@@ -30,7 +30,7 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
 
-    const { title, description, date, location } = req.body;
+    const { title, description, date, location, reminderFrequency, latitude, longitude } = req.body;
 
     if (!title || !date || !location) {
       return res.status(400).json({ error: 'Les champs title, date et location sont requis' });
@@ -53,6 +53,9 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
         description,
         date: new Date(date),
         location,
+        reminderFrequency: reminderFrequency || 'NONE',
+        latitude: latitude !== undefined && latitude !== null ? parseFloat(latitude) : null,
+        longitude: longitude !== undefined && longitude !== null ? parseFloat(longitude) : null,
       },
     });
 
@@ -93,7 +96,7 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
   try {
     const tenantId = req.user?.tenantId;
     const id = req.params.id as string;
-    const { title, description, date, location } = req.body;
+    const { title, description, date, location, reminderFrequency, latitude, longitude } = req.body;
 
     if (!tenantId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
@@ -115,6 +118,9 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
         description: description !== undefined ? description : existingEvent.description,
         date: date !== undefined ? new Date(date) : existingEvent.date,
         location: location !== undefined ? location : existingEvent.location,
+        reminderFrequency: reminderFrequency !== undefined ? reminderFrequency : existingEvent.reminderFrequency,
+        latitude: latitude !== undefined ? (latitude !== null ? parseFloat(latitude) : null) : existingEvent.latitude,
+        longitude: longitude !== undefined ? (longitude !== null ? parseFloat(longitude) : null) : existingEvent.longitude,
       },
     });
 

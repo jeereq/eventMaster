@@ -24,4 +24,5 @@ router.delete('/:eventId/guests/:id', guestController_1.deleteGuest);
 router.get('/:eventId/invitations', invitationController_1.getInvitations);
 router.post('/:eventId/invitations', invitationController_1.createInvitation);
 router.post('/:eventId/invitations/:id/send', invitationController_1.sendInvitation);
+router.post('/:eventId/invitations/:id/broadcast', invitationController_1.sendInvitation);
 exports.default = router;

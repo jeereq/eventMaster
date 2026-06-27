@@ -48,6 +48,12 @@ async function getBillingStatus(req, res) {
                 maxTemplates: 2,
                 customTemplates: false,
             },
+            STANDARD: {
+                maxEvents: 8,
+                maxGuests: 150,
+                maxTemplates: 5,
+                customTemplates: false,
+            },
             PREMIUM: {
                 maxEvents: 20,
                 maxGuests: 500,
@@ -85,7 +91,7 @@ async function createCheckoutSession(req, res) {
         if (!tenantId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
         }
-        if (!planType || !['PREMIUM', 'ENTERPRISE'].includes(planType)) {
+        if (!planType || !['STANDARD', 'PREMIUM', 'ENTERPRISE'].includes(planType)) {
             return res.status(400).json({ error: 'Type de forfait invalide' });
         }
         const tenant = await db_1.prisma.tenant.findUnique({
@@ -202,7 +208,7 @@ async function mockUpgrade(req, res) {
         if (!tenantId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
         }
-        if (!plan || !['FREE', 'PREMIUM', 'ENTERPRISE'].includes(plan)) {
+        if (!plan || !['FREE', 'STANDARD', 'PREMIUM', 'ENTERPRISE'].includes(plan)) {
             return res.status(400).json({ error: 'Plan invalide' });
         }
         const updatedTenant = await db_1.prisma.tenant.update({

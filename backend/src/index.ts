@@ -21,7 +21,8 @@ app.use(cors({
   origin: '*', // We can restrict this to the frontend URL later if needed
   credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Basic Route for Health Check
 app.get('/health', async (req: Request, res: Response) => {
@@ -47,3 +48,6 @@ app.use('/api/billing', billingRoutes);
 app.listen(PORT, () => {
   console.log(`[EventMaster Server] running on http://localhost:${PORT}`);
 });
+
+// Trigger ts-node-dev reload to pick up generated Prisma client after schema change (latitude and longitude fields added)
+

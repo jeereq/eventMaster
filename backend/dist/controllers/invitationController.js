@@ -73,6 +73,7 @@ async function sendInvitation(req, res) {
         const tenantId = req.user?.tenantId;
         const eventId = req.params.eventId;
         const id = req.params.id;
+        const { guestIds, channel } = req.body;
         if (!tenantId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
         }
@@ -86,14 +87,23 @@ async function sendInvitation(req, res) {
         if (!invitation) {
             return res.status(404).json({ error: 'Invitation non trouvée' });
         }
-        // Retrieve all guests for this event
-        const guests = await db_1.prisma.guest.findMany({
-            where: { eventId },
-        });
-        if (guests.length === 0) {
-            return res.status(400).json({ error: 'Aucun invité trouvé pour cet événement. Veuillez d\'abord ajouter des invités.' });
+        // Retrieve guests for this event (either specific ones or all)
+        let guests;
+        if (guestIds && Array.isArray(guestIds) && guestIds.length > 0) {
+            guests = await db_1.prisma.guest.findMany({
+                where: { id: { in: guestIds }, eventId },
+            });
         }
-        // Simulate sending email and generating RSVP links
+        else {
+            guests = await db_1.prisma.guest.findMany({
+                where: { eventId },
+            });
+        }
+        if (guests.length === 0) {
+            return res.status(400).json({ error: 'Aucun invité trouvé pour cet envoi. Veuillez d\'abord sélectionner ou ajouter des invités.' });
+        }
+        const activeChannel = channel || invitation.channel;
+        // Simulate sending and generating RSVP links
         const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
         const sentInvitations = guests.map(guest => {
             // Dynamic variables replacement
@@ -111,11 +121,19 @@ async function sendInvitation(req, res) {
                 body,
                 rsvpUrl: `${FRONTEND_URL}/rsvp/${guest.id}`,
                 status: 'SENT_SIMULATED',
+                channel: activeChannel,
             };
         });
         return res.json({
-            message: `Envoi simulé réussi pour ${guests.length} invités.`,
+            message: `Envoi simulé réussi via ${activeChannel} pour ${guests.length} invités.`,
             invitationsSent: sentInvitations,
+            results: sentInvitations.map(inv => ({
+                guestId: inv.guestId,
+                guestName: guests.find(g => g.id === inv.guestId) ? `${guests.find(g => g.id === inv.guestId)?.firstName} ${guests.find(g => g.id === inv.guestId)?.lastName}` : 'Invité',
+                email: inv.guestEmail,
+                rsvpLink: inv.rsvpUrl,
+                channel: inv.channel,
+            }))
         });
     }
     catch (error) {

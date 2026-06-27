@@ -9,7 +9,7 @@ import {
   Sparkles, CheckCircle2, AlertCircle, Type, Image, 
   Columns, Settings, Eye, CheckSquare, Loader2, XCircle,
   Spline, Triangle, Plus, Trash, Layout, Palette, Square,
-  ArrowUp, ArrowDown
+  ArrowUp, ArrowDown, Crop
 } from 'lucide-react';
 
 interface TemplateItem {
@@ -39,6 +39,7 @@ interface CanvasElement {
   imageUrl?: string;
   imageWidth?: string;
   imageHeight?: string;
+  imageObjectFit?: 'cover' | 'contain' | 'fill' | 'none';
   
   // Shape properties
   strokeWidth?: string;
@@ -59,6 +60,28 @@ interface CanvasElement {
   buttonStyle?: 'filled' | 'outline' | 'pill' | 'gold-glow' | 'double-border' | 'minimalist';
 }
 
+const darkenColor = (hex: string, percent = 30) => {
+  if (!hex || !hex.startsWith('#')) return hex || '#000000';
+  let r = parseInt(hex.slice(1, 3), 16);
+  let g = parseInt(hex.slice(3, 5), 16);
+  let b = parseInt(hex.slice(5, 7), 16);
+  r = Math.max(0, Math.floor(r * (1 - percent / 100)));
+  g = Math.max(0, Math.floor(g * (1 - percent / 100)));
+  b = Math.max(0, Math.floor(b * (1 - percent / 100)));
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+};
+
+const lightenColor = (hex: string, percent = 30) => {
+  if (!hex || !hex.startsWith('#')) return hex || '#ffffff';
+  let r = parseInt(hex.slice(1, 3), 16);
+  let g = parseInt(hex.slice(3, 5), 16);
+  let b = parseInt(hex.slice(5, 7), 16);
+  r = Math.min(255, Math.floor(r + (255 - r) * (percent / 100)));
+  g = Math.min(255, Math.floor(g + (255 - g) * (percent / 100)));
+  b = Math.min(255, Math.floor(b + (255 - b) * (percent / 100)));
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+};
+
 export default function TemplatesPage() {
   const { user } = useAuth();
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
@@ -73,9 +96,12 @@ export default function TemplatesPage() {
   const [bgType, setBgType] = useState<'color' | 'image' | 'pattern'>('pattern');
   const [bgColor, setBgColor] = useState('#faf8f5');
   const [bgImageUrl, setBgImageUrl] = useState('');
-  const [bgPattern, setBgPattern] = useState<'none' | 'paper' | 'watercolor' | 'boho'>('paper');
-  const [frameType, setFrameType] = useState<'none' | 'arch' | 'double-border' | 'gold-border'>('double-border');
+  const [bgPattern, setBgPattern] = useState<'none' | 'paper' | 'watercolor' | 'boho' | 'linen' | 'marble' | 'gold-dust' | 'parchment' | 'velvet'>('paper');
+  const [frameType, setFrameType] = useState<'none' | 'arch' | 'double-border' | 'gold-border' | 'floral-wreath' | 'floral-arch' | 'boho-dried' | 'gold-leaves-circle' | 'minimal-leaves'>('double-border');
   const [fontTheme, setFontTheme] = useState('classic');
+  const [floralColor, setFloralColor] = useState('#b91c1c');
+  const [floralType, setFloralType] = useState<'roses' | 'cherry-blossom' | 'gold-leaves' | 'sunflowers' | 'eucalyptus'>('roses');
+  const [floralDensity, setFloralDensity] = useState<number>(40);
 
   // Property editing states for selected element
   const [elText, setElText] = useState('');
@@ -85,6 +111,7 @@ export default function TemplatesPage() {
   const [elImageUrl, setElImageUrl] = useState('');
   const [elImageWidth, setElImageWidth] = useState('100%');
   const [elImageHeight, setElImageHeight] = useState('200px');
+  const [elImageObjectFit, setElImageObjectFit] = useState<'cover' | 'contain' | 'fill' | 'none'>('cover');
   const [elStrokeWidth, setElStrokeWidth] = useState('3px');
   const [elShapeSize, setElShapeSize] = useState('60px');
   const [elRsvpFields, setElRsvpFields] = useState<RsvpField[]>([]);
@@ -101,6 +128,19 @@ export default function TemplatesPage() {
   // Error/Success state
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  // Cropper States
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState('');
+  const [cropZoom, setCropZoom] = useState(1);
+  const [cropPanX, setCropPanX] = useState(0);
+  const [cropPanY, setCropPanY] = useState(0);
+  const [cropAspectRatio, setCropAspectRatio] = useState<'1:1' | '16:9' | '4:3' | '2:3' | 'free'>('1:1');
+  const [cropImageNaturalWidth, setCropImageNaturalWidth] = useState(0);
+  const [cropImageNaturalHeight, setCropImageNaturalHeight] = useState(0);
+  const [isDraggingCrop, setIsDraggingCrop] = useState(false);
+  const [dragStartCrop, setDragStartCrop] = useState({ x: 0, y: 0 });
 
   const loadTemplates = async () => {
     try {
@@ -159,6 +199,9 @@ export default function TemplatesPage() {
     setBgPattern('paper');
     setFrameType('double-border');
     setFontTheme('classic');
+    setFloralColor('#b91c1c');
+    setFloralType('roses');
+    setFloralDensity(40);
     
     setSelectedElementId(null);
     setEditorOpen(true);
@@ -177,6 +220,9 @@ export default function TemplatesPage() {
     setBgPattern(global.bgPattern || 'paper');
     setFrameType(global.frameType || 'double-border');
     setFontTheme(global.fontTheme || 'classic');
+    setFloralColor(global.floralColor || '#b91c1c');
+    setFloralType(global.floralType || 'roses');
+    setFloralDensity(global.floralDensity !== undefined ? global.floralDensity : 40);
     
     setSelectedElementId(null);
     setEditorOpen(true);
@@ -205,6 +251,7 @@ export default function TemplatesPage() {
       imageUrl: type === 'image' ? '' : undefined,
       imageWidth: type === 'image' ? '100%' : undefined,
       imageHeight: type === 'image' ? '200px' : undefined,
+      imageObjectFit: type === 'image' ? 'cover' : undefined,
       strokeWidth: type === 'curve' ? '3px' : undefined,
       shapeSize: type === 'triangle' ? '60px' : undefined,
       dividerStyle: type === 'divider' ? 'ornament-flower' : undefined,
@@ -231,6 +278,7 @@ export default function TemplatesPage() {
     setElImageUrl('');
     setElImageWidth('100%');
     setElImageHeight('200px');
+    setElImageObjectFit('cover');
     setElStrokeWidth('3px');
     setElShapeSize('60px');
     setElDividerStyle('ornament-flower');
@@ -256,6 +304,7 @@ export default function TemplatesPage() {
       setElImageUrl(el.imageUrl || '');
       setElImageWidth(el.imageWidth || '100%');
       setElImageHeight(el.imageHeight || '200px');
+      setElImageObjectFit(el.imageObjectFit || 'cover');
       setElStrokeWidth(el.strokeWidth || '3px');
       setElShapeSize(el.shapeSize || '60px');
       setElDividerStyle(el.dividerStyle || 'ornament-flower');
@@ -281,6 +330,7 @@ export default function TemplatesPage() {
     if (field === 'imageUrl') setElImageUrl(value);
     if (field === 'imageWidth') setElImageWidth(value);
     if (field === 'imageHeight') setElImageHeight(value);
+    if (field === 'imageObjectFit') setElImageObjectFit(value);
     if (field === 'strokeWidth') setElStrokeWidth(value);
     if (field === 'shapeSize') setElShapeSize(value);
     if (field === 'dividerStyle') setElDividerStyle(value);
@@ -334,6 +384,153 @@ export default function TemplatesPage() {
       handlePropertyChange('imageUrl', base64String);
     };
     reader.readAsDataURL(file);
+  };
+
+  const [cropTarget, setCropTarget] = useState<'element' | 'background'>('element');
+
+  const handleOpenCropper = (target: 'element' | 'background') => {
+    const src = target === 'element' ? elImageUrl : bgImageUrl;
+    if (!src) return;
+    setCropTarget(target);
+    setCropImageSrc(src);
+    setCropZoom(1);
+    setCropPanX(0);
+    setCropPanY(0);
+    setCropAspectRatio(target === 'background' ? '2:3' : '1:1');
+    setCropperOpen(true);
+  };
+
+  const handleApplyCrop = () => {
+    if (!cropImageSrc) return;
+
+    const img = new window.Image();
+    img.crossOrigin = 'anonymous';
+    
+    img.onload = () => {
+      try {
+        const containerWidth = 400;
+        const containerHeight = 300;
+        const imageRatio = img.naturalWidth / img.naturalHeight;
+        const containerRatio = containerWidth / containerHeight;
+        
+        let displayedWidth = 0;
+        let displayedHeight = 0;
+        
+        if (imageRatio > containerRatio) {
+          displayedWidth = containerWidth;
+          displayedHeight = containerWidth / imageRatio;
+        } else {
+          displayedHeight = containerHeight;
+          displayedWidth = containerHeight * imageRatio;
+        }
+
+        let cropWidth = 200;
+        let cropHeight = 200;
+        
+        if (cropAspectRatio === '1:1') {
+          cropWidth = 200;
+          cropHeight = 200;
+        } else if (cropAspectRatio === '16:9') {
+          cropWidth = 280;
+          cropHeight = 157.5;
+        } else if (cropAspectRatio === '4:3') {
+          cropWidth = 240;
+          cropHeight = 180;
+        } else if (cropAspectRatio === '2:3') {
+          cropWidth = 160;
+          cropHeight = 240;
+        } else { // free
+          cropWidth = 240;
+          cropHeight = 180;
+        }
+
+        const scale = img.naturalWidth / displayedWidth;
+        
+        const imgLeft = (containerWidth - displayedWidth * cropZoom) / 2 + cropPanX;
+        const imgTop = (containerHeight - displayedHeight * cropZoom) / 2 + cropPanY;
+        
+        const cropLeft = (containerWidth - cropWidth) / 2;
+        const cropTop = (containerHeight - cropHeight) / 2;
+        
+        const relativeLeft = cropLeft - imgLeft;
+        const relativeTop = cropTop - imgTop;
+        
+        const sourceX = (relativeLeft / cropZoom) * scale;
+        const sourceY = (relativeTop / cropZoom) * scale;
+        const sourceWidth = (cropWidth / cropZoom) * scale;
+        const sourceHeight = (cropHeight / cropZoom) * scale;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = sourceWidth;
+        canvas.height = sourceHeight;
+        const ctx = canvas.getContext('2d');
+        
+        if (ctx) {
+          ctx.drawImage(
+            img,
+            sourceX,
+            sourceY,
+            sourceWidth,
+            sourceHeight,
+            0,
+            0,
+            sourceWidth,
+            sourceHeight
+          );
+          
+          const croppedBase64 = canvas.toDataURL('image/jpeg', 0.95);
+          if (cropTarget === 'element') {
+            handlePropertyChange('imageUrl', croppedBase64);
+          } else {
+            setBgImageUrl(croppedBase64);
+          }
+          setCropperOpen(false);
+        }
+      } catch (err) {
+        console.error('Erreur lors du rognage de l\'image:', err);
+        setError('Impossible de rogner l\'image. Veuillez réessayer.');
+      }
+    };
+
+    img.onerror = (err) => {
+      console.error('Erreur de chargement de l\'image pour le rognage:', err);
+      setError('Impossible de charger l\'image pour le rognage.');
+    };
+
+    img.src = cropImageSrc;
+  };
+
+  // Drag handlers for the cropper
+  const handleCropMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDraggingCrop(true);
+    setDragStartCrop({ x: e.clientX - cropPanX, y: e.clientY - cropPanY });
+  };
+
+  const handleCropMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingCrop) return;
+    setCropPanX(e.clientX - dragStartCrop.x);
+    setCropPanY(e.clientY - dragStartCrop.y);
+  };
+
+  const handleCropMouseUp = () => {
+    setIsDraggingCrop(false);
+  };
+
+  // Touch handlers for mobile devices
+  const handleCropTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    setIsDraggingCrop(true);
+    setDragStartCrop({ 
+      x: e.touches[0].clientX - cropPanX, 
+      y: e.touches[0].clientY - cropPanY 
+    });
+  };
+
+  const handleCropTouchMove = (e: React.TouchEvent) => {
+    if (!isDraggingCrop || e.touches.length !== 1) return;
+    setCropPanX(e.touches[0].clientX - dragStartCrop.x);
+    setCropPanY(e.touches[0].clientY - dragStartCrop.y);
   };
 
   // Global background image upload
@@ -392,6 +589,7 @@ export default function TemplatesPage() {
       return;
     }
 
+    setSaving(true);
     try {
       const payload = {
         name: templateName,
@@ -402,7 +600,10 @@ export default function TemplatesPage() {
             bgImageUrl,
             bgPattern,
             frameType,
-            fontTheme
+            fontTheme,
+            floralColor,
+            floralType,
+            floralDensity
           },
           elements: canvasElements 
         },
@@ -420,6 +621,8 @@ export default function TemplatesPage() {
       loadTemplates();
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la sauvegarde du modèle.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -594,10 +797,20 @@ export default function TemplatesPage() {
           </div>
           <button 
             onClick={handleSaveTemplate}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition shadow-md shadow-indigo-100"
+            disabled={saving}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition shadow-md shadow-indigo-100 disabled:opacity-50"
           >
-            <Save className="w-4.5 h-4.5" />
-            Sauvegarder le modèle
+            {saving ? (
+              <>
+                <Loader2 className="w-4.5 h-4.5 animate-spin" />
+                Sauvegarde...
+              </>
+            ) : (
+              <>
+                <Save className="w-4.5 h-4.5" />
+                Sauvegarder le modèle
+              </>
+            )}
           </button>
         </div>
 
@@ -726,21 +939,173 @@ export default function TemplatesPage() {
 
               {/* Floral Arch Frame */}
               {frameType === 'floral-arch' && (
-                <div className="absolute inset-x-0 top-0 h-40 pointer-events-none z-0 overflow-hidden">
-                  <svg className="w-full h-full text-rose-600" viewBox="0 0 400 150" fill="none">
-                    <path d="M-20,15 Q200,-25 420,15" stroke="#4d7c0f" strokeWidth="1.5" strokeDasharray="4 4" />
-                    {[...Array(18)].map((_, i) => {
-                      const t = i / 17;
-                      const x = -20 + t * 440;
-                      const y = 15 + Math.sin(t * Math.PI) * -35;
+                <div className="absolute inset-0 pointer-events-none z-0">
+                  <svg className="w-full h-full" viewBox="0 0 400 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <radialGradient id={`floral-arch-grad-${floralColor.replace('#', '')}`} cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stopColor={lightenColor(floralColor, 40)} />
+                        <stop offset="60%" stopColor={floralColor} />
+                        <stop offset="100%" stopColor={darkenColor(floralColor, 40)} />
+                      </radialGradient>
+                    </defs>
+
+                    {/* Main Arch branches */}
+                    <path 
+                      d="M15,500 Q15,80 200,30 T385,500" 
+                      stroke={floralType === 'gold-leaves' ? '#d4af37' : '#3f492a'} 
+                      strokeWidth="3" 
+                      fill="none" 
+                      opacity="0.4"
+                    />
+                    <path 
+                      d="M30,500 Q30,100 200,50 T370,500" 
+                      stroke={floralType === 'gold-leaves' ? '#b59410' : '#2d361e'} 
+                      strokeWidth="2" 
+                      fill="none" 
+                      opacity="0.3"
+                    />
+
+                    {/* Generate dense flowers and leaves along the arch */}
+                    {[...Array(floralDensity)].map((_, i) => {
+                      const t = i / (floralDensity - 1);
+                      // Parabolic arch formula:
+                      // x goes from 15 to 385
+                      const x = 15 + t * 370;
+                      // y is a parabola: high in the middle (y=30), low at the ends (y=480)
+                      const y = 30 + 4 * (480 - 30) * Math.pow(t - 0.5, 2);
+
+                      // Deterministic pseudo-random offsets for organic look
+                      const seed1 = Math.sin(i * 123.45);
+                      const seed2 = Math.cos(i * 678.90);
+                      const offsetX = seed1 * 15;
+                      const offsetY = seed2 * 15;
+                      const scale = 0.7 + Math.abs(seed1) * 0.6; // Scale between 0.7 and 1.3
+                      const rotation = seed2 * 180; // Random rotation
+
+                      const px = x + offsetX;
+                      const py = y + offsetY;
+
+                      // Skip some flowers near the bottom to make it cascade naturally (thinner at the bottom)
+                      const isNearBottom = t < 0.1 || t > 0.9;
+                      const skipFlower = isNearBottom && (i % 3 === 0);
+
                       return (
-                        <g key={i} transform={`translate(${x}, ${y})`}>
-                          <path d="M-8,-4 C-12,-12 -4,-16 0,-8 Z" fill="#4d7c0f" opacity="0.8" />
-                          <path d="M8,-4 C12,-12 4,-16 0,-8 Z" fill="#4d7c0f" opacity="0.8" />
-                          <circle cx="0" cy="0" r="7" fill="#b91c1c" />
-                          <circle cx="-2" cy="-2" r="5" fill="#dc2626" />
-                          <circle cx="2" cy="-2" r="4" fill="#ef4444" />
-                          <circle cx="0" cy="0" r="2" fill="#f87171" />
+                        <g key={i} transform={`translate(${px}, ${py}) scale(${scale}) rotate(${rotation})`}>
+                          {/* Leaves (always render leaves behind flowers) */}
+                          {floralType !== 'gold-leaves' && (
+                            <>
+                              {/* Leaf 1 */}
+                              <path 
+                                d="M0,0 C-10,-15 -25,-10 -20,5 C-15,10 -5,5 0,0" 
+                                fill={floralType === 'eucalyptus' ? '#7d8c5c' : '#4d7c0f'} 
+                                opacity="0.85" 
+                              />
+                              {/* Leaf 2 */}
+                              <path 
+                                d="M0,0 C10,-15 25,-10 20,5 C15,10 5,5 0,0" 
+                                fill={floralType === 'eucalyptus' ? '#92a173' : '#3f6212'} 
+                                opacity="0.85" 
+                              />
+                            </>
+                          )}
+
+                          {/* Specific Flower Types */}
+                          {!skipFlower && (
+                            <>
+                              {floralType === 'roses' && (
+                                <>
+                                  {/* Red Rose Petals */}
+                                  <circle cx="0" cy="0" r="10" fill={`url(#floral-arch-grad-${floralColor.replace('#', '')})`} />
+                                  <path d="M-6,-4 C-10,-10 -2,-12 -4,-6" fill={darkenColor(floralColor, 15)} opacity="0.9" />
+                                  <path d="M6,-4 C10,-10 2,-12 4,-6" fill={darkenColor(floralColor, 15)} opacity="0.9" />
+                                  <path d="M-6,4 C-10,10 -2,12 -4,6" fill={darkenColor(floralColor, 10)} opacity="0.9" />
+                                  <path d="M6,4 C10,10 2,12 4,6" fill={darkenColor(floralColor, 10)} opacity="0.9" />
+                                  {/* Rose Center */}
+                                  <circle cx="0" cy="0" r="4" fill={darkenColor(floralColor, 30)} />
+                                  <circle cx="0" cy="0" r="2" fill="#fef08a" opacity="0.8" />
+                                </>
+                              )}
+
+                              {floralType === 'cherry-blossom' && (
+                                <>
+                                  {/* 5 Blossoms petals */}
+                                  {[...Array(5)].map((_, j) => {
+                                    const angle = (j * 72 * Math.PI) / 180;
+                                    const rx = 8 * Math.cos(angle);
+                                    const ry = 8 * Math.sin(angle);
+                                    return (
+                                      <path 
+                                        key={j}
+                                        d={`M0,0 C${rx * 1.5},${ry * 0.5} ${rx * 1.5},${ry * 1.5} 0,0`} 
+                                        fill={floralColor} 
+                                        stroke={darkenColor(floralColor, 20)}
+                                        strokeWidth="0.5"
+                                      />
+                                    );
+                                  })}
+                                  <circle cx="0" cy="0" r="3" fill="#fef08a" />
+                                  <circle cx="0" cy="0" r="1" fill="#ca8a04" />
+                                </>
+                              )}
+
+                              {floralType === 'gold-leaves' && (
+                                <>
+                                  {/* Gold Leaf 1 */}
+                                  <path 
+                                    d="M0,0 C-8,-12 -18,-8 -15,4 C-12,8 -4,4 0,0" 
+                                    fill={floralColor} 
+                                    stroke={darkenColor(floralColor, 20)}
+                                    strokeWidth="0.5"
+                                  />
+                                  {/* Gold Leaf 2 */}
+                                  <path 
+                                    d="M0,0 C8,-12 18,-8 15,4 C12,8 4,4 0,0" 
+                                    fill={lightenColor(floralColor, 20)} 
+                                    stroke={darkenColor(floralColor, 10)}
+                                    strokeWidth="0.5"
+                                  />
+                                  {/* Gold Berries */}
+                                  <circle cx="-2" cy="-6" r="2" fill="#ffffff" stroke={floralColor} strokeWidth="0.5" />
+                                  <circle cx="2" cy="-6" r="1.5" fill="#fef3c7" stroke={floralColor} strokeWidth="0.5" />
+                                </>
+                              )}
+
+                              {floralType === 'sunflowers' && (
+                                <>
+                                  {/* Sunflower Petals */}
+                                  {[...Array(12)].map((_, j) => {
+                                    const rot = j * 30;
+                                    return (
+                                      <ellipse 
+                                        key={j}
+                                        cx="0"
+                                        cy="-8"
+                                        rx="3"
+                                        ry="7"
+                                        fill={floralColor}
+                                        transform={`rotate(${rot})`}
+                                      />
+                                    );
+                                  })}
+                                  {/* Center seed head */}
+                                  <circle cx="0" cy="0" r="5" fill="#451a03" />
+                                  <circle cx="0" cy="0" r="4" fill="#1c1917" stroke="#78350f" strokeWidth="0.5" />
+                                </>
+                              )}
+
+                              {floralType === 'eucalyptus' && (
+                                <>
+                                  {/* Eucalyptus round leaves */}
+                                  <circle cx="-5" cy="-5" r="8" fill={floralColor} opacity="0.9" />
+                                  <circle cx="5" cy="5" r="7" fill={lightenColor(floralColor, 15)} opacity="0.9" />
+                                  <circle cx="-2" cy="6" r="6" fill={darkenColor(floralColor, 15)} opacity="0.8" />
+                                  {/* White berries */}
+                                  <circle cx="4" cy="-4" r="2" fill="#ffffff" stroke="#cbd5e1" strokeWidth="0.5" />
+                                  <circle cx="7" cy="-2" r="1.5" fill="#f1f5f9" stroke="#cbd5e1" strokeWidth="0.5" />
+                                </>
+                              )}
+                            </>
+                          )}
                         </g>
                       );
                     })}
@@ -934,7 +1299,7 @@ export default function TemplatesPage() {
                                 <img 
                                   src={el.imageUrl} 
                                   alt="Invitation" 
-                                  style={{ width: el.imageWidth || '100%', height: el.imageHeight || 'auto', objectFit: 'cover' }}
+                                  style={{ width: el.imageWidth || '100%', height: el.imageHeight || 'auto', objectFit: el.imageObjectFit || 'cover' }}
                                   className={`border border-slate-200 shadow-sm ${
                                     el.imageStyle === 'circle' ? 'rounded-full border-2 border-amber-200 aspect-square' :
                                     el.imageStyle === 'arch' ? 'rounded-t-[120px] border-2 border-amber-100' :
@@ -946,9 +1311,9 @@ export default function TemplatesPage() {
                                   }`}
                                 />
                               ) : (
-                                <div 
+                                <label 
                                   style={{ width: el.imageWidth || '100%', height: el.imageHeight || '150px' }}
-                                  className={`bg-slate-50 border border-slate-200 flex flex-col items-center justify-center text-slate-400 gap-2 p-4 ${
+                                  className={`bg-slate-50 border border-slate-200 flex flex-col items-center justify-center text-slate-400 gap-2 p-4 cursor-pointer hover:bg-slate-100/50 transition ${
                                     el.imageStyle === 'circle' ? 'rounded-full border-2 border-amber-200 aspect-square' :
                                     el.imageStyle === 'arch' ? 'rounded-t-[120px] border-2 border-amber-100' :
                                     el.imageStyle === 'oval' ? 'rounded-[50%] border-2 border-amber-100 aspect-[3/4]' :
@@ -958,9 +1323,33 @@ export default function TemplatesPage() {
                                     'rounded-2xl'
                                   }`}
                                 >
+                                  <input 
+                                    type="file" 
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                      e.stopPropagation();
+                                      const file = e.target.files?.[0];
+                                      if (!file) return;
+                                      const reader = new FileReader();
+                                      reader.onloadend = () => {
+                                        const base64String = reader.result as string;
+                                        setCanvasElements(canvasElements.map(item => {
+                                          if (item.id === el.id) {
+                                            return { ...item, imageUrl: base64String };
+                                          }
+                                          return item;
+                                        }));
+                                        handleElementSelect(el.id);
+                                        setElImageUrl(base64String);
+                                      };
+                                      reader.readAsDataURL(file);
+                                    }}
+                                    className="hidden"
+                                  />
                                   <Image className="w-8 h-8 text-slate-300" />
                                   <span className="text-xs font-semibold">{el.text}</span>
-                                </div>
+                                  <span className="text-[10px] text-indigo-500 font-bold">Cliquez pour importer</span>
+                                </label>
                               )}
                             </div>
                           )}
@@ -1111,15 +1500,23 @@ export default function TemplatesPage() {
                 {/* Text input */}
                 {['text', 'button', 'image', 'rsvp-block'].includes(canvasElements.find(e => e.id === selectedElementId)?.type || '') && (
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                      {canvasElements.find(e => e.id === selectedElementId)?.type === 'image' ? "Texte alternatif d'image" : 
-                       canvasElements.find(e => e.id === selectedElementId)?.type === 'rsvp-block' ? "Titre du bloc RSVP" : 
-                       "Contenu du texte"}
-                    </label>
+                    <div className="flex justify-between items-center">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        {canvasElements.find(e => e.id === selectedElementId)?.type === 'image' ? "Texte alternatif d'image" : 
+                         canvasElements.find(e => e.id === selectedElementId)?.type === 'rsvp-block' ? "Titre du bloc RSVP" : 
+                         "Contenu du texte"}
+                      </label>
+                      {canvasElements.find(e => e.id === selectedElementId)?.type === 'text' && (
+                        <span className="text-[9px] text-indigo-600 font-bold uppercase tracking-wider">
+                          Variables: {"{{firstName}}"}, {"{{location}}"}
+                        </span>
+                      )}
+                    </div>
                     <textarea 
                       value={elText}
                       onChange={(e) => handlePropertyChange('text', e.target.value)}
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition h-20 resize-none"
+                      placeholder={canvasElements.find(e => e.id === selectedElementId)?.type === 'text' ? "Ex: Vous êtes invité au {{title}} à {{location}}..." : ""}
                     />
                   </div>
                 )}
@@ -1316,6 +1713,31 @@ export default function TemplatesPage() {
                         />
                       </div>
                     </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Mode d'affichage</label>
+                      <select 
+                        value={elImageObjectFit}
+                        onChange={(e) => handlePropertyChange('imageObjectFit', e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition"
+                      >
+                        <option value="cover">Remplir l'espace (Cover)</option>
+                        <option value="contain">Afficher en entier (Contain)</option>
+                        <option value="fill">Étirer (Fill)</option>
+                        <option value="none">Taille réelle (None)</option>
+                      </select>
+                    </div>
+
+                    {elImageUrl && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenCropper('element')}
+                        className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-xs transition border border-indigo-100 shadow-sm"
+                      >
+                        <Crop className="w-3.5 h-3.5" />
+                        Rogner / Recadrer l'image
+                      </button>
+                    )}
                   </div>
                 )}
 
@@ -1658,6 +2080,16 @@ export default function TemplatesPage() {
                         className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition"
                       />
                     </div>
+                    {bgImageUrl && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenCropper('background')}
+                        className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-xs transition border border-indigo-100 shadow-sm"
+                      >
+                        <Crop className="w-3.5 h-3.5" />
+                        Rogner l'image de fond
+                      </button>
+                    )}
                   </div>
                 )}
 
@@ -1681,6 +2113,59 @@ export default function TemplatesPage() {
                   </select>
                 </div>
 
+                {/* Floral Customization Panel */}
+                {frameType === 'floral-arch' && (
+                  <div className="space-y-4 border-t border-slate-100 pt-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Type de Fleurs</label>
+                      <select 
+                        value={floralType}
+                        onChange={(e) => setFloralType(e.target.value as any)}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition"
+                      >
+                        <option value="roses">Roses de Luxe (Mariage Royal)</option>
+                        <option value="cherry-blossom">Fleurs de Cerisier (Romantique)</option>
+                        <option value="gold-leaves">Feuillage d'Or & Perles (Prestige)</option>
+                        <option value="sunflowers">Tournesols Lumineux (Chaleureux)</option>
+                        <option value="eucalyptus">Eucalyptus & Baies (Boho Chic)</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Couleur des Fleurs</label>
+                      <div className="flex gap-2">
+                        <input 
+                          type="color" 
+                          value={floralColor.startsWith('#') ? floralColor : '#b91c1c'}
+                          onChange={(e) => setFloralColor(e.target.value)}
+                          className="w-8 h-8 rounded-lg border border-slate-200 cursor-pointer overflow-hidden p-0"
+                        />
+                        <input 
+                          type="text" 
+                          value={floralColor}
+                          onChange={(e) => setFloralColor(e.target.value)}
+                          className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex justify-between">
+                        <span>Densité de l'Arche</span>
+                        <span className="text-indigo-600 font-extrabold">{floralDensity} fleurs</span>
+                      </label>
+                      <input 
+                        type="range" 
+                        min="15" 
+                        max="80" 
+                        value={floralDensity}
+                        onChange={(e) => setFloralDensity(parseInt(e.target.value))}
+                        className="w-full accent-indigo-600 cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-4 space-y-2">
                   <h4 className="text-xs font-bold text-amber-800 flex items-center gap-1">
                     <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Conseil de Design
@@ -1693,6 +2178,178 @@ export default function TemplatesPage() {
             )}
           </div>
         </div>
+
+        {/* Image Cropper Modal */}
+        {cropperOpen && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-[32px] border border-slate-100 shadow-2xl max-w-lg w-full overflow-hidden flex flex-col animate-fade-in">
+              {/* Modal Header */}
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="bg-indigo-50 text-indigo-700 p-2 rounded-xl">
+                    <Crop className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">Recadrer / Rogner l'image</h3>
+                    <p className="text-xs text-slate-400 font-medium">Ajustez le zoom et déplacez l'image pour la recadrer</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setCropperOpen(false)}
+                  className="p-2 hover:bg-slate-100 rounded-xl transition text-slate-400 hover:text-slate-600"
+                >
+                  <XCircle className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 space-y-6 flex-1 flex flex-col items-center">
+                {error && (
+                  <div className="w-full p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-center gap-2 text-xs">
+                    <AlertCircle className="w-4 h-4 text-rose-500 flex-shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
+
+                {/* Aspect Ratio Selector */}
+                <div className="w-full space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block text-center">Format de recadrage</label>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {[
+                      { id: '1:1', label: '1:1 (Carré)' },
+                      { id: '16:9', label: '16:9 (Paysage)' },
+                      { id: '4:3', label: '4:3 (Standard)' },
+                      { id: '2:3', label: '2:3 (Portrait)' },
+                      { id: 'free', label: 'Libre' }
+                    ].map((ratio) => (
+                      <button
+                        key={ratio.id}
+                        type="button"
+                        onClick={() => {
+                          setCropAspectRatio(ratio.id as any);
+                          setCropPanX(0);
+                          setCropPanY(0);
+                          setCropZoom(1);
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${cropAspectRatio === ratio.id ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100' : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                      >
+                        {ratio.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Cropping Viewport Container */}
+                <div 
+                  className="w-[400px] h-[300px] bg-slate-950 rounded-2xl relative overflow-hidden flex items-center justify-center select-none shadow-inner border border-slate-800"
+                  onMouseDown={handleCropMouseDown}
+                  onMouseMove={handleCropMouseMove}
+                  onMouseUp={handleCropMouseUp}
+                  onMouseLeave={handleCropMouseUp}
+                  onTouchStart={handleCropTouchStart}
+                  onTouchMove={handleCropTouchMove}
+                  onTouchEnd={handleCropMouseUp}
+                >
+                  {/* Image being cropped */}
+                  {cropImageSrc && (
+                    <img 
+                      src={cropImageSrc} 
+                      alt="To Crop" 
+                      onLoad={(e) => {
+                        setCropImageNaturalWidth(e.currentTarget.naturalWidth);
+                        setCropImageNaturalHeight(e.currentTarget.naturalHeight);
+                      }}
+                      style={{
+                        width: (cropImageNaturalWidth && cropImageNaturalHeight) ? (
+                          (cropImageNaturalWidth / cropImageNaturalHeight > 400 / 300) ? 400 : 300 * (cropImageNaturalWidth / cropImageNaturalHeight)
+                        ) : 'auto',
+                        height: (cropImageNaturalWidth && cropImageNaturalHeight) ? (
+                          (cropImageNaturalWidth / cropImageNaturalHeight > 400 / 300) ? 400 / (cropImageNaturalWidth / cropImageNaturalHeight) : 300
+                        ) : 'auto',
+                        transform: `translate(${cropPanX}px, ${cropPanY}px) scale(${cropZoom})`,
+                        transformOrigin: 'center',
+                        transition: isDraggingCrop ? 'none' : 'transform 0.1s ease-out',
+                        pointerEvents: 'none',
+                        maxWidth: 'none',
+                        maxHeight: 'none'
+                      }}
+                      className="absolute"
+                    />
+                  )}
+
+                  {/* Cropping Frame Overlay */}
+                  <div 
+                    style={{
+                      width: cropAspectRatio === '1:1' ? 200 :
+                             cropAspectRatio === '16:9' ? 280 :
+                             cropAspectRatio === '4:3' ? 240 :
+                             cropAspectRatio === '2:3' ? 160 : 240,
+                      height: cropAspectRatio === '1:1' ? 200 :
+                              cropAspectRatio === '16:9' ? 157.5 :
+                              cropAspectRatio === '4:3' ? 180 :
+                              cropAspectRatio === '2:3' ? 240 : 180,
+                    }}
+                    className="border-2 border-dashed border-amber-400 absolute pointer-events-none z-10 shadow-[0_0_0_9999px_rgba(15,23,42,0.65)] rounded-lg"
+                  >
+                    {/* Corner markers */}
+                    <div className="absolute -top-1.5 -left-1.5 w-3 h-3 border-t-4 border-l-4 border-amber-400" />
+                    <div className="absolute -top-1.5 -right-1.5 w-3 h-3 border-t-4 border-r-4 border-amber-400" />
+                    <div className="absolute -bottom-1.5 -left-1.5 w-3 h-3 border-b-4 border-l-4 border-amber-400" />
+                    <div className="absolute -bottom-1.5 -right-1.5 w-3 h-3 border-b-4 border-r-4 border-amber-400" />
+                  </div>
+                </div>
+
+                {/* Zoom Slider */}
+                <div className="w-full space-y-2">
+                  <div className="flex justify-between text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <span>Zoom</span>
+                    <span className="font-mono text-indigo-600">{Math.round(cropZoom * 100)}%</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="1" 
+                    max="4" 
+                    step="0.01"
+                    value={cropZoom}
+                    onChange={(e) => setCropZoom(parseFloat(e.target.value))}
+                    className="w-full accent-indigo-600 h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                {/* Reset button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCropPanX(0);
+                    setCropPanY(0);
+                    setCropZoom(1);
+                  }}
+                  className="text-xs font-bold text-slate-400 hover:text-indigo-600 transition"
+                >
+                  Réinitialiser la position et le zoom
+                </button>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-6 border-t border-slate-100 bg-slate-50 flex gap-3">
+                <button 
+                  type="button"
+                  onClick={() => setCropperOpen(false)}
+                  className="flex-1 py-2.5 border border-slate-200 text-slate-600 font-bold rounded-xl text-xs uppercase tracking-wider hover:bg-slate-100 transition"
+                >
+                  Annuler
+                </button>
+                <button 
+                  type="button"
+                  onClick={handleApplyCrop}
+                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition shadow-md shadow-indigo-100"
+                >
+                  Valider le rognage
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

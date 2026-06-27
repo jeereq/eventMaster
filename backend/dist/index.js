@@ -11,6 +11,7 @@ const eventRoutes_1 = __importDefault(require("./routes/eventRoutes"));
 const templateRoutes_1 = __importDefault(require("./routes/templateRoutes"));
 const rsvpRoutes_1 = __importDefault(require("./routes/rsvpRoutes"));
 const billingRoutes_1 = __importDefault(require("./routes/billingRoutes"));
+const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
 const billingController_1 = require("./controllers/billingController");
 const db_1 = require("./db");
 // Load environment variables
@@ -39,6 +40,7 @@ app.use('/api/auth', authRoutes_1.default);
 app.use('/api/events', eventRoutes_1.default);
 app.use('/api/templates', templateRoutes_1.default);
 app.use('/api/rsvp', rsvpRoutes_1.default);
+app.use('/api/admin', adminRoutes_1.default);
 app.post('/api/billing/webhook', billingController_1.handleStripeWebhook);
 app.use('/api/billing', billingRoutes_1.default);
 // Start Server

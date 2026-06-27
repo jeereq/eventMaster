@@ -7,7 +7,7 @@ import {
   Calendar, MapPin, Users, PlusCircle, Trash2, Edit3, 
   ChevronRight, ArrowLeft, Check, Upload, Mail, Send, 
   Sparkles, CheckCircle2, XCircle, AlertCircle, HelpCircle, Loader2,
-  Copy, MessageSquare, Share2
+  Copy, MessageSquare, Share2, Search, Filter, RefreshCw, CheckSquare, XSquare, HelpCircle as PendingIcon
 } from 'lucide-react';
 
 interface EventItem {
@@ -16,6 +16,9 @@ interface EventItem {
   description: string;
   date: string;
   location: string;
+  reminderFrequency?: string;
+  latitude?: number;
+  longitude?: number;
   tenant?: { name: string };
 }
 
@@ -57,7 +60,11 @@ export default function EventsPage() {
   const [eventDesc, setEventDescription] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [eventLoc, setEventLocation] = useState('');
+  const [eventReminderFrequency, setEventReminderFrequency] = useState('NONE');
+  const [eventLatitude, setEventLatitude] = useState('');
+  const [eventLongitude, setEventLongitude] = useState('');
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [savingEvent, setSavingEvent] = useState(false);
 
   // Guest form
   const [showGuestModal, setShowGuestModal] = useState(false);
@@ -67,6 +74,11 @@ export default function EventsPage() {
   const [guestCategory, setGuestCategory] = useState('Famille');
   const [guestPrefs, setGuestPreferences] = useState('');
   const [guests, setGuests] = useState<GuestItem[]>([]);
+
+  // Guest filtering states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [rsvpFilter, setRsvpFilter] = useState<'ALL' | 'ACCEPTED' | 'DECLINED' | 'PENDING'>('ALL');
+  const [categoryFilter, setCategoryFilter] = useState('ALL');
 
   // Import guests
   const [showImportModal, setShowImportModal] = useState(false);
@@ -87,9 +99,37 @@ export default function EventsPage() {
   const [copiedGuestId, setCopiedGuestId] = useState<string | null>(null);
   const [sharingGuest, setSharingGuest] = useState<GuestItem | null>(null);
 
+  // Bulk guest selection & sending
+  const [selectedGuestIds, setSelectedGuestIds] = useState<string[]>([]);
+  const [showBulkInviteModal, setShowBulkInviteModal] = useState(false);
+  const [bulkSelectedInviteId, setBulkSelectedInviteId] = useState('');
+  const [bulkSelectedChannel, setBulkSelectedChannel] = useState('EMAIL');
+
   // Error/Success state
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Guest filtering and statistics calculations
+  const totalGuestsCount = guests.length;
+  const acceptedCount = guests.filter(g => g.rsvp === 'ACCEPTED').length;
+  const declinedCount = guests.filter(g => g.rsvp === 'DECLINED').length;
+  const pendingCount = guests.filter(g => g.rsvp === 'PENDING').length;
+
+  const acceptedPercentage = totalGuestsCount > 0 ? Math.round((acceptedCount / totalGuestsCount) * 100) : 0;
+  const declinedPercentage = totalGuestsCount > 0 ? Math.round((declinedCount / totalGuestsCount) * 100) : 0;
+  const pendingPercentage = totalGuestsCount > 0 ? Math.round((pendingCount / totalGuestsCount) * 100) : 0;
+  const responseRate = totalGuestsCount > 0 ? Math.round(((acceptedCount + declinedCount) / totalGuestsCount) * 100) : 0;
+
+  const uniqueCategories = Array.from(new Set(guests.map(g => g.category || 'Général')));
+
+  const filteredGuests = guests.filter(g => {
+    const matchesSearch = `${g.firstName} ${g.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) || g.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesRsvp = rsvpFilter === 'ALL' || g.rsvp === rsvpFilter;
+    const matchesCategory = categoryFilter === 'ALL' || (g.category || 'Général') === categoryFilter;
+    return matchesSearch && matchesRsvp && matchesCategory;
+  });
+
+  const isAllFilteredSelected = filteredGuests.length > 0 && filteredGuests.every(g => selectedGuestIds.includes(g.id));
 
   const loadEvents = async () => {
     try {
@@ -127,12 +167,16 @@ export default function EventsPage() {
     setError('');
     setSuccess('');
 
+    setSavingEvent(true);
     try {
       const payload = {
         title: eventTitle,
         description: eventDesc,
         date: eventDate,
         location: eventLoc,
+        reminderFrequency: eventReminderFrequency,
+        latitude: eventLatitude ? parseFloat(eventLatitude) : null,
+        longitude: eventLongitude ? parseFloat(eventLongitude) : null,
       };
 
       if (editingEventId) {
@@ -148,11 +192,16 @@ export default function EventsPage() {
       setEventDescription('');
       setEventDate('');
       setEventLocation('');
+      setEventReminderFrequency('NONE');
+      setEventLatitude('');
+      setEventLongitude('');
       setEditingEventId(null);
       setShowEventModal(false);
       loadEvents();
     } catch (err: any) {
       setError(err.message || "Erreur d'enregistrement de l'événement");
+    } finally {
+      setSavingEvent(false);
     }
   };
 
@@ -161,6 +210,9 @@ export default function EventsPage() {
     setEventDescription(event.description || '');
     setEventDate(new Date(event.date).toISOString().slice(0, 16));
     setEventLocation(event.location);
+    setEventReminderFrequency(event.reminderFrequency || 'NONE');
+    setEventLatitude(event.latitude !== undefined && event.latitude !== null ? event.latitude.toString() : '');
+    setEventLongitude(event.longitude !== undefined && event.longitude !== null ? event.longitude.toString() : '');
     setEditingEventId(event.id);
     setShowEventModal(true);
   };
@@ -310,6 +362,30 @@ export default function EventsPage() {
     }
   };
 
+  // Bulk Send Invitation
+  const handleBulkSendInvitation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedEvent || !bulkSelectedInviteId) {
+      setError('Veuillez sélectionner une invitation à envoyer.');
+      return;
+    }
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await api.post(`/events/${selectedEvent.id}/invitations/${bulkSelectedInviteId}/broadcast`, {
+        guestIds: selectedGuestIds,
+        channel: bulkSelectedChannel,
+      });
+      setBroadcastResults(response.results);
+      setShowBulkInviteModal(false);
+      setShowBroadcastModal(true);
+      setSelectedGuestIds([]); // Clear selection after successful send
+    } catch (err: any) {
+      setError(err.message || "Erreur lors de l'envoi groupé.");
+    }
+  };
+
   const handleCopyLink = (guestId: string, link: string) => {
     navigator.clipboard.writeText(link);
     setCopiedGuestId(guestId);
@@ -331,11 +407,25 @@ export default function EventsPage() {
     return `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
   };
 
+  const getFacebookShareUrl = (rsvpLink: string) => {
+    return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(rsvpLink)}`;
+  };
+
   const getGuestRsvpLink = (guestId: string) => {
     if (typeof window !== 'undefined') {
       return `${window.location.origin}/rsvp/${guestId}`;
     }
     return `http://localhost:3000/rsvp/${guestId}`;
+  };
+
+  const getReminderFrequencyLabel = (freq?: string) => {
+    switch (freq) {
+      case 'DAILY': return 'Rappel : Quotidien';
+      case 'EVERY_3_DAYS': return 'Rappel : Tous les 3 jours';
+      case 'EVERY_5_DAYS': return 'Rappel : Tous les 5 jours';
+      case 'WEEKLY': return 'Rappel : Hebdomadaire';
+      default: return 'Pas de rappel automatique';
+    }
   };
 
   if (user?.role === 'SUPER_ADMIN') {
@@ -400,7 +490,18 @@ export default function EventsPage() {
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{selectedEvent.title}</h1>
             <p className="text-slate-500 text-sm font-medium flex items-center gap-4 flex-wrap">
               <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4 text-slate-400" /> {new Date(selectedEvent.date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-              <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4 text-slate-400" /> {selectedEvent.location}</span>
+              <span className="flex items-center gap-1.5 flex-wrap">
+                <MapPin className="w-4 h-4 text-slate-400" /> 
+                <span>{selectedEvent.location}</span>
+                {selectedEvent.latitude !== undefined && selectedEvent.latitude !== null && selectedEvent.longitude !== undefined && selectedEvent.longitude !== null && (
+                  <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded-md font-bold">
+                    GPS: {Number(selectedEvent.latitude).toFixed(4)}, {Number(selectedEvent.longitude).toFixed(4)}
+                  </span>
+                )}
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 border border-indigo-100 text-indigo-700">
+                {getReminderFrequencyLabel(selectedEvent.reminderFrequency)}
+              </span>
             </p>
           </div>
           <div className="flex gap-2">
@@ -509,12 +610,102 @@ export default function EventsPage() {
           {/* Tab Content: Guests */}
           {activeTab === 'guests' && (
             <div className="space-y-6">
+              {/* Event Statistics Cards */}
+              {guests.length > 0 && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Card 1: Total Guests */}
+                    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center gap-4">
+                      <div className="bg-indigo-50 text-indigo-700 p-3 rounded-xl">
+                        <Users className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Invités</div>
+                        <div className="text-2xl font-extrabold text-slate-900">{totalGuestsCount}</div>
+                      </div>
+                    </div>
+
+                    {/* Card 2: Confirmed (ACCEPTED) */}
+                    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center gap-4">
+                      <div className="bg-emerald-50 text-emerald-700 p-3 rounded-xl">
+                        <CheckSquare className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Présents</div>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-2xl font-extrabold text-slate-900">{acceptedCount}</span>
+                          <span className="text-xs font-bold text-emerald-600">({acceptedPercentage}%)</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card 3: Absent (DECLINED) */}
+                    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center gap-4">
+                      <div className="bg-rose-50 text-rose-700 p-3 rounded-xl">
+                        <XSquare className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Absents</div>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-2xl font-extrabold text-slate-900">{declinedCount}</span>
+                          <span className="text-xs font-bold text-rose-600">({declinedPercentage}%)</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card 4: Pending (PENDING) */}
+                    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center gap-4">
+                      <div className="bg-amber-50 text-amber-700 p-3 rounded-xl">
+                        <PendingIcon className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Sans réponse</div>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-2xl font-extrabold text-slate-900">{pendingCount}</span>
+                          <span className="text-xs font-bold text-amber-600">({pendingPercentage}%)</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Response Rate Progress Bar */}
+                  <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-2">
+                    <div className="flex justify-between items-center text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      <span>Taux de réponse global</span>
+                      <span className="text-indigo-600">{responseRate}%</span>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                      <div 
+                        style={{ width: `${responseRate}%` }}
+                        className="bg-indigo-600 h-full rounded-full transition-all duration-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-bold text-slate-900">Liste des Invités</h2>
                   <p className="text-slate-500 text-sm mt-0.5">Ajoutez des invités manuellement ou importez-les en bloc à partir d'un fichier CSV.</p>
                 </div>
                 <div className="flex gap-2.5">
+                  {selectedGuestIds.length > 0 && (
+                    <button 
+                      onClick={() => {
+                        if (invitations.length === 0) {
+                          alert("Veuillez d'abord configurer une invitation dans l'onglet 'Invitations & Diffusion'.");
+                          return;
+                        }
+                        setBulkSelectedInviteId(invitations[0]?.id || '');
+                        setShowBulkInviteModal(true);
+                      }}
+                      className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-emerald-100 animate-fade-in"
+                    >
+                      <Send className="w-4 h-4" />
+                      Inviter la sélection ({selectedGuestIds.length})
+                    </button>
+                  )}
                   <button 
                     onClick={() => setShowImportModal(true)}
                     className="inline-flex items-center justify-center gap-1.5 px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold rounded-xl text-sm transition"
@@ -532,6 +723,66 @@ export default function EventsPage() {
                 </div>
               </div>
 
+              {/* Search & Filtering Controls */}
+              {guests.length > 0 && (
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col md:flex-row gap-3 items-center">
+                  {/* Search Input */}
+                  <div className="relative w-full md:flex-1">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                    <input 
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Rechercher un invité par nom ou email..."
+                      className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition shadow-sm"
+                    />
+                  </div>
+
+                  {/* RSVP Status Filter */}
+                  <div className="w-full md:w-48">
+                    <select 
+                      value={rsvpFilter}
+                      onChange={(e) => setRsvpFilter(e.target.value as any)}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition shadow-sm font-semibold text-slate-700"
+                    >
+                      <option value="ALL">Tous les statuts RSVP</option>
+                      <option value="ACCEPTED">Présent uniquement</option>
+                      <option value="DECLINED">Absent uniquement</option>
+                      <option value="PENDING">Sans réponse uniquement</option>
+                    </select>
+                  </div>
+
+                  {/* Category Filter */}
+                  <div className="w-full md:w-48">
+                    <select 
+                      value={categoryFilter}
+                      onChange={(e) => setCategoryFilter(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition shadow-sm font-semibold text-slate-700"
+                    >
+                      <option value="ALL">Toutes les catégories</option>
+                      {uniqueCategories.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Reset Filters Button */}
+                  {(searchQuery || rsvpFilter !== 'ALL' || categoryFilter !== 'ALL') && (
+                    <button
+                      onClick={() => {
+                        setSearchQuery('');
+                        setRsvpFilter('ALL');
+                        setCategoryFilter('ALL');
+                      }}
+                      className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-700 transition bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-xl"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      Réinitialiser
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* Guests Table */}
               <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
                 {guests.length === 0 ? (
@@ -540,11 +791,41 @@ export default function EventsPage() {
                     <h3 className="font-bold text-slate-700">Aucun invité</h3>
                     <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">Ajoutez des invités pour commencer à diffuser vos invitations.</p>
                   </div>
+                ) : filteredGuests.length === 0 ? (
+                  <div className="text-center py-16">
+                    <Search className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                    <h3 className="font-bold text-slate-700">Aucun résultat</h3>
+                    <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">Aucun invité ne correspond à vos critères de recherche ou de filtrage.</p>
+                    <button
+                      onClick={() => {
+                        setSearchQuery('');
+                        setRsvpFilter('ALL');
+                        setCategoryFilter('ALL');
+                      }}
+                      className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-700 transition bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-xl"
+                    >
+                      Effacer les filtres
+                    </button>
+                  </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className="border-b border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider bg-slate-50/50">
+                          <th className="py-3.5 px-6 font-semibold w-12">
+                            <input 
+                              type="checkbox" 
+                              checked={isAllFilteredSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedGuestIds(filteredGuests.map(g => g.id));
+                                } else {
+                                  setSelectedGuestIds([]);
+                                }
+                              }}
+                              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                            />
+                          </th>
                           <th className="py-3.5 px-6 font-semibold">Nom complet</th>
                           <th className="py-3.5 px-6 font-semibold">Email</th>
                           <th className="py-3.5 px-6 font-semibold">Catégorie</th>
@@ -554,8 +835,22 @@ export default function EventsPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 text-sm">
-                        {guests.map((g) => (
-                          <tr key={g.id} className="hover:bg-slate-50/30 transition-colors">
+                        {filteredGuests.map((g) => (
+                          <tr key={g.id} className={`hover:bg-slate-50/30 transition-colors ${selectedGuestIds.includes(g.id) ? 'bg-indigo-50/10' : ''}`}>
+                            <td className="py-4 px-6 w-12">
+                              <input 
+                                type="checkbox" 
+                                checked={selectedGuestIds.includes(g.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedGuestIds([...selectedGuestIds, g.id]);
+                                  } else {
+                                    setSelectedGuestIds(selectedGuestIds.filter(id => id !== g.id));
+                                  }
+                                }}
+                                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                              />
+                            </td>
                             <td className="py-4 px-6 font-bold text-slate-900">{g.firstName} {g.lastName}</td>
                             <td className="py-4 px-6 text-slate-500 font-medium">{g.email}</td>
                             <td className="py-4 px-6">
@@ -644,8 +939,18 @@ export default function EventsPage() {
                     <div key={invite.id} className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4 flex flex-col justify-between">
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 border border-indigo-100 text-indigo-700">
-                            Canal: {invite.channel}
+                          <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                            invite.channel === 'EMAIL' ? 'bg-indigo-50 border-indigo-100 text-indigo-700' :
+                            invite.channel === 'WHATSAPP' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
+                            invite.channel === 'SMS' ? 'bg-blue-50 border-blue-100 text-blue-700' :
+                            'bg-slate-50 border-slate-100 text-slate-700'
+                          }`}>
+                            Canal: {
+                              invite.channel === 'EMAIL' ? 'E-mail' :
+                              invite.channel === 'WHATSAPP' ? 'WhatsApp' :
+                              invite.channel === 'SMS' ? 'SMS' :
+                              invite.channel === 'LINK' ? 'Lien unique' : invite.channel
+                            }
                           </span>
                           <span className="text-xs text-slate-400 font-semibold">
                             Modèle: {invite.template?.name || 'Aucun'}
@@ -737,6 +1042,51 @@ export default function EventsPage() {
                   />
                 </div>
               </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Fréquence de rappel automatique</label>
+                <select 
+                  value={eventReminderFrequency}
+                  onChange={(e) => setEventReminderFrequency(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
+                >
+                  <option value="NONE">Pas de rappel automatique</option>
+                  <option value="DAILY">Chaque jour (Quotidien)</option>
+                  <option value="EVERY_3_DAYS">Tous les 3 jours</option>
+                  <option value="EVERY_5_DAYS">Tous les 5 jours</option>
+                  <option value="WEEKLY">Chaque semaine (Hebdomadaire)</option>
+                </select>
+                <p className="text-[11px] text-slate-400">
+                  Envoie automatiquement un rappel aux invités qui n'ont pas encore répondu (RSVP En attente).
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Latitude GPS (Optionnel)</label>
+                  <input 
+                    type="number" 
+                    step="any"
+                    value={eventLatitude}
+                    onChange={(e) => setEventLatitude(e.target.value)}
+                    placeholder="ex. -4.3014"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Longitude GPS (Optionnel)</label>
+                  <input 
+                    type="number" 
+                    step="any"
+                    value={eventLongitude}
+                    onChange={(e) => setEventLongitude(e.target.value)}
+                    placeholder="ex. 15.3048"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
+                  />
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-400 -mt-2">
+                Renseigner les coordonnées GPS permet d'afficher une carte interactive précise de l'emplacement sur l'invitation de vos invités.
+              </p>
               <div className="pt-4 flex gap-3 border-t border-slate-100">
                 <button 
                   type="button"
@@ -747,9 +1097,17 @@ export default function EventsPage() {
                 </button>
                 <button 
                   type="submit"
-                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100"
+                  disabled={savingEvent}
+                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100 disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
-                  Enregistrer
+                  {savingEvent ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Enregistrement...
+                    </>
+                  ) : (
+                    'Enregistrer'
+                  )}
                 </button>
               </div>
             </form>
@@ -899,6 +1257,80 @@ export default function EventsPage() {
         </div>
       )}
 
+      {/* Bulk Invitation Sending Modal */}
+      {showBulkInviteModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg p-6 space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-2">
+                <div className="bg-indigo-50 text-indigo-600 p-1.5 rounded-lg">
+                  <Send className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">Envoyer une invitation groupée</h3>
+              </div>
+              <button onClick={() => setShowBulkInviteModal(false)} className="text-slate-400 hover:text-slate-600 transition">
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+            <form onSubmit={handleBulkSendInvitation} className="space-y-4">
+              <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl">
+                <p className="text-xs text-indigo-800 font-semibold leading-relaxed">
+                  Vous vous apprêtez à envoyer une invitation personnalisée à <strong className="text-indigo-900 font-extrabold">{selectedGuestIds.length} invités</strong> sélectionnés.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Sélectionner l'invitation précise</label>
+                <select 
+                  value={bulkSelectedInviteId}
+                  onChange={(e) => setBulkSelectedInviteId(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
+                  required
+                >
+                  <option value="">-- Choisir une invitation --</option>
+                  {invitations.map(i => (
+                    <option key={i.id} value={i.id}>{i.subject} (Modèle: {i.template?.name || 'Aucun'})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Moyen de diffusion (Canal)</label>
+                <select 
+                  value={bulkSelectedChannel}
+                  onChange={(e) => setBulkSelectedChannel(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
+                >
+                  <option value="EMAIL">E-mail (Simulation d'envoi)</option>
+                  <option value="WHATSAPP">WhatsApp (Partage direct)</option>
+                  <option value="SMS">SMS (Partage direct)</option>
+                  <option value="X">X / Twitter (Partage direct)</option>
+                  <option value="INSTAGRAM">Instagram (Copie de lien DM)</option>
+                  <option value="FACEBOOK">Facebook (Copie de lien Messenger)</option>
+                </select>
+              </div>
+
+              <div className="pt-4 flex gap-3 border-t border-slate-100">
+                <button 
+                  type="button"
+                  onClick={() => setShowBulkInviteModal(false)}
+                  className="flex-1 py-2.5 border border-slate-200 text-slate-600 font-semibold rounded-xl text-sm hover:bg-slate-50 transition"
+                >
+                  Annuler
+                </button>
+                <button 
+                  type="submit"
+                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100 flex items-center justify-center gap-1.5"
+                >
+                  <Send className="w-4 h-4" />
+                  Générer & Envoyer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Invitation Configuration Modal */}
       {showInviteModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -932,6 +1364,8 @@ export default function EventsPage() {
                     className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
                   >
                     <option value="EMAIL">E-mail</option>
+                    <option value="WHATSAPP">WhatsApp</option>
+                    <option value="SMS">SMS</option>
                     <option value="LINK">Lien unique (Simulation)</option>
                   </select>
                 </div>
@@ -1093,6 +1527,20 @@ export default function EventsPage() {
                         </svg>
                         Instagram
                       </button>
+
+                      {/* Facebook */}
+                      <a
+                        href={getFacebookShareUrl(res.rsvpLink)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm"
+                        title="Partager sur Facebook"
+                      >
+                        <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                        </svg>
+                        Facebook
+                      </a>
                     </div>
                   </div>
                 ))}
@@ -1195,13 +1643,26 @@ export default function EventsPage() {
                   {/* Instagram */}
                   <button
                     onClick={() => handleCopyLink(sharingGuest.id, getGuestRsvpLink(sharingGuest.id))}
-                    className="col-span-2 flex items-center justify-center gap-2 p-3 bg-gradient-to-tr from-yellow-500 via-red-500 to-purple-600 hover:opacity-90 text-white rounded-xl text-sm font-bold transition shadow-sm"
+                    className="flex items-center justify-center gap-2 p-3 bg-gradient-to-tr from-yellow-500 via-red-500 to-purple-600 hover:opacity-90 text-white rounded-xl text-sm font-bold transition shadow-sm"
                   >
                     <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                       <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 2.191 4.919 5.4c.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 5.271-4.919 5.418-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-2.199-4.919-5.42-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-5.271 4.919-5.419 1.265-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
                     </svg>
-                    Partager sur Instagram DM (Copier le lien)
+                    Instagram (Copier)
                   </button>
+
+                  {/* Facebook */}
+                  <a
+                    href={getFacebookShareUrl(getGuestRsvpLink(sharingGuest.id))}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition shadow-sm"
+                  >
+                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                    Facebook
+                  </a>
                 </div>
               </div>
             </div>

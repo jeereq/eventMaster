@@ -20,6 +20,8 @@ interface GuestRsvpData {
     description: string;
     date: string;
     location: string;
+    latitude?: number;
+    longitude?: number;
     invitations?: Array<{
       template?: {
         id: string;
@@ -29,6 +31,28 @@ interface GuestRsvpData {
     }>;
   };
 }
+
+const darkenColor = (hex: string, percent = 30) => {
+  if (!hex || !hex.startsWith('#')) return hex || '#000000';
+  let r = parseInt(hex.slice(1, 3), 16);
+  let g = parseInt(hex.slice(3, 5), 16);
+  let b = parseInt(hex.slice(5, 7), 16);
+  r = Math.max(0, Math.floor(r * (1 - percent / 100)));
+  g = Math.max(0, Math.floor(g * (1 - percent / 100)));
+  b = Math.max(0, Math.floor(b * (1 - percent / 100)));
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+};
+
+const lightenColor = (hex: string, percent = 30) => {
+  if (!hex || !hex.startsWith('#')) return hex || '#ffffff';
+  let r = parseInt(hex.slice(1, 3), 16);
+  let g = parseInt(hex.slice(3, 5), 16);
+  let b = parseInt(hex.slice(5, 7), 16);
+  r = Math.min(255, Math.floor(r + (255 - r) * (percent / 100)));
+  g = Math.min(255, Math.floor(g + (255 - g) * (percent / 100)));
+  b = Math.min(255, Math.floor(b + (255 - b) * (percent / 100)));
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+};
 
 export default function RsvpPage() {
   const params = useParams();
@@ -248,9 +272,18 @@ export default function RsvpPage() {
 
   const formatText = (text: string) => {
     if (!text) return '';
-    return text
+    let formatted = text
       .replace(/\{\{firstName\}\}/g, guest.firstName)
       .replace(/\{\{lastName\}\}/g, guest.lastName);
+    
+    if (guest.event) {
+      formatted = formatted
+        .replace(/\{\{title\}\}/g, guest.event.title)
+        .replace(/\{\{description\}\}/g, guest.event.description || '')
+        .replace(/\{\{location\}\}/g, guest.event.location)
+        .replace(/\{\{date\}\}/g, new Date(guest.event.date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }));
+    }
+    return formatted;
   };
 
   const template = guest.event.invitations?.[0]?.template;
@@ -260,6 +293,9 @@ export default function RsvpPage() {
   const bgImageUrl = global.bgImageUrl || '';
   const bgPattern = global.bgPattern || 'none';
   const frameType = global.frameType || 'none';
+  const floralColor = global.floralColor || '#b91c1c';
+  const floralType = global.floralType || 'roses';
+  const floralDensity = global.floralDensity !== undefined ? global.floralDensity : 40;
 
   const renderRsvpFormControls = (el: any) => {
     return (
@@ -451,21 +487,173 @@ export default function RsvpPage() {
 
         {/* Floral Arch Frame */}
         {template && frameType === 'floral-arch' && (
-          <div className="absolute inset-x-0 top-0 h-40 pointer-events-none z-0 overflow-hidden">
-            <svg className="w-full h-full text-rose-600" viewBox="0 0 400 150" fill="none">
-              <path d="M-20,15 Q200,-25 420,15" stroke="#4d7c0f" strokeWidth="1.5" strokeDasharray="4 4" />
-              {[...Array(18)].map((_, i) => {
-                const t = i / 17;
-                const x = -20 + t * 440;
-                const y = 15 + Math.sin(t * Math.PI) * -35;
+          <div className="absolute inset-0 pointer-events-none z-0">
+            <svg className="w-full h-full" viewBox="0 0 400 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id={`floral-arch-grad-${floralColor.replace('#', '')}`} cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor={lightenColor(floralColor, 40)} />
+                  <stop offset="60%" stopColor={floralColor} />
+                  <stop offset="100%" stopColor={darkenColor(floralColor, 40)} />
+                </radialGradient>
+              </defs>
+
+              {/* Main Arch branches */}
+              <path 
+                d="M15,500 Q15,80 200,30 T385,500" 
+                stroke={floralType === 'gold-leaves' ? '#d4af37' : '#3f492a'} 
+                strokeWidth="3" 
+                fill="none" 
+                opacity="0.4"
+              />
+              <path 
+                d="M30,500 Q30,100 200,50 T370,500" 
+                stroke={floralType === 'gold-leaves' ? '#b59410' : '#2d361e'} 
+                strokeWidth="2" 
+                fill="none" 
+                opacity="0.3"
+              />
+
+              {/* Generate dense flowers and leaves along the arch */}
+              {[...Array(floralDensity)].map((_, i) => {
+                const t = i / (floralDensity - 1);
+                // Parabolic arch formula:
+                // x goes from 15 to 385
+                const x = 15 + t * 370;
+                // y is a parabola: high in the middle (y=30), low at the ends (y=480)
+                const y = 30 + 4 * (480 - 30) * Math.pow(t - 0.5, 2);
+
+                // Deterministic pseudo-random offsets for organic look
+                const seed1 = Math.sin(i * 123.45);
+                const seed2 = Math.cos(i * 678.90);
+                const offsetX = seed1 * 15;
+                const offsetY = seed2 * 15;
+                const scale = 0.7 + Math.abs(seed1) * 0.6; // Scale between 0.7 and 1.3
+                const rotation = seed2 * 180; // Random rotation
+
+                const px = x + offsetX;
+                const py = y + offsetY;
+
+                // Skip some flowers near the bottom to make it cascade naturally (thinner at the bottom)
+                const isNearBottom = t < 0.1 || t > 0.9;
+                const skipFlower = isNearBottom && (i % 3 === 0);
+
                 return (
-                  <g key={i} transform={`translate(${x}, ${y})`}>
-                    <path d="M-8,-4 C-12,-12 -4,-16 0,-8 Z" fill="#4d7c0f" opacity="0.8" />
-                    <path d="M8,-4 C12,-12 4,-16 0,-8 Z" fill="#4d7c0f" opacity="0.8" />
-                    <circle cx="0" cy="0" r="7" fill="#b91c1c" />
-                    <circle cx="-2" cy="-2" r="5" fill="#dc2626" />
-                    <circle cx="2" cy="-2" r="4" fill="#ef4444" />
-                    <circle cx="0" cy="0" r="2" fill="#f87171" />
+                  <g key={i} transform={`translate(${px}, ${py}) scale(${scale}) rotate(${rotation})`}>
+                    {/* Leaves (always render leaves behind flowers) */}
+                    {floralType !== 'gold-leaves' && (
+                      <>
+                        {/* Leaf 1 */}
+                        <path 
+                          d="M0,0 C-10,-15 -25,-10 -20,5 C-15,10 -5,5 0,0" 
+                          fill={floralType === 'eucalyptus' ? '#7d8c5c' : '#4d7c0f'} 
+                          opacity="0.85" 
+                        />
+                        {/* Leaf 2 */}
+                        <path 
+                          d="M0,0 C10,-15 25,-10 20,5 C15,10 5,5 0,0" 
+                          fill={floralType === 'eucalyptus' ? '#92a173' : '#3f6212'} 
+                          opacity="0.85" 
+                        />
+                      </>
+                    )}
+
+                    {/* Specific Flower Types */}
+                    {!skipFlower && (
+                      <>
+                        {floralType === 'roses' && (
+                          <>
+                            {/* Red Rose Petals */}
+                            <circle cx="0" cy="0" r="10" fill={`url(#floral-arch-grad-${floralColor.replace('#', '')})`} />
+                            <path d="M-6,-4 C-10,-10 -2,-12 -4,-6" fill={darkenColor(floralColor, 15)} opacity="0.9" />
+                            <path d="M6,-4 C10,-10 2,-12 4,-6" fill={darkenColor(floralColor, 15)} opacity="0.9" />
+                            <path d="M-6,4 C-10,10 -2,12 -4,6" fill={darkenColor(floralColor, 10)} opacity="0.9" />
+                            <path d="M6,4 C10,10 2,12 4,6" fill={darkenColor(floralColor, 10)} opacity="0.9" />
+                            {/* Rose Center */}
+                            <circle cx="0" cy="0" r="4" fill={darkenColor(floralColor, 30)} />
+                            <circle cx="0" cy="0" r="2" fill="#fef08a" opacity="0.8" />
+                          </>
+                        )}
+
+                        {floralType === 'cherry-blossom' && (
+                          <>
+                            {/* 5 Blossoms petals */}
+                            {[...Array(5)].map((_, j) => {
+                              const angle = (j * 72 * Math.PI) / 180;
+                              const rx = 8 * Math.cos(angle);
+                              const ry = 8 * Math.sin(angle);
+                              return (
+                                <path 
+                                  key={j}
+                                  d={`M0,0 C${rx * 1.5},${ry * 0.5} ${rx * 1.5},${ry * 1.5} 0,0`} 
+                                  fill={floralColor} 
+                                  stroke={darkenColor(floralColor, 20)}
+                                  strokeWidth="0.5"
+                                />
+                              );
+                            })}
+                            <circle cx="0" cy="0" r="3" fill="#fef08a" />
+                            <circle cx="0" cy="0" r="1" fill="#ca8a04" />
+                          </>
+                        )}
+
+                        {floralType === 'gold-leaves' && (
+                          <>
+                            {/* Gold Leaf 1 */}
+                            <path 
+                              d="M0,0 C-8,-12 -18,-8 -15,4 C-12,8 -4,4 0,0" 
+                              fill={floralColor} 
+                              stroke={darkenColor(floralColor, 20)}
+                              strokeWidth="0.5"
+                            />
+                            {/* Gold Leaf 2 */}
+                            <path 
+                              d="M0,0 C8,-12 18,-8 15,4 C12,8 4,4 0,0" 
+                              fill={lightenColor(floralColor, 20)} 
+                              stroke={darkenColor(floralColor, 10)}
+                              strokeWidth="0.5"
+                            />
+                            {/* Gold Berries */}
+                            <circle cx="-2" cy="-6" r="2" fill="#ffffff" stroke={floralColor} strokeWidth="0.5" />
+                            <circle cx="2" cy="-6" r="1.5" fill="#fef3c7" stroke={floralColor} strokeWidth="0.5" />
+                          </>
+                        )}
+
+                        {floralType === 'sunflowers' && (
+                          <>
+                            {/* Sunflower Petals */}
+                            {[...Array(12)].map((_, j) => {
+                              const rot = j * 30;
+                              return (
+                                <ellipse 
+                                  key={j}
+                                  cx="0"
+                                  cy="-8"
+                                  rx="3"
+                                  ry="7"
+                                  fill={floralColor}
+                                  transform={`rotate(${rot})`}
+                                />
+                              );
+                            })}
+                            {/* Center seed head */}
+                            <circle cx="0" cy="0" r="5" fill="#451a03" />
+                            <circle cx="0" cy="0" r="4" fill="#1c1917" stroke="#78350f" strokeWidth="0.5" />
+                          </>
+                        )}
+
+                        {floralType === 'eucalyptus' && (
+                          <>
+                            {/* Eucalyptus round leaves */}
+                            <circle cx="-5" cy="-5" r="8" fill={floralColor} opacity="0.9" />
+                            <circle cx="5" cy="5" r="7" fill={lightenColor(floralColor, 15)} opacity="0.9" />
+                            <circle cx="-2" cy="6" r="6" fill={darkenColor(floralColor, 15)} opacity="0.8" />
+                            {/* White berries */}
+                            <circle cx="4" cy="-4" r="2" fill="#ffffff" stroke="#cbd5e1" strokeWidth="0.5" />
+                            <circle cx="7" cy="-2" r="1.5" fill="#f1f5f9" stroke="#cbd5e1" strokeWidth="0.5" />
+                          </>
+                        )}
+                      </>
+                    )}
                   </g>
                 );
               })}
@@ -615,7 +803,7 @@ export default function RsvpPage() {
                           <img 
                             src={el.imageUrl} 
                             alt="Invitation" 
-                            style={{ width: el.imageWidth || '100%', height: el.imageHeight || 'auto', objectFit: 'cover' }}
+                            style={{ width: el.imageWidth || '100%', height: el.imageHeight || 'auto', objectFit: el.imageObjectFit || 'cover' }}
                             className={`border border-slate-200 shadow-sm ${
                               el.imageStyle === 'circle' ? 'rounded-full border-2 border-amber-200 aspect-square' :
                               el.imageStyle === 'arch' ? 'rounded-t-[120px] border-2 border-amber-100' :
@@ -860,6 +1048,68 @@ export default function RsvpPage() {
           )}
         </div>
       </div>
+
+      {/* Event Location & Directions Card */}
+      {guest && guest.event?.location && (
+        <div className="w-full max-w-xl bg-white/90 backdrop-blur-md rounded-[24px] border border-slate-200/60 shadow-xl p-6 mt-6 space-y-4 text-center relative overflow-hidden animate-fade-in">
+          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-amber-200 via-yellow-500 to-amber-200" />
+          <div className="flex flex-col items-center gap-2">
+            <div className="bg-amber-50 text-amber-700 p-2.5 rounded-full border border-amber-100/50">
+              <MapPin className="w-5 h-5" />
+            </div>
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-widest font-serif">Lieu de Réception</h3>
+            <p className="text-sm text-slate-700 font-semibold max-w-md mx-auto leading-relaxed">
+              {guest.event.location}
+            </p>
+          </div>
+
+          {/* Interactive Map Embed */}
+          <div className="w-full overflow-hidden rounded-2xl border border-slate-100 shadow-inner h-[250px] relative bg-slate-50">
+            <iframe
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              loading="lazy"
+              allowFullScreen
+              referrerPolicy="no-referrer-when-downgrade"
+              src={
+                guest.event.latitude && guest.event.longitude
+                  ? `https://maps.google.com/maps?q=${guest.event.latitude},${guest.event.longitude}&z=16&output=embed`
+                  : `https://maps.google.com/maps?q=${encodeURIComponent(guest.event.location)}&z=15&output=embed`
+              }
+              className="absolute inset-0"
+            ></iframe>
+          </div>
+
+          <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
+            <a 
+              href={
+                guest.event.latitude && guest.event.longitude
+                  ? `https://www.google.com/maps/search/?api=1&query=${guest.event.latitude},${guest.event.longitude}`
+                  : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(guest.event.location)}`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition shadow-md shadow-slate-200 hover:shadow-lg"
+            >
+              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+              </svg>
+              Ouvrir dans Google Maps
+            </a>
+            {guest.event.latitude && guest.event.longitude && (
+              <a 
+                href={`https://www.waze.com/ul?ll=${guest.event.latitude},${guest.event.longitude}&navigate=yes`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition shadow-md shadow-sky-100 hover:shadow-lg"
+              >
+                🚗 Naviguer avec Waze
+              </a>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

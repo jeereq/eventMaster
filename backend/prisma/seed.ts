@@ -218,6 +218,9 @@ async function main() {
       description: 'Collecte de fonds annuelle pour les orphelinats de Kinshasa.',
       date: new Date('2026-09-25T19:00:00Z'),
       location: 'Hôtel Fleuve Congo, Gombe, Kinshasa',
+      reminderFrequency: 'EVERY_5_DAYS',
+      latitude: -4.3014,
+      longitude: 15.3048,
     },
   });
 
@@ -228,6 +231,9 @@ async function main() {
       description: 'Lancement officiel de la nouvelle collection d\'art contemporain.',
       date: new Date('2026-07-30T18:30:00Z'),
       location: 'Galerie d\'Art de la Gombe, Kinshasa',
+      reminderFrequency: 'EVERY_3_DAYS',
+      latitude: -4.3050,
+      longitude: 15.3020,
     },
   });
 
@@ -239,6 +245,9 @@ async function main() {
       description: 'Rencontre mensuelle des entrepreneurs et investisseurs de la RDC.',
       date: new Date('2026-07-15T18:00:00Z'),
       location: 'Silikin Village, Limete, Kinshasa',
+      reminderFrequency: 'WEEKLY',
+      latitude: -4.3488,
+      longitude: 15.3185,
     },
   });
 
@@ -250,6 +259,9 @@ async function main() {
       description: 'Cérémonie religieuse suivie d\'un dîner dansant.',
       date: new Date('2026-12-19T14:00:00Z'),
       location: 'Espace Texas, Binza Pigeon, Kinshasa',
+      reminderFrequency: 'WEEKLY',
+      latitude: -4.3725,
+      longitude: 15.2530,
     },
   });
 
@@ -261,6 +273,8 @@ async function main() {
       description: 'Planification stratégique et revue des performances annuelles.',
       date: new Date('2026-10-10T09:00:00Z'),
       location: 'Pullman Grand Hôtel, Gombe, Kinshasa',
+      latitude: -4.3032,
+      longitude: 15.2861,
     },
   });
 
