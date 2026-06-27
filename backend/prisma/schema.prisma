@@ -1,0 +1,106 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  SUPER_ADMIN
+  COMMERCIAL
+  USER
+}
+
+enum PlanType {
+  FREE
+  STANDARD
+  PREMIUM
+  ENTERPRISE
+}
+
+model Tenant {
+  id            String     @id @default(uuid())
+  name          String
+  plan          PlanType   @default(FREE)
+  stripeCustId  String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  users         User[]
+  events        Event[]
+  templates     Template[]
+  
+  managerId     String?
+  manager       User?      @relation("TenantManager", fields: [managerId], references: [id])
+}
+
+model User {
+  id            String     @id @default(uuid())
+  email         String     @unique
+  passwordHash  String
+  name          String?
+  role          Role       @default(USER)
+  tenantId      String?
+  tenant        Tenant?    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  managedTenants Tenant[]  @relation("TenantManager")
+}
+
+model Event {
+  id          String       @id @default(uuid())
+  tenantId    String
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  date        DateTime
+  location    String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  guests      Guest[]
+  invitations Invitation[]
+}
+
+model Guest {
+  id          String       @id @default(uuid())
+  eventId     String
+  event       Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  firstName   String
+  lastName    String
+  email       String
+  category    String?
+  rsvp        String       @default("PENDING") // PENDING, ACCEPTED, DECLINED
+  preferences Json?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([eventId, email])
+}
+
+model Template {
+  id          String       @id @default(uuid())
+  tenantId    String
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  content     Json
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  invitations Invitation[]
+}
+
+model Invitation {
+  id          String       @id @default(uuid())
+  eventId     String
+  event       Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  templateId  String?
+  template    Template?    @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  subject     String
+  body        String
+  channel     String       // EMAIL, LINK, QR
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}

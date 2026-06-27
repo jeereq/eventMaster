@@ -1,0 +1,11 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const billingController_1 = require("../controllers/billingController");
+const auth_1 = require("../middleware/auth");
+const router = (0, express_1.Router)();
+router.use(auth_1.requireAuth);
+router.get('/status', billingController_1.getBillingStatus);
+router.post('/checkout', billingController_1.createCheckoutSession);
+router.post('/mock-upgrade', billingController_1.mockUpgrade);
+exports.default = router;

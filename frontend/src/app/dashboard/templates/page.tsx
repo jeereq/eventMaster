@@ -1,0 +1,1790 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { api } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
+import Link from 'next/link';
+import { 
+  Mail, PlusCircle, Trash2, Edit3, ArrowLeft, Save, 
+  Sparkles, CheckCircle2, AlertCircle, Type, Image, 
+  Columns, Settings, Eye, CheckSquare, Loader2, XCircle,
+  Spline, Triangle, Plus, Trash, Layout, Palette, Square,
+  ArrowUp, ArrowDown
+} from 'lucide-react';
+
+interface TemplateItem {
+  id: string;
+  name: string;
+  content: any;
+  createdAt: string;
+}
+
+interface RsvpField {
+  id: string;
+  type: 'text' | 'select' | 'checkbox';
+  label: string;
+  options?: string; // Comma-separated options for select
+  required: boolean;
+}
+
+interface CanvasElement {
+  id: string;
+  type: 'text' | 'image' | 'button' | 'rsvp-block' | 'curve' | 'triangle' | 'divider';
+  text: string; // Used for text content, button text, image placeholder, shape labels
+  color: string; // Main color (text color, button bg, shape fill, stroke color)
+  fontSize: string; // Font size (for text/button) or stroke width/size for shapes
+  align: 'left' | 'center' | 'right';
+  
+  // Advanced properties
+  imageUrl?: string;
+  imageWidth?: string;
+  imageHeight?: string;
+  
+  // Shape properties
+  strokeWidth?: string;
+  shapeSize?: string;
+  
+  // Customizable RSVP fields
+  rsvpFields?: RsvpField[];
+
+  // New properties for high-end styling
+  width?: 'full' | 'half' | 'third';
+  fontFamily?: string;
+  letterSpacing?: string;
+  bold?: boolean;
+  italic?: boolean;
+  dividerStyle?: 'solid' | 'dashed' | 'ornament-flower' | 'ornament-diamond' | 'ornament-star' | 'ornament-leaves' | 'ornament-lace';
+  curveStyle?: 'wave' | 'arc' | 'flourish-1' | 'flourish-2' | 'spiral' | 'infinity';
+  imageStyle?: 'rounded' | 'circle' | 'arch' | 'oval' | 'gold-frame' | 'vintage' | 'shadow-luxury';
+  buttonStyle?: 'filled' | 'outline' | 'pill' | 'gold-glow' | 'double-border' | 'minimalist';
+}
+
+export default function TemplatesPage() {
+  const { user } = useAuth();
+  const [templates, setTemplates] = useState<TemplateItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const [templateName, setTemplateName] = useState('');
+  const [canvasElements, setCanvasElements] = useState<CanvasElement[]>([]);
+  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  
+  // Global template properties
+  const [bgType, setBgType] = useState<'color' | 'image' | 'pattern'>('pattern');
+  const [bgColor, setBgColor] = useState('#faf8f5');
+  const [bgImageUrl, setBgImageUrl] = useState('');
+  const [bgPattern, setBgPattern] = useState<'none' | 'paper' | 'watercolor' | 'boho'>('paper');
+  const [frameType, setFrameType] = useState<'none' | 'arch' | 'double-border' | 'gold-border'>('double-border');
+  const [fontTheme, setFontTheme] = useState('classic');
+
+  // Property editing states for selected element
+  const [elText, setElText] = useState('');
+  const [elColor, setElColor] = useState('#1e293b');
+  const [elFontSize, setElFontSize] = useState('16px');
+  const [elAlign, setElAlign] = useState<'left' | 'center' | 'right'>('center');
+  const [elImageUrl, setElImageUrl] = useState('');
+  const [elImageWidth, setElImageWidth] = useState('100%');
+  const [elImageHeight, setElImageHeight] = useState('200px');
+  const [elStrokeWidth, setElStrokeWidth] = useState('3px');
+  const [elShapeSize, setElShapeSize] = useState('60px');
+  const [elRsvpFields, setElRsvpFields] = useState<RsvpField[]>([]);
+  const [elWidth, setElWidth] = useState<'full' | 'half' | 'third'>('full');
+  const [elFontFamily, setElFontFamily] = useState('Cormorant Garamond');
+  const [elLetterSpacing, setElLetterSpacing] = useState('normal');
+  const [elBold, setElBold] = useState(false);
+  const [elItalic, setElItalic] = useState(false);
+  const [elDividerStyle, setElDividerStyle] = useState<'solid' | 'dashed' | 'ornament-flower' | 'ornament-diamond' | 'ornament-star' | 'ornament-leaves' | 'ornament-lace'>('ornament-flower');
+  const [elCurveStyle, setElCurveStyle] = useState<'wave' | 'arc' | 'flourish-1' | 'flourish-2' | 'spiral' | 'infinity'>('wave');
+  const [elImageStyle, setElImageStyle] = useState<'rounded' | 'circle' | 'arch' | 'oval' | 'gold-frame' | 'vintage' | 'shadow-luxury'>('rounded');
+  const [elButtonStyle, setElButtonStyle] = useState<'filled' | 'outline' | 'pill' | 'gold-glow' | 'double-border' | 'minimalist'>('filled');
+
+  // Error/Success state
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const loadTemplates = async () => {
+    try {
+      if (user?.role === 'SUPER_ADMIN') {
+        setLoading(false);
+        return;
+      }
+      const data = await api.get('/templates');
+      setTemplates(data);
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors du chargement des modèles');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      loadTemplates();
+    }
+  }, [user]);
+
+  const handleCreateTemplateClick = () => {
+    setEditingTemplateId(null);
+    setTemplateName('Nouveau Modèle d\'Invitation');
+    
+    // Pre-populate with a gorgeous, luxury wedding invitation template (inspired by Hassan Raza & Ayesha Khan)
+    setCanvasElements([
+      { id: '1', type: 'text', text: 'CÉLÉBRATION UNIQUE', color: '#c5a059', fontSize: '12px', align: 'center', width: 'full', fontFamily: 'Montserrat', letterSpacing: '0.2em', bold: true },
+      { id: '2', type: 'text', text: 'Hassan & Ayesha', color: '#1e293b', fontSize: '32px', align: 'center', width: 'full', fontFamily: 'Great Vibes' },
+      { id: '3', type: 'divider', text: '', color: '#c5a059', fontSize: '14px', align: 'center', width: 'full', dividerStyle: 'ornament-flower' },
+      { id: '4', type: 'text', text: 'Rejoignez-nous pour célébrer notre union le dimanche 15 juin à 19h00.', color: '#475569', fontSize: '16px', align: 'center', width: 'full', fontFamily: 'Cormorant Garamond', italic: true },
+      { id: '5', type: 'text', text: 'DIMANCHE', color: '#1e293b', fontSize: '12px', align: 'center', width: 'third', fontFamily: 'Montserrat', letterSpacing: '0.1em', bold: true },
+      { id: '6', type: 'text', text: '15 JUIN', color: '#c5a059', fontSize: '16px', align: 'center', width: 'third', fontFamily: 'Cormorant Garamond', bold: true },
+      { id: '7', type: 'text', text: '19H00', color: '#1e293b', fontSize: '12px', align: 'center', width: 'third', fontFamily: 'Montserrat', letterSpacing: '0.1em', bold: true },
+      { id: '8', type: 'divider', text: '', color: '#cbd5e1', fontSize: '12px', align: 'center', width: 'full', dividerStyle: 'solid' },
+      { 
+        id: '9', 
+        type: 'rsvp-block', 
+        text: 'Confirmer votre présence', 
+        color: '#c5a059', 
+        fontSize: '16px', 
+        align: 'center',
+        width: 'full',
+        rsvpFields: [
+          { id: 'f1', type: 'select', label: 'Choix du menu', options: 'Poulet, Poisson, Végétarien', required: true },
+          { id: 'f2', type: 'checkbox', label: 'Accompagné d\'un "Plus One"', required: false }
+        ]
+      },
+    ]);
+    
+    // Set global styles for paper texture and double border
+    setBgType('pattern');
+    setBgColor('#faf8f5');
+    setBgImageUrl('');
+    setBgPattern('paper');
+    setFrameType('double-border');
+    setFontTheme('classic');
+    
+    setSelectedElementId(null);
+    setEditorOpen(true);
+  };
+
+  const handleEditTemplateClick = (t: TemplateItem) => {
+    setEditingTemplateId(t.id);
+    setTemplateName(t.name);
+    setCanvasElements(t.content?.elements || []);
+    
+    // Load global styles
+    const global = t.content?.global || {};
+    setBgType(global.bgType || 'pattern');
+    setBgColor(global.bgColor || '#faf8f5');
+    setBgImageUrl(global.bgImageUrl || '');
+    setBgPattern(global.bgPattern || 'paper');
+    setFrameType(global.frameType || 'double-border');
+    setFontTheme(global.fontTheme || 'classic');
+    
+    setSelectedElementId(null);
+    setEditorOpen(true);
+  };
+
+  const handleAddElement = (type: 'text' | 'image' | 'button' | 'rsvp-block' | 'curve' | 'triangle' | 'divider') => {
+    const newElement: CanvasElement = {
+      id: Date.now().toString(),
+      type,
+      text: type === 'text' ? 'Double-cliquez pour modifier ce texte' :
+            type === 'button' ? 'Bouton Action' :
+            type === 'image' ? 'Image d\'illustration' :
+            type === 'curve' ? 'Ligne courbe décorative' :
+            type === 'triangle' ? 'Triangle décoratif' : 
+            type === 'divider' ? '' : 'Confirmer ma présence',
+      color: type === 'button' ? '#4f46e5' : 
+             type === 'curve' || type === 'triangle' || type === 'divider' ? '#c5a059' : '#1e293b',
+      fontSize: type === 'text' ? '16px' : 
+                type === 'curve' ? '3px' : '15px',
+      align: 'center',
+      width: 'full',
+      fontFamily: type === 'text' || type === 'button' ? 'Cormorant Garamond' : undefined,
+      letterSpacing: 'normal',
+      bold: false,
+      italic: false,
+      imageUrl: type === 'image' ? '' : undefined,
+      imageWidth: type === 'image' ? '100%' : undefined,
+      imageHeight: type === 'image' ? '200px' : undefined,
+      strokeWidth: type === 'curve' ? '3px' : undefined,
+      shapeSize: type === 'triangle' ? '60px' : undefined,
+      dividerStyle: type === 'divider' ? 'ornament-flower' : undefined,
+      curveStyle: type === 'curve' ? 'wave' : undefined,
+      imageStyle: type === 'image' ? 'rounded' : undefined,
+      buttonStyle: type === 'button' ? 'filled' : undefined,
+      rsvpFields: type === 'rsvp-block' ? [
+        { id: 'f1', type: 'select', label: 'Choix du menu', options: 'Poulet, Poisson, Végétarien', required: true }
+      ] : undefined
+    };
+    setCanvasElements([...canvasElements, newElement]);
+    setSelectedElementId(newElement.id);
+    
+    // Set local states
+    setElText(newElement.text);
+    setElColor(newElement.color);
+    setElFontSize(newElement.fontSize);
+    setElAlign(newElement.align);
+    setElWidth('full');
+    setElFontFamily(newElement.fontFamily || 'Cormorant Garamond');
+    setElLetterSpacing('normal');
+    setElBold(false);
+    setElItalic(false);
+    setElImageUrl('');
+    setElImageWidth('100%');
+    setElImageHeight('200px');
+    setElStrokeWidth('3px');
+    setElShapeSize('60px');
+    setElDividerStyle('ornament-flower');
+    setElCurveStyle('wave');
+    setElImageStyle('rounded');
+    setElButtonStyle('filled');
+    setElRsvpFields(newElement.rsvpFields || []);
+  };
+
+  const handleElementSelect = (id: string) => {
+    setSelectedElementId(id);
+    const el = canvasElements.find(e => e.id === id);
+    if (el) {
+      setElText(el.text);
+      setElColor(el.color);
+      setElFontSize(el.fontSize);
+      setElAlign(el.align);
+      setElWidth(el.width || 'full');
+      setElFontFamily(el.fontFamily || 'Cormorant Garamond');
+      setElLetterSpacing(el.letterSpacing || 'normal');
+      setElBold(el.bold || false);
+      setElItalic(el.italic || false);
+      setElImageUrl(el.imageUrl || '');
+      setElImageWidth(el.imageWidth || '100%');
+      setElImageHeight(el.imageHeight || '200px');
+      setElStrokeWidth(el.strokeWidth || '3px');
+      setElShapeSize(el.shapeSize || '60px');
+      setElDividerStyle(el.dividerStyle || 'ornament-flower');
+      setElCurveStyle(el.curveStyle || 'wave');
+      setElImageStyle(el.imageStyle || 'rounded');
+      setElButtonStyle(el.buttonStyle || 'filled');
+      setElRsvpFields(el.rsvpFields || []);
+    }
+  };
+
+  const handlePropertyChange = (field: keyof CanvasElement, value: any) => {
+    if (!selectedElementId) return;
+    
+    if (field === 'text') setElText(value);
+    if (field === 'color') setElColor(value);
+    if (field === 'fontSize') setElFontSize(value);
+    if (field === 'align') setElAlign(value as any);
+    if (field === 'width') setElWidth(value);
+    if (field === 'fontFamily') setElFontFamily(value);
+    if (field === 'letterSpacing') setElLetterSpacing(value);
+    if (field === 'bold') setElBold(value);
+    if (field === 'italic') setElItalic(value);
+    if (field === 'imageUrl') setElImageUrl(value);
+    if (field === 'imageWidth') setElImageWidth(value);
+    if (field === 'imageHeight') setElImageHeight(value);
+    if (field === 'strokeWidth') setElStrokeWidth(value);
+    if (field === 'shapeSize') setElShapeSize(value);
+    if (field === 'dividerStyle') setElDividerStyle(value);
+    if (field === 'curveStyle') setElCurveStyle(value);
+    if (field === 'imageStyle') setElImageStyle(value);
+    if (field === 'buttonStyle') setElButtonStyle(value);
+    if (field === 'rsvpFields') setElRsvpFields(value);
+
+    setCanvasElements(canvasElements.map(el => {
+      if (el.id === selectedElementId) {
+        return { ...el, [field]: value };
+      }
+      return el;
+    }));
+  };
+
+  // Move element up in the list
+  const handleMoveElementUp = (index: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (index === 0) return; // Already at the top
+    
+    const updatedElements = [...canvasElements];
+    const temp = updatedElements[index];
+    updatedElements[index] = updatedElements[index - 1];
+    updatedElements[index - 1] = temp;
+    
+    setCanvasElements(updatedElements);
+  };
+
+  // Move element down in the list
+  const handleMoveElementDown = (index: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (index === canvasElements.length - 1) return; // Already at the bottom
+    
+    const updatedElements = [...canvasElements];
+    const temp = updatedElements[index];
+    updatedElements[index] = updatedElements[index + 1];
+    updatedElements[index + 1] = temp;
+    
+    setCanvasElements(updatedElements);
+  };
+
+  // Handle local image file upload (converts to Base64)
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      handlePropertyChange('imageUrl', base64String);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Global background image upload
+  const handleGlobalImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setBgImageUrl(base64String);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Customizable RSVP fields management
+  const handleAddRsvpField = () => {
+    const newField: RsvpField = {
+      id: Date.now().toString(),
+      type: 'text',
+      label: 'Nouveau champ',
+      required: false
+    };
+    const updatedFields = [...elRsvpFields, newField];
+    handlePropertyChange('rsvpFields', updatedFields);
+  };
+
+  const handleUpdateRsvpField = (fieldId: string, key: keyof RsvpField, value: any) => {
+    const updatedFields = elRsvpFields.map(f => {
+      if (f.id === fieldId) {
+        return { ...f, [key]: value };
+      }
+      return f;
+    });
+    handlePropertyChange('rsvpFields', updatedFields);
+  };
+
+  const handleDeleteRsvpField = (fieldId: string) => {
+    const updatedFields = elRsvpFields.filter(f => f.id !== fieldId);
+    handlePropertyChange('rsvpFields', updatedFields);
+  };
+
+  const handleDeleteElement = (id: string) => {
+    setCanvasElements(canvasElements.filter(el => el.id !== id));
+    if (selectedElementId === id) {
+      setSelectedElementId(null);
+    }
+  };
+
+  const handleSaveTemplate = async () => {
+    setError('');
+    setSuccess('');
+    
+    if (!templateName.trim()) {
+      setError('Le nom du modèle est obligatoire.');
+      return;
+    }
+
+    try {
+      const payload = {
+        name: templateName,
+        content: { 
+          global: {
+            bgType,
+            bgColor,
+            bgImageUrl,
+            bgPattern,
+            frameType,
+            fontTheme
+          },
+          elements: canvasElements 
+        },
+      };
+
+      if (editingTemplateId) {
+        await api.put(`/templates/${editingTemplateId}`, payload);
+        setSuccess('Modèle d\'invitation mis à jour avec succès !');
+      } else {
+        await api.post('/templates', payload);
+        setSuccess('Modèle d\'invitation enregistré avec succès !');
+      }
+
+      setEditorOpen(false);
+      loadTemplates();
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la sauvegarde du modèle.');
+    }
+  };
+
+  const handleDeleteTemplate = async (id: string) => {
+    if (!confirm('Supprimer ce modèle d\'invitation ?')) return;
+    try {
+      await api.delete(`/templates/${id}`);
+      setTemplates(templates.filter(t => t.id !== id));
+      setSuccess('Modèle supprimé.');
+    } catch (err: any) {
+      setError('Erreur lors de la suppression.');
+    }
+  };
+
+  // Helper to get background style
+  const getBackgroundStyle = (type: string, color: string, url: string, pattern: string) => {
+    if (type === 'color') return { backgroundColor: color };
+    if (type === 'image' && url) return { backgroundImage: `url(${url})`, backgroundSize: 'cover', backgroundPosition: 'center' };
+    if (type === 'pattern') {
+      if (pattern === 'paper') {
+        return {
+          backgroundColor: color || '#faf8f5',
+          backgroundImage: 'radial-gradient(rgba(0,0,0,0.03) 1px, transparent 0), radial-gradient(rgba(0,0,0,0.02) 1px, transparent 0)',
+          backgroundSize: '8px 8px',
+          backgroundPosition: '0 0, 4px 4px',
+        };
+      }
+      if (pattern === 'watercolor') {
+        return {
+          background: `radial-gradient(circle at 10% 10%, rgba(243, 224, 217, 0.6) 0%, transparent 60%), radial-gradient(circle at 90% 90%, rgba(225, 212, 198, 0.6) 0%, transparent 60%), radial-gradient(circle at 50% 50%, ${color || '#fdfbf7'} 0%, 100%)`,
+        };
+      }
+      if (pattern === 'boho') {
+        return { backgroundColor: color || '#faf6f0' };
+      }
+      if (pattern === 'linen') {
+        return {
+          backgroundColor: color || '#f4f1ea',
+          backgroundImage: `
+            linear-gradient(90deg, rgba(180,170,150,0.08) 1px, transparent 1px),
+            linear-gradient(rgba(180,170,150,0.08) 1px, transparent 1px)
+          `,
+          backgroundSize: '4px 4px',
+        };
+      }
+      if (pattern === 'marble') {
+        return {
+          backgroundColor: color || '#f5f5f5',
+          backgroundImage: `
+            radial-gradient(circle at 30% 20%, rgba(197,160,89,0.04) 0%, transparent 40%),
+            radial-gradient(circle at 80% 70%, rgba(197,160,89,0.04) 0%, transparent 40%),
+            linear-gradient(135deg, rgba(0,0,0,0.01) 0%, rgba(0,0,0,0.01) 10%, transparent 10%, transparent 50%, rgba(0,0,0,0.01) 50%, rgba(0,0,0,0.01) 60%, transparent 60%, transparent 100%)
+          `,
+          backgroundSize: '100% 100%, 100% 100%, 40px 40px',
+        };
+      }
+      if (pattern === 'gold-dust') {
+        return {
+          backgroundColor: color || '#1e1b18',
+          backgroundImage: `
+            radial-gradient(circle at 20% 30%, rgba(197,160,89,0.2) 1px, transparent 1px),
+            radial-gradient(circle at 75% 40%, rgba(197,160,89,0.2) 2px, transparent 2px),
+            radial-gradient(circle at 50% 80%, rgba(197,160,89,0.15) 1.5px, transparent 1.5px),
+            radial-gradient(circle at 10% 75%, rgba(197,160,89,0.12) 2.5px, transparent 2.5px),
+            radial-gradient(circle at 90% 15%, rgba(197,160,89,0.2) 1px, transparent 1px)
+          `,
+          backgroundSize: '120px 120px, 150px 150px, 100px 100px, 180px 180px, 140px 140px',
+        };
+      }
+      if (pattern === 'parchment') {
+        return {
+          background: `radial-gradient(circle, ${color || '#f1e6d2'} 0%, #e4d3b2 100%)`,
+          boxShadow: 'inset 0 0 40px rgba(139,90,43,0.15)',
+        };
+      }
+      if (pattern === 'velvet') {
+        return {
+          background: `radial-gradient(circle at 50% 30%, ${color || '#4a0e17'} 0%, #1a0307 100%)`,
+        };
+      }
+    }
+    return { backgroundColor: '#ffffff' };
+  };
+
+  const fontFamilies = [
+    { id: 'Cormorant Garamond', label: 'Cormorant Garamond (Classique Serif)' },
+    { id: 'Playfair Display', label: 'Playfair Display (Élégant Serif)' },
+    { id: 'Great Vibes', label: 'Great Vibes (Cursive Calligraphie)' },
+    { id: 'Alex Brush', label: 'Alex Brush (Signature Cursive)' },
+    { id: 'Montserrat', label: 'Montserrat (Moderne Sans)' },
+    { id: 'Cinzel', label: 'Cinzel (Impérial Romain)' },
+    { id: 'Dancing Script', label: 'Dancing Script (Manuscrit)' },
+    { id: 'Pinyon Script', label: 'Pinyon Script (Cursive de Luxe)' },
+    { id: 'Monsieur La Doulaise', label: 'Monsieur La Doulaise (Calligraphie Royale)' },
+    { id: 'Italiana', label: 'Italiana (Saphir Minimaliste)' },
+    { id: 'Bodoni Moda', label: 'Bodoni Moda (Haute Couture Serif)' },
+    { id: 'Allura', label: 'Allura (Romantique Cursive)' },
+    { id: 'Parisienne', label: 'Parisienne (Classique Paris)' },
+    { id: 'Prata', label: 'Prata (Serif Moderne)' },
+    { id: 'Sacramento', label: 'Sacramento (Rétro Chic)' },
+    { id: 'Marcellus', label: 'Marcellus (Sleek Romain)' },
+  ];
+
+  const letterSpacings = [
+    { id: 'normal', label: 'Normal' },
+    { id: '0.05em', label: 'Serré (0.05em)' },
+    { id: '0.1em', label: 'Espacé (0.1em)' },
+    { id: '0.15em', label: 'Très espacé (0.15em)' },
+    { id: '0.2em', label: 'Luxury (0.2em)' },
+  ];
+
+  if (user?.role === 'SUPER_ADMIN') {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white border border-slate-200 rounded-3xl p-8 text-center max-w-2xl mx-auto">
+        <div className="bg-indigo-50 text-indigo-600 p-4 rounded-full mb-6">
+          <Mail className="w-12 h-12" />
+        </div>
+        <h1 className="text-2xl font-black text-slate-900">Gestion des Modèles (Super Admin)</h1>
+        <p className="text-slate-500 mt-3 leading-relaxed">
+          En tant que Super Administrateur de la plateforme SaaS, vous n'êtes pas rattaché à une organisation spécifique et ne gérez pas de modèles d'invitations en nom propre.
+        </p>
+        <p className="text-slate-500 mt-2 leading-relaxed">
+          Veuillez utiliser le <strong className="text-indigo-600">Tableau de bord Admin</strong> pour superviser l'ensemble des organisations, leurs membres et leurs statistiques d'utilisation.
+        </p>
+        <Link 
+          href="/dashboard" 
+          className="mt-8 inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-lg shadow-indigo-100"
+        >
+          Retour au Tableau de Bord Admin
+        </Link>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-10 bg-slate-200 rounded-lg w-1/3 animate-pulse" />
+        <div className="h-64 bg-slate-200 rounded-2xl animate-pulse" />
+      </div>
+    );
+  }
+
+  if (editorOpen) {
+    return (
+      <div className="space-y-6">
+        {/* Load Google Fonts stylesheet */}
+        <link 
+          href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Dancing+Script:wght@500;700&family=Great+Vibes&family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Pinyon+Script&family=Monsieur+La+Doulaise&family=Italiana&family=Bodoni+Moda:ital,wght@0,400;0,700;1,400&family=Allura&family=Parisienne&family=Prata&family=Sacramento&family=Marcellus&display=swap" 
+          rel="stylesheet" 
+        />
+
+        {/* Editor Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-4">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setEditorOpen(false)}
+              className="p-2 hover:bg-slate-100 rounded-xl transition text-slate-600"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <input 
+                type="text" 
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                className="text-xl font-extrabold text-slate-900 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none px-1 transition"
+                placeholder="Nom du modèle"
+              />
+              <p className="text-xs text-slate-400 mt-0.5 font-semibold uppercase tracking-wider">Éditeur Visuel d'Invitation</p>
+            </div>
+          </div>
+          <button 
+            onClick={handleSaveTemplate}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition shadow-md shadow-indigo-100"
+          >
+            <Save className="w-4.5 h-4.5" />
+            Sauvegarder le modèle
+          </button>
+        </div>
+
+        {error && (
+          <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-center gap-3 text-sm">
+            <AlertCircle className="w-5 h-5 text-rose-500 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Editor Workspace */}
+        <div className="grid lg:grid-cols-4 gap-8 items-start">
+          {/* Left Toolbox */}
+          <div className="bg-white border border-slate-200 rounded-3xl p-5 space-y-6 shadow-sm">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-2">Composants</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <button 
+                onClick={() => handleAddElement('text')}
+                className="flex flex-col items-center gap-2 p-3.5 border border-slate-150 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50/20 text-slate-700 hover:text-indigo-700 font-semibold text-xs transition"
+              >
+                <Type className="w-5 h-5" />
+                <span>Texte</span>
+              </button>
+              <button 
+                onClick={() => handleAddElement('button')}
+                className="flex flex-col items-center gap-2 p-3.5 border border-slate-150 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50/20 text-slate-700 hover:text-indigo-700 font-semibold text-xs transition"
+              >
+                <Columns className="w-5 h-5" />
+                <span>Bouton</span>
+              </button>
+              <button 
+                onClick={() => handleAddElement('image')}
+                className="flex flex-col items-center gap-2 p-3.5 border border-slate-150 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50/20 text-slate-700 hover:text-indigo-700 font-semibold text-xs transition"
+              >
+                <Image className="w-5 h-5" />
+                <span>Image</span>
+              </button>
+              <button 
+                onClick={() => handleAddElement('divider')}
+                className="flex flex-col items-center gap-2 p-3.5 border border-slate-150 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50/20 text-slate-700 hover:text-indigo-700 font-semibold text-xs transition"
+              >
+                <Palette className="w-5 h-5" />
+                <span>Séparateur</span>
+              </button>
+              <button 
+                onClick={() => handleAddElement('curve')}
+                className="flex flex-col items-center gap-2 p-3.5 border border-slate-150 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50/20 text-slate-700 hover:text-indigo-700 font-semibold text-xs transition"
+              >
+                <Spline className="w-5 h-5" />
+                <span>Courbe</span>
+              </button>
+              <button 
+                onClick={() => handleAddElement('triangle')}
+                className="flex flex-col items-center gap-2 p-3.5 border border-slate-150 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50/20 text-slate-700 hover:text-indigo-700 font-semibold text-xs transition"
+              >
+                <Triangle className="w-5 h-5" />
+                <span>Triangle</span>
+              </button>
+              <button 
+                onClick={() => handleAddElement('rsvp-block')}
+                className="flex flex-col items-center gap-2 p-3.5 border border-slate-150 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50/20 text-slate-700 hover:text-indigo-700 font-semibold text-xs transition col-span-2"
+              >
+                <CheckSquare className="w-5 h-5" />
+                <span>Formulaire RSVP</span>
+              </button>
+            </div>
+
+            <div className="border-t border-slate-100 pt-4">
+              <button 
+                onClick={() => setSelectedElementId(null)}
+                className="w-full flex items-center justify-center gap-2 p-2.5 border border-slate-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50/20 text-slate-600 hover:text-indigo-700 font-bold text-xs transition"
+              >
+                <Settings className="w-4 h-4" />
+                Paramètres Globaux
+              </button>
+            </div>
+          </div>
+
+          {/* Center Canvas Preview */}
+          <div className="lg:col-span-2 space-y-4">
+            <div className="text-center">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
+                <Eye className="w-3.5 h-3.5" /> Zone de prévisualisation de l'invitation
+              </span>
+            </div>
+            
+            {/* Main Canvas Card */}
+            <div 
+              style={getBackgroundStyle(bgType, bgColor, bgImageUrl, bgPattern)}
+              className={`border border-slate-200 min-h-[550px] p-8 shadow-md relative overflow-hidden transition-all duration-300 ${
+                frameType === 'arch' ? 'rounded-t-[240px] border-t-2 border-x-2 border-amber-200/60' : 'rounded-3xl'
+              }`}
+            >
+              {/* Double Border Frame */}
+              {frameType === 'double-border' && (
+                <>
+                  <div className="absolute inset-3 border border-amber-500/20 rounded-2xl pointer-events-none" />
+                  <div className="absolute inset-4 border border-amber-500/10 rounded-2xl pointer-events-none" />
+                </>
+              )}
+
+              {/* Gold Border Frame */}
+              {frameType === 'gold-border' && (
+                <div className="absolute inset-3 border border-amber-500/30 rounded-2xl pointer-events-none shadow-[0_0_15px_rgba(197,160,89,0.05)]" />
+              )}
+
+              {/* Floral Wreath Frame */}
+              {frameType === 'floral-wreath' && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-25">
+                  <svg className="w-80 h-80 text-amber-600" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="0.5">
+                    <circle cx="50" cy="50" r="35" strokeDasharray="2 2" />
+                    {[...Array(16)].map((_, i) => {
+                      const angle = (i * 22.5 * Math.PI) / 180;
+                      const x = 50 + 35 * Math.cos(angle);
+                      const y = 50 + 35 * Math.sin(angle);
+                      return (
+                        <g key={i} transform={`translate(${x}, ${y}) rotate(${i * 22.5 + 90})`}>
+                          <path d="M0,0 C-3,-6 0,-10 3,-6 C6,-3 3,0 0,0" fill="currentColor" fillOpacity="0.3" />
+                          <path d="M0,0 C3,-6 0,-10 -3,-6 C-6,-3 -3,0 0,0" fill="currentColor" fillOpacity="0.3" />
+                        </g>
+                      );
+                    })}
+                  </svg>
+                </div>
+              )}
+
+              {/* Floral Arch Frame */}
+              {frameType === 'floral-arch' && (
+                <div className="absolute inset-x-0 top-0 h-40 pointer-events-none z-0 overflow-hidden">
+                  <svg className="w-full h-full text-rose-600" viewBox="0 0 400 150" fill="none">
+                    <path d="M-20,15 Q200,-25 420,15" stroke="#4d7c0f" strokeWidth="1.5" strokeDasharray="4 4" />
+                    {[...Array(18)].map((_, i) => {
+                      const t = i / 17;
+                      const x = -20 + t * 440;
+                      const y = 15 + Math.sin(t * Math.PI) * -35;
+                      return (
+                        <g key={i} transform={`translate(${x}, ${y})`}>
+                          <path d="M-8,-4 C-12,-12 -4,-16 0,-8 Z" fill="#4d7c0f" opacity="0.8" />
+                          <path d="M8,-4 C12,-12 4,-16 0,-8 Z" fill="#4d7c0f" opacity="0.8" />
+                          <circle cx="0" cy="0" r="7" fill="#b91c1c" />
+                          <circle cx="-2" cy="-2" r="5" fill="#dc2626" />
+                          <circle cx="2" cy="-2" r="4" fill="#ef4444" />
+                          <circle cx="0" cy="0" r="2" fill="#f87171" />
+                        </g>
+                      );
+                    })}
+                  </svg>
+                </div>
+              )}
+
+              {/* Boho Dried Frame */}
+              {frameType === 'boho-dried' && (
+                <>
+                  <div className="absolute top-0 left-0 w-32 h-32 pointer-events-none opacity-25 text-amber-800">
+                    <svg className="w-full h-full" viewBox="0 0 100 100" fill="currentColor">
+                      <path d="M0,0 C20,10 40,30 50,50 C40,45 25,35 0,30 Z" />
+                      <path d="M0,0 C10,20 30,40 50,50 C45,40 35,25 30,0 Z" />
+                      <path d="M0,0 C15,15 35,35 50,50 Z" stroke="currentColor" strokeWidth="1" />
+                    </svg>
+                  </div>
+                  <div className="absolute bottom-0 right-0 w-32 h-32 pointer-events-none opacity-25 text-amber-800 transform rotate-180">
+                    <svg className="w-full h-full" viewBox="0 0 100 100" fill="currentColor">
+                      <path d="M0,0 C20,10 40,30 50,50 C40,45 25,35 0,30 Z" />
+                      <path d="M0,0 C10,20 30,40 50,50 C45,40 35,25 30,0 Z" />
+                      <path d="M0,0 C15,15 35,35 50,50 Z" stroke="currentColor" strokeWidth="1" />
+                    </svg>
+                  </div>
+                </>
+              )}
+
+              {/* Gold Leaves Circle Frame */}
+              {frameType === 'gold-leaves-circle' && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <svg className="w-80 h-80 text-amber-500" viewBox="0 0 100 100" fill="none">
+                    <circle cx="50" cy="50" r="38" stroke="currentColor" strokeWidth="0.5" />
+                    {[...Array(20)].map((_, i) => {
+                      const angle = (i * 18 * Math.PI) / 180;
+                      const x = 50 + 38 * Math.cos(angle);
+                      const y = 50 + 38 * Math.sin(angle);
+                      return (
+                        <g key={i} transform={`translate(${x}, ${y}) rotate(${i * 18 + 45})`}>
+                          <path d="M0,0 C2,-5 6,-7 8,-2 C6,3 2,3 0,0" fill="currentColor" fillOpacity="0.6" />
+                          <circle cx="-2" cy="-2" r="1" fill="#fef3c7" stroke="currentColor" strokeWidth="0.1" />
+                        </g>
+                      );
+                    })}
+                  </svg>
+                </div>
+              )}
+
+              {/* Minimal Leaves Frame */}
+              {frameType === 'minimal-leaves' && (
+                <>
+                  <div className="absolute top-4 right-4 w-24 h-24 pointer-events-none opacity-30 text-emerald-800">
+                    <svg className="w-full h-full" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1">
+                      <path d="M10,90 Q50,50 90,10" />
+                      <path d="M50,50 Q60,30 75,25 Q65,45 50,50" fill="currentColor" fillOpacity="0.2" />
+                      <path d="M30,70 Q40,50 55,45 Q45,65 30,70" fill="currentColor" fillOpacity="0.2" />
+                      <path d="M70,30 Q80,10 95,5 Q85,25 70,30" fill="currentColor" fillOpacity="0.2" />
+                    </svg>
+                  </div>
+                  <div className="absolute bottom-4 left-4 w-24 h-24 pointer-events-none opacity-30 text-emerald-800 transform rotate-180">
+                    <svg className="w-full h-full" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1">
+                      <path d="M10,90 Q50,50 90,10" />
+                      <path d="M50,50 Q60,30 75,25 Q65,45 50,50" fill="currentColor" fillOpacity="0.2" />
+                      <path d="M30,70 Q40,50 55,45 Q45,65 30,70" fill="currentColor" fillOpacity="0.2" />
+                      <path d="M70,30 Q80,10 95,5 Q85,25 70,30" fill="currentColor" fillOpacity="0.2" />
+                    </svg>
+                  </div>
+                </>
+              )}
+
+              {/* Boho Botanical Corners */}
+              {bgPattern === 'boho' && (
+                <>
+                  {/* Top-Left Branch */}
+                  <svg className="absolute top-2 left-2 w-20 h-24 text-amber-800/15 pointer-events-none" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10,10 C30,15 60,35 70,70" />
+                    <path d="M25,14 C22,22 18,28 12,30 C18,26 24,22 28,15" fill="currentColor" fillOpacity="0.1" />
+                    <path d="M40,22 C38,32 32,40 24,44 C32,38 38,30 42,24" fill="currentColor" fillOpacity="0.1" />
+                    <path d="M55,35 C52,45 45,52 36,56 C45,50 52,42 56,36" fill="currentColor" fillOpacity="0.1" />
+                    <path d="M65,52 C62,62 55,68 46,72 C55,66 62,58 66,53" fill="currentColor" fillOpacity="0.1" />
+                  </svg>
+                  {/* Bottom-Right Branch */}
+                  <svg className="absolute bottom-2 right-2 w-20 h-24 text-amber-800/15 pointer-events-none transform rotate-180" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10,10 C30,15 60,35 70,70" />
+                    <path d="M25,14 C22,22 18,28 12,30 C18,26 24,22 28,15" fill="currentColor" fillOpacity="0.1" />
+                    <path d="M40,22 C38,32 32,40 24,44 C32,38 38,30 42,24" fill="currentColor" fillOpacity="0.1" />
+                    <path d="M55,35 C52,45 45,52 36,56 C45,50 52,42 56,36" fill="currentColor" fillOpacity="0.1" />
+                    <path d="M65,52 C62,62 55,68 46,72 C55,66 62,58 66,53" fill="currentColor" fillOpacity="0.1" />
+                  </svg>
+                </>
+              )}
+
+              {/* Elements Grid Container */}
+              <div className="relative z-10 flex flex-wrap gap-y-4 -mx-2">
+                {canvasElements.length === 0 ? (
+                  <div className="w-full text-center py-24 text-slate-400">
+                    <Sparkles className="w-10 h-10 mx-auto mb-3 text-slate-300 animate-pulse" />
+                    <p className="text-sm font-medium">Votre canevas est vide.</p>
+                    <p className="text-xs mt-1">Ajoutez des composants à partir de la boîte à outils à gauche.</p>
+                  </div>
+                ) : (
+                  canvasElements.map((el, index) => {
+                    const isSelected = selectedElementId === el.id;
+                    const widthClass = el.width === 'half' ? 'w-1/2 px-2' : el.width === 'third' ? 'w-1/3 px-2' : 'w-full px-2';
+                    
+                    return (
+                      <div 
+                        key={el.id}
+                        onClick={(e) => { e.stopPropagation(); handleElementSelect(el.id); }}
+                        className={`${widthClass} group transition cursor-pointer relative`}
+                      >
+                        <div className={`p-2.5 rounded-xl border transition ${isSelected ? 'border-indigo-500 bg-indigo-50/10 shadow-sm' : 'border-dashed border-transparent hover:border-slate-300/55'}`}>
+                          {/* Element Controls (Delete & Reorder) */}
+                          <div className="absolute -top-2.5 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                            {/* Move Up */}
+                            {index > 0 && (
+                              <button 
+                                onClick={(e) => handleMoveElementUp(index, e)}
+                                className="bg-slate-700 hover:bg-slate-800 text-white p-1 rounded-full shadow transition"
+                                title="Déplacer vers le haut"
+                              >
+                                <ArrowUp className="w-3 h-3" />
+                              </button>
+                            )}
+                            {/* Move Down */}
+                            {index < canvasElements.length - 1 && (
+                              <button 
+                                onClick={(e) => handleMoveElementDown(index, e)}
+                                className="bg-slate-700 hover:bg-slate-800 text-white p-1 rounded-full shadow transition"
+                                title="Déplacer vers le bas"
+                              >
+                                <ArrowDown className="w-3 h-3" />
+                              </button>
+                            )}
+                            {/* Delete */}
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleDeleteElement(el.id); }}
+                              className="bg-rose-500 hover:bg-rose-600 text-white p-1 rounded-full shadow transition"
+                              title="Supprimer cet élément"
+                            >
+                              <XCircle className="w-3 h-3" />
+                            </button>
+                          </div>
+
+                          {el.type === 'text' && (
+                            <div 
+                              style={{ 
+                                color: el.color, 
+                                fontSize: el.fontSize, 
+                                textAlign: el.align,
+                                fontFamily: el.fontFamily || 'Cormorant Garamond',
+                                letterSpacing: el.letterSpacing || 'normal',
+                                fontWeight: el.bold ? 'bold' : 'normal',
+                                fontStyle: el.italic ? 'italic' : 'normal'
+                              }}
+                              className="leading-relaxed break-words"
+                            >
+                              {el.text}
+                            </div>
+                          )}
+
+                          {el.type === 'button' && (
+                            <div className={`flex justify-${el.align === 'left' ? 'start' : el.align === 'right' ? 'end' : 'center'}`}>
+                              <button 
+                                style={{ 
+                                  backgroundColor: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? 'transparent' : el.color, 
+                                  color: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? el.color : '#ffffff',
+                                  borderColor: el.buttonStyle === 'outline' || el.buttonStyle === 'double-border' || el.buttonStyle === 'minimalist' ? el.color : 'transparent',
+                                  fontSize: el.fontSize,
+                                  fontFamily: el.fontFamily || 'Cormorant Garamond',
+                                  letterSpacing: el.letterSpacing || 'normal',
+                                  fontWeight: el.bold ? 'bold' : 'normal',
+                                  fontStyle: el.italic ? 'italic' : 'normal'
+                                }}
+                                className={`pointer-events-none transition-all ${
+                                  el.buttonStyle === 'outline' ? 'px-6 py-2.5 rounded-xl border-2' :
+                                  el.buttonStyle === 'pill' ? 'px-6 py-2.5 rounded-full shadow-md' :
+                                  el.buttonStyle === 'gold-glow' ? 'px-6 py-2.5 rounded-xl shadow-[0_0_15px_rgba(197,160,89,0.4)]' :
+                                  el.buttonStyle === 'double-border' ? 'px-6 py-2 rounded-xl border-4 border-double' :
+                                  el.buttonStyle === 'minimalist' ? 'px-2 py-1 border-b-2 rounded-none' :
+                                  'px-6 py-2.5 rounded-xl shadow-md'
+                                }`}
+                              >
+                                {el.text}
+                              </button>
+                            </div>
+                          )}
+
+                          {el.type === 'image' && (
+                            <div className={`flex justify-${el.align === 'left' ? 'start' : el.align === 'right' ? 'end' : 'center'}`}>
+                              {el.imageUrl ? (
+                                <img 
+                                  src={el.imageUrl} 
+                                  alt="Invitation" 
+                                  style={{ width: el.imageWidth || '100%', height: el.imageHeight || 'auto', objectFit: 'cover' }}
+                                  className={`border border-slate-200 shadow-sm ${
+                                    el.imageStyle === 'circle' ? 'rounded-full border-2 border-amber-200 aspect-square' :
+                                    el.imageStyle === 'arch' ? 'rounded-t-[120px] border-2 border-amber-100' :
+                                    el.imageStyle === 'oval' ? 'rounded-[50%] border-2 border-amber-100 aspect-[3/4]' :
+                                    el.imageStyle === 'gold-frame' ? 'rounded-2xl border-4 border-amber-400/80 p-1 bg-white shadow-lg' :
+                                    el.imageStyle === 'vintage' ? 'rounded-none border-8 border-amber-950/10 shadow-xl sepia contrast-[1.1]' :
+                                    el.imageStyle === 'shadow-luxury' ? 'rounded-3xl border border-slate-100 shadow-[0_15px_30px_rgba(197,160,89,0.12)]' :
+                                    'rounded-2xl'
+                                  }`}
+                                />
+                              ) : (
+                                <div 
+                                  style={{ width: el.imageWidth || '100%', height: el.imageHeight || '150px' }}
+                                  className={`bg-slate-50 border border-slate-200 flex flex-col items-center justify-center text-slate-400 gap-2 p-4 ${
+                                    el.imageStyle === 'circle' ? 'rounded-full border-2 border-amber-200 aspect-square' :
+                                    el.imageStyle === 'arch' ? 'rounded-t-[120px] border-2 border-amber-100' :
+                                    el.imageStyle === 'oval' ? 'rounded-[50%] border-2 border-amber-100 aspect-[3/4]' :
+                                    el.imageStyle === 'gold-frame' ? 'rounded-2xl border-4 border-amber-400/80 p-1 bg-white shadow-lg' :
+                                    el.imageStyle === 'vintage' ? 'rounded-none border-8 border-amber-950/10 shadow-xl sepia contrast-[1.1]' :
+                                    el.imageStyle === 'shadow-luxury' ? 'rounded-3xl border border-slate-100 shadow-[0_15px_30px_rgba(197,160,89,0.12)]' :
+                                    'rounded-2xl'
+                                  }`}
+                                >
+                                  <Image className="w-8 h-8 text-slate-300" />
+                                  <span className="text-xs font-semibold">{el.text}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {el.type === 'divider' && (
+                            <div className={`flex items-center justify-center gap-3 py-2 text-${el.align}`}>
+                              {el.dividerStyle === 'solid' && (
+                                <div className="w-full border-t" style={{ borderColor: el.color }} />
+                              )}
+                              {el.dividerStyle === 'dashed' && (
+                                <div className="w-full border-t border-dashed" style={{ borderColor: el.color }} />
+                              )}
+                              {el.dividerStyle === 'ornament-flower' && (
+                                <>
+                                  <div className="flex-1 border-t" style={{ borderColor: el.color }} />
+                                  <span style={{ color: el.color }} className="text-sm select-none">❀</span>
+                                  <div className="flex-1 border-t" style={{ borderColor: el.color }} />
+                                </>
+                              )}
+                              {el.dividerStyle === 'ornament-diamond' && (
+                                <>
+                                  <div className="flex-1 border-t" style={{ borderColor: el.color }} />
+                                  <span style={{ color: el.color }} className="text-xs tracking-widest select-none">✦ ❖ ✦</span>
+                                  <div className="flex-1 border-t" style={{ borderColor: el.color }} />
+                                </>
+                              )}
+                              {el.dividerStyle === 'ornament-star' && (
+                                <>
+                                  <div className="flex-1 border-t" style={{ borderColor: el.color }} />
+                                  <span style={{ color: el.color }} className="text-sm select-none">✦</span>
+                                  <div className="flex-1 border-t" style={{ borderColor: el.color }} />
+                                </>
+                              )}
+                              {el.dividerStyle === 'ornament-leaves' && (
+                                <>
+                                  <div className="flex-1 border-t" style={{ borderColor: el.color }} />
+                                  <span style={{ color: el.color }} className="text-sm select-none">🌿 ❀ 🌿</span>
+                                  <div className="flex-1 border-t" style={{ borderColor: el.color }} />
+                                </>
+                              )}
+                              {el.dividerStyle === 'ornament-lace' && (
+                                <>
+                                  <div className="flex-1 border-t" style={{ borderColor: el.color }} />
+                                  <span style={{ color: el.color }} className="text-xs tracking-widest select-none">⚜ ⚜ ⚜</span>
+                                  <div className="flex-1 border-t" style={{ borderColor: el.color }} />
+                                </>
+                              )}
+                            </div>
+                          )}
+
+                          {el.type === 'curve' && (
+                            <div className={`flex justify-${el.align === 'left' ? 'start' : el.align === 'right' ? 'end' : 'center'} py-1`}>
+                              <svg className="w-full max-w-[300px]" height="30" viewBox="0 0 300 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path 
+                                  d={
+                                    el.curveStyle === 'arc' ? "M10,25 Q 150,2, 290,25" :
+                                    el.curveStyle === 'flourish-1' ? "M30,15 C70,5 110,25 150,15 C190,5 230,25 270,15 M30,15 C20,15 15,10 20,5 C25,0 35,10 30,15 M270,15 C280,15 285,10 280,5 C275,0 265,10 270,15" :
+                                    el.curveStyle === 'flourish-2' ? "M10,15 L110,15 C120,15 125,5 135,5 C145,5 145,25 150,25 C155,25 155,5 165,5 C175,5 180,15 190,15 L290,15" :
+                                    el.curveStyle === 'spiral' ? "M150,15 C120,15 100,25 80,25 C60,25 50,15 60,10 C70,5 80,20 70,22 C65,23 60,15 65,13 M150,15 C180,15 200,25 220,25 C240,25 250,15 240,10 C230,5 220,20 230,22 C235,23 240,15 235,13" :
+                                    el.curveStyle === 'infinity' ? "M110,15 C110,25 130,25 150,15 C170,5 190,5 190,15 C190,25 170,25 150,15 C130,5 110,5 110,15 Z" :
+                                    "M0 15 Q 75 0, 150 15 T 300 15"
+                                  } 
+                                  stroke={el.color || '#cbd5e1'} 
+                                  strokeWidth={el.strokeWidth || '3px'} 
+                                  fill="none" 
+                                />
+                              </svg>
+                            </div>
+                          )}
+
+                          {el.type === 'triangle' && (
+                            <div className={`flex justify-${el.align === 'left' ? 'start' : el.align === 'right' ? 'end' : 'center'} py-1`}>
+                              <svg 
+                                width={el.shapeSize || '60px'} 
+                                height={el.shapeSize || '60px'} 
+                                viewBox="0 0 100 100" 
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <polygon points="50,15 90,85 10,85" fill={el.color || '#cbd5e1'} />
+                              </svg>
+                            </div>
+                          )}
+
+                          {el.type === 'rsvp-block' && (
+                            <div className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl p-5 space-y-4 pointer-events-none shadow-sm">
+                              <div className="font-bold text-slate-800 text-center text-sm">{el.text}</div>
+                              
+                              {/* Render customizable fields preview */}
+                              {el.rsvpFields && el.rsvpFields.length > 0 && (
+                                <div className="space-y-3 border-t border-b border-slate-200/60 py-3 text-left">
+                                  {el.rsvpFields.map((field) => (
+                                    <div key={field.id} className="space-y-1">
+                                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                        {field.label} {field.required && <span className="text-rose-500">*</span>}
+                                      </label>
+                                      {field.type === 'text' && (
+                                        <div className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-400">
+                                          Zone de texte
+                                        </div>
+                                      )}
+                                      {field.type === 'select' && (
+                                        <div className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-400 flex justify-between items-center">
+                                          <span>{field.options ? field.options.split(',')[0].trim() : 'Option 1'}</span>
+                                          <span className="text-[10px] text-slate-300">▼</span>
+                                        </div>
+                                      )}
+                                      {field.type === 'checkbox' && (
+                                        <div className="flex items-center gap-2">
+                                          <div className="w-4 h-4 border border-slate-200 bg-white rounded" />
+                                          <span className="text-xs text-slate-500 font-medium">{field.label}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              <div className="flex gap-2 justify-center">
+                                <div className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600">Je serai présent</div>
+                                <div className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600">Je serai absent</div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Properties Panel */}
+          <div className="bg-white border border-slate-200 rounded-3xl p-5 space-y-6 shadow-sm">
+            {selectedElementId ? (
+              // Element Properties Panel
+              <div className="space-y-5">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Propriétés de l'élément</h3>
+                  <button 
+                    onClick={() => setSelectedElementId(null)}
+                    className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-2 py-1 rounded-lg transition flex items-center gap-1"
+                  >
+                    <Settings className="w-3 h-3" /> Global
+                  </button>
+                </div>
+
+                {/* Text input */}
+                {['text', 'button', 'image', 'rsvp-block'].includes(canvasElements.find(e => e.id === selectedElementId)?.type || '') && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      {canvasElements.find(e => e.id === selectedElementId)?.type === 'image' ? "Texte alternatif d'image" : 
+                       canvasElements.find(e => e.id === selectedElementId)?.type === 'rsvp-block' ? "Titre du bloc RSVP" : 
+                       "Contenu du texte"}
+                    </label>
+                    <textarea 
+                      value={elText}
+                      onChange={(e) => handlePropertyChange('text', e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition h-20 resize-none"
+                    />
+                  </div>
+                )}
+
+                {/* Width selection (for layout grid) */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Largeur de l'élément</label>
+                  <select 
+                    value={elWidth}
+                    onChange={(e) => handlePropertyChange('width', e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition"
+                  >
+                    <option value="full">Pleine largeur (100%)</option>
+                    <option value="half">Demi-largeur (50%)</option>
+                    <option value="third">Un tiers (33%)</option>
+                  </select>
+                </div>
+
+                {/* Font Family Selection */}
+                {['text', 'button'].includes(canvasElements.find(e => e.id === selectedElementId)?.type || '') && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Police de caractères</label>
+                    <select 
+                      value={elFontFamily}
+                      onChange={(e) => handlePropertyChange('fontFamily', e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition"
+                    >
+                      {fontFamilies.map(font => (
+                        <option key={font.id} value={font.id}>{font.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Letter Spacing */}
+                {['text', 'button'].includes(canvasElements.find(e => e.id === selectedElementId)?.type || '') && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Espacement des lettres</label>
+                    <select 
+                      value={elLetterSpacing}
+                      onChange={(e) => handlePropertyChange('letterSpacing', e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition"
+                    >
+                      {letterSpacings.map(spacing => (
+                        <option key={spacing.id} value={spacing.id}>{spacing.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Bold / Italic Toggles */}
+                {['text', 'button'].includes(canvasElements.find(e => e.id === selectedElementId)?.type || '') && (
+                  <div className="flex gap-4 pt-1">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-600 font-semibold select-none">
+                      <input 
+                        type="checkbox" 
+                        checked={elBold}
+                        onChange={(e) => handlePropertyChange('bold', e.target.checked)}
+                        className="rounded text-indigo-600 focus:ring-indigo-500"
+                      />
+                      Gras
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-600 font-semibold select-none">
+                      <input 
+                        type="checkbox" 
+                        checked={elItalic}
+                        onChange={(e) => handlePropertyChange('italic', e.target.checked)}
+                        className="rounded text-indigo-600 focus:ring-indigo-500"
+                      />
+                      Italique
+                    </label>
+                  </div>
+                )}
+
+                {/* Divider style selection */}
+                {canvasElements.find(e => e.id === selectedElementId)?.type === 'divider' && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Style du séparateur</label>
+                    <select 
+                      value={elDividerStyle}
+                      onChange={(e) => handlePropertyChange('dividerStyle', e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition"
+                    >
+                      <option value="solid">Ligne continue</option>
+                      <option value="dashed">Ligne pointillée</option>
+                      <option value="ornament-flower">Ornement Fleur (❀)</option>
+                      <option value="ornament-diamond">Ornement Losange (✦ ❖ ✦)</option>
+                      <option value="ornament-star">Ornement Étoile (✦)</option>
+                      <option value="ornament-leaves">Ornement Feuillage (🌿 ❀ 🌿)</option>
+                      <option value="ornament-lace">Ornement Dentelle (⚜ ⚜ ⚜)</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Button style selection */}
+                {canvasElements.find(e => e.id === selectedElementId)?.type === 'button' && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Style de bouton</label>
+                    <select 
+                      value={elButtonStyle}
+                      onChange={(e) => handlePropertyChange('buttonStyle', e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition"
+                    >
+                      <option value="filled">Plein (Luxe)</option>
+                      <option value="outline">Contour élégant</option>
+                      <option value="pill">Bords ronds (Pilule)</option>
+                      <option value="gold-glow">Effet or lumineux</option>
+                      <option value="double-border">Double bordure fine</option>
+                      <option value="minimalist">Minimaliste souligné</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Curve style selection */}
+                {canvasElements.find(e => e.id === selectedElementId)?.type === 'curve' && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Style de la courbe</label>
+                    <select 
+                      value={elCurveStyle}
+                      onChange={(e) => handlePropertyChange('curveStyle', e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition"
+                    >
+                      <option value="wave">Vague douce</option>
+                      <option value="arc">Arche fine</option>
+                      <option value="flourish-1">Volute florale élégante</option>
+                      <option value="flourish-2">Ornement baroque</option>
+                      <option value="spiral">Spirale délicate</option>
+                      <option value="infinity">Nœud de l'infini</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Image style selection */}
+                {canvasElements.find(e => e.id === selectedElementId)?.type === 'image' && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Style d'image</label>
+                    <select 
+                      value={elImageStyle}
+                      onChange={(e) => handlePropertyChange('imageStyle', e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition"
+                    >
+                      <option value="rounded">Bords arrondis standard</option>
+                      <option value="circle">Cercle parfait</option>
+                      <option value="arch">Arche royale</option>
+                      <option value="oval">Ovale élégant</option>
+                      <option value="gold-frame">Cadre doré fin</option>
+                      <option value="vintage">Effet sépia vintage</option>
+                      <option value="shadow-luxury">Ombre douce de luxe</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Image-specific properties */}
+                {canvasElements.find(e => e.id === selectedElementId)?.type === 'image' && (
+                  <div className="space-y-4 border-t border-slate-100 pt-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Importer une image locale</label>
+                      <input 
+                        type="file" 
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Ou URL de l'image externe</label>
+                      <input 
+                        type="text" 
+                        value={elImageUrl}
+                        onChange={(e) => handlePropertyChange('imageUrl', e.target.value)}
+                        placeholder="https://images.unsplash.com/..."
+                        className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Largeur</label>
+                        <input 
+                          type="text" 
+                          value={elImageWidth}
+                          onChange={(e) => handlePropertyChange('imageWidth', e.target.value)}
+                          placeholder="100% ou 200px"
+                          className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Hauteur</label>
+                        <input 
+                          type="text" 
+                          value={elImageHeight}
+                          onChange={(e) => handlePropertyChange('imageHeight', e.target.value)}
+                          placeholder="200px ou auto"
+                          className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Curve-specific properties */}
+                {canvasElements.find(e => e.id === selectedElementId)?.type === 'curve' && (
+                  <div className="space-y-1.5 border-t border-slate-100 pt-4">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Épaisseur du trait</label>
+                    <select 
+                      value={elStrokeWidth}
+                      onChange={(e) => handlePropertyChange('strokeWidth', e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition"
+                    >
+                      <option value="1px">Fin (1px)</option>
+                      <option value="2px">Normal (2px)</option>
+                      <option value="3px">Moyen (3px)</option>
+                      <option value="5px">Épais (5px)</option>
+                      <option value="8px">Très épais (8px)</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Triangle-specific properties */}
+                {canvasElements.find(e => e.id === selectedElementId)?.type === 'triangle' && (
+                  <div className="space-y-1.5 border-t border-slate-100 pt-4">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Taille du triangle</label>
+                    <select 
+                      value={elShapeSize}
+                      onChange={(e) => handlePropertyChange('shapeSize', e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition"
+                    >
+                      <option value="30px">Petit (30px)</option>
+                      <option value="45px">Moyen (45px)</option>
+                      <option value="60px">Grand (60px)</option>
+                      <option value="80px">Très grand (80px)</option>
+                      <option value="120px">Géant (120px)</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Customizable RSVP Fields Properties */}
+                {canvasElements.find(e => e.id === selectedElementId)?.type === 'rsvp-block' && (
+                  <div className="space-y-4 border-t border-slate-100 pt-4">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Champs du formulaire</label>
+                      <button 
+                        type="button"
+                        onClick={handleAddRsvpField}
+                        className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded-lg transition"
+                      >
+                        <Plus className="w-3 h-3" /> Ajouter un champ
+                      </button>
+                    </div>
+
+                    <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
+                      {elRsvpFields.map((field, index) => (
+                        <div key={field.id} className="p-3 bg-slate-50 border border-slate-150 rounded-xl space-y-2.5 relative">
+                          <button 
+                            type="button"
+                            onClick={() => handleDeleteRsvpField(field.id)}
+                            className="absolute top-2 right-2 text-slate-400 hover:text-rose-600 transition"
+                            title="Supprimer ce champ"
+                          >
+                            <Trash className="w-3.5 h-3.5" />
+                          </button>
+
+                          <div className="text-[10px] font-bold text-slate-400">Champ #{index + 1}</div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase">Libellé / Question</label>
+                            <input 
+                              type="text" 
+                              value={field.label}
+                              onChange={(e) => handleUpdateRsvpField(field.id, 'label', e.target.value)}
+                              className="w-full px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition"
+                              required
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase">Type</label>
+                              <select 
+                                value={field.type}
+                                onChange={(e) => handleUpdateRsvpField(field.id, 'type', e.target.value)}
+                                className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition"
+                              >
+                                <option value="text">Texte libre</option>
+                                <option value="select">Menu déroulant</option>
+                                <option value="checkbox">Case à cocher</option>
+                              </select>
+                            </div>
+                            <div className="flex items-end pb-1.5">
+                              <label className="flex items-center gap-1.5 cursor-pointer text-xs text-slate-600 font-semibold select-none">
+                                <input 
+                                  type="checkbox" 
+                                  checked={field.required}
+                                  onChange={(e) => handleUpdateRsvpField(field.id, 'required', e.target.checked)}
+                                  className="rounded text-indigo-600 focus:ring-indigo-500"
+                                />
+                                Requis
+                              </label>
+                            </div>
+                          </div>
+
+                          {field.type === 'select' && (
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase">Options (séparées par virgules)</label>
+                              <input 
+                                type="text" 
+                                value={field.options || ''}
+                                onChange={(e) => handleUpdateRsvpField(field.id, 'options', e.target.value)}
+                                placeholder="Option 1, Option 2, Option 3"
+                                className="w-full px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition"
+                                required
+                              />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Color input */}
+                <div className="space-y-2 border-t border-slate-100 pt-4">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                    {canvasElements.find(e => e.id === selectedElementId)?.type === 'button' ? "Couleur du bouton" : 
+                     canvasElements.find(e => e.id === selectedElementId)?.type === 'curve' ? "Couleur du trait" : 
+                     canvasElements.find(e => e.id === selectedElementId)?.type === 'triangle' ? "Couleur de remplissage" : 
+                     "Couleur du texte"}
+                  </label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="color" 
+                      value={elColor.startsWith('#') ? elColor : '#4f46e5'}
+                      onChange={(e) => handlePropertyChange('color', e.target.value)}
+                      className="w-8 h-8 rounded-lg border border-slate-200 cursor-pointer overflow-hidden p-0"
+                    />
+                    <input 
+                      type="text" 
+                      value={elColor}
+                      onChange={(e) => handlePropertyChange('color', e.target.value)}
+                      className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition font-mono"
+                    />
+                  </div>
+
+                  {/* Luxury Predefined Palette */}
+                  <div className="space-y-1 pt-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Palette de Luxe :</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { hex: '#c5a059', name: 'Or Royal' },
+                        { hex: '#7d8c5c', name: 'Vert Sauge' },
+                        { hex: '#6b1d2f', name: 'Bourgogne' },
+                        { hex: '#1d2d44', name: 'Bleu Nuit' },
+                        { hex: '#e8c5c8', name: 'Rose Poudré' },
+                        { hex: '#b05a47', name: 'Terracotta' },
+                        { hex: '#8c6239', name: 'Bronze' },
+                        { hex: '#1e293b', name: 'Ardoise' },
+                        { hex: '#faf6f0', name: 'Ivoire' },
+                      ].map((c) => (
+                        <button
+                          key={c.hex}
+                          type="button"
+                          onClick={() => handlePropertyChange('color', c.hex)}
+                          className="w-6 h-6 rounded-full border border-slate-200 shadow-sm transition hover:scale-110 relative group"
+                          style={{ backgroundColor: c.hex }}
+                          title={c.name}
+                        >
+                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] px-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-30">
+                            {c.name}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Font size (only for text/button) */}
+                {['text', 'button'].includes(canvasElements.find(e => e.id === selectedElementId)?.type || '') && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Taille de police</label>
+                    <select 
+                      value={elFontSize}
+                      onChange={(e) => handlePropertyChange('fontSize', e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition"
+                    >
+                      <option value="12px">Petite (12px)</option>
+                      <option value="14px">Normale (14px)</option>
+                      <option value="16px">Moyenne (16px)</option>
+                      <option value="20px">Grande (20px)</option>
+                      <option value="24px">Titre 3 (24px)</option>
+                      <option value="28px">Titre 2 (28px)</option>
+                      <option value="32px">Titre 1 (32px)</option>
+                      <option value="36px">Titre XL (36px)</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Alignment */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Alignement</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {['left', 'center', 'right'].map((align) => (
+                      <button
+                        key={align}
+                        type="button"
+                        onClick={() => handlePropertyChange('align', align)}
+                        className={`py-1.5 border rounded-lg text-xs font-bold capitalize transition ${elAlign === align ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                      >
+                        {align === 'left' ? 'gauche' : align === 'right' ? 'droite' : 'centré'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // Global Template Properties Panel (shown when no element is selected)
+              <div className="space-y-5">
+                <div className="border-b border-slate-100 pb-2">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Palette className="w-4 h-4 text-indigo-600" /> Paramètres Globaux
+                  </h3>
+                </div>
+
+                {/* Background Type */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Type d'arrière-plan</label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {[
+                      { id: 'color', label: 'Couleur' },
+                      { id: 'pattern', label: 'Texture' },
+                      { id: 'image', label: 'Image' }
+                    ].map((type) => (
+                      <button
+                        key={type.id}
+                        type="button"
+                        onClick={() => setBgType(type.id as any)}
+                        className={`py-1.5 border rounded-lg text-[10px] font-bold transition ${bgType === type.id ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                      >
+                        {type.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Background Color Picker (For color and pattern types) */}
+                {bgType !== 'image' && (
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Couleur de fond</label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="color" 
+                        value={bgColor.startsWith('#') ? bgColor : '#faf8f5'}
+                        onChange={(e) => setBgColor(e.target.value)}
+                        className="w-8 h-8 rounded-lg border border-slate-200 cursor-pointer overflow-hidden p-0"
+                      />
+                      <input 
+                        type="text" 
+                        value={bgColor}
+                        onChange={(e) => setBgColor(e.target.value)}
+                        className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition font-mono"
+                      />
+                    </div>
+
+                    {/* Luxury Predefined Background Palette */}
+                    <div className="space-y-1 pt-1">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Fonds Recommandés :</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          { hex: '#faf8f5', name: 'Blanc Pur' },
+                          { hex: '#faf6f0', name: 'Ivoire Doux' },
+                          { hex: '#f4f1ea', name: 'Lin Naturel' },
+                          { hex: '#f3e0da', name: 'Rose Poudré' },
+                          { hex: '#e2e8f0', name: 'Gris Perle' },
+                          { hex: '#7d8c5c', name: 'Vert Sauge' },
+                          { hex: '#58111a', name: 'Bourgogne' },
+                          { hex: '#1d2d44', name: 'Bleu Nuit' },
+                          { hex: '#1e1b18', name: 'Noir Ébène' },
+                        ].map((c) => (
+                          <button
+                            key={c.hex}
+                            type="button"
+                            onClick={() => setBgColor(c.hex)}
+                            className="w-6 h-6 rounded-full border border-slate-200 shadow-sm transition hover:scale-110 relative group"
+                            style={{ backgroundColor: c.hex }}
+                            title={c.name}
+                          >
+                            <span className="absolute bottom-full left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] px-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-30">
+                              {c.name}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Pattern Selector */}
+                {bgType === 'pattern' && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Style de Texture</label>
+                    <select 
+                      value={bgPattern}
+                      onChange={(e) => setBgPattern(e.target.value as any)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition"
+                    >
+                      <option value="none">Aucune texture</option>
+                      <option value="paper">Papier grainé de luxe (Hassan Raza)</option>
+                      <option value="watercolor">Aquarelle artistique (Ananya & Rishabh)</option>
+                      <option value="boho">Boho Botanique (Feuillage Ornemental)</option>
+                      <option value="linen">Lin de luxe (Tissu texturé)</option>
+                      <option value="marble">Marbre blanc (Veines dorées)</option>
+                      <option value="gold-dust">Poussière d'or (Scintillant)</option>
+                      <option value="parchment">Parchemin ancien (Kraft)</option>
+                      <option value="velvet">Velours royal (Sombre)</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Global Image Upload */}
+                {bgType === 'image' && (
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Importer image de fond</label>
+                      <input 
+                        type="file" 
+                        accept="image/*"
+                        onChange={handleGlobalImageUpload}
+                        className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Ou URL d'image de fond</label>
+                      <input 
+                        type="text" 
+                        value={bgImageUrl}
+                        onChange={(e) => setBgImageUrl(e.target.value)}
+                        placeholder="https://images.unsplash.com/..."
+                        className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Frame Type Selection */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Style d'Encadrement / Cadre</label>
+                  <select 
+                    value={frameType}
+                    onChange={(e) => setFrameType(e.target.value as any)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition"
+                  >
+                    <option value="none">Aucun cadre (Bords normaux)</option>
+                    <option value="arch">Arche Royale de Luxe (Ananya / Watercolor)</option>
+                    <option value="double-border">Double Bordure Fine (Hassan Raza / Boho)</option>
+                    <option value="gold-border">Bordure Or Lumineuse (Luxury Modern)</option>
+                    <option value="floral-wreath">Couronne Florale Dorée (Centre)</option>
+                    <option value="floral-arch">Arche de Roses Rouges (Haut)</option>
+                    <option value="boho-dried">Feuillage Séché Boho (Coins)</option>
+                    <option value="gold-leaves-circle">Cercle de Feuilles d'Or et Perles</option>
+                    <option value="minimal-leaves">Feuilles Minimalistes (Angles)</option>
+                  </select>
+                </div>
+
+                <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-4 space-y-2">
+                  <h4 className="text-xs font-bold text-amber-800 flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" /> Conseil de Design
+                  </h4>
+                  <p className="text-[11px] text-amber-700 leading-relaxed">
+                    Pour reproduire les invitations de mariage fournies : utilisez la texture <strong>Papier grainé</strong> ou <strong>Aquarelle</strong>, combinez-la avec l'<strong>Arche Royale</strong> ou la <strong>Double Bordure</strong>, et utilisez la police <strong>Cormorant Garamond</strong> ou <strong>Great Vibes</strong> pour les noms.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Vos Modèles d'Invitation</h1>
+          <p className="text-slate-500 mt-1">Concevez des invitations interactives uniques à l'aide de notre éditeur visuel.</p>
+        </div>
+        <button 
+          onClick={handleCreateTemplateClick}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition shadow-md shadow-indigo-100 text-sm"
+        >
+          <PlusCircle className="w-4.5 h-4.5" />
+          Nouveau modèle
+        </button>
+      </div>
+
+      {error && (
+        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-center gap-3 text-sm">
+          <AlertCircle className="w-5 h-5 text-rose-500 flex-shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {success && (
+        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-center gap-3 text-sm">
+          <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+          <span>{success}</span>
+        </div>
+      )}
+
+      {/* Templates Grid */}
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {templates.length === 0 ? (
+          <div className="col-span-full text-center py-16 bg-white border border-slate-200 rounded-3xl">
+            <Mail className="w-16 h-12 text-slate-300 mx-auto mb-4" />
+            <h3 className="text-lg font-bold text-slate-700">Aucun modèle créé</h3>
+            <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">Créez votre premier modèle d'invitation personnalisé à l'aide de notre concepteur visuel.</p>
+            <button 
+              onClick={handleCreateTemplateClick}
+              className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100"
+            >
+              Créer mon premier modèle
+            </button>
+          </div>
+        ) : (
+          templates.map((t) => (
+            <div key={t.id} className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-6">
+              <div className="space-y-3">
+                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 min-h-[140px] flex flex-col justify-center space-y-2 pointer-events-none relative overflow-hidden">
+                  <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:12px_16px] opacity-50" />
+                  <div className="relative scale-90 origin-center space-y-2">
+                    {t.content?.elements?.slice(0, 3).map((el: any, i: number) => (
+                      <div 
+                        key={i} 
+                        style={{ color: el.color, fontSize: '11px', textAlign: el.align }}
+                        className={`font-semibold ${el.type === 'button' ? 'bg-indigo-600 text-white px-3 py-1 rounded-lg inline-block mx-auto' : ''}`}
+                      >
+                        {el.text?.length > 40 ? el.text.slice(0, 40) + '...' : el.text}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 tracking-tight line-clamp-1">{t.name}</h3>
+                <p className="text-xs text-slate-400 font-medium">
+                  Créé le {new Date(t.createdAt).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
+                </p>
+              </div>
+              <div className="flex gap-2 pt-2 border-t border-slate-100">
+                <button 
+                  onClick={() => handleEditTemplateClick(t)}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-xs transition"
+                >
+                  <Edit3 className="w-4 h-4" />
+                  Modifier
+                </button>
+                <button 
+                  onClick={() => handleDeleteTemplate(t.id)}
+                  className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition"
+                  title="Supprimer le modèle"
+                >
+                  <Trash2 className="w-4.5 h-4.5" />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
