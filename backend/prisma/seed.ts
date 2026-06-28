@@ -37,6 +37,7 @@ async function main() {
       name: 'Super Admin EventMaster',
       passwordHash,
       role: 'SUPER_ADMIN',
+      isEmailVerified: true,
     },
   });
 
@@ -88,6 +89,7 @@ async function main() {
       passwordHash,
       role: 'USER',
       tenantId: tenantPrestige.id,
+      isEmailVerified: true,
     },
   });
 
@@ -98,6 +100,7 @@ async function main() {
       passwordHash,
       role: 'USER',
       tenantId: tenantEntrepreneurs.id,
+      isEmailVerified: true,
     },
   });
 
@@ -108,6 +111,7 @@ async function main() {
       passwordHash,
       role: 'USER',
       tenantId: tenantMariage.id,
+      isEmailVerified: true,
     },
   });
 
@@ -118,6 +122,7 @@ async function main() {
       passwordHash,
       role: 'USER',
       tenantId: tenantGlobalCorp.id,
+      isEmailVerified: true,
     },
   });
 

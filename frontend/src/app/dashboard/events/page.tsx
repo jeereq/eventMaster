@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { 
@@ -66,11 +66,18 @@ export default function EventsPage() {
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [savingEvent, setSavingEvent] = useState(false);
 
+  // Map Picker States & Refs
+  const [searchingLocation, setSearchingLocation] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  const mapRef = useRef<any>(null);
+  const markerRef = useRef<any>(null);
+
   // Guest form
   const [showGuestModal, setShowGuestModal] = useState(false);
   const [guestFirstName, setGuestFirstName] = useState('');
   const [guestLastName, setGuestLastName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
   const [guestCategory, setGuestCategory] = useState('Famille');
   const [guestPrefs, setGuestPreferences] = useState('');
   const [guests, setGuests] = useState<GuestItem[]>([]);
@@ -161,6 +168,160 @@ export default function EventsPage() {
       loadEvents();
     }
   }, [user]);
+
+  // Leaflet Map Initialization Effect
+  useEffect(() => {
+    if (!showEventModal) {
+      // Clean up refs when modal is closed
+      mapRef.current = null;
+      markerRef.current = null;
+      return;
+    }
+
+    let mapInstance: any = null;
+    let markerInstance: any = null;
+
+    const initMap = () => {
+      const L = (window as any).L;
+      if (!L) return;
+
+      // Default coordinates: Kinshasa (-4.3224, 15.3070)
+      const initialLat = eventLatitude ? parseFloat(eventLatitude) : -4.3224;
+      const initialLng = eventLongitude ? parseFloat(eventLongitude) : 15.3070;
+
+      const mapContainer = document.getElementById('map-picker');
+      if (!mapContainer) return;
+
+      // Clear existing map container content
+      mapContainer.innerHTML = '';
+      const mapDiv = document.createElement('div');
+      mapDiv.style.height = '100%';
+      mapDiv.style.width = '100%';
+      mapContainer.appendChild(mapDiv);
+
+      try {
+        mapInstance = L.map(mapDiv).setView([initialLat, initialLng], 13);
+        mapRef.current = mapInstance;
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(mapInstance);
+
+        // Add marker if coordinates exist
+        if (eventLatitude && eventLongitude) {
+          markerInstance = L.marker([initialLat, initialLng], { draggable: true }).addTo(mapInstance);
+          markerRef.current = markerInstance;
+        }
+
+        // Map click handler
+        mapInstance.on('click', (e: any) => {
+          const { lat, lng } = e.latlng;
+          setEventLatitude(lat.toFixed(6));
+          setEventLongitude(lng.toFixed(6));
+
+          if (markerRef.current) {
+            markerRef.current.setLatLng([lat, lng]);
+          } else {
+            const newMarker = L.marker([lat, lng], { draggable: true }).addTo(mapRef.current);
+            markerRef.current = newMarker;
+            
+            newMarker.on('dragend', (de: any) => {
+              const position = newMarker.getLatLng();
+              setEventLatitude(position.lat.toFixed(6));
+              setEventLongitude(position.lng.toFixed(6));
+            });
+          }
+        });
+
+        if (markerInstance) {
+          markerInstance.on('dragend', (de: any) => {
+            const position = markerInstance.getLatLng();
+            setEventLatitude(position.lat.toFixed(6));
+            setEventLongitude(position.lng.toFixed(6));
+          });
+        }
+      } catch (err) {
+        console.error('Error initializing Leaflet map:', err);
+      }
+    };
+
+    // Check if Leaflet is already loaded
+    if (!(window as any).L) {
+      // Load CSS
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+
+      // Load JS
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.onload = () => {
+        initMap();
+      };
+      document.body.appendChild(script);
+    } else {
+      // Wait a brief moment for the modal transition to complete and container to be rendered
+      const timer = setTimeout(initMap, 200);
+      return () => clearTimeout(timer);
+    }
+
+    return () => {
+      if (mapInstance) {
+        try {
+          mapInstance.remove();
+        } catch (e) {
+          console.error('Error removing map instance:', e);
+        }
+      }
+    };
+  }, [showEventModal]);
+
+  // Geocoding search function
+  const searchLocationOnMap = async () => {
+    if (!eventLoc) {
+      setSearchError('Veuillez d\'abord saisir un lieu dans le champ "Lieu".');
+      return;
+    }
+    setSearchingLocation(true);
+    setSearchError('');
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(eventLoc)}`);
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const first = data[0];
+        const lat = parseFloat(first.lat);
+        const lon = parseFloat(first.lon);
+        setEventLatitude(lat.toFixed(6));
+        setEventLongitude(lon.toFixed(6));
+        
+        const L = (window as any).L;
+        if (L && mapRef.current) {
+          mapRef.current.setView([lat, lon], 15);
+          
+          if (markerRef.current) {
+            markerRef.current.setLatLng([lat, lon]);
+          } else {
+            const newMarker = L.marker([lat, lon], { draggable: true }).addTo(mapRef.current);
+            markerRef.current = newMarker;
+            
+            newMarker.on('dragend', (de: any) => {
+              const position = newMarker.getLatLng();
+              setEventLatitude(position.lat.toFixed(6));
+              setEventLongitude(position.lng.toFixed(6));
+            });
+          }
+        }
+      } else {
+        setSearchError('Lieu non trouvé. Essayez de préciser la ville (ex. Kinshasa).');
+      }
+    } catch (err) {
+      console.error(err);
+      setSearchError('Erreur lors de la recherche du lieu.');
+    } finally {
+      setSearchingLocation(false);
+    }
+  };
 
   const handleCreateOrUpdateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -263,7 +424,10 @@ export default function EventsPage() {
         lastName: guestLastName,
         email: guestEmail,
         category: guestCategory,
-        preferences: guestPrefs ? { notes: guestPrefs } : {},
+        preferences: {
+          notes: guestPrefs || undefined,
+          phone: guestPhone || undefined,
+        },
       };
 
       const newGuest = await api.post(`/events/${selectedEvent.id}/guests`, payload);
@@ -271,6 +435,7 @@ export default function EventsPage() {
       setGuestFirstName('');
       setGuestLastName('');
       setGuestEmail('');
+      setGuestPhone('');
       setGuestPreferences('');
       setShowGuestModal(false);
       setSuccess('Invité ajouté avec succès !');
@@ -392,13 +557,21 @@ export default function EventsPage() {
     setTimeout(() => setCopiedGuestId(null), 2000);
   };
 
-  const getWhatsAppShareUrl = (guestName: string, rsvpLink: string) => {
+  const getWhatsAppShareUrl = (guestName: string, rsvpLink: string, phone?: string | null) => {
     const text = `Bonjour ${guestName}, vous êtes chaleureusement invité(e) ! Veuillez confirmer votre présence en ouvrant votre invitation personnalisée ici : ${rsvpLink}`;
+    if (phone) {
+      const cleanPhone = phone.replace(/[^\d+]/g, '');
+      return `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`;
+    }
     return `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
   };
 
-  const getSMSShareUrl = (guestName: string, rsvpLink: string) => {
+  const getSMSShareUrl = (guestName: string, rsvpLink: string, phone?: string | null) => {
     const text = `Bonjour ${guestName}, vous êtes chaleureusement invité(e) ! Veuillez confirmer votre présence en ouvrant votre invitation personnalisée ici : ${rsvpLink}`;
+    if (phone) {
+      const cleanPhone = phone.replace(/[^\d+]/g, '');
+      return `sms:${cleanPhone}?&body=${encodeURIComponent(text)}`;
+    }
     return `sms:?&body=${encodeURIComponent(text)}`;
   };
 
@@ -989,7 +1162,7 @@ export default function EventsPage() {
       {/* Event Modal */}
       {showEventModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg p-6 space-y-6">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-3xl p-6 space-y-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <h3 className="text-lg font-bold text-slate-900">
                 {editingEventId ? "Modifier l'événement" : 'Créer un événement'}
@@ -998,95 +1171,164 @@ export default function EventsPage() {
                 <XCircle className="w-6 h-6" />
               </button>
             </div>
-            <form onSubmit={handleCreateOrUpdateEvent} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Titre de l'événement</label>
-                <input 
-                  type="text" 
-                  value={eventTitle}
-                  onChange={(e) => setEventTitle(e.target.value)}
-                  placeholder="ex. Mariage de Claire & Alexandre"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
-                  required
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Description (Optionnel)</label>
-                <textarea 
-                  value={eventDesc}
-                  onChange={(e) => setEventDescription(e.target.value)}
-                  placeholder="Décrivez brièvement le déroulement de la réception..."
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition h-20 resize-none"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Date & Heure</label>
-                  <input 
-                    type="datetime-local" 
-                    value={eventDate}
-                    onChange={(e) => setEventDate(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
-                    required
-                  />
+            <form onSubmit={handleCreateOrUpdateEvent} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Column: Event Details */}
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Titre de l'événement</label>
+                    <input 
+                      type="text" 
+                      value={eventTitle}
+                      onChange={(e) => setEventTitle(e.target.value)}
+                      placeholder="ex. Mariage de Claire & Alexandre"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Description (Optionnel)</label>
+                    <textarea 
+                      value={eventDesc}
+                      onChange={(e) => setEventDescription(e.target.value)}
+                      placeholder="Décrivez brièvement le déroulement de la réception..."
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition h-20 resize-none"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Date & Heure</label>
+                      <input 
+                        type="datetime-local" 
+                        value={eventDate}
+                        onChange={(e) => setEventDate(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Lieu / Adresse</label>
+                      <input 
+                        type="text" 
+                        value={eventLoc}
+                        onChange={(e) => setEventLocation(e.target.value)}
+                        placeholder="ex. Hôtel Fleuve Congo, Kinshasa"
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Fréquence de rappel automatique</label>
+                    <select 
+                      value={eventReminderFrequency}
+                      onChange={(e) => setEventReminderFrequency(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
+                    >
+                      <option value="NONE">Pas de rappel automatique</option>
+                      <option value="DAILY">Chaque jour (Quotidien)</option>
+                      <option value="EVERY_3_DAYS">Tous les 3 jours</option>
+                      <option value="EVERY_5_DAYS">Tous les 5 jours</option>
+                      <option value="WEEKLY">Chaque semaine (Hebdomadaire)</option>
+                    </select>
+                    <p className="text-[11px] text-slate-400">
+                      Envoie automatiquement un rappel aux invités qui n'ont pas encore répondu (RSVP En attente).
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Lieu</label>
-                  <input 
-                    type="text" 
-                    value={eventLoc}
-                    onChange={(e) => setEventLocation(e.target.value)}
-                    placeholder="ex. Hôtel Fleuve Congo"
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
-                    required
-                  />
+
+                {/* Right Column: Map Picker */}
+                <div className="space-y-4 flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Sélectionner sur la carte</label>
+                      <button
+                        type="button"
+                        onClick={searchLocationOnMap}
+                        disabled={searchingLocation}
+                        className="text-xs font-semibold text-indigo-600 hover:text-indigo-500 flex items-center gap-1 disabled:opacity-50"
+                      >
+                        {searchingLocation ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Search className="w-3.5 h-3.5" />
+                        )}
+                        Rechercher le lieu saisi
+                      </button>
+                    </div>
+
+                    {searchError && (
+                      <p className="text-xs text-rose-500 font-semibold">{searchError}</p>
+                    )}
+
+                    {/* Map Container */}
+                    <div 
+                      id="map-picker" 
+                      className="w-full h-56 bg-slate-100 rounded-2xl border border-slate-200 overflow-hidden relative"
+                      style={{ minHeight: '220px' }}
+                    >
+                      <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-xs">
+                        Chargement de la carte...
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Latitude GPS</label>
+                      <input 
+                        type="number" 
+                        step="any"
+                        value={eventLatitude}
+                        onChange={(e) => {
+                          setEventLatitude(e.target.value);
+                          const lat = parseFloat(e.target.value);
+                          const lng = parseFloat(eventLongitude);
+                          const L = (window as any).L;
+                          if (!isNaN(lat) && !isNaN(lng) && L && mapRef.current) {
+                            mapRef.current.setView([lat, lng]);
+                            if (markerRef.current) {
+                              markerRef.current.setLatLng([lat, lng]);
+                            } else {
+                              markerRef.current = L.marker([lat, lng], { draggable: true }).addTo(mapRef.current);
+                            }
+                          }
+                        }}
+                        placeholder="ex. -4.3014"
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Longitude GPS</label>
+                      <input 
+                        type="number" 
+                        step="any"
+                        value={eventLongitude}
+                        onChange={(e) => {
+                          setEventLongitude(e.target.value);
+                          const lat = parseFloat(eventLatitude);
+                          const lng = parseFloat(e.target.value);
+                          const L = (window as any).L;
+                          if (!isNaN(lat) && !isNaN(lng) && L && mapRef.current) {
+                            mapRef.current.setView([lat, lng]);
+                            if (markerRef.current) {
+                              markerRef.current.setLatLng([lat, lng]);
+                            } else {
+                              markerRef.current = L.marker([lat, lng], { draggable: true }).addTo(mapRef.current);
+                            }
+                          }
+                        }}
+                        placeholder="ex. 15.3048"
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-400">
+                    Cliquez sur la carte ou utilisez le bouton de recherche pour placer le repère et récupérer automatiquement les coordonnées GPS.
+                  </p>
                 </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Fréquence de rappel automatique</label>
-                <select 
-                  value={eventReminderFrequency}
-                  onChange={(e) => setEventReminderFrequency(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
-                >
-                  <option value="NONE">Pas de rappel automatique</option>
-                  <option value="DAILY">Chaque jour (Quotidien)</option>
-                  <option value="EVERY_3_DAYS">Tous les 3 jours</option>
-                  <option value="EVERY_5_DAYS">Tous les 5 jours</option>
-                  <option value="WEEKLY">Chaque semaine (Hebdomadaire)</option>
-                </select>
-                <p className="text-[11px] text-slate-400">
-                  Envoie automatiquement un rappel aux invités qui n'ont pas encore répondu (RSVP En attente).
-                </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Latitude GPS (Optionnel)</label>
-                  <input 
-                    type="number" 
-                    step="any"
-                    value={eventLatitude}
-                    onChange={(e) => setEventLatitude(e.target.value)}
-                    placeholder="ex. -4.3014"
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Longitude GPS (Optionnel)</label>
-                  <input 
-                    type="number" 
-                    step="any"
-                    value={eventLongitude}
-                    onChange={(e) => setEventLongitude(e.target.value)}
-                    placeholder="ex. 15.3048"
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
-                  />
-                </div>
-              </div>
-              <p className="text-[10px] text-slate-400 -mt-2">
-                Renseigner les coordonnées GPS permet d'afficher une carte interactive précise de l'emplacement sur l'invitation de vos invités.
-              </p>
               <div className="pt-4 flex gap-3 border-t border-slate-100">
                 <button 
                   type="button"
@@ -1150,16 +1392,28 @@ export default function EventsPage() {
                   />
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email</label>
-                <input 
-                  type="email" 
-                  value={guestEmail}
-                  onChange={(e) => setGuestEmail(e.target.value)}
-                  placeholder="ex. jean.kabeya@gmail.com"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
-                  required
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email</label>
+                  <input 
+                    type="email" 
+                    value={guestEmail}
+                    onChange={(e) => setGuestEmail(e.target.value)}
+                    placeholder="ex. jean.kabeya@gmail.com"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Téléphone (WhatsApp/SMS)</label>
+                  <input 
+                    type="text" 
+                    value={guestPhone}
+                    onChange={(e) => setGuestPhone(e.target.value)}
+                    placeholder="ex. +243812345678"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
+                  />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
@@ -1301,9 +1555,12 @@ export default function EventsPage() {
                   onChange={(e) => setBulkSelectedChannel(e.target.value)}
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
                 >
-                  <option value="EMAIL">E-mail (Simulation d'envoi)</option>
-                  <option value="WHATSAPP">WhatsApp (Partage direct)</option>
-                  <option value="SMS">SMS (Partage direct)</option>
+                  <option value="EMAIL">E-mail uniquement</option>
+                  <option value="WHATSAPP">WhatsApp uniquement</option>
+                  <option value="EMAIL_AND_WHATSAPP">E-mail ET WhatsApp (Simultané)</option>
+                  <option value="SMS">SMS uniquement</option>
+                  <option value="EMAIL_AND_SMS">E-mail ET SMS (Simultané)</option>
+                  <option value="ALL_CHANNELS">Tous les canaux (E-mail, WhatsApp, SMS)</option>
                   <option value="X">X / Twitter (Partage direct)</option>
                   <option value="INSTAGRAM">Instagram (Copie de lien DM)</option>
                   <option value="FACEBOOK">Facebook (Copie de lien Messenger)</option>
@@ -1365,7 +1622,10 @@ export default function EventsPage() {
                   >
                     <option value="EMAIL">E-mail</option>
                     <option value="WHATSAPP">WhatsApp</option>
+                    <option value="EMAIL_AND_WHATSAPP">E-mail et WhatsApp</option>
                     <option value="SMS">SMS</option>
+                    <option value="EMAIL_AND_SMS">E-mail et SMS</option>
+                    <option value="ALL_CHANNELS">Tous les canaux (E-mail, WhatsApp, SMS)</option>
                     <option value="LINK">Lien unique (Simulation)</option>
                   </select>
                 </div>
@@ -1425,7 +1685,7 @@ export default function EventsPage() {
                 <div className="bg-emerald-50 text-emerald-600 p-1.5 rounded-lg">
                   <Check className="w-5 h-5" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900">Simulation de diffusion réussie !</h3>
+                <h3 className="text-lg font-bold text-slate-900">Envoi des invitations effectué !</h3>
               </div>
               <button onClick={() => { setShowBroadcastModal(false); setBroadcastResults(null); }} className="text-slate-400 hover:text-slate-600 transition">
                 <XCircle className="w-6 h-6" />
@@ -1433,7 +1693,7 @@ export default function EventsPage() {
             </div>
             <div className="space-y-4">
               <p className="text-sm text-slate-500 leading-relaxed">
-                L'application a généré des liens d'invitations individuels et sécurisés pour chacun de vos invités. En conditions réelles, ces liens sont envoyés par e-mail.
+                Les invitations ont été traitées pour chacun de vos invités. Si les clés API réelles (SendGrid, Twilio) sont configurées, les messages ont été envoyés instantanément. Sinon, l'envoi a été simulé dans la console du serveur.
               </p>
               <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl space-y-3 max-h-96 overflow-y-auto">
                 <div className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200 pb-2 mb-2">Liens RSVP individuels et options de partage direct :</div>
@@ -1480,7 +1740,7 @@ export default function EventsPage() {
 
                       {/* WhatsApp */}
                       <a
-                        href={getWhatsAppShareUrl(res.guestName, res.rsvpLink)}
+                        href={getWhatsAppShareUrl(res.guestName, res.rsvpLink, res.phone)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition shadow-sm"
@@ -1494,7 +1754,7 @@ export default function EventsPage() {
 
                       {/* SMS */}
                       <a
-                        href={getSMSShareUrl(res.guestName, res.rsvpLink)}
+                        href={getSMSShareUrl(res.guestName, res.rsvpLink, res.phone)}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs font-bold transition shadow-sm"
                         title="Envoyer par SMS"
                       >

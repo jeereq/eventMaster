@@ -147,27 +147,60 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
         .replace('{{lastName}}', guest.lastName)
         .replace('{{rsvpLink}}', `${FRONTEND_URL}/rsvp/${guest.id}`);
 
-      let sendResult: any = { success: true, simulated: true };
-
-      if (activeChannel === 'EMAIL') {
-        sendResult = await sendRealEmail(guest.email, subject, body);
-      } else if (activeChannel === 'SMS') {
-        const phone = getGuestPhone(guest);
-        if (phone) {
-          sendResult = await sendRealSMS(phone, body);
+      // Support multiple channels (comma-separated, array, or specific combinations like EMAIL_AND_WHATSAPP)
+      let channelsToSend: string[] = [];
+      if (Array.isArray(activeChannel)) {
+        channelsToSend = activeChannel;
+      } else if (typeof activeChannel === 'string') {
+        if (activeChannel === 'EMAIL_AND_WHATSAPP') {
+          channelsToSend = ['EMAIL', 'WHATSAPP'];
+        } else if (activeChannel === 'EMAIL_AND_SMS') {
+          channelsToSend = ['EMAIL', 'SMS'];
+        } else if (activeChannel === 'ALL_CHANNELS') {
+          channelsToSend = ['EMAIL', 'WHATSAPP', 'SMS'];
         } else {
-          console.warn(`[Invitation Controller] Guest ${guest.firstName} ${guest.lastName} has no valid phone number for SMS sending.`);
-          sendResult = { success: false, simulated: false, error: 'No valid phone number' };
+          channelsToSend = activeChannel.split(',').map(c => c.trim());
         }
-      } else if (activeChannel === 'WHATSAPP') {
-        const phone = getGuestPhone(guest);
-        if (phone) {
-          sendResult = await sendRealWhatsApp(phone, body);
-        } else {
-          console.warn(`[Invitation Controller] Guest ${guest.firstName} ${guest.lastName} has no valid phone number for WhatsApp sending.`);
-          sendResult = { success: false, simulated: false, error: 'No valid phone number' };
-        }
+      } else {
+        channelsToSend = ['EMAIL'];
       }
+
+      const channelResults = [];
+      for (const chan of channelsToSend) {
+        let sendResult: any = { success: true, simulated: true };
+
+        if (chan === 'EMAIL') {
+          sendResult = await sendRealEmail(guest.email, subject, body);
+        } else if (chan === 'SMS') {
+          const phone = getGuestPhone(guest);
+          if (phone) {
+            sendResult = await sendRealSMS(phone, body);
+          } else {
+            console.warn(`[Invitation Controller] Guest ${guest.firstName} ${guest.lastName} has no valid phone number for SMS sending.`);
+            sendResult = { success: false, simulated: false, error: 'No valid phone number' };
+          }
+        } else if (chan === 'WHATSAPP') {
+          const phone = getGuestPhone(guest);
+          if (phone) {
+            sendResult = await sendRealWhatsApp(phone, body);
+          } else {
+            console.warn(`[Invitation Controller] Guest ${guest.firstName} ${guest.lastName} has no valid phone number for WhatsApp sending.`);
+            sendResult = { success: false, simulated: false, error: 'No valid phone number' };
+          }
+        }
+
+        channelResults.push({
+          channel: chan,
+          success: sendResult.success,
+          simulated: sendResult.simulated,
+          error: sendResult.error || null,
+        });
+      }
+
+      // Determine overall status
+      const anySuccess = channelResults.some(r => r.success);
+      const allSimulated = channelResults.every(r => r.simulated);
+      const errors = channelResults.filter(r => r.error).map(r => `${r.channel}: ${r.error}`).join('; ');
 
       return {
         guestId: guest.id,
@@ -175,10 +208,11 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
         subject,
         body,
         rsvpUrl: `${FRONTEND_URL}/rsvp/${guest.id}`,
-        status: sendResult.success ? (sendResult.simulated ? 'SENT_SIMULATED' : 'SENT') : 'FAILED',
-        channel: activeChannel,
-        simulated: sendResult.simulated,
-        error: sendResult.error || null,
+        status: anySuccess ? (allSimulated ? 'SENT_SIMULATED' : 'SENT') : 'FAILED',
+        channel: channelsToSend.join(', '),
+        simulated: allSimulated,
+        error: errors || null,
+        channelResults,
       };
     }));
 
@@ -190,15 +224,19 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
     return res.json({
       message,
       invitationsSent: sentInvitations,
-      results: sentInvitations.map(inv => ({
-        guestId: inv.guestId,
-        guestName: guests.find(g => g.id === inv.guestId) ? `${guests.find(g => g.id === inv.guestId)?.firstName} ${guests.find(g => g.id === inv.guestId)?.lastName}` : 'Invité',
-        email: inv.guestEmail,
-        rsvpLink: inv.rsvpUrl,
-        channel: inv.channel,
-        status: inv.status,
-        error: inv.error,
-      }))
+      results: sentInvitations.map(inv => {
+        const guest = guests.find(g => g.id === inv.guestId);
+        return {
+          guestId: inv.guestId,
+          guestName: guest ? `${guest.firstName} ${guest.lastName}` : 'Invité',
+          email: inv.guestEmail,
+          phone: guest ? getGuestPhone(guest) : null,
+          rsvpLink: inv.rsvpUrl,
+          channel: inv.channel,
+          status: inv.status,
+          error: inv.error,
+        };
+      })
     });
   } catch (error: any) {
     console.error('Erreur lors de la diffusion de l\'invitation:', error);

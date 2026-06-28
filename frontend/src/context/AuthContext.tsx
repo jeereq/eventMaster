@@ -23,7 +23,7 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string, tenantName: string) => Promise<void>;
+  register: (email: string, password: string, name: string, tenantName: string) => Promise<{ message: string }>;
   logout: () => void;
   refreshBilling: () => Promise<void>;
 }
@@ -81,16 +81,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     try {
       const data = await api.post('/auth/register', { email, password, name, tenantName });
-      
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.setItem('tenant', JSON.stringify(data.tenant));
-
-      setToken(data.token);
-      setUser(data.user);
-      setTenant(data.tenant);
-
-      router.push('/dashboard');
+      setLoading(false);
+      return { message: data.message || 'Inscription réussie ! Veuillez vérifier vos e-mails pour confirmer votre compte.' };
     } catch (error) {
       setLoading(false);
       throw error;

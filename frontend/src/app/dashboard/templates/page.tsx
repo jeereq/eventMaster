@@ -58,6 +58,7 @@ interface CanvasElement {
   curveStyle?: 'wave' | 'arc' | 'flourish-1' | 'flourish-2' | 'spiral' | 'infinity';
   imageStyle?: 'rounded' | 'circle' | 'arch' | 'oval' | 'gold-frame' | 'vintage' | 'shadow-luxury';
   buttonStyle?: 'filled' | 'outline' | 'pill' | 'gold-glow' | 'double-border' | 'minimalist';
+  buttonLink?: string;
 }
 
 const darkenColor = (hex: string, percent = 30) => {
@@ -124,6 +125,7 @@ export default function TemplatesPage() {
   const [elCurveStyle, setElCurveStyle] = useState<'wave' | 'arc' | 'flourish-1' | 'flourish-2' | 'spiral' | 'infinity'>('wave');
   const [elImageStyle, setElImageStyle] = useState<'rounded' | 'circle' | 'arch' | 'oval' | 'gold-frame' | 'vintage' | 'shadow-luxury'>('rounded');
   const [elButtonStyle, setElButtonStyle] = useState<'filled' | 'outline' | 'pill' | 'gold-glow' | 'double-border' | 'minimalist'>('filled');
+  const [elButtonLink, setElButtonLink] = useState('');
 
   // Error/Success state
   const [error, setError] = useState('');
@@ -258,6 +260,7 @@ export default function TemplatesPage() {
       curveStyle: type === 'curve' ? 'wave' : undefined,
       imageStyle: type === 'image' ? 'rounded' : undefined,
       buttonStyle: type === 'button' ? 'filled' : undefined,
+      buttonLink: type === 'button' ? '' : undefined,
       rsvpFields: type === 'rsvp-block' ? [
         { id: 'f1', type: 'select', label: 'Choix du menu', options: 'Poulet, Poisson, Végétarien', required: true }
       ] : undefined
@@ -285,6 +288,7 @@ export default function TemplatesPage() {
     setElCurveStyle('wave');
     setElImageStyle('rounded');
     setElButtonStyle('filled');
+    setElButtonLink('');
     setElRsvpFields(newElement.rsvpFields || []);
   };
 
@@ -311,6 +315,7 @@ export default function TemplatesPage() {
       setElCurveStyle(el.curveStyle || 'wave');
       setElImageStyle(el.imageStyle || 'rounded');
       setElButtonStyle(el.buttonStyle || 'filled');
+      setElButtonLink(el.buttonLink || '');
       setElRsvpFields(el.rsvpFields || []);
     }
   };
@@ -337,6 +342,7 @@ export default function TemplatesPage() {
     if (field === 'curveStyle') setElCurveStyle(value);
     if (field === 'imageStyle') setElImageStyle(value);
     if (field === 'buttonStyle') setElButtonStyle(value);
+    if (field === 'buttonLink') setElButtonLink(value);
     if (field === 'rsvpFields') setElRsvpFields(value);
 
     setCanvasElements(canvasElements.map(el => {
@@ -1279,7 +1285,7 @@ export default function TemplatesPage() {
                                   fontWeight: el.bold ? 'bold' : 'normal',
                                   fontStyle: el.italic ? 'italic' : 'normal'
                                 }}
-                                className={`pointer-events-none transition-all ${
+                                className={`pointer-events-none transition-all flex items-center gap-1.5 ${
                                   el.buttonStyle === 'outline' ? 'px-6 py-2.5 rounded-xl border-2' :
                                   el.buttonStyle === 'pill' ? 'px-6 py-2.5 rounded-full shadow-md' :
                                   el.buttonStyle === 'gold-glow' ? 'px-6 py-2.5 rounded-xl shadow-[0_0_15px_rgba(197,160,89,0.4)]' :
@@ -1289,6 +1295,9 @@ export default function TemplatesPage() {
                                 }`}
                               >
                                 {el.text}
+                                {el.buttonLink && (
+                                  <span className="text-[10px] opacity-80" title={`Lien : ${el.buttonLink}`}>🔗</span>
+                                )}
                               </button>
                             </div>
                           )}
@@ -1627,6 +1636,23 @@ export default function TemplatesPage() {
                       <option value="double-border">Double bordure fine</option>
                       <option value="minimalist">Minimaliste souligné</option>
                     </select>
+                  </div>
+                )}
+
+                {/* Button link input */}
+                {canvasElements.find(e => e.id === selectedElementId)?.type === 'button' && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Lien de redirection (URL)</label>
+                    <input 
+                      type="text"
+                      value={elButtonLink}
+                      onChange={(e) => handlePropertyChange('buttonLink', e.target.value)}
+                      placeholder="ex: https://g.co/maps/... ou {{rsvpLink}}"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition"
+                    />
+                    <p className="text-[10px] text-slate-400">
+                      Lien vers lequel rediriger l'invité au clic (ex: liste de mariage, itinéraire GPS, etc.). Laissez vide si le bouton n'a pas de lien.
+                    </p>
                   </div>
                 )}
 

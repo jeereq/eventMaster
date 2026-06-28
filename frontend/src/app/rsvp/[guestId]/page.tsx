@@ -434,7 +434,7 @@ export default function RsvpPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 px-4 py-12 flex items-center justify-center relative overflow-hidden">
+    <div className="min-h-screen bg-slate-100 px-4 py-12 flex flex-col items-center justify-center gap-6 relative overflow-hidden">
       {/* Load Google Fonts stylesheet */}
       <link 
         href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Dancing+Script:wght@500;700&family=Great+Vibes&family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Pinyon+Script&family=Monsieur+La+Doulaise&family=Italiana&family=Bodoni+Moda:ital,wght@0,400;0,700;1,400&family=Allura&family=Parisienne&family=Prata&family=Sacramento&family=Marcellus&display=swap" 
@@ -773,28 +773,86 @@ export default function RsvpPage() {
                     )}
                     {el.type === 'button' && (
                       <div className={`flex justify-${el.align === 'left' ? 'start' : el.align === 'right' ? 'end' : 'center'}`}>
-                        <div 
-                          style={{ 
-                            backgroundColor: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? 'transparent' : el.color || '#4f46e5', 
-                            color: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? el.color || '#4f46e5' : '#ffffff', 
-                            borderColor: el.buttonStyle === 'outline' || el.buttonStyle === 'double-border' || el.buttonStyle === 'minimalist' ? el.color || '#4f46e5' : 'transparent',
-                            fontSize: el.fontSize,
-                            fontFamily: el.fontFamily || 'Cormorant Garamond',
-                            letterSpacing: el.letterSpacing || 'normal',
-                            fontWeight: el.bold ? 'bold' : 'normal',
-                            fontStyle: el.italic ? 'italic' : 'normal'
-                          }}
-                          className={`font-bold text-center inline-block transition-all ${
-                            el.buttonStyle === 'outline' ? 'px-6 py-2.5 rounded-xl border-2 shadow-sm' :
-                            el.buttonStyle === 'pill' ? 'px-6 py-2.5 rounded-full shadow-md' :
-                            el.buttonStyle === 'gold-glow' ? 'px-6 py-2.5 rounded-xl shadow-[0_0_15px_rgba(197,160,89,0.4)]' :
-                            el.buttonStyle === 'double-border' ? 'px-6 py-2 rounded-xl border-4 border-double' :
-                            el.buttonStyle === 'minimalist' ? 'px-2 py-1 border-b-2 rounded-none shadow-none' :
-                            'px-5 py-2.5 rounded-xl shadow-md shadow-indigo-100'
-                          }`}
-                        >
-                          {formatText(el.text)}
-                        </div>
+                        {el.buttonLink ? (
+                          el.buttonLink === '{{rsvpLink}}' || el.buttonLink === '#rsvp' || el.buttonLink === '#rsvp-section' ? (
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                document.getElementById('rsvp-section')?.scrollIntoView({ behavior: 'smooth' });
+                              }}
+                              style={{ 
+                                backgroundColor: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? 'transparent' : el.color || '#4f46e5', 
+                                color: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? el.color || '#4f46e5' : '#ffffff', 
+                                borderColor: el.buttonStyle === 'outline' || el.buttonStyle === 'double-border' || el.buttonStyle === 'minimalist' ? el.color || '#4f46e5' : 'transparent',
+                                fontSize: el.fontSize,
+                                fontFamily: el.fontFamily || 'Cormorant Garamond',
+                                letterSpacing: el.letterSpacing || 'normal',
+                                fontWeight: el.bold ? 'bold' : 'normal',
+                                fontStyle: el.italic ? 'italic' : 'normal'
+                              }}
+                              className={`font-bold text-center inline-block transition-all cursor-pointer ${
+                                el.buttonStyle === 'outline' ? 'px-6 py-2.5 rounded-xl border-2 shadow-sm' :
+                                el.buttonStyle === 'pill' ? 'px-6 py-2.5 rounded-full shadow-md' :
+                                el.buttonStyle === 'gold-glow' ? 'px-6 py-2.5 rounded-xl shadow-[0_0_15px_rgba(197,160,89,0.4)]' :
+                                el.buttonStyle === 'double-border' ? 'px-6 py-2 rounded-xl border-4 border-double' :
+                                el.buttonStyle === 'minimalist' ? 'px-2 py-1 border-b-2 rounded-none shadow-none' :
+                                'px-5 py-2.5 rounded-xl shadow-md shadow-indigo-100'
+                              }`}
+                            >
+                              {formatText(el.text)}
+                            </button>
+                          ) : (
+                            <a 
+                              href={formatText(el.buttonLink)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ 
+                                backgroundColor: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? 'transparent' : el.color || '#4f46e5', 
+                                color: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? el.color || '#4f46e5' : '#ffffff', 
+                                borderColor: el.buttonStyle === 'outline' || el.buttonStyle === 'double-border' || el.buttonStyle === 'minimalist' ? el.color || '#4f46e5' : 'transparent',
+                                fontSize: el.fontSize,
+                                fontFamily: el.fontFamily || 'Cormorant Garamond',
+                                letterSpacing: el.letterSpacing || 'normal',
+                                fontWeight: el.bold ? 'bold' : 'normal',
+                                fontStyle: el.italic ? 'italic' : 'normal',
+                                display: 'inline-block'
+                              }}
+                              className={`font-bold text-center transition-all cursor-pointer ${
+                                el.buttonStyle === 'outline' ? 'px-6 py-2.5 rounded-xl border-2 shadow-sm' :
+                                el.buttonStyle === 'pill' ? 'px-6 py-2.5 rounded-full shadow-md' :
+                                el.buttonStyle === 'gold-glow' ? 'px-6 py-2.5 rounded-xl shadow-[0_0_15px_rgba(197,160,89,0.4)]' :
+                                el.buttonStyle === 'double-border' ? 'px-6 py-2 rounded-xl border-4 border-double' :
+                                el.buttonStyle === 'minimalist' ? 'px-2 py-1 border-b-2 rounded-none shadow-none' :
+                                'px-5 py-2.5 rounded-xl shadow-md shadow-indigo-100'
+                              }`}
+                            >
+                              {formatText(el.text)}
+                            </a>
+                          )
+                        ) : (
+                          <div 
+                            style={{ 
+                              backgroundColor: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? 'transparent' : el.color || '#4f46e5', 
+                              color: el.buttonStyle === 'outline' || el.buttonStyle === 'minimalist' ? el.color || '#4f46e5' : '#ffffff', 
+                              borderColor: el.buttonStyle === 'outline' || el.buttonStyle === 'double-border' || el.buttonStyle === 'minimalist' ? el.color || '#4f46e5' : 'transparent',
+                              fontSize: el.fontSize,
+                              fontFamily: el.fontFamily || 'Cormorant Garamond',
+                              letterSpacing: el.letterSpacing || 'normal',
+                              fontWeight: el.bold ? 'bold' : 'normal',
+                              fontStyle: el.italic ? 'italic' : 'normal'
+                            }}
+                            className={`font-bold text-center inline-block transition-all ${
+                              el.buttonStyle === 'outline' ? 'px-6 py-2.5 rounded-xl border-2 shadow-sm' :
+                              el.buttonStyle === 'pill' ? 'px-6 py-2.5 rounded-full shadow-md' :
+                              el.buttonStyle === 'gold-glow' ? 'px-6 py-2.5 rounded-xl shadow-[0_0_15px_rgba(197,160,89,0.4)]' :
+                              el.buttonStyle === 'double-border' ? 'px-6 py-2 rounded-xl border-4 border-double' :
+                              el.buttonStyle === 'minimalist' ? 'px-2 py-1 border-b-2 rounded-none shadow-none' :
+                              'px-5 py-2.5 rounded-xl shadow-md shadow-indigo-100'
+                            }`}
+                          >
+                            {formatText(el.text)}
+                          </div>
+                        )}
                       </div>
                     )}
                     {el.type === 'image' && (
@@ -898,7 +956,7 @@ export default function RsvpPage() {
                       </div>
                     )}
                     {el.type === 'rsvp-block' && (
-                      <div>
+                      <div id="rsvp-section">
                         {renderRsvpFormControls(el)}
                       </div>
                     )}
@@ -1051,7 +1109,7 @@ export default function RsvpPage() {
 
       {/* Event Location & Directions Card */}
       {guest && guest.event?.location && (
-        <div className="w-full max-w-xl bg-white/90 backdrop-blur-md rounded-[24px] border border-slate-200/60 shadow-xl p-6 mt-6 space-y-4 text-center relative overflow-hidden animate-fade-in">
+        <div className="w-full max-w-lg bg-white/90 backdrop-blur-md rounded-[24px] border border-slate-200/60 shadow-xl p-6 space-y-4 text-center relative overflow-hidden animate-fade-in">
           <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-amber-200 via-yellow-500 to-amber-200" />
           <div className="flex flex-col items-center gap-2">
             <div className="bg-amber-50 text-amber-700 p-2.5 rounded-full border border-amber-100/50">
