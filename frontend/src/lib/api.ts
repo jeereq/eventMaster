@@ -1,5 +1,7 @@
-const API_URL = process.env.API_URL || 'http://localhost:5001/api';
-
+// const API_URL = process.env.API_URL || 'http://localhost:5001/api';
+const API_URL = "https://eventmaster-backend-ysgk.onrender.com/api"
+// API_URL=http://localhost:5001/api var environnement local
+// API_URL=https://eventmaster.itmafrica.com var environnement production
 
 interface FetchOptions extends RequestInit {
   body?: any;
