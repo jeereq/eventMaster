@@ -188,6 +188,14 @@ async function importGuests(req, res) {
                 errors.push(`Champs requis manquants pour l'invité: ${JSON.stringify(g)}`);
                 continue;
             }
+            // Construct preferences structure with phone and notes if provided
+            const guestPrefs = g.preferences || {};
+            if (g.phone) {
+                guestPrefs.phone = g.phone;
+            }
+            if (g.notes) {
+                guestPrefs.notes = g.notes;
+            }
             try {
                 await db_1.prisma.guest.upsert({
                     where: { eventId_email: { eventId, email: g.email } },
@@ -195,7 +203,7 @@ async function importGuests(req, res) {
                         firstName: g.firstName,
                         lastName: g.lastName,
                         category: g.category || 'Général',
-                        preferences: g.preferences || {},
+                        preferences: guestPrefs,
                     },
                     create: {
                         eventId,
@@ -203,7 +211,7 @@ async function importGuests(req, res) {
                         lastName: g.lastName,
                         email: g.email,
                         category: g.category || 'Général',
-                        preferences: g.preferences || {},
+                        preferences: guestPrefs,
                     },
                 });
                 importedCount++;

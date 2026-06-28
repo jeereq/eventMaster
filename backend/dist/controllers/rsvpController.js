@@ -16,6 +16,8 @@ async function getGuestRsvpDetails(req, res) {
                         description: true,
                         date: true,
                         location: true,
+                        latitude: true,
+                        longitude: true,
                         invitations: {
                             where: {
                                 templateId: { not: null }

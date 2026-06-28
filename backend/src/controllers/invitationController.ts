@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
-import { sendRealEmail, sendRealSMS, sendRealWhatsApp } from '../services/notificationService';
+import { sendRealEmail, sendRealSMS, sendRealWhatsApp, sendRealWhatsAppLocation } from '../services/notificationService';
 
 // Helper function to extract guest phone number
 function getGuestPhone(guest: any): string | null {
@@ -206,6 +206,24 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
           const phone = getGuestPhone(guest);
           if (phone) {
             sendResult = await sendRealWhatsApp(phone, body);
+            
+            // If the main message succeeded and the event has GPS coordinates, send the location as a second message
+            if (sendResult.success && event.latitude && event.longitude) {
+              try {
+                console.log(`[Invitation Controller] Sending WhatsApp Location for event "${event.title}" to ${guest.firstName} ${guest.lastName}...`);
+                const locResult = await sendRealWhatsAppLocation(
+                  phone, 
+                  event.location || 'Lieu de l\'événement', 
+                  event.latitude, 
+                  event.longitude
+                );
+                if (!locResult.success) {
+                  console.warn(`[Invitation Controller] Location message failed but main message succeeded:`, locResult.error);
+                }
+              } catch (locErr) {
+                console.error(`[Invitation Controller] Error sending WhatsApp Location:`, locErr);
+              }
+            }
           } else {
             console.warn(`[Invitation Controller] Guest ${guest.firstName} ${guest.lastName} has no valid phone number for WhatsApp sending.`);
             sendResult = { success: false, simulated: false, error: 'No valid phone number' };

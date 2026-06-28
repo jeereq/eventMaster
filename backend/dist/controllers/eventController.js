@@ -31,7 +31,7 @@ async function createEvent(req, res) {
         if (!tenantId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
         }
-        const { title, description, date, location, reminderFrequency } = req.body;
+        const { title, description, date, location, reminderFrequency, latitude, longitude } = req.body;
         if (!title || !date || !location) {
             return res.status(400).json({ error: 'Les champs title, date et location sont requis' });
         }
@@ -51,6 +51,8 @@ async function createEvent(req, res) {
                 date: new Date(date),
                 location,
                 reminderFrequency: reminderFrequency || 'NONE',
+                latitude: latitude !== undefined && latitude !== null ? parseFloat(latitude) : null,
+                longitude: longitude !== undefined && longitude !== null ? parseFloat(longitude) : null,
             },
         });
         return res.status(201).json(event);
@@ -86,7 +88,7 @@ async function updateEvent(req, res) {
     try {
         const tenantId = req.user?.tenantId;
         const id = req.params.id;
-        const { title, description, date, location, reminderFrequency } = req.body;
+        const { title, description, date, location, reminderFrequency, latitude, longitude } = req.body;
         if (!tenantId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
         }
@@ -105,6 +107,8 @@ async function updateEvent(req, res) {
                 date: date !== undefined ? new Date(date) : existingEvent.date,
                 location: location !== undefined ? location : existingEvent.location,
                 reminderFrequency: reminderFrequency !== undefined ? reminderFrequency : existingEvent.reminderFrequency,
+                latitude: latitude !== undefined ? (latitude !== null ? parseFloat(latitude) : null) : existingEvent.latitude,
+                longitude: longitude !== undefined ? (longitude !== null ? parseFloat(longitude) : null) : existingEvent.longitude,
             },
         });
         return res.json(updatedEvent);

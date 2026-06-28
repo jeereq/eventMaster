@@ -1,4 +1,5 @@
-const API_URL = 'http://localhost:5001/api';
+const API_URL = process.env.API_URL || 'http://localhost:5001/api';
+
 
 interface FetchOptions extends RequestInit {
   body?: any;
@@ -28,17 +29,17 @@ async function request(path: string, options: FetchOptions = {}) {
 
   try {
     const response = await fetch(`${API_URL}${path}`, config);
-    
+
     if (response.status === 204) {
       return null;
     }
 
     const data = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(data.error || 'Une erreur est survenue');
     }
-    
+
     return data;
   } catch (error: any) {
     console.error(`API Fetch Error [${path}]:`, error);

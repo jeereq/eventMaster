@@ -220,6 +220,15 @@ export async function importGuests(req: AuthenticatedRequest, res: Response) {
         continue;
       }
 
+      // Construct preferences structure with phone and notes if provided
+      const guestPrefs: any = g.preferences || {};
+      if (g.phone) {
+        guestPrefs.phone = g.phone;
+      }
+      if (g.notes) {
+        guestPrefs.notes = g.notes;
+      }
+
       try {
         await prisma.guest.upsert({
           where: { eventId_email: { eventId, email: g.email } },
@@ -227,7 +236,7 @@ export async function importGuests(req: AuthenticatedRequest, res: Response) {
             firstName: g.firstName,
             lastName: g.lastName,
             category: g.category || 'Général',
-            preferences: g.preferences || {},
+            preferences: guestPrefs,
           },
           create: {
             eventId,
@@ -235,7 +244,7 @@ export async function importGuests(req: AuthenticatedRequest, res: Response) {
             lastName: g.lastName,
             email: g.email,
             category: g.category || 'Général',
-            preferences: g.preferences || {},
+            preferences: guestPrefs,
           },
         });
         importedCount++;

@@ -3,12 +3,13 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
+import * as XLSX from 'xlsx';
 import { 
   Calendar, MapPin, Users, PlusCircle, Trash2, Edit3, 
   ChevronRight, ArrowLeft, Check, Upload, Mail, Send, 
   Sparkles, CheckCircle2, XCircle, AlertCircle, HelpCircle, Loader2,
   Copy, MessageSquare, Share2, Search, Filter, RefreshCw, CheckSquare, XSquare, HelpCircle as PendingIcon,
-  Eye, BarChart3, Utensils
+  Eye, BarChart3, Utensils, FileSpreadsheet, Download
 } from 'lucide-react';
 
 interface EventItem {
@@ -168,6 +169,10 @@ export default function EventsPage() {
   // Import guests
   const [showImportModal, setShowImportModal] = useState(false);
   const [importText, setImportText] = useState('');
+  const [importingFile, setImportingFile] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [parsedPreview, setParsedPreview] = useState<any[] | null>(null);
+  const [importMethod, setImportImportMethod] = useState<'excel' | 'csv' | 'text'>('excel');
 
   // Invitation form
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -617,21 +622,216 @@ export default function EventsPage() {
     }
   };
 
-  // Bulk Import Guests CSV
-  const handleBulkImport = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedEvent || !importText.trim()) return;
+  // Bulk Import Guests (CSV & Excel)
+  const handleBulkImport = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!selectedEvent) return;
     setError('');
     setSuccess('');
+    setImportingFile(true);
 
     try {
-      const response = await api.post(`/events/${selectedEvent.id}/guests/import`, { csvData: importText });
-      setGuests([...guests, ...response.guests]);
+      let guestsToImport: any[] = [];
+
+      if (importMethod === 'text') {
+        if (!importText.trim()) {
+          setError('Veuillez saisir du texte CSV valide.');
+          setImportingFile(false);
+          return;
+        }
+        // Parse CSV text manually
+        const lines = importText.split('\n');
+        lines.forEach((line, index) => {
+          if (index === 0 && (line.toLowerCase().includes('prénom') || line.toLowerCase().includes('prenom') || line.toLowerCase().includes('email'))) {
+            // Skip header
+            return;
+          }
+          const cols = line.split(',').map(c => c.trim());
+          if (cols.length >= 3 && cols[2].includes('@')) {
+            guestsToImport.push({
+              firstName: cols[0],
+              lastName: cols[1],
+              email: cols[2],
+              category: cols[3] || 'Général',
+              phone: cols[4] || '',
+              notes: cols[5] || '',
+            });
+          }
+        });
+      } else {
+        if (!parsedPreview || parsedPreview.length === 0) {
+          setError('Aucune donnée valide à importer.');
+          setImportingFile(false);
+          return;
+        }
+        guestsToImport = parsedPreview;
+      }
+
+      if (guestsToImport.length === 0) {
+        setError('Aucun invité valide trouvé dans le fichier ou le texte.');
+        setImportingFile(false);
+        return;
+      }
+
+      const response = await api.post(`/events/${selectedEvent.id}/guests/import`, { guests: guestsToImport });
+      
+      // Refresh guest list
+      const updatedGuests = await api.get(`/events/${selectedEvent.id}/guests`);
+      setGuests(updatedGuests);
+      
       setImportText('');
+      setParsedPreview(null);
       setShowImportModal(false);
-      setSuccess(`${response.count} invités importés avec succès !`);
+      setSuccess(response.message || `${guestsToImport.length} invités importés avec succès !`);
     } catch (err: any) {
-      setError(err.message || "Erreur lors de l'importation CSV.");
+      setError(err.message || "Erreur lors de l'importation.");
+    } finally {
+      setImportingFile(false);
+    }
+  };
+
+  // Handle Excel or CSV File Selection
+  const handleFileChange = (file: File) => {
+    if (!file) return;
+    setError('');
+    setSuccess('');
+    setImportingFile(true);
+
+    const reader = new FileReader();
+    reader.onload = (e: any) => {
+      try {
+        const data = e.target.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        
+        // Convert sheet to JSON array
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+        
+        if (jsonData.length < 2) {
+          setError("Le fichier semble vide ou ne contient pas d'en-tête.");
+          setImportingFile(false);
+          return;
+        }
+
+        // Find column indices based on header mapping
+        const headers = jsonData[0].map(h => h?.toString().toLowerCase().trim() || '');
+        
+        const firstNameIdx = headers.findIndex(h => h.includes('prénom') || h.includes('prenom') || h.includes('first') || h.includes('nom1') || h === 'pnom');
+        const lastNameIdx = headers.findIndex(h => h.includes('nom') && !h.includes('prénom') && !h.includes('prenom') || h.includes('last') || h === 'name' || h === 'nom2');
+        const emailIdx = headers.findIndex(h => h.includes('mail') || h.includes('courriel') || h === 'email');
+        const categoryIdx = headers.findIndex(h => h.includes('cat') || h.includes('groupe') || h.includes('type'));
+        const phoneIdx = headers.findIndex(h => h.includes('tel') || h.includes('tél') || h.includes('phone') || h.includes('whatsapp') || h.includes('mobile'));
+        const notesIdx = headers.findIndex(h => h.includes('note') || h.includes('pref') || h.includes('remarque') || h.includes('commentaire'));
+
+        // Fallback to default indices if not found
+        const finalFirstNameIdx = firstNameIdx !== -1 ? firstNameIdx : 0;
+        const finalLastNameIdx = lastNameIdx !== -1 ? lastNameIdx : 1;
+        const finalEmailIdx = emailIdx !== -1 ? emailIdx : 2;
+        const finalCategoryIdx = categoryIdx !== -1 ? categoryIdx : 3;
+        const finalPhoneIdx = phoneIdx !== -1 ? phoneIdx : 4;
+        const finalNotesIdx = notesIdx !== -1 ? notesIdx : 5;
+
+        const guestsList: any[] = [];
+        for (let i = 1; i < jsonData.length; i++) {
+          const row = jsonData[i];
+          if (!row || row.length === 0) continue;
+
+          const email = row[finalEmailIdx]?.toString().trim() || '';
+          const firstName = row[finalFirstNameIdx]?.toString().trim() || '';
+          const lastName = row[finalLastNameIdx]?.toString().trim() || '';
+
+          // Skip rows without minimum required info
+          if (!email && !firstName && !lastName) continue;
+
+          guestsList.push({
+            firstName: firstName || 'Invité',
+            lastName: lastName || `N°${i}`,
+            email: email || `invite.${i}@simulation.com`,
+            category: row[finalCategoryIdx]?.toString().trim() || 'Général',
+            phone: row[finalPhoneIdx]?.toString().trim() || '',
+            notes: row[finalNotesIdx]?.toString().trim() || '',
+          });
+        }
+
+        if (guestsList.length === 0) {
+          setError("Aucun invité valide n'a pu être extrait du fichier.");
+        } else {
+          setParsedPreview(guestsList);
+          setSuccess(`${guestsList.length} invités détectés avec succès. Veuillez vérifier l'aperçu ci-dessous puis valider.`);
+        }
+      } catch (err: any) {
+        setError("Erreur lors de la lecture du fichier : " + err.message);
+      } finally {
+        setImportingFile(false);
+      }
+    };
+
+    reader.onerror = () => {
+      setError("Erreur lors du chargement du fichier.");
+      setImportingFile(false);
+    };
+
+    reader.readAsBinaryString(file);
+  };
+
+  // Drag & Drop handlers
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+      const isCsv = file.name.endsWith('.csv');
+      
+      if (isExcel) {
+        setImportImportMethod('excel');
+        handleFileChange(file);
+      } else if (isCsv) {
+        setImportImportMethod('csv');
+        handleFileChange(file);
+      } else {
+        setError("Format de fichier non supporté. Veuillez déposer un fichier .xlsx, .xls ou .csv.");
+      }
+    }
+  };
+
+  // Download Sample Template File
+  const downloadSampleTemplate = (type: 'excel' | 'csv') => {
+    const headers = ['Prénom', 'Nom', 'Email', 'Catégorie', 'Téléphone', 'Notes/Préférences'];
+    const sampleRows = [
+      ['Jean', 'Kabeya', 'jean.kabeya@gmail.com', 'VIP', '+243812345678', 'Besoin de transport, régime Halal'],
+      ['Sarah', 'Mwamba', 'sarah.m@outlook.com', 'Ami', '+243998765432', 'Allergique aux arachides'],
+      ['Christian', 'Tshilombo', 'c.tshilombo@gmail.com', 'Famille', '', 'Végétarien, vient avec un accompagnateur'],
+    ];
+
+    if (type === 'excel') {
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
+      XLSX.utils.book_append_sheet(wb, ws, 'Modèle Invités');
+      XLSX.writeFile(wb, 'modele_invites_eventmaster.xlsx');
+    } else {
+      const csvContent = [headers.join(','), ...sampleRows.map(row => row.map(val => `"${val.replace(/"/g, '""')}"`).join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'modele_invites_eventmaster.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   };
 
@@ -1241,8 +1441,8 @@ export default function EventsPage() {
                     onClick={() => setShowImportModal(true)}
                     className="inline-flex items-center justify-center gap-1.5 px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold rounded-xl text-sm transition"
                   >
-                    <Upload className="w-4 h-4" />
-                    Importer CSV
+                    <FileSpreadsheet className="w-4 h-4" />
+                    Importer Excel / CSV
                   </button>
                   <button 
                     onClick={() => {
@@ -1960,49 +2160,241 @@ export default function EventsPage() {
         </div>
       )}
 
-      {/* CSV Import Modal */}
+      {/* CSV & Excel Import Modal */}
       {showImportModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-xl p-6 space-y-6">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-2xl p-6 space-y-6 overflow-y-auto max-h-[90vh]">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <h3 className="text-lg font-bold text-slate-900">Importer des invités en bloc</h3>
-              <button onClick={() => setShowImportModal(false)} className="text-slate-400 hover:text-slate-600 transition">
+              <div className="flex items-center gap-2">
+                <div className="bg-indigo-50 text-indigo-600 p-1.5 rounded-lg">
+                  <FileSpreadsheet className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">Importer des invités en bloc</h3>
+              </div>
+              <button 
+                onClick={() => {
+                  setShowImportModal(false);
+                  setParsedPreview(null);
+                  setImportText('');
+                }} 
+                className="text-slate-400 hover:text-slate-600 transition"
+              >
                 <XCircle className="w-6 h-6" />
               </button>
             </div>
+
+            {/* Import Methods Selector */}
+            <div className="flex bg-slate-100 p-1 rounded-xl">
+              <button
+                type="button"
+                onClick={() => {
+                  setImportImportMethod('excel');
+                  setParsedPreview(null);
+                }}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${
+                  importMethod === 'excel' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Fichier Excel (.xlsx, .xls)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setImportImportMethod('csv');
+                  setParsedPreview(null);
+                }}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${
+                  importMethod === 'csv' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Fichier CSV (.csv)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setImportImportMethod('text');
+                  setParsedPreview(null);
+                }}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${
+                  importMethod === 'text' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Copier-Coller Texte CSV
+              </button>
+            </div>
+
             <form onSubmit={handleBulkImport} className="space-y-4">
-              <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl text-xs text-indigo-950 space-y-2 leading-relaxed">
-                <div className="font-bold flex items-center gap-1.5"><Sparkles className="w-4 h-4 text-indigo-600" /> Format CSV requis :</div>
-                <p>Copiez et collez vos lignes d'invités en respectant l'ordre des colonnes séparées par des virgules :</p>
-                <pre className="bg-white p-2.5 rounded-xl border border-indigo-100 font-mono text-[11px] text-slate-700 overflow-x-auto">
-                  Prénom, Nom, Email, Catégorie{'\n'}
-                  Jean, Kabeya, jean.kabeya@gmail.com, VIP{'\n'}
-                  Sarah, Mwamba, sarah.m@outlook.com, Ami
-                </pre>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Données CSV</label>
-                <textarea 
-                  value={importText}
-                  onChange={(e) => setImportText(e.target.value)}
-                  placeholder="Prénom, Nom, Email, Catégorie..."
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:border-indigo-500 transition h-40 resize-none"
-                  required
-                />
-              </div>
+              {/* Excel / CSV File Upload Drag & Drop */}
+              {(importMethod === 'excel' || importMethod === 'csv') && (
+                <div className="space-y-4">
+                  {/* Download Templates */}
+                  <div className="flex items-center justify-between bg-indigo-50/50 border border-indigo-100 rounded-2xl p-4">
+                    <div className="space-y-1">
+                      <div className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-indigo-600" />
+                        Modèle de document requis
+                      </div>
+                      <p className="text-[11px] text-indigo-900/80">
+                        Pour garantir un import parfait, utilisez notre modèle contenant les en-têtes corrects.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => downloadSampleTemplate(importMethod)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition shadow-sm"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      Télécharger le modèle
+                    </button>
+                  </div>
+
+                  {/* Drag and Drop Zone */}
+                  <div 
+                    onDragEnter={handleDrag}
+                    onDragOver={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDrop={handleDrop}
+                    className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition flex flex-col items-center justify-center gap-3 ${
+                      dragActive 
+                        ? 'border-indigo-500 bg-indigo-50/30' 
+                        : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'
+                    }`}
+                  >
+                    <input 
+                      type="file"
+                      id="file-upload"
+                      accept={importMethod === 'excel' ? '.xlsx, .xls' : '.csv'}
+                      onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
+                      className="hidden"
+                    />
+                    <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-sm text-slate-400">
+                      <Upload className="w-6 h-6" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold text-slate-700">
+                        Glissez et déposez votre fichier ici, ou{' '}
+                        <label htmlFor="file-upload" className="text-indigo-600 hover:text-indigo-700 cursor-pointer underline">
+                          parcourez vos fichiers
+                        </label>
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        Formats acceptés : {importMethod === 'excel' ? '.xlsx, .xls' : '.csv'} (Taille max 10 Mo)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Text Area CSV Copy Paste */}
+              {importMethod === 'text' && (
+                <div className="space-y-4">
+                  <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl text-xs text-indigo-950 space-y-2 leading-relaxed">
+                    <div className="font-bold flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-indigo-600" /> Format CSV requis :
+                    </div>
+                    <p>Copiez et collez vos lignes d'invités en respectant l'ordre des colonnes séparées par des virgules :</p>
+                    <pre className="bg-white p-2.5 rounded-xl border border-indigo-100 font-mono text-[11px] text-slate-700 overflow-x-auto">
+                      Prénom, Nom, Email, Catégorie, Téléphone, Notes{'\n'}
+                      Jean, Kabeya, jean.kabeya@gmail.com, VIP, +243812345678, Table d'honneur{'\n'}
+                      Sarah, Mwamba, sarah.m@outlook.com, Ami, +243998765432, Allergie arachides
+                    </pre>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Données CSV</label>
+                    <textarea 
+                      value={importText}
+                      onChange={(e) => setImportText(e.target.value)}
+                      placeholder="Prénom, Nom, Email, Catégorie, Téléphone, Notes..."
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:border-indigo-500 transition h-40 resize-none"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Preview Section */}
+              {parsedPreview && parsedPreview.length > 0 && (
+                <div className="space-y-2 border-t border-slate-100 pt-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Aperçu des données ({parsedPreview.length} invités détectés)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setParsedPreview(null)}
+                      className="text-xs font-bold text-rose-600 hover:text-rose-700 transition"
+                    >
+                      Effacer
+                    </button>
+                  </div>
+                  <div className="border border-slate-200 rounded-2xl overflow-hidden max-h-48 overflow-y-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          <th className="py-2 px-3">Prénom</th>
+                          <th className="py-2 px-3">Nom</th>
+                          <th className="py-2 px-3">Email</th>
+                          <th className="py-2 px-3">Catégorie</th>
+                          <th className="py-2 px-3">Téléphone</th>
+                          <th className="py-2 px-3">Notes</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                        {parsedPreview.slice(0, 5).map((p, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50/50">
+                            <td className="py-2 px-3 font-semibold">{p.firstName}</td>
+                            <td className="py-2 px-3">{p.lastName}</td>
+                            <td className="py-2 px-3 font-mono text-[11px] text-slate-500">{p.email}</td>
+                            <td className="py-2 px-3">
+                              <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full text-[10px] font-bold">
+                                {p.category}
+                              </span>
+                            </td>
+                            <td className="py-2 px-3 font-mono text-[11px]">{p.phone || '-'}</td>
+                            <td className="py-2 px-3 truncate max-w-[120px]" title={p.notes}>{p.notes || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {parsedPreview.length > 5 && (
+                      <div className="bg-slate-50 text-center py-2 text-[10px] font-bold text-slate-400 border-t border-slate-100">
+                        Et {parsedPreview.length - 5} autres lignes...
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
               <div className="pt-4 flex gap-3 border-t border-slate-100">
                 <button 
                   type="button"
-                  onClick={() => setShowImportModal(false)}
+                  onClick={() => {
+                    setShowImportModal(false);
+                    setParsedPreview(null);
+                    setImportText('');
+                  }}
                   className="flex-1 py-2.5 border border-slate-200 text-slate-600 font-semibold rounded-xl text-sm hover:bg-slate-50 transition"
+                  disabled={importingFile}
                 >
                   Annuler
                 </button>
                 <button 
                   type="submit"
-                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100"
+                  disabled={importingFile || (importMethod !== 'text' && (!parsedPreview || parsedPreview.length === 0))}
+                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100 flex items-center justify-center gap-2"
                 >
-                  Importer
+                  {importingFile ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Traitement...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      Lancer l'importation
+                    </>
+                  )}
                 </button>
               </div>
             </form>

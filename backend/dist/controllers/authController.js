@@ -5,10 +5,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.register = register;
 exports.login = login;
+exports.verifyEmail = verifyEmail;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const crypto_1 = __importDefault(require("crypto"));
 const db_1 = require("../db");
+const notificationService_1 = require("../services/notificationService");
 const JWT_SECRET = process.env.JWT_SECRET || 'eventmaster-secret-key-12345';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 async function register(req, res) {
     try {
         const { email, password, name, tenantName } = req.body;
@@ -20,6 +24,7 @@ async function register(req, res) {
             return res.status(400).json({ error: 'Cet email est déjà utilisé' });
         }
         const passwordHash = await bcryptjs_1.default.hash(password, 10);
+        const verificationToken = crypto_1.default.randomBytes(32).toString('hex');
         // Create Tenant and User in a transaction to ensure atomic registration
         const result = await db_1.prisma.$transaction(async (tx) => {
             // 1. Create Tenant
@@ -37,6 +42,8 @@ async function register(req, res) {
                     name,
                     role: 'USER',
                     tenantId: tenant.id,
+                    isEmailVerified: false,
+                    verificationToken,
                 },
             });
             // 3. Set User as the manager of the Tenant
@@ -46,13 +53,27 @@ async function register(req, res) {
             });
             return { user, tenant };
         });
-        const token = jsonwebtoken_1.default.sign({
-            userId: result.user.id,
-            tenantId: result.tenant.id,
-            role: result.user.role,
-        }, JWT_SECRET, { expiresIn: '24h' });
+        // Send confirmation email
+        const verificationLink = `${FRONTEND_URL}/verify-email?token=${verificationToken}`;
+        const emailSubject = 'Confirmez votre adresse e-mail - EventMaster';
+        const emailText = `Bonjour ${name},\n\nMerci de vous être inscrit sur EventMaster. Veuillez confirmer votre adresse e-mail en cliquant sur le lien suivant :\n${verificationLink}\n\nSi vous n'avez pas créé de compte, vous pouvez ignorer cet e-mail.\n\nCordialement,\nL'équipe EventMaster`;
+        const emailHtml = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h2 style="color: #4f46e5; text-align: center;">Bienvenue sur EventMaster !</h2>
+        <p>Bonjour <strong>${name}</strong>,</p>
+        <p>Merci de vous être inscrit sur EventMaster, votre plateforme de gestion d'événements et d'invitations.</p>
+        <p>Pour activer votre compte et commencer à organiser vos événements, veuillez confirmer votre adresse e-mail en cliquant sur le bouton ci-dessous :</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${verificationLink}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Confirmer mon e-mail</a>
+        </div>
+        <p style="font-size: 0.875rem; color: #6b7280;">Si le bouton ne fonctionne pas, vous pouvez copier et coller ce lien dans votre navigateur :<br><a href="${verificationLink}" style="color: #4f46e5;">${verificationLink}</a></p>
+        <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0;" />
+        <p style="font-size: 0.875rem; color: #9ca3af; text-align: center;">Si vous n'avez pas créé de compte, vous pouvez ignorer cet e-mail.</p>
+      </div>
+    `;
+        await (0, notificationService_1.sendRealEmail)(email, emailSubject, emailText, emailHtml);
         return res.status(201).json({
-            token,
+            message: 'Compte créé avec succès ! Un e-mail de confirmation a été envoyé. Veuillez confirmer votre adresse e-mail pour vous connecter.',
             user: {
                 id: result.user.id,
                 email: result.user.email,
@@ -88,6 +109,13 @@ async function login(req, res) {
         if (!isPasswordValid) {
             return res.status(401).json({ error: 'Identifiants incorrects' });
         }
+        // Check if email is verified
+        if (!user.isEmailVerified && user.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({
+                error: 'Veuillez confirmer votre adresse e-mail avant de vous connecter. Un lien de confirmation vous a été envoyé par e-mail.',
+                notVerified: true,
+            });
+        }
         const token = jsonwebtoken_1.default.sign({
             userId: user.id,
             tenantId: user.tenantId,
@@ -113,5 +141,31 @@ async function login(req, res) {
     catch (error) {
         console.error('Erreur lors de la connexion:', error);
         return res.status(500).json({ error: 'Erreur interne du serveur lors de la connexion' });
+    }
+}
+async function verifyEmail(req, res) {
+    try {
+        const { token } = req.query;
+        if (!token || typeof token !== 'string') {
+            return res.status(400).json({ error: 'Jeton de vérification manquant ou invalide' });
+        }
+        const user = await db_1.prisma.user.findFirst({
+            where: { verificationToken: token },
+        });
+        if (!user) {
+            return res.status(400).json({ error: 'Le jeton de vérification est invalide ou a expiré' });
+        }
+        await db_1.prisma.user.update({
+            where: { id: user.id },
+            data: {
+                isEmailVerified: true,
+                verificationToken: null,
+            },
+        });
+        return res.json({ message: 'Votre adresse e-mail a été confirmée avec succès ! Vous pouvez maintenant vous connecter.' });
+    }
+    catch (error) {
+        console.error('Erreur lors de la vérification de l\'e-mail:', error);
+        return res.status(500).json({ error: 'Erreur interne du serveur lors de la vérification de l\'e-mail' });
     }
 }
