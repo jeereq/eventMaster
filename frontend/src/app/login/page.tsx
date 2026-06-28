@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { Calendar, Mail, Lock, Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Calendar, Mail, Lock, Loader2, AlertCircle, ArrowLeft, PartyPopper } from 'lucide-react';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -43,7 +43,7 @@ export default function LoginPage() {
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl border border-slate-200 shadow-xl relative z-10">
         <div className="text-center">
           <div className="inline-flex items-center justify-center bg-indigo-600 p-3 rounded-2xl text-white mb-4 shadow-lg shadow-indigo-100">
-            <Calendar className="w-8 h-8" />
+            <PartyPopper className="w-8 h-8" />
           </div>
           <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Connexion</h2>
           <p className="mt-2 text-sm text-slate-600">

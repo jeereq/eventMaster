@@ -4,7 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { CheckCircle, XCircle, Loader2, Calendar, ArrowRight } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, Calendar, ArrowRight, PartyPopper } from 'lucide-react';
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
@@ -39,7 +39,7 @@ function VerifyEmailContent() {
     <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl border border-slate-200 shadow-xl relative z-10 my-8">
       <div className="text-center">
         <div className="inline-flex items-center justify-center bg-indigo-600 p-3 rounded-2xl text-white mb-6 shadow-lg shadow-indigo-100">
-          <Calendar className="w-8 h-8" />
+          <PartyPopper className="w-8 h-8" />
         </div>
         
         {status === 'loading' && (

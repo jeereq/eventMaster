@@ -7,7 +7,8 @@ import {
   Calendar, MapPin, Users, PlusCircle, Trash2, Edit3, 
   ChevronRight, ArrowLeft, Check, Upload, Mail, Send, 
   Sparkles, CheckCircle2, XCircle, AlertCircle, HelpCircle, Loader2,
-  Copy, MessageSquare, Share2, Search, Filter, RefreshCw, CheckSquare, XSquare, HelpCircle as PendingIcon
+  Copy, MessageSquare, Share2, Search, Filter, RefreshCw, CheckSquare, XSquare, HelpCircle as PendingIcon,
+  Eye, BarChart3, Utensils
 } from 'lucide-react';
 
 interface EventItem {
@@ -158,6 +159,11 @@ export default function EventsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [rsvpFilter, setRsvpFilter] = useState<'ALL' | 'ACCEPTED' | 'DECLINED' | 'PENDING'>('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [dietFilter, setDietFilter] = useState<string>('ALL');
+  const [customFilters, setCustomFilters] = useState<Record<string, string>>({});
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [showDetailedStats, setShowDetailedStats] = useState(false);
+  const [selectedGuestDetails, setSelectedGuestDetails] = useState<GuestItem | null>(null);
 
   // Import guests
   const [showImportModal, setShowImportModal] = useState(false);
@@ -204,11 +210,61 @@ export default function EventsPage() {
 
   const uniqueCategories = Array.from(new Set(guests.map(g => g.category || 'Général')));
 
+  const getCustomRsvpFields = () => {
+    const fields: { id: string; label: string; type: string; options?: string[] }[] = [];
+    invitations.forEach(invite => {
+      if (invite.template?.id || (invite as any).templateId) {
+        const templateId = invite.template?.id || (invite as any).templateId;
+        const template = templates.find(t => t.id === templateId);
+        if (template && template.content) {
+          let contentObj = template.content;
+          if (typeof contentObj === 'string') {
+            try { contentObj = JSON.parse(contentObj); } catch(e) {}
+          }
+          if (contentObj && contentObj.elements) {
+            contentObj.elements.forEach((el: any) => {
+              if (el.type === 'rsvp-block' && el.rsvpFields) {
+                el.rsvpFields.forEach((f: any) => {
+                  if (!fields.some(existing => existing.label === f.label)) {
+                    fields.push({
+                      id: f.id,
+                      label: f.label,
+                      type: f.type,
+                      options: f.options ? f.options.split(',').map((o: string) => o.trim()) : undefined
+                    });
+                  }
+                });
+              }
+            });
+          }
+        }
+      }
+    });
+    return fields;
+  };
+
   const filteredGuests = guests.filter(g => {
     const matchesSearch = `${g.firstName} ${g.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) || g.email.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesRsvp = rsvpFilter === 'ALL' || g.rsvp === rsvpFilter;
     const matchesCategory = categoryFilter === 'ALL' || (g.category || 'Général') === categoryFilter;
-    return matchesSearch && matchesRsvp && matchesCategory;
+    const matchesDiet = dietFilter === 'ALL' || (g.preferences?.specialMeal || 'none') === dietFilter;
+    
+    let matchesCustom = true;
+    Object.entries(customFilters).forEach(([label, value]) => {
+      if (value && value !== 'ALL' && value.trim() !== '') {
+        const guestVal = g.preferences?.customFields?.[label];
+        if (guestVal === undefined || guestVal === null) {
+          matchesCustom = false;
+        } else if (typeof guestVal === 'boolean') {
+          const filterBool = value === 'Oui';
+          if (guestVal !== filterBool) matchesCustom = false;
+        } else if (!guestVal.toString().toLowerCase().includes(value.toLowerCase())) {
+          matchesCustom = false;
+        }
+      }
+    });
+    
+    return matchesSearch && matchesRsvp && matchesCategory && matchesDiet && matchesCustom;
   });
 
   const isAllFilteredSelected = filteredGuests.length > 0 && filteredGuests.every(g => selectedGuestIds.includes(g.id));
@@ -1013,6 +1069,149 @@ export default function EventsPage() {
                       />
                     </div>
                   </div>
+
+                  {/* Toggle Detailed Stats Button */}
+                  <button 
+                    onClick={() => setShowDetailedStats(!showDetailedStats)}
+                    className="w-full py-2.5 px-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-xs transition flex items-center justify-center gap-2 border border-indigo-100 shadow-sm"
+                  >
+                    <BarChart3 className="w-4 h-4" />
+                    {showDetailedStats ? "Masquer les statistiques détaillées" : "Afficher les statistiques détaillées (Repas, Questions personnalisées, etc.)"}
+                  </button>
+                </div>
+              )}
+
+              {/* Detailed Statistics Panel */}
+              {selectedEvent && guests.length > 0 && showDetailedStats && (
+                <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6 animate-fade-in">
+                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+                    <BarChart3 className="w-5 h-5 text-indigo-600" />
+                    Statistiques de réponses détaillées
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* Diet/Menu Stats */}
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Utensils className="w-4 h-4 text-indigo-500" />
+                        Régimes Alimentaires (Présents)
+                      </h4>
+                      <div className="bg-slate-50 border border-slate-150 rounded-2xl p-4 space-y-2.5">
+                        {[
+                          { label: 'Standard', count: guests.filter(g => g.rsvp === 'ACCEPTED' && (!g.preferences?.specialMeal || g.preferences?.specialMeal === 'none')).length },
+                          { label: 'Végétarien', count: guests.filter(g => g.rsvp === 'ACCEPTED' && g.preferences?.specialMeal === 'vegetarian').length },
+                          { label: 'Végétalien (Vegan)', count: guests.filter(g => g.rsvp === 'ACCEPTED' && g.preferences?.specialMeal === 'vegan').length },
+                          { label: 'Halal', count: guests.filter(g => g.rsvp === 'ACCEPTED' && g.preferences?.specialMeal === 'halal').length },
+                          { label: 'Casher', count: guests.filter(g => g.rsvp === 'ACCEPTED' && g.preferences?.specialMeal === 'kosher').length },
+                        ].map(item => {
+                          const totalAccepted = guests.filter(g => g.rsvp === 'ACCEPTED').length;
+                          const pct = totalAccepted > 0 ? Math.round((item.count / totalAccepted) * 100) : 0;
+                          return (
+                            <div key={item.label} className="space-y-1">
+                              <div className="flex justify-between text-xs font-semibold text-slate-700">
+                                <span>{item.label}</span>
+                                <span>{item.count} <span className="text-slate-400 font-normal">({pct}%)</span></span>
+                              </div>
+                              <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                                <div style={{ width: `${pct}%` }} className="bg-indigo-500 h-full rounded-full" />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Category Stats */}
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Users className="w-4 h-4 text-indigo-500" />
+                        Statut par Catégorie d'Invités
+                      </h4>
+                      <div className="bg-slate-50 border border-slate-150 rounded-2xl p-4 space-y-3 max-h-64 overflow-y-auto">
+                        {uniqueCategories.map(cat => {
+                          const catGuests = guests.filter(g => (g.category || 'Général') === cat);
+                          const total = catGuests.length;
+                          const accepted = catGuests.filter(g => g.rsvp === 'ACCEPTED').length;
+                          const declined = catGuests.filter(g => g.rsvp === 'DECLINED').length;
+                          const pending = catGuests.filter(g => g.rsvp === 'PENDING').length;
+                          return (
+                            <div key={cat} className="space-y-1 border-b border-slate-150 pb-2 last:border-0 last:pb-0">
+                              <div className="text-xs font-bold text-slate-800">{cat} ({total})</div>
+                              <div className="grid grid-cols-3 gap-1 text-[10px] text-center font-bold">
+                                <div className="bg-emerald-50 text-emerald-700 py-1 rounded">Présent: {accepted}</div>
+                                <div className="bg-rose-50 text-rose-700 py-1 rounded">Absent: {declined}</div>
+                                <div className="bg-amber-50 text-amber-700 py-1 rounded">Attente: {pending}</div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Custom Questions Stats */}
+                    <div className="space-y-3 md:col-span-2 lg:col-span-1">
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-indigo-500" />
+                        Questions Personnalisées (Présents)
+                      </h4>
+                      <div className="bg-slate-50 border border-slate-150 rounded-2xl p-4 space-y-4 max-h-64 overflow-y-auto">
+                        {getCustomRsvpFields().length === 0 ? (
+                          <div className="text-center py-8 text-xs text-slate-400 italic">
+                            Aucune question personnalisée définie dans le modèle de cet événement.
+                          </div>
+                        ) : (
+                          getCustomRsvpFields().map(field => {
+                            const answers = guests
+                              .filter(g => g.rsvp === 'ACCEPTED' && g.preferences?.customFields?.[field.label] !== undefined)
+                              .map(g => g.preferences.customFields[field.label]);
+                            
+                            const totalAnswers = answers.length;
+
+                            if (field.type === 'checkbox') {
+                              const yesCount = answers.filter(a => a === true).length;
+                              const noCount = totalAnswers - yesCount;
+                              const yesPct = totalAnswers > 0 ? Math.round((yesCount / totalAnswers) * 100) : 0;
+                              return (
+                                <div key={field.id} className="space-y-1.5 border-b border-slate-150 pb-2.5 last:border-0 last:pb-0">
+                                  <div className="text-xs font-bold text-slate-800">{field.label}</div>
+                                  <div className="flex justify-between text-[10px] font-semibold text-slate-500">
+                                    <span>Coché (Oui) : {yesCount} ({yesPct}%)</span>
+                                    <span>Non coché (Non) : {noCount}</span>
+                                  </div>
+                                  <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                                    <div style={{ width: `${yesPct}%` }} className="bg-indigo-500 h-full rounded-full" />
+                                  </div>
+                                </div>
+                              );
+                            } else {
+                              const counts: Record<string, number> = {};
+                              answers.forEach(ans => {
+                                const strVal = ans === null || ans === undefined ? 'Non renseigné' : ans.toString();
+                                counts[strVal] = (counts[strVal] || 0) + 1;
+                              });
+
+                              return (
+                                <div key={field.id} className="space-y-1.5 border-b border-slate-150 pb-2.5 last:border-0 last:pb-0">
+                                  <div className="text-xs font-bold text-slate-800">{field.label}</div>
+                                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                                    {Object.entries(counts).map(([option, count]) => {
+                                      const pct = totalAnswers > 0 ? Math.round((count / totalAnswers) * 100) : 0;
+                                      return (
+                                        <div key={option} className="flex justify-between text-[10px] text-slate-600">
+                                          <span className="truncate max-w-[150px]">{option}</span>
+                                          <span className="font-bold">{count} ({pct}%)</span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            }
+                          })
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -1066,60 +1265,141 @@ export default function EventsPage() {
 
               {/* Search & Filtering Controls */}
               {guests.length > 0 && (
-                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col md:flex-row gap-3 items-center">
-                  {/* Search Input */}
-                  <div className="relative w-full md:flex-1">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-                    <input 
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Rechercher un invité par nom ou email..."
-                      className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition shadow-sm"
-                    />
-                  </div>
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+                  <div className="flex flex-col md:flex-row gap-3 items-center">
+                    {/* Search Input */}
+                    <div className="relative w-full md:flex-1">
+                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                      <input 
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Rechercher un invité par nom ou email..."
+                        className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition shadow-sm"
+                      />
+                    </div>
 
-                  {/* RSVP Status Filter */}
-                  <div className="w-full md:w-48">
-                    <select 
-                      value={rsvpFilter}
-                      onChange={(e) => setRsvpFilter(e.target.value as any)}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition shadow-sm font-semibold text-slate-700"
-                    >
-                      <option value="ALL">Tous les statuts RSVP</option>
-                      <option value="ACCEPTED">Présent uniquement</option>
-                      <option value="DECLINED">Absent uniquement</option>
-                      <option value="PENDING">Sans réponse uniquement</option>
-                    </select>
-                  </div>
+                    {/* RSVP Status Filter */}
+                    <div className="w-full md:w-48">
+                      <select 
+                        value={rsvpFilter}
+                        onChange={(e) => setRsvpFilter(e.target.value as any)}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition shadow-sm font-semibold text-slate-700"
+                      >
+                        <option value="ALL">Tous les statuts RSVP</option>
+                        <option value="ACCEPTED">Présent uniquement</option>
+                        <option value="DECLINED">Absent uniquement</option>
+                        <option value="PENDING">Sans réponse uniquement</option>
+                      </select>
+                    </div>
 
-                  {/* Category Filter */}
-                  <div className="w-full md:w-48">
-                    <select 
-                      value={categoryFilter}
-                      onChange={(e) => setCategoryFilter(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition shadow-sm font-semibold text-slate-700"
-                    >
-                      <option value="ALL">Toutes les catégories</option>
-                      {uniqueCategories.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                  </div>
+                    {/* Category Filter */}
+                    <div className="w-full md:w-48">
+                      <select 
+                        value={categoryFilter}
+                        onChange={(e) => setCategoryFilter(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition shadow-sm font-semibold text-slate-700"
+                      >
+                        <option value="ALL">Toutes les catégories</option>
+                        {uniqueCategories.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                    </div>
 
-                  {/* Reset Filters Button */}
-                  {(searchQuery || rsvpFilter !== 'ALL' || categoryFilter !== 'ALL') && (
+                    {/* Advanced Filters Toggle */}
                     <button
-                      onClick={() => {
-                        setSearchQuery('');
-                        setRsvpFilter('ALL');
-                        setCategoryFilter('ALL');
-                      }}
-                      className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-700 transition bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-xl"
+                      onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                      className={`w-full md:w-auto px-4 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border ${
+                        showAdvancedFilters 
+                          ? 'bg-indigo-50 border-indigo-200 text-indigo-700' 
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
                     >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                      Réinitialiser
+                      <Filter className="w-3.5 h-3.5" />
+                      Filtres avancés
                     </button>
+
+                    {/* Reset Filters Button */}
+                    {(searchQuery || rsvpFilter !== 'ALL' || categoryFilter !== 'ALL' || dietFilter !== 'ALL' || Object.values(customFilters).some(v => v !== 'ALL' && v !== '')) && (
+                      <button
+                        onClick={() => {
+                          setSearchQuery('');
+                          setRsvpFilter('ALL');
+                          setCategoryFilter('ALL');
+                          setDietFilter('ALL');
+                          setCustomFilters({});
+                        }}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-700 transition bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-xl"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin-once" />
+                        Réinitialiser
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Advanced Collapsible Filters */}
+                  {showAdvancedFilters && (
+                    <div className="pt-3 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 animate-fade-in">
+                      {/* Diet Filter */}
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Régime alimentaire</label>
+                        <select 
+                          value={dietFilter}
+                          onChange={(e) => setDietFilter(e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition shadow-sm font-semibold text-slate-700"
+                        >
+                          <option value="ALL">Tous les régimes</option>
+                          <option value="none">Standard</option>
+                          <option value="vegetarian">Végétarien</option>
+                          <option value="vegan">Végétalien (Vegan)</option>
+                          <option value="halal">Halal</option>
+                          <option value="kosher">Casher</option>
+                        </select>
+                      </div>
+
+                      {/* Dynamic Custom Questions Filters */}
+                      {getCustomRsvpFields().map(field => {
+                        const currentValue = customFilters[field.label] || 'ALL';
+                        return (
+                          <div key={field.id} className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate block max-w-full" title={field.label}>
+                              {field.label}
+                            </label>
+                            {field.type === 'checkbox' ? (
+                              <select 
+                                value={currentValue}
+                                onChange={(e) => setCustomFilters({ ...customFilters, [field.label]: e.target.value })}
+                                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition shadow-sm font-semibold text-slate-700"
+                              >
+                                <option value="ALL">Tous</option>
+                                <option value="Oui">Coché (Oui)</option>
+                                <option value="Non">Non coché (Non)</option>
+                              </select>
+                            ) : field.type === 'select' && field.options ? (
+                              <select 
+                                value={currentValue}
+                                onChange={(e) => setCustomFilters({ ...customFilters, [field.label]: e.target.value })}
+                                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition shadow-sm font-semibold text-slate-700"
+                              >
+                                <option value="ALL">Tous</option>
+                                {field.options.map(opt => (
+                                  <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              <input 
+                                type="text"
+                                value={currentValue === 'ALL' ? '' : currentValue}
+                                onChange={(e) => setCustomFilters({ ...customFilters, [field.label]: e.target.value || 'ALL' })}
+                                placeholder="Filtrer par réponse..."
+                                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition shadow-sm font-semibold text-slate-700"
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               )}
@@ -1225,6 +1505,13 @@ export default function EventsPage() {
                               )}
                             </td>
                             <td className="py-4 px-6 text-right flex items-center justify-end gap-1.5">
+                              <button 
+                                onClick={() => setSelectedGuestDetails(g)}
+                                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                                title="Voir les détails et choix de l'invité"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
                               <button 
                                 onClick={() => handleEditGuestClick(g)}
                                 className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
@@ -2167,6 +2454,127 @@ export default function EventsPage() {
               <button 
                 onClick={() => setSharingGuest(null)}
                 className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Guest Details Modal */}
+      {selectedGuestDetails && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg p-6 space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-2">
+                <div className="bg-indigo-50 text-indigo-600 p-1.5 rounded-lg">
+                  <Users className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">Détails de l'invité</h3>
+              </div>
+              <button onClick={() => setSelectedGuestDetails(null)} className="text-slate-400 hover:text-slate-600 transition">
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+              {/* Contact Info */}
+              <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-150">
+                <div>
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Prénom & Nom</div>
+                  <div className="font-bold text-slate-800 text-sm mt-0.5">{selectedGuestDetails.firstName} {selectedGuestDetails.lastName}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Catégorie</div>
+                  <div className="font-bold text-slate-800 text-sm mt-0.5">{selectedGuestDetails.category || 'Général'}</div>
+                </div>
+                <div className="col-span-2">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">E-mail</div>
+                  <div className="font-bold text-slate-800 text-sm mt-0.5 truncate">{selectedGuestDetails.email}</div>
+                </div>
+                {selectedGuestDetails.preferences?.phone && (
+                  <div className="col-span-2">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Téléphone</div>
+                    <div className="font-bold text-slate-800 text-sm mt-0.5">{selectedGuestDetails.preferences.phone}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* RSVP Status */}
+              <div className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Statut de réponse</span>
+                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-extrabold border ${
+                  selectedGuestDetails.rsvp === 'ACCEPTED' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
+                  selectedGuestDetails.rsvp === 'DECLINED' ? 'bg-rose-50 border-rose-100 text-rose-700' :
+                  'bg-amber-50 border-amber-100 text-amber-700'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    selectedGuestDetails.rsvp === 'ACCEPTED' ? 'bg-emerald-500' :
+                    selectedGuestDetails.rsvp === 'DECLINED' ? 'bg-rose-500' : 'bg-amber-500'
+                  }`} />
+                  {selectedGuestDetails.rsvp === 'ACCEPTED' ? 'Présent' : selectedGuestDetails.rsvp === 'DECLINED' ? 'Absent' : 'En attente'}
+                </span>
+              </div>
+
+              {/* Standard Preferences */}
+              {selectedGuestDetails.rsvp === 'ACCEPTED' && (
+                <div className="p-4 border border-slate-200 rounded-2xl space-y-3 bg-white">
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 pb-2 flex items-center gap-1.5">
+                    <Utensils className="w-4 h-4 text-indigo-600" />
+                    <span>Préférences de repas & Notes</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Type de Menu</div>
+                      <div className="font-bold text-slate-800 text-xs mt-1">
+                        {selectedGuestDetails.preferences?.specialMeal === 'vegetarian' ? 'Végétarien' :
+                         selectedGuestDetails.preferences?.specialMeal === 'vegan' ? 'Végétalien (Vegan)' :
+                         selectedGuestDetails.preferences?.specialMeal === 'halal' ? 'Halal' :
+                         selectedGuestDetails.preferences?.specialMeal === 'kosher' ? 'Casher' : 'Standard'}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Allergies</div>
+                      <div className="font-bold text-slate-800 text-xs mt-1">
+                        {selectedGuestDetails.preferences?.allergies || <span className="italic text-slate-300">Aucune</span>}
+                      </div>
+                    </div>
+                    <div className="col-span-2">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Notes / Remarques</div>
+                      <div className="font-bold text-slate-800 text-xs mt-1">
+                        {selectedGuestDetails.preferences?.notes || <span className="italic text-slate-300">Aucune note</span>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Custom RSVP Form Fields */}
+              {selectedGuestDetails.rsvp === 'ACCEPTED' && selectedGuestDetails.preferences?.customFields && Object.keys(selectedGuestDetails.preferences.customFields).length > 0 && (
+                <div className="p-4 border border-slate-200 rounded-2xl space-y-3 bg-white">
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 pb-2 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-indigo-600" />
+                    <span>Réponses aux questions personnalisées</span>
+                  </div>
+                  <div className="space-y-3">
+                    {Object.entries(selectedGuestDetails.preferences.customFields).map(([question, answer]: [string, any]) => (
+                      <div key={question} className="border-b border-slate-100 pb-2 last:border-0 last:pb-0">
+                        <div className="text-[10px] font-bold text-slate-400 uppercase leading-relaxed">{question}</div>
+                        <div className="font-bold text-slate-800 text-xs mt-0.5">
+                          {typeof answer === 'boolean' ? (answer ? 'Oui' : 'Non') : (answer || <span className="italic text-slate-300">Non renseigné</span>)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-slate-100">
+              <button 
+                onClick={() => setSelectedGuestDetails(null)}
+                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-sm transition"
               >
                 Fermer
               </button>

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { Calendar, Mail, Lock, User, Building, Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Calendar, Mail, Lock, User, Building, Loader2, AlertCircle, ArrowLeft, PartyPopper } from 'lucide-react';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -68,7 +68,7 @@ export default function RegisterPage() {
           <>
             <div className="text-center">
               <div className="inline-flex items-center justify-center bg-indigo-600 p-3 rounded-2xl text-white mb-4 shadow-lg shadow-indigo-100">
-                <Calendar className="w-8 h-8" />
+                <PartyPopper className="w-8 h-8" />
               </div>
               <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Inscription SaaS</h2>
               <p className="mt-2 text-sm text-slate-600">

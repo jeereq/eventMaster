@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { 
   Calendar, Users, Mail, CreditCard, LayoutDashboard, 
-  LogOut, Menu, X, Loader2, ShieldCheck 
+  LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper 
 } from 'lucide-react';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -50,7 +50,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <header className="md:hidden bg-white border-b border-slate-200 h-16 px-4 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-2">
           <div className="bg-indigo-600 p-1.5 rounded-lg text-white">
-            <Calendar className="w-5 h-5" />
+            <PartyPopper className="w-5 h-5" />
           </div>
           <span className="font-bold text-lg text-slate-900">EventMaster</span>
         </div>
@@ -68,7 +68,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Logo */}
           <div className="flex items-center gap-3">
             <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-md shadow-indigo-100">
-              <Calendar className="w-6 h-6" />
+              <PartyPopper className="w-6 h-6" />
             </div>
             <div className="flex flex-col">
               <span className="font-bold text-lg leading-none text-slate-900">EventMaster</span>

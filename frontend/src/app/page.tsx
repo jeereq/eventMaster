@@ -7,7 +7,8 @@ import { api } from '@/lib/api';
 import { 
   Calendar, Users, Award, Shield, CheckCircle, Mail, 
   ArrowRight, Lock, Layout, Sparkles, Compass, Heart, 
-  Briefcase, Smartphone, Star, ShieldCheck, Check, XCircle
+  Briefcase, Smartphone, Star, ShieldCheck, Check, XCircle,
+  PartyPopper
 } from 'lucide-react';
 
 interface MockTemplate {
@@ -158,7 +159,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-indigo-600 p-2 rounded-lg text-white">
-              <Calendar className="w-5 h-5" />
+              <PartyPopper className="w-5 h-5" />
             </div>
             <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
               EventMaster
@@ -585,7 +586,7 @@ export default function Home() {
       <footer className="bg-slate-900 text-slate-400 py-12 border-t border-slate-800 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center sm:flex sm:justify-between sm:items-center">
           <div className="flex items-center justify-center gap-2 mb-4 sm:mb-0">
-            <Calendar className="w-5 h-5 text-indigo-500" />
+            <PartyPopper className="w-5 h-5 text-indigo-500" />
             <span className="text-white font-bold">EventMaster</span>
           </div>
           <p className="text-xs">© 2026 EventMaster SaaS. Isolation stricte garantie. Tous droits réservés.</p>
