@@ -1096,6 +1096,15 @@ export default function EventsPage() {
           </div>
           <div className="flex gap-2">
             <button 
+              onClick={() => handleManageEvent(selectedEvent)}
+              className="px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold rounded-xl text-sm transition flex items-center gap-1.5 shadow-sm"
+              title="Actualiser les données de l'événement"
+              disabled={loading}
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              Actualiser
+            </button>
+            <button 
               onClick={() => handleEditEventClick(selectedEvent)}
               className="px-4 py-2.5 border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold rounded-xl text-sm transition"
             >
