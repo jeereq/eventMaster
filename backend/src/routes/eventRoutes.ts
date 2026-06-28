@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { getEvents, createEvent, getEventById, updateEvent, deleteEvent } from '../controllers/eventController';
 import { getGuests, createGuest, updateGuest, deleteGuest, importGuests } from '../controllers/guestController';
-import { getInvitations, createInvitation, sendInvitation } from '../controllers/invitationController';
+import { getInvitations, createInvitation, updateInvitation, deleteInvitation, sendInvitation } from '../controllers/invitationController';
 import { requireAuth } from '../middleware/auth';
 
 const router = Router();
@@ -26,6 +26,8 @@ router.delete('/:eventId/guests/:id', deleteGuest);
 // Invitations related to Events
 router.get('/:eventId/invitations', getInvitations);
 router.post('/:eventId/invitations', createInvitation);
+router.put('/:eventId/invitations/:id', updateInvitation);
+router.delete('/:eventId/invitations/:id', deleteInvitation);
 router.post('/:eventId/invitations/:id/send', sendInvitation);
 router.post('/:eventId/invitations/:id/broadcast', sendInvitation);
 

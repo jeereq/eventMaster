@@ -42,8 +42,78 @@ interface InvitationItem {
   subject: string;
   body: string;
   channel: string;
-  template?: { name: string } | null;
+  template?: { id: string; name: string } | null;
 }
+
+const MESSAGE_TEMPLATES = [
+  {
+    id: 'wedding',
+    name: '💍 Mariage',
+    subject: 'Invitation officielle à notre mariage : {{title}}',
+    body: `Cher(e) {{firstName}} {{lastName}},
+
+Nous avons l'immense joie de vous inviter à célébrer notre mariage : {{title}}.
+
+L'événement aura lieu le {{date}} à {{location}}.
+
+Votre présence est précieuse pour nous. Veuillez confirmer votre venue en cliquant sur le lien ci-dessous :
+
+{{rsvpLink}}
+
+Avec toute notre affection.`
+  },
+  {
+    id: 'birthday',
+    name: '🎉 Anniversaire',
+    subject: 'Invitation : Célébrons ensemble mon anniversaire !',
+    body: `Salut {{firstName}},
+
+Une année de plus, ça se fête ! Je t'invite chaleureusement à mon anniversaire : {{title}}.
+
+On se retrouve le {{date}} à l'adresse suivante : {{location}}.
+
+Merci de me confirmer si tu seras des nôtres en cliquant sur ce lien :
+
+{{rsvpLink}}
+
+Hâte de faire la fête avec toi !`
+  },
+  {
+    id: 'corporate',
+    name: '💼 Gala / Professionnel',
+    subject: 'Invitation officielle : {{title}}',
+    body: `Cher(e) {{firstName}} {{lastName}},
+
+Nous avons l'honneur de vous convier à l'événement : {{title}}.
+
+Cette rencontre prestigieuse se déroulera le {{date}} à {{location}}.
+
+Nous vous prions de bien vouloir confirmer votre participation en complétant le formulaire d'inscription en ligne via le lien suivant :
+
+{{rsvpLink}}
+
+En espérant vous compter parmi nos honorables invités.
+
+Cordialement,
+L'équipe organisatrice.`
+  },
+  {
+    id: 'family',
+    name: '🏡 Fête de Famille',
+    subject: 'Invitation : Retrouvailles familiales - {{title}}',
+    body: `Cher(e) {{firstName}},
+
+C'est le moment de se réunir ! Tu es invité(e) à notre fête de famille : {{title}}.
+
+Nous nous rassemblerons le {{date}} à {{location}}.
+
+Pour nous aider à organiser le repas et l'accueil, merci de confirmer ta présence ici :
+
+{{rsvpLink}}
+
+A très vite !`
+  }
+];
 
 export default function EventsPage() {
   const { user } = useAuth();
@@ -81,6 +151,8 @@ export default function EventsPage() {
   const [guestCategory, setGuestCategory] = useState('Famille');
   const [guestPrefs, setGuestPreferences] = useState('');
   const [guests, setGuests] = useState<GuestItem[]>([]);
+  const [editingGuestId, setEditingGuestId] = useState<string | null>(null);
+  const [savingGuest, setSavingGuest] = useState(false);
 
   // Guest filtering states
   const [searchQuery, setSearchQuery] = useState('');
@@ -99,10 +171,13 @@ export default function EventsPage() {
   const [inviteSubject, setInviteSubject] = useState('');
   const [inviteBody, setInviteBody] = useState('');
   const [inviteChannel, setInviteChannel] = useState('EMAIL');
+  const [editingInviteId, setEditingInviteId] = useState<string | null>(null);
+  const [savingInvite, setSavingInvite] = useState(false);
 
   // Broadcast results
   const [broadcastResults, setBroadcastResults] = useState<any[] | null>(null);
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+  const [broadcastingInviteId, setBroadcastingInviteId] = useState<string | null>(null);
   const [copiedGuestId, setCopiedGuestId] = useState<string | null>(null);
   const [sharingGuest, setSharingGuest] = useState<GuestItem | null>(null);
 
@@ -412,11 +487,12 @@ export default function EventsPage() {
     }
   };
 
-  // Create Guest
+  // Create or Update Guest
   const handleAddGuest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEvent) return;
     setError('');
+    setSavingGuest(true);
 
     try {
       const payload = {
@@ -430,18 +506,47 @@ export default function EventsPage() {
         },
       };
 
-      const newGuest = await api.post(`/events/${selectedEvent.id}/guests`, payload);
-      setGuests([...guests, newGuest]);
+      if (editingGuestId) {
+        const updatedGuest = await api.put(`/events/${selectedEvent.id}/guests/${editingGuestId}`, payload);
+        setGuests(guests.map(g => g.id === editingGuestId ? updatedGuest : g));
+        setSuccess('Invité mis à jour avec succès !');
+      } else {
+        const newGuest = await api.post(`/events/${selectedEvent.id}/guests`, payload);
+        setGuests([...guests, newGuest]);
+        setSuccess('Invité ajouté avec succès !');
+      }
+
       setGuestFirstName('');
       setGuestLastName('');
       setGuestEmail('');
       setGuestPhone('');
       setGuestPreferences('');
+      setEditingGuestId(null);
       setShowGuestModal(false);
-      setSuccess('Invité ajouté avec succès !');
     } catch (err: any) {
-      setError(err.message || "Erreur d'ajout de l'invité");
+      setError(err.message || "Erreur lors de l'enregistrement de l'invité");
+    } finally {
+      setSavingGuest(false);
     }
+  };
+
+  const handleEditGuestClick = (guest: GuestItem) => {
+    setEditingGuestId(guest.id);
+    setGuestFirstName(guest.firstName);
+    setGuestLastName(guest.lastName);
+    setGuestEmail(guest.email);
+    setGuestCategory(guest.category || 'Famille');
+    
+    let phone = '';
+    let notes = '';
+    if (guest.preferences && typeof guest.preferences === 'object') {
+      const prefs = guest.preferences as any;
+      phone = prefs.phone || '';
+      notes = prefs.notes || '';
+    }
+    setGuestPhone(phone);
+    setGuestPreferences(notes);
+    setShowGuestModal(true);
   };
 
   // Delete Guest
@@ -474,11 +579,12 @@ export default function EventsPage() {
     }
   };
 
-  // Create Invitation
+  // Create or Update Invitation
   const handleCreateInvitation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedEvent) return;
     setError('');
+    setSavingInvite(true);
 
     try {
       const payload = {
@@ -488,15 +594,42 @@ export default function EventsPage() {
         channel: inviteChannel,
       };
 
-      const newInvite = await api.post(`/events/${selectedEvent.id}/invitations`, payload);
-      setInvitations([...invitations, newInvite]);
+      if (editingInviteId) {
+        const updatedInvite = await api.put(`/events/${selectedEvent.id}/invitations/${editingInviteId}`, payload);
+        setInvitations(invitations.map(i => i.id === editingInviteId ? updatedInvite : i));
+        setSuccess('Invitation mise à jour avec succès !');
+      } else {
+        const newInvite = await api.post(`/events/${selectedEvent.id}/invitations`, payload);
+        setInvitations([...invitations, newInvite]);
+        setSuccess('Invitation configurée avec succès !');
+      }
+
       setInviteSubject('');
       setInviteBody('');
       setSelectedTemplateId('');
+      setEditingInviteId(null);
       setShowInviteModal(false);
-      setSuccess('Invitation configurée avec succès !');
     } catch (err: any) {
       setError(err.message || "Erreur de configuration de l'invitation");
+    } finally {
+      setSavingInvite(false);
+    }
+  };
+
+  const handleEditInvitationClick = (invite: InvitationItem) => {
+    setEditingInviteId(invite.id);
+    setInviteSubject(invite.subject);
+    setInviteBody(invite.body);
+    setSelectedTemplateId(invite.template?.id || '');
+    setInviteChannel(invite.channel || 'EMAIL');
+    setShowInviteModal(true);
+  };
+
+  const handleSelectMessageTemplate = (templateId: string) => {
+    const template = MESSAGE_TEMPLATES.find(t => t.id === templateId);
+    if (template) {
+      setInviteSubject(template.subject);
+      setInviteBody(template.body);
     }
   };
 
@@ -517,6 +650,7 @@ export default function EventsPage() {
     if (!selectedEvent) return;
     setError('');
     setSuccess('');
+    setBroadcastingInviteId(inviteId);
 
     try {
       const response = await api.post(`/events/${selectedEvent.id}/invitations/${inviteId}/broadcast`);
@@ -524,6 +658,8 @@ export default function EventsPage() {
       setShowBroadcastModal(true);
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la diffusion.');
+    } finally {
+      setBroadcastingInviteId(null);
     }
   };
 
@@ -557,8 +693,31 @@ export default function EventsPage() {
     setTimeout(() => setCopiedGuestId(null), 2000);
   };
 
-  const getWhatsAppShareUrl = (guestName: string, rsvpLink: string, phone?: string | null) => {
-    const text = `Bonjour ${guestName}, vous êtes chaleureusement invité(e) ! Veuillez confirmer votre présence en ouvrant votre invitation personnalisée ici : ${rsvpLink}`;
+  const getRenderedInvitationBody = (guest: GuestItem) => {
+    if (!invitations || invitations.length === 0) return null;
+    const invitation = invitations[0]; // Use the first invitation
+    const FRONTEND_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+    const rsvpLink = `${FRONTEND_URL}/rsvp/${guest.id}`;
+    
+    let body = invitation.body || '';
+    body = body.replaceAll('{{firstName}}', guest.firstName || '');
+    body = body.replaceAll('{{lastName}}', guest.lastName || '');
+    body = body.replaceAll('{{rsvpLink}}', rsvpLink);
+    
+    if (selectedEvent) {
+      body = body.replaceAll('{{title}}', selectedEvent.title || '');
+      body = body.replaceAll('{{description}}', selectedEvent.description || '');
+      body = body.replaceAll('{{location}}', selectedEvent.location || '');
+      const formattedDate = new Date(selectedEvent.date).toLocaleDateString('fr-FR', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+      body = body.replaceAll('{{date}}', formattedDate);
+    }
+    return body;
+  };
+
+  const getWhatsAppShareUrl = (guestName: string, rsvpLink: string, phone?: string | null, customBody?: string | null) => {
+    const text = customBody || `Bonjour ${guestName}, vous êtes chaleureusement invité(e) ! Veuillez confirmer votre présence en ouvrant votre invitation personnalisée ici : ${rsvpLink}`;
     if (phone) {
       const cleanPhone = phone.replace(/[^\d+]/g, '');
       return `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`;
@@ -566,8 +725,8 @@ export default function EventsPage() {
     return `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
   };
 
-  const getSMSShareUrl = (guestName: string, rsvpLink: string, phone?: string | null) => {
-    const text = `Bonjour ${guestName}, vous êtes chaleureusement invité(e) ! Veuillez confirmer votre présence en ouvrant votre invitation personnalisée ici : ${rsvpLink}`;
+  const getSMSShareUrl = (guestName: string, rsvpLink: string, phone?: string | null, customBody?: string | null) => {
+    const text = customBody || `Bonjour ${guestName}, vous êtes chaleureusement invité(e) ! Veuillez confirmer votre présence en ouvrant votre invitation personnalisée ici : ${rsvpLink}`;
     if (phone) {
       const cleanPhone = phone.replace(/[^\d+]/g, '');
       return `sms:${cleanPhone}?&body=${encodeURIComponent(text)}`;
@@ -575,8 +734,8 @@ export default function EventsPage() {
     return `sms:?&body=${encodeURIComponent(text)}`;
   };
 
-  const getXShareUrl = (guestName: string, rsvpLink: string) => {
-    const text = `Bonjour ${guestName}, vous êtes invité(e) ! Confirmez votre présence ici : ${rsvpLink}`;
+  const getXShareUrl = (guestName: string, rsvpLink: string, customBody?: string | null) => {
+    const text = customBody || `Bonjour ${guestName}, vous êtes invité(e) ! Confirmez votre présence ici : ${rsvpLink}`;
     return `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
   };
 
@@ -887,7 +1046,16 @@ export default function EventsPage() {
                     Importer CSV
                   </button>
                   <button 
-                    onClick={() => setShowGuestModal(true)}
+                    onClick={() => {
+                      setEditingGuestId(null);
+                      setGuestFirstName('');
+                      setGuestLastName('');
+                      setGuestEmail('');
+                      setGuestPhone('');
+                      setGuestPreferences('');
+                      setGuestCategory('Famille');
+                      setShowGuestModal(true);
+                    }}
                     className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100"
                   >
                     <PlusCircle className="w-4 h-4" />
@@ -1058,6 +1226,13 @@ export default function EventsPage() {
                             </td>
                             <td className="py-4 px-6 text-right flex items-center justify-end gap-1.5">
                               <button 
+                                onClick={() => handleEditGuestClick(g)}
+                                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                                title="Modifier l'invité"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                              </button>
+                              <button 
                                 onClick={() => setSharingGuest(g)}
                                 className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
                                 title="Partager l'invitation (WhatsApp, SMS, X, Instagram)"
@@ -1091,7 +1266,14 @@ export default function EventsPage() {
                   <p className="text-slate-500 text-sm mt-0.5">Associez un modèle visuel d'invitation à votre événement et rédigez le message de diffusion.</p>
                 </div>
                 <button 
-                  onClick={() => setShowInviteModal(true)}
+                  onClick={() => {
+                    setEditingInviteId(null);
+                    setInviteSubject('');
+                    setInviteBody('');
+                    setSelectedTemplateId('');
+                    setInviteChannel('EMAIL');
+                    setShowInviteModal(true);
+                  }}
                   className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100"
                 >
                   <PlusCircle className="w-4 h-4" />
@@ -1135,14 +1317,33 @@ export default function EventsPage() {
                       <div className="flex gap-2 pt-4 border-t border-slate-100">
                         <button 
                           onClick={() => handleSimulateBroadcast(invite.id)}
-                          className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition shadow-md shadow-indigo-100"
+                          disabled={broadcastingInviteId !== null}
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition shadow-md shadow-indigo-100 disabled:bg-indigo-400 disabled:cursor-not-allowed"
                         >
-                          <Send className="w-3.5 h-3.5" />
-                          Simuler la diffusion (Liens RSVP)
+                          {broadcastingInviteId === invite.id ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              Génération en cours...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="w-3.5 h-3.5" />
+                              Générer les invitations & Liens RSVP
+                            </>
+                          )}
+                        </button>
+                        <button 
+                          onClick={() => handleEditInvitationClick(invite)}
+                          disabled={broadcastingInviteId !== null}
+                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition disabled:opacity-50"
+                          title="Modifier l'invitation"
+                        >
+                          <Edit3 className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => handleDeleteInvitation(invite.id)}
-                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition"
+                          disabled={broadcastingInviteId !== null}
+                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition disabled:opacity-50"
                           title="Supprimer l'invitation"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -1362,8 +1563,10 @@ export default function EventsPage() {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg p-6 space-y-6">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <h3 className="text-lg font-bold text-slate-900">Ajouter un invité</h3>
-              <button onClick={() => setShowGuestModal(false)} className="text-slate-400 hover:text-slate-600 transition">
+              <h3 className="text-lg font-bold text-slate-900">
+                {editingGuestId ? "Modifier l'invité" : "Ajouter un invité"}
+              </h3>
+              <button onClick={() => { setShowGuestModal(false); setEditingGuestId(null); }} className="text-slate-400 hover:text-slate-600 transition">
                 <XCircle className="w-6 h-6" />
               </button>
             </div>
@@ -1444,16 +1647,25 @@ export default function EventsPage() {
               <div className="pt-4 flex gap-3 border-t border-slate-100">
                 <button 
                   type="button"
-                  onClick={() => setShowGuestModal(false)}
+                  onClick={() => { setShowGuestModal(false); setEditingGuestId(null); }}
                   className="flex-1 py-2.5 border border-slate-200 text-slate-600 font-semibold rounded-xl text-sm hover:bg-slate-50 transition"
+                  disabled={savingGuest}
                 >
                   Annuler
                 </button>
                 <button 
                   type="submit"
-                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100"
+                  disabled={savingGuest}
+                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100 flex items-center justify-center gap-2"
                 >
-                  Ajouter
+                  {savingGuest ? (
+                    <>
+                      <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
+                      Enregistrement...
+                    </>
+                  ) : (
+                    editingGuestId ? "Enregistrer" : "Ajouter"
+                  )}
                 </button>
               </div>
             </form>
@@ -1593,8 +1805,10 @@ export default function EventsPage() {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg p-6 space-y-6">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <h3 className="text-lg font-bold text-slate-900">Configurer une invitation</h3>
-              <button onClick={() => setShowInviteModal(false)} className="text-slate-400 hover:text-slate-600 transition">
+              <h3 className="text-lg font-bold text-slate-900">
+                {editingInviteId ? "Modifier l'invitation" : "Configurer une invitation"}
+              </h3>
+              <button onClick={() => { setShowInviteModal(false); setEditingInviteId(null); }} className="text-slate-400 hover:text-slate-600 transition">
                 <XCircle className="w-6 h-6" />
               </button>
             </div>
@@ -1631,6 +1845,19 @@ export default function EventsPage() {
                 </div>
               </div>
               <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Modèles de message prédéfinis (Optionnel)</label>
+                <select 
+                  onChange={(e) => handleSelectMessageTemplate(e.target.value)}
+                  defaultValue=""
+                  className="w-full px-4 py-2.5 bg-indigo-50/50 border border-indigo-100 text-indigo-950 rounded-xl text-sm font-semibold focus:outline-none focus:border-indigo-500 transition"
+                >
+                  <option value="">-- Choisir un modèle de message pour pré-remplir --</option>
+                  {MESSAGE_TEMPLATES.map(mt => (
+                    <option key={mt.id} value={mt.id}>{mt.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Objet du message</label>
                 <input 
                   type="text" 
@@ -1644,8 +1871,9 @@ export default function EventsPage() {
               <div className="space-y-1.5">
                 <div className="flex justify-between items-center">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Corps du message</label>
-                  <span className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider flex items-center gap-1">
-                    <HelpCircle className="w-3.5 h-3.5" /> Variables: {'{{firstName}}'}, {'{{rsvpLink}}'}
+                  <span className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <HelpCircle className="w-3.5 h-3.5" /> 
+                    <span>Variables: {'{{firstName}}'}, {'{{lastName}}'}, {'{{rsvpLink}}'}, {'{{title}}'}, {'{{date}}'}, {'{{location}}'}, {'{{description}}'}</span>
                   </span>
                 </div>
                 <textarea 
@@ -1659,16 +1887,25 @@ export default function EventsPage() {
               <div className="pt-4 flex gap-3 border-t border-slate-100">
                 <button 
                   type="button"
-                  onClick={() => setShowInviteModal(false)}
+                  onClick={() => { setShowInviteModal(false); setEditingInviteId(null); }}
                   className="flex-1 py-2.5 border border-slate-200 text-slate-600 font-semibold rounded-xl text-sm hover:bg-slate-50 transition"
+                  disabled={savingInvite}
                 >
                   Annuler
                 </button>
                 <button 
                   type="submit"
-                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100"
+                  disabled={savingInvite}
+                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100 flex items-center justify-center gap-2"
                 >
-                  Enregistrer
+                  {savingInvite ? (
+                    <>
+                      <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
+                      Enregistrement...
+                    </>
+                  ) : (
+                    editingInviteId ? "Enregistrer" : "Créer"
+                  )}
                 </button>
               </div>
             </form>
@@ -1740,7 +1977,7 @@ export default function EventsPage() {
 
                       {/* WhatsApp */}
                       <a
-                        href={getWhatsAppShareUrl(res.guestName, res.rsvpLink, res.phone)}
+                        href={getWhatsAppShareUrl(res.guestName, res.rsvpLink, res.phone, res.body)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition shadow-sm"
@@ -1754,7 +1991,7 @@ export default function EventsPage() {
 
                       {/* SMS */}
                       <a
-                        href={getSMSShareUrl(res.guestName, res.rsvpLink, res.phone)}
+                        href={getSMSShareUrl(res.guestName, res.rsvpLink, res.phone, res.body)}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs font-bold transition shadow-sm"
                         title="Envoyer par SMS"
                       >
@@ -1764,7 +2001,7 @@ export default function EventsPage() {
 
                       {/* X (Twitter) */}
                       <a
-                        href={getXShareUrl(res.guestName, res.rsvpLink)}
+                        href={getXShareUrl(res.guestName, res.rsvpLink, res.body)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-900 hover:bg-slate-950 text-white rounded-xl text-xs font-bold transition shadow-sm"
@@ -1867,7 +2104,7 @@ export default function EventsPage() {
 
                   {/* WhatsApp */}
                   <a
-                    href={getWhatsAppShareUrl(`${sharingGuest.firstName} ${sharingGuest.lastName}`, getGuestRsvpLink(sharingGuest.id))}
+                    href={getWhatsAppShareUrl(`${sharingGuest.firstName} ${sharingGuest.lastName}`, getGuestRsvpLink(sharingGuest.id), sharingGuest.preferences && typeof sharingGuest.preferences === 'object' ? (sharingGuest.preferences as any).phone : null, getRenderedInvitationBody(sharingGuest))}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 p-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition shadow-sm"
@@ -1880,7 +2117,7 @@ export default function EventsPage() {
 
                   {/* SMS */}
                   <a
-                    href={getSMSShareUrl(`${sharingGuest.firstName} ${sharingGuest.lastName}`, getGuestRsvpLink(sharingGuest.id))}
+                    href={getSMSShareUrl(`${sharingGuest.firstName} ${sharingGuest.lastName}`, getGuestRsvpLink(sharingGuest.id), sharingGuest.preferences && typeof sharingGuest.preferences === 'object' ? (sharingGuest.preferences as any).phone : null, getRenderedInvitationBody(sharingGuest))}
                     className="flex items-center justify-center gap-2 p-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-bold transition shadow-sm"
                   >
                     <MessageSquare className="w-4 h-4" />
@@ -1889,7 +2126,7 @@ export default function EventsPage() {
 
                   {/* X (Twitter) */}
                   <a
-                    href={getXShareUrl(`${sharingGuest.firstName} ${sharingGuest.lastName}`, getGuestRsvpLink(sharingGuest.id))}
+                    href={getXShareUrl(`${sharingGuest.firstName} ${sharingGuest.lastName}`, getGuestRsvpLink(sharingGuest.id), getRenderedInvitationBody(sharingGuest))}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 p-3 bg-slate-900 hover:bg-slate-950 text-white rounded-xl text-sm font-bold transition shadow-sm"

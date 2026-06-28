@@ -134,18 +134,41 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
 
     const activeChannel = channel || invitation.channel;
 
+    // Fetch event details for variable replacement
+    const event = await prisma.event.findFirst({
+      where: { id: eventId },
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: 'Événement non trouvé' });
+    }
+
+    const formattedDate = event.date ? new Date(event.date).toLocaleDateString('fr-FR', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    }) : '';
+
     // Send and generate RSVP links
     const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
     const sentInvitations = await Promise.all(guests.map(async (guest) => {
       // Dynamic variables replacement
-      let subject = invitation.subject
-        .replace('{{firstName}}', guest.firstName)
-        .replace('{{lastName}}', guest.lastName);
+      let subject = invitation.subject || '';
+      subject = subject
+        .replaceAll('{{firstName}}', guest.firstName || '')
+        .replaceAll('{{lastName}}', guest.lastName || '')
+        .replaceAll('{{title}}', event.title || '')
+        .replaceAll('{{description}}', event.description || '')
+        .replaceAll('{{location}}', event.location || '')
+        .replaceAll('{{date}}', formattedDate);
       
-      let body = invitation.body
-        .replace('{{firstName}}', guest.firstName)
-        .replace('{{lastName}}', guest.lastName)
-        .replace('{{rsvpLink}}', `${FRONTEND_URL}/rsvp/${guest.id}`);
+      let body = invitation.body || '';
+      body = body
+        .replaceAll('{{firstName}}', guest.firstName || '')
+        .replaceAll('{{lastName}}', guest.lastName || '')
+        .replaceAll('{{rsvpLink}}', `${FRONTEND_URL}/rsvp/${guest.id}`)
+        .replaceAll('{{title}}', event.title || '')
+        .replaceAll('{{description}}', event.description || '')
+        .replaceAll('{{location}}', event.location || '')
+        .replaceAll('{{date}}', formattedDate);
 
       // Support multiple channels (comma-separated, array, or specific combinations like EMAIL_AND_WHATSAPP)
       let channelsToSend: string[] = [];
@@ -232,6 +255,8 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
           email: inv.guestEmail,
           phone: guest ? getGuestPhone(guest) : null,
           rsvpLink: inv.rsvpUrl,
+          subject: inv.subject,
+          body: inv.body,
           channel: inv.channel,
           status: inv.status,
           error: inv.error,
@@ -241,5 +266,83 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
   } catch (error: any) {
     console.error('Erreur lors de la diffusion de l\'invitation:', error);
     return res.status(500).json({ error: 'Erreur lors de la diffusion de l\'invitation' });
+  }
+}
+
+// Update an invitation
+export async function updateInvitation(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    const eventId = req.params.eventId as string;
+    const id = req.params.id as string;
+    const { templateId, subject, body, channel } = req.body;
+
+    if (!tenantId) {
+      return res.status(403).json({ error: 'Tenant non identifié' });
+    }
+
+    const isOwner = await verifyEventOwner(eventId, tenantId);
+    if (!isOwner) {
+      return res.status(404).json({ error: 'Événement non trouvé ou non autorisé' });
+    }
+
+    const existingInvitation = await prisma.invitation.findFirst({
+      where: { id, eventId },
+    });
+
+    if (!existingInvitation) {
+      return res.status(404).json({ error: 'Invitation non trouvée dans cet événement' });
+    }
+
+    const updatedInvitation = await prisma.invitation.update({
+      where: { id },
+      data: {
+        templateId: templateId !== undefined ? (templateId || null) : existingInvitation.templateId,
+        subject: subject !== undefined ? subject : existingInvitation.subject,
+        body: body !== undefined ? body : existingInvitation.body,
+        channel: channel !== undefined ? channel : existingInvitation.channel,
+      },
+      include: { template: true },
+    });
+
+    return res.json(updatedInvitation);
+  } catch (error: any) {
+    console.error('Erreur lors de la mise à jour de l\'invitation:', error);
+    return res.status(500).json({ error: 'Erreur lors de la mise à jour de l\'invitation' });
+  }
+}
+
+// Delete an invitation
+export async function deleteInvitation(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    const eventId = req.params.eventId as string;
+    const id = req.params.id as string;
+
+    if (!tenantId) {
+      return res.status(403).json({ error: 'Tenant non identifié' });
+    }
+
+    const isOwner = await verifyEventOwner(eventId, tenantId);
+    if (!isOwner) {
+      return res.status(404).json({ error: 'Événement non trouvé ou non autorisé' });
+    }
+
+    const existingInvitation = await prisma.invitation.findFirst({
+      where: { id, eventId },
+    });
+
+    if (!existingInvitation) {
+      return res.status(404).json({ error: 'Invitation non trouvée dans cet événement' });
+    }
+
+    await prisma.invitation.delete({
+      where: { id },
+    });
+
+    return res.json({ message: 'Invitation supprimée avec succès' });
+  } catch (error: any) {
+    console.error('Erreur lors de la suppression de l\'invitation:', error);
+    return res.status(500).json({ error: 'Erreur lors de la suppression de l\'invitation' });
   }
 }
