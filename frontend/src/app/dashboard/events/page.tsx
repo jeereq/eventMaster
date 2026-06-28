@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
+import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import * as XLSX from 'xlsx';
@@ -37,6 +38,7 @@ interface GuestItem {
 interface TemplateItem {
   id: string;
   name: string;
+  content?: any;
 }
 
 interface InvitationItem {

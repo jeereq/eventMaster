@@ -14,7 +14,7 @@ interface User {
 interface Tenant {
   id: string;
   name: string;
-  plan: 'FREE' | 'PREMIUM' | 'ENTERPRISE';
+  plan: 'FREE' | 'STANDARD' | 'PREMIUM' | 'ENTERPRISE';
 }
 
 interface AuthContextType {

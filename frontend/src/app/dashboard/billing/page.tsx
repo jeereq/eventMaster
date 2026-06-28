@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { CreditCard, Check, ShieldCheck, Loader2, AlertCircle, Sparkles } from 'lucide-react';
 
 interface BillingStatus {
-  plan: 'FREE' | 'PREMIUM' | 'ENTERPRISE';
+  plan: 'FREE' | 'STANDARD' | 'PREMIUM' | 'ENTERPRISE';
   usage: {
     events: number;
     guests: number;
@@ -44,7 +44,7 @@ export default function BillingPage() {
     loadBillingStatus();
   }, []);
 
-  const handleUpgrade = async (plan: 'PREMIUM' | 'ENTERPRISE') => {
+  const handleUpgrade = async (plan: 'FREE' | 'STANDARD' | 'PREMIUM' | 'ENTERPRISE') => {
     setError('');
     setSuccessMsg('');
     setActionLoading(plan);
