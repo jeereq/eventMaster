@@ -1,0 +1,36 @@
+> git push origin main:main
+remote: error: GH013: Repository rule violations found for refs/heads/main.        
+remote: 
+remote: - GITHUB PUSH PROTECTION        
+remote:   —————————————————————————————————————————        
+remote:     Resolve the following violations before pushing again        
+remote: 
+remote:     - Push cannot contain secrets        
+remote: 
+remote:             
+remote:      (?) Learn how to resolve a blocked push        
+remote:      https://docs.github.com/code-security/secret-scanning/working-with-secret-scanning-and-push-protection/working-with-push-protection-from-the-command-line#resolving-a-blocked-push        
+remote:             
+remote:             
+remote:       —— SendGrid API Key ——————————————————————————————————        
+remote:        locations:        
+remote:          - commit: 55492f0d5d28f27b3e55fbc7c4a138e1ed244239        
+remote:            path: backend/src/config/settings.json:8        
+remote:             
+remote:        (?) To push, remove secret from commit(s) or follow this URL to allow the secret.        
+remote:        https://github.com/jeereq/eventMaster/security/secret-scanning/unblock-secret/3FoVdS7qqKROEFQ4icMgp75vEq3        
+remote:             
+remote:             
+remote:       —— Twilio Account String Identifier ——————————————————        
+remote:        locations:        
+remote:          - commit: 55492f0d5d28f27b3e55fbc7c4a138e1ed244239        
+remote:            path: backend/src/config/settings.json:9        
+remote:             
+remote:        (?) To push, remove secret from commit(s) or follow this URL to allow the secret.        
+remote:        https://github.com/jeereq/eventMaster/security/secret-scanning/unblock-secret/3FoVdO1QUVqc5HkcviksaafLAgw        
+remote:             
+remote: 
+remote: 
+To https://github.com/jeereq/eventMaster.git
+ ! [remote rejected] main -> main (push declined due to repository rule violations)
+error: failed to push some refs to 'https://github.com/jeereq/eventMaster.git'
