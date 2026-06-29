@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { Calendar, Mail, Lock, User, Building, Loader2, AlertCircle, ArrowLeft, PartyPopper } from 'lucide-react';
+import { Calendar, Mail, Lock, User, Building, Loader2, AlertCircle, ArrowLeft, PartyPopper, Phone, MessageSquare } from 'lucide-react';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -11,6 +11,8 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [tenantName, setTenantName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [verificationMethod, setVerificationMethod] = useState<'EMAIL' | 'WHATSAPP'>('EMAIL');
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -20,8 +22,14 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
 
+    if (verificationMethod === 'WHATSAPP' && !phone) {
+      setError('Le numéro de téléphone est obligatoire pour la confirmation par WhatsApp.');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const res = await register(email, password, name, tenantName);
+      const res = await register(email, password, name, tenantName, phone, verificationMethod);
       setSuccessMessage(res.message);
       setLoading(false);
     } catch (err: any) {
@@ -49,9 +57,15 @@ export default function RegisterPage() {
         {successMessage ? (
           <div className="text-center space-y-6 py-4">
             <div className="inline-flex items-center justify-center bg-emerald-100 p-4 rounded-full text-emerald-600 mb-2 shadow-inner">
-              <Mail className="w-12 h-12" />
+              {verificationMethod === 'WHATSAPP' ? (
+                <MessageSquare className="w-12 h-12" />
+              ) : (
+                <Mail className="w-12 h-12" />
+              )}
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Vérifiez votre boîte mail</h2>
+            <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+              {verificationMethod === 'WHATSAPP' ? 'Vérifiez votre WhatsApp' : 'Vérifiez votre boîte mail'}
+            </h2>
             <p className="text-slate-600 text-sm leading-relaxed">
               {successMessage}
             </p>
@@ -171,6 +185,50 @@ export default function RegisterPage() {
                       placeholder="Minimum 6 caractères"
                       minLength={6}
                     />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-semibold text-slate-700 mb-1">
+                    Numéro de Téléphone (WhatsApp)
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                      <Phone className="w-5 h-5" />
+                    </div>
+                    <input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-900 placeholder-slate-400 transition sm:text-sm"
+                      placeholder="Ex: +243990000000"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                    Méthode de confirmation du compte
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setVerificationMethod('EMAIL')}
+                      className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border text-sm font-bold transition ${verificationMethod === 'EMAIL' ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-xs' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                    >
+                      <Mail className="w-4 h-4" />
+                      Par E-mail
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setVerificationMethod('WHATSAPP')}
+                      className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border text-sm font-bold transition ${verificationMethod === 'WHATSAPP' ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-xs' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      Par WhatsApp
+                    </button>
                   </div>
                 </div>
               </div>

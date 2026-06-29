@@ -8,6 +8,7 @@ interface User {
   id: string;
   email: string;
   name: string;
+  phone?: string | null;
   role: 'SUPER_ADMIN' | 'COMMERCIAL' | 'USER';
 }
 
@@ -15,6 +16,8 @@ interface Tenant {
   id: string;
   name: string;
   plan: 'FREE' | 'STANDARD' | 'PREMIUM' | 'ENTERPRISE';
+  licenseActive?: boolean;
+  licenseExpiresAt?: string | null;
 }
 
 interface AuthContextType {
@@ -23,9 +26,10 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string, tenantName: string) => Promise<{ message: string }>;
+  register: (email: string, password: string, name: string, tenantName: string, phone?: string, verificationMethod?: 'EMAIL' | 'WHATSAPP') => Promise<{ message: string }>;
   logout: () => void;
   refreshBilling: () => Promise<void>;
+  updateUserAndTenant: (user: User, tenant: Tenant | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -77,15 +81,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (email: string, password: string, name: string, tenantName: string) => {
+  const register = async (email: string, password: string, name: string, tenantName: string, phone?: string, verificationMethod?: 'EMAIL' | 'WHATSAPP') => {
     setLoading(true);
     try {
-      const data = await api.post('/auth/register', { email, password, name, tenantName });
+      const data = await api.post('/auth/register', { email, password, name, tenantName, phone, verificationMethod });
       setLoading(false);
       return { message: data.message || 'Inscription réussie ! Veuillez vérifier vos e-mails pour confirmer votre compte.' };
     } catch (error) {
       setLoading(false);
       throw error;
+    }
+  };
+
+  const updateUserAndTenant = (updatedUser: User, updatedTenant: Tenant | null) => {
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    
+    if (updatedTenant) {
+      setTenant(updatedTenant);
+      localStorage.setItem('tenant', JSON.stringify(updatedTenant));
+    } else {
+      setTenant(null);
+      localStorage.removeItem('tenant');
     }
   };
 
@@ -113,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, tenant, token, loading, login, register, logout, refreshBilling }}>
+    <AuthContext.Provider value={{ user, tenant, token, loading, login, register, logout, refreshBilling, updateUserAndTenant }}>
       {children}
     </AuthContext.Provider>
   );

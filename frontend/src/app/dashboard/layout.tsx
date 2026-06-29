@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { 
   Calendar, Users, Mail, CreditCard, LayoutDashboard, 
-  LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper 
+  LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper, User
 } from 'lucide-react';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -36,12 +36,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const navItems = user?.role === 'SUPER_ADMIN' 
     ? [
         { name: 'Tableau de bord Admin', href: '/dashboard', icon: LayoutDashboard },
+        { name: 'Mon Compte', href: '/dashboard/profile', icon: User },
       ]
     : [
         { name: 'Tableau de bord', href: '/dashboard', icon: LayoutDashboard },
         { name: 'Événements', href: '/dashboard/events', icon: Calendar },
         { name: 'Modèles', href: '/dashboard/templates', icon: Mail },
         { name: 'Facturation & Plan', href: '/dashboard/billing', icon: CreditCard },
+        { name: 'Mon Compte', href: '/dashboard/profile', icon: User },
       ];
 
   return (
@@ -119,15 +121,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* User profile & Logout */}
         <div className="border-t border-slate-100 pt-6 mt-6 space-y-4">
-          <div className="flex items-center gap-3 px-2">
-            <div className="w-10 h-10 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center font-bold text-indigo-700 text-sm">
+          <Link 
+            href="/dashboard/profile"
+            className="flex items-center gap-3 px-2 py-1.5 rounded-xl hover:bg-slate-50 transition group"
+          >
+            <div className="w-10 h-10 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center font-bold text-indigo-700 text-sm group-hover:bg-indigo-100 transition-colors">
               {user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
             </div>
             <div className="flex flex-col overflow-hidden">
-              <span className="font-semibold text-slate-800 text-sm truncate">{user.name}</span>
+              <span className="font-semibold text-slate-800 text-sm truncate group-hover:text-indigo-600 transition-colors">{user.name}</span>
               <span className="text-xs text-slate-500 truncate">{user.email}</span>
             </div>
-          </div>
+          </Link>
           <button
             onClick={logout}
             className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-semibold text-rose-600 hover:bg-rose-50 transition"
