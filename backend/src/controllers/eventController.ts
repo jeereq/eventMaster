@@ -96,7 +96,7 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
   try {
     const tenantId = req.user?.tenantId;
     const id = req.params.id as string;
-    const { title, description, date, location, reminderFrequency, latitude, longitude } = req.body;
+    const { title, description, date, location, reminderFrequency, latitude, longitude, tablePlan } = req.body;
 
     if (!tenantId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
@@ -121,6 +121,7 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
         reminderFrequency: reminderFrequency !== undefined ? reminderFrequency : existingEvent.reminderFrequency,
         latitude: latitude !== undefined ? (latitude !== null ? parseFloat(latitude) : null) : existingEvent.latitude,
         longitude: longitude !== undefined ? (longitude !== null ? parseFloat(longitude) : null) : existingEvent.longitude,
+        tablePlan: tablePlan !== undefined ? tablePlan : existingEvent.tablePlan,
       },
     });
 

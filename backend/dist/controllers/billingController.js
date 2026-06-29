@@ -102,10 +102,16 @@ async function createCheckoutSession(req, res) {
         }
         // If Stripe is mock mode or we want to support easy upgrades:
         if (STRIPE_SECRET_KEY === 'sk_test_mock' || req.body.mock === true) {
-            // Direct mock upgrade for local dev convenience
+            // Direct mock upgrade for local dev convenience - also activate and extend license
+            const expiryDate = new Date();
+            expiryDate.setDate(expiryDate.getDate() + 30); // Extend by 30 days
             const updatedTenant = await db_1.prisma.tenant.update({
                 where: { id: tenantId },
-                data: { plan: planType },
+                data: {
+                    plan: planType,
+                    licenseActive: true,
+                    licenseExpiresAt: expiryDate,
+                },
             });
             return res.json({
                 message: 'Mise à niveau fictive réussie (Mode Développement)',
@@ -113,6 +119,8 @@ async function createCheckoutSession(req, res) {
                     id: updatedTenant.id,
                     name: updatedTenant.name,
                     plan: updatedTenant.plan,
+                    licenseActive: updatedTenant.licenseActive,
+                    licenseExpiresAt: updatedTenant.licenseExpiresAt,
                 },
                 mock: true,
             });
@@ -164,15 +172,19 @@ async function handleStripeWebhook(req, res) {
                 const session = event.data.object;
                 const tenantId = session.client_reference_id;
                 if (tenantId) {
+                    const expiryDate = new Date();
+                    expiryDate.setDate(expiryDate.getDate() + 30); // 30 days of active license
                     // Check what item they subscribed to, or default to PREMIUM for simplicity
                     await db_1.prisma.tenant.update({
                         where: { id: tenantId },
                         data: {
                             plan: 'PREMIUM',
                             stripeCustId: session.customer,
+                            licenseActive: true,
+                            licenseExpiresAt: expiryDate,
                         },
                     });
-                    console.log(`[Stripe Webhook] Tenant ${tenantId} upgraded to PREMIUM`);
+                    console.log(`[Stripe Webhook] Tenant ${tenantId} upgraded to PREMIUM and license extended`);
                 }
                 break;
             }
@@ -184,9 +196,12 @@ async function handleStripeWebhook(req, res) {
                 if (tenant) {
                     await db_1.prisma.tenant.update({
                         where: { id: tenant.id },
-                        data: { plan: 'FREE' },
+                        data: {
+                            plan: 'FREE',
+                            licenseActive: false, // Deactivate license upon subscription cancelation
+                        },
                     });
-                    console.log(`[Stripe Webhook] Tenant ${tenant.id} downgraded to FREE due to cancelation`);
+                    console.log(`[Stripe Webhook] Tenant ${tenant.id} downgraded to FREE and license deactivated due to cancelation`);
                 }
                 break;
             }
@@ -211,9 +226,15 @@ async function mockUpgrade(req, res) {
         if (!plan || !['FREE', 'STANDARD', 'PREMIUM', 'ENTERPRISE'].includes(plan)) {
             return res.status(400).json({ error: 'Plan invalide' });
         }
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 30); // 30 days extension
         const updatedTenant = await db_1.prisma.tenant.update({
             where: { id: tenantId },
-            data: { plan },
+            data: {
+                plan,
+                licenseActive: true,
+                licenseExpiresAt: plan === 'FREE' ? null : expiryDate, // Free plan has no expiry by default
+            },
         });
         return res.json({
             message: `Forfait modifié en ${plan} (Mode de simulation de paiement)`,
@@ -221,6 +242,8 @@ async function mockUpgrade(req, res) {
                 id: updatedTenant.id,
                 name: updatedTenant.name,
                 plan: updatedTenant.plan,
+                licenseActive: updatedTenant.licenseActive,
+                licenseExpiresAt: updatedTenant.licenseExpiresAt,
             },
         });
     }

@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { getTemplates, createTemplate, getTemplateById, updateTemplate, deleteTemplate } from '../controllers/templateController';
-import { requireAuth } from '../middleware/auth';
+import { requireAuth, requireActiveLicense } from '../middleware/auth';
 
 const router = Router();
 
 router.use(requireAuth);
+router.use(requireActiveLicense);
 
 router.get('/', getTemplates);
 router.post('/', createTemplate);

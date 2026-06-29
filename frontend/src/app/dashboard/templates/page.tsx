@@ -9,7 +9,7 @@ import {
   Sparkles, CheckCircle2, AlertCircle, Type, Image, 
   Columns, Settings, Eye, CheckSquare, Loader2, XCircle,
   Spline, Triangle, Plus, Trash, Layout, Palette, Square,
-  ArrowUp, ArrowDown, Crop
+  ArrowUp, ArrowDown, Crop, Copy
 } from 'lucide-react';
 
 interface TemplateItem {
@@ -17,6 +17,10 @@ interface TemplateItem {
   name: string;
   content: any;
   createdAt: string;
+  tenantId?: string | null;
+  tenant?: {
+    name: string;
+  } | null;
 }
 
 interface RsvpField {
@@ -92,6 +96,10 @@ export default function TemplatesPage() {
   const [templateName, setTemplateName] = useState('');
   const [canvasElements, setCanvasElements] = useState<CanvasElement[]>([]);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+
+  // Super Admin specific states
+  const [tenants, setTenants] = useState<{ id: string; name: string }[]>([]);
+  const [selectedTenantId, setSelectedTenantId] = useState<string>('');
   
   // Global template properties
   const [bgType, setBgType] = useState<'color' | 'image' | 'pattern'>('pattern');
@@ -146,10 +154,6 @@ export default function TemplatesPage() {
 
   const loadTemplates = async () => {
     try {
-      if (user?.role === 'SUPER_ADMIN') {
-        setLoading(false);
-        return;
-      }
       const data = await api.get('/templates');
       setTemplates(data);
     } catch (err: any) {
@@ -159,15 +163,45 @@ export default function TemplatesPage() {
     }
   };
 
+  const loadTenants = async () => {
+    if (user?.role === 'SUPER_ADMIN') {
+      try {
+        const data = await api.get('/admin/stats');
+        if (data && data.tenants) {
+          setTenants(data.tenants);
+        }
+      } catch (err) {
+        console.error('Erreur lors du chargement des organisations:', err);
+      }
+    }
+  };
+
   useEffect(() => {
     if (user) {
       loadTemplates();
+      loadTenants();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && templates.length > 0) {
+      const params = new URLSearchParams(window.location.search);
+      const editId = params.get('edit');
+      if (editId) {
+        const t = templates.find(temp => temp.id === editId);
+        if (t) {
+          handleEditTemplateClick(t);
+          // Clear query parameter so it doesn't reopen on subsequent refreshes
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+    }
+  }, [templates]);
 
   const handleCreateTemplateClick = () => {
     setEditingTemplateId(null);
     setTemplateName('Nouveau Modèle d\'Invitation');
+    setSelectedTenantId('');
     
     // Pre-populate with a gorgeous, luxury wedding invitation template (inspired by Hassan Raza & Ayesha Khan)
     setCanvasElements([
@@ -213,6 +247,7 @@ export default function TemplatesPage() {
     setEditingTemplateId(t.id);
     setTemplateName(t.name);
     setCanvasElements(t.content?.elements || []);
+    setSelectedTenantId(t.tenantId || '');
     
     // Load global styles
     const global = t.content?.global || {};
@@ -613,6 +648,7 @@ export default function TemplatesPage() {
           },
           elements: canvasElements 
         },
+        targetTenantId: user?.role === 'SUPER_ADMIN' ? (selectedTenantId || null) : undefined
       };
 
       if (editingTemplateId) {
@@ -640,6 +676,23 @@ export default function TemplatesPage() {
       setSuccess('Modèle supprimé.');
     } catch (err: any) {
       setError('Erreur lors de la suppression.');
+    }
+  };
+
+  const handleDuplicateTemplate = async (t: TemplateItem) => {
+    try {
+      setLoading(true);
+      const payload = {
+        name: `${t.name} (Copie)`,
+        content: t.content,
+        targetTenantId: t.tenantId || null
+      };
+      await api.post('/templates', payload);
+      setSuccess(`Modèle "${t.name}" dupliqué avec succès !`);
+      loadTemplates();
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la duplication du modèle.');
+      setLoading(false);
     }
   };
 
@@ -740,28 +793,6 @@ export default function TemplatesPage() {
     { id: '0.2em', label: 'Luxury (0.2em)' },
   ];
 
-  if (user?.role === 'SUPER_ADMIN') {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white border border-slate-200 rounded-3xl p-8 text-center max-w-2xl mx-auto">
-        <div className="bg-indigo-50 text-indigo-600 p-4 rounded-full mb-6">
-          <Mail className="w-12 h-12" />
-        </div>
-        <h1 className="text-2xl font-black text-slate-900">Gestion des Modèles (Super Admin)</h1>
-        <p className="text-slate-500 mt-3 leading-relaxed">
-          En tant que Super Administrateur de la plateforme SaaS, vous n'êtes pas rattaché à une organisation spécifique et ne gérez pas de modèles d'invitations en nom propre.
-        </p>
-        <p className="text-slate-500 mt-2 leading-relaxed">
-          Veuillez utiliser le <strong className="text-indigo-600">Tableau de bord Admin</strong> pour superviser l'ensemble des organisations, leurs membres et leurs statistiques d'utilisation.
-        </p>
-        <Link 
-          href="/dashboard" 
-          className="mt-8 inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-lg shadow-indigo-100"
-        >
-          Retour au Tableau de Bord Admin
-        </Link>
-      </div>
-    );
-  }
 
   if (loading) {
     return (
@@ -798,7 +829,27 @@ export default function TemplatesPage() {
                 className="text-xl font-extrabold text-slate-900 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none px-1 transition"
                 placeholder="Nom du modèle"
               />
-              <p className="text-xs text-slate-400 mt-0.5 font-semibold uppercase tracking-wider">Éditeur Visuel d'Invitation</p>
+              <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Éditeur Visuel d'Invitation</p>
+                {user?.role === 'SUPER_ADMIN' && (
+                  <>
+                    <span className="text-slate-300 text-xs">•</span>
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Organisation :</span>
+                    <select
+                      value={selectedTenantId}
+                      onChange={(e) => setSelectedTenantId(e.target.value)}
+                      className="text-[11px] font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-2 py-0.5 focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="">Global (Tous / Public)</option>
+                      {tenants.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                )}
+              </div>
             </div>
           </div>
           <button 
@@ -2385,8 +2436,14 @@ export default function TemplatesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Vos Modèles d'Invitation</h1>
-          <p className="text-slate-500 mt-1">Concevez des invitations interactives uniques à l'aide de notre éditeur visuel.</p>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+            {user?.role === 'SUPER_ADMIN' ? "Gestion des Modèles d'Invitation (Super Admin)" : "Vos Modèles d'Invitation"}
+          </h1>
+          <p className="text-slate-500 mt-1">
+            {user?.role === 'SUPER_ADMIN' 
+              ? "Gérez, créez et modifiez les modèles d'invitation globaux et privés de toutes les organisations."
+              : "Concevez des invitations interactives uniques à l'aide de notre éditeur visuel."}
+          </p>
         </div>
         <button 
           onClick={handleCreateTemplateClick}
@@ -2447,6 +2504,19 @@ export default function TemplatesPage() {
                 <p className="text-xs text-slate-400 font-medium">
                   Créé le {new Date(t.createdAt).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
                 </p>
+                {user?.role === 'SUPER_ADMIN' && (
+                  <div className="mt-1">
+                    {t.tenantId ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-150">
+                        Privé : {t.tenant?.name || 'Inconnu'}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-150">
+                        Global (Public)
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="flex gap-2 pt-2 border-t border-slate-100">
                 <button 
@@ -2455,6 +2525,13 @@ export default function TemplatesPage() {
                 >
                   <Edit3 className="w-4 h-4" />
                   Modifier
+                </button>
+                <button 
+                  onClick={() => handleDuplicateTemplate(t)}
+                  className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition"
+                  title="Dupliquer le modèle"
+                >
+                  <Copy className="w-4.5 h-4.5" />
                 </button>
                 <button 
                   onClick={() => handleDeleteTemplate(t.id)}

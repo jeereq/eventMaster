@@ -108,10 +108,17 @@ export async function createCheckoutSession(req: AuthenticatedRequest, res: Resp
 
     // If Stripe is mock mode or we want to support easy upgrades:
     if (STRIPE_SECRET_KEY === 'sk_test_mock' || req.body.mock === true) {
-      // Direct mock upgrade for local dev convenience
+      // Direct mock upgrade for local dev convenience - also activate and extend license
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + 30); // Extend by 30 days
+
       const updatedTenant = await prisma.tenant.update({
         where: { id: tenantId },
-        data: { plan: planType },
+        data: { 
+          plan: planType,
+          licenseActive: true,
+          licenseExpiresAt: expiryDate,
+        },
       });
       return res.json({
         message: 'Mise à niveau fictive réussie (Mode Développement)',
@@ -119,6 +126,8 @@ export async function createCheckoutSession(req: AuthenticatedRequest, res: Resp
           id: updatedTenant.id,
           name: updatedTenant.name,
           plan: updatedTenant.plan,
+          licenseActive: updatedTenant.licenseActive,
+          licenseExpiresAt: updatedTenant.licenseExpiresAt,
         },
         mock: true,
       });
@@ -178,15 +187,20 @@ export async function handleStripeWebhook(req: Request, res: Response) {
         const tenantId = session.client_reference_id;
         
         if (tenantId) {
+          const expiryDate = new Date();
+          expiryDate.setDate(expiryDate.getDate() + 30); // 30 days of active license
+
           // Check what item they subscribed to, or default to PREMIUM for simplicity
           await prisma.tenant.update({
             where: { id: tenantId },
             data: {
               plan: 'PREMIUM',
               stripeCustId: session.customer as string,
+              licenseActive: true,
+              licenseExpiresAt: expiryDate,
             },
           });
-          console.log(`[Stripe Webhook] Tenant ${tenantId} upgraded to PREMIUM`);
+          console.log(`[Stripe Webhook] Tenant ${tenantId} upgraded to PREMIUM and license extended`);
         }
         break;
       }
@@ -199,9 +213,12 @@ export async function handleStripeWebhook(req: Request, res: Response) {
         if (tenant) {
           await prisma.tenant.update({
             where: { id: tenant.id },
-            data: { plan: 'FREE' },
+            data: { 
+              plan: 'FREE',
+              licenseActive: false, // Deactivate license upon subscription cancelation
+            },
           });
-          console.log(`[Stripe Webhook] Tenant ${tenant.id} downgraded to FREE due to cancelation`);
+          console.log(`[Stripe Webhook] Tenant ${tenant.id} downgraded to FREE and license deactivated due to cancelation`);
         }
         break;
       }
@@ -230,9 +247,16 @@ export async function mockUpgrade(req: AuthenticatedRequest, res: Response) {
       return res.status(400).json({ error: 'Plan invalide' });
     }
 
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + 30); // 30 days extension
+
     const updatedTenant = await prisma.tenant.update({
       where: { id: tenantId },
-      data: { plan },
+      data: { 
+        plan,
+        licenseActive: true,
+        licenseExpiresAt: plan === 'FREE' ? null : expiryDate, // Free plan has no expiry by default
+      },
     });
 
     return res.json({
@@ -241,6 +265,8 @@ export async function mockUpgrade(req: AuthenticatedRequest, res: Response) {
         id: updatedTenant.id,
         name: updatedTenant.name,
         plan: updatedTenant.plan,
+        licenseActive: updatedTenant.licenseActive,
+        licenseExpiresAt: updatedTenant.licenseExpiresAt,
       },
     });
   } catch (error: any) {

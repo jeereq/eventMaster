@@ -6,8 +6,9 @@ const guestController_1 = require("../controllers/guestController");
 const invitationController_1 = require("../controllers/invitationController");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
-// Apply requireAuth middleware to all event-related routes
+// Apply requireAuth and requireActiveLicense middleware to all event-related routes
 router.use(auth_1.requireAuth);
+router.use(auth_1.requireActiveLicense);
 // Events CRUD
 router.get('/', eventController_1.getEvents);
 router.post('/', eventController_1.createEvent);

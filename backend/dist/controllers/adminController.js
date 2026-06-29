@@ -1,15 +1,34 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getSystemStats = getSystemStats;
+exports.createTenant = createTenant;
 exports.updateTenantPlanOrLicense = updateTenantPlanOrLicense;
 exports.deleteTenant = deleteTenant;
 exports.getAllUsers = getAllUsers;
+exports.createUser = createUser;
 exports.updateUserRoleOrStatus = updateUserRoleOrStatus;
 exports.deleteUser = deleteUser;
 exports.getAllTemplates = getAllTemplates;
 exports.createGlobalTemplate = createGlobalTemplate;
+exports.toggleTemplateLanding = toggleTemplateLanding;
 exports.deleteTemplate = deleteTemplate;
+exports.getAllEvents = getAllEvents;
+exports.createAdminEvent = createAdminEvent;
+exports.updateAdminEvent = updateAdminEvent;
+exports.deleteAdminEvent = deleteAdminEvent;
+exports.getAllGuests = getAllGuests;
+exports.createAdminGuest = createAdminGuest;
+exports.updateAdminGuest = updateAdminGuest;
+exports.deleteAdminGuest = deleteAdminGuest;
+exports.getAdminSettings = getAdminSettings;
+exports.updateAdminSettings = updateAdminSettings;
 const db_1 = require("../db");
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
+const fs_1 = __importDefault(require("fs"));
+const path_1 = __importDefault(require("path"));
 // Get global system statistics and list of all tenants (Super Admin only)
 async function getSystemStats(req, res) {
     try {
@@ -68,6 +87,32 @@ async function getSystemStats(req, res) {
         return res.status(500).json({ error: 'Erreur lors de la récupération des statistiques globales' });
     }
 }
+// Create a new tenant (SaaS organization)
+async function createTenant(req, res) {
+    try {
+        if (req.user?.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+        }
+        const { name, plan, licenseActive, licenseExpiresAt, licenseKey } = req.body;
+        if (!name) {
+            return res.status(400).json({ error: 'Le nom de l\'organisation est requis.' });
+        }
+        const newTenant = await db_1.prisma.tenant.create({
+            data: {
+                name,
+                plan: plan || 'FREE',
+                licenseActive: licenseActive !== undefined ? Boolean(licenseActive) : true,
+                licenseExpiresAt: licenseExpiresAt ? new Date(licenseExpiresAt) : null,
+                licenseKey: licenseKey || null,
+            },
+        });
+        return res.status(201).json({ message: 'Organisation créée avec succès', tenant: newTenant });
+    }
+    catch (error) {
+        console.error('Erreur lors de la création de l\'organisation:', error);
+        return res.status(500).json({ error: 'Erreur lors de la création de l\'organisation' });
+    }
+}
 // Update tenant plan and license details
 async function updateTenantPlanOrLicense(req, res) {
     try {
@@ -75,10 +120,11 @@ async function updateTenantPlanOrLicense(req, res) {
             return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
         }
         const id = req.params.id;
-        const { plan, licenseActive, licenseExpiresAt, licenseKey } = req.body;
+        const { name, plan, licenseActive, licenseExpiresAt, licenseKey } = req.body;
         const updatedTenant = await db_1.prisma.tenant.update({
             where: { id },
             data: {
+                name: name !== undefined ? name : undefined,
                 plan: plan,
                 licenseActive: licenseActive !== undefined ? Boolean(licenseActive) : undefined,
                 licenseExpiresAt: licenseExpiresAt ? new Date(licenseExpiresAt) : null,
@@ -132,6 +178,7 @@ async function getAllUsers(req, res) {
             name: u.name,
             email: u.email,
             role: u.role,
+            tenantId: u.tenantId,
             isEmailVerified: u.isEmailVerified,
             tenantName: u.tenant?.name || 'Aucun (Super Admin)',
             createdAt: u.createdAt,
@@ -142,20 +189,71 @@ async function getAllUsers(req, res) {
         return res.status(500).json({ error: 'Erreur lors de la récupération des utilisateurs' });
     }
 }
-// Update user role or status
+// Create a new user (Super Admin only)
+async function createUser(req, res) {
+    try {
+        if (req.user?.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+        }
+        const { name, email, password, role, isEmailVerified, tenantId } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ error: 'L\'adresse email et le mot de passe sont requis.' });
+        }
+        const existingUser = await db_1.prisma.user.findUnique({
+            where: { email },
+        });
+        if (existingUser) {
+            return res.status(400).json({ error: 'Un utilisateur avec cette adresse email existe déjà.' });
+        }
+        const passwordHash = await bcryptjs_1.default.hash(password, 10);
+        const newUser = await db_1.prisma.user.create({
+            data: {
+                name,
+                email,
+                passwordHash,
+                role: role || 'USER',
+                isEmailVerified: isEmailVerified !== undefined ? Boolean(isEmailVerified) : false,
+                tenantId: tenantId || null,
+            },
+        });
+        // If this is the manager of the tenant and tenant managerId is not set, we can set it
+        if (tenantId && role === 'USER') {
+            const tenant = await db_1.prisma.tenant.findUnique({ where: { id: tenantId } });
+            if (tenant && !tenant.managerId) {
+                await db_1.prisma.tenant.update({
+                    where: { id: tenantId },
+                    data: { managerId: newUser.id },
+                });
+            }
+        }
+        return res.status(201).json({ message: 'Utilisateur créé avec succès', user: newUser });
+    }
+    catch (error) {
+        console.error('Erreur lors de la création de l\'utilisateur:', error);
+        return res.status(500).json({ error: 'Erreur lors de la création de l\'utilisateur' });
+    }
+}
+// Update user details (Super Admin only)
 async function updateUserRoleOrStatus(req, res) {
     try {
         if (req.user?.role !== 'SUPER_ADMIN') {
             return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
         }
         const id = req.params.id;
-        const { role, isEmailVerified } = req.body;
+        const { name, email, password, role, isEmailVerified, tenantId } = req.body;
+        const updateData = {
+            name: name !== undefined ? name : undefined,
+            email: email !== undefined ? email : undefined,
+            role: role,
+            isEmailVerified: isEmailVerified !== undefined ? Boolean(isEmailVerified) : undefined,
+            tenantId: tenantId !== undefined ? (tenantId || null) : undefined,
+        };
+        if (password) {
+            updateData.passwordHash = await bcryptjs_1.default.hash(password, 10);
+        }
         const updatedUser = await db_1.prisma.user.update({
             where: { id },
-            data: {
-                role: role,
-                isEmailVerified: isEmailVerified !== undefined ? Boolean(isEmailVerified) : undefined,
-            },
+            data: updateData,
         });
         return res.json({ message: 'Utilisateur mis à jour avec succès', user: updatedUser });
     }
@@ -204,6 +302,7 @@ async function getAllTemplates(req, res) {
             name: t.name,
             content: t.content,
             isGlobal: t.tenantId === null,
+            showOnLanding: t.showOnLanding,
             tenantName: t.tenant?.name || 'Global (Tous)',
             createdAt: t.createdAt,
         })));
@@ -219,7 +318,7 @@ async function createGlobalTemplate(req, res) {
         if (req.user?.role !== 'SUPER_ADMIN') {
             return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
         }
-        const { name, content } = req.body;
+        const { name, content, showOnLanding } = req.body;
         if (!name || !content) {
             return res.status(400).json({ error: 'Le nom et le contenu du modèle sont requis.' });
         }
@@ -227,6 +326,7 @@ async function createGlobalTemplate(req, res) {
             data: {
                 name,
                 content,
+                showOnLanding: showOnLanding !== undefined ? Boolean(showOnLanding) : false,
                 tenantId: null, // Null means it is a global template
             },
         });
@@ -235,6 +335,27 @@ async function createGlobalTemplate(req, res) {
     catch (error) {
         console.error('Erreur lors de la création du modèle global:', error);
         return res.status(500).json({ error: 'Erreur lors de la création du modèle global' });
+    }
+}
+// Toggle showOnLanding flag for a template
+async function toggleTemplateLanding(req, res) {
+    try {
+        if (req.user?.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+        }
+        const id = req.params.id;
+        const { showOnLanding } = req.body;
+        const updatedTemplate = await db_1.prisma.template.update({
+            where: { id },
+            data: {
+                showOnLanding: Boolean(showOnLanding),
+            },
+        });
+        return res.json({ message: 'Visibilité sur la landing page mise à jour', template: updatedTemplate });
+    }
+    catch (error) {
+        console.error('Erreur lors de la mise à jour de la visibilité du modèle:', error);
+        return res.status(500).json({ error: 'Erreur lors de la mise à jour de la visibilité du modèle' });
     }
 }
 // Delete template
@@ -252,5 +373,375 @@ async function deleteTemplate(req, res) {
     catch (error) {
         console.error('Erreur lors de la suppression du modèle:', error);
         return res.status(500).json({ error: 'Erreur lors de la suppression du modèle' });
+    }
+}
+// Get all events across all tenants (Super Admin only)
+async function getAllEvents(req, res) {
+    try {
+        if (req.user?.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+        }
+        const events = await db_1.prisma.event.findMany({
+            include: {
+                tenant: {
+                    select: {
+                        name: true,
+                    },
+                },
+                _count: {
+                    select: {
+                        guests: true,
+                        invitations: true,
+                    },
+                },
+            },
+            orderBy: {
+                date: 'desc',
+            },
+        });
+        return res.json(events.map(e => ({
+            id: e.id,
+            title: e.title,
+            description: e.description,
+            date: e.date,
+            location: e.location,
+            reminderFrequency: e.reminderFrequency,
+            latitude: e.latitude,
+            longitude: e.longitude,
+            tenantId: e.tenantId,
+            tenantName: e.tenant?.name || 'Inconnu',
+            guestCount: e._count.guests,
+            invitationCount: e._count.invitations,
+            createdAt: e.createdAt,
+        })));
+    }
+    catch (error) {
+        console.error('Erreur lors de la récupération de tous les événements:', error);
+        return res.status(500).json({ error: 'Erreur lors de la récupération de tous les événements' });
+    }
+}
+// Create an event for any tenant (Super Admin only)
+async function createAdminEvent(req, res) {
+    try {
+        if (req.user?.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+        }
+        const { title, description, date, location, reminderFrequency, latitude, longitude, tenantId } = req.body;
+        if (!title || !date || !location || !tenantId) {
+            return res.status(400).json({ error: 'Les champs title, date, location et tenantId sont requis.' });
+        }
+        const event = await db_1.prisma.event.create({
+            data: {
+                tenantId,
+                title,
+                description,
+                date: new Date(date),
+                location,
+                reminderFrequency: reminderFrequency || 'NONE',
+                latitude: latitude !== undefined && latitude !== null ? parseFloat(latitude) : null,
+                longitude: longitude !== undefined && longitude !== null ? parseFloat(longitude) : null,
+            },
+        });
+        return res.status(201).json({ message: 'Événement créé avec succès par l\'administrateur', event });
+    }
+    catch (error) {
+        console.error('Erreur lors de la création de l\'événement par l\'admin:', error);
+        return res.status(500).json({ error: 'Erreur lors de la création de l\'événement' });
+    }
+}
+// Update any event (Super Admin only)
+async function updateAdminEvent(req, res) {
+    try {
+        if (req.user?.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+        }
+        const id = req.params.id;
+        const { title, description, date, location, reminderFrequency, latitude, longitude, tenantId } = req.body;
+        const existingEvent = await db_1.prisma.event.findUnique({
+            where: { id },
+        });
+        if (!existingEvent) {
+            return res.status(404).json({ error: 'Événement non trouvé' });
+        }
+        const updatedEvent = await db_1.prisma.event.update({
+            where: { id },
+            data: {
+                title: title !== undefined ? title : existingEvent.title,
+                description: description !== undefined ? description : existingEvent.description,
+                date: date !== undefined ? new Date(date) : existingEvent.date,
+                location: location !== undefined ? location : existingEvent.location,
+                reminderFrequency: reminderFrequency !== undefined ? reminderFrequency : existingEvent.reminderFrequency,
+                latitude: latitude !== undefined ? (latitude !== null ? parseFloat(latitude) : null) : existingEvent.latitude,
+                longitude: longitude !== undefined ? (longitude !== null ? parseFloat(longitude) : null) : existingEvent.longitude,
+                tenantId: tenantId !== undefined ? tenantId : existingEvent.tenantId,
+            },
+        });
+        return res.json({ message: 'Événement modifié avec succès', event: updatedEvent });
+    }
+    catch (error) {
+        console.error('Erreur lors de la modification de l\'événement par l\'admin:', error);
+        return res.status(500).json({ error: 'Erreur lors de la modification de l\'événement' });
+    }
+}
+// Delete any event (Super Admin only)
+async function deleteAdminEvent(req, res) {
+    try {
+        if (req.user?.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+        }
+        const id = req.params.id;
+        await db_1.prisma.event.delete({
+            where: { id },
+        });
+        return res.json({ message: 'Événement supprimé avec succès' });
+    }
+    catch (error) {
+        console.error('Erreur lors de la suppression de l\'événement par l\'admin:', error);
+        return res.status(500).json({ error: 'Erreur lors de la suppression de l\'événement' });
+    }
+}
+// === GUESTS MANAGEMENT (Super Admin only) ===
+// Get all guests across all events
+async function getAllGuests(req, res) {
+    try {
+        if (req.user?.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+        }
+        const guests = await db_1.prisma.guest.findMany({
+            include: {
+                event: {
+                    select: {
+                        title: true,
+                        tenant: {
+                            select: {
+                                name: true,
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+        });
+        return res.json(guests.map((g) => ({
+            id: g.id,
+            eventId: g.eventId,
+            eventTitle: g.event?.title || 'Événement inconnu',
+            tenantName: g.event?.tenant?.name || 'Organisation inconnue',
+            firstName: g.firstName,
+            lastName: g.lastName,
+            email: g.email,
+            category: g.category || 'Général',
+            rsvp: g.rsvp,
+            preferences: g.preferences,
+            createdAt: g.createdAt,
+        })));
+    }
+    catch (error) {
+        console.error('Erreur lors de la récupération de tous les invités:', error);
+        return res.status(500).json({ error: 'Erreur lors de la récupération de tous les invités' });
+    }
+}
+// Create a guest for any event
+async function createAdminGuest(req, res) {
+    try {
+        if (req.user?.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+        }
+        const { eventId, firstName, lastName, email, category, rsvp, preferences } = req.body;
+        if (!eventId || !firstName || !lastName || !email) {
+            return res.status(400).json({ error: 'Les champs eventId, firstName, lastName et email sont requis' });
+        }
+        // Check if guest already exists for this event
+        const existingGuest = await db_1.prisma.guest.findUnique({
+            where: { eventId_email: { eventId, email } },
+        });
+        if (existingGuest) {
+            return res.status(400).json({ error: 'Un invité avec cet email existe déjà pour cet événement' });
+        }
+        const guest = await db_1.prisma.guest.create({
+            data: {
+                eventId,
+                firstName,
+                lastName,
+                email,
+                category: category || 'Général',
+                rsvp: rsvp || 'PENDING',
+                preferences: preferences || {},
+            },
+            include: {
+                event: {
+                    select: {
+                        title: true,
+                        tenant: {
+                            select: {
+                                name: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        return res.status(201).json({
+            message: 'Invité créé avec succès',
+            guest: {
+                id: guest.id,
+                eventId: guest.eventId,
+                eventTitle: guest.event?.title || 'Événement inconnu',
+                tenantName: guest.event?.tenant?.name || 'Organisation inconnue',
+                firstName: guest.firstName,
+                lastName: guest.lastName,
+                email: guest.email,
+                category: guest.category,
+                rsvp: guest.rsvp,
+                preferences: guest.preferences,
+                createdAt: guest.createdAt,
+            },
+        });
+    }
+    catch (error) {
+        console.error('Erreur lors de la création de l\'invité par l\'admin:', error);
+        return res.status(500).json({ error: 'Erreur lors de la création de l\'invité' });
+    }
+}
+// Update any guest
+async function updateAdminGuest(req, res) {
+    try {
+        if (req.user?.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+        }
+        const id = req.params.id;
+        const { eventId, firstName, lastName, email, category, rsvp, preferences } = req.body;
+        const existingGuest = await db_1.prisma.guest.findUnique({
+            where: { id },
+        });
+        if (!existingGuest) {
+            return res.status(404).json({ error: 'Invité non trouvé' });
+        }
+        const updatedGuest = await db_1.prisma.guest.update({
+            where: { id },
+            data: {
+                eventId: eventId !== undefined ? eventId : existingGuest.eventId,
+                firstName: firstName !== undefined ? firstName : existingGuest.firstName,
+                lastName: lastName !== undefined ? lastName : existingGuest.lastName,
+                email: email !== undefined ? email : existingGuest.email,
+                category: category !== undefined ? category : existingGuest.category,
+                rsvp: rsvp !== undefined ? rsvp : existingGuest.rsvp,
+                preferences: preferences !== undefined ? preferences : existingGuest.preferences,
+            },
+            include: {
+                event: {
+                    select: {
+                        title: true,
+                        tenant: {
+                            select: {
+                                name: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        return res.json({
+            message: 'Invité modifié avec succès',
+            guest: {
+                id: updatedGuest.id,
+                eventId: updatedGuest.eventId,
+                eventTitle: updatedGuest.event?.title || 'Événement inconnu',
+                tenantName: updatedGuest.event?.tenant?.name || 'Organisation inconnue',
+                firstName: updatedGuest.firstName,
+                lastName: updatedGuest.lastName,
+                email: updatedGuest.email,
+                category: updatedGuest.category,
+                rsvp: updatedGuest.rsvp,
+                preferences: updatedGuest.preferences,
+                createdAt: updatedGuest.createdAt,
+            },
+        });
+    }
+    catch (error) {
+        console.error('Erreur lors de la modification de l\'invité par l\'admin:', error);
+        return res.status(500).json({ error: 'Erreur lors de la modification de l\'invité' });
+    }
+}
+// Delete any guest
+async function deleteAdminGuest(req, res) {
+    try {
+        if (req.user?.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+        }
+        const id = req.params.id;
+        await db_1.prisma.guest.delete({
+            where: { id },
+        });
+        return res.json({ message: 'Invité supprimé avec succès' });
+    }
+    catch (error) {
+        console.error('Erreur lors de la suppression de l\'invité par l\'admin:', error);
+        return res.status(500).json({ error: 'Erreur lors de la suppression de l\'invité' });
+    }
+}
+// === CONFIGURATION & SETTINGS (Super Admin only) ===
+const settingsFilePath = path_1.default.join(__dirname, '..', 'config', 'settings.json');
+// Ensure the directory exists
+function ensureSettingsDir() {
+    const dir = path_1.default.dirname(settingsFilePath);
+    if (!fs_1.default.existsSync(dir)) {
+        fs_1.default.mkdirSync(dir, { recursive: true });
+    }
+}
+const defaultSettings = {
+    platformName: "EventMaster",
+    supportEmail: "support@eventmaster.com",
+    maintenanceMode: false,
+    allowRegistration: true,
+    ultramsgInstanceId: process.env.ULTRAMSG_INSTANCE_ID || "",
+    ultramsgToken: process.env.ULTRAMSG_TOKEN || "",
+    sendgridApiKey: process.env.SENDGRID_API_KEY || "",
+    twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || "",
+    twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || "",
+    twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER || ""
+};
+async function getAdminSettings(req, res) {
+    try {
+        if (req.user?.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+        }
+        ensureSettingsDir();
+        if (fs_1.default.existsSync(settingsFilePath)) {
+            const data = fs_1.default.readFileSync(settingsFilePath, 'utf-8');
+            const settings = JSON.parse(data);
+            return res.json({ ...defaultSettings, ...settings });
+        }
+        return res.json(defaultSettings);
+    }
+    catch (error) {
+        console.error('Erreur lors de la récupération des paramètres:', error);
+        return res.status(500).json({ error: 'Erreur lors de la récupération des paramètres' });
+    }
+}
+async function updateAdminSettings(req, res) {
+    try {
+        if (req.user?.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+        }
+        const newSettings = req.body;
+        ensureSettingsDir();
+        let currentSettings = { ...defaultSettings };
+        if (fs_1.default.existsSync(settingsFilePath)) {
+            const data = fs_1.default.readFileSync(settingsFilePath, 'utf-8');
+            currentSettings = { ...currentSettings, ...JSON.parse(data) };
+        }
+        const updatedSettings = {
+            ...currentSettings,
+            ...newSettings
+        };
+        fs_1.default.writeFileSync(settingsFilePath, JSON.stringify(updatedSettings, null, 2), 'utf-8');
+        return res.json({ message: 'Paramètres mis à jour avec succès', settings: updatedSettings });
+    }
+    catch (error) {
+        console.error('Erreur lors de la mise à jour des paramètres:', error);
+        return res.status(500).json({ error: 'Erreur lors de la mise à jour des paramètres' });
     }
 }

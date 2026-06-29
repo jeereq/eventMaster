@@ -12,8 +12,10 @@ const templateRoutes_1 = __importDefault(require("./routes/templateRoutes"));
 const rsvpRoutes_1 = __importDefault(require("./routes/rsvpRoutes"));
 const billingRoutes_1 = __importDefault(require("./routes/billingRoutes"));
 const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
+const publicRoutes_1 = __importDefault(require("./routes/publicRoutes"));
 const billingController_1 = require("./controllers/billingController");
 const db_1 = require("./db");
+const reminderService_1 = require("./services/reminderService");
 // Load environment variables
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -42,10 +44,13 @@ app.use('/api/events', eventRoutes_1.default);
 app.use('/api/templates', templateRoutes_1.default);
 app.use('/api/rsvp', rsvpRoutes_1.default);
 app.use('/api/admin', adminRoutes_1.default);
+app.use('/api/public', publicRoutes_1.default);
 app.post('/api/billing/webhook', billingController_1.handleStripeWebhook);
 app.use('/api/billing', billingRoutes_1.default);
 // Start Server
 app.listen(PORT, () => {
     console.log(`[EventMaster Server] running on http://localhost:${PORT}`);
+    // Start background automatic reminders worker
+    (0, reminderService_1.startReminderWorker)();
 });
 // Trigger ts-node-dev reload to pick up generated Prisma client after schema change (latitude and longitude fields added)

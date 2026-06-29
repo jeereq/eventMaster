@@ -10,8 +10,9 @@ import {
   ChevronRight, ArrowLeft, Check, Upload, Mail, Send, 
   Sparkles, CheckCircle2, XCircle, AlertCircle, HelpCircle, Loader2,
   Copy, MessageSquare, Share2, Search, Filter, RefreshCw, CheckSquare, XSquare, HelpCircle as PendingIcon,
-  Eye, BarChart3, Utensils, FileSpreadsheet, Download
+  Eye, BarChart3, Utensils, FileSpreadsheet, Download, LayoutGrid
 } from 'lucide-react';
+import TablePlanner from './TablePlanner';
 
 interface EventItem {
   id: string;
@@ -22,6 +23,7 @@ interface EventItem {
   reminderFrequency?: string;
   latitude?: number;
   longitude?: number;
+  tablePlan?: any;
   tenant?: { name: string };
 }
 
@@ -126,7 +128,7 @@ export default function EventsPage() {
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   
   // Tabs
-  const [activeTab, setActiveTab] = useState<'guests' | 'invitations'>('guests');
+  const [activeTab, setActiveTab] = useState<'guests' | 'invitations' | 'tablePlan'>('guests');
 
   // Event form
   const [showEventModal, setShowEventModal] = useState(false);
@@ -528,6 +530,20 @@ export default function EventsPage() {
     }
   };
 
+  const handleSaveTablePlan = async (newTablePlan: any) => {
+    if (!selectedEvent) return;
+    try {
+      const updatedEvent = await api.put(`/events/${selectedEvent.id}`, {
+        tablePlan: newTablePlan
+      });
+      setSelectedEvent(updatedEvent);
+      setEvents(events.map(e => e.id === selectedEvent.id ? updatedEvent : e));
+    } catch (err: any) {
+      console.error('Erreur lors de la sauvegarde du plan de table:', err);
+      throw err;
+    }
+  };
+
   // Manage Event Details
   const handleManageEvent = async (event: EventItem) => {
     setSelectedEvent(event);
@@ -622,6 +638,43 @@ export default function EventsPage() {
     } catch (err: any) {
       setError('Erreur de suppression.');
     }
+  };
+
+  // Export Guests to CSV
+  const handleExportGuests = () => {
+    if (guests.length === 0) {
+      alert("Aucun invité à exporter.");
+      return;
+    }
+    
+    const headers = ["Prénom", "Nom", "Email", "Téléphone", "Catégorie", "Statut RSVP", "Préférences & Notes"];
+    const rows = guests.map(g => {
+      const phone = g.preferences?.phone || g.preferences?.telephone || "";
+      const notes = g.preferences?.notes || "";
+      return [
+        g.firstName,
+        g.lastName,
+        g.email,
+        phone,
+        g.category || "Général",
+        g.rsvp === "ACCEPTED" ? "Accepté" : g.rsvp === "DECLINED" ? "Décliné" : "En attente",
+        notes
+      ];
+    });
+    
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+    
+    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `invites_${selectedEvent?.title.replace(/\s+/g, '_') || 'evenement'}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Bulk Import Guests (CSV & Excel)
@@ -1204,6 +1257,15 @@ export default function EventsPage() {
                 Invitations & Diffusion ({invitations.length})
               </span>
             </button>
+            <button
+              onClick={() => setActiveTab('tablePlan')}
+              className={`pb-4 px-6 text-sm font-bold border-b-2 transition ${activeTab === 'tablePlan' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+            >
+              <span className="flex items-center gap-2">
+                <LayoutGrid className="w-4.5 h-4.5" />
+                Plan de table
+              </span>
+            </button>
           </div>
 
           {/* Tab Content: Guests */}
@@ -1455,6 +1517,16 @@ export default function EventsPage() {
                     <FileSpreadsheet className="w-4 h-4" />
                     Importer Excel / CSV
                   </button>
+                  {guests.length > 0 && (
+                    <button 
+                      onClick={handleExportGuests}
+                      className="inline-flex items-center justify-center gap-1.5 px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold rounded-xl text-sm transition"
+                      title="Exporter tous les invités en fichier CSV"
+                    >
+                      <Download className="w-4 h-4" />
+                      Exporter CSV
+                    </button>
+                  )}
                   <button 
                     onClick={() => {
                       setEditingGuestId(null);
@@ -1852,6 +1924,16 @@ export default function EventsPage() {
                 )}
               </div>
             </div>
+          )}
+
+          {/* Tab Content: Table Plan */}
+          {activeTab === 'tablePlan' && (
+            <TablePlanner
+              key={selectedEvent.id}
+              guests={guests}
+              initialTablePlan={selectedEvent.tablePlan}
+              onSave={handleSaveTablePlan}
+            />
           )}
         </div>
       )}

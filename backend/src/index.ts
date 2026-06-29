@@ -7,8 +7,10 @@ import templateRoutes from './routes/templateRoutes';
 import rsvpRoutes from './routes/rsvpRoutes';
 import billingRoutes from './routes/billingRoutes';
 import adminRoutes from './routes/adminRoutes';
+import publicRoutes from './routes/publicRoutes';
 import { handleStripeWebhook } from './controllers/billingController';
 import { prisma } from './db';
+import { startReminderWorker } from './services/reminderService';
 
 // Load environment variables
 dotenv.config();
@@ -41,12 +43,15 @@ app.use('/api/events', eventRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/rsvp', rsvpRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/public', publicRoutes);
 app.post('/api/billing/webhook', handleStripeWebhook);
 app.use('/api/billing', billingRoutes);
 
 // Start Server
 app.listen(PORT, () => {
   console.log(`[EventMaster Server] running on http://localhost:${PORT}`);
+  // Start background automatic reminders worker
+  startReminderWorker();
 });
 
 // Trigger ts-node-dev reload to pick up generated Prisma client after schema change (latitude and longitude fields added)

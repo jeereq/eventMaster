@@ -5,7 +5,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.requireAuth = requireAuth;
 exports.requireRole = requireRole;
+exports.requireActiveLicense = requireActiveLicense;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const db_1 = require("../db");
 const JWT_SECRET = process.env.JWT_SECRET || 'eventmaster-secret-key-12345';
 function requireAuth(req, res, next) {
     const authHeader = req.headers.authorization;
@@ -36,4 +38,42 @@ function requireRole(roles) {
         }
         next();
     };
+}
+async function requireActiveLicense(req, res, next) {
+    if (!req.user) {
+        return res.status(401).json({ error: 'Non authentifié.' });
+    }
+    // SUPER_ADMIN bypasses license checks
+    if (req.user.role === 'SUPER_ADMIN') {
+        return next();
+    }
+    const tenantId = req.user.tenantId;
+    if (!tenantId) {
+        return res.status(403).json({ error: 'Tenant non identifié. Accès refusé.' });
+    }
+    try {
+        const tenant = await db_1.prisma.tenant.findUnique({
+            where: { id: tenantId },
+        });
+        if (!tenant) {
+            return res.status(404).json({ error: 'Organisation non trouvée.' });
+        }
+        if (!tenant.licenseActive) {
+            return res.status(403).json({
+                error: 'Votre licence est inactive. Veuillez contacter l\'administrateur ou régulariser votre abonnement.',
+                licenseError: 'INACTIVE'
+            });
+        }
+        if (tenant.licenseExpiresAt && new Date(tenant.licenseExpiresAt) < new Date()) {
+            return res.status(403).json({
+                error: `Votre licence a expiré le ${new Date(tenant.licenseExpiresAt).toLocaleDateString('fr-FR')}. Veuillez renouveler votre abonnement.`,
+                licenseError: 'EXPIRED'
+            });
+        }
+        next();
+    }
+    catch (error) {
+        console.error('[Auth Middleware] Erreur lors de la vérification de la licence:', error);
+        return res.status(500).json({ error: 'Erreur interne lors de la vérification de la licence.' });
+    }
 }

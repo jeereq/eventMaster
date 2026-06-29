@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { prisma } from '../db';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'eventmaster-secret-key-12345';
 
@@ -44,4 +45,49 @@ export function requireRole(roles: ('SUPER_ADMIN' | 'COMMERCIAL' | 'USER')[]) {
 
     next();
   };
+}
+
+export async function requireActiveLicense(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Non authentifié.' });
+  }
+
+  // SUPER_ADMIN bypasses license checks
+  if (req.user.role === 'SUPER_ADMIN') {
+    return next();
+  }
+
+  const tenantId = req.user.tenantId;
+  if (!tenantId) {
+    return res.status(403).json({ error: 'Tenant non identifié. Accès refusé.' });
+  }
+
+  try {
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+    });
+
+    if (!tenant) {
+      return res.status(404).json({ error: 'Organisation non trouvée.' });
+    }
+
+    if (!tenant.licenseActive) {
+      return res.status(403).json({ 
+        error: 'Votre licence est inactive. Veuillez contacter l\'administrateur ou régulariser votre abonnement.',
+        licenseError: 'INACTIVE'
+      });
+    }
+
+    if (tenant.licenseExpiresAt && new Date(tenant.licenseExpiresAt) < new Date()) {
+      return res.status(403).json({ 
+        error: `Votre licence a expiré le ${new Date(tenant.licenseExpiresAt).toLocaleDateString('fr-FR')}. Veuillez renouveler votre abonnement.`,
+        licenseError: 'EXPIRED'
+      });
+    }
+
+    next();
+  } catch (error) {
+    console.error('[Auth Middleware] Erreur lors de la vérification de la licence:', error);
+    return res.status(500).json({ error: 'Erreur interne lors de la vérification de la licence.' });
+  }
 }

@@ -8,7 +8,7 @@ import {
   Calendar, Users, Award, Shield, CheckCircle, Mail, 
   ArrowRight, Lock, Layout, Sparkles, Compass, Heart, 
   Briefcase, Smartphone, Star, ShieldCheck, Check, XCircle,
-  PartyPopper
+  PartyPopper, Loader2
 } from 'lucide-react';
 
 interface MockTemplate {
@@ -35,35 +35,14 @@ interface MockTemplate {
 export default function Home() {
   const { user, tenant, logout } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [previewTemplate, setPreviewTemplate] = useState<string>('wedding');
-  const [modalTemplate, setModalTemplate] = useState<MockTemplate | null>(null);
+  const [previewTemplate, setPreviewTemplate] = useState<string>('');
+  const [modalTemplate, setModalTemplate] = useState<any | null>(null);
   const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+  const [dbTemplates, setDbTemplates] = useState<any[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
 
-  useEffect(() => {
-    async function checkServer() {
-      try {
-        // We use fetch directly or the API client to hit the public health endpoint
-        const response = await fetch('http://localhost:5001/health');
-        if (response.ok) {
-          setServerStatus('online');
-        } else {
-          setServerStatus('offline');
-        }
-      } catch (err) {
-        setServerStatus('offline');
-      }
-    }
-    checkServer();
-  }, []);
-
-  const categories = [
-    { id: 'all', name: 'Tous les modèles' },
-    { id: 'private', name: 'Privé & Célébrations' },
-    { id: 'corporate', name: 'Professionnel & Gala' },
-    { id: 'casual', name: 'Moderne & Cocktail' },
-  ];
-
-  const invitationTemplates: MockTemplate[] = [
+  // Static fallback templates in case database is empty or offline
+  const fallbackTemplates: MockTemplate[] = [
     {
       id: 'wedding',
       name: 'Mariage Élégant & Romantique',
@@ -123,34 +102,78 @@ export default function Home() {
         { type: 'text', content: 'Rencontrez l\'écosystème local et découvrez nos nouveaux locaux autour d\'une sélection de mets raffinés.', color: '#cbd5e1', fontSize: 'text-sm' },
         { type: 'button', content: 'S\'inscrire à la Soirée' }
       ]
-    },
-    {
-      id: 'seminar',
-      name: 'Séminaire & Conférence Privée',
-      category: 'corporate',
-      description: 'Design minimaliste structuré mettant l\'accent sur le programme de la journée et les intervenants.',
-      style: {
-        bg: 'bg-white',
-        border: 'border-slate-200',
-        textTitle: 'text-slate-900 font-sans',
-        textBody: 'text-slate-600',
-        btnBg: 'bg-slate-900 hover:bg-slate-800',
-        btnText: 'text-white'
-      },
-      elements: [
-        { type: 'text', content: 'CONFÉRENCE EXCLUSIVE', color: '#4f46e5', fontSize: 'text-xs tracking-widest' },
-        { type: 'text', content: 'Séminaire Dirigeants', color: '#0f172a', fontSize: 'text-3xl font-extrabold' },
-        { type: 'text', content: 'Une journée de réflexion stratégique sur les enjeux de l\'année fiscale, réservée aux membres du conseil d\'administration.', color: '#475569', fontSize: 'text-sm' },
-        { type: 'button', content: 'Confirmer ma présence' }
-      ]
     }
   ];
 
-  const filteredTemplates = selectedCategory === 'all' 
-    ? invitationTemplates 
-    : invitationTemplates.filter(t => t.category === selectedCategory);
+  useEffect(() => {
+    async function checkServerAndFetchTemplates() {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}/health`);
+        if (response.ok) {
+          setServerStatus('online');
+          
+          // Fetch templates configured for landing page
+          const templatesData = await api.get('/public/templates');
+          if (Array.isArray(templatesData) && templatesData.length > 0) {
+            // Map DB templates to MockTemplate structure
+            const mapped = templatesData.map((t: any) => {
+              const content = t.content || {};
+              return {
+                id: t.id,
+                name: t.name,
+                category: content.category || 'private',
+                description: content.description || 'Modèle personnalisé configuré par l\'administrateur.',
+                style: content.style || {
+                  bg: 'bg-white',
+                  border: 'border-slate-200',
+                  textTitle: 'text-slate-900 font-sans',
+                  textBody: 'text-slate-600',
+                  btnBg: 'bg-indigo-600 hover:bg-indigo-700',
+                  btnText: 'text-white'
+                },
+                elements: content.elements || [
+                  { type: 'text', content: t.name.toUpperCase(), color: '#4f46e5', fontSize: 'text-xs tracking-widest' },
+                  { type: 'text', content: content.subject || 'Vous êtes invité !', color: '#0f172a', fontSize: 'text-2xl font-extrabold' },
+                  { type: 'text', content: content.body || 'Rejoignez-nous pour cet événement exceptionnel.', color: '#475569', fontSize: 'text-sm' },
+                  { type: 'button', content: 'Confirmer ma présence' }
+                ]
+              };
+            });
+            setDbTemplates(mapped);
+            setPreviewTemplate(mapped[0].id);
+          } else {
+            setDbTemplates([]);
+            setPreviewTemplate('wedding');
+          }
+        } else {
+          setServerStatus('offline');
+          setPreviewTemplate('wedding');
+        }
+      } catch (err) {
+        setServerStatus('offline');
+        setPreviewTemplate('wedding');
+      } finally {
+        setLoadingTemplates(false);
+      }
+    }
+    checkServerAndFetchTemplates();
+  }, []);
 
-  const activePreview = invitationTemplates.find(t => t.id === previewTemplate) || invitationTemplates[0];
+  const categories = [
+    { id: 'all', name: 'Tous les modèles' },
+    { id: 'private', name: 'Privé & Célébrations' },
+    { id: 'corporate', name: 'Professionnel & Gala' },
+    { id: 'casual', name: 'Moderne & Cocktail' },
+  ];
+
+  // Use DB templates if available, otherwise fall back to static ones
+  const activeTemplatesList = dbTemplates.length > 0 ? dbTemplates : fallbackTemplates;
+
+  const filteredTemplates = selectedCategory === 'all' 
+    ? activeTemplatesList 
+    : activeTemplatesList.filter(t => t.category === selectedCategory);
+
+  const activePreview = activeTemplatesList.find(t => t.id === previewTemplate) || activeTemplatesList[0];
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 font-sans antialiased text-slate-900">
@@ -181,7 +204,7 @@ export default function Home() {
             {user ? (
               <>
                 <span className="text-xs text-slate-500 font-semibold hidden md:inline">
-                  Connecté en tant que <span className="font-bold text-indigo-600">{user.name}</span> ({tenant?.name})
+                  Connecté en tant que <span className="font-bold text-indigo-600">{user.name}</span> {tenant ? `(${tenant.name})` : ''}
                 </span>
                 <Link href="/dashboard" className="text-sm font-semibold bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-100">
                   Tableau de Bord
@@ -251,46 +274,58 @@ export default function Home() {
                 Aperçu du designer
               </div>
 
-              {/* Selector within Preview Widget */}
-              <div className="flex gap-2 mb-4 border-b border-slate-200 pb-3 overflow-x-auto">
-                {invitationTemplates.map(t => (
-                  <button
-                    key={t.id}
-                    onClick={() => setPreviewTemplate(t.id)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${previewTemplate === t.id ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-                  >
-                    {t.id === 'wedding' ? 'Mariage' : t.id === 'gala' ? 'Gala' : t.id === 'cocktail' ? 'Cocktail' : 'Séminaire'}
-                  </button>
-                ))}
-              </div>
-
-              {/* Invitation Model Render Card */}
-              <div className={`rounded-2xl border ${activePreview.style.bg} ${activePreview.style.border} p-6 sm:p-8 space-y-6 shadow-md transition-all duration-300 min-h-[340px] flex flex-col justify-between relative overflow-hidden`}>
-                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-500 to-violet-500" />
-                
-                <div className="space-y-4 pt-2">
-                  {activePreview.elements.map((el, i) => {
-                    if (el.type === 'text') {
-                      return (
-                        <div 
-                          key={i} 
-                          style={{ color: el.color }}
-                          className={`${el.fontSize || 'text-base'} text-center leading-relaxed`}
-                        >
-                          {el.content}
-                        </div>
-                      );
-                    }
-                    return null;
-                  })}
+              {loadingTemplates ? (
+                <div className="h-[400px] flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
                 </div>
-
-                <div className="flex justify-center pt-4">
-                  <div className={`px-5 py-2.5 rounded-xl font-bold text-center inline-block text-sm shadow-md cursor-pointer ${activePreview.style.btnBg} ${activePreview.style.btnText}`}>
-                    {activePreview.elements.find(el => el.type === 'button')?.content}
+              ) : activePreview ? (
+                <>
+                  {/* Selector within Preview Widget */}
+                  <div className="flex gap-2 mb-4 border-b border-slate-200 pb-3 overflow-x-auto">
+                    {activeTemplatesList.map(t => (
+                      <button
+                        key={t.id}
+                        onClick={() => setPreviewTemplate(t.id)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${previewTemplate === t.id ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                      >
+                        {t.name.split(' ')[0]}
+                      </button>
+                    ))}
                   </div>
+
+                  {/* Invitation Model Render Card */}
+                  <div className={`rounded-2xl border ${activePreview.style.bg} ${activePreview.style.border} p-6 sm:p-8 space-y-6 shadow-md transition-all duration-300 min-h-[340px] flex flex-col justify-between relative overflow-hidden`}>
+                    <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-500 to-violet-500" />
+                    
+                    <div className="space-y-4 pt-2">
+                      {activePreview.elements.map((el: any, i: number) => {
+                        if (el.type === 'text') {
+                          return (
+                            <div 
+                              key={i} 
+                              style={{ color: el.color }}
+                              className={`${el.fontSize || 'text-base'} text-center leading-relaxed`}
+                            >
+                              {el.content}
+                            </div>
+                          );
+                        }
+                        return null;
+                      })}
+                    </div>
+
+                    <div className="flex justify-center pt-4">
+                      <div className={`px-5 py-2.5 rounded-xl font-bold text-center inline-block text-sm shadow-md cursor-pointer ${activePreview.style.btnBg} ${activePreview.style.btnText}`}>
+                        {activePreview.elements.find((el: any) => el.type === 'button')?.content || 'S\'inscrire'}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="h-[400px] flex items-center justify-center text-slate-500">
+                  Aucun modèle disponible.
                 </div>
-              </div>
+              )}
 
               <div className="mt-4 text-center text-xs text-slate-500 font-medium">
                 Générez des liens RSVP sécurisés et uniques pour chaque invité.
@@ -376,46 +411,57 @@ export default function Home() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            {filteredTemplates.map((t) => (
-              <div key={t.id} className="bg-slate-50 border border-slate-200 rounded-3xl p-6 flex flex-col justify-between hover:shadow-md transition duration-300">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] bg-indigo-50 border border-indigo-100 text-indigo-700 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                      {t.category === 'private' ? 'Événement Privé' : t.category === 'corporate' ? 'Professionnel' : 'Cocktail'}
-                    </span>
-                    <button
-                      onClick={() => setModalTemplate(t)}
-                      className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
-                    >
-                      Apercevoir
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                  <h3 className="font-extrabold text-slate-900 text-lg leading-tight">{t.name}</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">{t.description}</p>
-
-                  {/* Component preview badges */}
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    <span className="bg-white border border-slate-200 px-2 py-1 rounded-md text-[10px] text-slate-600 font-semibold flex items-center gap-1">
-                      <Layout className="w-3.5 h-3.5 text-indigo-500" /> Elements JSON
-                    </span>
-                    <span className="bg-white border border-slate-200 px-2 py-1 rounded-md text-[10px] text-slate-600 font-semibold flex items-center gap-1">
-                      <Smartphone className="w-3.5 h-3.5 text-indigo-500" /> Mobile Ready
-                    </span>
-                    <span className="bg-white border border-slate-200 px-2 py-1 rounded-md text-[10px] text-slate-600 font-semibold flex items-center gap-1">
-                      <Compass className="w-3.5 h-3.5 text-indigo-500" /> RSVP Inclus
-                    </span>
-                  </div>
-                </div>
-
-                <div className="border-t border-slate-200/60 pt-4 mt-6 flex items-center justify-between text-xs font-semibold text-slate-500">
-                  <span>Modèle {t.id}</span>
-                  <Link href="/register" className="text-indigo-600 hover:underline">
-                    Utiliser ce modèle
-                  </Link>
-                </div>
+            {loadingTemplates ? (
+              <div className="col-span-2 py-12 flex flex-col items-center justify-center gap-3">
+                <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                <p className="text-sm font-medium text-slate-500">Chargement des modèles...</p>
               </div>
-            ))}
+            ) : filteredTemplates.length === 0 ? (
+              <div className="col-span-2 text-center py-12 text-slate-500 font-medium">
+                Aucun modèle disponible dans cette catégorie.
+              </div>
+            ) : (
+              filteredTemplates.map((t) => (
+                <div key={t.id} className="bg-slate-50 border border-slate-200 rounded-3xl p-6 flex flex-col justify-between hover:shadow-md transition duration-300">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] bg-indigo-50 border border-indigo-100 text-indigo-700 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                        {t.category === 'private' ? 'Événement Privé' : t.category === 'corporate' ? 'Professionnel' : 'Cocktail'}
+                      </span>
+                      <button
+                        onClick={() => setModalTemplate(t)}
+                        className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                      >
+                        Apercevoir
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <h3 className="font-extrabold text-slate-900 text-lg leading-tight">{t.name}</h3>
+                    <p className="text-xs text-slate-500 leading-relaxed">{t.description}</p>
+
+                    {/* Component preview badges */}
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      <span className="bg-white border border-slate-200 px-2 py-1 rounded-md text-[10px] text-slate-600 font-semibold flex items-center gap-1">
+                        <Layout className="w-3.5 h-3.5 text-indigo-500" /> Elements JSON
+                      </span>
+                      <span className="bg-white border border-slate-200 px-2 py-1 rounded-md text-[10px] text-slate-600 font-semibold flex items-center gap-1">
+                        <Smartphone className="w-3.5 h-3.5 text-indigo-500" /> Mobile Ready
+                      </span>
+                      <span className="bg-white border border-slate-200 px-2 py-1 rounded-md text-[10px] text-slate-600 font-semibold flex items-center gap-1">
+                        <Compass className="w-3.5 h-3.5 text-indigo-500" /> RSVP Inclus
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-200/60 pt-4 mt-6 flex items-center justify-between text-xs font-semibold text-slate-500">
+                    <span className="truncate max-w-[150px]">Modèle {t.name}</span>
+                    <Link href="/register" className="text-indigo-600 hover:underline">
+                      Utiliser ce modèle
+                    </Link>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </section>
@@ -470,9 +516,9 @@ export default function Home() {
               <div className="space-y-6">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">Plan Standard</h3>
-                  <p className="text-xs text-slate-500 mt-1">Idéal pour les événements familiaux de taille moyenne.</p>
+                  <p className="text-xs text-slate-500 mt-1">Idéal pour les événements de taille moyenne.</p>
                   <div className="flex items-baseline gap-1 mt-4">
-                    <span className="text-3xl font-extrabold text-slate-900">30.000 FC</span>
+                    <span className="text-3xl font-extrabold text-slate-900">40.000 FC</span>
                     <span className="text-slate-500 text-sm">/mois</span>
                   </div>
                 </div>
@@ -490,9 +536,8 @@ export default function Home() {
                     <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                     <span>5 modèles d'invitations</span>
                   </li>
-                  <li className="flex items-center gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>Modèles d'invitations simples</span>
+                  <li className="flex items-center gap-2.5 text-slate-400 line-through">
+                    <span>Modèles d'invitations customisés</span>
                   </li>
                 </ul>
               </div>
@@ -597,33 +642,35 @@ export default function Home() {
       {modalTemplate && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl max-w-md w-full border border-slate-200 p-6 space-y-6 shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-indigo-500 to-violet-500" />
+            <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-indigo-500 to-violet-500" />
             
-            <div className="flex items-center justify-between">
-              <div className="max-w-[85%]">
-                <h3 className="text-lg font-bold text-slate-900 truncate">{modalTemplate.name}</h3>
-                <p className="text-xs text-slate-500 mt-0.5">{modalTemplate.description}</p>
-              </div>
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] bg-indigo-50 border border-indigo-100 text-indigo-700 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                {modalTemplate.category === 'private' ? 'Événement Privé' : modalTemplate.category === 'corporate' ? 'Professionnel' : 'Cocktail'}
+              </span>
               <button 
-                onClick={() => setModalTemplate(null)} 
-                className="text-slate-400 hover:bg-slate-50 p-1.5 rounded-lg transition"
+                onClick={() => setModalTemplate(null)}
+                className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1 rounded-lg transition"
               >
                 <XCircle className="w-6 h-6" />
               </button>
             </div>
 
-            {/* Rendu du modèle */}
-            <div className={`rounded-2xl border ${modalTemplate.style.bg} ${modalTemplate.style.border} p-6 sm:p-8 space-y-6 shadow-md min-h-[300px] flex flex-col justify-between relative overflow-hidden`}>
-              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-500 to-violet-500" />
-              
-              <div className="space-y-4 pt-2">
-                {modalTemplate.elements.map((el, i) => {
+            <div className="space-y-2">
+              <h3 className="text-xl font-extrabold text-slate-900 leading-tight">{modalTemplate.name}</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">{modalTemplate.description}</p>
+            </div>
+
+            {/* Rendered Card */}
+            <div className={`rounded-2xl border ${modalTemplate.style.bg} ${modalTemplate.style.border} p-6 sm:p-8 space-y-6 shadow-inner relative overflow-hidden`}>
+              <div className="space-y-4">
+                {modalTemplate.elements.map((el: any, i: number) => {
                   if (el.type === 'text') {
                     return (
                       <div 
                         key={i} 
                         style={{ color: el.color }}
-                        className={`${el.fontSize || 'text-base'} text-center leading-relaxed`}
+                        className={`${el.fontSize || 'text-sm'} text-center leading-relaxed`}
                       >
                         {el.content}
                       </div>
@@ -635,21 +682,21 @@ export default function Home() {
 
               <div className="flex justify-center pt-4">
                 <div className={`px-5 py-2.5 rounded-xl font-bold text-center inline-block text-sm shadow-md ${modalTemplate.style.btnBg} ${modalTemplate.style.btnText}`}>
-                  {modalTemplate.elements.find(el => el.type === 'button')?.content}
+                  {modalTemplate.elements.find((el: any) => el.type === 'button')?.content || 'S\'inscrire'}
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setModalTemplate(null)}
-                className="flex-1 py-3 border border-slate-300 hover:border-slate-400 text-slate-700 font-semibold rounded-xl text-sm transition"
+                className="flex-1 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs transition"
               >
                 Fermer
               </button>
               <Link
                 href="/register"
-                className="flex-1 text-center py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition shadow-md shadow-indigo-100"
+                className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs text-center transition shadow-md shadow-indigo-100"
               >
                 Utiliser ce modèle
               </Link>

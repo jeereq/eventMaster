@@ -65,6 +65,7 @@ model Event {
   reminderFrequency String?      @default("NONE") // NONE, DAILY, EVERY_3_DAYS, EVERY_5_DAYS, WEEKLY
   latitude          Float?
   longitude         Float?
+  tablePlan         Json?        // Added for visual table planning
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
@@ -89,13 +90,14 @@ model Guest {
 }
 
 model Template {
-  id          String       @id @default(uuid())
-  tenantId    String?
-  tenant      Tenant?      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name        String
-  content     Json
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id            String       @id @default(uuid())
+  tenantId      String?
+  tenant        Tenant?      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name          String
+  content       Json
+  showOnLanding Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   invitations Invitation[]
 }

@@ -2,16 +2,25 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 
-// Get all templates for the tenant
+// Get all templates (for the tenant, or all templates if Super Admin)
 export async function getTemplates(req: AuthenticatedRequest, res: Response) {
   try {
+    const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
     const tenantId = req.user?.tenantId;
-    if (!tenantId) {
+    
+    if (!isSuperAdmin && !tenantId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
 
     const templates = await prisma.template.findMany({
-      where: { tenantId },
+      where: isSuperAdmin ? {} : { tenantId },
+      include: {
+        tenant: {
+          select: {
+            name: true,
+          },
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -22,33 +31,39 @@ export async function getTemplates(req: AuthenticatedRequest, res: Response) {
   }
 }
 
-// Create a template
+// Create a template (global or private)
 export async function createTemplate(req: AuthenticatedRequest, res: Response) {
   try {
+    const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
     const tenantId = req.user?.tenantId;
-    if (!tenantId) {
+    
+    const { name, content, targetTenantId } = req.body;
+
+    if (!isSuperAdmin && !tenantId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
-
-    const { name, content } = req.body;
 
     if (!name || !content) {
       return res.status(400).json({ error: 'Les champs name et content sont requis' });
     }
 
-    // Check Plan / Quotas (e.g. Free plan has max 2 custom templates, let's add a placeholder)
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: tenantId },
-      include: { _count: { select: { templates: true } } },
-    });
+    const finalTenantId = isSuperAdmin ? (targetTenantId || null) : tenantId;
 
-    if (tenant && tenant.plan === 'FREE' && tenant._count.templates >= 2) {
-      return res.status(403).json({ error: 'Quota de modèles atteint pour le plan GRATUIT (Max 2 modèles). Veuillez passer au plan PREMIUM.' });
+    // Check Plan / Quotas only for non-super-admins
+    if (!isSuperAdmin && finalTenantId) {
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: finalTenantId },
+        include: { _count: { select: { templates: true } } },
+      });
+
+      if (tenant && tenant.plan === 'FREE' && tenant._count.templates >= 2) {
+        return res.status(403).json({ error: 'Quota de modèles atteint pour le plan GRATUIT (Max 2 modèles). Veuillez passer au plan PREMIUM.' });
+      }
     }
 
     const template = await prisma.template.create({
       data: {
-        tenantId,
+        tenantId: finalTenantId,
         name,
         content: content || {},
       },
@@ -64,15 +79,16 @@ export async function createTemplate(req: AuthenticatedRequest, res: Response) {
 // Get single template
 export async function getTemplateById(req: AuthenticatedRequest, res: Response) {
   try {
+    const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
     const tenantId = req.user?.tenantId;
     const id = req.params.id as string;
 
-    if (!tenantId) {
+    if (!isSuperAdmin && !tenantId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
 
     const template = await prisma.template.findFirst({
-      where: { id, tenantId },
+      where: isSuperAdmin ? { id } : { id, tenantId },
     });
 
     if (!template) {
@@ -89,16 +105,17 @@ export async function getTemplateById(req: AuthenticatedRequest, res: Response) 
 // Update a template
 export async function updateTemplate(req: AuthenticatedRequest, res: Response) {
   try {
+    const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
     const tenantId = req.user?.tenantId;
     const id = req.params.id as string;
-    const { name, content } = req.body;
+    const { name, content, targetTenantId } = req.body;
 
-    if (!tenantId) {
+    if (!isSuperAdmin && !tenantId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
 
     const existingTemplate = await prisma.template.findFirst({
-      where: { id, tenantId },
+      where: isSuperAdmin ? { id } : { id, tenantId },
     });
 
     if (!existingTemplate) {
@@ -110,6 +127,7 @@ export async function updateTemplate(req: AuthenticatedRequest, res: Response) {
       data: {
         name: name !== undefined ? name : existingTemplate.name,
         content: content !== undefined ? content : (existingTemplate.content as any),
+        tenantId: isSuperAdmin && targetTenantId !== undefined ? (targetTenantId || null) : undefined,
       },
     });
 
@@ -123,15 +141,16 @@ export async function updateTemplate(req: AuthenticatedRequest, res: Response) {
 // Delete a template
 export async function deleteTemplate(req: AuthenticatedRequest, res: Response) {
   try {
+    const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
     const tenantId = req.user?.tenantId;
     const id = req.params.id as string;
 
-    if (!tenantId) {
+    if (!isSuperAdmin && !tenantId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
 
     const existingTemplate = await prisma.template.findFirst({
-      where: { id, tenantId },
+      where: isSuperAdmin ? { id } : { id, tenantId },
     });
 
     if (!existingTemplate) {

@@ -2,12 +2,13 @@ import { Router } from 'express';
 import { getEvents, createEvent, getEventById, updateEvent, deleteEvent } from '../controllers/eventController';
 import { getGuests, createGuest, updateGuest, deleteGuest, importGuests } from '../controllers/guestController';
 import { getInvitations, createInvitation, updateInvitation, deleteInvitation, sendInvitation } from '../controllers/invitationController';
-import { requireAuth } from '../middleware/auth';
+import { requireAuth, requireActiveLicense } from '../middleware/auth';
 
 const router = Router();
 
-// Apply requireAuth middleware to all event-related routes
+// Apply requireAuth and requireActiveLicense middleware to all event-related routes
 router.use(requireAuth);
+router.use(requireActiveLicense);
 
 // Events CRUD
 router.get('/', getEvents);

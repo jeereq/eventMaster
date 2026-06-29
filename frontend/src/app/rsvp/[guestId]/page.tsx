@@ -248,6 +248,22 @@ export default function RsvpPage() {
             </span>
           </p>
 
+          {(guest.rsvp === 'ACCEPTED' || rsvpStatus === 'ACCEPTED') && (
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Votre Badge d'Émargement QR Code</span>
+              <div className="flex justify-center">
+                <img 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${guest.id}`} 
+                  alt="QR Code d'émargement"
+                  className="w-36 h-36 border border-slate-200 rounded-xl p-1 bg-white shadow-sm"
+                />
+              </div>
+              <p className="text-[11px] text-slate-500 font-medium leading-tight">
+                Présentez ce QR Code à l'entrée de l'événement pour valider votre présence.
+              </p>
+            </div>
+          )}
+
           <div className="border-t border-slate-100 pt-6 space-y-4">
             <div className="text-left bg-slate-50 border border-slate-150 p-4 rounded-2xl space-y-3">
               <div className="text-xs text-slate-500 font-bold uppercase tracking-wider">Événement</div>

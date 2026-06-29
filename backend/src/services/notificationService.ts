@@ -221,3 +221,59 @@ export async function sendRealWhatsAppLocation(
     return { success: true, simulated: true };
   }
 }
+
+/**
+ * Send a real WhatsApp Image using UltraMsg or fall back to simulation
+ */
+export async function sendRealWhatsAppImage(
+  to: string, 
+  imageUrl: string, 
+  caption: string
+): Promise<{ success: boolean; simulated: boolean; messageSid?: string; error?: string }> {
+  // Ensure phone number is in E.164 format (starts with +)
+  let formattedTo = to.trim();
+  if (!formattedTo.startsWith('+')) {
+    if (formattedTo.startsWith('0')) {
+      formattedTo = '+243' + formattedTo.slice(1);
+    } else {
+      formattedTo = '+' + formattedTo;
+    }
+  }
+
+  if (isUltraMsgInitialized && ultramsgInstanceId && ultramsgToken) {
+    try {
+      const url = `https://api.ultramsg.com/${ultramsgInstanceId}/messages/image`;
+      const params = new URLSearchParams();
+      params.append('token', ultramsgToken);
+      params.append('to', formattedTo);
+      params.append('image', imageUrl);
+      params.append('caption', caption);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params,
+      });
+
+      const data = await response.json() as any;
+
+      if (response.ok && (data.sent === 'true' || data.success || data.id)) {
+        const messageId = data.id || 'um-img-sent';
+        console.log(`[Notification Service] UltraMsg WhatsApp Image sent successfully to ${formattedTo}. ID: ${messageId}`);
+        return { success: true, simulated: false, messageSid: messageId };
+      } else {
+        const errMsg = data.error || data.message || JSON.stringify(data);
+        console.error(`[Notification Service] UltraMsg Image API returned error for ${formattedTo}:`, errMsg);
+        return { success: false, simulated: false, error: errMsg };
+      }
+    } catch (error: any) {
+      console.error(`[Notification Service] Failed to send UltraMsg WhatsApp Image to ${formattedTo}:`, error);
+      return { success: false, simulated: false, error: error.message || String(error) };
+    }
+  } else {
+    console.log(`[Simulation] Sending UltraMsg WhatsApp Image to ${formattedTo}:\nImage URL: ${imageUrl}\nCaption: ${caption}\n`);
+    return { success: true, simulated: true };
+  }
+}
