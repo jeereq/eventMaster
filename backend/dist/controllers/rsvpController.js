@@ -4,6 +4,7 @@ exports.getGuestRsvpDetails = getGuestRsvpDetails;
 exports.submitRsvp = submitRsvp;
 const db_1 = require("../db");
 const notificationService_1 = require("../services/notificationService");
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 // Helper function to extract guest phone number
 function getGuestPhone(guest) {
     if (guest.preferences && typeof guest.preferences === 'object') {
@@ -95,7 +96,9 @@ async function submitRsvp(req, res) {
             weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
         }) : '';
         if (rsvp === 'ACCEPTED') {
-            const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${guest.id}`;
+            // Customized QR Code with platform colors (Indigo: #4f46e5) - point to the public RSVP landing page for this guest
+            const rsvpUrl = `${FRONTEND_URL}/rsvp/${guest.id}`;
+            const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(rsvpUrl)}&color=4f-46-e5&bgcolor=ffffff&qzone=2`;
             const subject = `Confirmation de votre présence - ${guest.event.title}`;
             const textBody = `Bonjour ${guest.firstName},\n\nVotre présence à l'événement "${guest.event.title}" a été confirmée avec succès !\n\nVoici votre badge d'émargement QR Code : ${qrCodeUrl}\n\nPrésentez ce QR Code à l'entrée pour valider votre présence.\n\nDate : ${formattedDate}\nLieu : ${guest.event.location || 'Non défini'}\n\nMerci et à très bientôt !`;
             const htmlBody = `

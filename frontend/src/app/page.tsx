@@ -8,7 +8,7 @@ import {
   Calendar, Users, Award, Shield, CheckCircle, Mail, 
   ArrowRight, Lock, Layout, Sparkles, Compass, Heart, 
   Briefcase, Smartphone, Star, ShieldCheck, Check, XCircle,
-  PartyPopper, Loader2
+  PartyPopper, Loader2, LayoutGrid
 } from 'lucide-react';
 
 interface MockTemplate {
@@ -360,19 +360,19 @@ export default function Home() {
               <div className="bg-violet-50 text-violet-600 w-11 h-11 rounded-xl flex items-center justify-center mb-5">
                 <Users className="w-5.5 h-5.5" />
               </div>
-              <h3 className="text-base font-extrabold text-slate-900 mb-2">Gestion d'Invités & CSV</h3>
+              <h3 className="text-base font-extrabold text-slate-900 mb-2">Gestion d'Invités & Excel</h3>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Gérez la liste de vos invités avec un contrôle d'état RSVP complet. Importez instantanément des listes de centaines d'invités en copiant-collant simplement des lignes au format CSV.
+                Gérez la liste de vos invités avec un contrôle RSVP complet. Importez instantanément des listes entières à partir de fichiers Excel (.xlsx) ou CSV avec aperçu dynamique, et exportez vos données en un clic.
               </p>
             </div>
 
             <div className="bg-white p-6 rounded-2xl border border-slate-200/80 hover:shadow-lg transition">
               <div className="bg-amber-50 text-amber-600 w-11 h-11 rounded-xl flex items-center justify-center mb-5">
-                <Layout className="w-5.5 h-5.5" />
+                <LayoutGrid className="w-5.5 h-5.5" />
               </div>
-              <h3 className="text-base font-extrabold text-slate-900 mb-2">Éditeur Drag & Drop</h3>
+              <h3 className="text-base font-extrabold text-slate-900 mb-2">Plan de Table Interactif</h3>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Concevez vos cartons d'invitations en ligne sans compétences techniques. Notre designer visuel vous permet de composer l'agencement, les couleurs, textes et boutons d'action en quelques clics.
+                Organisez vos salles de réception en 2D grâce à notre plan de table interactif. Créez des tables de formes variées (rondes, rectangulaires, carrées, ovales), déplacez-les par glisser-déposer et placez vos invités.
               </p>
             </div>
 
@@ -380,9 +380,9 @@ export default function Home() {
               <div className="bg-emerald-50 text-emerald-600 w-11 h-11 rounded-xl flex items-center justify-center mb-5">
                 <Smartphone className="w-5.5 h-5.5" />
               </div>
-              <h3 className="text-base font-extrabold text-slate-900 mb-2">Portail RSVP Intelligent</h3>
+              <h3 className="text-base font-extrabold text-slate-900 mb-2">Portail RSVP & Badge QR</h3>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Chaque convive accède à un portail de réponse personnalisé, sur lequel il peut confirmer sa présence, préciser ses régimes alimentaires spécifiques ou allergies.
+                Chaque convive accède à un portail de réponse personnalisé. Dès sa confirmation, un badge unique avec un QR Code aux couleurs de la plateforme et logo central lui est généré pour un émargement ultra-rapide.
               </p>
             </div>
           </div>

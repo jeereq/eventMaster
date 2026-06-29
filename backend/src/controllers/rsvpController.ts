@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { sendRealEmail, sendRealSMS, sendRealWhatsApp, sendRealWhatsAppImage } from '../services/notificationService';
 
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+
 // Helper function to extract guest phone number
 function getGuestPhone(guest: any): string | null {
   if (guest.preferences && typeof guest.preferences === 'object') {
@@ -101,8 +103,9 @@ export async function submitRsvp(req: Request, res: Response) {
     }) : '';
 
     if (rsvp === 'ACCEPTED') {
-      // Customized QR Code with platform colors (Indigo: #4f46e5 / RGB: 79, 70, 229)
-      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${guest.id}&color=4f-46-e5&bgcolor=ffffff&qzone=2`;
+      // Customized QR Code with platform colors (Indigo: #4f46e5) - point to the public RSVP landing page for this guest
+      const rsvpUrl = `${FRONTEND_URL}/rsvp/${guest.id}`;
+      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(rsvpUrl)}&color=4f-46-e5&bgcolor=ffffff&qzone=2`;
 
       const subject = `Confirmation de votre présence - ${guest.event.title}`;
       const textBody = `Bonjour ${guest.firstName},\n\nVotre présence à l'événement "${guest.event.title}" a été confirmée avec succès !\n\nVoici votre badge d'émargement QR Code : ${qrCodeUrl}\n\nPrésentez ce QR Code à l'entrée pour valider votre présence.\n\nDate : ${formattedDate}\nLieu : ${guest.event.location || 'Non défini'}\n\nMerci et à très bientôt !`;

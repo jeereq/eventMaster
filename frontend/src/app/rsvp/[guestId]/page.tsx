@@ -254,7 +254,7 @@ export default function RsvpPage() {
               <div className="flex justify-center">
                 <div className="relative p-2 bg-white border border-slate-200 rounded-2xl shadow-sm">
                   <img 
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${guest.id}&color=4f-46-e5&bgcolor=ffffff&qzone=1`} 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(window.location.href)}&color=4f-46-e5&bgcolor=ffffff&qzone=1`} 
                     alt="QR Code d'émargement"
                     className="w-40 h-40"
                   />

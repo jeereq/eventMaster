@@ -19,7 +19,7 @@ interface GuestItem {
 interface Table {
   id: string;
   name: string;
-  shape: 'round' | 'rectangular';
+  shape: 'round' | 'rectangular' | 'square' | 'oval';
   capacity: number;
   x: number; // percentage 0-100
   y: number; // percentage 0-100
@@ -47,7 +47,7 @@ export default function TablePlanner({ guests, initialTablePlan, onSave }: Table
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTableName, setNewTableName] = useState('');
-  const [newTableShape, setNewTableShape] = useState<'round' | 'rectangular'>('round');
+  const [newTableShape, setNewTableShape] = useState<'round' | 'rectangular' | 'square' | 'oval'>('round');
   const [newTableCapacity, setNewTableCapacity] = useState<number>(8);
 
   // Dragging states
@@ -220,14 +220,28 @@ export default function TablePlanner({ guests, initialTablePlan, onSave }: Table
   };
 
   // Helper to compute seat coordinates around a table
-  const getSeatCoordinates = (shape: 'round' | 'rectangular', capacity: number, seatIndex: number) => {
+  const getSeatCoordinates = (shape: 'round' | 'rectangular' | 'square' | 'oval', capacity: number, seatIndex: number) => {
     const radius = 45; // pixels
-    if (shape === 'round') {
+    if (shape === 'round' || shape === 'oval') {
       const angle = (seatIndex / capacity) * 2 * Math.PI - Math.PI / 2;
+      const rx = shape === 'oval' ? radius * 1.3 : radius;
+      const ry = shape === 'oval' ? radius * 0.8 : radius;
       return {
-        x: Math.cos(angle) * radius,
-        y: Math.sin(angle) * radius
+        x: Math.cos(angle) * rx,
+        y: Math.sin(angle) * ry
       };
+    } else if (shape === 'square') {
+      // square table layout
+      const seatsPerSide = Math.ceil(capacity / 4);
+      const side = Math.floor(seatIndex / seatsPerSide) % 4;
+      const indexOnSide = seatIndex % seatsPerSide;
+      const step = 80 / (seatsPerSide + 1);
+      const offset = -40 + step * (indexOnSide + 1);
+
+      if (side === 0) return { x: offset, y: -40 }; // Top
+      if (side === 1) return { x: 40, y: offset };  // Right
+      if (side === 2) return { x: -offset, y: 40 }; // Bottom
+      return { x: -40, y: -offset };                // Left
     } else {
       // rectangular table
       const seatsPerSide = Math.ceil(capacity / 2);
@@ -359,7 +373,12 @@ export default function TablePlanner({ guests, initialTablePlan, onSave }: Table
                     className={`absolute cursor-move select-none transition-shadow p-4 rounded-full ${isActive ? 'ring-2 ring-indigo-600 ring-offset-2 shadow-lg' : 'hover:shadow-md'}`}
                   >
                     {/* Visual Table Core */}
-                    <div className={`relative flex items-center justify-center font-bold text-xs text-center shadow-md ${table.shape === 'round' ? 'w-24 h-24 rounded-full' : 'w-32 h-16 rounded-xl'} ${isActive ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-slate-800'}`}>
+                    <div className={`relative flex items-center justify-center font-bold text-xs text-center shadow-md ${
+                      table.shape === 'round' ? 'w-24 h-24 rounded-full' : 
+                      table.shape === 'oval' ? 'w-28 h-20 rounded-[50%]' :
+                      table.shape === 'square' ? 'w-20 h-20 rounded-xl' :
+                      'w-32 h-16 rounded-xl'
+                    } ${isActive ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-slate-800'}`}>
                       <div className="px-2">
                         <div className="truncate max-w-[90px] font-black text-[11px]">{table.name}</div>
                         <div className="text-[9px] opacity-85 mt-0.5">
@@ -538,6 +557,8 @@ export default function TablePlanner({ guests, initialTablePlan, onSave }: Table
                   >
                     <option value="round">Ronde 🟡</option>
                     <option value="rectangular">Rectangulaire ⬜</option>
+                    <option value="square">Carrée 🔲</option>
+                    <option value="oval">Ovale 🥚</option>
                   </select>
                 </div>
 
@@ -611,6 +632,8 @@ export default function TablePlanner({ guests, initialTablePlan, onSave }: Table
                   >
                     <option value="round">Ronde 🟡</option>
                     <option value="rectangular">Rectangulaire ⬜</option>
+                    <option value="square">Carrée 🔲</option>
+                    <option value="oval">Ovale 🥚</option>
                   </select>
                 </div>
 
