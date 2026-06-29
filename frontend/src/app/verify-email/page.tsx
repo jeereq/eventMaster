@@ -26,6 +26,20 @@ function VerifyEmailContent() {
         const res = await api.get(`/auth/verify-email?token=${token}`);
         setStatus('success');
         setMessage(res.message || 'Votre e-mail a été vérifié avec succès !');
+
+        // If the response contains a session token, log the user in automatically
+        if (res.token && res.user) {
+          localStorage.setItem('token', res.token);
+          localStorage.setItem('user', JSON.stringify(res.user));
+          if (res.tenant) {
+            localStorage.setItem('tenant', JSON.stringify(res.tenant));
+          }
+          
+          // Trigger a page reload or state refresh and redirect to dashboard after 2.5 seconds
+          setTimeout(() => {
+            window.location.href = '/dashboard';
+          }, 2500);
+        }
       } catch (err: any) {
         setStatus('error');
         setMessage(err.message || 'Le lien de vérification est invalide ou a expiré.');
@@ -33,7 +47,7 @@ function VerifyEmailContent() {
     };
 
     verify();
-  }, [token]);
+  }, [token, router]);
 
   return (
     <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl border border-slate-200 shadow-xl relative z-10 my-8">
@@ -54,7 +68,7 @@ function VerifyEmailContent() {
 
         {status === 'success' && (
           <div className="space-y-6 py-4">
-            <div className="flex justify-center">
+            <div className="flex justify-center animate-bounce">
               <div className="bg-emerald-100 p-4 rounded-full text-emerald-600 shadow-inner">
                 <CheckCircle className="w-12 h-12" />
               </div>
@@ -62,12 +76,10 @@ function VerifyEmailContent() {
             <h2 className="text-2xl font-bold text-slate-900">Compte activé !</h2>
             <p className="text-slate-600 text-sm leading-relaxed">{message}</p>
             <div className="pt-4">
-              <Link
-                href="/login"
-                className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl text-base font-semibold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition shadow-lg shadow-indigo-100"
-              >
-                Se connecter <ArrowRight className="w-4 h-4" />
-              </Link>
+              <div className="flex items-center justify-center gap-2 text-indigo-600 font-bold text-sm">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Redirection automatique vers le tableau de bord...
+              </div>
             </div>
           </div>
         )}
