@@ -151,18 +151,41 @@ async function verifyEmail(req, res) {
         }
         const user = await db_1.prisma.user.findFirst({
             where: { verificationToken: token },
+            include: { tenant: true },
         });
         if (!user) {
             return res.status(400).json({ error: 'Le jeton de vérification est invalide ou a expiré' });
         }
-        await db_1.prisma.user.update({
+        const updatedUser = await db_1.prisma.user.update({
             where: { id: user.id },
             data: {
                 isEmailVerified: true,
                 verificationToken: null,
             },
         });
-        return res.json({ message: 'Votre adresse e-mail a été confirmée avec succès ! Vous pouvez maintenant vous connecter.' });
+        // Generate JWT Token to automatically log the user in
+        const jwtToken = jsonwebtoken_1.default.sign({
+            userId: updatedUser.id,
+            tenantId: updatedUser.tenantId,
+            role: updatedUser.role,
+        }, JWT_SECRET, { expiresIn: '24h' });
+        return res.json({
+            message: 'Votre adresse e-mail a été confirmée avec succès ! Connexion automatique en cours...',
+            token: jwtToken,
+            user: {
+                id: updatedUser.id,
+                email: updatedUser.email,
+                name: updatedUser.name,
+                role: updatedUser.role,
+            },
+            tenant: user.tenant
+                ? {
+                    id: user.tenant.id,
+                    name: user.tenant.name,
+                    plan: user.tenant.plan,
+                }
+                : null,
+        });
     }
     catch (error) {
         console.error('Erreur lors de la vérification de l\'e-mail:', error);
