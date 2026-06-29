@@ -252,11 +252,17 @@ export default function RsvpPage() {
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Votre Badge d'Émargement QR Code</span>
               <div className="flex justify-center">
-                <img 
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${guest.id}`} 
-                  alt="QR Code d'émargement"
-                  className="w-36 h-36 border border-slate-200 rounded-xl p-1 bg-white shadow-sm"
-                />
+                <div className="relative p-2 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                  <img 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${guest.id}&color=4f-46-e5&bgcolor=ffffff&qzone=1`} 
+                    alt="QR Code d'émargement"
+                    className="w-40 h-40"
+                  />
+                  {/* Embedded Logo in the middle of the QR Code */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-1.5 rounded-xl border border-slate-150 shadow-xs flex items-center justify-center w-9 h-9">
+                    <span className="text-sm">✨</span>
+                  </div>
+                </div>
               </div>
               <p className="text-[11px] text-slate-500 font-medium leading-tight">
                 Présentez ce QR Code à l'entrée de l'événement pour valider votre présence.

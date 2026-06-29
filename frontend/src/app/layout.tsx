@@ -16,6 +16,14 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "EventMaster - SaaS de gestion d'événements privés",
   description: "Plateforme SaaS Multi-tenant d'organisation d'événements, RSVP et invitations personnalisées",
+  icons: {
+    icon: [
+      {
+        url: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>✨</text></svg>",
+        type: "image/svg+xml",
+      }
+    ],
+  }
 };
 
 export default function RootLayout({

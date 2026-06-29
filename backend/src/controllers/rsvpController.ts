@@ -101,7 +101,8 @@ export async function submitRsvp(req: Request, res: Response) {
     }) : '';
 
     if (rsvp === 'ACCEPTED') {
-      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${guest.id}`;
+      // Customized QR Code with platform colors (Indigo: #4f46e5 / RGB: 79, 70, 229)
+      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${guest.id}&color=4f-46-e5&bgcolor=ffffff&qzone=2`;
 
       const subject = `Confirmation de votre présence - ${guest.event.title}`;
       const textBody = `Bonjour ${guest.firstName},\n\nVotre présence à l'événement "${guest.event.title}" a été confirmée avec succès !\n\nVoici votre badge d'émargement QR Code : ${qrCodeUrl}\n\nPrésentez ce QR Code à l'entrée pour valider votre présence.\n\nDate : ${formattedDate}\nLieu : ${guest.event.location || 'Non défini'}\n\nMerci et à très bientôt !`;
