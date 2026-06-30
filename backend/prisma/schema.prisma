@@ -53,6 +53,7 @@ model User {
   updatedAt     DateTime   @updatedAt
 
   managedTenants Tenant[]  @relation("TenantManager")
+  comments       EventComment[]
 }
 
 model Event {
@@ -72,6 +73,8 @@ model Event {
 
   guests      Guest[]
   invitations Invitation[]
+  shares      GuestShare[]
+  posts       EventPost[]
 }
 
 model Guest {
@@ -86,6 +89,9 @@ model Guest {
   preferences Json?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+
+  shares      GuestShare[]
+  comments    EventComment[]
 
   @@unique([eventId, email])
 }
@@ -114,4 +120,39 @@ model Invitation {
   channel     String       // EMAIL, LINK, QR
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+}
+
+model GuestShare {
+  id        String   @id @default(uuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  guestId   String
+  guest     Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  message   String?
+  photo     String?  // Base64 string
+  createdAt DateTime @default(now())
+}
+
+model EventPost {
+  id        String         @id @default(uuid())
+  eventId   String
+  event     Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  content   String?
+  mediaUrl  String?        // Base64 string
+  mediaType String?        // IMAGE, VIDEO, TEXT
+  createdAt DateTime       @default(now())
+  comments  EventComment[]
+}
+
+model EventComment {
+  id         String    @id @default(uuid())
+  postId     String
+  post       EventPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorName String
+  guestId    String?
+  guest      Guest?    @relation(fields: [guestId], references: [id], onDelete: SetNull)
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  content    String
+  createdAt  DateTime  @default(now())
 }

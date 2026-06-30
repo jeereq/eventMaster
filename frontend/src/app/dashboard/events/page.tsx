@@ -13,6 +13,7 @@ import {
   Eye, BarChart3, Utensils, FileSpreadsheet, Download, LayoutGrid
 } from 'lucide-react';
 import TablePlanner from './TablePlanner';
+import EventFeedManager from './EventFeedManager';
 
 interface EventItem {
   id: string;
@@ -128,7 +129,7 @@ export default function EventsPage() {
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   
   // Tabs
-  const [activeTab, setActiveTab] = useState<'guests' | 'invitations' | 'tablePlan'>('guests');
+  const [activeTab, setActiveTab] = useState<'guests' | 'invitations' | 'tablePlan' | 'feed'>('guests');
 
   // Event form
   const [showEventModal, setShowEventModal] = useState(false);
@@ -1266,6 +1267,15 @@ export default function EventsPage() {
                 Plan de table
               </span>
             </button>
+            <button
+              onClick={() => setActiveTab('feed')}
+              className={`pb-4 px-6 text-sm font-bold border-b-2 transition ${activeTab === 'feed' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+            >
+              <span className="flex items-center gap-2">
+                <MessageSquare className="w-4.5 h-4.5" />
+                Feed & Partages
+              </span>
+            </button>
           </div>
 
           {/* Tab Content: Guests */}
@@ -1933,6 +1943,14 @@ export default function EventsPage() {
               guests={guests}
               initialTablePlan={selectedEvent.tablePlan}
               onSave={handleSaveTablePlan}
+            />
+          )}
+
+          {/* Tab Content: Feed & Shares */}
+          {activeTab === 'feed' && (
+            <EventFeedManager
+              key={`feed_${selectedEvent.id}`}
+              eventId={selectedEvent.id}
             />
           )}
         </div>

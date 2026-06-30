@@ -4,6 +4,7 @@ const express_1 = require("express");
 const eventController_1 = require("../controllers/eventController");
 const guestController_1 = require("../controllers/guestController");
 const invitationController_1 = require("../controllers/invitationController");
+const feedController_1 = require("../controllers/feedController");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
 // Apply requireAuth and requireActiveLicense middleware to all event-related routes
@@ -28,4 +29,9 @@ router.put('/:eventId/invitations/:id', invitationController_1.updateInvitation)
 router.delete('/:eventId/invitations/:id', invitationController_1.deleteInvitation);
 router.post('/:eventId/invitations/:id/send', invitationController_1.sendInvitation);
 router.post('/:eventId/invitations/:id/broadcast', invitationController_1.sendInvitation);
+// Feed & Guest Shares related to Events (Protected)
+router.get('/:eventId/shares', feedController_1.getEventShares);
+router.get('/:eventId/feed', feedController_1.getEventFeed);
+router.post('/:eventId/feed', feedController_1.createEventPost);
+router.delete('/:eventId/feed/:postId', feedController_1.deleteEventPost);
 exports.default = router;

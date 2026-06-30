@@ -36,6 +36,7 @@ async function getGuestRsvpDetails(req, res) {
                         location: true,
                         latitude: true,
                         longitude: true,
+                        tablePlan: true,
                         invitations: {
                             where: {
                                 templateId: { not: null }
@@ -52,7 +53,42 @@ async function getGuestRsvpDetails(req, res) {
         if (!guest) {
             return res.status(404).json({ error: 'Invité non trouvé ou lien RSVP invalide.' });
         }
-        return res.json(guest);
+        // Extract table details if the guest is assigned to a table
+        let tableDetails = null;
+        const eventObj = guest.event;
+        if (eventObj && eventObj.tablePlan && typeof eventObj.tablePlan === 'object') {
+            const plan = eventObj.tablePlan;
+            if (Array.isArray(plan.tables)) {
+                for (const table of plan.tables) {
+                    const seats = Object.values(table.seats || {});
+                    if (seats.includes(guestId)) {
+                        const neighborIds = seats.filter((id) => id && id !== guestId);
+                        let neighbors = [];
+                        if (neighborIds.length > 0) {
+                            neighbors = await db_1.prisma.guest.findMany({
+                                where: { id: { in: neighborIds } },
+                                select: {
+                                    id: true,
+                                    firstName: true,
+                                    lastName: true,
+                                }
+                            });
+                        }
+                        tableDetails = {
+                            tableName: table.name,
+                            shape: table.shape,
+                            capacity: table.capacity,
+                            neighbors
+                        };
+                        break;
+                    }
+                }
+            }
+        }
+        return res.json({
+            ...guest,
+            tableDetails
+        });
     }
     catch (error) {
         console.error('Erreur lors de la récupération des détails RSVP de l\'invité:', error);

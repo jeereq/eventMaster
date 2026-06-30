@@ -35,6 +35,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
             location: true,
             latitude: true,
             longitude: true,
+            tablePlan: true,
             invitations: {
               where: {
                 templateId: { not: null }
@@ -53,7 +54,43 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
       return res.status(404).json({ error: 'Invité non trouvé ou lien RSVP invalide.' });
     }
 
-    return res.json(guest);
+    // Extract table details if the guest is assigned to a table
+    let tableDetails = null;
+    const eventObj = guest.event as any;
+    if (eventObj && eventObj.tablePlan && typeof eventObj.tablePlan === 'object') {
+      const plan = eventObj.tablePlan;
+      if (Array.isArray(plan.tables)) {
+        for (const table of plan.tables) {
+          const seats = Object.values(table.seats || {});
+          if (seats.includes(guestId)) {
+            const neighborIds = seats.filter((id: any) => id && id !== guestId) as string[];
+            let neighbors: any[] = [];
+            if (neighborIds.length > 0) {
+              neighbors = await prisma.guest.findMany({
+                where: { id: { in: neighborIds } },
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                }
+              });
+            }
+            tableDetails = {
+              tableName: table.name,
+              shape: table.shape,
+              capacity: table.capacity,
+              neighbors
+            };
+            break;
+          }
+        }
+      }
+    }
+
+    return res.json({
+      ...guest,
+      tableDetails
+    });
   } catch (error: any) {
     console.error('Erreur lors de la récupération des détails RSVP de l\'invité:', error);
     return res.status(500).json({ error: 'Erreur lors de la récupération du RSVP' });
