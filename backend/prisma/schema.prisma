@@ -129,7 +129,8 @@ model GuestShare {
   guestId   String
   guest     Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
   message   String?
-  photo     String?  // Base64 string
+  photo     String?  // Base64 string (legacy)
+  photos    Json?    // Array of Base64 strings for multiple photos
   createdAt DateTime @default(now())
 }
 
@@ -138,8 +139,9 @@ model EventPost {
   eventId   String
   event     Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
   content   String?
-  mediaUrl  String?        // Base64 string
-  mediaType String?        // IMAGE, VIDEO, TEXT
+  mediaUrl  String?        // Base64 string (legacy)
+  mediaUrls Json?          // Array of objects { url: string, type: 'IMAGE' | 'VIDEO' }
+  mediaType String?        // IMAGE, VIDEO, TEXT (legacy)
   createdAt DateTime       @default(now())
   comments  EventComment[]
 }

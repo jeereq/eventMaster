@@ -6,7 +6,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 export async function submitGuestShare(req: Request, res: Response) {
   try {
     const guestId = req.params.guestId as string;
-    const { message, photo } = req.body;
+    const { message, photo, photos } = req.body; // photos is an array of Base64 strings
 
     const guest = await prisma.guest.findUnique({
       where: { id: guestId },
@@ -16,12 +16,17 @@ export async function submitGuestShare(req: Request, res: Response) {
       return res.status(404).json({ error: 'Invité non trouvé.' });
     }
 
+    // Determine photo and photos values
+    const finalPhotos = photos && Array.isArray(photos) ? photos : (photo ? [photo] : []);
+    const legacyPhoto = finalPhotos.length > 0 ? finalPhotos[0] : null;
+
     const share = await prisma.guestShare.create({
       data: {
         eventId: guest.eventId,
         guestId: guest.id,
         message: message || null,
-        photo: photo || null,
+        photo: legacyPhoto,
+        photos: finalPhotos.length > 0 ? (finalPhotos as any) : undefined,
       },
     });
 
@@ -102,7 +107,7 @@ export async function createEventPost(req: AuthenticatedRequest, res: Response) 
   try {
     const tenantId = req.user?.tenantId;
     const eventId = req.params.eventId as string;
-    const { content, mediaUrl, mediaType } = req.body;
+    const { content, mediaUrl, mediaType, mediaUrls } = req.body; // mediaUrls is [{ url: string, type: 'IMAGE' | 'VIDEO' }]
 
     if (!tenantId) {
       return res.status(403).json({ error: 'Tenant non identifié.' });
@@ -117,12 +122,22 @@ export async function createEventPost(req: AuthenticatedRequest, res: Response) 
       return res.status(404).json({ error: 'Événement non trouvé.' });
     }
 
+    // Determine legacy and rich media values
+    let finalMediaUrls = mediaUrls && Array.isArray(mediaUrls) ? mediaUrls : [];
+    if (finalMediaUrls.length === 0 && mediaUrl) {
+      finalMediaUrls = [{ url: mediaUrl, type: mediaType || 'IMAGE' }];
+    }
+
+    const legacyMediaUrl = finalMediaUrls.length > 0 ? finalMediaUrls[0].url : null;
+    const legacyMediaType = finalMediaUrls.length > 0 ? finalMediaUrls[0].type : 'TEXT';
+
     const post = await prisma.eventPost.create({
       data: {
         eventId,
         content: content || null,
-        mediaUrl: mediaUrl || null,
-        mediaType: mediaType || 'TEXT',
+        mediaUrl: legacyMediaUrl,
+        mediaType: legacyMediaType,
+        mediaUrls: finalMediaUrls.length > 0 ? (finalMediaUrls as any) : undefined,
       },
     });
 

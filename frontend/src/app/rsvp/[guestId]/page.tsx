@@ -6,7 +6,8 @@ import { api } from '@/lib/api';
 import { 
   Calendar, MapPin, CheckCircle2, XCircle, AlertCircle, 
   HelpCircle, Utensils, Loader2, Award, Sparkles,
-  Users, MessageSquare, Image, Send, Heart, Eye, Trash2, LayoutGrid, MessageCircle
+  Users, MessageSquare, Image, Send, Heart, Eye, Trash2, LayoutGrid, MessageCircle,
+  ChevronLeft, ChevronRight, X, RefreshCw, Video
 } from 'lucide-react';
 
 interface GuestRsvpData {
@@ -84,12 +85,16 @@ export default function RsvpPage() {
   const [activeGuestTab, setActiveGuestTab] = useState<'badge' | 'table' | 'guestbook' | 'feed'>('badge');
   const [guestbookMessage, setGuestbookMessage] = useState('');
   const [guestbookPhoto, setGuestbookPhoto] = useState<string | null>(null);
+  const [guestbookPhotos, setGuestbookPhotos] = useState<string[]>([]);
+  const [isGuestbookUploading, setIsGuestbookUploading] = useState(false);
   const [submittingGuestbook, setSubmittingGuestbook] = useState(false);
   const [feedPosts, setFeedPosts] = useState<any[]>([]);
   const [loadingFeed, setLoadingFeed] = useState(false);
   const [guestCommentContents, setGuestCommentContents] = useState<Record<string, string>>({});
   const [guestCommentSubmitting, setGuestCommentSubmitting] = useState<Record<string, boolean>>({});
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
+  const [expandedImages, setExpandedImages] = useState<string[]>([]);
+  const [expandedImageIndex, setExpandedImageIndex] = useState<number>(0);
   const [guestbookSuccess, setGuestbookSuccess] = useState(false);
 
   useEffect(() => {
@@ -132,35 +137,60 @@ export default function RsvpPage() {
   };
 
   useEffect(() => {
-    if (submitted && (guest?.rsvp === 'ACCEPTED' || rsvpStatus === 'ACCEPTED') && activeGuestTab === 'feed') {
+    if (!submitted || !(guest?.rsvp === 'ACCEPTED' || rsvpStatus === 'ACCEPTED')) return;
+
+    if (activeGuestTab === 'feed') {
       loadGuestFeed();
+      const interval = setInterval(() => {
+        loadGuestFeed();
+      }, 10000); // 10s polling
+      return () => clearInterval(interval);
     }
   }, [submitted, guest, rsvpStatus, activeGuestTab]);
 
-  const handleGuestbookPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleGuestbookMultiplePhotosUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setGuestbookPhoto(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    setIsGuestbookUploading(true);
+    const newPhotos = [...guestbookPhotos];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      try {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = (err) => reject(err);
+        });
+        newPhotos.push(base64);
+      } catch (err) {
+        console.error('Error reading file:', err);
+      }
+    }
+
+    setGuestbookPhotos(newPhotos);
+    setIsGuestbookUploading(false);
+  };
+
+  const handleRemoveGuestbookPhoto = (index: number) => {
+    setGuestbookPhotos(guestbookPhotos.filter((_, i) => i !== index));
   };
 
   const handleSubmitGuestbook = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!guestbookMessage.trim() && !guestbookPhoto) return;
+    if (!guestbookMessage.trim() && guestbookPhotos.length === 0) return;
 
     setSubmittingGuestbook(true);
     try {
       await api.post(`/rsvp/${guestId}/share`, {
         message: guestbookMessage,
-        photo: guestbookPhoto,
+        photos: guestbookPhotos,
       });
       setGuestbookSuccess(true);
       setGuestbookMessage('');
-      setGuestbookPhoto(null);
+      setGuestbookPhotos([]);
       setTimeout(() => setGuestbookSuccess(false), 5000);
     } catch (err) {
       console.error('Error submitting guestbook:', err);
@@ -324,121 +354,64 @@ export default function RsvpPage() {
     );
   }
 
-  if (submitted && !submitting) {
-    const isAccepted = guest.rsvp === 'ACCEPTED' || rsvpStatus === 'ACCEPTED';
-
-    if (!isAccepted) {
-      // Simple card for Declined guests
+    // Rich Interactive Portal for Accepted guests (Immersive Mobile App Experience)
+    if (submitted && rsvpStatus === 'ACCEPTED') {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4 py-12 relative overflow-hidden">
-          <div className="absolute inset-0 bg-grid-slate-200 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.7))]" />
+        <div className="min-h-screen bg-slate-950 flex items-center justify-center p-0 md:p-6 relative overflow-hidden font-sans">
+        {/* Ambient background glow */}
+        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-indigo-900/20 blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-violet-900/20 blur-[120px] pointer-events-none" />
 
-          <div className="max-w-md w-full bg-white p-8 rounded-3xl border border-slate-200 shadow-2xl text-center space-y-6 relative z-10">
-            <div className="absolute top-0 inset-x-0 h-2 bg-rose-500 rounded-t-3xl" />
+        {/* Smartphone Container Frame */}
+        <div className="w-full max-w-md md:h-[840px] md:rounded-[48px] md:border-[10px] md:border-slate-800 bg-slate-900 text-slate-100 relative shadow-2xl overflow-hidden flex flex-col md:ring-4 md:ring-slate-950">
+          
+          {/* Smartphone Notch / Dynamic Island (visible on desktop) */}
+          <div className="hidden md:flex absolute top-0 inset-x-0 h-7 bg-slate-950 items-center justify-center z-40">
+            <div className="w-28 h-4 bg-black rounded-full" />
+          </div>
 
-            <div className="bg-rose-50 border border-rose-100 text-rose-600 p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto shadow-sm">
-              <XCircle className="w-8 h-8" />
-            </div>
-
-            <div className="space-y-2">
-              <h2 className="text-3xl font-black text-slate-900 leading-none">Réponse enregistrée</h2>
-              <p className="text-sm font-semibold text-rose-600 uppercase tracking-widest pt-1">
-                Merci, {guest.firstName} !
-              </p>
-            </div>
-
-            <p className="text-sm text-slate-600 leading-relaxed">
-              Votre statut de participation a été enregistré : <br />
-              <span className="inline-block mt-3 px-3.5 py-1 text-xs font-black uppercase tracking-wider border rounded-full bg-rose-50 border-rose-100 text-rose-700">
-                Décliné (Absence)
-              </span>
-            </p>
-
-            <div className="border-t border-slate-100 pt-6 space-y-4">
-              <div className="text-left bg-slate-50 border border-slate-150 p-4 rounded-2xl space-y-3">
-                <div className="text-xs text-slate-500 font-bold uppercase tracking-wider">Événement</div>
-                <div className="font-extrabold text-slate-900 text-base">{guest.event.title}</div>
-                <div className="text-xs text-slate-600 font-medium space-y-1">
-                  <div>Date : {new Date(guest.event.date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-                  <div>Lieu : {guest.event.location}</div>
-                </div>
+          {/* App Header */}
+          <div className="bg-slate-900 border-b border-slate-800/80 px-6 pt-8 pb-4 md:pt-11 flex items-center justify-between z-30">
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-500 to-violet-500 flex items-center justify-center font-black text-white text-sm shadow-lg shadow-indigo-500/20">
+                ✨
               </div>
+              <div>
+                <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest block">Mon Invitation</span>
+                <span className="text-sm font-extrabold text-white leading-none block truncate max-w-[200px]">{guest.event.title}</span>
+              </div>
+            </div>
 
-              <button 
-                onClick={() => setSubmitted(false)}
-                className="text-xs font-bold text-slate-500 hover:text-indigo-600 transition"
-              >
-                Modifier ma réponse
-              </button>
+            {/* Live indicator */}
+            <div className="flex items-center gap-1.5 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1 rounded-full text-[9px] font-extrabold text-indigo-400 uppercase tracking-wider">
+              <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse" />
+              Live App
             </div>
           </div>
-        </div>
-      );
-    }
 
-    // Rich Interactive Portal for Accepted guests
-    return (
-      <div className="min-h-screen bg-slate-50 px-4 py-8 md:py-12 relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid-slate-200 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.7))]" />
-
-        <div className="max-w-3xl w-full mx-auto bg-white rounded-3xl border border-slate-200 shadow-2xl relative z-10 overflow-hidden flex flex-col">
-          {/* Header Banner */}
-          <div className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white p-6 md:p-8 space-y-3 relative">
-            <div className="absolute top-4 right-4 flex items-center gap-1 bg-white/20 backdrop-blur-xs px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">
-              <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-              Présence Confirmée
-            </div>
-            <span className="text-xs font-bold uppercase tracking-widest text-indigo-200">Votre Portail Invité</span>
-            <h1 className="text-2xl md:text-3xl font-black leading-tight">
-              Ravi de vous compter parmi nous, {guest.firstName} !
-            </h1>
-            <p className="text-indigo-100 text-xs md:text-sm max-w-xl font-medium">
-              {guest.event.title} — {new Date(guest.event.date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-            </p>
-          </div>
-
-          {/* Navigation Tabs */}
-          <div className="flex border-b border-slate-200 overflow-x-auto scrollbar-none bg-slate-50">
-            <button
-              onClick={() => setActiveGuestTab('badge')}
-              className={`flex-1 min-w-[120px] py-4 px-4 text-center text-xs font-bold border-b-2 transition flex flex-col items-center gap-1.5 ${activeGuestTab === 'badge' ? 'border-indigo-600 text-indigo-600 bg-white' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
-            >
-              <Award className="w-4 h-4" />
-              Badge & Infos
-            </button>
-            <button
-              onClick={() => setActiveGuestTab('table')}
-              className={`flex-1 min-w-[120px] py-4 px-4 text-center text-xs font-bold border-b-2 transition flex flex-col items-center gap-1.5 ${activeGuestTab === 'table' ? 'border-indigo-600 text-indigo-600 bg-white' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
-            >
-              <LayoutGrid className="w-4 h-4" />
-              Ma Table
-            </button>
-            <button
-              onClick={() => setActiveGuestTab('guestbook')}
-              className={`flex-1 min-w-[120px] py-4 px-4 text-center text-xs font-bold border-b-2 transition flex flex-col items-center gap-1.5 ${activeGuestTab === 'guestbook' ? 'border-indigo-600 text-indigo-600 bg-white' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
-            >
-              <Heart className="w-4 h-4" />
-              Livre d'or
-            </button>
-            <button
-              onClick={() => setActiveGuestTab('feed')}
-              className={`flex-1 min-w-[120px] py-4 px-4 text-center text-xs font-bold border-b-2 transition flex flex-col items-center gap-1.5 ${activeGuestTab === 'feed' ? 'border-indigo-600 text-indigo-600 bg-white' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
-            >
-              <MessageCircle className="w-4 h-4" />
-              Fil de l'événement
-            </button>
-          </div>
-
-          {/* Tab Contents */}
-          <div className="p-6 md:p-8 min-h-[350px]">
-            {/* 1. BADGE & INFOS */}
+          {/* App Body (Scrollable) */}
+          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 scrollbar-none pb-24">
+            
+            {/* 1. BADGE & INFOS TAB */}
             {activeGuestTab === 'badge' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+              <div className="space-y-6 animate-fade-in">
+                {/* Welcome Card */}
+                <div className="bg-gradient-to-br from-indigo-600 to-violet-600 rounded-3xl p-6 text-white space-y-3 relative overflow-hidden shadow-xl shadow-indigo-950/30">
+                  <div className="absolute -right-10 -bottom-10 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-200">Bienvenue</span>
+                  <h2 className="text-xl font-black leading-tight">
+                    Ravi de vous compter parmi nous, {guest.firstName} !
+                  </h2>
+                  <p className="text-indigo-100 text-xs leading-relaxed font-medium">
+                    Votre présence est confirmée. Préparez-vous à vivre un moment inoubliable !
+                  </p>
+                </div>
+
                 {/* QR Badge Card */}
-                <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5 text-center space-y-3">
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Votre Badge d'Émargement QR Code</span>
+                <div className="bg-slate-800/50 border border-slate-700/50 rounded-3xl p-6 text-center space-y-4">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Votre Badge d'Émargement QR Code</span>
                   <div className="flex justify-center">
-                    <div className="relative p-2 bg-white border border-slate-200 rounded-2xl shadow-sm">
+                    <div className="relative p-3 bg-white rounded-3xl shadow-lg">
                       <img 
                         src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(window.location.href)}&color=4f-46-e5&bgcolor=ffffff&qzone=1`} 
                         alt="QR Code d'émargement"
@@ -449,70 +422,72 @@ export default function RsvpPage() {
                       </div>
                     </div>
                   </div>
-                  <p className="text-[11px] text-slate-500 font-medium leading-tight max-w-xs mx-auto">
+                  <p className="text-[11px] text-slate-400 font-medium leading-tight max-w-xs mx-auto">
                     Présentez ce QR Code à l'entrée de l'événement pour valider votre présence.
                   </p>
                 </div>
 
                 {/* Event Details Card */}
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <h3 className="font-extrabold text-slate-900 text-lg">Détails de l'événement</h3>
-                    <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line">
+                <div className="bg-slate-800/40 border border-slate-700/40 rounded-3xl p-5 space-y-4">
+                  <div className="space-y-1.5">
+                    <h3 className="font-extrabold text-white text-sm">Détails de l'événement</h3>
+                    <p className="text-slate-400 text-xs leading-relaxed whitespace-pre-line">
                       {guest.event.description || "Aucune description supplémentaire fournie pour cet événement."}
                     </p>
                   </div>
 
-                  <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 space-y-2.5 text-xs text-slate-700 font-medium">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-indigo-600" />
+                  <div className="space-y-3 text-xs text-slate-300 font-semibold pt-3 border-t border-slate-800">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-indigo-500/10 rounded-xl text-indigo-400">
+                        <Calendar className="w-4 h-4" />
+                      </div>
                       <div>
-                        <span className="font-bold block text-slate-900">Date & Heure</span>
+                        <span className="font-bold block text-white">Date & Heure</span>
                         {new Date(guest.event.date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-indigo-600" />
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-indigo-500/10 rounded-xl text-indigo-400">
+                        <MapPin className="w-4 h-4" />
+                      </div>
                       <div>
-                        <span className="font-bold block text-slate-900">Lieu</span>
+                        <span className="font-bold block text-white">Lieu</span>
                         {guest.event.location}
                       </div>
                     </div>
                   </div>
-
-                  <div className="flex gap-3">
-                    <button 
-                      onClick={() => setSubmitted(false)}
-                      className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition text-center"
-                    >
-                      Modifier ma réponse
-                    </button>
-                  </div>
                 </div>
+
+                <button 
+                  onClick={() => setSubmitted(false)}
+                  className="w-full py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-2xl text-xs transition"
+                >
+                  Modifier ma réponse de présence
+                </button>
               </div>
             )}
 
-            {/* 2. MA TABLE */}
+            {/* 2. MA TABLE TAB */}
             {activeGuestTab === 'table' && (
-              <div className="space-y-6">
+              <div className="space-y-6 animate-fade-in">
                 {guest.tableDetails ? (
-                  <div className="space-y-6 animate-fade-in">
-                    <div className="bg-indigo-50 border border-indigo-100 rounded-3xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      <div className="space-y-1">
-                        <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest block">Votre placement</span>
-                        <h3 className="text-2xl font-black text-slate-900 leading-none">
+                  <div className="space-y-6">
+                    <div className="bg-gradient-to-br from-indigo-500/20 to-violet-500/20 border border-indigo-500/30 rounded-3xl p-6 flex items-center justify-between gap-4">
+                      <div className="space-y-1.5">
+                        <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest block">Votre placement</span>
+                        <h3 className="text-xl font-black text-white leading-none">
                           {guest.tableDetails.tableName}
                         </h3>
-                        <p className="text-slate-500 text-xs font-semibold">
+                        <p className="text-slate-400 text-xs font-semibold">
                           Table {guest.tableDetails.shape === 'round' ? 'Ronde' : guest.tableDetails.shape === 'rectangular' ? 'Rectangulaire' : guest.tableDetails.shape === 'square' ? 'Carrée' : 'Ovale'} • {guest.tableDetails.capacity} places
                         </p>
                       </div>
-                      <div className="text-3xl">🍽️</div>
+                      <div className="text-3xl p-3 bg-indigo-500/10 rounded-2xl">🍽️</div>
                     </div>
 
                     <div className="space-y-3">
-                      <h4 className="font-extrabold text-slate-900 text-sm flex items-center gap-2">
-                        <Users className="w-4.5 h-4.5 text-indigo-600" />
+                      <h4 className="font-extrabold text-white text-xs uppercase tracking-wider flex items-center gap-2">
+                        <Users className="w-4 h-4 text-indigo-400" />
                         Partagez votre table avec :
                       </h4>
 
@@ -521,14 +496,14 @@ export default function RsvpPage() {
                           Vous êtes le seul invité actuellement placé à cette table. D'autres convives s'ajouteront bientôt !
                         </p>
                       ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 gap-3">
                           {guest.tableDetails.neighbors.map(neighbor => (
-                            <div key={neighbor.id} className="bg-slate-50 border border-slate-150 rounded-2xl p-3.5 flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-black text-xs">
+                            <div key={neighbor.id} className="bg-slate-800/40 border border-slate-700/40 rounded-2xl p-4 flex items-center gap-3.5">
+                              <div className="w-9 h-9 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center font-black text-xs">
                                 {neighbor.firstName[0]}{neighbor.lastName[0]}
                               </div>
                               <div>
-                                <span className="font-bold text-slate-900 text-xs block">
+                                <span className="font-bold text-white text-xs block">
                                   {neighbor.firstName} {neighbor.lastName}
                                 </span>
                                 <span className="text-[9px] text-slate-400 font-medium">Invité</span>
@@ -540,33 +515,33 @@ export default function RsvpPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-12 space-y-4 animate-fade-in max-w-md mx-auto">
-                    <div className="inline-flex items-center justify-center bg-indigo-50 p-4 rounded-full text-indigo-600">
+                  <div className="text-center py-16 space-y-4 max-w-xs mx-auto">
+                    <div className="inline-flex items-center justify-center bg-indigo-500/10 p-5 rounded-full text-indigo-400">
                       <LayoutGrid className="w-8 h-8" />
                     </div>
-                    <h3 className="font-bold text-slate-800 text-base">Plan de table en cours de finalisation</h3>
-                    <p className="text-slate-500 text-xs leading-relaxed">
-                      Les organisateurs sont en train d'organiser le placement des invités. Revenez un peu plus tard pour découvrir vos voisins de table !
+                    <h3 className="font-bold text-white text-base">Plan de table en cours</h3>
+                    <p className="text-slate-400 text-xs leading-relaxed">
+                      Les organisateurs finalisent le placement des invités. Revenez bientôt pour découvrir vos voisins de table !
                     </p>
                   </div>
                 )}
               </div>
             )}
 
-            {/* 3. LIVRE D'OR */}
+            {/* 3. LIVRE D'OR TAB */}
             {activeGuestTab === 'guestbook' && (
               <div className="space-y-6 animate-fade-in">
                 <div className="space-y-1">
-                  <h3 className="font-extrabold text-slate-900 text-base">Laissez un mot doux ou une photo</h3>
-                  <p className="text-slate-500 text-xs">
-                    Partagez un message de félicitations ou une photo souvenir en privé avec les organisateurs.
+                  <h3 className="font-extrabold text-white text-base">Livre d'or de l'événement</h3>
+                  <p className="text-slate-400 text-xs">
+                    Partagez un mot doux, des félicitations ou plusieurs photos souvenirs avec les organisateurs.
                   </p>
                 </div>
 
                 {guestbookSuccess && (
-                  <div className="bg-emerald-50 border border-emerald-100 text-emerald-700 px-4 py-3 rounded-2xl text-xs font-semibold flex items-center gap-2">
-                    <CheckCircle2 className="w-4.5 h-4.5 text-emerald-600" />
-                    Votre message et/ou photo ont été envoyés avec succès aux organisateurs ! Merci pour votre partage.
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-3.5 rounded-2xl text-xs font-semibold flex items-center gap-2">
+                    <CheckCircle2 className="w-4.5 h-4.5 text-emerald-400" />
+                    Message et photos envoyés avec succès ! Merci.
                   </div>
                 )}
 
@@ -575,41 +550,59 @@ export default function RsvpPage() {
                     <textarea
                       value={guestbookMessage}
                       onChange={(e) => setGuestbookMessage(e.target.value)}
-                      placeholder="Écrivez votre message ici..."
+                      placeholder="Écrivez votre message de félicitations ou d'amitié ici..."
                       rows={4}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors resize-none text-slate-800"
+                      className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-2xl text-xs focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors resize-none text-slate-100 placeholder-slate-500"
                     />
                   </div>
 
-                  {guestbookPhoto && (
-                    <div className="relative rounded-2xl overflow-hidden border border-slate-200 max-h-48 bg-slate-50 flex items-center justify-center">
-                      <img src={guestbookPhoto} alt="Preview" className="max-h-48 w-full object-contain" />
-                      <button
-                        type="button"
-                        onClick={() => setGuestbookPhoto(null)}
-                        className="absolute top-2 right-2 p-1.5 bg-slate-900/80 hover:bg-slate-900 text-white rounded-full transition"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                  {/* Previews of uploaded guestbook photos */}
+                  {guestbookPhotos.length > 0 && (
+                    <div className="space-y-2">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                        Photos sélectionnées ({guestbookPhotos.length})
+                      </span>
+                      <div className="grid grid-cols-3 gap-2">
+                        {guestbookPhotos.map((photo, idx) => (
+                          <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-slate-700 bg-slate-800 flex items-center justify-center">
+                            <img src={photo} alt="Preview" className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveGuestbookPhoto(idx)}
+                              className="absolute top-1 right-1 p-1 bg-rose-600 hover:bg-rose-700 text-white rounded-full transition shadow-sm"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {isGuestbookUploading && (
+                    <div className="flex items-center justify-center gap-2 py-3 bg-slate-800/50 border border-dashed border-slate-700 rounded-2xl">
+                      <Loader2 className="w-4 h-4 text-indigo-400 animate-spin" />
+                      <span className="text-xs font-semibold text-slate-400">Encodage des photos...</span>
                     </div>
                   )}
 
                   <div className="flex items-center justify-between gap-3 pt-2">
-                    <label className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs cursor-pointer transition">
-                      <Image className="w-4 h-4 text-indigo-600" />
-                      Ajouter une photo
+                    <label className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs cursor-pointer transition">
+                      <Image className="w-4 h-4 text-indigo-400" />
+                      Ajouter des photos
                       <input
                         type="file"
+                        multiple
                         accept="image/*"
-                        onChange={handleGuestbookPhotoUpload}
+                        onChange={handleGuestbookMultiplePhotosUpload}
                         className="hidden"
                       />
                     </label>
 
                     <button
                       type="submit"
-                      disabled={submittingGuestbook || (!guestbookMessage.trim() && !guestbookPhoto)}
-                      className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold rounded-xl text-xs transition shadow-md shadow-indigo-100"
+                      disabled={submittingGuestbook || isGuestbookUploading || (!guestbookMessage.trim() && guestbookPhotos.length === 0)}
+                      className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold rounded-xl text-xs transition shadow-md shadow-indigo-950/20"
                     >
                       {submittingGuestbook ? (
                         <>
@@ -628,146 +621,234 @@ export default function RsvpPage() {
               </div>
             )}
 
-            {/* 4. FIL DE L'ÉVÉNEMENT */}
+            {/* 4. FIL DE L'ÉVÉNEMENT TAB */}
             {activeGuestTab === 'feed' && (
               <div className="space-y-6 animate-fade-in">
                 <div className="space-y-1">
-                  <h3 className="font-extrabold text-slate-900 text-base">Fil de l'événement</h3>
-                  <p className="text-slate-500 text-xs">
-                    Découvrez les publications des organisateurs et interagissez avec les autres invités.
+                  <h3 className="font-extrabold text-white text-base">Fil d'actualité</h3>
+                  <p className="text-slate-400 text-xs">
+                    Découvrez les publications en direct des organisateurs et commentez-les.
                   </p>
                 </div>
 
                 {loadingFeed ? (
-                  <div className="py-12 flex flex-col items-center justify-center gap-3">
-                    <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-                    <p className="text-xs font-medium text-slate-500">Chargement du fil d'actualité...</p>
+                  <div className="py-16 flex flex-col items-center justify-center gap-3">
+                    <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+                    <p className="text-xs font-medium text-slate-400">Chargement du fil d'actualité...</p>
                   </div>
                 ) : feedPosts.length === 0 ? (
-                  <div className="text-center py-12 space-y-3 max-w-md mx-auto">
-                    <div className="inline-flex items-center justify-center bg-indigo-50 p-4 rounded-full text-indigo-600">
+                  <div className="text-center py-16 space-y-3 max-w-xs mx-auto">
+                    <div className="inline-flex items-center justify-center bg-indigo-500/10 p-5 rounded-full text-indigo-400">
                       <MessageCircle className="w-8 h-8" />
                     </div>
-                    <h4 className="font-bold text-slate-800 text-sm">Aucune publication pour le moment</h4>
-                    <p className="text-slate-500 text-xs">
-                      Les publications des organisateurs apparaîtront ici dès qu'elles seront partagées !
+                    <h4 className="font-bold text-white text-sm">Aucune publication</h4>
+                    <p className="text-slate-400 text-xs">
+                      Les publications en direct des organisateurs apparaîtront ici très bientôt !
                     </p>
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {feedPosts.map(post => (
-                      <div key={post.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
-                        {/* Post Header */}
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center font-bold text-indigo-700 text-[10px]">
-                            ✨
+                    {feedPosts.map(post => {
+                      const mediaList = post.mediaUrls && Array.isArray(post.mediaUrls) 
+                        ? post.mediaUrls 
+                        : (post.mediaUrl ? [{ url: post.mediaUrl, type: post.mediaType || 'IMAGE' }] : []);
+
+                      return (
+                        <div key={post.id} className="bg-slate-800/30 border border-slate-700/30 rounded-3xl p-4 space-y-4">
+                          {/* Post Header */}
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center font-bold text-indigo-400 text-xs">
+                              ✨
+                            </div>
+                            <div>
+                              <span className="font-bold text-white text-xs block leading-tight">Organisateur</span>
+                              <span className="text-[9px] text-slate-400 font-medium">
+                                {new Date(post.createdAt).toLocaleDateString('fr-FR', {
+                                  day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                                })}
+                              </span>
+                            </div>
                           </div>
-                          <div>
-                            <span className="font-bold text-slate-900 text-xs block leading-tight">Organisateur</span>
-                            <span className="text-[9px] text-slate-400 font-medium">
-                              {new Date(post.createdAt).toLocaleDateString('fr-FR', {
-                                day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-                              })}
-                            </span>
-                          </div>
-                        </div>
 
-                        {/* Post Content */}
-                        {post.content && (
-                          <p className="text-slate-800 text-xs leading-relaxed whitespace-pre-line">
-                            {post.content}
-                          </p>
-                        )}
+                          {/* Post Content */}
+                          {post.content && (
+                            <p className="text-slate-200 text-xs leading-relaxed whitespace-pre-line">
+                              {post.content}
+                            </p>
+                          )}
 
-                        {/* Post Media */}
-                        {post.mediaUrl && (
-                          <div className="rounded-xl overflow-hidden border border-slate-200 bg-white max-h-64 flex items-center justify-center">
-                            {post.mediaType === 'VIDEO' ? (
-                              <video src={post.mediaUrl} controls className="max-h-64 w-full object-contain" />
-                            ) : (
-                              <img 
-                                src={post.mediaUrl} 
-                                alt="Post Media" 
-                                onClick={() => setExpandedImage(post.mediaUrl)}
-                                className="max-h-64 w-full object-contain cursor-pointer hover:opacity-95 transition-opacity" 
-                              />
-                            )}
-                          </div>
-                        )}
-
-                        {/* Comments Section */}
-                        <div className="border-t border-slate-200/60 pt-3 space-y-3">
-                          <h4 className="font-bold text-slate-700 text-[10px] uppercase tracking-wider flex items-center gap-1">
-                            <MessageCircle className="w-3.5 h-3.5 text-slate-400" />
-                            Commentaires ({post.comments.length})
-                          </h4>
-
-                          {post.comments.length > 0 && (
-                            <div className="space-y-2 bg-white p-3 rounded-xl max-h-40 overflow-y-auto border border-slate-150">
-                              {post.comments.map((comment: any) => (
-                                <div key={comment.id} className="text-[11px] space-y-0.5">
-                                  <div className="flex items-center justify-between">
-                                    <span className="font-bold text-slate-800">{comment.authorName}</span>
-                                    <span className="text-[8px] text-slate-400">
-                                      {new Date(comment.createdAt).toLocaleDateString('fr-FR', {
-                                        hour: '2-digit', minute: '2-digit'
-                                      })}
-                                    </span>
-                                  </div>
-                                  <p className="text-slate-600 leading-relaxed">{comment.content}</p>
+                          {/* Post Media Grid */}
+                          {mediaList.length > 0 && (
+                            <div className={`grid gap-1.5 rounded-2xl overflow-hidden border border-slate-800 bg-black ${
+                              mediaList.length === 1 ? 'grid-cols-1' : mediaList.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
+                            }`}>
+                              {mediaList.map((media: any, idx: number) => (
+                                <div key={idx} className="relative aspect-video max-h-64 flex items-center justify-center overflow-hidden">
+                                  {media.type === 'VIDEO' ? (
+                                    <video src={media.url} controls className="w-full h-full object-contain" />
+                                  ) : (
+                                    <img 
+                                      src={media.url} 
+                                      alt={`Media ${idx + 1}`} 
+                                      onClick={() => {
+                                        setExpandedImages(mediaList.filter((m: any) => m.type === 'IMAGE').map((m: any) => m.url));
+                                        setExpandedImageIndex(idx);
+                                      }}
+                                      className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity" 
+                                    />
+                                  )}
                                 </div>
                               ))}
                             </div>
                           )}
 
-                          {/* Add Comment Form */}
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              placeholder="Écrire un commentaire..."
-                              value={guestCommentContents[post.id] || ''}
-                              onChange={(e) => setGuestCommentContents({ ...guestCommentContents, [post.id]: e.target.value })}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleCreateGuestComment(post.id);
-                              }}
-                              className="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors text-slate-800"
-                            />
-                            <button
-                              onClick={() => handleCreateGuestComment(post.id)}
-                              disabled={guestCommentSubmitting[post.id] || !guestCommentContents[post.id]?.trim()}
-                              className="p-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-lg transition shadow-sm"
-                            >
-                              {guestCommentSubmitting[post.id] ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              ) : (
-                                <Send className="w-3.5 h-3.5" />
-                              )}
-                            </button>
+                          {/* Comments Section */}
+                          <div className="border-t border-slate-800 pt-3.5 space-y-3">
+                            <h4 className="font-bold text-slate-400 text-[10px] uppercase tracking-wider flex items-center gap-1">
+                              <MessageCircle className="w-3.5 h-3.5 text-slate-500" />
+                              Commentaires ({post.comments.length})
+                            </h4>
+
+                            {post.comments.length > 0 && (
+                              <div className="space-y-2 bg-slate-900/50 p-3 rounded-2xl max-h-40 overflow-y-auto border border-slate-800/60">
+                                {post.comments.map((comment: any) => (
+                                  <div key={comment.id} className="text-[11px] space-y-0.5">
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-bold text-white">{comment.authorName}</span>
+                                      <span className="text-[8px] text-slate-500">
+                                        {new Date(comment.createdAt).toLocaleDateString('fr-FR', {
+                                          hour: '2-digit', minute: '2-digit'
+                                        })}
+                                      </span>
+                                    </div>
+                                    <p className="text-slate-400 leading-relaxed">{comment.content}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Add Comment Form */}
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                placeholder="Écrire un commentaire..."
+                                value={guestCommentContents[post.id] || ''}
+                                onChange={(e) => setGuestCommentContents({ ...guestCommentContents, [post.id]: e.target.value })}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleCreateGuestComment(post.id);
+                                }}
+                                className="flex-1 px-3.5 py-2 bg-slate-800/60 border border-slate-700/80 rounded-xl text-[11px] focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors text-slate-100 placeholder-slate-500"
+                              />
+                              <button
+                                onClick={() => handleCreateGuestComment(post.id)}
+                                disabled={guestCommentSubmitting[post.id] || !guestCommentContents[post.id]?.trim()}
+                                className="p-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl transition shadow-sm"
+                              >
+                                {guestCommentSubmitting[post.id] ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Send className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
             )}
+
           </div>
+
+          {/* App Bottom Navigation Bar (iOS / Android Immersive Style) */}
+          <div className="absolute bottom-0 inset-x-0 bg-slate-950/90 backdrop-blur-md border-t border-slate-800/80 py-2.5 px-4 flex items-center justify-around z-30">
+            <button
+              onClick={() => setActiveGuestTab('badge')}
+              className={`flex flex-col items-center gap-1 transition ${activeGuestTab === 'badge' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              <Award className="w-5 h-5" />
+              <span className="text-[9px] font-bold">Badge</span>
+            </button>
+            <button
+              onClick={() => setActiveGuestTab('table')}
+              className={`flex flex-col items-center gap-1 transition ${activeGuestTab === 'table' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              <LayoutGrid className="w-5 h-5" />
+              <span className="text-[9px] font-bold">Ma Table</span>
+            </button>
+            <button
+              onClick={() => setActiveGuestTab('guestbook')}
+              className={`flex flex-col items-center gap-1 transition ${activeGuestTab === 'guestbook' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              <Heart className="w-5 h-5" />
+              <span className="text-[9px] font-bold">Livre d'or</span>
+            </button>
+            <button
+              onClick={() => setActiveGuestTab('feed')}
+              className={`flex flex-col items-center gap-1 transition ${activeGuestTab === 'feed' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              <MessageCircle className="w-5 h-5" />
+              <span className="text-[9px] font-bold">Live Feed</span>
+            </button>
+          </div>
+
+          {/* iOS Home Indicator Bar (visible on desktop) */}
+          <div className="hidden md:block absolute bottom-1 inset-x-0 h-1 flex justify-center z-40">
+            <div className="w-32 h-1 bg-slate-700 rounded-full" />
+          </div>
+
         </div>
 
-        {/* Expanded Image Modal */}
-        {expandedImage && (
+        {/* Expanded Image Modal with Carousel */}
+        {expandedImages.length > 0 && (
           <div 
-            className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center z-50 p-4"
-            onClick={() => setExpandedImage(null)}
+            className="fixed inset-0 bg-black/95 backdrop-blur-xs flex items-center justify-center z-50 p-4"
+            onClick={() => setExpandedImages([])}
           >
-            <div className="relative max-w-4xl max-h-[85vh] overflow-hidden rounded-2xl">
-              <img src={expandedImage} alt="Expanded" className="max-h-[85vh] max-w-full object-contain" />
+            <div className="relative max-w-4xl max-h-[85vh] overflow-hidden rounded-2xl flex items-center justify-center">
+              <img 
+                src={expandedImages[expandedImageIndex]} 
+                alt="Expanded" 
+                className="max-h-[85vh] max-w-full object-contain" 
+                onClick={(e) => e.stopPropagation()}
+              />
+              
+              {/* Close Button */}
               <button
-                onClick={() => setExpandedImage(null)}
-                className="absolute top-4 right-4 p-2 bg-black/60 hover:bg-black text-white rounded-full transition"
+                onClick={() => setExpandedImages([])}
+                className="absolute top-4 right-4 p-2 bg-black/60 hover:bg-black text-white rounded-full transition z-10"
               >
-                ✕
+                <X className="w-5 h-5" />
               </button>
+
+              {/* Carousel Navigation */}
+              {expandedImages.length > 1 && (
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setExpandedImageIndex((prev) => (prev - 1 + expandedImages.length) % expandedImages.length);
+                    }}
+                    className="absolute left-4 p-3 bg-black/50 hover:bg-black text-white rounded-full transition"
+                  >
+                    <ChevronLeft className="w-6 h-6" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setExpandedImageIndex((prev) => (prev + 1) % expandedImages.length);
+                    }}
+                    className="absolute right-4 p-3 bg-black/50 hover:bg-black text-white rounded-full transition"
+                  >
+                    <ChevronRight className="w-6 h-6" />
+                  </button>
+                  <div className="absolute bottom-4 bg-black/60 px-3 py-1 rounded-full text-white text-xs font-bold">
+                    {expandedImageIndex + 1} / {expandedImages.length}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
