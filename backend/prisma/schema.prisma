@@ -142,6 +142,7 @@ model EventPost {
   mediaUrl  String?        // Base64 string (legacy)
   mediaUrls Json?          // Array of objects { url: string, type: 'IMAGE' | 'VIDEO' }
   mediaType String?        // IMAGE, VIDEO, TEXT (legacy)
+  likes     Json?          // Array of guest/user IDs who liked the post
   createdAt DateTime       @default(now())
   comments  EventComment[]
 }

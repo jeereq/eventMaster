@@ -7,6 +7,7 @@ exports.getEventFeed = getEventFeed;
 exports.createEventPost = createEventPost;
 exports.deleteEventPost = deleteEventPost;
 exports.createEventComment = createEventComment;
+exports.toggleLikeEventPost = toggleLikeEventPost;
 const db_1 = require("../db");
 // 1. Submit Guest Share (Public - Guest RSVP page)
 async function submitGuestShare(req, res) {
@@ -237,5 +238,51 @@ async function createEventComment(req, res) {
     catch (error) {
         console.error('Erreur lors de la création du commentaire:', error);
         return res.status(500).json({ error: 'Erreur lors de la création du commentaire.' });
+    }
+}
+// 7. Toggle Like on Event Post (Public - Guest RSVP page and Dashboard)
+async function toggleLikeEventPost(req, res) {
+    try {
+        const postId = req.params.postId;
+        const { guestId, userId } = req.body;
+        if (!guestId && !userId) {
+            return res.status(400).json({ error: 'Identifiant requis (guestId ou userId).' });
+        }
+        const post = await db_1.prisma.eventPost.findUnique({
+            where: { id: postId },
+        });
+        if (!post) {
+            return res.status(404).json({ error: 'Publication non trouvée.' });
+        }
+        const likerId = userId ? `user_${userId}` : `guest_${guestId}`;
+        let currentLikes = [];
+        if (post.likes && Array.isArray(post.likes)) {
+            currentLikes = post.likes;
+        }
+        const hasLiked = currentLikes.includes(likerId);
+        let updatedLikes;
+        if (hasLiked) {
+            // Unlike
+            updatedLikes = currentLikes.filter(id => id !== likerId);
+        }
+        else {
+            // Like
+            updatedLikes = [...currentLikes, likerId];
+        }
+        const updatedPost = await db_1.prisma.eventPost.update({
+            where: { id: postId },
+            data: {
+                likes: updatedLikes,
+            },
+        });
+        return res.json({
+            liked: !hasLiked,
+            likesCount: updatedLikes.length,
+            likes: updatedLikes,
+        });
+    }
+    catch (error) {
+        console.error('Erreur lors du toggle like:', error);
+        return res.status(500).json({ error: 'Erreur lors du traitement du j\'aime.' });
     }
 }

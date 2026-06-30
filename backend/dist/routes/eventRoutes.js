@@ -34,4 +34,5 @@ router.get('/:eventId/shares', feedController_1.getEventShares);
 router.get('/:eventId/feed', feedController_1.getEventFeed);
 router.post('/:eventId/feed', feedController_1.createEventPost);
 router.delete('/:eventId/feed/:postId', feedController_1.deleteEventPost);
+router.post('/:eventId/feed/:postId/like', feedController_1.toggleLikeEventPost);
 exports.default = router;

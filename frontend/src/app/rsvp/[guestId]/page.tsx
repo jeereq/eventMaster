@@ -7,7 +7,7 @@ import {
   Calendar, MapPin, CheckCircle2, XCircle, AlertCircle, 
   HelpCircle, Utensils, Loader2, Award, Sparkles,
   Users, MessageSquare, Image, Send, Heart, Eye, Trash2, LayoutGrid, MessageCircle,
-  ChevronLeft, ChevronRight, X, RefreshCw, Video
+  ChevronLeft, ChevronRight, X, RefreshCw, Video, ThumbsUp
 } from 'lucide-react';
 
 interface GuestRsvpData {
@@ -125,29 +125,29 @@ export default function RsvpPage() {
     loadRsvpDetails();
   }, [guestId]);
 
-  const loadGuestFeed = async () => {
+  const loadGuestFeed = async (silent = false) => {
     if (!guest?.event?.id) return;
-    setLoadingFeed(true);
+    if (!silent) setLoadingFeed(true);
     try {
       const data = await api.get(`/rsvp/event/${guest.event.id}/feed`);
       setFeedPosts(data);
     } catch (err) {
       console.error('Error loading guest feed:', err);
     } finally {
-      setLoadingFeed(false);
+      if (!silent) setLoadingFeed(false);
     }
   };
 
-  const loadGuestbookShares = async () => {
+  const loadGuestbookShares = async (silent = false) => {
     if (!guest?.event?.id) return;
-    setLoadingGuestbook(true);
+    if (!silent) setLoadingGuestbook(true);
     try {
       const data = await api.get(`/rsvp/event/${guest.event.id}/shares`);
       setGuestbookShares(data);
     } catch (err) {
       console.error('Error loading guestbook shares:', err);
     } finally {
-      setLoadingGuestbook(false);
+      if (!silent) setLoadingGuestbook(false);
     }
   };
 
@@ -157,14 +157,14 @@ export default function RsvpPage() {
     if (activeGuestTab === 'feed') {
       loadGuestFeed();
       const interval = setInterval(() => {
-        loadGuestFeed();
-      }, 10000); // 10s polling
+        loadGuestFeed(true);
+      }, 10000); // 10s silent polling
       return () => clearInterval(interval);
     } else if (activeGuestTab === 'guestbook') {
       loadGuestbookShares();
       const interval = setInterval(() => {
-        loadGuestbookShares();
-      }, 10000); // 10s polling
+        loadGuestbookShares(true);
+      }, 10000); // 10s silent polling
       return () => clearInterval(interval);
     }
   }, [submitted, guest, rsvpStatus, activeGuestTab]);
@@ -219,6 +219,26 @@ export default function RsvpPage() {
       alert('Erreur lors de l\'envoi de votre message.');
     } finally {
       setSubmittingGuestbook(false);
+    }
+  };
+
+  const handleToggleLike = async (postId: string) => {
+    try {
+      const response = await api.post(`/rsvp/feed/post/${postId}/like`, {
+        guestId: guest?.id,
+      });
+
+      setFeedPosts(feedPosts.map(p => {
+        if (p.id === postId) {
+          return {
+            ...p,
+            likes: response.likes
+          };
+        }
+        return p;
+      }));
+    } catch (err) {
+      console.error('Error toggling like:', err);
     }
   };
 
@@ -795,26 +815,43 @@ export default function RsvpPage() {
                             </div>
                           )}
 
+                          {/* Like Bar */}
+                          <div className="flex items-center gap-4 pt-1">
+                            <button
+                              onClick={() => handleToggleLike(post.id)}
+                              className={`flex items-center gap-1.5 text-xs font-bold transition px-3 py-1.5 rounded-full ${
+                                post.likes && Array.isArray(post.likes) && post.likes.includes(`guest_${guest?.id}`)
+                                  ? 'text-pink-500 bg-pink-500/10'
+                                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                              }`}
+                            >
+                              <ThumbsUp className="w-4 h-4" />
+                              <span>
+                                {post.likes && Array.isArray(post.likes) ? post.likes.length : 0} J'aime
+                              </span>
+                            </button>
+                          </div>
+
                           {/* Comments Section */}
-                          <div className="border-t border-slate-800 pt-3.5 space-y-3">
-                            <h4 className="font-bold text-slate-400 text-[10px] uppercase tracking-wider flex items-center gap-1">
+                          <div className="border-t border-slate-800/80 pt-3.5 space-y-4">
+                            <h4 className="font-bold text-slate-400 text-[10px] uppercase tracking-wider flex items-center gap-1.5">
                               <MessageCircle className="w-3.5 h-3.5 text-slate-500" />
                               Commentaires ({post.comments.length})
                             </h4>
 
                             {post.comments.length > 0 && (
-                              <div className="space-y-2 bg-slate-900/50 p-3 rounded-2xl max-h-40 overflow-y-auto border border-slate-800/60">
+                              <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
                                 {post.comments.map((comment: any) => (
-                                  <div key={comment.id} className="text-[11px] space-y-0.5">
+                                  <div key={comment.id} className="bg-slate-900/40 border border-slate-800/60 p-3 rounded-2xl text-[11px] space-y-1">
                                     <div className="flex items-center justify-between">
-                                      <span className="font-bold text-white">{comment.authorName}</span>
-                                      <span className="text-[8px] text-slate-500">
+                                      <span className="font-extrabold text-indigo-400">{comment.authorName}</span>
+                                      <span className="text-[8px] text-slate-500 font-medium">
                                         {new Date(comment.createdAt).toLocaleDateString('fr-FR', {
-                                          hour: '2-digit', minute: '2-digit'
+                                          day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
                                         })}
                                       </span>
                                     </div>
-                                    <p className="text-slate-400 leading-relaxed">{comment.content}</p>
+                                    <p className="text-slate-300 leading-relaxed whitespace-pre-line">{comment.content}</p>
                                   </div>
                                 ))}
                               </div>
@@ -835,7 +872,7 @@ export default function RsvpPage() {
                               <button
                                 onClick={() => handleCreateGuestComment(post.id)}
                                 disabled={guestCommentSubmitting[post.id] || !guestCommentContents[post.id]?.trim()}
-                                className="p-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl transition shadow-sm"
+                                className="p-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl transition shadow-sm"
                               >
                                 {guestCommentSubmitting[post.id] ? (
                                   <Loader2 className="w-3.5 h-3.5 animate-spin" />

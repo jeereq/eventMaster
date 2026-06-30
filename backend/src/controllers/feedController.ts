@@ -266,3 +266,57 @@ export async function createEventComment(req: Request, res: Response) {
     return res.status(500).json({ error: 'Erreur lors de la création du commentaire.' });
   }
 }
+
+// 7. Toggle Like on Event Post (Public - Guest RSVP page and Dashboard)
+export async function toggleLikeEventPost(req: Request, res: Response) {
+  try {
+    const postId = req.params.postId as string;
+    const { guestId, userId } = req.body;
+
+    if (!guestId && !userId) {
+      return res.status(400).json({ error: 'Identifiant requis (guestId ou userId).' });
+    }
+
+    const post = await prisma.eventPost.findUnique({
+      where: { id: postId },
+    });
+
+    if (!post) {
+      return res.status(404).json({ error: 'Publication non trouvée.' });
+    }
+
+    const likerId = userId ? `user_${userId}` : `guest_${guestId}`;
+    let currentLikes: string[] = [];
+
+    if (post.likes && Array.isArray(post.likes)) {
+      currentLikes = post.likes as string[];
+    }
+
+    const hasLiked = currentLikes.includes(likerId);
+    let updatedLikes: string[];
+
+    if (hasLiked) {
+      // Unlike
+      updatedLikes = currentLikes.filter(id => id !== likerId);
+    } else {
+      // Like
+      updatedLikes = [...currentLikes, likerId];
+    }
+
+    const updatedPost = await prisma.eventPost.update({
+      where: { id: postId },
+      data: {
+        likes: updatedLikes as any,
+      },
+    });
+
+    return res.json({
+      liked: !hasLiked,
+      likesCount: updatedLikes.length,
+      likes: updatedLikes,
+    });
+  } catch (error: any) {
+    console.error('Erreur lors du toggle like:', error);
+    return res.status(500).json({ error: 'Erreur lors du traitement du j\'aime.' });
+  }
+}

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { getEvents, createEvent, getEventById, updateEvent, deleteEvent } from '../controllers/eventController';
 import { getGuests, createGuest, updateGuest, deleteGuest, importGuests } from '../controllers/guestController';
 import { getInvitations, createInvitation, updateInvitation, deleteInvitation, sendInvitation } from '../controllers/invitationController';
-import { getEventShares, getEventFeed, createEventPost, deleteEventPost } from '../controllers/feedController';
+import { getEventShares, getEventFeed, createEventPost, deleteEventPost, toggleLikeEventPost } from '../controllers/feedController';
 import { requireAuth, requireActiveLicense } from '../middleware/auth';
 
 const router = Router();
@@ -38,5 +38,6 @@ router.get('/:eventId/shares', getEventShares);
 router.get('/:eventId/feed', getEventFeed);
 router.post('/:eventId/feed', createEventPost);
 router.delete('/:eventId/feed/:postId', deleteEventPost);
+router.post('/:eventId/feed/:postId/like', toggleLikeEventPost);
 
 export default router;
