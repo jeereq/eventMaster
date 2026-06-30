@@ -30,6 +30,7 @@ async function getGuestRsvpDetails(req, res) {
             include: {
                 event: {
                     select: {
+                        id: true,
                         title: true,
                         description: true,
                         date: true,

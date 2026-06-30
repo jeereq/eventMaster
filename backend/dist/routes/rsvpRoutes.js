@@ -9,5 +9,6 @@ router.post('/:guestId', rsvpController_1.submitRsvp);
 // Guest feed and sharing routes
 router.post('/:guestId/share', feedController_1.submitGuestShare);
 router.get('/event/:eventId/feed', feedController_1.getEventFeed);
+router.get('/event/:eventId/shares', feedController_1.getPublicEventShares);
 router.post('/feed/post/:postId/comment', feedController_1.createEventComment);
 exports.default = router;

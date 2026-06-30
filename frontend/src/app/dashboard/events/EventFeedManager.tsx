@@ -450,7 +450,11 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
                               <img 
                                 src={media.url} 
                                 alt={`Media ${idx + 1}`} 
-                                onClick={() => openImageModal(mediaList.filter(m => m.type === 'IMAGE').map(m => m.url), idx)}
+                                onClick={() => {
+                                  const imagesOnly = mediaList.filter(m => m.type === 'IMAGE').map(m => m.url);
+                                  const imgIdx = imagesOnly.indexOf(media.url);
+                                  openImageModal(imagesOnly, imgIdx >= 0 ? imgIdx : 0);
+                                }}
                                 className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity" 
                               />
                             )}

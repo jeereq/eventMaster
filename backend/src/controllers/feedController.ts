@@ -80,6 +80,31 @@ export async function getEventShares(req: AuthenticatedRequest, res: Response) {
   }
 }
 
+// 2b. Get Public Event Shares (Public - Guest RSVP page)
+export async function getPublicEventShares(req: Request, res: Response) {
+  try {
+    const eventId = req.params.eventId as string;
+
+    const shares = await prisma.guestShare.findMany({
+      where: { eventId },
+      include: {
+        guest: {
+          select: {
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return res.json(shares);
+  } catch (error: any) {
+    console.error('Erreur lors de la récupération des partages publics:', error);
+    return res.status(500).json({ error: 'Erreur lors de la récupération des partages.' });
+  }
+}
+
 // 3. Get Event Feed (Public - Guest RSVP page and Dashboard)
 export async function getEventFeed(req: Request, res: Response) {
   try {

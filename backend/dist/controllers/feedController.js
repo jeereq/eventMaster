@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.submitGuestShare = submitGuestShare;
 exports.getEventShares = getEventShares;
+exports.getPublicEventShares = getPublicEventShares;
 exports.getEventFeed = getEventFeed;
 exports.createEventPost = createEventPost;
 exports.deleteEventPost = deleteEventPost;
@@ -72,6 +73,29 @@ async function getEventShares(req, res) {
     }
     catch (error) {
         console.error('Erreur lors de la récupération des partages:', error);
+        return res.status(500).json({ error: 'Erreur lors de la récupération des partages.' });
+    }
+}
+// 2b. Get Public Event Shares (Public - Guest RSVP page)
+async function getPublicEventShares(req, res) {
+    try {
+        const eventId = req.params.eventId;
+        const shares = await db_1.prisma.guestShare.findMany({
+            where: { eventId },
+            include: {
+                guest: {
+                    select: {
+                        firstName: true,
+                        lastName: true,
+                    },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+        return res.json(shares);
+    }
+    catch (error) {
+        console.error('Erreur lors de la récupération des partages publics:', error);
         return res.status(500).json({ error: 'Erreur lors de la récupération des partages.' });
     }
 }

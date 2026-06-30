@@ -96,6 +96,8 @@ export default function RsvpPage() {
   const [expandedImages, setExpandedImages] = useState<string[]>([]);
   const [expandedImageIndex, setExpandedImageIndex] = useState<number>(0);
   const [guestbookSuccess, setGuestbookSuccess] = useState(false);
+  const [guestbookShares, setGuestbookShares] = useState<any[]>([]);
+  const [loadingGuestbook, setLoadingGuestbook] = useState(false);
 
   useEffect(() => {
     async function loadRsvpDetails() {
@@ -136,6 +138,19 @@ export default function RsvpPage() {
     }
   };
 
+  const loadGuestbookShares = async () => {
+    if (!guest?.event?.id) return;
+    setLoadingGuestbook(true);
+    try {
+      const data = await api.get(`/rsvp/event/${guest.event.id}/shares`);
+      setGuestbookShares(data);
+    } catch (err) {
+      console.error('Error loading guestbook shares:', err);
+    } finally {
+      setLoadingGuestbook(false);
+    }
+  };
+
   useEffect(() => {
     if (!submitted || !(guest?.rsvp === 'ACCEPTED' || rsvpStatus === 'ACCEPTED')) return;
 
@@ -143,6 +158,12 @@ export default function RsvpPage() {
       loadGuestFeed();
       const interval = setInterval(() => {
         loadGuestFeed();
+      }, 10000); // 10s polling
+      return () => clearInterval(interval);
+    } else if (activeGuestTab === 'guestbook') {
+      loadGuestbookShares();
+      const interval = setInterval(() => {
+        loadGuestbookShares();
       }, 10000); // 10s polling
       return () => clearInterval(interval);
     }
@@ -191,6 +212,7 @@ export default function RsvpPage() {
       setGuestbookSuccess(true);
       setGuestbookMessage('');
       setGuestbookPhotos([]);
+      loadGuestbookShares();
       setTimeout(() => setGuestbookSuccess(false), 5000);
     } catch (err) {
       console.error('Error submitting guestbook:', err);
@@ -618,6 +640,75 @@ export default function RsvpPage() {
                     </button>
                   </div>
                 </form>
+
+                {/* Liste des messages du Livre d'or */}
+                <div className="border-t border-slate-800/80 pt-6 space-y-4">
+                  <h4 className="font-extrabold text-white text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <Heart className="w-4 h-4 text-indigo-400" />
+                    Messages des invités ({guestbookShares.length})
+                  </h4>
+
+                  {loadingGuestbook && guestbookShares.length === 0 ? (
+                    <div className="py-8 flex flex-col items-center justify-center gap-2">
+                      <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
+                      <p className="text-[10px] text-slate-400">Chargement des messages...</p>
+                    </div>
+                  ) : guestbookShares.length === 0 ? (
+                    <div className="text-center py-8 bg-slate-800/20 rounded-2xl border border-slate-800/40 p-4">
+                      <p className="text-slate-400 text-xs">Soyez le premier à laisser un message !</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4 max-h-[350px] overflow-y-auto pr-1">
+                      {guestbookShares.map((share) => {
+                        const photosList = share.photos && Array.isArray(share.photos) 
+                          ? share.photos 
+                          : (share.photo ? [share.photo] : []);
+
+                        return (
+                          <div key={share.id} className="bg-slate-800/30 border border-slate-700/30 rounded-2xl p-3 space-y-2.5">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-white text-[11px]">
+                                {share.guest ? `${share.guest.firstName} ${share.guest.lastName}` : 'Invité'}
+                              </span>
+                              <span className="text-[9px] text-slate-500">
+                                {new Date(share.createdAt).toLocaleDateString('fr-FR', {
+                                  day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                                })}
+                              </span>
+                            </div>
+
+                            {share.message && (
+                              <p className="text-slate-300 text-xs leading-relaxed whitespace-pre-line">
+                                {share.message}
+                              </p>
+                            )}
+
+                            {photosList.length > 0 && (
+                              <div className={`grid gap-1 rounded-xl overflow-hidden ${
+                                photosList.length === 1 ? 'grid-cols-1' : photosList.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
+                              }`}>
+                                {photosList.map((photo: string, pIdx: number) => (
+                                  <div key={pIdx} className="relative aspect-square overflow-hidden bg-slate-900">
+                                    <img 
+                                      src={photo} 
+                                      alt="Guestbook" 
+                                      onClick={() => {
+                                        setExpandedImages(photosList);
+                                        setExpandedImageIndex(pIdx);
+                                      }}
+                                      className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity" 
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
               </div>
             )}
 
@@ -691,8 +782,10 @@ export default function RsvpPage() {
                                       src={media.url} 
                                       alt={`Media ${idx + 1}`} 
                                       onClick={() => {
-                                        setExpandedImages(mediaList.filter((m: any) => m.type === 'IMAGE').map((m: any) => m.url));
-                                        setExpandedImageIndex(idx);
+                                        const imagesOnly = mediaList.filter((m: any) => m.type === 'IMAGE').map((m: any) => m.url);
+                                        const imgIdx = imagesOnly.indexOf(media.url);
+                                        setExpandedImages(imagesOnly);
+                                        setExpandedImageIndex(imgIdx >= 0 ? imgIdx : 0);
                                       }}
                                       className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity" 
                                     />

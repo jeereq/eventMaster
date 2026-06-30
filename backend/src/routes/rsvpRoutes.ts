@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { getGuestRsvpDetails, submitRsvp } from '../controllers/rsvpController';
-import { submitGuestShare, getEventFeed, createEventComment } from '../controllers/feedController';
+import { submitGuestShare, getEventFeed, createEventComment, getPublicEventShares } from '../controllers/feedController';
 
 const router = Router();
 
@@ -10,6 +10,7 @@ router.post('/:guestId', submitRsvp);
 // Guest feed and sharing routes
 router.post('/:guestId/share', submitGuestShare);
 router.get('/event/:eventId/feed', getEventFeed);
+router.get('/event/:eventId/shares', getPublicEventShares);
 router.post('/feed/post/:postId/comment', createEventComment);
 
 export default router;
