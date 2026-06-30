@@ -196,6 +196,7 @@ export default function EventsPage() {
   const [broadcastingInviteId, setBroadcastingInviteId] = useState<string | null>(null);
   const [copiedGuestId, setCopiedGuestId] = useState<string | null>(null);
   const [sharingGuest, setSharingGuest] = useState<GuestItem | null>(null);
+  const [isBulkSending, setIsBulkSending] = useState(false);
 
   // Bulk guest selection & sending
   const [selectedGuestIds, setSelectedGuestIds] = useState<string[]>([]);
@@ -984,6 +985,7 @@ export default function EventsPage() {
     }
     setError('');
     setSuccess('');
+    setIsBulkSending(true);
 
     try {
       const response = await api.post(`/events/${selectedEvent.id}/invitations/${bulkSelectedInviteId}/broadcast`, {
@@ -996,6 +998,8 @@ export default function EventsPage() {
       setSelectedGuestIds([]); // Clear selection after successful send
     } catch (err: any) {
       setError(err.message || "Erreur lors de l'envoi groupé.");
+    } finally {
+      setIsBulkSending(false);
     }
   };
 
@@ -2572,17 +2576,28 @@ export default function EventsPage() {
               <div className="pt-4 flex gap-3 border-t border-slate-100">
                 <button 
                   type="button"
+                  disabled={isBulkSending}
                   onClick={() => setShowBulkInviteModal(false)}
-                  className="flex-1 py-2.5 border border-slate-200 text-slate-600 font-semibold rounded-xl text-sm hover:bg-slate-50 transition"
+                  className="flex-1 py-2.5 border border-slate-200 text-slate-600 font-semibold rounded-xl text-sm hover:bg-slate-50 transition disabled:opacity-50"
                 >
                   Annuler
                 </button>
                 <button 
                   type="submit"
-                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100 flex items-center justify-center gap-1.5"
+                  disabled={isBulkSending}
+                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100 flex items-center justify-center gap-1.5 disabled:bg-indigo-400 disabled:cursor-not-allowed"
                 >
-                  <Send className="w-4 h-4" />
-                  Générer & Envoyer
+                  {isBulkSending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Envoi en cours...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      Générer & Envoyer
+                    </>
+                  )}
                 </button>
               </div>
             </form>
