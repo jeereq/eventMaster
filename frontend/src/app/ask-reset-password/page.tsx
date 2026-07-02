@@ -115,15 +115,7 @@ export default function AskResetPasswordPage() {
         <div className="absolute inset-0 bg-grid-slate-100 dark:bg-grid-slate-900/10 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))]" />
 
         {/* Top Actions */}
-        <div className="flex justify-between items-center relative z-10 mb-8">
-          <Link 
-            href="/login" 
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold rounded-xl text-xs transition shadow-xs"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Retour à la connexion
-          </Link>
-
+        <div className="flex justify-end items-center relative z-10 mb-8">
           <button
             onClick={toggleTheme}
             className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer shadow-xs"
@@ -135,6 +127,16 @@ export default function AskResetPasswordPage() {
 
         {/* Form Container */}
         <div className="max-w-md w-full mx-auto my-auto relative z-10 space-y-8 bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl dark:shadow-none">
+          <div className="flex justify-between items-center mb-2">
+            <Link 
+              href="/login" 
+              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Retour à la connexion
+            </Link>
+          </div>
+
           <div className="text-center lg:text-left">
             <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Mot de passe oublié</h2>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
