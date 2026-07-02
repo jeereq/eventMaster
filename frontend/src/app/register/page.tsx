@@ -133,7 +133,7 @@ export default function RegisterPage() {
         </div>
 
         {/* Form Container */}
-        <div className="max-w-md w-full mx-auto my-auto relative z-10 space-y-6 bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl dark:shadow-none my-6">
+        <div className="max-w-md w-full mx-auto my-auto relative z-10 space-y-6 bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl dark:shadow-none dark:ring-1 dark:ring-slate-800 my-6">
           <div className="flex justify-between items-center mb-2">
             <Link 
               href="/" 
@@ -170,7 +170,7 @@ export default function RegisterPage() {
           ) : (
             <>
               <div className="text-center lg:text-left">
-                <div className="inline-flex lg:hidden items-center justify-center bg-indigo-600 p-3 rounded-2xl text-white mb-4 shadow-lg shadow-indigo-100">
+                <div className="inline-flex lg:hidden items-center justify-center bg-indigo-600 p-3 rounded-2xl text-white mb-4 shadow-lg shadow-indigo-500/20">
                   <PartyPopper className="w-8 h-8" />
                 </div>
                 <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Créer un compte</h2>

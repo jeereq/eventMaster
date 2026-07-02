@@ -114,7 +114,7 @@ export default function ContactPage() {
                 <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
                   Connecté en tant que <span className="font-bold text-indigo-600">{user.name}</span> {tenant ? `(${tenant.name})` : ''}
                 </span>
-                <Link href="/dashboard" className="text-sm font-semibold bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-100">
+                <Link href="/dashboard" className="text-sm font-semibold bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-500/20">
                   Tableau de Bord
                 </Link>
                 <button 
@@ -129,7 +129,7 @@ export default function ContactPage() {
                 <Link href="/login" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
                   Connexion
                 </Link>
-                <Link href="/register" className="text-sm font-semibold bg-indigo-600 text-white px-4.5 py-2 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-100">
+                <Link href="/register" className="text-sm font-semibold bg-indigo-600 text-white px-4.5 py-2 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-500/20">
                   Essai Gratuit
                 </Link>
               </>
@@ -157,7 +157,7 @@ export default function ContactPage() {
 
         {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-6 space-y-4 animate-fade-in shadow-xl">
+          <div className="lg:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-6 space-y-4 animate-fade-in shadow-xl dark:shadow-lg">
             <div className="flex flex-col gap-3">
               <Link 
                 href="/contact" 
@@ -174,7 +174,7 @@ export default function ContactPage() {
                   <Link 
                     href="/dashboard" 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm font-semibold bg-indigo-600 text-white px-4 py-2.5 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-100 text-center"
+                    className="text-sm font-semibold bg-indigo-600 text-white px-4 py-2.5 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-500/20 text-center"
                   >
                     Tableau de Bord
                   </Link>
@@ -197,7 +197,7 @@ export default function ContactPage() {
                   <Link 
                     href="/register" 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm font-semibold bg-indigo-600 text-white px-4.5 py-2.5 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-100 text-center"
+                    className="text-sm font-semibold bg-indigo-600 text-white px-4.5 py-2.5 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-500/20 text-center"
                   >
                     Essai Gratuit
                   </Link>

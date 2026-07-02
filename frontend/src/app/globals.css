@@ -106,7 +106,73 @@ body {
   }
   
   /* Modals & Dialogs */
-  .shadow-2xl, .shadow-xl {
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* ─── Theme-aware shadows ─── */
+.dark {
+  /* Respect explicit dark:shadow-none utilities */
+  .dark\:shadow-none {
+    --tw-shadow: 0 0 #0000 !important;
+    --tw-shadow-colored: 0 0 #0000 !important;
+    box-shadow: none !important;
+  }
+
+  /* Neutral elevations adapted for dark surfaces */
+  .shadow-xs {
+    box-shadow: 0 1px 1px 0 rgb(0 0 0 / 0.28);
+  }
+  .shadow-sm {
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.32), 0 1px 2px -1px rgb(0 0 0 / 0.28);
+  }
+  .shadow-md {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.38), 0 2px 4px -2px rgb(0 0 0 / 0.32);
+  }
+  .shadow-lg {
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.42), 0 4px 6px -4px rgb(0 0 0 / 0.36);
+  }
+  .shadow-xl {
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.48), 0 8px 10px -6px rgb(0 0 0 / 0.42);
+  }
+  .shadow-2xl {
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.58);
+  }
+
+  /* Light-tinted colored shadows → subtle accent glows on dark backgrounds */
+  .shadow-indigo-100,
+  .shadow-indigo-150 {
+    --tw-shadow-color: rgb(99 102 241 / 0.22);
+  }
+  .shadow-indigo-500\/10 {
+    --tw-shadow-color: rgb(99 102 241 / 0.12);
+  }
+  .shadow-indigo-500\/20,
+  .shadow-indigo-500\/30 {
+    --tw-shadow-color: rgb(99 102 241 / 0.2);
+  }
+  .shadow-slate-100,
+  .shadow-slate-200 {
+    --tw-shadow-color: rgb(0 0 0 / 0.35);
+  }
+  .shadow-emerald-50,
+  .shadow-emerald-100 {
+    --tw-shadow-color: rgb(16 185 129 / 0.18);
+  }
+  .shadow-rose-50,
+  .shadow-rose-100 {
+    --tw-shadow-color: rgb(244 63 94 / 0.18);
+  }
+  .shadow-amber-100 {
+    --tw-shadow-color: rgb(245 158 11 / 0.18);
+  }
+
+  /* Hover elevation in dark mode */
+  .hover\:shadow-md:hover {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.38), 0 2px 4px -2px rgb(0 0 0 / 0.32);
+  }
+  .hover\:shadow-lg:hover {
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.42), 0 4px 6px -4px rgb(0 0 0 / 0.36);
+  }
+  .hover\:shadow-xl:hover {
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.48), 0 8px 10px -6px rgb(0 0 0 / 0.42);
   }
 }

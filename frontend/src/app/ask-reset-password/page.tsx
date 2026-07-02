@@ -126,7 +126,7 @@ export default function AskResetPasswordPage() {
         </div>
 
         {/* Form Container */}
-        <div className="max-w-md w-full mx-auto my-auto relative z-10 space-y-8 bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl dark:shadow-none">
+        <div className="max-w-md w-full mx-auto my-auto relative z-10 space-y-8 bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl dark:shadow-none dark:ring-1 dark:ring-slate-800">
           <div className="flex justify-between items-center mb-2">
             <Link 
               href="/login" 

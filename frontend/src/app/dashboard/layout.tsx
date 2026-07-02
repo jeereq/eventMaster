@@ -43,7 +43,7 @@ function SidebarNav({
             key={item.name}
             href={item.href}
             onClick={() => setMobileMenuOpen(false)}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition ${isActive ? 'bg-indigo-600 text-white shadow-lg dark:shadow-none shadow-indigo-100' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition ${isActive ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'}`}
           >
             <Icon className="w-5 h-5 flex-shrink-0" />
             <span>{item.name}</span>
@@ -142,7 +142,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Logo */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-md shadow-indigo-100 dark:shadow-none">
+              <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-md shadow-indigo-500/20 dark:shadow-indigo-500/10">
                 <PartyPopper className="w-6 h-6" />
               </div>
               <div className="flex flex-col">

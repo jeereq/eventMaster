@@ -232,7 +232,7 @@ export default function Home() {
                 <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
                   Connecté en tant que <span className="font-bold text-indigo-600">{user.name}</span> {tenant ? `(${tenant.name})` : ''}
                 </span>
-                <Link href="/dashboard" className="text-sm font-semibold bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-100">
+                <Link href="/dashboard" className="text-sm font-semibold bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-500/20">
                   Tableau de Bord
                 </Link>
                 <button 
@@ -247,7 +247,7 @@ export default function Home() {
                 <Link href="/login" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
                   Connexion
                 </Link>
-                <Link href="/register" className="text-sm font-semibold bg-indigo-600 text-white px-4.5 py-2 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-100">
+                <Link href="/register" className="text-sm font-semibold bg-indigo-600 text-white px-4.5 py-2 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-500/20">
                   Essai Gratuit
                 </Link>
               </>
@@ -275,7 +275,7 @@ export default function Home() {
 
         {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-6 space-y-4 animate-fade-in shadow-xl">
+          <div className="lg:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-6 space-y-4 animate-fade-in shadow-xl dark:shadow-lg">
             <div className="flex flex-col gap-3">
               <Link 
                 href="/contact" 
@@ -292,7 +292,7 @@ export default function Home() {
                   <Link 
                     href="/dashboard" 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm font-semibold bg-indigo-600 text-white px-4 py-2.5 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-100 text-center"
+                    className="text-sm font-semibold bg-indigo-600 text-white px-4 py-2.5 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-500/20 text-center"
                   >
                     Tableau de Bord
                   </Link>
@@ -315,7 +315,7 @@ export default function Home() {
                   <Link 
                     href="/register" 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm font-semibold bg-indigo-600 text-white px-4.5 py-2.5 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-100 text-center"
+                    className="text-sm font-semibold bg-indigo-600 text-white px-4.5 py-2.5 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-500/20 text-center"
                   >
                     Essai Gratuit
                   </Link>
@@ -345,13 +345,13 @@ export default function Home() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 {user ? (
-                  <Link href="/dashboard" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-xl shadow-indigo-150 dark:shadow-none transition group text-base">
+                  <Link href="/dashboard" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-xl shadow-indigo-500/25 transition group text-base">
                     Accéder à mon Tableau de Bord
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition" />
                   </Link>
                 ) : (
                   <>
-                    <Link href="/register" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-xl shadow-indigo-100 dark:shadow-none transition group text-base">
+                    <Link href="/register" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-xl shadow-indigo-500/25 transition group text-base">
                       Créer mon organisation
                       <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition" />
                     </Link>
@@ -721,7 +721,7 @@ export default function Home() {
                 </ul>
               </div>
 
-              <Link href="/register" className="w-full text-center py-2.5 mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-lg shadow-indigo-100 dark:shadow-none text-xs">
+              <Link href="/register" className="w-full text-center py-2.5 mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-lg shadow-indigo-500/20 text-xs">
                 Activer le Plan Premium
               </Link>
             </div>
