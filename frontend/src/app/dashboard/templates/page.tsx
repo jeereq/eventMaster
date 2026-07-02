@@ -11,6 +11,7 @@ import {
   Spline, Triangle, Plus, Trash, Layout, Palette, Square,
   ArrowUp, ArrowDown, Crop, Copy
 } from 'lucide-react';
+import { PageHeader, Alert, Button } from '@/components/ui';
 
 interface TemplateItem {
   id: string;
@@ -2433,33 +2434,21 @@ export default function TemplatesPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-            {user?.role === 'SUPER_ADMIN' ? "Gestion des Modèles d'Invitation (Super Admin)" : "Vos Modèles d'Invitation"}
-          </h1>
-          <p className="text-slate-500 mt-1">
-            {user?.role === 'SUPER_ADMIN' 
-              ? "Gérez, créez et modifiez les modèles d'invitation globaux et privés de toutes les organisations."
-              : "Concevez des invitations interactives uniques à l'aide de notre éditeur visuel."}
-          </p>
-        </div>
-        <button 
-          onClick={handleCreateTemplateClick}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition shadow-md shadow-indigo-100 text-sm"
-        >
-          <PlusCircle className="w-4.5 h-4.5" />
-          Nouveau modèle
-        </button>
-      </div>
+      <PageHeader
+        title={user?.role === 'SUPER_ADMIN' ? "Modèles d'invitation (Super Admin)" : "Vos modèles d'invitation"}
+        description={
+          user?.role === 'SUPER_ADMIN'
+            ? "Gérez les modèles d'invitation globaux et privés de toutes les organisations."
+            : "Concevez des invitations interactives uniques à l'aide de notre éditeur visuel."
+        }
+        action={
+          <Button onClick={handleCreateTemplateClick} leftIcon={<PlusCircle className="w-4 h-4" />}>
+            Nouveau modèle
+          </Button>
+        }
+      />
 
-      {error && (
-        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-center gap-3 text-sm">
-          <AlertCircle className="w-5 h-5 text-rose-500 flex-shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
+      {error && <Alert variant="error">{error}</Alert>}
 
       {success && (
         <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-center gap-3 text-sm">

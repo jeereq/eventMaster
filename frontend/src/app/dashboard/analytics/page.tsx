@@ -9,6 +9,7 @@ import {
   Clock, Download, FileSpreadsheet, RefreshCw, HelpCircle
 } from 'lucide-react';
 import Link from 'next/link';
+import { PageHeader, Alert, EmptyState, Button } from '@/components/ui';
 
 interface EventItem {
   id: string;
@@ -242,61 +243,47 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-8 w-full">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-5">
-        <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
-            <BarChart3 className="w-8 h-8 text-indigo-600" />
-            Statistiques des Événements
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Analyse approfondie des réponses RSVP, préférences de repas et questions personnalisées.</p>
-        </div>
+      <PageHeader
+        title="Statistiques des événements"
+        description="Analyse approfondie des réponses RSVP, préférences de repas et questions personnalisées."
+        action={
+          events.length > 0 ? (
+            <div className="flex items-center gap-2">
+              <select
+                value={selectedEventId}
+                onChange={(e) => setSelectedEventId(e.target.value)}
+                className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-800 dark:text-slate-100 transition"
+              >
+                {events.map((e) => (
+                  <option key={e.id} value={e.id}>{e.title}</option>
+                ))}
+              </select>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={loadingStats || refreshing}
+                title="Rafraîchir les données"
+                leftIcon={<RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />}
+              />
+            </div>
+          ) : undefined
+        }
+      />
 
-        {events.length > 0 && (
-          <div className="flex items-center gap-3">
-            <select
-              value={selectedEventId}
-              onChange={(e) => setSelectedEventId(e.target.value)}
-              className="px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-800 dark:text-slate-100 transition"
-            >
-              {events.map(e => (
-                <option key={e.id} value={e.id}>{e.title}</option>
-              ))}
-            </select>
-
-            <button
-              onClick={handleRefresh}
-              disabled={loadingStats || refreshing}
-              className="p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer shadow-sm disabled:opacity-50"
-              title="Rafraîchir les données"
-            >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        )}
-      </div>
-
-      {error && (
-        <div className="p-4 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 text-rose-800 dark:text-rose-300 rounded-xl flex items-center gap-3 text-sm">
-          <AlertCircle className="w-5 h-5 text-rose-500 flex-shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
+      {error && <Alert variant="error">{error}</Alert>}
 
       {events.length === 0 ? (
-        <div className="text-center py-16 bg-white dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-800 rounded-3xl max-w-xl mx-auto space-y-4">
-          <Calendar className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto" />
-          <h3 className="text-lg font-bold text-slate-800 dark:text-white">Aucun événement disponible</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
-            Vous devez d'abord créer un événement et y ajouter des invités pour pouvoir visualiser des statistiques.
-          </p>
-          <Link 
-            href="/dashboard/events" 
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition shadow-md"
-          >
-            Créer mon premier événement
-          </Link>
-        </div>
+        <EmptyState
+          icon={<Calendar className="w-7 h-7" />}
+          title="Aucun événement disponible"
+          description="Créez votre premier événement pour accéder aux statistiques détaillées."
+          action={
+            <Link href="/dashboard/events">
+              <Button leftIcon={<ChevronRight className="w-4 h-4" />}>Créer un événement</Button>
+            </Link>
+          }
+        />
       ) : loadingStats ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
           <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />

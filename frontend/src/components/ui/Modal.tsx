@@ -13,6 +13,7 @@ export interface ModalProps {
   footer?: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
+  dismissible?: boolean;
 }
 
 const sizeMap = {
@@ -31,6 +32,7 @@ export default function Modal({
   footer,
   size = 'md',
   className,
+  dismissible = true,
 }: ModalProps) {
   const handleEscape = useCallback(
     (e: KeyboardEvent) => {
@@ -41,24 +43,30 @@ export default function Modal({
 
   useEffect(() => {
     if (!open) return;
-    document.addEventListener('keydown', handleEscape);
+    if (dismissible) {
+      document.addEventListener('keydown', handleEscape);
+    }
     document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = '';
     };
-  }, [open, handleEscape]);
+  }, [open, handleEscape, dismissible]);
 
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <button
-        type="button"
-        aria-label="Fermer"
-        className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm animate-fade-in"
-        onClick={onClose}
-      />
+      {dismissible ? (
+        <button
+          type="button"
+          aria-label="Fermer"
+          className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm animate-fade-in"
+          onClick={onClose}
+        />
+      ) : (
+        <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm animate-fade-in" aria-hidden />
+      )}
       <div
         role="dialog"
         aria-modal="true"
@@ -82,14 +90,16 @@ export default function Modal({
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{description}</p>
               )}
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition shrink-0"
-              aria-label="Fermer la fenêtre"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            {dismissible && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition shrink-0"
+                aria-label="Fermer la fenêtre"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
           </div>
         )}
         <div className="overflow-y-auto flex-1 p-5 sm:p-6">{children}</div>
