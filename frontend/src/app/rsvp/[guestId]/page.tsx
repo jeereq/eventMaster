@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { downloadMedia, getMediaExtension, sanitizeFilenamePart } from '@/lib/downloadMedia';
 import { GuestPortalHomeLink } from '@/components/GuestPortalNav';
+import GuestTablePlanView from '@/app/rsvp/GuestTablePlanView';
 import { 
   Calendar, MapPin, CheckCircle2, XCircle, AlertCircle, 
   HelpCircle, Utensils, Loader2, Award, Sparkles,
@@ -23,8 +24,19 @@ interface GuestRsvpData {
     tableName: string;
     shape: 'round' | 'rectangular' | 'square' | 'oval';
     capacity: number;
-    neighbors: Array<{ id: string; firstName: string; lastName: string }>;
+    seatIndex?: number;
+    neighbors: Array<{ id: string; firstName: string; lastName: string; seatIndex?: number }>;
   } | null;
+  tablePlanOverview?: Array<{
+    id: string;
+    name: string;
+    shape: 'round' | 'rectangular' | 'square' | 'oval';
+    capacity: number;
+    x: number;
+    y: number;
+    occupiedCount: number;
+    isGuestTable: boolean;
+  }> | null;
   eventPassed?: boolean;
   rsvpLocked?: boolean;
   event: {
@@ -532,63 +544,12 @@ export default function RsvpPage() {
 
             {/* 2. MA TABLE TAB */}
             {activeGuestTab === 'table' && (
-              <div className="space-y-6 animate-fade-in">
-                {guest.tableDetails ? (
-                  <div className="space-y-6">
-                    <div className="bg-gradient-to-br from-indigo-500/20 to-violet-500/20 border border-indigo-500/30 rounded-3xl p-6 flex items-center justify-between gap-4">
-                      <div className="space-y-1.5">
-                        <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest block">Votre placement</span>
-                        <h3 className="text-xl font-black text-white leading-none">
-                          {guest.tableDetails.tableName}
-                        </h3>
-                        <p className="text-slate-400 text-xs font-semibold">
-                          Table {guest.tableDetails.shape === 'round' ? 'Ronde' : guest.tableDetails.shape === 'rectangular' ? 'Rectangulaire' : guest.tableDetails.shape === 'square' ? 'Carrée' : 'Ovale'} • {guest.tableDetails.capacity} places
-                        </p>
-                      </div>
-                      <div className="text-3xl p-3 bg-indigo-500/10 rounded-2xl">🍽️</div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <h4 className="font-extrabold text-white text-xs uppercase tracking-wider flex items-center gap-2">
-                        <Users className="w-4 h-4 text-indigo-400" />
-                        Partagez votre table avec :
-                      </h4>
-
-                      {guest.tableDetails.neighbors.length === 0 ? (
-                        <p className="text-slate-500 text-xs italic">
-                          Vous êtes le seul invité actuellement placé à cette table. D'autres convives s'ajouteront bientôt !
-                        </p>
-                      ) : (
-                        <div className="grid grid-cols-1 gap-3">
-                          {guest.tableDetails.neighbors.map(neighbor => (
-                            <div key={neighbor.id} className="bg-slate-800/40 border border-slate-700/40 rounded-2xl p-4 flex items-center gap-3.5">
-                              <div className="w-9 h-9 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center font-black text-xs">
-                                {neighbor.firstName[0]}{neighbor.lastName[0]}
-                              </div>
-                              <div>
-                                <span className="font-bold text-white text-xs block">
-                                  {neighbor.firstName} {neighbor.lastName}
-                                </span>
-                                <span className="text-[9px] text-slate-400 font-medium">Invité</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-16 space-y-4 max-w-xs mx-auto">
-                    <div className="inline-flex items-center justify-center bg-indigo-500/10 p-5 rounded-full text-indigo-400">
-                      <LayoutGrid className="w-8 h-8" />
-                    </div>
-                    <h3 className="font-bold text-white text-base">Plan de table en cours</h3>
-                    <p className="text-slate-400 text-xs leading-relaxed">
-                      Les organisateurs finalisent le placement des invités. Revenez bientôt pour découvrir vos voisins de table !
-                    </p>
-                  </div>
-                )}
-              </div>
+              <GuestTablePlanView
+                tableDetails={guest.tableDetails ?? null}
+                tablePlanOverview={guest.tablePlanOverview ?? null}
+                guestFirstName={guest.firstName}
+                guestLastName={guest.lastName}
+              />
             )}
 
             {/* 3. LIVRE D'OR TAB */}

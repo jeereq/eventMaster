@@ -175,30 +175,54 @@ async function getGuestRsvpDetails(req, res) {
         }
         // Extract table details if the guest is assigned to a table
         let tableDetails = null;
+        let tablePlanOverview = null;
         const eventObj = guest.event;
         if (eventObj && eventObj.tablePlan && typeof eventObj.tablePlan === 'object') {
             const plan = eventObj.tablePlan;
             if (Array.isArray(plan.tables)) {
+                tablePlanOverview = plan.tables.map((table) => ({
+                    id: table.id,
+                    name: table.name,
+                    shape: table.shape,
+                    capacity: table.capacity,
+                    x: table.x,
+                    y: table.y,
+                    occupiedCount: Object.values(table.seats || {}).filter(Boolean).length,
+                    isGuestTable: Object.values(table.seats || {}).includes(guestId),
+                }));
                 for (const table of plan.tables) {
-                    const seats = Object.values(table.seats || {});
-                    if (seats.includes(guestId)) {
-                        const neighborIds = seats.filter((id) => id && id !== guestId);
+                    const seatsObj = table.seats || {};
+                    const seatEntries = Object.entries(seatsObj);
+                    const guestSeatEntry = seatEntries.find(([, id]) => id === guestId);
+                    if (guestSeatEntry) {
+                        const seatIndex = parseInt(guestSeatEntry[0], 10);
+                        const neighborIds = seatEntries
+                            .filter(([, id]) => id && id !== guestId)
+                            .map(([, id]) => id);
                         let neighbors = [];
                         if (neighborIds.length > 0) {
-                            neighbors = await db_1.prisma.guest.findMany({
+                            const neighborGuests = await db_1.prisma.guest.findMany({
                                 where: { id: { in: neighborIds } },
                                 select: {
                                     id: true,
                                     firstName: true,
                                     lastName: true,
-                                }
+                                },
+                            });
+                            neighbors = neighborGuests.map((g) => {
+                                const neighborSeat = seatEntries.find(([, id]) => id === g.id);
+                                return {
+                                    ...g,
+                                    seatIndex: neighborSeat ? parseInt(neighborSeat[0], 10) : undefined,
+                                };
                             });
                         }
                         tableDetails = {
                             tableName: table.name,
                             shape: table.shape,
                             capacity: table.capacity,
-                            neighbors
+                            seatIndex,
+                            neighbors,
                         };
                         break;
                     }
@@ -208,6 +232,7 @@ async function getGuestRsvpDetails(req, res) {
         return res.json({
             ...guest,
             tableDetails,
+            tablePlanOverview,
             eventPassed: isEventDatePassed(guest.event.date),
             rsvpLocked: isEventDatePassed(guest.event.date),
         });

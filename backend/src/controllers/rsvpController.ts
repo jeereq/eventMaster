@@ -189,30 +189,68 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
 
     // Extract table details if the guest is assigned to a table
     let tableDetails = null;
+    let tablePlanOverview: Array<{
+      id: string;
+      name: string;
+      shape: string;
+      capacity: number;
+      x: number;
+      y: number;
+      occupiedCount: number;
+      isGuestTable: boolean;
+    }> | null = null;
+
     const eventObj = guest.event as any;
     if (eventObj && eventObj.tablePlan && typeof eventObj.tablePlan === 'object') {
       const plan = eventObj.tablePlan;
       if (Array.isArray(plan.tables)) {
+        tablePlanOverview = plan.tables.map((table: any) => ({
+          id: table.id,
+          name: table.name,
+          shape: table.shape,
+          capacity: table.capacity,
+          x: table.x,
+          y: table.y,
+          occupiedCount: Object.values(table.seats || {}).filter(Boolean).length,
+          isGuestTable: Object.values(table.seats || {}).includes(guestId),
+        }));
+
         for (const table of plan.tables) {
-          const seats = Object.values(table.seats || {});
-          if (seats.includes(guestId)) {
-            const neighborIds = seats.filter((id: any) => id && id !== guestId) as string[];
-            let neighbors: any[] = [];
+          const seatsObj = table.seats || {};
+          const seatEntries = Object.entries(seatsObj) as [string, string | null][];
+          const guestSeatEntry = seatEntries.find(([, id]) => id === guestId);
+
+          if (guestSeatEntry) {
+            const seatIndex = parseInt(guestSeatEntry[0], 10);
+            const neighborIds = seatEntries
+              .filter(([, id]) => id && id !== guestId)
+              .map(([, id]) => id as string);
+
+            let neighbors: Array<{ id: string; firstName: string; lastName: string; seatIndex?: number }> = [];
             if (neighborIds.length > 0) {
-              neighbors = await prisma.guest.findMany({
+              const neighborGuests = await prisma.guest.findMany({
                 where: { id: { in: neighborIds } },
                 select: {
                   id: true,
                   firstName: true,
                   lastName: true,
-                }
+                },
+              });
+              neighbors = neighborGuests.map((g) => {
+                const neighborSeat = seatEntries.find(([, id]) => id === g.id);
+                return {
+                  ...g,
+                  seatIndex: neighborSeat ? parseInt(neighborSeat[0], 10) : undefined,
+                };
               });
             }
+
             tableDetails = {
               tableName: table.name,
               shape: table.shape,
               capacity: table.capacity,
-              neighbors
+              seatIndex,
+              neighbors,
             };
             break;
           }
@@ -223,6 +261,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
     return res.json({
       ...guest,
       tableDetails,
+      tablePlanOverview,
       eventPassed: isEventDatePassed(guest.event.date),
       rsvpLocked: isEventDatePassed(guest.event.date),
     });
