@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
+import { getPlanLimits } from '../config/plansConfig';
 
 // Helper function to verify event ownership
 async function verifyEventOwner(eventId: string, tenantId: string): Promise<boolean> {
@@ -66,8 +67,13 @@ export async function createGuest(req: AuthenticatedRequest, res: Response) {
       where: { event: { tenantId } },
     });
 
-    if (tenant && tenant.plan === 'FREE' && guestCount >= 50) {
-      return res.status(403).json({ error: 'Quota total d\'invités atteint pour le plan GRATUIT (Max 50 invités). Veuillez passer au plan PREMIUM.' });
+    if (tenant) {
+      const limits = getPlanLimits(tenant.plan);
+      if (guestCount >= limits.maxGuests) {
+        return res.status(403).json({
+          error: `Quota total d'invités atteint pour le plan ${tenant.plan} (Max ${limits.maxGuests >= 9999 ? 'illimité' : limits.maxGuests}). Veuillez passer à un forfait supérieur.`,
+        });
+      }
     }
 
     // Check if guest already exists for this event
@@ -206,8 +212,13 @@ export async function importGuests(req: AuthenticatedRequest, res: Response) {
       where: { event: { tenantId } },
     });
 
-    if (tenant && tenant.plan === 'FREE' && (guestCount + guests.length) > 50) {
-      return res.status(403).json({ error: 'Quota total d\'invités dépassé pour le plan GRATUIT (Max 50 invités). Veuillez passer au plan PREMIUM.' });
+    if (tenant) {
+      const limits = getPlanLimits(tenant.plan);
+      if (guestCount + guests.length > limits.maxGuests) {
+        return res.status(403).json({
+          error: `Quota total d'invités dépassé pour le plan ${tenant.plan} (Max ${limits.maxGuests >= 9999 ? 'illimité' : limits.maxGuests}). Veuillez passer à un forfait supérieur.`,
+        });
+      }
     }
 
     let importedCount = 0;

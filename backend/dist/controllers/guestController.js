@@ -6,6 +6,7 @@ exports.updateGuest = updateGuest;
 exports.deleteGuest = deleteGuest;
 exports.importGuests = importGuests;
 const db_1 = require("../db");
+const plansConfig_1 = require("../config/plansConfig");
 // Helper function to verify event ownership
 async function verifyEventOwner(eventId, tenantId) {
     const event = await db_1.prisma.event.findFirst({
@@ -59,8 +60,13 @@ async function createGuest(req, res) {
         const guestCount = await db_1.prisma.guest.count({
             where: { event: { tenantId } },
         });
-        if (tenant && tenant.plan === 'FREE' && guestCount >= 50) {
-            return res.status(403).json({ error: 'Quota total d\'invités atteint pour le plan GRATUIT (Max 50 invités). Veuillez passer au plan PREMIUM.' });
+        if (tenant) {
+            const limits = (0, plansConfig_1.getPlanLimits)(tenant.plan);
+            if (guestCount >= limits.maxGuests) {
+                return res.status(403).json({
+                    error: `Quota total d'invités atteint pour le plan ${tenant.plan} (Max ${limits.maxGuests >= 9999 ? 'illimité' : limits.maxGuests}). Veuillez passer à un forfait supérieur.`,
+                });
+            }
         }
         // Check if guest already exists for this event
         const existingGuest = await db_1.prisma.guest.findUnique({
@@ -177,8 +183,13 @@ async function importGuests(req, res) {
         const guestCount = await db_1.prisma.guest.count({
             where: { event: { tenantId } },
         });
-        if (tenant && tenant.plan === 'FREE' && (guestCount + guests.length) > 50) {
-            return res.status(403).json({ error: 'Quota total d\'invités dépassé pour le plan GRATUIT (Max 50 invités). Veuillez passer au plan PREMIUM.' });
+        if (tenant) {
+            const limits = (0, plansConfig_1.getPlanLimits)(tenant.plan);
+            if (guestCount + guests.length > limits.maxGuests) {
+                return res.status(403).json({
+                    error: `Quota total d'invités dépassé pour le plan ${tenant.plan} (Max ${limits.maxGuests >= 9999 ? 'illimité' : limits.maxGuests}). Veuillez passer à un forfait supérieur.`,
+                });
+            }
         }
         let importedCount = 0;
         let errors = [];

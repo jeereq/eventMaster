@@ -49,7 +49,9 @@ export default function BillingPage() {
         api.get('/subscriptions/my-requests').catch(() => [])
       ]);
       setBilling(billingData);
-      if (plansData) {
+      if (billingData.plans) {
+        setDynamicPlans(billingData.plans);
+      } else if (plansData) {
         setDynamicPlans(plansData);
       }
       if (requestsData) {
@@ -104,7 +106,7 @@ export default function BillingPage() {
   }
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-12">
+    <div className="space-y-8 w-full">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Facturation & Plan</h1>
@@ -161,28 +163,28 @@ export default function BillingPage() {
         <div className={`border rounded-3xl p-6 bg-white dark:bg-slate-900 flex flex-col justify-between ${billing?.plan === 'FREE' ? 'ring-2 ring-slate-800 dark:ring-slate-200' : 'border-slate-200 dark:border-slate-800'}`}>
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Plan Gratuit (Free)</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Idéal pour tester l'application.</p>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{dynamicPlans?.FREE?.name || 'Plan Gratuit'}</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{dynamicPlans?.FREE?.description || "Idéal pour tester l'application."}</p>
               <div className="flex items-baseline gap-1 mt-4">
-                <span className="text-3xl font-extrabold text-slate-900 dark:text-white">0 FC</span>
-                <span className="text-slate-500 dark:text-slate-400 text-sm">/mois</span>
+                <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{dynamicPlans?.FREE?.price || '0 FC'}</span>
+                <span className="text-slate-500 dark:text-slate-400 text-sm">/sans engagement</span>
               </div>
             </div>
 
             <ul className="space-y-3 text-xs text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800 pt-4">
               <li className="flex items-center gap-2.5">
                 <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>3 événements actifs</span>
+                <span>{dynamicPlans?.FREE?.maxEvents ?? 3} événements actifs</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>50 invités maximum</span>
+                <span>{dynamicPlans?.FREE?.maxGuests ?? 50} invités maximum</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>2 modèles d'invitations simples</span>
+                <span>{dynamicPlans?.FREE?.maxTemplates ?? 2} modèles d'invitations simples</span>
               </li>
-              <li className="flex items-center gap-2.5 line-through text-slate-400 dark:text-slate-500">
+              <li className={`flex items-center gap-2.5 ${dynamicPlans?.FREE?.customTemplates ? '' : 'line-through text-slate-400 dark:text-slate-500'}`}>
                 <span>Modèles d'Invitation Customisés</span>
               </li>
             </ul>
@@ -208,7 +210,7 @@ export default function BillingPage() {
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">{dynamicPlans?.STANDARD?.name || 'Plan Standard'}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Idéal pour les événements de taille moyenne.</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{dynamicPlans?.STANDARD?.description || 'Idéal pour les événements de taille moyenne.'}</p>
               <div className="flex items-baseline gap-1 mt-4">
                 <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{dynamicPlans?.STANDARD?.price || '30.000 FC'}</span>
                 <span className="text-slate-500 dark:text-slate-400 text-sm">/mois</span>
@@ -260,7 +262,7 @@ export default function BillingPage() {
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">{dynamicPlans?.PREMIUM?.name || 'Plan Premium'}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Pour les organisateurs d'événements.</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{dynamicPlans?.PREMIUM?.description || "Pour les organisateurs d'événements."}</p>
               <div className="flex items-baseline gap-1 mt-4">
                 <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{dynamicPlans?.PREMIUM?.price || '80.000 FC'}</span>
                 <span className="text-slate-500 dark:text-slate-400 text-sm">/mois</span>
@@ -307,7 +309,7 @@ export default function BillingPage() {
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">{dynamicPlans?.ENTERPRISE?.name || 'Plan Enterprise'}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Pour les grandes organisations.</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{dynamicPlans?.ENTERPRISE?.description || 'Pour les grandes agences événementielles ou besoins sur-mesure.'}</p>
               <div className="flex items-baseline gap-1 mt-4">
                 <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{dynamicPlans?.ENTERPRISE?.price || '275.000 FC'}</span>
                 <span className="text-slate-500 dark:text-slate-400 text-sm">/mois</span>

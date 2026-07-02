@@ -2,10 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { PlanType } from '@prisma/client';
-import fs from 'fs';
-import path from 'path';
-
-const settingsFilePath = path.join(__dirname, '..', 'config', 'settings.json');
+import { getPlansConfiguration } from '../config/plansConfig';
 
 // 1. Submit a subscription request (Tenant)
 export async function submitSubscriptionRequest(req: AuthenticatedRequest, res: Response) {
@@ -202,44 +199,5 @@ export async function rejectSubscriptionRequest(req: AuthenticatedRequest, res: 
 
 // 6. Get public/authenticated subscription plans from settings
 export async function getSubscriptionPlans(req: AuthenticatedRequest, res: Response) {
-  const defaultPlans = {
-    STANDARD: {
-      name: "Plan Standard",
-      price: "49 $",
-      maxEvents: 8,
-      maxGuests: 150,
-      maxTemplates: 5,
-      customTemplates: false
-    },
-    PREMIUM: {
-      name: "Plan Premium",
-      price: "99 $",
-      maxEvents: 20,
-      maxGuests: 500,
-      maxTemplates: 10,
-      customTemplates: true
-    },
-    ENTERPRISE: {
-      name: "Plan Enterprise",
-      price: "249 $",
-      maxEvents: 9999,
-      maxGuests: 99999,
-      maxTemplates: 9999,
-      customTemplates: true
-    }
-  };
-
-  try {
-    if (fs.existsSync(settingsFilePath)) {
-      const data = fs.readFileSync(settingsFilePath, 'utf-8');
-      const settings = JSON.parse(data);
-      if (settings.plans) {
-        return res.json(settings.plans);
-      }
-    }
-    return res.json(defaultPlans);
-  } catch (error) {
-    console.error('Error reading plans from settings:', error);
-    return res.json(defaultPlans);
-  }
+  return res.json(getPlansConfiguration());
 }

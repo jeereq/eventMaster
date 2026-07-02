@@ -9,56 +9,13 @@ exports.handleStripeWebhook = handleStripeWebhook;
 exports.mockUpgrade = mockUpgrade;
 const db_1 = require("../db");
 const stripe_1 = __importDefault(require("stripe"));
-const fs_1 = __importDefault(require("fs"));
-const path_1 = __importDefault(require("path"));
+const plansConfig_1 = require("../config/plansConfig");
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_mock';
 const stripe = new stripe_1.default(STRIPE_SECRET_KEY, {
     apiVersion: '2025-11-13', // standard latest api version
 });
-const settingsFilePath = path_1.default.join(__dirname, '..', 'config', 'settings.json');
 function getPlansFromSettings() {
-    const defaultPlans = {
-        FREE: {
-            maxEvents: 3,
-            maxGuests: 50,
-            maxTemplates: 2,
-            customTemplates: false,
-        },
-        STANDARD: {
-            maxEvents: 8,
-            maxGuests: 150,
-            maxTemplates: 5,
-            customTemplates: false,
-        },
-        PREMIUM: {
-            maxEvents: 20,
-            maxGuests: 500,
-            maxTemplates: 10,
-            customTemplates: true,
-        },
-        ENTERPRISE: {
-            maxEvents: 9999,
-            maxGuests: 99999,
-            maxTemplates: 9999,
-            customTemplates: true,
-        },
-    };
-    try {
-        if (fs_1.default.existsSync(settingsFilePath)) {
-            const data = fs_1.default.readFileSync(settingsFilePath, 'utf-8');
-            const settings = JSON.parse(data);
-            if (settings.plans) {
-                return {
-                    FREE: defaultPlans.FREE,
-                    ...settings.plans
-                };
-            }
-        }
-    }
-    catch (error) {
-        console.error('Error reading plans from settings:', error);
-    }
-    return defaultPlans;
+    return (0, plansConfig_1.getPlansConfiguration)();
 }
 // Get current tenant billing plan, usage and quotas
 async function getBillingStatus(req, res) {
@@ -88,7 +45,7 @@ async function getBillingStatus(req, res) {
             },
         });
         const limits = getPlansFromSettings();
-        const currentLimits = limits[tenant.plan] || limits.FREE;
+        const currentLimits = (0, plansConfig_1.getPlanLimits)(tenant.plan);
         return res.json({
             plan: tenant.plan,
             usage: {
@@ -96,7 +53,13 @@ async function getBillingStatus(req, res) {
                 guests: guestCount,
                 templates: tenant._count.templates,
             },
-            limits: currentLimits,
+            limits: {
+                maxEvents: currentLimits.maxEvents,
+                maxGuests: currentLimits.maxGuests,
+                maxTemplates: currentLimits.maxTemplates,
+                customTemplates: currentLimits.customTemplates,
+            },
+            plans: limits,
         });
     }
     catch (error) {

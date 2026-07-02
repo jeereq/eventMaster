@@ -5,6 +5,7 @@ import { PlanType, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';
+import { getDefaultPlans, getPlansConfiguration, mergePlansForSave } from '../config/plansConfig';
 
 // Get global system statistics and list of all tenants (Super Admin only)
 export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
@@ -758,32 +759,7 @@ const defaultSettings = {
   twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || "",
   twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || "",
   twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER || "",
-  plans: {
-    STANDARD: {
-      name: "Plan Standard",
-      price: "30.000 FC",
-      maxEvents: 8,
-      maxGuests: 150,
-      maxTemplates: 5,
-      customTemplates: false
-    },
-    PREMIUM: {
-      name: "Plan Premium",
-      price: "80.000 FC",
-      maxEvents: 20,
-      maxGuests: 500,
-      maxTemplates: 10,
-      customTemplates: true
-    },
-    ENTERPRISE: {
-      name: "Plan Enterprise",
-      price: "275.000 FC",
-      maxEvents: 9999,
-      maxGuests: 99999,
-      maxTemplates: 9999,
-      customTemplates: true
-    }
-  }
+  plans: getDefaultPlans(),
 };
 
 export async function getAdminSettings(req: AuthenticatedRequest, res: Response) {
@@ -796,10 +772,14 @@ export async function getAdminSettings(req: AuthenticatedRequest, res: Response)
     if (fs.existsSync(settingsFilePath)) {
       const data = fs.readFileSync(settingsFilePath, 'utf-8');
       const settings = JSON.parse(data);
-      return res.json({ ...defaultSettings, ...settings });
+      return res.json({
+        ...defaultSettings,
+        ...settings,
+        plans: getPlansConfiguration(),
+      });
     }
 
-    return res.json(defaultSettings);
+    return res.json({ ...defaultSettings, plans: getPlansConfiguration() });
   } catch (error: any) {
     console.error('Erreur lors de la récupération des paramètres:', error);
     return res.status(500).json({ error: 'Erreur lors de la récupération des paramètres' });
@@ -823,8 +803,12 @@ export async function updateAdminSettings(req: AuthenticatedRequest, res: Respon
 
     const updatedSettings = {
       ...currentSettings,
-      ...newSettings
+      ...newSettings,
     };
+
+    if (newSettings.plans) {
+      updatedSettings.plans = mergePlansForSave(newSettings.plans);
+    }
 
     fs.writeFileSync(settingsFilePath, JSON.stringify(updatedSettings, null, 2), 'utf-8');
     return res.json({ message: 'Paramètres mis à jour avec succès', settings: updatedSettings });

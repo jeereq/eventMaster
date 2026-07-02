@@ -1,58 +1,13 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const db_1 = require("../db");
 const notificationService_1 = require("../services/notificationService");
-const fs_1 = __importDefault(require("fs"));
-const path_1 = __importDefault(require("path"));
+const plansConfig_1 = require("../config/plansConfig");
 const router = (0, express_1.Router)();
-const settingsFilePath = path_1.default.join(__dirname, '..', 'config', 'settings.json');
 // GET /api/public/plans
-// Public endpoint to fetch active subscription plans configuration
 router.get('/plans', async (req, res) => {
-    const defaultPlans = {
-        STANDARD: {
-            name: "Plan Standard",
-            price: "30.000 FC",
-            maxEvents: 8,
-            maxGuests: 150,
-            maxTemplates: 5,
-            customTemplates: false
-        },
-        PREMIUM: {
-            name: "Plan Premium",
-            price: "80.000 FC",
-            maxEvents: 20,
-            maxGuests: 500,
-            maxTemplates: 10,
-            customTemplates: true
-        },
-        ENTERPRISE: {
-            name: "Plan Enterprise",
-            price: "275.000 FC",
-            maxEvents: 9999,
-            maxGuests: 99999,
-            maxTemplates: 9999,
-            customTemplates: true
-        }
-    };
-    try {
-        if (fs_1.default.existsSync(settingsFilePath)) {
-            const data = fs_1.default.readFileSync(settingsFilePath, 'utf-8');
-            const settings = JSON.parse(data);
-            if (settings.plans) {
-                return res.json(settings.plans);
-            }
-        }
-        return res.json(defaultPlans);
-    }
-    catch (error) {
-        console.error('Error reading plans from settings for public:', error);
-        return res.json(defaultPlans);
-    }
+    return res.json((0, plansConfig_1.getPlansConfiguration)());
 });
 // GET /api/public/templates
 // Public endpoint to fetch templates that are configured to be shown on the landing page

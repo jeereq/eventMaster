@@ -2,59 +2,15 @@ import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import Stripe from 'stripe';
-import fs from 'fs';
-import path from 'path';
+import { getPlanLimits, getPlansConfiguration } from '../config/plansConfig';
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_mock';
 const stripe = new Stripe(STRIPE_SECRET_KEY, {
   apiVersion: '2025-11-13' as any, // standard latest api version
 });
 
-const settingsFilePath = path.join(__dirname, '..', 'config', 'settings.json');
-
 function getPlansFromSettings() {
-  const defaultPlans = {
-    FREE: {
-      maxEvents: 3,
-      maxGuests: 50,
-      maxTemplates: 2,
-      customTemplates: false,
-    },
-    STANDARD: {
-      maxEvents: 8,
-      maxGuests: 150,
-      maxTemplates: 5,
-      customTemplates: false,
-    },
-    PREMIUM: {
-      maxEvents: 20,
-      maxGuests: 500,
-      maxTemplates: 10,
-      customTemplates: true,
-    },
-    ENTERPRISE: {
-      maxEvents: 9999,
-      maxGuests: 99999,
-      maxTemplates: 9999,
-      customTemplates: true,
-    },
-  };
-
-  try {
-    if (fs.existsSync(settingsFilePath)) {
-      const data = fs.readFileSync(settingsFilePath, 'utf-8');
-      const settings = JSON.parse(data);
-      if (settings.plans) {
-        return {
-          FREE: defaultPlans.FREE,
-          ...settings.plans
-        };
-      }
-    }
-  } catch (error) {
-    console.error('Error reading plans from settings:', error);
-  }
-  return defaultPlans;
+  return getPlansConfiguration();
 }
 
 // Get current tenant billing plan, usage and quotas
@@ -89,7 +45,7 @@ export async function getBillingStatus(req: AuthenticatedRequest, res: Response)
     });
 
     const limits = getPlansFromSettings();
-    const currentLimits = limits[tenant.plan as keyof typeof limits] || limits.FREE;
+    const currentLimits = getPlanLimits(tenant.plan);
 
     return res.json({
       plan: tenant.plan,
@@ -98,7 +54,13 @@ export async function getBillingStatus(req: AuthenticatedRequest, res: Response)
         guests: guestCount,
         templates: tenant._count.templates,
       },
-      limits: currentLimits,
+      limits: {
+        maxEvents: currentLimits.maxEvents,
+        maxGuests: currentLimits.maxGuests,
+        maxTemplates: currentLimits.maxTemplates,
+        customTemplates: currentLimits.customTemplates,
+      },
+      plans: limits,
     });
   } catch (error: any) {
     console.error('Erreur lors de la récupération du statut de facturation:', error);

@@ -1,56 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../db';
 import { sendRealEmail } from '../services/notificationService';
-import fs from 'fs';
-import path from 'path';
+import { getPlansConfiguration } from '../config/plansConfig';
 
 const router = Router();
 
-const settingsFilePath = path.join(__dirname, '..', 'config', 'settings.json');
-
 // GET /api/public/plans
-// Public endpoint to fetch active subscription plans configuration
 router.get('/plans', async (req: Request, res: Response) => {
-  const defaultPlans = {
-    STANDARD: {
-      name: "Plan Standard",
-      price: "30.000 FC",
-      maxEvents: 8,
-      maxGuests: 150,
-      maxTemplates: 5,
-      customTemplates: false
-    },
-    PREMIUM: {
-      name: "Plan Premium",
-      price: "80.000 FC",
-      maxEvents: 20,
-      maxGuests: 500,
-      maxTemplates: 10,
-      customTemplates: true
-    },
-    ENTERPRISE: {
-      name: "Plan Enterprise",
-      price: "275.000 FC",
-      maxEvents: 9999,
-      maxGuests: 99999,
-      maxTemplates: 9999,
-      customTemplates: true
-    }
-  };
-
-  try {
-    if (fs.existsSync(settingsFilePath)) {
-      const data = fs.readFileSync(settingsFilePath, 'utf-8');
-      const settings = JSON.parse(data);
-      if (settings.plans) {
-        return res.json(settings.plans);
-      }
-    }
-    return res.json(defaultPlans);
-  } catch (error) {
-    console.error('Error reading plans from settings for public:', error);
-    return res.json(defaultPlans);
-  }
+  return res.json(getPlansConfiguration());
 });
 
 // GET /api/public/templates

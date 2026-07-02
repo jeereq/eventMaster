@@ -29,6 +29,7 @@ const db_1 = require("../db");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
+const plansConfig_1 = require("../config/plansConfig");
 // Get global system statistics and list of all tenants (Super Admin only)
 async function getSystemStats(req, res) {
     try {
@@ -702,32 +703,7 @@ const defaultSettings = {
     twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || "",
     twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || "",
     twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER || "",
-    plans: {
-        STANDARD: {
-            name: "Plan Standard",
-            price: "30.000 FC",
-            maxEvents: 8,
-            maxGuests: 150,
-            maxTemplates: 5,
-            customTemplates: false
-        },
-        PREMIUM: {
-            name: "Plan Premium",
-            price: "80.000 FC",
-            maxEvents: 20,
-            maxGuests: 500,
-            maxTemplates: 10,
-            customTemplates: true
-        },
-        ENTERPRISE: {
-            name: "Plan Enterprise",
-            price: "275.000 FC",
-            maxEvents: 9999,
-            maxGuests: 99999,
-            maxTemplates: 9999,
-            customTemplates: true
-        }
-    }
+    plans: (0, plansConfig_1.getDefaultPlans)(),
 };
 async function getAdminSettings(req, res) {
     try {
@@ -738,9 +714,13 @@ async function getAdminSettings(req, res) {
         if (fs_1.default.existsSync(settingsFilePath)) {
             const data = fs_1.default.readFileSync(settingsFilePath, 'utf-8');
             const settings = JSON.parse(data);
-            return res.json({ ...defaultSettings, ...settings });
+            return res.json({
+                ...defaultSettings,
+                ...settings,
+                plans: (0, plansConfig_1.getPlansConfiguration)(),
+            });
         }
-        return res.json(defaultSettings);
+        return res.json({ ...defaultSettings, plans: (0, plansConfig_1.getPlansConfiguration)() });
     }
     catch (error) {
         console.error('Erreur lors de la récupération des paramètres:', error);
@@ -761,8 +741,11 @@ async function updateAdminSettings(req, res) {
         }
         const updatedSettings = {
             ...currentSettings,
-            ...newSettings
+            ...newSettings,
         };
+        if (newSettings.plans) {
+            updatedSettings.plans = (0, plansConfig_1.mergePlansForSave)(newSettings.plans);
+        }
         fs_1.default.writeFileSync(settingsFilePath, JSON.stringify(updatedSettings, null, 2), 'utf-8');
         return res.json({ message: 'Paramètres mis à jour avec succès', settings: updatedSettings });
     }

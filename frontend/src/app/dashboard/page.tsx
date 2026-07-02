@@ -2247,8 +2247,8 @@ function DashboardPageContent() {
                       </h4>
                     </div>
 
-                    <div className="grid md:grid-cols-3 gap-6">
-                      {['STANDARD', 'PREMIUM', 'ENTERPRISE'].map((planKey) => {
+                    <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6">
+                      {['FREE', 'STANDARD', 'PREMIUM', 'ENTERPRISE'].map((planKey) => {
                         const plan = adminSettings.plans[planKey];
                         if (!plan) return null;
 
@@ -2256,7 +2256,9 @@ function DashboardPageContent() {
                           <div key={planKey} className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4">
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-extrabold text-indigo-600 uppercase tracking-wider">{planKey}</span>
-                              <span className="text-xs bg-indigo-50 text-indigo-700 font-bold px-2.5 py-0.5 rounded-full">Mensuel</span>
+                              <span className="text-xs bg-indigo-50 text-indigo-700 font-bold px-2.5 py-0.5 rounded-full">
+                                {planKey === 'FREE' ? 'Gratuit' : 'Mensuel'}
+                              </span>
                             </div>
 
                             <div className="space-y-3">
@@ -2272,6 +2274,20 @@ function DashboardPageContent() {
                                   }}
                                   className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-indigo-500 transition"
                                   required
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Description</label>
+                                <textarea
+                                  value={plan.description || ''}
+                                  onChange={(e) => {
+                                    const updatedPlans = { ...adminSettings.plans };
+                                    updatedPlans[planKey] = { ...plan, description: e.target.value };
+                                    setAdminSettings({ ...adminSettings, plans: updatedPlans });
+                                  }}
+                                  rows={2}
+                                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-indigo-500 transition resize-none"
                                 />
                               </div>
 

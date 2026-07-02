@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
+import { getPlanLimits } from '../config/plansConfig';
 
 // List all events for the current tenant
 export async function getEvents(req: AuthenticatedRequest, res: Response) {
@@ -42,8 +43,13 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
       include: { _count: { select: { events: true } } },
     });
 
-    if (tenant && tenant.plan === 'FREE' && tenant._count.events >= 3) {
-      return res.status(403).json({ error: 'Quota d\'événements atteint pour le plan GRATUIT (Max 3 événements). Veuillez passer au plan PREMIUM.' });
+    if (tenant) {
+      const limits = getPlanLimits(tenant.plan);
+      if (tenant._count.events >= limits.maxEvents) {
+        return res.status(403).json({
+          error: `Quota d'événements atteint pour le plan ${tenant.plan} (Max ${limits.maxEvents === 9999 ? 'illimité' : limits.maxEvents}). Veuillez passer à un forfait supérieur.`,
+        });
+      }
     }
 
     const event = await prisma.event.create({

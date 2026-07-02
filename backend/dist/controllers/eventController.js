@@ -6,6 +6,7 @@ exports.getEventById = getEventById;
 exports.updateEvent = updateEvent;
 exports.deleteEvent = deleteEvent;
 const db_1 = require("../db");
+const plansConfig_1 = require("../config/plansConfig");
 // List all events for the current tenant
 async function getEvents(req, res) {
     try {
@@ -40,8 +41,13 @@ async function createEvent(req, res) {
             where: { id: tenantId },
             include: { _count: { select: { events: true } } },
         });
-        if (tenant && tenant.plan === 'FREE' && tenant._count.events >= 3) {
-            return res.status(403).json({ error: 'Quota d\'événements atteint pour le plan GRATUIT (Max 3 événements). Veuillez passer au plan PREMIUM.' });
+        if (tenant) {
+            const limits = (0, plansConfig_1.getPlanLimits)(tenant.plan);
+            if (tenant._count.events >= limits.maxEvents) {
+                return res.status(403).json({
+                    error: `Quota d'événements atteint pour le plan ${tenant.plan} (Max ${limits.maxEvents === 9999 ? 'illimité' : limits.maxEvents}). Veuillez passer à un forfait supérieur.`,
+                });
+            }
         }
         const event = await db_1.prisma.event.create({
             data: {

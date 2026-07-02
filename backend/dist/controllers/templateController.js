@@ -6,6 +6,7 @@ exports.getTemplateById = getTemplateById;
 exports.updateTemplate = updateTemplate;
 exports.deleteTemplate = deleteTemplate;
 const db_1 = require("../db");
+const plansConfig_1 = require("../config/plansConfig");
 // Get all templates (for the tenant, or all templates if Super Admin)
 async function getTemplates(req, res) {
     try {
@@ -51,8 +52,13 @@ async function createTemplate(req, res) {
                 where: { id: finalTenantId },
                 include: { _count: { select: { templates: true } } },
             });
-            if (tenant && tenant.plan === 'FREE' && tenant._count.templates >= 2) {
-                return res.status(403).json({ error: 'Quota de modèles atteint pour le plan GRATUIT (Max 2 modèles). Veuillez passer au plan PREMIUM.' });
+            if (tenant) {
+                const limits = (0, plansConfig_1.getPlanLimits)(tenant.plan);
+                if (tenant._count.templates >= limits.maxTemplates) {
+                    return res.status(403).json({
+                        error: `Quota de modèles atteint pour le plan ${tenant.plan} (Max ${limits.maxTemplates >= 9999 ? 'illimité' : limits.maxTemplates}). Veuillez passer à un forfait supérieur.`,
+                    });
+                }
             }
         }
         const template = await db_1.prisma.template.create({

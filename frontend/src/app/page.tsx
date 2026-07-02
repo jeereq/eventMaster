@@ -617,10 +617,10 @@ export default function Home() {
             <div className="border border-slate-200 dark:border-slate-800 rounded-3xl p-6 bg-white dark:bg-slate-900 flex flex-col justify-between shadow-sm hover:shadow-md transition">
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Plan Gratuit</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Parfait pour tester l'application ou organiser un petit événement.</p>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{dbPlans?.FREE?.name || 'Plan Gratuit'}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{dbPlans?.FREE?.description || "Parfait pour tester l'application ou organiser un petit événement."}</p>
                   <div className="flex items-baseline gap-1 mt-4">
-                    <span className="text-3xl font-extrabold text-slate-900 dark:text-white">0 FC</span>
+                    <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{dbPlans?.FREE?.price || '0 FC'}</span>
                     <span className="text-slate-500 dark:text-slate-400 text-sm">/sans engagement</span>
                   </div>
                 </div>
@@ -628,17 +628,17 @@ export default function Home() {
                 <ul className="space-y-3 text-xs text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800 pt-4">
                   <li className="flex items-center gap-2.5">
                     <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>Jusqu'à 3 événements actifs</span>
+                    <span>Jusqu'à {dbPlans?.FREE?.maxEvents ?? 3} événements actifs</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>Maximum 50 invités</span>
+                    <span>Maximum {dbPlans?.FREE?.maxGuests ?? 50} invités</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>2 modèles d'invitation simples</span>
+                    <span>{dbPlans?.FREE?.maxTemplates ?? 2} modèles d'invitation simples</span>
                   </li>
-                  <li className="flex items-center gap-2.5 text-slate-400 dark:text-slate-600 line-through">
+                  <li className={`flex items-center gap-2.5 ${dbPlans?.FREE?.customTemplates ? '' : 'text-slate-400 dark:text-slate-600 line-through'}`}>
                     <span>Modèles d'invitations customisés</span>
                   </li>
                 </ul>
@@ -654,7 +654,7 @@ export default function Home() {
               <div className="space-y-6">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">{dbPlans?.STANDARD?.name || 'Plan Standard'}</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Idéal pour les événements de taille moyenne.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{dbPlans?.STANDARD?.description || 'Idéal pour les événements de taille moyenne.'}</p>
                   <div className="flex items-baseline gap-1 mt-4">
                     <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{dbPlans?.STANDARD?.price || '40.000 FC'}</span>
                     <span className="text-slate-500 dark:text-slate-400 text-sm">/mois</span>
@@ -694,7 +694,7 @@ export default function Home() {
               <div className="space-y-6">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">{dbPlans?.PREMIUM?.name || 'Plan Premium'}</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Conçu pour les organisateurs réguliers d'événements.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{dbPlans?.PREMIUM?.description || "Conçu pour les organisateurs réguliers d'événements."}</p>
                   <div className="flex items-baseline gap-1 mt-4">
                     <span className="text-3xl font-extrabold text-indigo-600 dark:text-indigo-400">{dbPlans?.PREMIUM?.price || '80.000 FC'}</span>
                     <span className="text-slate-500 dark:text-slate-400 text-sm">/mois</span>
@@ -731,7 +731,7 @@ export default function Home() {
               <div className="space-y-6">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900 dark:text-white">{dbPlans?.ENTERPRISE?.name || 'Plan Enterprise'}</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Pour les grandes agences événementielles ou besoins sur-mesure.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{dbPlans?.ENTERPRISE?.description || 'Pour les grandes agences événementielles ou besoins sur-mesure.'}</p>
                   <div className="flex items-baseline gap-1 mt-4">
                     <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{dbPlans?.ENTERPRISE?.price || '275.000 FC'}</span>
                     <span className="text-slate-500 dark:text-slate-400 text-sm">/mois</span>
