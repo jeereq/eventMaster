@@ -3,11 +3,12 @@
 import React from 'react';
 import {
   RoomLayoutBlueprint,
-  getChairVisualClass,
   getFixtureClass,
+  getRoomOutlineClipPath,
   roomTypeLabels,
 } from '@/lib/roomLayoutUtils';
 import { getTableVisualClasses } from '@/lib/tablePlanUtils';
+import ChairRenderer from '@/components/ChairRenderer';
 
 interface RoomLayoutPreviewProps {
   blueprint: RoomLayoutBlueprint | null;
@@ -23,36 +24,65 @@ export default function RoomLayoutPreview({ blueprint, className = '' }: RoomLay
     );
   }
 
+  const outline = blueprint.roomOutline;
+  const clipPath = outline ? getRoomOutlineClipPath(outline.shape) : undefined;
+
   return (
     <div className={`space-y-2 ${className}`}>
       <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-500">
         <span>{roomTypeLabels[blueprint.roomType]}</span>
         <span>{blueprint.metadata.totalSeats} places · {blueprint.canvas.widthM}×{blueprint.canvas.heightM} m</span>
       </div>
-      <div className="relative aspect-[4/3] bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden">
-        {blueprint.fixtures.map((fixture) => (
+      <div
+        className="relative aspect-[4/3] bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden"
+        style={{
+          backgroundImage: 'linear-gradient(rgba(148,163,184,0.25) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.25) 1px, transparent 1px)',
+          backgroundSize: '20px 20px',
+        }}
+      >
+        {outline && (
           <div
-            key={fixture.id}
-            className={`absolute border text-[8px] font-bold flex items-center justify-center px-1 text-center ${getFixtureClass(fixture.kind)}`}
+            className="absolute pointer-events-none z-0"
             style={{
-              left: `${fixture.x}%`,
-              top: `${fixture.y}%`,
-              width: `${fixture.w}%`,
-              height: `${fixture.h}%`,
-              transform: 'translate(-0%, -0%)',
+              left: `${outline.x}%`,
+              top: `${outline.y}%`,
+              width: `${outline.w}%`,
+              height: `${outline.h}%`,
+              background: outline.fill ?? 'rgba(241,245,249,0.8)',
+              border: `2px solid ${outline.stroke ?? '#cbd5e1'}`,
+              borderRadius: outline.shape === 'circle' ? '50%' : '4px',
+              clipPath,
             }}
-            title={fixture.label}
-          >
-            {fixture.kind !== 'aisle' && fixture.label}
-          </div>
-        ))}
+          />
+        )}
+
+        {blueprint.fixtures.map((fixture) => {
+          const isColumn = fixture.kind === 'pillar' || fixture.kind === 'column';
+          return (
+            <div
+              key={fixture.id}
+              className={`absolute border text-[8px] font-bold flex items-center justify-center px-1 text-center z-[5] ${getFixtureClass(fixture.kind)} ${isColumn && fixture.columnShape === 'round' ? 'rounded-full' : isColumn ? 'rounded-sm' : ''}`}
+              style={{
+                left: `${fixture.x}%`,
+                top: `${fixture.y}%`,
+                width: `${fixture.w}%`,
+                height: `${fixture.h}%`,
+                backgroundColor: isColumn && fixture.color ? fixture.color : undefined,
+                transform: fixture.rotation ? `rotate(${fixture.rotation}deg)` : undefined,
+              }}
+              title={fixture.label}
+            >
+              {fixture.kind !== 'aisle' && fixture.label}
+            </div>
+          );
+        })}
 
         {blueprint.furniture.map((item) => {
           if (item.kind === 'zone') {
             return (
               <div
                 key={item.id}
-                className="absolute border-2 border-dashed border-sky-300 bg-sky-50/60 rounded-xl flex items-center justify-center text-[9px] font-semibold text-sky-700"
+                className="absolute border-2 border-dashed border-sky-300 bg-sky-50/60 rounded-xl flex items-center justify-center text-[9px] font-semibold text-sky-700 z-[6]"
                 style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.w}%`, height: `${item.h}%` }}
               >
                 {item.label}
@@ -64,14 +94,14 @@ export default function RoomLayoutPreview({ blueprint, className = '' }: RoomLay
             return (
               <div
                 key={item.id}
-                className="absolute -translate-x-1/2 -translate-y-1/2"
+                className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
                 style={{ left: `${item.x}%`, top: `${item.y}%` }}
               >
                 <div className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg shadow-xs min-w-[72px] text-center">
                   <p className="text-[8px] font-bold text-slate-700 truncate max-w-[80px]">{item.label}</p>
                   <div className="flex justify-center gap-0.5 mt-1 flex-wrap max-w-[88px]">
                     {Array.from({ length: Math.min(item.seatCount, 8) }).map((_, i) => (
-                      <span key={i} className={getChairVisualClass(item.chairType)} />
+                      <ChairRenderer key={i} chairType={item.chairType} imageUrl={item.chairImageUrl} size="xs" />
                     ))}
                     {item.seatCount > 8 && <span className="text-[7px] text-slate-400">+{item.seatCount - 8}</span>}
                   </div>
@@ -83,14 +113,14 @@ export default function RoomLayoutPreview({ blueprint, className = '' }: RoomLay
           return (
             <div
               key={item.id}
-              className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5"
+              className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5 z-10"
               style={{ left: `${item.x}%`, top: `${item.y}%` }}
             >
               <div className={`${getTableVisualClasses(item.shape)} scale-[0.45] origin-center shadow-xs`} />
               <span className="text-[7px] font-bold text-slate-600 bg-white/90 px-1 rounded">{item.name}</span>
               <div className="flex gap-0.5">
                 {Array.from({ length: Math.min(item.capacity, 6) }).map((_, i) => (
-                  <span key={i} className={getChairVisualClass(item.chairType)} />
+                  <ChairRenderer key={i} chairType={item.chairType} imageUrl={item.chairImageUrl} size="xs" />
                 ))}
               </div>
             </div>

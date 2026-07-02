@@ -1,6 +1,8 @@
 export type RoomType = 'SIMPLE' | 'BANQUET' | 'CONFERENCE' | 'AMPHITHEATER' | 'TENT' | 'CUSTOM';
 export type ChairType = 'BANQUET' | 'FOLDING' | 'THEATER' | 'STOOL' | 'ARMCHAIR' | 'WHEELCHAIR';
 export type TableShape = 'round' | 'rectangular' | 'square' | 'oval';
+export type RoomOutlineShape = 'rectangle' | 'square' | 'circle' | 'lShape' | 'hexagon' | 'octagon';
+export type ColumnShape = 'round' | 'square';
 
 export interface LayoutParams {
   tableCount?: number;
@@ -18,16 +20,29 @@ export interface LayoutParams {
 export interface RoomLayoutBlueprint {
   version: 1;
   roomType: RoomType;
+  templateId?: string;
+  roomOutline?: {
+    shape: RoomOutlineShape;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    fill?: string;
+    stroke?: string;
+    strokeWidth?: number;
+  };
   canvas: { widthM: number; heightM: number };
   fixtures: Array<{
     id: string;
-    kind: 'stage' | 'podium' | 'aisle' | 'entrance' | 'pillar' | 'perimeter';
+    kind: 'stage' | 'podium' | 'aisle' | 'entrance' | 'pillar' | 'perimeter' | 'column';
     x: number;
     y: number;
     w: number;
     h: number;
     rotation?: number;
     label?: string;
+    columnShape?: ColumnShape;
+    color?: string;
   }>;
   furniture: Array<
     | {
@@ -37,6 +52,7 @@ export interface RoomLayoutBlueprint {
         shape: TableShape;
         capacity: number;
         chairType: ChairType;
+        chairImageUrl?: string;
         x: number;
         y: number;
         locked?: boolean;
@@ -47,6 +63,7 @@ export interface RoomLayoutBlueprint {
         label: string;
         seatCount: number;
         chairType: ChairType;
+        chairImageUrl?: string;
         tier: number;
         x: number;
         y: number;
@@ -328,7 +345,12 @@ function generateTentBlueprint(params: LayoutParams, chairType: ChairType): Room
 
 export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | undefined) {
   if (!blueprint?.furniture?.length) {
-    return { tables: [], fixtures: blueprint?.fixtures ?? [], sourceRoomType: blueprint?.roomType ?? null };
+    return {
+      tables: [],
+      fixtures: blueprint?.fixtures ?? [],
+      roomOutline: blueprint?.roomOutline,
+      sourceRoomType: blueprint?.roomType ?? null,
+    };
   }
 
   const tables = blueprint.furniture
@@ -344,6 +366,7 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
           shape: item.shape,
           capacity: item.capacity,
           chairType: item.chairType,
+          chairImageUrl: item.chairImageUrl,
           x: item.x,
           y: item.y,
           seats,
@@ -371,6 +394,7 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
   return {
     tables,
     fixtures: blueprint.fixtures,
+    roomOutline: blueprint.roomOutline,
     sourceRoomType: blueprint.roomType,
     importedAt: new Date().toISOString(),
   };

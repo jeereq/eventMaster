@@ -171,6 +171,11 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
             latitude: true,
             longitude: true,
             tablePlan: true,
+            room: {
+              select: {
+                layoutBlueprint: true,
+              },
+            },
             invitations: {
               where: {
                 templateId: { not: null }
@@ -200,7 +205,30 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
       y: number;
       occupiedCount: number;
       isGuestTable: boolean;
+      chairType?: string;
+      chairImageUrl?: string;
     }> | null = null;
+    let planFixtures: Array<{
+      id: string;
+      kind: string;
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+      label?: string;
+      color?: string;
+      columnShape?: string;
+      rotation?: number;
+    }> | null = null;
+    let roomOutline: {
+      shape: string;
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+      fill?: string;
+      stroke?: string;
+    } | null = null;
 
     const eventObj = guest.event as any;
     if (eventObj && eventObj.tablePlan && typeof eventObj.tablePlan === 'object') {
@@ -215,7 +243,13 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
           y: table.y,
           occupiedCount: Object.values(table.seats || {}).filter(Boolean).length,
           isGuestTable: Object.values(table.seats || {}).includes(guestId),
+          chairType: table.chairType,
+          chairImageUrl: table.chairImageUrl,
         }));
+
+        if (Array.isArray(plan.fixtures)) {
+          planFixtures = plan.fixtures;
+        }
 
         for (const table of plan.tables) {
           const seatsObj = table.seats || {};
@@ -252,11 +286,20 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
               shape: table.shape,
               capacity: table.capacity,
               seatIndex,
+              chairType: table.chairType,
+              chairImageUrl: table.chairImageUrl,
               neighbors,
             };
             break;
           }
         }
+      }
+
+      const room = eventObj.room as any;
+      if (room?.layoutBlueprint?.roomOutline) {
+        roomOutline = room.layoutBlueprint.roomOutline;
+      } else if (plan.roomOutline) {
+        roomOutline = plan.roomOutline;
       }
     }
 
@@ -264,6 +307,8 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
       ...guest,
       tableDetails,
       tablePlanOverview,
+      planFixtures,
+      roomOutline,
       eventPassed: isEventDatePassed(guest.event.date),
       rsvpLocked: isEventDatePassed(guest.event.date),
     });

@@ -2,6 +2,9 @@ export type RoomType = 'SIMPLE' | 'BANQUET' | 'CONFERENCE' | 'AMPHITHEATER' | 'T
 export type ChairType = 'BANQUET' | 'FOLDING' | 'THEATER' | 'STOOL' | 'ARMCHAIR' | 'WHEELCHAIR';
 export type TableShape = 'round' | 'rectangular' | 'square' | 'oval';
 
+export type RoomOutlineShape = 'rectangle' | 'square' | 'circle' | 'lShape' | 'hexagon' | 'octagon';
+export type ColumnShape = 'round' | 'square';
+
 export interface LayoutParams {
   tableCount?: number;
   tableShape?: TableShape;
@@ -18,16 +21,29 @@ export interface LayoutParams {
 export interface RoomLayoutBlueprint {
   version: 1;
   roomType: RoomType;
+  templateId?: string;
+  roomOutline?: {
+    shape: RoomOutlineShape;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    fill?: string;
+    stroke?: string;
+    strokeWidth?: number;
+  };
   canvas: { widthM: number; heightM: number };
   fixtures: Array<{
     id: string;
-    kind: 'stage' | 'podium' | 'aisle' | 'entrance' | 'pillar' | 'perimeter';
+    kind: 'stage' | 'podium' | 'aisle' | 'entrance' | 'pillar' | 'perimeter' | 'column';
     x: number;
     y: number;
     w: number;
     h: number;
     rotation?: number;
     label?: string;
+    columnShape?: ColumnShape;
+    color?: string;
   }>;
   furniture: Array<
     | {
@@ -37,6 +53,7 @@ export interface RoomLayoutBlueprint {
         shape: TableShape;
         capacity: number;
         chairType: ChairType;
+        chairImageUrl?: string;
         x: number;
         y: number;
         locked?: boolean;
@@ -47,6 +64,7 @@ export interface RoomLayoutBlueprint {
         label: string;
         seatCount: number;
         chairType: ChairType;
+        chairImageUrl?: string;
         tier: number;
         x: number;
         y: number;
@@ -133,10 +151,138 @@ export function createBlueprintFixture(
     aisle: { x: 48, y: 18, w: 4, h: 72, label: 'Allée' },
     entrance: { x: 42, y: 2, w: 16, h: 6, label: 'Entrée' },
     pillar: { x: 48, y: 48, w: 4, h: 4, label: 'Poteau' },
+    column: { x: 30, y: 40, w: 3, h: 3, label: 'Colonne' },
     perimeter: { x: 8, y: 10, w: 84, h: 80, label: 'Périmètre' },
   };
   const d = defaults[kind] ?? { x: 40, y: 40, w: 20, h: 10, label: kind };
-  return { id: makeLayoutId('fixture'), kind, ...d };
+  return {
+    id: makeLayoutId('fixture'),
+    kind,
+    ...d,
+    columnShape: kind === 'pillar' || kind === 'column' ? 'round' as ColumnShape : undefined,
+    color: kind === 'pillar' || kind === 'column' ? '#78716c' : undefined,
+  };
+}
+
+export function defaultRoomOutline(shape: RoomOutlineShape = 'rectangle'): NonNullable<RoomLayoutBlueprint['roomOutline']> {
+  return {
+    shape,
+    x: 5,
+    y: 5,
+    w: 90,
+    h: 90,
+    fill: 'rgba(248, 250, 252, 0.9)',
+    stroke: '#94a3b8',
+    strokeWidth: 2,
+  };
+}
+
+export function ensureBlueprintDefaults(blueprint: RoomLayoutBlueprint): RoomLayoutBlueprint {
+  return {
+    ...blueprint,
+    roomOutline: blueprint.roomOutline ?? defaultRoomOutline('rectangle'),
+  };
+}
+
+export interface RoomLayoutTemplate {
+  id: string;
+  name: string;
+  description: string;
+  roomType: RoomType;
+  outlineShape: RoomOutlineShape;
+  build: (params?: LayoutParams) => RoomLayoutBlueprint;
+}
+
+export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
+  {
+    id: 'banquet-classic',
+    name: 'Banquet classique',
+    description: '8 tables rondes + scène',
+    roomType: 'BANQUET',
+    outlineShape: 'rectangle',
+    build: (p) => ensureBlueprintDefaults({ ...generateRoomBlueprint('BANQUET', { tableCount: 8, ...p }), templateId: 'banquet-classic', roomOutline: defaultRoomOutline('rectangle') }),
+  },
+  {
+    id: 'banquet-oval',
+    name: 'Banquet ovale',
+    description: '12 tables dans une salle ovale',
+    roomType: 'BANQUET',
+    outlineShape: 'circle',
+    build: (p) => ensureBlueprintDefaults({ ...generateRoomBlueprint('BANQUET', { tableCount: 12, tableShape: 'round', ...p }), templateId: 'banquet-oval', roomOutline: defaultRoomOutline('circle') }),
+  },
+  {
+    id: 'conference-standard',
+    name: 'Conférence standard',
+    description: '6 rangées + podium',
+    roomType: 'CONFERENCE',
+    outlineShape: 'rectangle',
+    build: (p) => ensureBlueprintDefaults({ ...generateRoomBlueprint('CONFERENCE', { rowCount: 6, ...p }), templateId: 'conference-standard', roomOutline: defaultRoomOutline('rectangle') }),
+  },
+  {
+    id: 'amphitheater-small',
+    name: 'Amphithéâtre compact',
+    description: '3 gradins × 2 rangées',
+    roomType: 'AMPHITHEATER',
+    outlineShape: 'hexagon',
+    build: (p) => ensureBlueprintDefaults({ ...generateRoomBlueprint('AMPHITHEATER', { tierCount: 3, rowsPerTier: 2, ...p }), templateId: 'amphitheater-small', roomOutline: defaultRoomOutline('hexagon') }),
+  },
+  {
+    id: 'tent-garden',
+    name: 'Tente de réception',
+    description: 'Tente avec 6 tables',
+    roomType: 'TENT',
+    outlineShape: 'octagon',
+    build: (p) => ensureBlueprintDefaults({ ...generateRoomBlueprint('TENT', { tableCount: 6, ...p }), templateId: 'tent-garden', roomOutline: defaultRoomOutline('octagon') }),
+  },
+  {
+    id: 'empty-lshape',
+    name: 'Salle en L',
+    description: 'Contour vide personnalisable',
+    roomType: 'SIMPLE',
+    outlineShape: 'lShape',
+    build: () => ensureBlueprintDefaults({
+      version: 1,
+      roomType: 'SIMPLE',
+      templateId: 'empty-lshape',
+      canvas: { widthM: 20, heightM: 15 },
+      roomOutline: defaultRoomOutline('lShape'),
+      fixtures: [],
+      furniture: [],
+      metadata: { totalSeats: 0 },
+    }),
+  },
+];
+
+export function applyRoomTemplate(templateId: string, params?: LayoutParams): RoomLayoutBlueprint | null {
+  const tpl = ROOM_LAYOUT_TEMPLATES.find((t) => t.id === templateId);
+  if (!tpl) return null;
+  return refreshBlueprintMetadata(tpl.build(params));
+}
+
+export const roomOutlineLabels: Record<RoomOutlineShape, string> = {
+  rectangle: 'Rectangle',
+  square: 'Carré',
+  circle: 'Circulaire / Ovale',
+  lShape: 'Forme en L',
+  hexagon: 'Hexagone',
+  octagon: 'Octogone',
+};
+
+export function getRoomOutlineClipPath(shape: RoomOutlineShape): string | undefined {
+  switch (shape) {
+    case 'circle':
+      return 'ellipse(45% 42% at 50% 50%)';
+    case 'hexagon':
+      return 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)';
+    case 'octagon':
+      return 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)';
+    case 'lShape':
+      return 'polygon(0% 0%, 65% 0%, 65% 35%, 100% 35%, 100% 100%, 0% 100%)';
+    case 'square':
+      return 'inset(8% 20% 8% 20%)';
+    default:
+      return undefined;
+  }
 }
 
 function gridPositions(count: number, margin = 12, maxCol?: number) {
@@ -391,7 +537,12 @@ function generateTentBlueprint(params: LayoutParams, chairType: ChairType): Room
 
 export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | undefined) {
   if (!blueprint?.furniture?.length) {
-    return { tables: [], fixtures: blueprint?.fixtures ?? [], sourceRoomType: blueprint?.roomType ?? null };
+    return {
+      tables: [],
+      fixtures: blueprint?.fixtures ?? [],
+      roomOutline: blueprint?.roomOutline,
+      sourceRoomType: blueprint?.roomType ?? null,
+    };
   }
 
   const tables = blueprint.furniture
@@ -407,6 +558,7 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
           shape: item.shape,
           capacity: item.capacity,
           chairType: item.chairType,
+          chairImageUrl: item.chairImageUrl,
           x: item.x,
           y: item.y,
           seats,
@@ -434,6 +586,7 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
   return {
     tables,
     fixtures: blueprint.fixtures,
+    roomOutline: blueprint.roomOutline,
     sourceRoomType: blueprint.roomType,
     importedAt: new Date().toISOString(),
   };
@@ -492,7 +645,8 @@ export function getFixtureClass(kind: string): string {
     case 'aisle':
       return 'bg-slate-100 border-slate-200 border-dashed text-slate-400';
     case 'pillar':
-      return 'bg-stone-400 border-stone-500 rounded-full';
+    case 'column':
+      return 'bg-stone-400 border-stone-500';
     case 'perimeter':
       return 'bg-sky-50 border-sky-300 border-dashed text-sky-600';
     default:

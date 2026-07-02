@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { downloadMedia, getMediaExtension, sanitizeFilenamePart } from '@/lib/downloadMedia';
 import { GuestPortalHomeLink } from '@/components/GuestPortalNav';
 import GuestTablePlanView from '@/app/rsvp/GuestTablePlanView';
+import type { ChairType, RoomOutlineShape } from '@/lib/roomLayoutUtils';
 import { 
   Calendar, MapPin, CheckCircle2, XCircle, AlertCircle, 
   HelpCircle, Utensils, Loader2, Award, Sparkles,
@@ -25,6 +26,8 @@ interface GuestRsvpData {
     shape: 'round' | 'rectangular' | 'square' | 'oval';
     capacity: number;
     seatIndex?: number;
+    chairType?: string;
+    chairImageUrl?: string;
     neighbors: Array<{ id: string; firstName: string; lastName: string; seatIndex?: number }>;
   } | null;
   tablePlanOverview?: Array<{
@@ -36,7 +39,31 @@ interface GuestRsvpData {
     y: number;
     occupiedCount: number;
     isGuestTable: boolean;
+    chairType?: string;
+    chairImageUrl?: string;
   }> | null;
+  planFixtures?: Array<{
+    id: string;
+    kind: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    label?: string;
+    color?: string;
+    columnShape?: string;
+    rotation?: number;
+  }> | null;
+  roomOutline?: {
+    shape: string;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    fill?: string;
+    stroke?: string;
+    strokeWidth?: number;
+  } | null;
   eventPassed?: boolean;
   rsvpLocked?: boolean;
   event: {
@@ -545,8 +572,19 @@ export default function RsvpPage() {
             {/* 2. MA TABLE TAB */}
             {activeGuestTab === 'table' && (
               <GuestTablePlanView
-                tableDetails={guest.tableDetails ?? null}
-                tablePlanOverview={guest.tablePlanOverview ?? null}
+                tableDetails={guest.tableDetails ? {
+                  ...guest.tableDetails,
+                  chairType: guest.tableDetails.chairType as ChairType | undefined,
+                } : null}
+                tablePlanOverview={guest.tablePlanOverview?.map((t) => ({
+                  ...t,
+                  chairType: t.chairType as ChairType | undefined,
+                })) ?? null}
+                planFixtures={guest.planFixtures ?? null}
+                roomOutline={guest.roomOutline ? {
+                  ...guest.roomOutline,
+                  shape: guest.roomOutline.shape as RoomOutlineShape,
+                } : null}
                 guestFirstName={guest.firstName}
                 guestLastName={guest.lastName}
               />
