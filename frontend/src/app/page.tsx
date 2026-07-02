@@ -201,6 +201,9 @@ export default function Home() {
             </div>
           </div>
           <nav className="flex items-center gap-4">
+            <Link href="/contact" className="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition">
+              Contact
+            </Link>
             {user ? (
               <>
                 <span className="text-xs text-slate-500 font-semibold hidden md:inline">
@@ -619,7 +622,7 @@ export default function Home() {
                 </ul>
               </div>
 
-              <Link href="/register" className="w-full text-center py-2.5 mt-6 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl transition text-xs shadow-md">
+              <Link href="/contact" className="w-full text-center py-2.5 mt-6 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl transition text-xs shadow-md">
                 Prendre contact
               </Link>
             </div>
@@ -633,6 +636,13 @@ export default function Home() {
           <div className="flex items-center justify-center gap-2 mb-4 sm:mb-0">
             <PartyPopper className="w-5 h-5 text-indigo-500" />
             <span className="text-white font-bold">EventMaster</span>
+          </div>
+          <div className="flex gap-4 justify-center text-xs mb-4 sm:mb-0">
+            <Link href="/contact" className="hover:text-white transition">Contact</Link>
+            <span className="text-slate-700">|</span>
+            <Link href="/login" className="hover:text-white transition">Connexion</Link>
+            <span className="text-slate-700">|</span>
+            <Link href="/register" className="hover:text-white transition">Inscription</Link>
           </div>
           <p className="text-xs">© 2026 EventMaster SaaS. Isolation stricte garantie. Tous droits réservés.</p>
         </div>
