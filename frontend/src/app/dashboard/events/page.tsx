@@ -52,6 +52,62 @@ interface InvitationItem {
   template?: { id: string; name: string } | null;
 }
 
+interface BroadcastChannelResult {
+  channel: string;
+  success: boolean;
+  simulated: boolean;
+  error?: string | null;
+}
+
+interface BroadcastResultItem {
+  guestId: string;
+  guestName: string;
+  email: string;
+  phone?: string | null;
+  rsvpLink: string;
+  subject?: string;
+  body?: string;
+  channel: string;
+  status: 'SENT' | 'SENT_SIMULATED' | 'FAILED' | string;
+  simulated?: boolean;
+  error?: string | null;
+  channelResults?: BroadcastChannelResult[];
+}
+
+interface BroadcastSummary {
+  total: number;
+  sent: number;
+  simulated: number;
+  failed: number;
+  allSimulated: boolean;
+}
+
+function getBroadcastStatusMeta(status: string) {
+  switch (status) {
+    case 'SENT':
+      return { label: 'Envoyé', classes: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+    case 'SENT_SIMULATED':
+      return { label: 'Simulé', classes: 'bg-amber-50 text-amber-700 border-amber-200' };
+    case 'FAILED':
+      return { label: 'Échec', classes: 'bg-rose-50 text-rose-700 border-rose-200' };
+    default:
+      return { label: status, classes: 'bg-slate-50 text-slate-600 border-slate-200' };
+  }
+}
+
+function getChannelLabel(channel: string) {
+  switch (channel) {
+    case 'EMAIL':
+      return 'E-mail';
+    case 'WHATSAPP':
+      return 'WhatsApp';
+    case 'SMS':
+      return 'SMS';
+    default:
+      return channel;
+  }
+}
+
 const MESSAGE_TEMPLATES = [
   {
     id: 'wedding',
@@ -190,7 +246,9 @@ export default function EventsPage() {
   const [savingInvite, setSavingInvite] = useState(false);
 
   // Broadcast results
-  const [broadcastResults, setBroadcastResults] = useState<any[] | null>(null);
+  const [broadcastResults, setBroadcastResults] = useState<BroadcastResultItem[] | null>(null);
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [broadcastSummary, setBroadcastSummary] = useState<BroadcastSummary | null>(null);
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
   const [broadcastingInviteId, setBroadcastingInviteId] = useState<string | null>(null);
   const [copiedGuestId, setCopiedGuestId] = useState<string | null>(null);
@@ -994,7 +1052,9 @@ export default function EventsPage() {
 
     try {
       const response = await api.post(`/events/${selectedEvent.id}/invitations/${inviteId}/broadcast`);
-      setBroadcastResults(response.results);
+      setBroadcastResults(response.results || []);
+      setBroadcastMessage(response.message || '');
+      setBroadcastSummary(response.summary || null);
       setShowBroadcastModal(true);
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la diffusion.');
@@ -1019,7 +1079,9 @@ export default function EventsPage() {
         guestIds: selectedGuestIds,
         channel: bulkSelectedChannel,
       });
-      setBroadcastResults(response.results);
+      setBroadcastResults(response.results || []);
+      setBroadcastMessage(response.message || '');
+      setBroadcastSummary(response.summary || null);
       setShowBulkInviteModal(false);
       setShowBroadcastModal(true);
       setSelectedGuestIds([]); // Clear selection after successful send
@@ -2529,32 +2591,133 @@ export default function EventsPage() {
         </div>
       )}
 
-      {/* Broadcast Simulation Modal */}
+      {/* Broadcast Results Modal */}
       {showBroadcastModal && broadcastResults && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-4xl p-6 space-y-6">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2">
-                <div className="bg-emerald-50 text-emerald-600 p-1.5 rounded-lg">
-                  <Check className="w-5 h-5" />
+                <div className={`p-1.5 rounded-lg ${
+                  broadcastSummary?.failed === broadcastSummary?.total
+                    ? 'bg-rose-50 text-rose-600'
+                    : broadcastSummary?.allSimulated
+                      ? 'bg-amber-50 text-amber-600'
+                      : (broadcastSummary?.failed || 0) > 0 || (broadcastSummary?.simulated || 0) > 0
+                        ? 'bg-amber-50 text-amber-600'
+                        : 'bg-emerald-50 text-emerald-600'
+                }`}>
+                  {broadcastSummary?.failed === broadcastSummary?.total ? (
+                    <AlertCircle className="w-5 h-5" />
+                  ) : broadcastSummary?.allSimulated || (broadcastSummary?.failed || 0) > 0 ? (
+                    <AlertCircle className="w-5 h-5" />
+                  ) : (
+                    <Check className="w-5 h-5" />
+                  )}
                 </div>
-                <h3 className="text-lg font-bold text-slate-900">Envoi des invitations effectué !</h3>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">
+                    {broadcastSummary?.failed === broadcastSummary?.total
+                      ? 'Échec de l\'envoi'
+                      : broadcastSummary?.allSimulated
+                        ? 'Envoi simulé'
+                        : (broadcastSummary?.failed || 0) > 0
+                          ? 'Envoi partiel'
+                          : 'Envoi des invitations effectué !'}
+                  </h3>
+                  {broadcastMessage && (
+                    <p className="text-sm text-slate-500 mt-0.5">{broadcastMessage}</p>
+                  )}
+                </div>
               </div>
-              <button onClick={() => { setShowBroadcastModal(false); setBroadcastResults(null); }} className="text-slate-400 hover:text-slate-600 transition">
+              <button
+                onClick={() => {
+                  setShowBroadcastModal(false);
+                  setBroadcastResults(null);
+                  setBroadcastMessage('');
+                  setBroadcastSummary(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 transition"
+              >
                 <XCircle className="w-6 h-6" />
               </button>
             </div>
+
+            {broadcastSummary && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
+                  <div className="text-xl font-black text-slate-900">{broadcastSummary.total}</div>
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total</div>
+                </div>
+                <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-center">
+                  <div className="text-xl font-black text-emerald-700">{broadcastSummary.sent}</div>
+                  <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Envoyés</div>
+                </div>
+                <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-center">
+                  <div className="text-xl font-black text-amber-700">{broadcastSummary.simulated}</div>
+                  <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Simulés</div>
+                </div>
+                <div className="bg-rose-50 border border-rose-100 rounded-xl p-3 text-center">
+                  <div className="text-xl font-black text-rose-700">{broadcastSummary.failed}</div>
+                  <div className="text-[10px] font-bold text-rose-600 uppercase tracking-wider">Échecs</div>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-4">
               <p className="text-sm text-slate-500 leading-relaxed">
-                Les invitations ont été traitées pour chacun de vos invités. Si les clés API réelles (SendGrid, Twilio) sont configurées, les messages ont été envoyés instantanément. Sinon, l'envoi a été simulé dans la console du serveur.
+                Détail par invité ci-dessous. Les envois réels passent par SendGrid (e-mail), Twilio (SMS) et UltraMsg (WhatsApp), configurables dans le panneau Super Admin ou via les variables d&apos;environnement du serveur.
               </p>
               <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl space-y-3 max-h-96 overflow-y-auto">
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200 pb-2 mb-2">Liens RSVP individuels et options de partage direct :</div>
-                {broadcastResults.map((res, index) => (
-                  <div key={index} className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 py-3 border-b border-slate-100/80 last:border-0 pb-3 last:pb-0">
-                    <div className="space-y-0.5 min-w-[200px]">
-                      <div className="font-bold text-slate-800 text-sm">{res.guestName}</div>
-                      <div className="text-slate-400 text-xs truncate max-w-xs">{res.email}</div>
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200 pb-2 mb-2">
+                  Résultats d&apos;envoi et options de partage manuel :
+                </div>
+                {broadcastResults.map((res, index) => {
+                  const statusMeta = getBroadcastStatusMeta(res.status);
+                  return (
+                  <div key={res.guestId || index} className="flex flex-col gap-3 py-3 border-b border-slate-100/80 last:border-0 pb-3 last:pb-0">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                      <div className="space-y-1 min-w-[200px]">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="font-bold text-slate-800 text-sm">{res.guestName}</div>
+                          <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusMeta.classes}`}>
+                            {statusMeta.label}
+                          </span>
+                          {res.channel && (
+                            <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                              {res.channel.split(',').map(c => getChannelLabel(c.trim())).join(' + ')}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-slate-400 text-xs truncate max-w-xs">{res.email}</div>
+                        {res.phone && (
+                          <div className="text-slate-500 text-xs font-mono">{res.phone}</div>
+                        )}
+                        {res.error && (
+                          <div className="text-rose-600 text-xs font-medium bg-rose-50 border border-rose-100 rounded-lg px-2 py-1 mt-1">
+                            {res.error}
+                          </div>
+                        )}
+                        {res.channelResults && res.channelResults.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-1">
+                            {res.channelResults.map((cr, crIdx) => (
+                              <span
+                                key={crIdx}
+                                title={cr.error || undefined}
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border ${
+                                  cr.success && !cr.simulated
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                    : cr.simulated
+                                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                      : 'bg-rose-50 text-rose-700 border-rose-200'
+                                }`}
+                              >
+                                {getChannelLabel(cr.channel)}
+                                {cr.success ? (cr.simulated ? '(simulé)' : '✓') : '✗'}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       {/* Open Link */}
@@ -2656,12 +2819,18 @@ export default function EventsPage() {
                       </a>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
             <div className="pt-4 border-t border-slate-100 flex justify-end">
-              <button 
-                onClick={() => { setShowBroadcastModal(false); setBroadcastResults(null); }}
+              <button
+                onClick={() => {
+                  setShowBroadcastModal(false);
+                  setBroadcastResults(null);
+                  setBroadcastMessage('');
+                  setBroadcastSummary(null);
+                }}
                 className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition"
               >
                 Fermer

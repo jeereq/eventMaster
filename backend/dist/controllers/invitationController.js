@@ -297,11 +297,31 @@ async function sendInvitation(req, res) {
             };
         }));
         const allSimulated = sentInvitations.every(inv => inv.simulated);
-        const message = allSimulated
-            ? `Envoi simulé réussi via ${activeChannel} pour ${guests.length} invités.`
-            : `Envoi réel effectué avec succès via ${activeChannel} pour ${guests.length} invités.`;
+        const failedCount = sentInvitations.filter(inv => inv.status === 'FAILED').length;
+        const simulatedCount = sentInvitations.filter(inv => inv.status === 'SENT_SIMULATED').length;
+        const sentCount = sentInvitations.filter(inv => inv.status === 'SENT').length;
+        let message;
+        if (failedCount === sentInvitations.length) {
+            message = `Échec de l'envoi pour ${failedCount} invité(s) via ${activeChannel}.`;
+        }
+        else if (allSimulated) {
+            message = `Envoi simulé pour ${guests.length} invité(s) via ${activeChannel} (UltraMsg/SendGrid/Twilio non configurés).`;
+        }
+        else if (failedCount > 0 || simulatedCount > 0) {
+            message = `Envoi partiel : ${sentCount} réussi(s), ${simulatedCount} simulé(s), ${failedCount} échec(s) via ${activeChannel}.`;
+        }
+        else {
+            message = `Envoi réel effectué avec succès pour ${guests.length} invité(s) via ${activeChannel}.`;
+        }
         return res.json({
             message,
+            summary: {
+                total: sentInvitations.length,
+                sent: sentCount,
+                simulated: simulatedCount,
+                failed: failedCount,
+                allSimulated,
+            },
             invitationsSent: sentInvitations,
             results: sentInvitations.map(inv => {
                 const guest = guests.find(g => g.id === inv.guestId);
@@ -315,7 +335,9 @@ async function sendInvitation(req, res) {
                     body: inv.body,
                     channel: inv.channel,
                     status: inv.status,
+                    simulated: inv.simulated,
                     error: inv.error,
+                    channelResults: inv.channelResults,
                 };
             })
         });

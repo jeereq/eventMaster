@@ -80,7 +80,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto pb-12">
+    <div className="space-y-8 w-full">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Mon Compte</h1>
