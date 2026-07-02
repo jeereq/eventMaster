@@ -7,6 +7,7 @@ import {
   User, Mail, Phone, Lock, Building, Loader2, 
   AlertCircle, CheckCircle2, ShieldCheck, Save, Award, Calendar
 } from 'lucide-react';
+import TeamManagement from '../TeamManagement';
 
 export default function ProfilePage() {
   const { user, tenant, updateUserAndTenant } = useAuth();
@@ -300,6 +301,8 @@ export default function ProfilePage() {
           </button>
         </div>
       </form>
+
+      {user?.role === 'USER' && tenant && <TeamManagement />}
     </div>
   );
 }

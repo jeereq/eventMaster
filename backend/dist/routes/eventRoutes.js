@@ -31,6 +31,7 @@ router.post('/:eventId/invitations/:id/send', invitationController_1.sendInvitat
 router.post('/:eventId/invitations/:id/broadcast', invitationController_1.sendInvitation);
 // Feed & Guest Shares related to Events (Protected)
 router.get('/:eventId/shares', feedController_1.getEventShares);
+router.delete('/:eventId/shares/:shareId', feedController_1.deleteGuestShare);
 router.get('/:eventId/feed', feedController_1.getEventFeed);
 router.post('/:eventId/feed', feedController_1.createEventPost);
 router.delete('/:eventId/feed/:postId', feedController_1.deleteEventPost);

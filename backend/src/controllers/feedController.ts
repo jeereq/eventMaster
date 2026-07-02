@@ -173,7 +173,7 @@ export async function createEventPost(req: AuthenticatedRequest, res: Response) 
   }
 }
 
-// 5. Delete Event Post (Protected - Organizer Dashboard)
+// 5. Delete Event Post (Protected - Organization members)
 export async function deleteEventPost(req: AuthenticatedRequest, res: Response) {
   try {
     const tenantId = req.user?.tenantId;
@@ -209,6 +209,44 @@ export async function deleteEventPost(req: AuthenticatedRequest, res: Response) 
   } catch (error: any) {
     console.error('Erreur lors de la suppression du post:', error);
     return res.status(500).json({ error: 'Erreur lors de la suppression du post.' });
+  }
+}
+
+// 5b. Delete Guest Share (Protected - Organization members)
+export async function deleteGuestShare(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    const eventId = req.params.eventId as string;
+    const shareId = req.params.shareId as string;
+
+    if (!tenantId) {
+      return res.status(403).json({ error: 'Tenant non identifié.' });
+    }
+
+    const event = await prisma.event.findFirst({
+      where: { id: eventId, tenantId },
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: 'Événement non trouvé.' });
+    }
+
+    const share = await prisma.guestShare.findFirst({
+      where: { id: shareId, eventId },
+    });
+
+    if (!share) {
+      return res.status(404).json({ error: 'Message du livre d\'or introuvable.' });
+    }
+
+    await prisma.guestShare.delete({
+      where: { id: shareId },
+    });
+
+    return res.json({ message: 'Message du livre d\'or supprimé avec succès.' });
+  } catch (error: any) {
+    console.error('Erreur lors de la suppression du partage:', error);
+    return res.status(500).json({ error: 'Erreur lors de la suppression du message.' });
   }
 }
 

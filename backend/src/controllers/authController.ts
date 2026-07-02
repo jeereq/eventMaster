@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { prisma } from '../db';
 import { sendRealEmail, sendRealWhatsApp } from '../services/notificationService';
 import { AuthenticatedRequest } from '../middleware/auth';
+import { formatTenantResponse } from '../utils/tenantAccess';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'eventmaster-secret-key-12345';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -102,13 +103,7 @@ export async function register(req: Request, res: Response) {
         phone: result.user.phone,
         role: result.user.role,
       },
-      tenant: {
-        id: result.tenant.id,
-        name: result.tenant.name,
-        plan: result.tenant.plan,
-        licenseActive: result.tenant.licenseActive,
-        licenseExpiresAt: result.tenant.licenseExpiresAt,
-      },
+      tenant: formatTenantResponse(result.tenant),
     });
   } catch (error: any) {
     console.error('Erreur lors de l\'inscription:', error);
@@ -170,15 +165,7 @@ export async function login(req: Request, res: Response) {
         name: user.name,
         role: user.role,
       },
-      tenant: user.tenant
-        ? {
-            id: user.tenant.id,
-            name: user.tenant.name,
-            plan: user.tenant.plan,
-            licenseActive: user.tenant.licenseActive,
-            licenseExpiresAt: user.tenant.licenseExpiresAt,
-          }
-        : null,
+      tenant: user.tenant ? formatTenantResponse(user.tenant) : null,
     });
   } catch (error: any) {
     console.error('Erreur lors de la connexion:', error);
@@ -232,15 +219,7 @@ export async function verifyEmail(req: Request, res: Response) {
         phone: updatedUser.phone,
         role: updatedUser.role,
       },
-      tenant: user.tenant
-        ? {
-            id: user.tenant.id,
-            name: user.tenant.name,
-            plan: user.tenant.plan,
-            licenseActive: user.tenant.licenseActive,
-            licenseExpiresAt: user.tenant.licenseExpiresAt,
-          }
-        : null,
+      tenant: user.tenant ? formatTenantResponse(user.tenant) : null,
     });
   } catch (error: any) {
     console.error('Erreur lors de la vérification du compte:', error);
@@ -272,15 +251,7 @@ export async function getProfile(req: AuthenticatedRequest, res: Response) {
         phone: user.phone,
         role: user.role,
       },
-      tenant: user.tenant
-        ? {
-            id: user.tenant.id,
-            name: user.tenant.name,
-            plan: user.tenant.plan,
-            licenseActive: user.tenant.licenseActive,
-            licenseExpiresAt: user.tenant.licenseExpiresAt,
-          }
-        : null,
+      tenant: user.tenant ? formatTenantResponse(user.tenant) : null,
     });
   } catch (error: any) {
     console.error('Erreur lors de la récupération du profil:', error);
@@ -354,15 +325,7 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
         phone: result.user.phone,
         role: result.user.role,
       },
-      tenant: result.tenant
-        ? {
-            id: result.tenant.id,
-            name: result.tenant.name,
-            plan: result.tenant.plan,
-            licenseActive: result.tenant.licenseActive,
-            licenseExpiresAt: result.tenant.licenseExpiresAt,
-          }
-        : null,
+      tenant: result.tenant ? formatTenantResponse(result.tenant) : null,
     });
   } catch (error: any) {
     console.error('Erreur lors de la mise à jour du profil:', error);

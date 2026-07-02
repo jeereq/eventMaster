@@ -289,6 +289,17 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
     }
   };
 
+  const handleDeleteShare = async (shareId: string) => {
+    if (!confirm('Voulez-vous vraiment supprimer ce message du livre d\'or ?')) return;
+    try {
+      await api.delete(`/events/${eventId}/shares/${shareId}`);
+      setShares(shares.filter((s) => s.id !== shareId));
+    } catch (err) {
+      console.error('Error deleting share:', err);
+      alert('Erreur lors de la suppression.');
+    }
+  };
+
   const handleCreateComment = async (postId: string) => {
     const content = commentContents[postId];
     if (!content || !content.trim()) return;
@@ -765,6 +776,14 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
                             <Download className="w-4 h-4" />
                           </button>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteShare(share.id)}
+                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition flex-shrink-0"
+                          title="Supprimer ce message"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                         <Heart className="w-4 h-4 text-rose-300 dark:text-rose-700 flex-shrink-0" />
                       </div>
 

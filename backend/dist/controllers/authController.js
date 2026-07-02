@@ -15,6 +15,7 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const crypto_1 = __importDefault(require("crypto"));
 const db_1 = require("../db");
 const notificationService_1 = require("../services/notificationService");
+const tenantAccess_1 = require("../utils/tenantAccess");
 const JWT_SECRET = process.env.JWT_SECRET || 'eventmaster-secret-key-12345';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 async function register(req, res) {
@@ -100,13 +101,7 @@ async function register(req, res) {
                 phone: result.user.phone,
                 role: result.user.role,
             },
-            tenant: {
-                id: result.tenant.id,
-                name: result.tenant.name,
-                plan: result.tenant.plan,
-                licenseActive: result.tenant.licenseActive,
-                licenseExpiresAt: result.tenant.licenseExpiresAt,
-            },
+            tenant: (0, tenantAccess_1.formatTenantResponse)(result.tenant),
         });
     }
     catch (error) {
@@ -157,15 +152,7 @@ async function login(req, res) {
                 name: user.name,
                 role: user.role,
             },
-            tenant: user.tenant
-                ? {
-                    id: user.tenant.id,
-                    name: user.tenant.name,
-                    plan: user.tenant.plan,
-                    licenseActive: user.tenant.licenseActive,
-                    licenseExpiresAt: user.tenant.licenseExpiresAt,
-                }
-                : null,
+            tenant: user.tenant ? (0, tenantAccess_1.formatTenantResponse)(user.tenant) : null,
         });
     }
     catch (error) {
@@ -209,15 +196,7 @@ async function verifyEmail(req, res) {
                 phone: updatedUser.phone,
                 role: updatedUser.role,
             },
-            tenant: user.tenant
-                ? {
-                    id: user.tenant.id,
-                    name: user.tenant.name,
-                    plan: user.tenant.plan,
-                    licenseActive: user.tenant.licenseActive,
-                    licenseExpiresAt: user.tenant.licenseExpiresAt,
-                }
-                : null,
+            tenant: user.tenant ? (0, tenantAccess_1.formatTenantResponse)(user.tenant) : null,
         });
     }
     catch (error) {
@@ -246,15 +225,7 @@ async function getProfile(req, res) {
                 phone: user.phone,
                 role: user.role,
             },
-            tenant: user.tenant
-                ? {
-                    id: user.tenant.id,
-                    name: user.tenant.name,
-                    plan: user.tenant.plan,
-                    licenseActive: user.tenant.licenseActive,
-                    licenseExpiresAt: user.tenant.licenseExpiresAt,
-                }
-                : null,
+            tenant: user.tenant ? (0, tenantAccess_1.formatTenantResponse)(user.tenant) : null,
         });
     }
     catch (error) {
@@ -319,15 +290,7 @@ async function updateProfile(req, res) {
                 phone: result.user.phone,
                 role: result.user.role,
             },
-            tenant: result.tenant
-                ? {
-                    id: result.tenant.id,
-                    name: result.tenant.name,
-                    plan: result.tenant.plan,
-                    licenseActive: result.tenant.licenseActive,
-                    licenseExpiresAt: result.tenant.licenseExpiresAt,
-                }
-                : null,
+            tenant: result.tenant ? (0, tenantAccess_1.formatTenantResponse)(result.tenant) : null,
         });
     }
     catch (error) {

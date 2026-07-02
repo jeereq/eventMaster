@@ -6,6 +6,7 @@ exports.getPublicEventShares = getPublicEventShares;
 exports.getEventFeed = getEventFeed;
 exports.createEventPost = createEventPost;
 exports.deleteEventPost = deleteEventPost;
+exports.deleteGuestShare = deleteGuestShare;
 exports.createEventComment = createEventComment;
 exports.toggleLikeEventPost = toggleLikeEventPost;
 const db_1 = require("../db");
@@ -159,7 +160,7 @@ async function createEventPost(req, res) {
         return res.status(500).json({ error: 'Erreur lors de la création du post.' });
     }
 }
-// 5. Delete Event Post (Protected - Organizer Dashboard)
+// 5. Delete Event Post (Protected - Organization members)
 async function deleteEventPost(req, res) {
     try {
         const tenantId = req.user?.tenantId;
@@ -189,6 +190,37 @@ async function deleteEventPost(req, res) {
     catch (error) {
         console.error('Erreur lors de la suppression du post:', error);
         return res.status(500).json({ error: 'Erreur lors de la suppression du post.' });
+    }
+}
+// 5b. Delete Guest Share (Protected - Organization members)
+async function deleteGuestShare(req, res) {
+    try {
+        const tenantId = req.user?.tenantId;
+        const eventId = req.params.eventId;
+        const shareId = req.params.shareId;
+        if (!tenantId) {
+            return res.status(403).json({ error: 'Tenant non identifié.' });
+        }
+        const event = await db_1.prisma.event.findFirst({
+            where: { id: eventId, tenantId },
+        });
+        if (!event) {
+            return res.status(404).json({ error: 'Événement non trouvé.' });
+        }
+        const share = await db_1.prisma.guestShare.findFirst({
+            where: { id: shareId, eventId },
+        });
+        if (!share) {
+            return res.status(404).json({ error: 'Message du livre d\'or introuvable.' });
+        }
+        await db_1.prisma.guestShare.delete({
+            where: { id: shareId },
+        });
+        return res.json({ message: 'Message du livre d\'or supprimé avec succès.' });
+    }
+    catch (error) {
+        console.error('Erreur lors de la suppression du partage:', error);
+        return res.status(500).json({ error: 'Erreur lors de la suppression du message.' });
     }
 }
 // 6. Create Event Comment (Public - Guest RSVP page and Dashboard)

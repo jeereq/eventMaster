@@ -18,6 +18,7 @@ interface Tenant {
   plan: 'FREE' | 'STANDARD' | 'PREMIUM' | 'ENTERPRISE';
   licenseActive?: boolean;
   licenseExpiresAt?: string | null;
+  managerId?: string | null;
 }
 
 interface AuthContextType {
