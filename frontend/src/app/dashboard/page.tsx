@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { 
@@ -78,7 +79,7 @@ interface AdminTemplateItem {
   createdAt: string;
 }
 
-export default function DashboardPage() {
+function DashboardPageContent() {
   const { user, tenant } = useAuth();
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -86,8 +87,18 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const tabParam = searchParams.get('tab');
+
   // Super Admin specific states
   const [activeTab, setActiveTab] = useState<'tenants' | 'users' | 'templates' | 'events' | 'analytics' | 'guests' | 'settings' | 'subscriptions'>('tenants');
+
+  useEffect(() => {
+    if (user?.role === 'SUPER_ADMIN' && tabParam && ['tenants', 'users', 'templates', 'events', 'analytics', 'guests', 'settings', 'subscriptions'].includes(tabParam)) {
+      setActiveTab(tabParam as any);
+    }
+  }, [tabParam, user]);
   const [users, setUsers] = useState<AdminUserItem[]>([]);
   const [templates, setTemplates] = useState<AdminTemplateItem[]>([]);
   const [adminEvents, setAdminEvents] = useState<any[]>([]);
@@ -1016,200 +1027,176 @@ export default function DashboardPage() {
         {adminData && (
           <div className="grid sm:grid-cols-4 gap-6">
             {/* Tenants Widget */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Organisations</span>
-                <div className="bg-indigo-50 text-indigo-600 p-2 rounded-xl">
+                <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Organisations</span>
+                <div className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 p-2 rounded-xl">
                   <Building2 className="w-5 h-5" />
                 </div>
               </div>
               <div>
-                <span className="text-3xl font-extrabold text-slate-900">{adminData.stats.tenants}</span>
-                <p className="text-xs text-slate-400 mt-1.5 font-medium">Inscrites sur la plateforme</p>
+                <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{adminData.stats.tenants}</span>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium">Inscrites sur la plateforme</p>
               </div>
             </div>
 
             {/* Users Widget */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Utilisateurs</span>
-                <div className="bg-violet-50 text-violet-600 p-2 rounded-xl">
+                <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Utilisateurs</span>
+                <div className="bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400 p-2 rounded-xl">
                   <Users className="w-5 h-5" />
                 </div>
               </div>
               <div>
-                <span className="text-3xl font-extrabold text-slate-900">{adminData.stats.users}</span>
-                <p className="text-xs text-slate-400 mt-1.5 font-medium">Comptes actifs créés</p>
+                <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{adminData.stats.users}</span>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium">Comptes actifs créés</p>
               </div>
             </div>
 
             {/* Events Widget */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Événements</span>
-                <div className="bg-emerald-50 text-emerald-600 p-2 rounded-xl">
+                <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Événements</span>
+                <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 p-2 rounded-xl">
                   <Calendar className="w-5 h-5" />
                 </div>
               </div>
               <div>
-                <span className="text-3xl font-extrabold text-slate-900">{adminData.stats.events}</span>
-                <p className="text-xs text-slate-400 mt-1.5 font-medium">Organisés au total</p>
+                <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{adminData.stats.events}</span>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium">Organisés au total</p>
               </div>
             </div>
 
             {/* Guests Widget */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Invités</span>
-                <div className="bg-amber-50 text-amber-600 p-2 rounded-xl">
+                <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Invités</span>
+                <div className="bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 p-2 rounded-xl">
                   <Mail className="w-5 h-5" />
                 </div>
               </div>
               <div>
-                <span className="text-3xl font-extrabold text-slate-900">{adminData.stats.guests}</span>
-                <p className="text-xs text-slate-400 mt-1.5 font-medium">Enregistrés dans le système</p>
+                <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{adminData.stats.guests}</span>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium">Enregistrés dans le système</p>
               </div>
             </div>
           </div>
         )}
 
         {/* Global Management Panel */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          {/* Tabs header */}
-          <div className="border-b border-slate-200 bg-slate-50/50 px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex gap-2 p-1 bg-slate-100 rounded-xl self-start">
-              <button
-                onClick={() => { setActiveTab('tenants'); setSearchTerm(''); }}
-                className={`px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2 ${activeTab === 'tenants' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-              >
-                <Building2 className="w-4 h-4" />
-                Organisations (Tenants)
-              </button>
-              <button
-                onClick={() => { setActiveTab('users'); setSearchTerm(''); }}
-                className={`px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2 ${activeTab === 'users' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-              >
-                <Users className="w-4 h-4" />
-                Utilisateurs
-              </button>
-              <button
-                onClick={() => { setActiveTab('templates'); setSearchTerm(''); }}
-                className={`px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2 ${activeTab === 'templates' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-              >
-                <FileText className="w-4 h-4" />
-                Modèles d'Invitation
-              </button>
-              <button
-                onClick={() => { setActiveTab('events'); setSearchTerm(''); }}
-                className={`px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2 ${activeTab === 'events' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-              >
-                <Calendar className="w-4 h-4" />
-                Événements
-              </button>
-              <button
-                onClick={() => { setActiveTab('guests'); setSearchTerm(''); }}
-                className={`px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2 ${activeTab === 'guests' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-              >
-                <Users className="w-4 h-4" />
-                Invités
-              </button>
-              <button
-                onClick={() => { setActiveTab('analytics'); setSearchTerm(''); }}
-                className={`px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2 ${activeTab === 'analytics' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-              >
-                <BarChart3 className="w-4 h-4" />
-                Analyses & Statistiques
-              </button>
-              <button
-                onClick={() => { setActiveTab('settings'); setSearchTerm(''); }}
-                className={`px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2 ${activeTab === 'settings' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-              >
-                <Key className="w-4 h-4" />
-                Configurations
-              </button>
-              <button
-                onClick={() => { setActiveTab('subscriptions'); setSearchTerm(''); }}
-                className={`px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2 ${activeTab === 'subscriptions' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-              >
-                <CreditCard className="w-4 h-4" />
-                Abonnements
-              </button>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          {/* Section header */}
+          <div className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
+                {activeTab === 'tenants' && <Building2 className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
+                {activeTab === 'users' && <Users className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
+                {activeTab === 'templates' && <FileText className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
+                {activeTab === 'events' && <Calendar className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
+                {activeTab === 'guests' && <Users className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
+                {activeTab === 'analytics' && <BarChart3 className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
+                {activeTab === 'settings' && <Key className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
+                {activeTab === 'subscriptions' && <CreditCard className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
+                
+                {activeTab === 'tenants' && "Gestion des Organisations"}
+                {activeTab === 'users' && "Gestion des Utilisateurs"}
+                {activeTab === 'templates' && "Modèles d'Invitation Globaux"}
+                {activeTab === 'events' && "Supervision des Événements"}
+                {activeTab === 'guests' && "Supervision des Invités"}
+                {activeTab === 'analytics' && "Analyses & Statistiques Globales"}
+                {activeTab === 'settings' && "Configuration des Plans & Tarifs"}
+                {activeTab === 'subscriptions' && "Demandes d'Abonnement"}
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
+                {activeTab === 'tenants' && "Gérez les organisations enregistrées, leurs abonnements et l'état de leurs licences."}
+                {activeTab === 'users' && "Consultez et administrez l'ensemble des comptes d'utilisateurs de la plateforme."}
+                {activeTab === 'templates' && "Créez et configurez des modèles d'invitation globaux réutilisables par tous."}
+                {activeTab === 'events' && "Supervisez tous les événements créés par les organisations sur la plateforme."}
+                {activeTab === 'guests' && "Consultez et gérez la liste globale de tous les invités enregistrés."}
+                {activeTab === 'analytics' && "Visualisez les performances, l'adoption des forfaits et l'activité globale."}
+                {activeTab === 'settings' && "Configurez les caractéristiques, limites et prix des différents forfaits."}
+                {activeTab === 'subscriptions' && "Validez ou rejetez les demandes d'activation ou de changement d'abonnement."}
+              </p>
             </div>
 
-            {activeTab === 'tenants' && (
-              <button
-                onClick={handleOpenCreateTenantModal}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition flex items-center gap-2 shadow-md shadow-indigo-100"
-              >
-                <Plus className="w-4 h-4" />
-                Créer une Organisation
-              </button>
-            )}
-
-            {activeTab === 'users' && (
-              <button
-                onClick={handleOpenCreateUserModal}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition flex items-center gap-2 shadow-md shadow-indigo-100"
-              >
-                <Plus className="w-4 h-4" />
-                Créer un Utilisateur
-              </button>
-            )}
-
-            {activeTab === 'templates' && (
-              <div className="flex gap-2">
-                <Link
-                  href="/dashboard/templates"
-                  className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-sm transition flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  Concepteur Visuel
-                </Link>
+            {/* Action buttons on the right */}
+            <div className="flex flex-wrap items-center gap-2">
+              {activeTab === 'tenants' && (
                 <button
-                  onClick={() => setIsTemplateModalOpen(true)}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition flex items-center gap-2 shadow-md shadow-indigo-100"
+                  onClick={handleOpenCreateTenantModal}
+                  className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-md shadow-indigo-100 dark:shadow-none"
                 >
                   <Plus className="w-4 h-4" />
-                  Créer un Modèle Global
+                  Créer une Organisation
                 </button>
-              </div>
-            )}
+              )}
 
-            {activeTab === 'events' && (
-              <button
-                onClick={handleOpenCreateEventModal}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition flex items-center gap-2 shadow-md shadow-indigo-100"
-              >
-                <Plus className="w-4 h-4" />
-                Créer un Événement
-              </button>
-            )}
+              {activeTab === 'users' && (
+                <button
+                  onClick={handleOpenCreateUserModal}
+                  className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-md shadow-indigo-100 dark:shadow-none"
+                >
+                  <Plus className="w-4 h-4" />
+                  Créer un Utilisateur
+                </button>
+              )}
 
-            {activeTab === 'guests' && (
-              <div className="flex gap-2">
-                {adminGuests.length > 0 && (
-                  <button
-                    onClick={handleExportAdminGuests}
-                    className="px-4 py-2 border border-slate-200 text-slate-600 font-bold rounded-xl text-sm transition flex items-center gap-2 hover:bg-slate-50"
+              {activeTab === 'templates' && (
+                <div className="flex gap-2">
+                  <Link
+                    href="/dashboard/templates"
+                    className="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 font-bold rounded-xl text-xs transition flex items-center gap-2 border border-indigo-100 dark:border-indigo-900/30"
                   >
-                    <Download className="w-4 h-4" />
-                    Exporter CSV
+                    <Plus className="w-4 h-4" />
+                    Concepteur Visuel
+                  </Link>
+                  <button
+                    onClick={() => setIsTemplateModalOpen(true)}
+                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-md shadow-indigo-100 dark:shadow-none"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Créer un Modèle Global
                   </button>
-                )}
+                </div>
+              )}
+
+              {activeTab === 'events' && (
                 <button
-                  onClick={handleOpenCreateGuestModal}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition flex items-center gap-2 shadow-md shadow-indigo-100"
+                  onClick={handleOpenCreateEventModal}
+                  className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-md shadow-indigo-100 dark:shadow-none"
                 >
                   <Plus className="w-4 h-4" />
-                  Créer un Invité
+                  Créer un Événement
                 </button>
-              </div>
-            )}
+              )}
+
+              {activeTab === 'guests' && (
+                <div className="flex gap-2">
+                  {adminGuests.length > 0 && (
+                    <button
+                      onClick={handleExportAdminGuests}
+                      className="px-4 py-2.5 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-xl text-xs transition flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-800"
+                    >
+                      <Download className="w-4 h-4" />
+                      Exporter CSV
+                    </button>
+                  )}
+                  <button
+                    onClick={handleOpenCreateGuestModal}
+                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-md shadow-indigo-100 dark:shadow-none"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Créer un Invité
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Filters and search */}
           {activeTab !== 'analytics' && activeTab !== 'settings' && activeTab !== 'subscriptions' && (
-            <div className="p-6 border-b border-slate-100 bg-white flex flex-col sm:flex-row gap-4">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
               <input
@@ -1223,7 +1210,7 @@ export default function DashboardPage() {
                 }
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
               />
             </div>
 
@@ -1233,7 +1220,7 @@ export default function DashboardPage() {
                 <select
                   value={filterPlan}
                   onChange={(e) => setFilterPlan(e.target.value)}
-                  className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                  className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
                 >
                   <option value="ALL">Tous les plans</option>
                   <option value="FREE">FREE</option>
@@ -1250,7 +1237,7 @@ export default function DashboardPage() {
                 <select
                   value={filterRole}
                   onChange={(e) => setFilterRole(e.target.value)}
-                  className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                  className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
                 >
                   <option value="ALL">Tous les rôles</option>
                   <option value="USER">USER</option>
@@ -1266,7 +1253,7 @@ export default function DashboardPage() {
                 <select
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value as any)}
-                  className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                  className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
                 >
                   <option value="ALL">Tous les modèles</option>
                   <option value="GLOBAL">Modèles Globaux (Publics)</option>
@@ -1281,7 +1268,7 @@ export default function DashboardPage() {
                 <select
                   value={filterRsvp}
                   onChange={(e) => setFilterRsvp(e.target.value)}
-                  className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                  className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
                 >
                   <option value="ALL">Tous les statuts RSVP</option>
                   <option value="PENDING">En attente (PENDING)</option>
@@ -3928,5 +3915,20 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
+          <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Chargement de votre espace sécurisé...</p>
+        </div>
+      </div>
+    }>
+      <DashboardPageContent />
+    </Suspense>
   );
 }

@@ -1,15 +1,58 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { 
   Calendar, Users, Mail, CreditCard, LayoutDashboard, 
-  LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper, User, Sun, Moon, BarChart3
+  LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper, User, Sun, Moon, BarChart3,
+  Building2, Settings, Shield, FileText, Key
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
+
+interface NavItem {
+  name: string;
+  href: string;
+  tab?: string;
+  icon: React.ComponentType<any>;
+}
+
+function SidebarNav({ 
+  navItems, 
+  pathname, 
+  setMobileMenuOpen 
+}: { 
+  navItems: NavItem[], 
+  pathname: string, 
+  setMobileMenuOpen: (open: boolean) => void 
+}) {
+  const searchParams = useSearchParams();
+  const currentTab = searchParams.get('tab') || 'tenants';
+
+  return (
+    <nav className="space-y-1.5">
+      {navItems.map((item) => {
+        const Icon = item.icon;
+        const isActive = item.tab 
+          ? pathname === '/dashboard' && currentTab === item.tab
+          : pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+        return (
+          <Link
+            key={item.name}
+            href={item.href}
+            onClick={() => setMobileMenuOpen(false)}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition ${isActive ? 'bg-indigo-600 text-white shadow-lg dark:shadow-none shadow-indigo-100' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+          >
+            <Icon className="w-5 h-5 flex-shrink-0" />
+            <span>{item.name}</span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, tenant, token, loading, logout } = useAuth();
@@ -47,7 +90,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const navItems = user?.role === 'SUPER_ADMIN' 
     ? [
-        { name: 'Tableau de bord Admin', href: '/dashboard', icon: LayoutDashboard },
+        { name: 'Organisations', href: '/dashboard?tab=tenants', tab: 'tenants', icon: Building2 },
+        { name: 'Utilisateurs', href: '/dashboard?tab=users', tab: 'users', icon: Users },
+        { name: 'Modèles Globaux', href: '/dashboard?tab=templates', tab: 'templates', icon: FileText },
+        { name: 'Événements', href: '/dashboard?tab=events', tab: 'events', icon: Calendar },
+        { name: 'Invités', href: '/dashboard?tab=guests', tab: 'guests', icon: Users },
+        { name: 'Analyses & Stats', href: '/dashboard?tab=analytics', tab: 'analytics', icon: BarChart3 },
+        { name: 'Demandes d\'Abonnement', href: '/dashboard?tab=subscriptions', tab: 'subscriptions', icon: CreditCard },
+        { name: 'Configurations', href: '/dashboard?tab=settings', tab: 'settings', icon: Key },
         { name: 'Mon Compte', href: '/dashboard/profile', icon: User },
       ]
     : [
@@ -131,23 +181,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ) : null}
 
           {/* Nav Items */}
-          <nav className="space-y-1.5">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition ${isActive ? 'bg-indigo-600 text-white shadow-lg dark:shadow-none shadow-indigo-100' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-                >
-                  <Icon className="w-5 h-5 flex-shrink-0" />
-                  <span>{item.name}</span>
-                </Link>
-              );
-            })}
-          </nav>
+          <Suspense fallback={<div className="h-20 flex items-center justify-center"><Loader2 className="w-5 h-5 text-indigo-600 animate-spin" /></div>}>
+            <SidebarNav navItems={navItems} pathname={pathname} setMobileMenuOpen={setMobileMenuOpen} />
+          </Suspense>
         </div>
 
         {/* User profile & Logout */}
