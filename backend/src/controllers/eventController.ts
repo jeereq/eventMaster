@@ -9,6 +9,7 @@ import {
   resolveOrgAccess,
 } from '../services/permissionsService';
 import { blueprintToTablePlan } from '../services/roomLayoutService';
+import { toPrismaJson } from '../utils/prismaJson';
 
 // List all events for the current tenant
 export async function getEvents(req: AuthenticatedRequest, res: Response) {
@@ -98,7 +99,7 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
         reminderFrequency: reminderFrequency || 'NONE',
         latitude: latitude !== undefined && latitude !== null ? parseFloat(latitude) : null,
         longitude: longitude !== undefined && longitude !== null ? parseFloat(longitude) : null,
-        tablePlan: tablePlanData,
+        tablePlan: tablePlanData ? toPrismaJson(tablePlanData) : undefined,
       },
       include: { room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } } },
     });
@@ -266,7 +267,7 @@ export async function importRoomLayout(req: AuthenticatedRequest, res: Response)
     const tablePlan = blueprintToTablePlan(event.room.layoutBlueprint as any);
     const updatedEvent = await prisma.event.update({
       where: { id },
-      data: { tablePlan },
+      data: { tablePlan: toPrismaJson(tablePlan) },
       include: { room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } } },
     });
 
