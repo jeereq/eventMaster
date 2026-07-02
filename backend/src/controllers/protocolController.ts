@@ -9,6 +9,7 @@ import {
   extractGuestIdFromScanPayload,
   findGuestSeatInTablePlan,
 } from '../services/commercialService';
+import { notifyGuestSeatConfirmed } from '../services/guestSeatNotificationService';
 
 async function loadGuestForEvent(eventId: string, tenantId: string, guestId: string) {
   const guest = await prisma.guest.findFirst({
@@ -137,7 +138,7 @@ export async function verifyGuestSeat(req: AuthenticatedRequest, res: Response) 
 
     const event = await prisma.event.findFirst({
       where: { id: eventId, tenantId },
-      select: { tablePlan: true },
+      select: { title: true, date: true, location: true, tablePlan: true },
     });
     if (!event) {
       return res.status(404).json({ error: 'Événement introuvable.' });
@@ -148,6 +149,7 @@ export async function verifyGuestSeat(req: AuthenticatedRequest, res: Response) 
       return res.status(404).json({ error: 'Invité introuvable.' });
     }
 
+    const wasAlreadyVerified = guest.seatVerified;
     const assigned = findGuestSeatInTablePlan(event.tablePlan, guestId);
     let seatMatch = true;
     let mismatchReason: string | null = null;
@@ -172,13 +174,52 @@ export async function verifyGuestSeat(req: AuthenticatedRequest, res: Response) 
       },
     });
 
+    let notification: Awaited<ReturnType<typeof notifyGuestSeatConfirmed>> | null = null;
+
+    if (seatMatch && assigned && !wasAlreadyVerified) {
+      notification = await notifyGuestSeatConfirmed({
+        guest: {
+          id: guest.id,
+          firstName: guest.firstName,
+          lastName: guest.lastName,
+          email: guest.email,
+          phone: guest.phone,
+          preferences: guest.preferences,
+        },
+        event: {
+          title: event.title,
+          date: event.date,
+          location: event.location,
+        },
+        assignedSeat: assigned,
+      });
+
+      if (!notification.sent) {
+        console.warn('[Protocol] Notification placement non envoyée:', notification.errors);
+      } else {
+        console.log('[Protocol] Notification placement envoyée:', notification.channels.join(', '));
+      }
+    }
+
+    const baseMessage = seatMatch
+      ? 'Siège confirmé : l\'invité est bien à sa place.'
+      : mismatchReason || 'Siège non conforme.';
+
+    const notificationHint =
+      seatMatch && notification?.sent
+        ? ` Notification envoyée (${notification.channels.join(', ')}).`
+        : seatMatch && notification && !notification.sent
+          ? ' Notification non envoyée (coordonnées invité manquantes ou erreur d\'envoi).'
+          : '';
+
     return res.json({
-      message: seatMatch
-        ? 'Siège confirmé : l\'invité est bien à sa place.'
-        : mismatchReason || 'Siège non conforme.',
+      message: baseMessage + notificationHint,
       seatMatch,
       assignedSeat: assigned,
       guest: updated,
+      notification: notification
+        ? { sent: notification.sent, channels: notification.channels, errors: notification.errors }
+        : undefined,
     });
   } catch (error) {
     console.error('verifyGuestSeat:', error);
