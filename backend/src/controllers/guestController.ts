@@ -2,6 +2,12 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { getPlanLimits } from '../config/plansConfig';
+import { normalizePhone } from '../utils/guestIdentity';
+
+function resolveGuestPhone(body: any, preferences: any): string | null {
+  const rawPhone = body?.phone || preferences?.phone || preferences?.telephone;
+  return normalizePhone(typeof rawPhone === 'string' ? rawPhone : null);
+}
 
 // Helper function to verify event ownership
 async function verifyEventOwner(eventId: string, tenantId: string): Promise<boolean> {
@@ -85,15 +91,19 @@ export async function createGuest(req: AuthenticatedRequest, res: Response) {
       return res.status(400).json({ error: 'Un invité avec cet email existe déjà pour cet événement' });
     }
 
+    const guestPreferences = preferences || {};
+    const normalizedPhone = resolveGuestPhone(req.body, guestPreferences);
+
     const guest = await prisma.guest.create({
       data: {
         eventId,
         firstName,
         lastName,
         email,
+        phone: normalizedPhone,
         category: category || 'Général',
         rsvp: rsvp || 'PENDING',
-        preferences: preferences || {},
+        preferences: guestPreferences,
       },
     });
 
@@ -129,15 +139,23 @@ export async function updateGuest(req: AuthenticatedRequest, res: Response) {
       return res.status(404).json({ error: 'Invité non trouvé dans cet événement' });
     }
 
+    const mergedPreferences =
+      preferences !== undefined ? preferences : (existingGuest.preferences as any);
+    const normalizedPhone =
+      req.body.phone !== undefined || preferences !== undefined
+        ? resolveGuestPhone(req.body, mergedPreferences)
+        : existingGuest.phone;
+
     const updatedGuest = await prisma.guest.update({
       where: { id },
       data: {
         firstName: firstName !== undefined ? firstName : existingGuest.firstName,
         lastName: lastName !== undefined ? lastName : existingGuest.lastName,
         email: email !== undefined ? email : existingGuest.email,
+        phone: normalizedPhone,
         category: category !== undefined ? category : existingGuest.category,
         rsvp: rsvp !== undefined ? rsvp : existingGuest.rsvp,
-        preferences: preferences !== undefined ? preferences : (existingGuest.preferences as any),
+        preferences: mergedPreferences,
       },
     });
 
@@ -239,6 +257,7 @@ export async function importGuests(req: AuthenticatedRequest, res: Response) {
       if (g.notes) {
         guestPrefs.notes = g.notes;
       }
+      const normalizedPhone = resolveGuestPhone(g, guestPrefs);
 
       try {
         await prisma.guest.upsert({
@@ -247,6 +266,7 @@ export async function importGuests(req: AuthenticatedRequest, res: Response) {
             firstName: g.firstName,
             lastName: g.lastName,
             category: g.category || 'Général',
+            phone: normalizedPhone,
             preferences: guestPrefs,
           },
           create: {
@@ -254,6 +274,7 @@ export async function importGuests(req: AuthenticatedRequest, res: Response) {
             firstName: g.firstName,
             lastName: g.lastName,
             email: g.email,
+            phone: normalizedPhone,
             category: g.category || 'Général',
             preferences: guestPrefs,
           },

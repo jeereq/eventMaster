@@ -11,6 +11,7 @@ import {
   Building2, Settings, Shield, FileText, Key, MessageSquare
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
+import UserLegalGate from '@/components/UserLegalGate';
 
 interface NavItem {
   name: string;
@@ -213,7 +214,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto max-w-full p-4 sm:p-6 lg:p-8">
-        {children}
+        <UserLegalGate>{children}</UserLegalGate>
       </main>
     </div>
   );

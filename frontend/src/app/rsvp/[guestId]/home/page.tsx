@@ -26,7 +26,7 @@ interface GuestInvitationItem {
 }
 
 interface GuestInvitationsResponse {
-  guest: { firstName: string; lastName: string; email: string };
+  guest: { firstName: string; lastName: string; email: string | null; phone?: string | null };
   invitations: GuestInvitationItem[];
   total: number;
   upcomingCount: number;
@@ -183,7 +183,7 @@ export default function GuestHomePage() {
             Bonjour {data.guest.firstName} !
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400">
-            Retrouvez ici toutes les célébrations auxquelles vous avez été invité(e).
+            Retrouvez ici toutes les célébrations auxquelles vous avez été invité(e), regroupées par email et numéro de téléphone.
           </p>
         </div>
 

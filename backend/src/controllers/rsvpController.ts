@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { sendRealEmail, sendRealSMS, sendRealWhatsApp, sendRealWhatsAppImage } from '../services/notificationService';
 import { renderGuestMessage, polishWhatsAppBody } from '../services/messageTemplateService';
+import { findGuestsByIdentity } from '../services/legalService';
+import { extractGuestEmail, extractGuestPhone } from '../utils/guestIdentity';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -271,39 +273,23 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
   }
 }
 
-// Public endpoint: all events where this guest (by email) has been invited
+// Public endpoint: all events where this guest (by email or phone) has been invited
 export async function getGuestAllInvitations(req: Request, res: Response) {
   try {
     const guestId = req.params.guestId as string;
 
     const anchorGuest = await prisma.guest.findUnique({
       where: { id: guestId },
-      select: { id: true, firstName: true, lastName: true, email: true },
+      select: { id: true, firstName: true, lastName: true, email: true, phone: true, preferences: true },
     });
 
     if (!anchorGuest) {
       return res.status(404).json({ error: 'Invité non trouvé ou lien invalide.' });
     }
 
-    const normalizedEmail = anchorGuest.email.trim().toLowerCase();
-
-    const guestRecords = await prisma.guest.findMany({
-      where: {
-        email: { equals: anchorGuest.email, mode: 'insensitive' },
-      },
-      include: {
-        event: {
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            date: true,
-            location: true,
-            tenant: { select: { name: true } },
-          },
-        },
-      },
-    });
+    const guestRecords = await findGuestsByIdentity(anchorGuest);
+    const identityEmail = extractGuestEmail(anchorGuest);
+    const identityPhone = extractGuestPhone(anchorGuest);
 
     const invitations = guestRecords
       .map((record) => {
@@ -324,13 +310,18 @@ export async function getGuestAllInvitations(req: Request, res: Response) {
       guest: {
         firstName: anchorGuest.firstName,
         lastName: anchorGuest.lastName,
-        email: normalizedEmail,
+        email: identityEmail,
+        phone: identityPhone,
       },
       currentGuestId: guestId,
       invitations,
       total: invitations.length,
       upcomingCount: invitations.filter((i) => !i.eventPassed).length,
       pastCount: invitations.filter((i) => i.eventPassed).length,
+      matchedBy: {
+        email: Boolean(identityEmail),
+        phone: Boolean(identityPhone),
+      },
     });
   } catch (error: any) {
     console.error('Erreur lors de la récupération des invitations invité:', error);

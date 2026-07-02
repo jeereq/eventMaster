@@ -50,11 +50,16 @@ model User {
   tenant        Tenant?    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   isEmailVerified Boolean  @default(false)
   verificationToken String?
+  termsAcceptedAt   DateTime?
+  privacyAcceptedAt DateTime?
+  termsVersion      String?
+  privacyVersion    String?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
   managedTenants Tenant[]  @relation("TenantManager")
   comments       EventComment[]
+  legalAcceptances LegalAcceptance[]
 }
 
 model Event {
@@ -85,6 +90,7 @@ model Guest {
   firstName   String
   lastName    String
   email       String
+  phone       String?
   category    String?
   rsvp        String       @default("PENDING") // PENDING, ACCEPTED, DECLINED
   preferences Json?
@@ -93,8 +99,10 @@ model Guest {
 
   shares      GuestShare[]
   comments    EventComment[]
+  legalAcceptances LegalAcceptance[]
 
   @@unique([eventId, email])
+  @@index([phone])
 }
 
 model Template {
@@ -190,4 +198,26 @@ model GuestMessageTemplate {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model LegalAcceptance {
+  id               String   @id @default(uuid())
+  subjectType      String   // USER | GUEST
+  userId           String?
+  user             User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestId          String?
+  guest            Guest?   @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  normalizedEmail  String?
+  normalizedPhone  String?
+  documentType     String   // TERMS | PRIVACY
+  documentVersion  String
+  ipAddress        String?
+  userAgent        String?
+  acceptedAt       DateTime @default(now())
+
+  @@index([normalizedEmail])
+  @@index([normalizedPhone])
+  @@index([userId])
+  @@index([guestId])
+  @@index([subjectType, documentType, documentVersion])
 }

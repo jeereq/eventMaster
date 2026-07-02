@@ -6,16 +6,21 @@ import { prisma } from '../db';
 import { sendRealEmail, sendRealWhatsApp } from '../services/notificationService';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { formatTenantResponse } from '../utils/tenantAccess';
+import { recordUserLegalAcceptance } from '../services/legalService';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'eventmaster-secret-key-12345';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 export async function register(req: Request, res: Response) {
   try {
-    const { email, password, name, tenantName, phone, verificationMethod = 'EMAIL' } = req.body;
+    const { email, password, name, tenantName, phone, verificationMethod = 'EMAIL', acceptTerms, acceptPrivacy } = req.body;
 
     if (!email || !password || !name || !tenantName) {
       return res.status(400).json({ error: 'Tous les champs sont obligatoires (email, password, name, tenantName)' });
+    }
+
+    if (!acceptTerms || !acceptPrivacy) {
+      return res.status(400).json({ error: 'Vous devez accepter les conditions d\'utilisation et la politique de confidentialité.' });
     }
 
     if (verificationMethod === 'WHATSAPP' && !phone) {
@@ -61,6 +66,14 @@ export async function register(req: Request, res: Response) {
       });
 
       return { user, tenant };
+    });
+
+    await recordUserLegalAcceptance({
+      userId: result.user.id,
+      acceptTerms: true,
+      acceptPrivacy: true,
+      ipAddress: (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || null,
+      userAgent: (req.headers['user-agent'] as string) || null,
     });
 
     // Send confirmation link

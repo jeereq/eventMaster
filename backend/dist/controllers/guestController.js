@@ -7,6 +7,11 @@ exports.deleteGuest = deleteGuest;
 exports.importGuests = importGuests;
 const db_1 = require("../db");
 const plansConfig_1 = require("../config/plansConfig");
+const guestIdentity_1 = require("../utils/guestIdentity");
+function resolveGuestPhone(body, preferences) {
+    const rawPhone = body?.phone || preferences?.phone || preferences?.telephone;
+    return (0, guestIdentity_1.normalizePhone)(typeof rawPhone === 'string' ? rawPhone : null);
+}
 // Helper function to verify event ownership
 async function verifyEventOwner(eventId, tenantId) {
     const event = await db_1.prisma.event.findFirst({
@@ -75,15 +80,18 @@ async function createGuest(req, res) {
         if (existingGuest) {
             return res.status(400).json({ error: 'Un invité avec cet email existe déjà pour cet événement' });
         }
+        const guestPreferences = preferences || {};
+        const normalizedPhone = resolveGuestPhone(req.body, guestPreferences);
         const guest = await db_1.prisma.guest.create({
             data: {
                 eventId,
                 firstName,
                 lastName,
                 email,
+                phone: normalizedPhone,
                 category: category || 'Général',
                 rsvp: rsvp || 'PENDING',
-                preferences: preferences || {},
+                preferences: guestPreferences,
             },
         });
         return res.status(201).json(guest);
@@ -113,15 +121,20 @@ async function updateGuest(req, res) {
         if (!existingGuest) {
             return res.status(404).json({ error: 'Invité non trouvé dans cet événement' });
         }
+        const mergedPreferences = preferences !== undefined ? preferences : existingGuest.preferences;
+        const normalizedPhone = req.body.phone !== undefined || preferences !== undefined
+            ? resolveGuestPhone(req.body, mergedPreferences)
+            : existingGuest.phone;
         const updatedGuest = await db_1.prisma.guest.update({
             where: { id },
             data: {
                 firstName: firstName !== undefined ? firstName : existingGuest.firstName,
                 lastName: lastName !== undefined ? lastName : existingGuest.lastName,
                 email: email !== undefined ? email : existingGuest.email,
+                phone: normalizedPhone,
                 category: category !== undefined ? category : existingGuest.category,
                 rsvp: rsvp !== undefined ? rsvp : existingGuest.rsvp,
-                preferences: preferences !== undefined ? preferences : existingGuest.preferences,
+                preferences: mergedPreferences,
             },
         });
         return res.json(updatedGuest);
@@ -207,6 +220,7 @@ async function importGuests(req, res) {
             if (g.notes) {
                 guestPrefs.notes = g.notes;
             }
+            const normalizedPhone = resolveGuestPhone(g, guestPrefs);
             try {
                 await db_1.prisma.guest.upsert({
                     where: { eventId_email: { eventId, email: g.email } },
@@ -214,6 +228,7 @@ async function importGuests(req, res) {
                         firstName: g.firstName,
                         lastName: g.lastName,
                         category: g.category || 'Général',
+                        phone: normalizedPhone,
                         preferences: guestPrefs,
                     },
                     create: {
@@ -221,6 +236,7 @@ async function importGuests(req, res) {
                         firstName: g.firstName,
                         lastName: g.lastName,
                         email: g.email,
+                        phone: normalizedPhone,
                         category: g.category || 'Général',
                         preferences: guestPrefs,
                     },

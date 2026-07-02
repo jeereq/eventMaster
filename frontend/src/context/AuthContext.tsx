@@ -27,7 +27,7 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string, tenantName: string, phone?: string, verificationMethod?: 'EMAIL' | 'WHATSAPP') => Promise<{ message: string }>;
+  register: (email: string, password: string, name: string, tenantName: string, phone?: string, verificationMethod?: 'EMAIL' | 'WHATSAPP', acceptTerms?: boolean, acceptPrivacy?: boolean) => Promise<{ message: string }>;
   logout: () => void;
   refreshBilling: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -97,10 +97,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (email: string, password: string, name: string, tenantName: string, phone?: string, verificationMethod?: 'EMAIL' | 'WHATSAPP') => {
+  const register = async (email: string, password: string, name: string, tenantName: string, phone?: string, verificationMethod?: 'EMAIL' | 'WHATSAPP', acceptTerms?: boolean, acceptPrivacy?: boolean) => {
     setLoading(true);
     try {
-      const data = await api.post('/auth/register', { email, password, name, tenantName, phone, verificationMethod });
+      const data = await api.post('/auth/register', { email, password, name, tenantName, phone, verificationMethod, acceptTerms, acceptPrivacy });
       setLoading(false);
       return { message: data.message || 'Inscription réussie ! Veuillez vérifier vos e-mails pour confirmer votre compte.' };
     } catch (error) {

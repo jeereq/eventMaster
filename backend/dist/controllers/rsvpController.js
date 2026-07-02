@@ -6,6 +6,8 @@ exports.submitRsvp = submitRsvp;
 const db_1 = require("../db");
 const notificationService_1 = require("../services/notificationService");
 const messageTemplateService_1 = require("../services/messageTemplateService");
+const legalService_1 = require("../services/legalService");
+const guestIdentity_1 = require("../utils/guestIdentity");
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 function isEventDatePassed(eventDate) {
     return new Date(eventDate).getTime() < Date.now();
@@ -242,35 +244,20 @@ async function getGuestRsvpDetails(req, res) {
         return res.status(500).json({ error: 'Erreur lors de la récupération du RSVP' });
     }
 }
-// Public endpoint: all events where this guest (by email) has been invited
+// Public endpoint: all events where this guest (by email or phone) has been invited
 async function getGuestAllInvitations(req, res) {
     try {
         const guestId = req.params.guestId;
         const anchorGuest = await db_1.prisma.guest.findUnique({
             where: { id: guestId },
-            select: { id: true, firstName: true, lastName: true, email: true },
+            select: { id: true, firstName: true, lastName: true, email: true, phone: true, preferences: true },
         });
         if (!anchorGuest) {
             return res.status(404).json({ error: 'Invité non trouvé ou lien invalide.' });
         }
-        const normalizedEmail = anchorGuest.email.trim().toLowerCase();
-        const guestRecords = await db_1.prisma.guest.findMany({
-            where: {
-                email: { equals: anchorGuest.email, mode: 'insensitive' },
-            },
-            include: {
-                event: {
-                    select: {
-                        id: true,
-                        title: true,
-                        description: true,
-                        date: true,
-                        location: true,
-                        tenant: { select: { name: true } },
-                    },
-                },
-            },
-        });
+        const guestRecords = await (0, legalService_1.findGuestsByIdentity)(anchorGuest);
+        const identityEmail = (0, guestIdentity_1.extractGuestEmail)(anchorGuest);
+        const identityPhone = (0, guestIdentity_1.extractGuestPhone)(anchorGuest);
         const invitations = guestRecords
             .map((record) => {
             const eventPassed = isEventDatePassed(record.event.date);
@@ -289,13 +276,18 @@ async function getGuestAllInvitations(req, res) {
             guest: {
                 firstName: anchorGuest.firstName,
                 lastName: anchorGuest.lastName,
-                email: normalizedEmail,
+                email: identityEmail,
+                phone: identityPhone,
             },
             currentGuestId: guestId,
             invitations,
             total: invitations.length,
             upcomingCount: invitations.filter((i) => !i.eventPassed).length,
             pastCount: invitations.filter((i) => i.eventPassed).length,
+            matchedBy: {
+                email: Boolean(identityEmail),
+                phone: Boolean(identityPhone),
+            },
         });
     }
     catch (error) {

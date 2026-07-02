@@ -19,6 +19,8 @@ export default function RegisterPage() {
   const [tenantName, setTenantName] = useState('');
   const [phone, setPhone] = useState('');
   const [verificationMethod, setVerificationMethod] = useState<'EMAIL' | 'WHATSAPP'>('EMAIL');
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,8 +36,14 @@ export default function RegisterPage() {
       return;
     }
 
+    if (!acceptTerms || !acceptPrivacy) {
+      setError('Vous devez accepter les conditions d\'utilisation et la politique de confidentialité.');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const res = await register(email, password, name, tenantName, phone, verificationMethod);
+      const res = await register(email, password, name, tenantName, phone, verificationMethod, acceptTerms, acceptPrivacy);
       setSuccessMessage(res.message);
       setLoading(false);
     } catch (err: any) {
@@ -329,9 +337,40 @@ export default function RegisterPage() {
                   </div>
                 </div>
 
+                <div className="space-y-3">
+                  <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-800 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={acceptTerms}
+                      onChange={(e) => setAcceptTerms(e.target.checked)}
+                      className="mt-1 rounded text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span className="text-xs text-slate-600 dark:text-slate-300">
+                      J&apos;accepte les{' '}
+                      <Link href="/terms" target="_blank" className="text-indigo-600 font-bold hover:underline">
+                        conditions d&apos;utilisation
+                      </Link>.
+                    </span>
+                  </label>
+                  <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-800 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={acceptPrivacy}
+                      onChange={(e) => setAcceptPrivacy(e.target.checked)}
+                      className="mt-1 rounded text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span className="text-xs text-slate-600 dark:text-slate-300">
+                      J&apos;accepte la{' '}
+                      <Link href="/privacy" target="_blank" className="text-indigo-600 font-bold hover:underline">
+                        politique de confidentialité
+                      </Link>.
+                    </span>
+                  </label>
+                </div>
+
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || !acceptTerms || !acceptPrivacy}
                   className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition shadow-lg shadow-indigo-500/20 cursor-pointer"
                 >
                   {loading ? (
