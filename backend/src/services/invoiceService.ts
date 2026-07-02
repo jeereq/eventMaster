@@ -2,7 +2,7 @@ import { InvoiceType, PlanType } from '@prisma/client';
 import { prisma } from '../db';
 import { getPlanLimits } from '../config/plansConfig';
 import { parsePlanPrice, getBillingPeriod } from './commercialService';
-import { sendRealEmail } from './notificationService';
+import { sendRealEmail, sendRealWhatsApp } from './notificationService';
 
 export function formatAmountFc(amount: number): string {
   return `${amount.toLocaleString('fr-FR')} FC`;
@@ -24,15 +24,27 @@ async function generateInvoiceNumber(): Promise<string> {
   return `${prefix}-${String(count + 1).padStart(4, '0')}`;
 }
 
-export async function getTenantOwnerEmail(tenantId: string): Promise<{ email: string; name: string | null } | null> {
+export async function getTenantOwner(
+  tenantId: string,
+): Promise<{ email: string; name: string | null; phone: string | null } | null> {
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
     select: {
-      manager: { select: { email: true, name: true } },
+      manager: { select: { email: true, name: true, phone: true } },
     },
   });
   if (!tenant?.manager?.email) return null;
-  return { email: tenant.manager.email, name: tenant.manager.name };
+  return {
+    email: tenant.manager.email,
+    name: tenant.manager.name,
+    phone: tenant.manager.phone,
+  };
+}
+
+export async function getTenantOwnerEmail(tenantId: string): Promise<{ email: string; name: string | null } | null> {
+  const owner = await getTenantOwner(tenantId);
+  if (!owner) return null;
+  return { email: owner.email, name: owner.name };
 }
 
 export async function getTenantBillingRecipients(
@@ -239,8 +251,12 @@ export async function createAndSendInvoice(params: {
       durationDays: params.durationDays,
     });
 
-    await sendRealEmail(recipient.email, subject, text, html);
-    console.log(`[Invoice Service] Facture ${invoiceNumber} envoyée à ${recipient.email}`);
+    const result = await sendRealEmail(recipient.email, subject, text, html);
+    if (result.success) {
+      console.log(`[Invoice Service] Facture ${invoiceNumber} envoyée à ${recipient.email} via SendGrid`);
+    } else {
+      console.error(`[Invoice Service] Échec envoi facture ${invoiceNumber} à ${recipient.email}: ${result.error}`);
+    }
   }
 
   return invoice;
@@ -253,6 +269,7 @@ export async function sendLicenseExpiryWarning(params: {
   expiresAt: Date;
   ownerEmail: string;
   ownerName?: string | null;
+  ownerPhone?: string | null;
 }) {
   const planDef = getPlanLimits(params.plan);
   const amount = getPlanAmount(params.plan);
@@ -287,5 +304,26 @@ export async function sendLicenseExpiryWarning(params: {
 </body>
 </html>`;
 
-  await sendRealEmail(params.ownerEmail, subject, text, html);
+  const emailResult = await sendRealEmail(params.ownerEmail, subject, text, html);
+  if (!emailResult.success) {
+    console.error(`[Invoice Service] Échec e-mail rappel J-7 à ${params.ownerEmail}: ${emailResult.error}`);
+  }
+
+  if (params.ownerPhone?.trim()) {
+    const waBody = [
+      `EventMaster — Rappel abonnement`,
+      '',
+      `Bonjour${params.ownerName ? ` ${params.ownerName}` : ''},`,
+      `L'organisation « ${params.tenantName} » (${planDef.name}) expire le ${expiryStr}.`,
+      `Renouvellement estimé : ${formatAmountFc(amount)}.`,
+      'Connectez-vous à EventMaster → Facturation pour renouveler.',
+    ].join('\n');
+
+    const waResult = await sendRealWhatsApp(params.ownerPhone, waBody);
+    if (waResult.success && !waResult.simulated) {
+      console.log(`[Invoice Service] Rappel J-7 WhatsApp envoyé à ${params.ownerPhone}`);
+    } else if (!waResult.success) {
+      console.error(`[Invoice Service] Échec WhatsApp rappel J-7: ${waResult.error}`);
+    }
+  }
 }

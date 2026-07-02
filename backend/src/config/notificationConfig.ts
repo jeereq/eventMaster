@@ -51,8 +51,20 @@ export function getNotificationCredentials(): NotificationCredentials {
   };
 }
 
+export function isSendGridConfigured(credentials = getNotificationCredentials()): boolean {
+  return !!(credentials.sendgridApiKey?.trim() && credentials.sendgridFrom?.trim());
+}
+
 export function isUltraMsgConfigured(credentials = getNotificationCredentials()): boolean {
   return !!(credentials.ultramsgInstanceId && credentials.ultramsgToken);
+}
+
+export function assertSendGridConfigured(): void {
+  if (!isSendGridConfigured()) {
+    throw new Error(
+      'SendGrid obligatoire pour l\'envoi d\'e-mails. Configurez sendgridApiKey et sendgridFrom dans settings.json ou SENDGRID_API_KEY / SENDGRID_FROM.',
+    );
+  }
 }
 
 export function logNotificationConfigStatus(): void {
@@ -61,10 +73,10 @@ export function logNotificationConfigStatus(): void {
 
   console.log(`[Notification Config] settings.json ${settingsExists ? 'trouvé' : 'absent'} — credentials chargées depuis le panneau admin et/ou les variables d'environnement.`);
 
-  if (creds.sendgridApiKey) {
-    console.log('[Notification Service] SendGrid configuré.');
+  if (isSendGridConfigured(creds)) {
+    console.log(`[Notification Service] SendGrid configuré (expéditeur: ${creds.sendgridFrom}).`);
   } else {
-    console.warn('[Notification Service] SendGrid non configuré — envoi e-mail simulé.');
+    console.error('[Notification Service] SendGrid NON configuré — les e-mails ne pourront PAS être envoyés.');
   }
 
   if (creds.twilioSid && creds.twilioAuthToken && creds.twilioPhone) {

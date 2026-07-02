@@ -16,6 +16,7 @@ import { handleStripeWebhook } from './controllers/billingController';
 import { prisma } from './db';
 import { startReminderWorker } from './services/reminderService';
 import { startSubscriptionExpiryWorker } from './services/subscriptionExpiryService';
+import { isSendGridConfigured } from './config/notificationConfig';
 
 // Load environment variables
 dotenv.config();
@@ -59,6 +60,13 @@ app.use('/api/billing', billingRoutes);
 // Start Server
 app.listen(PORT, () => {
   console.log(`[EventMaster Server] running on http://localhost:${PORT}`);
+
+  if (!isSendGridConfigured()) {
+    console.error(
+      '[EventMaster Server] ATTENTION : SendGrid non configuré — aucun e-mail ne sera envoyé. Configurez SENDGRID_API_KEY et SENDGRID_FROM.',
+    );
+  }
+
   // Start background workers
   startReminderWorker();
   startSubscriptionExpiryWorker();

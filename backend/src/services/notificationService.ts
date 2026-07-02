@@ -1,6 +1,10 @@
 import sgMail from '@sendgrid/mail';
 import twilio from 'twilio';
-import { getNotificationCredentials, logNotificationConfigStatus } from '../config/notificationConfig';
+import {
+  getNotificationCredentials,
+  isSendGridConfigured,
+  logNotificationConfigStatus,
+} from '../config/notificationConfig';
 
 logNotificationConfigStatus();
 
@@ -23,35 +27,42 @@ function getTwilioClient() {
 }
 
 /**
- * Send a real email using SendGrid or fall back to simulation
+ * Envoie un e-mail via SendGrid uniquement (aucune simulation).
  */
-export async function sendRealEmail(to: string, subject: string, textBody: string, htmlBody?: string): Promise<{ success: boolean; simulated: boolean; messageId?: string; error?: string }> {
-  const { sendgridApiKey, sendgridFrom } = getNotificationCredentials();
-
-  if (sendgridApiKey) {
-    try {
-      sgMail.setApiKey(sendgridApiKey);
-      const msg = {
-        to,
-        from: sendgridFrom,
-        subject,
-        text: textBody,
-        html: htmlBody || textBody.replace(/\n/g, '<br>'),
-      };
-
-      const response = await sgMail.send(msg);
-      const messageId = response[0]?.headers?.['x-message-id'] || 'sg-sent';
-      console.log(`[Notification Service] SendGrid email sent successfully to ${to}. Message ID: ${messageId}`);
-      return { success: true, simulated: false, messageId };
-    } catch (error: any) {
-      const errMsg = error.response?.body?.errors?.[0]?.message || error.message || String(error);
-      console.error(`[Notification Service] Failed to send SendGrid email to ${to}:`, error.response?.body || error);
-      return { success: false, simulated: false, error: errMsg };
-    }
+export async function sendRealEmail(
+  to: string,
+  subject: string,
+  textBody: string,
+  htmlBody?: string,
+): Promise<{ success: boolean; simulated: boolean; messageId?: string; error?: string }> {
+  if (!isSendGridConfigured()) {
+    const errMsg =
+      'SendGrid non configuré. Définissez sendgridApiKey et sendgridFrom (settings.json ou variables d\'environnement).';
+    console.error(`[Notification Service] ${errMsg} Destinataire: ${to}`);
+    return { success: false, simulated: false, error: errMsg };
   }
 
-  console.log(`[Simulation] Sending SendGrid Email to ${to}:\nFrom: ${sendgridFrom}\nSubject: ${subject}\nBody: ${textBody}\n`);
-  return { success: true, simulated: true };
+  const { sendgridApiKey, sendgridFrom } = getNotificationCredentials();
+
+  try {
+    sgMail.setApiKey(sendgridApiKey);
+    const msg = {
+      to,
+      from: sendgridFrom,
+      subject,
+      text: textBody,
+      html: htmlBody || textBody.replace(/\n/g, '<br>'),
+    };
+
+    const response = await sgMail.send(msg);
+    const messageId = response[0]?.headers?.['x-message-id'] || 'sg-sent';
+    console.log(`[Notification Service] SendGrid email sent successfully to ${to}. Message ID: ${messageId}`);
+    return { success: true, simulated: false, messageId };
+  } catch (error: any) {
+    const errMsg = error.response?.body?.errors?.[0]?.message || error.message || String(error);
+    console.error(`[Notification Service] Failed to send SendGrid email to ${to}:`, error.response?.body || error);
+    return { success: false, simulated: false, error: errMsg };
+  }
 }
 
 /**

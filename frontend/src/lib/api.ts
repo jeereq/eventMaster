@@ -60,4 +60,31 @@ export const api = {
   post: (path: string, body?: any, options?: FetchOptions) => request(path, { ...options, method: 'POST', body }),
   put: (path: string, body?: any, options?: FetchOptions) => request(path, { ...options, method: 'PUT', body }),
   delete: (path: string, options?: FetchOptions) => request(path, { ...options, method: 'DELETE' }),
+  download: async (path: string, filename: string) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const headers = new Headers();
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+
+    const response = await fetch(`${API_URL}${path}`, { headers });
+    if (!response.ok) {
+      let message = 'Erreur lors du téléchargement';
+      try {
+        const data = await response.json();
+        message = data.error || message;
+      } catch {
+        // binaire
+      }
+      throw new Error(message);
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  },
 };

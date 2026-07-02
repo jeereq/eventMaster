@@ -531,6 +531,17 @@ function DashboardPageContent() {
     }
   };
 
+  const exportRevenueReport = async (format: 'csv' | 'pdf') => {
+    try {
+      await api.download(
+        `/admin/reports/revenue/export?period=${revenuePeriod}&format=${format}`,
+        `eventmaster-revenus-${revenuePeriod}.${format}`,
+      );
+    } catch (err: any) {
+      alert(err.message || 'Erreur lors de l\'export du rapport.');
+    }
+  };
+
   const handleApproveSubscription = async (id: string) => {
     if (!confirm('Approuver cette demande ? La licence sera activée et une facture sera envoyée au propriétaire et aux managers.')) {
       return;
@@ -2664,7 +2675,7 @@ function DashboardPageContent() {
                       <CreditCard className="w-5 h-5 text-indigo-600" />
                       Revenus & Commissions Commerciales
                     </h3>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <input
                         type="month"
                         value={revenuePeriod}
@@ -2676,6 +2687,20 @@ function DashboardPageContent() {
                         className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition"
                       >
                         Actualiser
+                      </button>
+                      <button
+                        onClick={() => exportRevenueReport('csv')}
+                        className="px-4 py-2 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-50 transition flex items-center gap-1.5"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        CSV
+                      </button>
+                      <button
+                        onClick={() => exportRevenueReport('pdf')}
+                        className="px-4 py-2 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-50 transition flex items-center gap-1.5"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        PDF
                       </button>
                     </div>
                   </div>

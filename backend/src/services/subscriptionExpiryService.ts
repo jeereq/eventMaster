@@ -1,5 +1,5 @@
 import { prisma } from '../db';
-import { createAndSendInvoice, getTenantOwnerEmail, sendLicenseExpiryWarning } from './invoiceService';
+import { createAndSendInvoice, getTenantOwner, sendLicenseExpiryWarning } from './invoiceService';
 import { recordCommercialCommission } from './commercialService';
 
 function startOfDay(date: Date): Date {
@@ -45,7 +45,7 @@ export async function processSubscriptionExpiryTasks() {
 
       // J-7 : avertir le propriétaire une seule fois par date d'expiration
       if (remaining === 7 && !isSameExpiryDate(tenant.licenseExpiryWarningFor, expiresAt)) {
-        const owner = await getTenantOwnerEmail(tenant.id);
+        const owner = await getTenantOwner(tenant.id);
         if (owner) {
           await sendLicenseExpiryWarning({
             tenantId: tenant.id,
@@ -54,6 +54,7 @@ export async function processSubscriptionExpiryTasks() {
             expiresAt,
             ownerEmail: owner.email,
             ownerName: owner.name,
+            ownerPhone: owner.phone,
           });
           await prisma.tenant.update({
             where: { id: tenant.id },

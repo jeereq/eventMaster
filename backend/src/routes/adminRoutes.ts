@@ -36,7 +36,7 @@ import {
   approveSubscriptionRequest, 
   rejectSubscriptionRequest 
 } from '../controllers/subscriptionController';
-import { getRevenueReport } from '../controllers/revenueReportController';
+import { getRevenueReport, exportRevenueReport } from '../controllers/revenueReportController';
 
 const router = Router();
 
@@ -49,6 +49,7 @@ router.get('/stats', getSystemStats);
 
 // Revenue & commissions report
 router.get('/reports/revenue', getRevenueReport);
+router.get('/reports/revenue/export', exportRevenueReport);
 
 // Subscription Requests routes (Super Admin)
 router.get('/subscriptions/requests', getAdminSubscriptionRequests);

@@ -1,13 +1,18 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { 
-  CreditCard, Check, ShieldCheck, Loader2, AlertCircle, Sparkles,
-  Clock, XCircle, CheckCircle, HelpCircle
+import {
+  CreditCard, Check, Loader2, Sparkles,
+  Clock, XCircle, CheckCircle, Minus, ChevronDown, ChevronUp, ShieldCheck,
 } from 'lucide-react';
-import { PageHeader, Alert } from '@/components/ui';
+import { Alert } from '@/components/ui';
+import {
+  LANDING_PLANS,
+  FEATURE_COMPARISON,
+  type BillingCycle,
+} from '@/config/landingPricing';
 
 interface BillingStatus {
   plan: 'FREE' | 'STANDARD' | 'PREMIUM' | 'ENTERPRISE';
@@ -32,22 +37,32 @@ interface SubscriptionRequest {
   createdAt: string;
 }
 
+type PlanId = 'FREE' | 'STANDARD' | 'PREMIUM' | 'ENTERPRISE';
+
+function FeatureCell({ value }: { value: string | boolean }) {
+  if (value === true) return <Check className="w-4 h-4 text-emerald-600 mx-auto" />;
+  if (value === false) return <Minus className="w-4 h-4 text-slate-300 dark:text-slate-600 mx-auto" />;
+  return <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{value}</span>;
+}
+
 export default function BillingPage() {
-  const { refreshBilling } = useAuth();
+  const { tenant } = useAuth();
   const [billing, setBilling] = useState<BillingStatus | null>(null);
-  const [dynamicPlans, setDynamicPlans] = useState<any>(null);
+  const [dynamicPlans, setDynamicPlans] = useState<Record<string, any> | null>(null);
   const [requests, setRequests] = useState<SubscriptionRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
+  const [showComparison, setShowComparison] = useState(false);
 
   const loadBillingStatus = async () => {
     try {
       const [billingData, plansData, requestsData] = await Promise.all([
         api.get('/billing/status'),
         api.get('/subscriptions/plans').catch(() => null),
-        api.get('/subscriptions/my-requests').catch(() => [])
+        api.get('/subscriptions/my-requests').catch(() => []),
       ]);
       setBilling(billingData);
       if (billingData.plans) {
@@ -55,9 +70,7 @@ export default function BillingPage() {
       } else if (plansData) {
         setDynamicPlans(plansData);
       }
-      if (requestsData) {
-        setRequests(requestsData);
-      }
+      if (requestsData) setRequests(requestsData);
     } catch (err: any) {
       console.error('Error loading billing status:', err);
       setError('Impossible de charger les informations de facturation.');
@@ -70,21 +83,46 @@ export default function BillingPage() {
     loadBillingStatus();
   }, []);
 
-  const handleUpgrade = async (plan: 'FREE' | 'STANDARD' | 'PREMIUM' | 'ENTERPRISE') => {
+  const plans = useMemo(() => {
+    return LANDING_PLANS.map((plan) => {
+      const db = dynamicPlans?.[plan.id];
+      return {
+        ...plan,
+        displayName: db?.name?.replace('Plan ', '') || plan.ms365Name,
+        price:
+          billingCycle === 'monthly'
+            ? db?.price && plan.id !== 'FREE'
+              ? db.price
+              : plan.monthlyPrice
+            : plan.annualPrice,
+        description: db?.description || plan.tagline,
+        limits: db
+          ? {
+              events: db.maxEvents,
+              guests: db.maxGuests,
+              templates: db.maxTemplates,
+              customTemplates: db.customTemplates,
+            }
+          : null,
+      };
+    });
+  }, [dynamicPlans, billingCycle]);
+
+  const handleUpgrade = async (plan: PlanId) => {
     setError('');
     setSuccessMsg('');
     setActionLoading(plan);
 
     try {
-      // Submit a subscription request to the Super Admin for validation
-      await api.post('/subscriptions/request', { 
-        requestedPlan: plan, 
-        durationDays: 30 
+      await api.post('/subscriptions/request', {
+        requestedPlan: plan,
+        durationDays: billingCycle === 'annual' ? 365 : 30,
       });
-      setSuccessMsg(`Votre demande d'activation du forfait ${plan} pour 30 jours a été soumise avec succès au Super Admin ! Veuillez attendre sa validation pour y accéder.`);
-      await loadBillingStatus(); // Reload status and requests list
+      setSuccessMsg(
+        `Demande d'activation du forfait ${plan} (${billingCycle === 'annual' ? '12 mois' : '30 jours'}) soumise au Super Admin. Une facture vous sera envoyée par e-mail après validation.`,
+      );
+      await loadBillingStatus();
     } catch (err: any) {
-      console.error('Error upgrading:', err);
       setError(err.message || 'Une erreur est survenue lors du changement de plan.');
     } finally {
       setActionLoading(null);
@@ -97,295 +135,262 @@ export default function BillingPage() {
         <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded-lg w-1/3 animate-pulse" />
         <div className="h-40 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
         <div className="grid md:grid-cols-4 gap-6">
-          <div className="h-96 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
-          <div className="h-96 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
-          <div className="h-96 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
-          <div className="h-96 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-96 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
+          ))}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 w-full">
-      <PageHeader
-        title="Facturation & plan"
-        description="Gérez votre formule SaaS et découvrez vos quotas d'utilisation."
-      />
+    <div className="space-y-10 w-full max-w-7xl mx-auto">
+      {/* En-tête style Microsoft 365 */}
+      <div className="text-center max-w-3xl mx-auto space-y-3">
+        <p className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
+          Facturation & abonnements
+        </p>
+        <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
+          Gérez le forfait de {tenant?.name || 'votre organisation'}
+        </h1>
+        <p className="text-slate-600 dark:text-slate-400 text-base">
+          Tarification transparente par organisation. Les factures sont envoyées par SendGrid au propriétaire et aux managers après validation.
+        </p>
+      </div>
 
       {error && <Alert variant="error">{error}</Alert>}
-
       {successMsg && <Alert variant="success">{successMsg}</Alert>}
 
-      {/* Current Plan Card */}
+      {/* Plan actuel + quotas */}
       {billing && (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div className="space-y-2">
-            <div className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">Abonnement Actuel</div>
-            <div className="flex items-center gap-3">
-              <span className="text-2xl font-black text-slate-900 dark:text-white">Plan {billing.plan}</span>
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50 text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                <Check className="w-3.5 h-3.5" />
-                Actif
-              </span>
+        <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 md:p-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="space-y-2">
+              <div className="text-xs text-slate-500 font-bold uppercase tracking-wider">Abonnement actuel</div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-2xl font-black text-slate-900 dark:text-white">
+                  {plans.find((p) => p.id === billing.plan)?.displayName || billing.plan}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 text-xs font-bold text-emerald-700">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  Actif
+                </span>
+              </div>
             </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-              Isolation stricte garantie de l'organisation tenant ID.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-6 text-sm">
-            <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-150 dark:border-slate-800 min-w-[120px]">
-              <div className="text-slate-500 dark:text-slate-400 font-bold text-xs uppercase tracking-wider">Événements</div>
-              <div className="font-extrabold text-slate-800 dark:text-slate-200 mt-1">{billing.usage.events} / {billing.limits.maxEvents === 9999 ? '∞' : billing.limits.maxEvents}</div>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-150 dark:border-slate-800 min-w-[120px]">
-              <div className="text-slate-500 dark:text-slate-400 font-bold text-xs uppercase tracking-wider">Invités Totaux</div>
-              <div className="font-extrabold text-slate-800 dark:text-slate-200 mt-1">{billing.usage.guests} / {billing.limits.maxGuests === 99999 ? '∞' : billing.limits.maxGuests}</div>
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              {[
+                { label: 'Événements', used: billing.usage.events, max: billing.limits.maxEvents },
+                { label: 'Invités', used: billing.usage.guests, max: billing.limits.maxGuests },
+                { label: 'Modèles', used: billing.usage.templates, max: billing.limits.maxTemplates },
+              ].map((q) => (
+                <div key={q.label} className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                  <div className="text-slate-500 text-xs font-bold uppercase">{q.label}</div>
+                  <div className="font-extrabold text-slate-800 dark:text-slate-200 mt-1">
+                    {q.used} / {q.max >= 9999 ? '∞' : q.max}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       )}
 
-      {/* Plans Comparison Grid */}
-      <div className="grid md:grid-cols-4 gap-6 items-stretch">
-        {/* FREE Plan */}
-        <div className={`border rounded-3xl p-6 bg-white dark:bg-slate-900 flex flex-col justify-between ${billing?.plan === 'FREE' ? 'ring-2 ring-slate-800 dark:ring-slate-200' : 'border-slate-200 dark:border-slate-800'}`}>
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{dynamicPlans?.FREE?.name || 'Plan Gratuit'}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{dynamicPlans?.FREE?.description || "Idéal pour tester l'application."}</p>
-              <div className="flex items-baseline gap-1 mt-4">
-                <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{dynamicPlans?.FREE?.price || '0 FC'}</span>
-                <span className="text-slate-500 dark:text-slate-400 text-sm">/sans engagement</span>
-              </div>
-            </div>
-
-            <ul className="space-y-3 text-xs text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800 pt-4">
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>{dynamicPlans?.FREE?.maxEvents ?? 3} événements actifs</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>{dynamicPlans?.FREE?.maxGuests ?? 50} invités maximum</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>{dynamicPlans?.FREE?.maxTemplates ?? 2} modèles d'invitations simples</span>
-              </li>
-              <li className={`flex items-center gap-2.5 ${dynamicPlans?.FREE?.customTemplates ? '' : 'line-through text-slate-400 dark:text-slate-500'}`}>
-                <span>Modèles d'Invitation Customisés</span>
-              </li>
-            </ul>
-          </div>
-
+      {/* Toggle mensuel / annuel */}
+      <div className="flex justify-center">
+        <div className="inline-flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-full">
           <button
-            disabled={billing?.plan === 'FREE' || actionLoading !== null}
-            onClick={() => handleUpgrade('FREE')}
-            className="w-full text-center py-2.5 mt-6 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition disabled:opacity-50 disabled:cursor-not-allowed text-xs cursor-pointer"
+            type="button"
+            onClick={() => setBillingCycle('monthly')}
+            className={`px-5 py-2 rounded-full text-sm font-semibold transition ${
+              billingCycle === 'monthly'
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400'
+            }`}
           >
-            {actionLoading === 'FREE' ? (
-              <Loader2 className="w-4 h-4 animate-spin mx-auto" />
-            ) : billing?.plan === 'FREE' ? (
-              'Votre plan actuel'
-            ) : (
-              'Demander le Plan Gratuit'
-            )}
+            Mensuel
           </button>
-        </div>
-
-        {/* STANDARD Plan */}
-        <div className={`border rounded-3xl p-6 bg-white dark:bg-slate-900 flex flex-col justify-between ${billing?.plan === 'STANDARD' ? 'ring-2 ring-slate-800 dark:ring-slate-200' : 'border-slate-200 dark:border-slate-800'}`}>
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{dynamicPlans?.STANDARD?.name || 'Plan Standard'}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{dynamicPlans?.STANDARD?.description || 'Idéal pour les événements de taille moyenne.'}</p>
-              <div className="flex items-baseline gap-1 mt-4">
-                <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{dynamicPlans?.STANDARD?.price || '30.000 FC'}</span>
-                <span className="text-slate-500 dark:text-slate-400 text-sm">/mois</span>
-              </div>
-            </div>
-
-            <ul className="space-y-3 text-xs text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800 pt-4">
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>{dynamicPlans?.STANDARD?.maxEvents ?? 8} événements actifs</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>{dynamicPlans?.STANDARD?.maxGuests ?? 150} invités maximum</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>{dynamicPlans?.STANDARD?.maxTemplates ?? 5} modèles d'invitations</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>{dynamicPlans?.STANDARD?.customTemplates ? "Modèles d'invitations personnalisés" : "Modèles d'invitations simples"}</span>
-              </li>
-            </ul>
-          </div>
-
           <button
-            disabled={billing?.plan === 'STANDARD' || actionLoading !== null}
-            onClick={() => handleUpgrade('STANDARD')}
-            className="w-full flex items-center justify-center gap-2 py-2.5 mt-6 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-950 text-white font-semibold rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed text-xs cursor-pointer"
+            type="button"
+            onClick={() => setBillingCycle('annual')}
+            className={`px-5 py-2 rounded-full text-sm font-semibold transition ${
+              billingCycle === 'annual'
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400'
+            }`}
           >
-            {actionLoading === 'STANDARD' ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : billing?.plan === 'STANDARD' ? (
-              'Votre plan actuel'
-            ) : (
-              'Demander le Plan Standard'
-            )}
-          </button>
-        </div>
-
-        {/* PREMIUM Plan */}
-        <div className={`border-2 rounded-3xl p-6 flex flex-col justify-between relative bg-white dark:bg-slate-900 ${billing?.plan === 'PREMIUM' ? 'border-indigo-600 shadow-lg' : 'border-slate-200 dark:border-slate-800'}`}>
-          <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-3.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5" />
-            Recommandé
-          </div>
-
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{dynamicPlans?.PREMIUM?.name || 'Plan Premium'}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{dynamicPlans?.PREMIUM?.description || "Pour les organisateurs d'événements."}</p>
-              <div className="flex items-baseline gap-1 mt-4">
-                <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{dynamicPlans?.PREMIUM?.price || '80.000 FC'}</span>
-                <span className="text-slate-500 dark:text-slate-400 text-sm">/mois</span>
-              </div>
-            </div>
-
-            <ul className="space-y-3 text-xs text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800 pt-4">
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>{dynamicPlans?.PREMIUM?.maxEvents ?? 20} événements actifs</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>{dynamicPlans?.PREMIUM?.maxGuests ?? 500} invités maximum</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>{dynamicPlans?.PREMIUM?.maxTemplates ?? 10} modèles d'invitations</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span className="font-semibold text-slate-900 dark:text-slate-100">{(dynamicPlans?.PREMIUM?.customTemplates ?? true) ? "Modèles d'Invitation Customisés" : "Modèles d'invitations simples"}</span>
-              </li>
-            </ul>
-          </div>
-
-          <button
-            disabled={billing?.plan === 'PREMIUM' || actionLoading !== null}
-            onClick={() => handleUpgrade('PREMIUM')}
-            className="w-full flex items-center justify-center gap-2 py-2.5 mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed text-xs cursor-pointer"
-          >
-            {actionLoading === 'PREMIUM' ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : billing?.plan === 'PREMIUM' ? (
-              'Votre plan actuel'
-            ) : (
-              'Demander le Plan Premium'
-            )}
-          </button>
-        </div>
-
-        {/* ENTERPRISE Plan */}
-        <div className={`border rounded-3xl p-6 bg-white dark:bg-slate-900 flex flex-col justify-between ${billing?.plan === 'ENTERPRISE' ? 'ring-2 ring-slate-800 dark:ring-slate-200' : 'border-slate-200 dark:border-slate-800'}`}>
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">{dynamicPlans?.ENTERPRISE?.name || 'Plan Enterprise'}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{dynamicPlans?.ENTERPRISE?.description || 'Pour les grandes agences événementielles ou besoins sur-mesure.'}</p>
-              <div className="flex items-baseline gap-1 mt-4">
-                <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{dynamicPlans?.ENTERPRISE?.price || '275.000 FC'}</span>
-                <span className="text-slate-500 dark:text-slate-400 text-sm">/mois</span>
-              </div>
-            </div>
-
-            <ul className="space-y-3 text-xs text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800 pt-4">
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>{(dynamicPlans?.ENTERPRISE?.maxEvents ?? 9999) >= 9999 ? 'Événements Illimités' : `${dynamicPlans?.ENTERPRISE?.maxEvents} événements actifs`}</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>{(dynamicPlans?.ENTERPRISE?.maxGuests ?? 99999) >= 9999 ? 'Invités Illimités' : `${dynamicPlans?.ENTERPRISE?.maxGuests} invités maximum`}</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>{(dynamicPlans?.ENTERPRISE?.maxTemplates ?? 9999) >= 9999 ? 'Modèles Illimités' : `${dynamicPlans?.ENTERPRISE?.maxTemplates} modèles d'invitations`}</span>
-              </li>
-              <li className="flex items-center gap-2.5">
-                <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span className="font-semibold text-slate-900 dark:text-slate-100">Support Dédié & SLA</span>
-              </li>
-            </ul>
-          </div>
-
-          <button
-            disabled={billing?.plan === 'ENTERPRISE' || actionLoading !== null}
-            onClick={() => handleUpgrade('ENTERPRISE')}
-            className="w-full flex items-center justify-center gap-2 py-2.5 mt-6 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-950 text-white font-semibold rounded-xl transition shadow-md disabled:opacity-50 disabled:cursor-not-allowed text-xs cursor-pointer"
-          >
-            {actionLoading === 'ENTERPRISE' ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : billing?.plan === 'ENTERPRISE' ? (
-              'Votre plan actuel'
-            ) : (
-              'Demander le Plan Enterprise'
-            )}
+            Annuel
+            <span className="ml-1.5 text-xs text-emerald-600 font-bold">−17 %</span>
           </button>
         </div>
       </div>
 
-      {/* Subscription Requests History */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xs space-y-6">
+      {/* Grille forfaits MS365 */}
+      <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-5 items-stretch">
+        {plans.map((plan) => {
+          const isCurrent = billing?.plan === plan.id;
+          const isHighlighted = plan.highlighted;
+
+          return (
+            <div
+              key={plan.id}
+              className={`relative flex flex-col rounded-2xl border bg-white dark:bg-slate-900 p-6 ${
+                isCurrent
+                  ? 'ring-2 ring-indigo-600 border-indigo-200 dark:border-indigo-800'
+                  : isHighlighted
+                    ? 'border-2 border-indigo-500 shadow-lg shadow-indigo-500/10'
+                    : 'border-slate-200 dark:border-slate-800'
+              }`}
+            >
+              {plan.badge && (
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" />
+                  {plan.badge}
+                </span>
+              )}
+
+              <div className="flex-1 space-y-4">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{plan.displayName}</h3>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">{plan.description}</p>
+                </div>
+                <div>
+                  <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{plan.price}</span>
+                  <span className="text-slate-500 text-sm ml-1">
+                    {plan.id === 'FREE' ? '' : billingCycle === 'monthly' ? '/ mois' : '/ mois (annuel)'}
+                  </span>
+                  <p className="text-[11px] text-slate-400 mt-1">{plan.monthlyNote}</p>
+                </div>
+
+                {plan.limits && (
+                  <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800 pt-4">
+                    <li className="flex items-center gap-2">
+                      <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                      {(plan.limits.events ?? 0) >= 9999 ? 'Événements illimités' : `${plan.limits.events} événements`}
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                      {(plan.limits.guests ?? 0) >= 99999 ? 'Invités illimités' : `${plan.limits.guests} invités`}
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                      {plan.limits.customTemplates ? 'Modèles personnalisés' : 'Modèles standards'}
+                    </li>
+                  </ul>
+                )}
+              </div>
+
+              <button
+                disabled={isCurrent || actionLoading !== null}
+                onClick={() => handleUpgrade(plan.id)}
+                className={`w-full py-2.5 mt-6 font-semibold rounded-xl text-xs transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                  isHighlighted && !isCurrent
+                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md'
+                    : 'bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-950 text-white'
+                }`}
+              >
+                {actionLoading === plan.id ? (
+                  <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                ) : isCurrent ? (
+                  'Forfait actuel'
+                ) : (
+                  `Demander ${plan.displayName}`
+                )}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Tableau comparatif */}
+      <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-slate-900">
+        <button
+          type="button"
+          onClick={() => setShowComparison(!showComparison)}
+          className="w-full flex items-center justify-between px-6 py-4 text-left font-bold text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 transition"
+        >
+          <span className="flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-indigo-600" />
+            Comparer toutes les fonctionnalités
+          </span>
+          {showComparison ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+        </button>
+
+        {showComparison && (
+          <div className="overflow-x-auto border-t border-slate-200 dark:border-slate-800">
+            <table className="w-full text-sm min-w-[640px]">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-950">
+                  <th className="text-left px-4 py-3 font-bold text-slate-600 w-1/3">Fonctionnalité</th>
+                  {(['FREE', 'STANDARD', 'PREMIUM', 'ENTERPRISE'] as const).map((id) => (
+                    <th key={id} className="px-3 py-3 font-bold text-slate-800 dark:text-slate-200 text-center text-xs">
+                      {plans.find((p) => p.id === id)?.displayName || id}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {FEATURE_COMPARISON.map((row, idx) => (
+                  <tr key={idx} className="border-t border-slate-100 dark:border-slate-800">
+                    <td className="px-4 py-2.5 text-slate-600 dark:text-slate-400 text-xs">{row.label}</td>
+                    {(['FREE', 'STANDARD', 'PREMIUM', 'ENTERPRISE'] as const).map((id) => (
+                      <td key={id} className="px-3 py-2.5 text-center">
+                        <FeatureCell value={row.values[id]} />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Historique demandes */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4">
         <div>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Historique de vos demandes d'activation</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Suivez le statut de validation de vos demandes d'abonnement par le Super Admin.</p>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Historique des demandes</h3>
+          <p className="text-xs text-slate-500 mt-1">
+            Après approbation, une facture SendGrid est envoyée au propriétaire et aux managers.
+          </p>
         </div>
 
         {requests.length === 0 ? (
-          <div className="text-center py-8 text-slate-400 dark:text-slate-500 italic text-xs">
-            Aucune demande d'activation soumise pour le moment.
-          </div>
+          <p className="text-center py-8 text-slate-400 italic text-xs">Aucune demande soumise.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-bold uppercase tracking-wider">
-                  <th className="py-3 px-4">Forfait Demandé</th>
+                <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase tracking-wider">
+                  <th className="py-3 px-4">Forfait</th>
                   <th className="py-3 px-4">Durée</th>
-                  <th className="py-3 px-4">Date de Demande</th>
+                  <th className="py-3 px-4">Date</th>
                   <th className="py-3 px-4">Statut</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium text-slate-700 dark:text-slate-300">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {requests.map((req) => (
-                  <tr key={req.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition">
-                    <td className="py-3.5 px-4 font-bold text-slate-900 dark:text-white">
-                      Plan {req.requestedPlan}
+                  <tr key={req.id}>
+                    <td className="py-3 px-4 font-bold">{req.requestedPlan}</td>
+                    <td className="py-3 px-4">{req.durationDays} jours</td>
+                    <td className="py-3 px-4">
+                      {new Date(req.createdAt).toLocaleDateString('fr-FR', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
                     </td>
-                    <td className="py-3.5 px-4">{req.durationDays} jours</td>
-                    <td className="py-3.5 px-4">
-                      {new Date(req.createdAt).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                        req.status === 'APPROVED' ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-400' :
-                        req.status === 'REJECTED' ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-400' :
-                        'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-400'
-                      }`}>
-                        {req.status === 'APPROVED' ? <CheckCircle className="w-3 h-3" /> :
-                         req.status === 'REJECTED' ? <XCircle className="w-3 h-3" /> :
-                         <Clock className="w-3 h-3" />}
-                        {req.status === 'APPROVED' ? 'Approuvée' :
-                         req.status === 'REJECTED' ? 'Refusée' :
-                         'En attente'}
+                    <td className="py-3 px-4">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                          req.status === 'APPROVED'
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                            : req.status === 'REJECTED'
+                              ? 'bg-rose-50 border-rose-200 text-rose-700'
+                              : 'bg-amber-50 border-amber-200 text-amber-700'
+                        }`}
+                      >
+                        {req.status === 'APPROVED' ? <CheckCircle className="w-3 h-3" /> : req.status === 'REJECTED' ? <XCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                        {req.status === 'APPROVED' ? 'Approuvée' : req.status === 'REJECTED' ? 'Refusée' : 'En attente'}
                       </span>
                     </td>
                   </tr>
