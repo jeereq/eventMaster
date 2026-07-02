@@ -5,6 +5,10 @@ import { renderGuestMessage, polishWhatsAppBody } from '../services/messageTempl
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
+function isEventDatePassed(eventDate: Date | string): boolean {
+  return new Date(eventDate).getTime() < Date.now();
+}
+
 // Helper function to extract guest phone number
 function getGuestPhone(guest: any): string | null {
   if (guest.preferences && typeof guest.preferences === 'object') {
@@ -218,11 +222,80 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
 
     return res.json({
       ...guest,
-      tableDetails
+      tableDetails,
+      eventPassed: isEventDatePassed(guest.event.date),
+      rsvpLocked: isEventDatePassed(guest.event.date),
     });
   } catch (error: any) {
     console.error('Erreur lors de la récupération des détails RSVP de l\'invité:', error);
     return res.status(500).json({ error: 'Erreur lors de la récupération du RSVP' });
+  }
+}
+
+// Public endpoint: all events where this guest (by email) has been invited
+export async function getGuestAllInvitations(req: Request, res: Response) {
+  try {
+    const guestId = req.params.guestId as string;
+
+    const anchorGuest = await prisma.guest.findUnique({
+      where: { id: guestId },
+      select: { id: true, firstName: true, lastName: true, email: true },
+    });
+
+    if (!anchorGuest) {
+      return res.status(404).json({ error: 'Invité non trouvé ou lien invalide.' });
+    }
+
+    const normalizedEmail = anchorGuest.email.trim().toLowerCase();
+
+    const guestRecords = await prisma.guest.findMany({
+      where: {
+        email: { equals: anchorGuest.email, mode: 'insensitive' },
+      },
+      include: {
+        event: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            date: true,
+            location: true,
+            tenant: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    const invitations = guestRecords
+      .map((record) => {
+        const eventPassed = isEventDatePassed(record.event.date);
+        return {
+          guestId: record.id,
+          rsvp: record.rsvp,
+          event: record.event,
+          organizationName: record.event.tenant?.name || 'Organisation',
+          eventPassed,
+          rsvpLocked: eventPassed,
+          isCurrent: record.id === guestId,
+        };
+      })
+      .sort((a, b) => new Date(a.event.date).getTime() - new Date(b.event.date).getTime());
+
+    return res.json({
+      guest: {
+        firstName: anchorGuest.firstName,
+        lastName: anchorGuest.lastName,
+        email: normalizedEmail,
+      },
+      currentGuestId: guestId,
+      invitations,
+      total: invitations.length,
+      upcomingCount: invitations.filter((i) => !i.eventPassed).length,
+      pastCount: invitations.filter((i) => i.eventPassed).length,
+    });
+  } catch (error: any) {
+    console.error('Erreur lors de la récupération des invitations invité:', error);
+    return res.status(500).json({ error: 'Erreur lors de la récupération de vos invitations.' });
   }
 }
 
@@ -253,6 +326,13 @@ export async function submitRsvp(req: Request, res: Response) {
 
     if (!guest) {
       return res.status(404).json({ error: 'Invité non trouvé ou lien RSVP invalide.' });
+    }
+
+    if (isEventDatePassed(guest.event.date)) {
+      return res.status(403).json({
+        error: 'La date de célébration est passée. Votre réponse RSVP ne peut plus être modifiée.',
+        rsvpLocked: true,
+      });
     }
 
     const previousRsvp = guest.rsvp;

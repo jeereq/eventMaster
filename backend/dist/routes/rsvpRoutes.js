@@ -4,6 +4,7 @@ const express_1 = require("express");
 const rsvpController_1 = require("../controllers/rsvpController");
 const feedController_1 = require("../controllers/feedController");
 const router = (0, express_1.Router)();
+router.get('/:guestId/invitations', rsvpController_1.getGuestAllInvitations);
 router.get('/:guestId', rsvpController_1.getGuestRsvpDetails);
 router.post('/:guestId', rsvpController_1.submitRsvp);
 // Guest feed and sharing routes

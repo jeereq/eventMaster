@@ -1,9 +1,10 @@
 import { Router } from 'express';
-import { getGuestRsvpDetails, submitRsvp } from '../controllers/rsvpController';
+import { getGuestRsvpDetails, submitRsvp, getGuestAllInvitations } from '../controllers/rsvpController';
 import { submitGuestShare, getEventFeed, createEventComment, getPublicEventShares, toggleLikeEventPost } from '../controllers/feedController';
 
 const router = Router();
 
+router.get('/:guestId/invitations', getGuestAllInvitations);
 router.get('/:guestId', getGuestRsvpDetails);
 router.post('/:guestId', submitRsvp);
 

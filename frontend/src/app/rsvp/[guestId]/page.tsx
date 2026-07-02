@@ -4,11 +4,12 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { downloadMedia, getMediaExtension, sanitizeFilenamePart } from '@/lib/downloadMedia';
+import { GuestPortalHomeLink } from '@/components/GuestPortalNav';
 import { 
   Calendar, MapPin, CheckCircle2, XCircle, AlertCircle, 
   HelpCircle, Utensils, Loader2, Award, Sparkles,
   Users, MessageSquare, Image, Send, Heart, Eye, Trash2, LayoutGrid, MessageCircle,
-  ChevronLeft, ChevronRight, X, RefreshCw, Video, ThumbsUp, Download
+  ChevronLeft, ChevronRight, X, RefreshCw, Video, ThumbsUp, Download, Clock
 } from 'lucide-react';
 
 interface GuestRsvpData {
@@ -24,6 +25,8 @@ interface GuestRsvpData {
     capacity: number;
     neighbors: Array<{ id: string; firstName: string; lastName: string }>;
   } | null;
+  eventPassed?: boolean;
+  rsvpLocked?: boolean;
   event: {
     id: string;
     title: string;
@@ -100,6 +103,7 @@ export default function RsvpPage() {
   const [guestbookSuccess, setGuestbookSuccess] = useState(false);
   const [guestbookShares, setGuestbookShares] = useState<any[]>([]);
   const [loadingGuestbook, setLoadingGuestbook] = useState(false);
+  const [rsvpLocked, setRsvpLocked] = useState(false);
 
   useEffect(() => {
     async function loadRsvpDetails() {
@@ -107,6 +111,7 @@ export default function RsvpPage() {
       try {
         const data = await api.get(`/rsvp/${guestId}`);
         setGuest(data);
+        setRsvpLocked(Boolean(data.rsvpLocked));
         if (data.rsvp && data.rsvp !== 'PENDING') {
           setRsvpStatus(data.rsvp);
           setSubmitted(true);
@@ -287,6 +292,10 @@ export default function RsvpPage() {
 
   const handleSubmitRsvp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (rsvpLocked) {
+      setError('La date de célébration est passée. Votre réponse RSVP ne peut plus être modifiée.');
+      return;
+    }
     setError('');
     setSubmitting(true);
 
@@ -437,11 +446,8 @@ export default function RsvpPage() {
               </div>
             </div>
 
-            {/* Live indicator */}
-            <div className="flex items-center gap-1.5 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1 rounded-full text-[9px] font-extrabold text-indigo-400 uppercase tracking-wider">
-              <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse" />
-              Live App
-            </div>
+            {/* Live indicator / Home link */}
+            <GuestPortalHomeLink guestId={guestId} variant="dark" />
           </div>
 
           {/* App Body (Scrollable) */}
@@ -513,12 +519,14 @@ export default function RsvpPage() {
                   </div>
                 </div>
 
+                {!rsvpLocked && (
                 <button 
                   onClick={() => setSubmitted(false)}
                   className="w-full py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-2xl text-xs transition"
                 >
                   Modifier ma réponse de présence
                 </button>
+                )}
               </div>
             )}
 
@@ -1070,16 +1078,31 @@ export default function RsvpPage() {
   const floralType = global.floralType || 'roses';
   const floralDensity = global.floralDensity !== undefined ? global.floralDensity : 40;
 
+  const renderRsvpLockedBanner = () =>
+    rsvpLocked ? (
+      <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-xl p-4 flex items-start gap-3 text-sm text-amber-900 dark:text-amber-200">
+        <Clock className="w-5 h-5 flex-shrink-0 text-amber-600" />
+        <div>
+          <p className="font-bold">Réponse verrouillée</p>
+          <p className="text-xs mt-0.5 opacity-90">
+            La date de célébration est passée. Votre réponse RSVP ne peut plus être modifiée.
+          </p>
+        </div>
+      </div>
+    ) : null;
+
   const renderRsvpFormControls = (el: any) => {
     return (
       <div className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl p-6 space-y-5 text-center shadow-sm">
+        {renderRsvpLockedBanner()}
         <div className="font-bold text-slate-800 text-sm">{formatText(el.text)}</div>
         
         {/* Yes/No Buttons */}
         <div className="grid grid-cols-2 gap-4">
           <button
             type="button"
-            onClick={() => setRsvpStatus('ACCEPTED')}
+            disabled={rsvpLocked}
+            onClick={() => !rsvpLocked && setRsvpStatus('ACCEPTED')}
             className={`py-3.5 px-4 border-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 transition ${rsvpStatus === 'ACCEPTED' ? 'border-emerald-600 bg-emerald-50/20 text-emerald-800 shadow-md shadow-emerald-50' : 'border-slate-200 hover:bg-slate-50 text-slate-600'}`}
           >
             <CheckCircle2 className={`w-6 h-6 ${rsvpStatus === 'ACCEPTED' ? 'text-emerald-600' : 'text-slate-300'}`} />
@@ -1088,7 +1111,8 @@ export default function RsvpPage() {
 
           <button
             type="button"
-            onClick={() => setRsvpStatus('DECLINED')}
+            disabled={rsvpLocked}
+            onClick={() => !rsvpLocked && setRsvpStatus('DECLINED')}
             className={`py-3.5 px-4 border-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 transition ${rsvpStatus === 'DECLINED' ? 'border-rose-600 bg-rose-50/20 text-rose-800 shadow-md shadow-rose-50' : 'border-slate-200 hover:bg-slate-50 text-slate-600'}`}
           >
             <XCircle className={`w-6 h-6 ${rsvpStatus === 'DECLINED' ? 'text-rose-600' : 'text-slate-300'}`} />
@@ -1190,7 +1214,7 @@ export default function RsvpPage() {
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || rsvpLocked}
           className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl transition shadow-lg shadow-indigo-100 disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {submitting ? (
@@ -1216,7 +1240,11 @@ export default function RsvpPage() {
 
       <div className="absolute inset-0 bg-grid-slate-200 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.7))]" />
 
-      <div 
+      <div className="max-w-lg w-full relative z-10 flex justify-start px-1">
+        <GuestPortalHomeLink guestId={guestId} variant="light" />
+      </div>
+
+      <div
         style={template ? getBackgroundStyle(bgType, bgColor, bgImageUrl, bgPattern) : { backgroundColor: '#ffffff' }}
         className={`max-w-lg w-full border border-slate-200 shadow-2xl relative z-10 overflow-hidden flex flex-col transition-all duration-300 ${
           template && frameType === 'arch' ? 'rounded-t-[240px] border-t-2 border-x-2 border-amber-200/60' : 'rounded-3xl'
@@ -1782,6 +1810,7 @@ export default function RsvpPage() {
 
               {/* Default RSVP Form */}
               <form onSubmit={handleSubmitRsvp} className="space-y-6">
+                {renderRsvpLockedBanner()}
                 <div className="space-y-3">
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider text-center mb-1">
                     Serez-vous parmi nous ?
@@ -1790,7 +1819,8 @@ export default function RsvpPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <button
                       type="button"
-                      onClick={() => setRsvpStatus('ACCEPTED')}
+                      disabled={rsvpLocked}
+                      onClick={() => !rsvpLocked && setRsvpStatus('ACCEPTED')}
                       className={`py-4 px-6 border-2 rounded-2xl flex flex-col items-center justify-center gap-2 transition ${rsvpStatus === 'ACCEPTED' ? 'border-emerald-600 bg-emerald-50/20 text-emerald-800 shadow-md shadow-emerald-50' : 'border-slate-200 hover:bg-slate-50 text-slate-600'}`}
                     >
                       <CheckCircle2 className={`w-7 h-7 ${rsvpStatus === 'ACCEPTED' ? 'text-emerald-600' : 'text-slate-300'}`} />
@@ -1799,7 +1829,8 @@ export default function RsvpPage() {
 
                     <button
                       type="button"
-                      onClick={() => setRsvpStatus('DECLINED')}
+                      disabled={rsvpLocked}
+                      onClick={() => !rsvpLocked && setRsvpStatus('DECLINED')}
                       className={`py-4 px-6 border-2 rounded-2xl flex flex-col items-center justify-center gap-2 transition ${rsvpStatus === 'DECLINED' ? 'border-rose-600 bg-rose-50/20 text-rose-800 shadow-md shadow-rose-50' : 'border-slate-200 hover:bg-slate-50 text-slate-600'}`}
                     >
                       <XCircle className={`w-7 h-7 ${rsvpStatus === 'DECLINED' ? 'text-rose-600' : 'text-slate-300'}`} />
@@ -1862,7 +1893,7 @@ export default function RsvpPage() {
 
                 <button
                   type="submit"
-                  disabled={submitting}
+                  disabled={submitting || rsvpLocked}
                   className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl transition shadow-lg shadow-indigo-100 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {submitting ? (
