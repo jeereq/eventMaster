@@ -54,6 +54,7 @@ model Tenant {
   stripeCustId  String?
   licenseActive Boolean    @default(true)
   licenseExpiresAt DateTime?
+  licenseExpiryWarningFor DateTime?
   licenseKey    String?
   referredByCommercialId String?
   referredByCommercial   User? @relation("CommercialReferral", fields: [referredByCommercialId], references: [id], onDelete: SetNull)
@@ -66,6 +67,7 @@ model Tenant {
   subscriptionRequests SubscriptionRequest[]
   rooms         OrganizationRoom[]
   commercialCommissions CommercialCommission[]
+  platformInvoices      PlatformInvoice[]
   
   managerId     String?
   manager       User?      @relation("TenantManager", fields: [managerId], references: [id])
@@ -184,10 +186,53 @@ model CommercialCommission {
   commissionAmount Float
   billingPeriod    String
   source           String
+  platformInvoiceId String?
+  platformInvoice   PlatformInvoice? @relation(fields: [platformInvoiceId], references: [id], onDelete: SetNull)
   createdAt        DateTime @default(now())
 
   @@unique([commercialId, tenantId, billingPeriod])
   @@index([commercialId])
+  @@index([platformInvoiceId])
+}
+
+enum InvoiceType {
+  SUBSCRIPTION_APPROVAL
+  RENEWAL
+  PAYMENT
+}
+
+enum InvoiceStatus {
+  SENT
+  PAID
+  PENDING
+}
+
+model PlatformInvoice {
+  id                    String        @id @default(uuid())
+  invoiceNumber         String        @unique
+  tenantId              String
+  tenant                Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan                  PlanType
+  amount                Float
+  currency              String        @default("FC")
+  type                  InvoiceType
+  status                InvoiceStatus @default(SENT)
+  durationDays          Int?
+  periodStart           DateTime?
+  periodEnd             DateTime?
+  billingPeriod         String
+  subscriptionRequestId String?       @unique
+  subscriptionRequest   SubscriptionRequest? @relation(fields: [subscriptionRequestId], references: [id], onDelete: SetNull)
+  recipientEmails       Json
+  details               Json?
+  sentAt                DateTime?
+  createdAt             DateTime      @default(now())
+  commercialCommissions CommercialCommission[]
+
+  @@index([tenantId])
+  @@index([billingPeriod])
+  @@index([type])
+  @@index([createdAt])
 }
 
 model Template {
@@ -268,6 +313,7 @@ model SubscriptionRequest {
   durationDays   Int                       @default(30)
   proofOfPayment String?
   status         SubscriptionRequestStatus @default(PENDING)
+  platformInvoice PlatformInvoice?
   createdAt      DateTime                  @default(now())
   updatedAt      DateTime                  @updatedAt
 }

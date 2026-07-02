@@ -5,6 +5,7 @@ import Stripe from 'stripe';
 import { getPlanLimits, getPlansConfiguration } from '../config/plansConfig';
 import { assertCanViewBilling } from '../services/permissionsService';
 import { recordCommercialCommission } from '../services/commercialService';
+import { createAndSendInvoice } from '../services/invoiceService';
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_mock';
 const stripe = new Stripe(STRIPE_SECRET_KEY, {
@@ -114,12 +115,28 @@ export async function createCheckoutSession(req: AuthenticatedRequest, res: Resp
           plan: planType,
           licenseActive: true,
           licenseExpiresAt: expiryDate,
+          licenseExpiryWarningFor: null,
         },
       });
+
+      const periodStart = new Date();
+      const invoice = await createAndSendInvoice({
+        tenantId,
+        plan: planType,
+        type: 'PAYMENT',
+        periodStart,
+        periodEnd: expiryDate,
+        durationDays: 30,
+        includeManagers: true,
+        status: 'PAID',
+      });
+
       await recordCommercialCommission({
         tenantId,
         plan: planType,
         source: 'MOCK_CHECKOUT',
+        invoiceAmount: invoice?.amount,
+        platformInvoiceId: invoice?.id,
       });
       return res.json({
         message: 'Mise à niveau fictive réussie (Mode Développement)',
@@ -199,12 +216,28 @@ export async function handleStripeWebhook(req: Request, res: Response) {
               stripeCustId: session.customer as string,
               licenseActive: true,
               licenseExpiresAt: expiryDate,
+              licenseExpiryWarningFor: null,
             },
           });
+
+          const periodStart = new Date();
+          const invoice = await createAndSendInvoice({
+            tenantId,
+            plan: 'PREMIUM',
+            type: 'PAYMENT',
+            periodStart,
+            periodEnd: expiryDate,
+            durationDays: 30,
+            includeManagers: true,
+            status: 'PAID',
+          });
+
           await recordCommercialCommission({
             tenantId,
             plan: 'PREMIUM',
             source: 'STRIPE_WEBHOOK',
+            invoiceAmount: invoice?.amount,
+            platformInvoiceId: invoice?.id,
           });
           console.log(`[Stripe Webhook] Tenant ${tenantId} upgraded to PREMIUM and license extended`);
         }
@@ -267,14 +300,29 @@ export async function mockUpgrade(req: AuthenticatedRequest, res: Response) {
         plan,
         licenseActive: true,
         licenseExpiresAt: plan === 'FREE' ? null : expiryDate,
+        licenseExpiryWarningFor: null,
       },
     });
 
     if (plan !== 'FREE') {
+      const periodStart = new Date();
+      const invoice = await createAndSendInvoice({
+        tenantId,
+        plan,
+        type: 'PAYMENT',
+        periodStart,
+        periodEnd: expiryDate,
+        durationDays: 30,
+        includeManagers: true,
+        status: 'PAID',
+      });
+
       await recordCommercialCommission({
         tenantId,
         plan,
         source: 'MOCK_UPGRADE',
+        invoiceAmount: invoice?.amount,
+        platformInvoiceId: invoice?.id,
       });
     }
 

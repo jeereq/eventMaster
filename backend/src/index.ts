@@ -15,6 +15,7 @@ import commercialRoutes from './routes/commercialRoutes';
 import { handleStripeWebhook } from './controllers/billingController';
 import { prisma } from './db';
 import { startReminderWorker } from './services/reminderService';
+import { startSubscriptionExpiryWorker } from './services/subscriptionExpiryService';
 
 // Load environment variables
 dotenv.config();
@@ -58,8 +59,9 @@ app.use('/api/billing', billingRoutes);
 // Start Server
 app.listen(PORT, () => {
   console.log(`[EventMaster Server] running on http://localhost:${PORT}`);
-  // Start background automatic reminders worker
+  // Start background workers
   startReminderWorker();
+  startSubscriptionExpiryWorker();
 });
 
 // Trigger ts-node-dev reload to pick up generated Prisma client after schema change (latitude and longitude fields added)

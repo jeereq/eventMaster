@@ -4,6 +4,7 @@ import { prisma } from '../db';
 import { PlanType } from '@prisma/client';
 import { getPlansConfiguration } from '../config/plansConfig';
 import { recordCommercialCommission } from '../services/commercialService';
+import { createAndSendInvoice } from '../services/invoiceService';
 
 // 1. Submit a subscription request (Tenant)
 export async function submitSubscriptionRequest(req: AuthenticatedRequest, res: Response) {
@@ -127,6 +128,9 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
     };
     const newLicenseKey = generateLicenseKey();
 
+    const periodStart = new Date();
+    const periodEnd = expiryDate;
+
     // Update Tenant and Request in a transaction
     const [updatedRequest, updatedTenant] = await prisma.$transaction([
       prisma.subscriptionRequest.update({
@@ -140,19 +144,36 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
           licenseActive: true,
           licenseExpiresAt: expiryDate,
           licenseKey: newLicenseKey,
+          licenseExpiryWarningFor: null,
         },
       }),
     ]);
+
+    const invoice = await createAndSendInvoice({
+      tenantId: request.tenantId,
+      plan: request.requestedPlan,
+      type: 'SUBSCRIPTION_APPROVAL',
+      durationDays: request.durationDays,
+      periodStart,
+      periodEnd,
+      subscriptionRequestId: requestId,
+      includeManagers: true,
+    });
 
     await recordCommercialCommission({
       tenantId: request.tenantId,
       plan: request.requestedPlan,
       source: 'SUBSCRIPTION_APPROVAL',
+      invoiceAmount: invoice?.amount,
+      platformInvoiceId: invoice?.id,
     });
 
     return res.json({
-      message: 'La demande d\'abonnement a été approuvée avec succès ! La licence est active pour 30 jours.',
+      message: `La demande d'abonnement a été approuvée. Licence active jusqu'au ${expiryDate.toLocaleDateString('fr-FR')}. Facture envoyée au propriétaire et aux managers.`,
       request: updatedRequest,
+      invoice: invoice
+        ? { id: invoice.id, invoiceNumber: invoice.invoiceNumber, amount: invoice.amount }
+        : null,
       tenant: {
         id: updatedTenant.id,
         name: updatedTenant.name,

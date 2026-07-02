@@ -65,6 +65,7 @@ export async function recordCommercialCommission(params: {
   plan: PlanType;
   source: string;
   invoiceAmount?: number;
+  platformInvoiceId?: string;
 }) {
   const tenant = await prisma.tenant.findUnique({
     where: { id: params.tenantId },
@@ -98,12 +99,14 @@ export async function recordCommercialCommission(params: {
       commissionAmount,
       billingPeriod,
       source: params.source,
+      platformInvoiceId: params.platformInvoiceId ?? null,
     },
     update: {
       plan: params.plan,
       invoiceAmount,
       commissionAmount,
       source: params.source,
+      platformInvoiceId: params.platformInvoiceId ?? undefined,
     },
   });
 }

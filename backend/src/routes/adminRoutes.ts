@@ -36,6 +36,7 @@ import {
   approveSubscriptionRequest, 
   rejectSubscriptionRequest 
 } from '../controllers/subscriptionController';
+import { getRevenueReport } from '../controllers/revenueReportController';
 
 const router = Router();
 
@@ -45,6 +46,9 @@ router.use(requireRole(['SUPER_ADMIN']));
 
 // GET /api/admin/stats
 router.get('/stats', getSystemStats);
+
+// Revenue & commissions report
+router.get('/reports/revenue', getRevenueReport);
 
 // Subscription Requests routes (Super Admin)
 router.get('/subscriptions/requests', getAdminSubscriptionRequests);

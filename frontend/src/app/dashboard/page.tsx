@@ -81,6 +81,51 @@ interface AdminTemplateItem {
   createdAt: string;
 }
 
+interface RevenueReport {
+  period: string;
+  summary: {
+    totalRevenue: number;
+    totalRevenueFormatted: string;
+    invoiceCount: number;
+    totalCommissions: number;
+    totalCommissionsFormatted: string;
+    netRevenue: number;
+    netRevenueFormatted: string;
+  };
+  byPlan: Record<string, { count: number; amount: number }>;
+  invoices: Array<{
+    id: string;
+    invoiceNumber: string;
+    tenantName: string;
+    plan: string;
+    amountFormatted: string;
+    type: string;
+    status: string;
+    createdAt: string;
+  }>;
+  commercialCommissions: Array<{
+    commercialId: string;
+    name: string | null;
+    email: string;
+    referralCode: string | null;
+    totalInvoiceAmount: number;
+    totalCommission: number;
+    entries: Array<{
+      tenantName: string;
+      plan: string;
+      invoiceAmount: number;
+      commissionAmount: number;
+      source: string;
+    }>;
+  }>;
+  monthlyTrend: Array<{
+    period: string;
+    revenue: number;
+    revenueFormatted: string;
+    invoiceCount: number;
+  }>;
+}
+
 function DashboardPageContent() {
   const { user, tenant } = useAuth();
   const [billing, setBilling] = useState<BillingStatus | null>(null);
@@ -107,6 +152,12 @@ function DashboardPageContent() {
   const [adminGuests, setAdminGuests] = useState<any[]>([]);
   const [adminSettings, setAdminSettings] = useState<any>(null);
   const [subscriptionRequests, setSubscriptionRequests] = useState<any[]>([]);
+  const [revenueReport, setRevenueReport] = useState<RevenueReport | null>(null);
+  const [revenuePeriod, setRevenuePeriod] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [loadingRevenueReport, setLoadingRevenueReport] = useState(false);
   const [usersLoading, setUsersLoading] = useState(false);
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [adminEventsLoading, setAdminEventsLoading] = useState(false);
@@ -265,6 +316,13 @@ function DashboardPageContent() {
       loadAdminSettings(); // Load settings to edit plans
     }
   }, [activeTab, user]);
+
+  // Load revenue report when analytics tab is active
+  useEffect(() => {
+    if (user?.role === 'SUPER_ADMIN' && activeTab === 'analytics') {
+      loadRevenueReport(revenuePeriod);
+    }
+  }, [activeTab, user, revenuePeriod]);
 
   // Reset pages on search or filter change
   useEffect(() => {
@@ -460,8 +518,21 @@ function DashboardPageContent() {
     }
   };
 
+  const loadRevenueReport = async (period: string) => {
+    setLoadingRevenueReport(true);
+    try {
+      const data = await api.get(`/admin/reports/revenue?period=${period}`);
+      setRevenueReport(data);
+    } catch (err: any) {
+      console.error('Error loading revenue report:', err);
+      setError('Impossible de charger le rapport de revenus.');
+    } finally {
+      setLoadingRevenueReport(false);
+    }
+  };
+
   const handleApproveSubscription = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir approuver cette demande d\'abonnement ? Cela activera la licence pour 30 jours.')) {
+    if (!confirm('Approuver cette demande ? La licence sera activée et une facture sera envoyée au propriétaire et aux managers.')) {
       return;
     }
     try {
@@ -2584,6 +2655,132 @@ function DashboardPageContent() {
                       )}
                     </div>
                   </div>
+                </div>
+
+                {/* Revenus & Commissions */}
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-6 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                      <CreditCard className="w-5 h-5 text-indigo-600" />
+                      Revenus & Commissions Commerciales
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="month"
+                        value={revenuePeriod}
+                        onChange={(e) => setRevenuePeriod(e.target.value)}
+                        className="px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium"
+                      />
+                      <button
+                        onClick={() => loadRevenueReport(revenuePeriod)}
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition"
+                      >
+                        Actualiser
+                      </button>
+                    </div>
+                  </div>
+
+                  {loadingRevenueReport ? (
+                    <div className="flex items-center justify-center py-12 text-slate-500">
+                      <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                      Chargement du rapport...
+                    </div>
+                  ) : revenueReport ? (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
+                          <span className="text-xs font-bold text-indigo-600 uppercase">Revenus bruts</span>
+                          <p className="text-xl font-extrabold text-indigo-900 mt-1">{revenueReport.summary.totalRevenueFormatted}</p>
+                          <span className="text-xs text-indigo-500">{revenueReport.summary.invoiceCount} facture(s)</span>
+                        </div>
+                        <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
+                          <span className="text-xs font-bold text-amber-600 uppercase">Commissions (20 %)</span>
+                          <p className="text-xl font-extrabold text-amber-900 mt-1">{revenueReport.summary.totalCommissionsFormatted}</p>
+                        </div>
+                        <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4">
+                          <span className="text-xs font-bold text-emerald-600 uppercase">Revenu net plateforme</span>
+                          <p className="text-xl font-extrabold text-emerald-900 mt-1">{revenueReport.summary.netRevenueFormatted}</p>
+                        </div>
+                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                          <span className="text-xs font-bold text-slate-500 uppercase">Période</span>
+                          <p className="text-xl font-extrabold text-slate-900 mt-1">{revenueReport.period}</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900 mb-3">Tendance sur 6 mois</h4>
+                          <div className="space-y-2">
+                            {revenueReport.monthlyTrend.map((m) => (
+                              <div key={m.period} className="flex items-center justify-between text-sm py-2 border-b border-slate-50">
+                                <span className="font-medium text-slate-600">{m.period}</span>
+                                <span className="font-bold text-indigo-600">{m.revenueFormatted}</span>
+                                <span className="text-xs text-slate-400">{m.invoiceCount} fact.</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900 mb-3">Commissions par commercial</h4>
+                          {revenueReport.commercialCommissions.length === 0 ? (
+                            <p className="text-sm text-slate-500">Aucune commission ce mois-ci.</p>
+                          ) : (
+                            <div className="space-y-3 max-h-64 overflow-y-auto">
+                              {revenueReport.commercialCommissions.map((c) => (
+                                <div key={c.commercialId} className="border border-slate-100 rounded-xl p-3">
+                                  <div className="flex justify-between items-start">
+                                    <div>
+                                      <p className="font-bold text-slate-800">{c.name || c.email}</p>
+                                      <p className="text-xs text-slate-400">{c.referralCode || '—'}</p>
+                                    </div>
+                                    <span className="font-extrabold text-amber-600">
+                                      {c.totalCommission.toLocaleString('fr-FR')} FC
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-slate-500 mt-1">
+                                    CA parrainé : {c.totalInvoiceAmount.toLocaleString('fr-FR')} FC · {c.entries.length} org.
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {revenueReport.invoices.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900 mb-3">Factures du mois</h4>
+                          <div className="overflow-x-auto border border-slate-100 rounded-xl">
+                            <table className="w-full text-sm">
+                              <thead className="bg-slate-50">
+                                <tr>
+                                  <th className="text-left px-4 py-2 font-bold text-slate-600">N°</th>
+                                  <th className="text-left px-4 py-2 font-bold text-slate-600">Organisation</th>
+                                  <th className="text-left px-4 py-2 font-bold text-slate-600">Forfait</th>
+                                  <th className="text-left px-4 py-2 font-bold text-slate-600">Montant</th>
+                                  <th className="text-left px-4 py-2 font-bold text-slate-600">Type</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {revenueReport.invoices.map((inv) => (
+                                  <tr key={inv.id} className="border-t border-slate-50">
+                                    <td className="px-4 py-2 font-mono text-xs">{inv.invoiceNumber}</td>
+                                    <td className="px-4 py-2">{inv.tenantName}</td>
+                                    <td className="px-4 py-2">{inv.plan}</td>
+                                    <td className="px-4 py-2 font-bold text-indigo-600">{inv.amountFormatted}</td>
+                                    <td className="px-4 py-2 text-xs text-slate-500">{inv.type}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm text-slate-500 text-center py-8">Aucune donnée de facturation disponible.</p>
+                  )}
                 </div>
 
                 {/* Bottom Analytics Grid */}
