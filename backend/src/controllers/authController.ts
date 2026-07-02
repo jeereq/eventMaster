@@ -121,11 +121,17 @@ export async function login(req: Request, res: Response) {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ error: 'Veuillez saisir votre email et mot de passe' });
+      return res.status(400).json({ error: 'Veuillez saisir votre email (ou téléphone) et mot de passe' });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email },
+    // Search user by email OR phone number
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: email },
+          { phone: email }
+        ]
+      },
       include: { tenant: true },
     });
 
@@ -361,5 +367,110 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
   } catch (error: any) {
     console.error('Erreur lors de la mise à jour du profil:', error);
     return res.status(500).json({ error: 'Erreur interne lors de la mise à jour du profil.' });
+  }
+}
+
+export async function forgotPassword(req: Request, res: Response) {
+  try {
+    const { email, method = 'EMAIL' } = req.body; // method: 'EMAIL' or 'WHATSAPP'
+
+    if (!email) {
+      return res.status(400).json({ error: 'Veuillez saisir votre adresse e-mail ou numéro de téléphone' });
+    }
+
+    // Find user by email or phone
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: email },
+          { phone: email }
+        ]
+      }
+    });
+
+    if (!user) {
+      // For security reasons, don't reveal if the user exists or not, but return success
+      return res.json({ message: 'Si le compte existe, un lien de réinitialisation a été envoyé.' });
+    }
+
+    // Generate a reset token (JWT containing userId and purpose, expiring in 1h)
+    const resetToken = jwt.sign(
+      { userId: user.id, purpose: 'password-reset' },
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    const resetLink = `${FRONTEND_URL}/reset-password?token=${resetToken}`;
+
+    if (method === 'WHATSAPP' && user.phone) {
+      const whatsappBody = `Bonjour *${user.name || 'Utilisateur'}*,\n\nVous avez demandé la réinitialisation de votre mot de passe sur *EventMaster*.\n\nVeuillez cliquer sur le lien suivant pour définir un nouveau mot de passe (valable 1 heure) :\n👉 ${resetLink}\n\nSi vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer ce message.\n\nL'équipe EventMaster ✨`;
+      console.log(`[Auth Controller] Sending password reset link via WhatsApp to ${user.phone}...`);
+      await sendRealWhatsApp(user.phone, whatsappBody);
+    } else {
+      const emailSubject = 'Réinitialisation de votre mot de passe - EventMaster';
+      const emailText = `Bonjour ${user.name || 'Utilisateur'},\n\nVous avez demandé la réinitialisation de votre mot de passe sur EventMaster. Veuillez cliquer sur le lien suivant pour définir un nouveau mot de passe (valable 1 heure) :\n${resetLink}\n\nSi vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet e-mail.\n\nCordialement,\nL'équipe EventMaster`;
+      const emailHtml = `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+          <h2 style="color: #4f46e5; text-align: center;">Réinitialisation de mot de passe</h2>
+          <p>Bonjour <strong>${user.name || 'Utilisateur'}</strong>,</p>
+          <p>Nous avons reçu une demande de réinitialisation de mot de passe pour votre compte EventMaster.</p>
+          <p>Pour définir un nouveau mot de passe, veuillez cliquer sur le bouton ci-dessous (ce lien est valable pendant 1 heure) :</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetLink}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Réinitialiser mon mot de passe</a>
+          </div>
+          <p style="font-size: 0.875rem; color: #6b7280;">Si le bouton ne fonctionne pas, vous pouvez copier et coller ce lien dans votre navigateur :<br><a href="${resetLink}" style="color: #4f46e5;">${resetLink}</a></p>
+          <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0;" />
+          <p style="font-size: 0.875rem; color: #9ca3af; text-align: center;">Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet e-mail en toute sécurité.</p>
+        </div>
+      `;
+      await sendRealEmail(user.email, emailSubject, emailText, emailHtml);
+    }
+
+    return res.json({ message: 'Si le compte existe, un lien de réinitialisation a été envoyé.' });
+  } catch (error: any) {
+    console.error('Erreur lors de la demande de réinitialisation de mot de passe:', error);
+    return res.status(500).json({ error: 'Erreur interne du serveur lors de la demande de réinitialisation' });
+  }
+}
+
+export async function resetPassword(req: Request, res: Response) {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ error: 'Le jeton et le mot de passe sont obligatoires.' });
+    }
+
+    // Verify reset token
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      return res.status(400).json({ error: 'Le jeton de réinitialisation est invalide ou a expiré.' });
+    }
+
+    if (!decoded || decoded.purpose !== 'password-reset' || !decoded.userId) {
+      return res.status(400).json({ error: 'Le jeton de réinitialisation est invalide.' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé.' });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash }
+    });
+
+    return res.json({ message: 'Votre mot de passe a été réinitialisé avec succès ! Vous pouvez maintenant vous connecter.' });
+  } catch (error: any) {
+    console.error('Erreur lors de la réinitialisation du mot de passe:', error);
+    return res.status(500).json({ error: 'Erreur interne du serveur lors de la réinitialisation du mot de passe' });
   }
 }
