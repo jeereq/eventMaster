@@ -8,6 +8,7 @@ import {
   AlertCircle, CheckCircle2, ShieldCheck, Save, Award, Calendar
 } from 'lucide-react';
 import TeamManagement from '../TeamManagement';
+import RoomsManagement from '../RoomsManagement';
 
 export default function ProfilePage() {
   const { user, tenant, updateUserAndTenant } = useAuth();
@@ -303,6 +304,7 @@ export default function ProfilePage() {
       </form>
 
       {user?.role === 'USER' && tenant && <TeamManagement />}
+      {user?.role === 'USER' && tenant && <RoomsManagement />}
     </div>
   );
 }

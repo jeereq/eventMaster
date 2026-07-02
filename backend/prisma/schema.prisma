@@ -12,6 +12,16 @@ enum Role {
   USER
 }
 
+enum OrgRole {
+  MANAGER
+  PROTOCOL
+}
+
+enum StaffRole {
+  MANAGER
+  PROTOCOL
+}
+
 enum PlanType {
   FREE
   STANDARD
@@ -34,6 +44,7 @@ model Tenant {
   events        Event[]
   templates     Template[]
   subscriptionRequests SubscriptionRequest[]
+  rooms         OrganizationRoom[]
   
   managerId     String?
   manager       User?      @relation("TenantManager", fields: [managerId], references: [id])
@@ -46,6 +57,7 @@ model User {
   name          String?
   phone         String?
   role          Role       @default(USER)
+  orgRole       OrgRole?
   tenantId      String?
   tenant        Tenant?    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   isEmailVerified Boolean  @default(false)
@@ -60,12 +72,16 @@ model User {
   managedTenants Tenant[]  @relation("TenantManager")
   comments       EventComment[]
   legalAcceptances LegalAcceptance[]
+  eventStaff     EventStaff[]
+  roomStaff      RoomStaff[]
 }
 
 model Event {
   id                String       @id @default(uuid())
   tenantId          String
   tenant            Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  roomId            String?
+  room              OrganizationRoom? @relation(fields: [roomId], references: [id], onDelete: SetNull)
   title             String
   description       String?
   date              DateTime
@@ -81,6 +97,7 @@ model Event {
   invitations Invitation[]
   shares      GuestShare[]
   posts       EventPost[]
+  staff       EventStaff[]
 }
 
 model Guest {
@@ -220,4 +237,48 @@ model LegalAcceptance {
   @@index([userId])
   @@index([guestId])
   @@index([subjectType, documentType, documentVersion])
+}
+
+model OrganizationRoom {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  capacity    Int?
+  floor       String?
+  location    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  events      Event[]
+  staff       RoomStaff[]
+
+  @@index([tenantId])
+}
+
+model RoomStaff {
+  id        String           @id @default(uuid())
+  roomId    String
+  room      OrganizationRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  staffRole StaffRole
+  createdAt DateTime         @default(now())
+
+  @@unique([roomId, userId])
+  @@index([userId])
+}
+
+model EventStaff {
+  id        String    @id @default(uuid())
+  eventId   String
+  event     Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  staffRole StaffRole
+  createdAt DateTime  @default(now())
+
+  @@unique([eventId, userId])
+  @@index([userId])
 }

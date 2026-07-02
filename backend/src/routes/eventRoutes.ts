@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getEvents, createEvent, getEventById, updateEvent, deleteEvent } from '../controllers/eventController';
+import { getEventStaff, assignEventStaff, removeEventStaff } from '../controllers/eventStaffController';
 import { getGuests, createGuest, updateGuest, deleteGuest, importGuests } from '../controllers/guestController';
 import { getInvitations, createInvitation, updateInvitation, deleteInvitation, sendInvitation } from '../controllers/invitationController';
 import { getEventShares, getEventFeed, createEventPost, deleteEventPost, deleteGuestShare, toggleLikeEventPost } from '../controllers/feedController';
@@ -17,6 +18,11 @@ router.post('/', createEvent);
 router.get('/:id', getEventById);
 router.put('/:id', updateEvent);
 router.delete('/:id', deleteEvent);
+
+// Event staff assignments
+router.get('/:eventId/staff', getEventStaff);
+router.post('/:eventId/staff', assignEventStaff);
+router.delete('/:eventId/staff/:userId', removeEventStaff);
 
 // Guests related to Events
 router.get('/:eventId/guests', getGuests);

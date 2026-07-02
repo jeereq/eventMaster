@@ -206,7 +206,8 @@ function DashboardPageContent() {
             api.get('/events'),
           ]);
           setBilling(billingData);
-          setEvents(eventsData.slice(0, 3)); // Display only 3 recent events
+          const eventsList = Array.isArray(eventsData) ? eventsData : eventsData.events || [];
+          setEvents(eventsList.slice(0, 3));
         }
       } catch (err: any) {
         console.error('Error loading dashboard data:', err);

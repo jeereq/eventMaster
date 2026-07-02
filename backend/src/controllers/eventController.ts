@@ -2,21 +2,38 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { getPlanLimits } from '../config/plansConfig';
+import {
+  canAccessEvent,
+  canManageEvent,
+  getAccessibleEventIds,
+  resolveOrgAccess,
+} from '../services/permissionsService';
 
 // List all events for the current tenant
 export async function getEvents(req: AuthenticatedRequest, res: Response) {
   try {
     const tenantId = req.user?.tenantId;
-    if (!tenantId) {
+    const userId = req.user?.id;
+    if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
 
+    const accessible = await getAccessibleEventIds(userId, tenantId);
+    const where =
+      accessible === 'all'
+        ? { tenantId }
+        : { tenantId, id: { in: accessible.length ? accessible : ['__none__'] } };
+
     const events = await prisma.event.findMany({
-      where: { tenantId },
+      where,
+      include: {
+        room: { select: { id: true, name: true } },
+      },
       orderBy: { date: 'asc' },
     });
 
-    return res.json(events);
+    const access = await resolveOrgAccess(userId, tenantId);
+    return res.json({ events, access });
   } catch (error: any) {
     console.error('Erreur lors de la récupération des événements:', error);
     return res.status(500).json({ error: 'Erreur lors de la récupération des événements' });
@@ -27,11 +44,17 @@ export async function getEvents(req: AuthenticatedRequest, res: Response) {
 export async function createEvent(req: AuthenticatedRequest, res: Response) {
   try {
     const tenantId = req.user?.tenantId;
-    if (!tenantId) {
+    const userId = req.user?.id;
+    if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
 
-    const { title, description, date, location, reminderFrequency, latitude, longitude } = req.body;
+    const access = await resolveOrgAccess(userId, tenantId);
+    if (!access.canCreateEvents) {
+      return res.status(403).json({ error: 'Vous n\'avez pas la permission de créer des événements.' });
+    }
+
+    const { title, description, date, location, reminderFrequency, latitude, longitude, roomId } = req.body;
 
     if (!title || !date || !location) {
       return res.status(400).json({ error: 'Les champs title, date et location sont requis' });
@@ -59,10 +82,12 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
         description,
         date: new Date(date),
         location,
+        roomId: roomId || null,
         reminderFrequency: reminderFrequency || 'NONE',
         latitude: latitude !== undefined && latitude !== null ? parseFloat(latitude) : null,
         longitude: longitude !== undefined && longitude !== null ? parseFloat(longitude) : null,
       },
+      include: { room: { select: { id: true, name: true } } },
     });
 
     return res.status(201).json(event);
@@ -76,14 +101,20 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
 export async function getEventById(req: AuthenticatedRequest, res: Response) {
   try {
     const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
     const id = req.params.id as string;
 
-    if (!tenantId) {
+    if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
+    }
+
+    if (!(await canAccessEvent(userId, tenantId, id))) {
+      return res.status(403).json({ error: 'Accès refusé à cet événement.' });
     }
 
     const event = await prisma.event.findFirst({
       where: { id, tenantId },
+      include: { room: { select: { id: true, name: true } } },
     });
 
     if (!event) {
@@ -101,14 +132,18 @@ export async function getEventById(req: AuthenticatedRequest, res: Response) {
 export async function updateEvent(req: AuthenticatedRequest, res: Response) {
   try {
     const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
     const id = req.params.id as string;
-    const { title, description, date, location, reminderFrequency, latitude, longitude, tablePlan } = req.body;
+    const { title, description, date, location, reminderFrequency, latitude, longitude, tablePlan, roomId } = req.body;
 
-    if (!tenantId) {
+    if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
 
-    // Ensure the event belongs to this tenant first
+    if (!(await canManageEvent(userId, tenantId, id))) {
+      return res.status(403).json({ error: 'Vous n\'avez pas la permission de modifier cet événement.' });
+    }
+
     const existingEvent = await prisma.event.findFirst({
       where: { id, tenantId },
     });
@@ -128,7 +163,9 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
         latitude: latitude !== undefined ? (latitude !== null ? parseFloat(latitude) : null) : existingEvent.latitude,
         longitude: longitude !== undefined ? (longitude !== null ? parseFloat(longitude) : null) : existingEvent.longitude,
         tablePlan: tablePlan !== undefined ? tablePlan : existingEvent.tablePlan,
+        roomId: roomId !== undefined ? roomId : existingEvent.roomId,
       },
+      include: { room: { select: { id: true, name: true } } },
     });
 
     return res.json(updatedEvent);
@@ -142,10 +179,16 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
 export async function deleteEvent(req: AuthenticatedRequest, res: Response) {
   try {
     const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
     const id = req.params.id as string;
 
-    if (!tenantId) {
+    if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
+    }
+
+    const access = await resolveOrgAccess(userId, tenantId);
+    if (!access.canManageAllEvents) {
+      return res.status(403).json({ error: 'Seuls le propriétaire et les managers org. peuvent supprimer des événements.' });
     }
 
     const existingEvent = await prisma.event.findFirst({

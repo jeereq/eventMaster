@@ -8,5 +8,6 @@ router.use(auth_1.requireAuth);
 router.use(auth_1.requireActiveLicense);
 router.get('/', teamController_1.getTeamMembers);
 router.post('/', teamController_1.createTeamMember);
+router.put('/:id', teamController_1.updateTeamMember);
 router.delete('/:id', teamController_1.deleteTeamMember);
 exports.default = router;

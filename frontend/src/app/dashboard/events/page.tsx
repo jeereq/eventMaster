@@ -10,9 +10,10 @@ import {
   ChevronRight, ArrowLeft, Check, Upload, Mail, Send, 
   Sparkles, CheckCircle2, XCircle, AlertCircle, HelpCircle, Loader2,
   Copy, MessageSquare, Share2, Search, Filter, RefreshCw,
-  Eye, Utensils, FileSpreadsheet, Download, LayoutGrid
+  Eye, Utensils, FileSpreadsheet, Download, LayoutGrid, Building2
 } from 'lucide-react';
 import TablePlanner from './TablePlanner';
+import EventStaffPanel from './EventStaffPanel';
 import EventFeedManager from './EventFeedManager';
 
 interface EventItem {
@@ -185,7 +186,7 @@ export default function EventsPage() {
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   
   // Tabs
-  const [activeTab, setActiveTab] = useState<'guests' | 'invitations' | 'tablePlan' | 'feed'>('guests');
+  const [activeTab, setActiveTab] = useState<'guests' | 'invitations' | 'tablePlan' | 'feed' | 'staff'>('guests');
 
   // Event form
   const [showEventModal, setShowEventModal] = useState(false);
@@ -381,7 +382,7 @@ export default function EventsPage() {
         // or we can show a message. Let's make sure they are redirected or shown an admin view.
       } else {
         const data = await api.get('/events');
-        setEvents(data);
+        setEvents(Array.isArray(data) ? data : data.events || []);
       }
     } catch (err: any) {
       setError(err.message || 'Erreur lors du chargement des événements');
@@ -1361,6 +1362,15 @@ export default function EventsPage() {
               </span>
             </button>
             <button
+              onClick={() => setActiveTab('staff')}
+              className={`pb-4 px-6 text-sm font-bold border-b-2 transition ${activeTab === 'staff' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+            >
+              <span className="flex items-center gap-2">
+                <Users className="w-4.5 h-4.5" />
+                Équipe événement
+              </span>
+            </button>
+            <button
               onClick={() => setActiveTab('feed')}
               className={`pb-4 px-6 text-sm font-bold border-b-2 transition ${activeTab === 'feed' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
             >
@@ -1824,6 +1834,10 @@ export default function EventsPage() {
           )}
 
           {/* Tab Content: Feed & Shares */}
+          {activeTab === 'staff' && selectedEvent && (
+            <EventStaffPanel eventId={selectedEvent.id} />
+          )}
+
           {activeTab === 'feed' && (
             <EventFeedManager
               key={`feed_${selectedEvent.id}`}

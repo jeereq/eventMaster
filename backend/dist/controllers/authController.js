@@ -17,6 +17,7 @@ const db_1 = require("../db");
 const notificationService_1 = require("../services/notificationService");
 const tenantAccess_1 = require("../utils/tenantAccess");
 const legalService_1 = require("../services/legalService");
+const permissionsService_1 = require("../services/permissionsService");
 const JWT_SECRET = process.env.JWT_SECRET || 'eventmaster-secret-key-12345';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 async function register(req, res) {
@@ -228,6 +229,9 @@ async function getProfile(req, res) {
         if (!user) {
             return res.status(404).json({ error: 'Utilisateur non trouvé.' });
         }
+        const access = user.tenantId
+            ? await (0, permissionsService_1.resolveOrgAccess)(user.id, user.tenantId)
+            : null;
         return res.json({
             user: {
                 id: user.id,
@@ -235,8 +239,10 @@ async function getProfile(req, res) {
                 name: user.name,
                 phone: user.phone,
                 role: user.role,
+                orgRole: user.orgRole,
             },
             tenant: user.tenant ? (0, tenantAccess_1.formatTenantResponse)(user.tenant) : null,
+            access,
         });
     }
     catch (error) {

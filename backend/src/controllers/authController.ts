@@ -7,6 +7,7 @@ import { sendRealEmail, sendRealWhatsApp } from '../services/notificationService
 import { AuthenticatedRequest } from '../middleware/auth';
 import { formatTenantResponse } from '../utils/tenantAccess';
 import { recordUserLegalAcceptance } from '../services/legalService';
+import { resolveOrgAccess } from '../services/permissionsService';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'eventmaster-secret-key-12345';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -256,6 +257,10 @@ export async function getProfile(req: AuthenticatedRequest, res: Response) {
       return res.status(404).json({ error: 'Utilisateur non trouvé.' });
     }
 
+    const access = user.tenantId
+      ? await resolveOrgAccess(user.id, user.tenantId)
+      : null;
+
     return res.json({
       user: {
         id: user.id,
@@ -263,8 +268,10 @@ export async function getProfile(req: AuthenticatedRequest, res: Response) {
         name: user.name,
         phone: user.phone,
         role: user.role,
+        orgRole: user.orgRole,
       },
       tenant: user.tenant ? formatTenantResponse(user.tenant) : null,
+      access,
     });
   } catch (error: any) {
     console.error('Erreur lors de la récupération du profil:', error);

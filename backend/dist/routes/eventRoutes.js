@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const eventController_1 = require("../controllers/eventController");
+const eventStaffController_1 = require("../controllers/eventStaffController");
 const guestController_1 = require("../controllers/guestController");
 const invitationController_1 = require("../controllers/invitationController");
 const feedController_1 = require("../controllers/feedController");
@@ -16,6 +17,10 @@ router.post('/', eventController_1.createEvent);
 router.get('/:id', eventController_1.getEventById);
 router.put('/:id', eventController_1.updateEvent);
 router.delete('/:id', eventController_1.deleteEvent);
+// Event staff assignments
+router.get('/:eventId/staff', eventStaffController_1.getEventStaff);
+router.post('/:eventId/staff', eventStaffController_1.assignEventStaff);
+router.delete('/:eventId/staff/:userId', eventStaffController_1.removeEventStaff);
 // Guests related to Events
 router.get('/:eventId/guests', guestController_1.getGuests);
 router.post('/:eventId/guests', guestController_1.createGuest);

@@ -7,18 +7,28 @@ exports.updateEvent = updateEvent;
 exports.deleteEvent = deleteEvent;
 const db_1 = require("../db");
 const plansConfig_1 = require("../config/plansConfig");
+const permissionsService_1 = require("../services/permissionsService");
 // List all events for the current tenant
 async function getEvents(req, res) {
     try {
         const tenantId = req.user?.tenantId;
-        if (!tenantId) {
+        const userId = req.user?.id;
+        if (!tenantId || !userId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
         }
+        const accessible = await (0, permissionsService_1.getAccessibleEventIds)(userId, tenantId);
+        const where = accessible === 'all'
+            ? { tenantId }
+            : { tenantId, id: { in: accessible.length ? accessible : ['__none__'] } };
         const events = await db_1.prisma.event.findMany({
-            where: { tenantId },
+            where,
+            include: {
+                room: { select: { id: true, name: true } },
+            },
             orderBy: { date: 'asc' },
         });
-        return res.json(events);
+        const access = await (0, permissionsService_1.resolveOrgAccess)(userId, tenantId);
+        return res.json({ events, access });
     }
     catch (error) {
         console.error('Erreur lors de la récupération des événements:', error);
@@ -29,10 +39,15 @@ async function getEvents(req, res) {
 async function createEvent(req, res) {
     try {
         const tenantId = req.user?.tenantId;
-        if (!tenantId) {
+        const userId = req.user?.id;
+        if (!tenantId || !userId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
         }
-        const { title, description, date, location, reminderFrequency, latitude, longitude } = req.body;
+        const access = await (0, permissionsService_1.resolveOrgAccess)(userId, tenantId);
+        if (!access.canCreateEvents) {
+            return res.status(403).json({ error: 'Vous n\'avez pas la permission de créer des événements.' });
+        }
+        const { title, description, date, location, reminderFrequency, latitude, longitude, roomId } = req.body;
         if (!title || !date || !location) {
             return res.status(400).json({ error: 'Les champs title, date et location sont requis' });
         }
@@ -56,10 +71,12 @@ async function createEvent(req, res) {
                 description,
                 date: new Date(date),
                 location,
+                roomId: roomId || null,
                 reminderFrequency: reminderFrequency || 'NONE',
                 latitude: latitude !== undefined && latitude !== null ? parseFloat(latitude) : null,
                 longitude: longitude !== undefined && longitude !== null ? parseFloat(longitude) : null,
             },
+            include: { room: { select: { id: true, name: true } } },
         });
         return res.status(201).json(event);
     }
@@ -72,12 +89,17 @@ async function createEvent(req, res) {
 async function getEventById(req, res) {
     try {
         const tenantId = req.user?.tenantId;
+        const userId = req.user?.id;
         const id = req.params.id;
-        if (!tenantId) {
+        if (!tenantId || !userId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
+        }
+        if (!(await (0, permissionsService_1.canAccessEvent)(userId, tenantId, id))) {
+            return res.status(403).json({ error: 'Accès refusé à cet événement.' });
         }
         const event = await db_1.prisma.event.findFirst({
             where: { id, tenantId },
+            include: { room: { select: { id: true, name: true } } },
         });
         if (!event) {
             return res.status(404).json({ error: 'Événement non trouvé' });
@@ -93,12 +115,15 @@ async function getEventById(req, res) {
 async function updateEvent(req, res) {
     try {
         const tenantId = req.user?.tenantId;
+        const userId = req.user?.id;
         const id = req.params.id;
-        const { title, description, date, location, reminderFrequency, latitude, longitude, tablePlan } = req.body;
-        if (!tenantId) {
+        const { title, description, date, location, reminderFrequency, latitude, longitude, tablePlan, roomId } = req.body;
+        if (!tenantId || !userId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
         }
-        // Ensure the event belongs to this tenant first
+        if (!(await (0, permissionsService_1.canManageEvent)(userId, tenantId, id))) {
+            return res.status(403).json({ error: 'Vous n\'avez pas la permission de modifier cet événement.' });
+        }
         const existingEvent = await db_1.prisma.event.findFirst({
             where: { id, tenantId },
         });
@@ -116,7 +141,9 @@ async function updateEvent(req, res) {
                 latitude: latitude !== undefined ? (latitude !== null ? parseFloat(latitude) : null) : existingEvent.latitude,
                 longitude: longitude !== undefined ? (longitude !== null ? parseFloat(longitude) : null) : existingEvent.longitude,
                 tablePlan: tablePlan !== undefined ? tablePlan : existingEvent.tablePlan,
+                roomId: roomId !== undefined ? roomId : existingEvent.roomId,
             },
+            include: { room: { select: { id: true, name: true } } },
         });
         return res.json(updatedEvent);
     }
@@ -129,9 +156,14 @@ async function updateEvent(req, res) {
 async function deleteEvent(req, res) {
     try {
         const tenantId = req.user?.tenantId;
+        const userId = req.user?.id;
         const id = req.params.id;
-        if (!tenantId) {
+        if (!tenantId || !userId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
+        }
+        const access = await (0, permissionsService_1.resolveOrgAccess)(userId, tenantId);
+        if (!access.canManageAllEvents) {
+            return res.status(403).json({ error: 'Seuls le propriétaire et les managers org. peuvent supprimer des événements.' });
         }
         const existingEvent = await db_1.prisma.event.findFirst({
             where: { id, tenantId },

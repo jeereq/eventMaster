@@ -65,9 +65,10 @@ export default function AnalyticsPage() {
     try {
       setError('');
       const data = await api.get('/events');
-      setEvents(data);
-      if (data.length > 0) {
-        setSelectedEventId(data[0].id);
+      const eventsList = Array.isArray(data) ? data : data.events || [];
+      setEvents(eventsList);
+      if (eventsList.length > 0) {
+        setSelectedEventId(eventsList[0].id);
       }
     } catch (err: any) {
       console.error('Error loading events for analytics:', err);
