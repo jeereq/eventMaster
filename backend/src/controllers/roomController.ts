@@ -74,8 +74,8 @@ export async function createRoom(req: AuthenticatedRequest, res: Response) {
     }
 
     const access = await resolveOrgAccess(userId, tenantId);
-    if (!access.canManageRooms) {
-      return res.status(403).json({ error: 'Seuls le propriétaire et les managers peuvent créer des salles.' });
+    if (!access.canCreateRooms) {
+      return res.status(403).json({ error: 'Seuls le propriétaire et les managers org. peuvent créer des salles.' });
     }
 
     const { name, description, capacity, floor, location, roomType, layoutParams, layoutBlueprint } = req.body;

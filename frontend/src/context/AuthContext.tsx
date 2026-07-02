@@ -4,12 +4,27 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '../lib/api';
 
+export interface OrgAccess {
+  level: 'owner' | 'manager' | 'protocol' | 'staff' | 'none';
+  orgRole: 'MANAGER' | 'PROTOCOL' | null;
+  isOwner: boolean;
+  canManageTeam: boolean;
+  canManageRooms: boolean;
+  canCreateEvents: boolean;
+  canCreateRooms: boolean;
+  canManageAllEvents: boolean;
+  canProtocolAllEvents: boolean;
+  canViewBilling: boolean;
+  isProtocolOnly: boolean;
+}
+
 interface User {
   id: string;
   email: string;
   name: string;
   phone?: string | null;
   role: 'SUPER_ADMIN' | 'COMMERCIAL' | 'USER';
+  orgRole?: 'MANAGER' | 'PROTOCOL' | null;
 }
 
 interface Tenant {
@@ -31,10 +46,21 @@ interface RegisterResult {
 interface AuthContextType {
   user: User | null;
   tenant: Tenant | null;
+  access: OrgAccess | null;
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string, tenantName: string, phone?: string, verificationMethod?: 'EMAIL' | 'WHATSAPP', acceptTerms?: boolean, acceptPrivacy?: boolean) => Promise<RegisterResult>;
+  register: (
+    email: string,
+    password: string,
+    name: string,
+    tenantName: string,
+    phone?: string,
+    verificationMethod?: 'EMAIL' | 'WHATSAPP',
+    acceptTerms?: boolean,
+    acceptPrivacy?: boolean,
+    referralCode?: string,
+  ) => Promise<RegisterResult>;
   verifyOtp: (email: string, otp: string) => Promise<void>;
   resendOtp: (email: string, verificationMethod?: 'EMAIL' | 'WHATSAPP') => Promise<string>;
   logout: () => void;
@@ -45,26 +71,34 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function persistAccess(access: OrgAccess | null) {
+  if (access) {
+    localStorage.setItem('access', JSON.stringify(access));
+  } else {
+    localStorage.removeItem('access');
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [tenant, setTenant] = useState<Tenant | null>(null);
+  const [access, setAccess] = useState<OrgAccess | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    // Check if token exists on mount
     const savedToken = localStorage.getItem('token');
     const savedUser = localStorage.getItem('user');
     const savedTenant = localStorage.getItem('tenant');
+    const savedAccess = localStorage.getItem('access');
 
     if (savedToken && savedUser) {
       setToken(savedToken);
       setUser(JSON.parse(savedUser));
-      if (savedTenant) {
-        setTenant(JSON.parse(savedTenant));
-      }
-      // Fetch latest profile asynchronously to sync state with server
+      if (savedTenant) setTenant(JSON.parse(savedTenant));
+      if (savedAccess) setAccess(JSON.parse(savedAccess));
+
       api.get('/auth/profile')
         .then((data) => {
           if (data.user) {
@@ -74,6 +108,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (data.tenant) {
             setTenant(data.tenant);
             localStorage.setItem('tenant', JSON.stringify(data.tenant));
+          }
+          if (data.access !== undefined) {
+            setAccess(data.access);
+            persistAccess(data.access);
           }
         })
         .catch((err) => console.error('Error auto-refreshing profile on mount:', err));
@@ -93,13 +131,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         localStorage.removeItem('tenant');
       }
+      persistAccess(data.access ?? null);
 
       setToken(data.token);
       setUser(data.user);
-      setTenant(data.tenant);
+      setTenant(data.tenant ?? null);
+      setAccess(data.access ?? null);
       setLoading(false);
 
-      router.push('/dashboard');
+      if (data.user?.role === 'COMMERCIAL') {
+        router.push('/dashboard/commercial');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (error: any) {
       setLoading(false);
       if (error?.data?.notVerified && error?.data?.email) {
@@ -110,10 +154,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (email: string, password: string, name: string, tenantName: string, phone?: string, verificationMethod?: 'EMAIL' | 'WHATSAPP', acceptTerms?: boolean, acceptPrivacy?: boolean) => {
+  const register = async (
+    email: string,
+    password: string,
+    name: string,
+    tenantName: string,
+    phone?: string,
+    verificationMethod?: 'EMAIL' | 'WHATSAPP',
+    acceptTerms?: boolean,
+    acceptPrivacy?: boolean,
+    referralCode?: string,
+  ) => {
     setLoading(true);
     try {
-      const data = await api.post('/auth/register', { email, password, name, tenantName, phone, verificationMethod, acceptTerms, acceptPrivacy });
+      const data = await api.post('/auth/register', {
+        email, password, name, tenantName, phone, verificationMethod, acceptTerms, acceptPrivacy, referralCode,
+      });
       setLoading(false);
       return {
         message: data.message || 'Inscription réussie ! Saisissez le code OTP reçu.',
@@ -138,9 +194,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         localStorage.removeItem('tenant');
       }
+      persistAccess(data.access ?? null);
       setToken(data.token);
       setUser(data.user);
-      setTenant(data.tenant);
+      setTenant(data.tenant ?? null);
+      setAccess(data.access ?? null);
       setLoading(false);
     } catch (error) {
       setLoading(false);
@@ -156,7 +214,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateUserAndTenant = (updatedUser: User, updatedTenant: Tenant | null) => {
     setUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
-    
     if (updatedTenant) {
       setTenant(updatedTenant);
       localStorage.setItem('tenant', JSON.stringify(updatedTenant));
@@ -170,9 +227,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('tenant');
+    localStorage.removeItem('access');
     setToken(null);
     setUser(null);
     setTenant(null);
+    setAccess(null);
     router.push('/login');
   };
 
@@ -203,13 +262,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setTenant(null);
         localStorage.removeItem('tenant');
       }
+      if (data.access !== undefined) {
+        setAccess(data.access);
+        persistAccess(data.access);
+      }
     } catch (error) {
       console.error('Error refreshing profile:', error);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, tenant, token, loading, login, register, verifyOtp, resendOtp, logout, refreshBilling, refreshProfile, updateUserAndTenant }}>
+    <AuthContext.Provider value={{
+      user, tenant, access, token, loading, login, register, verifyOtp, resendOtp,
+      logout, refreshBilling, refreshProfile, updateUserAndTenant,
+    }}>
       {children}
     </AuthContext.Provider>
   );

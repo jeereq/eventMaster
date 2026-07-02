@@ -3,8 +3,20 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { sendRealEmail, sendRealSMS, sendRealWhatsApp, sendRealWhatsAppLocation } from '../services/notificationService';
 import { renderGuestMessage, polishWhatsAppBody, applyTemplateVariables } from '../services/messageTemplateService';
+import { canManageEvent, canAccessEvent } from '../services/permissionsService';
 
-// Helper function to extract guest phone number
+async function verifyEventAccess(
+  userId: string,
+  tenantId: string,
+  eventId: string,
+  requireManage = false,
+): Promise<boolean> {
+  if (requireManage) {
+    return canManageEvent(userId, tenantId, eventId);
+  }
+  return canAccessEvent(userId, tenantId, eventId);
+}
+
 function getGuestPhone(guest: any): string | null {
   if (guest.preferences && typeof guest.preferences === 'object') {
     const prefs = guest.preferences as any;
@@ -13,18 +25,8 @@ function getGuestPhone(guest: any): string | null {
   }
   const emailStr = guest.email.trim();
   const isPhone = /^\+?[0-9\s\-()]{7,20}$/.test(emailStr);
-  if (isPhone) {
-    return emailStr;
-  }
+  if (isPhone) return emailStr;
   return null;
-}
-
-// Helper function to verify event ownership
-async function verifyEventOwner(eventId: string, tenantId: string): Promise<boolean> {
-  const event = await prisma.event.findFirst({
-    where: { id: eventId, tenantId },
-  });
-  return !!event;
 }
 
 // Get all invitations for an event
@@ -33,13 +35,13 @@ export async function getInvitations(req: AuthenticatedRequest, res: Response) {
     const tenantId = req.user?.tenantId;
     const eventId = req.params.eventId as string;
 
-    if (!tenantId) {
+    const userId = req.user?.id;
+    if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
 
-    const isOwner = await verifyEventOwner(eventId, tenantId);
-    if (!isOwner) {
-      return res.status(404).json({ error: 'Événement non trouvé ou non autorisé' });
+    if (!(await verifyEventAccess(userId, tenantId, eventId, true))) {
+      return res.status(403).json({ error: 'Événement non trouvé ou non autorisé' });
     }
 
     const invitations = await prisma.invitation.findMany({
@@ -62,13 +64,13 @@ export async function createInvitation(req: AuthenticatedRequest, res: Response)
     const eventId = req.params.eventId as string;
     const { templateId, subject, body, channel } = req.body;
 
-    if (!tenantId) {
+    const userId = req.user?.id;
+    if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
 
-    const isOwner = await verifyEventOwner(eventId, tenantId);
-    if (!isOwner) {
-      return res.status(404).json({ error: 'Événement non trouvé ou non autorisé' });
+    if (!(await verifyEventAccess(userId, tenantId, eventId, true))) {
+      return res.status(403).json({ error: 'Événement non trouvé ou non autorisé' });
     }
 
     if (!subject || !body || !channel) {
@@ -100,13 +102,13 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
     const id = req.params.id as string;
     const { guestIds, channel } = req.body || {};
 
-    if (!tenantId) {
+    const userId = req.user?.id;
+    if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
 
-    const isOwner = await verifyEventOwner(eventId, tenantId);
-    if (!isOwner) {
-      return res.status(404).json({ error: 'Événement non trouvé ou non autorisé' });
+    if (!(await verifyEventAccess(userId, tenantId, eventId, true))) {
+      return res.status(403).json({ error: 'Événement non trouvé ou non autorisé' });
     }
 
     const invitation = await prisma.invitation.findFirst({
@@ -389,13 +391,13 @@ export async function updateInvitation(req: AuthenticatedRequest, res: Response)
     const id = req.params.id as string;
     const { templateId, subject, body, channel } = req.body;
 
-    if (!tenantId) {
+    const userId = req.user?.id;
+    if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
 
-    const isOwner = await verifyEventOwner(eventId, tenantId);
-    if (!isOwner) {
-      return res.status(404).json({ error: 'Événement non trouvé ou non autorisé' });
+    if (!(await verifyEventAccess(userId, tenantId, eventId, true))) {
+      return res.status(403).json({ error: 'Événement non trouvé ou non autorisé' });
     }
 
     const existingInvitation = await prisma.invitation.findFirst({
@@ -431,13 +433,13 @@ export async function deleteInvitation(req: AuthenticatedRequest, res: Response)
     const eventId = req.params.eventId as string;
     const id = req.params.id as string;
 
-    if (!tenantId) {
+    const userId = req.user?.id;
+    if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
 
-    const isOwner = await verifyEventOwner(eventId, tenantId);
-    if (!isOwner) {
-      return res.status(404).json({ error: 'Événement non trouvé ou non autorisé' });
+    if (!(await verifyEventAccess(userId, tenantId, eventId, true))) {
+      return res.status(403).json({ error: 'Événement non trouvé ou non autorisé' });
     }
 
     const existingInvitation = await prisma.invitation.findFirst({

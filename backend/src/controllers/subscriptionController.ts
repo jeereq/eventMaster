@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { PlanType } from '@prisma/client';
 import { getPlansConfiguration } from '../config/plansConfig';
+import { recordCommercialCommission } from '../services/commercialService';
 
 // 1. Submit a subscription request (Tenant)
 export async function submitSubscriptionRequest(req: AuthenticatedRequest, res: Response) {
@@ -142,6 +143,12 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
         },
       }),
     ]);
+
+    await recordCommercialCommission({
+      tenantId: request.tenantId,
+      plan: request.requestedPlan,
+      source: 'SUBSCRIPTION_APPROVAL',
+    });
 
     return res.json({
       message: 'La demande d\'abonnement a été approuvée avec succès ! La licence est active pour 30 jours.',

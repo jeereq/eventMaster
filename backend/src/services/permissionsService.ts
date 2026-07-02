@@ -2,7 +2,7 @@ import { OrgRole, StaffRole } from '@prisma/client';
 import { prisma } from '../db';
 import { isTenantManager } from '../utils/tenantAccess';
 
-export type OrgAccessLevel = 'owner' | 'manager' | 'protocol' | 'member' | 'none';
+export type OrgAccessLevel = 'owner' | 'manager' | 'protocol' | 'staff' | 'none';
 
 export interface OrgAccess {
   level: OrgAccessLevel;
@@ -11,8 +11,11 @@ export interface OrgAccess {
   canManageTeam: boolean;
   canManageRooms: boolean;
   canCreateEvents: boolean;
+  canCreateRooms: boolean;
   canManageAllEvents: boolean;
+  canProtocolAllEvents: boolean;
   canViewBilling: boolean;
+  isProtocolOnly: boolean;
 }
 
 export async function resolveOrgAccess(userId: string, tenantId: string): Promise<OrgAccess> {
@@ -21,18 +24,21 @@ export async function resolveOrgAccess(userId: string, tenantId: string): Promis
     select: { id: true, orgRole: true },
   });
 
-  if (!user) {
-    return {
-      level: 'none',
-      orgRole: null,
-      isOwner: false,
-      canManageTeam: false,
-      canManageRooms: false,
-      canCreateEvents: false,
-      canManageAllEvents: false,
-      canViewBilling: false,
-    };
-  }
+  const none: OrgAccess = {
+    level: 'none',
+    orgRole: null,
+    isOwner: false,
+    canManageTeam: false,
+    canManageRooms: false,
+    canCreateEvents: false,
+    canCreateRooms: false,
+    canManageAllEvents: false,
+    canProtocolAllEvents: false,
+    canViewBilling: false,
+    isProtocolOnly: false,
+  };
+
+  if (!user) return none;
 
   const owner = await isTenantManager(userId, tenantId);
   if (owner) {
@@ -43,8 +49,11 @@ export async function resolveOrgAccess(userId: string, tenantId: string): Promis
       canManageTeam: true,
       canManageRooms: true,
       canCreateEvents: true,
+      canCreateRooms: true,
       canManageAllEvents: true,
+      canProtocolAllEvents: true,
       canViewBilling: true,
+      isProtocolOnly: false,
     };
   }
 
@@ -56,8 +65,11 @@ export async function resolveOrgAccess(userId: string, tenantId: string): Promis
       canManageTeam: true,
       canManageRooms: true,
       canCreateEvents: true,
+      canCreateRooms: true,
       canManageAllEvents: true,
+      canProtocolAllEvents: true,
       canViewBilling: false,
+      isProtocolOnly: false,
     };
   }
 
@@ -69,37 +81,38 @@ export async function resolveOrgAccess(userId: string, tenantId: string): Promis
       canManageTeam: false,
       canManageRooms: false,
       canCreateEvents: false,
+      canCreateRooms: false,
       canManageAllEvents: false,
+      canProtocolAllEvents: true,
       canViewBilling: false,
+      isProtocolOnly: true,
     };
   }
 
   return {
-    level: 'member',
+    level: 'staff',
     orgRole: null,
     isOwner: false,
     canManageTeam: false,
     canManageRooms: false,
-    canCreateEvents: true,
-    canManageAllEvents: true,
+    canCreateEvents: false,
+    canCreateRooms: false,
+    canManageAllEvents: false,
+    canProtocolAllEvents: false,
     canViewBilling: false,
+    isProtocolOnly: false,
   };
 }
 
-export async function getAccessibleEventIds(userId: string, tenantId: string): Promise<string[] | 'all'> {
-  const access = await resolveOrgAccess(userId, tenantId);
-  if (access.canManageAllEvents || access.level === 'member') {
-    return 'all';
-  }
-
+async function getStaffContext(userId: string, tenantId: string) {
   const [eventStaff, roomStaff] = await Promise.all([
     prisma.eventStaff.findMany({
       where: { userId, event: { tenantId } },
-      select: { eventId: true },
+      select: { eventId: true, staffRole: true },
     }),
     prisma.roomStaff.findMany({
       where: { userId, room: { tenantId } },
-      select: { roomId: true },
+      select: { roomId: true, staffRole: true },
     }),
   ]);
 
@@ -107,21 +120,54 @@ export async function getAccessibleEventIds(userId: string, tenantId: string): P
   const roomEvents = roomIds.length
     ? await prisma.event.findMany({
         where: { tenantId, roomId: { in: roomIds } },
-        select: { id: true },
+        select: { id: true, roomId: true },
       })
     : [];
 
+  return { eventStaff, roomStaff, roomEvents };
+}
+
+export async function getAccessibleEventIds(userId: string, tenantId: string): Promise<string[] | 'all'> {
+  const access = await resolveOrgAccess(userId, tenantId);
+  if (access.canManageAllEvents || access.canProtocolAllEvents) return 'all';
+
+  const { eventStaff, roomEvents } = await getStaffContext(userId, tenantId);
   const ids = new Set<string>([
     ...eventStaff.map((e) => e.eventId),
     ...roomEvents.map((e) => e.id),
   ]);
+  return Array.from(ids);
+}
 
+export async function getManageableEventIds(userId: string, tenantId: string): Promise<string[] | 'all'> {
+  const access = await resolveOrgAccess(userId, tenantId);
+  if (access.canManageAllEvents) return 'all';
+
+  const { eventStaff, roomStaff, roomEvents } = await getStaffContext(userId, tenantId);
+  const managerRoomIds = new Set(roomStaff.filter((r) => r.staffRole === 'MANAGER').map((r) => r.roomId));
+  const ids = new Set<string>();
+
+  eventStaff.filter((e) => e.staffRole === 'MANAGER').forEach((e) => ids.add(e.eventId));
+  roomEvents.filter((e) => e.roomId && managerRoomIds.has(e.roomId)).forEach((e) => ids.add(e.id));
+
+  return Array.from(ids);
+}
+
+export async function getProtocolEventIds(userId: string, tenantId: string): Promise<string[] | 'all'> {
+  const access = await resolveOrgAccess(userId, tenantId);
+  if (access.canProtocolAllEvents) return 'all';
+
+  const { eventStaff, roomEvents } = await getStaffContext(userId, tenantId);
+  const ids = new Set<string>([
+    ...eventStaff.map((e) => e.eventId),
+    ...roomEvents.map((e) => e.id),
+  ]);
   return Array.from(ids);
 }
 
 export async function canManageEvent(userId: string, tenantId: string, eventId: string): Promise<boolean> {
   const access = await resolveOrgAccess(userId, tenantId);
-  if (access.canManageAllEvents || access.level === 'member') return true;
+  if (access.canManageAllEvents) return true;
 
   const direct = await prisma.eventStaff.findFirst({
     where: { eventId, userId, staffRole: 'MANAGER' },
@@ -141,12 +187,30 @@ export async function canManageEvent(userId: string, tenantId: string, eventId: 
 }
 
 export async function canAccessEvent(userId: string, tenantId: string, eventId: string): Promise<boolean> {
-  const access = await resolveOrgAccess(userId, tenantId);
-  if (access.canManageAllEvents || access.level === 'member') return true;
+  if (await canManageEvent(userId, tenantId, eventId)) return true;
+  if (await canProtocolGuests(userId, tenantId, eventId)) return true;
+  return false;
+}
 
-  const accessible = await getAccessibleEventIds(userId, tenantId);
-  if (accessible === 'all') return true;
-  return accessible.includes(eventId);
+export async function canProtocolGuests(userId: string, tenantId: string, eventId: string): Promise<boolean> {
+  const access = await resolveOrgAccess(userId, tenantId);
+  if (access.canProtocolAllEvents || access.canManageAllEvents) return true;
+
+  const eventStaff = await prisma.eventStaff.findFirst({ where: { eventId, userId } });
+  if (eventStaff) return true;
+
+  const event = await prisma.event.findFirst({
+    where: { id: eventId, tenantId },
+    select: { roomId: true },
+  });
+  if (!event?.roomId) return false;
+
+  const roomStaff = await prisma.roomStaff.findFirst({ where: { roomId: event.roomId, userId } });
+  return Boolean(roomStaff);
+}
+
+export async function canManageGuests(userId: string, tenantId: string, eventId: string): Promise<boolean> {
+  return canManageEvent(userId, tenantId, eventId);
 }
 
 export async function canManageRoom(userId: string, tenantId: string, roomId: string): Promise<boolean> {
@@ -167,6 +231,21 @@ export async function canAccessRoom(userId: string, tenantId: string, roomId: st
     where: { roomId, userId, room: { tenantId } },
   });
   return Boolean(staff);
+}
+
+export async function assertCanCreateEvent(userId: string, tenantId: string): Promise<boolean> {
+  const access = await resolveOrgAccess(userId, tenantId);
+  return access.canCreateEvents;
+}
+
+export async function assertCanCreateRoom(userId: string, tenantId: string): Promise<boolean> {
+  const access = await resolveOrgAccess(userId, tenantId);
+  return access.canCreateRooms;
+}
+
+export async function assertCanViewBilling(userId: string, tenantId: string): Promise<boolean> {
+  const access = await resolveOrgAccess(userId, tenantId);
+  return access.canViewBilling;
 }
 
 export function isValidStaffRole(value: string): value is StaffRole {

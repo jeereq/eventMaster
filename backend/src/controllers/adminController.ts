@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';
 import { getDefaultPlans, getPlansConfiguration, mergePlansForSave } from '../config/plansConfig';
+import { ensureCommercialReferralCode } from '../services/commercialService';
 
 // Get global system statistics and list of all tenants (Super Admin only)
 export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
@@ -216,6 +217,10 @@ export async function createUser(req: AuthenticatedRequest, res: Response) {
       },
     });
 
+    if (newUser.role === 'COMMERCIAL') {
+      await ensureCommercialReferralCode(newUser.id);
+    }
+
     // If this is the manager of the tenant and tenant managerId is not set, we can set it
     if (tenantId && role === 'USER') {
       const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
@@ -260,6 +265,10 @@ export async function updateUserRoleOrStatus(req: AuthenticatedRequest, res: Res
       where: { id },
       data: updateData,
     });
+
+    if (updatedUser.role === 'COMMERCIAL') {
+      await ensureCommercialReferralCode(updatedUser.id);
+    }
 
     return res.json({ message: 'Utilisateur mis à jour avec succès', user: updatedUser });
   } catch (error: any) {

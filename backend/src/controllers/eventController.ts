@@ -200,9 +200,8 @@ export async function deleteEvent(req: AuthenticatedRequest, res: Response) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
 
-    const access = await resolveOrgAccess(userId, tenantId);
-    if (!access.canManageAllEvents) {
-      return res.status(403).json({ error: 'Seuls le propriétaire et les managers org. peuvent supprimer des événements.' });
+    if (!(await canManageEvent(userId, tenantId, id))) {
+      return res.status(403).json({ error: 'Vous n\'avez pas la permission de supprimer cet événement.' });
     }
 
     const existingEvent = await prisma.event.findFirst({

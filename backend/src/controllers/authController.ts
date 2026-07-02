@@ -6,6 +6,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { formatTenantResponse } from '../utils/tenantAccess';
 import { recordUserLegalAcceptance } from '../services/legalService';
 import { resolveOrgAccess } from '../services/permissionsService';
+import { resolveCommercialByReferralCode } from '../services/commercialService';
 import {
   generateOtpCode,
   hashOtpCode,
@@ -64,7 +65,7 @@ function buildAuthToken(user: { id: string; tenantId: string | null; role: strin
 
 export async function register(req: Request, res: Response) {
   try {
-    const { email, password, name, tenantName, phone, verificationMethod = 'EMAIL', acceptTerms, acceptPrivacy } = req.body;
+    const { email, password, name, tenantName, phone, verificationMethod = 'EMAIL', acceptTerms, acceptPrivacy, referralCode } = req.body;
 
     if (!email || !password || !name || !tenantName) {
       return res.status(400).json({ error: 'Tous les champs sont obligatoires (email, password, name, tenantName)' });
@@ -87,9 +88,22 @@ export async function register(req: Request, res: Response) {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
+    let referredByCommercialId: string | null = null;
+    if (referralCode) {
+      const commercial = await resolveCommercialByReferralCode(String(referralCode));
+      if (!commercial) {
+        return res.status(400).json({ error: 'Code parrainage commercial invalide.' });
+      }
+      referredByCommercialId = commercial.id;
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       const tenant = await tx.tenant.create({
-        data: { name: tenantName, plan: 'FREE' },
+        data: {
+          name: tenantName,
+          plan: 'FREE',
+          referredByCommercialId,
+        },
       });
 
       const user = await tx.user.create({
@@ -197,6 +211,11 @@ export async function verifyOtp(req: Request, res: Response) {
 
     const token = buildAuthToken(updatedUser);
 
+    const access =
+      updatedUser.tenantId && updatedUser.role === 'USER'
+        ? await resolveOrgAccess(updatedUser.id, updatedUser.tenantId)
+        : null;
+
     return res.json({
       message: 'Compte validé avec succès ! Connexion en cours...',
       token,
@@ -206,8 +225,10 @@ export async function verifyOtp(req: Request, res: Response) {
         name: updatedUser.name,
         phone: updatedUser.phone,
         role: updatedUser.role,
+        orgRole: updatedUser.orgRole,
       },
       tenant: user.tenant ? formatTenantResponse(user.tenant) : null,
+      access,
     });
   } catch (error: any) {
     console.error('Erreur verifyOtp:', error);
@@ -302,15 +323,23 @@ export async function login(req: Request, res: Response) {
 
     const token = buildAuthToken(user);
 
+    const access =
+      user.tenantId && user.role === 'USER'
+        ? await resolveOrgAccess(user.id, user.tenantId)
+        : null;
+
     return res.json({
       token,
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
+        phone: user.phone,
         role: user.role,
+        orgRole: user.orgRole,
       },
       tenant: user.tenant ? formatTenantResponse(user.tenant) : null,
+      access,
     });
   } catch (error: any) {
     console.error('Erreur lors de la connexion:', error);

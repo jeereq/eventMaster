@@ -3,33 +3,36 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { getPlanLimits } from '../config/plansConfig';
 import { normalizePhone } from '../utils/guestIdentity';
+import {
+  canManageGuests,
+  canProtocolGuests,
+  canAccessEvent,
+} from '../services/permissionsService';
 
 function resolveGuestPhone(body: any, preferences: any): string | null {
   const rawPhone = body?.phone || preferences?.phone || preferences?.telephone;
   return normalizePhone(typeof rawPhone === 'string' ? rawPhone : null);
 }
 
-// Helper function to verify event ownership
-async function verifyEventOwner(eventId: string, tenantId: string): Promise<boolean> {
-  const event = await prisma.event.findFirst({
-    where: { id: eventId, tenantId },
-  });
-  return !!event;
+async function assertGuestListAccess(userId: string, tenantId: string, eventId: string) {
+  const canManage = await canManageGuests(userId, tenantId, eventId);
+  const canProtocol = await canProtocolGuests(userId, tenantId, eventId);
+  return { allowed: canManage || canProtocol, canManage, canProtocol };
 }
 
-// Get all guests for an event
 export async function getGuests(req: AuthenticatedRequest, res: Response) {
   try {
     const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
     const eventId = req.params.eventId as string;
 
-    if (!tenantId) {
+    if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
 
-    const isOwner = await verifyEventOwner(eventId, tenantId);
-    if (!isOwner) {
-      return res.status(404).json({ error: 'Événement non trouvé ou non autorisé' });
+    const access = await assertGuestListAccess(userId, tenantId, eventId);
+    if (!access.allowed) {
+      return res.status(403).json({ error: 'Accès refusé à cet événement.' });
     }
 
     const guests = await prisma.guest.findMany({
@@ -44,34 +47,27 @@ export async function getGuests(req: AuthenticatedRequest, res: Response) {
   }
 }
 
-// Create a guest
 export async function createGuest(req: AuthenticatedRequest, res: Response) {
   try {
     const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
     const eventId = req.params.eventId as string;
     const { firstName, lastName, email, category, rsvp, preferences } = req.body;
 
-    if (!tenantId) {
+    if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
 
-    const isOwner = await verifyEventOwner(eventId, tenantId);
-    if (!isOwner) {
-      return res.status(404).json({ error: 'Événement non trouvé ou non autorisé' });
+    if (!(await canManageGuests(userId, tenantId, eventId))) {
+      return res.status(403).json({ error: 'Vous n\'avez pas la permission de gérer les invités.' });
     }
 
     if (!firstName || !lastName || !email) {
       return res.status(400).json({ error: 'Les champs firstName, lastName et email sont requis' });
     }
 
-    // Check Plan / Quota before adding guest (will be integrated in Phase 4, but let's add a placeholder or simple check)
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: tenantId },
-    });
-
-    const guestCount = await prisma.guest.count({
-      where: { event: { tenantId } },
-    });
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    const guestCount = await prisma.guest.count({ where: { event: { tenantId } } });
 
     if (tenant) {
       const limits = getPlanLimits(tenant.plan);
@@ -82,11 +78,9 @@ export async function createGuest(req: AuthenticatedRequest, res: Response) {
       }
     }
 
-    // Check if guest already exists for this event
     const existingGuest = await prisma.guest.findUnique({
       where: { eventId_email: { eventId, email } },
     });
-
     if (existingGuest) {
       return res.status(400).json({ error: 'Un invité avec cet email existe déjà pour cet événement' });
     }
@@ -114,27 +108,23 @@ export async function createGuest(req: AuthenticatedRequest, res: Response) {
   }
 }
 
-// Update a guest
 export async function updateGuest(req: AuthenticatedRequest, res: Response) {
   try {
     const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
     const eventId = req.params.eventId as string;
     const id = req.params.id as string;
     const { firstName, lastName, email, category, rsvp, preferences } = req.body;
 
-    if (!tenantId) {
+    if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
 
-    const isOwner = await verifyEventOwner(eventId, tenantId);
-    if (!isOwner) {
-      return res.status(404).json({ error: 'Événement non trouvé ou non autorisé' });
+    if (!(await canManageGuests(userId, tenantId, eventId))) {
+      return res.status(403).json({ error: 'Vous n\'avez pas la permission de modifier les invités.' });
     }
 
-    const existingGuest = await prisma.guest.findFirst({
-      where: { id, eventId },
-    });
-
+    const existingGuest = await prisma.guest.findFirst({ where: { id, eventId } });
     if (!existingGuest) {
       return res.status(404).json({ error: 'Invité non trouvé dans cet événement' });
     }
@@ -166,34 +156,27 @@ export async function updateGuest(req: AuthenticatedRequest, res: Response) {
   }
 }
 
-// Delete a guest
 export async function deleteGuest(req: AuthenticatedRequest, res: Response) {
   try {
     const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
     const eventId = req.params.eventId as string;
     const id = req.params.id as string;
 
-    if (!tenantId) {
+    if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
 
-    const isOwner = await verifyEventOwner(eventId, tenantId);
-    if (!isOwner) {
-      return res.status(404).json({ error: 'Événement non trouvé ou non autorisé' });
+    if (!(await canManageGuests(userId, tenantId, eventId))) {
+      return res.status(403).json({ error: 'Vous n\'avez pas la permission de supprimer des invités.' });
     }
 
-    const existingGuest = await prisma.guest.findFirst({
-      where: { id, eventId },
-    });
-
+    const existingGuest = await prisma.guest.findFirst({ where: { id, eventId } });
     if (!existingGuest) {
       return res.status(404).json({ error: 'Invité non trouvé' });
     }
 
-    await prisma.guest.delete({
-      where: { id },
-    });
-
+    await prisma.guest.delete({ where: { id } });
     return res.json({ message: 'Invité supprimé de l\'événement avec succès' });
   } catch (error: any) {
     console.error('Erreur lors de la suppression de l\'invité:', error);
@@ -201,34 +184,27 @@ export async function deleteGuest(req: AuthenticatedRequest, res: Response) {
   }
 }
 
-// Import multiple guests
 export async function importGuests(req: AuthenticatedRequest, res: Response) {
   try {
     const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
     const eventId = req.params.eventId as string;
-    const { guests } = req.body; // Expects array of { firstName, lastName, email, category, preferences }
+    const { guests } = req.body;
 
-    if (!tenantId) {
+    if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
 
-    const isOwner = await verifyEventOwner(eventId, tenantId);
-    if (!isOwner) {
-      return res.status(404).json({ error: 'Événement non trouvé ou non autorisé' });
+    if (!(await canManageGuests(userId, tenantId, eventId))) {
+      return res.status(403).json({ error: 'Vous n\'avez pas la permission d\'importer des invités.' });
     }
 
     if (!guests || !Array.isArray(guests)) {
       return res.status(400).json({ error: 'Le champ guests doit être un tableau d\'invités' });
     }
 
-    // Check Plan / Quota
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: tenantId },
-    });
-
-    const guestCount = await prisma.guest.count({
-      where: { event: { tenantId } },
-    });
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+    const guestCount = await prisma.guest.count({ where: { event: { tenantId } } });
 
     if (tenant) {
       const limits = getPlanLimits(tenant.plan);
@@ -240,23 +216,17 @@ export async function importGuests(req: AuthenticatedRequest, res: Response) {
     }
 
     let importedCount = 0;
-    let errors: string[] = [];
+    const errors: string[] = [];
 
-    // Use a transaction or sequential inserts to handle duplicate email errors gracefully
     for (const g of guests) {
       if (!g.firstName || !g.lastName || !g.email) {
         errors.push(`Champs requis manquants pour l'invité: ${JSON.stringify(g)}`);
         continue;
       }
 
-      // Construct preferences structure with phone and notes if provided
       const guestPrefs: any = g.preferences || {};
-      if (g.phone) {
-        guestPrefs.phone = g.phone;
-      }
-      if (g.notes) {
-        guestPrefs.notes = g.notes;
-      }
+      if (g.phone) guestPrefs.phone = g.phone;
+      if (g.notes) guestPrefs.notes = g.notes;
       const normalizedPhone = resolveGuestPhone(g, guestPrefs);
 
       try {

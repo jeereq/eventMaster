@@ -3,6 +3,8 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import Stripe from 'stripe';
 import { getPlanLimits, getPlansConfiguration } from '../config/plansConfig';
+import { assertCanViewBilling } from '../services/permissionsService';
+import { recordCommercialCommission } from '../services/commercialService';
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_mock';
 const stripe = new Stripe(STRIPE_SECRET_KEY, {
@@ -17,8 +19,13 @@ function getPlansFromSettings() {
 export async function getBillingStatus(req: AuthenticatedRequest, res: Response) {
   try {
     const tenantId = req.user?.tenantId;
-    if (!tenantId) {
+    const userId = req.user?.id;
+    if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
+    }
+
+    if (!(await assertCanViewBilling(userId, tenantId))) {
+      return res.status(403).json({ error: 'Seul le propriétaire peut consulter la facturation.' });
     }
 
     const tenant = await prisma.tenant.findUnique({
@@ -72,10 +79,15 @@ export async function getBillingStatus(req: AuthenticatedRequest, res: Response)
 export async function createCheckoutSession(req: AuthenticatedRequest, res: Response) {
   try {
     const tenantId = req.user?.tenantId;
-    const { planType } = req.body; // Expects 'PREMIUM' or 'ENTERPRISE'
+    const userId = req.user?.id;
+    const { planType } = req.body;
 
-    if (!tenantId) {
+    if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
+    }
+
+    if (!(await assertCanViewBilling(userId, tenantId))) {
+      return res.status(403).json({ error: 'Seul le propriétaire peut gérer la facturation.' });
     }
 
     if (!planType || !['STANDARD', 'PREMIUM', 'ENTERPRISE'].includes(planType)) {
@@ -103,6 +115,11 @@ export async function createCheckoutSession(req: AuthenticatedRequest, res: Resp
           licenseActive: true,
           licenseExpiresAt: expiryDate,
         },
+      });
+      await recordCommercialCommission({
+        tenantId,
+        plan: planType,
+        source: 'MOCK_CHECKOUT',
       });
       return res.json({
         message: 'Mise à niveau fictive réussie (Mode Développement)',
@@ -184,6 +201,11 @@ export async function handleStripeWebhook(req: Request, res: Response) {
               licenseExpiresAt: expiryDate,
             },
           });
+          await recordCommercialCommission({
+            tenantId,
+            plan: 'PREMIUM',
+            source: 'STRIPE_WEBHOOK',
+          });
           console.log(`[Stripe Webhook] Tenant ${tenantId} upgraded to PREMIUM and license extended`);
         }
         break;
@@ -221,10 +243,15 @@ export async function handleStripeWebhook(req: Request, res: Response) {
 export async function mockUpgrade(req: AuthenticatedRequest, res: Response) {
   try {
     const tenantId = req.user?.tenantId;
-    const { plan } = req.body; // FREE, PREMIUM, ENTERPRISE
+    const userId = req.user?.id;
+    const { plan } = req.body;
 
-    if (!tenantId) {
+    if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
+    }
+
+    if (!(await assertCanViewBilling(userId, tenantId))) {
+      return res.status(403).json({ error: 'Seul le propriétaire peut modifier le forfait.' });
     }
 
     if (!plan || !['FREE', 'STANDARD', 'PREMIUM', 'ENTERPRISE'].includes(plan)) {
@@ -239,9 +266,17 @@ export async function mockUpgrade(req: AuthenticatedRequest, res: Response) {
       data: { 
         plan,
         licenseActive: true,
-        licenseExpiresAt: plan === 'FREE' ? null : expiryDate, // Free plan has no expiry by default
+        licenseExpiresAt: plan === 'FREE' ? null : expiryDate,
       },
     });
+
+    if (plan !== 'FREE') {
+      await recordCommercialCommission({
+        tenantId,
+        plan,
+        source: 'MOCK_UPGRADE',
+      });
+    }
 
     return res.json({
       message: `Forfait modifié en ${plan} (Mode de simulation de paiement)`,

@@ -12,7 +12,7 @@ import RoomsManagement from '../RoomsManagement';
 import { PageHeader, Alert } from '@/components/ui';
 
 export default function ProfilePage() {
-  const { user, tenant, updateUserAndTenant } = useAuth();
+  const { user, tenant, updateUserAndTenant, access } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -293,8 +293,8 @@ export default function ProfilePage() {
         </div>
       </form>
 
-      {user?.role === 'USER' && tenant && <TeamManagement />}
-      {user?.role === 'USER' && tenant && <RoomsManagement />}
+      {user?.role === 'USER' && tenant && access?.canManageTeam && <TeamManagement />}
+      {user?.role === 'USER' && tenant && access?.canManageRooms && <RoomsManagement />}
     </div>
   );
 }

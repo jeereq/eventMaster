@@ -28,6 +28,7 @@ export default function RegisterPage() {
   const [verificationMethod, setVerificationMethod] = useState<'EMAIL' | 'WHATSAPP'>('EMAIL');
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+  const [referralCode, setReferralCode] = useState('');
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -50,7 +51,7 @@ export default function RegisterPage() {
     }
 
     try {
-      const res = await register(email, password, name, tenantName, phone, verificationMethod, acceptTerms, acceptPrivacy);
+      const res = await register(email, password, name, tenantName, phone, verificationMethod, acceptTerms, acceptPrivacy, referralCode || undefined);
       if (res.requiresVerification && res.email) {
         router.push(`/verify-otp?email=${encodeURIComponent(res.email)}&method=${res.verificationMethod || verificationMethod}`);
         return;
@@ -126,6 +127,15 @@ export default function RegisterPage() {
               />
 
               <Input label="Mot de passe" id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" leftIcon={<Lock className="w-4 h-4" />} />
+
+              <Input
+                label="Code parrainage commercial (optionnel)"
+                id="referralCode"
+                value={referralCode}
+                onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                placeholder="EM-XXXX-XXXX"
+                hint="Si un commercial vous a parrainé, saisissez son code ici."
+              />
 
               <MethodToggle
                 label="Code OTP de validation"

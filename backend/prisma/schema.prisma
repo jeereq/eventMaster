@@ -55,6 +55,8 @@ model Tenant {
   licenseActive Boolean    @default(true)
   licenseExpiresAt DateTime?
   licenseKey    String?
+  referredByCommercialId String?
+  referredByCommercial   User? @relation("CommercialReferral", fields: [referredByCommercialId], references: [id], onDelete: SetNull)
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
@@ -63,6 +65,7 @@ model Tenant {
   templates     Template[]
   subscriptionRequests SubscriptionRequest[]
   rooms         OrganizationRoom[]
+  commercialCommissions CommercialCommission[]
   
   managerId     String?
   manager       User?      @relation("TenantManager", fields: [managerId], references: [id])
@@ -90,11 +93,17 @@ model User {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
+  referralCode   String?    @unique
   managedTenants Tenant[]  @relation("TenantManager")
+  referredTenants Tenant[] @relation("CommercialReferral")
   comments       EventComment[]
   legalAcceptances LegalAcceptance[]
   eventStaff     EventStaff[]
   roomStaff      RoomStaff[]
+  guestCheckIns  Guest[]   @relation("GuestCheckIns")
+  guestSeatVerifications Guest[] @relation("GuestSeatVerifications")
+  protocolNotes  GuestProtocolNote[]
+  commercialCommissions CommercialCommission[]
 }
 
 model Event {
@@ -132,15 +141,53 @@ model Guest {
   category    String?
   rsvp        String       @default("PENDING") // PENDING, ACCEPTED, DECLINED
   preferences Json?
+  checkedInAt DateTime?
+  checkedInByUserId String?
+  checkedInBy User?        @relation("GuestCheckIns", fields: [checkedInByUserId], references: [id], onDelete: SetNull)
+  seatVerified Boolean     @default(false)
+  seatVerifiedAt DateTime?
+  seatVerifiedByUserId String?
+  seatVerifiedBy User?     @relation("GuestSeatVerifications", fields: [seatVerifiedByUserId], references: [id], onDelete: SetNull)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
   shares      GuestShare[]
   comments    EventComment[]
   legalAcceptances LegalAcceptance[]
+  protocolNotes GuestProtocolNote[]
 
   @@unique([eventId, email])
   @@index([phone])
+}
+
+model GuestProtocolNote {
+  id        String   @id @default(uuid())
+  guestId   String
+  guest     Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([guestId])
+}
+
+model CommercialCommission {
+  id               String   @id @default(uuid())
+  commercialId     String
+  commercial       User     @relation(fields: [commercialId], references: [id], onDelete: Cascade)
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan             PlanType
+  invoiceAmount    Float
+  commissionRate   Float    @default(0.20)
+  commissionAmount Float
+  billingPeriod    String
+  source           String
+  createdAt        DateTime @default(now())
+
+  @@unique([commercialId, tenantId, billingPeriod])
+  @@index([commercialId])
 }
 
 model Template {

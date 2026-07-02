@@ -8,7 +8,7 @@ import { useTheme } from '@/context/ThemeContext';
 import {
   Calendar, Users, Mail, CreditCard, LayoutDashboard,
   LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper, User, Sun, Moon, BarChart3,
-  Building2, FileText, Key, MessageSquare,
+  Building2, FileText, Key, MessageSquare, ScanLine, Briefcase,
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import UserLegalGate from '@/components/UserLegalGate';
@@ -79,7 +79,7 @@ function SidebarNav({
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, tenant, token, loading, logout } = useAuth();
+  const { user, tenant, token, loading, logout, access } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
@@ -156,14 +156,37 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           items: [{ name: 'Mon compte', href: '/dashboard/profile', icon: User }],
         },
       ]
+    : user?.role === 'COMMERCIAL'
+    ? [
+        {
+          items: [
+            { name: 'Espace commercial', href: '/dashboard/commercial', icon: Briefcase },
+            { name: 'Mon compte', href: '/dashboard/profile', icon: User },
+          ],
+        },
+      ]
+    : access?.isProtocolOnly
+    ? [
+        {
+          items: [
+            { name: 'Événements', href: '/dashboard/events', icon: Calendar },
+            { name: 'Mon compte', href: '/dashboard/profile', icon: User },
+          ],
+        },
+      ]
     : [
         {
           items: [
             { name: 'Tableau de bord', href: '/dashboard', icon: LayoutDashboard },
             { name: 'Événements', href: '/dashboard/events', icon: Calendar },
-            { name: 'Statistiques', href: '/dashboard/analytics', icon: BarChart3 },
-            { name: 'Modèles', href: '/dashboard/templates', icon: Mail },
-            { name: 'Facturation & plan', href: '/dashboard/billing', icon: CreditCard },
+            ...(access?.canProtocolAllEvents || access?.level === 'staff'
+              ? [{ name: 'Protocole', href: '/dashboard/events?mode=protocol', icon: ScanLine }]
+              : []),
+            ...(!access?.isProtocolOnly ? [
+              { name: 'Statistiques', href: '/dashboard/analytics', icon: BarChart3 },
+              { name: 'Modèles', href: '/dashboard/templates', icon: Mail },
+            ] : []),
+            ...(access?.canViewBilling ? [{ name: 'Facturation & plan', href: '/dashboard/billing', icon: CreditCard }] : []),
             { name: 'Mon compte', href: '/dashboard/profile', icon: User },
           ],
         },

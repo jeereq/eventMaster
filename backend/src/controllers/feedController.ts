@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { AuthenticatedRequest } from '../middleware/auth';
+import { canManageEvent } from '../services/permissionsService';
 
 // 1. Submit Guest Share (Public - Guest RSVP page)
 export async function submitGuestShare(req: Request, res: Response) {
@@ -46,17 +47,13 @@ export async function getEventShares(req: AuthenticatedRequest, res: Response) {
     const tenantId = req.user?.tenantId;
     const eventId = req.params.eventId as string;
 
-    if (!tenantId) {
+    const userId = req.user?.id;
+    if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié.' });
     }
 
-    // Verify event belongs to tenant
-    const event = await prisma.event.findFirst({
-      where: { id: eventId, tenantId },
-    });
-
-    if (!event) {
-      return res.status(404).json({ error: 'Événement non trouvé.' });
+    if (!(await canManageEvent(userId, tenantId, eventId))) {
+      return res.status(403).json({ error: 'Accès refusé à cet événement.' });
     }
 
     const shares = await prisma.guestShare.findMany({
@@ -134,17 +131,13 @@ export async function createEventPost(req: AuthenticatedRequest, res: Response) 
     const eventId = req.params.eventId as string;
     const { content, mediaUrl, mediaType, mediaUrls } = req.body; // mediaUrls is [{ url: string, type: 'IMAGE' | 'VIDEO' }]
 
-    if (!tenantId) {
+    const userId = req.user?.id;
+    if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié.' });
     }
 
-    // Verify event belongs to tenant
-    const event = await prisma.event.findFirst({
-      where: { id: eventId, tenantId },
-    });
-
-    if (!event) {
-      return res.status(404).json({ error: 'Événement non trouvé.' });
+    if (!(await canManageEvent(userId, tenantId, eventId))) {
+      return res.status(403).json({ error: 'Accès refusé à cet événement.' });
     }
 
     // Determine legacy and rich media values
@@ -180,17 +173,13 @@ export async function deleteEventPost(req: AuthenticatedRequest, res: Response) 
     const eventId = req.params.eventId as string;
     const postId = req.params.postId as string;
 
-    if (!tenantId) {
+    const userId = req.user?.id;
+    if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié.' });
     }
 
-    // Verify event and post belong to tenant
-    const event = await prisma.event.findFirst({
-      where: { id: eventId, tenantId },
-    });
-
-    if (!event) {
-      return res.status(404).json({ error: 'Événement non trouvé.' });
+    if (!(await canManageEvent(userId, tenantId, eventId))) {
+      return res.status(403).json({ error: 'Accès refusé à cet événement.' });
     }
 
     const post = await prisma.eventPost.findFirst({
@@ -219,16 +208,13 @@ export async function deleteGuestShare(req: AuthenticatedRequest, res: Response)
     const eventId = req.params.eventId as string;
     const shareId = req.params.shareId as string;
 
-    if (!tenantId) {
+    const userId = req.user?.id;
+    if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié.' });
     }
 
-    const event = await prisma.event.findFirst({
-      where: { id: eventId, tenantId },
-    });
-
-    if (!event) {
-      return res.status(404).json({ error: 'Événement non trouvé.' });
+    if (!(await canManageEvent(userId, tenantId, eventId))) {
+      return res.status(403).json({ error: 'Accès refusé à cet événement.' });
     }
 
     const share = await prisma.guestShare.findFirst({

@@ -10,11 +10,12 @@ import {
   ChevronRight, ArrowLeft, Check, Upload, Mail, Send, 
   Sparkles, CheckCircle2, XCircle, AlertCircle, HelpCircle, Loader2,
   Copy, MessageSquare, Share2, Search, Filter, RefreshCw,
-  Eye, Utensils, FileSpreadsheet, Download, LayoutGrid, Building2
+  Eye, Utensils, FileSpreadsheet, Download, LayoutGrid, Building2, ScanLine
 } from 'lucide-react';
 import TablePlanner from './TablePlanner';
 import EventStaffPanel from './EventStaffPanel';
 import EventFeedManager from './EventFeedManager';
+import GuestProtocolPanel from './GuestProtocolPanel';
 import { PageHeader, Button } from '@/components/ui';
 
 interface EventItem {
@@ -200,13 +201,17 @@ A très vite !`
 ];
 
 export default function EventsPage() {
-  const { user } = useAuth();
+  const { user, access } = useAuth();
+  const isProtocolOnly = access?.isProtocolOnly ?? false;
+  const canManageEvents = access?.canManageAllEvents ?? false;
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   
   // Tabs
-  const [activeTab, setActiveTab] = useState<'guests' | 'invitations' | 'tablePlan' | 'feed' | 'staff'>('guests');
+  const [activeTab, setActiveTab] = useState<'guests' | 'invitations' | 'tablePlan' | 'feed' | 'staff' | 'protocol'>(
+    isProtocolOnly ? 'protocol' : 'guests',
+  );
 
   // Event form
   const [showEventModal, setShowEventModal] = useState(false);
@@ -1315,9 +1320,11 @@ export default function EventsPage() {
           title="Vos événements"
           description="Créez et gérez vos réceptions privées, vos listes d'invités et vos invitations."
           action={
+            access?.canCreateEvents ? (
             <Button onClick={openCreateEventModal} leftIcon={<PlusCircle className="w-4 h-4" />}>
               Créer un événement
             </Button>
+            ) : undefined
           }
         />
       ) : (
@@ -1452,19 +1459,32 @@ export default function EventsPage() {
       {selectedEvent && (
         <div className="space-y-8">
           {/* Tabs Selector */}
-          <div className="flex border-b border-slate-200">
+          <div className="flex border-b border-slate-200 overflow-x-auto">
+            {!isProtocolOnly && (
             <button
               onClick={() => setActiveTab('guests')}
-              className={`pb-4 px-6 text-sm font-bold border-b-2 transition ${activeTab === 'guests' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+              className={`pb-4 px-6 text-sm font-bold border-b-2 transition whitespace-nowrap ${activeTab === 'guests' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
             >
               <span className="flex items-center gap-2">
                 <Users className="w-4.5 h-4.5" />
                 Invités ({guests.length})
               </span>
             </button>
+            )}
+            <button
+              onClick={() => setActiveTab('protocol')}
+              className={`pb-4 px-6 text-sm font-bold border-b-2 transition whitespace-nowrap ${activeTab === 'protocol' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+            >
+              <span className="flex items-center gap-2">
+                <ScanLine className="w-4.5 h-4.5" />
+                Protocole
+              </span>
+            </button>
+            {!isProtocolOnly && (
+            <>
             <button
               onClick={() => setActiveTab('invitations')}
-              className={`pb-4 px-6 text-sm font-bold border-b-2 transition ${activeTab === 'invitations' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+              className={`pb-4 px-6 text-sm font-bold border-b-2 transition whitespace-nowrap ${activeTab === 'invitations' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
             >
               <span className="flex items-center gap-2">
                 <Mail className="w-4.5 h-4.5" />
@@ -1473,7 +1493,7 @@ export default function EventsPage() {
             </button>
             <button
               onClick={() => setActiveTab('tablePlan')}
-              className={`pb-4 px-6 text-sm font-bold border-b-2 transition ${activeTab === 'tablePlan' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+              className={`pb-4 px-6 text-sm font-bold border-b-2 transition whitespace-nowrap ${activeTab === 'tablePlan' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
             >
               <span className="flex items-center gap-2">
                 <LayoutGrid className="w-4.5 h-4.5" />
@@ -1482,7 +1502,7 @@ export default function EventsPage() {
             </button>
             <button
               onClick={() => setActiveTab('staff')}
-              className={`pb-4 px-6 text-sm font-bold border-b-2 transition ${activeTab === 'staff' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+              className={`pb-4 px-6 text-sm font-bold border-b-2 transition whitespace-nowrap ${activeTab === 'staff' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
             >
               <span className="flex items-center gap-2">
                 <Users className="w-4.5 h-4.5" />
@@ -1491,17 +1511,23 @@ export default function EventsPage() {
             </button>
             <button
               onClick={() => setActiveTab('feed')}
-              className={`pb-4 px-6 text-sm font-bold border-b-2 transition ${activeTab === 'feed' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+              className={`pb-4 px-6 text-sm font-bold border-b-2 transition whitespace-nowrap ${activeTab === 'feed' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
             >
               <span className="flex items-center gap-2">
                 <MessageSquare className="w-4.5 h-4.5" />
                 Feed & Livre d'or
               </span>
             </button>
+            </>
+            )}
           </div>
 
+          {activeTab === 'protocol' && selectedEvent && (
+            <GuestProtocolPanel eventId={selectedEvent.id} />
+          )}
+
           {/* Tab Content: Guests */}
-          {activeTab === 'guests' && (
+          {activeTab === 'guests' && !isProtocolOnly && (
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>

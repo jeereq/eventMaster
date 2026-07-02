@@ -2,6 +2,14 @@ import { Router } from 'express';
 import { getEvents, createEvent, getEventById, updateEvent, deleteEvent, importRoomLayout } from '../controllers/eventController';
 import { getEventStaff, assignEventStaff, removeEventStaff } from '../controllers/eventStaffController';
 import { getGuests, createGuest, updateGuest, deleteGuest, importGuests } from '../controllers/guestController';
+import {
+  scanGuest,
+  checkInGuest,
+  verifyGuestSeat,
+  addGuestProtocolNote,
+  getGuestProtocolNotes,
+  listProtocolGuests,
+} from '../controllers/protocolController';
 import { getInvitations, createInvitation, updateInvitation, deleteInvitation, sendInvitation } from '../controllers/invitationController';
 import { getEventShares, getEventFeed, createEventPost, deleteEventPost, deleteGuestShare, toggleLikeEventPost } from '../controllers/feedController';
 import { requireAuth, requireActiveLicense } from '../middleware/auth';
@@ -31,6 +39,14 @@ router.post('/:eventId/guests', createGuest);
 router.post('/:eventId/guests/import', importGuests);
 router.put('/:eventId/guests/:id', updateGuest);
 router.delete('/:eventId/guests/:id', deleteGuest);
+
+// Protocol — scan QR, émargement, siège, commentaires
+router.get('/:eventId/protocol/guests', listProtocolGuests);
+router.post('/:eventId/protocol/scan', scanGuest);
+router.post('/:eventId/guests/:guestId/check-in', checkInGuest);
+router.post('/:eventId/guests/:guestId/verify-seat', verifyGuestSeat);
+router.get('/:eventId/guests/:guestId/protocol-notes', getGuestProtocolNotes);
+router.post('/:eventId/guests/:guestId/protocol-notes', addGuestProtocolNote);
 
 // Invitations related to Events
 router.get('/:eventId/invitations', getInvitations);
