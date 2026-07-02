@@ -2,13 +2,17 @@
 
 import React, { useRef, useState, useCallback } from 'react';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette,
 } from 'lucide-react';
 import ChairRenderer from '@/components/ChairRenderer';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
+import FixtureRenderer from '@/components/FixtureRenderer';
+import ImageCropModal from '@/components/ImageCropModal';
 import {
   ChairType,
   ColumnShape,
+  FlowerType,
+  ImageCropRect,
   RoomLayoutBlueprint,
   RoomOutlineShape,
   RoomType,
@@ -21,14 +25,16 @@ import {
   createBlueprintTable,
   defaultRoomOutline,
   ensureBlueprintDefaults,
-  getFixtureClass,
+  flowerTypeLabels,
   getRoomOutlineClipPath,
   refreshBlueprintMetadata,
+  resolveTableColor,
   roomOutlineLabels,
   roomTypeLabels,
 } from '@/lib/roomLayoutUtils';
 import { prependLayoutAction, LayoutActionEntry } from '@/lib/layoutActionLog';
-import { getSeatCoordinates, getTableVisualClasses } from '@/lib/tablePlanUtils';
+import { getSeatCoordinates, getTableVisualStyle } from '@/lib/tablePlanUtils';
+import { readImageFile } from '@/lib/imageCropUtils';
 
 type SelectableKind = 'table' | 'row' | 'zone' | 'fixture';
 
@@ -39,14 +45,7 @@ interface RoomLayoutEditorProps {
   readOnly?: boolean;
 }
 
-function readImageFile(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
+type CropTarget = { kind: 'fixture'; id: string } | null;
 
 export default function RoomLayoutEditor({
   blueprint: rawBlueprint,
@@ -61,6 +60,7 @@ export default function RoomLayoutEditor({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isExpanded, setIsExpanded] = useState(false);
   const [actionLog, setActionLog] = useState<LayoutActionEntry[]>([]);
+  const [cropTarget, setCropTarget] = useState<CropTarget>(null);
 
   const log = useCallback((message: string, kind: LayoutActionEntry['kind'] = 'info') => {
     setActionLog((prev) => prependLayoutAction(prev, message, kind));
@@ -211,6 +211,31 @@ export default function RoomLayoutEditor({
     }, actionMsg ? { message: actionMsg, kind: 'edit' } : undefined);
   };
 
+  const setDefaultTableColor = (color: string) => {
+    updateBlueprint({
+      ...blueprint,
+      metadata: { ...blueprint.metadata, defaultTableColor: color },
+    }, { message: `Couleur par défaut des tables : ${color}`, kind: 'settings' });
+  };
+
+  const applyTableColorToAll = (color: string) => {
+    updateBlueprint({
+      ...blueprint,
+      metadata: { ...blueprint.metadata, defaultTableColor: color },
+      furniture: blueprint.furniture.map((f) =>
+        f.kind === 'table' ? { ...f, tableColor: color } : f,
+      ),
+    }, { message: 'Couleur appliquée à toutes les tables', kind: 'settings' });
+  };
+
+  const handleCropApply = (imageUrl: string, crop: ImageCropRect) => {
+    if (!cropTarget) return;
+    updateFixture(cropTarget.id, { imageUrl, imageCrop: crop }, 'Image personnalisée appliquée');
+    setCropTarget(null);
+  };
+
+  const cropFixture = cropTarget ? blueprint.fixtures.find((f) => f.id === cropTarget.id) : null;
+
   const outline = blueprint.roomOutline!;
   const clipPath = getRoomOutlineClipPath(outline.shape);
 
@@ -247,25 +272,20 @@ export default function RoomLayoutEditor({
 
       {blueprint.fixtures.map((fixture) => {
         const isSel = selected?.kind === 'fixture' && selected.id === fixture.id;
-        const isColumn = fixture.kind === 'pillar' || fixture.kind === 'column';
-        const colShape = fixture.columnShape ?? 'round';
         return (
           <div
             key={fixture.id}
             onMouseDown={(e) => handleMouseDown('fixture', fixture.id, e, 'topleft')}
             onClick={(e) => { e.stopPropagation(); setSelected({ kind: 'fixture', id: fixture.id }); }}
-            className={`absolute border-2 text-[9px] font-bold flex items-center justify-center px-1 text-center cursor-move shadow-sm ${getFixtureClass(fixture.kind)} ${isSel ? 'ring-2 ring-indigo-500 z-30' : 'z-10'} ${isColumn && colShape === 'round' ? 'rounded-full' : isColumn ? 'rounded-md' : ''}`}
+            className={`absolute cursor-move ${isSel ? 'ring-2 ring-indigo-500 z-30' : 'z-10'}`}
             style={{
               left: `${fixture.x}%`,
               top: `${fixture.y}%`,
               width: `${fixture.w}%`,
               height: `${fixture.h}%`,
-              backgroundColor: isColumn && fixture.color ? fixture.color : undefined,
-              transform: fixture.rotation ? `rotate(${fixture.rotation}deg)` : undefined,
             }}
-            title={fixture.label}
           >
-            {fixture.kind !== 'aisle' && (fixture.label || fixture.kind)}
+            <FixtureRenderer fixture={fixture} fill showLabel={fixture.kind !== 'flower'} />
           </div>
         );
       })}
@@ -309,6 +329,8 @@ export default function RoomLayoutEditor({
         }
 
         const isSel = selected?.kind === 'table' && selected.id === item.id;
+        const tableColor = resolveTableColor(item.tableColor, blueprint.metadata.defaultTableColor);
+        const { className: tableClass, style: tableStyle } = getTableVisualStyle(item.shape, isSel, tableColor);
         return (
           <div
             key={item.id}
@@ -317,7 +339,7 @@ export default function RoomLayoutEditor({
             className={`absolute -translate-x-1/2 -translate-y-1/2 cursor-move ${isSel ? 'z-40' : 'z-20'}`}
             style={{ left: `${item.x}%`, top: `${item.y}%` }}
           >
-            <div className={`relative flex items-center justify-center ${getTableVisualClasses(item.shape, isSel)} shadow-lg border-2`}>
+            <div className={`relative flex items-center justify-center ${tableClass} border-2`} style={tableStyle}>
               <div className="px-2 text-center z-10">
                 <div className="text-[10px] font-black truncate max-w-[80px]">{item.name}</div>
                 <div className="text-[8px] opacity-80">{item.capacity} pl.</div>
@@ -381,6 +403,24 @@ export default function RoomLayoutEditor({
       return (
         <div className="space-y-4">
           <div className="p-4 bg-slate-50 rounded-xl border space-y-3">
+            <p className="text-xs font-bold uppercase text-slate-500 flex items-center gap-1"><Palette className="w-3.5 h-3.5" /> Couleur des tables (global)</p>
+            <div className="flex gap-2 items-center">
+              <input
+                type="color"
+                value={blueprint.metadata.defaultTableColor ?? '#ffffff'}
+                onChange={(e) => setDefaultTableColor(e.target.value)}
+                className="w-12 h-9 rounded-lg border cursor-pointer shrink-0"
+              />
+              <button
+                type="button"
+                onClick={() => applyTableColorToAll(blueprint.metadata.defaultTableColor ?? '#ffffff')}
+                className="flex-1 py-2 px-2 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 text-[10px] font-bold hover:bg-indigo-100"
+              >
+                Appliquer à toutes les tables
+              </button>
+            </div>
+          </div>
+          <div className="p-4 bg-slate-50 rounded-xl border space-y-3">
             <p className="text-xs font-bold uppercase text-slate-500 flex items-center gap-1"><Shapes className="w-3.5 h-3.5" /> Forme de la salle</p>
             <div className="grid grid-cols-2 gap-2">
               {(Object.keys(roomOutlineLabels) as RoomOutlineShape[]).map((shape) => (
@@ -402,10 +442,16 @@ export default function RoomLayoutEditor({
 
     if (selectedFixture) {
       const isColumn = selectedFixture.kind === 'pillar' || selectedFixture.kind === 'column';
+      const isStage = selectedFixture.kind === 'stage' || selectedFixture.kind === 'podium';
+      const isFlower = selectedFixture.kind === 'flower';
+      const canHaveImage = isColumn || isStage || isFlower;
+
       return (
         <div className="space-y-3">
           <div className="p-4 bg-slate-50 rounded-xl border space-y-3">
-            <p className="text-xs font-bold uppercase text-slate-500">{isColumn ? 'Colonne / Poteau' : `Fixe — ${selectedFixture.kind}`}</p>
+            <p className="text-xs font-bold uppercase text-slate-500">
+              {isFlower ? 'Décoration florale' : isColumn ? 'Colonne / Poteau' : isStage ? 'Scène / Podium' : `Fixe — ${selectedFixture.kind}`}
+            </p>
             <label className="block text-xs space-y-1">
               <span className="font-semibold text-slate-600">Libellé</span>
               <input value={selectedFixture.label ?? ''} onChange={(e) => updateFixture(selectedFixture.id, { label: e.target.value })} className="w-full px-3 py-2 rounded-lg border text-sm" />
@@ -420,6 +466,28 @@ export default function RoomLayoutEditor({
                 <input type="number" min={1} max={100} value={Math.round(selectedFixture.h)} onChange={(e) => updateFixture(selectedFixture.id, { h: parseFloat(e.target.value) })} className="w-full px-2 py-1.5 rounded-lg border text-sm" />
               </label>
             </div>
+
+            {isFlower && (
+              <>
+                <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-slate-600">Type de fleurs</span>
+                  <select
+                    value={selectedFixture.flowerType ?? 'boquet'}
+                    onChange={(e) => updateFixture(selectedFixture.id, { flowerType: e.target.value as FlowerType }, 'Type de fleurs modifié')}
+                    className="w-full px-2 py-1.5 rounded-lg border text-sm"
+                  >
+                    {Object.entries(flowerTypeLabels).map(([k, v]) => (
+                      <option key={k} value={k}>{v}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-slate-600">Couleur des fleurs</span>
+                  <input type="color" value={selectedFixture.flowerColor ?? '#e11d48'} onChange={(e) => updateFixture(selectedFixture.id, { flowerColor: e.target.value }, 'Couleur florale modifiée')} className="w-full h-9 rounded-lg border cursor-pointer" />
+                </label>
+              </>
+            )}
+
             {isColumn && (
               <>
                 <label className="block text-xs space-y-1">
@@ -430,7 +498,7 @@ export default function RoomLayoutEditor({
                   </select>
                 </label>
                 <label className="block text-xs space-y-1">
-                  <span className="font-semibold text-slate-600">Couleur</span>
+                  <span className="font-semibold text-slate-600">Couleur (sans image)</span>
                   <input type="color" value={selectedFixture.color ?? '#78716c'} onChange={(e) => updateFixture(selectedFixture.id, { color: e.target.value })} className="w-full h-9 rounded-lg border cursor-pointer" />
                 </label>
                 <label className="block text-xs space-y-1">
@@ -438,6 +506,28 @@ export default function RoomLayoutEditor({
                   <input type="number" min={0} max={360} value={selectedFixture.rotation ?? 0} onChange={(e) => updateFixture(selectedFixture.id, { rotation: parseFloat(e.target.value) })} className="w-full px-2 py-1.5 rounded-lg border text-sm" />
                 </label>
               </>
+            )}
+
+            {canHaveImage && (
+              <div className="space-y-2 pt-2 border-t border-slate-200">
+                <p className="text-xs font-semibold text-slate-600 flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> Image personnalisée</p>
+                <button
+                  type="button"
+                  onClick={() => setCropTarget({ kind: 'fixture', id: selectedFixture.id })}
+                  className="w-full py-2 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 text-xs font-bold hover:bg-indigo-100"
+                >
+                  {selectedFixture.imageUrl ? 'Modifier / rogner l\'image' : 'Importer et rogner une image'}
+                </button>
+                {selectedFixture.imageUrl && (
+                  <button
+                    type="button"
+                    onClick={() => updateFixture(selectedFixture.id, { imageUrl: undefined, imageCrop: undefined }, 'Image retirée')}
+                    className="text-[10px] text-rose-600 font-bold"
+                  >
+                    Retirer l&apos;image
+                  </button>
+                )}
+              </div>
             )}
           </div>
           <LayoutActionPanel actions={actionLog} />
@@ -469,6 +559,24 @@ export default function RoomLayoutEditor({
                 <input type="number" min={2} max={24} value={selectedFurniture.capacity} onChange={(e) => updateFurniture(selectedFurniture.id, { capacity: parseInt(e.target.value, 10) })} className="w-full px-2 py-1.5 rounded-lg border text-sm" />
               </label>
             </div>
+            <label className="block text-xs space-y-1">
+              <span className="font-semibold text-slate-600 flex items-center gap-1"><Palette className="w-3 h-3" /> Couleur de cette table</span>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="color"
+                  value={selectedFurniture.tableColor ?? blueprint.metadata.defaultTableColor ?? '#ffffff'}
+                  onChange={(e) => updateFurniture(selectedFurniture.id, { tableColor: e.target.value }, 'Couleur de table modifiée')}
+                  className="w-full h-9 rounded-lg border cursor-pointer"
+                />
+                <button
+                  type="button"
+                  onClick={() => updateFurniture(selectedFurniture.id, { tableColor: undefined }, 'Couleur table réinitialisée')}
+                  className="shrink-0 px-2 py-1 text-[10px] font-bold text-slate-500 border rounded-lg"
+                >
+                  Défaut
+                </button>
+              </div>
+            </label>
             <label className="block text-xs space-y-1">
               <span className="font-semibold text-slate-600">Type de chaise</span>
               <select value={selectedFurniture.chairType} onChange={(e) => updateFurniture(selectedFurniture.id, { chairType: e.target.value as ChairType })} className="w-full px-2 py-1.5 rounded-lg border text-sm">
@@ -549,6 +657,9 @@ export default function RoomLayoutEditor({
       <button type="button" onClick={() => addFixture('column')} className="inline-flex items-center gap-1 px-3 py-1.5 bg-stone-100 border border-stone-300 text-stone-700 rounded-lg text-xs font-bold">
         <Columns3 className="w-3.5 h-3.5" /> Colonne
       </button>
+      <button type="button" onClick={() => addFixture('flower')} className="inline-flex items-center gap-1 px-3 py-1.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-xs font-bold">
+        <Flower2 className="w-3.5 h-3.5" /> Fleurs
+      </button>
       <button type="button" onClick={() => addFixture('aisle')} className="px-3 py-1.5 bg-slate-100 border border-slate-200 text-slate-600 rounded-lg text-xs font-bold">Allée</button>
       {selected && (
         <button type="button" onClick={deleteSelected} className="inline-flex items-center gap-1 px-3 py-1.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-xs font-bold ml-auto">
@@ -587,6 +698,15 @@ export default function RoomLayoutEditor({
 
   if (isExpanded) {
     return (
+      <>
+      <ImageCropModal
+        open={Boolean(cropTarget)}
+        onClose={() => setCropTarget(null)}
+        onApply={handleCropApply}
+        title={cropFixture?.kind === 'stage' ? 'Image de la scène' : cropFixture?.kind === 'flower' ? 'Image florale' : 'Image personnalisée'}
+        initialImageUrl={cropFixture?.imageUrl}
+        initialCrop={cropFixture?.imageCrop}
+      />
       <div className="fixed inset-0 z-[70] bg-slate-950/70 backdrop-blur-sm flex flex-col p-2 sm:p-3">
         <div className="bg-white rounded-2xl shadow-2xl flex flex-col flex-1 min-h-0 overflow-hidden">
           <div className="p-4 space-y-3 border-b border-slate-100 shrink-0">
@@ -607,10 +727,20 @@ export default function RoomLayoutEditor({
           </div>
         </div>
       </div>
+      </>
     );
   }
 
   return (
+    <>
+      <ImageCropModal
+        open={Boolean(cropTarget)}
+        onClose={() => setCropTarget(null)}
+        onApply={handleCropApply}
+        title={cropFixture?.kind === 'stage' ? 'Image de la scène' : cropFixture?.kind === 'flower' ? 'Image florale' : 'Image de la colonne'}
+        initialImageUrl={cropFixture?.imageUrl}
+        initialCrop={cropFixture?.imageCrop}
+      />
     <div className="space-y-3">
       {header}
       {templateBar}
@@ -620,5 +750,6 @@ export default function RoomLayoutEditor({
         <div className="max-h-[520px] overflow-y-auto">{renderEditPanel()}</div>
       </div>
     </div>
+    </>
   );
 }

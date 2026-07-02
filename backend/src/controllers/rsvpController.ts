@@ -245,6 +245,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
           isGuestTable: Object.values(table.seats || {}).includes(guestId),
           chairType: table.chairType,
           chairImageUrl: table.chairImageUrl,
+          tableColor: table.tableColor,
         }));
 
         if (Array.isArray(plan.fixtures)) {

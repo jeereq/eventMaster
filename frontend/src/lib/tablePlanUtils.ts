@@ -1,5 +1,7 @@
 export type TableShape = 'round' | 'rectangular' | 'square' | 'oval';
 
+import type React from 'react';
+
 export interface TablePlanTable {
   id: string;
   name: string;
@@ -70,6 +72,38 @@ export function getTableVisualClasses(shape: TableShape | string, active = false
           : 'w-32 h-16 rounded-xl';
 
   return `${size} ${base}`;
+}
+
+export function getTableVisualStyle(
+  shape: TableShape | string,
+  active = false,
+  tableColor?: string,
+): { className: string; style?: React.CSSProperties } {
+  const size =
+    shape === 'round'
+      ? 'w-24 h-24 rounded-full'
+      : shape === 'oval'
+        ? 'w-28 h-20 rounded-[50%]'
+        : shape === 'square'
+          ? 'w-20 h-20 rounded-xl'
+          : 'w-32 h-16 rounded-xl';
+
+  if (tableColor && !active) {
+    return {
+      className: `${size} border-2 text-slate-800 shadow-lg`,
+      style: {
+        backgroundColor: tableColor,
+        borderColor: tableColor,
+        filter: 'brightness(0.92)',
+      },
+    };
+  }
+
+  const base = active
+    ? 'bg-indigo-600 text-white border-indigo-700'
+    : 'bg-white border border-slate-200 text-slate-800';
+
+  return { className: `${size} ${base} shadow-lg border-2` };
 }
 
 export function getOccupiedSeatCount(table: Pick<TablePlanTable, 'seats' | 'capacity'>): number {

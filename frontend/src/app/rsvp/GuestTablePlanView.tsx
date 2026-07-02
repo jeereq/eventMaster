@@ -6,11 +6,12 @@ import {
   getTableShapeDescription,
   getTableShapeEmoji,
   getTableShapeLabel,
-  getTableVisualClasses,
+  getTableVisualStyle,
   TableShape,
 } from '@/lib/tablePlanUtils';
-import { getFixtureClass, getRoomOutlineClipPath, RoomOutlineShape } from '@/lib/roomLayoutUtils';
+import { getRoomOutlineClipPath, RoomOutlineShape } from '@/lib/roomLayoutUtils';
 import ChairRenderer from '@/components/ChairRenderer';
+import FixtureRenderer from '@/components/FixtureRenderer';
 import { LayoutGrid, Users, Maximize2 } from 'lucide-react';
 import { ChairType } from '@/lib/roomLayoutUtils';
 
@@ -35,6 +36,7 @@ export interface GuestTablePlanOverviewItem {
   isGuestTable: boolean;
   chairType?: ChairType;
   chairImageUrl?: string;
+  tableColor?: string;
 }
 
 export interface GuestPlanFixture {
@@ -48,6 +50,10 @@ export interface GuestPlanFixture {
   color?: string;
   columnShape?: string;
   rotation?: number;
+  imageUrl?: string;
+  imageCrop?: { x: number; y: number; w: number; h: number };
+  flowerType?: string;
+  flowerColor?: string;
 }
 
 export interface GuestRoomOutline {
@@ -210,30 +216,23 @@ export default function GuestTablePlanView({
         />
       )}
 
-      {(planFixtures ?? []).map((fixture) => {
-        const isColumn = fixture.kind === 'pillar' || fixture.kind === 'column';
-        return (
-          <div
-            key={fixture.id}
-            className={`absolute pointer-events-none z-[5] border text-[8px] font-bold flex items-center justify-center opacity-80 ${getFixtureClass(fixture.kind)} ${isColumn && fixture.columnShape === 'round' ? 'rounded-full' : isColumn ? 'rounded-sm' : ''}`}
-            style={{
-              left: `${fixture.x}%`,
-              top: `${fixture.y}%`,
-              width: `${fixture.w}%`,
-              height: `${fixture.h}%`,
-              backgroundColor: isColumn && fixture.color ? fixture.color : undefined,
-              transform: fixture.rotation ? `rotate(${fixture.rotation}deg)` : undefined,
-            }}
-          >
-            {fixture.kind !== 'aisle' && fixture.label}
-          </div>
-        );
-      })}
+      {(planFixtures ?? []).map((fixture) => (
+        <FixtureRenderer
+          key={fixture.id}
+          fixture={{
+            ...fixture,
+            kind: fixture.kind as 'stage' | 'podium' | 'aisle' | 'entrance' | 'pillar' | 'perimeter' | 'column' | 'flower',
+            columnShape: fixture.columnShape as 'round' | 'square' | undefined,
+            flowerType: fixture.flowerType as import('@/lib/roomLayoutUtils').FlowerType | undefined,
+          }}
+        />
+      ))}
 
       {tablePlanOverview!.map((table) => {
         const isHovered = hoveredTableId === table.id;
         const isGuestTable = table.isGuestTable;
         const scale = height > 400 ? 1 : 0.85;
+        const { className: tableClass, style: tableStyle } = getTableVisualStyle(table.shape, isGuestTable, table.tableColor);
 
         return (
           <div
@@ -255,13 +254,14 @@ export default function GuestTablePlanView({
               />
             )}
             <div
-              className={`relative flex items-center justify-center font-bold text-xs text-center cursor-default transition-all duration-200 ${
+              className={`relative flex items-center justify-center font-bold text-xs text-center cursor-default transition-all duration-200 ${tableClass} ${
                 isGuestTable
                   ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-950 shadow-lg shadow-amber-500/30'
                   : isHovered
                     ? 'ring-2 ring-indigo-400 ring-offset-2 ring-offset-slate-950 shadow-lg'
                     : 'hover:shadow-md'
-              } ${getTableVisualClasses(table.shape, isGuestTable)}`}
+              }`}
+              style={tableStyle}
             >
               <div className="px-1.5">
                 <div className="truncate max-w-[min(72px,18vw)] font-black text-[10px]">{table.name}</div>
@@ -308,8 +308,12 @@ export default function GuestTablePlanView({
               Votre place à la table
             </p>
             <div className="relative flex items-center justify-center min-h-[clamp(160px,35vw,220px)]">
+              {(() => {
+                const { className: detailTableClass, style: detailTableStyle } = getTableVisualStyle(tableDetails.shape, true);
+                return (
               <div
-                className={`relative flex items-center justify-center font-bold text-xs text-center shadow-lg scale-[clamp(0.85,2.5vw,1.1)] ${getTableVisualClasses(tableDetails.shape, true)}`}
+                className={`relative flex items-center justify-center font-bold text-xs text-center shadow-lg scale-[clamp(0.85,2.5vw,1.1)] ${detailTableClass}`}
+                style={detailTableStyle}
               >
                 <div className="px-2">
                   <div className="truncate max-w-[90px] font-black text-[11px]">{tableDetails.tableName}</div>
@@ -355,6 +359,8 @@ export default function GuestTablePlanView({
                   );
                 })}
               </div>
+                );
+              })()}
             </div>
             <p className="text-[10px] text-center text-amber-400/90 font-semibold mt-3">
               Votre siège est surligné en doré

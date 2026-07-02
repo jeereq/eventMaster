@@ -3,12 +3,13 @@
 import React from 'react';
 import {
   RoomLayoutBlueprint,
-  getFixtureClass,
   getRoomOutlineClipPath,
+  resolveTableColor,
   roomTypeLabels,
 } from '@/lib/roomLayoutUtils';
-import { getTableVisualClasses } from '@/lib/tablePlanUtils';
+import { getTableVisualStyle } from '@/lib/tablePlanUtils';
 import ChairRenderer from '@/components/ChairRenderer';
+import FixtureRenderer from '@/components/FixtureRenderer';
 
 interface RoomLayoutPreviewProps {
   blueprint: RoomLayoutBlueprint | null;
@@ -56,26 +57,9 @@ export default function RoomLayoutPreview({ blueprint, className = '' }: RoomLay
           />
         )}
 
-        {blueprint.fixtures.map((fixture) => {
-          const isColumn = fixture.kind === 'pillar' || fixture.kind === 'column';
-          return (
-            <div
-              key={fixture.id}
-              className={`absolute border text-[8px] font-bold flex items-center justify-center px-1 text-center z-[5] ${getFixtureClass(fixture.kind)} ${isColumn && fixture.columnShape === 'round' ? 'rounded-full' : isColumn ? 'rounded-sm' : ''}`}
-              style={{
-                left: `${fixture.x}%`,
-                top: `${fixture.y}%`,
-                width: `${fixture.w}%`,
-                height: `${fixture.h}%`,
-                backgroundColor: isColumn && fixture.color ? fixture.color : undefined,
-                transform: fixture.rotation ? `rotate(${fixture.rotation}deg)` : undefined,
-              }}
-              title={fixture.label}
-            >
-              {fixture.kind !== 'aisle' && fixture.label}
-            </div>
-          );
-        })}
+        {blueprint.fixtures.map((fixture) => (
+          <FixtureRenderer key={fixture.id} fixture={fixture} />
+        ))}
 
         {blueprint.furniture.map((item) => {
           if (item.kind === 'zone') {
@@ -110,13 +94,16 @@ export default function RoomLayoutPreview({ blueprint, className = '' }: RoomLay
             );
           }
 
+          const tableColor = resolveTableColor(item.tableColor, blueprint.metadata.defaultTableColor);
+          const { className: tableClass, style: tableStyle } = getTableVisualStyle(item.shape, false, tableColor);
+
           return (
             <div
               key={item.id}
               className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5 z-10"
               style={{ left: `${item.x}%`, top: `${item.y}%` }}
             >
-              <div className={`${getTableVisualClasses(item.shape)} scale-[0.45] origin-center shadow-xs`} />
+              <div className={`${tableClass} scale-[0.45] origin-center shadow-xs flex items-center justify-center`} style={tableStyle} />
               <span className="text-[7px] font-bold text-slate-600 bg-white/90 px-1 rounded">{item.name}</span>
               <div className="flex gap-0.5">
                 {Array.from({ length: Math.min(item.capacity, 6) }).map((_, i) => (

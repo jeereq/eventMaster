@@ -4,6 +4,14 @@ export type TableShape = 'round' | 'rectangular' | 'square' | 'oval';
 
 export type RoomOutlineShape = 'rectangle' | 'square' | 'circle' | 'lShape' | 'hexagon' | 'octagon';
 export type ColumnShape = 'round' | 'square';
+export type FlowerType = 'rose' | 'tulipe' | 'orchidee' | 'tournesol' | 'lavande' | 'boquet' | 'personnalise';
+
+export interface ImageCropRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
 
 export interface LayoutParams {
   tableCount?: number;
@@ -35,7 +43,7 @@ export interface RoomLayoutBlueprint {
   canvas: { widthM: number; heightM: number };
   fixtures: Array<{
     id: string;
-    kind: 'stage' | 'podium' | 'aisle' | 'entrance' | 'pillar' | 'perimeter' | 'column';
+    kind: 'stage' | 'podium' | 'aisle' | 'entrance' | 'pillar' | 'perimeter' | 'column' | 'flower';
     x: number;
     y: number;
     w: number;
@@ -44,6 +52,10 @@ export interface RoomLayoutBlueprint {
     label?: string;
     columnShape?: ColumnShape;
     color?: string;
+    imageUrl?: string;
+    imageCrop?: ImageCropRect;
+    flowerType?: FlowerType;
+    flowerColor?: string;
   }>;
   furniture: Array<
     | {
@@ -54,6 +66,7 @@ export interface RoomLayoutBlueprint {
         capacity: number;
         chairType: ChairType;
         chairImageUrl?: string;
+        tableColor?: string;
         x: number;
         y: number;
         locked?: boolean;
@@ -84,6 +97,7 @@ export interface RoomLayoutBlueprint {
     tableCount?: number;
     rowCount?: number;
     totalSeats: number;
+    defaultTableColor?: string;
   };
 }
 
@@ -153,6 +167,7 @@ export function createBlueprintFixture(
     pillar: { x: 48, y: 48, w: 4, h: 4, label: 'Poteau' },
     column: { x: 30, y: 40, w: 3, h: 3, label: 'Colonne' },
     perimeter: { x: 8, y: 10, w: 84, h: 80, label: 'Périmètre' },
+    flower: { x: 10, y: 85, w: 4, h: 4, label: 'Fleurs' },
   };
   const d = defaults[kind] ?? { x: 40, y: 40, w: 20, h: 10, label: kind };
   return {
@@ -161,6 +176,8 @@ export function createBlueprintFixture(
     ...d,
     columnShape: kind === 'pillar' || kind === 'column' ? 'round' as ColumnShape : undefined,
     color: kind === 'pillar' || kind === 'column' ? '#78716c' : undefined,
+    flowerType: kind === 'flower' ? 'boquet' as FlowerType : undefined,
+    flowerColor: kind === 'flower' ? '#e11d48' : undefined,
   };
 }
 
@@ -181,6 +198,10 @@ export function ensureBlueprintDefaults(blueprint: RoomLayoutBlueprint): RoomLay
   return {
     ...blueprint,
     roomOutline: blueprint.roomOutline ?? defaultRoomOutline('rectangle'),
+    metadata: {
+      ...blueprint.metadata,
+      defaultTableColor: blueprint.metadata.defaultTableColor ?? '#ffffff',
+    },
   };
 }
 
@@ -559,6 +580,7 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
           capacity: item.capacity,
           chairType: item.chairType,
           chairImageUrl: item.chairImageUrl,
+          tableColor: item.tableColor,
           x: item.x,
           y: item.y,
           seats,
@@ -586,6 +608,7 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
   return {
     tables,
     fixtures: blueprint.fixtures,
+    defaultTableColor: blueprint.metadata.defaultTableColor,
     roomOutline: blueprint.roomOutline,
     sourceRoomType: blueprint.roomType,
     importedAt: new Date().toISOString(),
@@ -619,6 +642,20 @@ export const chairTypeLabels: Record<ChairType, string> = {
   WHEELCHAIR: 'Place PMR',
 };
 
+export const flowerTypeLabels: Record<FlowerType, string> = {
+  rose: 'Roses',
+  tulipe: 'Tulipes',
+  orchidee: 'Orchidées',
+  tournesol: 'Tournesols',
+  lavande: 'Lavande',
+  boquet: 'Bouquet mixte',
+  personnalise: 'Personnalisé (image)',
+};
+
+export function resolveTableColor(tableColor?: string, defaultColor?: string): string | undefined {
+  return tableColor ?? defaultColor;
+}
+
 export function getChairVisualClass(chairType: ChairType): string {
   switch (chairType) {
     case 'THEATER':
@@ -647,6 +684,8 @@ export function getFixtureClass(kind: string): string {
     case 'pillar':
     case 'column':
       return 'bg-stone-400 border-stone-500';
+    case 'flower':
+      return 'bg-transparent border-transparent';
     case 'perimeter':
       return 'bg-sky-50 border-sky-300 border-dashed text-sky-600';
     default:

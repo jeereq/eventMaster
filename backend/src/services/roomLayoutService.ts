@@ -3,6 +3,14 @@ export type ChairType = 'BANQUET' | 'FOLDING' | 'THEATER' | 'STOOL' | 'ARMCHAIR'
 export type TableShape = 'round' | 'rectangular' | 'square' | 'oval';
 export type RoomOutlineShape = 'rectangle' | 'square' | 'circle' | 'lShape' | 'hexagon' | 'octagon';
 export type ColumnShape = 'round' | 'square';
+export type FlowerType = 'rose' | 'tulipe' | 'orchidee' | 'tournesol' | 'lavande' | 'boquet' | 'personnalise';
+
+export interface ImageCropRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
 
 export interface LayoutParams {
   tableCount?: number;
@@ -34,7 +42,7 @@ export interface RoomLayoutBlueprint {
   canvas: { widthM: number; heightM: number };
   fixtures: Array<{
     id: string;
-    kind: 'stage' | 'podium' | 'aisle' | 'entrance' | 'pillar' | 'perimeter' | 'column';
+    kind: 'stage' | 'podium' | 'aisle' | 'entrance' | 'pillar' | 'perimeter' | 'column' | 'flower';
     x: number;
     y: number;
     w: number;
@@ -43,6 +51,10 @@ export interface RoomLayoutBlueprint {
     label?: string;
     columnShape?: ColumnShape;
     color?: string;
+    imageUrl?: string;
+    imageCrop?: ImageCropRect;
+    flowerType?: FlowerType;
+    flowerColor?: string;
   }>;
   furniture: Array<
     | {
@@ -53,6 +65,7 @@ export interface RoomLayoutBlueprint {
         capacity: number;
         chairType: ChairType;
         chairImageUrl?: string;
+        tableColor?: string;
         x: number;
         y: number;
         locked?: boolean;
@@ -83,6 +96,7 @@ export interface RoomLayoutBlueprint {
     tableCount?: number;
     rowCount?: number;
     totalSeats: number;
+    defaultTableColor?: string;
   };
 }
 
@@ -367,6 +381,7 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
           capacity: item.capacity,
           chairType: item.chairType,
           chairImageUrl: item.chairImageUrl,
+          tableColor: item.tableColor,
           x: item.x,
           y: item.y,
           seats,
@@ -394,6 +409,7 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
   return {
     tables,
     fixtures: blueprint.fixtures,
+    defaultTableColor: blueprint.metadata.defaultTableColor,
     roomOutline: blueprint.roomOutline,
     sourceRoomType: blueprint.roomType,
     importedAt: new Date().toISOString(),
