@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getEvents, createEvent, getEventById, updateEvent, deleteEvent } from '../controllers/eventController';
+import { getEvents, createEvent, getEventById, updateEvent, deleteEvent, importRoomLayout } from '../controllers/eventController';
 import { getEventStaff, assignEventStaff, removeEventStaff } from '../controllers/eventStaffController';
 import { getGuests, createGuest, updateGuest, deleteGuest, importGuests } from '../controllers/guestController';
 import { getInvitations, createInvitation, updateInvitation, deleteInvitation, sendInvitation } from '../controllers/invitationController';
@@ -17,6 +17,7 @@ router.get('/', getEvents);
 router.post('/', createEvent);
 router.get('/:id', getEventById);
 router.put('/:id', updateEvent);
+router.post('/:id/import-room-layout', importRoomLayout);
 router.delete('/:id', deleteEvent);
 
 // Event staff assignments

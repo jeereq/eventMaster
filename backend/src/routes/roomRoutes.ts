@@ -7,6 +7,7 @@ import {
   deleteRoom,
   assignRoomStaff,
   removeRoomStaff,
+  previewRoomLayout,
 } from '../controllers/roomController';
 
 const router = Router();
@@ -15,6 +16,7 @@ router.use(requireAuth);
 router.use(requireActiveLicense);
 
 router.get('/', getRooms);
+router.post('/preview-layout', previewRoomLayout);
 router.post('/', createRoom);
 router.put('/:roomId', updateRoom);
 router.delete('/:roomId', deleteRoom);

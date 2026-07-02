@@ -26,7 +26,14 @@ interface EventItem {
   latitude?: number;
   longitude?: number;
   roomId?: string | null;
-  room?: { id: string; name: string; location?: string | null; floor?: string | null } | null;
+  room?: {
+    id: string;
+    name: string;
+    roomType?: string;
+    layoutBlueprint?: unknown;
+    location?: string | null;
+    floor?: string | null;
+  } | null;
   tablePlan?: any;
   tenant?: { name: string };
 }
@@ -37,6 +44,8 @@ interface OrgRoomOption {
   location: string | null;
   floor: string | null;
   capacity: number | null;
+  roomType?: string;
+  layoutBlueprint?: unknown;
 }
 
 interface GuestItem {
@@ -212,6 +221,7 @@ export default function EventsPage() {
   const [loadingRooms, setLoadingRooms] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [savingEvent, setSavingEvent] = useState(false);
+  const [importingLayout, setImportingLayout] = useState(false);
 
   // Map Picker States & Refs
   const [searchingLocation, setSearchingLocation] = useState(false);
@@ -635,8 +645,16 @@ export default function EventsPage() {
           setSelectedEvent((prev) => (prev ? { ...prev, ...savedEvent } : prev));
         }
       } else {
-        await api.post('/events', payload);
-        setSuccess('Événement créé avec succès !');
+        const savedEvent: EventItem = await api.post('/events', {
+          ...payload,
+          importRoomLayout: Boolean(eventRoomId),
+        });
+        const importedPlan = savedEvent.tablePlan?.tables?.length;
+        setSuccess(
+          importedPlan
+            ? 'Événement créé et plan de table importé depuis la salle.'
+            : 'Événement créé avec succès !'
+        );
       }
 
       resetEventForm();
@@ -687,6 +705,40 @@ export default function EventsPage() {
       throw err;
     }
   };
+
+  const handleImportRoomLayout = async (replaceExisting: boolean) => {
+    if (!selectedEvent) return;
+    if (replaceExisting && !confirm('Remplacer le plan de table actuel par le modèle de la salle ? Les assignations seront perdues.')) {
+      return;
+    }
+    setImportingLayout(true);
+    setError('');
+    try {
+      const updatedEvent = await api.post(`/events/${selectedEvent.id}/import-room-layout`, {
+        replaceExisting,
+      });
+      setSelectedEvent(updatedEvent);
+      setEvents(events.map((e) => (e.id === selectedEvent.id ? updatedEvent : e)));
+      setSuccess('Plan de table importé depuis la salle.');
+    } catch (err: any) {
+      if (err.message?.includes('existe déjà') || err.hasExistingPlan) {
+        if (confirm('Un plan existe déjà. Voulez-vous le remplacer par le modèle de la salle ?')) {
+          setImportingLayout(false);
+          return handleImportRoomLayout(true);
+        }
+      } else {
+        setError(err.message || 'Impossible d\'importer le plan de la salle.');
+      }
+    } finally {
+      setImportingLayout(false);
+    }
+  };
+
+  const selectedRoomHasLayout = Boolean(
+    selectedEvent?.room?.layoutBlueprint &&
+    typeof selectedEvent.room.layoutBlueprint === 'object' &&
+    (selectedEvent.room.layoutBlueprint as { furniture?: unknown[] }).furniture?.length
+  );
 
   // Manage Event Details
   const handleManageEvent = async (event: EventItem) => {
@@ -1896,10 +1948,14 @@ export default function EventsPage() {
           {/* Tab Content: Table Plan */}
           {activeTab === 'tablePlan' && (
             <TablePlanner
-              key={selectedEvent.id}
+              key={`${selectedEvent.id}_${selectedEvent.tablePlan?.importedAt ?? 'empty'}`}
               guests={guests}
               initialTablePlan={selectedEvent.tablePlan}
               onSave={handleSaveTablePlan}
+              roomName={selectedEvent.room?.name}
+              canImportRoomLayout={selectedRoomHasLayout || Boolean(selectedEvent.roomId && orgRooms.find((r) => r.id === selectedEvent.roomId)?.layoutBlueprint)}
+              onImportRoomLayout={handleImportRoomLayout}
+              importingLayout={importingLayout}
             />
           )}
 
@@ -1994,6 +2050,7 @@ export default function EventsPage() {
                             {room.name}
                             {room.floor ? ` (${room.floor})` : ''}
                             {room.capacity ? ` — ${room.capacity} pl.` : ''}
+                            {room.roomType && room.roomType !== 'SIMPLE' ? ` · ${room.roomType}` : ''}
                           </option>
                         ))}
                       </select>

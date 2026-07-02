@@ -14,6 +14,7 @@ import {
   getTableVisualClasses,
   TableShape,
 } from '@/lib/tablePlanUtils';
+import { getFixtureClass } from '@/lib/roomLayoutUtils';
 
 interface GuestItem {
   id: string;
@@ -30,24 +31,39 @@ interface Table {
   name: string;
   shape: TableShape;
   capacity: number;
-  x: number; // percentage 0-100
-  y: number; // percentage 0-100
-  seats: Record<number, string | null>; // seatIndex -> guestId or null
+  x: number;
+  y: number;
+  seats: Record<number, string | null>;
+  locked?: boolean;
+  chairType?: string;
 }
 
 interface TablePlannerProps {
   guests: GuestItem[];
-  initialTablePlan: { tables?: Table[] } | null | undefined;
-  onSave: (newTablePlan: { tables: Table[] }) => Promise<void>;
+  initialTablePlan: { tables?: Table[]; fixtures?: Array<{ id: string; kind: string; x: number; y: number; w: number; h: number; label?: string }> } | null | undefined;
+  onSave: (newTablePlan: { tables: Table[]; fixtures?: unknown[] }) => Promise<void>;
+  roomName?: string | null;
+  canImportRoomLayout?: boolean;
+  onImportRoomLayout?: (replaceExisting: boolean) => Promise<void>;
+  importingLayout?: boolean;
 }
 
-export default function TablePlanner({ guests, initialTablePlan, onSave }: TablePlannerProps) {
+export default function TablePlanner({
+  guests,
+  initialTablePlan,
+  onSave,
+  roomName,
+  canImportRoomLayout,
+  onImportRoomLayout,
+  importingLayout,
+}: TablePlannerProps) {
   const [tables, setTables] = useState<Table[]>(() => {
     if (initialTablePlan && Array.isArray(initialTablePlan.tables)) {
       return initialTablePlan.tables;
     }
     return [];
   });
+  const [fixtures] = useState(() => initialTablePlan?.fixtures ?? []);
   const [saving, setSaving] = useState(false);
   const [activeTableId, setActiveTableId] = useState<string | null>(null);
   const [selectedSeat, setSelectedGuestSeat] = useState<{ tableId: string; seatIndex: number } | null>(null);
@@ -167,11 +183,12 @@ export default function TablePlanner({ guests, initialTablePlan, onSave }: Table
 
   // Dragging logic
   const handleMouseDown = (tableId: string, e: React.MouseEvent) => {
+    const table = tables.find((t) => t.id === tableId);
+    if (table?.locked) return;
     if (e.target instanceof HTMLButtonElement || e.target instanceof HTMLSelectElement) return;
     e.preventDefault();
     setDraggingTableId(tableId);
 
-    const table = tables.find(t => t.id === tableId);
     if (table && canvasRef.current) {
       const rect = canvasRef.current.getBoundingClientRect();
       const clickX = e.clientX - rect.left;
@@ -220,7 +237,7 @@ export default function TablePlanner({ guests, initialTablePlan, onSave }: Table
   const handleSavePlan = async () => {
     setSaving(true);
     try {
-      await onSave({ tables });
+      await onSave({ tables, fixtures: fixtures.length ? fixtures : undefined });
       alert('Plan de table sauvegardé avec succès !');
     } catch (err) {
       console.error('Error saving table plan:', err);
@@ -251,6 +268,22 @@ export default function TablePlanner({ guests, initialTablePlan, onSave }: Table
       onMouseLeave={handleMouseUp}
       className={`relative w-full ${heightClass} bg-slate-50 border border-slate-200 rounded-3xl overflow-hidden shadow-inner bg-grid-slate-200 [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0.95))]`}
     >
+      {fixtures.map((fixture) => (
+        <div
+          key={fixture.id}
+          className={`absolute pointer-events-none border text-[9px] font-bold flex items-center justify-center px-1 text-center opacity-80 ${getFixtureClass(fixture.kind)}`}
+          style={{
+            left: `${fixture.x}%`,
+            top: `${fixture.y}%`,
+            width: `${fixture.w}%`,
+            height: `${fixture.h}%`,
+          }}
+          title={fixture.label}
+        >
+          {fixture.kind !== 'aisle' && fixture.label}
+        </div>
+      ))}
+
       {tables.length === 0 ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 space-y-3">
           <LayoutGrid className="w-12 h-12 text-slate-300" />
@@ -383,6 +416,26 @@ export default function TablePlanner({ guests, initialTablePlan, onSave }: Table
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {canImportRoomLayout && onImportRoomLayout && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-violet-50 border border-violet-100 rounded-2xl">
+          <div className="text-sm">
+            <p className="font-bold text-violet-900">Plan de salle disponible</p>
+            <p className="text-violet-700 text-xs mt-0.5">
+              {roomName ? `Importer la disposition de « ${roomName} » comme base du plan de table.` : 'Importer le modèle de la salle liée.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={importingLayout}
+            onClick={() => onImportRoomLayout(tables.length > 0)}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-xs font-bold rounded-xl transition"
+          >
+            {importingLayout ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            Importer depuis la salle
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">

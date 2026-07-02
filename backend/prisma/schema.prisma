@@ -22,6 +22,24 @@ enum StaffRole {
   PROTOCOL
 }
 
+enum RoomType {
+  SIMPLE
+  BANQUET
+  CONFERENCE
+  AMPHITHEATER
+  TENT
+  CUSTOM
+}
+
+enum ChairType {
+  BANQUET
+  FOLDING
+  THEATER
+  STOOL
+  ARMCHAIR
+  WHEELCHAIR
+}
+
 enum PlanType {
   FREE
   STANDARD
@@ -240,16 +258,18 @@ model LegalAcceptance {
 }
 
 model OrganizationRoom {
-  id          String   @id @default(uuid())
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name        String
-  description String?
-  capacity    Int?
-  floor       String?
-  location    String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String   @id @default(uuid())
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name             String
+  description      String?
+  capacity         Int?
+  floor            String?
+  location         String?
+  roomType         RoomType @default(SIMPLE)
+  layoutBlueprint  Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   events      Event[]
   staff       RoomStaff[]

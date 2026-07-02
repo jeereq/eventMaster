@@ -8,6 +8,7 @@ import {
   getAccessibleEventIds,
   resolveOrgAccess,
 } from '../services/permissionsService';
+import { blueprintToTablePlan } from '../services/roomLayoutService';
 
 // List all events for the current tenant
 export async function getEvents(req: AuthenticatedRequest, res: Response) {
@@ -27,7 +28,7 @@ export async function getEvents(req: AuthenticatedRequest, res: Response) {
     const events = await prisma.event.findMany({
       where,
       include: {
-        room: { select: { id: true, name: true } },
+        room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } },
       },
       orderBy: { date: 'asc' },
     });
@@ -54,7 +55,7 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
       return res.status(403).json({ error: 'Vous n\'avez pas la permission de créer des événements.' });
     }
 
-    const { title, description, date, location, reminderFrequency, latitude, longitude, roomId } = req.body;
+    const { title, description, date, location, reminderFrequency, latitude, longitude, roomId, importRoomLayout } = req.body;
 
     if (!title || !date || !location) {
       return res.status(400).json({ error: 'Les champs title, date et location sont requis' });
@@ -75,6 +76,17 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
       }
     }
 
+    let tablePlanData: object | undefined;
+    if (roomId && importRoomLayout !== false) {
+      const room = await prisma.organizationRoom.findFirst({
+        where: { id: roomId, tenantId },
+        select: { layoutBlueprint: true },
+      });
+      if (room?.layoutBlueprint) {
+        tablePlanData = blueprintToTablePlan(room.layoutBlueprint as any);
+      }
+    }
+
     const event = await prisma.event.create({
       data: {
         tenantId,
@@ -86,8 +98,9 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
         reminderFrequency: reminderFrequency || 'NONE',
         latitude: latitude !== undefined && latitude !== null ? parseFloat(latitude) : null,
         longitude: longitude !== undefined && longitude !== null ? parseFloat(longitude) : null,
+        tablePlan: tablePlanData,
       },
-      include: { room: { select: { id: true, name: true } } },
+      include: { room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } } },
     });
 
     return res.status(201).json(event);
@@ -114,7 +127,7 @@ export async function getEventById(req: AuthenticatedRequest, res: Response) {
 
     const event = await prisma.event.findFirst({
       where: { id, tenantId },
-      include: { room: { select: { id: true, name: true } } },
+      include: { room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } } },
     });
 
     if (!event) {
@@ -165,7 +178,7 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
         tablePlan: tablePlan !== undefined ? tablePlan : existingEvent.tablePlan,
         roomId: roomId !== undefined ? roomId : existingEvent.roomId,
       },
-      include: { room: { select: { id: true, name: true } } },
+      include: { room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } } },
     });
 
     return res.json(updatedEvent);
@@ -207,5 +220,59 @@ export async function deleteEvent(req: AuthenticatedRequest, res: Response) {
   } catch (error: any) {
     console.error('Erreur lors de la suppression de l\'événement:', error);
     return res.status(500).json({ error: 'Erreur lors de la suppression de l\'événement' });
+  }
+}
+
+export async function importRoomLayout(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
+    const id = req.params.id as string;
+    const { replaceExisting } = req.body;
+
+    if (!tenantId || !userId) {
+      return res.status(403).json({ error: 'Tenant non identifié' });
+    }
+
+    if (!(await canManageEvent(userId, tenantId, id))) {
+      return res.status(403).json({ error: 'Vous n\'avez pas la permission de modifier cet événement.' });
+    }
+
+    const event = await prisma.event.findFirst({
+      where: { id, tenantId },
+      include: {
+        room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } },
+      },
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: 'Événement non trouvé' });
+    }
+
+    if (!event.roomId || !event.room?.layoutBlueprint) {
+      return res.status(400).json({ error: 'Cet événement n\'est pas lié à une salle avec un plan configuré.' });
+    }
+
+    if (event.tablePlan && !replaceExisting) {
+      const plan = event.tablePlan as { tables?: unknown[] };
+      if (plan.tables && plan.tables.length > 0) {
+        return res.status(409).json({
+          error: 'Un plan de table existe déjà. Confirmez le remplacement avec replaceExisting: true.',
+          hasExistingPlan: true,
+        });
+      }
+    }
+
+    const tablePlan = blueprintToTablePlan(event.room.layoutBlueprint as any);
+    const updatedEvent = await prisma.event.update({
+      where: { id },
+      data: { tablePlan },
+      include: { room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } } },
+    });
+
+    return res.json(updatedEvent);
+  } catch (error: any) {
+    console.error('Erreur importRoomLayout:', error);
+    return res.status(500).json({ error: 'Impossible d\'importer le plan de la salle.' });
   }
 }

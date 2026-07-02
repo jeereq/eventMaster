@@ -1,0 +1,6 @@
+-- Room layout types and blueprint
+CREATE TYPE "RoomType" AS ENUM ('SIMPLE', 'BANQUET', 'CONFERENCE', 'AMPHITHEATER', 'TENT', 'CUSTOM');
+CREATE TYPE "ChairType" AS ENUM ('BANQUET', 'FOLDING', 'THEATER', 'STOOL', 'ARMCHAIR', 'WHEELCHAIR');
+
+ALTER TABLE "OrganizationRoom" ADD COLUMN IF NOT EXISTS "roomType" "RoomType" NOT NULL DEFAULT 'SIMPLE';
+ALTER TABLE "OrganizationRoom" ADD COLUMN IF NOT EXISTS "layoutBlueprint" JSONB;
