@@ -3,12 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import { api } from '@/lib/api';
 import { 
   Calendar, Users, Award, Shield, CheckCircle, Mail, 
   ArrowRight, Lock, Layout, Sparkles, Compass, Heart, 
   Briefcase, Smartphone, Star, ShieldCheck, Check, XCircle,
-  PartyPopper, Loader2, LayoutGrid
+  PartyPopper, Loader2, LayoutGrid, Sun, Moon
 } from 'lucide-react';
 
 interface MockTemplate {
@@ -34,6 +35,7 @@ interface MockTemplate {
 
 export default function Home() {
   const { user, tenant, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [previewTemplate, setPreviewTemplate] = useState<string>('');
   const [modalTemplate, setModalTemplate] = useState<any | null>(null);
@@ -185,9 +187,9 @@ export default function Home() {
   const activePreview = activeTemplatesList.find(t => t.id === previewTemplate) || activeTemplatesList[0];
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 font-sans antialiased text-slate-900">
+    <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950 font-sans antialiased text-slate-900 dark:text-slate-100 transition-colors duration-200">
       {/* Header */}
-      <header className="border-b border-slate-200/80 bg-white/80 backdrop-blur-md sticky top-0 z-50 transition-all">
+      <header className="border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-50 transition-all">
         <div className="w-10/12 max-w-7xl mx-auto h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-indigo-600 p-2 rounded-lg text-white">
@@ -198,7 +200,7 @@ export default function Home() {
             </span>
             
             {/* Indicateur de connexion API en temps réel */}
-            <div className="hidden sm:flex items-center gap-1.5 ml-4 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-[10px] font-bold text-slate-500">
+            <div className="hidden sm:flex items-center gap-1.5 ml-4 px-2.5 py-1 rounded-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[10px] font-bold text-slate-500 dark:text-slate-400">
               <span className={`w-2 h-2 rounded-full ${
                 serverStatus === 'online' ? 'bg-emerald-500 animate-pulse' : 
                 serverStatus === 'offline' ? 'bg-rose-500' : 'bg-amber-500 animate-pulse'
@@ -210,12 +212,19 @@ export default function Home() {
             </div>
           </div>
           <nav className="flex items-center gap-4">
-            <Link href="/contact" className="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition">
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 transition cursor-pointer"
+              aria-label="Changer de thème"
+            >
+              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+            </button>
+            <Link href="/contact" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
               Contact
             </Link>
             {user ? (
               <>
-                <span className="text-xs text-slate-500 font-semibold hidden md:inline">
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold hidden md:inline">
                   Connecté en tant que <span className="font-bold text-indigo-600">{user.name}</span> {tenant ? `(${tenant.name})` : ''}
                 </span>
                 <Link href="/dashboard" className="text-sm font-semibold bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-100">
@@ -223,14 +232,14 @@ export default function Home() {
                 </Link>
                 <button 
                   onClick={logout}
-                  className="text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-xl transition"
+                  className="text-sm font-semibold border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 px-4 py-2 rounded-xl transition cursor-pointer"
                 >
                   Déconnexion
                 </button>
               </>
             ) : (
               <>
-                <Link href="/login" className="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition">
+                <Link href="/login" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
                   Connexion
                 </Link>
                 <Link href="/register" className="text-sm font-semibold bg-indigo-600 text-white px-4.5 py-2 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-100">
@@ -243,35 +252,35 @@ export default function Home() {
       </header>
 
       {/* Hero Section */}
-      <section className="py-20 lg:py-28 bg-white relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-80" />
+      <section className="py-20 lg:py-28 bg-white dark:bg-slate-950 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-80" />
         <div className="w-10/12 max-w-7xl mx-auto relative">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Hero Left: Value Proposition */}
             <div className="space-y-8 text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-bold">
                 <Sparkles className="w-4 h-4" />
                 <span>Plateforme SaaS Multi-tenant</span>
               </div>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-none">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
                 Gérez vos événements privés en toute <span className="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">sécurité</span>.
               </h1>
-              <p className="text-lg text-slate-600 leading-relaxed max-w-xl">
+              <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl">
                 EventMaster centralise l'organisation de vos réceptions, de l'import de vos invités au suivi en temps réel de leurs préférences, avec un créateur d'invitations interactif et un cloisonnement strict par organisation.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 {user ? (
-                  <Link href="/dashboard" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-xl shadow-indigo-150 transition group text-base">
+                  <Link href="/dashboard" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-xl shadow-indigo-150 dark:shadow-none transition group text-base">
                     Accéder à mon Tableau de Bord
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition" />
                   </Link>
                 ) : (
                   <>
-                    <Link href="/register" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-xl shadow-indigo-100 transition group text-base">
+                    <Link href="/register" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-xl shadow-indigo-100 dark:shadow-none transition group text-base">
                       Créer mon organisation
                       <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition" />
                     </Link>
-                    <Link href="/login" className="inline-flex items-center justify-center px-6 py-3.5 border border-slate-300 hover:border-slate-400 text-slate-700 hover:text-slate-900 font-semibold rounded-xl bg-white transition text-base shadow-sm">
+                    <Link href="/login" className="inline-flex items-center justify-center px-6 py-3.5 border border-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white font-semibold rounded-xl bg-white dark:bg-slate-900 transition text-base shadow-sm">
                       Accéder à mon espace
                     </Link>
                   </>
@@ -280,7 +289,7 @@ export default function Home() {
             </div>
 
             {/* Hero Right: Live Interactive Presentation of Models */}
-            <div className="bg-slate-100 p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-lg relative flex flex-col justify-between">
+            <div className="bg-slate-100 dark:bg-slate-900 p-4 sm:p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-lg relative flex flex-col justify-between">
               <div className="absolute -top-3 -right-3 bg-indigo-600 text-white px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider shadow z-10 flex items-center gap-1">
                 <Star className="w-3.5 h-3.5 fill-white" />
                 Aperçu du designer
@@ -293,12 +302,12 @@ export default function Home() {
               ) : activePreview ? (
                 <>
                   {/* Selector within Preview Widget */}
-                  <div className="flex gap-2 mb-4 border-b border-slate-200 pb-3 overflow-x-auto">
+                  <div className="flex gap-2 mb-4 border-b border-slate-200 dark:border-slate-800 pb-3 overflow-x-auto">
                     {activeTemplatesList.map(t => (
                       <button
                         key={t.id}
                         onClick={() => setPreviewTemplate(t.id)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${previewTemplate === t.id ? 'bg-indigo-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap cursor-pointer ${previewTemplate === t.id ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                       >
                         {t.name.split(' ')[0]}
                       </button>
@@ -348,52 +357,52 @@ export default function Home() {
       </section>
 
       {/* Ce Que Nous Faisons (What We Do / Value Prop) */}
-      <section className="py-20 bg-slate-50 border-t border-b border-slate-200">
+      <section className="py-20 bg-slate-50 dark:bg-slate-900/50 border-t border-b border-slate-200 dark:border-slate-800">
         <div className="w-10/12 max-w-7xl mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-            <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Ce Que Nous Faisons</h2>
-            <p className="text-lg text-slate-600 leading-relaxed">
+            <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Ce Que Nous Faisons</h2>
+            <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed">
               EventMaster fournit aux créateurs d'événements, aux professionnels et aux entreprises un outil SaaS complet de gestion d'invitations privées, assurant une parfaite étanchéité de leurs données.
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 hover:shadow-lg transition">
-              <div className="bg-indigo-50 text-indigo-600 w-11 h-11 rounded-xl flex items-center justify-center mb-5">
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 hover:shadow-lg transition">
+              <div className="bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 w-11 h-11 rounded-xl flex items-center justify-center mb-5">
                 <ShieldCheck className="w-5.5 h-5.5" />
               </div>
-              <h3 className="text-base font-extrabold text-slate-900 mb-2">Isolation Multi-tenant</h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white mb-2">Isolation Multi-tenant</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                 Chaque organisation possède son propre espace logique. Les bases de données filtrent vos événements et modèles de manière hermétique pour une protection optimale des données de vos convives.
               </p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 hover:shadow-lg transition">
-              <div className="bg-violet-50 text-violet-600 w-11 h-11 rounded-xl flex items-center justify-center mb-5">
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 hover:shadow-lg transition">
+              <div className="bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400 w-11 h-11 rounded-xl flex items-center justify-center mb-5">
                 <Users className="w-5.5 h-5.5" />
               </div>
-              <h3 className="text-base font-extrabold text-slate-900 mb-2">Gestion d'Invités & Excel</h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white mb-2">Gestion d'Invités & Excel</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                 Gérez la liste de vos invités avec un contrôle RSVP complet. Importez instantanément des listes entières à partir de fichiers Excel (.xlsx) ou CSV avec aperçu dynamique, et exportez vos données en un clic.
               </p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 hover:shadow-lg transition">
-              <div className="bg-amber-50 text-amber-600 w-11 h-11 rounded-xl flex items-center justify-center mb-5">
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 hover:shadow-lg transition">
+              <div className="bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 w-11 h-11 rounded-xl flex items-center justify-center mb-5">
                 <LayoutGrid className="w-5.5 h-5.5" />
               </div>
-              <h3 className="text-base font-extrabold text-slate-900 mb-2">Plan de Table Interactif</h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white mb-2">Plan de Table Interactif</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                 Organisez vos salles de réception en 2D grâce à notre plan de table interactif. Créez des tables de formes variées (rondes, rectangulaires, carrées, ovales), déplacez-les par glisser-déposer et placez vos invités.
               </p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 hover:shadow-lg transition">
-              <div className="bg-emerald-50 text-emerald-600 w-11 h-11 rounded-xl flex items-center justify-center mb-5">
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 hover:shadow-lg transition">
+              <div className="bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 w-11 h-11 rounded-xl flex items-center justify-center mb-5">
                 <Smartphone className="w-5.5 h-5.5" />
               </div>
-              <h3 className="text-base font-extrabold text-slate-900 mb-2">Portail RSVP & Badge QR</h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white mb-2">Portail RSVP & Badge QR</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                 Chaque convive accède à un portail de réponse personnalisé. Dès sa confirmation, un badge unique avec un QR Code aux couleurs de la plateforme et logo central lui est généré pour un émargement ultra-rapide.
               </p>
             </div>
@@ -402,11 +411,11 @@ export default function Home() {
       </section>
 
       {/* Nos Modèles Possibles (Invitation Models Showcase) */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-white dark:bg-slate-950">
         <div className="w-10/12 max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
-            <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Nos Modèles Possibles</h2>
-            <p className="text-slate-600">Explorez quelques-unes des structures de modèles d'invitation pré-configurées ou créez les vôtres de toutes pièces.</p>
+            <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Nos Modèles Possibles</h2>
+            <p className="text-slate-600 dark:text-slate-400">Explorez quelques-unes des structures de modèles d'invitation pré-configurées ou créez les vôtres de toutes pièces.</p>
             
             {/* Filter buttons */}
             <div className="flex flex-wrap justify-center gap-2 pt-4">
@@ -414,7 +423,7 @@ export default function Home() {
                 <button
                   key={c.id}
                   onClick={() => setSelectedCategory(c.id)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition ${selectedCategory === c.id ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'}`}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${selectedCategory === c.id ? 'bg-indigo-600 text-white shadow-md dark:shadow-none' : 'bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'}`}
                 >
                   {c.name}
                 </button>
@@ -426,48 +435,48 @@ export default function Home() {
             {loadingTemplates ? (
               <div className="col-span-2 py-12 flex flex-col items-center justify-center gap-3">
                 <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-                <p className="text-sm font-medium text-slate-500">Chargement des modèles...</p>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Chargement des modèles...</p>
               </div>
             ) : filteredTemplates.length === 0 ? (
-              <div className="col-span-2 text-center py-12 text-slate-500 font-medium">
+              <div className="col-span-2 text-center py-12 text-slate-500 dark:text-slate-400 font-medium">
                 Aucun modèle disponible dans cette catégorie.
               </div>
             ) : (
               filteredTemplates.map((t) => (
-                <div key={t.id} className="bg-slate-50 border border-slate-200 rounded-3xl p-6 flex flex-col justify-between hover:shadow-md transition duration-300">
+                <div key={t.id} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 flex flex-col justify-between hover:shadow-md transition duration-300">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] bg-indigo-50 border border-indigo-100 text-indigo-700 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      <span className="text-[10px] bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                         {t.category === 'private' ? 'Événement Privé' : t.category === 'corporate' ? 'Professionnel' : 'Cocktail'}
                       </span>
                       <button
                         onClick={() => setModalTemplate(t)}
-                        className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                        className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
                       >
                         Apercevoir
                         <ArrowRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <h3 className="font-extrabold text-slate-900 text-lg leading-tight">{t.name}</h3>
-                    <p className="text-xs text-slate-500 leading-relaxed">{t.description}</p>
+                    <h3 className="font-extrabold text-slate-900 dark:text-white text-lg leading-tight">{t.name}</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{t.description}</p>
 
                     {/* Component preview badges */}
                     <div className="flex flex-wrap gap-2 pt-2">
-                      <span className="bg-white border border-slate-200 px-2 py-1 rounded-md text-[10px] text-slate-600 font-semibold flex items-center gap-1">
+                      <span className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded-md text-[10px] text-slate-600 dark:text-slate-300 font-semibold flex items-center gap-1">
                         <Layout className="w-3.5 h-3.5 text-indigo-500" /> Elements JSON
                       </span>
-                      <span className="bg-white border border-slate-200 px-2 py-1 rounded-md text-[10px] text-slate-600 font-semibold flex items-center gap-1">
+                      <span className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded-md text-[10px] text-slate-600 dark:text-slate-300 font-semibold flex items-center gap-1">
                         <Smartphone className="w-3.5 h-3.5 text-indigo-500" /> Mobile Ready
                       </span>
-                      <span className="bg-white border border-slate-200 px-2 py-1 rounded-md text-[10px] text-slate-600 font-semibold flex items-center gap-1">
+                      <span className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded-md text-[10px] text-slate-600 dark:text-slate-300 font-semibold flex items-center gap-1">
                         <Compass className="w-3.5 h-3.5 text-indigo-500" /> RSVP Inclus
                       </span>
                     </div>
                   </div>
 
-                  <div className="border-t border-slate-200/60 pt-4 mt-6 flex items-center justify-between text-xs font-semibold text-slate-500">
+                  <div className="border-t border-slate-200/60 dark:border-slate-800/60 pt-4 mt-6 flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
                     <span className="truncate max-w-[150px]">Modèle {t.name}</span>
-                    <Link href="/register" className="text-indigo-600 hover:underline">
+                    <Link href="/register" className="text-indigo-600 dark:text-indigo-400 hover:underline">
                       Utiliser ce modèle
                     </Link>
                   </div>
@@ -479,27 +488,27 @@ export default function Home() {
       </section>
 
       {/* Grille des Pricing (Pricing Options) */}
-      <section className="py-20 bg-slate-50 border-t border-slate-200">
+      <section className="py-20 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-800">
         <div className="w-10/12 max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
-            <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Des Tarifs Transparents pour Chaque Échelle</h2>
-            <p className="text-slate-600">Sélectionnez le forfait adapté à la taille de votre organisation et débloquez de nouvelles limites.</p>
+            <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Des Tarifs Transparents pour Chaque Échelle</h2>
+            <p className="text-slate-600 dark:text-slate-400">Sélectionnez le forfait adapté à la taille de votre organisation et débloquez de nouvelles limites.</p>
           </div>
 
           <div className="grid md:grid-cols-4 gap-6 max-w-7xl mx-auto items-stretch">
             {/* Free Plan */}
-            <div className="border border-slate-200 rounded-3xl p-6 bg-white flex flex-col justify-between shadow-sm hover:shadow-md transition">
+            <div className="border border-slate-200 dark:border-slate-800 rounded-3xl p-6 bg-white dark:bg-slate-900 flex flex-col justify-between shadow-sm hover:shadow-md transition">
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">Plan Gratuit</h3>
-                  <p className="text-xs text-slate-500 mt-1">Parfait pour tester l'application ou organiser un petit événement.</p>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Plan Gratuit</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Parfait pour tester l'application ou organiser un petit événement.</p>
                   <div className="flex items-baseline gap-1 mt-4">
-                    <span className="text-3xl font-extrabold text-slate-900">0 FC</span>
-                    <span className="text-slate-500 text-sm">/sans engagement</span>
+                    <span className="text-3xl font-extrabold text-slate-900 dark:text-white">0 FC</span>
+                    <span className="text-slate-500 dark:text-slate-400 text-sm">/sans engagement</span>
                   </div>
                 </div>
 
-                <ul className="space-y-3 text-xs text-slate-600 border-t border-slate-100 pt-4">
+                <ul className="space-y-3 text-xs text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800 pt-4">
                   <li className="flex items-center gap-2.5">
                     <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                     <span>Jusqu'à 3 événements actifs</span>
@@ -512,30 +521,30 @@ export default function Home() {
                     <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                     <span>2 modèles d'invitation simples</span>
                   </li>
-                  <li className="flex items-center gap-2.5 text-slate-400 line-through">
+                  <li className="flex items-center gap-2.5 text-slate-400 dark:text-slate-600 line-through">
                     <span>Modèles d'invitations customisés</span>
                   </li>
                 </ul>
               </div>
 
-              <Link href="/register" className="w-full text-center py-2.5 mt-6 border border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition text-xs">
+              <Link href="/register" className="w-full text-center py-2.5 mt-6 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-950 transition text-xs">
                 S'inscrire gratuitement
               </Link>
             </div>
 
             {/* Standard Plan */}
-            <div className="border border-slate-200 rounded-3xl p-6 bg-white flex flex-col justify-between shadow-sm hover:shadow-md transition">
+            <div className="border border-slate-200 dark:border-slate-800 rounded-3xl p-6 bg-white dark:bg-slate-900 flex flex-col justify-between shadow-sm hover:shadow-md transition">
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">{dbPlans?.STANDARD?.name || 'Plan Standard'}</h3>
-                  <p className="text-xs text-slate-500 mt-1">Idéal pour les événements de taille moyenne.</p>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{dbPlans?.STANDARD?.name || 'Plan Standard'}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Idéal pour les événements de taille moyenne.</p>
                   <div className="flex items-baseline gap-1 mt-4">
-                    <span className="text-3xl font-extrabold text-slate-900">{dbPlans?.STANDARD?.price || '40.000 FC'}</span>
-                    <span className="text-slate-500 text-sm">/mois</span>
+                    <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{dbPlans?.STANDARD?.price || '40.000 FC'}</span>
+                    <span className="text-slate-500 dark:text-slate-400 text-sm">/mois</span>
                   </div>
                 </div>
 
-                <ul className="space-y-3 text-xs text-slate-600 border-t border-slate-100 pt-4">
+                <ul className="space-y-3 text-xs text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800 pt-4">
                   <li className="flex items-center gap-2.5">
                     <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                     <span>Jusqu'à {dbPlans?.STANDARD?.maxEvents ?? 8} événements actifs</span>
@@ -555,27 +564,27 @@ export default function Home() {
                 </ul>
               </div>
 
-              <Link href="/register" className="w-full text-center py-2.5 mt-6 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl transition text-xs shadow-md">
+              <Link href="/register" className="w-full text-center py-2.5 mt-6 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-semibold rounded-xl transition text-xs shadow-md">
                 Activer le Plan Standard
               </Link>
             </div>
 
             {/* Premium Plan */}
-            <div className="border-2 border-indigo-600 rounded-3xl p-6 bg-white flex flex-col justify-between shadow-lg relative">
+            <div className="border-2 border-indigo-600 rounded-3xl p-6 bg-white dark:bg-slate-900 flex flex-col justify-between shadow-lg relative">
               <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-3.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
                 Recommandé
               </div>
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">{dbPlans?.PREMIUM?.name || 'Plan Premium'}</h3>
-                  <p className="text-xs text-slate-500 mt-1">Conçu pour les organisateurs réguliers d'événements.</p>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{dbPlans?.PREMIUM?.name || 'Plan Premium'}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Conçu pour les organisateurs réguliers d'événements.</p>
                   <div className="flex items-baseline gap-1 mt-4">
-                    <span className="text-3xl font-extrabold text-indigo-600">{dbPlans?.PREMIUM?.price || '80.000 FC'}</span>
-                    <span className="text-slate-500 text-sm">/mois</span>
+                    <span className="text-3xl font-extrabold text-indigo-600 dark:text-indigo-400">{dbPlans?.PREMIUM?.price || '80.000 FC'}</span>
+                    <span className="text-slate-500 dark:text-slate-400 text-sm">/mois</span>
                   </div>
                 </div>
 
-                <ul className="space-y-3 text-xs text-slate-600 border-t border-slate-100 pt-4">
+                <ul className="space-y-3 text-xs text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800 pt-4">
                   <li className="flex items-center gap-2.5">
                     <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                     <span>Jusqu'à {dbPlans?.PREMIUM?.maxEvents ?? 20} événements actifs</span>
@@ -588,31 +597,31 @@ export default function Home() {
                     <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                     <span>{dbPlans?.PREMIUM?.maxTemplates ?? 10} modèles d'invitations</span>
                   </li>
-                  <li className="flex items-center gap-2.5 font-bold text-slate-900">
+                  <li className="flex items-center gap-2.5 font-bold text-slate-900 dark:text-white">
                     <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                     <span>{(dbPlans?.PREMIUM?.customTemplates ?? true) ? "Modèles d'Invitation Customisés" : "Modèles d'invitations simples"}</span>
                   </li>
                 </ul>
               </div>
 
-              <Link href="/register" className="w-full text-center py-2.5 mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-lg shadow-indigo-100 text-xs">
+              <Link href="/register" className="w-full text-center py-2.5 mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-lg shadow-indigo-100 dark:shadow-none text-xs">
                 Activer le Plan Premium
               </Link>
             </div>
 
             {/* Enterprise Plan */}
-            <div className="border border-slate-200 rounded-3xl p-6 bg-white flex flex-col justify-between shadow-sm hover:shadow-md transition">
+            <div className="border border-slate-200 dark:border-slate-800 rounded-3xl p-6 bg-white dark:bg-slate-900 flex flex-col justify-between shadow-sm hover:shadow-md transition">
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">{dbPlans?.ENTERPRISE?.name || 'Plan Enterprise'}</h3>
-                  <p className="text-xs text-slate-500 mt-1">Pour les grandes agences événementielles ou besoins sur-mesure.</p>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{dbPlans?.ENTERPRISE?.name || 'Plan Enterprise'}</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Pour les grandes agences événementielles ou besoins sur-mesure.</p>
                   <div className="flex items-baseline gap-1 mt-4">
-                    <span className="text-3xl font-extrabold text-slate-900">{dbPlans?.ENTERPRISE?.price || '275.000 FC'}</span>
-                    <span className="text-slate-500 text-sm">/mois</span>
+                    <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{dbPlans?.ENTERPRISE?.price || '275.000 FC'}</span>
+                    <span className="text-slate-500 dark:text-slate-400 text-sm">/mois</span>
                   </div>
                 </div>
 
-                <ul className="space-y-3 text-xs text-slate-600 border-t border-slate-100 pt-4">
+                <ul className="space-y-3 text-xs text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800 pt-4">
                   <li className="flex items-center gap-2.5">
                     <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                     <span>{(dbPlans?.ENTERPRISE?.maxEvents ?? 9999) >= 9999 ? 'Événements Illimités' : `${dbPlans?.ENTERPRISE?.maxEvents} événements actifs`}</span>
@@ -627,12 +636,12 @@ export default function Home() {
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span className="font-semibold text-slate-900">Support Dédié & SLA</span>
+                    <span className="font-semibold text-slate-900 dark:text-white">Support Dédié & SLA</span>
                   </li>
                 </ul>
               </div>
 
-              <Link href="/contact" className="w-full text-center py-2.5 mt-6 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl transition text-xs shadow-md">
+              <Link href="/contact" className="w-full text-center py-2.5 mt-6 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-semibold rounded-xl transition text-xs shadow-md">
                 Prendre contact
               </Link>
             </div>
@@ -742,24 +751,24 @@ export default function Home() {
       {/* Modal de prévisualisation de modèle */}
       {modalTemplate && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl max-w-md w-full border border-slate-200 p-6 space-y-6 shadow-2xl relative overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full border border-slate-200 dark:border-slate-800 p-6 space-y-6 shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-indigo-500 to-violet-500" />
             
             <div className="flex justify-between items-center">
-              <span className="text-[10px] bg-indigo-50 border border-indigo-100 text-indigo-700 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+              <span className="text-[10px] bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                 {modalTemplate.category === 'private' ? 'Événement Privé' : modalTemplate.category === 'corporate' ? 'Professionnel' : 'Cocktail'}
               </span>
               <button 
                 onClick={() => setModalTemplate(null)}
-                className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1 rounded-lg transition"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 p-1 rounded-lg transition cursor-pointer"
               >
                 <XCircle className="w-6 h-6" />
               </button>
             </div>
 
             <div className="space-y-2">
-              <h3 className="text-xl font-extrabold text-slate-900 leading-tight">{modalTemplate.name}</h3>
-              <p className="text-xs text-slate-500 leading-relaxed">{modalTemplate.description}</p>
+              <h3 className="text-xl font-extrabold text-slate-900 dark:text-white leading-tight">{modalTemplate.name}</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{modalTemplate.description}</p>
             </div>
 
             {/* Rendered Card */}
@@ -791,13 +800,13 @@ export default function Home() {
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setModalTemplate(null)}
-                className="flex-1 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs transition"
+                className="flex-1 py-2.5 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition cursor-pointer"
               >
                 Fermer
               </button>
               <Link
                 href="/register"
-                className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs text-center transition shadow-md shadow-indigo-100"
+                className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs text-center transition shadow-md dark:shadow-none"
               >
                 Utiliser ce modèle
               </Link>

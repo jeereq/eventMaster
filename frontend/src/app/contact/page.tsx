@@ -3,14 +3,16 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import { api } from '@/lib/api';
 import { 
   Mail, Phone, MapPin, Send, MessageSquare, 
-  CheckCircle2, AlertCircle, Loader2, ArrowLeft, PartyPopper, Sparkles, ArrowRight
+  CheckCircle2, AlertCircle, Loader2, ArrowLeft, PartyPopper, Sparkles, ArrowRight, Sun, Moon
 } from 'lucide-react';
 
 export default function ContactPage() {
   const { user, tenant, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -67,9 +69,9 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans antialiased text-slate-900">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col font-sans antialiased text-slate-900 dark:text-slate-100 transition-colors duration-200">
       {/* Header */}
-      <header className="border-b border-slate-200/80 bg-white/80 backdrop-blur-md sticky top-0 z-50 transition-all">
+      <header className="border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-50 transition-all">
         <div className="w-10/12 max-w-7xl mx-auto h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition">
@@ -82,7 +84,7 @@ export default function ContactPage() {
             </Link>
             
             {/* Indicateur de connexion API en temps réel */}
-            <div className="hidden sm:flex items-center gap-1.5 ml-4 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-[10px] font-bold text-slate-500">
+            <div className="hidden sm:flex items-center gap-1.5 ml-4 px-2.5 py-1 rounded-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[10px] font-bold text-slate-500 dark:text-slate-400">
               <span className={`w-2 h-2 rounded-full ${
                 serverStatus === 'online' ? 'bg-emerald-500 animate-pulse' : 
                 serverStatus === 'offline' ? 'bg-rose-500' : 'bg-amber-500 animate-pulse'
@@ -94,12 +96,19 @@ export default function ContactPage() {
             </div>
           </div>
           <nav className="flex items-center gap-4">
-            <Link href="/contact" className="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition">
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 transition cursor-pointer"
+              aria-label="Changer de thème"
+            >
+              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+            </button>
+            <Link href="/contact" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
               Contact
             </Link>
             {user ? (
               <>
-                <span className="text-xs text-slate-500 font-semibold hidden md:inline">
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold hidden md:inline">
                   Connecté en tant que <span className="font-bold text-indigo-600">{user.name}</span> {tenant ? `(${tenant.name})` : ''}
                 </span>
                 <Link href="/dashboard" className="text-sm font-semibold bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-100">
@@ -107,14 +116,14 @@ export default function ContactPage() {
                 </Link>
                 <button 
                   onClick={logout}
-                  className="text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-xl transition"
+                  className="text-sm font-semibold border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 px-4 py-2 rounded-xl transition cursor-pointer"
                 >
                   Déconnexion
                 </button>
               </>
             ) : (
               <>
-                <Link href="/login" className="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition">
+                <Link href="/login" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
                   Connexion
                 </Link>
                 <Link href="/register" className="text-sm font-semibold bg-indigo-600 text-white px-4.5 py-2 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-100">
@@ -129,19 +138,19 @@ export default function ContactPage() {
       {/* Main Content */}
       <main className="flex-1 py-16 sm:py-24 relative overflow-hidden">
         {/* Background decorative elements */}
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-100/40 blur-[100px] pointer-events-none" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-violet-100/40 blur-[100px] pointer-events-none" />
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-100/40 dark:bg-indigo-950/20 blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-violet-100/40 dark:bg-violet-950/20 blur-[100px] pointer-events-none" />
 
         <div className="w-10/12 max-w-5xl mx-auto relative z-10">
           <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-bold">
               <Sparkles className="w-4 h-4" />
               <span>Contactez-nous</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
               Une question ? Un projet ? Parlons-en !
             </h1>
-            <p className="text-sm sm:text-base text-slate-600 leading-relaxed">
+            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed">
               Que vous soyez un particulier organisant un mariage ou une entreprise planifiant un gala, notre équipe est là pour vous accompagner.
             </p>
           </div>
@@ -149,7 +158,7 @@ export default function ContactPage() {
           <div className="grid md:grid-cols-5 gap-8 items-start">
             {/* Contact Info (2 columns) */}
             <div className="md:col-span-2 space-y-6">
-              <div className="bg-slate-950 text-white rounded-3xl p-8 shadow-xl space-y-8 relative overflow-hidden border border-slate-900">
+              <div className="bg-slate-950 text-white rounded-3xl p-8 shadow-xl space-y-8 relative overflow-hidden border border-slate-900 dark:border-slate-800">
                 <div className="absolute top-[-20%] right-[-20%] w-48 h-48 rounded-full bg-indigo-500/20 blur-[60px]" />
                 
                 <div className="space-y-2">
@@ -219,28 +228,28 @@ export default function ContactPage() {
             </div>
 
             {/* Contact Form (3 columns) */}
-            <div className="md:col-span-3 bg-white border border-slate-200/80 rounded-3xl p-8 shadow-lg shadow-slate-100">
+            <div className="md:col-span-3 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-8 shadow-lg dark:shadow-none shadow-slate-100">
               {success ? (
                 <div className="py-12 text-center space-y-6 animate-fade-in">
-                  <div className="inline-flex items-center justify-center bg-emerald-50 text-emerald-600 p-4 rounded-full border border-emerald-100">
+                  <div className="inline-flex items-center justify-center bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 p-4 rounded-full border border-emerald-100 dark:border-emerald-900/50">
                     <CheckCircle2 className="w-12 h-12" />
                   </div>
                   <div className="space-y-2">
-                    <h3 className="text-2xl font-extrabold text-slate-900">Message envoyé !</h3>
-                    <p className="text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
+                    <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white">Message envoyé !</h3>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
                       {successMessage}
                     </p>
                   </div>
                   <button
                     onClick={() => setSuccess(false)}
-                    className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs transition shadow-md shadow-indigo-100"
+                    className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs transition shadow-md dark:shadow-none cursor-pointer"
                   >
                     Envoyer un autre message
                   </button>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-5">
-                  <h3 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                  <h3 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                     <MessageSquare className="w-5 h-5 text-indigo-500" />
                     Écrivez-nous
                   </h3>
@@ -254,26 +263,26 @@ export default function ContactPage() {
 
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Votre nom complet</label>
+                      <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Votre nom complet</label>
                       <input
                         type="text"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="Ex: Jean Dupont"
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:bg-white transition"
+                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-950 transition text-slate-900 dark:text-white"
                         required
                         disabled={submitting}
                       />
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Votre adresse e-mail</label>
+                      <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Votre adresse e-mail</label>
                       <input
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="Ex: jean.dupont@gmail.com"
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:bg-white transition"
+                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-950 transition text-slate-900 dark:text-white"
                         required
                         disabled={submitting}
                       />
@@ -281,26 +290,26 @@ export default function ContactPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Sujet du message</label>
+                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Sujet du message</label>
                     <input
                       type="text"
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
                       placeholder="Ex: Demande de tarif Premium / Question technique"
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:bg-white transition"
+                      className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-950 transition text-slate-900 dark:text-white"
                       required
                       disabled={submitting}
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Votre message</label>
+                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Votre message</label>
                     <textarea
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                       placeholder="Décrivez votre besoin en détail..."
                       rows={5}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:bg-white transition resize-none"
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-950 transition resize-none text-slate-900 dark:text-white"
                       required
                       disabled={submitting}
                     />
@@ -309,7 +318,7 @@ export default function ContactPage() {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-indigo-100 flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold rounded-xl text-xs transition shadow-lg dark:shadow-none flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {submitting ? (
                       <>
