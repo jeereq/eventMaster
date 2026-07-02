@@ -102,6 +102,8 @@ async function register(req, res) {
                 id: result.tenant.id,
                 name: result.tenant.name,
                 plan: result.tenant.plan,
+                licenseActive: result.tenant.licenseActive,
+                licenseExpiresAt: result.tenant.licenseExpiresAt,
             },
         });
     }
@@ -152,6 +154,8 @@ async function login(req, res) {
                     id: user.tenant.id,
                     name: user.tenant.name,
                     plan: user.tenant.plan,
+                    licenseActive: user.tenant.licenseActive,
+                    licenseExpiresAt: user.tenant.licenseExpiresAt,
                 }
                 : null,
         });
@@ -202,6 +206,8 @@ async function verifyEmail(req, res) {
                     id: user.tenant.id,
                     name: user.tenant.name,
                     plan: user.tenant.plan,
+                    licenseActive: user.tenant.licenseActive,
+                    licenseExpiresAt: user.tenant.licenseExpiresAt,
                 }
                 : null,
         });

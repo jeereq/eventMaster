@@ -106,6 +106,8 @@ export async function register(req: Request, res: Response) {
         id: result.tenant.id,
         name: result.tenant.name,
         plan: result.tenant.plan,
+        licenseActive: result.tenant.licenseActive,
+        licenseExpiresAt: result.tenant.licenseExpiresAt,
       },
     });
   } catch (error: any) {
@@ -167,6 +169,8 @@ export async function login(req: Request, res: Response) {
             id: user.tenant.id,
             name: user.tenant.name,
             plan: user.tenant.plan,
+            licenseActive: user.tenant.licenseActive,
+            licenseExpiresAt: user.tenant.licenseExpiresAt,
           }
         : null,
     });
@@ -227,6 +231,8 @@ export async function verifyEmail(req: Request, res: Response) {
             id: user.tenant.id,
             name: user.tenant.name,
             plan: user.tenant.plan,
+            licenseActive: user.tenant.licenseActive,
+            licenseExpiresAt: user.tenant.licenseExpiresAt,
           }
         : null,
     });

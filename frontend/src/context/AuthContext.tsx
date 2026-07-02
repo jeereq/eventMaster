@@ -87,6 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(data.token);
       setUser(data.user);
       setTenant(data.tenant);
+      setLoading(false);
       
       router.push('/dashboard');
     } catch (error) {
