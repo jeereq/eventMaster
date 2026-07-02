@@ -10,11 +10,14 @@ import {
   getLandingTemplateGroups,
   type LandingTemplate,
 } from '@/config/landingTemplates';
+import LandingPricingSection from '@/components/landing/LandingPricingSection';
+import LandingRolesSection from '@/components/landing/LandingRolesSection';
 import { 
   Calendar, Users, Award, Shield, CheckCircle, Mail, 
   ArrowRight, Lock, Layout, Sparkles, Compass, Heart, 
   Briefcase, Smartphone, Star, ShieldCheck, Check, XCircle,
-  PartyPopper, Loader2, LayoutGrid, Sun, Moon, Menu, X, MessageSquare
+  PartyPopper, Loader2, LayoutGrid, Sun, Moon, Menu, X, MessageSquare,
+  ScanLine, Building2,
 } from 'lucide-react';
 
 function getCategoryLabel(category: string) {
@@ -137,6 +140,9 @@ export default function Home() {
             <Link href="/contact" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
               Contact
             </Link>
+            <a href="#tarifs" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+              Tarifs
+            </a>
             {user ? (
               <>
                 <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
@@ -245,14 +251,30 @@ export default function Home() {
             <div className="space-y-8 text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-bold">
                 <Sparkles className="w-4 h-4" />
-                <span>Plateforme SaaS Multi-tenant</span>
+                <span>Salles 2D · Protocole QR · Rôles multi-niveaux</span>
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
-                Gérez vos événements privés en toute <span className="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">sécurité</span>.
+                L&apos;événementiel professionnel, de la salle au{' '}
+                <span className="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">scan invité</span>.
               </h1>
               <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl">
-                EventMaster centralise l'organisation de vos réceptions, de l'import de vos invités au suivi en temps réel de leurs préférences, avec un créateur d'invitations interactif et un cloisonnement strict par organisation.
+                EventMaster unifie plans de salle 2D, RSVP, protocole avec scan caméra, rôles granulaires (manager, protocole, commercial)
+                et notifications automatiques de placement — le tout isolé par organisation.
               </p>
+              <ul className="flex flex-wrap gap-3 text-xs font-semibold text-slate-600 dark:text-slate-400">
+                <li className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-full">
+                  <ScanLine className="w-3.5 h-3.5 text-indigo-500" /> Protocole QR
+                </li>
+                <li className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-full">
+                  <Building2 className="w-3.5 h-3.5 text-indigo-500" /> Salles 2D
+                </li>
+                <li className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-full">
+                  <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" /> Rôles & permissions
+                </li>
+                <li className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-full">
+                  <Briefcase className="w-3.5 h-3.5 text-indigo-500" /> Réseau commercial
+                </li>
+              </ul>
               <div className="flex flex-col sm:flex-row gap-4">
                 {user ? (
                   <Link href="/dashboard" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-xl shadow-indigo-500/25 transition group text-base">
@@ -315,101 +337,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Ce Que Nous Faisons (What We Do / Value Prop) */}
-      <section className="py-24 bg-slate-50 dark:bg-slate-900/40 border-t border-b border-slate-200 dark:border-slate-800 relative overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
-          <div className="absolute top-12 left-10 w-72 h-72 rounded-full bg-indigo-500/5 blur-[100px]" />
-          <div className="absolute bottom-12 right-10 w-72 h-72 rounded-full bg-violet-500/5 blur-[100px]" />
-        </div>
-
-        <div className="w-10/12 max-w-7xl mx-auto relative z-10">
-          <div className="text-center max-w-3xl mx-auto mb-20 space-y-4">
-            <span className="text-xs bg-indigo-100 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-400 font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
-              Fonctionnalités Clés
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-              Ce Que Nous Faisons
-            </h2>
-            <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
-              EventMaster fournit aux créateurs d'événements, aux professionnels et aux entreprises un outil SaaS complet de gestion d'invitations privées, assurant une parfaite étanchéité de leurs données.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* Card 1 */}
-            <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 hover:border-indigo-500/30 dark:hover:border-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/[0.02] transition duration-300 group relative">
-              <div className="absolute top-0 left-0 w-full h-full rounded-3xl bg-gradient-to-br from-indigo-500/[0.01] to-violet-500/[0.01] opacity-0 group-hover:opacity-100 transition duration-300" />
-              <div className="bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 border border-indigo-100/50 dark:border-indigo-900/30 shadow-xs group-hover:scale-110 transition duration-300">
-                <ShieldCheck className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3 tracking-tight">Isolation Multi-tenant</h3>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
-                Chaque organisation possède son propre espace logique sécurisé. Les bases de données filtrent vos événements et modèles de manière hermétique pour une protection optimale des données de vos convives.
-              </p>
-            </div>
-
-            {/* Card 2 */}
-            <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 hover:border-indigo-500/30 dark:hover:border-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/[0.02] transition duration-300 group relative">
-              <div className="absolute top-0 left-0 w-full h-full rounded-3xl bg-gradient-to-br from-indigo-500/[0.01] to-violet-500/[0.01] opacity-0 group-hover:opacity-100 transition duration-300" />
-              <div className="bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 border border-violet-100/50 dark:border-violet-900/30 shadow-xs group-hover:scale-110 transition duration-300">
-                <Users className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3 tracking-tight">Gestion d'Invités & Excel</h3>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
-                Gérez la liste de vos invités avec un contrôle RSVP complet. Importez instantanément des listes entières à partir de fichiers Excel (.xlsx) ou CSV avec aperçu dynamique, et exportez vos données en un clic.
-              </p>
-            </div>
-
-            {/* Card 3 */}
-            <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 hover:border-indigo-500/30 dark:hover:border-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/[0.02] transition duration-300 group relative">
-              <div className="absolute top-0 left-0 w-full h-full rounded-3xl bg-gradient-to-br from-indigo-500/[0.01] to-violet-500/[0.01] opacity-0 group-hover:opacity-100 transition duration-300" />
-              <div className="bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 border border-amber-100/50 dark:border-amber-900/30 shadow-xs group-hover:scale-110 transition duration-300">
-                <LayoutGrid className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3 tracking-tight">Plan de Table Interactif</h3>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
-                Organisez vos salles de réception en 2D grâce à notre plan de table interactif. Créez des tables de formes variées (rondes, rectangulaires, carrées, ovales), déplacez-les par glisser-déposer et placez vos invités.
-              </p>
-            </div>
-
-            {/* Card 4 */}
-            <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 hover:border-indigo-500/30 dark:hover:border-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/[0.02] transition duration-300 group relative">
-              <div className="absolute top-0 left-0 w-full h-full rounded-3xl bg-gradient-to-br from-indigo-500/[0.01] to-violet-500/[0.01] opacity-0 group-hover:opacity-100 transition duration-300" />
-              <div className="bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 border border-emerald-100/50 dark:border-emerald-900/30 shadow-xs group-hover:scale-110 transition duration-300">
-                <Smartphone className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3 tracking-tight">Portail RSVP & Badge QR</h3>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
-                Chaque convive accède à un portail de réponse personnalisé. Dès sa confirmation, un badge unique avec un QR Code aux couleurs de la plateforme et logo central lui est généré pour un émargement ultra-rapide.
-              </p>
-            </div>
-
-            {/* Card 5 */}
-            <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 hover:border-indigo-500/30 dark:hover:border-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/[0.02] transition duration-300 group relative">
-              <div className="absolute top-0 left-0 w-full h-full rounded-3xl bg-gradient-to-br from-indigo-500/[0.01] to-violet-500/[0.01] opacity-0 group-hover:opacity-100 transition duration-300" />
-              <div className="bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 border border-rose-100/50 dark:border-rose-900/30 shadow-xs group-hover:scale-110 transition duration-300">
-                <MessageSquare className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3 tracking-tight">Fil d'Actualité Privé (Feed)</h3>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
-                Créez un véritable mini-réseau social privé pour votre événement. Les organisateurs et les invités peuvent publier des photos, vidéos, commenter et liker les publications en temps réel.
-              </p>
-            </div>
-
-            {/* Card 6 */}
-            <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 hover:border-indigo-500/30 dark:hover:border-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/[0.02] transition duration-300 group relative">
-              <div className="absolute top-0 left-0 w-full h-full rounded-3xl bg-gradient-to-br from-indigo-500/[0.01] to-violet-500/[0.01] opacity-0 group-hover:opacity-100 transition duration-300" />
-              <div className="bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 border border-sky-100/50 dark:border-sky-900/30 shadow-xs group-hover:scale-110 transition duration-300">
-                <Heart className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3 tracking-tight">Livre d'Or & Partages</h3>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
-                Offrez à vos invités un espace d'expression pour laisser des mots chaleureux et partager des souvenirs. Un livre d'or numérique moderne, interactif et modérable par l'organisateur.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <LandingRolesSection />
 
       {/* Nos Modèles Possibles (Invitation Models Showcase) */}
       <section className="py-20 bg-white dark:bg-slate-950">
@@ -498,167 +426,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Grille des Pricing (Pricing Options) */}
-      <section className="py-20 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-800">
-        <div className="w-10/12 max-w-7xl mx-auto">
-          <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
-            <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Des Tarifs Transparents pour Chaque Échelle</h2>
-            <p className="text-slate-600 dark:text-slate-400">Sélectionnez le forfait adapté à la taille de votre organisation et débloquez de nouvelles limites.</p>
-          </div>
-
-          <div className="grid md:grid-cols-4 gap-6 max-w-7xl mx-auto items-stretch">
-            {/* Free Plan */}
-            <div className="border border-slate-200 dark:border-slate-800 rounded-3xl p-6 bg-white dark:bg-slate-900 flex flex-col justify-between shadow-sm hover:shadow-md transition">
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{dbPlans?.FREE?.name || 'Plan Gratuit'}</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{dbPlans?.FREE?.description || "Parfait pour tester l'application ou organiser un petit événement."}</p>
-                  <div className="flex items-baseline gap-1 mt-4">
-                    <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{dbPlans?.FREE?.price || '0 FC'}</span>
-                    <span className="text-slate-500 dark:text-slate-400 text-sm">/sans engagement</span>
-                  </div>
-                </div>
-
-                <ul className="space-y-3 text-xs text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800 pt-4">
-                  <li className="flex items-center gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>Jusqu'à {dbPlans?.FREE?.maxEvents ?? 3} événements actifs</span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>Maximum {dbPlans?.FREE?.maxGuests ?? 50} invités</span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>{dbPlans?.FREE?.maxTemplates ?? 2} modèles d'invitation simples</span>
-                  </li>
-                  <li className={`flex items-center gap-2.5 ${dbPlans?.FREE?.customTemplates ? '' : 'text-slate-400 dark:text-slate-600 line-through'}`}>
-                    <span>Modèles d'invitations customisés</span>
-                  </li>
-                </ul>
-              </div>
-
-              <Link href="/register" className="w-full text-center py-2.5 mt-6 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-950 transition text-xs">
-                S'inscrire gratuitement
-              </Link>
-            </div>
-
-            {/* Standard Plan */}
-            <div className="border border-slate-200 dark:border-slate-800 rounded-3xl p-6 bg-white dark:bg-slate-900 flex flex-col justify-between shadow-sm hover:shadow-md transition">
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{dbPlans?.STANDARD?.name || 'Plan Standard'}</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{dbPlans?.STANDARD?.description || 'Idéal pour les événements de taille moyenne.'}</p>
-                  <div className="flex items-baseline gap-1 mt-4">
-                    <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{dbPlans?.STANDARD?.price || '40.000 FC'}</span>
-                    <span className="text-slate-500 dark:text-slate-400 text-sm">/mois</span>
-                  </div>
-                </div>
-
-                <ul className="space-y-3 text-xs text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800 pt-4">
-                  <li className="flex items-center gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>Jusqu'à {dbPlans?.STANDARD?.maxEvents ?? 8} événements actifs</span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>Maximum {dbPlans?.STANDARD?.maxGuests ?? 150} invités</span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>{dbPlans?.STANDARD?.maxTemplates ?? 5} modèles d'invitations</span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>{dbPlans?.STANDARD?.customTemplates ? "Modèles d'invitations personnalisés" : "Modèles d'invitations simples"}</span>
-                  </li>
-                </ul>
-              </div>
-
-              <Link href="/register" className="w-full text-center py-2.5 mt-6 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-semibold rounded-xl transition text-xs shadow-md">
-                Activer le Plan Standard
-              </Link>
-            </div>
-
-            {/* Premium Plan */}
-            <div className="border-2 border-indigo-600 rounded-3xl p-6 bg-white dark:bg-slate-900 flex flex-col justify-between shadow-lg relative">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-3.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
-                Recommandé
-              </div>
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{dbPlans?.PREMIUM?.name || 'Plan Premium'}</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{dbPlans?.PREMIUM?.description || "Conçu pour les organisateurs réguliers d'événements."}</p>
-                  <div className="flex items-baseline gap-1 mt-4">
-                    <span className="text-3xl font-extrabold text-indigo-600 dark:text-indigo-400">{dbPlans?.PREMIUM?.price || '80.000 FC'}</span>
-                    <span className="text-slate-500 dark:text-slate-400 text-sm">/mois</span>
-                  </div>
-                </div>
-
-                <ul className="space-y-3 text-xs text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800 pt-4">
-                  <li className="flex items-center gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>Jusqu'à {dbPlans?.PREMIUM?.maxEvents ?? 20} événements actifs</span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>Maximum {dbPlans?.PREMIUM?.maxGuests ?? 500} invités</span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>{dbPlans?.PREMIUM?.maxTemplates ?? 10} modèles d'invitations</span>
-                  </li>
-                  <li className="flex items-center gap-2.5 font-bold text-slate-900 dark:text-white">
-                    <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>{(dbPlans?.PREMIUM?.customTemplates ?? true) ? "Modèles d'Invitation Customisés" : "Modèles d'invitations simples"}</span>
-                  </li>
-                </ul>
-              </div>
-
-              <Link href="/register" className="w-full text-center py-2.5 mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-lg shadow-indigo-500/20 text-xs">
-                Activer le Plan Premium
-              </Link>
-            </div>
-
-            {/* Enterprise Plan */}
-            <div className="border border-slate-200 dark:border-slate-800 rounded-3xl p-6 bg-white dark:bg-slate-900 flex flex-col justify-between shadow-sm hover:shadow-md transition">
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{dbPlans?.ENTERPRISE?.name || 'Plan Enterprise'}</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{dbPlans?.ENTERPRISE?.description || 'Pour les grandes agences événementielles ou besoins sur-mesure.'}</p>
-                  <div className="flex items-baseline gap-1 mt-4">
-                    <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{dbPlans?.ENTERPRISE?.price || '275.000 FC'}</span>
-                    <span className="text-slate-500 dark:text-slate-400 text-sm">/mois</span>
-                  </div>
-                </div>
-
-                <ul className="space-y-3 text-xs text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800 pt-4">
-                  <li className="flex items-center gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>{(dbPlans?.ENTERPRISE?.maxEvents ?? 9999) >= 9999 ? 'Événements Illimités' : `${dbPlans?.ENTERPRISE?.maxEvents} événements actifs`}</span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>{(dbPlans?.ENTERPRISE?.maxGuests ?? 99999) >= 9999 ? 'Invités Illimités' : `${dbPlans?.ENTERPRISE?.maxGuests} invités maximum`}</span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>{(dbPlans?.ENTERPRISE?.maxTemplates ?? 9999) >= 9999 ? 'Modèles Illimités' : `${dbPlans?.ENTERPRISE?.maxTemplates} modèles d'invitations`}</span>
-                  </li>
-                  <li className="flex items-center gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span className="font-semibold text-slate-900 dark:text-white">Support Dédié & SLA</span>
-                  </li>
-                </ul>
-              </div>
-
-              <Link href="/contact" className="w-full text-center py-2.5 mt-6 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white font-semibold rounded-xl transition text-xs shadow-md">
-                Prendre contact
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+      <LandingPricingSection dbPlans={dbPlans} />
 
       {/* Section CTA (Call to Action) */}
       <section className="py-20 bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-950 text-white relative overflow-hidden">
@@ -711,7 +479,7 @@ export default function Home() {
                 <span className="text-white font-black text-lg">EventMaster</span>
               </div>
               <p className="text-xs text-slate-500 leading-relaxed">
-                La plateforme SaaS multi-tenant de référence pour la planification d'événements d'exception, la gestion d'invités RSVP et la conception de plans de table interactifs en 2D.
+                Plateforme SaaS multi-tenant : salles 2D, protocole QR, rôles granulaires, réseau commercial et tarification par organisation — inspirée des abonnements Microsoft 365.
               </p>
             </div>
 
@@ -719,11 +487,11 @@ export default function Home() {
             <div className="space-y-4">
               <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Fonctionnalités</h4>
               <ul className="space-y-2 text-xs">
-                <li><span className="hover:text-white transition cursor-default">Plan de table interactif 2D</span></li>
-                <li><span className="hover:text-white transition cursor-default">Portail RSVP personnalisé</span></li>
-                <li><span className="hover:text-white transition cursor-default">Badge QR Code d'émargement</span></li>
-                <li><span className="hover:text-white transition cursor-default">Import / Export Excel & CSV</span></li>
-                <li><span className="hover:text-white transition cursor-default">Fil d'actualité & Livre d'or</span></li>
+                <li><span className="hover:text-white transition cursor-default">Salles 2D & éditeur de layout</span></li>
+                <li><span className="hover:text-white transition cursor-default">Protocole QR & scan caméra</span></li>
+                <li><span className="hover:text-white transition cursor-default">Rôles manager / protocole / commercial</span></li>
+                <li><span className="hover:text-white transition cursor-default">Portail RSVP & notifications placement</span></li>
+                <li><span className="hover:text-white transition cursor-default">Fil d&apos;actualité & Livre d&apos;or</span></li>
               </ul>
             </div>
 
