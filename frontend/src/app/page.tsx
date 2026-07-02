@@ -179,7 +179,7 @@ export default function Home() {
     <div className="flex flex-col min-h-screen bg-slate-50 font-sans antialiased text-slate-900">
       {/* Header */}
       <header className="border-b border-slate-200/80 bg-white/80 backdrop-blur-md sticky top-0 z-50 transition-all">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="w-10/12 max-w-7xl mx-auto h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-indigo-600 p-2 rounded-lg text-white">
               <PartyPopper className="w-5 h-5" />
@@ -236,7 +236,7 @@ export default function Home() {
       {/* Hero Section */}
       <section className="py-20 lg:py-28 bg-white relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-80" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+        <div className="w-10/12 max-w-7xl mx-auto relative">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Hero Left: Value Proposition */}
             <div className="space-y-8 text-left">
@@ -340,7 +340,7 @@ export default function Home() {
 
       {/* Ce Que Nous Faisons (What We Do / Value Prop) */}
       <section className="py-20 bg-slate-50 border-t border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-10/12 max-w-7xl mx-auto">
           <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
             <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Ce Que Nous Faisons</h2>
             <p className="text-lg text-slate-600 leading-relaxed">
@@ -394,7 +394,7 @@ export default function Home() {
 
       {/* Nos Modèles Possibles (Invitation Models Showcase) */}
       <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-10/12 max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
             <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Nos Modèles Possibles</h2>
             <p className="text-slate-600">Explorez quelques-unes des structures de modèles d'invitation pré-configurées ou créez les vôtres de toutes pièces.</p>
@@ -471,7 +471,7 @@ export default function Home() {
 
       {/* Grille des Pricing (Pricing Options) */}
       <section className="py-20 bg-slate-50 border-t border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-10/12 max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
             <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Des Tarifs Transparents pour Chaque Échelle</h2>
             <p className="text-slate-600">Sélectionnez le forfait adapté à la taille de votre organisation et débloquez de nouvelles limites.</p>
@@ -632,7 +632,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="bg-slate-900 text-slate-400 py-12 border-t border-slate-800 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center sm:flex sm:justify-between sm:items-center">
+        <div className="w-10/12 max-w-7xl mx-auto text-center sm:flex sm:justify-between sm:items-center">
           <div className="flex items-center justify-center gap-2 mb-4 sm:mb-0">
             <PartyPopper className="w-5 h-5 text-indigo-500" />
             <span className="text-white font-bold">EventMaster</span>

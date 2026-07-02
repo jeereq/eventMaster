@@ -51,7 +51,7 @@ export default function ContactPage() {
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans antialiased text-slate-900">
       {/* Header */}
       <header className="border-b border-slate-200/80 bg-white/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="w-10/12 max-w-7xl mx-auto h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition">
             <div className="bg-indigo-600 p-2 rounded-lg text-white">
               <PartyPopper className="w-5 h-5" />
@@ -76,7 +76,7 @@ export default function ContactPage() {
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-100/40 blur-[100px] pointer-events-none" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-violet-100/40 blur-[100px] pointer-events-none" />
 
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="w-10/12 max-w-5xl mx-auto relative z-10">
           <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold">
               <Sparkles className="w-4 h-4" />
@@ -276,7 +276,7 @@ export default function ContactPage() {
 
       {/* Footer */}
       <footer className="bg-slate-900 text-slate-400 py-8 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center sm:flex sm:justify-between sm:items-center">
+        <div className="w-10/12 max-w-7xl mx-auto text-center sm:flex sm:justify-between sm:items-center">
           <div className="flex items-center justify-center gap-2 mb-4 sm:mb-0">
             <PartyPopper className="w-5 h-5 text-indigo-500" />
             <span className="text-white font-bold">EventMaster</span>

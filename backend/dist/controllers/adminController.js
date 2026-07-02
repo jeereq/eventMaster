@@ -693,7 +693,7 @@ function ensureSettingsDir() {
 }
 const defaultSettings = {
     platformName: "EventMaster",
-    supportEmail: "support@eventmaster.com",
+    supportEmail: "mingandajeereq@gmail.com",
     maintenanceMode: false,
     allowRegistration: true,
     ultramsgInstanceId: process.env.ULTRAMSG_INSTANCE_ID || "",
@@ -705,7 +705,7 @@ const defaultSettings = {
     plans: {
         STANDARD: {
             name: "Plan Standard",
-            price: "49 $",
+            price: "30.000 FC",
             maxEvents: 8,
             maxGuests: 150,
             maxTemplates: 5,
@@ -713,7 +713,7 @@ const defaultSettings = {
         },
         PREMIUM: {
             name: "Plan Premium",
-            price: "99 $",
+            price: "80.000 FC",
             maxEvents: 20,
             maxGuests: 500,
             maxTemplates: 10,
@@ -721,7 +721,7 @@ const defaultSettings = {
         },
         ENTERPRISE: {
             name: "Plan Enterprise",
-            price: "249 $",
+            price: "275.000 FC",
             maxEvents: 9999,
             maxGuests: 99999,
             maxTemplates: 9999,

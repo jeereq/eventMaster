@@ -749,7 +749,7 @@ function ensureSettingsDir() {
 
 const defaultSettings = {
   platformName: "EventMaster",
-  supportEmail: "support@eventmaster.com",
+  supportEmail: "mingandajeereq@gmail.com",
   maintenanceMode: false,
   allowRegistration: true,
   ultramsgInstanceId: process.env.ULTRAMSG_INSTANCE_ID || "",
