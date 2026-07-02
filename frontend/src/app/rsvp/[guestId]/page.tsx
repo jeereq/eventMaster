@@ -3,11 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
+import { downloadMedia, getMediaExtension, sanitizeFilenamePart } from '@/lib/downloadMedia';
 import { 
   Calendar, MapPin, CheckCircle2, XCircle, AlertCircle, 
   HelpCircle, Utensils, Loader2, Award, Sparkles,
   Users, MessageSquare, Image, Send, Heart, Eye, Trash2, LayoutGrid, MessageCircle,
-  ChevronLeft, ChevronRight, X, RefreshCw, Video, ThumbsUp
+  ChevronLeft, ChevronRight, X, RefreshCw, Video, ThumbsUp, Download
 } from 'lucide-react';
 
 interface GuestRsvpData {
@@ -95,6 +96,7 @@ export default function RsvpPage() {
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [expandedImages, setExpandedImages] = useState<string[]>([]);
   const [expandedImageIndex, setExpandedImageIndex] = useState<number>(0);
+  const [expandedImagePrefix, setExpandedImagePrefix] = useState('media');
   const [guestbookSuccess, setGuestbookSuccess] = useState(false);
   const [guestbookShares, setGuestbookShares] = useState<any[]>([]);
   const [loadingGuestbook, setLoadingGuestbook] = useState(false);
@@ -270,6 +272,17 @@ export default function RsvpPage() {
     } finally {
       setGuestCommentSubmitting(prev => ({ ...prev, [postId]: false }));
     }
+  };
+
+  const handleDownloadMedia = async (e: React.MouseEvent, url: string, filename: string) => {
+    e.stopPropagation();
+    await downloadMedia(url, filename);
+  };
+
+  const openGuestImageModal = (images: string[], index: number, filenamePrefix = 'media') => {
+    setExpandedImages(images);
+    setExpandedImageIndex(index);
+    setExpandedImagePrefix(filenamePrefix);
   };
 
   const handleSubmitRsvp = async (e: React.FormEvent) => {
@@ -683,6 +696,9 @@ export default function RsvpPage() {
                         const photosList = share.photos && Array.isArray(share.photos) 
                           ? share.photos 
                           : (share.photo ? [share.photo] : []);
+                        const guestSlug = sanitizeFilenamePart(
+                          share.guest ? `${share.guest.firstName}-${share.guest.lastName}` : 'invite'
+                        );
 
                         return (
                           <div key={share.id} className="bg-slate-800/30 border border-slate-700/30 rounded-2xl p-3 space-y-2.5">
@@ -708,16 +724,25 @@ export default function RsvpPage() {
                                 photosList.length === 1 ? 'grid-cols-1' : photosList.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
                               }`}>
                                 {photosList.map((photo: string, pIdx: number) => (
-                                  <div key={pIdx} className="relative aspect-square overflow-hidden bg-slate-900">
+                                  <div key={pIdx} className="relative aspect-square overflow-hidden bg-slate-900 group">
                                     <img 
                                       src={photo} 
                                       alt="Guestbook" 
-                                      onClick={() => {
-                                        setExpandedImages(photosList);
-                                        setExpandedImageIndex(pIdx);
-                                      }}
+                                      onClick={() => openGuestImageModal(photosList, pIdx, `livre-dor-${guestSlug}`)}
                                       className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity" 
                                     />
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleDownloadMedia(
+                                        e,
+                                        photo,
+                                        `livre-dor-${guestSlug}-${pIdx + 1}${getMediaExtension(photo, 'IMAGE')}`
+                                      )}
+                                      className="absolute top-1.5 right-1.5 p-1.5 bg-black/60 hover:bg-black text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                      title="Télécharger"
+                                    >
+                                      <Download className="w-3 h-3" />
+                                    </button>
                                   </div>
                                 ))}
                               </div>
@@ -794,7 +819,7 @@ export default function RsvpPage() {
                               mediaList.length === 1 ? 'grid-cols-1' : mediaList.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
                             }`}>
                               {mediaList.map((media: any, idx: number) => (
-                                <div key={idx} className="relative aspect-video max-h-64 flex items-center justify-center overflow-hidden">
+                                <div key={idx} className="relative aspect-video max-h-64 flex items-center justify-center overflow-hidden group">
                                   {media.type === 'VIDEO' ? (
                                     <video src={media.url} controls className="w-full h-full object-contain" />
                                   ) : (
@@ -804,12 +829,27 @@ export default function RsvpPage() {
                                       onClick={() => {
                                         const imagesOnly = mediaList.filter((m: any) => m.type === 'IMAGE').map((m: any) => m.url);
                                         const imgIdx = imagesOnly.indexOf(media.url);
-                                        setExpandedImages(imagesOnly);
-                                        setExpandedImageIndex(imgIdx >= 0 ? imgIdx : 0);
+                                        openGuestImageModal(
+                                          imagesOnly,
+                                          imgIdx >= 0 ? imgIdx : 0,
+                                          `feed-${sanitizeFilenamePart(post.id)}`
+                                        );
                                       }}
                                       className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity" 
                                     />
                                   )}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleDownloadMedia(
+                                      e,
+                                      media.url,
+                                      `feed-${sanitizeFilenamePart(post.id)}-${idx + 1}${getMediaExtension(media.url, media.type)}`
+                                    )}
+                                    className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                    title="Télécharger"
+                                  >
+                                    <Download className="w-3 h-3" />
+                                  </button>
                                 </div>
                               ))}
                             </div>
@@ -945,6 +985,23 @@ export default function RsvpPage() {
                 onClick={(e) => e.stopPropagation()}
               />
               
+              {/* Download Button */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const url = expandedImages[expandedImageIndex];
+                  void downloadMedia(
+                    url,
+                    `${expandedImagePrefix}-${expandedImageIndex + 1}${getMediaExtension(url, 'IMAGE')}`
+                  );
+                }}
+                className="absolute top-4 left-4 p-2 bg-black/60 hover:bg-black text-white rounded-full transition z-10"
+                title="Télécharger"
+              >
+                <Download className="w-5 h-5" />
+              </button>
+
               {/* Close Button */}
               <button
                 onClick={() => setExpandedImages([])}

@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from '@/lib/api';
+import { downloadMedia, downloadMediaBatch, getMediaExtension, sanitizeFilenamePart } from '@/lib/downloadMedia';
 import { useAuth } from '@/context/AuthContext';
 import { 
   Image, Send, Trash2, 
   Loader2, Heart, Plus, Video, Eye, MessageCircle, 
   RefreshCw, X, ChevronLeft, ChevronRight, BookOpen,
-  Rss, Search, ThumbsUp, Sparkles
+  Rss, Search, ThumbsUp, Sparkles, Download
 } from 'lucide-react';
 
 interface Comment {
@@ -96,7 +97,9 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
 
   const [expandedImages, setExpandedImages] = useState<string[]>([]);
   const [expandedImageIndex, setExpandedImageIndex] = useState<number>(0);
+  const [expandedImagePrefix, setExpandedImagePrefix] = useState('media');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isBulkDownloading, setIsBulkDownloading] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -151,6 +154,80 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
 
   const totalComments = useMemo(() => posts.reduce((acc, p) => acc + p.comments.length, 0), [posts]);
   const totalLikes = useMemo(() => posts.reduce((acc, p) => acc + (p.likes?.length || 0), 0), [posts]);
+
+  const handleDownloadMedia = async (
+    e: React.MouseEvent,
+    url: string,
+    filename: string
+  ) => {
+    e.stopPropagation();
+    await downloadMedia(url, filename);
+  };
+
+  const handleDownloadFeedPostMedia = async (e: React.MouseEvent, post: Post) => {
+    e.stopPropagation();
+    const mediaList = getMediaList(post);
+    const items = mediaList.map((media, idx) => ({
+      url: media.url,
+      filename: `feed-${sanitizeFilenamePart(post.id)}-${idx + 1}${getMediaExtension(media.url, media.type)}`,
+    }));
+    setIsBulkDownloading(true);
+    try {
+      await downloadMediaBatch(items);
+    } finally {
+      setIsBulkDownloading(false);
+    }
+  };
+
+  const handleDownloadSharePhotos = async (e: React.MouseEvent, share: GuestShare) => {
+    e.stopPropagation();
+    const photosList = getPhotosList(share);
+    const guestSlug = sanitizeFilenamePart(`${share.guest.firstName}-${share.guest.lastName}`);
+    const items = photosList.map((photo, idx) => ({
+      url: photo,
+      filename: `livre-dor-${guestSlug}-${idx + 1}${getMediaExtension(photo, 'IMAGE')}`,
+    }));
+    setIsBulkDownloading(true);
+    try {
+      await downloadMediaBatch(items);
+    } finally {
+      setIsBulkDownloading(false);
+    }
+  };
+
+  const handleDownloadAllVisibleMedia = async () => {
+    setIsBulkDownloading(true);
+    try {
+      if (activeSubTab === 'feed') {
+        const items = posts.flatMap((post) => {
+          const mediaList = getMediaList(post);
+          return mediaList.map((media, idx) => ({
+            url: media.url,
+            filename: `feed-${sanitizeFilenamePart(post.id)}-${idx + 1}${getMediaExtension(media.url, media.type)}`,
+          }));
+        });
+        await downloadMediaBatch(items);
+      } else {
+        const items = filteredShares.flatMap((share) => {
+          const photosList = getPhotosList(share);
+          const guestSlug = sanitizeFilenamePart(`${share.guest.firstName}-${share.guest.lastName}`);
+          return photosList.map((photo, idx) => ({
+            url: photo,
+            filename: `livre-dor-${guestSlug}-${idx + 1}${getMediaExtension(photo, 'IMAGE')}`,
+          }));
+        });
+        await downloadMediaBatch(items);
+      }
+    } finally {
+      setIsBulkDownloading(false);
+    }
+  };
+
+  const openImageModal = (images: string[], index: number, filenamePrefix = 'media') => {
+    setExpandedImages(images);
+    setExpandedImageIndex(index);
+    setExpandedImagePrefix(filenamePrefix);
+  };
 
   const handleMultipleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -236,10 +313,27 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
     }
   };
 
-  const openImageModal = (images: string[], index: number) => {
-    setExpandedImages(images);
-    setExpandedImageIndex(index);
-  };
+  const getMediaList = (post: Post): PostMedia[] =>
+    post.mediaUrls && Array.isArray(post.mediaUrls)
+      ? post.mediaUrls
+      : (post.mediaUrl ? [{ url: post.mediaUrl, type: (post.mediaType as 'IMAGE' | 'VIDEO') || 'IMAGE' }] : []);
+
+  const getPhotosList = (share: GuestShare): string[] =>
+    share.photos && Array.isArray(share.photos)
+      ? share.photos
+      : (share.photo ? [share.photo] : []);
+
+  const feedMediaCount = useMemo(
+    () => posts.reduce((acc, post) => acc + getMediaList(post).length, 0),
+    [posts]
+  );
+
+  const sharesMediaCount = useMemo(
+    () => filteredShares.reduce((acc, share) => acc + getPhotosList(share).length, 0),
+    [filteredShares]
+  );
+
+  const visibleMediaCount = activeSubTab === 'feed' ? feedMediaCount : sharesMediaCount;
 
   const nextImage = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -250,16 +344,6 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
     e.stopPropagation();
     setExpandedImageIndex((prev) => (prev - 1 + expandedImages.length) % expandedImages.length);
   };
-
-  const getMediaList = (post: Post): PostMedia[] =>
-    post.mediaUrls && Array.isArray(post.mediaUrls)
-      ? post.mediaUrls
-      : (post.mediaUrl ? [{ url: post.mediaUrl, type: (post.mediaType as 'IMAGE' | 'VIDEO') || 'IMAGE' }] : []);
-
-  const getPhotosList = (share: GuestShare): string[] =>
-    share.photos && Array.isArray(share.photos)
-      ? share.photos
-      : (share.photo ? [share.photo] : []);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -281,14 +365,31 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
           </p>
         </div>
 
-        <button
-          onClick={() => activeSubTab === 'feed' ? loadFeed() : loadShares()}
-          disabled={isRefreshing}
-          className="self-start inline-flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold rounded-xl text-xs transition shadow-xs"
-        >
-          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-indigo-600' : ''}`} />
-          Actualiser
-        </button>
+        <div className="flex flex-wrap items-center gap-2 self-start">
+          {visibleMediaCount > 0 && (
+            <button
+              type="button"
+              onClick={handleDownloadAllVisibleMedia}
+              disabled={isBulkDownloading || isRefreshing}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold rounded-xl text-xs transition shadow-md shadow-indigo-100 dark:shadow-none"
+            >
+              {isBulkDownloading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4" />
+              )}
+              Télécharger tout ({visibleMediaCount})
+            </button>
+          )}
+          <button
+            onClick={() => activeSubTab === 'feed' ? loadFeed() : loadShares()}
+            disabled={isRefreshing || isBulkDownloading}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold rounded-xl text-xs transition shadow-xs"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-indigo-600' : ''}`} />
+            Actualiser
+          </button>
+        </div>
       </div>
 
       {/* Summary KPIs */}
@@ -464,13 +565,26 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
                           <span className="text-[10px] text-slate-400 font-medium">{formatRelativeDate(post.createdAt)}</span>
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleDeletePost(post.id)}
-                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition"
-                        title="Supprimer"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        {mediaList.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={(e) => handleDownloadFeedPostMedia(e, post)}
+                            disabled={isBulkDownloading}
+                            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-xl transition"
+                            title="Télécharger les médias"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDeletePost(post.id)}
+                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition"
+                          title="Supprimer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
 
                     {post.content && (
@@ -484,7 +598,7 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
                         mediaList.length === 1 ? 'grid-cols-1' : mediaList.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
                       }`}>
                         {mediaList.map((media, idx) => (
-                          <div key={idx} className="relative aspect-video max-h-80 bg-black flex items-center justify-center overflow-hidden">
+                          <div key={idx} className="relative aspect-video max-h-80 bg-black flex items-center justify-center overflow-hidden group">
                             {media.type === 'VIDEO' ? (
                               <video src={media.url} controls className="w-full h-full object-contain" />
                             ) : (
@@ -493,11 +607,27 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
                                 alt={`Media ${idx + 1}`}
                                 onClick={() => {
                                   const imagesOnly = mediaList.filter(m => m.type === 'IMAGE').map(m => m.url);
-                                  openImageModal(imagesOnly, imagesOnly.indexOf(media.url));
+                                  openImageModal(
+                                    imagesOnly,
+                                    imagesOnly.indexOf(media.url),
+                                    `feed-${sanitizeFilenamePart(post.id)}`
+                                  );
                                 }}
                                 className="w-full h-full object-cover cursor-pointer hover:opacity-95 transition"
                               />
                             )}
+                            <button
+                              type="button"
+                              onClick={(e) => handleDownloadMedia(
+                                e,
+                                media.url,
+                                `feed-${sanitizeFilenamePart(post.id)}-${idx + 1}${getMediaExtension(media.url, media.type)}`
+                              )}
+                              className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                              title="Télécharger"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                         ))}
                       </div>
@@ -603,6 +733,7 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
               {filteredShares.map(share => {
                 const photosList = getPhotosList(share);
                 const initials = getInitials(share.guest.firstName, share.guest.lastName);
+                const guestSlug = sanitizeFilenamePart(`${share.guest.firstName}-${share.guest.lastName}`);
 
                 return (
                   <article
@@ -623,6 +754,17 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
                           </span>
                           <span className="text-[10px] text-slate-400 font-medium">{formatRelativeDate(share.createdAt)}</span>
                         </div>
+                        {photosList.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={(e) => handleDownloadSharePhotos(e, share)}
+                            disabled={isBulkDownloading}
+                            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition flex-shrink-0"
+                            title="Télécharger les photos"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                        )}
                         <Heart className="w-4 h-4 text-rose-300 dark:text-rose-700 flex-shrink-0" />
                       </div>
 
@@ -645,12 +787,24 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
                               className={`relative overflow-hidden bg-slate-100 dark:bg-slate-800 group cursor-pointer ${
                                 photosList.length === 1 ? 'aspect-video' : 'aspect-square'
                               }`}
-                              onClick={() => openImageModal(photosList, idx)}
+                              onClick={() => openImageModal(photosList, idx, `livre-dor-${guestSlug}`)}
                             >
                               <img src={photo} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 flex items-center justify-center transition-all">
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 flex items-center justify-center transition-all pointer-events-none">
                                 <Eye className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
                               </div>
+                              <button
+                                type="button"
+                                onClick={(e) => handleDownloadMedia(
+                                  e,
+                                  photo,
+                                  `livre-dor-${guestSlug}-${idx + 1}${getMediaExtension(photo, 'IMAGE')}`
+                                )}
+                                className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                title="Télécharger"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           ))}
                         </div>
@@ -685,6 +839,21 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
               className="max-h-[85vh] max-w-full object-contain rounded-lg"
               onClick={(e) => e.stopPropagation()}
             />
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                const url = expandedImages[expandedImageIndex];
+                void downloadMedia(
+                  url,
+                  `${expandedImagePrefix}-${expandedImageIndex + 1}${getMediaExtension(url, 'IMAGE')}`
+                );
+              }}
+              className="absolute top-4 left-4 p-2 bg-black/60 hover:bg-black text-white rounded-full transition"
+              title="Télécharger"
+            >
+              <Download className="w-5 h-5" />
+            </button>
             <button
               onClick={() => setExpandedImages([])}
               className="absolute top-4 right-4 p-2 bg-black/60 hover:bg-black text-white rounded-full transition"
