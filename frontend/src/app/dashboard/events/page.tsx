@@ -25,8 +25,18 @@ interface EventItem {
   reminderFrequency?: string;
   latitude?: number;
   longitude?: number;
+  roomId?: string | null;
+  room?: { id: string; name: string; location?: string | null; floor?: string | null } | null;
   tablePlan?: any;
   tenant?: { name: string };
+}
+
+interface OrgRoomOption {
+  id: string;
+  name: string;
+  location: string | null;
+  floor: string | null;
+  capacity: number | null;
 }
 
 interface GuestItem {
@@ -197,6 +207,9 @@ export default function EventsPage() {
   const [eventReminderFrequency, setEventReminderFrequency] = useState('NONE');
   const [eventLatitude, setEventLatitude] = useState('');
   const [eventLongitude, setEventLongitude] = useState('');
+  const [eventRoomId, setEventRoomId] = useState('');
+  const [orgRooms, setOrgRooms] = useState<OrgRoomOption[]>([]);
+  const [loadingRooms, setLoadingRooms] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [savingEvent, setSavingEvent] = useState(false);
 
@@ -551,6 +564,52 @@ export default function EventsPage() {
     }
   };
 
+  const resetEventForm = () => {
+    setEventTitle('');
+    setEventDescription('');
+    setEventDate('');
+    setEventLocation('');
+    setEventReminderFrequency('NONE');
+    setEventLatitude('');
+    setEventLongitude('');
+    setEventRoomId('');
+    setEditingEventId(null);
+  };
+
+  const openCreateEventModal = () => {
+    resetEventForm();
+    setShowEventModal(true);
+  };
+
+  useEffect(() => {
+    if (!showEventModal || user?.role !== 'USER') return;
+
+    async function loadRooms() {
+      setLoadingRooms(true);
+      try {
+        const data = await api.get('/rooms');
+        setOrgRooms(data.rooms || []);
+      } catch {
+        setOrgRooms([]);
+      } finally {
+        setLoadingRooms(false);
+      }
+    }
+
+    loadRooms();
+  }, [showEventModal, user?.role]);
+
+  const handleRoomChange = (roomId: string) => {
+    setEventRoomId(roomId);
+    if (!roomId) return;
+    const room = orgRooms.find((r) => r.id === roomId);
+    if (!room) return;
+    const parts = [room.name, room.floor, room.location].filter(Boolean);
+    if (parts.length > 0) {
+      setEventLocation(parts.join(' — '));
+    }
+  };
+
   const handleCreateOrUpdateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -566,25 +625,21 @@ export default function EventsPage() {
         reminderFrequency: eventReminderFrequency,
         latitude: eventLatitude ? parseFloat(eventLatitude) : null,
         longitude: eventLongitude ? parseFloat(eventLongitude) : null,
+        roomId: eventRoomId || null,
       };
 
       if (editingEventId) {
-        await api.put(`/events/${editingEventId}`, payload);
+        const savedEvent: EventItem = await api.put(`/events/${editingEventId}`, payload);
         setSuccess('Événement mis à jour avec succès !');
+        if (selectedEvent?.id === editingEventId) {
+          setSelectedEvent((prev) => (prev ? { ...prev, ...savedEvent } : prev));
+        }
       } else {
         await api.post('/events', payload);
         setSuccess('Événement créé avec succès !');
       }
 
-      // Reset
-      setEventTitle('');
-      setEventDescription('');
-      setEventDate('');
-      setEventLocation('');
-      setEventReminderFrequency('NONE');
-      setEventLatitude('');
-      setEventLongitude('');
-      setEditingEventId(null);
+      resetEventForm();
       setShowEventModal(false);
       loadEvents();
     } catch (err: any) {
@@ -602,6 +657,7 @@ export default function EventsPage() {
     setEventReminderFrequency(event.reminderFrequency || 'NONE');
     setEventLatitude(event.latitude !== undefined && event.latitude !== null ? event.latitude.toString() : '');
     setEventLongitude(event.longitude !== undefined && event.longitude !== null ? event.longitude.toString() : '');
+    setEventRoomId(event.roomId || event.room?.id || '');
     setEditingEventId(event.id);
     setShowEventModal(true);
   };
@@ -1208,7 +1264,7 @@ export default function EventsPage() {
             <p className="text-slate-500 mt-1">Créez et gérez vos réceptions privées, vos listes d'invités et vos invitations.</p>
           </div>
           <button 
-            onClick={() => { setEditingEventId(null); setShowEventModal(true); }}
+            onClick={openCreateEventModal}
             className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition shadow-md shadow-indigo-100 text-sm"
           >
             <PlusCircle className="w-4.5 h-4.5" />
@@ -1240,6 +1296,12 @@ export default function EventsPage() {
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 border border-indigo-100 text-indigo-700">
                 {getReminderFrequencyLabel(selectedEvent.reminderFrequency)}
               </span>
+              {selectedEvent.room && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-violet-50 border border-violet-100 text-violet-700">
+                  <Building2 className="w-3.5 h-3.5" />
+                  Salle : {selectedEvent.room.name}
+                </span>
+              )}
             </p>
           </div>
           <div className="flex gap-2">
@@ -1285,7 +1347,7 @@ export default function EventsPage() {
               <h3 className="text-lg font-bold text-slate-700">Aucun événement planifié</h3>
               <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">Commencez par créer votre premier événement pour y ajouter vos invités.</p>
               <button 
-                onClick={() => { setEditingEventId(null); setShowEventModal(true); }}
+                onClick={openCreateEventModal}
                 className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100"
               >
                 Créer mon premier événement
@@ -1302,9 +1364,17 @@ export default function EventsPage() {
                   {event.description && (
                     <p className="text-sm text-slate-500 line-clamp-2 leading-relaxed">{event.description}</p>
                   )}
-                  <div className="pt-2 flex items-center gap-1.5 text-xs text-slate-400 font-medium">
-                    <MapPin className="w-4 h-4 flex-shrink-0" />
-                    <span className="truncate">{event.location}</span>
+                  <div className="pt-2 flex flex-col gap-1.5">
+                    <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
+                      <MapPin className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate">{event.location}</span>
+                    </div>
+                    {event.room && (
+                      <div className="flex items-center gap-1.5 text-xs text-violet-600 font-semibold">
+                        <Building2 className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span className="truncate">{event.room.name}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-2 pt-2 border-t border-slate-100">
@@ -1906,6 +1976,32 @@ export default function EventsPage() {
                         className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
                         required
                       />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-violet-600" />
+                        Salle de l&apos;organisation (optionnel)
+                      </label>
+                      <select
+                        value={eventRoomId}
+                        onChange={(e) => handleRoomChange(e.target.value)}
+                        disabled={loadingRooms}
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
+                      >
+                        <option value="">Aucune salle — lieu libre</option>
+                        {orgRooms.map((room) => (
+                          <option key={room.id} value={room.id}>
+                            {room.name}
+                            {room.floor ? ` (${room.floor})` : ''}
+                            {room.capacity ? ` — ${room.capacity} pl.` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[11px] text-slate-400">
+                        {orgRooms.length === 0
+                          ? 'Aucune salle configurée. Créez-en dans Mon compte → Profil.'
+                          : 'La sélection d\'une salle préremplit le lieu et lie l\'événement au staff de cette salle.'}
+                      </p>
                     </div>
                   </div>
                   <div className="space-y-1.5">
