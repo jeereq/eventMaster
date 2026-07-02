@@ -3812,48 +3812,69 @@ export default function DashboardPage() {
       {/* Main Row */}
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Events List */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-900">Événements Récents</h2>
-            <Link href="/dashboard/events" className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition flex items-center gap-1">
-              Voir tout
-              <ChevronRight className="w-4 h-4" />
-            </Link>
-          </div>
-
-          {events.length === 0 ? (
-            <div className="text-center py-12 bg-slate-50 border border-dashed border-slate-200 rounded-xl">
-              <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <h3 className="font-semibold text-slate-700">Aucun événement</h3>
-              <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">Vous n'avez pas encore d'événement. Créez-en un pour commencer à inviter des personnes.</p>
-              <Link 
-                href="/dashboard/events" 
-                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition"
-              >
-                Créer mon premier événement
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-slate-900">Événements Récents</h2>
+              <Link href="/dashboard/events" className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition flex items-center gap-1">
+                Voir tout
+                <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {events.map((event) => (
-                <div key={event.id} className="p-4 border border-slate-150 rounded-xl hover:bg-slate-50 transition flex items-center justify-between">
-                  <div className="space-y-1">
-                    <h3 className="font-bold text-slate-900">{event.title}</h3>
-                    <p className="text-xs text-slate-500 font-medium">
-                      {new Date(event.date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} • {event.location}
-                    </p>
-                    {event.description && <p className="text-sm text-slate-600 line-clamp-1">{event.description}</p>}
+
+            {events.length === 0 ? (
+              <div className="text-center py-12 bg-slate-50 border border-dashed border-slate-200 rounded-xl">
+                <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                <h3 className="font-semibold text-slate-700">Aucun événement</h3>
+                <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">Vous n'avez pas encore d'événement. Créez-en un pour commencer à inviter des personnes.</p>
+                <Link 
+                  href="/dashboard/events" 
+                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition"
+                >
+                  Créer mon premier événement
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {events.map((event) => (
+                  <div key={event.id} className="p-4 border border-slate-150 rounded-xl hover:bg-slate-50 transition flex items-center justify-between">
+                    <div className="space-y-1">
+                      <h3 className="font-bold text-slate-900">{event.title}</h3>
+                      <p className="text-xs text-slate-500 font-medium">
+                        {new Date(event.date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} • {event.location}
+                      </p>
+                      {event.description && <p className="text-sm text-slate-600 line-clamp-1">{event.description}</p>}
+                    </div>
+                    <Link 
+                      href={`/dashboard/events?id=${event.id}`}
+                      className="p-2 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 rounded-lg transition"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </Link>
                   </div>
-                  <Link 
-                    href={`/dashboard/events?id=${event.id}`}
-                    className="p-2 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 rounded-lg transition"
-                  >
-                    <ChevronRight className="w-5 h-5" />
-                  </Link>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Analytics Promo Card */}
+          <div className="bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-950 text-white rounded-2xl p-6 shadow-md border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-6 relative overflow-hidden">
+            <div className="absolute top-[-20%] left-[-20%] w-[50%] h-[50%] rounded-full bg-indigo-500/10 blur-[80px] pointer-events-none" />
+            <div className="space-y-2 relative z-10">
+              <span className="text-[10px] bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">Nouveau</span>
+              <h3 className="text-lg font-bold">Analyses & Statistiques Avancées</h3>
+              <p className="text-xs text-slate-300 max-w-md leading-relaxed">
+                Visualisez les régimes alimentaires de vos invités, les réponses aux questions personnalisées et exportez vos données en un clic pour une organisation parfaite.
+              </p>
             </div>
-          )}
+            <Link 
+              href="/dashboard/analytics" 
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-indigo-500/20 whitespace-nowrap relative z-10"
+            >
+              <BarChart3 className="w-4 h-4" />
+              Consulter les statistiques
+            </Link>
+          </div>
         </div>
 
         {/* Plan Summary Card */}

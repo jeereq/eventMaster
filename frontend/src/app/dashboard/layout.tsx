@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { 
   Calendar, Users, Mail, CreditCard, LayoutDashboard, 
-  LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper, User, Sun, Moon
+  LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper, User, Sun, Moon, BarChart3
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 
@@ -53,6 +53,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     : [
         { name: 'Tableau de bord', href: '/dashboard', icon: LayoutDashboard },
         { name: 'Événements', href: '/dashboard/events', icon: Calendar },
+        { name: 'Statistiques', href: '/dashboard/analytics', icon: BarChart3 },
         { name: 'Modèles', href: '/dashboard/templates', icon: Mail },
         { name: 'Facturation & Plan', href: '/dashboard/billing', icon: CreditCard },
         { name: 'Mon Compte', href: '/dashboard/profile', icon: User },

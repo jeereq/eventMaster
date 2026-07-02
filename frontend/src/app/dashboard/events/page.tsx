@@ -223,6 +223,8 @@ export default function EventsPage() {
 
   const getCustomRsvpFields = () => {
     const fields: { id: string; label: string; type: string; options?: string[] }[] = [];
+    
+    // First, try to get fields from invitations templates
     invitations.forEach(invite => {
       if (invite.template?.id || (invite as any).templateId) {
         const templateId = invite.template?.id || (invite as any).templateId;
@@ -251,11 +253,42 @@ export default function EventsPage() {
         }
       }
     });
+
+    // Supplement with actually answered fields in guests preferences
+    guests.forEach(g => {
+      if (g.preferences?.customFields) {
+        Object.entries(g.preferences.customFields).forEach(([label, val]) => {
+          if (!fields.some(f => f.label === label)) {
+            const type = typeof val === 'boolean' ? 'checkbox' : 'text';
+            fields.push({
+              id: `dynamic-${label}`,
+              label,
+              type
+            });
+          }
+        });
+      }
+    });
+
     return fields;
   };
 
   const filteredGuests = guests.filter(g => {
-    const matchesSearch = `${g.firstName} ${g.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) || g.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const searchLower = searchQuery.toLowerCase();
+    const matchesSearch = 
+      `${g.firstName} ${g.lastName}`.toLowerCase().includes(searchLower) || 
+      g.email.toLowerCase().includes(searchLower) ||
+      (g.preferences?.phone && g.preferences.phone.toLowerCase().includes(searchLower)) ||
+      (g.preferences?.telephone && g.preferences.telephone.toLowerCase().includes(searchLower)) ||
+      (g.category && g.category.toLowerCase().includes(searchLower)) ||
+      (g.preferences?.allergies && g.preferences.allergies.toLowerCase().includes(searchLower)) ||
+      (g.preferences?.notes && g.preferences.notes.toLowerCase().includes(searchLower)) ||
+      (g.preferences?.specialMeal && g.preferences.specialMeal.toLowerCase().includes(searchLower)) ||
+      (g.preferences?.customFields && Object.entries(g.preferences.customFields).some(([key, val]) => 
+        key.toLowerCase().includes(searchLower) || 
+        (val !== undefined && val !== null && val.toString().toLowerCase().includes(searchLower))
+      ));
+
     const matchesRsvp = rsvpFilter === 'ALL' || g.rsvp === rsvpFilter;
     const matchesCategory = categoryFilter === 'ALL' || (g.category || 'Général') === categoryFilter;
     const matchesDiet = dietFilter === 'ALL' || (g.preferences?.specialMeal || 'none') === dietFilter;
@@ -264,13 +297,18 @@ export default function EventsPage() {
     Object.entries(customFilters).forEach(([label, value]) => {
       if (value && value !== 'ALL' && value.trim() !== '') {
         const guestVal = g.preferences?.customFields?.[label];
-        if (guestVal === undefined || guestVal === null) {
-          matchesCustom = false;
-        } else if (typeof guestVal === 'boolean') {
-          const filterBool = value === 'Oui';
-          if (guestVal !== filterBool) matchesCustom = false;
-        } else if (!guestVal.toString().toLowerCase().includes(value.toLowerCase())) {
-          matchesCustom = false;
+        
+        if (value === 'Oui') {
+          if (guestVal !== true) matchesCustom = false;
+        } else if (value === 'Non') {
+          if (guestVal === true) matchesCustom = false; // undefined, null, false are all considered "Non"
+        } else {
+          // Text or select filter
+          if (guestVal === undefined || guestVal === null) {
+            matchesCustom = false;
+          } else if (!guestVal.toString().toLowerCase().includes(value.toLowerCase())) {
+            matchesCustom = false;
+          }
         }
       }
     });
