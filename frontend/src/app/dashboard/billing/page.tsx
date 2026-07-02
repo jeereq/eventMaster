@@ -7,6 +7,7 @@ import {
   CreditCard, Check, ShieldCheck, Loader2, AlertCircle, Sparkles,
   Clock, XCircle, CheckCircle, HelpCircle
 } from 'lucide-react';
+import { PageHeader, Alert } from '@/components/ui';
 
 interface BillingStatus {
   plan: 'FREE' | 'STANDARD' | 'PREMIUM' | 'ENTERPRISE';
@@ -107,25 +108,14 @@ export default function BillingPage() {
 
   return (
     <div className="space-y-8 w-full">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Facturation & Plan</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">Gérez votre formule SaaS Multi-tenant et découvrez vos quotas d'utilisation.</p>
-      </div>
+      <PageHeader
+        title="Facturation & plan"
+        description="Gérez votre formule SaaS et découvrez vos quotas d'utilisation."
+      />
 
-      {error && (
-        <div className="p-4 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 text-rose-800 dark:text-rose-300 rounded-xl flex items-center gap-3 text-sm">
-          <AlertCircle className="w-5 h-5 text-rose-500 flex-shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
+      {error && <Alert variant="error">{error}</Alert>}
 
-      {successMsg && (
-        <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 text-emerald-800 dark:text-emerald-300 rounded-xl flex items-center gap-3 text-sm">
-          <ShieldCheck className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-          <span>{successMsg}</span>
-        </div>
-      )}
+      {successMsg && <Alert variant="success">{successMsg}</Alert>}
 
       {/* Current Plan Card */}
       {billing && (

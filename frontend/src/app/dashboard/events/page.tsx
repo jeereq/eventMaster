@@ -15,6 +15,7 @@ import {
 import TablePlanner from './TablePlanner';
 import EventStaffPanel from './EventStaffPanel';
 import EventFeedManager from './EventFeedManager';
+import { PageHeader, Button } from '@/components/ui';
 
 interface EventItem {
   id: string;
@@ -1310,19 +1311,15 @@ export default function EventsPage() {
     <div className="space-y-8">
       {/* Header */}
       {!selectedEvent ? (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Vos Événements</h1>
-            <p className="text-slate-500 mt-1">Créez et gérez vos réceptions privées, vos listes d'invités et vos invitations.</p>
-          </div>
-          <button 
-            onClick={openCreateEventModal}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition shadow-md shadow-indigo-100 text-sm"
-          >
-            <PlusCircle className="w-4.5 h-4.5" />
-            Créer un événement
-          </button>
-        </div>
+        <PageHeader
+          title="Vos événements"
+          description="Créez et gérez vos réceptions privées, vos listes d'invités et vos invitations."
+          action={
+            <Button onClick={openCreateEventModal} leftIcon={<PlusCircle className="w-4 h-4" />}>
+              Créer un événement
+            </Button>
+          }
+        />
       ) : (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-6">
           <div className="space-y-2">

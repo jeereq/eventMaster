@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import TeamManagement from '../TeamManagement';
 import RoomsManagement from '../RoomsManagement';
+import { PageHeader, Alert } from '@/components/ui';
 
 export default function ProfilePage() {
   const { user, tenant, updateUserAndTenant } = useAuth();
@@ -83,25 +84,14 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-8 w-full">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Mon Compte</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">Gérez vos informations personnelles, de contact, de sécurité et visualisez votre statut d'organisation.</p>
-      </div>
+      <PageHeader
+        title="Mon compte"
+        description="Gérez vos informations personnelles, de contact, de sécurité et visualisez votre statut d'organisation."
+      />
 
-      {error && (
-        <div className="p-4 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 text-rose-800 dark:text-rose-300 rounded-xl flex items-center gap-3 text-sm">
-          <AlertCircle className="w-5 h-5 text-rose-500 flex-shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
+      {error && <Alert variant="error">{error}</Alert>}
 
-      {success && (
-        <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 text-emerald-800 dark:text-emerald-300 rounded-xl flex items-center gap-3 text-sm">
-          <ShieldCheck className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-          <span>{success}</span>
-        </div>
-      )}
+      {success && <Alert variant="success">{success}</Alert>}
 
       {/* Profile Header Card */}
       <div className="bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-950 text-white rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-md relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">

@@ -13,6 +13,7 @@ import {
   BarChart3, PieChart, ChevronLeft, ChevronRight, CheckSquare, Sparkles, MapPin, Download, MessageSquare
 } from 'lucide-react';
 import GuestMessageTemplatesPanel from './GuestMessageTemplatesPanel';
+import { PageHeader, Alert, Button } from '@/components/ui';
 
 interface BillingStatus {
   plan: 'FREE' | 'STANDARD' | 'PREMIUM' | 'ENTERPRISE';
@@ -3719,27 +3720,17 @@ function DashboardPageContent() {
   // Render Regular Tenant Dashboard
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Tableau de Bord</h1>
-          <p className="text-slate-500 mt-1">Bienvenue dans votre espace d'administration de gestion d'événements privés.</p>
-        </div>
-        <Link 
-          href="/dashboard/events" 
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition shadow-md shadow-indigo-100 text-sm"
-        >
-          <PlusCircle className="w-4.5 h-4.5" />
-          Créer un événement
-        </Link>
-      </div>
+      <PageHeader
+        title="Tableau de bord"
+        description="Bienvenue dans votre espace d'administration de gestion d'événements privés."
+        action={
+          <Button onClick={() => router.push('/dashboard/events')} leftIcon={<PlusCircle className="w-4 h-4" />}>
+            Créer un événement
+          </Button>
+        }
+      />
 
-      {error && (
-        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-center gap-3 text-sm">
-          <AlertCircle className="w-5 h-5 text-rose-500 flex-shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
+      {error && <Alert variant="error">{error}</Alert>}
 
       {/* Quotas & Usage Widgets */}
       {billing && (
