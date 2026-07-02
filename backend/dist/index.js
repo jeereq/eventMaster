@@ -13,6 +13,7 @@ const rsvpRoutes_1 = __importDefault(require("./routes/rsvpRoutes"));
 const billingRoutes_1 = __importDefault(require("./routes/billingRoutes"));
 const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
 const publicRoutes_1 = __importDefault(require("./routes/publicRoutes"));
+const subscriptionRoutes_1 = __importDefault(require("./routes/subscriptionRoutes"));
 const billingController_1 = require("./controllers/billingController");
 const db_1 = require("./db");
 const reminderService_1 = require("./services/reminderService");
@@ -45,6 +46,7 @@ app.use('/api/templates', templateRoutes_1.default);
 app.use('/api/rsvp', rsvpRoutes_1.default);
 app.use('/api/admin', adminRoutes_1.default);
 app.use('/api/public', publicRoutes_1.default);
+app.use('/api/subscriptions', subscriptionRoutes_1.default);
 app.post('/api/billing/webhook', billingController_1.handleStripeWebhook);
 app.use('/api/billing', billingRoutes_1.default);
 // Start Server

@@ -8,6 +8,7 @@ import rsvpRoutes from './routes/rsvpRoutes';
 import billingRoutes from './routes/billingRoutes';
 import adminRoutes from './routes/adminRoutes';
 import publicRoutes from './routes/publicRoutes';
+import subscriptionRoutes from './routes/subscriptionRoutes';
 import { handleStripeWebhook } from './controllers/billingController';
 import { prisma } from './db';
 import { startReminderWorker } from './services/reminderService';
@@ -44,6 +45,7 @@ app.use('/api/templates', templateRoutes);
 app.use('/api/rsvp', rsvpRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
 app.post('/api/billing/webhook', handleStripeWebhook);
 app.use('/api/billing', billingRoutes);
 

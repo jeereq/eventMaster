@@ -87,17 +87,19 @@ export default function DashboardPage() {
   const [error, setError] = useState('');
 
   // Super Admin specific states
-  const [activeTab, setActiveTab] = useState<'tenants' | 'users' | 'templates' | 'events' | 'analytics' | 'guests' | 'settings'>('tenants');
+  const [activeTab, setActiveTab] = useState<'tenants' | 'users' | 'templates' | 'events' | 'analytics' | 'guests' | 'settings' | 'subscriptions'>('tenants');
   const [users, setUsers] = useState<AdminUserItem[]>([]);
   const [templates, setTemplates] = useState<AdminTemplateItem[]>([]);
   const [adminEvents, setAdminEvents] = useState<any[]>([]);
   const [adminGuests, setAdminGuests] = useState<any[]>([]);
   const [adminSettings, setAdminSettings] = useState<any>(null);
+  const [subscriptionRequests, setSubscriptionRequests] = useState<any[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [adminEventsLoading, setAdminEventsLoading] = useState(false);
   const [adminGuestsLoading, setAdminGuestsLoading] = useState(false);
   const [adminSettingsLoading, setAdminSettingsLoading] = useState(false);
+  const [subRequestsLoading, setSubRequestsLoading] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPlan, setFilterPlan] = useState<string>('ALL');
@@ -239,6 +241,13 @@ export default function DashboardPage() {
   useEffect(() => {
     if (user?.role === 'SUPER_ADMIN' && activeTab === 'settings') {
       loadAdminSettings();
+    }
+  }, [activeTab, user]);
+
+  // Load subscription requests when subscriptions tab is active
+  useEffect(() => {
+    if (user?.role === 'SUPER_ADMIN' && activeTab === 'subscriptions') {
+      loadSubscriptionRequests();
     }
   }, [activeTab, user]);
 
@@ -420,6 +429,46 @@ export default function DashboardPage() {
       setError('Impossible de charger les configurations.');
     } finally {
       setAdminSettingsLoading(false);
+    }
+  };
+
+  const loadSubscriptionRequests = async () => {
+    setSubRequestsLoading(true);
+    try {
+      const data = await api.get('/admin/subscriptions/requests');
+      setSubscriptionRequests(data);
+    } catch (err: any) {
+      console.error('Error loading subscription requests:', err);
+      setError('Impossible de charger les demandes d\'abonnement.');
+    } finally {
+      setSubRequestsLoading(false);
+    }
+  };
+
+  const handleApproveSubscription = async (id: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir approuver cette demande d\'abonnement ? Cela activera la licence pour 30 jours.')) {
+      return;
+    }
+    try {
+      const response = await api.post(`/admin/subscriptions/requests/${id}/approve`);
+      alert(response.message || 'Demande approuvée avec succès !');
+      await loadSubscriptionRequests();
+      await refreshStats();
+    } catch (err: any) {
+      alert(err.message || 'Erreur lors de l\'approbation de la demande.');
+    }
+  };
+
+  const handleRejectSubscription = async (id: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir rejeter cette demande d\'abonnement ?')) {
+      return;
+    }
+    try {
+      const response = await api.post(`/admin/subscriptions/requests/${id}/reject`);
+      alert(response.message || 'Demande rejetée.');
+      await loadSubscriptionRequests();
+    } catch (err: any) {
+      alert(err.message || 'Erreur lors du rejet de la demande.');
     }
   };
 
@@ -1077,6 +1126,13 @@ export default function DashboardPage() {
                 <Key className="w-4 h-4" />
                 Configurations
               </button>
+              <button
+                onClick={() => { setActiveTab('subscriptions'); setSearchTerm(''); }}
+                className={`px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2 ${activeTab === 'subscriptions' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+              >
+                <CreditCard className="w-4 h-4" />
+                Abonnements
+              </button>
             </div>
 
             {activeTab === 'tenants' && (
@@ -1151,7 +1207,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Filters and search */}
-          {activeTab !== 'analytics' && activeTab !== 'settings' && (
+          {activeTab !== 'analytics' && activeTab !== 'settings' && activeTab !== 'subscriptions' && (
             <div className="p-6 border-b border-slate-100 bg-white flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
@@ -2080,6 +2136,109 @@ export default function DashboardPage() {
                       </div>
                     </form>
                   )
+                )}
+              </div>
+            )}
+
+            {/* Subscriptions Tab */}
+            {activeTab === 'subscriptions' && (
+              <div className="space-y-6 animate-in fade-in duration-200">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">Demandes d'activation d'abonnement</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">Validez ou rejetez les demandes d'activation mensuelle soumises par les organisations.</p>
+                  </div>
+                </div>
+
+                {subRequestsLoading ? (
+                  <div className="py-12 flex flex-col items-center justify-center gap-3">
+                    <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                    <p className="text-sm font-medium text-slate-500">Chargement des demandes d'abonnement...</p>
+                  </div>
+                ) : subscriptionRequests.length === 0 ? (
+                  <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-150 p-6">
+                    <p className="text-slate-500 text-sm font-medium">Aucune demande d'abonnement soumise pour le moment.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          <th className="pb-3 font-semibold">Organisation</th>
+                          <th className="pb-3 font-semibold">Plan Demandé</th>
+                          <th className="pb-3 font-semibold">Durée</th>
+                          <th className="pb-3 font-semibold">Preuve / Référence</th>
+                          <th className="pb-3 font-semibold">Date de Demande</th>
+                          <th className="pb-3 font-semibold">Statut</th>
+                          <th className="pb-3 font-semibold text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-sm">
+                        {subscriptionRequests.map((req) => (
+                          <tr key={req.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="py-4">
+                              <div className="flex flex-col">
+                                <span className="font-bold text-slate-900">{req.tenant?.name || 'Inconnue'}</span>
+                                <span className="text-xs text-slate-400">ID: {req.tenantId}</span>
+                              </div>
+                            </td>
+                            <td className="py-4">
+                              <span className={`px-2 py-0.5 rounded text-xs font-extrabold border ${
+                                req.requestedPlan === 'STANDARD' ? 'bg-blue-50 border-blue-100 text-blue-700' :
+                                req.requestedPlan === 'PREMIUM' ? 'bg-indigo-50 border-indigo-100 text-indigo-700' :
+                                'bg-amber-50 border-amber-100 text-amber-700'
+                              }`}>
+                                {req.requestedPlan}
+                              </span>
+                            </td>
+                            <td className="py-4 font-semibold text-slate-700">
+                              {req.durationDays} jours
+                            </td>
+                            <td className="py-4">
+                              <div className="max-w-xs truncate text-xs text-slate-600 font-medium italic" title={req.proofOfPayment}>
+                                {req.proofOfPayment ? `"${req.proofOfPayment}"` : 'Aucune preuve fournie'}
+                              </div>
+                            </td>
+                            <td className="py-4 text-xs text-slate-500">
+                              {new Date(req.createdAt).toLocaleDateString('fr-FR', {
+                                day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                              })}
+                            </td>
+                            <td className="py-4">
+                              <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider border ${
+                                req.status === 'APPROVED' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
+                                req.status === 'REJECTED' ? 'bg-rose-50 border-rose-100 text-rose-700' :
+                                'bg-amber-50 border-amber-100 text-amber-700'
+                              }`}>
+                                {req.status === 'APPROVED' ? 'Approuvée' :
+                                 req.status === 'REJECTED' ? 'Rejetée' : 'En attente'}
+                              </span>
+                            </td>
+                            <td className="py-4 text-right">
+                              {req.status === 'PENDING' ? (
+                                <div className="flex justify-end gap-2">
+                                  <button
+                                    onClick={() => handleApproveSubscription(req.id)}
+                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition shadow-sm"
+                                  >
+                                    Approuver
+                                  </button>
+                                  <button
+                                    onClick={() => handleRejectSubscription(req.id)}
+                                    className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition shadow-sm"
+                                  >
+                                    Rejeter
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-slate-400 font-medium italic">Traitée</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </div>
             )}

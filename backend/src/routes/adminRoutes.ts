@@ -24,6 +24,11 @@ import {
   getAdminSettings,
   updateAdminSettings
 } from '../controllers/adminController';
+import { 
+  getAdminSubscriptionRequests, 
+  approveSubscriptionRequest, 
+  rejectSubscriptionRequest 
+} from '../controllers/subscriptionController';
 
 const router = Router();
 
@@ -33,6 +38,11 @@ router.use(requireRole(['SUPER_ADMIN']));
 
 // GET /api/admin/stats
 router.get('/stats', getSystemStats);
+
+// Subscription Requests routes (Super Admin)
+router.get('/subscriptions/requests', getAdminSubscriptionRequests);
+router.post('/subscriptions/requests/:id/approve', approveSubscriptionRequest);
+router.post('/subscriptions/requests/:id/reject', rejectSubscriptionRequest);
 
 // Tenants routes
 router.post('/tenants', createTenant);

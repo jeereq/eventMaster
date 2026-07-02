@@ -8,6 +8,7 @@ import {
   Calendar, Users, Mail, CreditCard, LayoutDashboard, 
   LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper, User
 } from 'lucide-react';
+import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, tenant, token, loading, logout } = useAuth();
@@ -31,6 +32,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </div>
     );
+  }
+
+  // Check if tenant license is expired or inactive (only for regular users, SUPER_ADMIN bypasses)
+  const isLicenseExpired = tenant?.licenseExpiresAt && new Date(tenant.licenseExpiresAt) < new Date();
+  const isLicenseInactive = tenant && !tenant.licenseActive;
+  const isBlocked = user.role !== 'SUPER_ADMIN' && (isLicenseInactive || isLicenseExpired);
+
+  if (isBlocked) {
+    return <PWARestrictedScreen />;
   }
 
   const navItems = user?.role === 'SUPER_ADMIN' 
