@@ -19,6 +19,131 @@ function getGuestPhone(guest: any): string | null {
   return null;
 }
 
+function getUserPhone(user: { phone?: string | null; email?: string | null }): string | null {
+  if (user.phone?.trim()) return user.phone.trim();
+  const emailStr = user.email?.trim() || '';
+  const isPhone = /^\+?[0-9\s\-()]{7,20}$/.test(emailStr);
+  return isPhone ? emailStr : null;
+}
+
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function formatPreferencesDetails(preferences: unknown): string {
+  if (!preferences || typeof preferences !== 'object') return '';
+
+  const prefs = preferences as Record<string, unknown>;
+  const lines: string[] = [];
+
+  if (prefs.allergies) lines.push(`- Allergies : ${prefs.allergies}`);
+  if (prefs.specialMeal) lines.push(`- Repas spécial : ${prefs.specialMeal}`);
+  if (prefs.notes) lines.push(`- Notes : ${prefs.notes}`);
+
+  if (prefs.customFields && typeof prefs.customFields === 'object') {
+    for (const [key, value] of Object.entries(prefs.customFields as Record<string, unknown>)) {
+      if (value !== undefined && value !== null && String(value).trim()) {
+        lines.push(`- ${key} : ${value}`);
+      }
+    }
+  }
+
+  return lines.length > 0 ? `\n\nPréférences indiquées :\n${lines.join('\n')}` : '';
+}
+
+async function resolveEventOrganizer(tenantId: string, manager: { id: string; name: string | null; email: string; phone: string | null } | null) {
+  if (manager) return manager;
+
+  return prisma.user.findFirst({
+    where: { tenantId, role: 'USER' },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true, name: true, email: true, phone: true },
+  });
+}
+
+async function notifyOrganizerOfRsvp(params: {
+  organizer: { name: string | null; email: string; phone: string | null };
+  guest: { firstName: string; lastName: string; email: string };
+  eventTitle: string;
+  rsvp: 'ACCEPTED' | 'DECLINED';
+  preferences: unknown;
+}) {
+  const { organizer, guest, eventTitle, rsvp, preferences } = params;
+  const statusLabel = rsvp === 'ACCEPTED' ? 'Présence confirmée (Oui)' : 'Absence (Décliné)';
+  const preferencesDetails = formatPreferencesDetails(preferences);
+  const ownerSubject = `[RSVP] ${guest.firstName} ${guest.lastName} — ${rsvp === 'ACCEPTED' ? 'Présent' : 'Décliné'}`;
+  const dashboardUrl = `${FRONTEND_URL}/dashboard/events`;
+
+  const ownerTextBody =
+    `Bonjour ${organizer.name || 'Organisateur'},\n\n` +
+    `Un invité vient de répondre à votre invitation pour l'événement "${eventTitle}".\n\n` +
+    `Invité : ${guest.firstName} ${guest.lastName}\n` +
+    `Email : ${guest.email}\n` +
+    `Statut : ${statusLabel}${preferencesDetails}\n\n` +
+    `Consultez la liste complète : ${dashboardUrl}\n\n` +
+    `L'équipe EventMaster`;
+
+  const ownerHtmlBody = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+      <h2 style="color: #1e1b4b; margin-bottom: 5px;">Nouvelle réponse RSVP</h2>
+      <p style="color: #64748b; margin-top: 0; margin-bottom: 20px;">Un invité a répondu pour <strong>${eventTitle}</strong>.</p>
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+        <p style="margin: 0 0 8px;"><strong>Invité :</strong> ${guest.firstName} ${guest.lastName}</p>
+        <p style="margin: 0 0 8px;"><strong>Email :</strong> ${guest.email}</p>
+        <p style="margin: 0;">
+          <strong>Statut :</strong>
+          <span style="display: inline-block; padding: 4px 10px; font-size: 12px; font-weight: bold; border-radius: 20px; margin-left: 6px; ${rsvp === 'ACCEPTED' ? 'background-color: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;' : 'background-color: #fff1f2; color: #be123c; border: 1px solid #fecdd3;'}">
+            ${statusLabel}
+          </span>
+        </p>
+      </div>
+      ${preferencesDetails ? `<pre style="background-color: #fffbeb; border: 1px solid #fef3c7; border-radius: 8px; padding: 15px; font-size: 13px; white-space: pre-wrap;">${preferencesDetails.trim()}</pre>` : ''}
+      <div style="text-align: center; margin-top: 25px;">
+        <a href="${dashboardUrl}" style="display: inline-block; background-color: #4f46e5; color: white; padding: 12px 24px; font-weight: bold; border-radius: 8px; text-decoration: none; font-size: 14px;">Voir mes invités</a>
+      </div>
+    </div>
+  `;
+
+  const ownerWhatsappBody =
+    `🔔 *Nouvelle réponse RSVP*\n\n` +
+    `Événement : *${eventTitle}*\n\n` +
+    `👤 *Invité* : ${guest.firstName} ${guest.lastName}\n` +
+    `📬 *Statut* : ${rsvp === 'ACCEPTED' ? '✅ Présent' : '❌ Décliné'}` +
+    (preferencesDetails ? `\n\n📋 *Détails* :${preferencesDetails}` : '') +
+    `\n\n👉 ${dashboardUrl}`;
+
+  const organizerPhone = getUserPhone(organizer);
+  const results: string[] = [];
+
+  if (isValidEmail(organizer.email)) {
+    const emailResult = await sendRealEmail(organizer.email, ownerSubject, ownerTextBody, ownerHtmlBody);
+    if (emailResult.success && !emailResult.simulated) {
+      results.push(`email:${organizer.email}`);
+    } else if (emailResult.simulated) {
+      console.log(`[RSVP Controller] Organizer email simulated to ${organizer.email}`);
+    } else {
+      console.warn(`[RSVP Controller] Organizer email failed for ${organizer.email}`);
+    }
+  }
+
+  if (organizerPhone) {
+    const whatsappResult = await sendRealWhatsApp(organizerPhone, ownerWhatsappBody);
+    if (whatsappResult.success && !whatsappResult.simulated) {
+      results.push(`whatsapp:${organizerPhone}`);
+    } else if (whatsappResult.simulated) {
+      console.log(`[RSVP Controller] Organizer WhatsApp simulated to ${organizerPhone}`);
+    } else {
+      console.warn(`[RSVP Controller] Organizer WhatsApp failed for ${organizerPhone}:`, whatsappResult.error);
+    }
+  }
+
+  if (results.length === 0) {
+    console.warn(`[RSVP Controller] Aucune notification organisateur envoyée (email/téléphone manquants ou simulés).`);
+  } else {
+    console.log(`[RSVP Controller] Organisateur notifié via: ${results.join(', ')}`);
+  }
+}
+
 // Public endpoint to get guest and event details
 export async function getGuestRsvpDetails(req: Request, res: Response) {
   try {
@@ -127,6 +252,9 @@ export async function submitRsvp(req: Request, res: Response) {
       return res.status(404).json({ error: 'Invité non trouvé ou lien RSVP invalide.' });
     }
 
+    const previousRsvp = guest.rsvp;
+    const statusChanged = previousRsvp !== rsvp;
+
     const updatedGuest = await prisma.guest.update({
       where: { id: guestId },
       data: {
@@ -199,92 +327,33 @@ export async function submitRsvp(req: Request, res: Response) {
       })();
     }
 
-    // Inform the Event Owner (Tenant Manager) asynchronously
-    const owner = guest.event.tenant?.manager;
-    if (owner && owner.email) {
-      const ownerSubject = `[Notification RSVP] ${guest.firstName} ${guest.lastName} a répondu !`;
-      const statusLabel = rsvp === 'ACCEPTED' ? 'Présence confirmée (Oui)' : 'Absence (Décliné)';
-      
-      let preferencesDetails = '';
-      if (preferences && typeof preferences === 'object') {
-        const prefs = preferences as any;
-        if (prefs.allergies || prefs.specialMeal || prefs.notes) {
-          preferencesDetails = `\n\nPréférences indiquées :\n` +
-            `- Allergies : ${prefs.allergies || 'Aucune'}\n` +
-            `- Repas spécial : ${prefs.specialMeal || 'Aucun'}\n` +
-            `- Notes de table : ${prefs.notes || 'Aucune'}`;
-        }
-      }
-
-      const ownerTextBody = `Bonjour ${owner.name || 'Organisateur'},\n\nUn invité vient de soumettre sa réponse RSVP pour votre événement "${guest.event.title}".\n\n` +
-        `Invité : ${guest.firstName} ${guest.lastName}\n` +
-        `Email : ${guest.email}\n` +
-        `Statut : ${statusLabel}${preferencesDetails}\n\n` +
-        `Vous pouvez suivre l'état complet de vos invités en temps réel sur votre tableau de bord EventMaster.\n\nCordialement,\nL'équipe EventMaster`;
-
-      const ownerHtmlBody = `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
-          <h2 style="color: #1e1b4b; margin-bottom: 5px;">Nouvelle Réponse RSVP !</h2>
-          <p style="color: #64748b; margin-top: 0; margin-bottom: 20px;">Un invité a répondu pour l'événement <strong>${guest.event.title}</strong>.</p>
-          
-          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-            <table style="width: 100%; border-collapse: collapse;">
-              <tr>
-                <td style="padding: 6px 0; font-weight: bold; color: #475569; width: 120px;">Invité :</td>
-                <td style="padding: 6px 0; color: #1e293b;">${guest.firstName} ${guest.lastName}</td>
-              </tr>
-              <tr>
-                <td style="padding: 6px 0; font-weight: bold; color: #475569;">Email :</td>
-                <td style="padding: 6px 0; color: #1e293b;">${guest.email}</td>
-              </tr>
-              <tr>
-                <td style="padding: 6px 0; font-weight: bold; color: #475569;">Statut RSVP :</td>
-                <td style="padding: 6px 0;">
-                  <span style="display: inline-block; padding: 4px 10px; font-size: 12px; font-weight: bold; border-radius: 20px; ${rsvp === 'ACCEPTED' ? 'background-color: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;' : 'background-color: #fff1f2; color: #be123c; border: 1px solid #fecdd3;'}">
-                    ${statusLabel}
-                  </span>
-                </td>
-              </tr>
-            </table>
-          </div>
-
-          ${preferencesDetails ? `
-          <div style="background-color: #fffbeb; border: 1px solid #fef3c7; border-radius: 8px; padding: 15px; margin-bottom: 20px; font-size: 14px; color: #78350f;">
-            <strong style="display: block; margin-bottom: 8px; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; color: #b45309;">Préférences et exigences de table :</strong>
-            • <strong>Allergies :</strong> ${preferences.allergies || 'Aucune'}<br />
-            • <strong>Repas spécial :</strong> ${preferences.specialMeal || 'Aucun'}<br />
-            • <strong>Notes/Commentaires :</strong> ${preferences.notes || 'Aucun'}
-          </div>
-          ` : ''}
-
-          <p style="font-size: 14px; color: #475569;">Vous pouvez consulter votre liste d'invités complète et mise à jour sur votre espace d'administration.</p>
-          
-          <div style="text-align: center; margin-top: 25px;">
-            <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard" style="display: inline-block; background-color: #4f46e5; color: white; padding: 12px 24px; font-weight: bold; border-radius: 8px; text-decoration: none; font-size: 14px; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.1);">Accéder au Tableau de Bord</a>
-          </div>
-
-          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 25px 0;" />
-          <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 0;">Cet e-mail de notification automatique a été envoyé par EventMaster.</p>
-        </div>
-      `;
-
-      const ownerPhone = getGuestPhone(owner); // Reusing phone extractor helper for the owner if stored in preferences/details
-      const ownerWhatsappBody = `🔔 *Nouvelle réponse RSVP !*\n\nUn invité a répondu pour l'événement *${guest.event.title}*.\n\n👤 *Invité* : ${guest.firstName} ${guest.lastName}\n📬 *Statut* : ${rsvp === 'ACCEPTED' ? '✅ Présent' : '❌ Décliné'}${preferencesDetails ? `\n\n⚠️ *Préférences* :${preferencesDetails}` : ''}\n\nConsultez vos statistiques sur votre tableau de bord EventMaster.`;
-
-      // Run owner notification asynchronously
+    // Notifier l'organisateur (email + WhatsApp) à chaque changement de statut RSVP
+    if (statusChanged) {
       (async () => {
         try {
-          // 1. Send Email to Owner
-          console.log(`[RSVP Controller] Sending RSVP notification email to owner/manager: ${owner.email}...`);
-          await sendRealEmail(owner.email, ownerSubject, ownerTextBody, ownerHtmlBody);
+          const organizer = await resolveEventOrganizer(
+            guest.event.tenantId,
+            guest.event.tenant?.manager ?? null
+          );
 
-          // 2. Send WhatsApp to Owner if phone is configured
-          if (ownerPhone) {
-            console.log(`[RSVP Controller] Sending RSVP notification WhatsApp to owner: ${ownerPhone}...`);
-            await sendRealWhatsApp(ownerPhone, ownerWhatsappBody);
+          if (!organizer) {
+            console.warn(`[RSVP Controller] Aucun organisateur trouvé pour le tenant ${guest.event.tenantId}`);
+            return;
           }
+
+          await notifyOrganizerOfRsvp({
+            organizer,
+            guest: {
+              firstName: guest.firstName,
+              lastName: guest.lastName,
+              email: guest.email,
+            },
+            eventTitle: guest.event.title,
+            rsvp,
+            preferences: preferences || {},
+          });
         } catch (ownerNotifErr) {
-          console.error('[RSVP Controller] Error sending notification to event owner:', ownerNotifErr);
+          console.error('[RSVP Controller] Error sending notification to event organizer:', ownerNotifErr);
         }
       })();
     }
