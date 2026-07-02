@@ -1,16 +1,66 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
 import { prisma } from '../db';
-import { sendRealEmail, sendRealWhatsApp } from '../services/notificationService';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { formatTenantResponse } from '../utils/tenantAccess';
 import { recordUserLegalAcceptance } from '../services/legalService';
 import { resolveOrgAccess } from '../services/permissionsService';
+import {
+  generateOtpCode,
+  hashOtpCode,
+  verifyOtpCode,
+  getOtpExpiryDate,
+  isOtpExpired,
+  canResendOtp,
+  sendRegistrationOtp,
+  maskEmail,
+  maskPhone,
+  VerificationMethod,
+} from '../services/otpService';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'eventmaster-secret-key-12345';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+async function issueAndSendOtp(params: {
+  userId: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  method: VerificationMethod;
+}) {
+  const code = generateOtpCode();
+  const otpHash = await hashOtpCode(code);
+  const otpExpiresAt = getOtpExpiryDate();
+
+  await prisma.user.update({
+    where: { id: params.userId },
+    data: {
+      otpHash,
+      otpExpiresAt,
+      verificationMethod: params.method,
+      verificationToken: null,
+      isEmailVerified: false,
+    },
+  });
+
+  const { sentVia } = await sendRegistrationOtp({
+    name: params.name,
+    email: params.email,
+    phone: params.phone,
+    code,
+    method: params.method,
+  });
+
+  return sentVia;
+}
+
+function buildAuthToken(user: { id: string; tenantId: string | null; role: string }) {
+  return jwt.sign(
+    { userId: user.id, tenantId: user.tenantId, role: user.role },
+    JWT_SECRET,
+    { expiresIn: '24h' },
+  );
+}
 
 export async function register(req: Request, res: Response) {
   try {
@@ -24,8 +74,10 @@ export async function register(req: Request, res: Response) {
       return res.status(400).json({ error: 'Vous devez accepter les conditions d\'utilisation et la politique de confidentialité.' });
     }
 
-    if (verificationMethod === 'WHATSAPP' && !phone) {
-      return res.status(400).json({ error: 'Le numéro de téléphone est obligatoire pour la confirmation par WhatsApp.' });
+    const method = (verificationMethod === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL') as VerificationMethod;
+
+    if (method === 'WHATSAPP' && !phone) {
+      return res.status(400).json({ error: 'Le numéro de téléphone est obligatoire pour la validation par WhatsApp.' });
     }
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -34,19 +86,12 @@ export async function register(req: Request, res: Response) {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const verificationToken = crypto.randomBytes(32).toString('hex');
 
-    // Create Tenant and User in a transaction to ensure atomic registration
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Create Tenant
       const tenant = await tx.tenant.create({
-        data: {
-          name: tenantName,
-          plan: 'FREE',
-        },
+        data: { name: tenantName, plan: 'FREE' },
       });
 
-      // 2. Create User linked to Tenant
       const user = await tx.user.create({
         data: {
           email,
@@ -56,11 +101,10 @@ export async function register(req: Request, res: Response) {
           role: 'USER',
           tenantId: tenant.id,
           isEmailVerified: false,
-          verificationToken,
+          verificationMethod: method,
         },
       });
 
-      // 3. Set User as the manager of the Tenant
       await tx.tenant.update({
         where: { id: tenant.id },
         data: { managerId: user.id },
@@ -77,39 +121,25 @@ export async function register(req: Request, res: Response) {
       userAgent: (req.headers['user-agent'] as string) || null,
     });
 
-    // Send confirmation link
-    const verificationLink = `${FRONTEND_URL}/verify-email?token=${verificationToken}`;
-    
-    let sentMethod = 'EMAIL';
-    if (verificationMethod === 'WHATSAPP' && phone) {
-      const whatsappBody = `Bonjour *${name}*,\n\nMerci de vous être inscrit sur *EventMaster* ! 🚀\n\nPour activer votre compte et commencer à organiser vos événements, veuillez confirmer votre compte en cliquant sur le lien suivant :\n👉 ${verificationLink}\n\nSi vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer ce message.\n\nL'équipe EventMaster ✨`;
-      console.log(`[Auth Controller] Sending confirmation link via WhatsApp to ${phone}...`);
-      await sendRealWhatsApp(phone, whatsappBody);
-      sentMethod = 'WHATSAPP';
-    } else {
-      const emailSubject = 'Confirmez votre adresse e-mail - EventMaster';
-      const emailText = `Bonjour ${name},\n\nMerci de vous être inscrit sur EventMaster. Veuillez confirmer votre adresse e-mail en cliquant sur le lien suivant :\n${verificationLink}\n\nSi vous n'avez pas créé de compte, vous pouvez ignorer cet e-mail.\n\nCordialement,\nL'équipe EventMaster`;
-      const emailHtml = `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-          <h2 style="color: #4f46e5; text-align: center;">Bienvenue sur EventMaster !</h2>
-          <p>Bonjour <strong>${name}</strong>,</p>
-          <p>Merci de vous être inscrit sur EventMaster, votre plateforme de gestion d'événements et d'invitations.</p>
-          <p>Pour activer votre compte et commencer à organiser vos événements, veuillez confirmer votre adresse e-mail en cliquant sur le bouton ci-dessous :</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${verificationLink}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Confirmer mon e-mail</a>
-          </div>
-          <p style="font-size: 0.875rem; color: #6b7280;">Si le bouton ne fonctionne pas, vous pouvez copier et coller ce lien dans votre navigateur :<br><a href="${verificationLink}" style="color: #4f46e5;">${verificationLink}</a></p>
-          <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0;" />
-          <p style="font-size: 0.875rem; color: #9ca3af; text-align: center;">Si vous n'avez pas créé de compte, vous pouvez ignorer cet e-mail.</p>
-        </div>
-      `;
-      await sendRealEmail(email, emailSubject, emailText, emailHtml);
-    }
+    const sentVia = await issueAndSendOtp({
+      userId: result.user.id,
+      name,
+      email,
+      phone,
+      method,
+    });
+
+    const destination =
+      sentVia === 'WHATSAPP' && phone ? maskPhone(phone) : maskEmail(email);
 
     return res.status(201).json({
-      message: sentMethod === 'WHATSAPP' 
-        ? 'Compte créé avec succès ! Un lien de confirmation a été envoyé sur votre WhatsApp. Veuillez cliquer sur ce lien pour activer votre compte.'
-        : 'Compte créé avec succès ! Un e-mail de confirmation a été envoyé. Veuillez confirmer votre adresse e-mail pour vous connecter.',
+      message:
+        sentVia === 'WHATSAPP'
+          ? `Compte créé ! Un code OTP a été envoyé sur WhatsApp (${destination}). Saisissez-le pour activer votre compte.`
+          : `Compte créé ! Un code OTP a été envoyé par e-mail (${destination}). Saisissez-le pour activer votre compte.`,
+      requiresVerification: true,
+      verificationMethod: sentVia,
+      email: result.user.email,
       user: {
         id: result.user.id,
         email: result.user.email,
@@ -125,6 +155,118 @@ export async function register(req: Request, res: Response) {
   }
 }
 
+export async function verifyOtp(req: Request, res: Response) {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ error: 'L\'e-mail et le code OTP sont requis.' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: { tenant: true },
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: 'Code invalide ou compte introuvable.' });
+    }
+
+    if (user.isEmailVerified) {
+      return res.status(400).json({ error: 'Ce compte est déjà validé. Vous pouvez vous connecter.' });
+    }
+
+    if (isOtpExpired(user.otpExpiresAt)) {
+      return res.status(400).json({ error: 'Le code OTP a expiré. Demandez un nouveau code.', expired: true });
+    }
+
+    const valid = await verifyOtpCode(String(otp).trim(), user.otpHash);
+    if (!valid) {
+      return res.status(400).json({ error: 'Code OTP incorrect.' });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isEmailVerified: true,
+        otpHash: null,
+        otpExpiresAt: null,
+        verificationToken: null,
+      },
+    });
+
+    const token = buildAuthToken(updatedUser);
+
+    return res.json({
+      message: 'Compte validé avec succès ! Connexion en cours...',
+      token,
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        phone: updatedUser.phone,
+        role: updatedUser.role,
+      },
+      tenant: user.tenant ? formatTenantResponse(user.tenant) : null,
+    });
+  } catch (error: any) {
+    console.error('Erreur verifyOtp:', error);
+    return res.status(500).json({ error: 'Erreur lors de la validation du code OTP.' });
+  }
+}
+
+export async function resendOtp(req: Request, res: Response) {
+  try {
+    const { email, verificationMethod } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'L\'adresse e-mail est requise.' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      return res.json({ message: 'Si le compte existe, un nouveau code OTP a été envoyé.' });
+    }
+
+    if (user.isEmailVerified) {
+      return res.status(400).json({ error: 'Ce compte est déjà validé.' });
+    }
+
+    if (!canResendOtp(user.updatedAt, user.otpExpiresAt)) {
+      return res.status(429).json({ error: 'Veuillez patienter une minute avant de redemander un code.' });
+    }
+
+    const method = (verificationMethod || user.verificationMethod || 'EMAIL') as VerificationMethod;
+
+    if (method === 'WHATSAPP' && !user.phone) {
+      return res.status(400).json({ error: 'Aucun numéro WhatsApp associé à ce compte.' });
+    }
+
+    const sentVia = await issueAndSendOtp({
+      userId: user.id,
+      name: user.name || 'Utilisateur',
+      email: user.email,
+      phone: user.phone,
+      method,
+    });
+
+    const destination =
+      sentVia === 'WHATSAPP' && user.phone ? maskPhone(user.phone) : maskEmail(user.email);
+
+    return res.json({
+      message:
+        sentVia === 'WHATSAPP'
+          ? `Un nouveau code OTP a été envoyé sur WhatsApp (${destination}).`
+          : `Un nouveau code OTP a été envoyé par e-mail (${destination}).`,
+      verificationMethod: sentVia,
+    });
+  } catch (error: any) {
+    console.error('Erreur resendOtp:', error);
+    return res.status(500).json({ error: 'Impossible de renvoyer le code OTP.' });
+  }
+}
+
 export async function login(req: Request, res: Response) {
   try {
     const { email, password } = req.body;
@@ -133,13 +275,9 @@ export async function login(req: Request, res: Response) {
       return res.status(400).json({ error: 'Veuillez saisir votre email (ou téléphone) et mot de passe' });
     }
 
-    // Search user by email OR phone number
     const user = await prisma.user.findFirst({
       where: {
-        OR: [
-          { email: email },
-          { phone: email }
-        ]
+        OR: [{ email: email }, { phone: email }],
       },
       include: { tenant: true },
     });
@@ -153,23 +291,16 @@ export async function login(req: Request, res: Response) {
       return res.status(401).json({ error: 'Identifiants incorrects' });
     }
 
-    // Check if email is verified
     if (!user.isEmailVerified && user.role !== 'SUPER_ADMIN') {
       return res.status(403).json({
-        error: 'Veuillez confirmer votre adresse e-mail avant de vous connecter. Un lien de confirmation vous a été envoyé par e-mail.',
+        error: 'Votre compte n\'est pas encore validé. Saisissez le code OTP reçu par e-mail ou WhatsApp.',
         notVerified: true,
+        email: user.email,
+        verificationMethod: user.verificationMethod || 'EMAIL',
       });
     }
 
-    const token = jwt.sign(
-      {
-        userId: user.id,
-        tenantId: user.tenantId,
-        role: user.role,
-      },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
+    const token = buildAuthToken(user);
 
     return res.json({
       token,
@@ -187,6 +318,7 @@ export async function login(req: Request, res: Response) {
   }
 }
 
+/** @deprecated Conservé pour les anciens liens e-mail — préférer verifyOtp */
 export async function verifyEmail(req: Request, res: Response) {
   try {
     const { token } = req.query;
@@ -209,21 +341,14 @@ export async function verifyEmail(req: Request, res: Response) {
       data: {
         isEmailVerified: true,
         verificationToken: null,
+        otpHash: null,
+        otpExpiresAt: null,
       },
     });
 
-    // Generate JWT Token to automatically log the user in
-    const jwtToken = jwt.sign(
-      {
-        userId: updatedUser.id,
-        tenantId: updatedUser.tenantId,
-        role: updatedUser.role,
-      },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
+    const jwtToken = buildAuthToken(updatedUser);
 
-    return res.json({ 
+    return res.json({
       message: 'Votre compte a été confirmé avec succès ! Connexion automatique en cours...',
       token: jwtToken,
       user: {
@@ -241,7 +366,6 @@ export async function verifyEmail(req: Request, res: Response) {
   }
 }
 
-// GET /auth/profile
 export async function getProfile(req: AuthenticatedRequest, res: Response) {
   try {
     if (!req.user) {
@@ -279,7 +403,6 @@ export async function getProfile(req: AuthenticatedRequest, res: Response) {
   }
 }
 
-// PUT /auth/profile
 export async function updateProfile(req: AuthenticatedRequest, res: Response) {
   try {
     if (!req.user) {
@@ -292,7 +415,6 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
       return res.status(400).json({ error: 'Le nom et l\'adresse e-mail sont obligatoires.' });
     }
 
-    // Check if email is already taken by another user
     const existingUser = await prisma.user.findFirst({
       where: {
         email,
@@ -314,7 +436,6 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
       updateData.passwordHash = await bcrypt.hash(password, 10);
     }
 
-    // Update User and Tenant in a transaction if tenantName is provided
     const result = await prisma.$transaction(async (tx) => {
       const updatedUser = await tx.user.update({
         where: { id: req.user!.id },
@@ -353,43 +474,40 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
   }
 }
 
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+
 export async function forgotPassword(req: Request, res: Response) {
   try {
-    const { email, method = 'EMAIL' } = req.body; // method: 'EMAIL' or 'WHATSAPP'
+    const { email, method = 'EMAIL' } = req.body;
 
     if (!email) {
       return res.status(400).json({ error: 'Veuillez saisir votre adresse e-mail ou numéro de téléphone' });
     }
 
-    // Find user by email or phone
     const user = await prisma.user.findFirst({
       where: {
-        OR: [
-          { email: email },
-          { phone: email }
-        ]
-      }
+        OR: [{ email: email }, { phone: email }],
+      },
     });
 
     if (!user) {
-      // For security reasons, don't reveal if the user exists or not, but return success
       return res.json({ message: 'Si le compte existe, un lien de réinitialisation a été envoyé.' });
     }
 
-    // Generate a reset token (JWT containing userId and purpose, expiring in 1h)
     const resetToken = jwt.sign(
       { userId: user.id, purpose: 'password-reset' },
       JWT_SECRET,
-      { expiresIn: '1h' }
+      { expiresIn: '1h' },
     );
 
     const resetLink = `${FRONTEND_URL}/reset-password?token=${resetToken}`;
 
     if (method === 'WHATSAPP' && user.phone) {
+      const { sendRealWhatsApp } = await import('../services/notificationService');
       const whatsappBody = `Bonjour *${user.name || 'Utilisateur'}*,\n\nVous avez demandé la réinitialisation de votre mot de passe sur *EventMaster*.\n\nVeuillez cliquer sur le lien suivant pour définir un nouveau mot de passe (valable 1 heure) :\n👉 ${resetLink}\n\nSi vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer ce message.\n\nL'équipe EventMaster ✨`;
-      console.log(`[Auth Controller] Sending password reset link via WhatsApp to ${user.phone}...`);
       await sendRealWhatsApp(user.phone, whatsappBody);
     } else {
+      const { sendRealEmail } = await import('../services/notificationService');
       const emailSubject = 'Réinitialisation de votre mot de passe - EventMaster';
       const emailText = `Bonjour ${user.name || 'Utilisateur'},\n\nVous avez demandé la réinitialisation de votre mot de passe sur EventMaster. Veuillez cliquer sur le lien suivant pour définir un nouveau mot de passe (valable 1 heure) :\n${resetLink}\n\nSi vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet e-mail.\n\nCordialement,\nL'équipe EventMaster`;
       const emailHtml = `
@@ -397,13 +515,10 @@ export async function forgotPassword(req: Request, res: Response) {
           <h2 style="color: #4f46e5; text-align: center;">Réinitialisation de mot de passe</h2>
           <p>Bonjour <strong>${user.name || 'Utilisateur'}</strong>,</p>
           <p>Nous avons reçu une demande de réinitialisation de mot de passe pour votre compte EventMaster.</p>
-          <p>Pour définir un nouveau mot de passe, veuillez cliquer sur le bouton ci-dessous (ce lien est valable pendant 1 heure) :</p>
           <div style="text-align: center; margin: 30px 0;">
             <a href="${resetLink}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Réinitialiser mon mot de passe</a>
           </div>
-          <p style="font-size: 0.875rem; color: #6b7280;">Si le bouton ne fonctionne pas, vous pouvez copier et coller ce lien dans votre navigateur :<br><a href="${resetLink}" style="color: #4f46e5;">${resetLink}</a></p>
-          <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 30px 0;" />
-          <p style="font-size: 0.875rem; color: #9ca3af; text-align: center;">Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet e-mail en toute sécurité.</p>
+          <p style="font-size: 0.875rem; color: #6b7280;">Lien valable 1 heure.</p>
         </div>
       `;
       await sendRealEmail(user.email, emailSubject, emailText, emailHtml);
@@ -411,7 +526,7 @@ export async function forgotPassword(req: Request, res: Response) {
 
     return res.json({ message: 'Si le compte existe, un lien de réinitialisation a été envoyé.' });
   } catch (error: any) {
-    console.error('Erreur lors de la demande de réinitialisation de mot de passe:', error);
+    console.error('Erreur forgotPassword:', error);
     return res.status(500).json({ error: 'Erreur interne du serveur lors de la demande de réinitialisation' });
   }
 }
@@ -424,11 +539,10 @@ export async function resetPassword(req: Request, res: Response) {
       return res.status(400).json({ error: 'Le jeton et le mot de passe sont obligatoires.' });
     }
 
-    // Verify reset token
     let decoded: any;
     try {
       decoded = jwt.verify(token, JWT_SECRET);
-    } catch (err) {
+    } catch {
       return res.status(400).json({ error: 'Le jeton de réinitialisation est invalide ou a expiré.' });
     }
 
@@ -436,24 +550,28 @@ export async function resetPassword(req: Request, res: Response) {
       return res.status(400).json({ error: 'Le jeton de réinitialisation est invalide.' });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId }
-    });
-
+    const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
     if (!user) {
       return res.status(404).json({ error: 'Utilisateur non trouvé.' });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { passwordHash }
-    });
+    await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
 
     return res.json({ message: 'Votre mot de passe a été réinitialisé avec succès ! Vous pouvez maintenant vous connecter.' });
   } catch (error: any) {
-    console.error('Erreur lors de la réinitialisation du mot de passe:', error);
+    console.error('Erreur resetPassword:', error);
     return res.status(500).json({ error: 'Erreur interne du serveur lors de la réinitialisation du mot de passe' });
   }
+}
+
+/** Utilitaire partagé pour création d'utilisateur avec OTP (équipe, admin) */
+export async function setupUserOtpVerification(params: {
+  userId: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  method: VerificationMethod;
+}) {
+  return issueAndSendOtp(params);
 }

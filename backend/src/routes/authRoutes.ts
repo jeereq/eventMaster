@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, verifyEmail, getProfile, updateProfile, forgotPassword, resetPassword } from '../controllers/authController';
+import { register, login, verifyEmail, verifyOtp, resendOtp, getProfile, updateProfile, forgotPassword, resetPassword } from '../controllers/authController';
 import { requireAuth } from '../middleware/auth';
 import { acceptUserLegalHandler, getUserLegalStatusHandler } from '../controllers/legalController';
 
@@ -7,6 +7,8 @@ const router = Router();
 
 router.post('/register', register);
 router.post('/login', login);
+router.post('/verify-otp', verifyOtp);
+router.post('/resend-otp', resendOtp);
 router.get('/verify-email', verifyEmail);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);

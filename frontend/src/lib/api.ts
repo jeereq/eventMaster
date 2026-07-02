@@ -39,7 +39,13 @@ async function request(path: string, options: FetchOptions = {}) {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || 'Une erreur est survenue');
+      const err = new Error(data.error || 'Une erreur est survenue') as Error & {
+        status?: number;
+        data?: Record<string, unknown>;
+      };
+      err.status = response.status;
+      err.data = data;
+      throw err;
     }
 
     return data;

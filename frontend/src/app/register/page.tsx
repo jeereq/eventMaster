@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { 
@@ -12,6 +13,7 @@ import {
 
 export default function RegisterPage() {
   const { register } = useAuth();
+  const router = useRouter();
   const { theme, toggleTheme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,6 +46,10 @@ export default function RegisterPage() {
 
     try {
       const res = await register(email, password, name, tenantName, phone, verificationMethod, acceptTerms, acceptPrivacy);
+      if (res.requiresVerification && res.email) {
+        router.push(`/verify-otp?email=${encodeURIComponent(res.email)}&method=${res.verificationMethod || verificationMethod}`);
+        return;
+      }
       setSuccessMessage(res.message);
       setLoading(false);
     } catch (err: any) {
@@ -307,7 +313,7 @@ export default function RegisterPage() {
 
                 <div>
                   <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-                    Méthode de validation du compte
+                    Code OTP de validation
                   </label>
                   <div className="grid grid-cols-2 gap-3">
                     <button

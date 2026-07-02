@@ -80,6 +80,9 @@ model User {
   tenant        Tenant?    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   isEmailVerified Boolean  @default(false)
   verificationToken String?
+  otpHash           String?
+  otpExpiresAt      DateTime?
+  verificationMethod String?  // EMAIL | WHATSAPP
   termsAcceptedAt   DateTime?
   privacyAcceptedAt DateTime?
   termsVersion      String?

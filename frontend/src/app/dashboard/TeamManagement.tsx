@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
   Users, UserPlus, Trash2, Loader2, Crown, Mail, Phone, AlertCircle, CheckCircle2,
-  Shield, Briefcase,
+  Shield, Briefcase, MessageSquare,
 } from 'lucide-react';
 
 interface TeamMember {
@@ -40,6 +40,7 @@ export default function TeamManagement() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [orgRole, setOrgRole] = useState<'MANAGER' | 'PROTOCOL'>('MANAGER');
+  const [verificationMethod, setVerificationMethod] = useState<'EMAIL' | 'WHATSAPP'>('EMAIL');
 
   const isOwner = Boolean(tenant?.managerId && user?.id === tenant.managerId);
 
@@ -67,14 +68,20 @@ export default function TeamManagement() {
     setError('');
     setSuccess('');
     setSubmitting(true);
+    if (verificationMethod === 'WHATSAPP' && !phone) {
+      setError('Le téléphone est obligatoire pour envoyer le code OTP par WhatsApp.');
+      setSubmitting(false);
+      return;
+    }
     try {
-      await api.post('/team', { name, email, password, phone: phone || undefined, orgRole });
-      setSuccess('Utilisateur créé avec succès.');
+      const data = await api.post('/team', { name, email, password, phone: phone || undefined, orgRole, verificationMethod });
+      setSuccess(data.message || 'Utilisateur créé. Un code OTP a été envoyé pour valider le compte.');
       setName('');
       setEmail('');
       setPhone('');
       setPassword('');
       setOrgRole('MANAGER');
+      setVerificationMethod('EMAIL');
       setShowForm(false);
       await loadTeam();
     } catch (err: any) {
@@ -151,8 +158,19 @@ export default function TeamManagement() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <input type="text" required placeholder="Nom complet" value={name} onChange={(e) => setName(e.target.value)} className="px-4 py-2.5 bg-white dark:bg-slate-900 border rounded-xl text-sm" />
             <input type="email" required placeholder="E-mail" value={email} onChange={(e) => setEmail(e.target.value)} className="px-4 py-2.5 bg-white dark:bg-slate-900 border rounded-xl text-sm" />
-            <input type="tel" placeholder="Téléphone (optionnel)" value={phone} onChange={(e) => setPhone(e.target.value)} className="px-4 py-2.5 bg-white dark:bg-slate-900 border rounded-xl text-sm" />
+            <input type="tel" placeholder="Téléphone WhatsApp (+243...)" value={phone} onChange={(e) => setPhone(e.target.value)} className="px-4 py-2.5 bg-white dark:bg-slate-900 border rounded-xl text-sm" />
             <input type="password" required minLength={6} placeholder="Mot de passe (min. 6 caractères)" value={password} onChange={(e) => setPassword(e.target.value)} className="px-4 py-2.5 bg-white dark:bg-slate-900 border rounded-xl text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Validation du compte (OTP)</label>
+            <div className="grid grid-cols-2 gap-3">
+              <button type="button" onClick={() => setVerificationMethod('EMAIL')} className={`py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 ${verificationMethod === 'EMAIL' ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'border-slate-200 text-slate-600'}`}>
+                <Mail className="w-4 h-4" /> OTP par e-mail
+              </button>
+              <button type="button" onClick={() => setVerificationMethod('WHATSAPP')} className={`py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 ${verificationMethod === 'WHATSAPP' ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'border-slate-200 text-slate-600'}`}>
+                <MessageSquare className="w-4 h-4" /> OTP WhatsApp
+              </button>
+            </div>
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Rôle dans l&apos;organisation</label>
@@ -193,10 +211,17 @@ export default function TeamManagement() {
                       <Crown className="w-3 h-3" /> Propriétaire
                     </span>
                   ) : (
-                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${member.orgRoleLabel === 'PROTOCOL' ? 'bg-violet-50 text-violet-700 border-violet-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200'}`}>
-                      {member.orgRoleLabel === 'PROTOCOL' ? <Briefcase className="w-3 h-3" /> : <Shield className="w-3 h-3" />}
-                      {orgRoleLabels[member.orgRoleLabel] || member.orgRoleLabel}
-                    </span>
+                    <>
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${member.orgRoleLabel === 'PROTOCOL' ? 'bg-violet-50 text-violet-700 border-violet-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200'}`}>
+                        {member.orgRoleLabel === 'PROTOCOL' ? <Briefcase className="w-3 h-3" /> : <Shield className="w-3 h-3" />}
+                        {orgRoleLabels[member.orgRoleLabel] || member.orgRoleLabel}
+                      </span>
+                      {!member.isEmailVerified && (
+                        <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                          En attente OTP
+                        </span>
+                      )}
+                    </>
                   )}
                 </div>
                 <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-slate-500">

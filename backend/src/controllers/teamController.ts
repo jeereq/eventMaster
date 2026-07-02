@@ -2,8 +2,9 @@ import { Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../db';
 import { AuthenticatedRequest } from '../middleware/auth';
-import { isTenantManager } from '../utils/tenantAccess';
 import { isValidOrgRole, resolveOrgAccess } from '../services/permissionsService';
+import { setupUserOtpVerification } from './authController';
+import { VerificationMethod } from '../services/otpService';
 
 const userSelect = {
   id: true,
@@ -73,10 +74,15 @@ export async function createTeamMember(req: AuthenticatedRequest, res: Response)
       return res.status(403).json({ error: 'Seuls le propriétaire et les managers peuvent créer des utilisateurs.' });
     }
 
-    const { name, email, password, phone, orgRole = 'MANAGER' } = req.body;
+    const { name, email, password, phone, orgRole = 'MANAGER', verificationMethod = 'EMAIL' } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Le nom, l\'e-mail et le mot de passe sont requis.' });
+    }
+
+    const method = (verificationMethod === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL') as VerificationMethod;
+    if (method === 'WHATSAPP' && !phone) {
+      return res.status(400).json({ error: 'Le téléphone est obligatoire pour la validation par WhatsApp.' });
     }
 
     if (!isValidOrgRole(orgRole)) {
@@ -103,13 +109,25 @@ export async function createTeamMember(req: AuthenticatedRequest, res: Response)
         role: 'USER',
         orgRole,
         tenantId,
-        isEmailVerified: true,
+        isEmailVerified: false,
+        verificationMethod: method,
       },
       select: userSelect,
     });
 
+    await setupUserOtpVerification({
+      userId: newUser.id,
+      name,
+      email,
+      phone,
+      method,
+    });
+
     return res.status(201).json({
-      message: 'Utilisateur créé avec succès. Il peut se connecter immédiatement avec les identifiants définis.',
+      message:
+        method === 'WHATSAPP'
+          ? 'Utilisateur créé. Un code OTP a été envoyé sur WhatsApp pour valider le compte.'
+          : 'Utilisateur créé. Un code OTP a été envoyé par e-mail pour valider le compte.',
       member: { ...newUser, isOwner: false, orgRoleLabel: orgRole },
     });
   } catch (error: any) {

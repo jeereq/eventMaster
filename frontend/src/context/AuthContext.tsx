@@ -21,13 +21,22 @@ interface Tenant {
   managerId?: string | null;
 }
 
+interface RegisterResult {
+  message: string;
+  requiresVerification?: boolean;
+  email?: string;
+  verificationMethod?: 'EMAIL' | 'WHATSAPP';
+}
+
 interface AuthContextType {
   user: User | null;
   tenant: Tenant | null;
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string, tenantName: string, phone?: string, verificationMethod?: 'EMAIL' | 'WHATSAPP', acceptTerms?: boolean, acceptPrivacy?: boolean) => Promise<{ message: string }>;
+  register: (email: string, password: string, name: string, tenantName: string, phone?: string, verificationMethod?: 'EMAIL' | 'WHATSAPP', acceptTerms?: boolean, acceptPrivacy?: boolean) => Promise<RegisterResult>;
+  verifyOtp: (email: string, otp: string) => Promise<void>;
+  resendOtp: (email: string, verificationMethod?: 'EMAIL' | 'WHATSAPP') => Promise<string>;
   logout: () => void;
   refreshBilling: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -76,7 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     try {
       const data = await api.post('/auth/login', { email, password });
-      
+
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       if (data.tenant) {
@@ -89,10 +98,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(data.user);
       setTenant(data.tenant);
       setLoading(false);
-      
+
       router.push('/dashboard');
-    } catch (error) {
+    } catch (error: any) {
       setLoading(false);
+      if (error?.data?.notVerified && error?.data?.email) {
+        router.push(`/verify-otp?email=${encodeURIComponent(error.data.email as string)}&method=${error.data.verificationMethod || 'EMAIL'}`);
+        return;
+      }
       throw error;
     }
   };
@@ -102,11 +115,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await api.post('/auth/register', { email, password, name, tenantName, phone, verificationMethod, acceptTerms, acceptPrivacy });
       setLoading(false);
-      return { message: data.message || 'Inscription réussie ! Veuillez vérifier vos e-mails pour confirmer votre compte.' };
+      return {
+        message: data.message || 'Inscription réussie ! Saisissez le code OTP reçu.',
+        requiresVerification: data.requiresVerification,
+        email: data.email,
+        verificationMethod: data.verificationMethod,
+      };
     } catch (error) {
       setLoading(false);
       throw error;
     }
+  };
+
+  const verifyOtp = async (email: string, otp: string) => {
+    setLoading(true);
+    try {
+      const data = await api.post('/auth/verify-otp', { email, otp });
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      if (data.tenant) {
+        localStorage.setItem('tenant', JSON.stringify(data.tenant));
+      } else {
+        localStorage.removeItem('tenant');
+      }
+      setToken(data.token);
+      setUser(data.user);
+      setTenant(data.tenant);
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      throw error;
+    }
+  };
+
+  const resendOtp = async (email: string, verificationMethod?: 'EMAIL' | 'WHATSAPP') => {
+    const data = await api.post('/auth/resend-otp', { email, verificationMethod });
+    return data.message as string;
   };
 
   const updateUserAndTenant = (updatedUser: User, updatedTenant: Tenant | null) => {
@@ -165,7 +209,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, tenant, token, loading, login, register, logout, refreshBilling, refreshProfile, updateUserAndTenant }}>
+    <AuthContext.Provider value={{ user, tenant, token, loading, login, register, verifyOtp, resendOtp, logout, refreshBilling, refreshProfile, updateUserAndTenant }}>
       {children}
     </AuthContext.Provider>
   );
