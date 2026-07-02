@@ -1,14 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
 import { 
   Mail, Phone, MapPin, Send, MessageSquare, 
-  CheckCircle2, AlertCircle, Loader2, ArrowLeft, PartyPopper, Sparkles
+  CheckCircle2, AlertCircle, Loader2, ArrowLeft, PartyPopper, Sparkles, ArrowRight
 } from 'lucide-react';
 
 export default function ContactPage() {
+  const { user, tenant, logout } = useAuth();
+  const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('');
@@ -18,6 +21,22 @@ export default function ContactPage() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+
+  useEffect(() => {
+    async function checkServer() {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}/health`);
+        if (response.ok) {
+          setServerStatus('online');
+        } else {
+          setServerStatus('offline');
+        }
+      } catch (err) {
+        setServerStatus('offline');
+      }
+    }
+    checkServer();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,23 +69,60 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans antialiased text-slate-900">
       {/* Header */}
-      <header className="border-b border-slate-200/80 bg-white/80 backdrop-blur-md sticky top-0 z-50">
+      <header className="border-b border-slate-200/80 bg-white/80 backdrop-blur-md sticky top-0 z-50 transition-all">
         <div className="w-10/12 max-w-7xl mx-auto h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition">
-            <div className="bg-indigo-600 p-2 rounded-lg text-white">
-              <PartyPopper className="w-5 h-5" />
+          <div className="flex items-center gap-3">
+            <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition">
+              <div className="bg-indigo-600 p-2 rounded-lg text-white">
+                <PartyPopper className="w-5 h-5" />
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+                EventMaster
+              </span>
+            </Link>
+            
+            {/* Indicateur de connexion API en temps réel */}
+            <div className="hidden sm:flex items-center gap-1.5 ml-4 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-[10px] font-bold text-slate-500">
+              <span className={`w-2 h-2 rounded-full ${
+                serverStatus === 'online' ? 'bg-emerald-500 animate-pulse' : 
+                serverStatus === 'offline' ? 'bg-rose-500' : 'bg-amber-500 animate-pulse'
+              }`} />
+              <span>
+                {serverStatus === 'online' ? 'API Connectée' : 
+                 serverStatus === 'offline' ? 'API Déconnectée' : 'Vérification API...'}
+              </span>
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-              EventMaster
-            </span>
-          </Link>
-          <Link 
-            href="/" 
-            className="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition flex items-center gap-1.5"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Retour à l'accueil
-          </Link>
+          </div>
+          <nav className="flex items-center gap-4">
+            <Link href="/contact" className="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition">
+              Contact
+            </Link>
+            {user ? (
+              <>
+                <span className="text-xs text-slate-500 font-semibold hidden md:inline">
+                  Connecté en tant que <span className="font-bold text-indigo-600">{user.name}</span> {tenant ? `(${tenant.name})` : ''}
+                </span>
+                <Link href="/dashboard" className="text-sm font-semibold bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-100">
+                  Tableau de Bord
+                </Link>
+                <button 
+                  onClick={logout}
+                  className="text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-xl transition"
+                >
+                  Déconnexion
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="text-sm font-semibold text-slate-600 hover:text-indigo-600 transition">
+                  Connexion
+                </Link>
+                <Link href="/register" className="text-sm font-semibold bg-indigo-600 text-white px-4.5 py-2 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-100">
+                  Essai Gratuit
+                </Link>
+              </>
+            )}
+          </nav>
         </div>
       </header>
 
@@ -93,7 +149,7 @@ export default function ContactPage() {
           <div className="grid md:grid-cols-5 gap-8 items-start">
             {/* Contact Info (2 columns) */}
             <div className="md:col-span-2 space-y-6">
-              <div className="bg-slate-900 text-white rounded-3xl p-8 shadow-xl space-y-8 relative overflow-hidden">
+              <div className="bg-slate-950 text-white rounded-3xl p-8 shadow-xl space-y-8 relative overflow-hidden border border-slate-900">
                 <div className="absolute top-[-20%] right-[-20%] w-48 h-48 rounded-full bg-indigo-500/20 blur-[60px]" />
                 
                 <div className="space-y-2">
@@ -105,19 +161,19 @@ export default function ContactPage() {
 
                 <div className="space-y-6">
                   <div className="flex items-start gap-4">
-                    <div className="bg-slate-800 p-3 rounded-xl text-indigo-400 border border-slate-700/50">
+                    <div className="bg-slate-900 p-3 rounded-xl text-indigo-400 border border-slate-800/50">
                       <Mail className="w-5 h-5" />
                     </div>
                     <div>
                       <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Email</span>
-                      <a href="mailto:contact@eventmaster.cd" className="text-sm font-semibold hover:text-indigo-300 transition">
-                        contact@eventmaster.cd
+                      <a href="mailto:mingandajeereq@gmail.com" className="text-sm font-semibold hover:text-indigo-300 transition">
+                        mingandajeereq@gmail.com
                       </a>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-4">
-                    <div className="bg-slate-800 p-3 rounded-xl text-indigo-400 border border-slate-700/50">
+                    <div className="bg-slate-900 p-3 rounded-xl text-indigo-400 border border-slate-800/50">
                       <Phone className="w-5 h-5" />
                     </div>
                     <div>
@@ -129,7 +185,7 @@ export default function ContactPage() {
                   </div>
 
                   <div className="flex items-start gap-4">
-                    <div className="bg-slate-800 p-3 rounded-xl text-indigo-400 border border-slate-700/50">
+                    <div className="bg-slate-900 p-3 rounded-xl text-indigo-400 border border-slate-800/50">
                       <MapPin className="w-5 h-5" />
                     </div>
                     <div>
@@ -142,7 +198,7 @@ export default function ContactPage() {
                   </div>
                 </div>
 
-                <div className="border-t border-slate-800 pt-6 space-y-3">
+                <div className="border-t border-slate-900 pt-6 space-y-3">
                   <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pourquoi nous contacter ?</h4>
                   <ul className="space-y-2 text-xs text-slate-300">
                     <li className="flex items-center gap-2">
@@ -275,13 +331,63 @@ export default function ContactPage() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-slate-900 text-slate-400 py-8 border-t border-slate-800">
-        <div className="w-10/12 max-w-7xl mx-auto text-center sm:flex sm:justify-between sm:items-center">
-          <div className="flex items-center justify-center gap-2 mb-4 sm:mb-0">
-            <PartyPopper className="w-5 h-5 text-indigo-500" />
-            <span className="text-white font-bold">EventMaster</span>
+      <footer className="bg-slate-950 text-slate-400 py-16 border-t border-slate-900 mt-auto">
+        <div className="w-10/12 max-w-7xl mx-auto space-y-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            {/* Column 1: Brand */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-md shadow-indigo-500/10">
+                  <PartyPopper className="w-5 h-5" />
+                </div>
+                <span className="text-white font-black text-lg">EventMaster</span>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                La plateforme SaaS multi-tenant de référence pour la planification d'événements d'exception, la gestion d'invités RSVP et la conception de plans de table interactifs en 2D.
+              </p>
+            </div>
+
+            {/* Column 2: Features */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Fonctionnalités</h4>
+              <ul className="space-y-2 text-xs">
+                <li><span className="hover:text-white transition cursor-default">Plan de table interactif 2D</span></li>
+                <li><span className="hover:text-white transition cursor-default">Portail RSVP personnalisé</span></li>
+                <li><span className="hover:text-white transition cursor-default">Badge QR Code d'émargement</span></li>
+                <li><span className="hover:text-white transition cursor-default">Import / Export Excel & CSV</span></li>
+                <li><span className="hover:text-white transition cursor-default">Fil d'actualité & Livre d'or</span></li>
+              </ul>
+            </div>
+
+            {/* Column 3: Resources */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Ressources</h4>
+              <ul className="space-y-2 text-xs">
+                <li><Link href="/contact" className="hover:text-white transition">Contact & Support</Link></li>
+                <li><Link href="/login" className="hover:text-white transition">Connexion Espace Organisateur</Link></li>
+                <li><Link href="/register" className="hover:text-white transition">Créer une organisation</Link></li>
+                <li><span className="hover:text-white transition cursor-default">Sécurité & RGPD</span></li>
+              </ul>
+            </div>
+
+            {/* Column 4: Contact info */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Contact & Support</h4>
+              <ul className="space-y-2 text-xs text-slate-500">
+                <li>Email: <a href="mailto:mingandajeereq@gmail.com" className="text-slate-400 hover:text-white transition font-medium">mingandajeereq@gmail.com</a></li>
+                <li>Téléphone: <span className="text-slate-400">+243 810 000 000</span></li>
+                <li>Adresse: <span className="text-slate-400">Boulevard du 30 Juin, Gombe, Kinshasa, RDC</span></li>
+              </ul>
+            </div>
           </div>
-          <p className="text-xs">© 2026 EventMaster SaaS. Tous droits réservés.</p>
+
+          <div className="border-t border-slate-900 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-600">
+            <p>© 2026 EventMaster SaaS. Tous droits réservés.</p>
+            <p className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+              Isolation stricte des données garantie par organisation (Multi-tenant)
+            </p>
+          </div>
         </div>
       </footer>
     </div>

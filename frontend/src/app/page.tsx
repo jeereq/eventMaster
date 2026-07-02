@@ -39,6 +39,7 @@ export default function Home() {
   const [modalTemplate, setModalTemplate] = useState<any | null>(null);
   const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [dbTemplates, setDbTemplates] = useState<any[]>([]);
+  const [dbPlans, setDbPlans] = useState<any>(null);
   const [loadingTemplates, setLoadingTemplates] = useState(true);
 
   // Static fallback templates in case database is empty or offline
@@ -112,8 +113,16 @@ export default function Home() {
         if (response.ok) {
           setServerStatus('online');
           
-          // Fetch templates configured for landing page
-          const templatesData = await api.get('/public/templates');
+          // Fetch templates configured for landing page and plans
+          const [templatesData, plansData] = await Promise.all([
+            api.get('/public/templates'),
+            api.get('/public/plans').catch(() => null)
+          ]);
+
+          if (plansData) {
+            setDbPlans(plansData);
+          }
+
           if (Array.isArray(templatesData) && templatesData.length > 0) {
             // Map DB templates to MockTemplate structure
             const mapped = templatesData.map((t: any) => {
@@ -518,10 +527,10 @@ export default function Home() {
             <div className="border border-slate-200 rounded-3xl p-6 bg-white flex flex-col justify-between shadow-sm hover:shadow-md transition">
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">Plan Standard</h3>
+                  <h3 className="text-lg font-bold text-slate-900">{dbPlans?.STANDARD?.name || 'Plan Standard'}</h3>
                   <p className="text-xs text-slate-500 mt-1">Idéal pour les événements de taille moyenne.</p>
                   <div className="flex items-baseline gap-1 mt-4">
-                    <span className="text-3xl font-extrabold text-slate-900">40.000 FC</span>
+                    <span className="text-3xl font-extrabold text-slate-900">{dbPlans?.STANDARD?.price || '40.000 FC'}</span>
                     <span className="text-slate-500 text-sm">/mois</span>
                   </div>
                 </div>
@@ -529,18 +538,19 @@ export default function Home() {
                 <ul className="space-y-3 text-xs text-slate-600 border-t border-slate-100 pt-4">
                   <li className="flex items-center gap-2.5">
                     <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>Jusqu'à 8 événements actifs</span>
+                    <span>Jusqu'à {dbPlans?.STANDARD?.maxEvents ?? 8} événements actifs</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>Maximum 150 invités</span>
+                    <span>Maximum {dbPlans?.STANDARD?.maxGuests ?? 150} invités</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>5 modèles d'invitations</span>
+                    <span>{dbPlans?.STANDARD?.maxTemplates ?? 5} modèles d'invitations</span>
                   </li>
-                  <li className="flex items-center gap-2.5 text-slate-400 line-through">
-                    <span>Modèles d'invitations customisés</span>
+                  <li className="flex items-center gap-2.5">
+                    <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                    <span>{dbPlans?.STANDARD?.customTemplates ? "Modèles d'invitations personnalisés" : "Modèles d'invitations simples"}</span>
                   </li>
                 </ul>
               </div>
@@ -557,10 +567,10 @@ export default function Home() {
               </div>
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">Plan Premium</h3>
+                  <h3 className="text-lg font-bold text-slate-900">{dbPlans?.PREMIUM?.name || 'Plan Premium'}</h3>
                   <p className="text-xs text-slate-500 mt-1">Conçu pour les organisateurs réguliers d'événements.</p>
                   <div className="flex items-baseline gap-1 mt-4">
-                    <span className="text-3xl font-extrabold text-indigo-600">80.000 FC</span>
+                    <span className="text-3xl font-extrabold text-indigo-600">{dbPlans?.PREMIUM?.price || '80.000 FC'}</span>
                     <span className="text-slate-500 text-sm">/mois</span>
                   </div>
                 </div>
@@ -568,19 +578,19 @@ export default function Home() {
                 <ul className="space-y-3 text-xs text-slate-600 border-t border-slate-100 pt-4">
                   <li className="flex items-center gap-2.5">
                     <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>Jusqu'à 20 événements actifs</span>
+                    <span>Jusqu'à {dbPlans?.PREMIUM?.maxEvents ?? 20} événements actifs</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>Maximum 500 invités</span>
+                    <span>Maximum {dbPlans?.PREMIUM?.maxGuests ?? 500} invités</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>10 modèles d'invitations</span>
+                    <span>{dbPlans?.PREMIUM?.maxTemplates ?? 10} modèles d'invitations</span>
                   </li>
                   <li className="flex items-center gap-2.5 font-bold text-slate-900">
                     <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>Modèles customisés (JSON Editor)</span>
+                    <span>{(dbPlans?.PREMIUM?.customTemplates ?? true) ? "Modèles d'Invitation Customisés" : "Modèles d'invitations simples"}</span>
                   </li>
                 </ul>
               </div>
@@ -594,10 +604,10 @@ export default function Home() {
             <div className="border border-slate-200 rounded-3xl p-6 bg-white flex flex-col justify-between shadow-sm hover:shadow-md transition">
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">Plan Enterprise</h3>
+                  <h3 className="text-lg font-bold text-slate-900">{dbPlans?.ENTERPRISE?.name || 'Plan Enterprise'}</h3>
                   <p className="text-xs text-slate-500 mt-1">Pour les grandes agences événementielles ou besoins sur-mesure.</p>
                   <div className="flex items-baseline gap-1 mt-4">
-                    <span className="text-3xl font-extrabold text-slate-900">275.000 FC</span>
+                    <span className="text-3xl font-extrabold text-slate-900">{dbPlans?.ENTERPRISE?.price || '275.000 FC'}</span>
                     <span className="text-slate-500 text-sm">/mois</span>
                   </div>
                 </div>
@@ -605,19 +615,19 @@ export default function Home() {
                 <ul className="space-y-3 text-xs text-slate-600 border-t border-slate-100 pt-4">
                   <li className="flex items-center gap-2.5">
                     <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>Nombre d'événements illimités</span>
+                    <span>{(dbPlans?.ENTERPRISE?.maxEvents ?? 9999) >= 9999 ? 'Événements Illimités' : `${dbPlans?.ENTERPRISE?.maxEvents} événements actifs`}</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>Nombre d'invités illimités</span>
+                    <span>{(dbPlans?.ENTERPRISE?.maxGuests ?? 99999) >= 9999 ? 'Invités Illimités' : `${dbPlans?.ENTERPRISE?.maxGuests} invités maximum`}</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>Modèles illimités</span>
+                    <span>{(dbPlans?.ENTERPRISE?.maxTemplates ?? 9999) >= 9999 ? 'Modèles Illimités' : `${dbPlans?.ENTERPRISE?.maxTemplates} modèles d'invitations`}</span>
                   </li>
                   <li className="flex items-center gap-2.5">
                     <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                    <span>Rapports avancés et CA</span>
+                    <span className="font-semibold text-slate-900">Support Dédié & SLA</span>
                   </li>
                 </ul>
               </div>
@@ -630,21 +640,102 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Section CTA (Call to Action) */}
+      <section className="py-20 bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-950 text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(#4f46e5_1px,transparent_1px)] [background-size:24px_24px] opacity-20" />
+        <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] rounded-full bg-indigo-500/20 blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-[-20%] right-[-20%] w-[60%] h-[60%] rounded-full bg-violet-500/20 blur-[120px] pointer-events-none" />
+
+        <div className="w-10/12 max-w-5xl mx-auto text-center space-y-8 relative z-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-bold">
+            <Sparkles className="w-4 h-4" />
+            <span>Prêt à commencer ?</span>
+          </div>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-none max-w-3xl mx-auto">
+            Donnez à vos événements l'élégance qu'ils méritent
+          </h2>
+          <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto leading-relaxed">
+            Rejoignez des milliers d'organisateurs d'événements privés et professionnels qui font confiance à EventMaster pour simplifier leurs invitations, leurs plans de table et leur suivi RSVP.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+            {user ? (
+              <Link href="/dashboard" className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition group text-sm">
+                Accéder à mon Tableau de Bord
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
+              </Link>
+            ) : (
+              <>
+                <Link href="/register" className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition group text-sm">
+                  Créer mon organisation gratuitement
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
+                </Link>
+                <Link href="/contact" className="inline-flex items-center justify-center px-6 py-3 border border-slate-700 hover:border-slate-500 text-slate-200 hover:text-white font-semibold rounded-xl bg-slate-900/50 hover:bg-slate-900 transition text-sm">
+                  Parler à un conseiller
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
-      <footer className="bg-slate-900 text-slate-400 py-12 border-t border-slate-800 mt-auto">
-        <div className="w-10/12 max-w-7xl mx-auto text-center sm:flex sm:justify-between sm:items-center">
-          <div className="flex items-center justify-center gap-2 mb-4 sm:mb-0">
-            <PartyPopper className="w-5 h-5 text-indigo-500" />
-            <span className="text-white font-bold">EventMaster</span>
+      <footer className="bg-slate-950 text-slate-400 py-16 border-t border-slate-900 mt-auto">
+        <div className="w-10/12 max-w-7xl mx-auto space-y-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            {/* Column 1: Brand */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-md shadow-indigo-500/10">
+                  <PartyPopper className="w-5 h-5" />
+                </div>
+                <span className="text-white font-black text-lg">EventMaster</span>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                La plateforme SaaS multi-tenant de référence pour la planification d'événements d'exception, la gestion d'invités RSVP et la conception de plans de table interactifs en 2D.
+              </p>
+            </div>
+
+            {/* Column 2: Features */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Fonctionnalités</h4>
+              <ul className="space-y-2 text-xs">
+                <li><span className="hover:text-white transition cursor-default">Plan de table interactif 2D</span></li>
+                <li><span className="hover:text-white transition cursor-default">Portail RSVP personnalisé</span></li>
+                <li><span className="hover:text-white transition cursor-default">Badge QR Code d'émargement</span></li>
+                <li><span className="hover:text-white transition cursor-default">Import / Export Excel & CSV</span></li>
+                <li><span className="hover:text-white transition cursor-default">Fil d'actualité & Livre d'or</span></li>
+              </ul>
+            </div>
+
+            {/* Column 3: Resources */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Ressources</h4>
+              <ul className="space-y-2 text-xs">
+                <li><Link href="/contact" className="hover:text-white transition">Contact & Support</Link></li>
+                <li><Link href="/login" className="hover:text-white transition">Connexion Espace Organisateur</Link></li>
+                <li><Link href="/register" className="hover:text-white transition">Créer une organisation</Link></li>
+                <li><span className="hover:text-white transition cursor-default">Sécurité & RGPD</span></li>
+              </ul>
+            </div>
+
+            {/* Column 4: Contact info */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Contact & Support</h4>
+              <ul className="space-y-2 text-xs text-slate-500">
+                <li>Email: <a href="mailto:mingandajeereq@gmail.com" className="text-slate-400 hover:text-white transition font-medium">mingandajeereq@gmail.com</a></li>
+                <li>Téléphone: <span className="text-slate-400">+243 810 000 000</span></li>
+                <li>Adresse: <span className="text-slate-400">Boulevard du 30 Juin, Gombe, Kinshasa, RDC</span></li>
+              </ul>
+            </div>
           </div>
-          <div className="flex gap-4 justify-center text-xs mb-4 sm:mb-0">
-            <Link href="/contact" className="hover:text-white transition">Contact</Link>
-            <span className="text-slate-700">|</span>
-            <Link href="/login" className="hover:text-white transition">Connexion</Link>
-            <span className="text-slate-700">|</span>
-            <Link href="/register" className="hover:text-white transition">Inscription</Link>
+
+          <div className="border-t border-slate-900 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-600">
+            <p>© 2026 EventMaster SaaS. Tous droits réservés.</p>
+            <p className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+              Isolation stricte des données garantie par organisation (Multi-tenant)
+            </p>
           </div>
-          <p className="text-xs">© 2026 EventMaster SaaS. Isolation stricte garantie. Tous droits réservés.</p>
         </div>
       </footer>
 
