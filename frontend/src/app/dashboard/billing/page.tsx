@@ -11,16 +11,16 @@ import { Alert } from '@/components/ui';
 import {
   LANDING_PLANS,
   FEATURE_COMPARISON,
+  PLAN_IDS,
+  ANNUAL_DISCOUNT_PERCENT,
+  getPlanDisplayPrice,
   type BillingCycle,
+  type PlanId,
 } from '@/config/landingPricing';
 
 interface BillingStatus {
-  plan: 'FREE' | 'STANDARD' | 'PREMIUM' | 'ENTERPRISE';
-  usage: {
-    events: number;
-    guests: number;
-    templates: number;
-  };
+  plan: PlanId;
+  usage: { events: number; guests: number; templates: number };
   limits: {
     maxEvents: number;
     maxGuests: number;
@@ -31,19 +31,23 @@ interface BillingStatus {
 
 interface SubscriptionRequest {
   id: string;
-  requestedPlan: 'FREE' | 'STANDARD' | 'PREMIUM' | 'ENTERPRISE';
+  requestedPlan: PlanId;
   durationDays: number;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   createdAt: string;
 }
 
-type PlanId = 'FREE' | 'STANDARD' | 'PREMIUM' | 'ENTERPRISE';
-
 function FeatureCell({ value }: { value: string | boolean }) {
   if (value === true) return <Check className="w-4 h-4 text-emerald-600 mx-auto" />;
-  if (value === false) return <Minus className="w-4 h-4 text-slate-300 dark:text-slate-600 mx-auto" />;
+  if (value === false) return <Minus className="w-4 h-4 text-slate-300 mx-auto" />;
   return <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{value}</span>;
 }
+
+const BILLING_TIERS: Array<{ label: string; ids: PlanId[] }> = [
+  { label: 'Essentials & Business', ids: ['FREE', 'STANDARD'] },
+  { label: 'Business Premium', ids: ['PREMIUM_1', 'PREMIUM_2'] },
+  { label: 'Business Enterprise', ids: ['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3'] },
+];
 
 export default function BillingPage() {
   const { tenant } = useAuth();
@@ -65,14 +69,9 @@ export default function BillingPage() {
         api.get('/subscriptions/my-requests').catch(() => []),
       ]);
       setBilling(billingData);
-      if (billingData.plans) {
-        setDynamicPlans(billingData.plans);
-      } else if (plansData) {
-        setDynamicPlans(plansData);
-      }
+      setDynamicPlans(billingData.plans || plansData);
       if (requestsData) setRequests(requestsData);
     } catch (err: any) {
-      console.error('Error loading billing status:', err);
       setError('Impossible de charger les informations de facturation.');
     } finally {
       setLoading(false);
@@ -89,41 +88,28 @@ export default function BillingPage() {
       return {
         ...plan,
         displayName: db?.name?.replace('Plan ', '') || plan.ms365Name,
-        price:
-          billingCycle === 'monthly'
-            ? db?.price && plan.id !== 'FREE'
-              ? db.price
-              : plan.monthlyPrice
-            : plan.annualPrice,
+        price: getPlanDisplayPrice(plan, billingCycle, db?.price),
         description: db?.description || plan.tagline,
-        limits: db
-          ? {
-              events: db.maxEvents,
-              guests: db.maxGuests,
-              templates: db.maxTemplates,
-              customTemplates: db.customTemplates,
-            }
-          : null,
       };
     });
   }, [dynamicPlans, billingCycle]);
 
   const handleUpgrade = async (plan: PlanId) => {
+    if (plan === 'FREE') return;
     setError('');
     setSuccessMsg('');
     setActionLoading(plan);
-
     try {
       await api.post('/subscriptions/request', {
         requestedPlan: plan,
         durationDays: billingCycle === 'annual' ? 365 : 30,
       });
       setSuccessMsg(
-        `Demande d'activation du forfait ${plan} (${billingCycle === 'annual' ? '12 mois' : '30 jours'}) soumise au Super Admin. Une facture vous sera envoyée par e-mail après validation.`,
+        `Demande ${plan} soumise (${billingCycle === 'annual' ? '12 mois' : '30 jours'}, −${ANNUAL_DISCOUNT_PERCENT} % si annuel). Facture SendGrid après validation.`,
       );
       await loadBillingStatus();
     } catch (err: any) {
-      setError(err.message || 'Une erreur est survenue lors du changement de plan.');
+      setError(err.message || 'Erreur lors de la demande.');
     } finally {
       setActionLoading(null);
     }
@@ -131,63 +117,51 @@ export default function BillingPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 max-w-7xl mx-auto">
         <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded-lg w-1/3 animate-pulse" />
         <div className="h-40 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
-        <div className="grid md:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-96 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
-          ))}
-        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-10 w-full max-w-7xl mx-auto">
-      {/* En-tête style Microsoft 365 */}
       <div className="text-center max-w-3xl mx-auto space-y-3">
-        <p className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
-          Facturation & abonnements
-        </p>
-        <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
-          Gérez le forfait de {tenant?.name || 'votre organisation'}
+        <p className="text-sm font-semibold text-indigo-600 uppercase tracking-widest">Facturation</p>
+        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+          Forfait de {tenant?.name || 'votre organisation'}
         </h1>
-        <p className="text-slate-600 dark:text-slate-400 text-base">
-          Tarification transparente par organisation. Les factures sont envoyées par SendGrid au propriétaire et aux managers après validation.
+        <p className="text-slate-600 dark:text-slate-400 text-sm">
+          Business Premium 1 & 2 · Business Enterprise 1 à 3 · réduction annuelle {ANNUAL_DISCOUNT_PERCENT} %
         </p>
       </div>
 
       {error && <Alert variant="error">{error}</Alert>}
       {successMsg && <Alert variant="success">{successMsg}</Alert>}
 
-      {/* Plan actuel + quotas */}
       {billing && (
-        <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 md:p-8">
+        <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 rounded-2xl border p-6 md:p-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div className="space-y-2">
-              <div className="text-xs text-slate-500 font-bold uppercase tracking-wider">Abonnement actuel</div>
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className="text-2xl font-black text-slate-900 dark:text-white">
+            <div>
+              <div className="text-xs text-slate-500 font-bold uppercase">Plan actuel</div>
+              <div className="flex items-center gap-3 mt-1">
+                <span className="text-2xl font-black">
                   {plans.find((p) => p.id === billing.plan)?.displayName || billing.plan}
                 </span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 text-xs font-bold text-emerald-700">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Actif
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-xs font-bold text-emerald-700">
+                  <ShieldCheck className="w-3.5 h-3.5" /> Actif
                 </span>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-3 gap-3 text-sm">
               {[
-                { label: 'Événements', used: billing.usage.events, max: billing.limits.maxEvents },
-                { label: 'Invités', used: billing.usage.guests, max: billing.limits.maxGuests },
-                { label: 'Modèles', used: billing.usage.templates, max: billing.limits.maxTemplates },
+                { l: 'Événements', u: billing.usage.events, m: billing.limits.maxEvents },
+                { l: 'Invités', u: billing.usage.guests, m: billing.limits.maxGuests },
+                { l: 'Modèles', u: billing.usage.templates, m: billing.limits.maxTemplates },
               ].map((q) => (
-                <div key={q.label} className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <div className="text-slate-500 text-xs font-bold uppercase">{q.label}</div>
-                  <div className="font-extrabold text-slate-800 dark:text-slate-200 mt-1">
-                    {q.used} / {q.max >= 9999 ? '∞' : q.max}
-                  </div>
+                <div key={q.l} className="bg-white dark:bg-slate-900 p-3 rounded-xl border">
+                  <div className="text-xs text-slate-500 font-bold uppercase">{q.l}</div>
+                  <div className="font-extrabold mt-1">{q.u} / {q.m >= 9999 ? '∞' : q.m}</div>
                 </div>
               ))}
             </div>
@@ -195,145 +169,114 @@ export default function BillingPage() {
         </div>
       )}
 
-      {/* Toggle mensuel / annuel */}
       <div className="flex justify-center">
-        <div className="inline-flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-full">
-          <button
-            type="button"
-            onClick={() => setBillingCycle('monthly')}
-            className={`px-5 py-2 rounded-full text-sm font-semibold transition ${
-              billingCycle === 'monthly'
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400'
-            }`}
-          >
-            Mensuel
-          </button>
-          <button
-            type="button"
-            onClick={() => setBillingCycle('annual')}
-            className={`px-5 py-2 rounded-full text-sm font-semibold transition ${
-              billingCycle === 'annual'
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400'
-            }`}
-          >
-            Annuel
-            <span className="ml-1.5 text-xs text-emerald-600 font-bold">−17 %</span>
-          </button>
+        <div className="inline-flex p-1 bg-slate-100 dark:bg-slate-800 rounded-full">
+          {(['monthly', 'annual'] as BillingCycle[]).map((cycle) => (
+            <button
+              key={cycle}
+              type="button"
+              onClick={() => setBillingCycle(cycle)}
+              className={`px-5 py-2 rounded-full text-sm font-semibold transition ${
+                billingCycle === cycle ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'
+              }`}
+            >
+              {cycle === 'monthly' ? 'Mensuel' : `Annuel (−${ANNUAL_DISCOUNT_PERCENT} %)`}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Grille forfaits MS365 */}
-      <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-5 items-stretch">
-        {plans.map((plan) => {
-          const isCurrent = billing?.plan === plan.id;
-          const isHighlighted = plan.highlighted;
+      {BILLING_TIERS.map(({ label, ids }) => (
+        <div key={label}>
+          <h2 className="text-sm font-bold uppercase tracking-widest text-slate-500 mb-4 text-center">{label}</h2>
+          <div
+            className={`grid gap-4 ${
+              ids.length === 2 ? 'md:grid-cols-2 max-w-3xl mx-auto' : ids.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2 max-w-4xl mx-auto'
+            }`}
+          >
+            {plans
+              .filter((p) => ids.includes(p.id))
+              .map((plan) => {
+                const isCurrent = billing?.plan === plan.id;
+                return (
+                  <div
+                    key={plan.id}
+                    className={`relative flex flex-col rounded-2xl border bg-white dark:bg-slate-900 p-6 ${
+                      isCurrent ? 'ring-2 ring-indigo-600' : plan.highlighted ? 'border-indigo-500 shadow-lg' : 'border-slate-200 dark:border-slate-800'
+                    }`}
+                  >
+                    {plan.badge && (
+                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-3 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" /> {plan.badge}
+                      </span>
+                    )}
+                    <h3 className="text-lg font-bold">{plan.displayName}</h3>
+                    <p className="text-xs text-slate-500 mt-1">{plan.description}</p>
+                    <div className="mt-4 mb-4">
+                      <span className="text-3xl font-extrabold">{plan.price}</span>
+                      {plan.id !== 'FREE' && <span className="text-sm text-slate-500 ml-1">/ mois</span>}
+                    </div>
+                    <ul className="space-y-1.5 text-xs text-slate-600 flex-1 border-t pt-3">
+                      {plan.highlights.map((h) => (
+                        <li key={h} className="flex gap-2">
+                          <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> {h}
+                        </li>
+                      ))}
+                    </ul>
+                    <button
+                      disabled={isCurrent || plan.id === 'FREE' || actionLoading !== null}
+                      onClick={() => handleUpgrade(plan.id)}
+                      className={`w-full py-2.5 mt-5 font-semibold rounded-xl text-xs disabled:opacity-50 ${
+                        plan.highlighted ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950'
+                      }`}
+                    >
+                      {actionLoading === plan.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                      ) : isCurrent ? (
+                        'Forfait actuel'
+                      ) : plan.id === 'FREE' ? (
+                        'Gratuit'
+                      ) : (
+                        `Demander ${plan.displayName}`
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      ))}
 
-          return (
-            <div
-              key={plan.id}
-              className={`relative flex flex-col rounded-2xl border bg-white dark:bg-slate-900 p-6 ${
-                isCurrent
-                  ? 'ring-2 ring-indigo-600 border-indigo-200 dark:border-indigo-800'
-                  : isHighlighted
-                    ? 'border-2 border-indigo-500 shadow-lg shadow-indigo-500/10'
-                    : 'border-slate-200 dark:border-slate-800'
-              }`}
-            >
-              {plan.badge && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" />
-                  {plan.badge}
-                </span>
-              )}
-
-              <div className="flex-1 space-y-4">
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{plan.displayName}</h3>
-                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">{plan.description}</p>
-                </div>
-                <div>
-                  <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{plan.price}</span>
-                  <span className="text-slate-500 text-sm ml-1">
-                    {plan.id === 'FREE' ? '' : billingCycle === 'monthly' ? '/ mois' : '/ mois (annuel)'}
-                  </span>
-                  <p className="text-[11px] text-slate-400 mt-1">{plan.monthlyNote}</p>
-                </div>
-
-                {plan.limits && (
-                  <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-800 pt-4">
-                    <li className="flex items-center gap-2">
-                      <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                      {(plan.limits.events ?? 0) >= 9999 ? 'Événements illimités' : `${plan.limits.events} événements`}
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                      {(plan.limits.guests ?? 0) >= 99999 ? 'Invités illimités' : `${plan.limits.guests} invités`}
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                      {plan.limits.customTemplates ? 'Modèles personnalisés' : 'Modèles standards'}
-                    </li>
-                  </ul>
-                )}
-              </div>
-
-              <button
-                disabled={isCurrent || actionLoading !== null}
-                onClick={() => handleUpgrade(plan.id)}
-                className={`w-full py-2.5 mt-6 font-semibold rounded-xl text-xs transition disabled:opacity-50 disabled:cursor-not-allowed ${
-                  isHighlighted && !isCurrent
-                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md'
-                    : 'bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-950 text-white'
-                }`}
-              >
-                {actionLoading === plan.id ? (
-                  <Loader2 className="w-4 h-4 animate-spin mx-auto" />
-                ) : isCurrent ? (
-                  'Forfait actuel'
-                ) : (
-                  `Demander ${plan.displayName}`
-                )}
-              </button>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Tableau comparatif */}
-      <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden bg-white dark:bg-slate-900">
+      <div className="border rounded-2xl overflow-hidden bg-white dark:bg-slate-900">
         <button
           type="button"
           onClick={() => setShowComparison(!showComparison)}
-          className="w-full flex items-center justify-between px-6 py-4 text-left font-bold text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-800/50 transition"
+          className="w-full flex items-center justify-between px-6 py-4 font-bold text-sm"
         >
           <span className="flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-indigo-600" />
-            Comparer toutes les fonctionnalités
+            <CreditCard className="w-5 h-5 text-indigo-600" /> Comparer les fonctionnalités
           </span>
           {showComparison ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </button>
-
         {showComparison && (
-          <div className="overflow-x-auto border-t border-slate-200 dark:border-slate-800">
-            <table className="w-full text-sm min-w-[640px]">
+          <div className="overflow-x-auto border-t">
+            <table className="w-full text-sm min-w-[960px]">
               <thead>
-                <tr className="bg-slate-50 dark:bg-slate-950">
-                  <th className="text-left px-4 py-3 font-bold text-slate-600 w-1/3">Fonctionnalité</th>
-                  {(['FREE', 'STANDARD', 'PREMIUM', 'ENTERPRISE'] as const).map((id) => (
-                    <th key={id} className="px-3 py-3 font-bold text-slate-800 dark:text-slate-200 text-center text-xs">
-                      {plans.find((p) => p.id === id)?.displayName || id}
+                <tr className="bg-slate-50">
+                  <th className="text-left px-4 py-2 text-xs">Fonctionnalité</th>
+                  {PLAN_IDS.map((id) => (
+                    <th key={id} className="px-2 py-2 text-[10px] text-center">
+                      {LANDING_PLANS.find((p) => p.id === id)?.ms365Name}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {FEATURE_COMPARISON.map((row, idx) => (
-                  <tr key={idx} className="border-t border-slate-100 dark:border-slate-800">
-                    <td className="px-4 py-2.5 text-slate-600 dark:text-slate-400 text-xs">{row.label}</td>
-                    {(['FREE', 'STANDARD', 'PREMIUM', 'ENTERPRISE'] as const).map((id) => (
-                      <td key={id} className="px-3 py-2.5 text-center">
+                {FEATURE_COMPARISON.map((row) => (
+                  <tr key={row.label} className="border-t">
+                    <td className="px-4 py-2 text-xs">{row.label}</td>
+                    {PLAN_IDS.map((id) => (
+                      <td key={id} className="py-2 text-center">
                         <FeatureCell value={row.values[id]} />
                       </td>
                     ))}
@@ -345,59 +288,38 @@ export default function BillingPage() {
         )}
       </div>
 
-      {/* Historique demandes */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4">
-        <div>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Historique des demandes</h3>
-          <p className="text-xs text-slate-500 mt-1">
-            Après approbation, une facture SendGrid est envoyée au propriétaire et aux managers.
-          </p>
-        </div>
-
+      <div className="bg-white dark:bg-slate-900 border rounded-2xl p-6">
+        <h3 className="font-bold">Historique des demandes</h3>
         {requests.length === 0 ? (
-          <p className="text-center py-8 text-slate-400 italic text-xs">Aucune demande soumise.</p>
+          <p className="text-xs text-slate-400 py-6 text-center italic">Aucune demande.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase tracking-wider">
-                  <th className="py-3 px-4">Forfait</th>
-                  <th className="py-3 px-4">Durée</th>
-                  <th className="py-3 px-4">Date</th>
-                  <th className="py-3 px-4">Statut</th>
+          <table className="w-full text-xs mt-4">
+            <thead>
+              <tr className="text-slate-400 uppercase">
+                <th className="py-2 text-left">Forfait</th>
+                <th className="py-2 text-left">Durée</th>
+                <th className="py-2 text-left">Date</th>
+                <th className="py-2 text-left">Statut</th>
+              </tr>
+            </thead>
+            <tbody>
+              {requests.map((req) => (
+                <tr key={req.id} className="border-t">
+                  <td className="py-2 font-bold">{req.requestedPlan}</td>
+                  <td className="py-2">{req.durationDays} j</td>
+                  <td className="py-2">{new Date(req.createdAt).toLocaleDateString('fr-FR')}</td>
+                  <td className="py-2">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      req.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-700' :
+                      req.status === 'REJECTED' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'
+                    }`}>
+                      {req.status === 'APPROVED' ? 'Approuvée' : req.status === 'REJECTED' ? 'Refusée' : 'En attente'}
+                    </span>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {requests.map((req) => (
-                  <tr key={req.id}>
-                    <td className="py-3 px-4 font-bold">{req.requestedPlan}</td>
-                    <td className="py-3 px-4">{req.durationDays} jours</td>
-                    <td className="py-3 px-4">
-                      {new Date(req.createdAt).toLocaleDateString('fr-FR', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                          req.status === 'APPROVED'
-                            ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                            : req.status === 'REJECTED'
-                              ? 'bg-rose-50 border-rose-200 text-rose-700'
-                              : 'bg-amber-50 border-amber-200 text-amber-700'
-                        }`}
-                      >
-                        {req.status === 'APPROVED' ? <CheckCircle className="w-3 h-3" /> : req.status === 'REJECTED' ? <XCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                        {req.status === 'APPROVED' ? 'Approuvée' : req.status === 'REJECTED' ? 'Refusée' : 'En attente'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
     </div>

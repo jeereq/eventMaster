@@ -6,7 +6,11 @@ import { Check, Minus, ChevronDown, ChevronUp } from 'lucide-react';
 import {
   LANDING_PLANS,
   FEATURE_COMPARISON,
+  PLAN_IDS,
+  ANNUAL_DISCOUNT_PERCENT,
+  getPlanDisplayPrice,
   type BillingCycle,
+  type PlanId,
 } from '@/config/landingPricing';
 
 interface DbPlan {
@@ -43,9 +47,7 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
       return {
         ...plan,
         displayName: db?.name?.replace('Plan ', '') || plan.ms365Name,
-        price: billing === 'monthly'
-          ? (db?.price && plan.id !== 'FREE' ? db.price : plan.monthlyPrice)
-          : plan.annualPrice,
+        price: getPlanDisplayPrice(plan, billing, db?.price),
         description: db?.description || plan.tagline,
         limits: db
           ? {
@@ -59,26 +61,28 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
     });
   }, [dbPlans, billing]);
 
-  const planIds = ['FREE', 'STANDARD', 'PREMIUM', 'ENTERPRISE'] as const;
+  const tiers: Array<{ label: string; ids: PlanId[] }> = [
+    { label: 'Essentials & Business', ids: ['FREE', 'STANDARD'] },
+    { label: 'Business Premium', ids: ['PREMIUM_1', 'PREMIUM_2'] },
+    { label: 'Business Enterprise', ids: ['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3'] },
+  ];
 
   return (
     <section id="tarifs" className="py-24 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800">
       <div className="w-10/12 max-w-7xl mx-auto">
-        {/* En-tête style Microsoft 365 */}
         <div className="text-center max-w-3xl mx-auto mb-10 space-y-4">
           <p className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
             Forfaits & abonnements
           </p>
           <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
-            Choisissez le forfait EventMaster<br className="hidden sm:block" /> adapté à votre organisation
+            Business Premium & Enterprise — une offre pour chaque ambition
           </h2>
           <p className="text-slate-600 dark:text-slate-400 text-base leading-relaxed">
-            Tarification transparente par organisation, inspirée des abonnements Microsoft 365 :
-            commencez gratuitement, évoluez avec vos événements et débloquez le protocole QR et les salles 2D avancées.
+            De Essentials à Business Enterprise 3 : événements, salles 2D, protocole QR et réseau commercial.
+            Facturation annuelle avec <strong>{ANNUAL_DISCOUNT_PERCENT} %</strong> de réduction.
           </p>
         </div>
 
-        {/* Toggle Mensuel / Annuel — comme MS365 */}
         <div className="flex flex-col items-center gap-3 mb-12">
           <div className="inline-flex items-center p-1 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
             <button
@@ -103,97 +107,100 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
             >
               Payer annuellement
               <span className="text-[10px] font-bold uppercase bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full">
-                −17 %
+                −{ANNUAL_DISCOUNT_PERCENT} %
               </span>
             </button>
           </div>
           <p className="text-xs text-slate-500">
             {billing === 'annual'
-              ? 'Facturation annuelle — équivalent mensuel affiché. Contactez-nous pour Enterprise.'
-              : 'Renouvellement mensuel · Licence 30 jours activée par le Super Admin'}
+              ? `Équivalent mensuel avec ${ANNUAL_DISCOUNT_PERCENT} % de réduction · facturation annuelle`
+              : 'Renouvellement mensuel · Licence activée par le Super Admin'}
           </p>
         </div>
 
-        {/* Cartes forfaits — grille MS365 */}
-        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-5 items-stretch mb-8">
-          {plans.map((plan) => (
+        {tiers.map(({ label, ids }) => (
+          <div key={label} className="mb-12 last:mb-8">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500 mb-4 text-center">
+              {label}
+            </h3>
             <div
-              key={plan.id}
-              className={`relative flex flex-col rounded-lg border bg-white dark:bg-slate-900 transition-shadow ${
-                plan.highlighted
-                  ? 'border-indigo-600 shadow-lg shadow-indigo-500/10 ring-1 ring-indigo-600/20'
-                  : 'border-slate-200 dark:border-slate-800 hover:shadow-md'
+              className={`grid gap-4 items-stretch ${
+                ids.length === 2
+                  ? 'md:grid-cols-2 max-w-3xl mx-auto'
+                  : ids.length === 3
+                    ? 'md:grid-cols-3'
+                    : 'md:grid-cols-2 max-w-4xl mx-auto'
               }`}
             >
-              {plan.badge && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-sm whitespace-nowrap">
-                  {plan.badge}
-                </div>
-              )}
-
-              <div className="p-6 flex-1 flex flex-col">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">{plan.displayName}</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 min-h-[40px] leading-relaxed">{plan.description}</p>
-
-                <div className="mt-6 mb-6">
-                  <div className="flex items-baseline gap-1 flex-wrap">
-                    <span className={`text-3xl font-bold tracking-tight ${plan.highlighted ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-900 dark:text-white'}`}>
-                      {plan.price}
-                    </span>
-                    {plan.id !== 'FREE' && plan.id !== 'ENTERPRISE' && (
-                      <span className="text-sm text-slate-500">/mois</span>
+              {plans
+                .filter((p) => ids.includes(p.id))
+                .map((plan) => (
+                  <div
+                    key={plan.id}
+                    className={`relative flex flex-col rounded-lg border bg-white dark:bg-slate-900 transition-shadow ${
+                      plan.highlighted
+                        ? 'border-indigo-600 shadow-lg shadow-indigo-500/10 ring-1 ring-indigo-600/20'
+                        : 'border-slate-200 dark:border-slate-800 hover:shadow-md'
+                    }`}
+                  >
+                    {plan.badge && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-sm whitespace-nowrap">
+                        {plan.badge}
+                      </div>
                     )}
+
+                    <div className="p-6 flex-1 flex flex-col">
+                      <h3 className="text-lg font-bold text-slate-900 dark:text-white">{plan.displayName}</h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 min-h-[40px] leading-relaxed">
+                        {plan.description}
+                      </p>
+
+                      <div className="mt-6 mb-6">
+                        <div className="flex items-baseline gap-1 flex-wrap">
+                          <span
+                            className={`text-3xl font-bold tracking-tight ${
+                              plan.highlighted ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-900 dark:text-white'
+                            }`}
+                          >
+                            {plan.price}
+                          </span>
+                          {plan.id !== 'FREE' && <span className="text-sm text-slate-500">/mois</span>}
+                        </div>
+                        <p className="text-xs text-slate-400 mt-1">{plan.monthlyNote}</p>
+                      </div>
+
+                      <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-300 flex-1 border-t border-slate-100 dark:border-slate-800 pt-4">
+                        {plan.highlights.map((h) => (
+                          <li key={h} className="flex gap-2">
+                            <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                            {h}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="p-6 pt-0">
+                      <Link
+                        href={plan.ctaHref}
+                        className={`block w-full text-center py-2.5 rounded-md text-sm font-semibold transition ${
+                          plan.ctaVariant === 'outline'
+                            ? 'border border-slate-300 dark:border-slate-600 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
+                            : plan.ctaVariant === 'contact'
+                              ? 'border border-slate-800 dark:border-slate-600 text-slate-800 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
+                              : plan.highlighted
+                                ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                                : 'bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white text-white dark:text-slate-900'
+                        }`}
+                      >
+                        {plan.cta}
+                      </Link>
+                    </div>
                   </div>
-                  <p className="text-xs text-slate-400 mt-1">{plan.monthlyNote}</p>
-                </div>
-
-                <ul className="space-y-2.5 text-xs text-slate-600 dark:text-slate-300 flex-1 border-t border-slate-100 dark:border-slate-800 pt-4">
-                  {plan.limits && (
-                    <>
-                      <li className="flex gap-2"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{(plan.limits.events ?? 0) >= 9999 ? 'Événements illimités' : `${plan.limits.events} événements`}</li>
-                      <li className="flex gap-2"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{(plan.limits.guests ?? 0) >= 9999 ? 'Invités illimités' : `${plan.limits.guests} invités`}</li>
-                      <li className="flex gap-2"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{plan.limits.customTemplates ? 'Modèles custom' : `${plan.limits.templates} modèles`}</li>
-                    </>
-                  )}
-                  {plan.id === 'STANDARD' && (
-                    <li className="flex gap-2"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />Protocole QR & émargement</li>
-                  )}
-                  {plan.id === 'PREMIUM' && (
-                    <>
-                      <li className="flex gap-2"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />Salles 2D avancées + thèmes</li>
-                      <li className="flex gap-2"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />Rôles manager & protocole</li>
-                    </>
-                  )}
-                  {plan.id === 'ENTERPRISE' && (
-                    <>
-                      <li className="flex gap-2"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />Réseau commercial intégré</li>
-                      <li className="flex gap-2"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />Support dédié & SLA</li>
-                    </>
-                  )}
-                </ul>
-              </div>
-
-              <div className="p-6 pt-0">
-                <Link
-                  href={plan.ctaHref}
-                  className={`block w-full text-center py-2.5 rounded-md text-sm font-semibold transition ${
-                    plan.ctaVariant === 'outline'
-                      ? 'border border-slate-300 dark:border-slate-600 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
-                      : plan.ctaVariant === 'contact'
-                        ? 'border border-slate-800 dark:border-slate-600 text-slate-800 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
-                        : plan.highlighted
-                          ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                          : 'bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white text-white dark:text-slate-900'
-                  }`}
-                >
-                  {plan.cta}
-                </Link>
-              </div>
+                ))}
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
 
-        {/* Tableau comparatif — style MS365 "Compare plans" */}
         <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-slate-50/50 dark:bg-slate-900/50">
           <button
             type="button"
@@ -208,12 +215,14 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
 
           {showComparison && (
             <div className="overflow-x-auto border-t border-slate-200 dark:border-slate-800">
-              <table className="w-full text-left min-w-[640px]">
+              <table className="w-full text-left min-w-[960px]">
                 <thead>
                   <tr className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
-                    <th className="py-3 px-4 text-xs font-bold text-slate-500 uppercase w-[40%]">Fonctionnalité</th>
-                    {planIds.map((id) => (
-                      <th key={id} className="py-3 px-3 text-xs font-bold text-slate-900 dark:text-white text-center">
+                    <th className="py-3 px-4 text-xs font-bold text-slate-500 uppercase sticky left-0 bg-white dark:bg-slate-900 z-10">
+                      Fonctionnalité
+                    </th>
+                    {PLAN_IDS.map((id) => (
+                      <th key={id} className="py-3 px-2 text-[10px] font-bold text-slate-900 dark:text-white text-center min-w-[88px]">
                         {LANDING_PLANS.find((p) => p.id === id)?.ms365Name}
                       </th>
                     ))}
@@ -227,15 +236,17 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
                       <React.Fragment key={`${row.category}-${row.label}`}>
                         {showCategory && (
                           <tr className="bg-slate-100/80 dark:bg-slate-800/40">
-                            <td colSpan={5} className="py-2 px-4 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                            <td colSpan={PLAN_IDS.length + 1} className="py-2 px-4 text-[10px] font-bold uppercase tracking-wider text-slate-500">
                               {row.category}
                             </td>
                           </tr>
                         )}
                         <tr className="border-b border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-950/30">
-                          <td className="py-2.5 px-4 text-xs text-slate-700 dark:text-slate-300">{row.label}</td>
-                          {planIds.map((id) => (
-                            <td key={id} className="py-2.5 px-3 text-center">
+                          <td className="py-2.5 px-4 text-xs text-slate-700 dark:text-slate-300 sticky left-0 bg-white dark:bg-slate-950/30">
+                            {row.label}
+                          </td>
+                          {PLAN_IDS.map((id) => (
+                            <td key={id} className="py-2.5 px-2 text-center">
                               <FeatureCell value={row.values[id]} />
                             </td>
                           ))}
@@ -250,8 +261,8 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
         </div>
 
         <p className="text-center text-xs text-slate-400 mt-8 max-w-2xl mx-auto leading-relaxed">
-          Tous les forfaits incluent l&apos;isolation multi-tenant, le portail RSVP invité et les mises à jour de la plateforme.
-          Les prix affichés proviennent de la configuration admin et peuvent être ajustés. Enterprise : devis sur mesure.
+          Réduction annuelle de {ANNUAL_DISCOUNT_PERCENT} % sur l&apos;équivalent mensuel. Tous les forfaits incluent
+          l&apos;isolation multi-tenant et le portail RSVP invité.
         </p>
       </div>
     </section>

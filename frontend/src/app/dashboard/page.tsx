@@ -14,9 +14,26 @@ import {
 } from 'lucide-react';
 import GuestMessageTemplatesPanel from './GuestMessageTemplatesPanel';
 import { PageHeader, Alert, Button } from '@/components/ui';
+import { PLAN_IDS, type PlanId } from '@/config/landingPricing';
+
+function planBadgeClass(plan: string): string {
+  if (plan === 'FREE') return 'bg-slate-50 border-slate-200 text-slate-600';
+  if (plan === 'STANDARD') return 'bg-blue-50 border-blue-100 text-blue-700';
+  if (plan.startsWith('PREMIUM')) return 'bg-indigo-50 border-indigo-100 text-indigo-700';
+  if (plan.startsWith('ENTERPRISE')) return 'bg-amber-50 border-amber-100 text-amber-700';
+  return 'bg-slate-50 border-slate-200 text-slate-600';
+}
+
+function planBarClass(plan: string): string {
+  if (plan === 'FREE') return 'bg-slate-400';
+  if (plan === 'STANDARD') return 'bg-blue-500';
+  if (plan.startsWith('PREMIUM')) return 'bg-indigo-600';
+  if (plan.startsWith('ENTERPRISE')) return 'bg-amber-500';
+  return 'bg-slate-400';
+}
 
 interface BillingStatus {
-  plan: 'FREE' | 'STANDARD' | 'PREMIUM' | 'ENTERPRISE';
+  plan: PlanId;
   usage: {
     events: number;
     guests: number;
@@ -48,7 +65,7 @@ interface AdminStats {
   tenants: Array<{
     id: string;
     name: string;
-    plan: 'FREE' | 'STANDARD' | 'PREMIUM' | 'ENTERPRISE';
+    plan: PlanId;
     licenseActive: boolean;
     licenseExpiresAt: string | null;
     licenseKey: string | null;
@@ -219,7 +236,7 @@ function DashboardPageContent() {
   const [tenantModalMode, setTenantModalMode] = useState<'create' | 'edit'>('create');
   const [selectedTenant, setSelectedTenant] = useState<AdminStats['tenants'][0] | null>(null);
   const [modalTenantName, setTenantName] = useState('');
-  const [modalPlan, setModalPlan] = useState<'FREE' | 'STANDARD' | 'PREMIUM' | 'ENTERPRISE'>('FREE');
+  const [modalPlan, setModalPlan] = useState<PlanId>('FREE');
   const [modalLicenseActive, setModalLicenseActive] = useState(true);
   const [modalLicenseExpiresAt, setModalLicenseExpiresAt] = useState('');
   const [modalLicenseKey, setModalLicenseKey] = useState('');
@@ -1311,10 +1328,9 @@ function DashboardPageContent() {
                   className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
                 >
                   <option value="ALL">Tous les plans</option>
-                  <option value="FREE">FREE</option>
-                  <option value="STANDARD">STANDARD</option>
-                  <option value="PREMIUM">PREMIUM</option>
-                  <option value="ENTERPRISE">ENTERPRISE</option>
+                  {PLAN_IDS.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
                 </select>
               </div>
             )}
@@ -1402,12 +1418,7 @@ function DashboardPageContent() {
                             </div>
                           </td>
                           <td className="py-4">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-extrabold border ${
-                              t.plan === 'FREE' ? 'bg-slate-50 border-slate-200 text-slate-600' :
-                              t.plan === 'STANDARD' ? 'bg-blue-50 border-blue-100 text-blue-700' :
-                              t.plan === 'PREMIUM' ? 'bg-indigo-50 border-indigo-100 text-indigo-700' :
-                              'bg-amber-50 border-amber-100 text-amber-700'
-                            }`}>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-extrabold border ${planBadgeClass(t.plan)}`}>
                               {t.plan}
                             </span>
                           </td>
@@ -2270,11 +2281,7 @@ function DashboardPageContent() {
                                 </div>
                               </td>
                               <td className="py-4">
-                                <span className={`px-2 py-0.5 rounded text-xs font-extrabold border ${
-                                  req.requestedPlan === 'STANDARD' ? 'bg-blue-50 border-blue-100 text-blue-700' :
-                                  req.requestedPlan === 'PREMIUM' ? 'bg-indigo-50 border-indigo-100 text-indigo-700' :
-                                  'bg-amber-50 border-amber-100 text-amber-700'
-                                }`}>
+                                <span className={`px-2 py-0.5 rounded text-xs font-extrabold border ${planBadgeClass(req.requestedPlan)}`}>
                                   {req.requestedPlan}
                                 </span>
                               </td>
@@ -2340,7 +2347,7 @@ function DashboardPageContent() {
                     </div>
 
                     <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6">
-                      {['FREE', 'STANDARD', 'PREMIUM', 'ENTERPRISE'].map((planKey) => {
+                      {PLAN_IDS.map((planKey) => {
                         const plan = adminSettings.plans[planKey];
                         if (!plan) return null;
 
@@ -2576,7 +2583,7 @@ function DashboardPageContent() {
                     </h3>
                     
                     <div className="space-y-4">
-                      {['FREE', 'STANDARD', 'PREMIUM', 'ENTERPRISE'].map((plan) => {
+                      {PLAN_IDS.map((plan) => {
                         const count = adminData?.tenants.filter(t => t.plan === plan).length || 0;
                         const total = adminData?.tenants.length || 1;
                         const pct = Math.round((count / total) * 100);
@@ -2584,24 +2591,14 @@ function DashboardPageContent() {
                         return (
                           <div key={plan} className="space-y-1.5">
                             <div className="flex justify-between text-sm font-bold">
-                              <span className={`px-2 py-0.5 rounded text-xs font-extrabold border ${
-                                plan === 'FREE' ? 'bg-slate-50 border-slate-200 text-slate-600' :
-                                plan === 'STANDARD' ? 'bg-blue-50 border-blue-100 text-blue-700' :
-                                plan === 'PREMIUM' ? 'bg-indigo-50 border-indigo-100 text-indigo-700' :
-                                'bg-amber-50 border-amber-100 text-amber-700'
-                              }`}>
+                              <span className={`px-2 py-0.5 rounded text-xs font-extrabold border ${planBadgeClass(plan)}`}>
                                 {plan}
                               </span>
                               <span className="text-slate-600">{count} ({pct}%)</span>
                             </div>
                             <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
                               <div 
-                                className={`h-full rounded-full transition-all duration-500 ${
-                                  plan === 'FREE' ? 'bg-slate-400' :
-                                  plan === 'STANDARD' ? 'bg-blue-500' :
-                                  plan === 'PREMIUM' ? 'bg-indigo-600' :
-                                  'bg-amber-500'
-                                }`}
+                                className={`h-full rounded-full transition-all duration-500 ${planBarClass(plan)}`}
                                 style={{ width: `${pct}%` }}
                               ></div>
                             </div>
@@ -3065,10 +3062,9 @@ function DashboardPageContent() {
                     onChange={(e) => setModalPlan(e.target.value as any)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
                   >
-                    <option value="FREE">FREE</option>
-                    <option value="STANDARD">STANDARD</option>
-                    <option value="PREMIUM">PREMIUM</option>
-                    <option value="ENTERPRISE">ENTERPRISE</option>
+                    {PLAN_IDS.map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
                   </select>
                 </div>
 

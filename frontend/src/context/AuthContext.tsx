@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '../lib/api';
+import type { PlanId } from '@/config/landingPricing';
 
 export interface OrgAccess {
   level: 'owner' | 'manager' | 'protocol' | 'staff' | 'none';
@@ -30,7 +31,7 @@ interface User {
 interface Tenant {
   id: string;
   name: string;
-  plan: 'FREE' | 'STANDARD' | 'PREMIUM' | 'ENTERPRISE';
+  plan: PlanId;
   licenseActive?: boolean;
   licenseExpiresAt?: string | null;
   managerId?: string | null;

@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { PlanType } from '@prisma/client';
-import { getPlansConfiguration } from '../config/plansConfig';
+import { getPlansConfiguration, PAID_PLAN_KEYS } from '../config/plansConfig';
 import { recordCommercialCommission } from '../services/commercialService';
 import { createAndSendInvoice } from '../services/invoiceService';
 
@@ -16,7 +16,7 @@ export async function submitSubscriptionRequest(req: AuthenticatedRequest, res: 
 
     const { requestedPlan, durationDays, proofOfPayment } = req.body;
 
-    if (!requestedPlan || !['STANDARD', 'PREMIUM', 'ENTERPRISE'].includes(requestedPlan)) {
+    if (!requestedPlan || !PAID_PLAN_KEYS.includes(requestedPlan)) {
       return res.status(400).json({ error: 'Le forfait demandé est invalide.' });
     }
 

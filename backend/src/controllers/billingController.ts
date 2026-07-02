@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import Stripe from 'stripe';
-import { getPlanLimits, getPlansConfiguration } from '../config/plansConfig';
+import { getPlanLimits, getPlansConfiguration, PAID_PLAN_KEYS, PLAN_KEYS } from '../config/plansConfig';
 import { assertCanViewBilling } from '../services/permissionsService';
 import { recordCommercialCommission } from '../services/commercialService';
 import { createAndSendInvoice } from '../services/invoiceService';
@@ -91,7 +91,7 @@ export async function createCheckoutSession(req: AuthenticatedRequest, res: Resp
       return res.status(403).json({ error: 'Seul le propriétaire peut gérer la facturation.' });
     }
 
-    if (!planType || !['STANDARD', 'PREMIUM', 'ENTERPRISE'].includes(planType)) {
+    if (!planType || !PAID_PLAN_KEYS.includes(planType)) {
       return res.status(400).json({ error: 'Type de forfait invalide' });
     }
 
@@ -155,7 +155,7 @@ export async function createCheckoutSession(req: AuthenticatedRequest, res: Resp
     const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
     
     // Define Stripe prices (mock IDs or from config)
-    const priceId = planType === 'PREMIUM' ? 'price_premium_id' : 'price_enterprise_id';
+    const priceId = planType.startsWith('ENTERPRISE') ? 'price_enterprise_id' : 'price_premium_id';
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -208,11 +208,11 @@ export async function handleStripeWebhook(req: Request, res: Response) {
           const expiryDate = new Date();
           expiryDate.setDate(expiryDate.getDate() + 30); // 30 days of active license
 
-          // Check what item they subscribed to, or default to PREMIUM for simplicity
+          // Check what item they subscribed to, or default to PREMIUM_2 for simplicity
           await prisma.tenant.update({
             where: { id: tenantId },
             data: {
-              plan: 'PREMIUM',
+              plan: 'PREMIUM_2',
               stripeCustId: session.customer as string,
               licenseActive: true,
               licenseExpiresAt: expiryDate,
@@ -223,7 +223,7 @@ export async function handleStripeWebhook(req: Request, res: Response) {
           const periodStart = new Date();
           const invoice = await createAndSendInvoice({
             tenantId,
-            plan: 'PREMIUM',
+            plan: 'PREMIUM_2',
             type: 'PAYMENT',
             periodStart,
             periodEnd: expiryDate,
@@ -234,12 +234,12 @@ export async function handleStripeWebhook(req: Request, res: Response) {
 
           await recordCommercialCommission({
             tenantId,
-            plan: 'PREMIUM',
+            plan: 'PREMIUM_2',
             source: 'STRIPE_WEBHOOK',
             invoiceAmount: invoice?.amount,
             platformInvoiceId: invoice?.id,
           });
-          console.log(`[Stripe Webhook] Tenant ${tenantId} upgraded to PREMIUM and license extended`);
+          console.log(`[Stripe Webhook] Tenant ${tenantId} upgraded to PREMIUM_2 and license extended`);
         }
         break;
       }
@@ -287,7 +287,7 @@ export async function mockUpgrade(req: AuthenticatedRequest, res: Response) {
       return res.status(403).json({ error: 'Seul le propriétaire peut modifier le forfait.' });
     }
 
-    if (!plan || !['FREE', 'STANDARD', 'PREMIUM', 'ENTERPRISE'].includes(plan)) {
+    if (!plan || !PLAN_KEYS.includes(plan)) {
       return res.status(400).json({ error: 'Plan invalide' });
     }
 

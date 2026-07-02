@@ -43,8 +43,11 @@ enum ChairType {
 enum PlanType {
   FREE
   STANDARD
-  PREMIUM
-  ENTERPRISE
+  PREMIUM_1
+  PREMIUM_2
+  ENTERPRISE_1
+  ENTERPRISE_2
+  ENTERPRISE_3
 }
 
 model Tenant {

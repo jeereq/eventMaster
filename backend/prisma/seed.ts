@@ -48,7 +48,7 @@ async function main() {
   const tenantPrestige = await prisma.tenant.create({
     data: {
       name: 'Agence Prestige',
-      plan: 'PREMIUM',
+      plan: 'PREMIUM_2',
       stripeCustId: 'cus_prestige123',
     },
   });
@@ -74,7 +74,7 @@ async function main() {
   const tenantGlobalCorp = await prisma.tenant.create({
     data: {
       name: 'Global Corp Events',
-      plan: 'ENTERPRISE',
+      plan: 'ENTERPRISE_2',
       stripeCustId: 'cus_globalcorp123',
     },
   });
