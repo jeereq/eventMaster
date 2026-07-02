@@ -5,24 +5,32 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { 
   ShieldAlert, Send, Clock, CheckCircle2, XCircle, 
-  Loader2, CreditCard, Sparkles, Check, LogOut, ArrowRight
+  Loader2, CreditCard, Sparkles, Check, LogOut, ArrowRight, RefreshCw
 } from 'lucide-react';
 
 export default function PWARestrictedScreen() {
-  const { tenant, logout } = useAuth();
+  const { tenant, logout, refreshProfile } = useAuth();
   const [requestedPlan, setRequestedPlan] = useState<'STANDARD' | 'PREMIUM' | 'ENTERPRISE'>('PREMIUM');
   const [proofOfPayment, setProofOfPayment] = useState('');
   const [requests, setRequests] = useState<any[]>([]);
+  const [dynamicPlans, setDynamicPlans] = useState<any>(null);
   const [loadingRequests, setLoadingRequests] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   const loadMyRequests = async () => {
     try {
       setLoadingRequests(true);
-      const data = await api.get('/subscriptions/my-requests');
-      setRequests(data);
+      const [requestsData, plansData] = await Promise.all([
+        api.get('/subscriptions/my-requests'),
+        api.get('/subscriptions/plans').catch(() => null)
+      ]);
+      setRequests(requestsData);
+      if (plansData) {
+        setDynamicPlans(plansData);
+      }
     } catch (err) {
       console.error('Error loading subscription requests:', err);
     } finally {
@@ -33,6 +41,21 @@ export default function PWARestrictedScreen() {
   useEffect(() => {
     loadMyRequests();
   }, []);
+
+  const handleRefreshStatus = async () => {
+    setRefreshing(true);
+    setError('');
+    setSuccess('');
+    try {
+      await refreshProfile();
+      await loadMyRequests();
+      setSuccess('Statut rafraîchi avec succès depuis le serveur !');
+    } catch (err: any) {
+      setError('Impossible de rafraîchir le statut.');
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,22 +83,39 @@ export default function PWARestrictedScreen() {
   const plans = [
     {
       id: 'STANDARD',
-      name: 'Plan Standard',
-      price: '49 $',
-      features: ['Jusqu\'à 8 événements', 'Jusqu\'à 150 invités', '5 modèles d\'invitations', 'Support standard'],
+      name: dynamicPlans?.STANDARD?.name || 'Plan Standard',
+      price: dynamicPlans?.STANDARD?.price || '49 $',
+      features: [
+        `Jusqu'à ${dynamicPlans?.STANDARD?.maxEvents ?? 8} événements`,
+        `Jusqu'à ${dynamicPlans?.STANDARD?.maxGuests ?? 150} invités`,
+        `${dynamicPlans?.STANDARD?.maxTemplates ?? 5} modèles d'invitations`,
+        'Support standard'
+      ],
     },
     {
       id: 'PREMIUM',
-      name: 'Plan Premium',
-      price: '99 $',
-      features: ['Jusqu\'à 20 événements', 'Jusqu\'à 500 invités', '10 modèles d\'invitations', 'Modèles personnalisés', 'Support prioritaire'],
+      name: dynamicPlans?.PREMIUM?.name || 'Plan Premium',
+      price: dynamicPlans?.PREMIUM?.price || '99 $',
+      features: [
+        `Jusqu'à ${dynamicPlans?.PREMIUM?.maxEvents ?? 20} événements`,
+        `Jusqu'à ${dynamicPlans?.PREMIUM?.maxGuests ?? 500} invités`,
+        `${dynamicPlans?.PREMIUM?.maxTemplates ?? 10} modèles d'invitations`,
+        (dynamicPlans?.PREMIUM?.customTemplates ?? true) ? 'Modèles personnalisés' : 'Modèles standards',
+        'Support prioritaire'
+      ],
       popular: true,
     },
     {
       id: 'ENTERPRISE',
-      name: 'Plan Enterprise',
-      price: '249 $',
-      features: ['Événements illimités', 'Invités illimités', 'Modèles illimités', 'Modèles personnalisés', 'Support dédié 24/7'],
+      name: dynamicPlans?.ENTERPRISE?.name || 'Plan Enterprise',
+      price: dynamicPlans?.ENTERPRISE?.price || '249 $',
+      features: [
+        (dynamicPlans?.ENTERPRISE?.maxEvents ?? 9999) >= 9999 ? 'Événements illimités' : `Jusqu'à ${dynamicPlans?.ENTERPRISE?.maxEvents} événements`,
+        (dynamicPlans?.ENTERPRISE?.maxGuests ?? 99999) >= 9999 ? 'Invités illimités' : `Jusqu'à ${dynamicPlans?.ENTERPRISE?.maxGuests} invités`,
+        (dynamicPlans?.ENTERPRISE?.maxTemplates ?? 9999) >= 9999 ? 'Modèles illimités' : `${dynamicPlans?.ENTERPRISE?.maxTemplates} modèles d'invitations`,
+        'Modèles personnalisés',
+        'Support dédié 24/7'
+      ],
     },
   ];
 
@@ -98,13 +138,23 @@ export default function PWARestrictedScreen() {
             <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Accès Restreint</span>
           </div>
         </div>
-        <button
-          onClick={logout}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-rose-400 hover:bg-rose-500/10 transition border border-rose-500/20"
-        >
-          <LogOut className="w-4 h-4" />
-          Déconnexion
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleRefreshStatus}
+            disabled={refreshing}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-indigo-400 hover:bg-indigo-500/10 transition border border-indigo-500/20 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Rafraîchissement...' : 'Rafraîchrir mon statut'}
+          </button>
+          <button
+            onClick={logout}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-rose-400 hover:bg-rose-500/10 transition border border-rose-500/20"
+          >
+            <LogOut className="w-4 h-4" />
+            Déconnexion
+          </button>
+        </div>
       </header>
 
       {/* Main Content */}

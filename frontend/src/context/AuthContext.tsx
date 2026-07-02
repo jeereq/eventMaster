@@ -29,6 +29,7 @@ interface AuthContextType {
   register: (email: string, password: string, name: string, tenantName: string, phone?: string, verificationMethod?: 'EMAIL' | 'WHATSAPP') => Promise<{ message: string }>;
   logout: () => void;
   refreshBilling: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
   updateUserAndTenant: (user: User, tenant: Tenant | null) => void;
 }
 
@@ -53,6 +54,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (savedTenant) {
         setTenant(JSON.parse(savedTenant));
       }
+      // Fetch latest profile asynchronously to sync state with server
+      api.get('/auth/profile')
+        .then((data) => {
+          if (data.user) {
+            setUser(data.user);
+            localStorage.setItem('user', JSON.stringify(data.user));
+          }
+          if (data.tenant) {
+            setTenant(data.tenant);
+            localStorage.setItem('tenant', JSON.stringify(data.tenant));
+          }
+        })
+        .catch((err) => console.error('Error auto-refreshing profile on mount:', err));
     }
     setLoading(false);
   }, []);
@@ -129,8 +143,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const refreshProfile = async () => {
+    try {
+      const data = await api.get('/auth/profile');
+      if (data.user) {
+        setUser(data.user);
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
+      if (data.tenant) {
+        setTenant(data.tenant);
+        localStorage.setItem('tenant', JSON.stringify(data.tenant));
+      } else {
+        setTenant(null);
+        localStorage.removeItem('tenant');
+      }
+    } catch (error) {
+      console.error('Error refreshing profile:', error);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, tenant, token, loading, login, register, logout, refreshBilling, updateUserAndTenant }}>
+    <AuthContext.Provider value={{ user, tenant, token, loading, login, register, logout, refreshBilling, refreshProfile, updateUserAndTenant }}>
       {children}
     </AuthContext.Provider>
   );

@@ -757,7 +757,33 @@ const defaultSettings = {
   sendgridApiKey: process.env.SENDGRID_API_KEY || "",
   twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || "",
   twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || "",
-  twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER || ""
+  twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER || "",
+  plans: {
+    STANDARD: {
+      name: "Plan Standard",
+      price: "30.000 FC",
+      maxEvents: 8,
+      maxGuests: 150,
+      maxTemplates: 5,
+      customTemplates: false
+    },
+    PREMIUM: {
+      name: "Plan Premium",
+      price: "80.000 FC",
+      maxEvents: 20,
+      maxGuests: 500,
+      maxTemplates: 10,
+      customTemplates: true
+    },
+    ENTERPRISE: {
+      name: "Plan Enterprise",
+      price: "275.000 FC",
+      maxEvents: 9999,
+      maxGuests: 99999,
+      maxTemplates: 9999,
+      customTemplates: true
+    }
+  }
 };
 
 export async function getAdminSettings(req: AuthenticatedRequest, res: Response) {

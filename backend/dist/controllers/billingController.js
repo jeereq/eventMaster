@@ -9,10 +9,57 @@ exports.handleStripeWebhook = handleStripeWebhook;
 exports.mockUpgrade = mockUpgrade;
 const db_1 = require("../db");
 const stripe_1 = __importDefault(require("stripe"));
+const fs_1 = __importDefault(require("fs"));
+const path_1 = __importDefault(require("path"));
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_mock';
 const stripe = new stripe_1.default(STRIPE_SECRET_KEY, {
     apiVersion: '2025-11-13', // standard latest api version
 });
+const settingsFilePath = path_1.default.join(__dirname, '..', 'config', 'settings.json');
+function getPlansFromSettings() {
+    const defaultPlans = {
+        FREE: {
+            maxEvents: 3,
+            maxGuests: 50,
+            maxTemplates: 2,
+            customTemplates: false,
+        },
+        STANDARD: {
+            maxEvents: 8,
+            maxGuests: 150,
+            maxTemplates: 5,
+            customTemplates: false,
+        },
+        PREMIUM: {
+            maxEvents: 20,
+            maxGuests: 500,
+            maxTemplates: 10,
+            customTemplates: true,
+        },
+        ENTERPRISE: {
+            maxEvents: 9999,
+            maxGuests: 99999,
+            maxTemplates: 9999,
+            customTemplates: true,
+        },
+    };
+    try {
+        if (fs_1.default.existsSync(settingsFilePath)) {
+            const data = fs_1.default.readFileSync(settingsFilePath, 'utf-8');
+            const settings = JSON.parse(data);
+            if (settings.plans) {
+                return {
+                    FREE: defaultPlans.FREE,
+                    ...settings.plans
+                };
+            }
+        }
+    }
+    catch (error) {
+        console.error('Error reading plans from settings:', error);
+    }
+    return defaultPlans;
+}
 // Get current tenant billing plan, usage and quotas
 async function getBillingStatus(req, res) {
     try {
@@ -40,33 +87,7 @@ async function getBillingStatus(req, res) {
                 event: { tenantId },
             },
         });
-        // Plan limits definition
-        const limits = {
-            FREE: {
-                maxEvents: 3,
-                maxGuests: 50,
-                maxTemplates: 2,
-                customTemplates: false,
-            },
-            STANDARD: {
-                maxEvents: 8,
-                maxGuests: 150,
-                maxTemplates: 5,
-                customTemplates: false,
-            },
-            PREMIUM: {
-                maxEvents: 20,
-                maxGuests: 500,
-                maxTemplates: 10,
-                customTemplates: true,
-            },
-            ENTERPRISE: {
-                maxEvents: 9999,
-                maxGuests: 99999,
-                maxTemplates: 9999,
-                customTemplates: true,
-            },
-        };
+        const limits = getPlansFromSettings();
         const currentLimits = limits[tenant.plan] || limits.FREE;
         return res.json({
             plan: tenant.plan,

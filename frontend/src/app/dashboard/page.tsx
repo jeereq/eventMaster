@@ -248,6 +248,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (user?.role === 'SUPER_ADMIN' && activeTab === 'subscriptions') {
       loadSubscriptionRequests();
+      loadAdminSettings(); // Load settings to edit plans
     }
   }, [activeTab, user]);
 
@@ -2142,102 +2143,267 @@ export default function DashboardPage() {
 
             {/* Subscriptions Tab */}
             {activeTab === 'subscriptions' && (
-              <div className="space-y-6 animate-in fade-in duration-200">
-                <div className="flex justify-between items-center">
+              <div className="space-y-8 animate-in fade-in duration-200">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-100 pb-6">
                   <div>
-                    <h3 className="text-lg font-bold text-slate-900">Demandes d'activation d'abonnement</h3>
-                    <p className="text-xs text-slate-500 mt-0.5">Validez ou rejetez les demandes d'activation mensuelle soumises par les organisations.</p>
+                    <h3 className="text-xl font-extrabold text-slate-900">Gestion des Abonnements & Forfaits</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">Validez les demandes d'activation ou modifiez les tarifs et quotas des forfaits de la plateforme.</p>
                   </div>
                 </div>
 
-                {subRequestsLoading ? (
-                  <div className="py-12 flex flex-col items-center justify-center gap-3">
-                    <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-                    <p className="text-sm font-medium text-slate-500">Chargement des demandes d'abonnement...</p>
-                  </div>
-                ) : subscriptionRequests.length === 0 ? (
-                  <div className="text-center py-12 bg-slate-50 rounded-2xl border border-slate-150 p-6">
-                    <p className="text-slate-500 text-sm font-medium">Aucune demande d'abonnement soumise pour le moment.</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                          <th className="pb-3 font-semibold">Organisation</th>
-                          <th className="pb-3 font-semibold">Plan Demandé</th>
-                          <th className="pb-3 font-semibold">Durée</th>
-                          <th className="pb-3 font-semibold">Preuve / Référence</th>
-                          <th className="pb-3 font-semibold">Date de Demande</th>
-                          <th className="pb-3 font-semibold">Statut</th>
-                          <th className="pb-3 font-semibold text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 text-sm">
-                        {subscriptionRequests.map((req) => (
-                          <tr key={req.id} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="py-4">
-                              <div className="flex flex-col">
-                                <span className="font-bold text-slate-900">{req.tenant?.name || 'Inconnue'}</span>
-                                <span className="text-xs text-slate-400">ID: {req.tenantId}</span>
-                              </div>
-                            </td>
-                            <td className="py-4">
-                              <span className={`px-2 py-0.5 rounded text-xs font-extrabold border ${
-                                req.requestedPlan === 'STANDARD' ? 'bg-blue-50 border-blue-100 text-blue-700' :
-                                req.requestedPlan === 'PREMIUM' ? 'bg-indigo-50 border-indigo-100 text-indigo-700' :
-                                'bg-amber-50 border-amber-100 text-amber-700'
-                              }`}>
-                                {req.requestedPlan}
-                              </span>
-                            </td>
-                            <td className="py-4 font-semibold text-slate-700">
-                              {req.durationDays} jours
-                            </td>
-                            <td className="py-4">
-                              <div className="max-w-xs truncate text-xs text-slate-600 font-medium italic" title={req.proofOfPayment}>
-                                {req.proofOfPayment ? `"${req.proofOfPayment}"` : 'Aucune preuve fournie'}
-                              </div>
-                            </td>
-                            <td className="py-4 text-xs text-slate-500">
-                              {new Date(req.createdAt).toLocaleDateString('fr-FR', {
-                                day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                              })}
-                            </td>
-                            <td className="py-4">
-                              <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider border ${
-                                req.status === 'APPROVED' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
-                                req.status === 'REJECTED' ? 'bg-rose-50 border-rose-100 text-rose-700' :
-                                'bg-amber-50 border-amber-100 text-amber-700'
-                              }`}>
-                                {req.status === 'APPROVED' ? 'Approuvée' :
-                                 req.status === 'REJECTED' ? 'Rejetée' : 'En attente'}
-                              </span>
-                            </td>
-                            <td className="py-4 text-right">
-                              {req.status === 'PENDING' ? (
-                                <div className="flex justify-end gap-2">
-                                  <button
-                                    onClick={() => handleApproveSubscription(req.id)}
-                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition shadow-sm"
-                                  >
-                                    Approuver
-                                  </button>
-                                  <button
-                                    onClick={() => handleRejectSubscription(req.id)}
-                                    className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition shadow-sm"
-                                  >
-                                    Rejeter
-                                  </button>
-                                </div>
-                              ) : (
-                                <span className="text-xs text-slate-400 font-medium italic">Traitée</span>
-                              )}
-                            </td>
+                {/* Section 1: Subscription Requests */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+                  <h4 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-indigo-600" />
+                    Demandes d'activation reçues ({subscriptionRequests.length})
+                  </h4>
+
+                  {subRequestsLoading ? (
+                    <div className="py-12 flex flex-col items-center justify-center gap-3">
+                      <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                      <p className="text-sm font-medium text-slate-500">Chargement des demandes d'abonnement...</p>
+                    </div>
+                  ) : subscriptionRequests.length === 0 ? (
+                    <div className="text-center py-8 bg-slate-50 rounded-xl border border-slate-150 p-6">
+                      <p className="text-slate-500 text-xs font-medium">Aucune demande d'abonnement soumise pour le moment.</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="border-b border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                            <th className="pb-3 font-semibold">Organisation</th>
+                            <th className="pb-3 font-semibold">Plan Demandé</th>
+                            <th className="pb-3 font-semibold">Durée</th>
+                            <th className="pb-3 font-semibold">Preuve / Référence</th>
+                            <th className="pb-3 font-semibold">Date de Demande</th>
+                            <th className="pb-3 font-semibold">Statut</th>
+                            <th className="pb-3 font-semibold text-right">Actions</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 text-sm">
+                          {subscriptionRequests.map((req) => (
+                            <tr key={req.id} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="py-4">
+                                <div className="flex flex-col">
+                                  <span className="font-bold text-slate-900">{req.tenant?.name || 'Inconnue'}</span>
+                                  <span className="text-xs text-slate-400">ID: {req.tenantId}</span>
+                                </div>
+                              </td>
+                              <td className="py-4">
+                                <span className={`px-2 py-0.5 rounded text-xs font-extrabold border ${
+                                  req.requestedPlan === 'STANDARD' ? 'bg-blue-50 border-blue-100 text-blue-700' :
+                                  req.requestedPlan === 'PREMIUM' ? 'bg-indigo-50 border-indigo-100 text-indigo-700' :
+                                  'bg-amber-50 border-amber-100 text-amber-700'
+                                }`}>
+                                  {req.requestedPlan}
+                                </span>
+                              </td>
+                              <td className="py-4 font-semibold text-slate-700">
+                                {req.durationDays} jours
+                              </td>
+                              <td className="py-4">
+                                <div className="max-w-xs truncate text-xs text-slate-600 font-medium italic" title={req.proofOfPayment}>
+                                  {req.proofOfPayment ? `"${req.proofOfPayment}"` : 'Aucune preuve fournie'}
+                                </div>
+                              </td>
+                              <td className="py-4 text-xs text-slate-500">
+                                {new Date(req.createdAt).toLocaleDateString('fr-FR', {
+                                  day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                                })}
+                              </td>
+                              <td className="py-4">
+                                <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider border ${
+                                  req.status === 'APPROVED' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
+                                  req.status === 'REJECTED' ? 'bg-rose-50 border-rose-100 text-rose-700' :
+                                  'bg-amber-50 border-amber-100 text-amber-700'
+                                }`}>
+                                  {req.status === 'APPROVED' ? 'Approuvée' :
+                                   req.status === 'REJECTED' ? 'Rejetée' : 'En attente'}
+                                </span>
+                              </td>
+                              <td className="py-4 text-right">
+                                {req.status === 'PENDING' ? (
+                                  <div className="flex justify-end gap-2">
+                                    <button
+                                      onClick={() => handleApproveSubscription(req.id)}
+                                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition shadow-sm"
+                                    >
+                                      Approuver
+                                    </button>
+                                    <button
+                                      onClick={() => handleRejectSubscription(req.id)}
+                                      className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition shadow-sm"
+                                    >
+                                      Rejeter
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-slate-400 font-medium italic">Traitée</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* Section 2: Subscription Plans Configuration */}
+                {adminSettings && adminSettings.plans && (
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
+                    <div className="flex justify-between items-center border-b border-slate-150 pb-4">
+                      <h4 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <CreditCard className="w-5 h-5 text-indigo-600" />
+                        Configuration des types de souscription (Forfaits)
+                      </h4>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-6">
+                      {['STANDARD', 'PREMIUM', 'ENTERPRISE'].map((planKey) => {
+                        const plan = adminSettings.plans[planKey];
+                        if (!plan) return null;
+
+                        return (
+                          <div key={planKey} className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-extrabold text-indigo-600 uppercase tracking-wider">{planKey}</span>
+                              <span className="text-xs bg-indigo-50 text-indigo-700 font-bold px-2.5 py-0.5 rounded-full">Mensuel</span>
+                            </div>
+
+                            <div className="space-y-3">
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Nom du Plan</label>
+                                <input
+                                  type="text"
+                                  value={plan.name}
+                                  onChange={(e) => {
+                                    const updatedPlans = { ...adminSettings.plans };
+                                    updatedPlans[planKey] = { ...plan, name: e.target.value };
+                                    setAdminSettings({ ...adminSettings, plans: updatedPlans });
+                                  }}
+                                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-indigo-500 transition"
+                                  required
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Prix mensuel</label>
+                                <input
+                                  type="text"
+                                  value={plan.price}
+                                  onChange={(e) => {
+                                    const updatedPlans = { ...adminSettings.plans };
+                                    updatedPlans[planKey] = { ...plan, price: e.target.value };
+                                    setAdminSettings({ ...adminSettings, plans: updatedPlans });
+                                  }}
+                                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-indigo-500 transition"
+                                  required
+                                />
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Max Événements</label>
+                                  <input
+                                    type="number"
+                                    value={plan.maxEvents}
+                                    onChange={(e) => {
+                                      const updatedPlans = { ...adminSettings.plans };
+                                      updatedPlans[planKey] = { ...plan, maxEvents: parseInt(e.target.value) || 0 };
+                                      setAdminSettings({ ...adminSettings, plans: updatedPlans });
+                                    }}
+                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-indigo-500 transition"
+                                    required
+                                  />
+                                </div>
+
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Max Invités</label>
+                                  <input
+                                    type="number"
+                                    value={plan.maxGuests}
+                                    onChange={(e) => {
+                                      const updatedPlans = { ...adminSettings.plans };
+                                      updatedPlans[planKey] = { ...plan, maxGuests: parseInt(e.target.value) || 0 };
+                                      setAdminSettings({ ...adminSettings, plans: updatedPlans });
+                                    }}
+                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-indigo-500 transition"
+                                    required
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Max Modèles</label>
+                                  <input
+                                    type="number"
+                                    value={plan.maxTemplates}
+                                    onChange={(e) => {
+                                      const updatedPlans = { ...adminSettings.plans };
+                                      updatedPlans[planKey] = { ...plan, maxTemplates: parseInt(e.target.value) || 0 };
+                                      setAdminSettings({ ...adminSettings, plans: updatedPlans });
+                                    }}
+                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-indigo-500 transition"
+                                    required
+                                  />
+                                </div>
+
+                                <div className="flex items-center gap-2 pt-5">
+                                  <input
+                                    type="checkbox"
+                                    id={`custom-templates-${planKey}`}
+                                    checked={plan.customTemplates}
+                                    onChange={(e) => {
+                                      const updatedPlans = { ...adminSettings.plans };
+                                      updatedPlans[planKey] = { ...plan, customTemplates: e.target.checked };
+                                      setAdminSettings({ ...adminSettings, plans: updatedPlans });
+                                    }}
+                                    className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                                  />
+                                  <label htmlFor={`custom-templates-${planKey}`} className="text-[10px] font-bold text-slate-600 uppercase tracking-wider cursor-pointer">
+                                    Modèles Perso.
+                                  </label>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="flex justify-end border-t border-slate-100 pt-4">
+                      <button
+                        onClick={async () => {
+                          setSavingSettings(true);
+                          try {
+                            await api.put('/admin/settings', { plans: adminSettings.plans });
+                            alert('Forfaits d\'abonnement mis à jour avec succès !');
+                            await loadAdminSettings();
+                          } catch (err: any) {
+                            alert(err.message || 'Erreur lors de la mise à jour des forfaits.');
+                          } finally {
+                            setSavingSettings(false);
+                          }
+                        }}
+                        disabled={savingSettings}
+                        className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-md shadow-indigo-100 disabled:opacity-50 cursor-pointer"
+                      >
+                        {savingSettings ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Enregistrement...
+                          </>
+                        ) : (
+                          <>
+                            <Check className="w-4 h-4" />
+                            Enregistrer les modifications de forfaits
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

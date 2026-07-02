@@ -23,6 +23,7 @@ interface BillingStatus {
 export default function BillingPage() {
   const { refreshBilling } = useAuth();
   const [billing, setBilling] = useState<BillingStatus | null>(null);
+  const [dynamicPlans, setDynamicPlans] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -30,8 +31,14 @@ export default function BillingPage() {
 
   const loadBillingStatus = async () => {
     try {
-      const data = await api.get('/billing/status');
-      setBilling(data);
+      const [billingData, plansData] = await Promise.all([
+        api.get('/billing/status'),
+        api.get('/subscriptions/plans').catch(() => null)
+      ]);
+      setBilling(billingData);
+      if (plansData) {
+        setDynamicPlans(plansData);
+      }
     } catch (err: any) {
       console.error('Error loading billing status:', err);
       setError('Impossible de charger les informations de facturation.');
@@ -175,10 +182,10 @@ export default function BillingPage() {
         <div className={`border rounded-3xl p-6 bg-white flex flex-col justify-between ${billing?.plan === 'STANDARD' ? 'ring-2 ring-slate-800' : 'border-slate-200'}`}>
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-bold text-slate-900">Plan Standard</h3>
+              <h3 className="text-lg font-bold text-slate-900">{dynamicPlans?.STANDARD?.name || 'Plan Standard'}</h3>
               <p className="text-xs text-slate-500 mt-1">Idéal pour les événements familiaux de taille moyenne.</p>
               <div className="flex items-baseline gap-1 mt-4">
-                <span className="text-3xl font-extrabold text-slate-900">30.000 FC</span>
+                <span className="text-3xl font-extrabold text-slate-900">{dynamicPlans?.STANDARD?.price || '30.000 FC'}</span>
                 <span className="text-slate-500 text-sm">/mois</span>
               </div>
             </div>
@@ -186,19 +193,19 @@ export default function BillingPage() {
             <ul className="space-y-3 text-xs text-slate-600 border-t border-slate-100 pt-4">
               <li className="flex items-center gap-2.5">
                 <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>8 événements actifs</span>
+                <span>{dynamicPlans?.STANDARD?.maxEvents ?? 8} événements actifs</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>150 invités maximum</span>
+                <span>{dynamicPlans?.STANDARD?.maxGuests ?? 150} invités maximum</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>5 modèles d'invitations</span>
+                <span>{dynamicPlans?.STANDARD?.maxTemplates ?? 5} modèles d'invitations</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>Modèles d'invitations simples</span>
+                <span>{dynamicPlans?.STANDARD?.customTemplates ? "Modèles d'invitations personnalisés" : "Modèles d'invitations simples"}</span>
               </li>
             </ul>
           </div>
@@ -227,10 +234,10 @@ export default function BillingPage() {
 
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-bold text-slate-900">Plan Premium</h3>
+              <h3 className="text-lg font-bold text-slate-900">{dynamicPlans?.PREMIUM?.name || 'Plan Premium'}</h3>
               <p className="text-xs text-slate-500 mt-1">Pour les organisateurs d'événements.</p>
               <div className="flex items-baseline gap-1 mt-4">
-                <span className="text-3xl font-extrabold text-slate-900">80.000 FC</span>
+                <span className="text-3xl font-extrabold text-slate-900">{dynamicPlans?.PREMIUM?.price || '80.000 FC'}</span>
                 <span className="text-slate-500 text-sm">/mois</span>
               </div>
             </div>
@@ -238,19 +245,19 @@ export default function BillingPage() {
             <ul className="space-y-3 text-xs text-slate-600 border-t border-slate-100 pt-4">
               <li className="flex items-center gap-2.5">
                 <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>20 événements actifs</span>
+                <span>{dynamicPlans?.PREMIUM?.maxEvents ?? 20} événements actifs</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>500 invités maximum</span>
+                <span>{dynamicPlans?.PREMIUM?.maxGuests ?? 500} invités maximum</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>10 modèles d'invitations</span>
+                <span>{dynamicPlans?.PREMIUM?.maxTemplates ?? 10} modèles d'invitations</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span className="font-semibold text-slate-900">Modèles d'Invitation Customisés</span>
+                <span className="font-semibold text-slate-900">{(dynamicPlans?.PREMIUM?.customTemplates ?? true) ? "Modèles d'Invitation Customisés" : "Modèles d'invitations simples"}</span>
               </li>
             </ul>
           </div>
@@ -274,10 +281,10 @@ export default function BillingPage() {
         <div className={`border rounded-3xl p-6 bg-white flex flex-col justify-between ${billing?.plan === 'ENTERPRISE' ? 'ring-2 ring-indigo-600' : 'border-slate-200'}`}>
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-bold text-slate-900">Plan Enterprise</h3>
+              <h3 className="text-lg font-bold text-slate-900">{dynamicPlans?.ENTERPRISE?.name || 'Plan Enterprise'}</h3>
               <p className="text-xs text-slate-500 mt-1">Pour les grandes organisations.</p>
               <div className="flex items-baseline gap-1 mt-4">
-                <span className="text-3xl font-extrabold text-slate-900">275.000 FC</span>
+                <span className="text-3xl font-extrabold text-slate-900">{dynamicPlans?.ENTERPRISE?.price || '275.000 FC'}</span>
                 <span className="text-slate-500 text-sm">/mois</span>
               </div>
             </div>
@@ -285,15 +292,15 @@ export default function BillingPage() {
             <ul className="space-y-3 text-xs text-slate-600 border-t border-slate-100 pt-4">
               <li className="flex items-center gap-2.5">
                 <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>Événements Illimités</span>
+                <span>{(dynamicPlans?.ENTERPRISE?.maxEvents ?? 9999) >= 9999 ? 'Événements Illimités' : `${dynamicPlans?.ENTERPRISE?.maxEvents} événements actifs`}</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>Invités Illimités</span>
+                <span>{(dynamicPlans?.ENTERPRISE?.maxGuests ?? 99999) >= 9999 ? 'Invités Illimités' : `${dynamicPlans?.ENTERPRISE?.maxGuests} invités maximum`}</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span>Modèles Illimités</span>
+                <span>{(dynamicPlans?.ENTERPRISE?.maxTemplates ?? 9999) >= 9999 ? 'Modèles Illimités' : `${dynamicPlans?.ENTERPRISE?.maxTemplates} modèles d'invitations`}</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
