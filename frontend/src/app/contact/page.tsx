@@ -7,12 +7,13 @@ import { useTheme } from '@/context/ThemeContext';
 import { api } from '@/lib/api';
 import { 
   Mail, Phone, MapPin, Send, MessageSquare, 
-  CheckCircle2, AlertCircle, Loader2, ArrowLeft, PartyPopper, Sparkles, ArrowRight, Sun, Moon
+  CheckCircle2, AlertCircle, Loader2, ArrowLeft, PartyPopper, Sparkles, ArrowRight, Sun, Moon, Menu, X
 } from 'lucide-react';
 
 export default function ContactPage() {
   const { user, tenant, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -95,7 +96,9 @@ export default function ContactPage() {
               </span>
             </div>
           </div>
-          <nav className="flex items-center gap-4">
+
+          {/* Desktop Navigation */}
+          <nav className="hidden lg:flex items-center gap-4">
             <button
               onClick={toggleTheme}
               className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 transition cursor-pointer"
@@ -108,7 +111,7 @@ export default function ContactPage() {
             </Link>
             {user ? (
               <>
-                <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold hidden md:inline">
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
                   Connecté en tant que <span className="font-bold text-indigo-600">{user.name}</span> {tenant ? `(${tenant.name})` : ''}
                 </span>
                 <Link href="/dashboard" className="text-sm font-semibold bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-100">
@@ -132,7 +135,77 @@ export default function ContactPage() {
               </>
             )}
           </nav>
+
+          {/* Mobile Menu Button */}
+          <div className="flex items-center gap-3 lg:hidden">
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 transition cursor-pointer"
+              aria-label="Changer de thème"
+            >
+              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 transition cursor-pointer"
+              aria-label="Ouvrir le menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Dropdown Menu */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-6 space-y-4 animate-fade-in shadow-xl">
+            <div className="flex flex-col gap-3">
+              <Link 
+                href="/contact" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition py-2 border-b border-slate-100 dark:border-slate-900"
+              >
+                Contact
+              </Link>
+              {user ? (
+                <>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold py-1">
+                    Connecté en tant que <span className="font-bold text-indigo-600">{user.name}</span> {tenant ? `(${tenant.name})` : ''}
+                  </div>
+                  <Link 
+                    href="/dashboard" 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-sm font-semibold bg-indigo-600 text-white px-4 py-2.5 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-100 text-center"
+                  >
+                    Tableau de Bord
+                  </Link>
+                  <button 
+                    onClick={() => { logout(); setMobileMenuOpen(false); }}
+                    className="text-sm font-semibold border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 px-4 py-2.5 rounded-xl transition cursor-pointer text-center w-full"
+                  >
+                    Déconnexion
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link 
+                    href="/login" 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition py-2 border-b border-slate-100 dark:border-slate-900 text-center"
+                  >
+                    Connexion
+                  </Link>
+                  <Link 
+                    href="/register" 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-sm font-semibold bg-indigo-600 text-white px-4.5 py-2.5 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-100 text-center"
+                  >
+                    Essai Gratuit
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Main Content */}

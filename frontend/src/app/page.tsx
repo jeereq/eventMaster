@@ -9,7 +9,7 @@ import {
   Calendar, Users, Award, Shield, CheckCircle, Mail, 
   ArrowRight, Lock, Layout, Sparkles, Compass, Heart, 
   Briefcase, Smartphone, Star, ShieldCheck, Check, XCircle,
-  PartyPopper, Loader2, LayoutGrid, Sun, Moon
+  PartyPopper, Loader2, LayoutGrid, Sun, Moon, Menu, X, MessageSquare
 } from 'lucide-react';
 
 interface MockTemplate {
@@ -36,6 +36,7 @@ interface MockTemplate {
 export default function Home() {
   const { user, tenant, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [previewTemplate, setPreviewTemplate] = useState<string>('');
   const [modalTemplate, setModalTemplate] = useState<any | null>(null);
@@ -192,12 +193,14 @@ export default function Home() {
       <header className="border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-50 transition-all">
         <div className="w-10/12 max-w-7xl mx-auto h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-indigo-600 p-2 rounded-lg text-white">
-              <PartyPopper className="w-5 h-5" />
-            </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-              EventMaster
-            </span>
+            <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition">
+              <div className="bg-indigo-600 p-2 rounded-lg text-white">
+                <PartyPopper className="w-5 h-5" />
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+                EventMaster
+              </span>
+            </Link>
             
             {/* Indicateur de connexion API en temps réel */}
             <div className="hidden sm:flex items-center gap-1.5 ml-4 px-2.5 py-1 rounded-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[10px] font-bold text-slate-500 dark:text-slate-400">
@@ -211,7 +214,9 @@ export default function Home() {
               </span>
             </div>
           </div>
-          <nav className="flex items-center gap-4">
+
+          {/* Desktop Navigation */}
+          <nav className="hidden lg:flex items-center gap-4">
             <button
               onClick={toggleTheme}
               className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 transition cursor-pointer"
@@ -224,7 +229,7 @@ export default function Home() {
             </Link>
             {user ? (
               <>
-                <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold hidden md:inline">
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
                   Connecté en tant que <span className="font-bold text-indigo-600">{user.name}</span> {tenant ? `(${tenant.name})` : ''}
                 </span>
                 <Link href="/dashboard" className="text-sm font-semibold bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-100">
@@ -248,7 +253,77 @@ export default function Home() {
               </>
             )}
           </nav>
+
+          {/* Mobile Menu Button */}
+          <div className="flex items-center gap-3 lg:hidden">
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 transition cursor-pointer"
+              aria-label="Changer de thème"
+            >
+              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 transition cursor-pointer"
+              aria-label="Ouvrir le menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Dropdown Menu */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-6 space-y-4 animate-fade-in shadow-xl">
+            <div className="flex flex-col gap-3">
+              <Link 
+                href="/contact" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition py-2 border-b border-slate-100 dark:border-slate-900"
+              >
+                Contact
+              </Link>
+              {user ? (
+                <>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold py-1">
+                    Connecté en tant que <span className="font-bold text-indigo-600">{user.name}</span> {tenant ? `(${tenant.name})` : ''}
+                  </div>
+                  <Link 
+                    href="/dashboard" 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-sm font-semibold bg-indigo-600 text-white px-4 py-2.5 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-100 text-center"
+                  >
+                    Tableau de Bord
+                  </Link>
+                  <button 
+                    onClick={() => { logout(); setMobileMenuOpen(false); }}
+                    className="text-sm font-semibold border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 px-4 py-2.5 rounded-xl transition cursor-pointer text-center w-full"
+                  >
+                    Déconnexion
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link 
+                    href="/login" 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition py-2 border-b border-slate-100 dark:border-slate-900 text-center"
+                  >
+                    Connexion
+                  </Link>
+                  <Link 
+                    href="/register" 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-sm font-semibold bg-indigo-600 text-white px-4.5 py-2.5 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-100 text-center"
+                  >
+                    Essai Gratuit
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Hero Section */}
@@ -357,53 +432,95 @@ export default function Home() {
       </section>
 
       {/* Ce Que Nous Faisons (What We Do / Value Prop) */}
-      <section className="py-20 bg-slate-50 dark:bg-slate-900/50 border-t border-b border-slate-200 dark:border-slate-800">
-        <div className="w-10/12 max-w-7xl mx-auto">
-          <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-            <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Ce Que Nous Faisons</h2>
-            <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed">
+      <section className="py-24 bg-slate-50 dark:bg-slate-900/40 border-t border-b border-slate-200 dark:border-slate-800 relative overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none">
+          <div className="absolute top-12 left-10 w-72 h-72 rounded-full bg-indigo-500/5 blur-[100px]" />
+          <div className="absolute bottom-12 right-10 w-72 h-72 rounded-full bg-violet-500/5 blur-[100px]" />
+        </div>
+
+        <div className="w-10/12 max-w-7xl mx-auto relative z-10">
+          <div className="text-center max-w-3xl mx-auto mb-20 space-y-4">
+            <span className="text-xs bg-indigo-100 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-400 font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
+              Fonctionnalités Clés
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+              Ce Que Nous Faisons
+            </h2>
+            <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
               EventMaster fournit aux créateurs d'événements, aux professionnels et aux entreprises un outil SaaS complet de gestion d'invitations privées, assurant une parfaite étanchéité de leurs données.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 hover:shadow-lg transition">
-              <div className="bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 w-11 h-11 rounded-xl flex items-center justify-center mb-5">
-                <ShieldCheck className="w-5.5 h-5.5" />
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Card 1 */}
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 hover:border-indigo-500/30 dark:hover:border-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/[0.02] transition duration-300 group relative">
+              <div className="absolute top-0 left-0 w-full h-full rounded-3xl bg-gradient-to-br from-indigo-500/[0.01] to-violet-500/[0.01] opacity-0 group-hover:opacity-100 transition duration-300" />
+              <div className="bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 border border-indigo-100/50 dark:border-indigo-900/30 shadow-xs group-hover:scale-110 transition duration-300">
+                <ShieldCheck className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-extrabold text-slate-900 dark:text-white mb-2">Isolation Multi-tenant</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                Chaque organisation possède son propre espace logique. Les bases de données filtrent vos événements et modèles de manière hermétique pour une protection optimale des données de vos convives.
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3 tracking-tight">Isolation Multi-tenant</h3>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                Chaque organisation possède son propre espace logique sécurisé. Les bases de données filtrent vos événements et modèles de manière hermétique pour une protection optimale des données de vos convives.
               </p>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 hover:shadow-lg transition">
-              <div className="bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400 w-11 h-11 rounded-xl flex items-center justify-center mb-5">
-                <Users className="w-5.5 h-5.5" />
+            {/* Card 2 */}
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 hover:border-indigo-500/30 dark:hover:border-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/[0.02] transition duration-300 group relative">
+              <div className="absolute top-0 left-0 w-full h-full rounded-3xl bg-gradient-to-br from-indigo-500/[0.01] to-violet-500/[0.01] opacity-0 group-hover:opacity-100 transition duration-300" />
+              <div className="bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 border border-violet-100/50 dark:border-violet-900/30 shadow-xs group-hover:scale-110 transition duration-300">
+                <Users className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-extrabold text-slate-900 dark:text-white mb-2">Gestion d'Invités & Excel</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3 tracking-tight">Gestion d'Invités & Excel</h3>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
                 Gérez la liste de vos invités avec un contrôle RSVP complet. Importez instantanément des listes entières à partir de fichiers Excel (.xlsx) ou CSV avec aperçu dynamique, et exportez vos données en un clic.
               </p>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 hover:shadow-lg transition">
-              <div className="bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 w-11 h-11 rounded-xl flex items-center justify-center mb-5">
-                <LayoutGrid className="w-5.5 h-5.5" />
+            {/* Card 3 */}
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 hover:border-indigo-500/30 dark:hover:border-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/[0.02] transition duration-300 group relative">
+              <div className="absolute top-0 left-0 w-full h-full rounded-3xl bg-gradient-to-br from-indigo-500/[0.01] to-violet-500/[0.01] opacity-0 group-hover:opacity-100 transition duration-300" />
+              <div className="bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 border border-amber-100/50 dark:border-amber-900/30 shadow-xs group-hover:scale-110 transition duration-300">
+                <LayoutGrid className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-extrabold text-slate-900 dark:text-white mb-2">Plan de Table Interactif</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3 tracking-tight">Plan de Table Interactif</h3>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
                 Organisez vos salles de réception en 2D grâce à notre plan de table interactif. Créez des tables de formes variées (rondes, rectangulaires, carrées, ovales), déplacez-les par glisser-déposer et placez vos invités.
               </p>
             </div>
 
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 hover:shadow-lg transition">
-              <div className="bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 w-11 h-11 rounded-xl flex items-center justify-center mb-5">
-                <Smartphone className="w-5.5 h-5.5" />
+            {/* Card 4 */}
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 hover:border-indigo-500/30 dark:hover:border-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/[0.02] transition duration-300 group relative">
+              <div className="absolute top-0 left-0 w-full h-full rounded-3xl bg-gradient-to-br from-indigo-500/[0.01] to-violet-500/[0.01] opacity-0 group-hover:opacity-100 transition duration-300" />
+              <div className="bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 border border-emerald-100/50 dark:border-emerald-900/30 shadow-xs group-hover:scale-110 transition duration-300">
+                <Smartphone className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-extrabold text-slate-900 dark:text-white mb-2">Portail RSVP & Badge QR</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3 tracking-tight">Portail RSVP & Badge QR</h3>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
                 Chaque convive accède à un portail de réponse personnalisé. Dès sa confirmation, un badge unique avec un QR Code aux couleurs de la plateforme et logo central lui est généré pour un émargement ultra-rapide.
+              </p>
+            </div>
+
+            {/* Card 5 */}
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 hover:border-indigo-500/30 dark:hover:border-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/[0.02] transition duration-300 group relative">
+              <div className="absolute top-0 left-0 w-full h-full rounded-3xl bg-gradient-to-br from-indigo-500/[0.01] to-violet-500/[0.01] opacity-0 group-hover:opacity-100 transition duration-300" />
+              <div className="bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 border border-rose-100/50 dark:border-rose-900/30 shadow-xs group-hover:scale-110 transition duration-300">
+                <MessageSquare className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3 tracking-tight">Fil d'Actualité Privé (Feed)</h3>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                Créez un véritable mini-réseau social privé pour votre événement. Les organisateurs et les invités peuvent publier des photos, vidéos, commenter et liker les publications en temps réel.
+              </p>
+            </div>
+
+            {/* Card 6 */}
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-200/80 dark:border-slate-800 hover:border-indigo-500/30 dark:hover:border-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/[0.02] transition duration-300 group relative">
+              <div className="absolute top-0 left-0 w-full h-full rounded-3xl bg-gradient-to-br from-indigo-500/[0.01] to-violet-500/[0.01] opacity-0 group-hover:opacity-100 transition duration-300" />
+              <div className="bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 border border-sky-100/50 dark:border-sky-900/30 shadow-xs group-hover:scale-110 transition duration-300">
+                <Heart className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3 tracking-tight">Livre d'Or & Partages</h3>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                Offrez à vos invités un espace d'expression pour laisser des mots chaleureux et partager des souvenirs. Un livre d'or numérique moderne, interactif et modérable par l'organisateur.
               </p>
             </div>
           </div>
