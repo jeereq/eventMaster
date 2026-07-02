@@ -5,6 +5,11 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api } from '@/lib/api';
+import {
+  LANDING_TEMPLATES,
+  getLandingTemplateGroups,
+  type LandingTemplate,
+} from '@/config/landingTemplates';
 import { 
   Calendar, Users, Award, Shield, CheckCircle, Mail, 
   ArrowRight, Lock, Layout, Sparkles, Compass, Heart, 
@@ -12,25 +17,39 @@ import {
   PartyPopper, Loader2, LayoutGrid, Sun, Moon, Menu, X, MessageSquare
 } from 'lucide-react';
 
-interface MockTemplate {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  style: {
-    bg: string;
-    border: string;
-    textTitle: string;
-    textBody: string;
-    btnBg: string;
-    btnText: string;
-  };
-  elements: Array<{
-    type: 'text' | 'button' | 'rsvp';
-    content: string;
-    color?: string;
-    fontSize?: string;
-  }>;
+function getCategoryLabel(category: string) {
+  if (category === 'private') return 'Événement Privé';
+  if (category === 'corporate') return 'Professionnel';
+  return 'Cocktail';
+}
+
+function InvitationPreviewCard({ template, compact = false }: { template: LandingTemplate; compact?: boolean }) {
+  return (
+    <div className={`rounded-2xl border ${template.style.bg} ${template.style.border} ${compact ? 'p-4 space-y-3' : 'p-6 sm:p-8 space-y-6 min-h-[340px]'} shadow-md transition-all duration-300 flex flex-col justify-between relative overflow-hidden`}>
+      {!compact && <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-500 to-violet-500" />}
+      <div className={`space-y-3 ${compact ? '' : 'pt-2'}`}>
+        {template.elements.map((el, i) => {
+          if (el.type === 'text') {
+            return (
+              <div
+                key={i}
+                style={{ color: el.color }}
+                className={`${el.fontSize || 'text-base'} text-center leading-relaxed ${compact ? 'line-clamp-2' : ''}`}
+              >
+                {el.content}
+              </div>
+            );
+          }
+          return null;
+        })}
+      </div>
+      <div className={`flex justify-center ${compact ? 'pt-2' : 'pt-4'}`}>
+        <div className={`${compact ? 'px-3 py-1.5 text-[10px]' : 'px-5 py-2.5 text-sm'} rounded-xl font-bold text-center inline-block shadow-md ${template.style.btnBg} ${template.style.btnText}`}>
+          {template.elements.find((el) => el.type === 'button')?.content || 'S\'inscrire'}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function Home() {
@@ -38,137 +57,30 @@ export default function Home() {
   const { theme, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [previewTemplate, setPreviewTemplate] = useState<string>('');
-  const [modalTemplate, setModalTemplate] = useState<any | null>(null);
+  const [previewTemplate, setPreviewTemplate] = useState<string>(LANDING_TEMPLATES[0].id);
+  const [modalTemplate, setModalTemplate] = useState<LandingTemplate | null>(null);
   const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
-  const [dbTemplates, setDbTemplates] = useState<any[]>([]);
   const [dbPlans, setDbPlans] = useState<any>(null);
-  const [loadingTemplates, setLoadingTemplates] = useState(true);
-
-  // Static fallback templates in case database is empty or offline
-  const fallbackTemplates: MockTemplate[] = [
-    {
-      id: 'wedding',
-      name: 'Mariage Élégant & Romantique',
-      category: 'private',
-      description: 'Un modèle aux tons pastel avec des polices serif élégantes, parfait pour les grands jours.',
-      style: {
-        bg: 'bg-stone-50',
-        border: 'border-amber-100',
-        textTitle: 'text-stone-800 font-serif',
-        textBody: 'text-stone-600',
-        btnBg: 'bg-stone-800 hover:bg-stone-700',
-        btnText: 'text-white font-serif'
-      },
-      elements: [
-        { type: 'text', content: 'CÉLÉBRATION DE NOTRE UNION', color: '#9a3412', fontSize: 'text-xs tracking-widest' },
-        { type: 'text', content: 'Claire & Alexandre', color: '#1c1917', fontSize: 'text-3xl sm:text-4xl font-extrabold' },
-        { type: 'text', content: 'Nous sommes impatients de célébrer ce moment entourés de nos proches. Rejoignez-nous pour notre mariage suivi d\'une réception privée.', color: '#44403c', fontSize: 'text-sm' },
-        { type: 'button', content: 'Confirmer ma Présence (RSVP)' }
-      ]
-    },
-    {
-      id: 'gala',
-      name: 'Gala Prestige & Entreprise',
-      category: 'corporate',
-      description: 'Fond sombre premium et liserés dorés pour vos dîners caritatifs, lancements et remises de prix.',
-      style: {
-        bg: 'bg-slate-950',
-        border: 'border-amber-500/20',
-        textTitle: 'text-amber-400 font-sans',
-        textBody: 'text-slate-400',
-        btnBg: 'bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600',
-        btnText: 'text-slate-950 font-black'
-      },
-      elements: [
-        { type: 'text', content: 'SOIRÉE ANNUELLE DE BIENFAISANCE', color: '#f59e0b', fontSize: 'text-xs tracking-widest' },
-        { type: 'text', content: 'Gala d\'Excellence 2026', color: '#ffffff', fontSize: 'text-3xl font-black' },
-        { type: 'text', content: 'Une soirée prestigieuse dédiée à l\'innovation et à la solidarité internationale. Tenue de soirée exigée.', color: '#94a3b8', fontSize: 'text-sm' },
-        { type: 'button', content: 'Réserver mon Billet Individuel' }
-      ]
-    },
-    {
-      id: 'cocktail',
-      name: 'Cocktail & Networking',
-      category: 'casual',
-      description: 'Mise en page dynamique et colorée pour les cocktails dînatoires et événements professionnels décontractés.',
-      style: {
-        bg: 'bg-indigo-950',
-        border: 'border-indigo-800/30',
-        textTitle: 'text-indigo-300 font-sans',
-        textBody: 'text-indigo-200/80',
-        btnBg: 'bg-indigo-600 hover:bg-indigo-500',
-        btnText: 'text-white'
-      },
-      elements: [
-        { type: 'text', content: 'NETWORKING & COCKTAIL', color: '#a5b4fc', fontSize: 'text-xs tracking-widest' },
-        { type: 'text', content: 'Cocktail d\'Inauguration', color: '#ffffff', fontSize: 'text-3xl font-black' },
-        { type: 'text', content: 'Rencontrez l\'écosystème local et découvrez nos nouveaux locaux autour d\'une sélection de mets raffinés.', color: '#cbd5e1', fontSize: 'text-sm' },
-        { type: 'button', content: 'S\'inscrire à la Soirée' }
-      ]
-    }
-  ];
+  const [loadingPlans, setLoadingPlans] = useState(true);
 
   useEffect(() => {
-    async function checkServerAndFetchTemplates() {
+    async function checkServerAndFetchPlans() {
       try {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}/health`);
         if (response.ok) {
           setServerStatus('online');
-          
-          // Fetch templates configured for landing page and plans
-          const [templatesData, plansData] = await Promise.all([
-            api.get('/public/templates'),
-            api.get('/public/plans').catch(() => null)
-          ]);
-
-          if (plansData) {
-            setDbPlans(plansData);
-          }
-
-          if (Array.isArray(templatesData) && templatesData.length > 0) {
-            // Map DB templates to MockTemplate structure
-            const mapped = templatesData.map((t: any) => {
-              const content = t.content || {};
-              return {
-                id: t.id,
-                name: t.name,
-                category: content.category || 'private',
-                description: content.description || 'Modèle personnalisé configuré par l\'administrateur.',
-                style: content.style || {
-                  bg: 'bg-white',
-                  border: 'border-slate-200',
-                  textTitle: 'text-slate-900 font-sans',
-                  textBody: 'text-slate-600',
-                  btnBg: 'bg-indigo-600 hover:bg-indigo-700',
-                  btnText: 'text-white'
-                },
-                elements: content.elements || [
-                  { type: 'text', content: t.name.toUpperCase(), color: '#4f46e5', fontSize: 'text-xs tracking-widest' },
-                  { type: 'text', content: content.subject || 'Vous êtes invité !', color: '#0f172a', fontSize: 'text-2xl font-extrabold' },
-                  { type: 'text', content: content.body || 'Rejoignez-nous pour cet événement exceptionnel.', color: '#475569', fontSize: 'text-sm' },
-                  { type: 'button', content: 'Confirmer ma présence' }
-                ]
-              };
-            });
-            setDbTemplates(mapped);
-            setPreviewTemplate(mapped[0].id);
-          } else {
-            setDbTemplates([]);
-            setPreviewTemplate('wedding');
-          }
+          const plansData = await api.get('/public/plans').catch(() => null);
+          if (plansData) setDbPlans(plansData);
         } else {
           setServerStatus('offline');
-          setPreviewTemplate('wedding');
         }
-      } catch (err) {
+      } catch {
         setServerStatus('offline');
-        setPreviewTemplate('wedding');
       } finally {
-        setLoadingTemplates(false);
+        setLoadingPlans(false);
       }
     }
-    checkServerAndFetchTemplates();
+    checkServerAndFetchPlans();
   }, []);
 
   const categories = [
@@ -178,14 +90,12 @@ export default function Home() {
     { id: 'casual', name: 'Moderne & Cocktail' },
   ];
 
-  // Use DB templates if available, otherwise fall back to static ones
-  const activeTemplatesList = dbTemplates.length > 0 ? dbTemplates : fallbackTemplates;
+  // Neuf modèles statiques pour la vitrine landing page
+  const activeTemplatesList = LANDING_TEMPLATES;
 
-  const filteredTemplates = selectedCategory === 'all' 
-    ? activeTemplatesList 
-    : activeTemplatesList.filter(t => t.category === selectedCategory);
+  const filteredTemplateGroups = getLandingTemplateGroups(selectedCategory);
 
-  const activePreview = activeTemplatesList.find(t => t.id === previewTemplate) || activeTemplatesList[0];
+  const activePreview = activeTemplatesList.find((t) => t.id === previewTemplate) || activeTemplatesList[0];
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950 font-sans antialiased text-slate-900 dark:text-slate-100 transition-colors duration-200">
@@ -370,7 +280,7 @@ export default function Home() {
                 Aperçu du designer
               </div>
 
-              {loadingTemplates ? (
+              {loadingPlans ? (
                 <div className="h-[400px] flex items-center justify-center">
                   <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
                 </div>
@@ -389,33 +299,7 @@ export default function Home() {
                     ))}
                   </div>
 
-                  {/* Invitation Model Render Card */}
-                  <div className={`rounded-2xl border ${activePreview.style.bg} ${activePreview.style.border} p-6 sm:p-8 space-y-6 shadow-md transition-all duration-300 min-h-[340px] flex flex-col justify-between relative overflow-hidden`}>
-                    <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-500 to-violet-500" />
-                    
-                    <div className="space-y-4 pt-2">
-                      {activePreview.elements.map((el: any, i: number) => {
-                        if (el.type === 'text') {
-                          return (
-                            <div 
-                              key={i} 
-                              style={{ color: el.color }}
-                              className={`${el.fontSize || 'text-base'} text-center leading-relaxed`}
-                            >
-                              {el.content}
-                            </div>
-                          );
-                        }
-                        return null;
-                      })}
-                    </div>
-
-                    <div className="flex justify-center pt-4">
-                      <div className={`px-5 py-2.5 rounded-xl font-bold text-center inline-block text-sm shadow-md cursor-pointer ${activePreview.style.btnBg} ${activePreview.style.btnText}`}>
-                        {activePreview.elements.find((el: any) => el.type === 'button')?.content || 'S\'inscrire'}
-                      </div>
-                    </div>
-                  </div>
+                  <InvitationPreviewCard template={activePreview} />
                 </>
               ) : (
                 <div className="h-[400px] flex items-center justify-center text-slate-500">
@@ -532,7 +416,7 @@ export default function Home() {
         <div className="w-10/12 max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
             <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Nos Modèles Possibles</h2>
-            <p className="text-slate-600 dark:text-slate-400">Explorez quelques-unes des structures de modèles d'invitation pré-configurées ou créez les vôtres de toutes pièces.</p>
+            <p className="text-slate-600 dark:text-slate-400">Neuf modèles d'invitation pré-configurés, répartis en trois univers — privé, professionnel et cocktail.</p>
             
             {/* Filter buttons */}
             <div className="flex flex-wrap justify-center gap-2 pt-4">
@@ -548,54 +432,64 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            {loadingTemplates ? (
-              <div className="col-span-2 py-12 flex flex-col items-center justify-center gap-3">
-                <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Chargement des modèles...</p>
-              </div>
-            ) : filteredTemplates.length === 0 ? (
-              <div className="col-span-2 text-center py-12 text-slate-500 dark:text-slate-400 font-medium">
+          <div className="space-y-16">
+            {filteredTemplateGroups.every((g) => g.templates.length === 0) ? (
+              <div className="text-center py-12 text-slate-500 dark:text-slate-400 font-medium">
                 Aucun modèle disponible dans cette catégorie.
               </div>
             ) : (
-              filteredTemplates.map((t) => (
-                <div key={t.id} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 flex flex-col justify-between hover:shadow-md transition duration-300">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                        {t.category === 'private' ? 'Événement Privé' : t.category === 'corporate' ? 'Professionnel' : 'Cocktail'}
-                      </span>
-                      <button
-                        onClick={() => setModalTemplate(t)}
-                        className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
-                      >
-                        Apercevoir
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
+              filteredTemplateGroups.map((group) => (
+                <div key={group.id} className="space-y-8">
+                  {selectedCategory === 'all' && group.title && (
+                    <div className="text-center space-y-2">
+                      <h3 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">{group.title}</h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xl mx-auto">{group.subtitle}</p>
                     </div>
-                    <h3 className="font-extrabold text-slate-900 dark:text-white text-lg leading-tight">{t.name}</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{t.description}</p>
+                  )}
 
-                    {/* Component preview badges */}
-                    <div className="flex flex-wrap gap-2 pt-2">
-                      <span className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded-md text-[10px] text-slate-600 dark:text-slate-300 font-semibold flex items-center gap-1">
-                        <Layout className="w-3.5 h-3.5 text-indigo-500" /> Elements JSON
-                      </span>
-                      <span className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded-md text-[10px] text-slate-600 dark:text-slate-300 font-semibold flex items-center gap-1">
-                        <Smartphone className="w-3.5 h-3.5 text-indigo-500" /> Mobile Ready
-                      </span>
-                      <span className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded-md text-[10px] text-slate-600 dark:text-slate-300 font-semibold flex items-center gap-1">
-                        <Compass className="w-3.5 h-3.5 text-indigo-500" /> RSVP Inclus
-                      </span>
-                    </div>
-                  </div>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {group.templates.map((t) => (
+                      <div key={t.id} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 flex flex-col justify-between hover:shadow-md transition duration-300">
+                        <div className="space-y-4">
+                          <InvitationPreviewCard template={t} compact />
 
-                  <div className="border-t border-slate-200/60 dark:border-slate-800/60 pt-4 mt-6 flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
-                    <span className="truncate max-w-[150px]">Modèle {t.name}</span>
-                    <Link href="/register" className="text-indigo-600 dark:text-indigo-400 hover:underline">
-                      Utiliser ce modèle
-                    </Link>
+                          <div className="flex items-center justify-between pt-1">
+                            <span className="text-[10px] bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                              {getCategoryLabel(t.category)}
+                            </span>
+                            <button
+                              onClick={() => setModalTemplate(t)}
+                              className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
+                            >
+                              Apercevoir
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          <h3 className="font-extrabold text-slate-900 dark:text-white text-base leading-tight">{t.name}</h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{t.description}</p>
+
+                          <div className="flex flex-wrap gap-2">
+                            <span className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded-md text-[10px] text-slate-600 dark:text-slate-300 font-semibold flex items-center gap-1">
+                              <Layout className="w-3.5 h-3.5 text-indigo-500" /> Personnalisable
+                            </span>
+                            <span className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded-md text-[10px] text-slate-600 dark:text-slate-300 font-semibold flex items-center gap-1">
+                              <Smartphone className="w-3.5 h-3.5 text-indigo-500" /> Mobile Ready
+                            </span>
+                            <span className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded-md text-[10px] text-slate-600 dark:text-slate-300 font-semibold flex items-center gap-1">
+                              <Compass className="w-3.5 h-3.5 text-indigo-500" /> RSVP Inclus
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="border-t border-slate-200/60 dark:border-slate-800/60 pt-4 mt-5 flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
+                          <span className="truncate max-w-[150px]">{t.name}</span>
+                          <Link href="/register" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                            Utiliser ce modèle
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))
@@ -873,7 +767,7 @@ export default function Home() {
             
             <div className="flex justify-between items-center">
               <span className="text-[10px] bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                {modalTemplate.category === 'private' ? 'Événement Privé' : modalTemplate.category === 'corporate' ? 'Professionnel' : 'Cocktail'}
+                {getCategoryLabel(modalTemplate.category)}
               </span>
               <button 
                 onClick={() => setModalTemplate(null)}
@@ -888,31 +782,7 @@ export default function Home() {
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{modalTemplate.description}</p>
             </div>
 
-            {/* Rendered Card */}
-            <div className={`rounded-2xl border ${modalTemplate.style.bg} ${modalTemplate.style.border} p-6 sm:p-8 space-y-6 shadow-inner relative overflow-hidden`}>
-              <div className="space-y-4">
-                {modalTemplate.elements.map((el: any, i: number) => {
-                  if (el.type === 'text') {
-                    return (
-                      <div 
-                        key={i} 
-                        style={{ color: el.color }}
-                        className={`${el.fontSize || 'text-sm'} text-center leading-relaxed`}
-                      >
-                        {el.content}
-                      </div>
-                    );
-                  }
-                  return null;
-                })}
-              </div>
-
-              <div className="flex justify-center pt-4">
-                <div className={`px-5 py-2.5 rounded-xl font-bold text-center inline-block text-sm shadow-md ${modalTemplate.style.btnBg} ${modalTemplate.style.btnText}`}>
-                  {modalTemplate.elements.find((el: any) => el.type === 'button')?.content || 'S\'inscrire'}
-                </div>
-              </div>
-            </div>
+            <InvitationPreviewCard template={modalTemplate} />
 
             <div className="flex gap-3 pt-2">
               <button
