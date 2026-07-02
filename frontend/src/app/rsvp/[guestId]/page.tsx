@@ -64,6 +64,7 @@ interface GuestRsvpData {
     stroke?: string;
     strokeWidth?: number;
   } | null;
+  roomThemeId?: string | null;
   eventPassed?: boolean;
   rsvpLocked?: boolean;
   event: {
@@ -585,6 +586,7 @@ export default function RsvpPage() {
                   ...guest.roomOutline,
                   shape: guest.roomOutline.shape as RoomOutlineShape,
                 } : null}
+                roomThemeId={guest.roomThemeId ?? null}
                 guestFirstName={guest.firstName}
                 guestLastName={guest.lastName}
               />

@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useCallback } from 'react';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles,
 } from 'lucide-react';
 import ChairRenderer from '@/components/ChairRenderer';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
@@ -35,6 +35,7 @@ import {
 import { prependLayoutAction, LayoutActionEntry } from '@/lib/layoutActionLog';
 import { getSeatCoordinates, getTableVisualStyle } from '@/lib/tablePlanUtils';
 import { readImageFile } from '@/lib/imageCropUtils';
+import { applyRoomTheme, getRoomTheme, roomThemeList, RoomThemeId } from '@/lib/roomThemeUtils';
 
 type SelectableKind = 'table' | 'row' | 'zone' | 'fixture';
 
@@ -236,6 +237,14 @@ export default function RoomLayoutEditor({
 
   const cropFixture = cropTarget ? blueprint.fixtures.find((f) => f.id === cropTarget.id) : null;
 
+  const applyTheme = (themeId: RoomThemeId) => {
+    const next = applyRoomTheme(blueprint, themeId);
+    onChange(refreshBlueprintMetadata(ensureBlueprintDefaults(next)));
+    log(`Thème « ${getRoomTheme(themeId).name} » appliqué`, 'settings');
+  };
+
+  const activeTheme = getRoomTheme(blueprint.metadata.roomThemeId);
+
   const outline = blueprint.roomOutline!;
   const clipPath = getRoomOutlineClipPath(outline.shape);
 
@@ -262,9 +271,10 @@ export default function RoomLayoutEditor({
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       onClick={() => setSelected(null)}
-      className={`relative w-full ${className} bg-[#f1f5f9] border-2 border-slate-300 rounded-2xl overflow-hidden shadow-inner`}
+      className={`relative w-full ${className} border-2 rounded-2xl overflow-hidden shadow-inner`}
       style={{
-        backgroundImage: 'linear-gradient(rgba(148,163,184,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.15) 1px, transparent 1px)',
+        backgroundColor: activeTheme.canvasBackground,
+        backgroundImage: `linear-gradient(${activeTheme.gridColor} 1px, transparent 1px), linear-gradient(90deg, ${activeTheme.gridColor} 1px, transparent 1px)`,
         backgroundSize: '24px 24px',
       }}
     >
@@ -403,7 +413,30 @@ export default function RoomLayoutEditor({
       return (
         <div className="space-y-4">
           <div className="p-4 bg-slate-50 rounded-xl border space-y-3">
-            <p className="text-xs font-bold uppercase text-slate-500 flex items-center gap-1"><Palette className="w-3.5 h-3.5" /> Couleur des tables (global)</p>
+            <p className="text-xs font-bold uppercase text-slate-500 flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> Thème de la salle</p>
+            <div className="grid grid-cols-2 gap-2">
+              {roomThemeList.map((theme) => (
+                <button
+                  key={theme.id}
+                  type="button"
+                  onClick={() => applyTheme(theme.id)}
+                  className={`text-left py-2 px-2.5 rounded-lg border text-[10px] font-bold transition ${
+                    blueprint.metadata.roomThemeId === theme.id || (!blueprint.metadata.roomThemeId && theme.id === 'classic')
+                      ? 'bg-indigo-50 border-indigo-400 text-indigo-800 ring-1 ring-indigo-200'
+                      : 'border-slate-200 text-slate-600 hover:bg-white'
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-full border shrink-0" style={{ background: theme.roomOutline.fill, borderColor: theme.roomOutline.stroke }} />
+                    {theme.name}
+                  </span>
+                  <span className="font-normal text-slate-400 block mt-0.5 line-clamp-1">{theme.description}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="p-4 bg-slate-50 rounded-xl border space-y-3">
+            <p className="text-xs font-bold uppercase text-slate-500 flex items-center gap-1"><Palette className="w-3.5 h-3.5" /> Couleur des tables</p>
             <div className="flex gap-2 items-center">
               <input
                 type="color"

@@ -97,6 +97,7 @@ export interface RoomLayoutBlueprint {
     rowCount?: number;
     totalSeats: number;
     defaultTableColor?: string;
+    roomThemeId?: string;
   };
 }
 
@@ -410,6 +411,7 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
     tables,
     fixtures: blueprint.fixtures,
     defaultTableColor: blueprint.metadata.defaultTableColor,
+    roomThemeId: blueprint.metadata.roomThemeId,
     roomOutline: blueprint.roomOutline,
     sourceRoomType: blueprint.roomType,
     importedAt: new Date().toISOString(),

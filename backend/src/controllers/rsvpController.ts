@@ -229,6 +229,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
       fill?: string;
       stroke?: string;
     } | null = null;
+    let roomThemeId: string | null = null;
 
     const eventObj = guest.event as any;
     if (eventObj && eventObj.tablePlan && typeof eventObj.tablePlan === 'object') {
@@ -302,6 +303,11 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
       } else if (plan.roomOutline) {
         roomOutline = plan.roomOutline;
       }
+      if (room?.layoutBlueprint?.metadata?.roomThemeId) {
+        roomThemeId = room.layoutBlueprint.metadata.roomThemeId;
+      } else if (plan.roomThemeId) {
+        roomThemeId = plan.roomThemeId;
+      }
     }
 
     return res.json({
@@ -310,6 +316,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
       tablePlanOverview,
       planFixtures,
       roomOutline,
+      roomThemeId,
       eventPassed: isEventDatePassed(guest.event.date),
       rsvpLocked: isEventDatePassed(guest.event.date),
     });
