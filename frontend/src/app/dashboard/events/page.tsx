@@ -9,8 +9,8 @@ import {
   Calendar, MapPin, Users, PlusCircle, Trash2, Edit3, 
   ChevronRight, ArrowLeft, Check, Upload, Mail, Send, 
   Sparkles, CheckCircle2, XCircle, AlertCircle, HelpCircle, Loader2,
-  Copy, MessageSquare, Share2, Search, Filter, RefreshCw, CheckSquare, XSquare, HelpCircle as PendingIcon,
-  Eye, BarChart3, Utensils, FileSpreadsheet, Download, LayoutGrid
+  Copy, MessageSquare, Share2, Search, Filter, RefreshCw,
+  Eye, Utensils, FileSpreadsheet, Download, LayoutGrid
 } from 'lucide-react';
 import TablePlanner from './TablePlanner';
 import EventFeedManager from './EventFeedManager';
@@ -129,7 +129,7 @@ export default function EventsPage() {
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   
   // Tabs
-  const [activeTab, setActiveTab] = useState<'guests' | 'stats' | 'invitations' | 'tablePlan' | 'feed'>('guests');
+  const [activeTab, setActiveTab] = useState<'guests' | 'invitations' | 'tablePlan' | 'feed'>('guests');
 
   // Event form
   const [showEventModal, setShowEventModal] = useState(false);
@@ -168,7 +168,6 @@ export default function EventsPage() {
   const [dietFilter, setDietFilter] = useState<string>('ALL');
   const [customFilters, setCustomFilters] = useState<Record<string, string>>({});
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const [showDetailedStats, setShowDetailedStats] = useState(false);
   const [selectedGuestDetails, setSelectedGuestDetails] = useState<GuestItem | null>(null);
 
   // Import guests
@@ -208,17 +207,7 @@ export default function EventsPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Guest filtering and statistics calculations
-  const totalGuestsCount = guests.length;
-  const acceptedCount = guests.filter(g => g.rsvp === 'ACCEPTED').length;
-  const declinedCount = guests.filter(g => g.rsvp === 'DECLINED').length;
-  const pendingCount = guests.filter(g => g.rsvp === 'PENDING').length;
-
-  const acceptedPercentage = totalGuestsCount > 0 ? Math.round((acceptedCount / totalGuestsCount) * 100) : 0;
-  const declinedPercentage = totalGuestsCount > 0 ? Math.round((declinedCount / totalGuestsCount) * 100) : 0;
-  const pendingPercentage = totalGuestsCount > 0 ? Math.round((pendingCount / totalGuestsCount) * 100) : 0;
-  const responseRate = totalGuestsCount > 0 ? Math.round(((acceptedCount + declinedCount) / totalGuestsCount) * 100) : 0;
-
+  // Guest filtering
   const uniqueCategories = Array.from(new Set(guests.map(g => g.category || 'Général')));
 
   const getCustomRsvpFields = () => {
@@ -1292,15 +1281,6 @@ export default function EventsPage() {
               </span>
             </button>
             <button
-              onClick={() => setActiveTab('stats')}
-              className={`pb-4 px-6 text-sm font-bold border-b-2 transition ${activeTab === 'stats' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
-            >
-              <span className="flex items-center gap-2">
-                <BarChart3 className="w-4.5 h-4.5" />
-                Statistiques
-              </span>
-            </button>
-            <button
               onClick={() => setActiveTab('invitations')}
               className={`pb-4 px-6 text-sm font-bold border-b-2 transition ${activeTab === 'invitations' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
             >
@@ -1324,7 +1304,7 @@ export default function EventsPage() {
             >
               <span className="flex items-center gap-2">
                 <MessageSquare className="w-4.5 h-4.5" />
-                Feed & Partages
+                Feed & Livre d'or
               </span>
             </button>
           </div>
@@ -1332,223 +1312,6 @@ export default function EventsPage() {
           {/* Tab Content: Guests */}
           {activeTab === 'guests' && (
             <div className="space-y-6">
-              {/* Event Statistics Cards */}
-              {guests.length > 0 && (
-                <div className="space-y-4 animate-fade-in">
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* Card 1: Total Guests */}
-                    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center gap-4">
-                      <div className="bg-indigo-50 text-indigo-700 p-3 rounded-xl">
-                        <Users className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Invités</div>
-                        <div className="text-2xl font-extrabold text-slate-900">{totalGuestsCount}</div>
-                      </div>
-                    </div>
-
-                    {/* Card 2: Confirmed (ACCEPTED) */}
-                    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center gap-4">
-                      <div className="bg-emerald-50 text-emerald-700 p-3 rounded-xl">
-                        <CheckSquare className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Présents</div>
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="text-2xl font-extrabold text-slate-900">{acceptedCount}</span>
-                          <span className="text-xs font-bold text-emerald-600">({acceptedPercentage}%)</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Card 3: Absent (DECLINED) */}
-                    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center gap-4">
-                      <div className="bg-rose-50 text-rose-700 p-3 rounded-xl">
-                        <XSquare className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Absents</div>
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="text-2xl font-extrabold text-slate-900">{declinedCount}</span>
-                          <span className="text-xs font-bold text-rose-600">({declinedPercentage}%)</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Card 4: Pending (PENDING) */}
-                    <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex items-center gap-4">
-                      <div className="bg-amber-50 text-amber-700 p-3 rounded-xl">
-                        <PendingIcon className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Sans réponse</div>
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="text-2xl font-extrabold text-slate-900">{pendingCount}</span>
-                          <span className="text-xs font-bold text-amber-600">({pendingPercentage}%)</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Response Rate Progress Bar */}
-                  <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-2">
-                    <div className="flex justify-between items-center text-xs font-bold text-slate-500 uppercase tracking-wider">
-                      <span>Taux de réponse global</span>
-                      <span className="text-indigo-600">{responseRate}%</span>
-                    </div>
-                    <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                      <div 
-                        style={{ width: `${responseRate}%` }}
-                        className="bg-indigo-600 h-full rounded-full transition-all duration-500"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Toggle Detailed Stats Button */}
-                  <button 
-                    onClick={() => setShowDetailedStats(!showDetailedStats)}
-                    className="w-full py-2.5 px-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-xs transition flex items-center justify-center gap-2 border border-indigo-100 shadow-sm"
-                  >
-                    <BarChart3 className="w-4 h-4" />
-                    {showDetailedStats ? "Masquer les statistiques détaillées" : "Afficher les statistiques détaillées (Repas, Questions personnalisées, etc.)"}
-                  </button>
-                </div>
-              )}
-
-              {/* Detailed Statistics Panel */}
-              {selectedEvent && guests.length > 0 && showDetailedStats && (
-                <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6 animate-fade-in">
-                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                    <BarChart3 className="w-5 h-5 text-indigo-600" />
-                    Statistiques de réponses détaillées
-                  </h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {/* Diet/Menu Stats */}
-                    <div className="space-y-3">
-                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                        <Utensils className="w-4 h-4 text-indigo-500" />
-                        Régimes Alimentaires (Présents)
-                      </h4>
-                      <div className="bg-slate-50 border border-slate-150 rounded-2xl p-4 space-y-2.5">
-                        {[
-                          { label: 'Standard', count: guests.filter(g => g.rsvp === 'ACCEPTED' && (!g.preferences?.specialMeal || g.preferences?.specialMeal === 'none')).length },
-                          { label: 'Végétarien', count: guests.filter(g => g.rsvp === 'ACCEPTED' && g.preferences?.specialMeal === 'vegetarian').length },
-                          { label: 'Végétalien (Vegan)', count: guests.filter(g => g.rsvp === 'ACCEPTED' && g.preferences?.specialMeal === 'vegan').length },
-                          { label: 'Halal', count: guests.filter(g => g.rsvp === 'ACCEPTED' && g.preferences?.specialMeal === 'halal').length },
-                          { label: 'Casher', count: guests.filter(g => g.rsvp === 'ACCEPTED' && g.preferences?.specialMeal === 'kosher').length },
-                        ].map(item => {
-                          const totalAccepted = guests.filter(g => g.rsvp === 'ACCEPTED').length;
-                          const pct = totalAccepted > 0 ? Math.round((item.count / totalAccepted) * 100) : 0;
-                          return (
-                            <div key={item.label} className="space-y-1">
-                              <div className="flex justify-between text-xs font-semibold text-slate-700">
-                                <span>{item.label}</span>
-                                <span>{item.count} <span className="text-slate-400 font-normal">({pct}%)</span></span>
-                              </div>
-                              <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                                <div style={{ width: `${pct}%` }} className="bg-indigo-500 h-full rounded-full" />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Category Stats */}
-                    <div className="space-y-3">
-                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                        <Users className="w-4 h-4 text-indigo-500" />
-                        Statut par Catégorie d'Invités
-                      </h4>
-                      <div className="bg-slate-50 border border-slate-150 rounded-2xl p-4 space-y-3 max-h-64 overflow-y-auto">
-                        {uniqueCategories.map(cat => {
-                          const catGuests = guests.filter(g => (g.category || 'Général') === cat);
-                          const total = catGuests.length;
-                          const accepted = catGuests.filter(g => g.rsvp === 'ACCEPTED').length;
-                          const declined = catGuests.filter(g => g.rsvp === 'DECLINED').length;
-                          const pending = catGuests.filter(g => g.rsvp === 'PENDING').length;
-                          return (
-                            <div key={cat} className="space-y-1 border-b border-slate-150 pb-2 last:border-0 last:pb-0">
-                              <div className="text-xs font-bold text-slate-800">{cat} ({total})</div>
-                              <div className="grid grid-cols-3 gap-1 text-[10px] text-center font-bold">
-                                <div className="bg-emerald-50 text-emerald-700 py-1 rounded">Présent: {accepted}</div>
-                                <div className="bg-rose-50 text-rose-700 py-1 rounded">Absent: {declined}</div>
-                                <div className="bg-amber-50 text-amber-700 py-1 rounded">Attente: {pending}</div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Custom Questions Stats */}
-                    <div className="space-y-3 md:col-span-2 lg:col-span-1">
-                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                        <Sparkles className="w-4 h-4 text-indigo-500" />
-                        Questions Personnalisées (Présents)
-                      </h4>
-                      <div className="bg-slate-50 border border-slate-150 rounded-2xl p-4 space-y-4 max-h-64 overflow-y-auto">
-                        {getCustomRsvpFields().length === 0 ? (
-                          <div className="text-center py-8 text-xs text-slate-400 italic">
-                            Aucune question personnalisée définie dans le modèle de cet événement.
-                          </div>
-                        ) : (
-                          getCustomRsvpFields().map(field => {
-                            const answers = guests
-                              .filter(g => g.rsvp === 'ACCEPTED' && g.preferences?.customFields?.[field.label] !== undefined)
-                              .map(g => g.preferences.customFields[field.label]);
-                            
-                            const totalAnswers = answers.length;
-
-                            if (field.type === 'checkbox') {
-                              const yesCount = answers.filter(a => a === true).length;
-                              const noCount = totalAnswers - yesCount;
-                              const yesPct = totalAnswers > 0 ? Math.round((yesCount / totalAnswers) * 100) : 0;
-                              return (
-                                <div key={field.id} className="space-y-1.5 border-b border-slate-150 pb-2.5 last:border-0 last:pb-0">
-                                  <div className="text-xs font-bold text-slate-800">{field.label}</div>
-                                  <div className="flex justify-between text-[10px] font-semibold text-slate-500">
-                                    <span>Coché (Oui) : {yesCount} ({yesPct}%)</span>
-                                    <span>Non coché (Non) : {noCount}</span>
-                                  </div>
-                                  <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                                    <div style={{ width: `${yesPct}%` }} className="bg-indigo-500 h-full rounded-full" />
-                                  </div>
-                                </div>
-                              );
-                            } else {
-                              const counts: Record<string, number> = {};
-                              answers.forEach(ans => {
-                                const strVal = ans === null || ans === undefined ? 'Non renseigné' : ans.toString();
-                                counts[strVal] = (counts[strVal] || 0) + 1;
-                              });
-
-                              return (
-                                <div key={field.id} className="space-y-1.5 border-b border-slate-150 pb-2.5 last:border-0 last:pb-0">
-                                  <div className="text-xs font-bold text-slate-800">{field.label}</div>
-                                  <div className="space-y-1 max-h-32 overflow-y-auto">
-                                    {Object.entries(counts).map(([option, count]) => {
-                                      const pct = totalAnswers > 0 ? Math.round((count / totalAnswers) * 100) : 0;
-                                      return (
-                                        <div key={option} className="flex justify-between text-[10px] text-slate-600">
-                                          <span className="truncate max-w-[150px]">{option}</span>
-                                          <span className="font-bold">{count} ({pct}%)</span>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              );
-                            }
-                          })
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-bold text-slate-900">Liste des Invités</h2>
@@ -1888,220 +1651,6 @@ export default function EventsPage() {
             </div>
           )}
 
-          {/* Tab Content: Statistiques */}
-          {activeTab === 'stats' && (
-            <div className="space-y-6 animate-fade-in">
-              {/* Event Statistics Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Card 1: Total Guests */}
-                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex items-center gap-4">
-                  <div className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 p-3 rounded-xl">
-                    <Users className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Invités</div>
-                    <div className="text-2xl font-black text-slate-900 dark:text-white">{totalGuestsCount}</div>
-                  </div>
-                </div>
-
-                {/* Card 2: Confirmed (ACCEPTED) */}
-                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex items-center gap-4">
-                  <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 p-3 rounded-xl">
-                    <CheckSquare className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Présents</div>
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-2xl font-black text-slate-900 dark:text-white">{acceptedCount}</span>
-                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">({acceptedPercentage}%)</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card 3: Absent (DECLINED) */}
-                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex items-center gap-4">
-                  <div className="bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 p-3 rounded-xl">
-                    <XSquare className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Absents</div>
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-2xl font-black text-slate-900 dark:text-white">{declinedCount}</span>
-                      <span className="text-xs font-bold text-rose-600 dark:text-rose-400">({declinedPercentage}%)</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Card 4: Pending (PENDING) */}
-                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex items-center gap-4">
-                  <div className="bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 p-3 rounded-xl">
-                    <PendingIcon className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Sans réponse</div>
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-2xl font-black text-slate-900 dark:text-white">{pendingCount}</span>
-                      <span className="text-xs font-bold text-amber-600 dark:text-amber-400">({pendingPercentage}%)</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Response Rate Progress Bar */}
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-2">
-                <div className="flex justify-between items-center text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  <span>Taux de réponse global</span>
-                  <span className="text-indigo-600 dark:text-indigo-400 font-extrabold">{responseRate}%</span>
-                </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2.5 overflow-hidden">
-                  <div 
-                    style={{ width: `${responseRate}%` }}
-                    className="bg-indigo-600 h-full rounded-full transition-all duration-500"
-                  />
-                </div>
-              </div>
-
-              {/* Detailed Statistics Panel */}
-              {guests.length > 0 ? (
-                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xs space-y-6">
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-                    <BarChart3 className="w-5 h-5 text-indigo-600" />
-                    Statistiques de réponses détaillées
-                  </h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {/* Diet/Menu Stats */}
-                    <div className="space-y-3">
-                      <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                        <Utensils className="w-4 h-4 text-indigo-500" />
-                        Régimes Alimentaires (Présents)
-                      </h4>
-                      <div className="bg-slate-50 dark:bg-slate-950 border border-slate-150 dark:border-slate-800 rounded-2xl p-4 space-y-2.5">
-                        {[
-                          { label: 'Standard', count: guests.filter(g => g.rsvp === 'ACCEPTED' && (!g.preferences?.specialMeal || g.preferences?.specialMeal === 'none')).length },
-                          { label: 'Végétarien', count: guests.filter(g => g.rsvp === 'ACCEPTED' && g.preferences?.specialMeal === 'vegetarian').length },
-                          { label: 'Végétalien (Vegan)', count: guests.filter(g => g.rsvp === 'ACCEPTED' && g.preferences?.specialMeal === 'vegan').length },
-                          { label: 'Halal', count: guests.filter(g => g.rsvp === 'ACCEPTED' && g.preferences?.specialMeal === 'halal').length },
-                          { label: 'Casher', count: guests.filter(g => g.rsvp === 'ACCEPTED' && g.preferences?.specialMeal === 'kosher').length },
-                        ].map(item => {
-                          const totalAccepted = guests.filter(g => g.rsvp === 'ACCEPTED').length;
-                          const pct = totalAccepted > 0 ? Math.round((item.count / totalAccepted) * 100) : 0;
-                          return (
-                            <div key={item.label} className="space-y-1">
-                              <div className="flex justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
-                                <span>{item.label}</span>
-                                <span>{item.count} <span className="text-slate-400 dark:text-slate-500 font-normal">({pct}%)</span></span>
-                              </div>
-                              <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                                <div style={{ width: `${pct}%` }} className="bg-indigo-500 h-full rounded-full" />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Category Stats */}
-                    <div className="space-y-3">
-                      <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                        <Users className="w-4 h-4 text-indigo-500" />
-                        Statut par Catégorie d'Invités
-                      </h4>
-                      <div className="bg-slate-50 dark:bg-slate-950 border border-slate-150 dark:border-slate-800 rounded-2xl p-4 space-y-3 max-h-64 overflow-y-auto">
-                        {uniqueCategories.map(cat => {
-                          const catGuests = guests.filter(g => (g.category || 'Général') === cat);
-                          const total = catGuests.length;
-                          const accepted = catGuests.filter(g => g.rsvp === 'ACCEPTED').length;
-                          const declined = catGuests.filter(g => g.rsvp === 'DECLINED').length;
-                          const pending = catGuests.filter(g => g.rsvp === 'PENDING').length;
-                          return (
-                            <div key={cat} className="space-y-1 border-b border-slate-150 dark:border-slate-800 pb-2 last:border-0 last:pb-0">
-                              <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{cat} ({total})</div>
-                              <div className="grid grid-cols-3 gap-1 text-[10px] text-center font-bold">
-                                <div className="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 py-1 rounded">Présent: {accepted}</div>
-                                <div className="bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-400 py-1 rounded">Absent: {declined}</div>
-                                <div className="bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 py-1 rounded">Attente: {pending}</div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Custom Questions Stats */}
-                    <div className="space-y-3 md:col-span-2 lg:col-span-1">
-                      <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                        <Sparkles className="w-4 h-4 text-indigo-500" />
-                        Questions Personnalisées (Présents)
-                      </h4>
-                      <div className="bg-slate-50 dark:bg-slate-950 border border-slate-150 dark:border-slate-800 rounded-2xl p-4 space-y-4 max-h-64 overflow-y-auto">
-                        {getCustomRsvpFields().length === 0 ? (
-                          <div className="text-center py-8 text-xs text-slate-400 dark:text-slate-500 italic">
-                            Aucune question personnalisée définie dans le modèle de cet événement.
-                          </div>
-                        ) : (
-                          getCustomRsvpFields().map(field => {
-                            const answers = guests
-                              .filter(g => g.rsvp === 'ACCEPTED' && g.preferences?.customFields?.[field.label] !== undefined)
-                              .map(g => g.preferences.customFields[field.label]);
-                            
-                            const totalAnswers = answers.length;
-
-                            if (field.type === 'checkbox') {
-                              const yesCount = answers.filter(a => a === true).length;
-                              const noCount = totalAnswers - yesCount;
-                              const yesPct = totalAnswers > 0 ? Math.round((yesCount / totalAnswers) * 100) : 0;
-                              return (
-                                <div key={field.id} className="space-y-1.5 border-b border-slate-150 dark:border-slate-800 pb-2.5 last:border-0 last:pb-0">
-                                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{field.label}</div>
-                                  <div className="flex justify-between text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-                                    <span>Coché (Oui) : {yesCount} ({yesPct}%)</span>
-                                    <span>Non coché (Non) : {noCount}</span>
-                                  </div>
-                                  <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                                    <div style={{ width: `${yesPct}%` }} className="bg-indigo-500 h-full rounded-full" />
-                                  </div>
-                                </div>
-                              );
-                            } else {
-                              const counts: Record<string, number> = {};
-                              answers.forEach(ans => {
-                                const strVal = ans === null || ans === undefined ? 'Non renseigné' : ans.toString();
-                                counts[strVal] = (counts[strVal] || 0) + 1;
-                              });
-
-                              return (
-                                <div key={field.id} className="space-y-1.5 border-b border-slate-150 dark:border-slate-800 pb-2.5 last:border-0 last:pb-0">
-                                  <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{field.label}</div>
-                                  <div className="space-y-1 max-h-24 overflow-y-auto">
-                                    {Object.entries(counts).map(([val, count]) => {
-                                      const pct = totalAnswers > 0 ? Math.round((count / totalAnswers) * 100) : 0;
-                                      return (
-                                        <div key={val} className="flex items-center justify-between text-[10px] text-slate-600 dark:text-slate-400">
-                                          <span className="truncate max-w-[120px] font-semibold">{val}</span>
-                                          <span>{count} ({pct}%)</span>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              );
-                            }
-                          })
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl">
-                  <BarChart3 className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-4" />
-                  <h3 className="font-bold text-slate-700 dark:text-slate-300">Aucune statistique disponible</h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-xs mx-auto">Ajoutez des invités à cet événement pour commencer à générer des statistiques.</p>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Tab Content: Invitations */}
           {activeTab === 'invitations' && (
