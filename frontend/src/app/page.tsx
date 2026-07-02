@@ -732,9 +732,10 @@ export default function Home() {
               <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Ressources</h4>
               <ul className="space-y-2 text-xs">
                 <li><Link href="/contact" className="hover:text-white transition">Contact & Support</Link></li>
+                <li><Link href="/terms" className="hover:text-white transition">Conditions d&apos;utilisation</Link></li>
+                <li><Link href="/privacy" className="hover:text-white transition">Politique de confidentialité</Link></li>
                 <li><Link href="/login" className="hover:text-white transition">Connexion Espace Organisateur</Link></li>
                 <li><Link href="/register" className="hover:text-white transition">Créer une organisation</Link></li>
-                <li><span className="hover:text-white transition cursor-default">Sécurité & RGPD</span></li>
               </ul>
             </div>
 
@@ -743,7 +744,7 @@ export default function Home() {
               <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Contact & Support</h4>
               <ul className="space-y-2 text-xs text-slate-500">
                 <li>Email: <a href="mailto:mingandajeereq@gmail.com" className="text-slate-400 hover:text-white transition font-medium">mingandajeereq@gmail.com</a></li>
-                <li>Téléphone: <span className="text-slate-400">+243 810 000 000</span></li>
+                <li>Téléphone: <a href="tel:+243817125577" className="text-slate-400 hover:text-white transition font-medium">+243 817 125 577</a></li>
                 <li>Adresse: <span className="text-slate-400">Boulevard du 30 Juin, Gombe, Kinshasa, RDC</span></li>
               </ul>
             </div>
@@ -751,6 +752,10 @@ export default function Home() {
 
           <div className="border-t border-slate-900 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-600">
             <p>© 2026 EventMaster SaaS. Tous droits réservés.</p>
+            <div className="flex flex-wrap gap-4">
+              <Link href="/terms" className="hover:text-slate-400 transition">Conditions d&apos;utilisation</Link>
+              <Link href="/privacy" className="hover:text-slate-400 transition">Confidentialité</Link>
+            </div>
             <p className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
               Isolation stricte des données garantie par organisation (Multi-tenant)

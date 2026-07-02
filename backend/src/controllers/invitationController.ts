@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { sendRealEmail, sendRealSMS, sendRealWhatsApp, sendRealWhatsAppLocation } from '../services/notificationService';
+import { renderGuestMessage, polishWhatsAppBody, applyTemplateVariables } from '../services/messageTemplateService';
 
 // Helper function to extract guest phone number
 function getGuestPhone(guest: any): string | null {
@@ -263,7 +264,22 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
         } else if (chan === 'WHATSAPP') {
           const phone = getGuestPhone(guest);
           if (phone) {
-            sendResult = await sendRealWhatsApp(phone, body);
+            const templateVars = {
+              firstName: guest.firstName || '',
+              lastName: guest.lastName || '',
+              rsvpLink: `${FRONTEND_URL}/rsvp/${guest.id}`,
+              title: event.title || '',
+              description: event.description || '',
+              location: event.location || '',
+              date: formattedDate,
+            };
+
+            let whatsappBody = body.trim()
+              ? applyTemplateVariables(body, templateVars)
+              : (await renderGuestMessage('INVITATION_WHATSAPP', templateVars)).body;
+
+            whatsappBody = polishWhatsAppBody(whatsappBody);
+            sendResult = await sendRealWhatsApp(phone, whatsappBody);
             
             // If the main message succeeded and the event has GPS coordinates, send the location as a second message
             if (sendResult.success && event.latitude && event.longitude) {

@@ -4,6 +4,7 @@ exports.getGuestRsvpDetails = getGuestRsvpDetails;
 exports.submitRsvp = submitRsvp;
 const db_1 = require("../db");
 const notificationService_1 = require("../services/notificationService");
+const messageTemplateService_1 = require("../services/messageTemplateService");
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 // Helper function to extract guest phone number
 function getGuestPhone(guest) {
@@ -93,12 +94,15 @@ async function notifyOrganizerOfRsvp(params) {
       </div>
     </div>
   `;
-    const ownerWhatsappBody = `🔔 *Nouvelle réponse RSVP*\n\n` +
-        `Événement : *${eventTitle}*\n\n` +
-        `👤 *Invité* : ${guest.firstName} ${guest.lastName}\n` +
-        `📬 *Statut* : ${rsvp === 'ACCEPTED' ? '✅ Présent' : '❌ Décliné'}` +
-        (preferencesDetails ? `\n\n📋 *Détails* :${preferencesDetails}` : '') +
-        `\n\n👉 ${dashboardUrl}`;
+    const ownerWhatsappRendered = await (0, messageTemplateService_1.renderGuestMessage)('RSVP_ORGANIZER_WHATSAPP', {
+        title: eventTitle,
+        firstName: guest.firstName,
+        lastName: guest.lastName,
+        statusLabel: rsvp === 'ACCEPTED' ? '✅ Présent' : '❌ Décliné',
+        preferencesDetails: preferencesDetails ? `\n\n📋 *Préférences* :${preferencesDetails}` : '',
+        dashboardUrl,
+    });
+    const ownerWhatsappBody = (0, messageTemplateService_1.polishWhatsAppBody)(ownerWhatsappRendered.body);
     const organizerPhone = getUserPhone(organizer);
     const results = [];
     if (isValidEmail(organizer.email)) {
@@ -274,7 +278,13 @@ async function submitRsvp(req, res) {
           <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 0;">Cet e-mail automatique a été envoyé par EventMaster.</p>
         </div>
       `;
-            const whatsappCaption = `Bonjour ${guest.firstName},\n\nVotre présence à l'événement *${guest.event.title}* a été confirmée avec succès !\n\nPrésentez ce QR Code à l'entrée pour valider votre présence.\n\n📅 Date : ${formattedDate}\n📍 Lieu : ${guest.event.location || 'Non défini'}\n\nMerci et à très bientôt !`;
+            const whatsappRendered = await (0, messageTemplateService_1.renderGuestMessage)('RSVP_CONFIRMATION_WHATSAPP', {
+                firstName: guest.firstName,
+                title: guest.event.title,
+                date: formattedDate,
+                location: guest.event.location || 'Non défini',
+            });
+            const whatsappCaption = (0, messageTemplateService_1.polishWhatsAppBody)(whatsappRendered.body);
             const smsBody = `Bonjour ${guest.firstName}, votre présence à "${guest.event.title}" est confirmée. Voici votre QR Code d'entrée : ${qrCodeUrl}. Présentez-le à l'accueil. Merci !`;
             // Run sending in the background to avoid blocking the user response
             (async () => {

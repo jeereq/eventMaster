@@ -24,6 +24,13 @@ import {
   getAdminSettings,
   updateAdminSettings
 } from '../controllers/adminController';
+import {
+  getGuestMessageTemplates,
+  getGuestMessageTemplateById,
+  createGuestMessageTemplate,
+  updateGuestMessageTemplate,
+  resetGuestMessageTemplate,
+} from '../controllers/guestMessageTemplateController';
 import { 
   getAdminSubscriptionRequests, 
   approveSubscriptionRequest, 
@@ -60,6 +67,13 @@ router.get('/templates', getAllTemplates);
 router.post('/templates/global', createGlobalTemplate);
 router.put('/templates/:id/landing', toggleTemplateLanding);
 router.delete('/templates/:id', deleteTemplate);
+
+// Guest message templates (WhatsApp / SMS / Email to guests)
+router.get('/message-templates', getGuestMessageTemplates);
+router.get('/message-templates/:id', getGuestMessageTemplateById);
+router.post('/message-templates', createGuestMessageTemplate);
+router.put('/message-templates/:id', updateGuestMessageTemplate);
+router.post('/message-templates/:id/reset', resetGuestMessageTemplate);
 
 // Events routes
 router.get('/events', getAllEvents);

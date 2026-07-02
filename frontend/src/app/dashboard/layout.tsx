@@ -8,7 +8,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { 
   Calendar, Users, Mail, CreditCard, LayoutDashboard, 
   LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper, User, Sun, Moon, BarChart3,
-  Building2, Settings, Shield, FileText, Key
+  Building2, Settings, Shield, FileText, Key, MessageSquare
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 
@@ -93,6 +93,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { name: 'Organisations', href: '/dashboard?tab=tenants', tab: 'tenants', icon: Building2 },
         { name: 'Utilisateurs', href: '/dashboard?tab=users', tab: 'users', icon: Users },
         { name: 'Modèles Globaux', href: '/dashboard?tab=templates', tab: 'templates', icon: FileText },
+        { name: 'Messages Invités', href: '/dashboard?tab=message-templates', tab: 'message-templates', icon: MessageSquare },
         { name: 'Événements', href: '/dashboard?tab=events', tab: 'events', icon: Calendar },
         { name: 'Invités', href: '/dashboard?tab=guests', tab: 'guests', icon: Users },
         { name: 'Analyses & Stats', href: '/dashboard?tab=analytics', tab: 'analytics', icon: BarChart3 },

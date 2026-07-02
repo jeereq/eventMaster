@@ -10,8 +10,9 @@ import {
   PlusCircle, AlertCircle, Award, CheckCircle, Shield,
   Building2, Activity, TrendingUp, Clock, Trash2, Edit2, Key,
   CalendarDays, Globe, Search, Filter, Check, X, FileText, Plus, Loader2, Copy, Eye,
-  BarChart3, PieChart, ChevronLeft, ChevronRight, CheckSquare, Sparkles, MapPin, Download
+  BarChart3, PieChart, ChevronLeft, ChevronRight, CheckSquare, Sparkles, MapPin, Download, MessageSquare
 } from 'lucide-react';
+import GuestMessageTemplatesPanel from './GuestMessageTemplatesPanel';
 
 interface BillingStatus {
   plan: 'FREE' | 'STANDARD' | 'PREMIUM' | 'ENTERPRISE';
@@ -92,10 +93,10 @@ function DashboardPageContent() {
   const tabParam = searchParams.get('tab');
 
   // Super Admin specific states
-  const [activeTab, setActiveTab] = useState<'tenants' | 'users' | 'templates' | 'events' | 'analytics' | 'guests' | 'settings' | 'subscriptions'>('tenants');
+  const [activeTab, setActiveTab] = useState<'tenants' | 'users' | 'templates' | 'message-templates' | 'events' | 'analytics' | 'guests' | 'settings' | 'subscriptions'>('tenants');
 
   useEffect(() => {
-    if (user?.role === 'SUPER_ADMIN' && tabParam && ['tenants', 'users', 'templates', 'events', 'analytics', 'guests', 'settings', 'subscriptions'].includes(tabParam)) {
+    if (user?.role === 'SUPER_ADMIN' && tabParam && ['tenants', 'users', 'templates', 'message-templates', 'events', 'analytics', 'guests', 'settings', 'subscriptions'].includes(tabParam)) {
       setActiveTab(tabParam as any);
     }
   }, [tabParam, user]);
@@ -1093,6 +1094,7 @@ function DashboardPageContent() {
                 {activeTab === 'tenants' && <Building2 className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
                 {activeTab === 'users' && <Users className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
                 {activeTab === 'templates' && <FileText className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
+                {activeTab === 'message-templates' && <MessageSquare className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
                 {activeTab === 'events' && <Calendar className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
                 {activeTab === 'guests' && <Users className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
                 {activeTab === 'analytics' && <BarChart3 className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
@@ -1102,6 +1104,7 @@ function DashboardPageContent() {
                 {activeTab === 'tenants' && "Gestion des Organisations"}
                 {activeTab === 'users' && "Gestion des Utilisateurs"}
                 {activeTab === 'templates' && "Modèles d'Invitation Globaux"}
+                {activeTab === 'message-templates' && "Modèles de Messages Invités"}
                 {activeTab === 'events' && "Supervision des Événements"}
                 {activeTab === 'guests' && "Supervision des Invités"}
                 {activeTab === 'analytics' && "Analyses & Statistiques Globales"}
@@ -1112,6 +1115,7 @@ function DashboardPageContent() {
                 {activeTab === 'tenants' && "Gérez les organisations enregistrées, leurs abonnements et l'état de leurs licences."}
                 {activeTab === 'users' && "Consultez et administrez l'ensemble des comptes d'utilisateurs de la plateforme."}
                 {activeTab === 'templates' && "Créez et configurez des modèles d'invitation globaux réutilisables par tous."}
+                {activeTab === 'message-templates' && "Personnalisez les messages WhatsApp, SMS et e-mails envoyés automatiquement aux invités."}
                 {activeTab === 'events' && "Supervisez tous les événements créés par les organisations sur la plateforme."}
                 {activeTab === 'guests' && "Consultez et gérez la liste globale de tous les invités enregistrés."}
                 {activeTab === 'analytics' && "Visualisez les performances, l'adoption des forfaits et l'activité globale."}
@@ -1195,7 +1199,7 @@ function DashboardPageContent() {
           </div>
 
           {/* Filters and search */}
-          {activeTab !== 'analytics' && activeTab !== 'settings' && activeTab !== 'subscriptions' && (
+          {activeTab !== 'analytics' && activeTab !== 'settings' && activeTab !== 'subscriptions' && activeTab !== 'message-templates' && (
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
@@ -1697,6 +1701,10 @@ function DashboardPageContent() {
                   </>
                 )}
               </div>
+            )}
+
+            {activeTab === 'message-templates' && (
+              <GuestMessageTemplatesPanel />
             )}
 
             {/* Events Tab */}

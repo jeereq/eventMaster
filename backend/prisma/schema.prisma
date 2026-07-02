@@ -178,3 +178,16 @@ model SubscriptionRequest {
   createdAt      DateTime                  @default(now())
   updatedAt      DateTime                  @updatedAt
 }
+
+model GuestMessageTemplate {
+  id          String   @id @default(uuid())
+  type        String   @unique
+  name        String
+  description String?
+  channel     String   @default("WHATSAPP")
+  subject     String?
+  body        String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

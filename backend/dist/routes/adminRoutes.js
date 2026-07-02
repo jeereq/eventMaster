@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const auth_1 = require("../middleware/auth");
 const adminController_1 = require("../controllers/adminController");
+const guestMessageTemplateController_1 = require("../controllers/guestMessageTemplateController");
 const subscriptionController_1 = require("../controllers/subscriptionController");
 const router = (0, express_1.Router)();
 // Protect all admin routes with authentication and SUPER_ADMIN role
@@ -28,6 +29,12 @@ router.get('/templates', adminController_1.getAllTemplates);
 router.post('/templates/global', adminController_1.createGlobalTemplate);
 router.put('/templates/:id/landing', adminController_1.toggleTemplateLanding);
 router.delete('/templates/:id', adminController_1.deleteTemplate);
+// Guest message templates (WhatsApp / SMS / Email to guests)
+router.get('/message-templates', guestMessageTemplateController_1.getGuestMessageTemplates);
+router.get('/message-templates/:id', guestMessageTemplateController_1.getGuestMessageTemplateById);
+router.post('/message-templates', guestMessageTemplateController_1.createGuestMessageTemplate);
+router.put('/message-templates/:id', guestMessageTemplateController_1.updateGuestMessageTemplate);
+router.post('/message-templates/:id/reset', guestMessageTemplateController_1.resetGuestMessageTemplate);
 // Events routes
 router.get('/events', adminController_1.getAllEvents);
 router.post('/events', adminController_1.createAdminEvent);

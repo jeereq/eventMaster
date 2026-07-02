@@ -7,6 +7,7 @@ exports.processReminders = processReminders;
 exports.startReminderWorker = startReminderWorker;
 const db_1 = require("../db");
 const notificationService_1 = require("./notificationService");
+const messageTemplateService_1 = require("./messageTemplateService");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const remindersFilePath = path_1.default.join(__dirname, '..', 'config', 'reminders.json');
@@ -147,15 +148,21 @@ async function processReminders() {
                     .replaceAll('{{description}}', event.description || '')
                     .replaceAll('{{location}}', event.location || '')
                     .replaceAll('{{date}}', formattedDate);
-                let body = `Bonjour ${guest.firstName},\n\nIl s'agit d'un petit rappel concernant l'événement "${event.title}". Nous attendons votre réponse avec impatience !\n\n---\n\n` + (latestInvitation.body || '');
-                body = body
-                    .replaceAll('{{firstName}}', guest.firstName || '')
-                    .replaceAll('{{lastName}}', guest.lastName || '')
-                    .replaceAll('{{rsvpLink}}', `${FRONTEND_URL}/rsvp/${guest.id}`)
-                    .replaceAll('{{title}}', event.title || '')
-                    .replaceAll('{{description}}', event.description || '')
-                    .replaceAll('{{location}}', event.location || '')
-                    .replaceAll('{{date}}', formattedDate);
+                const templateVars = {
+                    firstName: guest.firstName || '',
+                    lastName: guest.lastName || '',
+                    rsvpLink: `${FRONTEND_URL}/rsvp/${guest.id}`,
+                    title: event.title || '',
+                    description: event.description || '',
+                    location: event.location || '',
+                    date: formattedDate,
+                };
+                let body = (await (0, messageTemplateService_1.renderGuestMessage)('REMINDER_WHATSAPP', templateVars)).body;
+                if (latestInvitation.body?.trim()) {
+                    const customPart = (0, messageTemplateService_1.applyTemplateVariables)(latestInvitation.body, templateVars);
+                    body = `${body}\n\n---\n\n${customPart}`;
+                }
+                body = (0, messageTemplateService_1.polishWhatsAppBody)(body);
                 const channel = latestInvitation.channel || 'EMAIL';
                 let channelsToSend = [];
                 if (channel === 'EMAIL_AND_WHATSAPP') {

@@ -1,5 +1,6 @@
 import { prisma } from '../db';
 import { sendRealEmail, sendRealSMS, sendRealWhatsApp, sendRealWhatsAppLocation } from './notificationService';
+import { renderGuestMessage, polishWhatsAppBody, applyTemplateVariables } from './messageTemplateService';
 import fs from 'fs';
 import path from 'path';
 
@@ -153,15 +154,22 @@ export async function processReminders() {
           .replaceAll('{{location}}', event.location || '')
           .replaceAll('{{date}}', formattedDate);
         
-        let body = `Bonjour ${guest.firstName},\n\nIl s'agit d'un petit rappel concernant l'événement "${event.title}". Nous attendons votre réponse avec impatience !\n\n---\n\n` + (latestInvitation.body || '');
-        body = body
-          .replaceAll('{{firstName}}', guest.firstName || '')
-          .replaceAll('{{lastName}}', guest.lastName || '')
-          .replaceAll('{{rsvpLink}}', `${FRONTEND_URL}/rsvp/${guest.id}`)
-          .replaceAll('{{title}}', event.title || '')
-          .replaceAll('{{description}}', event.description || '')
-          .replaceAll('{{location}}', event.location || '')
-          .replaceAll('{{date}}', formattedDate);
+        const templateVars = {
+          firstName: guest.firstName || '',
+          lastName: guest.lastName || '',
+          rsvpLink: `${FRONTEND_URL}/rsvp/${guest.id}`,
+          title: event.title || '',
+          description: event.description || '',
+          location: event.location || '',
+          date: formattedDate,
+        };
+
+        let body = (await renderGuestMessage('REMINDER_WHATSAPP', templateVars)).body;
+        if (latestInvitation.body?.trim()) {
+          const customPart = applyTemplateVariables(latestInvitation.body, templateVars);
+          body = `${body}\n\n---\n\n${customPart}`;
+        }
+        body = polishWhatsAppBody(body);
 
         const channel = latestInvitation.channel || 'EMAIL';
         let channelsToSend: string[] = [];

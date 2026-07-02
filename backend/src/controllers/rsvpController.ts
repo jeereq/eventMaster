@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { sendRealEmail, sendRealSMS, sendRealWhatsApp, sendRealWhatsAppImage } from '../services/notificationService';
+import { renderGuestMessage, polishWhatsAppBody } from '../services/messageTemplateService';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -104,13 +105,15 @@ async function notifyOrganizerOfRsvp(params: {
     </div>
   `;
 
-  const ownerWhatsappBody =
-    `🔔 *Nouvelle réponse RSVP*\n\n` +
-    `Événement : *${eventTitle}*\n\n` +
-    `👤 *Invité* : ${guest.firstName} ${guest.lastName}\n` +
-    `📬 *Statut* : ${rsvp === 'ACCEPTED' ? '✅ Présent' : '❌ Décliné'}` +
-    (preferencesDetails ? `\n\n📋 *Détails* :${preferencesDetails}` : '') +
-    `\n\n👉 ${dashboardUrl}`;
+  const ownerWhatsappRendered = await renderGuestMessage('RSVP_ORGANIZER_WHATSAPP', {
+    title: eventTitle,
+    firstName: guest.firstName,
+    lastName: guest.lastName,
+    statusLabel: rsvp === 'ACCEPTED' ? '✅ Présent' : '❌ Décliné',
+    preferencesDetails: preferencesDetails ? `\n\n📋 *Préférences* :${preferencesDetails}` : '',
+    dashboardUrl,
+  });
+  const ownerWhatsappBody = polishWhatsAppBody(ownerWhatsappRendered.body);
 
   const organizerPhone = getUserPhone(organizer);
   const results: string[] = [];
@@ -299,7 +302,13 @@ export async function submitRsvp(req: Request, res: Response) {
         </div>
       `;
 
-      const whatsappCaption = `Bonjour ${guest.firstName},\n\nVotre présence à l'événement *${guest.event.title}* a été confirmée avec succès !\n\nPrésentez ce QR Code à l'entrée pour valider votre présence.\n\n📅 Date : ${formattedDate}\n📍 Lieu : ${guest.event.location || 'Non défini'}\n\nMerci et à très bientôt !`;
+      const whatsappRendered = await renderGuestMessage('RSVP_CONFIRMATION_WHATSAPP', {
+        firstName: guest.firstName,
+        title: guest.event.title,
+        date: formattedDate,
+        location: guest.event.location || 'Non défini',
+      });
+      const whatsappCaption = polishWhatsAppBody(whatsappRendered.body);
       const smsBody = `Bonjour ${guest.firstName}, votre présence à "${guest.event.title}" est confirmée. Voici votre QR Code d'entrée : ${qrCodeUrl}. Présentez-le à l'accueil. Merci !`;
 
       // Run sending in the background to avoid blocking the user response
