@@ -60,6 +60,8 @@ interface CanvasElement {
   
   // Customizable RSVP fields
   rsvpFields?: RsvpField[];
+  /** inline = dans l'invitation ; outside = panneau sous la zone de design */
+  rsvpPlacement?: 'inline' | 'outside';
 
   // New properties for high-end styling
   width?: 'full' | 'half' | 'third';
@@ -144,6 +146,7 @@ export default function TemplatesPage() {
   const [elStrokeWidth, setElStrokeWidth] = useState('3px');
   const [elShapeSize, setElShapeSize] = useState('60px');
   const [elRsvpFields, setElRsvpFields] = useState<RsvpField[]>([]);
+  const [elRsvpPlacement, setElRsvpPlacement] = useState<'inline' | 'outside'>('inline');
   const [elWidth, setElWidth] = useState<'full' | 'half' | 'third'>('full');
   const [elFontFamily, setElFontFamily] = useState('Cormorant Garamond');
   const [elLetterSpacing, setElLetterSpacing] = useState('normal');
@@ -268,7 +271,8 @@ export default function TemplatesPage() {
           { id: 'f1', type: 'select', label: 'Choix du menu', options: 'Poulet, Poisson, Végétarien', required: true, analyticsKey: 'choix_menu', category: 'preference' },
           { id: 'f2', type: 'yes_no', label: 'Accompagné d\'un plus one', required: false, analyticsKey: 'plus_one', category: 'logistics' },
           { id: 'f3', type: 'number', label: 'Nombre de personnes', required: false, analyticsKey: 'nombre_personnes', category: 'logistics', placeholder: 'Ex. : 2' },
-        ]
+        ],
+        rsvpPlacement: 'outside',
       },
     ]);
     
@@ -368,7 +372,8 @@ export default function TemplatesPage() {
       buttonLink: type === 'button' ? '' : undefined,
       rsvpFields: type === 'rsvp-block' ? [
         { id: 'f1', type: 'select', label: 'Choix du menu', options: 'Poulet, Poisson, Végétarien', required: true, analyticsKey: 'choix_menu', category: 'preference' },
-      ] : undefined
+      ] : undefined,
+      rsvpPlacement: type === 'rsvp-block' ? 'inline' as const : undefined,
     };
     setCanvasElements([...canvasElements, newElement]);
     setSelectedElementId(newElement.id);
@@ -395,6 +400,7 @@ export default function TemplatesPage() {
     setElButtonStyle('filled');
     setElButtonLink('');
     setElRsvpFields(newElement.rsvpFields || []);
+    setElRsvpPlacement(newElement.rsvpPlacement || 'inline');
   };
 
   const handleElementSelect = (id: string) => {
@@ -422,6 +428,7 @@ export default function TemplatesPage() {
       setElButtonStyle(el.buttonStyle || 'filled');
       setElButtonLink(el.buttonLink || '');
       setElRsvpFields(el.rsvpFields || []);
+      setElRsvpPlacement(el.rsvpPlacement || 'inline');
     }
   };
 
@@ -449,6 +456,7 @@ export default function TemplatesPage() {
     if (field === 'buttonStyle') setElButtonStyle(value);
     if (field === 'buttonLink') setElButtonLink(value);
     if (field === 'rsvpFields') setElRsvpFields(value);
+    if (field === 'rsvpPlacement') setElRsvpPlacement(value);
 
     setCanvasElements(canvasElements.map(el => {
       if (el.id === selectedElementId) {
@@ -1632,7 +1640,9 @@ export default function TemplatesPage() {
                     <p className="text-xs mt-1">Ajoutez des composants à partir de la boîte à outils à gauche.</p>
                   </div>
                 ) : (
-                  canvasElements.map((el, index) => {
+                  canvasElements
+                    .filter((el) => !(el.type === 'rsvp-block' && el.rsvpPlacement === 'outside'))
+                    .map((el, index) => {
                     const isSelected = selectedElementId === el.id;
                     const widthClass = el.width === 'half' ? 'w-1/2 px-2' : el.width === 'third' ? 'w-1/3 px-2' : 'w-full px-2';
                     
@@ -1916,6 +1926,39 @@ export default function TemplatesPage() {
               </div>
             </div>
             </div>
+
+            {canvasElements.some((el) => el.type === 'rsvp-block' && el.rsvpPlacement === 'outside') && (
+              <div className="mt-4 space-y-3">
+                <p className="text-center text-[10px] font-bold uppercase tracking-wider text-indigo-600">
+                  Formulaire RSVP — zone externe (sous l&apos;invitation)
+                </p>
+                {canvasElements
+                  .filter((el) => el.type === 'rsvp-block' && el.rsvpPlacement === 'outside')
+                  .map((el) => (
+                    <div
+                      key={el.id}
+                      onClick={(e) => { e.stopPropagation(); handleElementSelect(el.id); }}
+                      className={`rounded-2xl border-2 border-dashed p-5 cursor-pointer transition ${
+                        selectedElementId === el.id
+                          ? 'border-indigo-500 bg-indigo-50/30 shadow-md'
+                          : 'border-indigo-200 bg-white hover:border-indigo-400'
+                      }`}
+                      style={{ maxWidth: `${canvasWidth}px`, width: '100%' }}
+                    >
+                      <div className="text-xs font-bold text-indigo-700 text-center mb-3">{el.text || 'Confirmer votre présence'}</div>
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        <div className="py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-[10px] font-bold text-emerald-700 text-center">Oui</div>
+                        <div className="py-2 rounded-xl border border-slate-200 text-[10px] font-bold text-slate-500 text-center">Non</div>
+                      </div>
+                      {el.rsvpFields && el.rsvpFields.length > 0 && (
+                        <p className="text-[9px] text-slate-400 text-center">
+                          {el.rsvpFields.length} champ{el.rsvpFields.length > 1 ? 's' : ''} personnalisé{el.rsvpFields.length > 1 ? 's' : ''}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
 
           {/* Right Properties Panel */}
@@ -2227,6 +2270,38 @@ export default function TemplatesPage() {
                       <option value="80px">Très grand (80px)</option>
                       <option value="120px">Géant (120px)</option>
                     </select>
+                  </div>
+                )}
+
+                {/* RSVP placement */}
+                {canvasElements.find(e => e.id === selectedElementId)?.type === 'rsvp-block' && (
+                  <div className="space-y-2 border-t border-slate-100 pt-4">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Emplacement du formulaire</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { id: 'inline' as const, label: 'Dans l\'invitation', hint: 'Intégré au design' },
+                        { id: 'outside' as const, label: 'Sous l\'invitation', hint: 'Plus visible' },
+                      ].map((opt) => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => handlePropertyChange('rsvpPlacement', opt.id)}
+                          className={`py-2.5 px-2 border rounded-xl text-left transition ${
+                            elRsvpPlacement === opt.id
+                              ? 'border-indigo-600 bg-indigo-50 text-indigo-800'
+                              : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span className="block text-[11px] font-bold">{opt.label}</span>
+                          <span className="block text-[9px] opacity-70 mt-0.5">{opt.hint}</span>
+                        </button>
+                      ))}
+                    </div>
+                    {elRsvpPlacement === 'outside' && (
+                      <p className="text-[10px] text-indigo-600 leading-relaxed">
+                        Le formulaire s&apos;affichera dans un panneau dédié sous la carte d&apos;invitation, pour une meilleure lisibilité sur mobile.
+                      </p>
+                    )}
                   </div>
                 )}
 

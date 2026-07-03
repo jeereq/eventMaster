@@ -1102,6 +1102,14 @@ export default function RsvpPage() {
   const floralType = global.floralType || 'roses';
   const floralDensity = global.floralDensity !== undefined ? global.floralDensity : 40;
   const canvasStyle = getCanvasStyle(global);
+  const templateElements: Array<{ id: string; type: string; rsvpPlacement?: string; [key: string]: unknown }> =
+    template?.content?.elements || [];
+  const inlineTemplateElements = templateElements.filter(
+    (el) => el.type !== 'rsvp-block' || el.rsvpPlacement !== 'outside',
+  );
+  const outsideRsvpElements = templateElements.filter(
+    (el) => el.type === 'rsvp-block' && el.rsvpPlacement === 'outside',
+  );
 
   const updateCustomField = (fieldId: string, value: string | number | boolean) => {
     setCustomFieldValues((prev) => ({ ...prev, [fieldId]: value }));
@@ -1257,11 +1265,22 @@ export default function RsvpPage() {
       </div>
     ) : null;
 
-  const renderRsvpFormControls = (el: any) => {
+  const renderRsvpFormControls = (el: any, variant: 'inline' | 'outside' = 'inline') => {
+    const isOutside = variant === 'outside';
     return (
-      <div className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl p-6 space-y-5 text-center shadow-sm">
+      <div
+        className={
+          isOutside
+            ? 'bg-white border border-slate-200/80 rounded-[28px] p-6 sm:p-8 space-y-6 text-center shadow-2xl relative overflow-hidden w-full'
+            : 'bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl p-6 space-y-5 text-center shadow-sm'
+        }
+      >
+        {isOutside && (
+          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-500 to-violet-500" />
+        )}
+        <div className={isOutside ? 'relative z-10' : undefined}>
         {renderRsvpLockedBanner()}
-        <div className="font-bold text-slate-800 text-sm">{formatText(el.text)}</div>
+        <div className={`font-bold text-slate-800 ${isOutside ? 'text-base sm:text-lg' : 'text-sm'}`}>{formatText(el.text)}</div>
         
         {/* Yes/No Buttons */}
         <div className="grid grid-cols-2 gap-4">
@@ -1361,9 +1380,22 @@ export default function RsvpPage() {
             'Envoyer ma Réponse'
           )}
         </button>
+        </div>
       </div>
     );
   };
+
+  const InvitationWrapper = template ? 'form' : 'div';
+  const invitationWrapperProps = template
+    ? {
+        onSubmit: handleSubmitRsvp,
+        className: 'w-full flex flex-col items-center gap-6',
+        style: { maxWidth: canvasStyle.maxWidth },
+      }
+    : {
+        className: 'w-full flex flex-col items-center gap-6',
+        style: { maxWidth: canvasStyle.maxWidth },
+      };
 
   return (
     <div className="min-h-screen bg-slate-100 px-4 py-12 flex flex-col items-center justify-center gap-6 relative overflow-hidden">
@@ -1386,6 +1418,7 @@ export default function RsvpPage() {
         </Link>
       </div>
 
+      <InvitationWrapper {...invitationWrapperProps}>
       <div
         style={{
           ...(template ? getBackgroundStyle(bgType, bgColor, bgImageUrl, bgPattern) : { backgroundColor: '#ffffff' }),
@@ -1696,8 +1729,8 @@ export default function RsvpPage() {
         <div className="p-8 space-y-8 flex-1 relative z-10">
           {/* Header */}
           {template ? (
-            <form onSubmit={handleSubmitRsvp} className="flex flex-wrap gap-y-4 -mx-2 pt-2">
-              {template.content?.elements?.map((el: any) => {
+            <div className="flex flex-wrap gap-y-4 -mx-2 pt-2">
+              {inlineTemplateElements.map((el: any) => {
                 const widthClass = el.width === 'half' ? 'w-1/2 px-2' : el.width === 'third' ? 'w-1/3 px-2' : 'w-full px-2';
                 
                 return (
@@ -1910,7 +1943,7 @@ export default function RsvpPage() {
                   </div>
                 );
               })}
-            </form>
+            </div>
           ) : (
             <div className="space-y-8">
               <div className="text-center space-y-2">
@@ -2056,6 +2089,15 @@ export default function RsvpPage() {
           )}
         </div>
       </div>
+
+      {template &&
+        outsideRsvpElements.map((el: any) => (
+          <div key={el.id} id="rsvp-section" className="w-full">
+            {renderRsvpFormControls(el, 'outside')}
+          </div>
+        ))}
+
+      </InvitationWrapper>
 
       {/* Event Location & Directions Card */}
       {guest && guest.event?.location && (
