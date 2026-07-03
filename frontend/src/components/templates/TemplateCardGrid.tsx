@@ -20,6 +20,10 @@ export interface TemplateCardItem {
   tenant?: { name: string } | null;
   showOnLanding?: boolean;
   isGlobal?: boolean;
+  isOwned?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  canDuplicate?: boolean;
 }
 
 interface TemplateCardGridProps {
@@ -38,6 +42,21 @@ interface TemplateCardGridProps {
 function isGlobalTemplate(t: TemplateCardItem): boolean {
   if (t.isGlobal !== undefined) return t.isGlobal;
   return !t.tenantId;
+}
+
+function canEditTemplate(t: TemplateCardItem, isSuperAdmin: boolean): boolean {
+  if (t.canEdit !== undefined) return t.canEdit;
+  return isSuperAdmin || Boolean(t.tenantId);
+}
+
+function canDuplicateTemplate(t: TemplateCardItem, isSuperAdmin: boolean): boolean {
+  if (t.canDuplicate !== undefined) return t.canDuplicate;
+  return isSuperAdmin || isGlobalTemplate(t) || Boolean(t.tenantId);
+}
+
+function canDeleteTemplate(t: TemplateCardItem, isSuperAdmin: boolean): boolean {
+  if (t.canDelete !== undefined) return t.canDelete;
+  return isSuperAdmin || Boolean(t.tenantId);
 }
 
 export default function TemplateCardGrid({
@@ -65,6 +84,9 @@ export default function TemplateCardGrid({
     <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
       {templates.map((t) => {
         const global = isGlobalTemplate(t);
+        const editable = canEditTemplate(t, isSuperAdmin);
+        const duplicatable = canDuplicateTemplate(t, isSuperAdmin);
+        const deletable = canDeleteTemplate(t, isSuperAdmin);
         const orgLabel = t.tenantName || t.tenant?.name || 'Inconnu';
         const summary = getTemplateElementSummary(t.content);
 
@@ -118,6 +140,13 @@ export default function TemplateCardGrid({
                 {summary}
               </p>
 
+              {global && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-400 border border-sky-100 dark:border-sky-900/50">
+                  <Globe className="w-3 h-3" />
+                  Bibliothèque EventMaster
+                </span>
+              )}
+
               {isSuperAdmin && (
                 <div className="flex flex-wrap gap-1.5 pt-0.5">
                   {global ? (
@@ -156,7 +185,7 @@ export default function TemplateCardGrid({
             </div>
 
             <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-              {editHref ? (
+              {editable && (editHref ? (
                 <Link
                   href={editHref(t)}
                   className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 font-bold rounded-xl text-xs transition"
@@ -173,7 +202,18 @@ export default function TemplateCardGrid({
                   <Edit3 className="w-4 h-4" />
                   Modifier
                 </button>
-              ) : null}
+              ) : null)}
+
+              {duplicatable && onDuplicate && global && !editable && (
+                <button
+                  type="button"
+                  onClick={() => onDuplicate(t)}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition"
+                >
+                  <Copy className="w-4 h-4" />
+                  Utiliser ce modèle
+                </button>
+              )}
 
               {onViewDetails && (
                 <button
@@ -186,18 +226,18 @@ export default function TemplateCardGrid({
                 </button>
               )}
 
-              {onDuplicate && (
+              {duplicatable && onDuplicate && (!global || editable) && (
                 <button
                   type="button"
                   onClick={() => onDuplicate(t)}
                   className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-xl transition"
-                  title="Dupliquer le modèle"
+                  title={global ? 'Dupliquer vers une organisation' : 'Dupliquer le modèle'}
                 >
                   <Copy className="w-4 h-4" />
                 </button>
               )}
 
-              {onDelete && (
+              {deletable && onDelete && (
                 <button
                   type="button"
                   onClick={() => onDelete(t.id, t.name)}

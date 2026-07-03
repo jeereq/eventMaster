@@ -50,7 +50,11 @@ export async function getTemplates(req: AuthenticatedRequest, res: Response) {
     }
 
     const templates = await prisma.template.findMany({
-      where: isSuperAdmin ? {} : { tenantId },
+      where: isSuperAdmin
+        ? {}
+        : {
+            OR: [{ tenantId }, { tenantId: null }],
+          },
       include: {
         tenant: {
           select: {
@@ -58,10 +62,23 @@ export async function getTemplates(req: AuthenticatedRequest, res: Response) {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ tenantId: 'asc' }, { createdAt: 'desc' }],
     });
 
-    return res.json(templates);
+    const annotated = templates.map((t) => {
+      const isGlobal = t.tenantId === null;
+      const isOwned = Boolean(tenantId && t.tenantId === tenantId);
+      return {
+        ...t,
+        isGlobal,
+        isOwned,
+        canEdit: isSuperAdmin || isOwned,
+        canDelete: isSuperAdmin || isOwned,
+        canDuplicate: isSuperAdmin || isGlobal || isOwned,
+      };
+    });
+
+    return res.json(annotated);
   } catch (error: any) {
     console.error('Erreur lors de la récupération des templates:', error);
     return res.status(500).json({ error: 'Erreur lors de la récupération des templates' });
@@ -136,14 +153,29 @@ export async function getTemplateById(req: AuthenticatedRequest, res: Response) 
     }
 
     const template = await prisma.template.findFirst({
-      where: isSuperAdmin ? { id } : { id, tenantId },
+      where: isSuperAdmin
+        ? { id }
+        : {
+            id,
+            OR: [{ tenantId }, { tenantId: null }],
+          },
     });
 
     if (!template) {
       return res.status(404).json({ error: 'Template non trouvé' });
     }
 
-    return res.json(template);
+    const isGlobal = template.tenantId === null;
+    const isOwned = Boolean(tenantId && template.tenantId === tenantId);
+
+    return res.json({
+      ...template,
+      isGlobal,
+      isOwned,
+      canEdit: isSuperAdmin || isOwned,
+      canDelete: isSuperAdmin || isOwned,
+      canDuplicate: isSuperAdmin || isGlobal || isOwned,
+    });
   } catch (error: any) {
     console.error('Erreur lors de la récupération du template:', error);
     return res.status(500).json({ error: 'Erreur lors de la récupération du template' });
@@ -210,6 +242,108 @@ export async function updateTemplate(req: AuthenticatedRequest, res: Response) {
   } catch (error: any) {
     console.error('Erreur lors de la modification du template:', error);
     return res.status(500).json({ error: 'Erreur lors de la modification du template' });
+  }
+}
+
+// Duplicate a template (catalog → organisation, or copy within org)
+export async function duplicateTemplate(req: AuthenticatedRequest, res: Response) {
+  try {
+    const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
+    const tenantId = req.user?.tenantId;
+    const id = req.params.id as string;
+    const { name, targetTenantId } = req.body ?? {};
+
+    if (!isSuperAdmin && !tenantId) {
+      return res.status(403).json({ error: 'Tenant non identifié' });
+    }
+
+    const source = await prisma.template.findFirst({
+      where: isSuperAdmin
+        ? { id }
+        : {
+            id,
+            OR: [{ tenantId: null }, { tenantId }],
+          },
+    });
+
+    if (!source) {
+      return res.status(404).json({ error: 'Modèle source introuvable' });
+    }
+
+    const isCatalogSource = source.tenantId === null;
+    const isOwnSource = Boolean(tenantId && source.tenantId === tenantId);
+
+    if (!isSuperAdmin && !isCatalogSource && !isOwnSource) {
+      return res.status(403).json({ error: 'Vous ne pouvez pas dupliquer ce modèle.' });
+    }
+
+    const finalTenantId = isSuperAdmin
+      ? (targetTenantId !== undefined ? targetTenantId || null : tenantId || null)
+      : tenantId;
+
+    if (!finalTenantId) {
+      return res.status(400).json({
+        error: 'Sélectionnez une organisation cible pour la duplication.',
+      });
+    }
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: finalTenantId },
+      include: { _count: { select: { templates: true } } },
+    });
+
+    if (!tenant) {
+      return res.status(404).json({ error: 'Organisation introuvable' });
+    }
+
+    const limits = getPlanLimits(tenant.plan);
+    if (tenant._count.templates >= limits.maxTemplates) {
+      return res.status(403).json({
+        error: `Quota de modèles atteint pour le plan ${tenant.plan} (max ${limits.maxTemplates >= 9999 ? 'illimité' : limits.maxTemplates}). Passez à un forfait supérieur.`,
+      });
+    }
+
+    // Duplication depuis la bibliothèque globale : pas de contrôle customTemplates
+    if (!isCatalogSource && !isSuperAdmin && finalTenantId) {
+      try {
+        await assertTemplateContentForPlan(finalTenantId, source.content);
+      } catch (err: any) {
+        return res.status(err.statusCode || 403).json({ error: err.message });
+      }
+    }
+
+    const copyName =
+      typeof name === 'string' && name.trim()
+        ? name.trim()
+        : isCatalogSource
+          ? source.name
+          : `${source.name} (Copie)`;
+
+    const template = await prisma.template.create({
+      data: {
+        tenantId: finalTenantId,
+        name: copyName,
+        content: source.content as object,
+        showOnLanding: false,
+      },
+    });
+
+    return res.status(201).json({
+      message: isCatalogSource
+        ? 'Modèle ajouté à votre organisation.'
+        : 'Modèle dupliqué avec succès.',
+      template: {
+        ...template,
+        isGlobal: false,
+        isOwned: true,
+        canEdit: true,
+        canDelete: true,
+        canDuplicate: true,
+      },
+    });
+  } catch (error: any) {
+    console.error('Erreur lors de la duplication du template:', error);
+    return res.status(500).json({ error: 'Erreur lors de la duplication du modèle.' });
   }
 }
 

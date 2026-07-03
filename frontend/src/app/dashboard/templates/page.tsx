@@ -35,6 +35,11 @@ interface TemplateItem {
   createdAt: string;
   tenantId?: string | null;
   showOnLanding?: boolean;
+  isGlobal?: boolean;
+  isOwned?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
+  canDuplicate?: boolean;
   tenant?: {
     name: string;
   } | null;
@@ -993,22 +998,24 @@ export default function TemplatesPage() {
   };
 
   const handleDuplicateTemplate = async (t: TemplateItem) => {
-    if (!canUseCustomTemplates) return;
+    const isCatalog = t.isGlobal ?? !t.tenantId;
     try {
       setLoading(true);
-      const payload = {
-        name: `${t.name} (Copie)`,
-        content: t.content,
-        targetTenantId: t.tenantId || null
-      };
-      await api.post('/templates', payload);
-      setSuccess(`Modèle "${t.name}" dupliqué avec succès !`);
-      loadTemplates();
+      const response = await api.post(`/templates/${t.id}/duplicate`, {
+        name: isCatalog ? t.name : `${t.name} (Copie)`,
+      });
+      setSuccess(response.message || `Modèle "${t.name}" ajouté à votre organisation.`);
+      await loadTemplates();
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la duplication du modèle.');
+    } finally {
       setLoading(false);
     }
   };
+
+  const catalogTemplates = templates.filter((t) => t.isGlobal ?? !t.tenantId);
+  const ownTemplates = templates.filter((t) => t.isOwned ?? Boolean(t.tenantId));
+  const canDuplicateAny = user?.role === 'SUPER_ADMIN' || catalogTemplates.length > 0 || canUseCustomTemplates;
 
   // Helper to get background style
   const getBackgroundStyle = (type: string, color: string, url: string, pattern: string) => {
@@ -3080,11 +3087,11 @@ export default function TemplatesPage() {
       />
 
       {!canUseCustomTemplates && user?.role === 'USER' && (
-        <div className="p-4 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-sm space-y-2">
-          <p className="font-bold">Modèles personnalisés non inclus</p>
+        <div className="p-4 bg-sky-50 border border-sky-200 text-sky-900 rounded-xl text-sm space-y-2">
+          <p className="font-bold">Bibliothèque de modèles EventMaster</p>
           <p>
-            L&apos;éditeur visuel nécessite le forfait <strong>Business Premium 1</strong> ou supérieur.
-            Forfait actuel : {tenant?.plan || 'FREE'}.
+            Parcourez les modèles ci-dessous et cliquez sur <strong>Utiliser ce modèle</strong> pour l&apos;ajouter à votre organisation.
+            L&apos;éditeur visuel avancé nécessite le forfait <strong>Business Premium 1</strong> ou supérieur.
           </p>
           <Link href="/dashboard/billing" className="inline-block text-indigo-600 font-bold text-xs hover:underline">
             Voir les forfaits →
@@ -3101,44 +3108,78 @@ export default function TemplatesPage() {
         </div>
       )}
 
-      {/* Templates Grid */}
-      <TemplateCardGrid
-        templates={templates}
-        isSuperAdmin={user?.role === 'SUPER_ADMIN'}
-        emptyMessage={
-          canUseCustomTemplates
-            ? "Aucun modèle créé. Utilisez le concepteur visuel pour créer votre premier modèle d'invitation."
-            : "Aucun modèle disponible pour votre organisation."
-        }
-        emptyAction={
-          canUseCustomTemplates ? (
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              {canUseMockupImport && (
+      {user?.role !== 'SUPER_ADMIN' && catalogTemplates.length > 0 && (
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Bibliothèque EventMaster</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Modèles prêts à l&apos;emploi — dupliquez-en un pour votre organisation ({catalogTemplates.length}).
+            </p>
+          </div>
+          <TemplateCardGrid
+            templates={catalogTemplates}
+            isSuperAdmin={false}
+            onDuplicate={canDuplicateAny ? (t) => handleDuplicateTemplate(t as TemplateItem) : undefined}
+          />
+        </section>
+      )}
+
+      <section className="space-y-4">
+        {user?.role !== 'SUPER_ADMIN' && (
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Mes modèles</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Modèles appartenant à votre organisation ({ownTemplates.length}).
+            </p>
+          </div>
+        )}
+
+        <TemplateCardGrid
+          templates={user?.role === 'SUPER_ADMIN' ? templates : ownTemplates}
+          isSuperAdmin={user?.role === 'SUPER_ADMIN'}
+          emptyMessage={
+            user?.role === 'SUPER_ADMIN'
+              ? "Aucun modèle. Créez un modèle global ou pour une organisation."
+              : canUseCustomTemplates
+                ? "Aucun modèle personnel. Dupliquez un modèle de la bibliothèque ou créez le vôtre."
+                : "Aucun modèle dans votre organisation. Utilisez la bibliothèque ci-dessus pour commencer."
+          }
+          emptyAction={
+            canUseCustomTemplates ? (
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                {canUseMockupImport && (
+                  <button
+                    type="button"
+                    onClick={() => mockupInputRef.current?.click()}
+                    disabled={mockupImporting}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-400 font-semibold rounded-xl text-sm transition hover:bg-indigo-50 dark:hover:bg-indigo-950/40 disabled:opacity-50"
+                  >
+                    {mockupImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    Importer ma maquette
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={() => mockupInputRef.current?.click()}
-                  disabled={mockupImporting}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-400 font-semibold rounded-xl text-sm transition hover:bg-indigo-50 dark:hover:bg-indigo-950/40 disabled:opacity-50"
+                  onClick={handleCreateTemplateClick}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100 dark:shadow-none"
                 >
-                  {mockupImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                  Importer ma maquette
+                  <PlusCircle className="w-4 h-4" />
+                  Créer mon premier modèle
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={handleCreateTemplateClick}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100 dark:shadow-none"
-              >
-                <PlusCircle className="w-4 h-4" />
-                Créer mon premier modèle
-              </button>
-            </div>
-          ) : undefined
-        }
-        onEdit={canUseCustomTemplates ? (t) => handleEditTemplateClick(t as TemplateItem) : undefined}
-        onDuplicate={canUseCustomTemplates ? (t) => handleDuplicateTemplate(t as TemplateItem) : undefined}
-        onDelete={canUseCustomTemplates ? (id) => handleDeleteTemplate(id) : undefined}
-      />
+              </div>
+            ) : catalogTemplates.length > 0 ? (
+              <p className="text-xs text-slate-500">Choisissez un modèle dans la bibliothèque et cliquez sur « Utiliser ce modèle ».</p>
+            ) : undefined
+          }
+          onEdit={canUseCustomTemplates ? (t) => handleEditTemplateClick(t as TemplateItem) : undefined}
+          onDuplicate={
+            canUseCustomTemplates || user?.role === 'SUPER_ADMIN'
+              ? (t) => handleDuplicateTemplate(t as TemplateItem)
+              : undefined
+          }
+          onDelete={canUseCustomTemplates ? (id) => handleDeleteTemplate(id) : undefined}
+        />
+      </section>
     </div>
     </>
   );
