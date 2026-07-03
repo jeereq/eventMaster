@@ -202,6 +202,32 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     },
   },
   {
+    category: 'Événements',
+    label: 'Import maquette (image + palette)',
+    values: {
+      FREE: false,
+      STANDARD: false,
+      PREMIUM_1: true,
+      PREMIUM_2: true,
+      ENTERPRISE_1: true,
+      ENTERPRISE_2: true,
+      ENTERPRISE_3: true,
+    },
+  },
+  {
+    category: 'Événements',
+    label: 'OCR texte sur maquette',
+    values: {
+      FREE: false,
+      STANDARD: false,
+      PREMIUM_1: false,
+      PREMIUM_2: true,
+      ENTERPRISE_1: true,
+      ENTERPRISE_2: true,
+      ENTERPRISE_3: true,
+    },
+  },
+  {
     category: 'Salles & plans',
     label: 'Salles organisation',
     values: {
@@ -281,7 +307,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
   },
   {
     category: 'Protocole',
-    label: 'Notification placement invité (WA/SMS/e-mail)',
+    label: 'Notification placement invité (WA / e-mail)',
     values: {
       FREE: false,
       STANDARD: false,
@@ -307,7 +333,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
   },
   {
     category: 'Invités',
-    label: 'WhatsApp / SMS / E-mail',
+    label: 'WhatsApp / E-mail',
     values: {
       FREE: true,
       STANDARD: true,
@@ -390,7 +416,7 @@ export const PLATFORM_PILLARS = [
   },
   {
     title: 'Protocole intelligent',
-    description: 'Scan caméra du QR invité, émargement, confirmation du siège et notification automatique (e-mail, WhatsApp, SMS).',
+    description: 'Scan caméra du QR invité, émargement, confirmation du siège et notification automatique (e-mail, WhatsApp).',
     icon: 'qr',
   },
   {

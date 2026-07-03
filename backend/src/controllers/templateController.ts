@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { getPlanLimits } from '../config/plansConfig';
+import { assertPlanFeature } from '../services/planFeaturesService';
 
 function isCustomTemplateContent(content: unknown): boolean {
   if (!content || typeof content !== 'object') return false;
@@ -11,6 +12,31 @@ function isCustomTemplateContent(content: unknown): boolean {
     (Array.isArray(c.layers) && c.layers.length > 0) ||
     (Array.isArray(c.elements) && c.elements.length > 0)
   );
+}
+
+function getMockupImportFlags(content: unknown): { importedFromMockup: boolean; importedWithOcr: boolean } {
+  if (!content || typeof content !== 'object') {
+    return { importedFromMockup: false, importedWithOcr: false };
+  }
+  const global = (content as Record<string, unknown>).global;
+  if (!global || typeof global !== 'object') {
+    return { importedFromMockup: false, importedWithOcr: false };
+  }
+  const g = global as Record<string, unknown>;
+  return {
+    importedFromMockup: g.importedFromMockup === true,
+    importedWithOcr: g.importedWithOcr === true,
+  };
+}
+
+async function assertTemplateContentForPlan(tenantId: string, content: unknown): Promise<void> {
+  const mockupFlags = getMockupImportFlags(content);
+  if (mockupFlags.importedFromMockup || isCustomTemplateContent(content)) {
+    await assertPlanFeature(tenantId, 'customTemplates');
+  }
+  if (mockupFlags.importedWithOcr) {
+    await assertPlanFeature(tenantId, 'mockupOcr');
+  }
 }
 
 // Get all templates (for the tenant, or all templates if Super Admin)
@@ -74,10 +100,10 @@ export async function createTemplate(req: AuthenticatedRequest, res: Response) {
             error: `Quota de modèles atteint pour le plan ${tenant.plan} (Max ${limits.maxTemplates >= 9999 ? 'illimité' : limits.maxTemplates}). Veuillez passer à un forfait supérieur.`,
           });
         }
-        if (isCustomTemplateContent(content) && !limits.customTemplates) {
-          return res.status(403).json({
-            error: `Les modèles personnalisés ne sont pas inclus dans votre forfait ${limits.name}. Passez à Business Premium ou supérieur.`,
-          });
+        try {
+          await assertTemplateContentForPlan(finalTenantId, content);
+        } catch (err: any) {
+          return res.status(err.statusCode || 403).json({ error: err.message });
         }
       }
     }
@@ -141,6 +167,18 @@ export async function updateTemplate(req: AuthenticatedRequest, res: Response) {
 
     if (!existingTemplate) {
       return res.status(404).json({ error: 'Template non trouvé ou non autorisé' });
+    }
+
+    const effectiveTenantId = isSuperAdmin
+      ? (targetTenantId !== undefined ? targetTenantId : existingTemplate.tenantId)
+      : tenantId;
+
+    if (!isSuperAdmin && effectiveTenantId && content !== undefined) {
+      try {
+        await assertTemplateContentForPlan(effectiveTenantId, content);
+      } catch (err: any) {
+        return res.status(err.statusCode || 403).json({ error: err.message });
+      }
     }
 
     const updatedTemplate = await prisma.template.update({

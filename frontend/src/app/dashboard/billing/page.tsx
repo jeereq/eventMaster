@@ -37,6 +37,7 @@ interface BillingStatus {
     protocolQr: boolean;
     seatNotifications: boolean;
     customTemplates: boolean;
+    mockupOcr: boolean;
     roomThemesFixtures: boolean;
     commercialNetwork: boolean;
     adminReports: boolean;
@@ -49,6 +50,7 @@ const CAPABILITY_LABELS: Array<{ key: keyof NonNullable<BillingStatus['capabilit
   { key: 'protocolQr', label: 'Protocole QR & émargement' },
   { key: 'seatNotifications', label: 'Notifications de siège' },
   { key: 'customTemplates', label: 'Modèles personnalisés' },
+  { key: 'mockupOcr', label: 'OCR import maquette' },
   { key: 'roomThemesFixtures', label: 'Thèmes & fixtures salles' },
   { key: 'commercialNetwork', label: 'Réseau commercial (20 %)' },
   { key: 'adminReports', label: 'Rapports avancés' },

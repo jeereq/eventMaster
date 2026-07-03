@@ -49,6 +49,7 @@ export interface PlanCapabilities {
   protocolQr: boolean;
   seatNotifications: boolean;
   customTemplates: boolean;
+  mockupOcr: boolean;
   roomThemesFixtures: boolean;
   commercialNetwork: boolean;
   adminReports: boolean;

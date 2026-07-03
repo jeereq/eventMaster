@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../db';
-import { sendRealEmail, sendRealSMS, sendRealWhatsApp, sendRealWhatsAppImage } from '../services/notificationService';
+import { sendRealEmail, sendRealWhatsApp, sendRealWhatsAppImage } from '../services/notificationService';
 import { renderGuestMessage, polishWhatsAppBody } from '../services/messageTemplateService';
 import { findGuestsByIdentity } from '../services/legalService';
 import { extractGuestEmail, extractGuestPhone } from '../utils/guestIdentity';
@@ -472,7 +472,6 @@ export async function submitRsvp(req: Request, res: Response) {
         location: guest.event.location || 'Non défini',
       });
       const whatsappCaption = polishWhatsAppBody(whatsappRendered.body);
-      const smsBody = `Bonjour ${guest.firstName}, votre présence à "${guest.event.title}" est confirmée. Voici votre QR Code d'entrée : ${qrCodeUrl}. Présentez-le à l'accueil. Merci !`;
 
       // Run sending in the background to avoid blocking the user response
       (async () => {
@@ -484,14 +483,11 @@ export async function submitRsvp(req: Request, res: Response) {
             await sendRealEmail(guest.email, subject, textBody, htmlBody);
           }
 
-          // 2. Send Phone notifications (WhatsApp / SMS)
+          // 2. WhatsApp avec image QR
           const phone = getGuestPhone(guest);
           if (phone) {
             console.log(`[RSVP Controller] Sending confirmation WhatsApp Image with QR Code to ${phone}...`);
             await sendRealWhatsAppImage(phone, qrCodeUrl, whatsappCaption);
-            
-            console.log(`[RSVP Controller] Sending confirmation SMS with QR Code link to ${phone}...`);
-            await sendRealSMS(phone, smsBody);
           }
         } catch (notifErr) {
           console.error('[RSVP Controller] Error sending QR Code confirmation notifications:', notifErr);

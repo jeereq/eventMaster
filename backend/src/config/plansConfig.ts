@@ -24,6 +24,7 @@ export interface PlanDefinition {
   maxRooms: number;
   maxOrgManagers: number;
   customTemplates: boolean;
+  mockupOcr: boolean;
   protocolQr: boolean;
   seatNotifications: boolean;
   roomThemesFixtures: boolean;
@@ -71,6 +72,7 @@ export function getDefaultPlans(): PlansConfiguration {
       maxRooms: 1,
       maxOrgManagers: 1,
       customTemplates: false,
+      mockupOcr: false,
       protocolQr: false,
       seatNotifications: false,
       roomThemesFixtures: false,
@@ -90,6 +92,7 @@ export function getDefaultPlans(): PlansConfiguration {
       maxRooms: 3,
       maxOrgManagers: 3,
       customTemplates: false,
+      mockupOcr: false,
       protocolQr: true,
       seatNotifications: false,
       roomThemesFixtures: true,
@@ -109,6 +112,7 @@ export function getDefaultPlans(): PlansConfiguration {
       maxRooms: 5,
       maxOrgManagers: 5,
       customTemplates: true,
+      mockupOcr: false,
       protocolQr: true,
       seatNotifications: true,
       roomThemesFixtures: true,
@@ -128,6 +132,7 @@ export function getDefaultPlans(): PlansConfiguration {
       maxRooms: 10,
       maxOrgManagers: 10,
       customTemplates: true,
+      mockupOcr: true,
       protocolQr: true,
       seatNotifications: true,
       roomThemesFixtures: true,
@@ -147,6 +152,7 @@ export function getDefaultPlans(): PlansConfiguration {
       maxRooms: 25,
       maxOrgManagers: 18,
       customTemplates: true,
+      mockupOcr: true,
       protocolQr: true,
       seatNotifications: true,
       roomThemesFixtures: true,
@@ -166,6 +172,7 @@ export function getDefaultPlans(): PlansConfiguration {
       maxRooms: 50,
       maxOrgManagers: 30,
       customTemplates: true,
+      mockupOcr: true,
       protocolQr: true,
       seatNotifications: true,
       roomThemesFixtures: true,
@@ -185,6 +192,7 @@ export function getDefaultPlans(): PlansConfiguration {
       maxRooms: 9999,
       maxOrgManagers: 9999,
       customTemplates: true,
+      mockupOcr: true,
       protocolQr: true,
       seatNotifications: true,
       roomThemesFixtures: true,
@@ -209,6 +217,7 @@ function mergePlan(base: PlanDefinition, override?: Partial<PlanDefinition>): Pl
     maxRooms: override.maxRooms ?? base.maxRooms,
     maxOrgManagers: override.maxOrgManagers ?? base.maxOrgManagers,
     customTemplates: override.customTemplates ?? base.customTemplates,
+    mockupOcr: override.mockupOcr ?? base.mockupOcr,
     protocolQr: override.protocolQr ?? base.protocolQr,
     seatNotifications: override.seatNotifications ?? base.seatNotifications,
     roomThemesFixtures: override.roomThemesFixtures ?? base.roomThemesFixtures,

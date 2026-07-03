@@ -87,6 +87,7 @@ export async function getBillingStatus(req: AuthenticatedRequest, res: Response)
         protocolQr: currentLimits.protocolQr,
         seatNotifications: currentLimits.seatNotifications,
         customTemplates: currentLimits.customTemplates,
+        mockupOcr: currentLimits.mockupOcr,
         roomThemesFixtures: currentLimits.roomThemesFixtures,
         commercialNetwork: currentLimits.commercialNetwork,
         adminReports: currentLimits.adminReports,

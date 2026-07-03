@@ -95,6 +95,8 @@ const lightenColor = (hex: string, percent = 30) => {
 export default function TemplatesPage() {
   const { user, planFeatures, tenant } = useAuth();
   const canUseCustomTemplates = user?.role === 'SUPER_ADMIN' || planFeatures?.customTemplates !== false;
+  const canUseMockupImport = canUseCustomTemplates;
+  const canUseMockupOcr = user?.role === 'SUPER_ADMIN' || planFeatures?.mockupOcr === true;
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -160,7 +162,8 @@ export default function TemplatesPage() {
   const [imageUploading, setImageUploading] = useState(false);
   const [mockupImporting, setMockupImporting] = useState(false);
   const [importedPalette, setImportedPalette] = useState<TemplatePalette | null>(null);
-  const [enableMockupOcr, setEnableMockupOcr] = useState(true);
+  const [importedWithOcr, setImportedWithOcr] = useState(false);
+  const [enableMockupOcr, setEnableMockupOcr] = useState(false);
   const [ocrProgress, setOcrProgress] = useState<number | null>(null);
   const mockupInputRef = useRef<HTMLInputElement>(null);
   const mockupEditorInputRef = useRef<HTMLInputElement>(null);
@@ -197,6 +200,10 @@ export default function TemplatesPage() {
   }, [user]);
 
   useEffect(() => {
+    setEnableMockupOcr(canUseMockupOcr);
+  }, [canUseMockupOcr]);
+
+  useEffect(() => {
     if (typeof window !== 'undefined' && templates.length > 0) {
       const params = new URLSearchParams(window.location.search);
       const editId = params.get('edit');
@@ -217,8 +224,7 @@ export default function TemplatesPage() {
     setTemplateName('Nouveau Modèle d\'Invitation');
     setSelectedTenantId('');
     setImportedPalette(null);
-    
-    // Pre-populate with a gorgeous, luxury wedding invitation template (inspired by Hassan Raza & Ayesha Khan)
+    setImportedWithOcr(false);
     setCanvasElements([
       { id: '1', type: 'text', text: 'CÉLÉBRATION UNIQUE', color: '#c5a059', fontSize: '12px', align: 'center', width: 'full', fontFamily: 'Montserrat', letterSpacing: '0.2em', bold: true },
       { id: '2', type: 'text', text: 'Hassan & Ayesha', color: '#1e293b', fontSize: '32px', align: 'center', width: 'full', fontFamily: 'Great Vibes' },
@@ -452,14 +458,19 @@ export default function TemplatesPage() {
 
   const handleMockupImport = async (file: File, openEditor = true) => {
     setError('');
+    if (!canUseMockupImport) {
+      setError('L\'import de maquette nécessite le forfait Business Premium 1 ou supérieur.');
+      return;
+    }
     setMockupImporting(true);
     setOcrProgress(null);
+    const useOcr = enableMockupOcr && canUseMockupOcr;
     try {
       const palette = await extractPaletteFromSource(file);
       const uploaded = await uploadImageFile(file);
       let mockup = buildMockupTemplate(uploaded.url, palette);
 
-      if (enableMockupOcr) {
+      if (useOcr) {
         setOcrProgress(0);
         const ocr = await extractTextFromImageSource(file, (p) => setOcrProgress(Math.round(p * 100)));
         if (ocr.lines.length > 0) {
@@ -486,10 +497,11 @@ export default function TemplatesPage() {
         setSelectedElementId,
       });
       setImportedPalette(palette);
+      setImportedWithOcr(useOcr);
       setEditingTemplateId(null);
       if (openEditor) setEditorOpen(true);
       setSuccess(
-        enableMockupOcr
+        useOcr
           ? 'Maquette importée — palette, OCR texte et blocs pré-positionnés. Personnalisez le contenu.'
           : 'Maquette importée — palette extraite et blocs texte ajoutés. Personnalisez le contenu.',
       );
@@ -745,7 +757,7 @@ export default function TemplatesPage() {
             floralColor,
             floralType,
             floralDensity,
-            ...(importedPalette ? { palette: importedPalette, importedFromMockup: true } : {}),
+            ...(importedPalette ? { palette: importedPalette, importedFromMockup: true, importedWithOcr } : {}),
           },
           elements: canvasElements 
         },
@@ -989,17 +1001,31 @@ export default function TemplatesPage() {
                 Importer ma maquette
               </h3>
               <p className="text-[10px] text-slate-500 leading-relaxed">
-                Image Cloudinary + palette auto + blocs texte. OCR niveau 3 optionnel.
+                {canUseMockupImport
+                  ? 'Image Cloudinary + palette auto + blocs texte.'
+                  : 'Disponible à partir de Business Premium 1.'}
+                {canUseMockupOcr
+                  ? ' OCR texte optionnel (Premium 2+).'
+                  : canUseMockupImport
+                    ? ' OCR texte : Business Premium 2 ou supérieur.'
+                    : ''}
               </p>
-              <label className="flex items-center gap-2 text-[10px] font-semibold text-slate-600 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={enableMockupOcr}
-                  onChange={(e) => setEnableMockupOcr(e.target.checked)}
-                  className="rounded border-slate-300"
-                />
-                Détecter le texte sur l&apos;image (OCR)
-              </label>
+              {canUseMockupOcr ? (
+                <label className="flex items-center gap-2 text-[10px] font-semibold text-slate-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={enableMockupOcr}
+                    onChange={(e) => setEnableMockupOcr(e.target.checked)}
+                    className="rounded border-slate-300"
+                  />
+                  Détecter le texte sur l&apos;image (OCR)
+                </label>
+              ) : canUseMockupImport ? (
+                <p className="text-[10px] text-amber-700 font-medium">
+                  OCR non inclus dans votre forfait —{' '}
+                  <Link href="/dashboard/billing" className="underline">passer à Premium 2</Link>
+                </p>
+              ) : null}
               {ocrProgress !== null && (
                 <p className="text-[10px] text-indigo-600 font-bold">OCR en cours… {ocrProgress}%</p>
               )}
@@ -1012,7 +1038,7 @@ export default function TemplatesPage() {
               />
               <button
                 type="button"
-                disabled={mockupImporting || imageUploading}
+                disabled={!canUseMockupImport || mockupImporting || imageUploading}
                 onClick={() => mockupEditorInputRef.current?.click()}
                 className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-indigo-200 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50/30 text-indigo-700 font-bold text-xs transition disabled:opacity-50 cursor-pointer"
               >
@@ -2609,6 +2635,8 @@ export default function TemplatesPage() {
         action={
           canUseCustomTemplates ? (
             <div className="flex flex-wrap gap-2">
+              {canUseMockupImport && (
+                <>
               <input
                 ref={mockupInputRef}
                 type="file"
@@ -2624,6 +2652,8 @@ export default function TemplatesPage() {
               >
                 {mockupImporting ? (ocrProgress !== null ? `OCR ${ocrProgress}%` : 'Import…') : 'Importer ma maquette'}
               </Button>
+                </>
+              )}
               <Button onClick={handleCreateTemplateClick} leftIcon={<PlusCircle className="w-4 h-4" />}>
                 Nouveau modèle
               </Button>
@@ -2663,6 +2693,7 @@ export default function TemplatesPage() {
             <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">Créez votre premier modèle d'invitation personnalisé à l'aide de notre concepteur visuel.</p>
             {canUseCustomTemplates && (
             <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+              {canUseMockupImport && (
               <button 
                 onClick={() => mockupInputRef.current?.click()}
                 disabled={mockupImporting}
@@ -2671,6 +2702,7 @@ export default function TemplatesPage() {
                 {mockupImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                 Importer ma maquette
               </button>
+              )}
               <button 
                 onClick={handleCreateTemplateClick}
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100"

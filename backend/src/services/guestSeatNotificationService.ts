@@ -1,4 +1,4 @@
-import { sendRealEmail, sendRealSMS, sendRealWhatsApp } from './notificationService';
+import { sendRealEmail, sendRealWhatsApp } from './notificationService';
 import { extractGuestEmail, extractGuestPhone } from '../utils/guestIdentity';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -90,8 +90,6 @@ export async function notifyGuestSeatConfirmed(params: {
 
   const whatsappBody = `Bonjour ${guest.firstName} 👋\n\nVotre placement pour *${event.title}* est confirmé ✅\n\n🪑 *${assignedSeat.tableName}* — Siège n°${seatNumber}${event.location ? `\n📍 ${event.location}` : ''}\n\nConsultez votre plan : ${rsvpUrl}\n\nBon événement !`;
 
-  const smsBody = `Bonjour ${guest.firstName}, votre place pour "${event.title}" est confirmée : ${assignedSeat.tableName}, siège ${seatNumber}. Plan : ${rsvpUrl}`;
-
   const tasks: Promise<void>[] = [];
 
   if (email) {
@@ -108,12 +106,6 @@ export async function notifyGuestSeatConfirmed(params: {
       sendRealWhatsApp(phone, whatsappBody).then((r) => {
         if (r.success) channels.push(r.simulated ? 'WhatsApp (simulation)' : 'WhatsApp');
         else if (r.error) errors.push(`WhatsApp: ${r.error}`);
-      }),
-    );
-    tasks.push(
-      sendRealSMS(phone, smsBody).then((r) => {
-        if (r.success) channels.push(r.simulated ? 'SMS (simulation)' : 'SMS');
-        else if (r.error) errors.push(`SMS: ${r.error}`);
       }),
     );
   }
