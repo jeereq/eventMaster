@@ -4,6 +4,9 @@ import { LEGACY_STATIC_LANDING_IDS } from '@/config/landingTemplates';
 export interface PublicTemplateDto {
   id: string;
   name: string;
+  tenantId?: string | null;
+  isGlobal?: boolean;
+  showOnLanding?: boolean;
   content?: {
     global?: {
       bgColor?: string;
@@ -84,6 +87,15 @@ export function dbTemplateToLandingTemplate(t: PublicTemplateDto): LandingTempla
       btnText: 'text-white font-bold',
     },
     elements: previewElements,
+    previewContent:
+      t.content && typeof t.content === 'object'
+        ? {
+            global: (t.content as { global?: Record<string, unknown> }).global,
+            elements: Array.isArray((t.content as { elements?: unknown[] }).elements)
+              ? ((t.content as { elements: Array<Record<string, unknown>> }).elements)
+              : [],
+          }
+        : undefined,
   };
 }
 
@@ -95,9 +107,17 @@ function normalizePublicTemplateList(data: unknown): PublicTemplateDto[] {
   return [];
 }
 
+function isGlobalLandingTemplate(t: PublicTemplateDto): boolean {
+  if (t.tenantId != null && t.tenantId !== '') return false;
+  if (t.isGlobal === false) return false;
+  if (t.showOnLanding === false) return false;
+  return true;
+}
+
 export function publicTemplatesToLanding(publicTemplates: PublicTemplateDto[]): LandingTemplate[] {
   return publicTemplates
     .filter((t) => t?.id && isUuidLike(t.id) && !LEGACY_STATIC_LANDING_IDS.has(t.id))
+    .filter(isGlobalLandingTemplate)
     .map(dbTemplateToLandingTemplate);
 }
 

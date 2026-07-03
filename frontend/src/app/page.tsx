@@ -13,6 +13,7 @@ import { fetchPublicLandingTemplates } from '@/lib/landingTemplateAdapter';
 import LandingPricingSection from '@/components/landing/LandingPricingSection';
 import LandingRolesSection from '@/components/landing/LandingRolesSection';
 import FaqSection from '@/components/landing/FaqSection';
+import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import SiteFooter from '@/components/SiteFooter';
 import { 
   Calendar, Users, Award, Shield, CheckCircle, Mail, 
@@ -26,46 +27,6 @@ function getCategoryLabel(category: string) {
   if (category === 'private') return 'Événement Privé';
   if (category === 'corporate') return 'Professionnel';
   return 'Cocktail';
-}
-
-function InvitationPreviewCard({ template, compact = false }: { template: LandingTemplate; compact?: boolean }) {
-  const useInlineBg = Boolean(template.style.bgColor);
-  return (
-    <div
-      className={`rounded-2xl border ${useInlineBg ? '' : template.style.bg} ${useInlineBg ? '' : template.style.border} ${compact ? 'p-4 space-y-3' : 'p-6 sm:p-8 space-y-6 min-h-[340px]'} shadow-md transition-all duration-300 flex flex-col justify-between relative overflow-hidden`}
-      style={
-        useInlineBg
-          ? {
-              backgroundColor: template.style.bgColor,
-              borderColor: template.style.borderColor || 'rgba(226,232,240,0.9)',
-            }
-          : undefined
-      }
-    >
-      {!compact && <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-500 to-violet-500" />}
-      <div className={`space-y-3 ${compact ? '' : 'pt-2'}`}>
-        {template.elements.map((el, i) => {
-          if (el.type === 'text') {
-            return (
-              <div
-                key={i}
-                style={{ color: el.color }}
-                className={`${el.fontSize || 'text-base'} text-center leading-relaxed ${compact ? 'line-clamp-2' : ''}`}
-              >
-                {el.content}
-              </div>
-            );
-          }
-          return null;
-        })}
-      </div>
-      <div className={`flex justify-center ${compact ? 'pt-2' : 'pt-4'}`}>
-        <div className={`${compact ? 'px-3 py-1.5 text-[10px]' : 'px-5 py-2.5 text-sm'} rounded-xl font-bold text-center inline-block shadow-md ${template.style.btnBg} ${template.style.btnText}`}>
-          {template.elements.find((el) => el.type === 'button')?.content || 'S\'inscrire'}
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export default function Home() {
@@ -359,7 +320,7 @@ export default function Home() {
                     ))}
                   </div>
 
-                  <InvitationPreviewCard template={activePreview} />
+                  <LandingInvitationPreview template={activePreview} />
                 </>
               ) : (
                 <div className="h-[400px] flex items-center justify-center text-slate-500">
@@ -386,8 +347,8 @@ export default function Home() {
               {loadingPublicTemplates
                 ? 'Chargement des modèles publics…'
                 : publicTemplates.length === 0
-                  ? 'Aucun modèle public pour le moment. Les modèles globaux activés « Sur la landing page » par le super admin apparaîtront ici.'
-                  : `${publicTemplates.length} modèle${publicTemplates.length > 1 ? 's' : ''} public${publicTemplates.length > 1 ? 's' : ''} configuré${publicTemplates.length > 1 ? 's' : ''} par la plateforme, répartis en trois univers — privé, professionnel et cocktail.`}
+                  ? 'Aucun modèle global pour le moment. Activez « Sur la landing page » sur un modèle global (sans organisation) depuis le concepteur visuel super admin.'
+                  : `${publicTemplates.length} modèle${publicTemplates.length > 1 ? 's' : ''} global${publicTemplates.length > 1 ? 'aux' : ''} affiché${publicTemplates.length > 1 ? 's' : ''} sur la vitrine, répartis en trois univers — privé, professionnel et cocktail.`}
             </p>
             
             {/* Filter buttons */}
@@ -431,19 +392,22 @@ export default function Home() {
                     {group.templates.map((t) => (
                       <div key={t.id} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 flex flex-col justify-between hover:shadow-md transition duration-300">
                         <div className="space-y-4">
-                          <InvitationPreviewCard template={t} compact />
+                        <button
+                          type="button"
+                          onClick={() => setModalTemplate(t)}
+                          className="w-full text-left rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                        >
+                          <LandingInvitationPreview template={t} compact />
+                        </button>
 
                           <div className="flex items-center justify-between pt-1">
                             <span className="text-[10px] bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                               {getCategoryLabel(t.category)}
                             </span>
-                            <button
-                              onClick={() => setModalTemplate(t)}
-                              className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center gap-1 cursor-pointer"
-                            >
+                            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
                               Apercevoir
                               <ArrowRight className="w-3.5 h-3.5" />
-                            </button>
+                            </span>
                           </div>
 
                           <h3 className="font-extrabold text-slate-900 dark:text-white text-base leading-tight">{t.name}</h3>
@@ -524,8 +488,18 @@ export default function Home() {
 
       {/* Modal de prévisualisation de modèle */}
       {modalTemplate && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full border border-slate-200 dark:border-slate-800 p-6 space-y-6 shadow-2xl relative overflow-hidden">
+        <div
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+          role="presentation"
+          onClick={() => setModalTemplate(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="landing-preview-title"
+            className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full border border-slate-200 dark:border-slate-800 p-6 space-y-6 shadow-2xl relative overflow-hidden max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-indigo-500 to-violet-500" />
             
             <div className="flex justify-between items-center">
@@ -541,11 +515,11 @@ export default function Home() {
             </div>
 
             <div className="space-y-2">
-              <h3 className="text-xl font-extrabold text-slate-900 dark:text-white leading-tight">{modalTemplate.name}</h3>
+              <h3 id="landing-preview-title" className="text-xl font-extrabold text-slate-900 dark:text-white leading-tight">{modalTemplate.name}</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{modalTemplate.description}</p>
             </div>
 
-            <InvitationPreviewCard template={modalTemplate} />
+            <LandingInvitationPreview template={modalTemplate} />
 
             <div className="flex gap-3 pt-2">
               <button

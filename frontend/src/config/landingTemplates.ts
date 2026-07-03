@@ -21,6 +21,17 @@ export interface LandingTemplate {
     color?: string;
     fontSize?: string;
   }>;
+  /** Contenu brut du concepteur visuel pour un aperçu fidèle sur la landing */
+  previewContent?: {
+    global?: {
+      bgColor?: string;
+      bgType?: string;
+      bgPattern?: string;
+      frameType?: string;
+      [key: string]: unknown;
+    };
+    elements?: Array<Record<string, unknown>>;
+  };
 }
 
 export const LANDING_TEMPLATE_GROUPS = [
