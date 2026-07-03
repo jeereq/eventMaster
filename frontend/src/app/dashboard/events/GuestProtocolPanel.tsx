@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { api } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 import {
   QrCode, ScanLine, CheckCircle2, XCircle, MessageSquare, Loader2, UserCheck, Armchair,
 } from 'lucide-react';
@@ -21,6 +23,7 @@ interface ProtocolGuest {
 }
 
 export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
+  const { planFeatures, tenant } = useAuth();
   const [guests, setGuests] = useState<ProtocolGuest[]>([]);
   const [loading, setLoading] = useState(true);
   const [scanInput, setScanInput] = useState('');
@@ -45,6 +48,22 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
   useEffect(() => {
     loadGuests();
   }, [loadGuests]);
+
+  if (planFeatures && !planFeatures.protocolQr) {
+    return (
+      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center space-y-3">
+        <QrCode className="w-10 h-10 text-amber-600 mx-auto" />
+        <h3 className="font-bold text-amber-900">Protocole QR non inclus</h3>
+        <p className="text-sm text-amber-800">
+          Le scan QR, l&apos;émargement et la vérification des sièges nécessitent le forfait{' '}
+          <strong>Business</strong> ou supérieur. Forfait actuel : {tenant?.plan || 'FREE'}.
+        </p>
+        <Link href="/dashboard/billing" className="inline-block text-sm font-bold text-indigo-600 hover:underline">
+          Voir les forfaits →
+        </Link>
+      </div>
+    );
+  }
 
   const resolvePayload = useCallback(async (payload: string, fromCamera = false) => {
     const trimmed = payload.trim();

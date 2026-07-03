@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { api } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 import {
   Building2, Plus, Trash2, Loader2, Users, UserPlus, AlertCircle, CheckCircle2,
   ChevronLeft, ChevronRight, LayoutGrid, Theater, Tent, Presentation, Edit3,
@@ -72,6 +74,7 @@ const defaultParams: Record<RoomType, LayoutParams> = {
 };
 
 export default function RoomsManagement() {
+  const { planFeatures, planQuota, tenant } = useAuth();
   const [rooms, setRooms] = useState<RoomItem[]>([]);
   const [canManage, setCanManage] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMemberOption[]>([]);
@@ -96,6 +99,18 @@ export default function RoomsManagement() {
   const [assignRoomId, setAssignRoomId] = useState<string | null>(null);
   const [assignUserId, setAssignUserId] = useState('');
   const [assignRole, setAssignRole] = useState<'MANAGER' | 'PROTOCOL'>('PROTOCOL');
+
+  const allowedRoomTypes = useMemo(() => {
+    const allowed = planFeatures?.allowedRoomTypes;
+    if (!allowed?.length) return selectableRoomTypes;
+    return selectableRoomTypes.filter((t) => allowed.includes(t));
+  }, [planFeatures?.allowedRoomTypes]);
+
+  const roomsAtLimit = Boolean(
+    planQuota &&
+    planQuota.limits.maxRooms < 9999 &&
+    planQuota.usage.rooms >= planQuota.limits.maxRooms,
+  );
 
   const regenerateBlueprint = () => {
     const bp =
@@ -352,13 +367,22 @@ export default function RoomsManagement() {
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Définissez le type de salle, générez un plan 2D et assignez le staff.
+            {planQuota && (
+              <span className="block mt-1 font-semibold text-indigo-600">
+                Salles : {planQuota.usage.rooms} / {planQuota.limits.maxRooms >= 9999 ? '∞' : planQuota.limits.maxRooms}
+                {planFeatures?.roomEditorLevel && (
+                  <> · Éditeur {planFeatures.roomEditorLevel}</>
+                )}
+              </span>
+            )}
           </p>
         </div>
         {canManage && (
           <button
             type="button"
             onClick={() => { resetWizard(); setShowWizard(true); }}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition"
+            disabled={roomsAtLimit}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition disabled:opacity-50"
           >
             <Plus className="w-4 h-4" />
             Nouvelle salle
@@ -375,6 +399,13 @@ export default function RoomsManagement() {
         <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 text-emerald-800 rounded-xl flex items-center gap-2 text-xs">
           <CheckCircle2 className="w-4 h-4" /> {success}
         </div>
+      )}
+
+      {roomsAtLimit && (
+        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+          Quota de salles atteint pour le forfait {tenant?.plan || 'actuel'}.{' '}
+          <Link href="/dashboard/billing" className="font-bold underline">Voir les forfaits</Link>
+        </p>
       )}
 
       {showWizard && canManage && (
@@ -400,7 +431,7 @@ export default function RoomsManagement() {
             <div className="space-y-3">
               <h3 className="font-bold text-slate-900 dark:text-white">Type de salle</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {selectableRoomTypes.map((type) => (
+                {allowedRoomTypes.map((type) => (
                   <button
                     key={type}
                     type="button"

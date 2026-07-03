@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../db';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { isValidOrgRole, resolveOrgAccess } from '../services/permissionsService';
+import { assertOrgManagerQuota, PlanFeatureError } from '../services/planFeaturesService';
 import { setupUserOtpVerification } from './authController';
 import { VerificationMethod } from '../services/otpService';
 
@@ -89,6 +90,17 @@ export async function createTeamMember(req: AuthenticatedRequest, res: Response)
       return res.status(400).json({ error: 'orgRole doit être MANAGER ou PROTOCOL.' });
     }
 
+    if (orgRole === 'MANAGER') {
+      try {
+        await assertOrgManagerQuota(tenantId, true);
+      } catch (err) {
+        if (err instanceof PlanFeatureError) {
+          return res.status(403).json({ error: err.message });
+        }
+        throw err;
+      }
+    }
+
     if (password.length < 6) {
       return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 6 caractères.' });
     }
@@ -166,6 +178,17 @@ export async function updateTeamMember(req: AuthenticatedRequest, res: Response)
     });
     if (!member) {
       return res.status(404).json({ error: 'Utilisateur introuvable.' });
+    }
+
+    if (orgRole === 'MANAGER' && member.orgRole !== 'MANAGER') {
+      try {
+        await assertOrgManagerQuota(tenantId, true);
+      } catch (err) {
+        if (err instanceof PlanFeatureError) {
+          return res.status(403).json({ error: err.message });
+        }
+        throw err;
+      }
     }
 
     const updated = await prisma.user.update({

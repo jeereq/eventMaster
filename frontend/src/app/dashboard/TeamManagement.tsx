@@ -27,7 +27,7 @@ const orgRoleLabels: Record<string, string> = {
 };
 
 export default function TeamManagement() {
-  const { user, tenant } = useAuth();
+  const { user, tenant, planQuota } = useAuth();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [canManageTeam, setCanManageTeam] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -43,6 +43,10 @@ export default function TeamManagement() {
   const [verificationMethod, setVerificationMethod] = useState<'EMAIL' | 'WHATSAPP'>('EMAIL');
 
   const isOwner = Boolean(tenant?.managerId && user?.id === tenant.managerId);
+
+  const managerCount = members.filter((m) => m.orgRole === 'MANAGER' || m.isOwner).length;
+  const maxManagers = planQuota?.limits.maxOrgManagers ?? null;
+  const managersAtLimit = maxManagers !== null && maxManagers < 9999 && managerCount >= maxManagers;
 
   const loadTeam = async () => {
     setLoading(true);
@@ -70,6 +74,11 @@ export default function TeamManagement() {
     setSubmitting(true);
     if (verificationMethod === 'WHATSAPP' && !phone) {
       setError('Le téléphone est obligatoire pour envoyer le code OTP par WhatsApp.');
+      setSubmitting(false);
+      return;
+    }
+    if (orgRole === 'MANAGER' && managersAtLimit) {
+      setError(`Quota de managers atteint (${maxManagers} max). Passez à un forfait supérieur.`);
       setSubmitting(false);
       return;
     }
@@ -125,6 +134,11 @@ export default function TeamManagement() {
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Créez des managers (gestion complète) ou des agents protocole (accès limité aux événements assignés).
+            {planQuota && maxManagers !== null && (
+              <span className="block mt-1 font-semibold text-indigo-600">
+                Managers : {managerCount} / {maxManagers >= 9999 ? '∞' : maxManagers}
+              </span>
+            )}
           </p>
         </div>
         {canManageTeam && (
@@ -183,9 +197,14 @@ export default function TeamManagement() {
               </button>
             </div>
           </div>
+          {orgRole === 'MANAGER' && managersAtLimit && (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+              Quota managers atteint. Les agents protocole restent disponibles, ou passez à un forfait supérieur.
+            </p>
+          )}
           <div className="flex gap-2">
             <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border rounded-xl text-xs font-bold text-slate-600">Annuler</button>
-            <button type="submit" disabled={submitting} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl text-xs font-bold flex items-center gap-2">
+            <button type="submit" disabled={submitting || (orgRole === 'MANAGER' && managersAtLimit)} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl text-xs font-bold flex items-center gap-2">
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
               Créer l&apos;utilisateur
             </button>

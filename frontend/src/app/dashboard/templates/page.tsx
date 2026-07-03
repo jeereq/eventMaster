@@ -89,7 +89,8 @@ const lightenColor = (hex: string, percent = 30) => {
 };
 
 export default function TemplatesPage() {
-  const { user } = useAuth();
+  const { user, planFeatures, tenant } = useAuth();
+  const canUseCustomTemplates = user?.role === 'SUPER_ADMIN' || planFeatures?.customTemplates !== false;
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -200,6 +201,7 @@ export default function TemplatesPage() {
   }, [templates]);
 
   const handleCreateTemplateClick = () => {
+    if (!canUseCustomTemplates) return;
     setEditingTemplateId(null);
     setTemplateName('Nouveau Modèle d\'Invitation');
     setSelectedTenantId('');
@@ -2442,11 +2444,26 @@ export default function TemplatesPage() {
             : "Concevez des invitations interactives uniques à l'aide de notre éditeur visuel."
         }
         action={
-          <Button onClick={handleCreateTemplateClick} leftIcon={<PlusCircle className="w-4 h-4" />}>
-            Nouveau modèle
-          </Button>
+          canUseCustomTemplates ? (
+            <Button onClick={handleCreateTemplateClick} leftIcon={<PlusCircle className="w-4 h-4" />}>
+              Nouveau modèle
+            </Button>
+          ) : undefined
         }
       />
+
+      {!canUseCustomTemplates && user?.role === 'USER' && (
+        <div className="p-4 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-sm space-y-2">
+          <p className="font-bold">Modèles personnalisés non inclus</p>
+          <p>
+            L&apos;éditeur visuel nécessite le forfait <strong>Business Premium 1</strong> ou supérieur.
+            Forfait actuel : {tenant?.plan || 'FREE'}.
+          </p>
+          <Link href="/dashboard/billing" className="inline-block text-indigo-600 font-bold text-xs hover:underline">
+            Voir les forfaits →
+          </Link>
+        </div>
+      )}
 
       {error && <Alert variant="error">{error}</Alert>}
 
@@ -2464,12 +2481,14 @@ export default function TemplatesPage() {
             <Mail className="w-16 h-12 text-slate-300 mx-auto mb-4" />
             <h3 className="text-lg font-bold text-slate-700">Aucun modèle créé</h3>
             <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">Créez votre premier modèle d'invitation personnalisé à l'aide de notre concepteur visuel.</p>
+            {canUseCustomTemplates && (
             <button 
               onClick={handleCreateTemplateClick}
               className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100"
             >
               Créer mon premier modèle
             </button>
+            )}
           </div>
         ) : (
           templates.map((t) => (

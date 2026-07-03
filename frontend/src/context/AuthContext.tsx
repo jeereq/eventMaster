@@ -44,10 +44,41 @@ interface RegisterResult {
   verificationMethod?: 'EMAIL' | 'WHATSAPP';
 }
 
+export interface PlanCapabilities {
+  protocolQr: boolean;
+  seatNotifications: boolean;
+  customTemplates: boolean;
+  roomThemesFixtures: boolean;
+  commercialNetwork: boolean;
+  adminReports: boolean;
+  roomEditorLevel: string;
+  allowedRoomTypes?: string[];
+  supportLevel: string;
+}
+
+export interface PlanQuotaInfo {
+  usage: {
+    events: number;
+    guests: number;
+    templates: number;
+    rooms: number;
+    orgManagers: number;
+  };
+  limits: {
+    maxEvents: number;
+    maxGuests: number;
+    maxTemplates: number;
+    maxRooms: number;
+    maxOrgManagers: number;
+  };
+}
+
 interface AuthContextType {
   user: User | null;
   tenant: Tenant | null;
   access: OrgAccess | null;
+  planFeatures: PlanCapabilities | null;
+  planQuota: PlanQuotaInfo | null;
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -66,6 +97,7 @@ interface AuthContextType {
   resendOtp: (email: string, verificationMethod?: 'EMAIL' | 'WHATSAPP') => Promise<string>;
   logout: () => void;
   refreshBilling: () => Promise<void>;
+  refreshPlanFeatures: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateUserAndTenant: (user: User, tenant: Tenant | null) => void;
 }
@@ -84,6 +116,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [access, setAccess] = useState<OrgAccess | null>(null);
+  const [planFeatures, setPlanFeatures] = useState<PlanCapabilities | null>(null);
+  const [planQuota, setPlanQuota] = useState<PlanQuotaInfo | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -233,8 +267,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setTenant(null);
     setAccess(null);
+    setPlanFeatures(null);
+    setPlanQuota(null);
     router.push('/login');
   };
+
+  const refreshPlanFeatures = async () => {
+    try {
+      const data = await api.get('/billing/plan-features');
+      setPlanFeatures(data.capabilities ?? null);
+      if (data.usage && data.limits) {
+        setPlanQuota({ usage: data.usage, limits: data.limits });
+      }
+    } catch {
+      setPlanFeatures(null);
+      setPlanQuota(null);
+    }
+  };
+
+  useEffect(() => {
+    if (token && tenant?.id && user?.role === 'USER') {
+      refreshPlanFeatures();
+    }
+  }, [token, tenant?.id, user?.role]);
 
   const refreshBilling = async () => {
     try {
@@ -243,6 +298,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const updatedTenant = { ...tenant, plan: billingData.plan };
         setTenant(updatedTenant);
         localStorage.setItem('tenant', JSON.stringify(updatedTenant));
+      }
+      if (billingData.capabilities) {
+        setPlanFeatures(billingData.capabilities);
+      }
+      if (billingData.usage && billingData.limits) {
+        setPlanQuota({ usage: billingData.usage, limits: billingData.limits });
       }
     } catch (error) {
       console.error('Error refreshing billing:', error);
@@ -274,8 +335,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, tenant, access, token, loading, login, register, verifyOtp, resendOtp,
-      logout, refreshBilling, refreshProfile, updateUserAndTenant,
+      user, tenant, access, planFeatures, planQuota, token, loading, login, register, verifyOtp, resendOtp,
+      logout, refreshBilling, refreshPlanFeatures, refreshProfile, updateUserAndTenant,
     }}>
       {children}
     </AuthContext.Provider>

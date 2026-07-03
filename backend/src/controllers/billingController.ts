@@ -6,6 +6,10 @@ import { getPlanLimits, getPlansConfiguration, PAID_PLAN_KEYS, PLAN_KEYS } from 
 import { assertCanViewBilling } from '../services/permissionsService';
 import { recordCommercialCommission } from '../services/commercialService';
 import { createAndSendInvoice } from '../services/invoiceService';
+import {
+  formatPlanFeaturesResponse,
+  getTenantPlanSnapshot,
+} from '../services/planFeaturesService';
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_mock';
 const stripe = new Stripe(STRIPE_SECRET_KEY, {
@@ -52,8 +56,15 @@ export async function getBillingStatus(req: AuthenticatedRequest, res: Response)
       },
     });
 
+    const roomCount = await prisma.organizationRoom.count({ where: { tenantId } });
+    const orgManagerCount = await prisma.user.count({
+      where: { tenantId, role: 'USER', orgRole: 'MANAGER' },
+    });
+
     const limits = getPlansFromSettings();
     const currentLimits = getPlanLimits(tenant.plan);
+    const snapshot = await getTenantPlanSnapshot(tenantId);
+    const planDetails = snapshot ? formatPlanFeaturesResponse(snapshot) : null;
 
     return res.json({
       plan: tenant.plan,
@@ -61,13 +72,28 @@ export async function getBillingStatus(req: AuthenticatedRequest, res: Response)
         events: tenant._count.events,
         guests: guestCount,
         templates: tenant._count.templates,
+        rooms: roomCount,
+        orgManagers: orgManagerCount + (tenant.managerId ? 1 : 0),
       },
       limits: {
         maxEvents: currentLimits.maxEvents,
         maxGuests: currentLimits.maxGuests,
         maxTemplates: currentLimits.maxTemplates,
+        maxRooms: currentLimits.maxRooms,
+        maxOrgManagers: currentLimits.maxOrgManagers,
         customTemplates: currentLimits.customTemplates,
       },
+      capabilities: planDetails?.capabilities ?? {
+        protocolQr: currentLimits.protocolQr,
+        seatNotifications: currentLimits.seatNotifications,
+        customTemplates: currentLimits.customTemplates,
+        roomThemesFixtures: currentLimits.roomThemesFixtures,
+        commercialNetwork: currentLimits.commercialNetwork,
+        adminReports: currentLimits.adminReports,
+        roomEditorLevel: currentLimits.roomEditorLevel,
+        supportLevel: currentLimits.supportLevel,
+      },
+      planDetails,
       plans: limits,
     });
   } catch (error: any) {
@@ -76,7 +102,24 @@ export async function getBillingStatus(req: AuthenticatedRequest, res: Response)
   }
 }
 
-// Create a Stripe Checkout Session for subscription
+export async function getPlanFeatures(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) {
+      return res.status(403).json({ error: 'Organisation non identifiée.' });
+    }
+
+    const snapshot = await getTenantPlanSnapshot(tenantId);
+    if (!snapshot) {
+      return res.status(404).json({ error: 'Organisation introuvable.' });
+    }
+
+    return res.json(formatPlanFeaturesResponse(snapshot));
+  } catch (error: any) {
+    console.error('Erreur getPlanFeatures:', error);
+    return res.status(500).json({ error: 'Impossible de charger les fonctionnalités du forfait.' });
+  }
+}
 export async function createCheckoutSession(req: AuthenticatedRequest, res: Response) {
   try {
     const tenantId = req.user?.tenantId;

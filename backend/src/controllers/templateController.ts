@@ -3,6 +3,16 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { getPlanLimits } from '../config/plansConfig';
 
+function isCustomTemplateContent(content: unknown): boolean {
+  if (!content || typeof content !== 'object') return false;
+  const c = content as Record<string, unknown>;
+  return (
+    c.customDesign === true ||
+    (Array.isArray(c.layers) && c.layers.length > 0) ||
+    (Array.isArray(c.elements) && c.elements.length > 0)
+  );
+}
+
 // Get all templates (for the tenant, or all templates if Super Admin)
 export async function getTemplates(req: AuthenticatedRequest, res: Response) {
   try {
@@ -62,6 +72,11 @@ export async function createTemplate(req: AuthenticatedRequest, res: Response) {
         if (tenant._count.templates >= limits.maxTemplates) {
           return res.status(403).json({
             error: `Quota de modèles atteint pour le plan ${tenant.plan} (Max ${limits.maxTemplates >= 9999 ? 'illimité' : limits.maxTemplates}). Veuillez passer à un forfait supérieur.`,
+          });
+        }
+        if (isCustomTemplateContent(content) && !limits.customTemplates) {
+          return res.status(403).json({
+            error: `Les modèles personnalisés ne sont pas inclus dans votre forfait ${limits.name}. Passez à Business Premium ou supérieur.`,
           });
         }
       }

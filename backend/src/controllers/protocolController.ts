@@ -10,6 +10,18 @@ import {
   findGuestSeatInTablePlan,
 } from '../services/commercialService';
 import { notifyGuestSeatConfirmed } from '../services/guestSeatNotificationService';
+import { assertPlanFeature, PlanFeatureError, getTenantPlanSnapshot } from '../services/planFeaturesService';
+
+async function ensureProtocolPlan(tenantId: string) {
+  await assertPlanFeature(tenantId, 'protocolQr');
+}
+
+function handlePlanError(res: Response, error: unknown) {
+  if (error instanceof PlanFeatureError) {
+    return res.status(403).json({ error: error.message });
+  }
+  return null;
+}
 
 async function loadGuestForEvent(eventId: string, tenantId: string, guestId: string) {
   const guest = await prisma.guest.findFirst({
@@ -41,6 +53,14 @@ export async function scanGuest(req: AuthenticatedRequest, res: Response) {
 
     if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Organisation non identifiée.' });
+    }
+
+    try {
+      await ensureProtocolPlan(tenantId);
+    } catch (err) {
+      const handled = handlePlanError(res, err);
+      if (handled) return handled;
+      throw err;
     }
 
     if (!(await canProtocolGuests(userId, tenantId, eventId))) {
@@ -84,6 +104,14 @@ export async function checkInGuest(req: AuthenticatedRequest, res: Response) {
 
     if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Organisation non identifiée.' });
+    }
+
+    try {
+      await ensureProtocolPlan(tenantId);
+    } catch (err) {
+      const handled = handlePlanError(res, err);
+      if (handled) return handled;
+      throw err;
     }
 
     if (!(await canProtocolGuests(userId, tenantId, eventId))) {
@@ -132,6 +160,14 @@ export async function verifyGuestSeat(req: AuthenticatedRequest, res: Response) 
       return res.status(403).json({ error: 'Organisation non identifiée.' });
     }
 
+    try {
+      await ensureProtocolPlan(tenantId);
+    } catch (err) {
+      const handled = handlePlanError(res, err);
+      if (handled) return handled;
+      throw err;
+    }
+
     if (!(await canProtocolGuests(userId, tenantId, eventId))) {
       return res.status(403).json({ error: 'Accès protocole refusé.' });
     }
@@ -177,27 +213,30 @@ export async function verifyGuestSeat(req: AuthenticatedRequest, res: Response) 
     let notification: Awaited<ReturnType<typeof notifyGuestSeatConfirmed>> | null = null;
 
     if (seatMatch && assigned && !wasAlreadyVerified) {
-      notification = await notifyGuestSeatConfirmed({
-        guest: {
-          id: guest.id,
-          firstName: guest.firstName,
-          lastName: guest.lastName,
-          email: guest.email,
-          phone: guest.phone,
-          preferences: guest.preferences,
-        },
-        event: {
-          title: event.title,
-          date: event.date,
-          location: event.location,
-        },
-        assignedSeat: assigned,
-      });
+      const snapshot = await getTenantPlanSnapshot(tenantId);
+      if (snapshot?.features.seatNotifications) {
+        notification = await notifyGuestSeatConfirmed({
+          guest: {
+            id: guest.id,
+            firstName: guest.firstName,
+            lastName: guest.lastName,
+            email: guest.email,
+            phone: guest.phone,
+            preferences: guest.preferences,
+          },
+          event: {
+            title: event.title,
+            date: event.date,
+            location: event.location,
+          },
+          assignedSeat: assigned,
+        });
 
-      if (!notification.sent) {
-        console.warn('[Protocol] Notification placement non envoyée:', notification.errors);
-      } else {
-        console.log('[Protocol] Notification placement envoyée:', notification.channels.join(', '));
+        if (!notification.sent) {
+          console.warn('[Protocol] Notification placement non envoyée:', notification.errors);
+        } else {
+          console.log('[Protocol] Notification placement envoyée:', notification.channels.join(', '));
+        }
       }
     }
 
@@ -237,6 +276,14 @@ export async function addGuestProtocolNote(req: AuthenticatedRequest, res: Respo
 
     if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Organisation non identifiée.' });
+    }
+
+    try {
+      await ensureProtocolPlan(tenantId);
+    } catch (err) {
+      const handled = handlePlanError(res, err);
+      if (handled) return handled;
+      throw err;
     }
 
     if (!(await canProtocolGuests(userId, tenantId, eventId))) {
@@ -308,6 +355,14 @@ export async function listProtocolGuests(req: AuthenticatedRequest, res: Respons
 
     if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Organisation non identifiée.' });
+    }
+
+    try {
+      await ensureProtocolPlan(tenantId);
+    } catch (err) {
+      const handled = handlePlanError(res, err);
+      if (handled) return handled;
+      throw err;
     }
 
     if (!(await canProtocolGuests(userId, tenantId, eventId))) {

@@ -3,6 +3,12 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { resolveOrgAccess, canManageRoom, canAccessRoom } from '../services/permissionsService';
 import {
+  assertRoomQuota,
+  assertRoomTypeForPlan,
+  allowsRoomBlueprint,
+  PlanFeatureError,
+} from '../services/planFeaturesService';
+import {
   generateRoomBlueprint,
   calculateBlueprintCapacity,
   blueprintToTablePlan,
@@ -84,6 +90,22 @@ export async function createRoom(req: AuthenticatedRequest, res: Response) {
     }
 
     const resolvedType = (roomType || 'SIMPLE') as RoomType;
+
+    try {
+      const plan = await assertRoomTypeForPlan(tenantId, resolvedType);
+      await assertRoomQuota(tenantId);
+      if (layoutBlueprint && !allowsRoomBlueprint(plan, resolvedType)) {
+        return res.status(403).json({
+          error: `Les plans de salle avancés ne sont pas inclus dans votre forfait ${plan.name}.`,
+        });
+      }
+    } catch (err) {
+      if (err instanceof PlanFeatureError) {
+        return res.status(403).json({ error: err.message });
+      }
+      throw err;
+    }
+
     const blueprint = resolveRoomLayout(resolvedType, layoutParams, layoutBlueprint);
     const computedCapacity = blueprint
       ? calculateBlueprintCapacity(blueprint as any)
@@ -132,6 +154,21 @@ export async function updateRoom(req: AuthenticatedRequest, res: Response) {
     const { name, description, capacity, floor, location, roomType, layoutParams, layoutBlueprint } = req.body;
 
     const nextType = roomType !== undefined ? (roomType as RoomType) : (existing.roomType as RoomType);
+
+    try {
+      const plan = await assertRoomTypeForPlan(tenantId, nextType);
+      if (layoutBlueprint !== undefined && layoutBlueprint && !allowsRoomBlueprint(plan, nextType)) {
+        return res.status(403).json({
+          error: `Les plans de salle avancés ne sont pas inclus dans votre forfait ${plan.name}.`,
+        });
+      }
+    } catch (err) {
+      if (err instanceof PlanFeatureError) {
+        return res.status(403).json({ error: err.message });
+      }
+      throw err;
+    }
+
     let nextBlueprint = existing.layoutBlueprint;
     if (layoutBlueprint !== undefined) {
       nextBlueprint = layoutBlueprint;

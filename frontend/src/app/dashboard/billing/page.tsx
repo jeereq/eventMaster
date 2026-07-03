@@ -20,13 +20,38 @@ import {
 
 interface BillingStatus {
   plan: PlanId;
-  usage: { events: number; guests: number; templates: number };
+  usage: { events: number; guests: number; templates: number; rooms: number; orgManagers: number };
   limits: {
     maxEvents: number;
     maxGuests: number;
     maxTemplates: number;
+    maxRooms: number;
+    maxOrgManagers: number;
     customTemplates: boolean;
   };
+  capabilities?: {
+    protocolQr: boolean;
+    seatNotifications: boolean;
+    customTemplates: boolean;
+    roomThemesFixtures: boolean;
+    commercialNetwork: boolean;
+    adminReports: boolean;
+    roomEditorLevel: string;
+    supportLevel: string;
+  };
+}
+
+const CAPABILITY_LABELS: Array<{ key: keyof NonNullable<BillingStatus['capabilities']>; label: string }> = [
+  { key: 'protocolQr', label: 'Protocole QR & émargement' },
+  { key: 'seatNotifications', label: 'Notifications de siège' },
+  { key: 'customTemplates', label: 'Modèles personnalisés' },
+  { key: 'roomThemesFixtures', label: 'Thèmes & fixtures salles' },
+  { key: 'commercialNetwork', label: 'Réseau commercial (20 %)' },
+  { key: 'adminReports', label: 'Rapports avancés' },
+];
+
+function formatQuota(u: number, m: number) {
+  return `${u} / ${m >= 9999 ? '∞' : m}`;
 }
 
 interface SubscriptionRequest {
@@ -153,19 +178,45 @@ export default function BillingPage() {
                 </span>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-3 text-sm">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-sm">
               {[
                 { l: 'Événements', u: billing.usage.events, m: billing.limits.maxEvents },
                 { l: 'Invités', u: billing.usage.guests, m: billing.limits.maxGuests },
                 { l: 'Modèles', u: billing.usage.templates, m: billing.limits.maxTemplates },
+                { l: 'Salles', u: billing.usage.rooms ?? 0, m: billing.limits.maxRooms ?? 0 },
+                { l: 'Managers', u: billing.usage.orgManagers ?? 0, m: billing.limits.maxOrgManagers ?? 0 },
               ].map((q) => (
                 <div key={q.l} className="bg-white dark:bg-slate-900 p-3 rounded-xl border">
                   <div className="text-xs text-slate-500 font-bold uppercase">{q.l}</div>
-                  <div className="font-extrabold mt-1">{q.u} / {q.m >= 9999 ? '∞' : q.m}</div>
+                  <div className="font-extrabold mt-1">{formatQuota(q.u, q.m)}</div>
                 </div>
               ))}
             </div>
           </div>
+          {billing.capabilities && (
+            <div className="mt-6 pt-6 border-t grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {CAPABILITY_LABELS.map(({ key, label }) => {
+                const enabled = billing.capabilities![key];
+                if (typeof enabled !== 'boolean') return null;
+                return (
+                  <div key={key} className="flex items-center gap-2 text-xs">
+                    {enabled ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    ) : (
+                      <Minus className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                    )}
+                    <span className={enabled ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400'}>{label}</span>
+                  </div>
+                );
+              })}
+              <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 sm:col-span-2 lg:col-span-3">
+                <ShieldCheck className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                Éditeur salles : <strong className="ml-1 capitalize">{billing.capabilities.roomEditorLevel}</strong>
+                {' · '}
+                Support : <strong className="ml-1 capitalize">{billing.capabilities.supportLevel}</strong>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
