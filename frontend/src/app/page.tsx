@@ -9,7 +9,7 @@ import {
   buildLandingTemplateGroups,
   type LandingTemplate,
 } from '@/config/landingTemplates';
-import { publicTemplatesToLanding, type PublicTemplateDto } from '@/lib/landingTemplateAdapter';
+import { fetchPublicLandingTemplates } from '@/lib/landingTemplateAdapter';
 import LandingPricingSection from '@/components/landing/LandingPricingSection';
 import LandingRolesSection from '@/components/landing/LandingRolesSection';
 import FaqSection from '@/components/landing/FaqSection';
@@ -84,28 +84,31 @@ export default function Home() {
   useEffect(() => {
     async function checkServerAndFetchPlans() {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}/health`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}/health`, {
+          cache: 'no-store',
+        });
         if (response.ok) {
           setServerStatus('online');
-          const [plansData, templatesData] = await Promise.all([
-            api.get('/public/plans').catch(() => null),
-            api.get('/public/templates').catch(() => []),
-          ]);
+          const plansData = await api.get('/public/plans').catch(() => null);
           if (plansData) setDbPlans(plansData);
-          setPublicTemplates(publicTemplatesToLanding((templatesData as PublicTemplateDto[]) || []));
         } else {
           setServerStatus('offline');
-          setPublicTemplates([]);
         }
       } catch {
         setServerStatus('offline');
-        setPublicTemplates([]);
       } finally {
         setLoadingPlans(false);
-        setLoadingPublicTemplates(false);
       }
     }
+
+    async function loadPublicTemplates() {
+      const fromDb = await fetchPublicLandingTemplates();
+      setPublicTemplates(fromDb);
+      setLoadingPublicTemplates(false);
+    }
+
     checkServerAndFetchPlans();
+    loadPublicTemplates();
   }, []);
 
   useEffect(() => {

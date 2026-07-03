@@ -1,4 +1,5 @@
 import type { LandingTemplate } from '@/config/landingTemplates';
+import { LEGACY_STATIC_LANDING_IDS } from '@/config/landingTemplates';
 
 export interface PublicTemplateDto {
   id: string;
@@ -16,8 +17,12 @@ export interface PublicTemplateDto {
       fontSize?: string;
     }>;
   };
+  category?: 'private' | 'corporate' | 'casual';
+  description?: string | null;
   createdAt: string;
 }
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'http://localhost:5001/api';
 
 function isDarkHex(hex?: string): boolean {
   if (!hex || !hex.startsWith('#') || hex.length < 7) return false;
@@ -27,10 +32,17 @@ function isDarkHex(hex?: string): boolean {
   return 0.299 * r + 0.587 * g + 0.114 * b < 128;
 }
 
+function isUuidLike(id: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+}
+
 export function dbTemplateToLandingTemplate(t: PublicTemplateDto): LandingTemplate {
   const global = t.content?.global || {};
   const rawElements = t.content?.elements || [];
-  const category = global.landingCategory || 'private';
+  const category =
+    t.category ||
+    global.landingCategory ||
+    'private';
   const bgColor = global.bgColor || '#faf8f5';
   const dark = isDarkHex(bgColor);
 
@@ -58,6 +70,7 @@ export function dbTemplateToLandingTemplate(t: PublicTemplateDto): LandingTempla
     category,
     group: category,
     description:
+      t.description ||
       global.landingDescription ||
       `Modèle « ${t.name} » — personnalisable dans le concepteur visuel EventMaster.`,
     style: {
@@ -74,8 +87,34 @@ export function dbTemplateToLandingTemplate(t: PublicTemplateDto): LandingTempla
   };
 }
 
+function normalizePublicTemplateList(data: unknown): PublicTemplateDto[] {
+  if (Array.isArray(data)) return data as PublicTemplateDto[];
+  if (data && typeof data === 'object' && Array.isArray((data as { templates?: unknown }).templates)) {
+    return (data as { templates: PublicTemplateDto[] }).templates;
+  }
+  return [];
+}
+
 export function publicTemplatesToLanding(publicTemplates: PublicTemplateDto[]): LandingTemplate[] {
-  return publicTemplates.map(dbTemplateToLandingTemplate);
+  return publicTemplates
+    .filter((t) => t?.id && isUuidLike(t.id) && !LEGACY_STATIC_LANDING_IDS.has(t.id))
+    .map(dbTemplateToLandingTemplate);
+}
+
+/** Charge les modèles vitrine depuis l'API publique (sans cache navigateur). */
+export async function fetchPublicLandingTemplates(): Promise<LandingTemplate[]> {
+  try {
+    const response = await fetch(`${API_BASE}/public/templates`, {
+      method: 'GET',
+      cache: 'no-store',
+      headers: { Accept: 'application/json' },
+    });
+    if (!response.ok) return [];
+    const data = await response.json();
+    return publicTemplatesToLanding(normalizePublicTemplateList(data));
+  } catch {
+    return [];
+  }
 }
 
 export function getTemplateElementSummary(content: unknown): string {
