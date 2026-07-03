@@ -15,6 +15,7 @@ enum Role {
 enum OrgRole {
   MANAGER
   PROTOCOL
+  COMMERCIAL
 }
 
 enum StaffRole {
@@ -61,6 +62,9 @@ model Tenant {
   licenseKey    String?
   referredByCommercialId String?
   referredByCommercial   User? @relation("CommercialReferral", fields: [referredByCommercialId], references: [id], onDelete: SetNull)
+  referredByOrgUserId    String?
+  referredByOrgUser      User? @relation("OrgCommercialReferral", fields: [referredByOrgUserId], references: [id], onDelete: SetNull)
+  defaultOrgCommercialCommissionRate Float @default(0.20)
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
@@ -99,8 +103,10 @@ model User {
   updatedAt     DateTime   @updatedAt
 
   referralCode   String?    @unique
+  commissionRate Float?
   managedTenants Tenant[]  @relation("TenantManager")
   referredTenants Tenant[] @relation("CommercialReferral")
+  orgCommercialReferrals Tenant[] @relation("OrgCommercialReferral")
   comments       EventComment[]
   legalAcceptances LegalAcceptance[]
   eventStaff     EventStaff[]

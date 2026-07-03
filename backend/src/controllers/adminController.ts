@@ -6,13 +6,14 @@ import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';
 import { getDefaultPlans, getPlansConfiguration, mergePlansForSave } from '../config/plansConfig';
-import { ensureCommercialReferralCode } from '../services/commercialService';
+import { ensureCommercialReferralCode, normalizeCommissionRate } from '../services/commercialService';
+import { isPlatformStaff } from '../middleware/platformAccess';
 
 // Get global system statistics and list of all tenants (Super Admin only)
 export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
   try {
-    if (req.user?.role !== 'SUPER_ADMIN') {
-      return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+    if (!isPlatformStaff(req.user?.role)) {
+      return res.status(403).json({ error: 'Accès refusé. Privilèges plateforme requis.' });
     }
 
     const [tenantCount, userCount, eventCount, guestCount] = await Promise.all([
@@ -72,8 +73,8 @@ export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
 // Create a new tenant (SaaS organization)
 export async function createTenant(req: AuthenticatedRequest, res: Response) {
   try {
-    if (req.user?.role !== 'SUPER_ADMIN') {
-      return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+    if (!isPlatformStaff(req.user?.role)) {
+      return res.status(403).json({ error: 'Accès refusé. Privilèges plateforme requis.' });
     }
 
     const { name, plan, licenseActive, licenseExpiresAt, licenseKey } = req.body;
@@ -89,6 +90,8 @@ export async function createTenant(req: AuthenticatedRequest, res: Response) {
         licenseActive: licenseActive !== undefined ? Boolean(licenseActive) : true,
         licenseExpiresAt: licenseExpiresAt ? new Date(licenseExpiresAt) : null,
         licenseKey: licenseKey || null,
+        referredByCommercialId:
+          req.user?.role === 'COMMERCIAL' ? req.user.id : null,
       },
     });
 
@@ -205,15 +208,18 @@ export async function createUser(req: AuthenticatedRequest, res: Response) {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
+    const resolvedRole = (role as Role) || 'USER';
+    const resolvedTenantId = resolvedRole === 'COMMERCIAL' ? null : (tenantId || null);
 
     const newUser = await prisma.user.create({
       data: {
         name,
         email,
         passwordHash,
-        role: (role as Role) || 'USER',
+        role: resolvedRole,
         isEmailVerified: isEmailVerified !== undefined ? Boolean(isEmailVerified) : false,
-        tenantId: tenantId || null,
+        tenantId: resolvedTenantId,
+        commissionRate: resolvedRole === 'COMMERCIAL' ? normalizeCommissionRate(0.2) : null,
       },
     });
 
@@ -222,7 +228,7 @@ export async function createUser(req: AuthenticatedRequest, res: Response) {
     }
 
     // If this is the manager of the tenant and tenant managerId is not set, we can set it
-    if (tenantId && role === 'USER') {
+    if (resolvedTenantId && resolvedRole === 'USER') {
       const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
       if (tenant && !tenant.managerId) {
         await prisma.tenant.update({
@@ -254,8 +260,16 @@ export async function updateUserRoleOrStatus(req: AuthenticatedRequest, res: Res
       email: email !== undefined ? email : undefined,
       role: role as Role,
       isEmailVerified: isEmailVerified !== undefined ? Boolean(isEmailVerified) : undefined,
-      tenantId: tenantId !== undefined ? (tenantId || null) : undefined,
     };
+
+    if (role === 'COMMERCIAL') {
+      updateData.tenantId = null;
+      if (updateData.commissionRate === undefined) {
+        updateData.commissionRate = normalizeCommissionRate(0.2);
+      }
+    } else if (tenantId !== undefined) {
+      updateData.tenantId = tenantId || null;
+    }
 
     if (password) {
       updateData.passwordHash = await bcrypt.hash(password, 10);

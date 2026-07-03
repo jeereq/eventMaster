@@ -2,16 +2,17 @@ import { PlanType } from '@prisma/client';
 import { prisma } from '../db';
 import { getPlanLimits } from '../config/plansConfig';
 
-const COMMISSION_RATE = 0.2;
+const DEFAULT_COMMISSION_RATE = 0.2;
 
-export function generateReferralCode(name?: string | null): string {
-  const prefix = (name || 'COM')
+export function generateReferralCode(name?: string | null, prefix = 'EM'): string {
+  const rolePrefix = prefix === 'ORG' ? 'ORG' : 'EM';
+  const namePart = (name || 'COM')
     .replace(/[^a-zA-Z0-9]/g, '')
     .slice(0, 4)
     .toUpperCase()
     .padEnd(4, 'X');
   const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
-  return `EM-${prefix}-${suffix}`;
+  return `${rolePrefix}-${namePart}-${suffix}`;
 }
 
 export function parsePlanPrice(priceLabel: string): number {
@@ -25,23 +26,18 @@ export function getBillingPeriod(date = new Date()): string {
   return `${y}-${m}`;
 }
 
-export async function ensureCommercialReferralCode(userId: string): Promise<string> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, role: true, referralCode: true, name: true },
-  });
+export function normalizeCommissionRate(rate: unknown, fallback = DEFAULT_COMMISSION_RATE): number {
+  const value = typeof rate === 'number' ? rate : parseFloat(String(rate));
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(1, Math.max(0, value));
+}
 
-  if (!user || user.role !== 'COMMERCIAL') {
-    throw new Error('Utilisateur commercial introuvable.');
-  }
-
-  if (user.referralCode) return user.referralCode;
-
-  let code = generateReferralCode(user.name);
-  for (let attempt = 0; attempt < 5; attempt++) {
+async function assignUniqueReferralCode(userId: string, name?: string | null, prefix = 'EM'): Promise<string> {
+  let code = generateReferralCode(name, prefix);
+  for (let attempt = 0; attempt < 8; attempt++) {
     const existing = await prisma.user.findUnique({ where: { referralCode: code } });
     if (!existing) break;
-    code = generateReferralCode(user.name);
+    code = generateReferralCode(name, prefix);
   }
 
   const updated = await prisma.user.update({
@@ -53,11 +49,73 @@ export async function ensureCommercialReferralCode(userId: string): Promise<stri
   return updated.referralCode!;
 }
 
-export async function resolveCommercialByReferralCode(referralCode: string) {
-  return prisma.user.findFirst({
-    where: { referralCode: referralCode.trim().toUpperCase(), role: 'COMMERCIAL' },
-    select: { id: true, name: true, referralCode: true },
+export async function ensureCommercialReferralCode(userId: string): Promise<string> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, role: true, referralCode: true, name: true, tenantId: true },
   });
+
+  if (!user || user.role !== 'COMMERCIAL' || user.tenantId) {
+    throw new Error('Utilisateur commercial plateforme introuvable.');
+  }
+
+  if (user.referralCode) return user.referralCode;
+  return assignUniqueReferralCode(userId, user.name, 'EM');
+}
+
+export async function ensureOrgCommercialReferralCode(userId: string, tenantId: string): Promise<string> {
+  const user = await prisma.user.findFirst({
+    where: { id: userId, tenantId, role: 'USER', orgRole: 'COMMERCIAL' },
+    select: { id: true, referralCode: true, name: true },
+  });
+
+  if (!user) {
+    throw new Error('Commercial organisation introuvable.');
+  }
+
+  if (user.referralCode) return user.referralCode;
+  return assignUniqueReferralCode(userId, user.name, 'ORG');
+}
+
+export type ResolvedReferral =
+  | { type: 'platform'; id: string; name: string | null; referralCode: string; commissionRate: number }
+  | { type: 'org'; id: string; name: string | null; referralCode: string; commissionRate: number; parentTenantId: string };
+
+export async function resolveCommercialByReferralCode(referralCode: string): Promise<ResolvedReferral | null> {
+  const code = referralCode.trim().toUpperCase();
+
+  const platformCommercial = await prisma.user.findFirst({
+    where: { referralCode: code, role: 'COMMERCIAL', tenantId: null },
+    select: { id: true, name: true, referralCode: true, commissionRate: true },
+  });
+
+  if (platformCommercial?.referralCode) {
+    return {
+      type: 'platform',
+      id: platformCommercial.id,
+      name: platformCommercial.name,
+      referralCode: platformCommercial.referralCode,
+      commissionRate: normalizeCommissionRate(platformCommercial.commissionRate),
+    };
+  }
+
+  const orgCommercial = await prisma.user.findFirst({
+    where: { referralCode: code, role: 'USER', orgRole: 'COMMERCIAL' },
+    select: { id: true, name: true, referralCode: true, commissionRate: true, tenantId: true },
+  });
+
+  if (orgCommercial?.referralCode && orgCommercial.tenantId) {
+    return {
+      type: 'org',
+      id: orgCommercial.id,
+      name: orgCommercial.name,
+      referralCode: orgCommercial.referralCode,
+      commissionRate: normalizeCommissionRate(orgCommercial.commissionRate),
+      parentTenantId: orgCommercial.tenantId,
+    };
+  }
+
+  return null;
 }
 
 export async function recordCommercialCommission(params: {
@@ -69,10 +127,14 @@ export async function recordCommercialCommission(params: {
 }) {
   const tenant = await prisma.tenant.findUnique({
     where: { id: params.tenantId },
-    select: { id: true, referredByCommercialId: true },
+    select: {
+      id: true,
+      referredByCommercialId: true,
+      referredByOrgUserId: true,
+    },
   });
 
-  if (!tenant?.referredByCommercialId) return null;
+  if (!tenant) return null;
 
   const invoiceAmount =
     params.invoiceAmount ?? parsePlanPrice(getPlanLimits(params.plan).price);
@@ -80,35 +142,93 @@ export async function recordCommercialCommission(params: {
   if (invoiceAmount <= 0) return null;
 
   const billingPeriod = getBillingPeriod();
-  const commissionAmount = Math.round(invoiceAmount * COMMISSION_RATE);
+  const results = [];
 
-  return prisma.commercialCommission.upsert({
-    where: {
-      commercialId_tenantId_billingPeriod: {
-        commercialId: tenant.referredByCommercialId,
-        tenantId: tenant.id,
-        billingPeriod,
-      },
-    },
-    create: {
-      commercialId: tenant.referredByCommercialId,
-      tenantId: tenant.id,
-      plan: params.plan,
-      invoiceAmount,
-      commissionRate: COMMISSION_RATE,
-      commissionAmount,
-      billingPeriod,
-      source: params.source,
-      platformInvoiceId: params.platformInvoiceId ?? null,
-    },
-    update: {
-      plan: params.plan,
-      invoiceAmount,
-      commissionAmount,
-      source: params.source,
-      platformInvoiceId: params.platformInvoiceId ?? undefined,
-    },
-  });
+  if (tenant.referredByCommercialId) {
+    const commercial = await prisma.user.findUnique({
+      where: { id: tenant.referredByCommercialId },
+      select: { id: true, commissionRate: true, role: true },
+    });
+
+    if (commercial?.role === 'COMMERCIAL') {
+      const rate = normalizeCommissionRate(commercial.commissionRate);
+      const commissionAmount = Math.round(invoiceAmount * rate);
+      results.push(
+        await prisma.commercialCommission.upsert({
+          where: {
+            commercialId_tenantId_billingPeriod: {
+              commercialId: commercial.id,
+              tenantId: tenant.id,
+              billingPeriod,
+            },
+          },
+          create: {
+            commercialId: commercial.id,
+            tenantId: tenant.id,
+            plan: params.plan,
+            invoiceAmount,
+            commissionRate: rate,
+            commissionAmount,
+            billingPeriod,
+            source: params.source,
+            platformInvoiceId: params.platformInvoiceId ?? null,
+          },
+          update: {
+            plan: params.plan,
+            invoiceAmount,
+            commissionRate: rate,
+            commissionAmount,
+            source: params.source,
+            platformInvoiceId: params.platformInvoiceId ?? undefined,
+          },
+        }),
+      );
+    }
+  }
+
+  if (tenant.referredByOrgUserId) {
+    const orgCommercial = await prisma.user.findFirst({
+      where: { id: tenant.referredByOrgUserId, role: 'USER', orgRole: 'COMMERCIAL' },
+      select: { id: true, commissionRate: true },
+    });
+
+    if (orgCommercial) {
+      const rate = normalizeCommissionRate(orgCommercial.commissionRate);
+      const commissionAmount = Math.round(invoiceAmount * rate);
+      results.push(
+        await prisma.commercialCommission.upsert({
+          where: {
+            commercialId_tenantId_billingPeriod: {
+              commercialId: orgCommercial.id,
+              tenantId: tenant.id,
+              billingPeriod,
+            },
+          },
+          create: {
+            commercialId: orgCommercial.id,
+            tenantId: tenant.id,
+            plan: params.plan,
+            invoiceAmount,
+            commissionRate: rate,
+            commissionAmount,
+            billingPeriod,
+            source: `${params.source}_ORG`,
+            platformInvoiceId: params.platformInvoiceId ?? null,
+          },
+          update: {
+            plan: params.plan,
+            invoiceAmount,
+            commissionRate: rate,
+            commissionAmount,
+            source: `${params.source}_ORG`,
+            platformInvoiceId: params.platformInvoiceId ?? undefined,
+          },
+        }),
+      );
+    }
+  }
+
+  return results[0] ?? null;
 }
 
 export function findGuestSeatInTablePlan(

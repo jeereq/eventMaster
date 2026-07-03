@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { PlanType } from '@prisma/client';
+import { isPlatformStaff } from '../middleware/platformAccess';
 import { getPlansConfiguration, PAID_PLAN_KEYS } from '../config/plansConfig';
 import { recordCommercialCommission } from '../services/commercialService';
 import { createAndSendInvoice } from '../services/invoiceService';
@@ -69,8 +70,8 @@ export async function getMySubscriptionRequests(req: AuthenticatedRequest, res: 
 // 3. Get all subscription requests (Super Admin)
 export async function getAdminSubscriptionRequests(req: AuthenticatedRequest, res: Response) {
   try {
-    if (req.user?.role !== 'SUPER_ADMIN') {
-      return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+    if (!isPlatformStaff(req.user?.role)) {
+      return res.status(403).json({ error: 'Accès refusé. Privilèges plateforme requis.' });
     }
 
     const requests = await prisma.subscriptionRequest.findMany({
@@ -98,8 +99,8 @@ export async function getAdminSubscriptionRequests(req: AuthenticatedRequest, re
 // 4. Approve a subscription request (Super Admin)
 export async function approveSubscriptionRequest(req: AuthenticatedRequest, res: Response) {
   try {
-    if (req.user?.role !== 'SUPER_ADMIN') {
-      return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+    if (!isPlatformStaff(req.user?.role)) {
+      return res.status(403).json({ error: 'Accès refusé. Privilèges plateforme requis.' });
     }
 
     const requestId = req.params.id as string;
@@ -192,8 +193,8 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
 // 5. Reject a subscription request (Super Admin)
 export async function rejectSubscriptionRequest(req: AuthenticatedRequest, res: Response) {
   try {
-    if (req.user?.role !== 'SUPER_ADMIN') {
-      return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+    if (!isPlatformStaff(req.user?.role)) {
+      return res.status(403).json({ error: 'Accès refusé. Privilèges plateforme requis.' });
     }
 
     const requestId = req.params.id as string;

@@ -52,8 +52,8 @@ export async function requireActiveLicense(req: AuthenticatedRequest, res: Respo
     return res.status(401).json({ error: 'Non authentifié.' });
   }
 
-  // SUPER_ADMIN bypasses license checks
-  if (req.user.role === 'SUPER_ADMIN') {
+  // SUPER_ADMIN et COMMERCIAL (sans organisation) contournent la vérification de licence
+  if (req.user.role === 'SUPER_ADMIN' || req.user.role === 'COMMERCIAL') {
     return next();
   }
 

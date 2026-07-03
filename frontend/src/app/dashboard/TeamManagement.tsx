@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
   Users, UserPlus, Trash2, Loader2, Crown, Mail, Phone, AlertCircle, CheckCircle2,
-  Shield, Briefcase, MessageSquare,
+  Shield, Briefcase, MessageSquare, TrendingUp, Copy,
 } from 'lucide-react';
 
 interface TeamMember {
@@ -13,8 +13,10 @@ interface TeamMember {
   name: string | null;
   email: string;
   phone: string | null;
-  orgRole: 'MANAGER' | 'PROTOCOL' | null;
+  orgRole: 'MANAGER' | 'PROTOCOL' | 'COMMERCIAL' | null;
   orgRoleLabel: string;
+  referralCode?: string | null;
+  commissionRate?: number | null;
   isEmailVerified: boolean;
   createdAt: string;
   isOwner: boolean;
@@ -24,12 +26,14 @@ const orgRoleLabels: Record<string, string> = {
   OWNER: 'Propriétaire',
   MANAGER: 'Manager organisation',
   PROTOCOL: 'Protocole organisation',
+  COMMERCIAL: 'Commercial organisation',
 };
 
 export default function TeamManagement() {
-  const { user, tenant, planQuota } = useAuth();
+  const { user, tenant, planQuota, planFeatures } = useAuth();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [canManageTeam, setCanManageTeam] = useState(false);
+  const [defaultCommissionRate, setDefaultCommissionRate] = useState(0.2);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -39,10 +43,13 @@ export default function TeamManagement() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [orgRole, setOrgRole] = useState<'MANAGER' | 'PROTOCOL'>('MANAGER');
+  const [orgRole, setOrgRole] = useState<'MANAGER' | 'PROTOCOL' | 'COMMERCIAL'>('MANAGER');
+  const [commissionRate, setCommissionRate] = useState('20');
   const [verificationMethod, setVerificationMethod] = useState<'EMAIL' | 'WHATSAPP'>('EMAIL');
+  const [editingCommissionId, setEditingCommissionId] = useState<string | null>(null);
+  const [editCommissionValue, setEditCommissionValue] = useState('');
 
-  const isOwner = Boolean(tenant?.managerId && user?.id === tenant.managerId);
+  const hasCommercialNetwork = planFeatures?.commercialNetwork === true;
 
   const managerCount = members.filter((m) => m.orgRole === 'MANAGER' || m.isOwner).length;
   const maxManagers = planQuota?.limits.maxOrgManagers ?? null;
@@ -54,6 +61,9 @@ export default function TeamManagement() {
       const data = await api.get('/team');
       setMembers(data.members || []);
       setCanManageTeam(Boolean(data.access?.canManageTeam ?? data.isManager));
+      if (data.orgCommercialSettings?.defaultCommissionRate != null) {
+        setDefaultCommissionRate(data.orgCommercialSettings.defaultCommissionRate);
+      }
     } catch (err: any) {
       setError(err.message || 'Impossible de charger l\'équipe.');
     } finally {
@@ -83,13 +93,20 @@ export default function TeamManagement() {
       return;
     }
     try {
-      const data = await api.post('/team', { name, email, password, phone: phone || undefined, orgRole, verificationMethod });
-      setSuccess(data.message || 'Utilisateur créé. Un code OTP a été envoyé pour valider le compte.');
+      const payload: Record<string, unknown> = {
+        name, email, password, phone: phone || undefined, orgRole, verificationMethod,
+      };
+      if (orgRole === 'COMMERCIAL') {
+        payload.commissionRate = parseFloat(commissionRate) / 100;
+      }
+      const data = await api.post('/team', payload);
+      setSuccess(data.message || 'Utilisateur créé.');
       setName('');
       setEmail('');
       setPhone('');
       setPassword('');
       setOrgRole('MANAGER');
+      setCommissionRate(String(Math.round(defaultCommissionRate * 100)));
       setVerificationMethod('EMAIL');
       setShowForm(false);
       await loadTeam();
@@ -100,13 +117,26 @@ export default function TeamManagement() {
     }
   };
 
-  const handleRoleChange = async (member: TeamMember, newRole: 'MANAGER' | 'PROTOCOL') => {
+  const handleRoleChange = async (member: TeamMember, newRole: 'MANAGER' | 'PROTOCOL' | 'COMMERCIAL') => {
     try {
       await api.put(`/team/${member.id}`, { orgRole: newRole });
       setSuccess('Rôle mis à jour.');
       await loadTeam();
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la mise à jour du rôle.');
+    }
+  };
+
+  const handleSaveCommission = async (memberId: string) => {
+    try {
+      await api.put(`/team/${memberId}/commission`, {
+        commissionRate: parseFloat(editCommissionValue) / 100,
+      });
+      setSuccess('Commission mise à jour.');
+      setEditingCommissionId(null);
+      await loadTeam();
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la mise à jour de la commission.');
     }
   };
 
@@ -133,7 +163,7 @@ export default function TeamManagement() {
             Équipe de l&apos;organisation
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Créez des managers (gestion complète) ou des agents protocole (accès limité aux événements assignés).
+            Managers, protocole et commerciaux (Enterprise 2+).
             {planQuota && maxManagers !== null && (
               <span className="block mt-1 font-semibold text-indigo-600">
                 Managers : {managerCount} / {maxManagers >= 9999 ? '∞' : maxManagers}
@@ -152,6 +182,46 @@ export default function TeamManagement() {
           </button>
         )}
       </div>
+
+      {hasCommercialNetwork && canManageTeam && (
+        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-2xl p-4 space-y-3">
+          <div className="flex items-center gap-2 text-sm font-bold text-amber-900 dark:text-amber-200">
+            <TrendingUp className="w-4 h-4" />
+            Réseau commercial — commission par défaut
+          </div>
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="text-[10px] font-bold uppercase text-amber-700 block mb-1">Nouveaux commerciaux (%)</label>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={Math.round(defaultCommissionRate * 100)}
+                onChange={(e) => setDefaultCommissionRate(parseFloat(e.target.value) / 100 || 0)}
+                className="w-24 px-3 py-2 rounded-xl border text-sm"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await api.put('/team/commercial-settings', { defaultCommissionRate });
+                  setSuccess('Commission par défaut enregistrée.');
+                  await loadTeam();
+                } catch (err: any) {
+                  setError(err.message || 'Erreur lors de la mise à jour.');
+                }
+              }}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl"
+            >
+              Enregistrer
+            </button>
+          </div>
+          <p className="text-[11px] text-amber-800 dark:text-amber-300">
+            Le propriétaire et les managers peuvent modifier la commission de chaque commercial individuellement.
+          </p>
+        </div>
+      )}
 
       {error && (
         <div className="p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 text-rose-800 dark:text-rose-300 rounded-xl flex items-center gap-2 text-xs">
@@ -188,15 +258,33 @@ export default function TeamManagement() {
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Rôle dans l&apos;organisation</label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className={`grid gap-3 ${hasCommercialNetwork ? 'grid-cols-3' : 'grid-cols-2'}`}>
               <button type="button" onClick={() => setOrgRole('MANAGER')} className={`py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 ${orgRole === 'MANAGER' ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'border-slate-200 text-slate-600'}`}>
                 <Shield className="w-4 h-4" /> Manager
               </button>
               <button type="button" onClick={() => setOrgRole('PROTOCOL')} className={`py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 ${orgRole === 'PROTOCOL' ? 'bg-violet-50 border-violet-300 text-violet-700' : 'border-slate-200 text-slate-600'}`}>
                 <Briefcase className="w-4 h-4" /> Protocole
               </button>
+              {hasCommercialNetwork && (
+                <button type="button" onClick={() => setOrgRole('COMMERCIAL')} className={`py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 ${orgRole === 'COMMERCIAL' ? 'bg-amber-50 border-amber-300 text-amber-700' : 'border-slate-200 text-slate-600'}`}>
+                  <TrendingUp className="w-4 h-4" /> Commercial
+                </button>
+              )}
             </div>
           </div>
+          {orgRole === 'COMMERCIAL' && (
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase">Commission (%)</label>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={commissionRate}
+                onChange={(e) => setCommissionRate(e.target.value)}
+                className="mt-1 w-32 px-3 py-2 rounded-xl border text-sm"
+              />
+            </div>
+          )}
           {orgRole === 'MANAGER' && managersAtLimit && (
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
               Quota managers atteint. Les agents protocole restent disponibles, ou passez à un forfait supérieur.
@@ -222,7 +310,7 @@ export default function TeamManagement() {
         <div className="space-y-3">
           {members.map((member) => (
             <div key={member.id} className="flex items-center justify-between gap-3 p-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl">
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-bold text-sm text-slate-900 dark:text-white truncate">{member.name || 'Sans nom'}</span>
                   {member.isOwner ? (
@@ -231,8 +319,14 @@ export default function TeamManagement() {
                     </span>
                   ) : (
                     <>
-                      <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${member.orgRoleLabel === 'PROTOCOL' ? 'bg-violet-50 text-violet-700 border-violet-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200'}`}>
-                        {member.orgRoleLabel === 'PROTOCOL' ? <Briefcase className="w-3 h-3" /> : <Shield className="w-3 h-3" />}
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                        member.orgRole === 'PROTOCOL' ? 'bg-violet-50 text-violet-700 border-violet-200' :
+                        member.orgRole === 'COMMERCIAL' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                        'bg-indigo-50 text-indigo-700 border-indigo-200'
+                      }`}>
+                        {member.orgRole === 'PROTOCOL' ? <Briefcase className="w-3 h-3" /> :
+                         member.orgRole === 'COMMERCIAL' ? <TrendingUp className="w-3 h-3" /> :
+                         <Shield className="w-3 h-3" />}
                         {orgRoleLabels[member.orgRoleLabel] || member.orgRoleLabel}
                       </span>
                       {!member.isEmailVerified && (
@@ -246,11 +340,49 @@ export default function TeamManagement() {
                 <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-slate-500">
                   <span className="inline-flex items-center gap-1"><Mail className="w-3 h-3" />{member.email}</span>
                   {member.phone && <span className="inline-flex items-center gap-1"><Phone className="w-3 h-3" />{member.phone}</span>}
+                  {member.orgRole === 'COMMERCIAL' && member.referralCode && (
+                    <span className="inline-flex items-center gap-1 font-mono text-amber-700">
+                      <Copy className="w-3 h-3" />{member.referralCode}
+                    </span>
+                  )}
                 </div>
-                {canManageTeam && !member.isOwner && (
-                  <div className="flex gap-2 mt-2">
+                {member.orgRole === 'COMMERCIAL' && canManageTeam && !member.isOwner && (
+                  <div className="mt-2 flex items-center gap-2">
+                    {editingCommissionId === member.id ? (
+                      <>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={editCommissionValue}
+                          onChange={(e) => setEditCommissionValue(e.target.value)}
+                          className="w-20 px-2 py-1 rounded-lg border text-xs"
+                        />
+                        <span className="text-xs">%</span>
+                        <button type="button" onClick={() => handleSaveCommission(member.id)} className="text-[10px] font-bold px-2 py-1 rounded-lg bg-emerald-600 text-white">OK</button>
+                        <button type="button" onClick={() => setEditingCommissionId(null)} className="text-[10px] font-bold px-2 py-1 rounded-lg border">Annuler</button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingCommissionId(member.id);
+                          setEditCommissionValue(String(Math.round((member.commissionRate ?? defaultCommissionRate) * 100)));
+                        }}
+                        className="text-[10px] font-bold px-2 py-1 rounded-lg border border-amber-200 text-amber-700"
+                      >
+                        Commission : {Math.round((member.commissionRate ?? defaultCommissionRate) * 100)} % — Modifier
+                      </button>
+                    )}
+                  </div>
+                )}
+                {canManageTeam && !member.isOwner && member.orgRole !== 'COMMERCIAL' && (
+                  <div className="flex gap-2 mt-2 flex-wrap">
                     <button type="button" onClick={() => handleRoleChange(member, 'MANAGER')} className="text-[10px] font-bold px-2 py-1 rounded-lg border border-indigo-200 text-indigo-600">→ Manager</button>
                     <button type="button" onClick={() => handleRoleChange(member, 'PROTOCOL')} className="text-[10px] font-bold px-2 py-1 rounded-lg border border-violet-200 text-violet-600">→ Protocole</button>
+                    {hasCommercialNetwork && (
+                      <button type="button" onClick={() => handleRoleChange(member, 'COMMERCIAL')} className="text-[10px] font-bold px-2 py-1 rounded-lg border border-amber-200 text-amber-600">→ Commercial</button>
+                    )}
                   </div>
                 )}
               </div>

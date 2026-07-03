@@ -6,8 +6,8 @@ import { api } from '../lib/api';
 import type { PlanId } from '@/config/landingPricing';
 
 export interface OrgAccess {
-  level: 'owner' | 'manager' | 'protocol' | 'staff' | 'none';
-  orgRole: 'MANAGER' | 'PROTOCOL' | null;
+  level: 'owner' | 'manager' | 'protocol' | 'commercial' | 'staff' | 'none';
+  orgRole: 'MANAGER' | 'PROTOCOL' | 'COMMERCIAL' | null;
   isOwner: boolean;
   canManageTeam: boolean;
   canManageRooms: boolean;
@@ -25,7 +25,7 @@ interface User {
   name: string;
   phone?: string | null;
   role: 'SUPER_ADMIN' | 'COMMERCIAL' | 'USER';
-  orgRole?: 'MANAGER' | 'PROTOCOL' | null;
+  orgRole?: 'MANAGER' | 'PROTOCOL' | 'COMMERCIAL' | null;
 }
 
 interface Tenant {
@@ -175,7 +175,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
 
       if (data.user?.role === 'COMMERCIAL') {
-        router.push('/dashboard/commercial');
+        router.push('/dashboard?tab=tenants');
+      } else if (data.access?.level === 'commercial') {
+        router.push('/dashboard/org-commercial');
       } else {
         router.push('/dashboard');
       }
@@ -235,6 +237,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setTenant(data.tenant ?? null);
       setAccess(data.access ?? null);
       setLoading(false);
+      if (data.user?.role === 'COMMERCIAL') {
+        router.push('/dashboard?tab=tenants');
+      } else if (data.access?.level === 'commercial') {
+        router.push('/dashboard/org-commercial');
+      }
     } catch (error) {
       setLoading(false);
       throw error;

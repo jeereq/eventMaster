@@ -5,15 +5,22 @@ import { prisma } from '../db';
 import {
   ensureCommercialReferralCode,
   recordCommercialCommission,
+  normalizeCommissionRate,
 } from '../services/commercialService';
 
 export async function getCommercialDashboard(req: AuthenticatedRequest, res: Response) {
   try {
-    if (req.user?.role !== 'COMMERCIAL') {
-      return res.status(403).json({ error: 'Accès réservé aux commerciaux.' });
+    if (req.user?.role !== 'COMMERCIAL' || req.user.tenantId) {
+      return res.status(403).json({ error: 'Accès réservé aux commerciaux plateforme (sans organisation).' });
     }
 
     const referralCode = await ensureCommercialReferralCode(req.user.id);
+
+    const commercialUser = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { commissionRate: true },
+    });
+    const commissionRate = normalizeCommissionRate(commercialUser?.commissionRate);
 
     const [organizations, commissions] = await Promise.all([
       prisma.tenant.findMany({
@@ -38,7 +45,7 @@ export async function getCommercialDashboard(req: AuthenticatedRequest, res: Res
 
     return res.json({
       referralCode,
-      commissionRate: 0.2,
+      commissionRate,
       stats: {
         organizations: organizations.length,
         totalCommission,
@@ -65,8 +72,8 @@ export async function getCommercialDashboard(req: AuthenticatedRequest, res: Res
 
 export async function createCommercialOrganization(req: AuthenticatedRequest, res: Response) {
   try {
-    if (req.user?.role !== 'COMMERCIAL') {
-      return res.status(403).json({ error: 'Accès réservé aux commerciaux.' });
+    if (req.user?.role !== 'COMMERCIAL' || req.user.tenantId) {
+      return res.status(403).json({ error: 'Accès réservé aux commerciaux plateforme (sans organisation).' });
     }
 
     const { organizationName, managerName, managerEmail, managerPassword, managerPhone, plan } = req.body;
@@ -136,14 +143,18 @@ export async function createCommercialOrganization(req: AuthenticatedRequest, re
 
 export async function getCommercialReferralInfo(req: AuthenticatedRequest, res: Response) {
   try {
-    if (req.user?.role !== 'COMMERCIAL') {
-      return res.status(403).json({ error: 'Accès réservé aux commerciaux.' });
+    if (req.user?.role !== 'COMMERCIAL' || req.user.tenantId) {
+      return res.status(403).json({ error: 'Accès réservé aux commerciaux plateforme (sans organisation).' });
     }
 
     const referralCode = await ensureCommercialReferralCode(req.user.id);
+    const commercialUser = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { commissionRate: true },
+    });
     return res.json({
       referralCode,
-      commissionRate: 0.2,
+      commissionRate: normalizeCommissionRate(commercialUser?.commissionRate),
       description: '20% de la facture mensuelle générée par chaque organisation parrainée.',
     });
   } catch (error) {

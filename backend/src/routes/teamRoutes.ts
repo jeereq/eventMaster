@@ -1,6 +1,13 @@
 import { Router } from 'express';
 import { requireAuth, requireActiveLicense } from '../middleware/auth';
-import { getTeamMembers, createTeamMember, updateTeamMember, deleteTeamMember } from '../controllers/teamController';
+import {
+  getTeamMembers,
+  createTeamMember,
+  updateTeamMember,
+  deleteTeamMember,
+  updateMemberCommissionRate,
+  updateOrgCommercialSettings,
+} from '../controllers/teamController';
 
 const router = Router();
 
@@ -9,6 +16,8 @@ router.use(requireActiveLicense);
 
 router.get('/', getTeamMembers);
 router.post('/', createTeamMember);
+router.put('/commercial-settings', updateOrgCommercialSettings);
+router.put('/:id/commission', updateMemberCommissionRate);
 router.put('/:id', updateTeamMember);
 router.delete('/:id', deleteTeamMember);
 

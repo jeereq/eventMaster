@@ -120,7 +120,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const isLicenseExpired = tenant?.licenseExpiresAt && new Date(tenant.licenseExpiresAt) < new Date();
   const isLicenseInactive = tenant && !tenant.licenseActive;
-  const isBlocked = user.role !== 'SUPER_ADMIN' && (isLicenseInactive || isLicenseExpired);
+  const isBlocked = user.role !== 'SUPER_ADMIN' && user.role !== 'COMMERCIAL' && (isLicenseInactive || isLicenseExpired);
 
   if (isBlocked) {
     return <PWARestrictedScreen />;
@@ -159,8 +159,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     : user?.role === 'COMMERCIAL'
     ? [
         {
+          label: 'Plateforme',
           items: [
-            { name: 'Espace commercial', href: '/dashboard/commercial', icon: Briefcase },
+            { name: 'Organisations', href: '/dashboard?tab=tenants', tab: 'tenants', icon: Building2 },
+            { name: 'Abonnements', href: '/dashboard?tab=subscriptions', tab: 'subscriptions', icon: CreditCard },
+          ],
+        },
+        {
+          items: [
+            { name: 'Parrainage & commissions', href: '/dashboard/commercial', icon: Briefcase },
+            { name: 'Mon compte', href: '/dashboard/profile', icon: User },
+          ],
+        },
+      ]
+    : access?.level === 'commercial'
+    ? [
+        {
+          items: [
+            { name: 'Réseau commercial', href: '/dashboard/org-commercial', icon: Briefcase },
             { name: 'Mon compte', href: '/dashboard/profile', icon: User },
           ],
         },
@@ -271,6 +287,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-bold text-indigo-300">
                 <ShieldCheck className="w-3 h-3" />
                 Plateforme SaaS
+              </div>
+            </div>
+          ) : user?.role === 'COMMERCIAL' ? (
+            <div className="p-3.5 bg-amber-950 text-white border border-amber-800 rounded-xl">
+              <div className="text-[10px] text-amber-300 font-bold uppercase tracking-wider">Rôle global</div>
+              <div className="font-semibold text-sm mt-0.5">Commercial plateforme</div>
+              <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-[10px] font-bold text-amber-300">
+                <Briefcase className="w-3 h-3" />
+                Sans organisation
               </div>
             </div>
           ) : tenant ? (

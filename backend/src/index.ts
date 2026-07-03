@@ -12,6 +12,7 @@ import subscriptionRoutes from './routes/subscriptionRoutes';
 import teamRoutes from './routes/teamRoutes';
 import roomRoutes from './routes/roomRoutes';
 import commercialRoutes from './routes/commercialRoutes';
+import orgCommercialRoutes from './routes/orgCommercialRoutes';
 import { handleStripeWebhook } from './controllers/billingController';
 import { prisma } from './db';
 import { startReminderWorker } from './services/reminderService';
@@ -54,6 +55,7 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api/rooms', roomRoutes);
 app.use('/api/commercial', commercialRoutes);
+app.use('/api/org-commercial', orgCommercialRoutes);
 app.post('/api/billing/webhook', handleStripeWebhook);
 app.use('/api/billing', billingRoutes);
 

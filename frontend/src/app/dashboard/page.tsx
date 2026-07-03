@@ -16,6 +16,10 @@ import GuestMessageTemplatesPanel from './GuestMessageTemplatesPanel';
 import { PageHeader, Alert, Button } from '@/components/ui';
 import { PLAN_IDS, type PlanId } from '@/config/landingPricing';
 
+function isPlatformStaff(role?: string) {
+  return role === 'SUPER_ADMIN' || role === 'COMMERCIAL';
+}
+
 function planBadgeClass(plan: string): string {
   if (plan === 'FREE') return 'bg-slate-50 border-slate-200 text-slate-600';
   if (plan === 'STANDARD') return 'bg-blue-50 border-blue-100 text-blue-700';
@@ -159,8 +163,13 @@ function DashboardPageContent() {
   const [activeTab, setActiveTab] = useState<'tenants' | 'users' | 'templates' | 'message-templates' | 'events' | 'analytics' | 'guests' | 'settings' | 'subscriptions'>('tenants');
 
   useEffect(() => {
-    if (user?.role === 'SUPER_ADMIN' && tabParam && ['tenants', 'users', 'templates', 'message-templates', 'events', 'analytics', 'guests', 'settings', 'subscriptions'].includes(tabParam)) {
-      setActiveTab(tabParam as any);
+    if (isPlatformStaff(user?.role) && tabParam) {
+      const allowedTabs = user?.role === 'COMMERCIAL'
+        ? ['tenants', 'subscriptions']
+        : ['tenants', 'users', 'templates', 'message-templates', 'events', 'analytics', 'guests', 'settings', 'subscriptions'];
+      if (allowedTabs.includes(tabParam)) {
+        setActiveTab(tabParam as any);
+      }
     }
   }, [tabParam, user]);
   const [users, setUsers] = useState<AdminUserItem[]>([]);
@@ -266,7 +275,7 @@ function DashboardPageContent() {
   useEffect(() => {
     async function loadDashboardData() {
       try {
-        if (user?.role === 'SUPER_ADMIN') {
+        if (isPlatformStaff(user?.role)) {
           const data = await api.get('/admin/stats');
           setAdminData(data);
         } else {
@@ -328,9 +337,11 @@ function DashboardPageContent() {
 
   // Load subscription requests when subscriptions tab is active
   useEffect(() => {
-    if (user?.role === 'SUPER_ADMIN' && activeTab === 'subscriptions') {
+    if (isPlatformStaff(user?.role) && activeTab === 'subscriptions') {
       loadSubscriptionRequests();
-      loadAdminSettings(); // Load settings to edit plans
+      if (user?.role === 'SUPER_ADMIN') {
+        loadAdminSettings();
+      }
     }
   }, [activeTab, user]);
 
@@ -1049,8 +1060,9 @@ function DashboardPageContent() {
     return Math.min(Math.round((value / max) * 100), 100);
   };
 
-  // Render Super Admin Dashboard
-  if (user?.role === 'SUPER_ADMIN') {
+  // Render Super Admin / Commercial plateforme Dashboard
+  if (isPlatformStaff(user?.role)) {
+    const isSuperAdmin = user?.role === 'SUPER_ADMIN';
     // Filter tenants
     const filteredTenants = adminData?.tenants.filter(t => {
       const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase()) || 

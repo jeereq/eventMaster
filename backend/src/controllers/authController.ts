@@ -89,12 +89,17 @@ export async function register(req: Request, res: Response) {
     const passwordHash = await bcrypt.hash(password, 10);
 
     let referredByCommercialId: string | null = null;
+    let referredByOrgUserId: string | null = null;
     if (referralCode) {
       const commercial = await resolveCommercialByReferralCode(String(referralCode));
       if (!commercial) {
         return res.status(400).json({ error: 'Code parrainage commercial invalide.' });
       }
-      referredByCommercialId = commercial.id;
+      if (commercial.type === 'platform') {
+        referredByCommercialId = commercial.id;
+      } else {
+        referredByOrgUserId = commercial.id;
+      }
     }
 
     const result = await prisma.$transaction(async (tx) => {
@@ -103,6 +108,7 @@ export async function register(req: Request, res: Response) {
           name: tenantName,
           plan: 'FREE',
           referredByCommercialId,
+          referredByOrgUserId,
         },
       });
 
@@ -312,7 +318,7 @@ export async function login(req: Request, res: Response) {
       return res.status(401).json({ error: 'Identifiants incorrects' });
     }
 
-    if (!user.isEmailVerified && user.role !== 'SUPER_ADMIN') {
+    if (!user.isEmailVerified && user.role !== 'SUPER_ADMIN' && user.role !== 'COMMERCIAL') {
       return res.status(403).json({
         error: 'Votre compte n\'est pas encore validé. Saisissez le code OTP reçu par e-mail ou WhatsApp.',
         notVerified: true,

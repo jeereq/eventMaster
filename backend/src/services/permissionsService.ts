@@ -2,7 +2,7 @@ import { OrgRole, StaffRole } from '@prisma/client';
 import { prisma } from '../db';
 import { isTenantManager } from '../utils/tenantAccess';
 
-export type OrgAccessLevel = 'owner' | 'manager' | 'protocol' | 'staff' | 'none';
+export type OrgAccessLevel = 'owner' | 'manager' | 'protocol' | 'commercial' | 'staff' | 'none';
 
 export interface OrgAccess {
   level: OrgAccessLevel;
@@ -86,6 +86,22 @@ export async function resolveOrgAccess(userId: string, tenantId: string): Promis
       canProtocolAllEvents: true,
       canViewBilling: false,
       isProtocolOnly: true,
+    };
+  }
+
+  if (user.orgRole === 'COMMERCIAL') {
+    return {
+      level: 'commercial',
+      orgRole: 'COMMERCIAL',
+      isOwner: false,
+      canManageTeam: false,
+      canManageRooms: false,
+      canCreateEvents: false,
+      canCreateRooms: false,
+      canManageAllEvents: false,
+      canProtocolAllEvents: false,
+      canViewBilling: false,
+      isProtocolOnly: false,
     };
   }
 
@@ -253,5 +269,5 @@ export function isValidStaffRole(value: string): value is StaffRole {
 }
 
 export function isValidOrgRole(value: string): value is OrgRole {
-  return value === 'MANAGER' || value === 'PROTOCOL';
+  return value === 'MANAGER' || value === 'PROTOCOL' || value === 'COMMERCIAL';
 }
