@@ -1,15 +1,18 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
+import { uploadImageFile, uploadDataUrlImage, isCloudinaryUrl } from '@/lib/cloudinaryUpload';
+import { extractPaletteFromSource, type TemplatePalette } from '@/lib/imagePalette';
+import { buildMockupTemplate, applyMockupToEditor } from '@/lib/templateMockupImport';
 import { 
   Mail, PlusCircle, Trash2, Edit3, ArrowLeft, Save, 
   Sparkles, CheckCircle2, AlertCircle, Type, Image, 
   Columns, Settings, Eye, CheckSquare, Loader2, XCircle,
   Spline, Triangle, Plus, Trash, Layout, Palette, Square,
-  ArrowUp, ArrowDown, Crop, Copy
+  ArrowUp, ArrowDown, Crop, Copy, Upload
 } from 'lucide-react';
 import { PageHeader, Alert, Button } from '@/components/ui';
 
@@ -153,6 +156,11 @@ export default function TemplatesPage() {
   const [cropImageNaturalHeight, setCropImageNaturalHeight] = useState(0);
   const [isDraggingCrop, setIsDraggingCrop] = useState(false);
   const [dragStartCrop, setDragStartCrop] = useState({ x: 0, y: 0 });
+  const [imageUploading, setImageUploading] = useState(false);
+  const [mockupImporting, setMockupImporting] = useState(false);
+  const [importedPalette, setImportedPalette] = useState<TemplatePalette | null>(null);
+  const mockupInputRef = useRef<HTMLInputElement>(null);
+  const mockupEditorInputRef = useRef<HTMLInputElement>(null);
 
   const loadTemplates = async () => {
     try {
@@ -205,6 +213,7 @@ export default function TemplatesPage() {
     setEditingTemplateId(null);
     setTemplateName('Nouveau Modèle d\'Invitation');
     setSelectedTenantId('');
+    setImportedPalette(null);
     
     // Pre-populate with a gorgeous, luxury wedding invitation template (inspired by Hassan Raza & Ayesha Khan)
     setCanvasElements([
@@ -263,6 +272,7 @@ export default function TemplatesPage() {
     setFloralColor(global.floralColor || '#b91c1c');
     setFloralType(global.floralType || 'roses');
     setFloralDensity(global.floralDensity !== undefined ? global.floralDensity : 40);
+    setImportedPalette(global.palette || null);
     
     setSelectedElementId(null);
     setEditorOpen(true);
@@ -417,17 +427,80 @@ export default function TemplatesPage() {
     setCanvasElements(updatedElements);
   };
 
-  // Handle local image file upload (converts to Base64)
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const uploadToCloudinary = async (source: File | string): Promise<string> => {
+    if (typeof source === 'string' && (isCloudinaryUrl(source) || source.startsWith('http'))) {
+      return source;
+    }
+    setImageUploading(true);
+    try {
+      if (source instanceof File) {
+        const result = await uploadImageFile(source);
+        return result.url;
+      }
+      if (source.startsWith('data:image/')) {
+        const result = await uploadDataUrlImage(source);
+        return result.url;
+      }
+      throw new Error('Format d\'image non supporté.');
+    } finally {
+      setImageUploading(false);
+    }
+  };
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result as string;
-      handlePropertyChange('imageUrl', base64String);
-    };
-    reader.readAsDataURL(file);
+  const handleMockupImport = async (file: File, openEditor = true) => {
+    setError('');
+    setMockupImporting(true);
+    try {
+      const palette = await extractPaletteFromSource(file);
+      const uploaded = await uploadImageFile(file);
+      const mockup = buildMockupTemplate(uploaded.url, palette);
+      applyMockupToEditor(mockup, {
+        setTemplateName,
+        setCanvasElements,
+        setBgType,
+        setBgColor,
+        setBgImageUrl,
+        setBgPattern,
+        setFrameType,
+        setFontTheme,
+        setFloralColor,
+        setFloralType,
+        setFloralDensity,
+        setSelectedElementId,
+      });
+      setImportedPalette(palette);
+      setEditingTemplateId(null);
+      if (openEditor) setEditorOpen(true);
+      setSuccess('Maquette importée — palette extraite et blocs texte ajoutés. Personnalisez le contenu.');
+    } catch (err: any) {
+      setError(err.message || 'Impossible d\'importer la maquette.');
+    } finally {
+      setMockupImporting(false);
+    }
+  };
+
+  const handleMockupFileChange = async (e: React.ChangeEvent<HTMLInputElement>, openEditor = true) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setError('Veuillez sélectionner une image (JPEG, PNG, WebP).');
+      return;
+    }
+    await handleMockupImport(file, openEditor);
+  };
+
+  // Handle image file upload → Cloudinary
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const url = await uploadToCloudinary(file);
+      handlePropertyChange('imageUrl', url);
+    } catch (err: any) {
+      setError(err.message || 'Échec de l\'upload image.');
+    }
   };
 
   const [cropTarget, setCropTarget] = useState<'element' | 'background'>('element');
@@ -450,7 +523,7 @@ export default function TemplatesPage() {
     const img = new window.Image();
     img.crossOrigin = 'anonymous';
     
-    img.onload = () => {
+    img.onload = async () => {
       try {
         const containerWidth = 400;
         const containerHeight = 300;
@@ -483,7 +556,7 @@ export default function TemplatesPage() {
         } else if (cropAspectRatio === '2:3') {
           cropWidth = 160;
           cropHeight = 240;
-        } else { // free
+        } else {
           cropWidth = 240;
           cropHeight = 180;
         }
@@ -522,17 +595,18 @@ export default function TemplatesPage() {
             sourceHeight
           );
           
-          const croppedBase64 = canvas.toDataURL('image/jpeg', 0.95);
+          const croppedBase64 = canvas.toDataURL('image/jpeg', 0.92);
+          const cloudUrl = await uploadToCloudinary(croppedBase64);
           if (cropTarget === 'element') {
-            handlePropertyChange('imageUrl', croppedBase64);
+            handlePropertyChange('imageUrl', cloudUrl);
           } else {
-            setBgImageUrl(croppedBase64);
+            setBgImageUrl(cloudUrl);
           }
           setCropperOpen(false);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Erreur lors du rognage de l\'image:', err);
-        setError('Impossible de rogner l\'image. Veuillez réessayer.');
+        setError(err.message || 'Impossible de rogner l\'image. Veuillez réessayer.');
       }
     };
 
@@ -577,17 +651,18 @@ export default function TemplatesPage() {
     setCropPanY(e.touches[0].clientY - dragStartCrop.y);
   };
 
-  // Global background image upload
-  const handleGlobalImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Global background image upload → Cloudinary
+  const handleGlobalImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result as string;
-      setBgImageUrl(base64String);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const url = await uploadToCloudinary(file);
+      setBgImageUrl(url);
+      setBgType('image');
+    } catch (err: any) {
+      setError(err.message || 'Échec de l\'upload de l\'image de fond.');
+    }
   };
 
   // Customizable RSVP fields management
@@ -647,7 +722,8 @@ export default function TemplatesPage() {
             fontTheme,
             floralColor,
             floralType,
-            floralDensity
+            floralDensity,
+            ...(importedPalette ? { palette: importedPalette, importedFromMockup: true } : {}),
           },
           elements: canvasElements 
         },
@@ -885,6 +961,53 @@ export default function TemplatesPage() {
         <div className="grid lg:grid-cols-4 gap-8 items-start">
           {/* Left Toolbox */}
           <div className="bg-white border border-slate-200 rounded-3xl p-5 space-y-6 shadow-sm">
+            <div className="space-y-3 pb-4 border-b border-slate-100">
+              <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" />
+                Importer ma maquette
+              </h3>
+              <p className="text-[10px] text-slate-500 leading-relaxed">
+                Image de fond Cloudinary + palette auto + blocs texte pré-positionnés.
+              </p>
+              <input
+                ref={mockupEditorInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(e) => handleMockupFileChange(e, false)}
+              />
+              <button
+                type="button"
+                disabled={mockupImporting || imageUploading}
+                onClick={() => mockupEditorInputRef.current?.click()}
+                className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-indigo-200 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50/30 text-indigo-700 font-bold text-xs transition disabled:opacity-50 cursor-pointer"
+              >
+                {mockupImporting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4" />
+                )}
+                {mockupImporting ? 'Analyse en cours…' : 'Choisir une image'}
+              </button>
+              {importedPalette && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {(['primary', 'secondary', 'accent', 'background'] as const).map((key) => (
+                    <span
+                      key={key}
+                      className="inline-flex items-center gap-1 text-[9px] font-bold text-slate-500 uppercase"
+                      title={importedPalette[key]}
+                    >
+                      <span
+                        className="w-4 h-4 rounded-md border border-slate-200 shadow-sm"
+                        style={{ backgroundColor: importedPalette[key] }}
+                      />
+                      {key.slice(0, 3)}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-2">Composants</h3>
             <div className="grid grid-cols-2 gap-3">
               <button 
@@ -1389,27 +1512,33 @@ export default function TemplatesPage() {
                                   <input 
                                     type="file" 
                                     accept="image/*"
-                                    onChange={(e) => {
+                                    disabled={imageUploading}
+                                    onChange={async (e) => {
                                       e.stopPropagation();
                                       const file = e.target.files?.[0];
+                                      e.target.value = '';
                                       if (!file) return;
-                                      const reader = new FileReader();
-                                      reader.onloadend = () => {
-                                        const base64String = reader.result as string;
+                                      try {
+                                        const url = await uploadToCloudinary(file);
                                         setCanvasElements(canvasElements.map(item => {
                                           if (item.id === el.id) {
-                                            return { ...item, imageUrl: base64String };
+                                            return { ...item, imageUrl: url };
                                           }
                                           return item;
                                         }));
                                         handleElementSelect(el.id);
-                                        setElImageUrl(base64String);
-                                      };
-                                      reader.readAsDataURL(file);
+                                        setElImageUrl(url);
+                                      } catch (err: any) {
+                                        setError(err.message || 'Échec upload image.');
+                                      }
                                     }}
                                     className="hidden"
                                   />
-                                  <Image className="w-8 h-8 text-slate-300" />
+                                  {imageUploading ? (
+                                    <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+                                  ) : (
+                                    <Image className="w-8 h-8 text-slate-300" />
+                                  )}
                                   <span className="text-xs font-semibold">{el.text}</span>
                                   <span className="text-[10px] text-indigo-500 font-bold">Cliquez pour importer</span>
                                 </label>
@@ -1753,7 +1882,7 @@ export default function TemplatesPage() {
                 {canvasElements.find(e => e.id === selectedElementId)?.type === 'image' && (
                   <div className="space-y-4 border-t border-slate-100 pt-4">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Importer une image locale</label>
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Importer une image (Cloudinary)</label>
                       <input 
                         type="file" 
                         accept="image/*"
@@ -2142,7 +2271,7 @@ export default function TemplatesPage() {
                 {bgType === 'image' && (
                   <div className="space-y-4">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Importer image de fond</label>
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Importer image de fond (Cloudinary)</label>
                       <input 
                         type="file" 
                         accept="image/*"
@@ -2445,9 +2574,26 @@ export default function TemplatesPage() {
         }
         action={
           canUseCustomTemplates ? (
-            <Button onClick={handleCreateTemplateClick} leftIcon={<PlusCircle className="w-4 h-4" />}>
-              Nouveau modèle
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <input
+                ref={mockupInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(e) => handleMockupFileChange(e, true)}
+              />
+              <Button
+                variant="secondary"
+                onClick={() => mockupInputRef.current?.click()}
+                disabled={mockupImporting}
+                leftIcon={mockupImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              >
+                Importer ma maquette
+              </Button>
+              <Button onClick={handleCreateTemplateClick} leftIcon={<PlusCircle className="w-4 h-4" />}>
+                Nouveau modèle
+              </Button>
+            </div>
           ) : undefined
         }
       />
@@ -2482,12 +2628,22 @@ export default function TemplatesPage() {
             <h3 className="text-lg font-bold text-slate-700">Aucun modèle créé</h3>
             <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">Créez votre premier modèle d'invitation personnalisé à l'aide de notre concepteur visuel.</p>
             {canUseCustomTemplates && (
-            <button 
-              onClick={handleCreateTemplateClick}
-              className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100"
-            >
-              Créer mon premier modèle
-            </button>
+            <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+              <button 
+                onClick={() => mockupInputRef.current?.click()}
+                disabled={mockupImporting}
+                className="inline-flex items-center gap-2 px-5 py-2.5 border border-indigo-200 text-indigo-700 font-semibold rounded-xl text-sm transition hover:bg-indigo-50 disabled:opacity-50"
+              >
+                {mockupImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                Importer ma maquette
+              </button>
+              <button 
+                onClick={handleCreateTemplateClick}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100"
+              >
+                Créer mon premier modèle
+              </button>
+            </div>
             )}
           </div>
         ) : (

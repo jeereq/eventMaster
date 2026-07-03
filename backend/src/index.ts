@@ -13,6 +13,7 @@ import teamRoutes from './routes/teamRoutes';
 import roomRoutes from './routes/roomRoutes';
 import commercialRoutes from './routes/commercialRoutes';
 import orgCommercialRoutes from './routes/orgCommercialRoutes';
+import uploadRoutes from './routes/uploadRoutes';
 import { handleStripeWebhook } from './controllers/billingController';
 import { prisma } from './db';
 import { startReminderWorker } from './services/reminderService';
@@ -48,6 +49,7 @@ app.get('/health', async (req: Request, res: Response) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/templates', templateRoutes);
+app.use('/api/uploads', uploadRoutes);
 app.use('/api/rsvp', rsvpRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/public', publicRoutes);
@@ -66,6 +68,12 @@ app.listen(PORT, () => {
   if (!isSendGridConfigured()) {
     console.error(
       '[EventMaster Server] ATTENTION : SendGrid non configuré — aucun e-mail ne sera envoyé. Configurez SENDGRID_API_KEY et SENDGRID_FROM.',
+    );
+  }
+
+  if (!process.env.CLOUDINARY_CLOUD_NAME) {
+    console.warn(
+      '[EventMaster Server] Cloudinary non configuré — uploads d\'images modèles désactivés. CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET.',
     );
   }
 
