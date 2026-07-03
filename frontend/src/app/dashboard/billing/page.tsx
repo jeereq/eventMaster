@@ -10,6 +10,8 @@ import {
 import Link from 'next/link';
 import { Alert } from '@/components/ui';
 import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/InvoiceListPanel';
+import QuotaUsagePanel, { PlanQuotaLimits } from '@/components/QuotaUsagePanel';
+import { formatQuotaRemaining } from '@/lib/quotaDisplay';
 import {
   LANDING_PLANS,
   FEATURE_COMPARISON,
@@ -52,8 +54,8 @@ const CAPABILITY_LABELS: Array<{ key: keyof NonNullable<BillingStatus['capabilit
   { key: 'adminReports', label: 'Rapports avancés' },
 ];
 
-function formatQuota(u: number, m: number) {
-  return `${u} / ${m >= 9999 ? '∞' : m}`;
+function formatQuotaSummary(u: number, m: number, guests = false) {
+  return formatQuotaRemaining(u, m, guests);
 }
 
 interface SubscriptionRequest {
@@ -98,7 +100,7 @@ export default function BillingPage() {
         api.get('/billing/invoices').catch(() => ({ invoices: [] })),
       ]);
       setBilling(billingData);
-      setDynamicPlans(billingData.plans || plansData);
+      setDynamicPlans(plansData || billingData.plans || null);
       if (requestsData) setRequests(requestsData);
       setInvoices(invoicesData.invoices || []);
     } catch (err: any) {
@@ -170,8 +172,8 @@ export default function BillingPage() {
       {successMsg && <Alert variant="success">{successMsg}</Alert>}
 
       {billing && (
-        <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 rounded-2xl border p-6 md:p-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+        <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 rounded-2xl border p-6 md:p-8 space-y-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <div className="text-xs text-slate-500 font-bold uppercase">Plan actuel</div>
               <div className="flex items-center gap-3 mt-1">
@@ -183,21 +185,13 @@ export default function BillingPage() {
                 </span>
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-sm">
-              {[
-                { l: 'Événements', u: billing.usage.events, m: billing.limits.maxEvents },
-                { l: 'Invités', u: billing.usage.guests, m: billing.limits.maxGuests },
-                { l: 'Modèles', u: billing.usage.templates, m: billing.limits.maxTemplates },
-                { l: 'Salles', u: billing.usage.rooms ?? 0, m: billing.limits.maxRooms ?? 0 },
-                { l: 'Managers', u: billing.usage.orgManagers ?? 0, m: billing.limits.maxOrgManagers ?? 0 },
-              ].map((q) => (
-                <div key={q.l} className="bg-white dark:bg-slate-900 p-3 rounded-xl border">
-                  <div className="text-xs text-slate-500 font-bold uppercase">{q.l}</div>
-                  <div className="font-extrabold mt-1">{formatQuota(q.u, q.m)}</div>
-                </div>
-              ))}
-            </div>
           </div>
+          <QuotaUsagePanel
+            quota={{
+              usage: billing.usage,
+              limits: billing.limits,
+            }}
+          />
           {billing.capabilities && (
             <div className="mt-6 pt-6 border-t grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {CAPABILITY_LABELS.map(({ key, label }) => {
@@ -254,6 +248,7 @@ export default function BillingPage() {
               .filter((p) => ids.includes(p.id))
               .map((plan) => {
                 const isCurrent = billing?.plan === plan.id;
+                const db = dynamicPlans?.[plan.id];
                 return (
                   <div
                     key={plan.id}
@@ -279,6 +274,23 @@ export default function BillingPage() {
                         </li>
                       ))}
                     </ul>
+                    {db && (
+                      <PlanQuotaLimits
+                        compact
+                        maxEvents={db.maxEvents}
+                        maxGuests={db.maxGuests}
+                        maxTemplates={db.maxTemplates}
+                        maxRooms={db.maxRooms}
+                        maxOrgManagers={db.maxOrgManagers}
+                      />
+                    )}
+                    {isCurrent && billing && (
+                      <p className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 rounded-lg px-2 py-1.5 mt-2">
+                        Événements : {formatQuotaSummary(billing.usage.events, billing.limits.maxEvents)}
+                        {' · '}
+                        Modèles : {formatQuotaSummary(billing.usage.templates, billing.limits.maxTemplates)}
+                      </p>
+                    )}
                     <button
                       disabled={isCurrent || plan.id === 'FREE' || actionLoading !== null}
                       onClick={() => handleUpgrade(plan.id)}

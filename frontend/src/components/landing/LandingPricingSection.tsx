@@ -12,6 +12,7 @@ import {
   type BillingCycle,
   type PlanId,
 } from '@/config/landingPricing';
+import { PlanQuotaLimits } from '@/components/QuotaUsagePanel';
 
 interface DbPlan {
   name?: string;
@@ -20,7 +21,17 @@ interface DbPlan {
   maxEvents?: number;
   maxGuests?: number;
   maxTemplates?: number;
+  maxRooms?: number;
+  maxOrgManagers?: number;
   customTemplates?: boolean;
+}
+
+function parseComparisonQuota(planId: PlanId, label: string): number {
+  const row = FEATURE_COMPARISON.find((r) => r.label === label);
+  const value = row?.values[planId];
+  if (typeof value !== 'string') return 0;
+  if (value === 'Illimité') return 9999;
+  return parseInt(value.replace(/\s/g, ''), 10) || 0;
 }
 
 interface LandingPricingSectionProps {
@@ -49,14 +60,14 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
         displayName: db?.name?.replace('Plan ', '') || plan.ms365Name,
         price: getPlanDisplayPrice(plan, billing, db?.price),
         description: db?.description || plan.tagline,
-        limits: db
-          ? {
-              events: db.maxEvents,
-              guests: db.maxGuests,
-              templates: db.maxTemplates,
-              customTemplates: db.customTemplates,
-            }
-          : null,
+        limits: {
+          events: db?.maxEvents ?? parseComparisonQuota(plan.id, 'Événements actifs'),
+          guests: db?.maxGuests ?? parseComparisonQuota(plan.id, 'Invités (quota org.)'),
+          templates: db?.maxTemplates ?? parseComparisonQuota(plan.id, "Modèles d'invitation"),
+          rooms: db?.maxRooms ?? parseComparisonQuota(plan.id, 'Salles organisation'),
+          orgManagers: db?.maxOrgManagers ?? parseComparisonQuota(plan.id, 'Managers organisation'),
+          customTemplates: db?.customTemplates,
+        },
       };
     });
   }, [dbPlans, billing]);
@@ -177,6 +188,16 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
                           </li>
                         ))}
                       </ul>
+                      {(plan.limits.events > 0 || plan.limits.templates > 0) && (
+                        <PlanQuotaLimits
+                          compact
+                          maxEvents={plan.limits.events}
+                          maxGuests={plan.limits.guests}
+                          maxTemplates={plan.limits.templates}
+                          maxRooms={plan.limits.rooms}
+                          maxOrgManagers={plan.limits.orgManagers}
+                        />
+                      )}
                     </div>
 
                     <div className="p-6 pt-0">

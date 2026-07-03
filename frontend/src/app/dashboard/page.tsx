@@ -15,6 +15,8 @@ import {
 import GuestMessageTemplatesPanel from './GuestMessageTemplatesPanel';
 import { cn } from '@/lib/cn';
 import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/InvoiceListPanel';
+import QuotaUsagePanel from '@/components/QuotaUsagePanel';
+import type { QuotaSnapshot } from '@/lib/quotaDisplay';
 import { PageHeader, Alert, Button } from '@/components/ui';
 import { PLAN_IDS, type PlanId } from '@/config/landingPricing';
 
@@ -38,17 +40,9 @@ function planBarClass(plan: string): string {
   return 'bg-slate-400';
 }
 
-interface BillingStatus {
+interface BillingStatus extends QuotaSnapshot {
   plan: PlanId;
-  usage: {
-    events: number;
-    guests: number;
-    templates: number;
-  };
-  limits: {
-    maxEvents: number;
-    maxGuests: number;
-    maxTemplates: number;
+  limits: QuotaSnapshot['limits'] & {
     customTemplates: boolean;
   };
 }
@@ -182,7 +176,7 @@ interface TenantSubscriptionHistoryEntry {
 }
 
 function DashboardPageContent() {
-  const { user, tenant } = useAuth();
+  const { user, tenant, access, planQuota } = useAuth();
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [adminData, setAdminData] = useState<AdminStats | null>(null);
@@ -328,18 +322,60 @@ function DashboardPageContent() {
   // Load initial data
   useEffect(() => {
     async function loadDashboardData() {
+      setError('');
       try {
         if (isPlatformStaff(user?.role)) {
           const data = await api.get('/admin/stats');
           setAdminData(data);
-        } else {
-          const [billingData, eventsData] = await Promise.all([
-            api.get('/billing/status'),
-            api.get('/events'),
-          ]);
-          setBilling(billingData);
+          return;
+        }
+
+        if (!tenant?.id) {
+          return;
+        }
+
+        let eventsLoaded = false;
+
+        try {
+          const eventsData = await api.get('/events');
           const eventsList = Array.isArray(eventsData) ? eventsData : eventsData.events || [];
           setEvents(eventsList.slice(0, 3));
+          eventsLoaded = true;
+        } catch (err) {
+          console.error('Error loading events:', err);
+        }
+
+        try {
+          if (access?.canViewBilling) {
+            const billingData = await api.get('/billing/status');
+            setBilling(billingData);
+          } else {
+            const planData = await api.get('/billing/plan-features');
+            setBilling({
+              plan: planData.plan,
+              usage: {
+                events: planData.usage.events,
+                guests: planData.usage.guests,
+                templates: planData.usage.templates,
+                rooms: planData.usage.rooms,
+                orgManagers: planData.usage.orgManagers,
+              },
+              limits: {
+                maxEvents: planData.limits.maxEvents,
+                maxGuests: planData.limits.maxGuests,
+                maxTemplates: planData.limits.maxTemplates,
+                maxRooms: planData.limits.maxRooms,
+                maxOrgManagers: planData.limits.maxOrgManagers,
+                customTemplates: planData.capabilities?.customTemplates ?? false,
+              },
+            });
+          }
+        } catch (err) {
+          console.error('Error loading quotas:', err);
+        }
+
+        if (!eventsLoaded) {
+          setError('Impossible de charger les données du tableau de bord.');
         }
       } catch (err: any) {
         console.error('Error loading dashboard data:', err);
@@ -351,7 +387,7 @@ function DashboardPageContent() {
     if (user) {
       loadDashboardData();
     }
-  }, [user]);
+  }, [user, tenant?.id, access?.canViewBilling]);
 
   // Load users when users tab is active
   useEffect(() => {
@@ -1144,6 +1180,20 @@ function DashboardPageContent() {
       setTenantSubscriptionHistory([]);
     }
   };
+
+  const orgQuota: QuotaSnapshot | null = React.useMemo(() => {
+    if (isPlatformStaff(user?.role)) return null;
+    if (billing) {
+      return { usage: billing.usage, limits: billing.limits };
+    }
+    if (planQuota) {
+      return {
+        usage: planQuota.usage,
+        limits: planQuota.limits,
+      };
+    }
+    return null;
+  }, [billing, planQuota, user?.role]);
 
   if (loading) {
     return (
@@ -4200,83 +4250,12 @@ function DashboardPageContent() {
 
       {error && <Alert variant="error">{error}</Alert>}
 
-      {/* Quotas & Usage Widgets */}
-      {billing && (
-        <div className="grid sm:grid-cols-3 gap-6">
-          {/* Events Widget */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Événements</span>
-              <div className="bg-indigo-50 text-indigo-600 p-2 rounded-xl">
-                <Calendar className="w-5 h-5" />
-              </div>
-            </div>
-            <div>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-extrabold text-slate-900">{billing.usage.events}</span>
-                <span className="text-slate-500 text-sm">/ {billing.limits.maxEvents === 9999 ? 'illimité' : billing.limits.maxEvents}</span>
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-2 mt-3 overflow-hidden">
-                <div 
-                  className="bg-indigo-600 h-full rounded-full transition-all duration-500" 
-                  style={{ width: `${getPercentage(billing.usage.events, billing.limits.maxEvents)}%` }}
-                />
-              </div>
-              <p className="text-xs text-slate-400 mt-1.5 font-medium">
-                {getPercentage(billing.usage.events, billing.limits.maxEvents)}% du quota utilisé
-              </p>
-            </div>
-          </div>
-
-          {/* Guests Widget */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Invités Totaux</span>
-              <div className="bg-violet-50 text-violet-600 p-2 rounded-xl">
-                <Users className="w-5 h-5" />
-              </div>
-            </div>
-            <div>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-extrabold text-slate-900">{billing.usage.guests}</span>
-                <span className="text-slate-500 text-sm">/ {billing.limits.maxGuests === 99999 ? 'illimité' : billing.limits.maxGuests}</span>
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-2 mt-3 overflow-hidden">
-                <div 
-                  className="bg-violet-600 h-full rounded-full transition-all duration-500" 
-                  style={{ width: `${getPercentage(billing.usage.guests, billing.limits.maxGuests)}%` }}
-                />
-              </div>
-              <p className="text-xs text-slate-400 mt-1.5 font-medium">
-                {getPercentage(billing.usage.guests, billing.limits.maxGuests)}% du quota utilisé
-              </p>
-            </div>
-          </div>
-
-          {/* Templates Widget */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Modèles d'Invitation</span>
-              <div className="bg-amber-50 text-amber-600 p-2 rounded-xl">
-                <Mail className="w-5 h-5" />
-              </div>
-            </div>
-            <div>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-extrabold text-slate-900">{billing.usage.templates}</span>
-                <span className="text-slate-500 text-sm">/ {billing.limits.maxTemplates === 9999 ? 'illimité' : billing.limits.maxTemplates}</span>
-              </div>
-              <div className="w-full bg-slate-100 rounded-full h-2 mt-3 overflow-hidden">
-                <div 
-                  className="bg-amber-500 h-full rounded-full transition-all duration-500" 
-                  style={{ width: `${getPercentage(billing.usage.templates, billing.limits.maxTemplates)}%` }}
-                />
-              </div>
-              <p className="text-xs text-slate-400 mt-1.5 font-medium">
-                {getPercentage(billing.usage.templates, billing.limits.maxTemplates)}% du quota utilisé
-              </p>
-            </div>
-          </div>
+      {orgQuota && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider">
+            Quotas restants — forfait {tenant?.plan || billing?.plan}
+          </h2>
+          <QuotaUsagePanel quota={orgQuota} />
         </div>
       )}
 
