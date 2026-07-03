@@ -62,7 +62,7 @@ export default function TermsPage() {
           <li>ne collecter que les données adéquates, pertinentes et limitées à ce qui est nécessaire à l&apos;événement ;</li>
           <li>répondre aux demandes d&apos;exercice des droits (accès, rectification, effacement, etc.) dans les délais légaux ;</li>
           <li>assurer la licéité, l&apos;exactitude et la mise à jour des listes d&apos;invités et des contenus publiés ;</li>
-          <li>la conformité des envois (e-mail, SMS, WhatsApp) qu&apos;elle déclenche via la plateforme.</li>
+          <li>la conformité des envois (e-mail et WhatsApp) qu&apos;elle déclenche via la plateforme.</li>
         </ul>
         <p>
           <strong>3.2 Rôle d&apos;EventMaster.</strong> EventMaster agit en qualité de <strong>sous-traitant</strong> pour

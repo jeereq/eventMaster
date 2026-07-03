@@ -79,12 +79,6 @@ export function logNotificationConfigStatus(): void {
     console.error('[Notification Service] SendGrid NON configuré — les e-mails ne pourront PAS être envoyés.');
   }
 
-  if (creds.twilioSid && creds.twilioAuthToken && creds.twilioPhone) {
-    console.log('[Notification Service] Twilio configuré.');
-  } else {
-    console.warn('[Notification Service] Twilio non configuré — envoi SMS simulé.');
-  }
-
   if (isUltraMsgConfigured(creds)) {
     console.log('[Notification Service] UltraMsg configuré pour WhatsApp.');
   } else {

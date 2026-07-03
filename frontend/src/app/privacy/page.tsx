@@ -48,7 +48,7 @@ export default function PrivacyPage() {
       <Section title="3. Finalités du traitement">
         <ul className="list-disc pl-5 space-y-1">
           <li>Création et gestion des comptes et des organisations ;</li>
-          <li>Envoi d&apos;invitations, rappels RSVP et notifications (e-mail, SMS, WhatsApp) sur instruction de l&apos;organisateur ;</li>
+          <li>Envoi d&apos;invitations, rappels RSVP et notifications (e-mail et WhatsApp) sur instruction de l&apos;organisateur ;</li>
           <li>Protocole : scan QR, émargement, vérification de placement ;</li>
           <li>Gestion des abonnements, quotas, factures et demandes de support ;</li>
           <li>Sécurité, prévention des abus, sauvegardes et continuité du service ;</li>
@@ -103,7 +103,7 @@ export default function PrivacyPage() {
       <Section title="7. Sous-traitants">
         <p>
           Des prestataires tiers interviennent pour l&apos;hébergement (base de données, serveurs), l&apos;envoi
-          d&apos;e-mails (SendGrid), de SMS/WhatsApp (Twilio, UltraMsg) ou le paiement le cas échéant. Ils ne
+          d&apos;e-mails (SendGrid), de WhatsApp (UltraMsg) ou le paiement le cas échéant. Ils ne
           traitent les données que sur instruction d&apos;EventMaster ou de l&apos;organisateur, dans le cadre
           contractuel du service, et sont sélectionnés pour leur fiabilité et leurs garanties de confidentialité.
         </p>

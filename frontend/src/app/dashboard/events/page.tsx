@@ -123,8 +123,12 @@ function getChannelLabel(channel: string) {
       return 'E-mail';
     case 'WHATSAPP':
       return 'WhatsApp';
+    case 'EMAIL_AND_WHATSAPP':
+    case 'ALL_CHANNELS':
+    case 'EMAIL_AND_SMS':
+      return 'E-mail et WhatsApp';
     case 'SMS':
-      return 'SMS';
+      return 'WhatsApp';
     default:
       return channel;
   }
@@ -1245,15 +1249,6 @@ export default function EventsPage() {
     return `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
   };
 
-  const getSMSShareUrl = (guestName: string, rsvpLink: string, phone?: string | null, customBody?: string | null) => {
-    const text = customBody || `Bonjour ${guestName}, vous êtes chaleureusement invité(e) ! Veuillez confirmer votre présence en ouvrant votre invitation personnalisée ici : ${rsvpLink}`;
-    if (phone) {
-      const cleanPhone = phone.replace(/[^\d+]/g, '');
-      return `sms:${cleanPhone}?&body=${encodeURIComponent(text)}`;
-    }
-    return `sms:?&body=${encodeURIComponent(text)}`;
-  };
-
   const getXShareUrl = (guestName: string, rsvpLink: string, customBody?: string | null) => {
     const text = customBody || `Bonjour ${guestName}, vous êtes invité(e) ! Confirmez votre présence ici : ${rsvpLink}`;
     return `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
@@ -1846,7 +1841,7 @@ export default function EventsPage() {
                               <button 
                                 onClick={() => setSharingGuest(g)}
                                 className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
-                                title="Partager l'invitation (WhatsApp, SMS, X, Instagram)"
+                                title="Partager l'invitation (WhatsApp, X, Instagram)"
                               >
                                 <Share2 className="w-4 h-4" />
                               </button>
@@ -1908,16 +1903,11 @@ export default function EventsPage() {
                         <div className="flex items-center justify-between">
                           <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold border ${
                             invite.channel === 'EMAIL' ? 'bg-indigo-50 border-indigo-100 text-indigo-700' :
-                            invite.channel === 'WHATSAPP' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
-                            invite.channel === 'SMS' ? 'bg-blue-50 border-blue-100 text-blue-700' :
+                            invite.channel === 'WHATSAPP' || invite.channel === 'SMS' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
+                            invite.channel === 'EMAIL_AND_WHATSAPP' || invite.channel === 'EMAIL_AND_SMS' || invite.channel === 'ALL_CHANNELS' ? 'bg-violet-50 border-violet-100 text-violet-700' :
                             'bg-slate-50 border-slate-100 text-slate-700'
                           }`}>
-                            Canal: {
-                              invite.channel === 'EMAIL' ? 'E-mail' :
-                              invite.channel === 'WHATSAPP' ? 'WhatsApp' :
-                              invite.channel === 'SMS' ? 'SMS' :
-                              invite.channel === 'LINK' ? 'Lien unique' : invite.channel
-                            }
+                            Canal: {getChannelLabel(invite.channel)}
                           </span>
                           <span className="text-xs text-slate-400 font-semibold">
                             Modèle: {invite.template?.name || 'Aucun'}
@@ -2273,7 +2263,7 @@ export default function EventsPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Téléphone (WhatsApp/SMS)</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Téléphone (WhatsApp)</label>
                   <input 
                     type="text" 
                     value={guestPhone}
@@ -2627,9 +2617,6 @@ export default function EventsPage() {
                   <option value="EMAIL">E-mail uniquement</option>
                   <option value="WHATSAPP">WhatsApp uniquement</option>
                   <option value="EMAIL_AND_WHATSAPP">E-mail ET WhatsApp (Simultané)</option>
-                  <option value="SMS">SMS uniquement</option>
-                  <option value="EMAIL_AND_SMS">E-mail ET SMS (Simultané)</option>
-                  <option value="ALL_CHANNELS">Tous les canaux (E-mail, WhatsApp, SMS)</option>
                   <option value="X">X / Twitter (Partage direct)</option>
                   <option value="INSTAGRAM">Instagram (Copie de lien DM)</option>
                   <option value="FACEBOOK">Facebook (Copie de lien Messenger)</option>
@@ -2705,9 +2692,6 @@ export default function EventsPage() {
                     <option value="EMAIL">E-mail</option>
                     <option value="WHATSAPP">WhatsApp</option>
                     <option value="EMAIL_AND_WHATSAPP">E-mail et WhatsApp</option>
-                    <option value="SMS">SMS</option>
-                    <option value="EMAIL_AND_SMS">E-mail et SMS</option>
-                    <option value="ALL_CHANNELS">Tous les canaux (E-mail, WhatsApp, SMS)</option>
                     <option value="LINK">Lien unique (Simulation)</option>
                   </select>
                 </div>
@@ -2855,7 +2839,7 @@ export default function EventsPage() {
 
             <div className="space-y-4">
               <p className="text-sm text-slate-500 leading-relaxed">
-                Détail par invité ci-dessous. Les envois réels passent par SendGrid (e-mail), Twilio (SMS) et UltraMsg (WhatsApp), configurables dans le panneau Super Admin ou via les variables d&apos;environnement du serveur.
+                Détail par invité ci-dessous. Les envois réels passent par SendGrid (e-mail) et UltraMsg (WhatsApp), configurables dans le panneau Super Admin ou via les variables d&apos;environnement du serveur.
               </p>
               <div className="p-4 bg-slate-50 border border-slate-150 rounded-2xl space-y-3 max-h-96 overflow-y-auto">
                 <div className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200 pb-2 mb-2">
@@ -2956,16 +2940,6 @@ export default function EventsPage() {
                           <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.753-1.458L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.013-5.101-2.859-6.948C16.572 2.011 14.1 1 11.999 1c-5.438 0-9.863 4.37-9.868 9.8-.001 1.77.463 3.498 1.345 5.021l-.993 3.624 5.164-.991zm11.767-6.828c-.3-.15-1.774-.875-2.048-.975-.274-.1-.474-.15-.674.15-.2.3-.775.975-.95 1.175-.175.2-.35.225-.65.075-1.2-.6-2.007-1.05-2.8-2.425-.2-.3-.2-.125.1-.425.275-.275.6-.65.75-.875.15-.225.075-.425-.038-.625-.112-.2-.95-2.275-1.3-3.125-.34-.817-.68-.707-.95-.721-.24-.012-.514-.015-.788-.015-.274 0-.724.1-1.1.5-.375.4-1.425 1.4-1.425 3.4s1.45 3.925 1.65 4.175c.2.275 2.855 4.35 6.915 6.1 1.12.484 1.91.775 2.56.975 1.12.35 2.14.3 2.95.175.9-.137 2.775-1.125 3.175-2.225.4-1.1.4-2.05.275-2.25-.125-.2-.475-.3-.775-.45z"/>
                         </svg>
                         WhatsApp
-                      </a>
-
-                      {/* SMS */}
-                      <a
-                        href={getSMSShareUrl(res.guestName, res.rsvpLink, res.phone, res.body)}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-xs font-bold transition shadow-sm"
-                        title="Envoyer par SMS"
-                      >
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        SMS
                       </a>
 
                       {/* X (Twitter) */}
@@ -3088,15 +3062,6 @@ export default function EventsPage() {
                       <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.753-1.458L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.37 9.864-9.799.002-2.63-1.013-5.101-2.859-6.948C16.572 2.011 14.1 1 11.999 1c-5.438 0-9.863 4.37-9.868 9.8-.001 1.77.463 3.498 1.345 5.021l-.993 3.624 5.164-.991zm11.767-6.828c-.3-.15-1.774-.875-2.048-.975-.274-.1-.474-.15-.674.15-.2.3-.775.975-.95 1.175-.175.2-.35.225-.65.075-1.2-.6-2.007-1.05-2.8-2.425-.2-.3-.2-.125.1-.425.275-.275.6-.65.75-.875.15-.225.075-.425-.038-.625-.112-.2-.95-2.275-1.3-3.125-.34-.817-.68-.707-.95-.721-.24-.012-.514-.015-.788-.015-.274 0-.724.1-1.1.5-.375.4-1.425 1.4-1.425 3.4s1.45 3.925 1.65 4.175c.2.275 2.855 4.35 6.915 6.1 1.12.484 1.91.775 2.56.975 1.12.35 2.14.3 2.95.175.9-.137 2.775-1.125 3.175-2.225.4-1.1.4-2.05.275-2.25-.125-.2-.475-.3-.775-.45z"/>
                     </svg>
                     WhatsApp
-                  </a>
-
-                  {/* SMS */}
-                  <a
-                    href={getSMSShareUrl(`${sharingGuest.firstName} ${sharingGuest.lastName}`, getGuestRsvpLink(sharingGuest.id), sharingGuest.preferences && typeof sharingGuest.preferences === 'object' ? (sharingGuest.preferences as any).phone : null, getRenderedInvitationBody(sharingGuest))}
-                    className="flex items-center justify-center gap-2 p-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-bold transition shadow-sm"
-                  >
-                    <MessageSquare className="w-4 h-4" />
-                    SMS
                   </a>
 
                   {/* X (Twitter) */}

@@ -1,5 +1,4 @@
 import sgMail from '@sendgrid/mail';
-import twilio from 'twilio';
 import {
   getNotificationCredentials,
   isSendGridConfigured,
@@ -18,12 +17,6 @@ function formatPhoneE164(to: string): string {
     }
   }
   return formattedTo;
-}
-
-function getTwilioClient() {
-  const { twilioSid, twilioAuthToken } = getNotificationCredentials();
-  if (!twilioSid || !twilioAuthToken) return null;
-  return twilio(twilioSid, twilioAuthToken);
 }
 
 /**
@@ -63,33 +56,6 @@ export async function sendRealEmail(
     console.error(`[Notification Service] Failed to send SendGrid email to ${to}:`, error.response?.body || error);
     return { success: false, simulated: false, error: errMsg };
   }
-}
-
-/**
- * Send a real SMS using Twilio or fall back to simulation
- */
-export async function sendRealSMS(to: string, body: string): Promise<{ success: boolean; simulated: boolean; messageSid?: string; error?: string }> {
-  const formattedTo = formatPhoneE164(to);
-  const { twilioPhone } = getNotificationCredentials();
-  const twilioClient = getTwilioClient();
-
-  if (twilioClient && twilioPhone) {
-    try {
-      const message = await twilioClient.messages.create({
-        body,
-        from: twilioPhone,
-        to: formattedTo,
-      });
-      console.log(`[Notification Service] SMS sent successfully to ${formattedTo}. SID: ${message.sid}`);
-      return { success: true, simulated: false, messageSid: message.sid };
-    } catch (error: any) {
-      console.error(`[Notification Service] Failed to send SMS to ${formattedTo}:`, error);
-      return { success: false, simulated: false, error: error.message || String(error) };
-    }
-  }
-
-  console.log(`[Simulation] Sending SMS to ${formattedTo}:\nBody: ${body}\n`);
-  return { success: true, simulated: true };
 }
 
 async function sendUltraMsgRequest(

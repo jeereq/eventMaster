@@ -1,7 +1,8 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
-import { sendRealEmail, sendRealSMS, sendRealWhatsApp, sendRealWhatsAppLocation } from '../services/notificationService';
+import { sendRealEmail, sendRealWhatsApp, sendRealWhatsAppLocation } from '../services/notificationService';
+import { resolveDeliveryChannels } from '../utils/notificationChannels';
 import { renderGuestMessage, polishWhatsAppBody, applyTemplateVariables } from '../services/messageTemplateService';
 import { canManageEvent, canAccessEvent } from '../services/permissionsService';
 
@@ -173,23 +174,8 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
         .replaceAll('{{location}}', event.location || '')
         .replaceAll('{{date}}', formattedDate);
 
-      // Support multiple channels (comma-separated, array, or specific combinations like EMAIL_AND_WHATSAPP)
-      let channelsToSend: string[] = [];
-      if (Array.isArray(activeChannel)) {
-        channelsToSend = activeChannel;
-      } else if (typeof activeChannel === 'string') {
-        if (activeChannel === 'EMAIL_AND_WHATSAPP') {
-          channelsToSend = ['EMAIL', 'WHATSAPP'];
-        } else if (activeChannel === 'EMAIL_AND_SMS') {
-          channelsToSend = ['EMAIL', 'SMS'];
-        } else if (activeChannel === 'ALL_CHANNELS') {
-          channelsToSend = ['EMAIL', 'WHATSAPP', 'SMS'];
-        } else {
-          channelsToSend = activeChannel.split(',').map(c => c.trim());
-        }
-      } else {
-        channelsToSend = ['EMAIL'];
-      }
+      // Canaux : e-mail et WhatsApp uniquement (SMS / alias legacy convertis)
+      const channelsToSend = resolveDeliveryChannels(activeChannel);
 
       const channelResults = [];
       for (const chan of channelsToSend) {
@@ -255,14 +241,6 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
             </div>
           `;
           sendResult = await sendRealEmail(guest.email, subject, body, htmlBody);
-        } else if (chan === 'SMS') {
-          const phone = getGuestPhone(guest);
-          if (phone) {
-            sendResult = await sendRealSMS(phone, body);
-          } else {
-            console.warn(`[Invitation Controller] Guest ${guest.firstName} ${guest.lastName} has no valid phone number for SMS sending.`);
-            sendResult = { success: false, simulated: false, error: 'No valid phone number' };
-          }
         } else if (chan === 'WHATSAPP') {
           const phone = getGuestPhone(guest);
           if (phone) {
@@ -342,7 +320,7 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
     if (failedCount === sentInvitations.length) {
       message = `Échec de l'envoi pour ${failedCount} invité(s) via ${activeChannel}.`;
     } else if (allSimulated) {
-      message = `Envoi simulé pour ${guests.length} invité(s) via ${activeChannel} (UltraMsg/SendGrid/Twilio non configurés).`;
+      message = `Envoi simulé pour ${guests.length} invité(s) via ${activeChannel} (SendGrid / UltraMsg non configurés).`;
     } else if (failedCount > 0 || simulatedCount > 0) {
       message = `Envoi partiel : ${sentCount} réussi(s), ${simulatedCount} simulé(s), ${failedCount} échec(s) via ${activeChannel}.`;
     } else {

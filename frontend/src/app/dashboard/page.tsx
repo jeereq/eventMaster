@@ -1441,7 +1441,7 @@ function DashboardPageContent() {
                 {activeTab === 'tenants' && "Gérez les organisations enregistrées, leurs abonnements et l'état de leurs licences."}
                 {activeTab === 'users' && "Consultez et administrez l'ensemble des comptes d'utilisateurs de la plateforme."}
                 {activeTab === 'templates' && "Créez et configurez des modèles d'invitation globaux réutilisables par tous."}
-                {activeTab === 'message-templates' && "Personnalisez les messages WhatsApp, SMS et e-mails envoyés automatiquement aux invités."}
+                {activeTab === 'message-templates' && "Personnalisez les messages WhatsApp et e-mails envoyés automatiquement aux invités."}
                 {activeTab === 'events' && "Supervisez tous les événements créés par les organisations sur la plateforme."}
                 {activeTab === 'guests' && "Consultez et gérez la liste globale de tous les invités enregistrés."}
                 {activeTab === 'analytics' && "Visualisez les performances, l'adoption des forfaits et l'activité globale."}
@@ -2373,11 +2373,11 @@ function DashboardPageContent() {
                         </div>
                       </div>
 
-                      {/* Section 2: WhatsApp & SMS */}
+                      {/* Section 2: WhatsApp */}
                       <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-4">
                         <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-3">
                           <Mail className="w-5 h-5 text-indigo-600" />
-                          Configurations UltraMsg (WhatsApp) & Twilio (SMS)
+                          Configuration UltraMsg (WhatsApp)
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-1.5">
@@ -2398,39 +2398,6 @@ function DashboardPageContent() {
                               onChange={(e) => setAdminSettings({ ...adminSettings, ultramsgToken: e.target.value })}
                               className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-mono"
                               placeholder="••••••••••••••••••••••••••••••••"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="border-t border-slate-200 pt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Twilio Account SID</label>
-                            <input
-                              type="text"
-                              value={adminSettings.twilioAccountSid}
-                              onChange={(e) => setAdminSettings({ ...adminSettings, twilioAccountSid: e.target.value })}
-                              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-mono"
-                              placeholder="ex: AC..."
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Twilio Auth Token</label>
-                            <input
-                              type="password"
-                              value={adminSettings.twilioAuthToken}
-                              onChange={(e) => setAdminSettings({ ...adminSettings, twilioAuthToken: e.target.value })}
-                              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-mono"
-                              placeholder="••••••••••••"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Numéro Twilio SMS</label>
-                            <input
-                              type="text"
-                              value={adminSettings.twilioPhoneNumber}
-                              onChange={(e) => setAdminSettings({ ...adminSettings, twilioPhoneNumber: e.target.value })}
-                              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-mono"
-                              placeholder="ex: +1234567890"
                             />
                           </div>
                         </div>

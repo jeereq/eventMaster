@@ -1,5 +1,6 @@
 import { prisma } from '../db';
-import { sendRealEmail, sendRealSMS, sendRealWhatsApp, sendRealWhatsAppLocation } from './notificationService';
+import { sendRealEmail, sendRealWhatsApp, sendRealWhatsAppLocation } from './notificationService';
+import { resolveDeliveryChannels } from '../utils/notificationChannels';
 import { renderGuestMessage, polishWhatsAppBody, applyTemplateVariables } from './messageTemplateService';
 import fs from 'fs';
 import path from 'path';
@@ -172,16 +173,7 @@ export async function processReminders() {
         body = polishWhatsAppBody(body);
 
         const channel = latestInvitation.channel || 'EMAIL';
-        let channelsToSend: string[] = [];
-        if (channel === 'EMAIL_AND_WHATSAPP') {
-          channelsToSend = ['EMAIL', 'WHATSAPP'];
-        } else if (channel === 'EMAIL_AND_SMS') {
-          channelsToSend = ['EMAIL', 'SMS'];
-        } else if (channel === 'ALL_CHANNELS') {
-          channelsToSend = ['EMAIL', 'WHATSAPP', 'SMS'];
-        } else {
-          channelsToSend = channel.split(',').map(c => c.trim());
-        }
+        const channelsToSend = resolveDeliveryChannels(channel);
 
         for (const chan of channelsToSend) {
           if (chan === 'EMAIL') {
@@ -244,9 +236,6 @@ export async function processReminders() {
               </div>
             `;
             await sendRealEmail(guest.email, subject, body, htmlBody);
-          } else if (chan === 'SMS') {
-            const phone = getGuestPhone(guest);
-            if (phone) await sendRealSMS(phone, body);
           } else if (chan === 'WHATSAPP') {
             const phone = getGuestPhone(guest);
             if (phone) {
