@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api } from '@/lib/api';
+import { SITE_CONTACT } from '@/config/siteContent';
+import FaqSection from '@/components/landing/FaqSection';
+import SiteFooter from '@/components/SiteFooter';
 import { 
   Mail, Phone, MapPin, Send, MessageSquare, 
   CheckCircle2, AlertCircle, Loader2, ArrowLeft, PartyPopper, Sparkles, ArrowRight, Sun, Moon, Menu, X
@@ -114,6 +117,9 @@ export default function ContactPage() {
             <Link href="/contact" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
               Contact
             </Link>
+            <a href="#faq" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+              FAQ
+            </a>
             {user ? (
               <>
                 <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
@@ -171,6 +177,13 @@ export default function ContactPage() {
               >
                 Contact
               </Link>
+              <a 
+                href="#faq" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition py-2 border-b border-slate-100 dark:border-slate-900"
+              >
+                FAQ
+              </a>
               {user ? (
                 <>
                   <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold py-1">
@@ -253,8 +266,8 @@ export default function ContactPage() {
                     </div>
                     <div>
                       <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Email</span>
-                      <a href="mailto:mingandajeereq@gmail.com" className="text-sm font-semibold hover:text-indigo-300 transition">
-                        mingandajeereq@gmail.com
+                      <a href={`mailto:${SITE_CONTACT.email}`} className="text-sm font-semibold hover:text-indigo-300 transition">
+                        {SITE_CONTACT.email}
                       </a>
                     </div>
                   </div>
@@ -265,10 +278,10 @@ export default function ContactPage() {
                     </div>
                     <div>
                       <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Téléphone</span>
-                      <a href="tel:+243817125577" className="text-sm font-semibold hover:text-indigo-300 transition">
-                        +243 817 125 577
+                      <a href={SITE_CONTACT.phoneHref} className="text-sm font-semibold hover:text-indigo-300 transition">
+                        {SITE_CONTACT.phone}
                       </a>
-                      <p className="text-[10px] text-slate-500 mt-0.5">WhatsApp disponible</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">{SITE_CONTACT.whatsappNote}</p>
                     </div>
                   </div>
 
@@ -279,8 +292,8 @@ export default function ContactPage() {
                     <div>
                       <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Adresse</span>
                       <p className="text-sm font-semibold text-slate-200">
-                        Boulevard du 30 Juin, Gombe<br />
-                        Kinshasa, RD Congo
+                        {SITE_CONTACT.addressLine1}<br />
+                        {SITE_CONTACT.addressLine2}
                       </p>
                     </div>
                   </div>
@@ -418,67 +431,15 @@ export default function ContactPage() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-slate-950 text-slate-400 py-16 border-t border-slate-900 mt-auto">
-        <div className="w-10/12 max-w-7xl mx-auto space-y-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {/* Column 1: Brand */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2.5">
-                <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-md shadow-indigo-500/10">
-                  <PartyPopper className="w-5 h-5" />
-                </div>
-                <span className="text-white font-black text-lg">EventMaster</span>
-              </div>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                La plateforme SaaS multi-tenant de référence pour la planification d'événements d'exception, la gestion d'invités RSVP et la conception de plans de table interactifs en 2D.
-              </p>
-            </div>
+      <FaqSection
+        id="faq"
+        title="Questions fréquentes"
+        subtitle="Retrouvez les réponses aux questions les plus courantes avant de nous écrire."
+        showContactLink={false}
+        className="bg-white dark:bg-slate-950"
+      />
 
-            {/* Column 2: Features */}
-            <div className="space-y-4">
-              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Fonctionnalités</h4>
-              <ul className="space-y-2 text-xs">
-                <li><span className="hover:text-white transition cursor-default">Plan de table interactif 2D</span></li>
-                <li><span className="hover:text-white transition cursor-default">Portail RSVP personnalisé</span></li>
-                <li><span className="hover:text-white transition cursor-default">Badge QR Code d'émargement</span></li>
-                <li><span className="hover:text-white transition cursor-default">Import / Export Excel & CSV</span></li>
-                <li><span className="hover:text-white transition cursor-default">Fil d'actualité & Livre d'or</span></li>
-              </ul>
-            </div>
-
-            {/* Column 3: Resources */}
-            <div className="space-y-4">
-              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Ressources</h4>
-              <ul className="space-y-2 text-xs">
-                <li><Link href="/contact" className="hover:text-white transition">Contact & Support</Link></li>
-                <li><Link href="/terms" className="hover:text-white transition">Conditions d&apos;utilisation</Link></li>
-                <li><Link href="/privacy" className="hover:text-white transition">Politique de confidentialité</Link></li>
-                <li><Link href="/login" className="hover:text-white transition">Connexion Espace Organisateur</Link></li>
-                <li><Link href="/register" className="hover:text-white transition">Créer une organisation</Link></li>
-              </ul>
-            </div>
-
-            {/* Column 4: Contact info */}
-            <div className="space-y-4">
-              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Contact & Support</h4>
-              <ul className="space-y-2 text-xs text-slate-500">
-                <li>Email: <a href="mailto:mingandajeereq@gmail.com" className="text-slate-400 hover:text-white transition font-medium">mingandajeereq@gmail.com</a></li>
-                <li>Téléphone / WhatsApp: <a href="tel:+243817125577" className="text-slate-400 hover:text-white transition font-medium">+243 817 125 577</a></li>
-                <li>Adresse: <span className="text-slate-400">Boulevard du 30 Juin, Gombe, Kinshasa, RDC</span></li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t border-slate-900 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-600">
-            <p>© 2026 EventMaster SaaS. Tous droits réservés.</p>
-            <div className="flex flex-wrap gap-4">
-              <Link href="/terms" className="hover:text-slate-400 transition">Conditions d&apos;utilisation</Link>
-              <Link href="/privacy" className="hover:text-slate-400 transition">Confidentialité</Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter faqHref="/contact#faq" />
     </div>
   );
 }

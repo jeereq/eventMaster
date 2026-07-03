@@ -12,6 +12,8 @@ import {
 } from '@/config/landingTemplates';
 import LandingPricingSection from '@/components/landing/LandingPricingSection';
 import LandingRolesSection from '@/components/landing/LandingRolesSection';
+import FaqSection from '@/components/landing/FaqSection';
+import SiteFooter from '@/components/SiteFooter';
 import { 
   Calendar, Users, Award, Shield, CheckCircle, Mail, 
   ArrowRight, Lock, Layout, Sparkles, Compass, Heart, 
@@ -140,6 +142,9 @@ export default function Home() {
             <Link href="/contact" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
               Contact
             </Link>
+            <a href="#faq" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+              FAQ
+            </a>
             <a href="#tarifs" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
               Tarifs
             </a>
@@ -200,6 +205,13 @@ export default function Home() {
               >
                 Contact
               </Link>
+              <a 
+                href="#faq" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition py-2 border-b border-slate-100 dark:border-slate-900"
+              >
+                FAQ
+              </a>
               {user ? (
                 <>
                   <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold py-1">
@@ -428,6 +440,8 @@ export default function Home() {
 
       <LandingPricingSection dbPlans={dbPlans} />
 
+      <FaqSection />
+
       {/* Section CTA (Call to Action) */}
       <section className="py-20 bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-950 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(#4f46e5_1px,transparent_1px)] [background-size:24px_24px] opacity-20" />
@@ -466,71 +480,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-slate-950 text-slate-400 py-16 border-t border-slate-900 mt-auto">
-        <div className="w-10/12 max-w-7xl mx-auto space-y-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {/* Column 1: Brand */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2.5">
-                <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-md shadow-indigo-500/10">
-                  <PartyPopper className="w-5 h-5" />
-                </div>
-                <span className="text-white font-black text-lg">EventMaster</span>
-              </div>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Plateforme SaaS multi-tenant : salles 2D, protocole QR, rôles granulaires, réseau commercial et tarification par organisation — inspirée des abonnements Microsoft 365.
-              </p>
-            </div>
-
-            {/* Column 2: Features */}
-            <div className="space-y-4">
-              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Fonctionnalités</h4>
-              <ul className="space-y-2 text-xs">
-                <li><span className="hover:text-white transition cursor-default">Salles 2D & éditeur de layout</span></li>
-                <li><span className="hover:text-white transition cursor-default">Protocole QR & scan caméra</span></li>
-                <li><span className="hover:text-white transition cursor-default">Rôles manager / protocole / commercial</span></li>
-                <li><span className="hover:text-white transition cursor-default">Portail RSVP & notifications placement</span></li>
-                <li><span className="hover:text-white transition cursor-default">Fil d&apos;actualité & Livre d&apos;or</span></li>
-              </ul>
-            </div>
-
-            {/* Column 3: Resources */}
-            <div className="space-y-4">
-              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Ressources</h4>
-              <ul className="space-y-2 text-xs">
-                <li><Link href="/contact" className="hover:text-white transition">Contact & Support</Link></li>
-                <li><Link href="/terms" className="hover:text-white transition">Conditions d&apos;utilisation</Link></li>
-                <li><Link href="/privacy" className="hover:text-white transition">Politique de confidentialité</Link></li>
-                <li><Link href="/login" className="hover:text-white transition">Connexion Espace Organisateur</Link></li>
-                <li><Link href="/register" className="hover:text-white transition">Créer une organisation</Link></li>
-              </ul>
-            </div>
-
-            {/* Column 4: Contact info */}
-            <div className="space-y-4">
-              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">Contact & Support</h4>
-              <ul className="space-y-2 text-xs text-slate-500">
-                <li>Email: <a href="mailto:mingandajeereq@gmail.com" className="text-slate-400 hover:text-white transition font-medium">mingandajeereq@gmail.com</a></li>
-                <li>Téléphone: <a href="tel:+243817125577" className="text-slate-400 hover:text-white transition font-medium">+243 817 125 577</a></li>
-                <li>Adresse: <span className="text-slate-400">Boulevard du 30 Juin, Gombe, Kinshasa, RDC</span></li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t border-slate-900 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-600">
-            <p>© 2026 EventMaster SaaS. Tous droits réservés.</p>
-            <div className="flex flex-wrap gap-4">
-              <Link href="/terms" className="hover:text-slate-400 transition">Conditions d&apos;utilisation</Link>
-              <Link href="/privacy" className="hover:text-slate-400 transition">Confidentialité</Link>
-            </div>
-            <p className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-              Isolation stricte des données garantie par organisation (Multi-tenant)
-            </p>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter faqHref="/#faq" />
 
       {/* Modal de prévisualisation de modèle */}
       {modalTemplate && (
