@@ -23,7 +23,9 @@ export default function RegisterPage() {
     <Suspense
       fallback={
         <AuthSplitLayout badge="Inscription SaaS" title="Chargement…" description="" features={FEATURES} backHref="/" backLabel="Retour au site">
-          <Card padding="lg" className="shadow-xl animate-pulse h-96" />
+          <Card padding="lg" className="shadow-xl animate-pulse h-96">
+            <span className="sr-only">Chargement du formulaire d&apos;inscription</span>
+          </Card>
         </AuthSplitLayout>
       }
     >
