@@ -13,6 +13,7 @@ export interface ModalProps {
   footer?: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
+  containerClassName?: string;
   dismissible?: boolean;
 }
 
@@ -32,6 +33,7 @@ export default function Modal({
   footer,
   size = 'md',
   className,
+  containerClassName,
   dismissible = true,
 }: ModalProps) {
   const handleEscape = useCallback(
@@ -56,7 +58,7 @@ export default function Modal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div className={cn('fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4', containerClassName)}>
       {dismissible ? (
         <button
           type="button"

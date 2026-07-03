@@ -2,12 +2,14 @@
 
 import React, { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { Loader2 } from 'lucide-react';
 import LegalAcceptanceModal from '@/components/LegalAcceptanceModal';
 
 interface UserLegalStatus {
   termsAccepted: boolean;
   privacyAccepted: boolean;
   requiresAcceptance: boolean;
+  isFirstAcceptance?: boolean;
 }
 
 export default function UserLegalGate({ children }: { children: React.ReactNode }) {
@@ -21,8 +23,10 @@ export default function UserLegalGate({ children }: { children: React.ReactNode 
       try {
         const data = await api.get('/auth/legal-status');
         setLegalStatus(data);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Legal status error:', err);
+        setError(err.message || 'Impossible de vérifier les conditions d\'utilisation.');
+        setLegalStatus({ termsAccepted: false, privacyAccepted: false, requiresAcceptance: true });
       } finally {
         setLoading(false);
       }
@@ -48,25 +52,31 @@ export default function UserLegalGate({ children }: { children: React.ReactNode 
   };
 
   if (loading) {
-    return <>{children}</>;
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+      </div>
+    );
   }
 
-  const requiresAcceptance = legalStatus?.requiresAcceptance ?? false;
+  const requiresAcceptance = legalStatus?.requiresAcceptance ?? true;
+  const isFirstAcceptance = legalStatus?.isFirstAcceptance ?? true;
 
   return (
     <>
       <LegalAcceptanceModal
         open={requiresAcceptance}
-        title="Mise à jour des conditions"
-        subtitle="Pour continuer à utiliser EventMaster, veuillez accepter la version actuelle de nos conditions et de notre politique de confidentialité."
+        title={isFirstAcceptance ? 'Conditions d\'utilisation' : 'Mise à jour des conditions'}
+        subtitle={
+          isFirstAcceptance
+            ? 'Pour accéder à EventMaster après connexion, veuillez accepter nos conditions d\'utilisation et notre politique de confidentialité.'
+            : 'Pour continuer à utiliser EventMaster, veuillez accepter la version actuelle de nos conditions et de notre politique de confidentialité.'
+        }
         submitting={submitting}
         error={error}
         onAccept={handleAccept}
       />
       {!requiresAcceptance && children}
-      {requiresAcceptance && (
-        <div className="fixed inset-0 z-[190] bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-sm" />
-      )}
     </>
   );
 }

@@ -145,6 +145,7 @@ export async function getUserLegalStatus(userId: string) {
     privacyAccepted,
     termsVersion: TERMS_VERSION,
     privacyVersion: PRIVACY_VERSION,
+    isFirstAcceptance: !user.termsAcceptedAt && !user.privacyAcceptedAt,
     requiresAcceptance: !(termsAccepted && privacyAccepted),
   };
 }

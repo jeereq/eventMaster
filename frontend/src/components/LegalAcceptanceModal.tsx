@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ShieldCheck } from 'lucide-react';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Alert from '@/components/ui/Alert';
+import { TERMS_VERSION, PRIVACY_VERSION } from '@/config/legalConfig';
 
 interface LegalAcceptanceModalProps {
   open: boolean;
@@ -27,11 +28,19 @@ export default function LegalAcceptanceModal({
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
 
+  useEffect(() => {
+    if (open) {
+      setAcceptTerms(false);
+      setAcceptPrivacy(false);
+    }
+  }, [open]);
+
   return (
     <Modal
       open={open}
       onClose={() => {}}
       dismissible={false}
+      containerClassName="z-[200]"
       title={
         <span className="flex items-center gap-3">
           <span className="p-2 rounded-xl bg-indigo-600 text-white shrink-0">
@@ -68,7 +77,7 @@ export default function LegalAcceptanceModal({
             <Link href="/terms" target="_blank" className="text-indigo-600 font-semibold hover:underline">
               conditions d&apos;utilisation
             </Link>{' '}
-            (version {process.env.NEXT_PUBLIC_TERMS_VERSION || '1.0'}).
+            (version {TERMS_VERSION}).
           </span>
         </label>
 
@@ -84,7 +93,7 @@ export default function LegalAcceptanceModal({
             <Link href="/privacy" target="_blank" className="text-indigo-600 font-semibold hover:underline">
               politique de confidentialité
             </Link>{' '}
-            (version {process.env.NEXT_PUBLIC_PRIVACY_VERSION || '1.0'}).
+            (version {PRIVACY_VERSION}).
           </span>
         </label>
       </div>
