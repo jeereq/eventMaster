@@ -473,10 +473,10 @@ function DashboardPageContent() {
   }, [activeTab, user, revenuePeriod]);
 
   useEffect(() => {
-    if (user?.role === 'SUPER_ADMIN' && activeTab === 'analytics' && !sectionParam) {
+    if (user?.role === 'SUPER_ADMIN' && tabParam === 'analytics' && !sectionParam) {
       router.replace('/dashboard?tab=analytics&section=overview', { scroll: false });
     }
-  }, [activeTab, sectionParam, user, router]);
+  }, [tabParam, sectionParam, user, router]);
 
   // Reset pages on search or filter change
   useEffect(() => {

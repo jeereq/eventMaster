@@ -55,8 +55,10 @@ export default function ProductTourOverlay() {
 
   return (
     <>
-      <div className="fixed inset-0 z-[10000] pointer-events-auto" aria-hidden>
-        {!targetRect && <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-[2px]" />}
+      <div className="fixed inset-0 z-[10000] pointer-events-none" aria-hidden>
+        {!targetRect && (
+          <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-[2px] pointer-events-auto" />
+        )}
       </div>
 
       {targetRect && (

@@ -47,7 +47,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
     title: 'Analyses & stats',
     description:
       'Tableaux de bord plateforme : vue d\'ensemble, répartition des forfaits, organisations actives, revenus, modèles, utilisateurs et événements. Export CSV/PDF des revenus.',
-    route: '/dashboard?tab=analytics&section=overview',
+    route: '/dashboard?tab=analytics',
   },
   'nav-subscription-requests': {
     title: 'Demandes d\'abonnement',

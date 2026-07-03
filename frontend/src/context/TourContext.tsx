@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { getProductTour, type ProductTourStep } from '@/config/productTours';
 import type { OrgAccess } from '@/context/AuthContext';
@@ -48,6 +48,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [waitingForTarget, setWaitingForTarget] = useState(false);
+  const tourNavigatingRef = useRef(false);
 
   const currentStep = steps[stepIndex] ?? null;
 
@@ -71,6 +72,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       setIsActive(true);
       const first = tourSteps[0];
       if (first.route && !pathsMatch(currentPath, first.route)) {
+        tourNavigatingRef.current = true;
         router.push(first.route);
       }
     },
@@ -84,6 +86,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       setStepIndex(index);
       setTargetRect(null);
       if (step.route && !pathsMatch(currentPath, step.route)) {
+        tourNavigatingRef.current = true;
         router.push(step.route);
       }
     },
@@ -107,7 +110,11 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     if (!isActive || !currentStep) return;
 
     if (currentStep.route && !pathsMatch(currentPath, currentStep.route)) {
-      router.push(currentStep.route);
+      if (tourNavigatingRef.current) {
+        tourNavigatingRef.current = false;
+        return;
+      }
+      stopTour();
       return;
     }
 
@@ -147,7 +154,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     return () => {
       window.clearTimeout(timer);
     };
-  }, [isActive, currentStep, currentPath, router]);
+  }, [isActive, currentStep, currentPath, router, stopTour]);
 
   useEffect(() => {
     if (!isActive) return;
