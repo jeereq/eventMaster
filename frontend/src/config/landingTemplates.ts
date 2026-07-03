@@ -11,6 +11,9 @@ export interface LandingTemplate {
     textBody: string;
     btnBg: string;
     btnText: string;
+    /** Couleur de fond hex (modèles issus de la base) */
+    bgColor?: string;
+    borderColor?: string;
   };
   elements: Array<{
     type: 'text' | 'button' | 'rsvp';
@@ -240,13 +243,25 @@ export function getLandingTemplatesByCategory(category: string): LandingTemplate
   return LANDING_TEMPLATES.filter((t) => t.category === category);
 }
 
-export function getLandingTemplateGroups(category: string) {
+export function getLandingTemplatesByCategoryFrom(
+  templates: LandingTemplate[],
+  category: string,
+): LandingTemplate[] {
+  if (category === 'all') return templates;
+  return templates.filter((t) => t.category === category);
+}
+
+export function buildLandingTemplateGroups(templates: LandingTemplate[], category: string) {
   if (category === 'all') {
     return LANDING_TEMPLATE_GROUPS.map((group) => ({
       ...group,
-      templates: LANDING_TEMPLATES.filter((t) => t.group === group.id),
-    }));
+      templates: templates.filter((t) => t.group === group.id),
+    })).filter((g) => g.templates.length > 0);
   }
-  const templates = getLandingTemplatesByCategory(category);
-  return [{ id: category, title: '', subtitle: '', templates }];
+  const filtered = getLandingTemplatesByCategoryFrom(templates, category);
+  return [{ id: category, title: '', subtitle: '', templates: filtered }];
+}
+
+export function getLandingTemplateGroups(category: string) {
+  return buildLandingTemplateGroups(LANDING_TEMPLATES, category);
 }

@@ -21,6 +21,7 @@ router.get('/templates', async (req: Request, res: Response) => {
   try {
     const templates = await prisma.template.findMany({
       where: {
+        tenantId: null,
         showOnLanding: true,
       },
       orderBy: {
@@ -28,12 +29,17 @@ router.get('/templates', async (req: Request, res: Response) => {
       },
     });
 
-    return res.json(templates.map(t => ({
-      id: t.id,
-      name: t.name,
-      content: t.content,
-      createdAt: t.createdAt,
-    })));
+    return res.json(templates.map(t => {
+      const content = t.content as { global?: { landingCategory?: string; landingDescription?: string } } | null;
+      return {
+        id: t.id,
+        name: t.name,
+        content: t.content,
+        category: content?.global?.landingCategory || 'private',
+        description: content?.global?.landingDescription || null,
+        createdAt: t.createdAt,
+      };
+    }));
   } catch (error: any) {
     console.error('Erreur lors de la récupération des modèles publics:', error);
     return res.status(500).json({ error: 'Erreur lors de la récupération des modèles publics' });

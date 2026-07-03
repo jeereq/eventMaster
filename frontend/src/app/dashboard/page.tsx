@@ -21,6 +21,8 @@ import BillingDiscountFields, { getBillingPricingFromFields } from '@/components
 import type { QuotaSnapshot } from '@/lib/quotaDisplay';
 import { PageHeader, Alert, Button } from '@/components/ui';
 import { PLAN_IDS, type PlanId } from '@/config/landingPricing';
+import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
+import { getTemplateElementSummary } from '@/lib/landingTemplateAdapter';
 
 function isPlatformStaff(role?: string) {
   return role === 'SUPER_ADMIN' || role === 'COMMERCIAL';
@@ -243,7 +245,7 @@ function DashboardPageContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPlan, setFilterPlan] = useState<string>('ALL');
   const [filterRole, setFilterRole] = useState<string>('ALL');
-  const [filterType, setFilterType] = useState<'ALL' | 'GLOBAL' | 'TENANT'>('ALL');
+  const [filterType, setFilterType] = useState<'ALL' | 'GLOBAL' | 'TENANT'>('GLOBAL');
   const [filterRsvp, setFilterRsvp] = useState<string>('ALL');
 
   // Pagination states
@@ -1634,7 +1636,7 @@ function DashboardPageContent() {
           )}
 
           {/* Content area */}
-          <div className="p-6 bg-white">
+          <div className="p-6 bg-white dark:bg-slate-950">
             {/* Tenants Tab */}
             {activeTab === 'tenants' && (
               <div className="overflow-x-auto">
@@ -1905,7 +1907,27 @@ function DashboardPageContent() {
 
             {/* Templates Tab */}
             {activeTab === 'templates' && (
-              <div className="overflow-x-auto">
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40 rounded-xl p-4">
+                    <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Modèles globaux</p>
+                    <p className="text-2xl font-extrabold text-indigo-700 dark:text-indigo-300 mt-1">{templates.filter((t) => t.isGlobal).length}</p>
+                  </div>
+                  <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 rounded-xl p-4">
+                    <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Sur la landing</p>
+                    <p className="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1">{templates.filter((t) => t.isGlobal && t.showOnLanding).length}</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Organisations</p>
+                    <p className="text-2xl font-extrabold text-slate-800 dark:text-slate-200 mt-1">{templates.filter((t) => !t.isGlobal).length}</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-4">
+                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Affichés (filtre)</p>
+                    <p className="text-2xl font-extrabold text-slate-800 dark:text-slate-200 mt-1">{filteredTemplates.length}</p>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
                 {templatesLoading ? (
                   <div className="py-12 flex flex-col items-center justify-center gap-3">
                     <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
@@ -1915,15 +1937,15 @@ function DashboardPageContent() {
                   <>
                     <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="border-b border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      <tr className="border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-400 uppercase tracking-wider">
                         <th className="pb-3 font-semibold">Modèle</th>
                         <th className="pb-3 font-semibold">Type / Visibilité</th>
-                        <th className="pb-3 font-semibold">Sujet par défaut</th>
+                        <th className="pb-3 font-semibold">Contenu</th>
                         <th className="pb-3 font-semibold">Créateur / Organisation</th>
                         <th className="pb-3 font-semibold text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 text-sm">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
                       {filteredTemplates.length === 0 ? (
                         <tr>
                           <td colSpan={5} className="py-8 text-center text-slate-500 font-medium">
@@ -1932,11 +1954,14 @@ function DashboardPageContent() {
                         </tr>
                       ) : (
                         paginatedTemplates.map((t) => (
-                          <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
+                          <tr key={t.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/40 transition-colors">
                             <td className="py-4">
-                              <div className="flex flex-col">
-                                <span className="font-bold text-slate-900">{t.name}</span>
-                                <span className="text-xs text-slate-400">Créé le {new Date(t.createdAt).toLocaleDateString('fr-FR')}</span>
+                              <div className="flex items-center gap-3">
+                                <TemplatePreviewThumb content={t.content} name={t.name} />
+                                <div className="flex flex-col min-w-0">
+                                  <span className="font-bold text-slate-900 dark:text-white truncate">{t.name}</span>
+                                  <span className="text-xs text-slate-400">Créé le {new Date(t.createdAt).toLocaleDateString('fr-FR')}</span>
+                                </div>
                               </div>
                             </td>
                             <td className="py-4">
@@ -1963,10 +1988,10 @@ function DashboardPageContent() {
                                 )}
                               </div>
                             </td>
-                            <td className="py-4 text-slate-600 font-medium max-w-[200px] truncate" title={t.content?.subject}>
-                              {t.content?.subject || 'Aucun'}
+                            <td className="py-4 text-slate-600 dark:text-slate-400 font-medium max-w-[220px]" title={getTemplateElementSummary(t.content)}>
+                              <span className="line-clamp-2 text-xs">{getTemplateElementSummary(t.content)}</span>
                             </td>
-                            <td className="py-4 font-semibold text-slate-700">{t.tenantName}</td>
+                            <td className="py-4 font-semibold text-slate-700 dark:text-slate-300">{t.tenantName}</td>
                             <td className="py-4 text-right">
                               <div className="flex items-center justify-end gap-2">
                                 <button
@@ -2044,6 +2069,7 @@ function DashboardPageContent() {
                   )}
                   </>
                 )}
+                </div>
               </div>
             )}
 
@@ -2776,60 +2802,94 @@ function DashboardPageContent() {
             {activeTab === 'analytics' && (
               <div className="space-y-8 animate-in fade-in duration-200">
                 {activeAnalyticsSection === 'overview' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {/* Avg Users Card */}
-                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 flex items-center gap-4">
-                    <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
-                      <Users className="w-6 h-6" />
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex items-center gap-4">
+                      <div className="p-3 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                        <Building2 className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <span className="block text-2xl font-extrabold text-slate-900 dark:text-white">{adminData?.stats.tenants ?? 0}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">Organisations</span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="block text-2xl font-extrabold text-slate-900">
-                        {adminData?.tenants.length 
-                          ? (adminData.tenants.reduce((acc, t) => acc + t.usersCount, 0) / adminData.tenants.length).toFixed(1) 
-                          : '0'}
-                      </span>
-                      <span className="text-xs text-slate-500 font-medium font-bold">Membres / Organisation</span>
+                    <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex items-center gap-4">
+                      <div className="p-3 bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400 rounded-xl">
+                        <Users className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <span className="block text-2xl font-extrabold text-slate-900 dark:text-white">{adminData?.stats.users ?? 0}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">Utilisateurs</span>
+                      </div>
                     </div>
-                  </div>
-
-                  {/* Avg Events Card */}
-                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 flex items-center gap-4">
-                    <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-                      <Calendar className="w-6 h-6" />
+                    <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex items-center gap-4">
+                      <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-xl">
+                        <Calendar className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <span className="block text-2xl font-extrabold text-slate-900 dark:text-white">{adminData?.stats.events ?? 0}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">Événements</span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="block text-2xl font-extrabold text-slate-900">
-                        {adminData?.tenants.length 
-                          ? (adminData.tenants.reduce((acc, t) => acc + t.eventsCount, 0) / adminData.tenants.length).toFixed(1) 
-                          : '0'}
-                      </span>
-                      <span className="text-xs text-slate-500 font-medium font-bold">Événements / Organisation</span>
-                    </div>
-                  </div>
-
-                  {/* Active Licenses Card */}
-                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 flex items-center gap-4">
-                    <div className="p-3 bg-teal-50 text-emerald-600 rounded-xl">
-                      <Award className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <span className="block text-2xl font-extrabold text-slate-900">
-                        {adminData?.tenants.filter(t => t.licenseActive && (!t.licenseExpiresAt || new Date(t.licenseExpiresAt) > new Date())).length || 0}
-                      </span>
-                      <span className="text-xs text-slate-500 font-medium font-bold">Licences Actives</span>
+                    <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex items-center gap-4">
+                      <div className="p-3 bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 rounded-xl">
+                        <Mail className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <span className="block text-2xl font-extrabold text-slate-900 dark:text-white">{adminData?.stats.guests ?? 0}</span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">Invités</span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Verified Users Card */}
-                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 flex items-center gap-4">
-                    <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-                      <CheckCircle className="w-6 h-6" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex items-center gap-4">
+                      <div className="p-3 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                        <Users className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <span className="block text-2xl font-extrabold text-slate-900 dark:text-white">
+                          {adminData?.tenants.length
+                            ? (adminData.tenants.reduce((acc, t) => acc + t.usersCount, 0) / adminData.tenants.length).toFixed(1)
+                            : '0'}
+                        </span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">Membres / Organisation</span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="block text-2xl font-extrabold text-slate-900">
-                        {users.length ? `${Math.round((users.filter(u => u.isEmailVerified).length / users.length) * 100)}%` : '0%'}
-                      </span>
-                      <span className="text-xs text-slate-500 font-medium font-bold">Utilisateurs Vérifiés</span>
+                    <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex items-center gap-4">
+                      <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-xl">
+                        <Calendar className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <span className="block text-2xl font-extrabold text-slate-900 dark:text-white">
+                          {adminData?.tenants.length
+                            ? (adminData.tenants.reduce((acc, t) => acc + t.eventsCount, 0) / adminData.tenants.length).toFixed(1)
+                            : '0'}
+                        </span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">Événements / Organisation</span>
+                      </div>
+                    </div>
+                    <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex items-center gap-4">
+                      <div className="p-3 bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400 rounded-xl">
+                        <Award className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <span className="block text-2xl font-extrabold text-slate-900 dark:text-white">
+                          {adminData?.tenants.filter(t => t.licenseActive && (!t.licenseExpiresAt || new Date(t.licenseExpiresAt) > new Date())).length || 0}
+                        </span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">Licences actives</span>
+                      </div>
+                    </div>
+                    <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex items-center gap-4">
+                      <div className="p-3 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 rounded-xl">
+                        <CheckCircle className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <span className="block text-2xl font-extrabold text-slate-900 dark:text-white">
+                          {users.length ? `${Math.round((users.filter(u => u.isEmailVerified).length / users.length) * 100)}%` : '0%'}
+                        </span>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 font-bold">Utilisateurs vérifiés</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -3068,87 +3128,144 @@ function DashboardPageContent() {
                 )}
 
                 {activeAnalyticsSection === 'modeles' && (
-                  <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-sm">
-                    <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                      <FileText className="w-5 h-5 text-indigo-600" />
-                      Modèles d'Invitation
-                    </h3>
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-500 font-medium">Total des modèles</span>
-                        <span className="font-bold text-slate-800">{templates.length}</span>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4 shadow-sm">
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                        <FileText className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                        Répartition des modèles
+                      </h3>
+                      <div className="space-y-3">
+                        {[
+                          { label: 'Total des modèles', value: templates.length, color: 'text-slate-800 dark:text-slate-200' },
+                          { label: 'Modèles globaux (publics)', value: templates.filter(t => t.isGlobal).length, color: 'text-indigo-600 dark:text-indigo-400' },
+                          { label: 'Modèles d\'organisations', value: templates.filter(t => !t.isGlobal).length, color: 'text-slate-800 dark:text-slate-200' },
+                          { label: 'Affichés sur la landing page', value: templates.filter(t => t.showOnLanding).length, color: 'text-emerald-600 dark:text-emerald-400' },
+                        ].map((row) => (
+                          <div key={row.label} className="flex justify-between text-sm">
+                            <span className="text-slate-500 dark:text-slate-400 font-medium">{row.label}</span>
+                            <span className={`font-bold ${row.color}`}>{row.value}</span>
+                          </div>
+                        ))}
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-500 font-medium">Modèles Globaux (Publics)</span>
-                        <span className="font-bold text-indigo-600">{templates.filter(t => t.isGlobal).length}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-500 font-medium">Modèles d'organisations (Privés)</span>
-                        <span className="font-bold text-slate-800">{templates.filter(t => !t.isGlobal).length}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-500 font-medium">Affichés sur la Landing Page</span>
-                        <span className="font-bold text-emerald-600">{templates.filter(t => t.showOnLanding).length}</span>
-                      </div>
+                      <Link
+                        href="/dashboard?tab=templates"
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline pt-2"
+                      >
+                        Gérer les modèles globaux
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4 shadow-sm">
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                        <Globe className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                        Modèles visibles sur la landing
+                      </h3>
+                      {templates.filter(t => t.isGlobal && t.showOnLanding).length === 0 ? (
+                        <p className="text-sm text-slate-500 dark:text-slate-400 py-4 text-center">
+                          Aucun modèle global activé pour la landing. Activez « Sur la Landing Page » depuis l&apos;onglet Modèles.
+                        </p>
+                      ) : (
+                        <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-64 overflow-y-auto">
+                          {templates.filter(t => t.isGlobal && t.showOnLanding).map((t) => (
+                            <div key={t.id} className="py-3 flex items-center gap-3 first:pt-0 last:pb-0">
+                              <TemplatePreviewThumb content={t.content} name={t.name} />
+                              <div className="min-w-0 flex-1">
+                                <p className="font-bold text-slate-800 dark:text-slate-200 truncate">{t.name}</p>
+                                <p className="text-xs text-slate-400">{getTemplateElementSummary(t.content)}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
 
                 {activeAnalyticsSection === 'utilisateurs' && (
-                  <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-sm">
-                    <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                      <Users className="w-5 h-5 text-indigo-600" />
-                      Rôles des Utilisateurs
-                    </h3>
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-500 font-medium">Total des utilisateurs</span>
-                        <span className="font-bold text-slate-800">{users.length}</span>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4 shadow-sm">
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                        <Users className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                        Rôles des utilisateurs
+                      </h3>
+                      <div className="space-y-3">
+                        {[
+                          { label: 'Total', value: users.length, color: 'text-slate-800 dark:text-slate-200' },
+                          { label: 'Super administrateurs', value: users.filter(u => u.role === 'SUPER_ADMIN').length, color: 'text-rose-600 dark:text-rose-400' },
+                          { label: 'Commerciaux', value: users.filter(u => u.role === 'COMMERCIAL').length, color: 'text-amber-600 dark:text-amber-400' },
+                          { label: 'Utilisateurs standards', value: users.filter(u => u.role === 'USER').length, color: 'text-slate-800 dark:text-slate-200' },
+                          { label: 'E-mails vérifiés', value: users.filter(u => u.isEmailVerified).length, color: 'text-emerald-600 dark:text-emerald-400' },
+                        ].map((row) => (
+                          <div key={row.label} className="flex justify-between text-sm">
+                            <span className="text-slate-500 dark:text-slate-400 font-medium">{row.label}</span>
+                            <span className={`font-bold ${row.color}`}>{row.value}</span>
+                          </div>
+                        ))}
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-500 font-medium">Super Administrateurs</span>
-                        <span className="font-bold text-rose-600">{users.filter(u => u.role === 'SUPER_ADMIN').length}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-500 font-medium">Commerciaux</span>
-                        <span className="font-bold text-amber-600">{users.filter(u => u.role === 'COMMERCIAL').length}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-500 font-medium">Utilisateurs standards</span>
-                        <span className="font-bold text-slate-800">{users.filter(u => u.role === 'USER').length}</span>
+                    </div>
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4 shadow-sm">
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                        <TrendingUp className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                        Inscriptions récentes
+                      </h3>
+                      <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-64 overflow-y-auto">
+                        {users.slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 8).map((u) => (
+                          <div key={u.id} className="py-2.5 flex items-center justify-between gap-2 first:pt-0 last:pb-0">
+                            <div className="min-w-0">
+                              <p className="font-semibold text-slate-800 dark:text-slate-200 truncate text-sm">{u.name || u.email}</p>
+                              <p className="text-xs text-slate-400 truncate">{u.tenantName}</p>
+                            </div>
+                            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 shrink-0">{u.role}</span>
+                          </div>
+                        ))}
+                        {users.length === 0 && (
+                          <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-6">Aucun utilisateur.</p>
+                        )}
                       </div>
                     </div>
                   </div>
                 )}
 
                 {activeAnalyticsSection === 'evenements' && (
-                  <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-sm">
-                    <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-                      <Calendar className="w-5 h-5 text-indigo-600" />
-                      Statistiques des Événements
-                    </h3>
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-500 font-medium">Total des événements</span>
-                        <span className="font-bold text-slate-800">{adminEvents.length}</span>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4 shadow-sm">
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                        <Calendar className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                        Statistiques des événements
+                      </h3>
+                      <div className="space-y-3">
+                        {[
+                          { label: 'Total des événements', value: adminEvents.length },
+                          { label: 'Avec localisation GPS', value: adminEvents.filter(e => e.latitude && e.longitude).length },
+                          { label: 'Rappels quotidiens', value: adminEvents.filter(e => e.reminderFrequency === 'DAILY').length },
+                          { label: 'Rappels hebdomadaires', value: adminEvents.filter(e => e.reminderFrequency === 'WEEKLY').length },
+                        ].map((row) => (
+                          <div key={row.label} className="flex justify-between text-sm">
+                            <span className="text-slate-500 dark:text-slate-400 font-medium">{row.label}</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-200">{row.value}</span>
+                          </div>
+                        ))}
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-500 font-medium">Événements avec localisation GPS</span>
-                        <span className="font-bold text-indigo-600">
-                          {adminEvents.filter(e => e.latitude && e.longitude).length}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-500 font-medium">Rappels quotidiens configurés</span>
-                        <span className="font-bold text-slate-800">
-                          {adminEvents.filter(e => e.reminderFrequency === 'DAILY').length}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-500 font-medium">Rappels hebdomadaires configurés</span>
-                        <span className="font-bold text-slate-800">
-                          {adminEvents.filter(e => e.reminderFrequency === 'WEEKLY').length}
-                        </span>
+                    </div>
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4 shadow-sm">
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                        <Activity className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                        Événements récents
+                      </h3>
+                      <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-64 overflow-y-auto">
+                        {adminEvents.slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 8).map((e) => (
+                          <div key={e.id} className="py-2.5 flex items-center justify-between gap-2 first:pt-0 last:pb-0">
+                            <div className="min-w-0">
+                              <p className="font-semibold text-slate-800 dark:text-slate-200 truncate text-sm">{e.title}</p>
+                              <p className="text-xs text-slate-400 truncate">{e.tenantName} · {e.location || 'Lieu non défini'}</p>
+                            </div>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">{new Date(e.date).toLocaleDateString('fr-FR')}</span>
+                          </div>
+                        ))}
+                        {adminEvents.length === 0 && (
+                          <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-6">Aucun événement.</p>
+                        )}
                       </div>
                     </div>
                   </div>

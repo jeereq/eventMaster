@@ -7,9 +7,10 @@ import { useTheme } from '@/context/ThemeContext';
 import { api } from '@/lib/api';
 import {
   LANDING_TEMPLATES,
-  getLandingTemplateGroups,
+  buildLandingTemplateGroups,
   type LandingTemplate,
 } from '@/config/landingTemplates';
+import { publicTemplatesToLanding, type PublicTemplateDto } from '@/lib/landingTemplateAdapter';
 import LandingPricingSection from '@/components/landing/LandingPricingSection';
 import LandingRolesSection from '@/components/landing/LandingRolesSection';
 import FaqSection from '@/components/landing/FaqSection';
@@ -29,8 +30,19 @@ function getCategoryLabel(category: string) {
 }
 
 function InvitationPreviewCard({ template, compact = false }: { template: LandingTemplate; compact?: boolean }) {
+  const useInlineBg = Boolean(template.style.bgColor);
   return (
-    <div className={`rounded-2xl border ${template.style.bg} ${template.style.border} ${compact ? 'p-4 space-y-3' : 'p-6 sm:p-8 space-y-6 min-h-[340px]'} shadow-md transition-all duration-300 flex flex-col justify-between relative overflow-hidden`}>
+    <div
+      className={`rounded-2xl border ${useInlineBg ? '' : template.style.bg} ${useInlineBg ? '' : template.style.border} ${compact ? 'p-4 space-y-3' : 'p-6 sm:p-8 space-y-6 min-h-[340px]'} shadow-md transition-all duration-300 flex flex-col justify-between relative overflow-hidden`}
+      style={
+        useInlineBg
+          ? {
+              backgroundColor: template.style.bgColor,
+              borderColor: template.style.borderColor || 'rgba(226,232,240,0.9)',
+            }
+          : undefined
+      }
+    >
       {!compact && <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-500 to-violet-500" />}
       <div className={`space-y-3 ${compact ? '' : 'pt-2'}`}>
         {template.elements.map((el, i) => {
@@ -62,11 +74,14 @@ export default function Home() {
   const { theme, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [previewTemplate, setPreviewTemplate] = useState<string>(LANDING_TEMPLATES[0].id);
+  const [previewTemplate, setPreviewTemplate] = useState<string>('');
   const [modalTemplate, setModalTemplate] = useState<LandingTemplate | null>(null);
   const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [dbPlans, setDbPlans] = useState<any>(null);
   const [loadingPlans, setLoadingPlans] = useState(true);
+  const [publicTemplates, setPublicTemplates] = useState<LandingTemplate[]>([]);
+  const [loadingPublicTemplates, setLoadingPublicTemplates] = useState(true);
+  const [usingFallbackTemplates, setUsingFallbackTemplates] = useState(false);
 
   useEffect(() => {
     async function checkServerAndFetchPlans() {
@@ -74,19 +89,42 @@ export default function Home() {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}/health`);
         if (response.ok) {
           setServerStatus('online');
-          const plansData = await api.get('/public/plans').catch(() => null);
+          const [plansData, templatesData] = await Promise.all([
+            api.get('/public/plans').catch(() => null),
+            api.get('/public/templates').catch(() => []),
+          ]);
           if (plansData) setDbPlans(plansData);
+
+          const fromDb = publicTemplatesToLanding((templatesData as PublicTemplateDto[]) || []);
+          if (fromDb.length > 0) {
+            setPublicTemplates(fromDb);
+            setUsingFallbackTemplates(false);
+          } else {
+            setPublicTemplates(LANDING_TEMPLATES);
+            setUsingFallbackTemplates(true);
+          }
         } else {
           setServerStatus('offline');
+          setPublicTemplates(LANDING_TEMPLATES);
+          setUsingFallbackTemplates(true);
         }
       } catch {
         setServerStatus('offline');
+        setPublicTemplates(LANDING_TEMPLATES);
+        setUsingFallbackTemplates(true);
       } finally {
         setLoadingPlans(false);
+        setLoadingPublicTemplates(false);
       }
     }
     checkServerAndFetchPlans();
   }, []);
+
+  useEffect(() => {
+    if (publicTemplates.length > 0 && !publicTemplates.some((t) => t.id === previewTemplate)) {
+      setPreviewTemplate(publicTemplates[0].id);
+    }
+  }, [publicTemplates, previewTemplate]);
 
   const categories = [
     { id: 'all', name: 'Tous les modèles' },
@@ -95,10 +133,9 @@ export default function Home() {
     { id: 'casual', name: 'Moderne & Cocktail' },
   ];
 
-  // Neuf modèles statiques pour la vitrine landing page
-  const activeTemplatesList = LANDING_TEMPLATES;
+  const activeTemplatesList = publicTemplates.length > 0 ? publicTemplates : LANDING_TEMPLATES;
 
-  const filteredTemplateGroups = getLandingTemplateGroups(selectedCategory);
+  const filteredTemplateGroups = buildLandingTemplateGroups(activeTemplatesList, selectedCategory);
 
   const activePreview = activeTemplatesList.find((t) => t.id === previewTemplate) || activeTemplatesList[0];
 
@@ -314,7 +351,7 @@ export default function Home() {
                 Aperçu du designer
               </div>
 
-              {loadingPlans ? (
+              {loadingPlans || loadingPublicTemplates ? (
                 <div className="h-[400px] flex items-center justify-center">
                   <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
                 </div>
@@ -356,7 +393,11 @@ export default function Home() {
         <div className="w-10/12 max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
             <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Nos Modèles Possibles</h2>
-            <p className="text-slate-600 dark:text-slate-400">Neuf modèles d'invitation pré-configurés, répartis en trois univers — privé, professionnel et cocktail.</p>
+            <p className="text-slate-600 dark:text-slate-400">
+              {usingFallbackTemplates
+                ? 'Modèles de démonstration — activez des modèles globaux sur la landing depuis le tableau de bord super admin.'
+                : `${activeTemplatesList.length} modèle${activeTemplatesList.length > 1 ? 's' : ''} public${activeTemplatesList.length > 1 ? 's' : ''} configuré${activeTemplatesList.length > 1 ? 's' : ''} par la plateforme, répartis en trois univers — privé, professionnel et cocktail.`}
+            </p>
             
             {/* Filter buttons */}
             <div className="flex flex-wrap justify-center gap-2 pt-4">
