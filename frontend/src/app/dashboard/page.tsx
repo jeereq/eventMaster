@@ -22,6 +22,7 @@ import type { QuotaSnapshot } from '@/lib/quotaDisplay';
 import { PageHeader, Alert, Button } from '@/components/ui';
 import { PLAN_IDS, type PlanId } from '@/config/landingPricing';
 import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
+import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
 import { getTemplateElementSummary } from '@/lib/landingTemplateAdapter';
 
 function isPlatformStaff(role?: string) {
@@ -255,6 +256,7 @@ function DashboardPageContent() {
   const [eventsPage, setEventsPage] = useState(1);
   const [guestsPage, setGuestsPage] = useState(1);
   const ITEMS_PER_PAGE = 5;
+  const TEMPLATE_CARDS_PER_PAGE = 6;
 
   // Guest CRUD Modals states (Super Admin)
   const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
@@ -323,13 +325,7 @@ function DashboardPageContent() {
   const [modalUserTenantId, setUserTenantId] = useState('');
   const [updatingUser, setUpdatingUser] = useState(false);
 
-  // Template CRUD Modals states
-  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
-  const [templateName, setTemplateName] = useState('');
-  const [templateSubject, setTemplateSubject] = useState('');
-  const [templateBody, setTemplateBody] = useState('');
-  const [templateShowOnLanding, setTemplateShowOnLanding] = useState(false);
-  const [creatingTemplate, setCreatingTemplate] = useState(false);
+  // Template CRUD Modals states — édition via concepteur visuel uniquement
 
   // Load initial data
   useEffect(() => {
@@ -937,37 +933,7 @@ function DashboardPageContent() {
     }
   };
 
-  // Template handlers
-  const handleCreateGlobalTemplate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!templateName || !templateSubject || !templateBody) {
-      alert('Veuillez remplir tous les champs.');
-      return;
-    }
-
-    setCreatingTemplate(true);
-    try {
-      await api.post('/admin/templates/global', {
-        name: templateName,
-        content: {
-          subject: templateSubject,
-          body: templateBody,
-        },
-        showOnLanding: templateShowOnLanding,
-      });
-      setIsTemplateModalOpen(false);
-      setTemplateName('');
-      setTemplateSubject('');
-      setTemplateBody('');
-      setTemplateShowOnLanding(false);
-      await loadTemplates();
-    } catch (err: any) {
-      alert(err.message || 'Erreur lors de la création du modèle global');
-    } finally {
-      setCreatingTemplate(false);
-    }
-  };
-
+  // Template handlers — création/édition via /dashboard/templates (concepteur visuel)
   const handleToggleTemplateLanding = async (id: string, currentStatus: boolean) => {
     try {
       await api.put(`/admin/templates/${id}/landing`, {
@@ -1324,7 +1290,7 @@ function DashboardPageContent() {
     // Paginated arrays
     const paginatedTenants = filteredTenants.slice((tenantsPage - 1) * ITEMS_PER_PAGE, tenantsPage * ITEMS_PER_PAGE);
     const paginatedUsers = filteredUsers.slice((usersPage - 1) * ITEMS_PER_PAGE, usersPage * ITEMS_PER_PAGE);
-    const paginatedTemplates = filteredTemplates.slice((templatesPage - 1) * ITEMS_PER_PAGE, templatesPage * ITEMS_PER_PAGE);
+    const paginatedTemplates = filteredTemplates.slice((templatesPage - 1) * TEMPLATE_CARDS_PER_PAGE, templatesPage * TEMPLATE_CARDS_PER_PAGE);
     const paginatedEvents = filteredEvents.slice((eventsPage - 1) * ITEMS_PER_PAGE, eventsPage * ITEMS_PER_PAGE);
     const paginatedGuests = filteredGuests.slice((guestsPage - 1) * ITEMS_PER_PAGE, guestsPage * ITEMS_PER_PAGE);
 
@@ -1477,22 +1443,13 @@ function DashboardPageContent() {
               )}
 
               {activeTab === 'templates' && (
-                <div className="flex gap-2">
-                  <Link
-                    href="/dashboard/templates"
-                    className="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 font-bold rounded-xl text-xs transition flex items-center gap-2 border border-indigo-100 dark:border-indigo-900/30"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Concepteur Visuel
-                  </Link>
-                  <button
-                    onClick={() => setIsTemplateModalOpen(true)}
-                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-md shadow-indigo-100 dark:shadow-none"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Créer un Modèle Global
-                  </button>
-                </div>
+                <Link
+                  href="/dashboard/templates?new=1"
+                  className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-md shadow-indigo-100 dark:shadow-none"
+                >
+                  <Plus className="w-4 h-4" />
+                  Nouveau modèle (concepteur visuel)
+                </Link>
               )}
 
               {activeTab === 'events' && (
@@ -1927,7 +1884,7 @@ function DashboardPageContent() {
                   </div>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div>
                 {templatesLoading ? (
                   <div className="py-12 flex flex-col items-center justify-center gap-3">
                     <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
@@ -1935,132 +1892,65 @@ function DashboardPageContent() {
                   </div>
                 ) : (
                   <>
-                    <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                        <th className="pb-3 font-semibold">Modèle</th>
-                        <th className="pb-3 font-semibold">Type / Visibilité</th>
-                        <th className="pb-3 font-semibold">Contenu</th>
-                        <th className="pb-3 font-semibold">Créateur / Organisation</th>
-                        <th className="pb-3 font-semibold text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
-                      {filteredTemplates.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="py-8 text-center text-slate-500 font-medium">
-                            Aucun modèle trouvé.
-                          </td>
-                        </tr>
-                      ) : (
-                        paginatedTemplates.map((t) => (
-                          <tr key={t.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/40 transition-colors">
-                            <td className="py-4">
-                              <div className="flex items-center gap-3">
-                                <TemplatePreviewThumb content={t.content} name={t.name} />
-                                <div className="flex flex-col min-w-0">
-                                  <span className="font-bold text-slate-900 dark:text-white truncate">{t.name}</span>
-                                  <span className="text-xs text-slate-400">Créé le {new Date(t.createdAt).toLocaleDateString('fr-FR')}</span>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="py-4">
-                              <div className="flex flex-col gap-1.5">
-                                <span className={`inline-flex items-center gap-1 self-start px-2.5 py-0.5 rounded-full text-xs font-extrabold border ${
-                                  t.isGlobal ? 'bg-indigo-50 border-indigo-100 text-indigo-700' : 'bg-slate-50 border-slate-200 text-slate-600'
-                                }`}>
-                                  {t.isGlobal ? <Globe className="w-3.5 h-3.5" /> : null}
-                                  {t.isGlobal ? 'GLOBAL (Public)' : 'Privé'}
-                                </span>
-                                
-                                {t.isGlobal && (
-                                  <button
-                                    onClick={() => handleToggleTemplateLanding(t.id, t.showOnLanding)}
-                                    className={`inline-flex items-center gap-1 self-start px-2 py-0.5 rounded-full text-[10px] font-bold border transition ${
-                                      t.showOnLanding 
-                                        ? 'bg-emerald-50 border-emerald-100 text-emerald-700 hover:bg-emerald-100' 
-                                        : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
-                                    }`}
-                                    title="Cliquer pour changer la visibilité sur la landing page"
-                                  >
-                                    {t.showOnLanding ? 'Sur la Landing Page' : 'Masqué sur la Landing'}
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                            <td className="py-4 text-slate-600 dark:text-slate-400 font-medium max-w-[220px]" title={getTemplateElementSummary(t.content)}>
-                              <span className="line-clamp-2 text-xs">{getTemplateElementSummary(t.content)}</span>
-                            </td>
-                            <td className="py-4 font-semibold text-slate-700 dark:text-slate-300">{t.tenantName}</td>
-                            <td className="py-4 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <button
-                                  onClick={() => handleOpenDetailsModal('template', t)}
-                                  className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition"
-                                  title="Voir les détails"
-                                >
-                                  <Eye className="w-4.5 h-4.5" />
-                                </button>
-                                <Link
-                                  href={`/dashboard/templates?edit=${t.id}`}
-                                  className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
-                                  title="Modifier le modèle dans l'éditeur visuel"
-                                >
-                                  <Edit2 className="w-4.5 h-4.5" />
-                                </Link>
-                                <button
-                                  onClick={() => handleDuplicateAdminTemplate(t)}
-                                  className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
-                                  title="Dupliquer le modèle"
-                                >
-                                  <Copy className="w-4.5 h-4.5" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteTemplate(t.id, t.name)}
-                                  className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                                  title="Supprimer le modèle"
-                                >
-                                  <Trash2 className="w-4.5 h-4.5" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                    <TemplateCardGrid
+                      templates={paginatedTemplates.map((t) => ({
+                        id: t.id,
+                        name: t.name,
+                        content: t.content,
+                        createdAt: t.createdAt,
+                        tenantId: t.isGlobal ? null : t.tenantName,
+                        tenantName: t.tenantName,
+                        showOnLanding: t.showOnLanding,
+                        isGlobal: t.isGlobal,
+                      }))}
+                      isSuperAdmin
+                      emptyMessage="Aucun modèle trouvé pour ce filtre."
+                      emptyAction={
+                        <Link
+                          href="/dashboard/templates?new=1"
+                          className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Créer un modèle dans le concepteur visuel
+                        </Link>
+                      }
+                      editHref={(t) => `/dashboard/templates?edit=${t.id}`}
+                      onViewDetails={(t) => handleOpenDetailsModal('template', paginatedTemplates.find((x) => x.id === t.id))}
+                      onDuplicate={(t) => handleDuplicateAdminTemplate(paginatedTemplates.find((x) => x.id === t.id))}
+                      onDelete={handleDeleteTemplate}
+                      onToggleLanding={handleToggleTemplateLanding}
+                    />
 
-                  {/* Pagination pour les modèles */}
-                  {filteredTemplates.length > ITEMS_PER_PAGE && (
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 pt-4 mt-4 bg-white">
+                  {filteredTemplates.length > TEMPLATE_CARDS_PER_PAGE && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 dark:border-slate-800 pt-4 mt-6">
                       <span className="text-xs text-slate-500 font-medium">
-                        Affichage de {(templatesPage - 1) * ITEMS_PER_PAGE + 1} à {Math.min(templatesPage * ITEMS_PER_PAGE, filteredTemplates.length)} sur {filteredTemplates.length} modèles
+                        Affichage de {(templatesPage - 1) * TEMPLATE_CARDS_PER_PAGE + 1} à {Math.min(templatesPage * TEMPLATE_CARDS_PER_PAGE, filteredTemplates.length)} sur {filteredTemplates.length} modèles
                       </span>
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => setTemplatesPage(prev => Math.max(prev - 1, 1))}
                           disabled={templatesPage === 1}
-                          className="p-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-transparent transition"
+                          className="p-2 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:hover:bg-transparent transition"
                         >
                           <ChevronLeft className="w-4 h-4" />
                         </button>
-                        {Array.from({ length: Math.ceil(filteredTemplates.length / ITEMS_PER_PAGE) }).map((_, i) => (
+                        {Array.from({ length: Math.ceil(filteredTemplates.length / TEMPLATE_CARDS_PER_PAGE) }).map((_, i) => (
                           <button
                             key={i}
                             onClick={() => setTemplatesPage(i + 1)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                              templatesPage === i + 1 
-                                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-100' 
-                                : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
+                              templatesPage === i + 1
+                                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-100'
+                                : 'border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
                             }`}
                           >
                             {i + 1}
                           </button>
                         ))}
                         <button
-                          onClick={() => setTemplatesPage(prev => Math.min(prev + 1, Math.ceil(filteredTemplates.length / ITEMS_PER_PAGE)))}
-                          disabled={templatesPage === Math.ceil(filteredTemplates.length / ITEMS_PER_PAGE)}
-                          className="p-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-transparent transition"
+                          onClick={() => setTemplatesPage(prev => Math.min(prev + 1, Math.ceil(filteredTemplates.length / TEMPLATE_CARDS_PER_PAGE)))}
+                          disabled={templatesPage === Math.ceil(filteredTemplates.length / TEMPLATE_CARDS_PER_PAGE)}
+                          className="p-2 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:hover:bg-transparent transition"
                         >
                           <ChevronRight className="w-4 h-4" />
                         </button>
@@ -3713,111 +3603,6 @@ function DashboardPageContent() {
                   >
                     {updatingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                     Enregistrer
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Modal: Create Global Template */}
-        {isTemplateModalOpen && (
-          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in duration-200">
-              <div className="px-6 py-5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-                <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                  <PlusCircle className="w-5 h-5 text-indigo-600" />
-                  Créer un Modèle Global (Public)
-                </h3>
-                <button 
-                  onClick={() => setIsTemplateModalOpen(false)}
-                  className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleCreateGlobalTemplate} className="p-6 space-y-5">
-                {/* Nom */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nom du Modèle</label>
-                  <input
-                    type="text"
-                    placeholder="Ex: Invitation Mariage Standard, Relance..."
-                    value={templateName}
-                    onChange={(e) => setTemplateName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-semibold"
-                    required
-                  />
-                </div>
-
-                {/* Sujet */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Sujet du Message par Défaut</label>
-                  <input
-                    type="text"
-                    placeholder="Ex: Vous êtes invité à l'événement {{title}} !"
-                    value={templateSubject}
-                    onChange={(e) => setTemplateSubject(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
-                    required
-                  />
-                </div>
-
-                {/* Corps */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Corps du Message par Défaut</label>
-                  <textarea
-                    rows={6}
-                    placeholder="Ex: Bonjour {{firstName}},\n\nVous êtes cordialement invité à l'événement {{title}} qui aura lieu le {{date}} à {{location}}.\n\nVeuillez confirmer votre présence ici : {{rsvpLink}}\n\nCordialement,"
-                    value={templateBody}
-                    onChange={(e) => setTemplateBody(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-sans"
-                    required
-                  />
-                  <div className="p-3 bg-slate-50 border border-slate-150 rounded-lg space-y-1">
-                    <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Variables disponibles :</span>
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {['{{firstName}}', '{{lastName}}', '{{title}}', '{{date}}', '{{location}}', '{{rsvpLink}}'].map(v => (
-                        <span key={v} className="text-[10px] font-mono bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded border border-slate-300">
-                          {v}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Option: Show on landing page */}
-                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-150">
-                  <div className="space-y-0.5">
-                    <div className="text-sm font-bold text-slate-800">Afficher sur la Landing Page</div>
-                    <div className="text-xs text-slate-500">Rendre ce modèle public sur la page d'accueil</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setTemplateShowOnLanding(!templateShowOnLanding)}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${templateShowOnLanding ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                  >
-                    <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${templateShowOnLanding ? 'translate-x-5' : 'translate-x-0'}`} />
-                  </button>
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsTemplateModalOpen(false)}
-                    className="flex-1 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-sm transition"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={creatingTemplate}
-                    className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-md shadow-indigo-100"
-                  >
-                    {creatingTemplate ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                    Créer le modèle
                   </button>
                 </div>
               </form>

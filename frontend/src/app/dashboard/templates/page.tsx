@@ -16,6 +16,7 @@ import {
   ArrowUp, ArrowDown, Crop, Copy, Upload, Globe
 } from 'lucide-react';
 import { PageHeader, Alert, Button } from '@/components/ui';
+import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
 
 interface TemplateItem {
   id: string;
@@ -223,7 +224,6 @@ export default function TemplatesPage() {
         const t = templates.find(temp => temp.id === editId);
         if (t) {
           handleEditTemplateClick(t);
-          // Clear query parameter so it doesn't reopen on subsequent refreshes
           window.history.replaceState({}, document.title, window.location.pathname);
         }
       }
@@ -304,6 +304,15 @@ export default function TemplatesPage() {
     setSelectedElementId(null);
     setEditorOpen(true);
   };
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !canUseCustomTemplates) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('new') !== '1') return;
+    handleCreateTemplateClick();
+    window.history.replaceState({}, document.title, window.location.pathname);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- ouverture unique via ?new=1
+  }, [canUseCustomTemplates]);
 
   const handleAddElement = (type: 'text' | 'image' | 'button' | 'rsvp-block' | 'curve' | 'triangle' | 'divider') => {
     const newElement: CanvasElement = {
@@ -2697,12 +2706,21 @@ export default function TemplatesPage() {
         title={user?.role === 'SUPER_ADMIN' ? "Modèles d'invitation (Super Admin)" : "Vos modèles d'invitation"}
         description={
           user?.role === 'SUPER_ADMIN'
-            ? "Gérez les modèles d'invitation globaux et privés de toutes les organisations."
+            ? "Gérez les modèles d'invitation globaux et privés via le concepteur visuel."
             : "Concevez des invitations interactives uniques à l'aide de notre éditeur visuel."
         }
         action={
           canUseCustomTemplates ? (
             <div className="flex flex-wrap gap-2">
+              {user?.role === 'SUPER_ADMIN' && (
+                <Link
+                  href="/dashboard?tab=templates"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition hover:bg-slate-50 dark:hover:bg-slate-800"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Retour au tableau de bord
+                </Link>
+              )}
               {canUseMockupImport && (
                 <>
               <input
@@ -2753,104 +2771,39 @@ export default function TemplatesPage() {
       )}
 
       {/* Templates Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {templates.length === 0 ? (
-          <div className="col-span-full text-center py-16 bg-white border border-slate-200 rounded-3xl">
-            <Mail className="w-16 h-12 text-slate-300 mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-slate-700">Aucun modèle créé</h3>
-            <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">Créez votre premier modèle d'invitation personnalisé à l'aide de notre concepteur visuel.</p>
-            {canUseCustomTemplates && (
-            <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+      <TemplateCardGrid
+        templates={templates}
+        isSuperAdmin={user?.role === 'SUPER_ADMIN'}
+        emptyMessage="Aucun modèle créé. Utilisez le concepteur visuel pour créer votre premier modèle d'invitation."
+        emptyAction={
+          canUseCustomTemplates ? (
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
               {canUseMockupImport && (
-              <button 
-                onClick={() => mockupInputRef.current?.click()}
-                disabled={mockupImporting}
-                className="inline-flex items-center gap-2 px-5 py-2.5 border border-indigo-200 text-indigo-700 font-semibold rounded-xl text-sm transition hover:bg-indigo-50 disabled:opacity-50"
-              >
-                {mockupImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                Importer ma maquette
-              </button>
+                <button
+                  type="button"
+                  onClick={() => mockupInputRef.current?.click()}
+                  disabled={mockupImporting}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-400 font-semibold rounded-xl text-sm transition hover:bg-indigo-50 dark:hover:bg-indigo-950/40 disabled:opacity-50"
+                >
+                  {mockupImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                  Importer ma maquette
+                </button>
               )}
-              <button 
+              <button
+                type="button"
                 onClick={handleCreateTemplateClick}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100 dark:shadow-none"
               >
+                <PlusCircle className="w-4 h-4" />
                 Créer mon premier modèle
               </button>
             </div>
-            )}
-          </div>
-        ) : (
-          templates.map((t) => (
-            <div key={t.id} className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-6">
-              <div className="space-y-3">
-                <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 min-h-[140px] flex flex-col justify-center space-y-2 pointer-events-none relative overflow-hidden">
-                  <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:12px_16px] opacity-50" />
-                  <div className="relative scale-90 origin-center space-y-2">
-                    {t.content?.elements?.slice(0, 3).map((el: any, i: number) => (
-                      <div 
-                        key={i} 
-                        style={{ color: el.color, fontSize: '11px', textAlign: el.align }}
-                        className={`font-semibold ${el.type === 'button' ? 'bg-indigo-600 text-white px-3 py-1 rounded-lg inline-block mx-auto' : ''}`}
-                      >
-                        {el.text?.length > 40 ? el.text.slice(0, 40) + '...' : el.text}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 tracking-tight line-clamp-1">{t.name}</h3>
-                <p className="text-xs text-slate-400 font-medium">
-                  Créé le {new Date(t.createdAt).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
-                </p>
-                {user?.role === 'SUPER_ADMIN' && (
-                  <div className="mt-1 flex flex-wrap gap-1.5">
-                    {t.tenantId ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-150">
-                        Privé : {t.tenant?.name || 'Inconnu'}
-                      </span>
-                    ) : (
-                      <>
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-150">
-                          Global (Public)
-                        </span>
-                        {t.showOnLanding && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
-                            <Globe className="w-3 h-3" />
-                            Landing
-                          </span>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="flex gap-2 pt-2 border-t border-slate-100">
-                <button 
-                  onClick={() => handleEditTemplateClick(t)}
-                  className="flex-1 inline-flex items-center justify-center gap-1.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-xs transition"
-                >
-                  <Edit3 className="w-4 h-4" />
-                  Modifier
-                </button>
-                <button 
-                  onClick={() => handleDuplicateTemplate(t)}
-                  className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition"
-                  title="Dupliquer le modèle"
-                >
-                  <Copy className="w-4.5 h-4.5" />
-                </button>
-                <button 
-                  onClick={() => handleDeleteTemplate(t.id)}
-                  className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition"
-                  title="Supprimer le modèle"
-                >
-                  <Trash2 className="w-4.5 h-4.5" />
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+          ) : undefined
+        }
+        onEdit={(t) => handleEditTemplateClick(t as TemplateItem)}
+        onDuplicate={(t) => handleDuplicateTemplate(t as TemplateItem)}
+        onDelete={(id) => handleDeleteTemplate(id)}
+      />
     </div>
   );
 }

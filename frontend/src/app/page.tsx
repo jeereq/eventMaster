@@ -6,7 +6,6 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api } from '@/lib/api';
 import {
-  LANDING_TEMPLATES,
   buildLandingTemplateGroups,
   type LandingTemplate,
 } from '@/config/landingTemplates';
@@ -81,7 +80,6 @@ export default function Home() {
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [publicTemplates, setPublicTemplates] = useState<LandingTemplate[]>([]);
   const [loadingPublicTemplates, setLoadingPublicTemplates] = useState(true);
-  const [usingFallbackTemplates, setUsingFallbackTemplates] = useState(false);
 
   useEffect(() => {
     async function checkServerAndFetchPlans() {
@@ -94,24 +92,14 @@ export default function Home() {
             api.get('/public/templates').catch(() => []),
           ]);
           if (plansData) setDbPlans(plansData);
-
-          const fromDb = publicTemplatesToLanding((templatesData as PublicTemplateDto[]) || []);
-          if (fromDb.length > 0) {
-            setPublicTemplates(fromDb);
-            setUsingFallbackTemplates(false);
-          } else {
-            setPublicTemplates(LANDING_TEMPLATES);
-            setUsingFallbackTemplates(true);
-          }
+          setPublicTemplates(publicTemplatesToLanding((templatesData as PublicTemplateDto[]) || []));
         } else {
           setServerStatus('offline');
-          setPublicTemplates(LANDING_TEMPLATES);
-          setUsingFallbackTemplates(true);
+          setPublicTemplates([]);
         }
       } catch {
         setServerStatus('offline');
-        setPublicTemplates(LANDING_TEMPLATES);
-        setUsingFallbackTemplates(true);
+        setPublicTemplates([]);
       } finally {
         setLoadingPlans(false);
         setLoadingPublicTemplates(false);
@@ -133,11 +121,9 @@ export default function Home() {
     { id: 'casual', name: 'Moderne & Cocktail' },
   ];
 
-  const activeTemplatesList = publicTemplates.length > 0 ? publicTemplates : LANDING_TEMPLATES;
+  const filteredTemplateGroups = buildLandingTemplateGroups(publicTemplates, selectedCategory);
 
-  const filteredTemplateGroups = buildLandingTemplateGroups(activeTemplatesList, selectedCategory);
-
-  const activePreview = activeTemplatesList.find((t) => t.id === previewTemplate) || activeTemplatesList[0];
+  const activePreview = publicTemplates.find((t) => t.id === previewTemplate) || publicTemplates[0];
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950 font-sans antialiased text-slate-900 dark:text-slate-100 transition-colors duration-200">
@@ -359,7 +345,7 @@ export default function Home() {
                 <>
                   {/* Selector within Preview Widget */}
                   <div className="flex gap-2 mb-4 border-b border-slate-200 dark:border-slate-800 pb-3 overflow-x-auto">
-                    {activeTemplatesList.map(t => (
+                    {publicTemplates.map(t => (
                       <button
                         key={t.id}
                         onClick={() => setPreviewTemplate(t.id)}
@@ -394,9 +380,11 @@ export default function Home() {
           <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
             <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Nos Modèles Possibles</h2>
             <p className="text-slate-600 dark:text-slate-400">
-              {usingFallbackTemplates
-                ? 'Modèles de démonstration — activez des modèles globaux sur la landing depuis le tableau de bord super admin.'
-                : `${activeTemplatesList.length} modèle${activeTemplatesList.length > 1 ? 's' : ''} public${activeTemplatesList.length > 1 ? 's' : ''} configuré${activeTemplatesList.length > 1 ? 's' : ''} par la plateforme, répartis en trois univers — privé, professionnel et cocktail.`}
+              {loadingPublicTemplates
+                ? 'Chargement des modèles publics…'
+                : publicTemplates.length === 0
+                  ? 'Aucun modèle public pour le moment. Les modèles globaux activés « Sur la landing page » par le super admin apparaîtront ici.'
+                  : `${publicTemplates.length} modèle${publicTemplates.length > 1 ? 's' : ''} public${publicTemplates.length > 1 ? 's' : ''} configuré${publicTemplates.length > 1 ? 's' : ''} par la plateforme, répartis en trois univers — privé, professionnel et cocktail.`}
             </p>
             
             {/* Filter buttons */}
@@ -414,7 +402,15 @@ export default function Home() {
           </div>
 
           <div className="space-y-16">
-            {filteredTemplateGroups.every((g) => g.templates.length === 0) ? (
+            {loadingPublicTemplates ? (
+              <div className="flex justify-center py-16">
+                <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+              </div>
+            ) : publicTemplates.length === 0 ? (
+              <div className="text-center py-12 px-6 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl text-slate-500 dark:text-slate-400 font-medium max-w-lg mx-auto">
+                Aucun modèle n&apos;est affiché sur la vitrine pour l&apos;instant. Créez un modèle global dans le concepteur visuel et activez « Sur la landing page ».
+              </div>
+            ) : filteredTemplateGroups.every((g) => g.templates.length === 0) ? (
               <div className="text-center py-12 text-slate-500 dark:text-slate-400 font-medium">
                 Aucun modèle disponible dans cette catégorie.
               </div>
