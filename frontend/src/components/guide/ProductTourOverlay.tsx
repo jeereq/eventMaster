@@ -81,9 +81,13 @@ export default function ProductTourOverlay() {
       >
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1 min-w-0">
-            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+            <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
               <MapPin className="w-3.5 h-3.5 shrink-0" />
-              Étape {stepIndex + 1} / {steps.length}
+              {currentStep.target ? (
+                <span>Onglet du menu · {stepIndex + 1}/{steps.length}</span>
+              ) : (
+                <span>Étape {stepIndex + 1}/{steps.length}</span>
+              )}
             </div>
             <h2 id="tour-title" className="font-extrabold text-slate-900 dark:text-white text-sm leading-snug">
               {currentStep.title}

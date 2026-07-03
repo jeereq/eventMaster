@@ -3,6 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { getProductTour, type ProductTourStep } from '@/config/productTours';
+import type { OrgAccess } from '@/context/AuthContext';
 import type { UserGuideId } from '@/config/userGuides';
 
 interface TourContextValue {
@@ -10,7 +11,7 @@ interface TourContextValue {
   steps: ProductTourStep[];
   stepIndex: number;
   currentStep: ProductTourStep | null;
-  startTour: (guideId: UserGuideId) => void;
+  startTour: (guideId: UserGuideId, access?: OrgAccess | null) => void;
   stopTour: () => void;
   nextStep: () => void;
   prevStep: () => void;
@@ -62,8 +63,8 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const startTour = useCallback(
-    (guideId: UserGuideId) => {
-      const tourSteps = getProductTour(guideId);
+    (guideId: UserGuideId, access?: OrgAccess | null) => {
+      const tourSteps = getProductTour(guideId, access);
       if (tourSteps.length === 0) return;
       setSteps(tourSteps);
       setStepIndex(0);

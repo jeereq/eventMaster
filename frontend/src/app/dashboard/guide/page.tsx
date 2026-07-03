@@ -49,12 +49,12 @@ function DashboardGuidePageContent() {
 
   useEffect(() => {
     if (searchParams.get('start') === '1' && activeTab === 'tour') {
-      startTour(activeGuideId);
+      startTour(activeGuideId, access);
       const params = new URLSearchParams(searchParams.toString());
       params.delete('start');
       router.replace(`/dashboard/guide?${params.toString()}`, { scroll: false });
     }
-  }, [searchParams, activeTab, activeGuideId, startTour, router]);
+  }, [searchParams, activeTab, activeGuideId, access, startTour, router]);
 
   return (
     <div className="space-y-8 max-w-4xl">
