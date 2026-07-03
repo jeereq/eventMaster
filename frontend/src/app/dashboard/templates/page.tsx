@@ -13,7 +13,7 @@ import {
   Sparkles, CheckCircle2, AlertCircle, Type, Image, 
   Columns, Settings, Eye, CheckSquare, Loader2, XCircle,
   Spline, Triangle, Plus, Trash, Layout, Palette, Square,
-  ArrowUp, ArrowDown, Crop, Copy, Upload
+  ArrowUp, ArrowDown, Crop, Copy, Upload, Globe
 } from 'lucide-react';
 import { PageHeader, Alert, Button } from '@/components/ui';
 
@@ -23,6 +23,7 @@ interface TemplateItem {
   content: any;
   createdAt: string;
   tenantId?: string | null;
+  showOnLanding?: boolean;
   tenant?: {
     name: string;
   } | null;
@@ -120,6 +121,11 @@ export default function TemplatesPage() {
   const [floralType, setFloralType] = useState<'roses' | 'cherry-blossom' | 'gold-leaves' | 'sunflowers' | 'eucalyptus'>('roses');
   const [floralDensity, setFloralDensity] = useState<number>(40);
 
+  // Landing page metadata (modèles globaux super admin)
+  const [landingCategory, setLandingCategory] = useState<'private' | 'corporate' | 'casual'>('private');
+  const [landingDescription, setLandingDescription] = useState('');
+  const [showOnLanding, setShowOnLanding] = useState(false);
+
   // Property editing states for selected element
   const [elText, setElText] = useState('');
   const [elColor, setElColor] = useState('#1e293b');
@@ -204,6 +210,12 @@ export default function TemplatesPage() {
   }, [canUseMockupOcr]);
 
   useEffect(() => {
+    if (selectedTenantId) {
+      setShowOnLanding(false);
+    }
+  }, [selectedTenantId]);
+
+  useEffect(() => {
     if (typeof window !== 'undefined' && templates.length > 0) {
       const params = new URLSearchParams(window.location.search);
       const editId = params.get('edit');
@@ -259,6 +271,9 @@ export default function TemplatesPage() {
     setFloralColor('#b91c1c');
     setFloralType('roses');
     setFloralDensity(40);
+    setLandingCategory('private');
+    setLandingDescription('');
+    setShowOnLanding(false);
     
     setSelectedElementId(null);
     setEditorOpen(true);
@@ -282,6 +297,9 @@ export default function TemplatesPage() {
     setFloralType(global.floralType || 'roses');
     setFloralDensity(global.floralDensity !== undefined ? global.floralDensity : 40);
     setImportedPalette(global.palette || null);
+    setLandingCategory(global.landingCategory || 'private');
+    setLandingDescription(global.landingDescription || '');
+    setShowOnLanding(Boolean(t.showOnLanding));
     
     setSelectedElementId(null);
     setEditorOpen(true);
@@ -744,7 +762,8 @@ export default function TemplatesPage() {
 
     setSaving(true);
     try {
-      const payload = {
+      const isGlobalTemplate = user?.role === 'SUPER_ADMIN' && !selectedTenantId;
+      const payload: Record<string, unknown> = {
         name: templateName,
         content: { 
           global: {
@@ -757,12 +776,16 @@ export default function TemplatesPage() {
             floralColor,
             floralType,
             floralDensity,
+            ...(isGlobalTemplate ? { landingCategory, landingDescription: landingDescription.trim() || undefined } : {}),
             ...(importedPalette ? { palette: importedPalette, importedFromMockup: true, importedWithOcr } : {}),
           },
           elements: canvasElements 
         },
-        targetTenantId: user?.role === 'SUPER_ADMIN' ? (selectedTenantId || null) : undefined
+        targetTenantId: user?.role === 'SUPER_ADMIN' ? (selectedTenantId || null) : undefined,
       };
+      if (isGlobalTemplate) {
+        payload.showOnLanding = showOnLanding;
+      }
 
       if (editingTemplateId) {
         await api.put(`/templates/${editingTemplateId}`, payload);
@@ -2232,6 +2255,51 @@ export default function TemplatesPage() {
                   </h3>
                 </div>
 
+                {user?.role === 'SUPER_ADMIN' && !selectedTenantId && (
+                  <div className="space-y-3 p-3 rounded-2xl border border-emerald-100 bg-emerald-50/40">
+                    <h4 className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider flex items-center gap-1.5">
+                      <Globe className="w-3.5 h-3.5" />
+                      Vitrine landing page
+                    </h4>
+                    <label className="flex items-center justify-between gap-3 cursor-pointer">
+                      <span className="text-xs font-semibold text-slate-700">Afficher sur la landing page publique</span>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={showOnLanding}
+                        onClick={() => setShowOnLanding((v) => !v)}
+                        className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors ${showOnLanding ? 'bg-emerald-600' : 'bg-slate-200'}`}
+                      >
+                        <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${showOnLanding ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </button>
+                    </label>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Catégorie vitrine</label>
+                      <select
+                        value={landingCategory}
+                        onChange={(e) => setLandingCategory(e.target.value as 'private' | 'corporate' | 'casual')}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500"
+                      >
+                        <option value="private">Privé & Célébrations</option>
+                        <option value="corporate">Professionnel & Gala</option>
+                        <option value="casual">Moderne & Cocktail</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Description courte</label>
+                      <textarea
+                        value={landingDescription}
+                        onChange={(e) => setLandingDescription(e.target.value)}
+                        rows={3}
+                        maxLength={220}
+                        placeholder="Ex. : Tons pastel et typographie serif pour un grand jour raffiné."
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 focus:outline-none focus:border-indigo-500 resize-none leading-relaxed"
+                      />
+                      <p className="text-[9px] text-slate-400 text-right">{landingDescription.length}/220</p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Background Type */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Type d'arrière-plan</label>
@@ -2735,15 +2803,23 @@ export default function TemplatesPage() {
                   Créé le {new Date(t.createdAt).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
                 </p>
                 {user?.role === 'SUPER_ADMIN' && (
-                  <div className="mt-1">
+                  <div className="mt-1 flex flex-wrap gap-1.5">
                     {t.tenantId ? (
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-150">
                         Privé : {t.tenant?.name || 'Inconnu'}
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-150">
-                        Global (Public)
-                      </span>
+                      <>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-150">
+                          Global (Public)
+                        </span>
+                        {t.showOnLanding && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                            <Globe className="w-3 h-3" />
+                            Landing
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
                 )}

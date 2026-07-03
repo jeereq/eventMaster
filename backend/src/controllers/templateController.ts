@@ -74,7 +74,7 @@ export async function createTemplate(req: AuthenticatedRequest, res: Response) {
     const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
     const tenantId = req.user?.tenantId;
     
-    const { name, content, targetTenantId } = req.body;
+    const { name, content, targetTenantId, showOnLanding } = req.body;
 
     if (!isSuperAdmin && !tenantId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
@@ -113,6 +113,7 @@ export async function createTemplate(req: AuthenticatedRequest, res: Response) {
         tenantId: finalTenantId,
         name,
         content: content || {},
+        showOnLanding: isSuperAdmin && !finalTenantId ? Boolean(showOnLanding) : false,
       },
     });
 
@@ -155,7 +156,7 @@ export async function updateTemplate(req: AuthenticatedRequest, res: Response) {
     const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
     const tenantId = req.user?.tenantId;
     const id = req.params.id as string;
-    const { name, content, targetTenantId } = req.body;
+    const { name, content, targetTenantId, showOnLanding } = req.body;
 
     if (!isSuperAdmin && !tenantId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
@@ -181,13 +182,28 @@ export async function updateTemplate(req: AuthenticatedRequest, res: Response) {
       }
     }
 
+    const updateData: Record<string, unknown> = {
+      name: name !== undefined ? name : existingTemplate.name,
+      content: content !== undefined ? content : (existingTemplate.content as any),
+    };
+
+    if (isSuperAdmin && targetTenantId !== undefined) {
+      updateData.tenantId = targetTenantId || null;
+    }
+
+    if (isSuperAdmin) {
+      const resolvedTenantId =
+        targetTenantId !== undefined ? (targetTenantId || null) : existingTemplate.tenantId;
+      if (resolvedTenantId) {
+        updateData.showOnLanding = false;
+      } else if (showOnLanding !== undefined) {
+        updateData.showOnLanding = Boolean(showOnLanding);
+      }
+    }
+
     const updatedTemplate = await prisma.template.update({
       where: { id },
-      data: {
-        name: name !== undefined ? name : existingTemplate.name,
-        content: content !== undefined ? content : (existingTemplate.content as any),
-        tenantId: isSuperAdmin && targetTenantId !== undefined ? (targetTenantId || null) : undefined,
-      },
+      data: updateData as any,
     });
 
     return res.json(updatedTemplate);
