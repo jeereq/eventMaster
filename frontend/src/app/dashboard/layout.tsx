@@ -14,11 +14,14 @@ import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import UserLegalGate from '@/components/UserLegalGate';
 import { NotificationBell } from '@/components/CommercialNotifications';
 import { cn } from '@/lib/cn';
+import { TourProvider } from '@/context/TourContext';
+import ProductTourOverlay from '@/components/guide/ProductTourOverlay';
 
 interface NavItem {
   name: string;
   href: string;
   tab?: string;
+  tourId?: string;
   icon: React.ComponentType<{ className?: string }>;
 }
 
@@ -59,6 +62,7 @@ function SidebarNav({
                 <Link
                   key={item.name}
                   href={item.href}
+                  data-tour={item.tourId}
                   onClick={() => setMobileMenuOpen(false)}
                   className={cn(
                     'flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-150',
@@ -132,33 +136,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {
           label: 'Plateforme',
           items: [
-            { name: 'Organisations', href: '/dashboard?tab=tenants', tab: 'tenants', icon: Building2 },
-            { name: 'Utilisateurs', href: '/dashboard?tab=users', tab: 'users', icon: Users },
-            { name: 'Événements', href: '/dashboard?tab=events', tab: 'events', icon: Calendar },
-            { name: 'Invités', href: '/dashboard?tab=guests', tab: 'guests', icon: Users },
+            { name: 'Organisations', href: '/dashboard?tab=tenants', tab: 'tenants', tourId: 'nav-tenants', icon: Building2 },
+            { name: 'Utilisateurs', href: '/dashboard?tab=users', tab: 'users', tourId: 'nav-users', icon: Users },
+            { name: 'Événements', href: '/dashboard?tab=events', tab: 'events', tourId: 'nav-events-admin', icon: Calendar },
+            { name: 'Invités', href: '/dashboard?tab=guests', tab: 'guests', tourId: 'nav-guests', icon: Users },
           ],
         },
         {
           label: 'Contenu',
           items: [
-            { name: 'Modèles globaux', href: '/dashboard?tab=templates', tab: 'templates', icon: FileText },
-            { name: 'Messages invités', href: '/dashboard?tab=message-templates', tab: 'message-templates', icon: MessageSquare },
+            { name: 'Modèles globaux', href: '/dashboard?tab=templates', tab: 'templates', tourId: 'nav-templates', icon: FileText },
+            { name: 'Messages invités', href: '/dashboard?tab=message-templates', tab: 'message-templates', tourId: 'nav-message-templates', icon: MessageSquare },
           ],
         },
         {
           label: 'Administration',
           items: [
-            { name: 'Analyses & stats', href: '/dashboard?tab=analytics&section=overview', tab: 'analytics', icon: BarChart3 },
-            { name: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests', tab: 'subscription-requests', icon: Clock },
-            { name: 'Forfaits', href: '/dashboard?tab=subscription-plans', tab: 'subscription-plans', icon: CreditCard },
-            { name: 'Factures', href: '/dashboard?tab=invoices', tab: 'invoices', icon: FileText },
-            { name: 'Configurations', href: '/dashboard?tab=settings', tab: 'settings', icon: Key },
+            { name: 'Analyses & stats', href: '/dashboard?tab=analytics&section=overview', tab: 'analytics', tourId: 'nav-analytics', icon: BarChart3 },
+            { name: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests', tab: 'subscription-requests', tourId: 'nav-subscription-requests', icon: Clock },
+            { name: 'Forfaits', href: '/dashboard?tab=subscription-plans', tab: 'subscription-plans', tourId: 'nav-subscription-plans', icon: CreditCard },
+            { name: 'Factures', href: '/dashboard?tab=invoices', tab: 'invoices', tourId: 'nav-invoices', icon: FileText },
+            { name: 'Configurations', href: '/dashboard?tab=settings', tab: 'settings', tourId: 'nav-settings', icon: Key },
           ],
         },
         {
           items: [
-            { name: 'Guide utilisateur', href: '/dashboard/guide', icon: BookOpen },
-            { name: 'Mon compte', href: '/dashboard/profile', icon: User },
+            { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
+            { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
           ],
         },
       ]
@@ -167,16 +171,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {
           label: 'Plateforme',
           items: [
-            { name: 'Organisations', href: '/dashboard?tab=tenants', tab: 'tenants', icon: Building2 },
-            { name: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests', tab: 'subscription-requests', icon: Clock },
-            { name: 'Factures', href: '/dashboard?tab=invoices', tab: 'invoices', icon: FileText },
+            { name: 'Organisations', href: '/dashboard?tab=tenants', tab: 'tenants', tourId: 'nav-tenants', icon: Building2 },
+            { name: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests', tab: 'subscription-requests', tourId: 'nav-subscription-requests', icon: Clock },
+            { name: 'Factures', href: '/dashboard?tab=invoices', tab: 'invoices', tourId: 'nav-invoices', icon: FileText },
           ],
         },
         {
           items: [
-            { name: 'Parrainage & commissions', href: '/dashboard/commercial', icon: Briefcase },
-            { name: 'Guide utilisateur', href: '/dashboard/guide', icon: BookOpen },
-            { name: 'Mon compte', href: '/dashboard/profile', icon: User },
+            { name: 'Parrainage & commissions', href: '/dashboard/commercial', tourId: 'nav-commercial', icon: Briefcase },
+            { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
+            { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
           ],
         },
       ]
@@ -184,9 +188,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     ? [
         {
           items: [
-            { name: 'Réseau commercial', href: '/dashboard/org-commercial', icon: Briefcase },
-            { name: 'Guide utilisateur', href: '/dashboard/guide', icon: BookOpen },
-            { name: 'Mon compte', href: '/dashboard/profile', icon: User },
+            { name: 'Réseau commercial', href: '/dashboard/org-commercial', tourId: 'nav-org-commercial', icon: Briefcase },
+            { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
+            { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
           ],
         },
       ]
@@ -194,28 +198,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     ? [
         {
           items: [
-            { name: 'Événements', href: '/dashboard/events', icon: Calendar },
-            { name: 'Guide utilisateur', href: '/dashboard/guide', icon: BookOpen },
-            { name: 'Mon compte', href: '/dashboard/profile', icon: User },
+            { name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar },
+            { name: 'Protocole', href: '/dashboard/events?mode=protocol', tourId: 'nav-protocol', icon: ScanLine },
+            { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
+            { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
           ],
         },
       ]
     : [
         {
           items: [
-            { name: 'Tableau de bord', href: '/dashboard', icon: LayoutDashboard },
-            { name: 'Événements', href: '/dashboard/events', icon: Calendar },
+            { name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard },
+            { name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar },
             ...(access?.canProtocolAllEvents || access?.level === 'staff'
-              ? [{ name: 'Protocole', href: '/dashboard/events?mode=protocol', icon: ScanLine }]
+              ? [{ name: 'Protocole', href: '/dashboard/events?mode=protocol', tourId: 'nav-protocol', icon: ScanLine }]
               : []),
             ...(!access?.isProtocolOnly ? [
-              { name: 'Statistiques', href: '/dashboard/analytics', icon: BarChart3 },
-              { name: 'Modèles', href: '/dashboard/templates', icon: Mail },
+              { name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3 },
+              { name: 'Modèles', href: '/dashboard/templates', tourId: 'nav-templates', icon: Mail },
             ] : []),
-            ...(access?.canViewBilling ? [{ name: 'Facturation & plan', href: '/dashboard/billing', icon: CreditCard }] : []),
-            ...(access?.canViewInvoices ? [{ name: 'Factures', href: '/dashboard/invoices', icon: FileText }] : []),
-            { name: 'Guide utilisateur', href: '/dashboard/guide', icon: BookOpen },
-            { name: 'Mon compte', href: '/dashboard/profile', icon: User },
+            ...(access?.canViewBilling ? [{ name: 'Facturation & plan', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }] : []),
+            ...(access?.canViewInvoices ? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: FileText }] : []),
+            { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
+            { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
           ],
         },
       ];
@@ -223,7 +228,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const showCommercialNotifications = user?.role === 'COMMERCIAL' || access?.level === 'commercial';
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+          <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+        </div>
+      }
+    >
+      <TourProvider>
+        <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
       {/* Overlay mobile */}
       {mobileMenuOpen && (
         <button
@@ -346,6 +359,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="border-t border-slate-200 dark:border-slate-800 p-5 space-y-3 shrink-0">
           <Link
             href="/dashboard/profile"
+            data-tour="nav-profile"
             onClick={() => setMobileMenuOpen(false)}
             className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition group"
           >
@@ -375,6 +389,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <UserLegalGate>{children}</UserLegalGate>
         </div>
       </main>
-    </div>
+        <ProductTourOverlay />
+        </div>
+      </TourProvider>
+    </Suspense>
   );
 }

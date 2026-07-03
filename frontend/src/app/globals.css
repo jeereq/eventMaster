@@ -268,3 +268,8 @@ body {
     background: #334155;
   }
 }
+
+[data-tour-active] {
+  position: relative;
+  z-index: 10001 !important;
+}
