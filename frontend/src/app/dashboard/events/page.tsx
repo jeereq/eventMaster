@@ -17,6 +17,14 @@ import EventStaffPanel from './EventStaffPanel';
 import EventFeedManager from './EventFeedManager';
 import GuestProtocolPanel from './GuestProtocolPanel';
 import { PageHeader, Button } from '@/components/ui';
+import {
+  extractRsvpFieldsFromTemplateContent,
+  supplementFieldsFromGuestPreferences,
+  getCustomFieldValue,
+  formatCustomFieldValueForDisplay,
+  isBooleanFieldType,
+  type RsvpFormDataEntry,
+} from '@/lib/rsvpFormFields';
 
 interface EventItem {
   id: string;
@@ -303,55 +311,14 @@ export default function EventsPage() {
   const uniqueCategories = Array.from(new Set(guests.map(g => g.category || 'Général')));
 
   const getCustomRsvpFields = () => {
-    const fields: { id: string; label: string; type: string; options?: string[] }[] = [];
-    
-    // First, try to get fields from invitations templates
-    invitations.forEach(invite => {
-      if (invite.template?.id || (invite as any).templateId) {
-        const templateId = invite.template?.id || (invite as any).templateId;
-        const template = templates.find(t => t.id === templateId);
-        if (template && template.content) {
-          let contentObj = template.content;
-          if (typeof contentObj === 'string') {
-            try { contentObj = JSON.parse(contentObj); } catch(e) {}
-          }
-          if (contentObj && contentObj.elements) {
-            contentObj.elements.forEach((el: any) => {
-              if (el.type === 'rsvp-block' && el.rsvpFields) {
-                el.rsvpFields.forEach((f: any) => {
-                  if (!fields.some(existing => existing.label === f.label)) {
-                    fields.push({
-                      id: f.id,
-                      label: f.label,
-                      type: f.type,
-                      options: f.options ? f.options.split(',').map((o: string) => o.trim()) : undefined
-                    });
-                  }
-                });
-              }
-            });
-          }
-        }
-      }
+    const fields = invitations.flatMap((invite) => {
+      const templateId = invite.template?.id || (invite as { templateId?: string }).templateId;
+      const template = templates.find((t) => t.id === templateId);
+      if (!template?.content) return [];
+      return extractRsvpFieldsFromTemplateContent(template.content);
     });
 
-    // Supplement with actually answered fields in guests preferences
-    guests.forEach(g => {
-      if (g.preferences?.customFields) {
-        Object.entries(g.preferences.customFields).forEach(([label, val]) => {
-          if (!fields.some(f => f.label === label)) {
-            const type = typeof val === 'boolean' ? 'checkbox' : 'text';
-            fields.push({
-              id: `dynamic-${label}`,
-              label,
-              type
-            });
-          }
-        });
-      }
-    });
-
-    return fields;
+    return supplementFieldsFromGuestPreferences(fields, guests);
   };
 
   const filteredGuests = guests.filter(g => {
@@ -377,7 +344,10 @@ export default function EventsPage() {
     let matchesCustom = true;
     Object.entries(customFilters).forEach(([label, value]) => {
       if (value && value !== 'ALL' && value.trim() !== '') {
-        const guestVal = g.preferences?.customFields?.[label];
+        const fieldDef = getCustomRsvpFields().find((f) => f.label === label);
+        const guestVal = fieldDef
+          ? getCustomFieldValue(g.preferences, fieldDef)
+          : g.preferences?.customFields?.[label];
         
         if (value === 'Oui') {
           if (guestVal !== true) matchesCustom = false;
@@ -1685,7 +1655,7 @@ export default function EventsPage() {
                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate block max-w-full" title={field.label}>
                               {field.label}
                             </label>
-                            {field.type === 'checkbox' ? (
+                            {isBooleanFieldType(field.type) ? (
                               <select 
                                 value={currentValue}
                                 onChange={(e) => setCustomFilters({ ...customFilters, [field.label]: e.target.value })}
@@ -1695,7 +1665,7 @@ export default function EventsPage() {
                                 <option value="Oui">Coché (Oui)</option>
                                 <option value="Non">Non coché (Non)</option>
                               </select>
-                            ) : field.type === 'select' && field.options ? (
+                            ) : (field.type === 'select' || field.type === 'radio') && field.options ? (
                               <select 
                                 value={currentValue}
                                 onChange={(e) => setCustomFilters({ ...customFilters, [field.label]: e.target.value })}
@@ -3204,21 +3174,39 @@ export default function EventsPage() {
               )}
 
               {/* Custom RSVP Form Fields */}
-              {selectedGuestDetails.rsvp === 'ACCEPTED' && selectedGuestDetails.preferences?.customFields && Object.keys(selectedGuestDetails.preferences.customFields).length > 0 && (
+              {selectedGuestDetails.rsvp === 'ACCEPTED' && (
+                (selectedGuestDetails.preferences?.rsvpFormData?.length ?? 0) > 0 ||
+                (selectedGuestDetails.preferences?.customFields &&
+                  Object.keys(selectedGuestDetails.preferences.customFields).length > 0)
+              ) && (
                 <div className="p-4 border border-slate-200 rounded-2xl space-y-3 bg-white">
                   <div className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 pb-2 flex items-center gap-1.5">
                     <Sparkles className="w-4 h-4 text-indigo-600" />
                     <span>Réponses aux questions personnalisées</span>
                   </div>
                   <div className="space-y-3">
-                    {Object.entries(selectedGuestDetails.preferences.customFields).map(([question, answer]: [string, any]) => (
-                      <div key={question} className="border-b border-slate-100 pb-2 last:border-0 last:pb-0">
-                        <div className="text-[10px] font-bold text-slate-400 uppercase leading-relaxed">{question}</div>
-                        <div className="font-bold text-slate-800 text-xs mt-0.5">
-                          {typeof answer === 'boolean' ? (answer ? 'Oui' : 'Non') : (answer || <span className="italic text-slate-300">Non renseigné</span>)}
-                        </div>
-                      </div>
-                    ))}
+                    {(selectedGuestDetails.preferences?.rsvpFormData?.length
+                      ? selectedGuestDetails.preferences.rsvpFormData.map((entry: RsvpFormDataEntry) => (
+                          <div key={entry.fieldId || entry.analyticsKey} className="border-b border-slate-100 pb-2 last:border-0 last:pb-0">
+                            <div className="text-[10px] font-bold text-slate-400 uppercase leading-relaxed">{entry.label}</div>
+                            <div className="font-bold text-slate-800 text-xs mt-0.5">
+                              {formatCustomFieldValueForDisplay(entry.value) || (
+                                <span className="italic text-slate-300">Non renseigné</span>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      : Object.entries(selectedGuestDetails.preferences!.customFields!).map(([question, answer]: [string, unknown]) => (
+                          <div key={question} className="border-b border-slate-100 pb-2 last:border-0 last:pb-0">
+                            <div className="text-[10px] font-bold text-slate-400 uppercase leading-relaxed">{question}</div>
+                            <div className="font-bold text-slate-800 text-xs mt-0.5">
+                              {formatCustomFieldValueForDisplay(answer) || (
+                                <span className="italic text-slate-300">Non renseigné</span>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                    )}
                   </div>
                 </div>
               )}

@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { normalizeGuestPreferences } from '../utils/rsvpPreferences.js';
 import { prisma } from '../db';
 import { sendRealEmail, sendRealWhatsApp, sendRealWhatsAppImage } from '../services/notificationService';
 import { renderGuestMessage, polishWhatsAppBody } from '../services/messageTemplateService';
@@ -420,12 +421,13 @@ export async function submitRsvp(req: Request, res: Response) {
 
     const previousRsvp = guest.rsvp;
     const statusChanged = previousRsvp !== rsvp;
+    const normalizedPreferences = normalizeGuestPreferences(preferences);
 
     const updatedGuest = await prisma.guest.update({
       where: { id: guestId },
       data: {
         rsvp,
-        preferences: preferences || {},
+        preferences: normalizedPreferences as object,
       },
     });
 

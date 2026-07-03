@@ -14,6 +14,13 @@ import {
   Users, MessageSquare, Image, Send, Heart, Eye, Trash2, LayoutGrid, MessageCircle,
   ChevronLeft, ChevronRight, X, RefreshCw, Video, ThumbsUp, Download, Clock
 } from 'lucide-react';
+import {
+  type RsvpField,
+  buildRsvpPreferencesPayload,
+  getCanvasStyle,
+  parseFieldOptions,
+  restoreFieldValuesFromPreferences,
+} from '@/lib/rsvpFormFields';
 
 interface GuestRsvpData {
   id: string;
@@ -161,7 +168,16 @@ export default function RsvpPage() {
           setAllergies(data.preferences.allergies || '');
           setSpecialMeal(data.preferences.specialMeal || 'none');
           setAdditionalNotes(data.preferences.notes || '');
-          setCustomFieldValues(data.preferences.customFields || {});
+          const templateContent = data.event?.invitations?.[0]?.template?.content;
+          const elements = templateContent?.elements || [];
+          const rsvpFields = elements
+            .filter((el: { type?: string }) => el.type === 'rsvp-block')
+            .flatMap((el: { rsvpFields?: RsvpField[] }) => el.rsvpFields || []);
+          setCustomFieldValues(
+            rsvpFields.length > 0
+              ? restoreFieldValuesFromPreferences(rsvpFields, data.preferences)
+              : data.preferences.customFields || {}
+          );
         }
       } catch (err: any) {
         console.error('Error fetching RSVP details:', err);
@@ -341,12 +357,18 @@ export default function RsvpPage() {
     setSubmitting(true);
 
     try {
-      const preferences = {
+      const templateContent = guest?.event?.invitations?.[0]?.template?.content;
+      const rsvpFields = (templateContent?.elements || [])
+        .filter((el: { type?: string }) => el.type === 'rsvp-block')
+        .flatMap((el: { rsvpFields?: RsvpField[] }) => el.rsvpFields || []);
+
+      const preferences = buildRsvpPreferencesPayload({
         allergies,
         specialMeal,
         notes: additionalNotes,
-        customFields: customFieldValues,
-      };
+        rsvpFields,
+        fieldValues: customFieldValues,
+      });
 
       await api.post(`/rsvp/${guestId}`, {
         rsvp: rsvpStatus,
@@ -1079,6 +1101,148 @@ export default function RsvpPage() {
   const floralColor = global.floralColor || '#b91c1c';
   const floralType = global.floralType || 'roses';
   const floralDensity = global.floralDensity !== undefined ? global.floralDensity : 40;
+  const canvasStyle = getCanvasStyle(global);
+
+  const updateCustomField = (fieldId: string, value: string | number | boolean) => {
+    setCustomFieldValues((prev) => ({ ...prev, [fieldId]: value }));
+  };
+
+  const renderRsvpFieldInput = (field: RsvpField) => {
+    const options = parseFieldOptions(field.options);
+    const inputClass = 'w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-indigo-500 bg-white';
+    const value = customFieldValues[field.id];
+
+    if (field.type === 'textarea') {
+      return (
+        <textarea
+          value={value || ''}
+          onChange={(e) => updateCustomField(field.id, e.target.value)}
+          required={field.required}
+          rows={3}
+          placeholder={field.placeholder || 'Votre réponse...'}
+          className={`${inputClass} resize-none`}
+        />
+      );
+    }
+
+    if (field.type === 'select') {
+      return (
+        <select
+          value={value || ''}
+          onChange={(e) => updateCustomField(field.id, e.target.value)}
+          required={field.required}
+          className={inputClass}
+        >
+          <option value="">Sélectionnez une option...</option>
+          {options.map((opt) => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
+      );
+    }
+
+    if (field.type === 'radio') {
+      return (
+        <div className="space-y-2">
+          {options.map((opt) => (
+            <label key={opt} className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="radio"
+                name={`rsvp-field-${field.id}`}
+                checked={value === opt}
+                onChange={() => updateCustomField(field.id, opt)}
+                required={field.required}
+                className="text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="text-xs text-slate-600 font-semibold">{opt}</span>
+            </label>
+          ))}
+        </div>
+      );
+    }
+
+    if (field.type === 'checkbox') {
+      return (
+        <label className="flex items-center gap-2 cursor-pointer select-none py-1">
+          <input
+            type="checkbox"
+            checked={Boolean(value)}
+            onChange={(e) => updateCustomField(field.id, e.target.checked)}
+            required={field.required}
+            className="rounded text-indigo-600 focus:ring-indigo-500"
+          />
+          <span className="text-xs text-slate-600 font-semibold">{field.label}</span>
+        </label>
+      );
+    }
+
+    if (field.type === 'yes_no') {
+      return (
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { label: 'Oui', val: true },
+            { label: 'Non', val: false },
+          ].map(({ label, val }) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => updateCustomField(field.id, val)}
+              className={`py-2 px-3 rounded-xl text-xs font-bold border transition ${
+                value === val
+                  ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                  : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      );
+    }
+
+    if (field.type === 'rating') {
+      return (
+        <div className="flex gap-1">
+          {[1, 2, 3, 4, 5].map((rating) => (
+            <button
+              key={rating}
+              type="button"
+              onClick={() => updateCustomField(field.id, rating)}
+              className={`w-9 h-9 rounded-lg text-sm font-bold border transition ${
+                Number(value) === rating
+                  ? 'border-amber-500 bg-amber-50 text-amber-700'
+                  : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+              }`}
+            >
+              {rating}
+            </button>
+          ))}
+        </div>
+      );
+    }
+
+    const inputType =
+      field.type === 'number' ? 'number'
+      : field.type === 'email' ? 'email'
+      : field.type === 'phone' ? 'tel'
+      : field.type === 'date' ? 'date'
+      : 'text';
+
+    return (
+      <input
+        type={inputType}
+        value={value ?? ''}
+        onChange={(e) => updateCustomField(
+          field.id,
+          field.type === 'number' ? Number(e.target.value) : e.target.value
+        )}
+        required={field.required}
+        placeholder={field.placeholder || 'Votre réponse...'}
+        className={inputClass}
+        min={field.type === 'number' ? 0 : undefined}
+      />
+    );
+  };
 
   const renderRsvpLockedBanner = () =>
     rsvpLocked ? (
@@ -1126,48 +1290,17 @@ export default function RsvpPage() {
         {rsvpStatus === 'ACCEPTED' && (
           <div className="space-y-4 border-t border-slate-200/60 pt-4 text-left">
             {/* Custom Fields */}
-            {el.rsvpFields && el.rsvpFields.map((field: any) => (
+            {el.rsvpFields && el.rsvpFields.map((field: RsvpField) => (
               <div key={field.id} className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider">
-                  {field.label} {field.required && <span className="text-rose-500">*</span>}
-                </label>
-                {field.type === 'text' && (
-                  <input
-                    type="text"
-                    value={customFieldValues[field.id] || ''}
-                    onChange={(e) => setCustomFieldValues({ ...customFieldValues, [field.id]: e.target.value })}
-                    required={field.required}
-                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-indigo-500 bg-white"
-                    placeholder="Votre réponse..."
-                  />
-                )}
-                {field.type === 'select' && (
-                  <select
-                    value={customFieldValues[field.id] || ''}
-                    onChange={(e) => setCustomFieldValues({ ...customFieldValues, [field.id]: e.target.value })}
-                    required={field.required}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-indigo-500 bg-white"
-                  >
-                    <option value="">Sélectionnez une option...</option>
-                    {field.options?.split(',').map((opt: string) => (
-                      <option key={opt.trim()} value={opt.trim()}>
-                        {opt.trim()}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                {field.type === 'checkbox' && (
-                  <label className="flex items-center gap-2 cursor-pointer select-none py-1">
-                    <input
-                      type="checkbox"
-                      checked={customFieldValues[field.id] || false}
-                      onChange={(e) => setCustomFieldValues({ ...customFieldValues, [field.id]: e.target.checked })}
-                      required={field.required}
-                      className="rounded text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <span className="text-xs text-slate-600 font-semibold">{field.label}</span>
+                {field.type !== 'checkbox' && (
+                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider">
+                    {field.label} {field.required && <span className="text-rose-500">*</span>}
                   </label>
                 )}
+                {field.helpText && (
+                  <p className="text-[10px] text-slate-400">{field.helpText}</p>
+                )}
+                {renderRsvpFieldInput(field)}
               </div>
             ))}
 
@@ -1242,7 +1375,7 @@ export default function RsvpPage() {
 
       <div className="absolute inset-0 bg-grid-slate-200 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.7))]" />
 
-      <div className="max-w-lg w-full relative z-10 flex justify-between items-center px-1 gap-2">
+      <div className="w-full relative z-10 flex justify-between items-center px-1 gap-2" style={{ maxWidth: canvasStyle.maxWidth }}>
         <GuestPortalHomeLink guestId={guestId} variant="light" />
         <Link
           href="/guide/invite"
@@ -1254,8 +1387,12 @@ export default function RsvpPage() {
       </div>
 
       <div
-        style={template ? getBackgroundStyle(bgType, bgColor, bgImageUrl, bgPattern) : { backgroundColor: '#ffffff' }}
-        className={`max-w-lg w-full border border-slate-200 shadow-2xl relative z-10 overflow-hidden flex flex-col transition-all duration-300 ${
+        style={{
+          ...(template ? getBackgroundStyle(bgType, bgColor, bgImageUrl, bgPattern) : { backgroundColor: '#ffffff' }),
+          maxWidth: canvasStyle.maxWidth,
+          minHeight: canvasStyle.minHeight,
+        }}
+        className={`w-full border border-slate-200 shadow-2xl relative z-10 overflow-hidden flex flex-col transition-all duration-300 ${
           template && frameType === 'arch' ? 'rounded-t-[240px] border-t-2 border-x-2 border-amber-200/60' : 'rounded-3xl'
         }`}
       >

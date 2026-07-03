@@ -10,6 +10,14 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { PageHeader, Alert, EmptyState, Button } from '@/components/ui';
+import {
+  extractRsvpFieldsFromTemplateContent,
+  supplementFieldsFromGuestPreferences,
+  getCustomFieldValue,
+  formatCustomFieldValueForDisplay,
+  isBooleanFieldType,
+  isNumericFieldType,
+} from '@/lib/rsvpFormFields';
 
 interface EventItem {
   id: string;
@@ -135,55 +143,14 @@ export default function AnalyticsPage() {
   const uniqueCategories = Array.from(new Set(guests.map(g => g.category || 'Général')));
 
   const getCustomRsvpFields = () => {
-    const fields: { id: string; label: string; type: string; options?: string[] }[] = [];
-    
-    // Extract from templates associated with invitations
-    invitations.forEach(invite => {
+    const fields = invitations.flatMap((invite) => {
       const templateId = invite.template?.id || invite.templateId;
-      if (templateId) {
-        const template = templates.find(t => t.id === templateId);
-        if (template && template.content) {
-          let contentObj = template.content;
-          if (typeof contentObj === 'string') {
-            try { contentObj = JSON.parse(contentObj); } catch(e) {}
-          }
-          if (contentObj && contentObj.elements) {
-            contentObj.elements.forEach((el: any) => {
-              if (el.type === 'rsvp-block' && el.rsvpFields) {
-                el.rsvpFields.forEach((f: any) => {
-                  if (!fields.some(existing => existing.label === f.label)) {
-                    fields.push({
-                      id: f.id,
-                      label: f.label,
-                      type: f.type,
-                      options: f.options ? f.options.split(',').map((o: string) => o.trim()) : undefined
-                    });
-                  }
-                });
-              }
-            });
-          }
-        }
-      }
+      const template = templates.find((t) => t.id === templateId);
+      if (!template?.content) return [];
+      return extractRsvpFieldsFromTemplateContent(template.content);
     });
 
-    // Supplement with actually answered fields in guests preferences
-    guests.forEach(g => {
-      if (g.preferences?.customFields) {
-        Object.entries(g.preferences.customFields).forEach(([label, val]) => {
-          if (!fields.some(f => f.label === label)) {
-            const type = typeof val === 'boolean' ? 'checkbox' : 'text';
-            fields.push({
-              id: `dynamic-${label}`,
-              label,
-              type
-            });
-          }
-        });
-      }
-    });
-
-    return fields;
+    return supplementFieldsFromGuestPreferences(fields, guests);
   };
 
   const exportToCSV = () => {
@@ -208,13 +175,11 @@ export default function AnalyticsPage() {
         ];
         
         customFields.forEach(f => {
-          const val = g.preferences?.customFields?.[f.label];
+          const val = getCustomFieldValue(g.preferences, f);
           if (val === undefined || val === null) {
             row.push('""');
-          } else if (typeof val === 'boolean') {
-            row.push(val ? '"Oui"' : '"Non"');
           } else {
-            row.push(`"${val.toString().replace(/"/g, '""')}"`);
+            row.push(`"${formatCustomFieldValueForDisplay(val).replace(/"/g, '""')}"`);
           }
         });
         
@@ -402,37 +367,62 @@ export default function AnalyticsPage() {
                 ) : (
                   getCustomRsvpFields().map(field => {
                     const answers = guests
-                      .filter(g => g.rsvp === 'ACCEPTED' && g.preferences?.customFields?.[field.label] !== undefined)
-                      .map(g => g.preferences!.customFields![field.label]);
+                      .filter(g => g.rsvp === 'ACCEPTED' && getCustomFieldValue(g.preferences, field) !== undefined)
+                      .map(g => getCustomFieldValue(g.preferences, field)!);
                     
                     const totalAnswers = answers.length;
 
-                    if (field.type === 'checkbox') {
+                    if (isBooleanFieldType(field.type)) {
                       const yesCount = answers.filter(a => a === true).length;
                       const noCount = totalAnswers - yesCount;
                       const yesPct = totalAnswers > 0 ? Math.round((yesCount / totalAnswers) * 100) : 0;
                       return (
                         <div key={field.id} className="space-y-1.5 border-b border-slate-100 dark:border-slate-800 pb-3 last:border-0 last:pb-0">
                           <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{field.label}</div>
+                          <div className="text-[9px] text-slate-400 font-mono">{field.analyticsKey}</div>
                           <div className="flex justify-between text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-                            <span>Coché (Oui) : {yesCount} ({yesPct}%)</span>
-                            <span>Non coché (Non) : {noCount}</span>
+                            <span>Oui : {yesCount} ({yesPct}%)</span>
+                            <span>Non : {noCount}</span>
                           </div>
                           <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
                             <div style={{ width: `${yesPct}%` }} className="bg-indigo-500 h-full rounded-full" />
                           </div>
                         </div>
                       );
-                    } else {
+                    }
+
+                    if (isNumericFieldType(field.type)) {
+                      const numericAnswers = answers.map(a => Number(a)).filter(n => Number.isFinite(n));
+                      const avg = numericAnswers.length > 0
+                        ? (numericAnswers.reduce((s, n) => s + n, 0) / numericAnswers.length).toFixed(1)
+                        : '—';
+                      const min = numericAnswers.length > 0 ? Math.min(...numericAnswers) : '—';
+                      const max = numericAnswers.length > 0 ? Math.max(...numericAnswers) : '—';
+                      return (
+                        <div key={field.id} className="space-y-1.5 border-b border-slate-100 dark:border-slate-800 pb-3 last:border-0 last:pb-0">
+                          <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{field.label}</div>
+                          <div className="text-[9px] text-slate-400 font-mono">{field.analyticsKey}</div>
+                          <div className="grid grid-cols-3 gap-2 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                            <span>Moy. : {avg}</span>
+                            <span>Min : {min}</span>
+                            <span>Max : {max}</span>
+                          </div>
+                          <div className="text-[10px] text-slate-400">{totalAnswers} réponse(s)</div>
+                        </div>
+                      );
+                    }
+
+                    {
                       const counts: Record<string, number> = {};
                       answers.forEach(ans => {
-                        const strVal = ans === null || ans === undefined ? 'Non renseigné' : ans.toString();
+                        const strVal = ans === null || ans === undefined ? 'Non renseigné' : formatCustomFieldValueForDisplay(ans);
                         counts[strVal] = (counts[strVal] || 0) + 1;
                       });
 
                       return (
                         <div key={field.id} className="space-y-1.5 border-b border-slate-100 dark:border-slate-800 pb-3 last:border-0 last:pb-0">
                           <div className="text-xs font-bold text-slate-800 dark:text-slate-200">{field.label}</div>
+                          <div className="text-[9px] text-slate-400 font-mono">{field.analyticsKey}</div>
                           <div className="space-y-1 max-h-24 overflow-y-auto">
                             {Object.entries(counts).map(([val, count]) => {
                               const pct = totalAnswers > 0 ? Math.round((count / totalAnswers) * 100) : 0;

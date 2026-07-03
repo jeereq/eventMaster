@@ -17,6 +17,16 @@ import {
 } from 'lucide-react';
 import { PageHeader, Alert, Button } from '@/components/ui';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
+import {
+  type RsvpField,
+  type CanvasSizePreset,
+  CANVAS_SIZE_PRESETS,
+  RSVP_FIELD_CATEGORIES,
+  RSVP_FIELD_TYPE_LABELS,
+  createDefaultRsvpField,
+  getCanvasStyle,
+  slugifyAnalyticsKey,
+} from '@/lib/rsvpFormFields';
 
 interface TemplateItem {
   id: string;
@@ -28,14 +38,6 @@ interface TemplateItem {
   tenant?: {
     name: string;
   } | null;
-}
-
-interface RsvpField {
-  id: string;
-  type: 'text' | 'select' | 'checkbox';
-  label: string;
-  options?: string; // Comma-separated options for select
-  required: boolean;
 }
 
 interface CanvasElement {
@@ -126,6 +128,9 @@ export default function TemplatesPage() {
   const [landingCategory, setLandingCategory] = useState<'private' | 'corporate' | 'casual'>('private');
   const [landingDescription, setLandingDescription] = useState('');
   const [showOnLanding, setShowOnLanding] = useState(false);
+  const [canvasSizePreset, setCanvasSizePreset] = useState<CanvasSizePreset>('standard');
+  const [canvasWidth, setCanvasWidth] = useState(CANVAS_SIZE_PRESETS.standard.width);
+  const [canvasHeight, setCanvasHeight] = useState(CANVAS_SIZE_PRESETS.standard.height);
 
   // Property editing states for selected element
   const [elText, setElText] = useState('');
@@ -255,8 +260,9 @@ export default function TemplatesPage() {
         align: 'center',
         width: 'full',
         rsvpFields: [
-          { id: 'f1', type: 'select', label: 'Choix du menu', options: 'Poulet, Poisson, Végétarien', required: true },
-          { id: 'f2', type: 'checkbox', label: 'Accompagné d\'un "Plus One"', required: false }
+          { id: 'f1', type: 'select', label: 'Choix du menu', options: 'Poulet, Poisson, Végétarien', required: true, analyticsKey: 'choix_menu', category: 'preference' },
+          { id: 'f2', type: 'yes_no', label: 'Accompagné d\'un plus one', required: false, analyticsKey: 'plus_one', category: 'logistics' },
+          { id: 'f3', type: 'number', label: 'Nombre de personnes', required: false, analyticsKey: 'nombre_personnes', category: 'logistics', placeholder: 'Ex. : 2' },
         ]
       },
     ]);
@@ -274,6 +280,9 @@ export default function TemplatesPage() {
     setLandingCategory('private');
     setLandingDescription('');
     setShowOnLanding(false);
+    setCanvasSizePreset('standard');
+    setCanvasWidth(CANVAS_SIZE_PRESETS.standard.width);
+    setCanvasHeight(CANVAS_SIZE_PRESETS.standard.height);
     
     setSelectedElementId(null);
     setEditorOpen(true);
@@ -300,6 +309,12 @@ export default function TemplatesPage() {
     setLandingCategory(global.landingCategory || 'private');
     setLandingDescription(global.landingDescription || '');
     setShowOnLanding(Boolean(t.showOnLanding));
+    setCanvasSizePreset(global.canvasSizePreset || 'standard');
+    const dims = global.canvasSizePreset && global.canvasSizePreset !== 'custom'
+      ? CANVAS_SIZE_PRESETS[global.canvasSizePreset as Exclude<CanvasSizePreset, 'custom'>]
+      : null;
+    setCanvasWidth(global.canvasWidth || dims?.width || CANVAS_SIZE_PRESETS.standard.width);
+    setCanvasHeight(global.canvasHeight || dims?.height || CANVAS_SIZE_PRESETS.standard.height);
     
     setSelectedElementId(null);
     setEditorOpen(true);
@@ -346,7 +361,7 @@ export default function TemplatesPage() {
       buttonStyle: type === 'button' ? 'filled' : undefined,
       buttonLink: type === 'button' ? '' : undefined,
       rsvpFields: type === 'rsvp-block' ? [
-        { id: 'f1', type: 'select', label: 'Choix du menu', options: 'Poulet, Poisson, Végétarien', required: true }
+        { id: 'f1', type: 'select', label: 'Choix du menu', options: 'Poulet, Poisson, Végétarien', required: true, analyticsKey: 'choix_menu', category: 'preference' },
       ] : undefined
     };
     setCanvasElements([...canvasElements, newElement]);
@@ -728,12 +743,7 @@ export default function TemplatesPage() {
 
   // Customizable RSVP fields management
   const handleAddRsvpField = () => {
-    const newField: RsvpField = {
-      id: Date.now().toString(),
-      type: 'text',
-      label: 'Nouveau champ',
-      required: false
-    };
+    const newField = createDefaultRsvpField();
     const updatedFields = [...elRsvpFields, newField];
     handlePropertyChange('rsvpFields', updatedFields);
   };
@@ -741,11 +751,23 @@ export default function TemplatesPage() {
   const handleUpdateRsvpField = (fieldId: string, key: keyof RsvpField, value: any) => {
     const updatedFields = elRsvpFields.map(f => {
       if (f.id === fieldId) {
-        return { ...f, [key]: value };
+        const updated = { ...f, [key]: value };
+        if (key === 'label' && !f.analyticsKey?.trim()) {
+          updated.analyticsKey = slugifyAnalyticsKey(value);
+        }
+        return updated;
       }
       return f;
     });
     handlePropertyChange('rsvpFields', updatedFields);
+  };
+
+  const handleCanvasPresetChange = (preset: CanvasSizePreset) => {
+    setCanvasSizePreset(preset);
+    if (preset !== 'custom' && CANVAS_SIZE_PRESETS[preset]) {
+      setCanvasWidth(CANVAS_SIZE_PRESETS[preset].width);
+      setCanvasHeight(CANVAS_SIZE_PRESETS[preset].height);
+    }
   };
 
   const handleDeleteRsvpField = (fieldId: string) => {
@@ -785,6 +807,9 @@ export default function TemplatesPage() {
             floralColor,
             floralType,
             floralDensity,
+            canvasSizePreset,
+            canvasWidth,
+            canvasHeight,
             ...(isGlobalTemplate ? { landingCategory, landingDescription: landingDescription.trim() || undefined } : {}),
             ...(importedPalette ? { palette: importedPalette, importedFromMockup: true, importedWithOcr } : {}),
           },
@@ -1166,16 +1191,24 @@ export default function TemplatesPage() {
 
           {/* Center Canvas Preview */}
           <div className="lg:col-span-2 space-y-4">
-            <div className="text-center">
+            <div className="text-center space-y-1">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
                 <Eye className="w-3.5 h-3.5" /> Zone de prévisualisation de l'invitation
               </span>
+              <p className="text-[10px] text-slate-400 font-semibold">
+                {canvasWidth} × {canvasHeight} px
+                {canvasSizePreset !== 'custom' ? ` · ${CANVAS_SIZE_PRESETS[canvasSizePreset as Exclude<CanvasSizePreset, 'custom'>]?.label.split(' (')[0] || canvasSizePreset}` : ' · Personnalisé'}
+              </p>
             </div>
             
+            <div className="flex justify-center">
             {/* Main Canvas Card */}
             <div 
-              style={getBackgroundStyle(bgType, bgColor, bgImageUrl, bgPattern)}
-              className={`border border-slate-200 min-h-[550px] p-8 shadow-md relative overflow-hidden transition-all duration-300 ${
+              style={{
+                ...getBackgroundStyle(bgType, bgColor, bgImageUrl, bgPattern),
+                ...getCanvasStyle({ canvasSizePreset, canvasWidth, canvasHeight }),
+              }}
+              className={`border border-slate-200 p-8 shadow-md relative overflow-hidden transition-all duration-300 ${
                 frameType === 'arch' ? 'rounded-t-[240px] border-t-2 border-x-2 border-amber-200/60' : 'rounded-3xl'
               }`}
             >
@@ -1764,6 +1797,7 @@ export default function TemplatesPage() {
                 )}
               </div>
             </div>
+            </div>
           </div>
 
           {/* Right Properties Panel */}
@@ -2125,10 +2159,46 @@ export default function TemplatesPage() {
                                 onChange={(e) => handleUpdateRsvpField(field.id, 'type', e.target.value)}
                                 className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition"
                               >
-                                <option value="text">Texte libre</option>
-                                <option value="select">Menu déroulant</option>
-                                <option value="checkbox">Case à cocher</option>
+                                {Object.entries(RSVP_FIELD_TYPE_LABELS).map(([value, label]) => (
+                                  <option key={value} value={value}>{label}</option>
+                                ))}
                               </select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase">Catégorie analyse</label>
+                              <select
+                                value={field.category || 'custom'}
+                                onChange={(e) => handleUpdateRsvpField(field.id, 'category', e.target.value)}
+                                className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition"
+                              >
+                                {RSVP_FIELD_CATEGORIES.map((cat) => (
+                                  <option key={cat.id} value={cat.id}>{cat.label}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase">Clé analytique (CSV / stats)</label>
+                            <input
+                              type="text"
+                              value={field.analyticsKey || ''}
+                              onChange={(e) => handleUpdateRsvpField(field.id, 'analyticsKey', slugifyAnalyticsKey(e.target.value))}
+                              placeholder="ex. choix_menu"
+                              className="w-full px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs font-mono focus:outline-none focus:border-indigo-500 transition"
+                            />
+                            <p className="text-[9px] text-slate-400">Identifiant stable pour exports et graphiques.</p>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase">Placeholder</label>
+                              <input
+                                type="text"
+                                value={field.placeholder || ''}
+                                onChange={(e) => handleUpdateRsvpField(field.id, 'placeholder', e.target.value)}
+                                className="w-full px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition"
+                              />
                             </div>
                             <div className="flex items-end pb-1.5">
                               <label className="flex items-center gap-1.5 cursor-pointer text-xs text-slate-600 font-semibold select-none">
@@ -2143,7 +2213,18 @@ export default function TemplatesPage() {
                             </div>
                           </div>
 
-                          {field.type === 'select' && (
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase">Texte d&apos;aide (optionnel)</label>
+                            <input
+                              type="text"
+                              value={field.helpText || ''}
+                              onChange={(e) => handleUpdateRsvpField(field.id, 'helpText', e.target.value)}
+                              placeholder="Ex. : Indiquez vos restrictions alimentaires"
+                              className="w-full px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition"
+                            />
+                          </div>
+
+                          {(field.type === 'select' || field.type === 'radio') && (
                             <div className="space-y-1">
                               <label className="text-[10px] font-bold text-slate-500 uppercase">Options (séparées par virgules)</label>
                               <input 
@@ -2308,6 +2389,60 @@ export default function TemplatesPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Canvas dimensions */}
+                <div className="space-y-3 p-3 rounded-2xl border border-indigo-100 bg-indigo-50/30">
+                  <h4 className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <Layout className="w-3.5 h-3.5" />
+                    Taille du modèle
+                  </h4>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Format prédéfini</label>
+                    <select
+                      value={canvasSizePreset}
+                      onChange={(e) => handleCanvasPresetChange(e.target.value as CanvasSizePreset)}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-500"
+                    >
+                      {Object.entries(CANVAS_SIZE_PRESETS).map(([key, preset]) => (
+                        <option key={key} value={key}>{preset.label}</option>
+                      ))}
+                      <option value="custom">Personnalisé</option>
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase">Largeur (px)</label>
+                      <input
+                        type="number"
+                        min={280}
+                        max={1200}
+                        value={canvasWidth}
+                        onChange={(e) => {
+                          setCanvasSizePreset('custom');
+                          setCanvasWidth(Number(e.target.value) || CANVAS_SIZE_PRESETS.standard.width);
+                        }}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase">Hauteur min. (px)</label>
+                      <input
+                        type="number"
+                        min={400}
+                        max={1600}
+                        value={canvasHeight}
+                        onChange={(e) => {
+                          setCanvasSizePreset('custom');
+                          setCanvasHeight(Number(e.target.value) || CANVAS_SIZE_PRESETS.standard.height);
+                        }}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[9px] text-slate-400 leading-relaxed">
+                    Cette taille s&apos;applique à l&apos;aperçu, à l&apos;invitation RSVP et aux cartes modèles.
+                  </p>
+                </div>
 
                 {/* Background Type */}
                 <div className="space-y-1.5">

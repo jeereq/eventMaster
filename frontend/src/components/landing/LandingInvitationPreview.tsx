@@ -2,6 +2,7 @@
 
 import React from 'react';
 import type { LandingTemplate } from '@/config/landingTemplates';
+import { getCanvasStyle } from '@/lib/rsvpFormFields';
 
 const LANDING_PREVIEW_FONTS =
   'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Great+Vibes&family=Montserrat:wght@400;600;700&family=Playfair+Display:wght@400;700&display=swap';
@@ -228,6 +229,7 @@ export default function LandingInvitationPreview({
   const global = template.previewContent?.global;
   const rawElements = (template.previewContent?.elements || []) as PreviewElement[];
   const bgColor = global?.bgColor || template.style.bgColor || '#faf8f5';
+  const canvasStyle = getCanvasStyle(global as Parameters<typeof getCanvasStyle>[0]);
   const useLegacyOnly = rawElements.length === 0;
 
   const visibleElements = useLegacyOnly
@@ -244,6 +246,7 @@ export default function LandingInvitationPreview({
         style={{
           backgroundColor: bgColor,
           borderColor: template.style.borderColor || 'rgba(226,232,240,0.9)',
+          ...(compact ? {} : { maxWidth: canvasStyle.maxWidth, minHeight: canvasStyle.minHeight }),
         }}
       >
         {!compact && (
