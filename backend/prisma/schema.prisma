@@ -115,6 +115,7 @@ model User {
   guestSeatVerifications Guest[] @relation("GuestSeatVerifications")
   protocolNotes  GuestProtocolNote[]
   commercialCommissions CommercialCommission[]
+  platformNotifications PlatformNotification[]
 }
 
 model Event {
@@ -409,4 +410,19 @@ model EventStaff {
 
   @@unique([eventId, userId])
   @@index([userId])
+}
+
+model PlatformNotification {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  message   String
+  readAt    DateTime?
+  metadata  Json?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
 }

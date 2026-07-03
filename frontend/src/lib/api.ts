@@ -58,6 +58,7 @@ async function request(path: string, options: FetchOptions = {}) {
 export const api = {
   get: (path: string, options?: FetchOptions) => request(path, { ...options, method: 'GET' }),
   post: (path: string, body?: any, options?: FetchOptions) => request(path, { ...options, method: 'POST', body }),
+  patch: (path: string, body?: any, options?: FetchOptions) => request(path, { ...options, method: 'PATCH', body }),
   put: (path: string, body?: any, options?: FetchOptions) => request(path, { ...options, method: 'PUT', body }),
   delete: (path: string, options?: FetchOptions) => request(path, { ...options, method: 'DELETE' }),
   download: async (path: string, filename: string) => {

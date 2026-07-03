@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import UserLegalGate from '@/components/UserLegalGate';
+import { NotificationBell } from '@/components/CommercialNotifications';
 import { cn } from '@/lib/cn';
 
 interface NavItem {
@@ -212,6 +213,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         },
       ];
 
+  const showCommercialNotifications = user?.role === 'COMMERCIAL' || access?.level === 'commercial';
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
       {/* Overlay mobile */}
@@ -233,6 +236,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <span className="font-bold text-base text-slate-900 dark:text-white">EventMaster</span>
         </div>
         <div className="flex items-center gap-1.5">
+          {showCommercialNotifications && <NotificationBell />}
           <button
             onClick={toggleTheme}
             className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
@@ -274,13 +278,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </span>
               </div>
             </div>
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
-              aria-label="Changer de thème"
-            >
-              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-            </button>
+            <div className="flex items-center gap-1.5">
+              {showCommercialNotifications && <NotificationBell />}
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+                aria-label="Changer de thème"
+              >
+                {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
 
           {/* Contexte tenant / admin */}

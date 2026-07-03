@@ -2,10 +2,16 @@ import { PlanType } from '@prisma/client';
 import { prisma } from '../db';
 import { getPlanLimits } from '../config/plansConfig';
 import { sendRealEmail, sendRealWhatsApp } from './notificationService';
+import {
+  createCommercialBillingNotification,
+  type CommercialBillingEvent,
+} from './platformNotificationService';
 
 function formatAmountFc(amount: number): string {
   return `${amount.toLocaleString('fr-FR')} FC`;
 }
+
+export { formatAmountFc };
 
 const DEFAULT_COMMISSION_RATE = 0.2;
 
@@ -123,13 +129,18 @@ export async function resolveCommercialByReferralCode(referralCode: string): Pro
   return null;
 }
 
+export type CommercialCommissionRecord = {
+  commercialId: string;
+  commissionAmount: number;
+};
+
 export async function recordCommercialCommission(params: {
   tenantId: string;
   plan: PlanType;
   source: string;
   invoiceAmount?: number;
   platformInvoiceId?: string;
-}) {
+}): Promise<CommercialCommissionRecord[]> {
   const tenant = await prisma.tenant.findUnique({
     where: { id: params.tenantId },
     select: {
@@ -139,15 +150,15 @@ export async function recordCommercialCommission(params: {
     },
   });
 
-  if (!tenant) return null;
+  if (!tenant) return [];
 
   const invoiceAmount =
     params.invoiceAmount ?? parsePlanPrice(getPlanLimits(params.plan).price);
 
-  if (invoiceAmount <= 0) return null;
+  if (invoiceAmount <= 0) return [];
 
   const billingPeriod = getBillingPeriod();
-  const results = [];
+  const results: CommercialCommissionRecord[] = [];
 
   if (tenant.referredByCommercialId) {
     const commercial = await prisma.user.findUnique({
@@ -158,8 +169,7 @@ export async function recordCommercialCommission(params: {
     if (commercial?.role === 'COMMERCIAL') {
       const rate = normalizeCommissionRate(commercial.commissionRate);
       const commissionAmount = Math.round(invoiceAmount * rate);
-      results.push(
-        await prisma.commercialCommission.upsert({
+      await prisma.commercialCommission.upsert({
           where: {
             commercialId_tenantId_billingPeriod: {
               commercialId: commercial.id,
@@ -186,8 +196,8 @@ export async function recordCommercialCommission(params: {
             source: params.source,
             platformInvoiceId: params.platformInvoiceId ?? undefined,
           },
-        }),
-      );
+        });
+      results.push({ commercialId: commercial.id, commissionAmount });
     }
   }
 
@@ -200,8 +210,7 @@ export async function recordCommercialCommission(params: {
     if (orgCommercial) {
       const rate = normalizeCommissionRate(orgCommercial.commissionRate);
       const commissionAmount = Math.round(invoiceAmount * rate);
-      results.push(
-        await prisma.commercialCommission.upsert({
+      await prisma.commercialCommission.upsert({
           where: {
             commercialId_tenantId_billingPeriod: {
               commercialId: orgCommercial.id,
@@ -228,12 +237,12 @@ export async function recordCommercialCommission(params: {
             source: `${params.source}_ORG`,
             platformInvoiceId: params.platformInvoiceId ?? undefined,
           },
-        }),
-      );
+        });
+      results.push({ commercialId: orgCommercial.id, commissionAmount });
     }
   }
 
-  return results[0] ?? null;
+  return results;
 }
 
 type CommercialContact = {
@@ -294,6 +303,8 @@ export async function notifyCommercialsOnSubscriptionApproval(params: {
   discountPercent: number;
   discountAmount: number;
   invoiceNumber?: string;
+  event?: CommercialBillingEvent;
+  commissionsByUserId?: Record<string, number>;
 }): Promise<{ notified: string[] }> {
   const contacts = await getTenantCommercialContacts(params.tenantId);
   if (contacts.length === 0) {
@@ -306,6 +317,7 @@ export async function notifyCommercialsOnSubscriptionApproval(params: {
       ? `\nRéduction accordée : − ${formatAmountFc(params.discountAmount)} (${params.discountPercent} %)\nMontant facturé : ${formatAmountFc(params.finalAmount)}`
       : `\nMontant facturé : ${formatAmountFc(params.finalAmount)}`;
 
+  const event = params.event ?? 'SUBSCRIPTION_APPROVAL';
   const notified: string[] = [];
 
   for (const contact of contacts) {
@@ -351,6 +363,25 @@ export async function notifyCommercialsOnSubscriptionApproval(params: {
     if (contact.phone) {
       const waBody = `EventMaster — Abonnement approuvé pour ${params.tenantName} (${planName}). Montant facturé : ${formatAmountFc(params.finalAmount)}.${params.discountAmount > 0 ? ` Réduction : ${params.discountPercent}%.` : ''} Votre commission sera mise à jour.`;
       await sendRealWhatsApp(contact.phone, waBody);
+    }
+
+    try {
+      await createCommercialBillingNotification({
+        userId: contact.id,
+        tenantId: params.tenantId,
+        tenantName: params.tenantName,
+        plan: params.plan,
+        event,
+        durationDays: params.durationDays,
+        baseAmount: params.baseAmount,
+        finalAmount: params.finalAmount,
+        discountPercent: params.discountPercent,
+        discountAmount: params.discountAmount,
+        invoiceNumber: params.invoiceNumber,
+        commissionAmount: params.commissionsByUserId?.[contact.id],
+      });
+    } catch (err) {
+      console.error('[notifyCommercialsOnSubscriptionApproval] notification in-app:', err);
     }
   }
 

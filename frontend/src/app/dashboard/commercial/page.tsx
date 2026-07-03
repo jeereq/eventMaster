@@ -7,6 +7,7 @@ import {
   Building2, Copy, Loader2, PlusCircle, TrendingUp, Users, Wallet,
 } from 'lucide-react';
 import { Button, PageHeader } from '@/components/ui';
+import { CommercialNotificationsPanel } from '@/components/CommercialNotifications';
 
 interface CommercialDashboard {
   referralCode: string;
@@ -100,6 +101,8 @@ export default function CommercialDashboardPage() {
         title="Parrainage & commissions"
         description="Compte commercial plateforme — sans organisation. Gérez vos parrainages et suivez vos commissions."
       />
+
+      <CommercialNotificationsPanel />
 
       <div className="grid sm:grid-cols-3 gap-4">
         <div className="bg-white dark:bg-slate-900 border rounded-2xl p-5">

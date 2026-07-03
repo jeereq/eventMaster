@@ -5,6 +5,7 @@ import {
   getPlanAmount,
 } from './invoiceService';
 import { notifyCommercialsOnSubscriptionApproval, recordCommercialCommission } from './commercialService';
+import type { CommercialBillingEvent } from './platformNotificationService';
 
 export type TenantBillingAction = 'ACTIVATION' | 'PLAN_CHANGE' | 'RENEWAL';
 
@@ -44,6 +45,16 @@ export function sourceForAction(action: TenantBillingAction): string {
   if (action === 'RENEWAL') return 'ADMIN_RENEWAL';
   if (action === 'ACTIVATION') return 'ADMIN_ACTIVATION';
   return 'ADMIN_PLAN_CHANGE';
+}
+
+export function notificationEventForBilling(
+  action: TenantBillingAction,
+  subscriptionRequestId?: string,
+): CommercialBillingEvent {
+  if (subscriptionRequestId && action === 'ACTIVATION') return 'SUBSCRIPTION_APPROVAL';
+  if (action === 'RENEWAL') return 'ADMIN_RENEWAL';
+  if (action === 'PLAN_CHANGE') return 'ADMIN_PLAN_CHANGE';
+  return 'ADMIN_ACTIVATION';
 }
 
 export async function issueTenantPlanInvoice(params: {
@@ -86,13 +97,19 @@ export async function issueTenantPlanInvoice(params: {
     subscriptionRequestId: params.subscriptionRequestId,
   });
 
-  await recordCommercialCommission({
+  const commissionRecords = await recordCommercialCommission({
     tenantId: params.tenantId,
     plan: params.plan,
     source: sourceForAction(params.billing.action),
     invoiceAmount: pricing.finalAmount,
     platformInvoiceId: invoice?.id,
   });
+
+  const commissionsByUserId = Object.fromEntries(
+    commissionRecords.map((r) => [r.commercialId, r.commissionAmount]),
+  );
+
+  const notificationEvent = notificationEventForBilling(params.billing.action, params.subscriptionRequestId);
 
   const commercialNotification = await notifyCommercialsOnSubscriptionApproval({
     tenantId: params.tenantId,
@@ -104,6 +121,8 @@ export async function issueTenantPlanInvoice(params: {
     discountPercent: pricing.discountPercent,
     discountAmount: pricing.discountAmount,
     invoiceNumber: invoice?.invoiceNumber,
+    event: notificationEvent,
+    commissionsByUserId,
   });
 
   return {
