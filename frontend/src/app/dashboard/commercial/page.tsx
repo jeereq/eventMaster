@@ -4,10 +4,11 @@ import React, { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
-  Building2, Copy, Loader2, PlusCircle, TrendingUp, Users, Wallet,
+  Building2, Loader2, PlusCircle, TrendingUp, Users, Wallet, Mail, MessageSquare, RefreshCw, AlertCircle, CheckCircle2,
 } from 'lucide-react';
 import { Button, PageHeader } from '@/components/ui';
 import { CommercialNotificationsPanel } from '@/components/CommercialNotifications';
+import ReferralShareButtons from '@/components/commercial/ReferralShareButtons';
 
 interface CommercialDashboard {
   referralCode: string;
@@ -23,6 +24,9 @@ interface CommercialDashboard {
     plan: string;
     licenseActive: boolean;
     managerName?: string;
+    managerEmail?: string;
+    managerId?: string;
+    managerIsEmailVerified?: boolean;
     eventsCount: number;
   }>;
   commissions: Array<{
@@ -48,6 +52,10 @@ export default function CommercialDashboardPage() {
     managerPhone: '',
   });
   const [submitting, setSubmitting] = useState(false);
+  const [verificationMethod, setVerificationMethod] = useState<'EMAIL' | 'WHATSAPP'>('EMAIL');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [resendingManagerId, setResendingManagerId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.role !== 'COMMERCIAL') return;
@@ -57,25 +65,42 @@ export default function CommercialDashboardPage() {
       .finally(() => setLoading(false));
   }, [user]);
 
-  const copyCode = () => {
-    if (data?.referralCode) {
-      navigator.clipboard.writeText(data.referralCode);
-    }
-  };
-
   const handleCreateOrg = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setSuccess('');
     setSubmitting(true);
+    if (verificationMethod === 'WHATSAPP' && !form.managerPhone) {
+      setError('Le téléphone est obligatoire pour envoyer le code OTP par WhatsApp.');
+      setSubmitting(false);
+      return;
+    }
     try {
-      await api.post('/commercial/organizations', form);
+      const data = await api.post('/commercial/organizations', { ...form, verificationMethod });
+      setSuccess(data.message || 'Organisation créée.');
       setShowForm(false);
       setForm({ organizationName: '', managerName: '', managerEmail: '', managerPassword: '', managerPhone: '' });
+      setVerificationMethod('EMAIL');
       const refreshed = await api.get('/commercial/dashboard');
       setData(refreshed);
     } catch (err: any) {
-      alert(err?.data?.error || 'Erreur lors de la création.');
+      setError(err.message || 'Erreur lors de la création.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleResendManagerOtp = async (managerId: string) => {
+    setResendingManagerId(managerId);
+    setError('');
+    setSuccess('');
+    try {
+      const data = await api.post(`/commercial/organizations/${managerId}/resend-verification`);
+      setSuccess(data.message || 'Code OTP renvoyé au manager.');
+    } catch (err: any) {
+      setError(err.message || 'Impossible de renvoyer le code OTP.');
+    } finally {
+      setResendingManagerId(null);
     }
   };
 
@@ -134,10 +159,7 @@ export default function CommercialDashboardPage() {
           <p className="text-2xl font-black tracking-wider">{data.referralCode}</p>
           <p className="text-indigo-200 text-xs mt-1">{Math.round(data.commissionRate * 100)} % sur chaque facture mensuelle des org. parrainées</p>
         </div>
-        <Button variant="secondary" onClick={copyCode} className="bg-white/10 border-white/20 text-white hover:bg-white/20">
-          <Copy className="w-4 h-4" />
-          Copier le code
-        </Button>
+        <ReferralShareButtons referralCode={data.referralCode} />
       </div>
 
       <div className="flex justify-between items-center">
@@ -148,25 +170,52 @@ export default function CommercialDashboardPage() {
         </Button>
       </div>
 
+      {error && (
+        <div className="p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 text-rose-800 rounded-xl flex items-center gap-2 text-xs">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 text-emerald-800 rounded-xl flex items-center gap-2 text-xs">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          {success}
+        </div>
+      )}
+
       {showForm && (
-        <form onSubmit={handleCreateOrg} className="bg-white dark:bg-slate-900 border rounded-2xl p-5 grid sm:grid-cols-2 gap-4">
+        <form onSubmit={handleCreateOrg} className="bg-white dark:bg-slate-900 border rounded-2xl p-5 space-y-4">
+          <div className="grid sm:grid-cols-2 gap-4">
           {(['organizationName', 'managerName', 'managerEmail', 'managerPassword', 'managerPhone'] as const).map((field) => (
             <input
               key={field}
               required={field !== 'managerPhone'}
-              type={field.includes('Password') ? 'password' : field.includes('Email') ? 'email' : 'text'}
+              type={field.includes('Password') ? 'password' : field.includes('Email') ? 'email' : field === 'managerPhone' ? 'tel' : 'text'}
               placeholder={
                 field === 'organizationName' ? 'Nom organisation' :
                 field === 'managerName' ? 'Nom du manager' :
                 field === 'managerEmail' ? 'E-mail manager' :
-                field === 'managerPassword' ? 'Mot de passe manager' : 'Téléphone (optionnel)'
+                field === 'managerPassword' ? 'Mot de passe manager (min. 6 car.)' :
+                verificationMethod === 'WHATSAPP' ? 'Téléphone WhatsApp (+243…)' : 'Téléphone (optionnel)'
               }
               value={form[field]}
               onChange={(e) => setForm({ ...form, [field]: e.target.value })}
               className="px-4 py-2.5 rounded-xl border text-sm"
             />
           ))}
-          <div className="sm:col-span-2 flex gap-2">
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Validation du compte manager (OTP)</label>
+            <div className="grid grid-cols-2 gap-3 max-w-md">
+              <button type="button" onClick={() => setVerificationMethod('EMAIL')} className={`py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 ${verificationMethod === 'EMAIL' ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'border-slate-200 text-slate-600'}`}>
+                <Mail className="w-4 h-4" /> OTP par e-mail
+              </button>
+              <button type="button" onClick={() => setVerificationMethod('WHATSAPP')} className={`py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 ${verificationMethod === 'WHATSAPP' ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'border-slate-200 text-slate-600'}`}>
+                <MessageSquare className="w-4 h-4" /> OTP WhatsApp
+              </button>
+            </div>
+          </div>
+          <div className="flex gap-2">
             <Button type="submit" disabled={submitting}>{submitting ? 'Création…' : 'Créer l\'organisation'}</Button>
             <Button type="button" variant="secondary" onClick={() => setShowForm(false)}>Annuler</Button>
           </div>
@@ -179,6 +228,7 @@ export default function CommercialDashboardPage() {
             <tr>
               <th className="px-4 py-3">Organisation</th>
               <th className="px-4 py-3">Manager</th>
+              <th className="px-4 py-3">Compte</th>
               <th className="px-4 py-3">Plan</th>
               <th className="px-4 py-3">Événements</th>
             </tr>
@@ -187,7 +237,34 @@ export default function CommercialDashboardPage() {
             {data.organizations.map((o) => (
               <tr key={o.id}>
                 <td className="px-4 py-3 font-semibold">{o.name}</td>
-                <td className="px-4 py-3 text-slate-500">{o.managerName || '—'}</td>
+                <td className="px-4 py-3 text-slate-500">
+                  <div>{o.managerName || '—'}</div>
+                  {o.managerEmail && <div className="text-xs text-slate-400">{o.managerEmail}</div>}
+                </td>
+                <td className="px-4 py-3">
+                  {o.managerIsEmailVerified === false ? (
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 w-fit">
+                        En attente OTP
+                      </span>
+                      {o.managerId && (
+                        <button
+                          type="button"
+                          onClick={() => handleResendManagerOtp(o.managerId!)}
+                          disabled={resendingManagerId === o.managerId}
+                          className="text-[10px] font-bold text-amber-700 hover:underline inline-flex items-center gap-1 w-fit"
+                        >
+                          {resendingManagerId === o.managerId ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                          Renvoyer OTP
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      Validé
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3">{o.plan}</td>
                 <td className="px-4 py-3">{o.eventsCount}</td>
               </tr>

@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
   Users, UserPlus, Trash2, Loader2, Crown, Mail, Phone, AlertCircle, CheckCircle2,
-  Shield, Briefcase, MessageSquare, TrendingUp, Copy,
+  Shield, Briefcase, MessageSquare, TrendingUp, Copy, RefreshCw,
 } from 'lucide-react';
 
 interface TeamMember {
@@ -48,6 +48,7 @@ export default function TeamManagement() {
   const [verificationMethod, setVerificationMethod] = useState<'EMAIL' | 'WHATSAPP'>('EMAIL');
   const [editingCommissionId, setEditingCommissionId] = useState<string | null>(null);
   const [editCommissionValue, setEditCommissionValue] = useState('');
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   const hasCommercialNetwork = planFeatures?.commercialNetwork === true;
 
@@ -137,6 +138,20 @@ export default function TeamManagement() {
       await loadTeam();
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la mise à jour de la commission.');
+    }
+  };
+
+  const handleResendOtp = async (member: TeamMember) => {
+    setResendingId(member.id);
+    setError('');
+    setSuccess('');
+    try {
+      const data = await api.post(`/team/${member.id}/resend-verification`);
+      setSuccess(data.message || 'Code OTP renvoyé.');
+    } catch (err: any) {
+      setError(err.message || 'Impossible de renvoyer le code OTP.');
+    } finally {
+      setResendingId(null);
     }
   };
 
@@ -333,6 +348,17 @@ export default function TeamManagement() {
                         <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
                           En attente OTP
                         </span>
+                      )}
+                      {!member.isEmailVerified && canManageTeam && (
+                        <button
+                          type="button"
+                          onClick={() => handleResendOtp(member)}
+                          disabled={resendingId === member.id}
+                          className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border border-amber-300 text-amber-700 hover:bg-amber-50 inline-flex items-center gap-1"
+                        >
+                          {resendingId === member.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                          Renvoyer OTP
+                        </button>
                       )}
                     </>
                   )}

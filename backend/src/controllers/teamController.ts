@@ -171,7 +171,10 @@ export async function createTeamMember(req: AuthenticatedRequest, res: Response)
       email,
       phone,
       method,
+      invitedToTeam: true,
     });
+
+    const channelLabel = method === 'WHATSAPP' ? 'WhatsApp' : 'e-mail';
 
     const refreshed = await prisma.user.findUnique({
       where: { id: newUser.id },
@@ -180,9 +183,8 @@ export async function createTeamMember(req: AuthenticatedRequest, res: Response)
 
     return res.status(201).json({
       message:
-        method === 'WHATSAPP'
-          ? 'Utilisateur créé. Un code OTP a été envoyé sur WhatsApp pour valider le compte.'
-          : 'Utilisateur créé. Un code OTP a été envoyé par e-mail pour valider le compte.',
+        `Utilisateur créé. Un code OTP a été envoyé par ${channelLabel} à ${email}. ` +
+        `Le membre doit se connecter sur /login avec son mot de passe, saisir le code OTP, puis accéder au tableau de bord.`,
       member: {
         ...refreshed,
         isOwner: false,
@@ -383,6 +385,58 @@ export async function updateOrgCommercialSettings(req: AuthenticatedRequest, res
   } catch (error: any) {
     console.error('Erreur updateOrgCommercialSettings:', error);
     return res.status(500).json({ error: 'Impossible de mettre à jour les paramètres.' });
+  }
+}
+
+export async function resendTeamMemberVerification(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
+    const memberId = req.params.id as string;
+
+    if (!tenantId || !userId) {
+      return res.status(403).json({ error: 'Organisation non identifiée.' });
+    }
+
+    const access = await resolveOrgAccess(userId, tenantId);
+    if (!access.canManageTeam) {
+      return res.status(403).json({ error: 'Seuls le propriétaire et les managers peuvent renvoyer un code OTP.' });
+    }
+
+    const member = await prisma.user.findFirst({
+      where: { id: memberId, tenantId, role: 'USER' },
+    });
+
+    if (!member) {
+      return res.status(404).json({ error: 'Utilisateur introuvable dans votre organisation.' });
+    }
+
+    if (member.isEmailVerified) {
+      return res.status(400).json({ error: 'Ce compte est déjà validé.' });
+    }
+
+    const method = (member.verificationMethod === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL') as VerificationMethod;
+    if (method === 'WHATSAPP' && !member.phone) {
+      return res.status(400).json({ error: 'Aucun numéro WhatsApp associé à ce compte.' });
+    }
+
+    await setupUserOtpVerification({
+      userId: member.id,
+      name: member.name || 'Utilisateur',
+      email: member.email,
+      phone: member.phone,
+      method,
+      invitedToTeam: true,
+    });
+
+    const channelLabel = method === 'WHATSAPP' ? 'WhatsApp' : 'e-mail';
+
+    return res.json({
+      message: `Un nouveau code OTP a été envoyé par ${channelLabel} à ${member.email}.`,
+    });
+  } catch (error: any) {
+    console.error('Erreur resendTeamMemberVerification:', error);
+    return res.status(500).json({ error: 'Impossible de renvoyer le code OTP.' });
   }
 }
 

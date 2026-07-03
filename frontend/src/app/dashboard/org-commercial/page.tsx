@@ -4,10 +4,11 @@ import React, { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
-  Building2, Copy, Loader2, TrendingUp, Users, Wallet,
+  Building2, Loader2, TrendingUp, Users, Wallet,
 } from 'lucide-react';
 import { Button, PageHeader } from '@/components/ui';
 import { CommercialNotificationsPanel } from '@/components/CommercialNotifications';
+import ReferralShareButtons from '@/components/commercial/ReferralShareButtons';
 
 interface OrgCommercialDashboard {
   referralCode: string;
@@ -49,12 +50,6 @@ export default function OrgCommercialPage() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [access]);
-
-  const copyCode = () => {
-    if (data?.referralCode) {
-      navigator.clipboard.writeText(data.referralCode);
-    }
-  };
 
   if (user?.orgRole !== 'COMMERCIAL' && access?.level !== 'commercial') {
     return (
@@ -113,10 +108,7 @@ export default function OrgCommercialPage() {
             {Math.round(data.commissionRate * 100)} % sur chaque facture des org. que vous parrainez
           </p>
         </div>
-        <Button variant="secondary" onClick={copyCode} className="bg-white/10 border-white/20 text-white hover:bg-white/20">
-          <Copy className="w-4 h-4" />
-          Copier le code
-        </Button>
+        <ReferralShareButtons referralCode={data.referralCode} />
       </div>
 
       <div className="bg-white dark:bg-slate-900 border rounded-2xl overflow-hidden">

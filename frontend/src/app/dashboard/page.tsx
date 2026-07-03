@@ -1340,6 +1340,7 @@ function DashboardPageContent() {
     const paginatedGuests = filteredGuests.slice((guestsPage - 1) * ITEMS_PER_PAGE, guestsPage * ITEMS_PER_PAGE);
 
     return (
+      <>
       <div className="space-y-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -2580,12 +2581,14 @@ function DashboardPageContent() {
                                 {req.status === 'PENDING' ? (
                                   <div className="flex justify-end gap-2">
                                     <button
+                                      type="button"
                                       onClick={() => setApprovalModalRequest(req)}
                                       className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition shadow-sm"
                                     >
                                       Approuver
                                     </button>
                                     <button
+                                      type="button"
                                       onClick={() => handleRejectSubscription(req.id)}
                                       className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition shadow-sm"
                                     >
@@ -4436,6 +4439,20 @@ function DashboardPageContent() {
           </div>
         )}
       </div>
+
+      <SubscriptionApprovalModal
+        request={approvalModalRequest}
+        onClose={() => setApprovalModalRequest(null)}
+        catalogPrices={planCatalogPrices}
+        promoByPlan={planPromoByPlan}
+        onConfirm={async ({ discountPercent, approvedAmount }) => {
+          if (!approvalModalRequest) {
+            throw new Error('Demande introuvable.');
+          }
+          return handleApproveSubscription(approvalModalRequest.id, { discountPercent, approvedAmount });
+        }}
+      />
+      </>
     );
   }
 
@@ -4581,19 +4598,6 @@ function DashboardPageContent() {
           </div>
         </div>
       </div>
-
-      <SubscriptionApprovalModal
-        request={approvalModalRequest}
-        onClose={() => setApprovalModalRequest(null)}
-        catalogPrices={planCatalogPrices}
-        promoByPlan={planPromoByPlan}
-        onConfirm={async ({ discountPercent, approvedAmount }) => {
-          if (!approvalModalRequest) {
-            throw new Error('Demande introuvable.');
-          }
-          return handleApproveSubscription(approvalModalRequest.id, { discountPercent, approvedAmount });
-        }}
-      />
     </div>
   );
 }

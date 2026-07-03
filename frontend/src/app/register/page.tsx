@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import {
-  Calendar, Mail, Lock, User, Building, PartyPopper, Phone, MessageSquare, Table, Sparkles,
+  Calendar, Mail, Lock, User, Building, PartyPopper, Phone, MessageSquare, Table, Sparkles, UserCheck,
 } from 'lucide-react';
 import { AuthSplitLayout, MethodToggle } from '@/components/AuthSplitLayout';
 import { Button, Alert, Input, Card } from '@/components/ui';
+import { parseReferralFromSearchParams } from '@/lib/referralLink';
 
 const FEATURES = [
   { icon: Calendar, title: "Gestion d'événements & RSVP", desc: 'Invitations par e-mail ou WhatsApp, suivi des réponses en temps réel.' },
@@ -18,8 +19,23 @@ const FEATURES = [
 ];
 
 export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <AuthSplitLayout badge="Inscription SaaS" title="Chargement…" description="" features={FEATURES} backHref="/" backLabel="Retour au site">
+          <Card padding="lg" className="shadow-xl animate-pulse h-96" />
+        </AuthSplitLayout>
+      }
+    >
+      <RegisterPageContent />
+    </Suspense>
+  );
+}
+
+function RegisterPageContent() {
   const { register } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -29,9 +45,18 @@ export default function RegisterPage() {
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
   const [referralCode, setReferralCode] = useState('');
+  const [referralFromLink, setReferralFromLink] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fromUrl = parseReferralFromSearchParams(searchParams);
+    if (fromUrl) {
+      setReferralCode(fromUrl);
+      setReferralFromLink(true);
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,6 +131,18 @@ export default function RegisterPage() {
 
             {error && <Alert variant="error" className="mb-5">{error}</Alert>}
 
+            {referralFromLink && referralCode && (
+              <div className="mb-5 flex items-start gap-3 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 text-sm">
+                <UserCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-emerald-800 dark:text-emerald-300">Parrainage détecté</p>
+                  <p className="text-emerald-700 dark:text-emerald-400 text-xs mt-0.5">
+                    Code commercial pré-rempli : <span className="font-mono font-bold">{referralCode}</span>
+                  </p>
+                </div>
+              </div>
+            )}
+
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Input label="Votre nom" id="name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Jean Dupont" leftIcon={<User className="w-4 h-4" />} />
@@ -134,7 +171,11 @@ export default function RegisterPage() {
                 value={referralCode}
                 onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
                 placeholder="EM-XXXX-XXXX"
-                hint="Si un commercial vous a parrainé, saisissez son code ici."
+                hint={
+                  referralFromLink
+                    ? 'Code transmis par votre commercial — modifiable si besoin.'
+                    : 'Si un commercial vous a parrainé, saisissez son code ici.'
+                }
               />
 
               <MethodToggle

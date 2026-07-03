@@ -15,6 +15,7 @@ function VerifyOtpForm() {
 
   const initialEmail = searchParams.get('email') || '';
   const initialMethod = (searchParams.get('method') as 'EMAIL' | 'WHATSAPP') || 'EMAIL';
+  const fromLogin = searchParams.get('from') === 'login';
 
   const [email] = useState(initialEmail);
   const [verificationMethod, setVerificationMethod] = useState<'EMAIL' | 'WHATSAPP'>(initialMethod);
@@ -58,7 +59,7 @@ function VerifyOtpForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
-      setError('Adresse e-mail manquante. Recommencez l\'inscription.');
+      setError('Adresse e-mail manquante. Connectez-vous pour accéder à la validation OTP.');
       return;
     }
     if (otpValue.length !== 6) {
@@ -99,9 +100,14 @@ function VerifyOtpForm() {
       <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50 dark:bg-slate-950">
         <Card padding="lg" className="max-w-md w-full text-center space-y-4">
           <Alert variant="error">Aucune adresse e-mail fournie.</Alert>
-          <Link href="/register" className="text-indigo-600 font-semibold text-sm hover:underline">
-            Retour à l&apos;inscription
-          </Link>
+          <div className="flex flex-col gap-2 text-sm">
+            <Link href="/login" className="text-indigo-600 font-semibold hover:underline">
+              Se connecter pour valider mon compte
+            </Link>
+            <Link href="/register" className="text-slate-500 hover:underline">
+              Créer un nouveau compte organisation
+            </Link>
+          </div>
         </Card>
       </div>
     );
@@ -111,9 +117,13 @@ function VerifyOtpForm() {
     <AuthSplitLayout
       badge="Vérification"
       title="Confirmez votre identité"
-      description="Un code à 6 chiffres vous a été envoyé pour sécuriser votre compte EventMaster."
-      backHref="/register"
-      backLabel="Retour à l'inscription"
+      description={
+        fromLogin
+          ? 'Votre organisation vous a créé un compte. Saisissez le code reçu pour activer votre accès.'
+          : 'Un code à 6 chiffres vous a été envoyé pour sécuriser votre compte EventMaster.'
+      }
+      backHref={fromLogin ? '/login' : '/register'}
+      backLabel={fromLogin ? 'Retour à la connexion' : "Retour à l'inscription"}
     >
       <Card padding="lg" className="shadow-xl dark:ring-1 dark:ring-slate-800">
         <div className="text-center space-y-2 mb-6">

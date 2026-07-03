@@ -7,6 +7,8 @@ import {
   recordCommercialCommission,
   normalizeCommissionRate,
 } from '../services/commercialService';
+import { setupUserOtpVerification } from './authController';
+import { VerificationMethod } from '../services/otpService';
 
 export async function getCommercialDashboard(req: AuthenticatedRequest, res: Response) {
   try {
@@ -26,7 +28,7 @@ export async function getCommercialDashboard(req: AuthenticatedRequest, res: Res
       prisma.tenant.findMany({
         where: { referredByCommercialId: req.user.id },
         include: {
-          manager: { select: { name: true, email: true } },
+          manager: { select: { id: true, name: true, email: true, isEmailVerified: true } },
           _count: { select: { events: true, users: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -59,6 +61,8 @@ export async function getCommercialDashboard(req: AuthenticatedRequest, res: Res
         createdAt: o.createdAt,
         managerName: o.manager?.name,
         managerEmail: o.manager?.email,
+        managerId: o.manager?.id,
+        managerIsEmailVerified: o.manager?.isEmailVerified ?? true,
         eventsCount: o._count.events,
         usersCount: o._count.users,
       })),
@@ -76,12 +80,21 @@ export async function createCommercialOrganization(req: AuthenticatedRequest, re
       return res.status(403).json({ error: 'Accès réservé aux commerciaux plateforme (sans organisation).' });
     }
 
-    const { organizationName, managerName, managerEmail, managerPassword, managerPhone, plan } = req.body;
+    const { organizationName, managerName, managerEmail, managerPassword, managerPhone, plan, verificationMethod = 'EMAIL' } = req.body;
 
     if (!organizationName || !managerName || !managerEmail || !managerPassword) {
       return res.status(400).json({
         error: 'Nom de l\'organisation, nom, e-mail et mot de passe du manager sont requis.',
       });
+    }
+
+    const method = (verificationMethod === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL') as VerificationMethod;
+    if (method === 'WHATSAPP' && !managerPhone) {
+      return res.status(400).json({ error: 'Le téléphone est obligatoire pour la validation par WhatsApp.' });
+    }
+
+    if (managerPassword.length < 6) {
+      return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 6 caractères.' });
     }
 
     const existingUser = await prisma.user.findUnique({ where: { email: managerEmail } });
@@ -109,7 +122,8 @@ export async function createCommercialOrganization(req: AuthenticatedRequest, re
           passwordHash,
           role: 'USER',
           tenantId: tenant.id,
-          isEmailVerified: true,
+          isEmailVerified: false,
+          verificationMethod: method,
         },
       });
 
@@ -121,8 +135,21 @@ export async function createCommercialOrganization(req: AuthenticatedRequest, re
       return { tenant, manager };
     });
 
+    await setupUserOtpVerification({
+      userId: result.manager.id,
+      name: result.manager.name || managerName.trim(),
+      email: result.manager.email,
+      phone: managerPhone,
+      method,
+      invitedByCommercial: true,
+    });
+
+    const channelLabel = method === 'WHATSAPP' ? 'WhatsApp' : 'e-mail';
+
     return res.status(201).json({
-      message: 'Organisation créée avec succès.',
+      message:
+        `Organisation créée. Un code OTP a été envoyé par ${channelLabel} à ${result.manager.email}. ` +
+        `Le manager doit se connecter sur /login avec son mot de passe, valider le code OTP, puis accéder à son espace.`,
       referralCode,
       organization: {
         id: result.tenant.id,
@@ -133,11 +160,62 @@ export async function createCommercialOrganization(req: AuthenticatedRequest, re
         id: result.manager.id,
         name: result.manager.name,
         email: result.manager.email,
+        isEmailVerified: false,
       },
     });
   } catch (error) {
     console.error('createCommercialOrganization:', error);
     return res.status(500).json({ error: 'Erreur lors de la création de l\'organisation.' });
+  }
+}
+
+export async function resendCommercialManagerVerification(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (req.user?.role !== 'COMMERCIAL' || req.user.tenantId) {
+      return res.status(403).json({ error: 'Accès réservé aux commerciaux plateforme (sans organisation).' });
+    }
+
+    const managerId = req.params.managerId as string;
+
+    const manager = await prisma.user.findFirst({
+      where: {
+        id: managerId,
+        role: 'USER',
+        tenant: { referredByCommercialId: req.user.id },
+      },
+      include: { tenant: { select: { managerId: true } } },
+    });
+
+    if (!manager || manager.tenant?.managerId !== manager.id) {
+      return res.status(404).json({ error: 'Manager introuvable parmi vos organisations parrainées.' });
+    }
+
+    if (manager.isEmailVerified) {
+      return res.status(400).json({ error: 'Ce compte manager est déjà validé.' });
+    }
+
+    const method = (manager.verificationMethod === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL') as VerificationMethod;
+    if (method === 'WHATSAPP' && !manager.phone) {
+      return res.status(400).json({ error: 'Aucun numéro WhatsApp associé à ce compte.' });
+    }
+
+    await setupUserOtpVerification({
+      userId: manager.id,
+      name: manager.name || 'Manager',
+      email: manager.email,
+      phone: manager.phone,
+      method,
+      invitedByCommercial: true,
+    });
+
+    const channelLabel = method === 'WHATSAPP' ? 'WhatsApp' : 'e-mail';
+
+    return res.json({
+      message: `Un nouveau code OTP a été envoyé par ${channelLabel} à ${manager.email}.`,
+    });
+  } catch (error) {
+    console.error('resendCommercialManagerVerification:', error);
+    return res.status(500).json({ error: 'Impossible de renvoyer le code OTP.' });
   }
 }
 

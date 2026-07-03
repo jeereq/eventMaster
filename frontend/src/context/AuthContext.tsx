@@ -186,7 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error: any) {
       setLoading(false);
       if (error?.data?.notVerified && error?.data?.email) {
-        router.push(`/verify-otp?email=${encodeURIComponent(error.data.email as string)}&method=${error.data.verificationMethod || 'EMAIL'}`);
+        router.push(`/verify-otp?email=${encodeURIComponent(error.data.email as string)}&method=${error.data.verificationMethod || 'EMAIL'}&from=login`);
         return;
       }
       throw error;

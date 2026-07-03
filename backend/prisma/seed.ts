@@ -3,34 +3,58 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
+import { DEFAULT_GUEST_MESSAGE_TEMPLATES } from '../src/config/defaultGuestMessageTemplates';
+import {
+  SEED_PASSWORD,
+  addDays,
+  billingPeriod,
+  buildTemplateContent,
+  GLOBAL_CATALOG_TEMPLATES,
+  licenseKey,
+  PLAN_AMOUNTS,
+} from './seed/helpers';
 
-const pool = new pg.Pool({ 
+const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
+  ssl: process.env.DATABASE_URL?.includes('localhost') ? undefined : { rejectUnauthorized: false },
 });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-async function main() {
-  console.log('Début du peuplement de la base de données (seeding)...');
-
-  // Nettoyage de la base de données existante (dans l'ordre pour respecter les contraintes de clés étrangères)
+async function clearDatabase() {
   console.log('Nettoyage des données existantes...');
+  await prisma.platformNotification.deleteMany({});
+  await prisma.commercialCommission.deleteMany({});
+  await prisma.platformInvoice.deleteMany({});
+  await prisma.subscriptionRequest.deleteMany({});
+  await prisma.legalAcceptance.deleteMany({});
+  await prisma.guestProtocolNote.deleteMany({});
+  await prisma.eventComment.deleteMany({});
+  await prisma.eventPost.deleteMany({});
+  await prisma.guestShare.deleteMany({});
+  await prisma.eventStaff.deleteMany({});
+  await prisma.roomStaff.deleteMany({});
   await prisma.invitation.deleteMany({});
   await prisma.guest.deleteMany({});
   await prisma.event.deleteMany({});
+  await prisma.organizationRoom.deleteMany({});
   await prisma.template.deleteMany({});
-  
-  // Pour éviter les erreurs de clés circulaires entre Tenant et User, on met d'abord managerId à null
-  await prisma.tenant.updateMany({ data: { managerId: null } });
+  await prisma.guestMessageTemplate.deleteMany({});
+  await prisma.tenant.updateMany({ data: { managerId: null, referredByCommercialId: null, referredByOrgUserId: null } });
   await prisma.user.deleteMany({});
   await prisma.tenant.deleteMany({});
+}
 
-  console.log('Création des mots de passe hachés...');
-  const passwordHash = await bcrypt.hash('password123', 10);
+async function main() {
+  console.log('=== EventMaster — Seed complet ===\n');
+  await clearDatabase();
 
-  // 1. Création du Super Administrateur (sans Tenant)
-  console.log('Création du Super Admin...');
+  const passwordHash = await bcrypt.hash(SEED_PASSWORD, 10);
+  const now = new Date();
+  const period = billingPeriod(now);
+
+  // ─── Comptes plateforme ─────────────────────────────────────────────
+  console.log('Comptes plateforme (Super Admin + Commercial)...');
   const superAdmin = await prisma.user.create({
     data: {
       email: 'superadmin@eventmaster.cd',
@@ -38,56 +62,104 @@ async function main() {
       passwordHash,
       role: 'SUPER_ADMIN',
       isEmailVerified: true,
+      referralCode: 'EM-SUPER',
     },
   });
 
-  // 2. Création des Tenants (Organisations)
-  console.log('Création des Organisations (Tenants)...');
-  
-  // Tenant 1 : Agence Prestige (Premium)
+  const commercial = await prisma.user.create({
+    data: {
+      email: 'commercial@eventmaster.cd',
+      name: 'Jean Commercial ITM',
+      phone: '+243900000001',
+      passwordHash,
+      role: 'COMMERCIAL',
+      isEmailVerified: true,
+      referralCode: 'EM-COMM01',
+      commissionRate: 0.2,
+    },
+  });
+
+  // ─── Organisations ──────────────────────────────────────────────────
+  console.log('Organisations...');
   const tenantPrestige = await prisma.tenant.create({
     data: {
       name: 'Agence Prestige',
       plan: 'PREMIUM_2',
       stripeCustId: 'cus_prestige123',
+      licenseActive: true,
+      licenseExpiresAt: addDays(120),
+      licenseKey: licenseKey(),
+      referredByCommercialId: commercial.id,
     },
   });
 
-  // Tenant 2 : Club des Entrepreneurs (Standard)
   const tenantEntrepreneurs = await prisma.tenant.create({
     data: {
       name: 'Club des Entrepreneurs',
-      plan: 'STANDARD' as any,
+      plan: 'STANDARD',
       stripeCustId: 'cus_entrepreneurs123',
+      licenseActive: true,
+      licenseExpiresAt: addDays(60),
+      licenseKey: licenseKey(),
+      referredByCommercialId: commercial.id,
     },
   });
 
-  // Tenant 3 : Mariage Rêvé (Free)
   const tenantMariage = await prisma.tenant.create({
     data: {
       name: 'Mariage Rêvé',
       plan: 'FREE',
+      licenseActive: true,
+      licenseExpiresAt: addDays(30),
+      licenseKey: licenseKey(),
     },
   });
 
-  // Tenant 4 : Global Corp Events (Enterprise)
   const tenantGlobalCorp = await prisma.tenant.create({
     data: {
       name: 'Global Corp Events',
       plan: 'ENTERPRISE_2',
       stripeCustId: 'cus_globalcorp123',
+      licenseActive: true,
+      licenseExpiresAt: addDays(365),
+      licenseKey: licenseKey(),
+      referredByCommercialId: commercial.id,
     },
   });
 
-  // 3. Création des Utilisateurs associés aux Tenants
-  console.log('Création des utilisateurs...');
-  
+  const tenantNouveau = await prisma.tenant.create({
+    data: {
+      name: 'Nova Events (nouvelle org.)',
+      plan: 'FREE',
+      licenseActive: true,
+      licenseExpiresAt: addDays(14),
+      licenseKey: licenseKey(),
+      referredByCommercialId: commercial.id,
+    },
+  });
+
+  // ─── Utilisateurs organisations ─────────────────────────────────────
+  console.log('Utilisateurs organisations...');
   const userPrestige = await prisma.user.create({
     data: {
       email: 'admin@prestige.cd',
       name: 'Jean-Marc Kabeya',
+      phone: '+243810000001',
       passwordHash,
       role: 'USER',
+      orgRole: 'MANAGER',
+      tenantId: tenantPrestige.id,
+      isEmailVerified: true,
+    },
+  });
+
+  const protocolPrestige = await prisma.user.create({
+    data: {
+      email: 'protocole@prestige.cd',
+      name: 'Grace Mujinga',
+      passwordHash,
+      role: 'USER',
+      orgRole: 'PROTOCOL',
       tenantId: tenantPrestige.id,
       isEmailVerified: true,
     },
@@ -99,6 +171,7 @@ async function main() {
       name: 'Sarah Mwamba',
       passwordHash,
       role: 'USER',
+      orgRole: 'MANAGER',
       tenantId: tenantEntrepreneurs.id,
       isEmailVerified: true,
     },
@@ -110,6 +183,7 @@ async function main() {
       name: 'Claire Mpunga',
       passwordHash,
       role: 'USER',
+      orgRole: 'MANAGER',
       tenantId: tenantMariage.id,
       isEmailVerified: true,
     },
@@ -121,105 +195,141 @@ async function main() {
       name: 'Patrick Kalonji',
       passwordHash,
       role: 'USER',
+      orgRole: 'MANAGER',
       tenantId: tenantGlobalCorp.id,
       isEmailVerified: true,
     },
   });
 
-  // Mise à jour des managers des Tenants
-  console.log('Association des managers aux organisations...');
-  await prisma.tenant.update({
-    where: { id: tenantPrestige.id },
-    data: { managerId: userPrestige.id },
-  });
-  await prisma.tenant.update({
-    where: { id: tenantEntrepreneurs.id },
-    data: { managerId: userEntrepreneurs.id },
-  });
-  await prisma.tenant.update({
-    where: { id: tenantMariage.id },
-    data: { managerId: userMariage.id },
-  });
-  await prisma.tenant.update({
-    where: { id: tenantGlobalCorp.id },
-    data: { managerId: userGlobalCorp.id },
+  const userNova = await prisma.user.create({
+    data: {
+      email: 'demo@novaevents.cd',
+      name: 'Demo Nouvelle Org',
+      passwordHash,
+      role: 'USER',
+      orgRole: 'MANAGER',
+      tenantId: tenantNouveau.id,
+      isEmailVerified: true,
+    },
   });
 
-  // 4. Création des Modèles d'Invitations (Templates)
-  console.log('Création des modèles d\'invitations...');
+  await prisma.tenant.update({ where: { id: tenantPrestige.id }, data: { managerId: userPrestige.id } });
+  await prisma.tenant.update({ where: { id: tenantEntrepreneurs.id }, data: { managerId: userEntrepreneurs.id } });
+  await prisma.tenant.update({ where: { id: tenantMariage.id }, data: { managerId: userMariage.id } });
+  await prisma.tenant.update({ where: { id: tenantGlobalCorp.id }, data: { managerId: userGlobalCorp.id } });
+  await prisma.tenant.update({ where: { id: tenantNouveau.id }, data: { managerId: userNova.id } });
 
-  // Template Prestige - Gala
+  // ─── Modèles globaux (bibliothèque) ─────────────────────────────────
+  console.log('Bibliothèque de modèles globaux...');
+  for (const tpl of GLOBAL_CATALOG_TEMPLATES) {
+    await prisma.template.create({
+      data: {
+        tenantId: null,
+        name: tpl.name,
+        showOnLanding: tpl.showOnLanding,
+        content: buildTemplateContent(tpl.elements, tpl.global),
+      },
+    });
+  }
+
+  // ─── Modèles par organisation ───────────────────────────────────────
+  console.log('Modèles organisations...');
   const templatePrestige = await prisma.template.create({
     data: {
       tenantId: tenantPrestige.id,
-      name: 'Modèle Gala d\'Excellence',
-      content: {
-        elements: [
+      name: "Modèle Gala d'Excellence",
+      content: buildTemplateContent(
+        [
           { id: '1', type: 'text', text: 'SOIRÉE ANNUELLE DE BIENFAISANCE', color: '#f59e0b', fontSize: '12px', align: 'center' },
-          { id: '2', type: 'text', text: 'Gala d\'Excellence 2026', color: '#1e1b4b', fontSize: '32px', align: 'center' },
-          { id: '3', type: 'text', text: 'Une soirée prestigieuse dédiée à l\'innovation et à la solidarité internationale. Tenue de soirée exigée.', color: '#475569', fontSize: '14px', align: 'center' },
-          { id: '4', type: 'rsvp-block', text: 'Confirmer ma présence', color: '#4f46e5', fontSize: '16px', align: 'center' }
-        ]
-      }
-    }
+          { id: '2', type: 'text', text: "Gala d'Excellence 2026", color: '#1e1b4b', fontSize: '32px', align: 'center' },
+          { id: '3', type: 'text', text: "Une soirée prestigieuse dédiée à l'innovation.", color: '#475569', fontSize: '14px', align: 'center' },
+          { id: '4', type: 'rsvp-block', text: 'Confirmer ma présence', color: '#4f46e5', fontSize: '16px', align: 'center' },
+        ],
+        { floralColor: '#f59e0b' },
+      ),
+    },
   });
 
-  // Template Entrepreneurs - Cocktail
   const templateEntrepreneurs = await prisma.template.create({
     data: {
       tenantId: tenantEntrepreneurs.id,
       name: 'Modèle Networking Pro',
-      content: {
-        elements: [
+      content: buildTemplateContent(
+        [
           { id: '1', type: 'text', text: 'NETWORKING & COCKTAIL', color: '#4f46e5', fontSize: '12px', align: 'center' },
-          { id: '2', type: 'text', text: 'Cocktail d\'Inauguration', color: '#0f172a', fontSize: '28px', align: 'center' },
-          { id: '3', type: 'text', text: 'Rencontrez l\'écosystème local et découvrez nos nouveaux locaux autour d\'une sélection de mets raffinés.', color: '#334155', fontSize: '14px', align: 'center' },
-          { id: '4', type: 'rsvp-block', text: 'S\'inscrire à la Soirée', color: '#0f172a', fontSize: '16px', align: 'center' }
-        ]
-      }
-    }
+          { id: '2', type: 'text', text: "Cocktail d'Inauguration", color: '#0f172a', fontSize: '28px', align: 'center' },
+          { id: '3', type: 'rsvp-block', text: "S'inscrire", color: '#0f172a', fontSize: '16px', align: 'center' },
+        ],
+        { bgColor: '#f8fafc' },
+      ),
+    },
   });
 
-  // Template Mariage
   const templateMariage = await prisma.template.create({
     data: {
       tenantId: tenantMariage.id,
       name: 'Modèle Mariage Champêtre',
-      content: {
-        elements: [
+      content: buildTemplateContent(
+        [
           { id: '1', type: 'text', text: 'CÉLÉBRATION DE NOTRE UNION', color: '#b45309', fontSize: '12px', align: 'center' },
           { id: '2', type: 'text', text: 'Claire & Alexandre', color: '#78350f', fontSize: '36px', align: 'center' },
-          { id: '3', type: 'text', text: 'Nous sommes impatients de célébrer ce moment entourés de nos proches. Rejoignez-nous pour notre mariage suivi d\'une réception privée.', color: '#451a03', fontSize: '14px', align: 'center' },
-          { id: '4', type: 'rsvp-block', text: 'Confirmer ma Présence', color: '#b45309', fontSize: '16px', align: 'center' }
-        ]
-      }
-    }
+          { id: '3', type: 'rsvp-block', text: 'Confirmer ma Présence', color: '#b45309', fontSize: '16px', align: 'center' },
+        ],
+        { floralColor: '#b45309', landingCategory: 'wedding' },
+      ),
+    },
   });
 
-  // Template Global Corp
   const templateGlobalCorp = await prisma.template.create({
     data: {
       tenantId: tenantGlobalCorp.id,
       name: 'Modèle Séminaire Corporatif',
-      content: {
-        elements: [
+      content: buildTemplateContent(
+        [
           { id: '1', type: 'text', text: 'CONFÉRENCE EXCLUSIVE', color: '#2563eb', fontSize: '12px', align: 'center' },
           { id: '2', type: 'text', text: 'Séminaire Dirigeants 2026', color: '#1e293b', fontSize: '30px', align: 'center' },
-          { id: '3', type: 'text', text: 'Une journée de réflexion stratégique sur les enjeux de l\'année fiscale, réservée aux membres du conseil d\'administration.', color: '#475569', fontSize: '14px', align: 'center' },
-          { id: '4', type: 'rsvp-block', text: 'Confirmer ma présence', color: '#2563eb', fontSize: '16px', align: 'center' }
-        ]
-      }
-    }
+          { id: '3', type: 'rsvp-block', text: 'Confirmer ma présence', color: '#2563eb', fontSize: '16px', align: 'center' },
+        ],
+        { frameType: 'double-border' },
+      ),
+    },
   });
 
-  // 5. Création des Événements
-  console.log('Création des événements...');
+  // ─── Salles ─────────────────────────────────────────────────────────
+  console.log('Salles organisations...');
+  const roomPrestige = await prisma.organizationRoom.create({
+    data: {
+      tenantId: tenantPrestige.id,
+      name: 'Grande salle de bal',
+      description: 'Capacité 350 places, scène et piste de danse',
+      capacity: 350,
+      floor: 'RDC',
+      location: 'Hôtel Fleuve Congo',
+      roomType: 'BANQUET',
+    },
+  });
 
-  // Événements Agence Prestige
+  const roomGlobal = await prisma.organizationRoom.create({
+    data: {
+      tenantId: tenantGlobalCorp.id,
+      name: 'Amphithéâtre Executive',
+      capacity: 120,
+      roomType: 'AMPHITHEATER',
+      location: 'Pullman Grand Hôtel',
+    },
+  });
+
+  await prisma.roomStaff.create({
+    data: { roomId: roomPrestige.id, userId: protocolPrestige.id, staffRole: 'PROTOCOL' },
+  });
+
+  // ─── Événements ───────────────────────────────────────────────────
+  console.log('Événements...');
   const eventGala = await prisma.event.create({
     data: {
       tenantId: tenantPrestige.id,
-      title: 'Gala de Charité d\'Élite',
+      roomId: roomPrestige.id,
+      title: "Gala de Charité d'Élite",
       description: 'Collecte de fonds annuelle pour les orphelinats de Kinshasa.',
       date: new Date('2026-09-25T19:00:00Z'),
       location: 'Hôtel Fleuve Congo, Gombe, Kinshasa',
@@ -232,193 +342,304 @@ async function main() {
   const eventVIP = await prisma.event.create({
     data: {
       tenantId: tenantPrestige.id,
-      title: 'Cocktail d\'Inauguration VIP',
-      description: 'Lancement officiel de la nouvelle collection d\'art contemporain.',
+      title: "Cocktail d'Inauguration VIP",
+      description: "Lancement de la nouvelle collection d'art contemporain.",
       date: new Date('2026-07-30T18:30:00Z'),
-      location: 'Galerie d\'Art de la Gombe, Kinshasa',
+      location: "Galerie d'Art de la Gombe",
       reminderFrequency: 'EVERY_3_DAYS',
-      latitude: -4.3050,
-      longitude: 15.3020,
+      latitude: -4.305,
+      longitude: 15.302,
     },
   });
 
-  // Événement Club des Entrepreneurs
   const eventNetworking = await prisma.event.create({
     data: {
       tenantId: tenantEntrepreneurs.id,
       title: 'Soirée Networking & Pitch',
-      description: 'Rencontre mensuelle des entrepreneurs et investisseurs de la RDC.',
-      date: new Date('2026-07-15T18:00:00Z'),
-      location: 'Silikin Village, Limete, Kinshasa',
+      description: 'Rencontre mensuelle des entrepreneurs.',
+      date: new Date('2026-08-15T18:00:00Z'),
+      location: 'Silikin Village, Limete',
       reminderFrequency: 'WEEKLY',
       latitude: -4.3488,
       longitude: 15.3185,
     },
   });
 
-  // Événement Mariage Rêvé
   const eventMariage = await prisma.event.create({
     data: {
       tenantId: tenantMariage.id,
       title: 'Mariage de Claire & Alexandre',
       description: 'Cérémonie religieuse suivie d\'un dîner dansant.',
       date: new Date('2026-12-19T14:00:00Z'),
-      location: 'Espace Texas, Binza Pigeon, Kinshasa',
+      location: 'Espace Texas, Binza Pigeon',
       reminderFrequency: 'WEEKLY',
       latitude: -4.3725,
-      longitude: 15.2530,
+      longitude: 15.253,
     },
   });
 
-  // Événement Global Corp Events
   const eventSeminar = await prisma.event.create({
     data: {
       tenantId: tenantGlobalCorp.id,
+      roomId: roomGlobal.id,
       title: 'Séminaire Annuel des Dirigeants',
-      description: 'Planification stratégique et revue des performances annuelles.',
+      description: 'Planification stratégique annuelle.',
       date: new Date('2026-10-10T09:00:00Z'),
-      location: 'Pullman Grand Hôtel, Gombe, Kinshasa',
+      location: 'Pullman Grand Hôtel, Gombe',
       latitude: -4.3032,
       longitude: 15.2861,
     },
   });
 
-  // 6. Création des Invitations (liaison Événement <-> Modèle)
-  console.log('Création des invitations...');
+  await prisma.eventStaff.create({
+    data: { eventId: eventGala.id, userId: protocolPrestige.id, staffRole: 'PROTOCOL' },
+  });
 
-  await prisma.invitation.create({
-    data: {
+  // ─── Invitations ──────────────────────────────────────────────────
+  console.log('Invitations...');
+  const invitationPairs: Array<{ eventId: string; templateId: string; subject: string; body: string }> = [
+    {
       eventId: eventGala.id,
       templateId: templatePrestige.id,
-      subject: 'Invitation officielle : Gala de Charité d\'Élite 2026',
-      body: 'Cher(e) {{firstName}} {{lastName}},\n\nNous avons l\'immense honneur de vous inviter au Gala de Charité d\'Élite.\n\nCliquez sur le lien ci-dessous pour confirmer votre présence et choisir vos préférences.\n\n{{rsvpLink}}',
-      channel: 'EMAIL',
-    }
-  });
-
-  await prisma.invitation.create({
-    data: {
+      subject: "Invitation : Gala de Charité d'Élite 2026",
+      body: 'Cher(e) {{firstName}},\n\nInvitation au Gala.\n\n{{rsvpLink}}',
+    },
+    {
       eventId: eventNetworking.id,
       templateId: templateEntrepreneurs.id,
-      subject: 'Votre invitation : Soirée Networking & Pitch',
-      body: 'Bonjour {{firstName}},\n\nRejoignez-nous pour la soirée de réseautage de ce mois.\n\nRéservez votre place ici : {{rsvpLink}}',
-      channel: 'EMAIL',
-    }
-  });
-
-  await prisma.invitation.create({
-    data: {
+      subject: 'Networking & Pitch — Invitation',
+      body: 'Bonjour {{firstName}},\n\n{{rsvpLink}}',
+    },
+    {
       eventId: eventMariage.id,
       templateId: templateMariage.id,
-      subject: 'Mariage de Claire & Alexandre - Invitation',
-      body: 'Chers {{firstName}} et {{lastName}},\n\nC\'est avec une grande joie que nous vous invitons à notre mariage.\n\nMerci de confirmer votre présence avant le 30 novembre sur ce lien : {{rsvpLink}}',
-      channel: 'EMAIL',
-    }
-  });
-
-  await prisma.invitation.create({
-    data: {
+      subject: 'Mariage Claire & Alexandre',
+      body: 'Chers {{firstName}} {{lastName}},\n\n{{rsvpLink}}',
+    },
+    {
       eventId: eventSeminar.id,
       templateId: templateGlobalCorp.id,
-      subject: 'Séminaire Annuel des Dirigeants 2026 - Convocation',
-      body: 'Cher(e) {{firstName}} {{lastName}},\n\nVous êtes convié(e) au séminaire annuel de planification.\n\nMerci de confirmer votre présence et d\'indiquer vos contraintes alimentaires : {{rsvpLink}}',
-      channel: 'EMAIL',
+      subject: 'Séminaire Dirigeants 2026',
+      body: 'Cher(e) {{firstName}},\n\n{{rsvpLink}}',
+    },
+  ];
+
+  for (const inv of invitationPairs) {
+    await prisma.invitation.create({
+      data: { ...inv, channel: 'EMAIL' },
+    });
+  }
+
+  // ─── Invités ──────────────────────────────────────────────────────
+  console.log('Invités...');
+  const guestBatches: Array<{
+    eventId: string;
+    guests: Array<{
+      firstName: string;
+      lastName: string;
+      email: string;
+      category?: string;
+      rsvp: string;
+      preferences?: object;
+      phone?: string;
+    }>;
+  }> = [
+    {
+      eventId: eventGala.id,
+      guests: [
+        { firstName: 'Dieudonné', lastName: 'Kabila', email: 'dieudonne.kabila@gmail.com', category: 'VIP', rsvp: 'ACCEPTED', preferences: { specialMeal: 'none', allergies: '' } },
+        { firstName: 'Marie-Thérèse', lastName: 'Nzuzi', email: 'mt.nzuzi@yahoo.fr', category: 'VIP', rsvp: 'ACCEPTED', preferences: { specialMeal: 'vegetarian' } },
+        { firstName: 'Christian', lastName: 'Lwamba', email: 'c.lwamba@outlook.com', category: 'Donateur', rsvp: 'PENDING' },
+        { firstName: 'Fanny', lastName: 'Kapinga', email: 'fanny.kapinga@gmail.com', category: 'Donateur', rsvp: 'DECLINED' },
+        { firstName: 'Jonathan', lastName: 'Tshilombo', email: 'j.tshilombo@gmail.com', category: 'Presse', rsvp: 'ACCEPTED', phone: '+243820000101' },
+      ],
+    },
+    {
+      eventId: eventNetworking.id,
+      guests: [
+        { firstName: 'Alain', lastName: 'Mukendi', email: 'alain@mukendi-consulting.cd', category: 'Membre', rsvp: 'ACCEPTED' },
+        { firstName: 'Patricia', lastName: 'Ngalula', email: 'patricia@techstart.cd', category: 'Pitcher', rsvp: 'ACCEPTED' },
+        { firstName: 'Didier', lastName: 'Tshisekedi', email: 'didier.t@invest-rdc.com', category: 'Investisseur', rsvp: 'PENDING' },
+      ],
+    },
+    {
+      eventId: eventMariage.id,
+      guests: [
+        { firstName: 'Alexandre', lastName: 'Nguya', email: 'alexandre.nguya@gmail.com', category: 'Famille', rsvp: 'ACCEPTED' },
+        { firstName: 'Rachel', lastName: 'Mbuyi', email: 'rachel.mbuyi@gmail.com', category: 'Ami', rsvp: 'ACCEPTED', preferences: { specialMeal: 'vegetarian' } },
+        { firstName: 'Gauthier', lastName: 'Kalonji', email: 'gauthier.k@gmail.com', category: 'Ami', rsvp: 'PENDING' },
+      ],
+    },
+    {
+      eventId: eventSeminar.id,
+      guests: [
+        { firstName: 'Jean-Pierre', lastName: 'Bemba', email: 'jp.bemba@globalcorp.cd', category: 'C-Level', rsvp: 'ACCEPTED' },
+        { firstName: 'Solange', lastName: 'Liyolo', email: 'solange.liyolo@globalcorp.cd', category: 'C-Level', rsvp: 'ACCEPTED' },
+        { firstName: 'Arthur', lastName: 'Mavinga', email: 'arthur.mavinga@globalcorp.cd', category: 'Directeur', rsvp: 'PENDING' },
+      ],
+    },
+  ];
+
+  for (const batch of guestBatches) {
+    for (const g of batch.guests) {
+      await prisma.guest.create({ data: { eventId: batch.eventId, ...g } });
     }
+  }
+
+  // ─── Mur social événement ─────────────────────────────────────────
+  console.log('Publications événement...');
+  const post = await prisma.eventPost.create({
+    data: {
+      eventId: eventGala.id,
+      content: 'Merci à tous pour vos confirmations ! La soirée promet d\'être mémorable.',
+      mediaType: 'TEXT',
+      likes: [],
+    },
   });
 
-  // 7. Création des Invités (Guests) avec différents statuts RSVP
-  console.log('Création des invités...');
+  await prisma.eventComment.create({
+    data: {
+      postId: post.id,
+      authorName: userPrestige.name || 'Organisateur',
+      userId: userPrestige.id,
+      content: 'N\'oubliez pas la tenue de soirée.',
+    },
+  });
 
-  // Invités pour le Gala de Charité d'Élite (Prestige)
-  const guestsGala = [
-    { firstName: 'Dieudonné', lastName: 'Kabila', email: 'dieudonne.kabila@gmail.com', category: 'VIP', rsvp: 'ACCEPTED', preferences: { diet: 'Aucun', allergies: 'Aucune', plusOne: true } },
-    { firstName: 'Marie-Thérèse', lastName: 'Nzuzi', email: 'mt.nzuzi@yahoo.fr', category: 'VIP', rsvp: 'ACCEPTED', preferences: { diet: 'Poisson uniquement', allergies: 'Gluten', plusOne: false } },
-    { firstName: 'Christian', lastName: 'Lwamba', email: 'c.lwamba@outlook.com', category: 'Donateur', rsvp: 'PENDING', preferences: undefined },
-    { firstName: 'Fanny', lastName: 'Kapinga', email: 'fanny.kapinga@gmail.com', category: 'Donateur', rsvp: 'DECLINED', preferences: undefined },
-    { firstName: 'Jonathan', lastName: 'Tshilombo', email: 'j.tshilombo@gmail.com', category: 'Presse', rsvp: 'ACCEPTED', preferences: { diet: 'Végétarien', allergies: 'Arachides', plusOne: false } },
-    { firstName: 'Arlette', lastName: 'Mbuyi', email: 'arlette.mbuyi@prestige.cd', category: 'Staff', rsvp: 'ACCEPTED', preferences: { diet: 'Aucun', allergies: 'Aucune', plusOne: false } },
-  ];
-
-  for (const guest of guestsGala) {
-    await prisma.guest.create({
+  // ─── Modèles messages invités ─────────────────────────────────────
+  console.log('Modèles messages WhatsApp...');
+  for (const tpl of DEFAULT_GUEST_MESSAGE_TEMPLATES) {
+    await prisma.guestMessageTemplate.create({
       data: {
-        eventId: eventGala.id,
-        ...guest,
+        type: tpl.type,
+        name: tpl.name,
+        description: tpl.description,
+        channel: tpl.channel,
+        subject: tpl.subject ?? null,
+        body: tpl.body,
+        isActive: true,
       },
     });
   }
 
-  // Invités pour le Cocktail VIP (Prestige)
-  const guestsVIP = [
-    { firstName: 'Marc', lastName: 'Ilunga', email: 'marc.ilunga@gmail.com', category: 'VIP', rsvp: 'ACCEPTED', preferences: { diet: 'Aucun', allergies: 'Aucune', plusOne: true } },
-    { firstName: 'Sandrine', lastName: 'Kanku', email: 'sandrine.kanku@gmail.com', category: 'Artiste', rsvp: 'PENDING', preferences: undefined },
-    { firstName: 'Olivier', lastName: 'Mukinayi', email: 'o.mukinayi@gmail.com', category: 'Presse', rsvp: 'DECLINED', preferences: undefined },
-  ];
+  // ─── Demandes d'abonnement ────────────────────────────────────────
+  console.log('Demandes d\'abonnement...');
+  const subApproved = await prisma.subscriptionRequest.create({
+    data: {
+      tenantId: tenantEntrepreneurs.id,
+      requestedPlan: 'STANDARD',
+      durationDays: 30,
+      status: 'APPROVED',
+      baseAmount: PLAN_AMOUNTS.STANDARD,
+      approvedAmount: PLAN_AMOUNTS.STANDARD,
+      proofOfPayment: 'VIREMENT-REF-2026-001',
+    },
+  });
 
-  for (const guest of guestsVIP) {
-    await prisma.guest.create({
-      data: {
-        eventId: eventVIP.id,
-        ...guest,
+  await prisma.subscriptionRequest.create({
+    data: {
+      tenantId: tenantMariage.id,
+      requestedPlan: 'PREMIUM_1',
+      durationDays: 30,
+      status: 'PENDING',
+      proofOfPayment: 'Preuve mobile money — à valider',
+    },
+  });
+
+  await prisma.subscriptionRequest.create({
+    data: {
+      tenantId: tenantNouveau.id,
+      requestedPlan: 'STANDARD',
+      durationDays: 30,
+      status: 'PENDING',
+    },
+  });
+
+  // ─── Factures plateforme ──────────────────────────────────────────
+  console.log('Factures plateforme...');
+  const invoiceNumber = `EM-INV-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-SEED01`;
+  const platformInvoice = await prisma.platformInvoice.create({
+    data: {
+      invoiceNumber,
+      tenantId: tenantEntrepreneurs.id,
+      plan: 'STANDARD',
+      amount: PLAN_AMOUNTS.STANDARD ?? 30000,
+      type: 'SUBSCRIPTION_APPROVAL',
+      status: 'PAID',
+      durationDays: 30,
+      periodStart: addDays(-30),
+      periodEnd: tenantEntrepreneurs.licenseExpiresAt,
+      billingPeriod: period,
+      subscriptionRequestId: subApproved.id,
+      recipientEmails: [userEntrepreneurs.email],
+      details: {
+        planName: 'Business',
+        tenantName: tenantEntrepreneurs.name,
+        baseAmount: PLAN_AMOUNTS.STANDARD,
+        discountPercent: 0,
+        discountAmount: 0,
       },
-    });
-  }
+      sentAt: addDays(-28),
+    },
+  });
 
-  // Invités pour la Soirée Networking (Club des Entrepreneurs)
-  const guestsNetworking = [
-    { firstName: 'Alain', lastName: 'Mukendi', email: 'alain@mukendi-consulting.cd', category: 'Membre', rsvp: 'ACCEPTED', preferences: { diet: 'Halal', allergies: 'Aucune', plusOne: false } },
-    { firstName: 'Patricia', lastName: 'Ngalula', email: 'patricia@techstart.cd', category: 'Pitcher', rsvp: 'ACCEPTED', preferences: { diet: 'Végétarien', allergies: 'Lactose', plusOne: false } },
-    { firstName: 'Didier', lastName: 'Tshisekedi', email: 'didier.t@invest-rdc.com', category: 'Investisseur', rsvp: 'PENDING', preferences: undefined },
-    { firstName: 'Nathalie', lastName: 'Banza', email: 'nathalie.banza@gmail.com', category: 'Visiteur', rsvp: 'ACCEPTED', preferences: { diet: 'Aucun', allergies: 'Fruits de mer', plusOne: false } },
-    { firstName: 'Eric', lastName: 'Kabasele', email: 'eric.kabasele@gmail.com', category: 'Visiteur', rsvp: 'DECLINED', preferences: undefined },
-  ];
+  // ─── Commissions commercial ─────────────────────────────────────────
+  console.log('Commissions commercial...');
+  const commissionAmount = Math.round((PLAN_AMOUNTS.STANDARD ?? 30000) * 0.2);
+  await prisma.commercialCommission.create({
+    data: {
+      commercialId: commercial.id,
+      tenantId: tenantEntrepreneurs.id,
+      plan: 'STANDARD',
+      invoiceAmount: PLAN_AMOUNTS.STANDARD ?? 30000,
+      commissionRate: 0.2,
+      commissionAmount,
+      billingPeriod: period,
+      source: 'SUBSCRIPTION_APPROVAL',
+      platformInvoiceId: platformInvoice.id,
+    },
+  });
 
-  for (const guest of guestsNetworking) {
-    await prisma.guest.create({
-      data: {
-        eventId: eventNetworking.id,
-        ...guest,
+  // ─── Notifications plateforme ─────────────────────────────────────
+  console.log('Notifications commercial...');
+  await prisma.platformNotification.create({
+    data: {
+      userId: commercial.id,
+      type: 'SUBSCRIPTION_APPROVAL',
+      title: `Abonnement activé — ${tenantEntrepreneurs.name}`,
+      message: `Forfait STANDARD activé. Montant facturé : ${(PLAN_AMOUNTS.STANDARD ?? 30000).toLocaleString('fr-FR')} FC. Commission : ${commissionAmount.toLocaleString('fr-FR')} FC.`,
+      metadata: {
+        tenantId: tenantEntrepreneurs.id,
+        invoiceNumber,
+        commissionAmount,
       },
-    });
-  }
+    },
+  });
 
-  // Invités pour le Mariage (Claire & Alexandre)
-  const guestsMariage = [
-    { firstName: 'Alexandre', lastName: 'Nguya', email: 'alexandre.nguya@gmail.com', category: 'Famille Époux', rsvp: 'ACCEPTED', preferences: { diet: 'Aucun', allergies: 'Aucune', plusOne: false } },
-    { firstName: 'Maman', lastName: 'Jeanne', email: 'maman.jeanne@gmail.com', category: 'Famille Épouse', rsvp: 'ACCEPTED', preferences: { diet: 'Aucun', allergies: 'Aucune', plusOne: false } },
-    { firstName: 'Tonton', lastName: 'Michel', email: 'michel.mpunga@yahoo.fr', category: 'Famille Épouse', rsvp: 'ACCEPTED', preferences: { diet: 'Sans porc', allergies: 'Aucune', plusOne: true } },
-    { firstName: 'Gauthier', lastName: 'Kalonji', email: 'gauthier.k@gmail.com', category: 'Ami', rsvp: 'PENDING', preferences: undefined },
-    { firstName: 'Rachel', lastName: 'Mbuyi', email: 'rachel.mbuyi@gmail.com', category: 'Ami', rsvp: 'ACCEPTED', preferences: { diet: 'Végétarien', allergies: 'Aucune', plusOne: true } },
-    { firstName: 'Bob', lastName: 'Kabongo', email: 'bob.kabongo@gmail.com', category: 'Collègue', rsvp: 'DECLINED', preferences: undefined },
-  ];
+  // ─── Résumé ───────────────────────────────────────────────────────
+  const counts = {
+    users: await prisma.user.count(),
+    tenants: await prisma.tenant.count(),
+    globalTemplates: await prisma.template.count({ where: { tenantId: null } }),
+    orgTemplates: await prisma.template.count({ where: { tenantId: { not: null } } }),
+    events: await prisma.event.count(),
+    guests: await prisma.guest.count(),
+    subscriptionRequests: await prisma.subscriptionRequest.count(),
+    invoices: await prisma.platformInvoice.count(),
+    rooms: await prisma.organizationRoom.count(),
+  };
 
-  for (const guest of guestsMariage) {
-    await prisma.guest.create({
-      data: {
-        eventId: eventMariage.id,
-        ...guest,
-      },
-    });
-  }
-
-  // Invités pour le Séminaire (Global Corp)
-  const guestsSeminar = [
-    { firstName: 'Jean-Pierre', lastName: 'Bemba', email: 'jp.bemba@globalcorp.cd', category: 'C-Level', rsvp: 'ACCEPTED', preferences: { diet: 'Aucun', allergies: 'Aucune' } },
-    { firstName: 'Solange', lastName: 'Liyolo', email: 'solange.liyolo@globalcorp.cd', category: 'C-Level', rsvp: 'ACCEPTED', preferences: { diet: 'Poisson', allergies: 'Aucune' } },
-    { firstName: 'Arthur', lastName: 'Mavinga', email: 'arthur.mavinga@globalcorp.cd', category: 'Directeur', rsvp: 'PENDING', preferences: undefined },
-    { firstName: 'Carine', lastName: 'Kanza', email: 'carine.kanza@globalcorp.cd', category: 'Directeur', rsvp: 'ACCEPTED', preferences: { diet: 'Végétalien', allergies: 'Soja' } },
-  ];
-
-  for (const guest of guestsSeminar) {
-    await prisma.guest.create({
-      data: {
-        eventId: eventSeminar.id,
-        ...guest,
-      },
-    });
-  }
-
-  console.log('Base de données peuplée avec succès ! 🎉');
+  console.log('\n=== Seed terminé ===');
+  console.log(JSON.stringify(counts, null, 2));
+  console.log('\nComptes de test (mot de passe : password123) :');
+  console.log('  Super Admin  : superadmin@eventmaster.cd');
+  console.log('  Commercial   : commercial@eventmaster.cd');
+  console.log('  Prestige     : admin@prestige.cd');
+  console.log('  Entrepreneurs: contact@entrepreneurs.cd');
+  console.log('  Mariage      : claire@mariagereve.cd');
+  console.log('  Global Corp  : event@globalcorp.cd');
+  console.log('  Nouvelle org.: demo@novaevents.cd  (FREE — bibliothèque modèles)');
+  console.log(`\nSuper Admin id: ${superAdmin.id}`);
 }
 
 main()
@@ -428,4 +649,5 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
+    await pool.end();
   });
