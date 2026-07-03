@@ -2,10 +2,18 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.resolveOrgAccess = resolveOrgAccess;
 exports.getAccessibleEventIds = getAccessibleEventIds;
+exports.getManageableEventIds = getManageableEventIds;
+exports.getProtocolEventIds = getProtocolEventIds;
 exports.canManageEvent = canManageEvent;
 exports.canAccessEvent = canAccessEvent;
+exports.canProtocolGuests = canProtocolGuests;
+exports.canManageGuests = canManageGuests;
 exports.canManageRoom = canManageRoom;
 exports.canAccessRoom = canAccessRoom;
+exports.assertCanCreateEvent = assertCanCreateEvent;
+exports.assertCanCreateRoom = assertCanCreateRoom;
+exports.assertCanViewBilling = assertCanViewBilling;
+exports.assertCanViewInvoices = assertCanViewInvoices;
 exports.isValidStaffRole = isValidStaffRole;
 exports.isValidOrgRole = isValidOrgRole;
 const db_1 = require("../db");
@@ -15,18 +23,22 @@ async function resolveOrgAccess(userId, tenantId) {
         where: { id: userId, tenantId, role: 'USER' },
         select: { id: true, orgRole: true },
     });
-    if (!user) {
-        return {
-            level: 'none',
-            orgRole: null,
-            isOwner: false,
-            canManageTeam: false,
-            canManageRooms: false,
-            canCreateEvents: false,
-            canManageAllEvents: false,
-            canViewBilling: false,
-        };
-    }
+    const none = {
+        level: 'none',
+        orgRole: null,
+        isOwner: false,
+        canManageTeam: false,
+        canManageRooms: false,
+        canCreateEvents: false,
+        canCreateRooms: false,
+        canManageAllEvents: false,
+        canProtocolAllEvents: false,
+        canViewBilling: false,
+        canViewInvoices: false,
+        isProtocolOnly: false,
+    };
+    if (!user)
+        return none;
     const owner = await (0, tenantAccess_1.isTenantManager)(userId, tenantId);
     if (owner) {
         return {
@@ -36,8 +48,12 @@ async function resolveOrgAccess(userId, tenantId) {
             canManageTeam: true,
             canManageRooms: true,
             canCreateEvents: true,
+            canCreateRooms: true,
             canManageAllEvents: true,
+            canProtocolAllEvents: true,
             canViewBilling: true,
+            canViewInvoices: true,
+            isProtocolOnly: false,
         };
     }
     if (user.orgRole === 'MANAGER') {
@@ -48,8 +64,12 @@ async function resolveOrgAccess(userId, tenantId) {
             canManageTeam: true,
             canManageRooms: true,
             canCreateEvents: true,
+            canCreateRooms: true,
             canManageAllEvents: true,
+            canProtocolAllEvents: true,
             canViewBilling: false,
+            canViewInvoices: true,
+            isProtocolOnly: false,
         };
     }
     if (user.orgRole === 'PROTOCOL') {
@@ -60,43 +80,92 @@ async function resolveOrgAccess(userId, tenantId) {
             canManageTeam: false,
             canManageRooms: false,
             canCreateEvents: false,
+            canCreateRooms: false,
             canManageAllEvents: false,
+            canProtocolAllEvents: true,
             canViewBilling: false,
+            canViewInvoices: false,
+            isProtocolOnly: true,
+        };
+    }
+    if (user.orgRole === 'COMMERCIAL') {
+        return {
+            level: 'commercial',
+            orgRole: 'COMMERCIAL',
+            isOwner: false,
+            canManageTeam: false,
+            canManageRooms: false,
+            canCreateEvents: false,
+            canCreateRooms: false,
+            canManageAllEvents: false,
+            canProtocolAllEvents: false,
+            canViewBilling: false,
+            canViewInvoices: false,
+            isProtocolOnly: false,
         };
     }
     return {
-        level: 'member',
+        level: 'staff',
         orgRole: null,
         isOwner: false,
         canManageTeam: false,
         canManageRooms: false,
-        canCreateEvents: true,
-        canManageAllEvents: true,
+        canCreateEvents: false,
+        canCreateRooms: false,
+        canManageAllEvents: false,
+        canProtocolAllEvents: false,
         canViewBilling: false,
+        canViewInvoices: false,
+        isProtocolOnly: false,
     };
 }
-async function getAccessibleEventIds(userId, tenantId) {
-    const access = await resolveOrgAccess(userId, tenantId);
-    if (access.canManageAllEvents || access.level === 'member') {
-        return 'all';
-    }
+async function getStaffContext(userId, tenantId) {
     const [eventStaff, roomStaff] = await Promise.all([
         db_1.prisma.eventStaff.findMany({
             where: { userId, event: { tenantId } },
-            select: { eventId: true },
+            select: { eventId: true, staffRole: true },
         }),
         db_1.prisma.roomStaff.findMany({
             where: { userId, room: { tenantId } },
-            select: { roomId: true },
+            select: { roomId: true, staffRole: true },
         }),
     ]);
     const roomIds = roomStaff.map((r) => r.roomId);
     const roomEvents = roomIds.length
         ? await db_1.prisma.event.findMany({
             where: { tenantId, roomId: { in: roomIds } },
-            select: { id: true },
+            select: { id: true, roomId: true },
         })
         : [];
+    return { eventStaff, roomStaff, roomEvents };
+}
+async function getAccessibleEventIds(userId, tenantId) {
+    const access = await resolveOrgAccess(userId, tenantId);
+    if (access.canManageAllEvents || access.canProtocolAllEvents)
+        return 'all';
+    const { eventStaff, roomEvents } = await getStaffContext(userId, tenantId);
+    const ids = new Set([
+        ...eventStaff.map((e) => e.eventId),
+        ...roomEvents.map((e) => e.id),
+    ]);
+    return Array.from(ids);
+}
+async function getManageableEventIds(userId, tenantId) {
+    const access = await resolveOrgAccess(userId, tenantId);
+    if (access.canManageAllEvents)
+        return 'all';
+    const { eventStaff, roomStaff, roomEvents } = await getStaffContext(userId, tenantId);
+    const managerRoomIds = new Set(roomStaff.filter((r) => r.staffRole === 'MANAGER').map((r) => r.roomId));
+    const ids = new Set();
+    eventStaff.filter((e) => e.staffRole === 'MANAGER').forEach((e) => ids.add(e.eventId));
+    roomEvents.filter((e) => e.roomId && managerRoomIds.has(e.roomId)).forEach((e) => ids.add(e.id));
+    return Array.from(ids);
+}
+async function getProtocolEventIds(userId, tenantId) {
+    const access = await resolveOrgAccess(userId, tenantId);
+    if (access.canProtocolAllEvents)
+        return 'all';
+    const { eventStaff, roomEvents } = await getStaffContext(userId, tenantId);
     const ids = new Set([
         ...eventStaff.map((e) => e.eventId),
         ...roomEvents.map((e) => e.id),
@@ -105,7 +174,7 @@ async function getAccessibleEventIds(userId, tenantId) {
 }
 async function canManageEvent(userId, tenantId, eventId) {
     const access = await resolveOrgAccess(userId, tenantId);
-    if (access.canManageAllEvents || access.level === 'member')
+    if (access.canManageAllEvents)
         return true;
     const direct = await db_1.prisma.eventStaff.findFirst({
         where: { eventId, userId, staffRole: 'MANAGER' },
@@ -124,13 +193,30 @@ async function canManageEvent(userId, tenantId, eventId) {
     return Boolean(roomManager);
 }
 async function canAccessEvent(userId, tenantId, eventId) {
+    if (await canManageEvent(userId, tenantId, eventId))
+        return true;
+    if (await canProtocolGuests(userId, tenantId, eventId))
+        return true;
+    return false;
+}
+async function canProtocolGuests(userId, tenantId, eventId) {
     const access = await resolveOrgAccess(userId, tenantId);
-    if (access.canManageAllEvents || access.level === 'member')
+    if (access.canProtocolAllEvents || access.canManageAllEvents)
         return true;
-    const accessible = await getAccessibleEventIds(userId, tenantId);
-    if (accessible === 'all')
+    const eventStaff = await db_1.prisma.eventStaff.findFirst({ where: { eventId, userId } });
+    if (eventStaff)
         return true;
-    return accessible.includes(eventId);
+    const event = await db_1.prisma.event.findFirst({
+        where: { id: eventId, tenantId },
+        select: { roomId: true },
+    });
+    if (!event?.roomId)
+        return false;
+    const roomStaff = await db_1.prisma.roomStaff.findFirst({ where: { roomId: event.roomId, userId } });
+    return Boolean(roomStaff);
+}
+async function canManageGuests(userId, tenantId, eventId) {
+    return canManageEvent(userId, tenantId, eventId);
 }
 async function canManageRoom(userId, tenantId, roomId) {
     const access = await resolveOrgAccess(userId, tenantId);
@@ -150,9 +236,25 @@ async function canAccessRoom(userId, tenantId, roomId) {
     });
     return Boolean(staff);
 }
+async function assertCanCreateEvent(userId, tenantId) {
+    const access = await resolveOrgAccess(userId, tenantId);
+    return access.canCreateEvents;
+}
+async function assertCanCreateRoom(userId, tenantId) {
+    const access = await resolveOrgAccess(userId, tenantId);
+    return access.canCreateRooms;
+}
+async function assertCanViewBilling(userId, tenantId) {
+    const access = await resolveOrgAccess(userId, tenantId);
+    return access.canViewBilling;
+}
+async function assertCanViewInvoices(userId, tenantId) {
+    const access = await resolveOrgAccess(userId, tenantId);
+    return access.canViewInvoices;
+}
 function isValidStaffRole(value) {
     return value === 'MANAGER' || value === 'PROTOCOL';
 }
 function isValidOrgRole(value) {
-    return value === 'MANAGER' || value === 'PROTOCOL';
+    return value === 'MANAGER' || value === 'PROTOCOL' || value === 'COMMERCIAL';
 }

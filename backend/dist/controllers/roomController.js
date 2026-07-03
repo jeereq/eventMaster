@@ -5,9 +5,22 @@ exports.createRoom = createRoom;
 exports.updateRoom = updateRoom;
 exports.deleteRoom = deleteRoom;
 exports.assignRoomStaff = assignRoomStaff;
+exports.previewRoomLayout = previewRoomLayout;
 exports.removeRoomStaff = removeRoomStaff;
 const db_1 = require("../db");
 const permissionsService_1 = require("../services/permissionsService");
+const planFeaturesService_1 = require("../services/planFeaturesService");
+const roomLayoutService_1 = require("../services/roomLayoutService");
+function resolveRoomLayout(roomType, layoutParams, layoutBlueprint) {
+    const type = (roomType || 'SIMPLE');
+    if (layoutBlueprint && typeof layoutBlueprint === 'object') {
+        return layoutBlueprint;
+    }
+    if (type !== 'SIMPLE' && type !== 'CUSTOM') {
+        return (0, roomLayoutService_1.generateRoomBlueprint)(type, layoutParams || {});
+    }
+    return null;
+}
 async function getRooms(req, res) {
     try {
         const tenantId = req.user?.tenantId;
@@ -55,21 +68,45 @@ async function createRoom(req, res) {
             return res.status(403).json({ error: 'Organisation non identifiée.' });
         }
         const access = await (0, permissionsService_1.resolveOrgAccess)(userId, tenantId);
-        if (!access.canManageRooms) {
-            return res.status(403).json({ error: 'Seuls le propriétaire et les managers peuvent créer des salles.' });
+        if (!access.canCreateRooms) {
+            return res.status(403).json({ error: 'Seuls le propriétaire et les managers org. peuvent créer des salles.' });
         }
-        const { name, description, capacity, floor, location } = req.body;
+        const { name, description, capacity, floor, location, roomType, layoutParams, layoutBlueprint } = req.body;
         if (!name?.trim()) {
             return res.status(400).json({ error: 'Le nom de la salle est requis.' });
         }
+        const resolvedType = (roomType || 'SIMPLE');
+        try {
+            const plan = await (0, planFeaturesService_1.assertRoomTypeForPlan)(tenantId, resolvedType);
+            await (0, planFeaturesService_1.assertRoomQuota)(tenantId);
+            if (layoutBlueprint && !(0, planFeaturesService_1.allowsRoomBlueprint)(plan, resolvedType)) {
+                return res.status(403).json({
+                    error: `Les plans de salle avancés ne sont pas inclus dans votre forfait ${plan.name}.`,
+                });
+            }
+        }
+        catch (err) {
+            if (err instanceof planFeaturesService_1.PlanFeatureError) {
+                return res.status(403).json({ error: err.message });
+            }
+            throw err;
+        }
+        const blueprint = resolveRoomLayout(resolvedType, layoutParams, layoutBlueprint);
+        const computedCapacity = blueprint
+            ? (0, roomLayoutService_1.calculateBlueprintCapacity)(blueprint)
+            : capacity
+                ? parseInt(capacity, 10)
+                : null;
         const room = await db_1.prisma.organizationRoom.create({
             data: {
                 tenantId,
                 name: name.trim(),
                 description: description || null,
-                capacity: capacity ? parseInt(capacity, 10) : null,
+                capacity: computedCapacity,
                 floor: floor || null,
                 location: location || null,
+                roomType: resolvedType,
+                layoutBlueprint: blueprint ?? undefined,
             },
         });
         return res.status(201).json(room);
@@ -94,15 +131,46 @@ async function updateRoom(req, res) {
         if (!existing) {
             return res.status(404).json({ error: 'Salle introuvable.' });
         }
-        const { name, description, capacity, floor, location } = req.body;
+        const { name, description, capacity, floor, location, roomType, layoutParams, layoutBlueprint } = req.body;
+        const nextType = roomType !== undefined ? roomType : existing.roomType;
+        try {
+            const plan = await (0, planFeaturesService_1.assertRoomTypeForPlan)(tenantId, nextType);
+            if (layoutBlueprint !== undefined && layoutBlueprint && !(0, planFeaturesService_1.allowsRoomBlueprint)(plan, nextType)) {
+                return res.status(403).json({
+                    error: `Les plans de salle avancés ne sont pas inclus dans votre forfait ${plan.name}.`,
+                });
+            }
+        }
+        catch (err) {
+            if (err instanceof planFeaturesService_1.PlanFeatureError) {
+                return res.status(403).json({ error: err.message });
+            }
+            throw err;
+        }
+        let nextBlueprint = existing.layoutBlueprint;
+        if (layoutBlueprint !== undefined) {
+            nextBlueprint = layoutBlueprint;
+        }
+        else if (layoutParams !== undefined || (roomType !== undefined && roomType !== existing.roomType)) {
+            nextBlueprint = resolveRoomLayout(nextType, layoutParams, null);
+        }
+        const computedCapacity = nextBlueprint && typeof nextBlueprint === 'object'
+            ? (0, roomLayoutService_1.calculateBlueprintCapacity)(nextBlueprint)
+            : capacity !== undefined
+                ? capacity
+                    ? parseInt(capacity, 10)
+                    : null
+                : existing.capacity;
         const room = await db_1.prisma.organizationRoom.update({
             where: { id: roomId },
             data: {
                 name: name !== undefined ? name : existing.name,
                 description: description !== undefined ? description : existing.description,
-                capacity: capacity !== undefined ? (capacity ? parseInt(capacity, 10) : null) : existing.capacity,
+                capacity: computedCapacity,
                 floor: floor !== undefined ? floor : existing.floor,
                 location: location !== undefined ? location : existing.location,
+                roomType: nextType,
+                layoutBlueprint: nextBlueprint === null ? undefined : nextBlueprint,
             },
         });
         return res.json(room);
@@ -174,6 +242,18 @@ async function assignRoomStaff(req, res) {
     catch (error) {
         console.error('Erreur assignRoomStaff:', error);
         return res.status(500).json({ error: 'Impossible d\'assigner le staff.' });
+    }
+}
+async function previewRoomLayout(req, res) {
+    try {
+        const { roomType, layoutParams } = req.body;
+        const type = (roomType || 'SIMPLE');
+        const blueprint = (0, roomLayoutService_1.generateRoomBlueprint)(type, layoutParams || {});
+        return res.json({ blueprint, capacity: (0, roomLayoutService_1.calculateBlueprintCapacity)(blueprint) });
+    }
+    catch (error) {
+        console.error('Erreur previewRoomLayout:', error);
+        return res.status(500).json({ error: 'Impossible de générer l\'aperçu.' });
     }
 }
 async function removeRoomStaff(req, res) {

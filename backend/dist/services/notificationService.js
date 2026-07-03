@@ -4,12 +4,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendRealEmail = sendRealEmail;
-exports.sendRealSMS = sendRealSMS;
 exports.sendRealWhatsApp = sendRealWhatsApp;
 exports.sendRealWhatsAppLocation = sendRealWhatsAppLocation;
 exports.sendRealWhatsAppImage = sendRealWhatsAppImage;
 const mail_1 = __importDefault(require("@sendgrid/mail"));
-const twilio_1 = __importDefault(require("twilio"));
 const notificationConfig_1 = require("../config/notificationConfig");
 (0, notificationConfig_1.logNotificationConfigStatus)();
 function formatPhoneE164(to) {
@@ -24,65 +22,35 @@ function formatPhoneE164(to) {
     }
     return formattedTo;
 }
-function getTwilioClient() {
-    const { twilioSid, twilioAuthToken } = (0, notificationConfig_1.getNotificationCredentials)();
-    if (!twilioSid || !twilioAuthToken)
-        return null;
-    return (0, twilio_1.default)(twilioSid, twilioAuthToken);
-}
 /**
- * Send a real email using SendGrid or fall back to simulation
+ * Envoie un e-mail via SendGrid uniquement (aucune simulation).
  */
 async function sendRealEmail(to, subject, textBody, htmlBody) {
+    if (!(0, notificationConfig_1.isSendGridConfigured)()) {
+        const errMsg = 'SendGrid non configuré. Définissez sendgridApiKey et sendgridFrom (settings.json ou variables d\'environnement).';
+        console.error(`[Notification Service] ${errMsg} Destinataire: ${to}`);
+        return { success: false, simulated: false, error: errMsg };
+    }
     const { sendgridApiKey, sendgridFrom } = (0, notificationConfig_1.getNotificationCredentials)();
-    if (sendgridApiKey) {
-        try {
-            mail_1.default.setApiKey(sendgridApiKey);
-            const msg = {
-                to,
-                from: sendgridFrom,
-                subject,
-                text: textBody,
-                html: htmlBody || textBody.replace(/\n/g, '<br>'),
-            };
-            const response = await mail_1.default.send(msg);
-            const messageId = response[0]?.headers?.['x-message-id'] || 'sg-sent';
-            console.log(`[Notification Service] SendGrid email sent successfully to ${to}. Message ID: ${messageId}`);
-            return { success: true, simulated: false, messageId };
-        }
-        catch (error) {
-            const errMsg = error.response?.body?.errors?.[0]?.message || error.message || String(error);
-            console.error(`[Notification Service] Failed to send SendGrid email to ${to}:`, error.response?.body || error);
-            return { success: false, simulated: false, error: errMsg };
-        }
+    try {
+        mail_1.default.setApiKey(sendgridApiKey);
+        const msg = {
+            to,
+            from: sendgridFrom,
+            subject,
+            text: textBody,
+            html: htmlBody || textBody.replace(/\n/g, '<br>'),
+        };
+        const response = await mail_1.default.send(msg);
+        const messageId = response[0]?.headers?.['x-message-id'] || 'sg-sent';
+        console.log(`[Notification Service] SendGrid email sent successfully to ${to}. Message ID: ${messageId}`);
+        return { success: true, simulated: false, messageId };
     }
-    console.log(`[Simulation] Sending SendGrid Email to ${to}:\nFrom: ${sendgridFrom}\nSubject: ${subject}\nBody: ${textBody}\n`);
-    return { success: true, simulated: true };
-}
-/**
- * Send a real SMS using Twilio or fall back to simulation
- */
-async function sendRealSMS(to, body) {
-    const formattedTo = formatPhoneE164(to);
-    const { twilioPhone } = (0, notificationConfig_1.getNotificationCredentials)();
-    const twilioClient = getTwilioClient();
-    if (twilioClient && twilioPhone) {
-        try {
-            const message = await twilioClient.messages.create({
-                body,
-                from: twilioPhone,
-                to: formattedTo,
-            });
-            console.log(`[Notification Service] SMS sent successfully to ${formattedTo}. SID: ${message.sid}`);
-            return { success: true, simulated: false, messageSid: message.sid };
-        }
-        catch (error) {
-            console.error(`[Notification Service] Failed to send SMS to ${formattedTo}:`, error);
-            return { success: false, simulated: false, error: error.message || String(error) };
-        }
+    catch (error) {
+        const errMsg = error.response?.body?.errors?.[0]?.message || error.message || String(error);
+        console.error(`[Notification Service] Failed to send SendGrid email to ${to}:`, error.response?.body || error);
+        return { success: false, simulated: false, error: errMsg };
     }
-    console.log(`[Simulation] Sending SMS to ${formattedTo}:\nBody: ${body}\n`);
-    return { success: true, simulated: true };
 }
 async function sendUltraMsgRequest(endpoint, formattedTo, params) {
     const { ultramsgInstanceId, ultramsgToken } = (0, notificationConfig_1.getNotificationCredentials)();

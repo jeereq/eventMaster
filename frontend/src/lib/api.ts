@@ -45,6 +45,9 @@ async function request(path: string, options: FetchOptions = {}) {
       };
       err.status = response.status;
       err.data = data;
+      if (data.details && typeof data.details === 'string') {
+        err.message = `${data.error} (${data.details})`;
+      }
       throw err;
     }
 

@@ -218,39 +218,56 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
       }),
     ]);
 
-    const invoiceResult = await issueTenantPlanInvoice({
-      tenantId: request.tenantId,
-      tenantName: request.tenant?.name ?? 'Organisation',
-      plan: request.requestedPlan,
-      billing: {
-        action: 'ACTIVATION',
-        durationDays: request.durationDays,
-        discountPercent: resolvedDiscount,
-        approvedAmount: resolvedApproved,
-        periodStart,
-        periodEnd,
-      },
-      subscriptionRequestId: requestId,
-    });
+    let invoiceResult: Awaited<ReturnType<typeof issueTenantPlanInvoice>> | null = null;
+    let billingWarning: string | null = null;
+
+    try {
+      invoiceResult = await issueTenantPlanInvoice({
+        tenantId: request.tenantId,
+        tenantName: request.tenant?.name ?? 'Organisation',
+        plan: request.requestedPlan,
+        billing: {
+          action: 'ACTIVATION',
+          durationDays: request.durationDays,
+          discountPercent: resolvedDiscount,
+          approvedAmount: resolvedApproved,
+          periodStart,
+          periodEnd,
+        },
+        subscriptionRequestId: requestId,
+      });
+    } catch (billingError: unknown) {
+      const billingMessage =
+        billingError instanceof Error ? billingError.message : 'Erreur facturation inconnue';
+      console.error('Erreur facturation après approbation abonnement:', billingError);
+      billingWarning = `Licence activée, mais la facture n'a pas pu être générée (${billingMessage}).`;
+    }
 
     const discountNote =
-      invoiceResult.pricing.discountAmount > 0
+      invoiceResult && invoiceResult.pricing.discountAmount > 0
         ? ` Réduction spéciale de ${invoiceResult.pricing.discountPercent} % appliquée (− ${invoiceResult.pricing.discountAmount.toLocaleString('fr-FR')} FC).`
         : '';
 
     const commercialNote =
-      invoiceResult.commercialNotified.length > 0
+      invoiceResult && invoiceResult.commercialNotified.length > 0
         ? ` Commercial(s) informé(s) : ${invoiceResult.commercialNotified.join(', ')}.`
         : '';
 
+    const invoiceNote = invoiceResult?.invoice
+      ? ' Facture envoyée au propriétaire et aux managers.'
+      : billingWarning
+        ? ` ${billingWarning}`
+        : '';
+
     return res.json({
-      message: `La demande d'abonnement a été approuvée. Licence active jusqu'au ${expiryDate.toLocaleDateString('fr-FR')}. Facture envoyée au propriétaire et aux managers.${discountNote}${commercialNote}`,
+      message: `La demande d'abonnement a été approuvée. Licence active jusqu'au ${expiryDate.toLocaleDateString('fr-FR')}.${invoiceNote}${discountNote}${commercialNote}`,
       request: updatedRequest,
-      pricing: invoiceResult.pricing,
-      commercialNotified: invoiceResult.commercialNotified,
-      invoice: invoiceResult.invoice
+      pricing: invoiceResult?.pricing ?? pricing,
+      commercialNotified: invoiceResult?.commercialNotified ?? [],
+      invoice: invoiceResult?.invoice
         ? { id: invoiceResult.invoice.id, invoiceNumber: invoiceResult.invoice.invoiceNumber, amount: invoiceResult.invoice.amount }
         : null,
+      billingWarning,
       tenant: {
         id: updatedTenant.id,
         name: updatedTenant.name,
@@ -260,9 +277,13 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
         licenseKey: updatedTenant.licenseKey,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Erreur inconnue';
     console.error('Erreur lors de l\'approbation de la demande d\'abonnement:', error);
-    return res.status(500).json({ error: 'Erreur lors de l\'approbation de la demande.' });
+    return res.status(500).json({
+      error: 'Erreur lors de l\'approbation de la demande.',
+      details: process.env.NODE_ENV !== 'production' ? message : undefined,
+    });
   }
 }
 

@@ -4,12 +4,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getBillingStatus = getBillingStatus;
+exports.getPlanFeatures = getPlanFeatures;
+exports.getTenantInvoices = getTenantInvoices;
 exports.createCheckoutSession = createCheckoutSession;
 exports.handleStripeWebhook = handleStripeWebhook;
 exports.mockUpgrade = mockUpgrade;
 const db_1 = require("../db");
 const stripe_1 = __importDefault(require("stripe"));
 const plansConfig_1 = require("../config/plansConfig");
+const permissionsService_1 = require("../services/permissionsService");
+const commercialService_1 = require("../services/commercialService");
+const invoiceService_1 = require("../services/invoiceService");
+const planFeaturesService_1 = require("../services/planFeaturesService");
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_mock';
 const stripe = new stripe_1.default(STRIPE_SECRET_KEY, {
     apiVersion: '2025-11-13', // standard latest api version
@@ -21,8 +27,12 @@ function getPlansFromSettings() {
 async function getBillingStatus(req, res) {
     try {
         const tenantId = req.user?.tenantId;
-        if (!tenantId) {
+        const userId = req.user?.id;
+        if (!tenantId || !userId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
+        }
+        if (!(await (0, permissionsService_1.assertCanViewBilling)(userId, tenantId))) {
+            return res.status(403).json({ error: 'Seul le propriétaire peut consulter la facturation.' });
         }
         const tenant = await db_1.prisma.tenant.findUnique({
             where: { id: tenantId },
@@ -44,21 +54,43 @@ async function getBillingStatus(req, res) {
                 event: { tenantId },
             },
         });
+        const roomCount = await db_1.prisma.organizationRoom.count({ where: { tenantId } });
+        const orgManagerCount = await db_1.prisma.user.count({
+            where: { tenantId, role: 'USER', orgRole: 'MANAGER' },
+        });
         const limits = getPlansFromSettings();
         const currentLimits = (0, plansConfig_1.getPlanLimits)(tenant.plan);
+        const snapshot = await (0, planFeaturesService_1.getTenantPlanSnapshot)(tenantId);
+        const planDetails = snapshot ? (0, planFeaturesService_1.formatPlanFeaturesResponse)(snapshot) : null;
         return res.json({
             plan: tenant.plan,
             usage: {
                 events: tenant._count.events,
                 guests: guestCount,
                 templates: tenant._count.templates,
+                rooms: roomCount,
+                orgManagers: orgManagerCount + (tenant.managerId ? 1 : 0),
             },
             limits: {
                 maxEvents: currentLimits.maxEvents,
                 maxGuests: currentLimits.maxGuests,
                 maxTemplates: currentLimits.maxTemplates,
+                maxRooms: currentLimits.maxRooms,
+                maxOrgManagers: currentLimits.maxOrgManagers,
                 customTemplates: currentLimits.customTemplates,
             },
+            capabilities: planDetails?.capabilities ?? {
+                protocolQr: currentLimits.protocolQr,
+                seatNotifications: currentLimits.seatNotifications,
+                customTemplates: currentLimits.customTemplates,
+                mockupOcr: currentLimits.mockupOcr,
+                roomThemesFixtures: currentLimits.roomThemesFixtures,
+                commercialNetwork: currentLimits.commercialNetwork,
+                adminReports: currentLimits.adminReports,
+                roomEditorLevel: currentLimits.roomEditorLevel,
+                supportLevel: currentLimits.supportLevel,
+            },
+            planDetails,
             plans: limits,
         });
     }
@@ -67,15 +99,65 @@ async function getBillingStatus(req, res) {
         return res.status(500).json({ error: 'Erreur lors de la récupération des infos de facturation' });
     }
 }
-// Create a Stripe Checkout Session for subscription
+async function getPlanFeatures(req, res) {
+    try {
+        const tenantId = req.user?.tenantId;
+        if (!tenantId) {
+            return res.status(403).json({ error: 'Organisation non identifiée.' });
+        }
+        const snapshot = await (0, planFeaturesService_1.getTenantPlanSnapshot)(tenantId);
+        if (!snapshot) {
+            return res.status(404).json({ error: 'Organisation introuvable.' });
+        }
+        return res.json((0, planFeaturesService_1.formatPlanFeaturesResponse)(snapshot));
+    }
+    catch (error) {
+        console.error('Erreur getPlanFeatures:', error);
+        return res.status(500).json({ error: 'Impossible de charger les fonctionnalités du forfait.' });
+    }
+}
+async function getTenantInvoices(req, res) {
+    try {
+        const tenantId = req.user?.tenantId;
+        const userId = req.user?.id;
+        if (!tenantId || !userId) {
+            return res.status(403).json({ error: 'Organisation non identifiée.' });
+        }
+        if (!(await (0, permissionsService_1.assertCanViewInvoices)(userId, tenantId))) {
+            return res.status(403).json({ error: 'Accès réservé au propriétaire et aux managers.' });
+        }
+        const invoices = await db_1.prisma.platformInvoice.findMany({
+            where: { tenantId },
+            include: {
+                commercialCommissions: {
+                    include: {
+                        commercial: { select: { name: true, email: true } },
+                    },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+        return res.json({
+            invoices: invoices.map(invoiceService_1.formatInvoiceForApi),
+        });
+    }
+    catch (error) {
+        console.error('Erreur getTenantInvoices:', error);
+        return res.status(500).json({ error: 'Impossible de charger les factures.' });
+    }
+}
 async function createCheckoutSession(req, res) {
     try {
         const tenantId = req.user?.tenantId;
-        const { planType } = req.body; // Expects 'PREMIUM' or 'ENTERPRISE'
-        if (!tenantId) {
+        const userId = req.user?.id;
+        const { planType } = req.body;
+        if (!tenantId || !userId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
         }
-        if (!planType || !['STANDARD', 'PREMIUM', 'ENTERPRISE'].includes(planType)) {
+        if (!(await (0, permissionsService_1.assertCanViewBilling)(userId, tenantId))) {
+            return res.status(403).json({ error: 'Seul le propriétaire peut gérer la facturation.' });
+        }
+        if (!planType || !plansConfig_1.PAID_PLAN_KEYS.includes(planType)) {
             return res.status(400).json({ error: 'Type de forfait invalide' });
         }
         const tenant = await db_1.prisma.tenant.findUnique({
@@ -95,7 +177,26 @@ async function createCheckoutSession(req, res) {
                     plan: planType,
                     licenseActive: true,
                     licenseExpiresAt: expiryDate,
+                    licenseExpiryWarningFor: null,
                 },
+            });
+            const periodStart = new Date();
+            const invoice = await (0, invoiceService_1.createAndSendInvoice)({
+                tenantId,
+                plan: planType,
+                type: 'PAYMENT',
+                periodStart,
+                periodEnd: expiryDate,
+                durationDays: 30,
+                includeManagers: true,
+                status: 'PAID',
+            });
+            await (0, commercialService_1.recordCommercialCommission)({
+                tenantId,
+                plan: planType,
+                source: 'MOCK_CHECKOUT',
+                invoiceAmount: invoice?.amount,
+                platformInvoiceId: invoice?.id,
             });
             return res.json({
                 message: 'Mise à niveau fictive réussie (Mode Développement)',
@@ -112,7 +213,7 @@ async function createCheckoutSession(req, res) {
         // Real Stripe Integration
         const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
         // Define Stripe prices (mock IDs or from config)
-        const priceId = planType === 'PREMIUM' ? 'price_premium_id' : 'price_enterprise_id';
+        const priceId = planType.startsWith('ENTERPRISE') ? 'price_enterprise_id' : 'price_premium_id';
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             line_items: [
@@ -158,17 +259,36 @@ async function handleStripeWebhook(req, res) {
                 if (tenantId) {
                     const expiryDate = new Date();
                     expiryDate.setDate(expiryDate.getDate() + 30); // 30 days of active license
-                    // Check what item they subscribed to, or default to PREMIUM for simplicity
+                    // Check what item they subscribed to, or default to PREMIUM_2 for simplicity
                     await db_1.prisma.tenant.update({
                         where: { id: tenantId },
                         data: {
-                            plan: 'PREMIUM',
+                            plan: 'PREMIUM_2',
                             stripeCustId: session.customer,
                             licenseActive: true,
                             licenseExpiresAt: expiryDate,
+                            licenseExpiryWarningFor: null,
                         },
                     });
-                    console.log(`[Stripe Webhook] Tenant ${tenantId} upgraded to PREMIUM and license extended`);
+                    const periodStart = new Date();
+                    const invoice = await (0, invoiceService_1.createAndSendInvoice)({
+                        tenantId,
+                        plan: 'PREMIUM_2',
+                        type: 'PAYMENT',
+                        periodStart,
+                        periodEnd: expiryDate,
+                        durationDays: 30,
+                        includeManagers: true,
+                        status: 'PAID',
+                    });
+                    await (0, commercialService_1.recordCommercialCommission)({
+                        tenantId,
+                        plan: 'PREMIUM_2',
+                        source: 'STRIPE_WEBHOOK',
+                        invoiceAmount: invoice?.amount,
+                        platformInvoiceId: invoice?.id,
+                    });
+                    console.log(`[Stripe Webhook] Tenant ${tenantId} upgraded to PREMIUM_2 and license extended`);
                 }
                 break;
             }
@@ -203,11 +323,15 @@ async function handleStripeWebhook(req, res) {
 async function mockUpgrade(req, res) {
     try {
         const tenantId = req.user?.tenantId;
-        const { plan } = req.body; // FREE, PREMIUM, ENTERPRISE
-        if (!tenantId) {
+        const userId = req.user?.id;
+        const { plan } = req.body;
+        if (!tenantId || !userId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
         }
-        if (!plan || !['FREE', 'STANDARD', 'PREMIUM', 'ENTERPRISE'].includes(plan)) {
+        if (!(await (0, permissionsService_1.assertCanViewBilling)(userId, tenantId))) {
+            return res.status(403).json({ error: 'Seul le propriétaire peut modifier le forfait.' });
+        }
+        if (!plan || !plansConfig_1.PLAN_KEYS.includes(plan)) {
             return res.status(400).json({ error: 'Plan invalide' });
         }
         const expiryDate = new Date();
@@ -217,9 +341,30 @@ async function mockUpgrade(req, res) {
             data: {
                 plan,
                 licenseActive: true,
-                licenseExpiresAt: plan === 'FREE' ? null : expiryDate, // Free plan has no expiry by default
+                licenseExpiresAt: plan === 'FREE' ? null : expiryDate,
+                licenseExpiryWarningFor: null,
             },
         });
+        if (plan !== 'FREE') {
+            const periodStart = new Date();
+            const invoice = await (0, invoiceService_1.createAndSendInvoice)({
+                tenantId,
+                plan,
+                type: 'PAYMENT',
+                periodStart,
+                periodEnd: expiryDate,
+                durationDays: 30,
+                includeManagers: true,
+                status: 'PAID',
+            });
+            await (0, commercialService_1.recordCommercialCommission)({
+                tenantId,
+                plan,
+                source: 'MOCK_UPGRADE',
+                invoiceAmount: invoice?.amount,
+                platformInvoiceId: invoice?.id,
+            });
+        }
         return res.json({
             message: `Forfait modifié en ${plan} (Mode de simulation de paiement)`,
             tenant: {

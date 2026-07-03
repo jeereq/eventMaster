@@ -4,6 +4,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getSystemStats = getSystemStats;
+exports.getTenantSubscriptionHistory = getTenantSubscriptionHistory;
+exports.getAdminInvoices = getAdminInvoices;
 exports.createTenant = createTenant;
 exports.updateTenantPlanOrLicense = updateTenantPlanOrLicense;
 exports.deleteTenant = deleteTenant;
@@ -30,19 +32,34 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const plansConfig_1 = require("../config/plansConfig");
+const commercialService_1 = require("../services/commercialService");
+const platformAccess_1 = require("../middleware/platformAccess");
+const platformCommercialScope_1 = require("../services/platformCommercialScope");
+const invoiceService_1 = require("../services/invoiceService");
+const tenantBillingService_1 = require("../services/tenantBillingService");
+const plansConfig_2 = require("../config/plansConfig");
 // Get global system statistics and list of all tenants (Super Admin only)
 async function getSystemStats(req, res) {
     try {
-        if (req.user?.role !== 'SUPER_ADMIN') {
-            return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+        if (!(0, platformAccess_1.isPlatformStaff)(req.user?.role)) {
+            return res.status(403).json({ error: 'Accès refusé. Privilèges plateforme requis.' });
         }
+        const commercialId = (0, platformCommercialScope_1.isPlatformCommercial)(req.user?.role) ? req.user?.id : undefined;
+        const tenantWhere = commercialId ? (0, platformCommercialScope_1.commercialReferredTenantFilter)(commercialId) : {};
         const [tenantCount, userCount, eventCount, guestCount] = await Promise.all([
-            db_1.prisma.tenant.count(),
-            db_1.prisma.user.count(),
-            db_1.prisma.event.count(),
-            db_1.prisma.guest.count(),
+            db_1.prisma.tenant.count({ where: tenantWhere }),
+            commercialId
+                ? db_1.prisma.user.count({ where: { tenant: tenantWhere } })
+                : db_1.prisma.user.count(),
+            commercialId
+                ? db_1.prisma.event.count({ where: { tenant: tenantWhere } })
+                : db_1.prisma.event.count(),
+            commercialId
+                ? db_1.prisma.guest.count({ where: { event: { tenant: tenantWhere } } })
+                : db_1.prisma.guest.count(),
         ]);
         const tenants = await db_1.prisma.tenant.findMany({
+            where: tenantWhere,
             include: {
                 manager: {
                     select: {
@@ -88,11 +105,154 @@ async function getSystemStats(req, res) {
         return res.status(500).json({ error: 'Erreur lors de la récupération des statistiques globales' });
     }
 }
+const SUBSCRIPTION_REQUEST_STATUS_LABELS = {
+    PENDING: 'En attente',
+    APPROVED: 'Approuvée',
+    REJECTED: 'Rejetée',
+};
+async function getTenantSubscriptionHistory(req, res) {
+    try {
+        if (!(0, platformAccess_1.isPlatformStaff)(req.user?.role)) {
+            return res.status(403).json({ error: 'Accès refusé. Privilèges plateforme requis.' });
+        }
+        const tenantId = req.params.id;
+        const tenant = await db_1.prisma.tenant.findUnique({
+            where: { id: tenantId },
+            select: {
+                id: true,
+                name: true,
+                plan: true,
+                licenseActive: true,
+                licenseExpiresAt: true,
+                createdAt: true,
+            },
+        });
+        if (!tenant) {
+            return res.status(404).json({ error: 'Organisation non trouvée.' });
+        }
+        if ((0, platformCommercialScope_1.isPlatformCommercial)(req.user?.role) && req.user?.id) {
+            const owns = await (0, platformCommercialScope_1.assertCommercialOwnsTenant)(req.user.id, tenantId);
+            if (!owns) {
+                return res.status(403).json({ error: 'Accès réservé aux organisations que vous avez parrainées.' });
+            }
+        }
+        const [requests, invoices] = await Promise.all([
+            db_1.prisma.subscriptionRequest.findMany({
+                where: { tenantId },
+                orderBy: { createdAt: 'desc' },
+                include: {
+                    platformInvoice: {
+                        select: {
+                            id: true,
+                            invoiceNumber: true,
+                            plan: true,
+                            amount: true,
+                            currency: true,
+                            status: true,
+                            type: true,
+                            billingPeriod: true,
+                            periodStart: true,
+                            periodEnd: true,
+                            durationDays: true,
+                            sentAt: true,
+                            createdAt: true,
+                        },
+                    },
+                },
+            }),
+            db_1.prisma.platformInvoice.findMany({
+                where: { tenantId },
+                orderBy: { createdAt: 'desc' },
+            }),
+        ]);
+        const requestEntries = requests.map((r) => ({
+            id: r.id,
+            kind: 'REQUEST',
+            date: r.createdAt,
+            plan: r.requestedPlan,
+            durationDays: r.durationDays,
+            status: r.status,
+            statusLabel: SUBSCRIPTION_REQUEST_STATUS_LABELS[r.status] || r.status,
+            proofOfPayment: r.proofOfPayment,
+            processedAt: r.status !== 'PENDING' ? r.updatedAt : null,
+            invoice: r.platformInvoice
+                ? (0, invoiceService_1.formatInvoiceForApi)({ ...r.platformInvoice, tenant: { name: tenant.name } })
+                : null,
+        }));
+        const linkedInvoiceIds = new Set(requests.map((r) => r.platformInvoice?.id).filter(Boolean));
+        const invoiceEntries = invoices
+            .filter((inv) => !linkedInvoiceIds.has(inv.id))
+            .map((inv) => ({
+            id: inv.id,
+            kind: 'INVOICE',
+            date: inv.createdAt,
+            plan: inv.plan,
+            durationDays: inv.durationDays,
+            invoice: (0, invoiceService_1.formatInvoiceForApi)({ ...inv, tenant: { name: tenant.name } }),
+        }));
+        const history = [...requestEntries, ...invoiceEntries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return res.json({
+            tenant,
+            history,
+            requestsCount: requests.length,
+            invoicesCount: invoices.length,
+        });
+    }
+    catch (error) {
+        console.error('Erreur getTenantSubscriptionHistory:', error);
+        return res.status(500).json({ error: 'Impossible de charger l\'historique des abonnements.' });
+    }
+}
+async function getAdminInvoices(req, res) {
+    try {
+        if (!(0, platformAccess_1.isPlatformStaff)(req.user?.role)) {
+            return res.status(403).json({ error: 'Accès refusé. Privilèges plateforme requis.' });
+        }
+        const { period, tenantId } = req.query;
+        const commercialId = (0, platformCommercialScope_1.isPlatformCommercial)(req.user?.role) ? req.user?.id : undefined;
+        if (commercialId && typeof tenantId === 'string' && tenantId.trim()) {
+            const owns = await (0, platformCommercialScope_1.assertCommercialOwnsTenant)(commercialId, tenantId.trim());
+            if (!owns) {
+                return res.status(403).json({ error: 'Accès réservé aux organisations que vous avez parrainées.' });
+            }
+        }
+        const where = {};
+        if (typeof period === 'string' && period.trim()) {
+            where.billingPeriod = period.trim();
+        }
+        if (typeof tenantId === 'string' && tenantId.trim()) {
+            where.tenantId = tenantId.trim();
+        }
+        else if (commercialId) {
+            where.tenant = (0, platformCommercialScope_1.commercialReferredTenantFilter)(commercialId);
+        }
+        const invoices = await db_1.prisma.platformInvoice.findMany({
+            where,
+            include: {
+                tenant: { select: { name: true } },
+                commercialCommissions: {
+                    include: {
+                        commercial: { select: { name: true, email: true } },
+                    },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 200,
+        });
+        return res.json({
+            invoices: invoices.map(invoiceService_1.formatInvoiceForApi),
+        });
+    }
+    catch (error) {
+        console.error('Erreur getAdminInvoices:', error);
+        return res.status(500).json({ error: 'Impossible de charger les factures.' });
+    }
+}
 // Create a new tenant (SaaS organization)
 async function createTenant(req, res) {
     try {
-        if (req.user?.role !== 'SUPER_ADMIN') {
-            return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+        if (!(0, platformAccess_1.isPlatformStaff)(req.user?.role)) {
+            return res.status(403).json({ error: 'Accès refusé. Privilèges plateforme requis.' });
         }
         const { name, plan, licenseActive, licenseExpiresAt, licenseKey } = req.body;
         if (!name) {
@@ -105,6 +265,7 @@ async function createTenant(req, res) {
                 licenseActive: licenseActive !== undefined ? Boolean(licenseActive) : true,
                 licenseExpiresAt: licenseExpiresAt ? new Date(licenseExpiresAt) : null,
                 licenseKey: licenseKey || null,
+                referredByCommercialId: req.user?.role === 'COMMERCIAL' ? req.user.id : null,
             },
         });
         return res.status(201).json({ message: 'Organisation créée avec succès', tenant: newTenant });
@@ -121,18 +282,95 @@ async function updateTenantPlanOrLicense(req, res) {
             return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
         }
         const id = req.params.id;
-        const { name, plan, licenseActive, licenseExpiresAt, licenseKey } = req.body;
+        const { name, plan, licenseActive, licenseExpiresAt, licenseKey, billing, } = req.body;
+        const existing = await db_1.prisma.tenant.findUnique({ where: { id } });
+        if (!existing) {
+            return res.status(404).json({ error: 'Organisation introuvable.' });
+        }
+        const newPlan = plan ?? existing.plan;
+        let nextExpiry = licenseExpiresAt !== undefined
+            ? licenseExpiresAt
+                ? new Date(licenseExpiresAt)
+                : null
+            : existing.licenseExpiresAt;
+        const billingPayload = billing;
+        const durationDays = billingPayload?.durationDays ? parseInt(String(billingPayload.durationDays), 10) : 30;
+        if (billingPayload?.extendLicense && newPlan !== 'FREE' && plansConfig_2.PAID_PLAN_KEYS.includes(newPlan)) {
+            nextExpiry = (0, tenantBillingService_1.computeExtendedExpiry)(existing.licenseExpiresAt, durationDays);
+        }
         const updatedTenant = await db_1.prisma.tenant.update({
             where: { id },
             data: {
                 name: name !== undefined ? name : undefined,
-                plan: plan,
+                plan: newPlan,
                 licenseActive: licenseActive !== undefined ? Boolean(licenseActive) : undefined,
-                licenseExpiresAt: licenseExpiresAt ? new Date(licenseExpiresAt) : null,
+                licenseExpiresAt: licenseExpiresAt !== undefined ? nextExpiry : undefined,
                 licenseKey: licenseKey !== undefined ? licenseKey : undefined,
+                licenseExpiryWarningFor: billingPayload?.extendLicense || billingPayload?.issueInvoice ? null : undefined,
             },
         });
-        return res.json({ message: 'Tenant mis à jour avec succès', tenant: updatedTenant });
+        let billingResult = null;
+        if (billingPayload?.issueInvoice &&
+            newPlan !== 'FREE' &&
+            plansConfig_2.PAID_PLAN_KEYS.includes(newPlan)) {
+            const parsedDiscount = billingPayload.discountPercent !== undefined && billingPayload.discountPercent !== null
+                ? parseFloat(String(billingPayload.discountPercent))
+                : undefined;
+            const parsedApproved = billingPayload.approvedAmount !== undefined && billingPayload.approvedAmount !== null
+                ? parseFloat(String(billingPayload.approvedAmount))
+                : undefined;
+            if (parsedDiscount !== undefined && (isNaN(parsedDiscount) || parsedDiscount < 0 || parsedDiscount > 100)) {
+                return res.status(400).json({ error: 'La réduction doit être entre 0 et 100 %.' });
+            }
+            const action = (0, tenantBillingService_1.resolveBillingAction)(existing.plan, newPlan, billingPayload.action);
+            const periodStart = new Date();
+            const periodEnd = nextExpiry ??
+                (() => {
+                    const d = new Date(periodStart);
+                    d.setDate(d.getDate() + durationDays);
+                    return d;
+                })();
+            billingResult = await (0, tenantBillingService_1.issueTenantPlanInvoice)({
+                tenantId: id,
+                tenantName: updatedTenant.name,
+                plan: newPlan,
+                billing: {
+                    action,
+                    durationDays,
+                    discountPercent: parsedDiscount,
+                    approvedAmount: parsedApproved,
+                    periodStart,
+                    periodEnd,
+                },
+            });
+        }
+        const discountNote = billingResult?.pricing.discountAmount && billingResult.pricing.discountAmount > 0
+            ? ` Réduction ${billingResult.pricing.discountPercent} % appliquée.`
+            : '';
+        const invoiceNote = billingResult?.invoice
+            ? ` Facture ${billingResult.invoice.invoiceNumber} envoyée.${discountNote}`
+            : '';
+        const commercialNote = billingResult?.commercialNotified.length
+            ? ` Commerciaux informés : ${billingResult.commercialNotified.join(', ')}.`
+            : '';
+        return res.json({
+            message: `Organisation mise à jour.${invoiceNote}${commercialNote}`,
+            tenant: updatedTenant,
+            billing: billingResult
+                ? {
+                    action: billingPayload?.action ?? (0, tenantBillingService_1.resolveBillingAction)(existing.plan, newPlan),
+                    pricing: billingResult.pricing,
+                    invoice: billingResult.invoice
+                        ? {
+                            id: billingResult.invoice.id,
+                            invoiceNumber: billingResult.invoice.invoiceNumber,
+                            amount: billingResult.invoice.amount,
+                        }
+                        : null,
+                    commercialNotified: billingResult.commercialNotified,
+                }
+                : null,
+        });
     }
     catch (error) {
         console.error('Erreur lors de la mise à jour du tenant:', error);
@@ -207,18 +445,24 @@ async function createUser(req, res) {
             return res.status(400).json({ error: 'Un utilisateur avec cette adresse email existe déjà.' });
         }
         const passwordHash = await bcryptjs_1.default.hash(password, 10);
+        const resolvedRole = role || 'USER';
+        const resolvedTenantId = resolvedRole === 'COMMERCIAL' ? null : (tenantId || null);
         const newUser = await db_1.prisma.user.create({
             data: {
                 name,
                 email,
                 passwordHash,
-                role: role || 'USER',
+                role: resolvedRole,
                 isEmailVerified: isEmailVerified !== undefined ? Boolean(isEmailVerified) : false,
-                tenantId: tenantId || null,
+                tenantId: resolvedTenantId,
+                commissionRate: resolvedRole === 'COMMERCIAL' ? (0, commercialService_1.normalizeCommissionRate)(0.2) : null,
             },
         });
+        if (newUser.role === 'COMMERCIAL') {
+            await (0, commercialService_1.ensureCommercialReferralCode)(newUser.id);
+        }
         // If this is the manager of the tenant and tenant managerId is not set, we can set it
-        if (tenantId && role === 'USER') {
+        if (resolvedTenantId && resolvedRole === 'USER') {
             const tenant = await db_1.prisma.tenant.findUnique({ where: { id: tenantId } });
             if (tenant && !tenant.managerId) {
                 await db_1.prisma.tenant.update({
@@ -247,8 +491,16 @@ async function updateUserRoleOrStatus(req, res) {
             email: email !== undefined ? email : undefined,
             role: role,
             isEmailVerified: isEmailVerified !== undefined ? Boolean(isEmailVerified) : undefined,
-            tenantId: tenantId !== undefined ? (tenantId || null) : undefined,
         };
+        if (role === 'COMMERCIAL') {
+            updateData.tenantId = null;
+            if (updateData.commissionRate === undefined) {
+                updateData.commissionRate = (0, commercialService_1.normalizeCommissionRate)(0.2);
+            }
+        }
+        else if (tenantId !== undefined) {
+            updateData.tenantId = tenantId || null;
+        }
         if (password) {
             updateData.passwordHash = await bcryptjs_1.default.hash(password, 10);
         }
@@ -256,6 +508,9 @@ async function updateUserRoleOrStatus(req, res) {
             where: { id },
             data: updateData,
         });
+        if (updatedUser.role === 'COMMERCIAL') {
+            await (0, commercialService_1.ensureCommercialReferralCode)(updatedUser.id);
+        }
         return res.json({ message: 'Utilisateur mis à jour avec succès', user: updatedUser });
     }
     catch (error) {

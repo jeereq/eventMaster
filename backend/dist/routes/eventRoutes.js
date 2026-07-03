@@ -4,6 +4,7 @@ const express_1 = require("express");
 const eventController_1 = require("../controllers/eventController");
 const eventStaffController_1 = require("../controllers/eventStaffController");
 const guestController_1 = require("../controllers/guestController");
+const protocolController_1 = require("../controllers/protocolController");
 const invitationController_1 = require("../controllers/invitationController");
 const feedController_1 = require("../controllers/feedController");
 const auth_1 = require("../middleware/auth");
@@ -16,6 +17,7 @@ router.get('/', eventController_1.getEvents);
 router.post('/', eventController_1.createEvent);
 router.get('/:id', eventController_1.getEventById);
 router.put('/:id', eventController_1.updateEvent);
+router.post('/:id/import-room-layout', eventController_1.importRoomLayout);
 router.delete('/:id', eventController_1.deleteEvent);
 // Event staff assignments
 router.get('/:eventId/staff', eventStaffController_1.getEventStaff);
@@ -27,6 +29,13 @@ router.post('/:eventId/guests', guestController_1.createGuest);
 router.post('/:eventId/guests/import', guestController_1.importGuests);
 router.put('/:eventId/guests/:id', guestController_1.updateGuest);
 router.delete('/:eventId/guests/:id', guestController_1.deleteGuest);
+// Protocol — scan QR, émargement, siège, commentaires
+router.get('/:eventId/protocol/guests', protocolController_1.listProtocolGuests);
+router.post('/:eventId/protocol/scan', protocolController_1.scanGuest);
+router.post('/:eventId/guests/:guestId/check-in', protocolController_1.checkInGuest);
+router.post('/:eventId/guests/:guestId/verify-seat', protocolController_1.verifyGuestSeat);
+router.get('/:eventId/guests/:guestId/protocol-notes', protocolController_1.getGuestProtocolNotes);
+router.post('/:eventId/guests/:guestId/protocol-notes', protocolController_1.addGuestProtocolNote);
 // Invitations related to Events
 router.get('/:eventId/invitations', invitationController_1.getInvitations);
 router.post('/:eventId/invitations', invitationController_1.createInvitation);

@@ -7,6 +7,7 @@ exports.processReminders = processReminders;
 exports.startReminderWorker = startReminderWorker;
 const db_1 = require("../db");
 const notificationService_1 = require("./notificationService");
+const notificationChannels_1 = require("../utils/notificationChannels");
 const messageTemplateService_1 = require("./messageTemplateService");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
@@ -164,19 +165,7 @@ async function processReminders() {
                 }
                 body = (0, messageTemplateService_1.polishWhatsAppBody)(body);
                 const channel = latestInvitation.channel || 'EMAIL';
-                let channelsToSend = [];
-                if (channel === 'EMAIL_AND_WHATSAPP') {
-                    channelsToSend = ['EMAIL', 'WHATSAPP'];
-                }
-                else if (channel === 'EMAIL_AND_SMS') {
-                    channelsToSend = ['EMAIL', 'SMS'];
-                }
-                else if (channel === 'ALL_CHANNELS') {
-                    channelsToSend = ['EMAIL', 'WHATSAPP', 'SMS'];
-                }
-                else {
-                    channelsToSend = channel.split(',').map(c => c.trim());
-                }
+                const channelsToSend = (0, notificationChannels_1.resolveDeliveryChannels)(channel);
                 for (const chan of channelsToSend) {
                     if (chan === 'EMAIL') {
                         const htmlBody = `
@@ -238,11 +227,6 @@ async function processReminders() {
               </div>
             `;
                         await (0, notificationService_1.sendRealEmail)(guest.email, subject, body, htmlBody);
-                    }
-                    else if (chan === 'SMS') {
-                        const phone = getGuestPhone(guest);
-                        if (phone)
-                            await (0, notificationService_1.sendRealSMS)(phone, body);
                     }
                     else if (chan === 'WHATSAPP') {
                         const phone = getGuestPhone(guest);

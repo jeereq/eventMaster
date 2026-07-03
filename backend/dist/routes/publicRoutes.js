@@ -17,18 +17,27 @@ router.get('/templates', async (req, res) => {
     try {
         const templates = await db_1.prisma.template.findMany({
             where: {
+                tenantId: null,
                 showOnLanding: true,
             },
             orderBy: {
                 createdAt: 'desc',
             },
         });
-        return res.json(templates.map(t => ({
-            id: t.id,
-            name: t.name,
-            content: t.content,
-            createdAt: t.createdAt,
-        })));
+        return res.json(templates.map(t => {
+            const content = t.content;
+            return {
+                id: t.id,
+                name: t.name,
+                content: t.content,
+                tenantId: null,
+                isGlobal: true,
+                showOnLanding: t.showOnLanding,
+                category: content?.global?.landingCategory || 'private',
+                description: content?.global?.landingDescription || null,
+                createdAt: t.createdAt,
+            };
+        }));
     }
     catch (error) {
         console.error('Erreur lors de la récupération des modèles publics:', error);

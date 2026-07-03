@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getGuestRsvpDetails = getGuestRsvpDetails;
 exports.getGuestAllInvitations = getGuestAllInvitations;
 exports.submitRsvp = submitRsvp;
+const rsvpPreferences_1 = require("../utils/rsvpPreferences");
 const db_1 = require("../db");
 const notificationService_1 = require("../services/notificationService");
 const messageTemplateService_1 = require("../services/messageTemplateService");
@@ -159,6 +160,11 @@ async function getGuestRsvpDetails(req, res) {
                         latitude: true,
                         longitude: true,
                         tablePlan: true,
+                        room: {
+                            select: {
+                                layoutBlueprint: true,
+                            },
+                        },
                         invitations: {
                             where: {
                                 templateId: { not: null }
@@ -178,6 +184,9 @@ async function getGuestRsvpDetails(req, res) {
         // Extract table details if the guest is assigned to a table
         let tableDetails = null;
         let tablePlanOverview = null;
+        let planFixtures = null;
+        let roomOutline = null;
+        let roomThemeId = null;
         const eventObj = guest.event;
         if (eventObj && eventObj.tablePlan && typeof eventObj.tablePlan === 'object') {
             const plan = eventObj.tablePlan;
@@ -191,7 +200,13 @@ async function getGuestRsvpDetails(req, res) {
                     y: table.y,
                     occupiedCount: Object.values(table.seats || {}).filter(Boolean).length,
                     isGuestTable: Object.values(table.seats || {}).includes(guestId),
+                    chairType: table.chairType,
+                    chairImageUrl: table.chairImageUrl,
+                    tableColor: table.tableColor,
                 }));
+                if (Array.isArray(plan.fixtures)) {
+                    planFixtures = plan.fixtures;
+                }
                 for (const table of plan.tables) {
                     const seatsObj = table.seats || {};
                     const seatEntries = Object.entries(seatsObj);
@@ -224,17 +239,35 @@ async function getGuestRsvpDetails(req, res) {
                             shape: table.shape,
                             capacity: table.capacity,
                             seatIndex,
+                            chairType: table.chairType,
+                            chairImageUrl: table.chairImageUrl,
                             neighbors,
                         };
                         break;
                     }
                 }
             }
+            const room = eventObj.room;
+            if (room?.layoutBlueprint?.roomOutline) {
+                roomOutline = room.layoutBlueprint.roomOutline;
+            }
+            else if (plan.roomOutline) {
+                roomOutline = plan.roomOutline;
+            }
+            if (room?.layoutBlueprint?.metadata?.roomThemeId) {
+                roomThemeId = room.layoutBlueprint.metadata.roomThemeId;
+            }
+            else if (plan.roomThemeId) {
+                roomThemeId = plan.roomThemeId;
+            }
         }
         return res.json({
             ...guest,
             tableDetails,
             tablePlanOverview,
+            planFixtures,
+            roomOutline,
+            roomThemeId,
             eventPassed: isEventDatePassed(guest.event.date),
             rsvpLocked: isEventDatePassed(guest.event.date),
         });
@@ -328,11 +361,12 @@ async function submitRsvp(req, res) {
         }
         const previousRsvp = guest.rsvp;
         const statusChanged = previousRsvp !== rsvp;
+        const normalizedPreferences = (0, rsvpPreferences_1.normalizeGuestPreferences)(preferences);
         const updatedGuest = await db_1.prisma.guest.update({
             where: { id: guestId },
             data: {
                 rsvp,
-                preferences: preferences || {},
+                preferences: normalizedPreferences,
             },
         });
         // Send QR Code notifications asynchronously if RSVP is accepted
@@ -375,7 +409,6 @@ async function submitRsvp(req, res) {
                 location: guest.event.location || 'Non défini',
             });
             const whatsappCaption = (0, messageTemplateService_1.polishWhatsAppBody)(whatsappRendered.body);
-            const smsBody = `Bonjour ${guest.firstName}, votre présence à "${guest.event.title}" est confirmée. Voici votre QR Code d'entrée : ${qrCodeUrl}. Présentez-le à l'accueil. Merci !`;
             // Run sending in the background to avoid blocking the user response
             (async () => {
                 try {
@@ -385,13 +418,11 @@ async function submitRsvp(req, res) {
                         console.log(`[RSVP Controller] Sending confirmation email with QR Code to ${guest.email}...`);
                         await (0, notificationService_1.sendRealEmail)(guest.email, subject, textBody, htmlBody);
                     }
-                    // 2. Send Phone notifications (WhatsApp / SMS)
+                    // 2. WhatsApp avec image QR
                     const phone = getGuestPhone(guest);
                     if (phone) {
                         console.log(`[RSVP Controller] Sending confirmation WhatsApp Image with QR Code to ${phone}...`);
                         await (0, notificationService_1.sendRealWhatsAppImage)(phone, qrCodeUrl, whatsappCaption);
-                        console.log(`[RSVP Controller] Sending confirmation SMS with QR Code link to ${phone}...`);
-                        await (0, notificationService_1.sendRealSMS)(phone, smsBody);
                     }
                 }
                 catch (notifErr) {

@@ -764,7 +764,8 @@ function DashboardPageContent() {
         setAdminInvoices(data.invoices || []);
       }
     } catch (err: any) {
-      alert(err.message || 'Erreur lors de l\'approbation de la demande.');
+      const detail = err?.data?.details || err?.data?.error || err.message;
+      alert(detail || 'Erreur lors de l\'approbation de la demande.');
       throw err;
     }
   };

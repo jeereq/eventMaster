@@ -7,8 +7,15 @@ exports.updateInvitation = updateInvitation;
 exports.deleteInvitation = deleteInvitation;
 const db_1 = require("../db");
 const notificationService_1 = require("../services/notificationService");
+const notificationChannels_1 = require("../utils/notificationChannels");
 const messageTemplateService_1 = require("../services/messageTemplateService");
-// Helper function to extract guest phone number
+const permissionsService_1 = require("../services/permissionsService");
+async function verifyEventAccess(userId, tenantId, eventId, requireManage = false) {
+    if (requireManage) {
+        return (0, permissionsService_1.canManageEvent)(userId, tenantId, eventId);
+    }
+    return (0, permissionsService_1.canAccessEvent)(userId, tenantId, eventId);
+}
 function getGuestPhone(guest) {
     if (guest.preferences && typeof guest.preferences === 'object') {
         const prefs = guest.preferences;
@@ -19,29 +26,21 @@ function getGuestPhone(guest) {
     }
     const emailStr = guest.email.trim();
     const isPhone = /^\+?[0-9\s\-()]{7,20}$/.test(emailStr);
-    if (isPhone) {
+    if (isPhone)
         return emailStr;
-    }
     return null;
-}
-// Helper function to verify event ownership
-async function verifyEventOwner(eventId, tenantId) {
-    const event = await db_1.prisma.event.findFirst({
-        where: { id: eventId, tenantId },
-    });
-    return !!event;
 }
 // Get all invitations for an event
 async function getInvitations(req, res) {
     try {
         const tenantId = req.user?.tenantId;
         const eventId = req.params.eventId;
-        if (!tenantId) {
+        const userId = req.user?.id;
+        if (!tenantId || !userId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
         }
-        const isOwner = await verifyEventOwner(eventId, tenantId);
-        if (!isOwner) {
-            return res.status(404).json({ error: 'Événement non trouvé ou non autorisé' });
+        if (!(await verifyEventAccess(userId, tenantId, eventId, true))) {
+            return res.status(403).json({ error: 'Événement non trouvé ou non autorisé' });
         }
         const invitations = await db_1.prisma.invitation.findMany({
             where: { eventId },
@@ -61,12 +60,12 @@ async function createInvitation(req, res) {
         const tenantId = req.user?.tenantId;
         const eventId = req.params.eventId;
         const { templateId, subject, body, channel } = req.body;
-        if (!tenantId) {
+        const userId = req.user?.id;
+        if (!tenantId || !userId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
         }
-        const isOwner = await verifyEventOwner(eventId, tenantId);
-        if (!isOwner) {
-            return res.status(404).json({ error: 'Événement non trouvé ou non autorisé' });
+        if (!(await verifyEventAccess(userId, tenantId, eventId, true))) {
+            return res.status(403).json({ error: 'Événement non trouvé ou non autorisé' });
         }
         if (!subject || !body || !channel) {
             return res.status(400).json({ error: 'Les champs subject, body et channel sont requis' });
@@ -94,12 +93,12 @@ async function sendInvitation(req, res) {
         const eventId = req.params.eventId;
         const id = req.params.id;
         const { guestIds, channel } = req.body || {};
-        if (!tenantId) {
+        const userId = req.user?.id;
+        if (!tenantId || !userId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
         }
-        const isOwner = await verifyEventOwner(eventId, tenantId);
-        if (!isOwner) {
-            return res.status(404).json({ error: 'Événement non trouvé ou non autorisé' });
+        if (!(await verifyEventAccess(userId, tenantId, eventId, true))) {
+            return res.status(403).json({ error: 'Événement non trouvé ou non autorisé' });
         }
         const invitation = await db_1.prisma.invitation.findFirst({
             where: { id, eventId },
@@ -154,28 +153,8 @@ async function sendInvitation(req, res) {
                 .replaceAll('{{description}}', event.description || '')
                 .replaceAll('{{location}}', event.location || '')
                 .replaceAll('{{date}}', formattedDate);
-            // Support multiple channels (comma-separated, array, or specific combinations like EMAIL_AND_WHATSAPP)
-            let channelsToSend = [];
-            if (Array.isArray(activeChannel)) {
-                channelsToSend = activeChannel;
-            }
-            else if (typeof activeChannel === 'string') {
-                if (activeChannel === 'EMAIL_AND_WHATSAPP') {
-                    channelsToSend = ['EMAIL', 'WHATSAPP'];
-                }
-                else if (activeChannel === 'EMAIL_AND_SMS') {
-                    channelsToSend = ['EMAIL', 'SMS'];
-                }
-                else if (activeChannel === 'ALL_CHANNELS') {
-                    channelsToSend = ['EMAIL', 'WHATSAPP', 'SMS'];
-                }
-                else {
-                    channelsToSend = activeChannel.split(',').map(c => c.trim());
-                }
-            }
-            else {
-                channelsToSend = ['EMAIL'];
-            }
+            // Canaux : e-mail et WhatsApp uniquement (SMS / alias legacy convertis)
+            const channelsToSend = (0, notificationChannels_1.resolveDeliveryChannels)(activeChannel);
             const channelResults = [];
             for (const chan of channelsToSend) {
                 let sendResult = { success: true, simulated: true };
@@ -239,16 +218,6 @@ async function sendInvitation(req, res) {
             </div>
           `;
                     sendResult = await (0, notificationService_1.sendRealEmail)(guest.email, subject, body, htmlBody);
-                }
-                else if (chan === 'SMS') {
-                    const phone = getGuestPhone(guest);
-                    if (phone) {
-                        sendResult = await (0, notificationService_1.sendRealSMS)(phone, body);
-                    }
-                    else {
-                        console.warn(`[Invitation Controller] Guest ${guest.firstName} ${guest.lastName} has no valid phone number for SMS sending.`);
-                        sendResult = { success: false, simulated: false, error: 'No valid phone number' };
-                    }
                 }
                 else if (chan === 'WHATSAPP') {
                     const phone = getGuestPhone(guest);
@@ -319,7 +288,7 @@ async function sendInvitation(req, res) {
             message = `Échec de l'envoi pour ${failedCount} invité(s) via ${activeChannel}.`;
         }
         else if (allSimulated) {
-            message = `Envoi simulé pour ${guests.length} invité(s) via ${activeChannel} (UltraMsg/SendGrid/Twilio non configurés).`;
+            message = `Envoi simulé pour ${guests.length} invité(s) via ${activeChannel} (SendGrid / UltraMsg non configurés).`;
         }
         else if (failedCount > 0 || simulatedCount > 0) {
             message = `Envoi partiel : ${sentCount} réussi(s), ${simulatedCount} simulé(s), ${failedCount} échec(s) via ${activeChannel}.`;
@@ -368,12 +337,12 @@ async function updateInvitation(req, res) {
         const eventId = req.params.eventId;
         const id = req.params.id;
         const { templateId, subject, body, channel } = req.body;
-        if (!tenantId) {
+        const userId = req.user?.id;
+        if (!tenantId || !userId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
         }
-        const isOwner = await verifyEventOwner(eventId, tenantId);
-        if (!isOwner) {
-            return res.status(404).json({ error: 'Événement non trouvé ou non autorisé' });
+        if (!(await verifyEventAccess(userId, tenantId, eventId, true))) {
+            return res.status(403).json({ error: 'Événement non trouvé ou non autorisé' });
         }
         const existingInvitation = await db_1.prisma.invitation.findFirst({
             where: { id, eventId },
@@ -404,12 +373,12 @@ async function deleteInvitation(req, res) {
         const tenantId = req.user?.tenantId;
         const eventId = req.params.eventId;
         const id = req.params.id;
-        if (!tenantId) {
+        const userId = req.user?.id;
+        if (!tenantId || !userId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
         }
-        const isOwner = await verifyEventOwner(eventId, tenantId);
-        if (!isOwner) {
-            return res.status(404).json({ error: 'Événement non trouvé ou non autorisé' });
+        if (!(await verifyEventAccess(userId, tenantId, eventId, true))) {
+            return res.status(403).json({ error: 'Événement non trouvé ou non autorisé' });
         }
         const existingInvitation = await db_1.prisma.invitation.findFirst({
             where: { id, eventId },

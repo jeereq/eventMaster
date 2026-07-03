@@ -7,6 +7,7 @@ const router = (0, express_1.Router)();
 router.use(auth_1.requireAuth);
 router.use(auth_1.requireActiveLicense);
 router.get('/', roomController_1.getRooms);
+router.post('/preview-layout', roomController_1.previewRoomLayout);
 router.post('/', roomController_1.createRoom);
 router.put('/:roomId', roomController_1.updateRoom);
 router.delete('/:roomId', roomController_1.deleteRoom);

@@ -104,6 +104,8 @@ export default function SubscriptionApprovalModal({
         approvedAmount: discountMode === 'amount' ? pricing.finalAmount : undefined,
       });
       onClose();
+    } catch {
+      // L'erreur est affichée par handleApproveSubscription (alert)
     } finally {
       setSubmitting(false);
     }

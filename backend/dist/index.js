@@ -16,9 +16,15 @@ const publicRoutes_1 = __importDefault(require("./routes/publicRoutes"));
 const subscriptionRoutes_1 = __importDefault(require("./routes/subscriptionRoutes"));
 const teamRoutes_1 = __importDefault(require("./routes/teamRoutes"));
 const roomRoutes_1 = __importDefault(require("./routes/roomRoutes"));
+const commercialRoutes_1 = __importDefault(require("./routes/commercialRoutes"));
+const orgCommercialRoutes_1 = __importDefault(require("./routes/orgCommercialRoutes"));
+const uploadRoutes_1 = __importDefault(require("./routes/uploadRoutes"));
+const notificationRoutes_1 = __importDefault(require("./routes/notificationRoutes"));
 const billingController_1 = require("./controllers/billingController");
 const db_1 = require("./db");
 const reminderService_1 = require("./services/reminderService");
+const subscriptionExpiryService_1 = require("./services/subscriptionExpiryService");
+const notificationConfig_1 = require("./config/notificationConfig");
 // Load environment variables
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -45,18 +51,29 @@ app.get('/health', async (req, res) => {
 app.use('/api/auth', authRoutes_1.default);
 app.use('/api/events', eventRoutes_1.default);
 app.use('/api/templates', templateRoutes_1.default);
+app.use('/api/uploads', uploadRoutes_1.default);
 app.use('/api/rsvp', rsvpRoutes_1.default);
 app.use('/api/admin', adminRoutes_1.default);
 app.use('/api/public', publicRoutes_1.default);
 app.use('/api/subscriptions', subscriptionRoutes_1.default);
 app.use('/api/team', teamRoutes_1.default);
 app.use('/api/rooms', roomRoutes_1.default);
+app.use('/api/commercial', commercialRoutes_1.default);
+app.use('/api/org-commercial', orgCommercialRoutes_1.default);
+app.use('/api/notifications', notificationRoutes_1.default);
 app.post('/api/billing/webhook', billingController_1.handleStripeWebhook);
 app.use('/api/billing', billingRoutes_1.default);
 // Start Server
 app.listen(PORT, () => {
     console.log(`[EventMaster Server] running on http://localhost:${PORT}`);
-    // Start background automatic reminders worker
+    if (!(0, notificationConfig_1.isSendGridConfigured)()) {
+        console.error('[EventMaster Server] ATTENTION : SendGrid non configuré — aucun e-mail ne sera envoyé. Configurez SENDGRID_API_KEY et SENDGRID_FROM.');
+    }
+    if (!process.env.CLOUDINARY_CLOUD_NAME) {
+        console.warn('[EventMaster Server] Cloudinary non configuré — uploads d\'images modèles désactivés. CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET.');
+    }
+    // Start background workers
     (0, reminderService_1.startReminderWorker)();
+    (0, subscriptionExpiryService_1.startSubscriptionExpiryWorker)();
 });
 // Trigger ts-node-dev reload to pick up generated Prisma client after schema change (latitude and longitude fields added)

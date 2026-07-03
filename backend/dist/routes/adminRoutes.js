@@ -5,47 +5,48 @@ const auth_1 = require("../middleware/auth");
 const adminController_1 = require("../controllers/adminController");
 const guestMessageTemplateController_1 = require("../controllers/guestMessageTemplateController");
 const subscriptionController_1 = require("../controllers/subscriptionController");
+const revenueReportController_1 = require("../controllers/revenueReportController");
+const invoiceController_1 = require("../controllers/invoiceController");
 const router = (0, express_1.Router)();
-// Protect all admin routes with authentication and SUPER_ADMIN role
 router.use(auth_1.requireAuth);
+// Personnel plateforme (Super Admin + Commercial sans organisation)
+router.get('/stats', (0, auth_1.requireRole)(['SUPER_ADMIN', 'COMMERCIAL']), adminController_1.getSystemStats);
+router.get('/invoices', (0, auth_1.requireRole)(['SUPER_ADMIN', 'COMMERCIAL']), adminController_1.getAdminInvoices);
+router.get('/invoices/:id', (0, auth_1.requireRole)(['SUPER_ADMIN', 'COMMERCIAL']), invoiceController_1.getInvoiceDetail);
+router.get('/invoices/:id/pdf', (0, auth_1.requireRole)(['SUPER_ADMIN', 'COMMERCIAL']), invoiceController_1.downloadInvoicePdf);
+router.post('/invoices/:id/send', (0, auth_1.requireRole)(['SUPER_ADMIN', 'COMMERCIAL']), invoiceController_1.sendInvoiceByEmail);
+router.get('/subscriptions/requests', (0, auth_1.requireRole)(['SUPER_ADMIN', 'COMMERCIAL']), subscriptionController_1.getAdminSubscriptionRequests);
+router.post('/subscriptions/requests/:id/approve', (0, auth_1.requireRole)(['SUPER_ADMIN', 'COMMERCIAL']), subscriptionController_1.approveSubscriptionRequest);
+router.post('/subscriptions/requests/:id/reject', (0, auth_1.requireRole)(['SUPER_ADMIN', 'COMMERCIAL']), subscriptionController_1.rejectSubscriptionRequest);
+router.post('/tenants', (0, auth_1.requireRole)(['SUPER_ADMIN', 'COMMERCIAL']), adminController_1.createTenant);
+router.get('/tenants/:id/subscription-history', (0, auth_1.requireRole)(['SUPER_ADMIN', 'COMMERCIAL']), adminController_1.getTenantSubscriptionHistory);
+// Super Admin uniquement
 router.use((0, auth_1.requireRole)(['SUPER_ADMIN']));
-// GET /api/admin/stats
-router.get('/stats', adminController_1.getSystemStats);
-// Subscription Requests routes (Super Admin)
-router.get('/subscriptions/requests', subscriptionController_1.getAdminSubscriptionRequests);
-router.post('/subscriptions/requests/:id/approve', subscriptionController_1.approveSubscriptionRequest);
-router.post('/subscriptions/requests/:id/reject', subscriptionController_1.rejectSubscriptionRequest);
-// Tenants routes
-router.post('/tenants', adminController_1.createTenant);
+router.get('/reports/revenue', revenueReportController_1.getRevenueReport);
+router.get('/reports/revenue/export', revenueReportController_1.exportRevenueReport);
 router.put('/tenants/:id', adminController_1.updateTenantPlanOrLicense);
 router.delete('/tenants/:id', adminController_1.deleteTenant);
-// Users routes
 router.get('/users', adminController_1.getAllUsers);
 router.post('/users', adminController_1.createUser);
 router.put('/users/:id', adminController_1.updateUserRoleOrStatus);
 router.delete('/users/:id', adminController_1.deleteUser);
-// Templates routes
 router.get('/templates', adminController_1.getAllTemplates);
 router.post('/templates/global', adminController_1.createGlobalTemplate);
 router.put('/templates/:id/landing', adminController_1.toggleTemplateLanding);
 router.delete('/templates/:id', adminController_1.deleteTemplate);
-// Guest message templates (WhatsApp / SMS / Email to guests)
 router.get('/message-templates', guestMessageTemplateController_1.getGuestMessageTemplates);
 router.get('/message-templates/:id', guestMessageTemplateController_1.getGuestMessageTemplateById);
 router.post('/message-templates', guestMessageTemplateController_1.createGuestMessageTemplate);
 router.put('/message-templates/:id', guestMessageTemplateController_1.updateGuestMessageTemplate);
 router.post('/message-templates/:id/reset', guestMessageTemplateController_1.resetGuestMessageTemplate);
-// Events routes
 router.get('/events', adminController_1.getAllEvents);
 router.post('/events', adminController_1.createAdminEvent);
 router.put('/events/:id', adminController_1.updateAdminEvent);
 router.delete('/events/:id', adminController_1.deleteAdminEvent);
-// Guests routes
 router.get('/guests', adminController_1.getAllGuests);
 router.post('/guests', adminController_1.createAdminGuest);
 router.put('/guests/:id', adminController_1.updateAdminGuest);
 router.delete('/guests/:id', adminController_1.deleteAdminGuest);
-// Settings routes
 router.get('/settings', adminController_1.getAdminSettings);
 router.put('/settings', adminController_1.updateAdminSettings);
 exports.default = router;

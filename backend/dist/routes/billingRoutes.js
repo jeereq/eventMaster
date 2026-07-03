@@ -2,10 +2,16 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const billingController_1 = require("../controllers/billingController");
+const invoiceController_1 = require("../controllers/invoiceController");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
 router.use(auth_1.requireAuth);
 router.get('/status', billingController_1.getBillingStatus);
+router.get('/invoices', billingController_1.getTenantInvoices);
+router.get('/invoices/:id', invoiceController_1.getInvoiceDetail);
+router.get('/invoices/:id/pdf', invoiceController_1.downloadInvoicePdf);
+router.post('/invoices/:id/send', invoiceController_1.sendInvoiceByEmail);
+router.get('/plan-features', billingController_1.getPlanFeatures);
 router.post('/checkout', billingController_1.createCheckoutSession);
 router.post('/mock-upgrade', billingController_1.mockUpgrade);
 exports.default = router;

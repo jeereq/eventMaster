@@ -10,6 +10,7 @@ exports.deleteGuestShare = deleteGuestShare;
 exports.createEventComment = createEventComment;
 exports.toggleLikeEventPost = toggleLikeEventPost;
 const db_1 = require("../db");
+const permissionsService_1 = require("../services/permissionsService");
 // 1. Submit Guest Share (Public - Guest RSVP page)
 async function submitGuestShare(req, res) {
     try {
@@ -48,15 +49,12 @@ async function getEventShares(req, res) {
     try {
         const tenantId = req.user?.tenantId;
         const eventId = req.params.eventId;
-        if (!tenantId) {
+        const userId = req.user?.id;
+        if (!tenantId || !userId) {
             return res.status(403).json({ error: 'Tenant non identifié.' });
         }
-        // Verify event belongs to tenant
-        const event = await db_1.prisma.event.findFirst({
-            where: { id: eventId, tenantId },
-        });
-        if (!event) {
-            return res.status(404).json({ error: 'Événement non trouvé.' });
+        if (!(await (0, permissionsService_1.canManageEvent)(userId, tenantId, eventId))) {
+            return res.status(403).json({ error: 'Accès refusé à cet événement.' });
         }
         const shares = await db_1.prisma.guestShare.findMany({
             where: { eventId },
@@ -127,15 +125,12 @@ async function createEventPost(req, res) {
         const tenantId = req.user?.tenantId;
         const eventId = req.params.eventId;
         const { content, mediaUrl, mediaType, mediaUrls } = req.body; // mediaUrls is [{ url: string, type: 'IMAGE' | 'VIDEO' }]
-        if (!tenantId) {
+        const userId = req.user?.id;
+        if (!tenantId || !userId) {
             return res.status(403).json({ error: 'Tenant non identifié.' });
         }
-        // Verify event belongs to tenant
-        const event = await db_1.prisma.event.findFirst({
-            where: { id: eventId, tenantId },
-        });
-        if (!event) {
-            return res.status(404).json({ error: 'Événement non trouvé.' });
+        if (!(await (0, permissionsService_1.canManageEvent)(userId, tenantId, eventId))) {
+            return res.status(403).json({ error: 'Accès refusé à cet événement.' });
         }
         // Determine legacy and rich media values
         let finalMediaUrls = mediaUrls && Array.isArray(mediaUrls) ? mediaUrls : [];
@@ -166,15 +161,12 @@ async function deleteEventPost(req, res) {
         const tenantId = req.user?.tenantId;
         const eventId = req.params.eventId;
         const postId = req.params.postId;
-        if (!tenantId) {
+        const userId = req.user?.id;
+        if (!tenantId || !userId) {
             return res.status(403).json({ error: 'Tenant non identifié.' });
         }
-        // Verify event and post belong to tenant
-        const event = await db_1.prisma.event.findFirst({
-            where: { id: eventId, tenantId },
-        });
-        if (!event) {
-            return res.status(404).json({ error: 'Événement non trouvé.' });
+        if (!(await (0, permissionsService_1.canManageEvent)(userId, tenantId, eventId))) {
+            return res.status(403).json({ error: 'Accès refusé à cet événement.' });
         }
         const post = await db_1.prisma.eventPost.findFirst({
             where: { id: postId, eventId },
@@ -198,14 +190,12 @@ async function deleteGuestShare(req, res) {
         const tenantId = req.user?.tenantId;
         const eventId = req.params.eventId;
         const shareId = req.params.shareId;
-        if (!tenantId) {
+        const userId = req.user?.id;
+        if (!tenantId || !userId) {
             return res.status(403).json({ error: 'Tenant non identifié.' });
         }
-        const event = await db_1.prisma.event.findFirst({
-            where: { id: eventId, tenantId },
-        });
-        if (!event) {
-            return res.status(404).json({ error: 'Événement non trouvé.' });
+        if (!(await (0, permissionsService_1.canManageEvent)(userId, tenantId, eventId))) {
+            return res.status(403).json({ error: 'Accès refusé à cet événement.' });
         }
         const share = await db_1.prisma.guestShare.findFirst({
             where: { id: shareId, eventId },

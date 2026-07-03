@@ -7,6 +7,8 @@ const legalController_1 = require("../controllers/legalController");
 const router = (0, express_1.Router)();
 router.post('/register', authController_1.register);
 router.post('/login', authController_1.login);
+router.post('/verify-otp', authController_1.verifyOtp);
+router.post('/resend-otp', authController_1.resendOtp);
 router.get('/verify-email', authController_1.verifyEmail);
 router.post('/forgot-password', authController_1.forgotPassword);
 router.post('/reset-password', authController_1.resetPassword);

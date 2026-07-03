@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { normalizeGuestPreferences } from '../utils/rsvpPreferences.js';
+import { normalizeGuestPreferences } from '../utils/rsvpPreferences';
 import { prisma } from '../db';
 import { sendRealEmail, sendRealWhatsApp, sendRealWhatsAppImage } from '../services/notificationService';
 import { renderGuestMessage, polishWhatsAppBody } from '../services/messageTemplateService';

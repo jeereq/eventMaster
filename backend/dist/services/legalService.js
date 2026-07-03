@@ -119,6 +119,7 @@ async function getUserLegalStatus(userId) {
         privacyAccepted,
         termsVersion: legalConfig_1.TERMS_VERSION,
         privacyVersion: legalConfig_1.PRIVACY_VERSION,
+        isFirstAcceptance: !user.termsAcceptedAt && !user.privacyAcceptedAt,
         requiresAcceptance: !(termsAccepted && privacyAccepted),
     };
 }
