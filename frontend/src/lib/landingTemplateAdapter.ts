@@ -9,7 +9,10 @@ export interface PublicTemplateDto {
   showOnLanding?: boolean;
   content?: {
     global?: {
+      bgType?: 'color' | 'image' | 'pattern';
       bgColor?: string;
+      bgImageUrl?: string;
+      bgPattern?: string;
       landingCategory?: 'private' | 'corporate' | 'casual';
       landingDescription?: string;
     };
@@ -18,6 +21,7 @@ export interface PublicTemplateDto {
       text?: string;
       color?: string;
       fontSize?: string;
+      imageUrl?: string;
     }>;
   };
   category?: 'private' | 'corporate' | 'casual';
@@ -39,9 +43,23 @@ function isUuidLike(id: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 }
 
+function normalizeTemplateContent(content: unknown): PublicTemplateDto['content'] | undefined {
+  if (!content) return undefined;
+  if (typeof content === 'string') {
+    try {
+      return JSON.parse(content) as PublicTemplateDto['content'];
+    } catch {
+      return undefined;
+    }
+  }
+  if (typeof content === 'object') return content as PublicTemplateDto['content'];
+  return undefined;
+}
+
 export function dbTemplateToLandingTemplate(t: PublicTemplateDto): LandingTemplate {
-  const global = t.content?.global || {};
-  const rawElements = t.content?.elements || [];
+  const normalizedContent = normalizeTemplateContent(t.content);
+  const global = normalizedContent?.global || {};
+  const rawElements = normalizedContent?.elements || [];
   const category =
     t.category ||
     global.landingCategory ||
@@ -87,15 +105,14 @@ export function dbTemplateToLandingTemplate(t: PublicTemplateDto): LandingTempla
       btnText: 'text-white font-bold',
     },
     elements: previewElements,
-    previewContent:
-      t.content && typeof t.content === 'object'
-        ? {
-            global: (t.content as { global?: Record<string, unknown> }).global,
-            elements: Array.isArray((t.content as { elements?: unknown[] }).elements)
-              ? ((t.content as { elements: Array<Record<string, unknown>> }).elements)
-              : [],
-          }
-        : undefined,
+    previewContent: normalizedContent
+      ? {
+          global: normalizedContent.global as Record<string, unknown> | undefined,
+          elements: Array.isArray(normalizedContent.elements)
+            ? (normalizedContent.elements as Array<Record<string, unknown>>)
+            : [],
+        }
+      : undefined,
   };
 }
 

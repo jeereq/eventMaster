@@ -25,7 +25,7 @@ export interface LandingTemplate {
   previewContent?: {
     global?: {
       bgColor?: string;
-      bgType?: string;
+      bgImageUrl?: string;
       bgPattern?: string;
       frameType?: string;
       [key: string]: unknown;

@@ -3,6 +3,7 @@
 import React from 'react';
 import type { LandingTemplate } from '@/config/landingTemplates';
 import { getCanvasStyle } from '@/lib/rsvpFormFields';
+import { getTemplateBackgroundStyle } from '@/lib/templateBackgroundStyle';
 
 const LANDING_PREVIEW_FONTS =
   'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Great+Vibes&family=Montserrat:wght@400;600;700&family=Playfair+Display:wght@400;700&display=swap';
@@ -152,30 +153,36 @@ function renderElement(el: PreviewElement, compact?: boolean) {
       );
     }
 
-    case 'image':
+    case 'image': {
+      const imgHeight = compact ? '3.5rem' : el.imageHeight || '8rem';
+      const imgWidth = compact ? '100%' : el.imageWidth || '100%';
       return (
-        <div className={`flex ${alignClass(el.align)}`}>
+        <div className={`flex ${alignClass(el.align)} w-full`}>
           {el.imageUrl ? (
             <img
               src={el.imageUrl}
               alt=""
-              className={`object-cover border border-slate-200/80 ${compact ? 'max-h-16 rounded-lg' : 'max-h-32 rounded-xl'}`}
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              className={`border border-slate-200/80 bg-slate-50 object-cover ${compact ? 'rounded-md' : 'rounded-xl'}`}
               style={{
-                width: compact ? '100%' : el.imageWidth || '100%',
-                height: compact ? '4rem' : el.imageHeight || 'auto',
+                width: imgWidth,
+                height: imgHeight,
+                maxWidth: '100%',
                 objectFit: (el.imageObjectFit as React.CSSProperties['objectFit']) || 'cover',
               }}
             />
           ) : (
             <div
-              className={`bg-slate-100 border border-dashed border-slate-300 text-slate-400 flex items-center justify-center ${compact ? 'h-12 text-[9px] rounded-lg' : 'h-24 text-xs rounded-xl'}`}
-              style={{ width: compact ? '100%' : el.imageWidth || '100%' }}
+              className={`bg-slate-100 border border-dashed border-slate-300 text-slate-400 flex items-center justify-center ${compact ? 'h-12 text-[9px] rounded-md' : 'h-24 text-xs rounded-xl'}`}
+              style={{ width: imgWidth }}
             >
               Image
             </div>
           )}
         </div>
       );
+    }
 
     case 'divider':
       return renderDivider(el, compact);
@@ -229,7 +236,12 @@ export default function LandingInvitationPreview({
   const global = template.previewContent?.global;
   const rawElements = (template.previewContent?.elements || []) as PreviewElement[];
   const bgColor = global?.bgColor || template.style.bgColor || '#faf8f5';
+  const bgType = (global?.bgType as string | undefined) || 'color';
+  const bgImageUrl = (global?.bgImageUrl as string | undefined) || '';
+  const bgPattern = (global?.bgPattern as string | undefined) || 'paper';
   const canvasStyle = getCanvasStyle(global as Parameters<typeof getCanvasStyle>[0]);
+  const backgroundStyle = getTemplateBackgroundStyle(bgType, bgColor, bgImageUrl, bgPattern);
+  const hasBackgroundImage = bgType === 'image' && Boolean(bgImageUrl);
   const useLegacyOnly = rawElements.length === 0;
 
   const visibleElements = useLegacyOnly
@@ -238,29 +250,41 @@ export default function LandingInvitationPreview({
         ['text', 'button', 'image', 'divider', 'rsvp-block'].includes(el.type || ''),
       );
 
+  const elementsToRender = compact && hasBackgroundImage
+    ? (visibleElements as PreviewElement[]).filter((el) => el.type === 'image' || el.type === 'divider').slice(0, 2)
+    : visibleElements;
+
   return (
     <>
       <link href={LANDING_PREVIEW_FONTS} rel="stylesheet" />
       <div
-        className={`rounded-2xl border shadow-md transition-all duration-300 flex flex-col relative overflow-hidden ${compact ? 'p-3 min-h-[180px]' : 'p-6 sm:p-8 min-h-[340px]'} ${className}`}
+        className={`rounded-2xl border shadow-md transition-all duration-300 flex flex-col relative overflow-hidden ${compact ? 'min-h-[180px]' : 'p-6 sm:p-8 min-h-[340px]'} ${className}`}
         style={{
-          backgroundColor: bgColor,
+          ...backgroundStyle,
           borderColor: template.style.borderColor || 'rgba(226,232,240,0.9)',
-          ...(compact ? {} : { maxWidth: canvasStyle.maxWidth, minHeight: canvasStyle.minHeight }),
+          ...(compact ? { padding: hasBackgroundImage ? '0.5rem' : '0.75rem' } : { maxWidth: canvasStyle.maxWidth, minHeight: canvasStyle.minHeight }),
         }}
       >
-        {!compact && (
-          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-500 to-violet-500" />
+        {hasBackgroundImage && compact && (
+          <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent pointer-events-none z-[1]" />
         )}
 
-        <div className={`relative z-10 flex flex-wrap gap-y-2 ${compact ? '' : 'pt-2'}`}>
+        {!compact && (
+          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-500 to-violet-500 z-[2]" />
+        )}
+
+        <div
+          className={`relative z-10 flex flex-wrap gap-y-2 w-full ${
+            compact && hasBackgroundImage ? 'mt-auto pt-8' : compact ? '' : 'pt-2'
+          }`}
+        >
           {useLegacyOnly
             ? template.elements.map((el, i) => (
                 <div key={i} className="w-full">
                   {renderLegacyElement(el, compact)}
                 </div>
               ))
-            : (visibleElements as PreviewElement[]).map((el, i) => (
+            : (elementsToRender as PreviewElement[]).map((el, i) => (
                 <div key={el.id || i} className={`${widthClass(el.width)} px-1`}>
                   {renderElement(el, compact)}
                 </div>
