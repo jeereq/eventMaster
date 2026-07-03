@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import { uploadImageFile, uploadDataUrlImage, isCloudinaryUrl } from '@/lib/cloudinaryUpload';
 import { extractPaletteFromSource, type TemplatePalette } from '@/lib/imagePalette';
-import { buildMockupTemplate, applyMockupToEditor } from '@/lib/templateMockupImport';
+import { buildMockupTemplate, applyMockupToEditor, applyMockupTextMode, buildTextElementsFromOcrLines, type MockupImportTextMode } from '@/lib/templateMockupImport';
 import { extractTextFromImageSource, mergeOcrIntoMockupElements } from '@/lib/templateOcrImport';
 import { 
   Mail, PlusCircle, Trash2, Edit3, ArrowLeft, Save, 
@@ -175,8 +175,11 @@ export default function TemplatesPage() {
   const [mockupImporting, setMockupImporting] = useState(false);
   const [importedPalette, setImportedPalette] = useState<TemplatePalette | null>(null);
   const [importedWithOcr, setImportedWithOcr] = useState(false);
-  const [enableMockupOcr, setEnableMockupOcr] = useState(false);
   const [ocrProgress, setOcrProgress] = useState<number | null>(null);
+  const [mockupImportModalOpen, setMockupImportModalOpen] = useState(false);
+  const [pendingMockupFile, setPendingMockupFile] = useState<File | null>(null);
+  const [pendingMockupOpenEditor, setPendingMockupOpenEditor] = useState(true);
+  const [mockupImportMode, setMockupImportMode] = useState<MockupImportTextMode>('placeholders');
   const mockupInputRef = useRef<HTMLInputElement>(null);
   const mockupEditorInputRef = useRef<HTMLInputElement>(null);
 
@@ -212,8 +215,10 @@ export default function TemplatesPage() {
   }, [user]);
 
   useEffect(() => {
-    setEnableMockupOcr(canUseMockupOcr);
-  }, [canUseMockupOcr]);
+    if (editorOpen && !canUseCustomTemplates) {
+      setEditorOpen(false);
+    }
+  }, [editorOpen, canUseCustomTemplates]);
 
   useEffect(() => {
     if (selectedTenantId) {
@@ -289,6 +294,7 @@ export default function TemplatesPage() {
   };
 
   const handleEditTemplateClick = (t: TemplateItem) => {
+    if (!canUseCustomTemplates) return;
     setEditingTemplateId(t.id);
     setTemplateName(t.name);
     setCanvasElements(t.content?.elements || []);
@@ -498,21 +504,26 @@ export default function TemplatesPage() {
     }
   };
 
-  const handleMockupImport = async (file: File, openEditor = true) => {
+  const handleMockupImport = async (
+    file: File,
+    openEditor = true,
+    textMode: MockupImportTextMode = 'placeholders',
+  ) => {
     setError('');
-    if (!canUseMockupImport) {
-      setError('L\'import de maquette nécessite le forfait Business Premium 1 ou supérieur.');
-      return;
-    }
+    if (!canUseMockupImport) return;
     setMockupImporting(true);
     setOcrProgress(null);
-    const useOcr = enableMockupOcr && canUseMockupOcr;
+    const useOcr = textMode === 'ocr';
     try {
       const palette = await extractPaletteFromSource(file);
       const uploaded = await uploadImageFile(file);
       let mockup = buildMockupTemplate(uploaded.url, palette);
 
       if (useOcr) {
+        if (!canUseMockupOcr) {
+          setError('La détection de texte (OCR) nécessite le forfait Business Premium 2 ou supérieur.');
+          return;
+        }
         setOcrProgress(0);
         const ocr = await extractTextFromImageSource(file, (p) => setOcrProgress(Math.round(p * 100)));
         if (ocr.lines.length > 0) {
@@ -520,8 +531,12 @@ export default function TemplatesPage() {
             ...mockup,
             elements: mergeOcrIntoMockupElements(mockup.elements, ocr.lines) as typeof mockup.elements,
           };
+        } else {
+          mockup = applyMockupTextMode(mockup, 'placeholders');
         }
         setOcrProgress(null);
+      } else {
+        mockup = applyMockupTextMode(mockup, textMode);
       }
 
       applyMockupToEditor(mockup, {
@@ -544,8 +559,12 @@ export default function TemplatesPage() {
       if (openEditor) setEditorOpen(true);
       setSuccess(
         useOcr
-          ? 'Maquette importée — palette, OCR texte et blocs pré-positionnés. Personnalisez le contenu.'
-          : 'Maquette importée — palette extraite et blocs texte ajoutés. Personnalisez le contenu.',
+          ? 'Maquette importée — texte de l\'image détecté et appliqué aux emplacements.'
+          : textMode === 'image-only'
+            ? 'Maquette importée — fond image et palette uniquement. Ajoutez vos éléments.'
+            : textMode === 'structure-only'
+              ? 'Maquette importée — structure sans blocs texte (RSVP, boutons…).'
+              : 'Maquette importée — emplacements texte génériques ajoutés.',
       );
     } catch (err: any) {
       setError(err.message || 'Impossible d\'importer la maquette.');
@@ -559,11 +578,126 @@ export default function TemplatesPage() {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
+    if (!canUseMockupImport) return;
     if (!file.type.startsWith('image/')) {
       setError('Veuillez sélectionner une image (JPEG, PNG, WebP).');
       return;
     }
-    await handleMockupImport(file, openEditor);
+    setPendingMockupFile(file);
+    setPendingMockupOpenEditor(openEditor);
+    setMockupImportMode('placeholders');
+    setMockupImportModalOpen(true);
+  };
+
+  const handleConfirmMockupImport = async () => {
+    if (!pendingMockupFile) return;
+    setMockupImportModalOpen(false);
+    const file = pendingMockupFile;
+    const openEditor = pendingMockupOpenEditor;
+    const mode = mockupImportMode;
+    setPendingMockupFile(null);
+    await handleMockupImport(file, openEditor, mode);
+  };
+
+  const renderMockupImportModal = () => {
+    if (!mockupImportModalOpen || !pendingMockupFile) return null;
+
+    const modes: Array<{
+      id: MockupImportTextMode;
+      title: string;
+      description: string;
+      disabled?: boolean;
+      badge?: string;
+    }> = [
+      {
+        id: 'image-only',
+        title: 'Fond image uniquement',
+        description: 'Importe la palette et l\'image de fond, sans aucun élément par-dessus.',
+      },
+      {
+        id: 'placeholders',
+        title: 'Avec emplacements texte',
+        description: 'Ajoute des blocs texte génériques (titre, date, lieu…) à personnaliser.',
+      },
+      {
+        id: 'structure-only',
+        title: 'Sans blocs texte',
+        description: 'Conserve RSVP, boutons et séparateurs, mais supprime tous les blocs texte.',
+      },
+      {
+        id: 'ocr',
+        title: 'Détecter le texte de l\'image (OCR)',
+        description: 'Lit le texte sur l\'image et remplit les emplacements texte du modèle.',
+        disabled: !canUseMockupOcr,
+        badge: canUseMockupOcr ? 'Premium 2+' : 'Premium 2 requis',
+      },
+    ];
+
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+        <div className="bg-white rounded-[28px] border border-slate-100 shadow-2xl max-w-lg w-full overflow-hidden flex flex-col animate-fade-in">
+          <div className="p-6 border-b border-slate-100">
+            <h3 className="text-lg font-bold text-slate-900">Mode d&apos;import de la maquette</h3>
+            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+              Fichier : <span className="font-semibold text-slate-700">{pendingMockupFile.name}</span>
+            </p>
+          </div>
+          <div className="p-6 space-y-3 max-h-[60vh] overflow-y-auto">
+            {modes.map((mode) => (
+              <label
+                key={mode.id}
+                className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition ${
+                  mockupImportMode === mode.id
+                    ? 'border-indigo-500 bg-indigo-50/40'
+                    : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                } ${mode.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <input
+                  type="radio"
+                  name="mockup-import-mode"
+                  value={mode.id}
+                  checked={mockupImportMode === mode.id}
+                  disabled={mode.disabled}
+                  onChange={() => setMockupImportMode(mode.id)}
+                  className="mt-1 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="min-w-0">
+                  <span className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-bold text-slate-800">{mode.title}</span>
+                    {mode.badge && (
+                      <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                        {mode.badge}
+                      </span>
+                    )}
+                  </span>
+                  <span className="block text-xs text-slate-500 mt-1 leading-relaxed">{mode.description}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+          <div className="p-6 border-t border-slate-100 flex gap-3 justify-end bg-slate-50/50">
+            <button
+              type="button"
+              onClick={() => {
+                setMockupImportModalOpen(false);
+                setPendingMockupFile(null);
+              }}
+              className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmMockupImport}
+              disabled={mockupImportMode === 'ocr' && !canUseMockupOcr}
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl transition shadow-md"
+            >
+              Importer
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // Handle image file upload → Cloudinary
@@ -839,6 +973,7 @@ export default function TemplatesPage() {
   };
 
   const handleDeleteTemplate = async (id: string) => {
+    if (!canUseCustomTemplates) return;
     if (!confirm('Supprimer ce modèle d\'invitation ?')) return;
     try {
       await api.delete(`/templates/${id}`);
@@ -850,6 +985,7 @@ export default function TemplatesPage() {
   };
 
   const handleDuplicateTemplate = async (t: TemplateItem) => {
+    if (!canUseCustomTemplates) return;
     try {
       setLoading(true);
       const payload = {
@@ -973,8 +1109,10 @@ export default function TemplatesPage() {
     );
   }
 
-  if (editorOpen) {
+  if (editorOpen && canUseCustomTemplates) {
     return (
+      <>
+        {renderMockupImportModal()}
       <div className="space-y-6">
         {/* Load Google Fonts stylesheet */}
         <link 
@@ -1052,37 +1190,16 @@ export default function TemplatesPage() {
         <div className="grid lg:grid-cols-4 gap-8 items-start">
           {/* Left Toolbox */}
           <div className="bg-white border border-slate-200 rounded-3xl p-5 space-y-6 shadow-sm">
+            {canUseMockupImport && (
             <div className="space-y-3 pb-4 border-b border-slate-100">
               <h3 className="text-xs font-bold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5" />
                 Importer ma maquette
               </h3>
               <p className="text-[10px] text-slate-500 leading-relaxed">
-                {canUseMockupImport
-                  ? 'Image Cloudinary + palette auto + blocs texte.'
-                  : 'Disponible à partir de Business Premium 1.'}
-                {canUseMockupOcr
-                  ? ' OCR texte optionnel (Premium 2+).'
-                  : canUseMockupImport
-                    ? ' OCR texte : Business Premium 2 ou supérieur.'
-                    : ''}
+                Image + palette automatique. Choisissez ensuite le mode : avec ou sans texte, ou OCR
+                {canUseMockupOcr ? ' (Premium 2+).' : '.'}
               </p>
-              {canUseMockupOcr ? (
-                <label className="flex items-center gap-2 text-[10px] font-semibold text-slate-600 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={enableMockupOcr}
-                    onChange={(e) => setEnableMockupOcr(e.target.checked)}
-                    className="rounded border-slate-300"
-                  />
-                  Détecter le texte sur l&apos;image (OCR)
-                </label>
-              ) : canUseMockupImport ? (
-                <p className="text-[10px] text-amber-700 font-medium">
-                  OCR non inclus dans votre forfait —{' '}
-                  <Link href="/dashboard/billing" className="underline">passer à Premium 2</Link>
-                </p>
-              ) : null}
               {ocrProgress !== null && (
                 <p className="text-[10px] text-indigo-600 font-bold">OCR en cours… {ocrProgress}%</p>
               )}
@@ -1095,9 +1212,9 @@ export default function TemplatesPage() {
               />
               <button
                 type="button"
-                disabled={!canUseMockupImport || mockupImporting || imageUploading}
+                disabled={mockupImporting || imageUploading}
                 onClick={() => mockupEditorInputRef.current?.click()}
-                className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-indigo-200 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50/30 text-indigo-700 font-bold text-xs transition disabled:opacity-50 cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-indigo-200 rounded-2xl hover:border-indigo-500 hover:bg-indigo-50/30 text-indigo-700 font-bold text-xs transition cursor-pointer"
               >
                 {mockupImporting ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -1124,6 +1241,7 @@ export default function TemplatesPage() {
                 </div>
               )}
             </div>
+            )}
 
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-2">Composants</h3>
             <div className="grid grid-cols-2 gap-3">
@@ -2832,10 +2950,13 @@ export default function TemplatesPage() {
           </div>
         )}
       </div>
+      </>
     );
   }
 
   return (
+    <>
+      {renderMockupImportModal()}
     <div className="space-y-8">
       <PageHeader
         title={user?.role === 'SUPER_ADMIN' ? "Modèles d'invitation (Super Admin)" : "Vos modèles d'invitation"}
@@ -2909,7 +3030,11 @@ export default function TemplatesPage() {
       <TemplateCardGrid
         templates={templates}
         isSuperAdmin={user?.role === 'SUPER_ADMIN'}
-        emptyMessage="Aucun modèle créé. Utilisez le concepteur visuel pour créer votre premier modèle d'invitation."
+        emptyMessage={
+          canUseCustomTemplates
+            ? "Aucun modèle créé. Utilisez le concepteur visuel pour créer votre premier modèle d'invitation."
+            : "Aucun modèle disponible pour votre organisation."
+        }
         emptyAction={
           canUseCustomTemplates ? (
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -2935,10 +3060,11 @@ export default function TemplatesPage() {
             </div>
           ) : undefined
         }
-        onEdit={(t) => handleEditTemplateClick(t as TemplateItem)}
-        onDuplicate={(t) => handleDuplicateTemplate(t as TemplateItem)}
-        onDelete={(id) => handleDeleteTemplate(id)}
+        onEdit={canUseCustomTemplates ? (t) => handleEditTemplateClick(t as TemplateItem) : undefined}
+        onDuplicate={canUseCustomTemplates ? (t) => handleDuplicateTemplate(t as TemplateItem) : undefined}
+        onDelete={canUseCustomTemplates ? (id) => handleDeleteTemplate(id) : undefined}
       />
     </div>
+    </>
   );
 }

@@ -93,6 +93,49 @@ export interface MockupImportResult {
   elements: MockupCanvasElement[];
 }
 
+export type MockupImportTextMode =
+  | 'image-only'
+  | 'placeholders'
+  | 'structure-only'
+  | 'ocr';
+
+export function applyMockupTextMode(
+  mockup: MockupImportResult,
+  mode: MockupImportTextMode,
+): MockupImportResult {
+  if (mode === 'image-only') {
+    return { ...mockup, elements: [] };
+  }
+  if (mode === 'structure-only') {
+    return {
+      ...mockup,
+      elements: mockup.elements.filter((el) => el.type !== 'text'),
+    };
+  }
+  return mockup;
+}
+
+export function buildTextElementsFromOcrLines(
+  lines: Array<{ text: string }>,
+  palette: TemplatePalette,
+): MockupCanvasElement[] {
+  const textPrimary = palette.isDark ? '#f8fafc' : palette.primary;
+  const accent = palette.accent;
+
+  return lines.map((line, index) => ({
+    id: uid(),
+    type: 'text',
+    text: line.text,
+    color: index === 0 ? accent : textPrimary,
+    fontSize: index === 0 ? '28px' : index === 1 ? '16px' : '14px',
+    align: 'center' as const,
+    width: 'full' as const,
+    fontFamily: index === 0 ? 'Great Vibes' : 'Cormorant Garamond',
+    italic: index > 0,
+    bold: index === 0,
+  }));
+}
+
 function uid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
