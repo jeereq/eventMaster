@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { downloadMedia, getMediaExtension, sanitizeFilenamePart } from '@/lib/downloadMedia';
 import { GuestPortalHomeLink } from '@/components/GuestPortalNav';
+import Link from 'next/link';
 import GuestTablePlanView from '@/app/rsvp/GuestTablePlanView';
 import type { ChairType, RoomOutlineShape } from '@/lib/roomLayoutUtils';
 import { 
@@ -1241,8 +1242,15 @@ export default function RsvpPage() {
 
       <div className="absolute inset-0 bg-grid-slate-200 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.7))]" />
 
-      <div className="max-w-lg w-full relative z-10 flex justify-start px-1">
+      <div className="max-w-lg w-full relative z-10 flex justify-between items-center px-1 gap-2">
         <GuestPortalHomeLink guestId={guestId} variant="light" />
+        <Link
+          href="/guide/invite"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-600 transition"
+        >
+          <HelpCircle className="w-3.5 h-3.5" />
+          Aide invité
+        </Link>
       </div>
 
       <div

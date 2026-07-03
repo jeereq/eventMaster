@@ -8,7 +8,7 @@ import { useTheme } from '@/context/ThemeContext';
 import {
   Calendar, Users, Mail, CreditCard, LayoutDashboard,
   LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper, User, Sun, Moon, BarChart3,
-  Building2, FileText, Key, MessageSquare, ScanLine, Briefcase, Clock,
+  Building2, FileText, Key, MessageSquare, ScanLine, Briefcase, Clock, BookOpen,
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import UserLegalGate from '@/components/UserLegalGate';
@@ -156,7 +156,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ],
         },
         {
-          items: [{ name: 'Mon compte', href: '/dashboard/profile', icon: User }],
+          items: [
+            { name: 'Guide utilisateur', href: '/dashboard/guide', icon: BookOpen },
+            { name: 'Mon compte', href: '/dashboard/profile', icon: User },
+          ],
         },
       ]
     : user?.role === 'COMMERCIAL'
@@ -172,6 +175,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {
           items: [
             { name: 'Parrainage & commissions', href: '/dashboard/commercial', icon: Briefcase },
+            { name: 'Guide utilisateur', href: '/dashboard/guide', icon: BookOpen },
             { name: 'Mon compte', href: '/dashboard/profile', icon: User },
           ],
         },
@@ -181,6 +185,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {
           items: [
             { name: 'Réseau commercial', href: '/dashboard/org-commercial', icon: Briefcase },
+            { name: 'Guide utilisateur', href: '/dashboard/guide', icon: BookOpen },
             { name: 'Mon compte', href: '/dashboard/profile', icon: User },
           ],
         },
@@ -190,6 +195,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {
           items: [
             { name: 'Événements', href: '/dashboard/events', icon: Calendar },
+            { name: 'Guide utilisateur', href: '/dashboard/guide', icon: BookOpen },
             { name: 'Mon compte', href: '/dashboard/profile', icon: User },
           ],
         },
@@ -208,6 +214,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             ] : []),
             ...(access?.canViewBilling ? [{ name: 'Facturation & plan', href: '/dashboard/billing', icon: CreditCard }] : []),
             ...(access?.canViewInvoices ? [{ name: 'Factures', href: '/dashboard/invoices', icon: FileText }] : []),
+            { name: 'Guide utilisateur', href: '/dashboard/guide', icon: BookOpen },
             { name: 'Mon compte', href: '/dashboard/profile', icon: User },
           ],
         },
