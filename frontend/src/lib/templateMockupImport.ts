@@ -1,5 +1,61 @@
 import type { TemplatePalette } from '@/lib/imagePalette';
 
+export type MockupRsvpFieldType = 'text' | 'select' | 'checkbox';
+
+export interface MockupRsvpField {
+  id: string;
+  type: MockupRsvpFieldType;
+  label: string;
+  options?: string;
+  required: boolean;
+}
+
+export type MockupDividerStyle =
+  | 'solid'
+  | 'dashed'
+  | 'ornament-flower'
+  | 'ornament-diamond'
+  | 'ornament-star'
+  | 'ornament-leaves'
+  | 'ornament-lace';
+
+export type MockupButtonStyle =
+  | 'filled'
+  | 'outline'
+  | 'pill'
+  | 'gold-glow'
+  | 'double-border'
+  | 'minimalist';
+
+export type MockupBgPattern =
+  | 'none'
+  | 'paper'
+  | 'watercolor'
+  | 'boho'
+  | 'linen'
+  | 'marble'
+  | 'gold-dust'
+  | 'parchment'
+  | 'velvet';
+
+export type MockupFrameType =
+  | 'none'
+  | 'arch'
+  | 'double-border'
+  | 'gold-border'
+  | 'floral-wreath'
+  | 'floral-arch'
+  | 'boho-dried'
+  | 'gold-leaves-circle'
+  | 'minimal-leaves';
+
+export type MockupFloralType =
+  | 'roses'
+  | 'cherry-blossom'
+  | 'gold-leaves'
+  | 'sunflowers'
+  | 'eucalyptus';
+
 export interface MockupCanvasElement {
   id: string;
   type: 'text' | 'image' | 'button' | 'rsvp-block' | 'curve' | 'triangle' | 'divider';
@@ -12,20 +68,20 @@ export interface MockupCanvasElement {
   letterSpacing?: string;
   bold?: boolean;
   italic?: boolean;
-  dividerStyle?: string;
-  buttonStyle?: string;
-  rsvpFields?: Array<{ id: string; type: string; label: string; options?: string; required: boolean }>;
+  dividerStyle?: MockupDividerStyle;
+  buttonStyle?: MockupButtonStyle;
+  rsvpFields?: MockupRsvpField[];
 }
 
 export interface MockupTemplateGlobal {
   bgType: 'color' | 'image' | 'pattern';
   bgColor: string;
   bgImageUrl: string;
-  bgPattern: string;
-  frameType: string;
+  bgPattern: MockupBgPattern;
+  frameType: MockupFrameType;
   fontTheme: string;
   floralColor: string;
-  floralType: string;
+  floralType: MockupFloralType;
   floralDensity: number;
   importedFromMockup?: boolean;
   palette?: TemplatePalette;
@@ -190,33 +246,32 @@ export function buildMockupTemplate(imageUrl: string, palette: TemplatePalette):
   };
 }
 
-export function applyMockupToEditor(
-  mockup: MockupImportResult,
-  setters: {
-    setTemplateName: (v: string) => void;
-    setCanvasElements: (v: MockupCanvasElement[]) => void;
-    setBgType: (v: 'color' | 'image' | 'pattern') => void;
-    setBgColor: (v: string) => void;
-    setBgImageUrl: (v: string) => void;
-    setBgPattern: (v: 'none' | 'paper' | 'watercolor' | 'boho' | 'linen' | 'marble' | 'gold-dust' | 'parchment' | 'velvet') => void;
-    setFrameType: (v: string) => void;
-    setFontTheme: (v: string) => void;
-    setFloralColor: (v: string) => void;
-    setFloralType: (v: 'roses' | 'cherry-blossom' | 'gold-leaves' | 'sunflowers' | 'eucalyptus') => void;
-    setFloralDensity: (v: number) => void;
-    setSelectedElementId: (v: string | null) => void;
-  },
-) {
+export interface MockupEditorSetters {
+  setTemplateName: (v: string) => void;
+  setCanvasElements: (v: MockupCanvasElement[]) => void;
+  setBgType: (v: 'color' | 'image' | 'pattern') => void;
+  setBgColor: (v: string) => void;
+  setBgImageUrl: (v: string) => void;
+  setBgPattern: (v: MockupBgPattern) => void;
+  setFrameType: (v: MockupFrameType) => void;
+  setFontTheme: (v: string) => void;
+  setFloralColor: (v: string) => void;
+  setFloralType: (v: MockupFloralType) => void;
+  setFloralDensity: (v: number) => void;
+  setSelectedElementId: (v: string | null) => void;
+}
+
+export function applyMockupToEditor(mockup: MockupImportResult, setters: MockupEditorSetters) {
   setters.setTemplateName(mockup.templateName);
-  setters.setCanvasElements(mockup.elements as any);
+  setters.setCanvasElements(mockup.elements);
   setters.setBgType(mockup.global.bgType);
   setters.setBgColor(mockup.global.bgColor);
   setters.setBgImageUrl(mockup.global.bgImageUrl);
-  setters.setBgPattern(mockup.global.bgPattern as any);
+  setters.setBgPattern(mockup.global.bgPattern);
   setters.setFrameType(mockup.global.frameType);
   setters.setFontTheme(mockup.global.fontTheme);
   setters.setFloralColor(mockup.global.floralColor);
-  setters.setFloralType(mockup.global.floralType as any);
+  setters.setFloralType(mockup.global.floralType);
   setters.setFloralDensity(mockup.global.floralDensity);
   setters.setSelectedElementId(null);
 }

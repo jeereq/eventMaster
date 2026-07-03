@@ -473,15 +473,15 @@ export default function TemplatesPage() {
 
       applyMockupToEditor(mockup, {
         setTemplateName,
-        setCanvasElements,
+        setCanvasElements: (elements) => setCanvasElements(elements),
         setBgType,
         setBgColor,
         setBgImageUrl,
-        setBgPattern,
-        setFrameType,
+        setBgPattern: (v) => setBgPattern(v),
+        setFrameType: (v) => setFrameType(v),
         setFontTheme,
         setFloralColor,
-        setFloralType,
+        setFloralType: (v) => setFloralType(v),
         setFloralDensity,
         setSelectedElementId,
       });

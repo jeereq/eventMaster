@@ -9,6 +9,17 @@ export interface OcrImportResult {
   fullText: string;
 }
 
+interface TesseractRecognizeLine {
+  text: string;
+  confidence: number;
+  bbox: { x0: number; y0: number; x1: number; y1: number };
+}
+
+interface TesseractPageData {
+  text?: string;
+  lines?: TesseractRecognizeLine[];
+}
+
 /** Niveau 3 : OCR du texte présent sur l'image de maquette (français + anglais). */
 export async function extractTextFromImageSource(
   source: File | string,
@@ -33,20 +44,21 @@ export async function extractTextFromImageSource(
 
   try {
     const { data } = await worker.recognize(imageInput);
-    const lines: OcrTextLine[] = (data.lines ?? [])
-      .map((line) => ({
+    const pageData = data as TesseractPageData;
+    const lines: OcrTextLine[] = (pageData.lines ?? [])
+      .map((line: TesseractRecognizeLine) => ({
         text: (line.text || '').trim(),
         confidence: line.confidence,
         bbox: line.bbox,
       }))
-      .filter((line) => line.text.length > 1 && line.confidence > 35);
+      .filter((line: OcrTextLine) => line.text.length > 1 && line.confidence > 35);
 
-    if (lines.length === 0 && data.text?.trim()) {
-      data.text
+    if (lines.length === 0 && pageData.text?.trim()) {
+      pageData.text
         .split('\n')
-        .map((t) => t.trim())
-        .filter((t) => t.length > 1)
-        .forEach((text, i) => {
+        .map((t: string) => t.trim())
+        .filter((t: string) => t.length > 1)
+        .forEach((text: string, i: number) => {
           lines.push({
             text,
             confidence: 50,
@@ -55,7 +67,7 @@ export async function extractTextFromImageSource(
         });
     }
 
-    return { lines, fullText: data.text?.trim() ?? '' };
+    return { lines, fullText: pageData.text?.trim() ?? '' };
   } finally {
     await worker.terminate();
     if (source instanceof File) {
