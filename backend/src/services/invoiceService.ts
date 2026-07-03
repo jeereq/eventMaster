@@ -1,4 +1,5 @@
 import { InvoiceType, PlanType } from '@prisma/client';
+import PDFDocument from 'pdfkit';
 import { prisma } from '../db';
 import { getPlanLimits } from '../config/plansConfig';
 import { parsePlanPrice, getBillingPeriod } from './commercialService';
@@ -375,4 +376,181 @@ export function formatInvoiceForApi(invoice: {
     createdAt: invoice.createdAt,
     tenantName: invoice.tenant?.name ?? null,
   };
+}
+
+type InvoiceWithTenant = {
+  id: string;
+  invoiceNumber: string;
+  tenantId: string;
+  plan: string;
+  amount: number;
+  currency: string;
+  type: string;
+  status: string;
+  billingPeriod: string;
+  periodStart: Date | null;
+  periodEnd: Date | null;
+  durationDays: number | null;
+  sentAt: Date | null;
+  createdAt: Date;
+  recipientEmails: unknown;
+  details: unknown;
+  tenant?: { name: string } | null;
+};
+
+export function formatInvoiceDetailForApi(invoice: InvoiceWithTenant) {
+  const base = formatInvoiceForApi(invoice);
+  const details = invoice.details as { planName?: string; tenantName?: string; planPriceLabel?: string } | null;
+  const recipientEmails = Array.isArray(invoice.recipientEmails)
+    ? (invoice.recipientEmails as string[])
+    : [];
+
+  return {
+    ...base,
+    tenantId: invoice.tenantId,
+    tenantName: invoice.tenant?.name ?? details?.tenantName ?? null,
+    planName: details?.planName ?? invoice.plan,
+    planPriceLabel: details?.planPriceLabel ?? null,
+    recipientEmails,
+  };
+}
+
+export async function findInvoiceById(invoiceId: string) {
+  return prisma.platformInvoice.findUnique({
+    where: { id: invoiceId },
+    include: { tenant: { select: { name: true } } },
+  });
+}
+
+function getInvoicePlanName(invoice: InvoiceWithTenant): string {
+  const details = invoice.details as { planName?: string } | null;
+  return details?.planName ?? getPlanLimits(invoice.plan as PlanType).name;
+}
+
+export function buildInvoicePdf(invoice: InvoiceWithTenant): Promise<Buffer> {
+  const planName = getInvoicePlanName(invoice);
+  const tenantName = invoice.tenant?.name ?? 'Organisation';
+  const typeLabel = INVOICE_TYPE_LABELS[invoice.type] || invoice.type;
+  const statusLabel = INVOICE_STATUS_LABELS[invoice.status] || invoice.status;
+
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 50, size: 'A4' });
+    const chunks: Buffer[] = [];
+
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    doc.fontSize(20).font('Helvetica-Bold').fillColor('#4f46e5').text('EventMaster', { align: 'left' });
+    doc.fontSize(10).font('Helvetica').fillColor('#64748b').text('Facture d\'abonnement', { align: 'left' });
+    doc.moveDown(1);
+
+    doc.fontSize(16).font('Helvetica-Bold').fillColor('#0f172a').text(invoice.invoiceNumber);
+    doc.moveDown(0.5);
+    doc.fontSize(10).font('Helvetica').fillColor('#64748b');
+    doc.text(`Émise le ${invoice.createdAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`);
+    if (invoice.sentAt) {
+      doc.text(`Envoyée le ${invoice.sentAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`);
+    }
+    doc.moveDown(1.5);
+
+    doc.fontSize(12).font('Helvetica-Bold').fillColor('#0f172a').text('Organisation');
+    doc.fontSize(11).font('Helvetica').fillColor('#334155').text(tenantName);
+    doc.moveDown(1);
+
+    doc.fontSize(12).font('Helvetica-Bold').fillColor('#0f172a').text('Détails');
+    doc.moveDown(0.5);
+    doc.fontSize(11).font('Helvetica').fillColor('#334155');
+    doc.text(`Type : ${typeLabel}`);
+    doc.text(`Forfait : ${planName} (${invoice.plan})`);
+    doc.text(`Statut : ${statusLabel}`);
+    doc.text(`Période de facturation : ${invoice.billingPeriod}`);
+
+    if (invoice.periodStart && invoice.periodEnd) {
+      doc.text(
+        `Couverture : ${invoice.periodStart.toLocaleDateString('fr-FR')} → ${invoice.periodEnd.toLocaleDateString('fr-FR')}`,
+      );
+    } else if (invoice.durationDays) {
+      doc.text(`Durée : ${invoice.durationDays} jours`);
+    }
+
+    doc.moveDown(1.5);
+    doc.fontSize(14).font('Helvetica-Bold').fillColor('#4f46e5');
+    doc.text(`Montant TTC : ${formatAmountFc(invoice.amount)}`, { align: 'right' });
+    doc.moveDown(2);
+
+    const recipients = Array.isArray(invoice.recipientEmails)
+      ? (invoice.recipientEmails as string[])
+      : [];
+    if (recipients.length > 0) {
+      doc.fontSize(10).font('Helvetica').fillColor('#64748b');
+      doc.text(`Destinataires : ${recipients.join(', ')}`);
+    }
+
+    doc.moveDown(2);
+    doc.fontSize(9).font('Helvetica').fillColor('#94a3b8');
+    doc.text(
+      'Document généré par EventMaster. Pour renouveler votre abonnement, connectez-vous à votre espace Facturation.',
+      { align: 'center' },
+    );
+
+    doc.end();
+  });
+}
+
+export async function resendInvoiceByEmail(invoiceId: string, targetEmail?: string) {
+  const invoice = await findInvoiceById(invoiceId);
+  if (!invoice) {
+    throw new Error('Facture introuvable.');
+  }
+
+  const planName = getInvoicePlanName(invoice);
+  const tenantName = invoice.tenant?.name ?? 'Organisation';
+  const emails = targetEmail
+    ? [targetEmail.trim()]
+    : (Array.isArray(invoice.recipientEmails) ? (invoice.recipientEmails as string[]) : []);
+
+  if (emails.length === 0) {
+    throw new Error('Aucun destinataire e-mail disponible.');
+  }
+
+  const subject =
+    invoice.type === 'RENEWAL'
+      ? `EventMaster — Facture de renouvellement ${invoice.invoiceNumber}`
+      : `EventMaster — Facture abonnement ${invoice.invoiceNumber}`;
+
+  const results: Array<{ email: string; success: boolean; error?: string }> = [];
+
+  for (const email of emails) {
+    const html = renderInvoiceHtml({
+      invoiceNumber: invoice.invoiceNumber,
+      tenantName,
+      planName,
+      amount: invoice.amount,
+      currency: invoice.currency,
+      type: invoice.type as InvoiceType,
+      periodStart: invoice.periodStart,
+      periodEnd: invoice.periodEnd,
+      durationDays: invoice.durationDays,
+    });
+    const text = renderInvoiceText({
+      invoiceNumber: invoice.invoiceNumber,
+      tenantName,
+      planName,
+      amount: invoice.amount,
+      periodStart: invoice.periodStart,
+      periodEnd: invoice.periodEnd,
+      durationDays: invoice.durationDays,
+    });
+
+    const result = await sendRealEmail(email, subject, text, html);
+    results.push({ email, success: result.success, error: result.error });
+  }
+
+  const sent = results.filter((r) => r.success).map((r) => r.email);
+  if (sent.length === 0) {
+    throw new Error(results[0]?.error || 'Échec de l\'envoi par e-mail.');
+  }
+
+  return { sentTo: sent, results };
 }

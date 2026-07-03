@@ -71,6 +71,112 @@ export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
   }
 }
 
+const SUBSCRIPTION_REQUEST_STATUS_LABELS: Record<string, string> = {
+  PENDING: 'En attente',
+  APPROVED: 'Approuvée',
+  REJECTED: 'Rejetée',
+};
+
+export async function getTenantSubscriptionHistory(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!isPlatformStaff(req.user?.role)) {
+      return res.status(403).json({ error: 'Accès refusé. Privilèges plateforme requis.' });
+    }
+
+    const tenantId = req.params.id as string;
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: {
+        id: true,
+        name: true,
+        plan: true,
+        licenseActive: true,
+        licenseExpiresAt: true,
+        createdAt: true,
+      },
+    });
+
+    if (!tenant) {
+      return res.status(404).json({ error: 'Organisation non trouvée.' });
+    }
+
+    const [requests, invoices] = await Promise.all([
+      prisma.subscriptionRequest.findMany({
+        where: { tenantId },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          platformInvoice: {
+            select: {
+              id: true,
+              invoiceNumber: true,
+              plan: true,
+              amount: true,
+              currency: true,
+              status: true,
+              type: true,
+              billingPeriod: true,
+              periodStart: true,
+              periodEnd: true,
+              durationDays: true,
+              sentAt: true,
+              createdAt: true,
+            },
+          },
+        },
+      }),
+      prisma.platformInvoice.findMany({
+        where: { tenantId },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    const requestEntries = requests.map((r) => ({
+      id: r.id,
+      kind: 'REQUEST' as const,
+      date: r.createdAt,
+      plan: r.requestedPlan,
+      durationDays: r.durationDays,
+      status: r.status,
+      statusLabel: SUBSCRIPTION_REQUEST_STATUS_LABELS[r.status] || r.status,
+      proofOfPayment: r.proofOfPayment,
+      processedAt: r.status !== 'PENDING' ? r.updatedAt : null,
+      invoice: r.platformInvoice
+        ? formatInvoiceForApi({ ...r.platformInvoice, tenant: { name: tenant.name } })
+        : null,
+    }));
+
+    const linkedInvoiceIds = new Set(
+      requests.map((r) => r.platformInvoice?.id).filter(Boolean),
+    );
+
+    const invoiceEntries = invoices
+      .filter((inv) => !linkedInvoiceIds.has(inv.id))
+      .map((inv) => ({
+        id: inv.id,
+        kind: 'INVOICE' as const,
+        date: inv.createdAt,
+        plan: inv.plan,
+        durationDays: inv.durationDays,
+        invoice: formatInvoiceForApi({ ...inv, tenant: { name: tenant.name } }),
+      }));
+
+    const history = [...requestEntries, ...invoiceEntries].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+    );
+
+    return res.json({
+      tenant,
+      history,
+      requestsCount: requests.length,
+      invoicesCount: invoices.length,
+    });
+  } catch (error: any) {
+    console.error('Erreur getTenantSubscriptionHistory:', error);
+    return res.status(500).json({ error: 'Impossible de charger l\'historique des abonnements.' });
+  }
+}
+
 export async function getAdminInvoices(req: AuthenticatedRequest, res: Response) {
   try {
     if (!isPlatformStaff(req.user?.role)) {

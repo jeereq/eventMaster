@@ -8,7 +8,7 @@ import { useTheme } from '@/context/ThemeContext';
 import {
   Calendar, Users, Mail, CreditCard, LayoutDashboard,
   LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper, User, Sun, Moon, BarChart3,
-  Building2, FileText, Key, MessageSquare, ScanLine, Briefcase,
+  Building2, FileText, Key, MessageSquare, ScanLine, Briefcase, Clock,
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import UserLegalGate from '@/components/UserLegalGate';
@@ -147,8 +147,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {
           label: 'Administration',
           items: [
-            { name: 'Analyses & stats', href: '/dashboard?tab=analytics', tab: 'analytics', icon: BarChart3 },
-            { name: 'Abonnements', href: '/dashboard?tab=subscriptions', tab: 'subscriptions', icon: CreditCard },
+            { name: 'Analyses & stats', href: '/dashboard?tab=analytics&section=overview', tab: 'analytics', icon: BarChart3 },
+            { name: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests', tab: 'subscription-requests', icon: Clock },
+            { name: 'Forfaits', href: '/dashboard?tab=subscription-plans', tab: 'subscription-plans', icon: CreditCard },
             { name: 'Factures', href: '/dashboard?tab=invoices', tab: 'invoices', icon: FileText },
             { name: 'Configurations', href: '/dashboard?tab=settings', tab: 'settings', icon: Key },
           ],
@@ -163,7 +164,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           label: 'Plateforme',
           items: [
             { name: 'Organisations', href: '/dashboard?tab=tenants', tab: 'tenants', icon: Building2 },
-            { name: 'Abonnements', href: '/dashboard?tab=subscriptions', tab: 'subscriptions', icon: CreditCard },
+            { name: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests', tab: 'subscription-requests', icon: Clock },
             { name: 'Factures', href: '/dashboard?tab=invoices', tab: 'invoices', icon: FileText },
           ],
         },

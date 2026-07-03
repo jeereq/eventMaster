@@ -10,9 +10,10 @@ import {
   PlusCircle, AlertCircle, Award, CheckCircle, Shield,
   Building2, Activity, TrendingUp, Clock, Trash2, Edit2, Key,
   CalendarDays, Globe, Search, Filter, Check, X, FileText, Plus, Loader2, Copy, Eye,
-  BarChart3, PieChart, ChevronLeft, ChevronRight, CheckSquare, Sparkles, MapPin, Download, MessageSquare
+  BarChart3, PieChart, ChevronLeft, ChevronRight, CheckSquare, Sparkles, MapPin, Download, MessageSquare, History
 } from 'lucide-react';
 import GuestMessageTemplatesPanel from './GuestMessageTemplatesPanel';
+import { cn } from '@/lib/cn';
 import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/InvoiceListPanel';
 import { PageHeader, Alert, Button } from '@/components/ui';
 import { PLAN_IDS, type PlanId } from '@/config/landingPricing';
@@ -148,6 +149,38 @@ interface RevenueReport {
   }>;
 }
 
+type AnalyticsSection = 'overview' | 'plans' | 'organisations' | 'revenus' | 'modeles' | 'utilisateurs' | 'evenements';
+
+const ANALYTICS_SECTIONS: Array<{ id: AnalyticsSection; label: string }> = [
+  { id: 'overview', label: 'Vue d\'ensemble' },
+  { id: 'plans', label: 'Plans & licences' },
+  { id: 'organisations', label: 'Organisations' },
+  { id: 'revenus', label: 'Revenus' },
+  { id: 'modeles', label: 'Modèles' },
+  { id: 'utilisateurs', label: 'Utilisateurs' },
+  { id: 'evenements', label: 'Événements' },
+];
+
+interface TenantSubscriptionHistoryEntry {
+  id: string;
+  kind: 'REQUEST' | 'INVOICE';
+  date: string;
+  plan: string;
+  durationDays?: number | null;
+  status?: string;
+  statusLabel?: string;
+  proofOfPayment?: string | null;
+  processedAt?: string | null;
+  invoice?: {
+    invoiceNumber: string;
+    amountFormatted: string;
+    statusLabel: string;
+    typeLabel: string;
+    periodStart?: string | null;
+    periodEnd?: string | null;
+  } | null;
+}
+
 function DashboardPageContent() {
   const { user, tenant } = useAuth();
   const [billing, setBilling] = useState<BillingStatus | null>(null);
@@ -159,17 +192,33 @@ function DashboardPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const tabParam = searchParams.get('tab');
+  const sectionParam = searchParams.get('section');
+  const activeAnalyticsSection: AnalyticsSection =
+    sectionParam && ANALYTICS_SECTIONS.some((s) => s.id === sectionParam)
+      ? (sectionParam as AnalyticsSection)
+      : 'overview';
+
+  const setAnalyticsSection = (section: AnalyticsSection) => {
+    router.replace(`/dashboard?tab=analytics&section=${section}`, { scroll: false });
+  };
 
   // Super Admin specific states
-  const [activeTab, setActiveTab] = useState<'tenants' | 'users' | 'templates' | 'message-templates' | 'events' | 'analytics' | 'guests' | 'settings' | 'subscriptions' | 'invoices'>('tenants');
+  const [activeTab, setActiveTab] = useState<
+    'tenants' | 'users' | 'templates' | 'message-templates' | 'events' | 'analytics' | 'guests' | 'settings'
+    | 'subscription-requests' | 'subscription-plans' | 'invoices'
+  >('tenants');
 
   useEffect(() => {
     if (isPlatformStaff(user?.role) && tabParam) {
+      const legacySubscriptions = tabParam === 'subscriptions' ? 'subscription-requests' : tabParam;
       const allowedTabs = user?.role === 'COMMERCIAL'
-        ? ['tenants', 'subscriptions', 'invoices']
-        : ['tenants', 'users', 'templates', 'message-templates', 'events', 'analytics', 'guests', 'settings', 'subscriptions', 'invoices'];
-      if (allowedTabs.includes(tabParam)) {
-        setActiveTab(tabParam as any);
+        ? ['tenants', 'subscription-requests', 'invoices']
+        : [
+            'tenants', 'users', 'templates', 'message-templates', 'events', 'analytics', 'guests', 'settings',
+            'subscription-requests', 'subscription-plans', 'invoices',
+          ];
+      if (allowedTabs.includes(legacySubscriptions)) {
+        setActiveTab(legacySubscriptions as typeof activeTab);
       }
     }
   }, [tabParam, user]);
@@ -242,6 +291,8 @@ function DashboardPageContent() {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [detailsType, setDetailsType] = useState<'tenant' | 'user' | 'template' | 'event' | 'guest' | null>(null);
   const [detailsData, setDetailsData] = useState<any>(null);
+  const [tenantSubscriptionHistory, setTenantSubscriptionHistory] = useState<TenantSubscriptionHistoryEntry[]>([]);
+  const [loadingTenantHistory, setLoadingTenantHistory] = useState(false);
 
   // Tenant CRUD Modals states
   const [isCreateTenantModalOpen, setIsTenantModalOpen] = useState(false);
@@ -338,13 +389,17 @@ function DashboardPageContent() {
     }
   }, [activeTab, user]);
 
-  // Load subscription requests when subscriptions tab is active
+  // Load subscription requests
   useEffect(() => {
-    if (isPlatformStaff(user?.role) && activeTab === 'subscriptions') {
+    if (isPlatformStaff(user?.role) && activeTab === 'subscription-requests') {
       loadSubscriptionRequests();
-      if (user?.role === 'SUPER_ADMIN') {
-        loadAdminSettings();
-      }
+    }
+  }, [activeTab, user]);
+
+  // Load subscription plans config
+  useEffect(() => {
+    if (user?.role === 'SUPER_ADMIN' && activeTab === 'subscription-plans') {
+      loadAdminSettings();
     }
   }, [activeTab, user]);
 
@@ -363,8 +418,17 @@ function DashboardPageContent() {
   useEffect(() => {
     if (user?.role === 'SUPER_ADMIN' && activeTab === 'analytics') {
       loadRevenueReport(revenuePeriod);
+      loadUsers();
+      loadTemplates();
+      loadAdminEvents();
     }
   }, [activeTab, user, revenuePeriod]);
+
+  useEffect(() => {
+    if (user?.role === 'SUPER_ADMIN' && activeTab === 'analytics' && !sectionParam) {
+      router.replace('/dashboard?tab=analytics&section=overview', { scroll: false });
+    }
+  }, [activeTab, sectionParam, user, router]);
 
   // Reset pages on search or filter change
   useEffect(() => {
@@ -1056,10 +1120,29 @@ function DashboardPageContent() {
     }
   };
 
+  const loadTenantSubscriptionHistory = async (tenantId: string) => {
+    setLoadingTenantHistory(true);
+    setTenantSubscriptionHistory([]);
+    try {
+      const data = await api.get(`/admin/tenants/${tenantId}/subscription-history`);
+      setTenantSubscriptionHistory(data.history || []);
+    } catch (err) {
+      console.error(err);
+      setTenantSubscriptionHistory([]);
+    } finally {
+      setLoadingTenantHistory(false);
+    }
+  };
+
   const handleOpenDetailsModal = (type: 'tenant' | 'user' | 'template' | 'event' | 'guest', data: any) => {
     setDetailsType(type as any);
     setDetailsData(data);
     setIsDetailsModalOpen(true);
+    if (type === 'tenant') {
+      loadTenantSubscriptionHistory(data.id);
+    } else {
+      setTenantSubscriptionHistory([]);
+    }
   };
 
   if (loading) {
@@ -1233,7 +1316,8 @@ function DashboardPageContent() {
                 {activeTab === 'guests' && <Users className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
                 {activeTab === 'analytics' && <BarChart3 className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
                 {activeTab === 'settings' && <Key className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
-                {activeTab === 'subscriptions' && <CreditCard className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
+                {activeTab === 'subscription-requests' && <Clock className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
+                {activeTab === 'subscription-plans' && <CreditCard className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
                 {activeTab === 'invoices' && <FileText className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
                 
                 {activeTab === 'tenants' && "Gestion des Organisations"}
@@ -1244,7 +1328,8 @@ function DashboardPageContent() {
                 {activeTab === 'guests' && "Supervision des Invités"}
                 {activeTab === 'analytics' && "Analyses & Statistiques Globales"}
                 {activeTab === 'settings' && "Configuration des Plans & Tarifs"}
-                {activeTab === 'subscriptions' && "Demandes d'Abonnement"}
+                {activeTab === 'subscription-requests' && "Demandes d'abonnement"}
+                {activeTab === 'subscription-plans' && 'Forfaits & abonnements'}
                 {activeTab === 'invoices' && 'Factures plateforme'}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
@@ -1256,7 +1341,8 @@ function DashboardPageContent() {
                 {activeTab === 'guests' && "Consultez et gérez la liste globale de tous les invités enregistrés."}
                 {activeTab === 'analytics' && "Visualisez les performances, l'adoption des forfaits et l'activité globale."}
                 {activeTab === 'settings' && "Configurez les caractéristiques, limites et prix des différents forfaits."}
-                {activeTab === 'subscriptions' && "Validez ou rejetez les demandes d'activation ou de changement d'abonnement."}
+                {activeTab === 'subscription-requests' && "Validez ou rejetez les demandes d'activation ou de changement de forfait."}
+                {activeTab === 'subscription-plans' && 'Configurez les tarifs, quotas et fonctionnalités de chaque forfait.'}
                 {activeTab === 'invoices' && "Consultez toutes les factures générées après approbation, paiement ou renouvellement."}
               </p>
             </div>
@@ -1335,8 +1421,30 @@ function DashboardPageContent() {
             </div>
           </div>
 
+          {activeTab === 'analytics' && user?.role === 'SUPER_ADMIN' && (
+            <div className="px-6 py-3 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <div className="flex flex-wrap gap-2 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl">
+                {ANALYTICS_SECTIONS.map(({ id, label }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setAnalyticsSection(id)}
+                    className={cn(
+                      'inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all',
+                      activeAnalyticsSection === id
+                        ? 'bg-white dark:bg-slate-900 text-indigo-600 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white',
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Filters and search */}
-          {activeTab !== 'analytics' && activeTab !== 'settings' && activeTab !== 'subscriptions' && activeTab !== 'invoices' && activeTab !== 'message-templates' && (
+          {activeTab !== 'analytics' && activeTab !== 'settings' && activeTab !== 'subscription-requests' && activeTab !== 'subscription-plans' && activeTab !== 'invoices' && activeTab !== 'message-templates' && (
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
@@ -2267,21 +2375,13 @@ function DashboardPageContent() {
               </div>
             )}
 
-            {/* Subscriptions Tab */}
-            {activeTab === 'subscriptions' && (
-              <div className="space-y-8 animate-in fade-in duration-200">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-100 pb-6">
-                  <div>
-                    <h3 className="text-xl font-extrabold text-slate-900">Gestion des Abonnements & Forfaits</h3>
-                    <p className="text-xs text-slate-500 mt-0.5">Validez les demandes d'activation ou modifiez les tarifs et quotas des forfaits de la plateforme.</p>
-                  </div>
-                </div>
-
-                {/* Section 1: Subscription Requests */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
-                  <h4 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            {/* Demandes d'abonnement */}
+            {activeTab === 'subscription-requests' && (
+              <div className="space-y-6 animate-in fade-in duration-200">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-4">
+                  <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <Clock className="w-5 h-5 text-indigo-600" />
-                    Demandes d'activation reçues ({subscriptionRequests.length})
+                    Demandes reçues ({subscriptionRequests.length})
                   </h4>
 
                   {subRequestsLoading ? (
@@ -2371,14 +2471,22 @@ function DashboardPageContent() {
                     </div>
                   )}
                 </div>
+              </div>
+            )}
 
-                {/* Section 2: Subscription Plans Configuration */}
-                {adminSettings && adminSettings.plans && (
-                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
-                    <div className="flex justify-between items-center border-b border-slate-150 pb-4">
-                      <h4 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            {/* Forfaits & abonnements */}
+            {activeTab === 'subscription-plans' && isSuperAdmin && (
+              <div className="space-y-6 animate-in fade-in duration-200">
+                {adminSettingsLoading ? (
+                  <div className="py-12 flex justify-center">
+                    <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                  </div>
+                ) : adminSettings && adminSettings.plans ? (
+                  <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-6">
+                    <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4">
+                      <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <CreditCard className="w-5 h-5 text-indigo-600" />
-                        Configuration des types de souscription (Forfaits)
+                        Configuration des forfaits ({PLAN_IDS.length})
                       </h4>
                     </div>
 
@@ -2543,6 +2651,8 @@ function DashboardPageContent() {
                       </button>
                     </div>
                   </div>
+                ) : (
+                  <p className="text-sm text-slate-500 text-center py-8">Impossible de charger la configuration des forfaits.</p>
                 )}
               </div>
             )}
@@ -2563,6 +2673,7 @@ function DashboardPageContent() {
                     <InvoiceListPanel
                       invoices={adminInvoices}
                       showOrganization
+                      apiPrefix="admin"
                       emptyMessage="Aucune facture générée. Les factures apparaissent ici dès qu'une demande d'abonnement est approuvée."
                     />
                   )}
@@ -2573,7 +2684,7 @@ function DashboardPageContent() {
             {/* Analytics Tab */}
             {activeTab === 'analytics' && (
               <div className="space-y-8 animate-in fade-in duration-200">
-                {/* Top Metrics Grid */}
+                {activeAnalyticsSection === 'overview' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {/* Avg Users Card */}
                   <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 flex items-center gap-4">
@@ -2631,10 +2742,9 @@ function DashboardPageContent() {
                     </div>
                   </div>
                 </div>
+                )}
 
-                {/* Main Analytics Sections */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* Plans & Licenses */}
+                {activeAnalyticsSection === 'plans' && (
                   <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-6 shadow-sm">
                     <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                       <PieChart className="w-5 h-5 text-indigo-600" />
@@ -2687,8 +2797,9 @@ function DashboardPageContent() {
                       </div>
                     </div>
                   </div>
+                )}
 
-                  {/* Top Active Organizations */}
+                {activeAnalyticsSection === 'organisations' && (
                   <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-6 shadow-sm">
                     <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                       <TrendingUp className="w-5 h-5 text-indigo-600" />
@@ -2722,9 +2833,9 @@ function DashboardPageContent() {
                       )}
                     </div>
                   </div>
-                </div>
+                )}
 
-                {/* Revenus & Commissions */}
+                {activeAnalyticsSection === 'revenus' && (
                 <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-6 shadow-sm">
                   <div className="flex flex-wrap items-center justify-between gap-4">
                     <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -2863,10 +2974,9 @@ function DashboardPageContent() {
                     <p className="text-sm text-slate-500 text-center py-8">Aucune donnée de facturation disponible.</p>
                   )}
                 </div>
+                )}
 
-                {/* Bottom Analytics Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  {/* Templates Analytics */}
+                {activeAnalyticsSection === 'modeles' && (
                   <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-sm">
                     <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
                       <FileText className="w-5 h-5 text-indigo-600" />
@@ -2891,8 +3001,9 @@ function DashboardPageContent() {
                       </div>
                     </div>
                   </div>
+                )}
 
-                  {/* Users Roles Analytics */}
+                {activeAnalyticsSection === 'utilisateurs' && (
                   <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-sm">
                     <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
                       <Users className="w-5 h-5 text-indigo-600" />
@@ -2917,8 +3028,9 @@ function DashboardPageContent() {
                       </div>
                     </div>
                   </div>
+                )}
 
-                  {/* Events Stats */}
+                {activeAnalyticsSection === 'evenements' && (
                   <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-sm">
                     <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
                       <Calendar className="w-5 h-5 text-indigo-600" />
@@ -2949,7 +3061,7 @@ function DashboardPageContent() {
                       </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
           </div>
@@ -3621,7 +3733,7 @@ function DashboardPageContent() {
         {/* Modal: View Details (Super Admin) */}
         {isDetailsModalOpen && detailsData && (
           <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className={`bg-white rounded-2xl border border-slate-200 shadow-xl w-full overflow-hidden animate-in fade-in zoom-in duration-200 ${detailsType === 'tenant' ? 'max-w-2xl' : 'max-w-lg'}`}>
               {/* Header */}
               <div className="px-6 py-5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
                 <h3 className="font-bold text-slate-900 flex items-center gap-2">
@@ -3719,6 +3831,85 @@ function DashboardPageContent() {
                         <span className="text-[10px] font-bold text-violet-500 uppercase tracking-wider block">Événements</span>
                         <span className="text-2xl font-black text-violet-700 mt-1 block">{detailsData.eventsCount}</span>
                       </div>
+                    </div>
+
+                    <div className="space-y-3 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                      <h5 className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 pb-1.5 flex items-center gap-2">
+                        <History className="w-3.5 h-3.5" />
+                        Historique des abonnements ({tenantSubscriptionHistory.length})
+                      </h5>
+                      {loadingTenantHistory ? (
+                        <div className="py-6 flex justify-center">
+                          <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+                        </div>
+                      ) : tenantSubscriptionHistory.length === 0 ? (
+                        <p className="text-xs text-slate-500 text-center py-4">Aucune demande ni facture enregistrée pour cette organisation.</p>
+                      ) : (
+                        <div className="overflow-x-auto max-h-64 overflow-y-auto">
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead>
+                              <tr className="border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase">
+                                <th className="pb-2 pr-2">Date</th>
+                                <th className="pb-2 pr-2">Type</th>
+                                <th className="pb-2 pr-2">Forfait</th>
+                                <th className="pb-2 pr-2">Durée</th>
+                                <th className="pb-2 pr-2">Statut</th>
+                                <th className="pb-2">Facture</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {tenantSubscriptionHistory.map((entry) => (
+                                <tr key={`${entry.kind}-${entry.id}`}>
+                                  <td className="py-2 pr-2 text-slate-600 whitespace-nowrap">
+                                    {new Date(entry.date).toLocaleDateString('fr-FR', {
+                                      day: 'numeric', month: 'short', year: 'numeric',
+                                    })}
+                                  </td>
+                                  <td className="py-2 pr-2">
+                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                      entry.kind === 'REQUEST' ? 'bg-amber-50 text-amber-700' : 'bg-indigo-50 text-indigo-700'
+                                    }`}>
+                                      {entry.kind === 'REQUEST' ? 'Demande' : 'Facture'}
+                                    </span>
+                                  </td>
+                                  <td className="py-2 pr-2">
+                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold border ${planBadgeClass(entry.plan)}`}>
+                                      {entry.plan}
+                                    </span>
+                                  </td>
+                                  <td className="py-2 pr-2 text-slate-600">
+                                    {entry.durationDays ? `${entry.durationDays} j` : '—'}
+                                  </td>
+                                  <td className="py-2 pr-2">
+                                    {entry.kind === 'REQUEST' ? (
+                                      <span className={`text-[10px] font-bold ${
+                                        entry.status === 'APPROVED' ? 'text-emerald-600' :
+                                        entry.status === 'REJECTED' ? 'text-rose-600' : 'text-amber-600'
+                                      }`}>
+                                        {entry.statusLabel}
+                                      </span>
+                                    ) : (
+                                      <span className="text-[10px] font-bold text-slate-500">
+                                        {entry.invoice?.statusLabel || '—'}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="py-2">
+                                    {entry.invoice ? (
+                                      <div className="flex flex-col">
+                                        <span className="font-mono text-[10px] text-slate-700">{entry.invoice.invoiceNumber}</span>
+                                        <span className="font-bold text-indigo-600">{entry.invoice.amountFormatted}</span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-slate-400">—</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

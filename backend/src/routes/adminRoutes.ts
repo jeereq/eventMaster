@@ -24,6 +24,7 @@ import {
   getAdminSettings,
   updateAdminSettings,
   getAdminInvoices,
+  getTenantSubscriptionHistory,
 } from '../controllers/adminController';
 import {
   getGuestMessageTemplates,
@@ -38,6 +39,7 @@ import {
   rejectSubscriptionRequest 
 } from '../controllers/subscriptionController';
 import { getRevenueReport, exportRevenueReport } from '../controllers/revenueReportController';
+import { getInvoiceDetail, downloadInvoicePdf, sendInvoiceByEmail } from '../controllers/invoiceController';
 
 const router = Router();
 
@@ -46,10 +48,14 @@ router.use(requireAuth);
 // Personnel plateforme (Super Admin + Commercial sans organisation)
 router.get('/stats', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), getSystemStats);
 router.get('/invoices', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), getAdminInvoices);
+router.get('/invoices/:id', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), getInvoiceDetail);
+router.get('/invoices/:id/pdf', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), downloadInvoicePdf);
+router.post('/invoices/:id/send', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), sendInvoiceByEmail);
 router.get('/subscriptions/requests', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), getAdminSubscriptionRequests);
 router.post('/subscriptions/requests/:id/approve', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), approveSubscriptionRequest);
 router.post('/subscriptions/requests/:id/reject', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), rejectSubscriptionRequest);
 router.post('/tenants', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), createTenant);
+router.get('/tenants/:id/subscription-history', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), getTenantSubscriptionHistory);
 
 // Super Admin uniquement
 router.use(requireRole(['SUPER_ADMIN']));
