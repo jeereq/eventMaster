@@ -68,7 +68,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     ctaHref: '/register',
     ctaVariant: 'outline',
     tier: 'essentials',
-    highlights: ['3 événements', '50 invités', 'RSVP & portail invité'],
+    highlights: ['3 événements · 50 invités', 'RSVP & portail invité', 'Modèles standards inclus'],
   },
   {
     id: 'STANDARD',
@@ -80,24 +80,24 @@ export const LANDING_PLANS: LandingPlan[] = [
     ctaHref: '/register',
     ctaVariant: 'primary',
     tier: 'business',
-    highlights: ['8 événements · 150 invités', 'Protocole QR & émargement', '3 salles · 3 managers'],
+    highlights: ['8 événements · 150 invités', 'Protocole QR & émargement', '3 salles · thèmes & fixtures'],
   },
   {
     id: 'PREMIUM_1',
     ms365Name: 'Business Premium 1',
-    tagline: 'Salles 2D avancées, modèles personnalisés et équipe élargie.',
+    tagline: 'Éditeur visuel, import maquette et formulaires RSVP analytiques.',
     monthlyPriceFc: 55000,
     monthlyNote: 'par organisation / mois',
     cta: 'Choisir Premium 1',
     ctaHref: '/register',
     ctaVariant: 'primary',
     tier: 'premium',
-    highlights: ['12 événements · 500 invités', 'Modèles custom · thèmes 2D', '5 salles · 5 managers'],
+    highlights: ['12 événements · 500 invités', 'Modèles custom · import image', 'Taille canvas · champs RSVP stats'],
   },
   {
     id: 'PREMIUM_2',
     ms365Name: 'Business Premium 2',
-    tagline: 'Protocole complet, notifications siège et gestion multi-salles.',
+    tagline: 'OCR maquette, protocole complet et notifications siège.',
     monthlyPriceFc: 85000,
     monthlyNote: 'par organisation / mois',
     cta: 'Choisir Premium 2',
@@ -106,7 +106,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tier: 'premium',
     highlighted: true,
     badge: 'Le plus populaire',
-    highlights: ['20 événements · 1 000 invités', 'Vérification siège + WhatsApp', '10 salles · 10 managers'],
+    highlights: ['20 événements · 1 000 invités', 'OCR texte sur maquette', 'Vérification siège · WhatsApp'],
   },
   {
     id: 'ENTERPRISE_1',
@@ -118,19 +118,19 @@ export const LANDING_PLANS: LandingPlan[] = [
     ctaHref: '/register',
     ctaVariant: 'primary',
     tier: 'enterprise',
-    highlights: ['40 événements · 3 500 invités', 'Éditeur salle complet · rapports', '25 salles · 18 managers · support prioritaire'],
+    highlights: ['40 événements · 3 500 invités', 'Rapports & export commissions', '25 salles · support prioritaire'],
   },
   {
     id: 'ENTERPRISE_2',
     ms365Name: 'Business Enterprise 2',
-    tagline: 'Agences avec réseau commercial intégré et commissions 20 %.',
+    tagline: 'Réseau commercial intégré avec commissions 20 % sur facturation.',
     monthlyPriceFc: 525000,
     monthlyNote: 'par organisation / mois',
     cta: 'Choisir Enterprise 2',
     ctaHref: '/register',
     ctaVariant: 'primary',
     tier: 'enterprise',
-    highlights: ['70 événements · 5 000 invités', 'Réseau commercial 20 %', '50 salles · 30 managers · support dédié'],
+    highlights: ['70 événements · 5 000 invités', 'Espace commercial dédié', '50 salles · support dédié'],
   },
   {
     id: 'ENTERPRISE_3',
@@ -333,6 +333,19 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
   },
   {
     category: 'Invités',
+    label: 'Formulaires RSVP analytiques (export CSV)',
+    values: {
+      FREE: false,
+      STANDARD: false,
+      PREMIUM_1: true,
+      PREMIUM_2: true,
+      ENTERPRISE_1: true,
+      ENTERPRISE_2: true,
+      ENTERPRISE_3: true,
+    },
+  },
+  {
+    category: 'Invités',
     label: 'WhatsApp / E-mail',
     values: {
       FREE: true,
@@ -440,6 +453,40 @@ export const PLATFORM_PILLARS = [
     icon: 'trending',
   },
 ];
+
+export function parsePriceFc(price: string): number {
+  return parseInt(price.replace(/[^\d]/g, ''), 10) || 0;
+}
+
+export function computePromoSavingsPercent(catalogFc: number, promoFc: number): number | null {
+  if (catalogFc <= 0 || promoFc <= 0 || promoFc >= catalogFc) return null;
+  return Math.round((1 - promoFc / catalogFc) * 100);
+}
+
+export interface PlanCapabilityBadge {
+  id: string;
+  label: string;
+  tone: 'indigo' | 'violet' | 'emerald' | 'amber' | 'rose';
+}
+
+export function getPlanCapabilityBadges(planId: PlanId): PlanCapabilityBadge[] {
+  const badges: PlanCapabilityBadge[] = [];
+  const custom = FEATURE_COMPARISON.find((r) => r.label === 'Modèles personnalisés')?.values[planId];
+  const mockup = FEATURE_COMPARISON.find((r) => r.label === 'Import maquette (image + palette)')?.values[planId];
+  const ocr = FEATURE_COMPARISON.find((r) => r.label === 'OCR texte sur maquette')?.values[planId];
+  const commercial = FEATURE_COMPARISON.find((r) => r.label === 'Réseau commercial & commissions 20 %')?.values[planId];
+  const rsvpAnalytics = FEATURE_COMPARISON.find((r) => r.label === 'Formulaires RSVP analytiques (export CSV)')?.values[planId];
+
+  if (custom) badges.push({ id: 'custom', label: 'Éditeur visuel', tone: 'indigo' });
+  if (mockup) badges.push({ id: 'mockup', label: 'Import maquette', tone: 'violet' });
+  if (ocr) badges.push({ id: 'ocr', label: 'OCR maquette', tone: 'violet' });
+  if (rsvpAnalytics) badges.push({ id: 'rsvp', label: 'RSVP analytique', tone: 'emerald' });
+  if (commercial) badges.push({ id: 'commercial', label: 'Réseau commercial', tone: 'amber' });
+  if (planId === 'FREE') badges.push({ id: 'starter', label: 'Gratuit', tone: 'emerald' });
+  if (planId.startsWith('ENTERPRISE_3')) badges.push({ id: 'unlimited', label: 'Illimité', tone: 'rose' });
+
+  return badges;
+}
 
 export function getPlanDisplayPrice(plan: LandingPlan, cycle: BillingCycle, dbPrice?: string): string {
   if (plan.id === 'FREE') return '0 FC';
