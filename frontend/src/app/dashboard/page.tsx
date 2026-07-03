@@ -10,7 +10,7 @@ import {
   PlusCircle, AlertCircle, Award, CheckCircle, Shield,
   Building2, Activity, TrendingUp, Clock, Trash2, Edit2, Key,
   CalendarDays, Globe, Search, Filter, Check, X, FileText, Plus, Loader2, Copy, Eye,
-  BarChart3, PieChart, ChevronLeft, ChevronRight, CheckSquare, Sparkles, MapPin, Download, MessageSquare, History
+  BarChart3, PieChart, ChevronLeft, ChevronRight, CheckSquare, Sparkles, MapPin, Download, MessageSquare, History, Briefcase, Wallet
 } from 'lucide-react';
 import GuestMessageTemplatesPanel from './GuestMessageTemplatesPanel';
 import { cn } from '@/lib/cn';
@@ -28,6 +28,8 @@ import { getTemplateElementSummary } from '@/lib/landingTemplateAdapter';
 function isPlatformStaff(role?: string) {
   return role === 'SUPER_ADMIN' || role === 'COMMERCIAL';
 }
+
+const COMMERCIAL_PLATFORM_TABS = ['tenants', 'subscription-requests', 'invoices'] as const;
 
 function planBadgeClass(plan: string): string {
   if (plan === 'FREE') return 'bg-slate-50 border-slate-200 text-slate-600';
@@ -221,6 +223,15 @@ function DashboardPageContent() {
       }
     }
   }, [tabParam, user]);
+
+  useEffect(() => {
+    if (user?.role !== 'COMMERCIAL') return;
+    if (!COMMERCIAL_PLATFORM_TABS.includes(activeTab as (typeof COMMERCIAL_PLATFORM_TABS)[number])) {
+      setActiveTab('tenants');
+      router.replace('/dashboard?tab=tenants');
+    }
+  }, [user?.role, activeTab, router]);
+
   const [users, setUsers] = useState<AdminUserItem[]>([]);
   const [templates, setTemplates] = useState<AdminTemplateItem[]>([]);
   const [adminEvents, setAdminEvents] = useState<any[]>([]);
@@ -265,6 +276,10 @@ function DashboardPageContent() {
   const [adminSettingsLoading, setAdminSettingsLoading] = useState(false);
   const [subRequestsLoading, setSubRequestsLoading] = useState(false);
   const [approvalModalRequest, setApprovalModalRequest] = useState<SubscriptionApprovalRequest | null>(null);
+  const [commercialOverview, setCommercialOverview] = useState<{
+    stats?: { monthlyCommission?: number; totalCommission?: number };
+    commissionRate?: number;
+  } | null>(null);
   const [savingSettings, setSavingSettings] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPlan, setFilterPlan] = useState<string>('ALL');
@@ -690,6 +705,17 @@ function DashboardPageContent() {
       setSubRequestsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user?.role !== 'COMMERCIAL') return;
+    loadSubscriptionRequests();
+    api.get('/commercial/dashboard')
+      .then((data) => setCommercialOverview(data))
+      .catch(() => setCommercialOverview(null));
+    api.get('/public/plans')
+      .then((plans) => setAdminSettings((prev: any) => ({ ...(prev || {}), plans })))
+      .catch(console.error);
+  }, [user?.role]);
 
   const loadRevenueReport = async (period: string) => {
     setLoadingRevenueReport(true);
@@ -1264,6 +1290,8 @@ function DashboardPageContent() {
   // Render Super Admin / Commercial plateforme Dashboard
   if (isPlatformStaff(user?.role)) {
     const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+    const isCommercialPlatform = user?.role === 'COMMERCIAL';
+    const pendingSubscriptionCount = subscriptionRequests.filter((r) => r.status === 'PENDING').length;
     // Filter tenants
     const filteredTenants = adminData?.tenants.filter(t => {
       const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -1324,10 +1352,18 @@ function DashboardPageContent() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
-              <Shield className="w-8 h-8 text-indigo-600" />
-              Espace Super Admin
+              {isCommercialPlatform ? (
+                <Briefcase className="w-8 h-8 text-amber-600" />
+              ) : (
+                <Shield className="w-8 h-8 text-indigo-600" />
+              )}
+              {isCommercialPlatform ? 'Espace Commercial' : 'Espace Super Admin'}
             </h1>
-            <p className="text-slate-500 mt-1">Vue d'ensemble globale et gestion de la plateforme SaaS EventMaster.</p>
+            <p className="text-slate-500 mt-1">
+              {isCommercialPlatform
+                ? 'Organisations parrainées, validation des abonnements et suivi de vos commissions.'
+                : "Vue d'ensemble globale et gestion de la plateforme SaaS EventMaster."}
+            </p>
           </div>
         </div>
 
@@ -1340,21 +1376,60 @@ function DashboardPageContent() {
 
         {/* Global Statistics Widgets */}
         {adminData && (
-          <div className="grid sm:grid-cols-4 gap-6">
+          <div className={`grid gap-6 ${isCommercialPlatform ? 'sm:grid-cols-3' : 'sm:grid-cols-4'}`}>
             {/* Tenants Widget */}
             <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Organisations</span>
+                <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  {isCommercialPlatform ? 'Organisations parrainées' : 'Organisations'}
+                </span>
                 <div className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 p-2 rounded-xl">
                   <Building2 className="w-5 h-5" />
                 </div>
               </div>
               <div>
                 <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{adminData.stats.tenants}</span>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium">Inscrites sur la plateforme</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium">
+                  {isCommercialPlatform ? 'Liées à votre code parrainage' : 'Inscrites sur la plateforme'}
+                </p>
               </div>
             </div>
 
+            {isCommercialPlatform ? (
+              <>
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Demandes en attente</span>
+                    <div className="bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 p-2 rounded-xl">
+                      <Clock className="w-5 h-5" />
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{pendingSubscriptionCount}</span>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium">Abonnements à valider</p>
+                  </div>
+                </div>
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Commission ce mois</span>
+                    <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 p-2 rounded-xl">
+                      <Wallet className="w-5 h-5" />
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
+                      {(commercialOverview?.stats?.monthlyCommission ?? 0).toLocaleString('fr-FR')} FC
+                    </span>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium">
+                      {commercialOverview?.commissionRate != null
+                        ? `${Math.round(commercialOverview.commissionRate * 100)} % sur factures validées`
+                        : 'Commissions sur factures validées'}
+                    </p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
             {/* Users Widget */}
             <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
@@ -1396,6 +1471,8 @@ function DashboardPageContent() {
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium">Enregistrés dans le système</p>
               </div>
             </div>
+              </>
+            )}
           </div>
         )}
 
@@ -1430,7 +1507,9 @@ function DashboardPageContent() {
                 {activeTab === 'invoices' && 'Factures plateforme'}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
-                {activeTab === 'tenants' && "Gérez les organisations enregistrées, leurs abonnements et l'état de leurs licences."}
+                {activeTab === 'tenants' && (isCommercialPlatform
+                  ? "Consultez les organisations que vous avez parrainées (plan, licence, contact manager)."
+                  : "Gérez les organisations enregistrées, leurs abonnements et l'état de leurs licences.")}
                 {activeTab === 'users' && "Consultez et administrez l'ensemble des comptes d'utilisateurs de la plateforme."}
                 {activeTab === 'templates' && "Créez et configurez des modèles d'invitation globaux réutilisables par tous."}
                 {activeTab === 'message-templates' && "Personnalisez les messages WhatsApp et e-mails envoyés automatiquement aux invités."}
@@ -1438,15 +1517,28 @@ function DashboardPageContent() {
                 {activeTab === 'guests' && "Consultez et gérez la liste globale de tous les invités enregistrés."}
                 {activeTab === 'analytics' && "Visualisez les performances, l'adoption des forfaits et l'activité globale."}
                 {activeTab === 'settings' && "Configurez les caractéristiques, limites et prix des différents forfaits."}
-                {activeTab === 'subscription-requests' && "Validez ou rejetez les demandes d'activation ou de changement de forfait."}
+                {activeTab === 'subscription-requests' && (isCommercialPlatform
+                  ? "Approuvez ou rejetez les demandes d'abonnement de vos organisations parrainées (réduction promo possible)."
+                  : "Validez ou rejetez les demandes d'activation ou de changement de forfait.")}
                 {activeTab === 'subscription-plans' && 'Configurez les tarifs, quotas et fonctionnalités de chaque forfait.'}
-                {activeTab === 'invoices' && "Consultez toutes les factures générées après approbation, paiement ou renouvellement."}
+                {activeTab === 'invoices' && (isCommercialPlatform
+                  ? "Factures de vos organisations parrainées et commissions associées."
+                  : "Consultez toutes les factures générées après approbation, paiement ou renouvellement.")}
               </p>
             </div>
 
             {/* Action buttons on the right */}
             <div className="flex flex-wrap items-center gap-2">
               {activeTab === 'tenants' && (
+                isCommercialPlatform ? (
+                  <Link
+                    href="/dashboard/commercial"
+                    className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-md"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Nouvelle organisation parrainée
+                  </Link>
+                ) : (
                 <button
                   onClick={handleOpenCreateTenantModal}
                   className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-md shadow-indigo-100 dark:shadow-none"
@@ -1454,9 +1546,10 @@ function DashboardPageContent() {
                   <Plus className="w-4 h-4" />
                   Créer une Organisation
                 </button>
+                )
               )}
 
-              {activeTab === 'users' && (
+              {activeTab === 'users' && isSuperAdmin && (
                 <button
                   onClick={handleOpenCreateUserModal}
                   className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-md shadow-indigo-100 dark:shadow-none"
@@ -1466,7 +1559,7 @@ function DashboardPageContent() {
                 </button>
               )}
 
-              {activeTab === 'templates' && (
+              {activeTab === 'templates' && isSuperAdmin && (
                 <Link
                   href="/dashboard/templates?new=1"
                   className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-md shadow-indigo-100 dark:shadow-none"
@@ -1476,7 +1569,7 @@ function DashboardPageContent() {
                 </Link>
               )}
 
-              {activeTab === 'events' && (
+              {activeTab === 'events' && isSuperAdmin && (
                 <button
                   onClick={handleOpenCreateEventModal}
                   className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-md shadow-indigo-100 dark:shadow-none"
@@ -1486,7 +1579,7 @@ function DashboardPageContent() {
                 </button>
               )}
 
-              {activeTab === 'guests' && (
+              {activeTab === 'guests' && isSuperAdmin && (
                 <div className="flex gap-2">
                   {adminGuests.length > 0 && (
                     <button
@@ -1583,7 +1676,7 @@ function DashboardPageContent() {
               </div>
             )}
 
-            {activeTab === 'templates' && (
+            {activeTab === 'templates' && isSuperAdmin && (
               <div className="flex items-center gap-2">
                 <Filter className="w-4.5 h-4.5 text-slate-400 flex-shrink-0" />
                 <select
@@ -1696,6 +1789,8 @@ function DashboardPageContent() {
                               >
                                 <Eye className="w-4.5 h-4.5" />
                               </button>
+                              {!isCommercialPlatform && (
+                                <>
                               <button
                                 onClick={() => handleOpenEditTenantModal(t)}
                                 className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
@@ -1710,6 +1805,8 @@ function DashboardPageContent() {
                               >
                                 <Trash2 className="w-4.5 h-4.5" />
                               </button>
+                                </>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1887,7 +1984,7 @@ function DashboardPageContent() {
             )}
 
             {/* Templates Tab */}
-            {activeTab === 'templates' && (
+            {activeTab === 'templates' && isSuperAdmin && (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40 rounded-xl p-4">

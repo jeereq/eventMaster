@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { isPlatformStaff } from '../middleware/platformAccess';
+import { assertCommercialOwnsInvoice } from '../services/platformCommercialScope';
 import { assertCanViewInvoices } from '../services/permissionsService';
 import {
   buildInvoicePdf,
@@ -16,6 +17,12 @@ async function assertInvoiceAccess(req: AuthenticatedRequest, invoiceId: string)
   }
 
   if (isPlatformStaff(req.user?.role)) {
+    if (req.user?.role === 'COMMERCIAL' && req.user.id) {
+      const owns = await assertCommercialOwnsInvoice(req.user.id, invoiceId);
+      if (!owns) {
+        return { invoice: null, error: 'Accès réservé aux factures de vos organisations parrainées.' as const, status: 403 as const };
+      }
+    }
     return { invoice, error: null, status: null };
   }
 

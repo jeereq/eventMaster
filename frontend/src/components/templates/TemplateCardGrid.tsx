@@ -3,8 +3,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { Copy, Edit3, Eye, Globe, Trash2 } from 'lucide-react';
-import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
-import { getTemplateElementSummary } from '@/lib/landingTemplateAdapter';
+import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
+import { getTemplateElementSummary, templateContentToLandingPreview } from '@/lib/landingTemplateAdapter';
 import { cn } from '@/lib/cn';
 
 export interface TemplateCardItem {
@@ -73,15 +73,41 @@ export default function TemplateCardGrid({
             key={t.id}
             className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 shadow-sm hover:shadow-md transition flex flex-col gap-4"
           >
-            <div className="relative bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 min-h-[160px] flex items-center justify-center overflow-hidden">
-              <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] dark:bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:12px_16px] opacity-40" />
-              <TemplatePreviewThumb
-                content={t.content}
-                name={t.name}
-                variant="card"
-                className="relative z-10"
-              />
-            </div>
+            {onViewDetails ? (
+              <button
+                type="button"
+                onClick={() => onViewDetails(t)}
+                className="relative w-full bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl p-3 min-h-[200px] flex items-center justify-center overflow-hidden text-left transition hover:border-indigo-200 dark:hover:border-indigo-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 cursor-pointer"
+              >
+                <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] dark:bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:12px_16px] opacity-40 pointer-events-none" />
+                <div className="relative z-10 w-full max-w-[240px] pointer-events-none">
+                  <LandingInvitationPreview
+                    template={templateContentToLandingPreview({
+                      id: t.id,
+                      name: t.name,
+                      content: t.content,
+                    })}
+                    compact
+                    className="w-full shadow-sm"
+                  />
+                </div>
+              </button>
+            ) : (
+              <div className="relative w-full bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl p-3 min-h-[200px] flex items-center justify-center overflow-hidden">
+                <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] dark:bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:12px_16px] opacity-40 pointer-events-none" />
+                <div className="relative z-10 w-full max-w-[240px]">
+                  <LandingInvitationPreview
+                    template={templateContentToLandingPreview({
+                      id: t.id,
+                      name: t.name,
+                      content: t.content,
+                    })}
+                    compact
+                    className="w-full shadow-sm"
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2 min-w-0 flex-1">
               <h3 className="text-base font-bold text-slate-900 dark:text-white tracking-tight line-clamp-1">{t.name}</h3>

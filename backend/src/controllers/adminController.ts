@@ -8,6 +8,11 @@ import path from 'path';
 import { getDefaultPlans, getPlansConfiguration, mergePlansForSave } from '../config/plansConfig';
 import { ensureCommercialReferralCode, normalizeCommissionRate } from '../services/commercialService';
 import { isPlatformStaff } from '../middleware/platformAccess';
+import {
+  assertCommercialOwnsTenant,
+  commercialReferredTenantFilter,
+  isPlatformCommercial,
+} from '../services/platformCommercialScope';
 import { formatInvoiceForApi } from '../services/invoiceService';
 import {
   computeExtendedExpiry,
@@ -24,14 +29,24 @@ export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
       return res.status(403).json({ error: 'Accès refusé. Privilèges plateforme requis.' });
     }
 
+    const commercialId = isPlatformCommercial(req.user?.role) ? req.user?.id : undefined;
+    const tenantWhere = commercialId ? commercialReferredTenantFilter(commercialId) : {};
+
     const [tenantCount, userCount, eventCount, guestCount] = await Promise.all([
-      prisma.tenant.count(),
-      prisma.user.count(),
-      prisma.event.count(),
-      prisma.guest.count(),
+      prisma.tenant.count({ where: tenantWhere }),
+      commercialId
+        ? prisma.user.count({ where: { tenant: tenantWhere } })
+        : prisma.user.count(),
+      commercialId
+        ? prisma.event.count({ where: { tenant: tenantWhere } })
+        : prisma.event.count(),
+      commercialId
+        ? prisma.guest.count({ where: { event: { tenant: tenantWhere } } })
+        : prisma.guest.count(),
     ]);
 
     const tenants = await prisma.tenant.findMany({
+      where: tenantWhere,
       include: {
         manager: {
           select: {
@@ -106,6 +121,13 @@ export async function getTenantSubscriptionHistory(req: AuthenticatedRequest, re
 
     if (!tenant) {
       return res.status(404).json({ error: 'Organisation non trouvée.' });
+    }
+
+    if (isPlatformCommercial(req.user?.role) && req.user?.id) {
+      const owns = await assertCommercialOwnsTenant(req.user.id, tenantId);
+      if (!owns) {
+        return res.status(403).json({ error: 'Accès réservé aux organisations que vous avez parrainées.' });
+      }
     }
 
     const [requests, invoices] = await Promise.all([
@@ -191,13 +213,23 @@ export async function getAdminInvoices(req: AuthenticatedRequest, res: Response)
     }
 
     const { period, tenantId } = req.query;
-    const where: { billingPeriod?: string; tenantId?: string } = {};
+    const commercialId = isPlatformCommercial(req.user?.role) ? req.user?.id : undefined;
+    if (commercialId && typeof tenantId === 'string' && tenantId.trim()) {
+      const owns = await assertCommercialOwnsTenant(commercialId, tenantId.trim());
+      if (!owns) {
+        return res.status(403).json({ error: 'Accès réservé aux organisations que vous avez parrainées.' });
+      }
+    }
+
+    const where: { billingPeriod?: string; tenantId?: string; tenant?: { referredByCommercialId: string } } = {};
 
     if (typeof period === 'string' && period.trim()) {
       where.billingPeriod = period.trim();
     }
     if (typeof tenantId === 'string' && tenantId.trim()) {
       where.tenantId = tenantId.trim();
+    } else if (commercialId) {
+      where.tenant = commercialReferredTenantFilter(commercialId);
     }
 
     const invoices = await prisma.platformInvoice.findMany({

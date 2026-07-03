@@ -3,6 +3,11 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { PlanType } from '@prisma/client';
 import { isPlatformStaff } from '../middleware/platformAccess';
+import {
+  assertCommercialOwnsTenant,
+  commercialReferredTenantFilter,
+  isPlatformCommercial,
+} from '../services/platformCommercialScope';
 import { getPlansConfiguration, getPlanLimits, PAID_PLAN_KEYS } from '../config/plansConfig';
 import { issueTenantPlanInvoice } from '../services/tenantBillingService';
 import { computeApprovedAmount, getPlanAmount } from '../services/invoiceService';
@@ -88,7 +93,12 @@ export async function getAdminSubscriptionRequests(req: AuthenticatedRequest, re
       return res.status(403).json({ error: 'Accès refusé. Privilèges plateforme requis.' });
     }
 
+    const commercialId = isPlatformCommercial(req.user?.role) ? req.user?.id : undefined;
+
     const requests = await prisma.subscriptionRequest.findMany({
+      where: commercialId
+        ? { tenant: commercialReferredTenantFilter(commercialId) }
+        : undefined,
       include: {
         tenant: {
           select: tenantCommercialSelect,
@@ -143,6 +153,13 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
 
     if (request.status !== 'PENDING') {
       return res.status(400).json({ error: 'Cette demande a déjà été traitée.' });
+    }
+
+    if (isPlatformCommercial(req.user?.role) && req.user?.id) {
+      const owns = await assertCommercialOwnsTenant(req.user.id, request.tenantId);
+      if (!owns) {
+        return res.status(403).json({ error: 'Vous ne pouvez approuver que les demandes des organisations que vous avez parrainées.' });
+      }
     }
 
     const baseAmount = getPlanAmount(request.requestedPlan);
@@ -268,6 +285,13 @@ export async function rejectSubscriptionRequest(req: AuthenticatedRequest, res: 
 
     if (request.status !== 'PENDING') {
       return res.status(400).json({ error: 'Cette demande a déjà été traitée.' });
+    }
+
+    if (isPlatformCommercial(req.user?.role) && req.user?.id) {
+      const owns = await assertCommercialOwnsTenant(req.user.id, request.tenantId);
+      if (!owns) {
+        return res.status(403).json({ error: 'Vous ne pouvez rejeter que les demandes des organisations que vous avez parrainées.' });
+      }
     }
 
     const updatedRequest = await prisma.subscriptionRequest.update({

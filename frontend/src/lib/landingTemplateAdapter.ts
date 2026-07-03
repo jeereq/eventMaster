@@ -137,6 +137,19 @@ export async function fetchPublicLandingTemplates(): Promise<LandingTemplate[]> 
   }
 }
 
+export function templateContentToLandingPreview(params: {
+  id: string;
+  name: string;
+  content?: unknown;
+}): LandingTemplate {
+  return dbTemplateToLandingTemplate({
+    id: params.id,
+    name: params.name,
+    content: params.content as PublicTemplateDto['content'],
+    createdAt: new Date().toISOString(),
+  });
+}
+
 export function getTemplateElementSummary(content: unknown): string {
   const c = content as { elements?: Array<{ type: string }> } | null | undefined;
   const elements = c?.elements;
