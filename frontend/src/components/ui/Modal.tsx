@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
 import { X } from 'lucide-react';
 
@@ -36,12 +37,18 @@ export default function Modal({
   containerClassName,
   dismissible = true,
 }: ModalProps) {
+  const [mounted, setMounted] = useState(false);
+
   const handleEscape = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     },
     [onClose],
   );
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -55,10 +62,10 @@ export default function Modal({
     };
   }, [open, handleEscape, dismissible]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
-    <div className={cn('fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4', containerClassName)}>
+  return createPortal(
+    <div className={cn('fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4', containerClassName)}>
       {dismissible ? (
         <button
           type="button"
@@ -111,6 +118,7 @@ export default function Modal({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

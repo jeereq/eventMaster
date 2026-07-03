@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
-import { X, Percent, UserCheck, Loader2, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
+import { Percent, UserCheck, Loader2, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
 import { LANDING_PLANS } from '@/config/landingPricing';
+import Modal from '@/components/ui/Modal';
+import Button from '@/components/ui/Button';
 
 export interface SubscriptionApprovalRequest {
   id: string;
@@ -27,7 +29,10 @@ export interface SubscriptionApprovalResult {
 interface SubscriptionApprovalModalProps {
   request: SubscriptionApprovalRequest | null;
   onClose: () => void;
-  onConfirm: (params: { discountPercent: number; approvedAmount?: number }) => Promise<SubscriptionApprovalResult>;
+  onConfirm: (
+    requestId: string,
+    params: { discountPercent: number; approvedAmount?: number },
+  ) => Promise<SubscriptionApprovalResult>;
   catalogPrices?: Record<string, number>;
   promoByPlan?: Record<string, { price: number; label?: string }>;
 }
@@ -71,6 +76,7 @@ export default function SubscriptionApprovalModal({
   useEffect(() => {
     if (!request) return;
     setFeedback(null);
+    setSubmitting(false);
     if (activePromo?.price != null) {
       setDiscountMode('amount');
       setApprovedAmount(String(activePromo.price));
@@ -115,14 +121,13 @@ export default function SubscriptionApprovalModal({
     return list;
   }, [request]);
 
-  if (!request) return null;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!request?.id) return;
     setSubmitting(true);
     setFeedback(null);
     try {
-      const result = await onConfirm({
+      const result = await onConfirm(request.id, {
         discountPercent: pricing.discountPercent,
         approvedAmount: discountMode === 'amount' ? pricing.finalAmount : undefined,
       });
@@ -130,7 +135,7 @@ export default function SubscriptionApprovalModal({
       window.setTimeout(() => {
         onClose();
         setFeedback(null);
-      }, 2200);
+      }, 1800);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : 'Erreur lors de l\'approbation de la demande.';
@@ -141,38 +146,33 @@ export default function SubscriptionApprovalModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Approuver l&apos;abonnement</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={submitting}
-            className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <Modal
+      open={Boolean(request)}
+      onClose={onClose}
+      title="Approuver l'abonnement"
+      size="sm"
+      dismissible={!submitting}
+      containerClassName="z-[10000]"
+    >
+      {request && (
+        <form onSubmit={handleSubmit} className="space-y-5 -mt-2">
+          {feedback && (
+            <div
+              className={`flex items-start gap-2.5 rounded-xl px-4 py-3 text-sm ${
+                feedback.type === 'success'
+                  ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                  : 'bg-rose-50 border border-rose-200 text-rose-800'
+              }`}
+            >
+              {feedback.type === 'success' ? (
+                <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
+              ) : (
+                <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+              )}
+              <p className="font-medium leading-snug">{feedback.message}</p>
+            </div>
+          )}
 
-        {feedback && (
-          <div
-            className={`mx-6 mt-4 flex items-start gap-2.5 rounded-xl px-4 py-3 text-sm ${
-              feedback.type === 'success'
-                ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
-                : 'bg-rose-50 border border-rose-200 text-rose-800'
-            }`}
-          >
-            {feedback.type === 'success' ? (
-              <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
-            ) : (
-              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-            )}
-            <p className="font-medium leading-snug">{feedback.message}</p>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
           <div className="text-sm space-y-2">
             <p className="font-bold text-slate-900 dark:text-white">{request.tenant?.name || 'Organisation'}</p>
 
@@ -308,25 +308,26 @@ export default function SubscriptionApprovalModal({
           )}
 
           <div className="flex gap-3 pt-2">
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={onClose}
               disabled={submitting}
-              className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
+              className="flex-1"
             >
               {feedback?.type === 'success' ? 'Fermer' : 'Annuler'}
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={submitting || feedback?.type === 'success'}
-              className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 cursor-pointer"
+              loading={submitting}
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700"
             >
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {submitting ? 'Traitement…' : isPlanChange ? 'Changer le forfait' : 'Approuver & facturer'}
-            </button>
+              {isPlanChange ? 'Changer le forfait' : 'Approuver & facturer'}
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      )}
+    </Modal>
   );
 }

@@ -250,25 +250,6 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
           ? `Abonnement renouvelé jusqu'au ${expiryDate.toLocaleDateString('fr-FR')}.`
           : `La demande d'abonnement a été approuvée. Licence active jusqu'au ${expiryDate.toLocaleDateString('fr-FR')}.`;
 
-    res.json({
-      message: successMessage,
-      request: updatedRequest,
-      pricing,
-      commercialNotified: [],
-      invoice: null,
-      billingWarning: null,
-      billingAction,
-      tenant: {
-        id: updatedTenant.id,
-        name: updatedTenant.name,
-        plan: updatedTenant.plan,
-        licenseActive: updatedTenant.licenseActive,
-        licenseExpiresAt: updatedTenant.licenseExpiresAt,
-        licenseKey: updatedTenant.licenseKey,
-        previousPlan: tenantBefore.plan,
-      },
-    });
-
     // Facturation et notifications en arrière-plan (réponse immédiate à l'interface)
     void (async () => {
       try {
@@ -295,6 +276,25 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
         console.error('Erreur facturation après approbation abonnement:', billingError);
       }
     })();
+
+    return res.json({
+      message: successMessage,
+      request: updatedRequest,
+      pricing,
+      commercialNotified: [],
+      invoice: null,
+      billingWarning: null,
+      billingAction,
+      tenant: {
+        id: updatedTenant.id,
+        name: updatedTenant.name,
+        plan: updatedTenant.plan,
+        licenseActive: updatedTenant.licenseActive,
+        licenseExpiresAt: updatedTenant.licenseExpiresAt,
+        licenseKey: updatedTenant.licenseKey,
+        previousPlan: tenantBefore.plan,
+      },
+    });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Erreur inconnue';
     console.error('Erreur lors de l\'approbation de la demande d\'abonnement:', error);

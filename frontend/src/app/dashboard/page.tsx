@@ -745,21 +745,26 @@ function DashboardPageContent() {
     id: string,
     options?: { discountPercent?: number; approvedAmount?: number },
   ) => {
-    const response = await api.post(`/admin/subscriptions/requests/${id}/approve`, {
-      discountPercent: options?.discountPercent ?? 0,
-      approvedAmount: options?.approvedAmount,
-    });
-    await loadSubscriptionRequests();
-    await refreshStats();
-    if (activeTab === 'invoices') {
-      const data = await api.get('/admin/invoices');
-      setAdminInvoices(data.invoices || []);
+    try {
+      const response = await api.post(`/admin/subscriptions/requests/${id}/approve`, {
+        discountPercent: options?.discountPercent ?? 0,
+        approvedAmount: options?.approvedAmount,
+      });
+      await loadSubscriptionRequests();
+      await refreshStats();
+      if (activeTab === 'invoices') {
+        const data = await api.get('/admin/invoices');
+        setAdminInvoices(data.invoices || []);
+      }
+      return {
+        message: response.message || 'Demande approuvée avec succès !',
+        billingAction: response.billingAction,
+        tenant: response.tenant,
+      };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erreur lors de l\'approbation.';
+      throw new Error(message);
     }
-    return {
-      message: response.message || 'Demande approuvée avec succès !',
-      billingAction: response.billingAction,
-      tenant: response.tenant,
-    };
   };
 
   const handleRejectSubscription = async (id: string) => {
@@ -2582,8 +2587,17 @@ function DashboardPageContent() {
                                   <div className="flex justify-end gap-2">
                                     <button
                                       type="button"
-                                      onClick={() => setApprovalModalRequest(req)}
-                                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition shadow-sm"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setApprovalModalRequest({
+                                          id: req.id,
+                                          requestedPlan: req.requestedPlan,
+                                          durationDays: req.durationDays,
+                                          tenant: req.tenant,
+                                        });
+                                      }}
+                                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition shadow-sm cursor-pointer"
                                     >
                                       Approuver
                                     </button>
@@ -4445,12 +4459,9 @@ function DashboardPageContent() {
         onClose={() => setApprovalModalRequest(null)}
         catalogPrices={planCatalogPrices}
         promoByPlan={planPromoByPlan}
-        onConfirm={async ({ discountPercent, approvedAmount }) => {
-          if (!approvalModalRequest) {
-            throw new Error('Demande introuvable.');
-          }
-          return handleApproveSubscription(approvalModalRequest.id, { discountPercent, approvedAmount });
-        }}
+        onConfirm={async (requestId, { discountPercent, approvedAmount }) =>
+          handleApproveSubscription(requestId, { discountPercent, approvedAmount })
+        }
       />
       </>
     );
