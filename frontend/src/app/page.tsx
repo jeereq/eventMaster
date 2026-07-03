@@ -142,9 +142,9 @@ export default function Home() {
             <Link href="/contact" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
               Contact
             </Link>
-            <a href="#faq" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+            <Link href="/faq" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
               FAQ
-            </a>
+            </Link>
             <a href="#tarifs" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
               Tarifs
             </a>
@@ -205,13 +205,13 @@ export default function Home() {
               >
                 Contact
               </Link>
-              <a 
-                href="#faq" 
+              <Link 
+                href="/faq" 
                 onClick={() => setMobileMenuOpen(false)}
                 className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition py-2 border-b border-slate-100 dark:border-slate-900"
               >
                 FAQ
-              </a>
+              </Link>
               {user ? (
                 <>
                   <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold py-1">

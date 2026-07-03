@@ -4,8 +4,8 @@ import { prisma } from '../db';
 import { PlanType } from '@prisma/client';
 import { isPlatformStaff } from '../middleware/platformAccess';
 import { getPlansConfiguration, PAID_PLAN_KEYS } from '../config/plansConfig';
-import { recordCommercialCommission, notifyCommercialsOnSubscriptionApproval } from '../services/commercialService';
-import { createAndSendInvoice, computeApprovedAmount, getPlanAmount } from '../services/invoiceService';
+import { issueTenantPlanInvoice } from '../services/tenantBillingService';
+import { computeApprovedAmount, getPlanAmount } from '../services/invoiceService';
 
 // 1. Submit a subscription request (Tenant)
 export async function submitSubscriptionRequest(req: AuthenticatedRequest, res: Response) {
@@ -189,58 +189,38 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
       }),
     ]);
 
-    const invoice = await createAndSendInvoice({
-      tenantId: request.tenantId,
-      plan: request.requestedPlan,
-      type: 'SUBSCRIPTION_APPROVAL',
-      amount: pricing.finalAmount,
-      baseAmount: pricing.baseAmount,
-      discountPercent: pricing.discountPercent,
-      discountAmount: pricing.discountAmount,
-      durationDays: request.durationDays,
-      periodStart,
-      periodEnd,
-      subscriptionRequestId: requestId,
-      includeManagers: true,
-    });
-
-    await recordCommercialCommission({
-      tenantId: request.tenantId,
-      plan: request.requestedPlan,
-      source: 'SUBSCRIPTION_APPROVAL',
-      invoiceAmount: pricing.finalAmount,
-      platformInvoiceId: invoice?.id,
-    });
-
-    const commercialNotification = await notifyCommercialsOnSubscriptionApproval({
+    const invoiceResult = await issueTenantPlanInvoice({
       tenantId: request.tenantId,
       tenantName: request.tenant?.name ?? 'Organisation',
       plan: request.requestedPlan,
-      durationDays: request.durationDays,
-      baseAmount: pricing.baseAmount,
-      finalAmount: pricing.finalAmount,
-      discountPercent: pricing.discountPercent,
-      discountAmount: pricing.discountAmount,
-      invoiceNumber: invoice?.invoiceNumber,
+      billing: {
+        action: 'ACTIVATION',
+        durationDays: request.durationDays,
+        discountPercent: parsedDiscount,
+        approvedAmount: parsedApproved,
+        periodStart,
+        periodEnd,
+      },
+      subscriptionRequestId: requestId,
     });
 
     const discountNote =
-      pricing.discountAmount > 0
-        ? ` Réduction spéciale de ${pricing.discountPercent} % appliquée (− ${pricing.discountAmount.toLocaleString('fr-FR')} FC).`
+      invoiceResult.pricing.discountAmount > 0
+        ? ` Réduction spéciale de ${invoiceResult.pricing.discountPercent} % appliquée (− ${invoiceResult.pricing.discountAmount.toLocaleString('fr-FR')} FC).`
         : '';
 
     const commercialNote =
-      commercialNotification.notified.length > 0
-        ? ` Commercial(s) informé(s) : ${commercialNotification.notified.join(', ')}.`
+      invoiceResult.commercialNotified.length > 0
+        ? ` Commercial(s) informé(s) : ${invoiceResult.commercialNotified.join(', ')}.`
         : '';
 
     return res.json({
       message: `La demande d'abonnement a été approuvée. Licence active jusqu'au ${expiryDate.toLocaleDateString('fr-FR')}. Facture envoyée au propriétaire et aux managers.${discountNote}${commercialNote}`,
       request: updatedRequest,
-      pricing,
-      commercialNotified: commercialNotification.notified,
-      invoice: invoice
-        ? { id: invoice.id, invoiceNumber: invoice.invoiceNumber, amount: invoice.amount }
+      pricing: invoiceResult.pricing,
+      commercialNotified: invoiceResult.commercialNotified,
+      invoice: invoiceResult.invoice
+        ? { id: invoiceResult.invoice.id, invoiceNumber: invoiceResult.invoice.invoiceNumber, amount: invoiceResult.invoice.amount }
         : null,
       tenant: {
         id: updatedTenant.id,

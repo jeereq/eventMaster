@@ -17,6 +17,7 @@ import { cn } from '@/lib/cn';
 import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/InvoiceListPanel';
 import QuotaUsagePanel from '@/components/QuotaUsagePanel';
 import SubscriptionApprovalModal, { type SubscriptionApprovalRequest } from '@/components/SubscriptionApprovalModal';
+import BillingDiscountFields, { getBillingPricingFromFields } from '@/components/BillingDiscountFields';
 import type { QuotaSnapshot } from '@/lib/quotaDisplay';
 import { PageHeader, Alert, Button } from '@/components/ui';
 import { PLAN_IDS, type PlanId } from '@/config/landingPricing';
@@ -299,6 +300,13 @@ function DashboardPageContent() {
   const [modalLicenseActive, setModalLicenseActive] = useState(true);
   const [modalLicenseExpiresAt, setModalLicenseExpiresAt] = useState('');
   const [modalLicenseKey, setModalLicenseKey] = useState('');
+  const [modalIssueInvoice, setModalIssueInvoice] = useState(false);
+  const [modalExtendLicense, setModalExtendLicense] = useState(true);
+  const [modalBillingDurationDays, setModalBillingDurationDays] = useState('30');
+  const [modalBillingAction, setModalBillingAction] = useState<'AUTO' | 'RENEWAL' | 'PLAN_CHANGE' | 'ACTIVATION'>('AUTO');
+  const [modalDiscountMode, setModalDiscountMode] = useState<'percent' | 'amount'>('percent');
+  const [modalDiscountPercent, setModalDiscountPercent] = useState('0');
+  const [modalApprovedAmount, setModalApprovedAmount] = useState('');
   const [updatingTenant, setUpdatingTenant] = useState(false);
 
   // User CRUD Modals states
@@ -745,6 +753,12 @@ function DashboardPageContent() {
     setModalLicenseActive(true);
     setModalLicenseExpiresAt('');
     setModalLicenseKey('');
+    setModalIssueInvoice(false);
+    setModalExtendLicense(true);
+    setModalBillingDurationDays('30');
+    setModalBillingAction('AUTO');
+    setModalDiscountPercent('0');
+    setModalApprovedAmount('');
     setIsTenantModalOpen(true);
   };
 
@@ -756,6 +770,12 @@ function DashboardPageContent() {
     setModalLicenseActive(t.licenseActive);
     setModalLicenseExpiresAt(t.licenseExpiresAt ? t.licenseExpiresAt.split('T')[0] : '');
     setModalLicenseKey(t.licenseKey || '');
+    setModalIssueInvoice(false);
+    setModalExtendLicense(false);
+    setModalBillingDurationDays('30');
+    setModalBillingAction('AUTO');
+    setModalDiscountPercent('0');
+    setModalApprovedAmount('');
     setIsTenantModalOpen(true);
   };
 
@@ -777,16 +797,42 @@ function DashboardPageContent() {
           licenseKey: modalLicenseKey || null,
         });
       } else if (selectedTenant) {
-        await api.put(`/admin/tenants/${selectedTenant.id}`, {
+        const pricing = getBillingPricingFromFields(
+          modalPlan,
+          modalDiscountMode,
+          modalDiscountPercent,
+          modalApprovedAmount,
+        );
+        const payload: Record<string, unknown> = {
           name: modalTenantName,
           plan: modalPlan,
           licenseActive: modalLicenseActive,
           licenseExpiresAt: modalLicenseExpiresAt ? new Date(modalLicenseExpiresAt).toISOString() : null,
           licenseKey: modalLicenseKey || null,
-        });
+        };
+        if (modalIssueInvoice && modalPlan !== 'FREE') {
+          payload.billing = {
+            issueInvoice: true,
+            action: modalBillingAction === 'AUTO' ? undefined : modalBillingAction,
+            durationDays: parseInt(modalBillingDurationDays, 10) || 30,
+            extendLicense: modalExtendLicense,
+            discountPercent: pricing.discountPercent,
+            approvedAmount: pricing.approvedAmount,
+          };
+        }
+        const response = await api.put(`/admin/tenants/${selectedTenant.id}`, payload);
+        if (response.billing?.invoice) {
+          alert(
+            `${response.message || 'Organisation mise à jour.'}\n\nFacture ${response.billing.invoice.invoiceNumber} — ${response.billing.invoice.amount?.toLocaleString('fr-FR')} FC`,
+          );
+        }
       }
       setIsTenantModalOpen(false);
       await refreshStats();
+      if (activeTab === 'invoices') {
+        const data = await api.get('/admin/invoices');
+        setAdminInvoices(data.invoices || []);
+      }
     } catch (err: any) {
       alert(err.message || 'Erreur lors de l\'enregistrement de l\'organisation');
     } finally {
@@ -3367,6 +3413,78 @@ function DashboardPageContent() {
                     </button>
                   </div>
                 </div>
+
+                {tenantModalMode === 'edit' && modalPlan !== 'FREE' && (
+                  <div className="space-y-4 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-bold text-slate-800">Facturation</div>
+                        <div className="text-xs text-slate-500">Renouvellement ou changement de forfait</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setModalIssueInvoice(!modalIssueInvoice)}
+                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${modalIssueInvoice ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                      >
+                        <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${modalIssueInvoice ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </button>
+                    </div>
+
+                    {modalIssueInvoice && (
+                      <>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Type d&apos;opération</label>
+                          <select
+                            value={modalBillingAction}
+                            onChange={(e) => setModalBillingAction(e.target.value as typeof modalBillingAction)}
+                            className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold"
+                          >
+                            <option value="AUTO">Automatique (selon changement)</option>
+                            <option value="RENEWAL">Renouvellement</option>
+                            <option value="PLAN_CHANGE">Changement de forfait</option>
+                            <option value="ACTIVATION">Activation</option>
+                          </select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Durée (jours)</label>
+                            <input
+                              type="number"
+                              min={1}
+                              value={modalBillingDurationDays}
+                              onChange={(e) => setModalBillingDurationDays(e.target.value)}
+                              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white"
+                            />
+                          </div>
+                          <div className="flex items-end pb-1">
+                            <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={modalExtendLicense}
+                                onChange={(e) => setModalExtendLicense(e.target.checked)}
+                                className="rounded border-slate-300"
+                              />
+                              Prolonger la licence
+                            </label>
+                          </div>
+                        </div>
+                        <BillingDiscountFields
+                          planId={modalPlan}
+                          discountMode={modalDiscountMode}
+                          onDiscountModeChange={setModalDiscountMode}
+                          discountPercent={modalDiscountPercent}
+                          onDiscountPercentChange={setModalDiscountPercent}
+                          approvedAmount={modalApprovedAmount}
+                          onApprovedAmountChange={setModalApprovedAmount}
+                          compact
+                        />
+                        <p className="text-[10px] text-slate-500">
+                          Facture au propriétaire et managers. Commerciaux liés informés par e-mail.
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
 
                 {/* Actions */}
                 <div className="flex gap-3 pt-2">

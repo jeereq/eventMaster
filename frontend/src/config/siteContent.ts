@@ -21,7 +21,7 @@ export const FOOTER_FEATURES = [
 ] as const;
 
 export const FOOTER_RESOURCES = [
-  { label: 'FAQ', href: '/#faq' },
+  { label: 'FAQ', href: '/faq' },
   { label: 'Tarifs', href: '/#tarifs' },
   { label: 'Contact & Support', href: '/contact' },
   { label: `Conditions d'utilisation (v${TERMS_VERSION})`, href: '/terms' },

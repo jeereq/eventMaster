@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { uploadImageFile, uploadDataUrlImage, isCloudinaryUrl } from '@/lib/cloudinaryUpload';
 import { extractPaletteFromSource, type TemplatePalette } from '@/lib/imagePalette';
 import { buildMockupTemplate, applyMockupToEditor } from '@/lib/templateMockupImport';
+import { extractTextFromImageSource, mergeOcrIntoMockupElements } from '@/lib/templateOcrImport';
 import { 
   Mail, PlusCircle, Trash2, Edit3, ArrowLeft, Save, 
   Sparkles, CheckCircle2, AlertCircle, Type, Image, 
@@ -159,6 +160,8 @@ export default function TemplatesPage() {
   const [imageUploading, setImageUploading] = useState(false);
   const [mockupImporting, setMockupImporting] = useState(false);
   const [importedPalette, setImportedPalette] = useState<TemplatePalette | null>(null);
+  const [enableMockupOcr, setEnableMockupOcr] = useState(true);
+  const [ocrProgress, setOcrProgress] = useState<number | null>(null);
   const mockupInputRef = useRef<HTMLInputElement>(null);
   const mockupEditorInputRef = useRef<HTMLInputElement>(null);
 
@@ -450,10 +453,24 @@ export default function TemplatesPage() {
   const handleMockupImport = async (file: File, openEditor = true) => {
     setError('');
     setMockupImporting(true);
+    setOcrProgress(null);
     try {
       const palette = await extractPaletteFromSource(file);
       const uploaded = await uploadImageFile(file);
-      const mockup = buildMockupTemplate(uploaded.url, palette);
+      let mockup = buildMockupTemplate(uploaded.url, palette);
+
+      if (enableMockupOcr) {
+        setOcrProgress(0);
+        const ocr = await extractTextFromImageSource(file, (p) => setOcrProgress(Math.round(p * 100)));
+        if (ocr.lines.length > 0) {
+          mockup = {
+            ...mockup,
+            elements: mergeOcrIntoMockupElements(mockup.elements, ocr.lines) as typeof mockup.elements,
+          };
+        }
+        setOcrProgress(null);
+      }
+
       applyMockupToEditor(mockup, {
         setTemplateName,
         setCanvasElements,
@@ -471,11 +488,16 @@ export default function TemplatesPage() {
       setImportedPalette(palette);
       setEditingTemplateId(null);
       if (openEditor) setEditorOpen(true);
-      setSuccess('Maquette importée — palette extraite et blocs texte ajoutés. Personnalisez le contenu.');
+      setSuccess(
+        enableMockupOcr
+          ? 'Maquette importée — palette, OCR texte et blocs pré-positionnés. Personnalisez le contenu.'
+          : 'Maquette importée — palette extraite et blocs texte ajoutés. Personnalisez le contenu.',
+      );
     } catch (err: any) {
       setError(err.message || 'Impossible d\'importer la maquette.');
     } finally {
       setMockupImporting(false);
+      setOcrProgress(null);
     }
   };
 
@@ -967,8 +989,20 @@ export default function TemplatesPage() {
                 Importer ma maquette
               </h3>
               <p className="text-[10px] text-slate-500 leading-relaxed">
-                Image de fond Cloudinary + palette auto + blocs texte pré-positionnés.
+                Image Cloudinary + palette auto + blocs texte. OCR niveau 3 optionnel.
               </p>
+              <label className="flex items-center gap-2 text-[10px] font-semibold text-slate-600 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={enableMockupOcr}
+                  onChange={(e) => setEnableMockupOcr(e.target.checked)}
+                  className="rounded border-slate-300"
+                />
+                Détecter le texte sur l&apos;image (OCR)
+              </label>
+              {ocrProgress !== null && (
+                <p className="text-[10px] text-indigo-600 font-bold">OCR en cours… {ocrProgress}%</p>
+              )}
               <input
                 ref={mockupEditorInputRef}
                 type="file"
@@ -2588,7 +2622,7 @@ export default function TemplatesPage() {
                 disabled={mockupImporting}
                 leftIcon={mockupImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
               >
-                Importer ma maquette
+                {mockupImporting ? (ocrProgress !== null ? `OCR ${ocrProgress}%` : 'Import…') : 'Importer ma maquette'}
               </Button>
               <Button onClick={handleCreateTemplateClick} leftIcon={<PlusCircle className="w-4 h-4" />}>
                 Nouveau modèle

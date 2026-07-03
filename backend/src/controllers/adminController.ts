@@ -9,6 +9,13 @@ import { getDefaultPlans, getPlansConfiguration, mergePlansForSave } from '../co
 import { ensureCommercialReferralCode, normalizeCommissionRate } from '../services/commercialService';
 import { isPlatformStaff } from '../middleware/platformAccess';
 import { formatInvoiceForApi } from '../services/invoiceService';
+import {
+  computeExtendedExpiry,
+  issueTenantPlanInvoice,
+  resolveBillingAction,
+  type TenantBillingAction,
+} from '../services/tenantBillingService';
+import { PAID_PLAN_KEYS } from '../config/plansConfig';
 
 // Get global system statistics and list of all tenants (Super Admin only)
 export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
@@ -249,20 +256,129 @@ export async function updateTenantPlanOrLicense(req: AuthenticatedRequest, res: 
     }
 
     const id = req.params.id as string;
-    const { name, plan, licenseActive, licenseExpiresAt, licenseKey } = req.body;
+    const {
+      name,
+      plan,
+      licenseActive,
+      licenseExpiresAt,
+      licenseKey,
+      billing,
+    } = req.body;
+
+    const existing = await prisma.tenant.findUnique({ where: { id } });
+    if (!existing) {
+      return res.status(404).json({ error: 'Organisation introuvable.' });
+    }
+
+    const newPlan = (plan as PlanType) ?? existing.plan;
+    let nextExpiry = licenseExpiresAt !== undefined
+      ? licenseExpiresAt
+        ? new Date(licenseExpiresAt)
+        : null
+      : existing.licenseExpiresAt;
+
+    const billingPayload = billing as {
+      issueInvoice?: boolean;
+      action?: TenantBillingAction;
+      durationDays?: number;
+      extendLicense?: boolean;
+      discountPercent?: number;
+      approvedAmount?: number;
+    } | undefined;
+
+    const durationDays = billingPayload?.durationDays ? parseInt(String(billingPayload.durationDays), 10) : 30;
+
+    if (billingPayload?.extendLicense && newPlan !== 'FREE' && PAID_PLAN_KEYS.includes(newPlan)) {
+      nextExpiry = computeExtendedExpiry(existing.licenseExpiresAt, durationDays);
+    }
 
     const updatedTenant = await prisma.tenant.update({
       where: { id },
       data: {
         name: name !== undefined ? name : undefined,
-        plan: plan as PlanType,
+        plan: newPlan,
         licenseActive: licenseActive !== undefined ? Boolean(licenseActive) : undefined,
-        licenseExpiresAt: licenseExpiresAt ? new Date(licenseExpiresAt) : null,
+        licenseExpiresAt: licenseExpiresAt !== undefined ? nextExpiry : undefined,
         licenseKey: licenseKey !== undefined ? licenseKey : undefined,
+        licenseExpiryWarningFor:
+          billingPayload?.extendLicense || billingPayload?.issueInvoice ? null : undefined,
       },
     });
 
-    return res.json({ message: 'Tenant mis à jour avec succès', tenant: updatedTenant });
+    let billingResult = null;
+    if (
+      billingPayload?.issueInvoice &&
+      newPlan !== 'FREE' &&
+      PAID_PLAN_KEYS.includes(newPlan)
+    ) {
+      const parsedDiscount =
+        billingPayload.discountPercent !== undefined && billingPayload.discountPercent !== null
+          ? parseFloat(String(billingPayload.discountPercent))
+          : undefined;
+      const parsedApproved =
+        billingPayload.approvedAmount !== undefined && billingPayload.approvedAmount !== null
+          ? parseFloat(String(billingPayload.approvedAmount))
+          : undefined;
+
+      if (parsedDiscount !== undefined && (isNaN(parsedDiscount) || parsedDiscount < 0 || parsedDiscount > 100)) {
+        return res.status(400).json({ error: 'La réduction doit être entre 0 et 100 %.' });
+      }
+
+      const action = resolveBillingAction(existing.plan, newPlan, billingPayload.action);
+      const periodStart = new Date();
+      const periodEnd =
+        nextExpiry ??
+        (() => {
+          const d = new Date(periodStart);
+          d.setDate(d.getDate() + durationDays);
+          return d;
+        })();
+
+      billingResult = await issueTenantPlanInvoice({
+        tenantId: id,
+        tenantName: updatedTenant.name,
+        plan: newPlan,
+        billing: {
+          action,
+          durationDays,
+          discountPercent: parsedDiscount,
+          approvedAmount: parsedApproved,
+          periodStart,
+          periodEnd,
+        },
+      });
+    }
+
+    const discountNote =
+      billingResult?.pricing.discountAmount && billingResult.pricing.discountAmount > 0
+        ? ` Réduction ${billingResult.pricing.discountPercent} % appliquée.`
+        : '';
+    const invoiceNote = billingResult?.invoice
+      ? ` Facture ${billingResult.invoice.invoiceNumber} envoyée.${discountNote}`
+      : '';
+    const commercialNote =
+      billingResult?.commercialNotified.length
+        ? ` Commerciaux informés : ${billingResult.commercialNotified.join(', ')}.`
+        : '';
+
+    return res.json({
+      message: `Organisation mise à jour.${invoiceNote}${commercialNote}`,
+      tenant: updatedTenant,
+      billing: billingResult
+        ? {
+            action: billingPayload?.action ?? resolveBillingAction(existing.plan, newPlan),
+            pricing: billingResult.pricing,
+            invoice: billingResult.invoice
+              ? {
+                  id: billingResult.invoice.id,
+                  invoiceNumber: billingResult.invoice.invoiceNumber,
+                  amount: billingResult.invoice.amount,
+                }
+              : null,
+            commercialNotified: billingResult.commercialNotified,
+          }
+        : null,
+    });
   } catch (error: any) {
     console.error('Erreur lors de la mise à jour du tenant:', error);
     return res.status(500).json({ error: 'Erreur lors de la mise à jour de l\'organisation' });
