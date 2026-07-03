@@ -92,7 +92,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     ctaHref: '/register',
     ctaVariant: 'primary',
     tier: 'premium',
-    highlights: ['12 événements · 300 invités', 'Modèles custom · thèmes 2D', '5 salles · 5 managers'],
+    highlights: ['12 événements · 500 invités', 'Modèles custom · thèmes 2D', '5 salles · 5 managers'],
   },
   {
     id: 'PREMIUM_2',
@@ -106,7 +106,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tier: 'premium',
     highlighted: true,
     badge: 'Le plus populaire',
-    highlights: ['20 événements · 500 invités', 'Vérification siège + WhatsApp', '10 salles · 10 managers'],
+    highlights: ['20 événements · 1 000 invités', 'Vérification siège + WhatsApp', '10 salles · 10 managers'],
   },
   {
     id: 'ENTERPRISE_1',
@@ -118,7 +118,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     ctaHref: '/register',
     ctaVariant: 'primary',
     tier: 'enterprise',
-    highlights: ['40 événements · 1 500 invités', 'Éditeur salle complet · rapports', '25 salles · 18 managers · support prioritaire'],
+    highlights: ['40 événements · 3 500 invités', 'Éditeur salle complet · rapports', '25 salles · 18 managers · support prioritaire'],
   },
   {
     id: 'ENTERPRISE_2',
@@ -130,7 +130,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     ctaHref: '/register',
     ctaVariant: 'primary',
     tier: 'enterprise',
-    highlights: ['70 événements · 3 500 invités', 'Réseau commercial 20 %', '50 salles · 30 managers · support dédié'],
+    highlights: ['70 événements · 5 000 invités', 'Réseau commercial 20 %', '50 salles · 30 managers · support dédié'],
   },
   {
     id: 'ENTERPRISE_3',
@@ -168,10 +168,10 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     values: {
       FREE: '50',
       STANDARD: '150',
-      PREMIUM_1: '300',
-      PREMIUM_2: '500',
-      ENTERPRISE_1: '1 500',
-      ENTERPRISE_2: '3 500',
+      PREMIUM_1: '500',
+      PREMIUM_2: '1 000',
+      ENTERPRISE_1: '3 500',
+      ENTERPRISE_2: '5 000',
       ENTERPRISE_3: 'Illimité',
     },
   },
