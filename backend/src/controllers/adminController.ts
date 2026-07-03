@@ -8,6 +8,7 @@ import path from 'path';
 import { getDefaultPlans, getPlansConfiguration, mergePlansForSave } from '../config/plansConfig';
 import { ensureCommercialReferralCode, normalizeCommissionRate } from '../services/commercialService';
 import { isPlatformStaff } from '../middleware/platformAccess';
+import { formatInvoiceForApi } from '../services/invoiceService';
 
 // Get global system statistics and list of all tenants (Super Admin only)
 export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
@@ -67,6 +68,38 @@ export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
   } catch (error: any) {
     console.error('Erreur lors de la récupération des stats admin:', error);
     return res.status(500).json({ error: 'Erreur lors de la récupération des statistiques globales' });
+  }
+}
+
+export async function getAdminInvoices(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!isPlatformStaff(req.user?.role)) {
+      return res.status(403).json({ error: 'Accès refusé. Privilèges plateforme requis.' });
+    }
+
+    const { period, tenantId } = req.query;
+    const where: { billingPeriod?: string; tenantId?: string } = {};
+
+    if (typeof period === 'string' && period.trim()) {
+      where.billingPeriod = period.trim();
+    }
+    if (typeof tenantId === 'string' && tenantId.trim()) {
+      where.tenantId = tenantId.trim();
+    }
+
+    const invoices = await prisma.platformInvoice.findMany({
+      where,
+      include: { tenant: { select: { name: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+
+    return res.json({
+      invoices: invoices.map(formatInvoiceForApi),
+    });
+  } catch (error: any) {
+    console.error('Erreur getAdminInvoices:', error);
+    return res.status(500).json({ error: 'Impossible de charger les factures.' });
   }
 }
 

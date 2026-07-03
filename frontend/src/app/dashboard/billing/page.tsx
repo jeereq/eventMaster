@@ -5,9 +5,11 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
   CreditCard, Check, Loader2, Sparkles,
-  Clock, XCircle, CheckCircle, Minus, ChevronDown, ChevronUp, ShieldCheck,
+  Clock, XCircle, CheckCircle, Minus, ChevronDown, ChevronUp, ShieldCheck, FileText,
 } from 'lucide-react';
+import Link from 'next/link';
 import { Alert } from '@/components/ui';
+import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/InvoiceListPanel';
 import {
   LANDING_PLANS,
   FEATURE_COMPARISON,
@@ -85,17 +87,20 @@ export default function BillingPage() {
   const [successMsg, setSuccessMsg] = useState('');
   const [billingCycle, setBillingCycle] = useState<BillingCycle>('monthly');
   const [showComparison, setShowComparison] = useState(false);
+  const [invoices, setInvoices] = useState<PlatformInvoiceItem[]>([]);
 
   const loadBillingStatus = async () => {
     try {
-      const [billingData, plansData, requestsData] = await Promise.all([
+      const [billingData, plansData, requestsData, invoicesData] = await Promise.all([
         api.get('/billing/status'),
         api.get('/subscriptions/plans').catch(() => null),
         api.get('/subscriptions/my-requests').catch(() => []),
+        api.get('/billing/invoices').catch(() => ({ invoices: [] })),
       ]);
       setBilling(billingData);
       setDynamicPlans(billingData.plans || plansData);
       if (requestsData) setRequests(requestsData);
+      setInvoices(invoicesData.invoices || []);
     } catch (err: any) {
       setError('Impossible de charger les informations de facturation.');
     } finally {
@@ -337,6 +342,22 @@ export default function BillingPage() {
             </table>
           </div>
         )}
+      </div>
+
+      <div className="bg-white dark:bg-slate-900 border rounded-2xl p-6">
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <h3 className="font-bold flex items-center gap-2">
+            <FileText className="w-5 h-5 text-indigo-600" />
+            Factures récentes
+          </h3>
+          <Link href="/dashboard/invoices" className="text-xs font-bold text-indigo-600 hover:underline">
+            Voir tout →
+          </Link>
+        </div>
+        <InvoiceListPanel
+          invoices={invoices.slice(0, 5)}
+          emptyMessage="Les factures apparaissent ici après approbation de votre demande d'abonnement."
+        />
       </div>
 
       <div className="bg-white dark:bg-slate-900 border rounded-2xl p-6">

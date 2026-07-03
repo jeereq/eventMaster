@@ -327,3 +327,52 @@ export async function sendLicenseExpiryWarning(params: {
     }
   }
 }
+
+const INVOICE_TYPE_LABELS: Record<string, string> = {
+  SUBSCRIPTION_APPROVAL: 'Approbation abonnement',
+  RENEWAL: 'Renouvellement',
+  PAYMENT: 'Paiement',
+};
+
+const INVOICE_STATUS_LABELS: Record<string, string> = {
+  SENT: 'Envoyée',
+  PAID: 'Payée',
+  PENDING: 'En attente',
+};
+
+export function formatInvoiceForApi(invoice: {
+  id: string;
+  invoiceNumber: string;
+  plan: string;
+  amount: number;
+  currency: string;
+  type: string;
+  status: string;
+  billingPeriod: string;
+  periodStart: Date | null;
+  periodEnd: Date | null;
+  durationDays: number | null;
+  sentAt: Date | null;
+  createdAt: Date;
+  tenant?: { name: string } | null;
+}) {
+  return {
+    id: invoice.id,
+    invoiceNumber: invoice.invoiceNumber,
+    plan: invoice.plan,
+    amount: invoice.amount,
+    amountFormatted: formatAmountFc(invoice.amount),
+    currency: invoice.currency,
+    type: invoice.type,
+    typeLabel: INVOICE_TYPE_LABELS[invoice.type] || invoice.type,
+    status: invoice.status,
+    statusLabel: INVOICE_STATUS_LABELS[invoice.status] || invoice.status,
+    billingPeriod: invoice.billingPeriod,
+    periodStart: invoice.periodStart,
+    periodEnd: invoice.periodEnd,
+    durationDays: invoice.durationDays,
+    sentAt: invoice.sentAt,
+    createdAt: invoice.createdAt,
+    tenantName: invoice.tenant?.name ?? null,
+  };
+}

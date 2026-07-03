@@ -22,7 +22,8 @@ import {
   updateAdminGuest,
   deleteAdminGuest,
   getAdminSettings,
-  updateAdminSettings
+  updateAdminSettings,
+  getAdminInvoices,
 } from '../controllers/adminController';
 import {
   getGuestMessageTemplates,
@@ -44,6 +45,7 @@ router.use(requireAuth);
 
 // Personnel plateforme (Super Admin + Commercial sans organisation)
 router.get('/stats', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), getSystemStats);
+router.get('/invoices', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), getAdminInvoices);
 router.get('/subscriptions/requests', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), getAdminSubscriptionRequests);
 router.post('/subscriptions/requests/:id/approve', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), approveSubscriptionRequest);
 router.post('/subscriptions/requests/:id/reject', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), rejectSubscriptionRequest);

@@ -15,6 +15,7 @@ export interface OrgAccess {
   canManageAllEvents: boolean;
   canProtocolAllEvents: boolean;
   canViewBilling: boolean;
+  canViewInvoices: boolean;
   isProtocolOnly: boolean;
 }
 
@@ -35,6 +36,7 @@ export async function resolveOrgAccess(userId: string, tenantId: string): Promis
     canManageAllEvents: false,
     canProtocolAllEvents: false,
     canViewBilling: false,
+    canViewInvoices: false,
     isProtocolOnly: false,
   };
 
@@ -53,6 +55,7 @@ export async function resolveOrgAccess(userId: string, tenantId: string): Promis
       canManageAllEvents: true,
       canProtocolAllEvents: true,
       canViewBilling: true,
+      canViewInvoices: true,
       isProtocolOnly: false,
     };
   }
@@ -69,6 +72,7 @@ export async function resolveOrgAccess(userId: string, tenantId: string): Promis
       canManageAllEvents: true,
       canProtocolAllEvents: true,
       canViewBilling: false,
+      canViewInvoices: true,
       isProtocolOnly: false,
     };
   }
@@ -85,6 +89,7 @@ export async function resolveOrgAccess(userId: string, tenantId: string): Promis
       canManageAllEvents: false,
       canProtocolAllEvents: true,
       canViewBilling: false,
+      canViewInvoices: false,
       isProtocolOnly: true,
     };
   }
@@ -101,6 +106,7 @@ export async function resolveOrgAccess(userId: string, tenantId: string): Promis
       canManageAllEvents: false,
       canProtocolAllEvents: false,
       canViewBilling: false,
+      canViewInvoices: false,
       isProtocolOnly: false,
     };
   }
@@ -116,6 +122,7 @@ export async function resolveOrgAccess(userId: string, tenantId: string): Promis
     canManageAllEvents: false,
     canProtocolAllEvents: false,
     canViewBilling: false,
+    canViewInvoices: false,
     isProtocolOnly: false,
   };
 }
@@ -262,6 +269,11 @@ export async function assertCanCreateRoom(userId: string, tenantId: string): Pro
 export async function assertCanViewBilling(userId: string, tenantId: string): Promise<boolean> {
   const access = await resolveOrgAccess(userId, tenantId);
   return access.canViewBilling;
+}
+
+export async function assertCanViewInvoices(userId: string, tenantId: string): Promise<boolean> {
+  const access = await resolveOrgAccess(userId, tenantId);
+  return access.canViewInvoices;
 }
 
 export function isValidStaffRole(value: string): value is StaffRole {

@@ -149,6 +149,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           items: [
             { name: 'Analyses & stats', href: '/dashboard?tab=analytics', tab: 'analytics', icon: BarChart3 },
             { name: 'Abonnements', href: '/dashboard?tab=subscriptions', tab: 'subscriptions', icon: CreditCard },
+            { name: 'Factures', href: '/dashboard?tab=invoices', tab: 'invoices', icon: FileText },
             { name: 'Configurations', href: '/dashboard?tab=settings', tab: 'settings', icon: Key },
           ],
         },
@@ -163,6 +164,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           items: [
             { name: 'Organisations', href: '/dashboard?tab=tenants', tab: 'tenants', icon: Building2 },
             { name: 'Abonnements', href: '/dashboard?tab=subscriptions', tab: 'subscriptions', icon: CreditCard },
+            { name: 'Factures', href: '/dashboard?tab=invoices', tab: 'invoices', icon: FileText },
           ],
         },
         {
@@ -203,6 +205,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               { name: 'Modèles', href: '/dashboard/templates', icon: Mail },
             ] : []),
             ...(access?.canViewBilling ? [{ name: 'Facturation & plan', href: '/dashboard/billing', icon: CreditCard }] : []),
+            ...(access?.canViewInvoices ? [{ name: 'Factures', href: '/dashboard/invoices', icon: FileText }] : []),
             { name: 'Mon compte', href: '/dashboard/profile', icon: User },
           ],
         },

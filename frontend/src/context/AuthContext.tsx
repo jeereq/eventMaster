@@ -16,6 +16,7 @@ export interface OrgAccess {
   canManageAllEvents: boolean;
   canProtocolAllEvents: boolean;
   canViewBilling: boolean;
+  canViewInvoices: boolean;
   isProtocolOnly: boolean;
 }
 

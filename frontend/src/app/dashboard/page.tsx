@@ -13,6 +13,7 @@ import {
   BarChart3, PieChart, ChevronLeft, ChevronRight, CheckSquare, Sparkles, MapPin, Download, MessageSquare
 } from 'lucide-react';
 import GuestMessageTemplatesPanel from './GuestMessageTemplatesPanel';
+import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/InvoiceListPanel';
 import { PageHeader, Alert, Button } from '@/components/ui';
 import { PLAN_IDS, type PlanId } from '@/config/landingPricing';
 
@@ -160,13 +161,13 @@ function DashboardPageContent() {
   const tabParam = searchParams.get('tab');
 
   // Super Admin specific states
-  const [activeTab, setActiveTab] = useState<'tenants' | 'users' | 'templates' | 'message-templates' | 'events' | 'analytics' | 'guests' | 'settings' | 'subscriptions'>('tenants');
+  const [activeTab, setActiveTab] = useState<'tenants' | 'users' | 'templates' | 'message-templates' | 'events' | 'analytics' | 'guests' | 'settings' | 'subscriptions' | 'invoices'>('tenants');
 
   useEffect(() => {
     if (isPlatformStaff(user?.role) && tabParam) {
       const allowedTabs = user?.role === 'COMMERCIAL'
-        ? ['tenants', 'subscriptions']
-        : ['tenants', 'users', 'templates', 'message-templates', 'events', 'analytics', 'guests', 'settings', 'subscriptions'];
+        ? ['tenants', 'subscriptions', 'invoices']
+        : ['tenants', 'users', 'templates', 'message-templates', 'events', 'analytics', 'guests', 'settings', 'subscriptions', 'invoices'];
       if (allowedTabs.includes(tabParam)) {
         setActiveTab(tabParam as any);
       }
@@ -178,6 +179,8 @@ function DashboardPageContent() {
   const [adminGuests, setAdminGuests] = useState<any[]>([]);
   const [adminSettings, setAdminSettings] = useState<any>(null);
   const [subscriptionRequests, setSubscriptionRequests] = useState<any[]>([]);
+  const [adminInvoices, setAdminInvoices] = useState<PlatformInvoiceItem[]>([]);
+  const [loadingAdminInvoices, setLoadingAdminInvoices] = useState(false);
   const [revenueReport, setRevenueReport] = useState<RevenueReport | null>(null);
   const [revenuePeriod, setRevenuePeriod] = useState(() => {
     const now = new Date();
@@ -342,6 +345,17 @@ function DashboardPageContent() {
       if (user?.role === 'SUPER_ADMIN') {
         loadAdminSettings();
       }
+    }
+  }, [activeTab, user]);
+
+  // Load platform invoices
+  useEffect(() => {
+    if (isPlatformStaff(user?.role) && activeTab === 'invoices') {
+      setLoadingAdminInvoices(true);
+      api.get('/admin/invoices')
+        .then((data) => setAdminInvoices(data.invoices || []))
+        .catch(console.error)
+        .finally(() => setLoadingAdminInvoices(false));
     }
   }, [activeTab, user]);
 
@@ -576,9 +590,16 @@ function DashboardPageContent() {
     }
     try {
       const response = await api.post(`/admin/subscriptions/requests/${id}/approve`);
-      alert(response.message || 'Demande approuvée avec succès !');
+      const invoiceInfo = response.invoice
+        ? `\n\nFacture ${response.invoice.invoiceNumber} — ${response.invoice.amount?.toLocaleString('fr-FR')} FC\nConsultable dans Administration → Factures.`
+        : '';
+      alert((response.message || 'Demande approuvée avec succès !') + invoiceInfo);
       await loadSubscriptionRequests();
       await refreshStats();
+      if (activeTab === 'invoices') {
+        const data = await api.get('/admin/invoices');
+        setAdminInvoices(data.invoices || []);
+      }
     } catch (err: any) {
       alert(err.message || 'Erreur lors de l\'approbation de la demande.');
     }
@@ -1213,6 +1234,7 @@ function DashboardPageContent() {
                 {activeTab === 'analytics' && <BarChart3 className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
                 {activeTab === 'settings' && <Key className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
                 {activeTab === 'subscriptions' && <CreditCard className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
+                {activeTab === 'invoices' && <FileText className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
                 
                 {activeTab === 'tenants' && "Gestion des Organisations"}
                 {activeTab === 'users' && "Gestion des Utilisateurs"}
@@ -1223,6 +1245,7 @@ function DashboardPageContent() {
                 {activeTab === 'analytics' && "Analyses & Statistiques Globales"}
                 {activeTab === 'settings' && "Configuration des Plans & Tarifs"}
                 {activeTab === 'subscriptions' && "Demandes d'Abonnement"}
+                {activeTab === 'invoices' && 'Factures plateforme'}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
                 {activeTab === 'tenants' && "Gérez les organisations enregistrées, leurs abonnements et l'état de leurs licences."}
@@ -1234,6 +1257,7 @@ function DashboardPageContent() {
                 {activeTab === 'analytics' && "Visualisez les performances, l'adoption des forfaits et l'activité globale."}
                 {activeTab === 'settings' && "Configurez les caractéristiques, limites et prix des différents forfaits."}
                 {activeTab === 'subscriptions' && "Validez ou rejetez les demandes d'activation ou de changement d'abonnement."}
+                {activeTab === 'invoices' && "Consultez toutes les factures générées après approbation, paiement ou renouvellement."}
               </p>
             </div>
 
@@ -1312,7 +1336,7 @@ function DashboardPageContent() {
           </div>
 
           {/* Filters and search */}
-          {activeTab !== 'analytics' && activeTab !== 'settings' && activeTab !== 'subscriptions' && activeTab !== 'message-templates' && (
+          {activeTab !== 'analytics' && activeTab !== 'settings' && activeTab !== 'subscriptions' && activeTab !== 'invoices' && activeTab !== 'message-templates' && (
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
@@ -2520,6 +2544,29 @@ function DashboardPageContent() {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Invoices Tab */}
+            {activeTab === 'invoices' && (
+              <div className="space-y-6 animate-in fade-in duration-200">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+                  <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
+                    <FileText className="w-5 h-5 text-indigo-600" />
+                    Toutes les factures ({adminInvoices.length})
+                  </h4>
+                  {loadingAdminInvoices ? (
+                    <div className="py-12 flex justify-center">
+                      <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                    </div>
+                  ) : (
+                    <InvoiceListPanel
+                      invoices={adminInvoices}
+                      showOrganization
+                      emptyMessage="Aucune facture générée. Les factures apparaissent ici dès qu'une demande d'abonnement est approuvée."
+                    />
+                  )}
+                </div>
               </div>
             )}
 

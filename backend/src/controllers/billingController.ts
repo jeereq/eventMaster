@@ -3,9 +3,9 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import Stripe from 'stripe';
 import { getPlanLimits, getPlansConfiguration, PAID_PLAN_KEYS, PLAN_KEYS } from '../config/plansConfig';
-import { assertCanViewBilling } from '../services/permissionsService';
+import { assertCanViewBilling, assertCanViewInvoices } from '../services/permissionsService';
 import { recordCommercialCommission } from '../services/commercialService';
-import { createAndSendInvoice } from '../services/invoiceService';
+import { createAndSendInvoice, formatInvoiceForApi } from '../services/invoiceService';
 import {
   formatPlanFeaturesResponse,
   getTenantPlanSnapshot,
@@ -120,6 +120,34 @@ export async function getPlanFeatures(req: AuthenticatedRequest, res: Response) 
     return res.status(500).json({ error: 'Impossible de charger les fonctionnalités du forfait.' });
   }
 }
+
+export async function getTenantInvoices(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
+
+    if (!tenantId || !userId) {
+      return res.status(403).json({ error: 'Organisation non identifiée.' });
+    }
+
+    if (!(await assertCanViewInvoices(userId, tenantId))) {
+      return res.status(403).json({ error: 'Accès réservé au propriétaire et aux managers.' });
+    }
+
+    const invoices = await prisma.platformInvoice.findMany({
+      where: { tenantId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return res.json({
+      invoices: invoices.map(formatInvoiceForApi),
+    });
+  } catch (error: any) {
+    console.error('Erreur getTenantInvoices:', error);
+    return res.status(500).json({ error: 'Impossible de charger les factures.' });
+  }
+}
+
 export async function createCheckoutSession(req: AuthenticatedRequest, res: Response) {
   try {
     const tenantId = req.user?.tenantId;
