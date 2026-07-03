@@ -202,7 +202,14 @@ export async function getAdminInvoices(req: AuthenticatedRequest, res: Response)
 
     const invoices = await prisma.platformInvoice.findMany({
       where,
-      include: { tenant: { select: { name: true } } },
+      include: {
+        tenant: { select: { name: true } },
+        commercialCommissions: {
+          include: {
+            commercial: { select: { name: true, email: true } },
+          },
+        },
+      },
       orderBy: { createdAt: 'desc' },
       take: 200,
     });

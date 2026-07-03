@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { X, Percent, UserCheck, Loader2 } from 'lucide-react';
 import { LANDING_PLANS } from '@/config/landingPricing';
 
@@ -19,9 +19,12 @@ interface SubscriptionApprovalModalProps {
   request: SubscriptionApprovalRequest | null;
   onClose: () => void;
   onConfirm: (params: { discountPercent: number; approvedAmount?: number }) => Promise<void>;
+  catalogPrices?: Record<string, number>;
+  promoByPlan?: Record<string, { price: number; label?: string }>;
 }
 
-function getPlanPriceFc(planId: string): number {
+function getPlanPriceFc(planId: string, catalogPrices?: Record<string, number>): number {
+  if (catalogPrices?.[planId] != null) return catalogPrices[planId];
   return LANDING_PLANS.find((p) => p.id === planId)?.monthlyPriceFc ?? 0;
 }
 
@@ -29,6 +32,8 @@ export default function SubscriptionApprovalModal({
   request,
   onClose,
   onConfirm,
+  catalogPrices,
+  promoByPlan,
 }: SubscriptionApprovalModalProps) {
   const [discountMode, setDiscountMode] = useState<'percent' | 'amount'>('percent');
   const [discountPercent, setDiscountPercent] = useState('0');
@@ -36,9 +41,24 @@ export default function SubscriptionApprovalModal({
   const [submitting, setSubmitting] = useState(false);
 
   const baseAmount = useMemo(
-    () => (request ? getPlanPriceFc(request.requestedPlan) : 0),
-    [request],
+    () => (request ? getPlanPriceFc(request.requestedPlan, catalogPrices) : 0),
+    [request, catalogPrices],
   );
+
+  const activePromo = request ? promoByPlan?.[request.requestedPlan] : undefined;
+
+  useEffect(() => {
+    if (!request) return;
+    if (activePromo?.price != null) {
+      setDiscountMode('amount');
+      setApprovedAmount(String(activePromo.price));
+      setDiscountPercent('0');
+    } else {
+      setDiscountMode('percent');
+      setDiscountPercent('0');
+      setApprovedAmount('');
+    }
+  }, [request?.id, activePromo?.price]);
 
   const pricing = useMemo(() => {
     if (!request) return { discountAmount: 0, finalAmount: 0, discountPercent: 0 };
@@ -114,6 +134,11 @@ export default function SubscriptionApprovalModal({
               Prix catalogue :{' '}
               <span className="font-bold">{baseAmount.toLocaleString('fr-FR')} FC</span>
             </p>
+            {activePromo && (
+              <p className="text-amber-700 dark:text-amber-400 text-xs font-semibold">
+                Promotion « {activePromo.label || 'active'} » : {activePromo.price.toLocaleString('fr-FR')} FC pré-rempli
+              </p>
+            )}
           </div>
 
           <div className="space-y-3">

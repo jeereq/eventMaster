@@ -15,11 +15,13 @@ function statusClass(status: string) {
 export default function InvoiceListPanel({
   invoices,
   showOrganization = false,
+  showCommissions = false,
   emptyMessage = 'Aucune facture pour le moment.',
   apiPrefix = 'billing',
 }: {
   invoices: PlatformInvoiceItem[];
   showOrganization?: boolean;
+  showCommissions?: boolean;
   emptyMessage?: string;
   apiPrefix?: 'billing' | 'admin';
 }) {
@@ -49,6 +51,7 @@ export default function InvoiceListPanel({
               <th className="px-4 py-3">Forfait</th>
               <th className="px-4 py-3">Type</th>
               <th className="px-4 py-3">Montant</th>
+              {showCommissions && <th className="px-4 py-3">Commission(s)</th>}
               <th className="px-4 py-3">Période</th>
               <th className="px-4 py-3">Statut</th>
               <th className="px-4 py-3">Date</th>
@@ -65,6 +68,15 @@ export default function InvoiceListPanel({
                 <td className="px-4 py-3">{inv.plan}</td>
                 <td className="px-4 py-3 text-xs">{inv.typeLabel}</td>
                 <td className="px-4 py-3 font-bold text-indigo-600">{inv.amountFormatted}</td>
+                {showCommissions && (
+                  <td className="px-4 py-3 text-xs">
+                    {inv.hasCommission && inv.totalCommissionFormatted ? (
+                      <span className="font-bold text-amber-700">{inv.totalCommissionFormatted}</span>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </td>
+                )}
                 <td className="px-4 py-3 text-xs text-slate-500">
                   {inv.periodStart && inv.periodEnd ? (
                     <>

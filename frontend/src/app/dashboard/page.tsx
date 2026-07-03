@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef, Suspense } from 'react';
+import React, { useEffect, useState, useRef, Suspense, useMemo } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
@@ -226,6 +226,29 @@ function DashboardPageContent() {
   const [adminEvents, setAdminEvents] = useState<any[]>([]);
   const [adminGuests, setAdminGuests] = useState<any[]>([]);
   const [adminSettings, setAdminSettings] = useState<any>(null);
+
+  const planCatalogPrices = useMemo(() => {
+    if (!adminSettings?.plans) return undefined;
+    const map: Record<string, number> = {};
+    for (const key of PLAN_IDS) {
+      const p = adminSettings.plans[key];
+      if (p?.monthlyPriceFc != null) map[key] = p.monthlyPriceFc;
+    }
+    return map;
+  }, [adminSettings]);
+
+  const planPromoByPlan = useMemo(() => {
+    if (!adminSettings?.plans) return undefined;
+    const map: Record<string, { price: number; label?: string }> = {};
+    for (const key of PLAN_IDS) {
+      const p = adminSettings.plans[key];
+      if (p?.promoActive && p.promoMonthlyPriceFc != null) {
+        map[key] = { price: p.promoMonthlyPriceFc, label: p.promoLabel };
+      }
+    }
+    return map;
+  }, [adminSettings]);
+
   const [subscriptionRequests, setSubscriptionRequests] = useState<any[]>([]);
   const [adminInvoices, setAdminInvoices] = useState<PlatformInvoiceItem[]>([]);
   const [loadingAdminInvoices, setLoadingAdminInvoices] = useState(false);
@@ -442,7 +465,7 @@ function DashboardPageContent() {
 
   // Load subscription plans config
   useEffect(() => {
-    if (user?.role === 'SUPER_ADMIN' && activeTab === 'subscription-plans') {
+    if (user?.role === 'SUPER_ADMIN' && (activeTab === 'subscription-plans' || activeTab === 'subscription-requests')) {
       loadAdminSettings();
     }
   }, [activeTab, user]);
@@ -800,6 +823,7 @@ function DashboardPageContent() {
           modalDiscountMode,
           modalDiscountPercent,
           modalApprovedAmount,
+          planCatalogPrices?.[modalPlan],
         );
         const payload: Record<string, unknown> = {
           name: modalTenantName,
@@ -2548,13 +2572,75 @@ function DashboardPageContent() {
                                   value={plan.price}
                                   onChange={(e) => {
                                     const updatedPlans = { ...adminSettings.plans };
-                                    updatedPlans[planKey] = { ...plan, price: e.target.value };
+                                    const digits = e.target.value.replace(/[^\d]/g, '');
+                                    updatedPlans[planKey] = {
+                                      ...plan,
+                                      price: e.target.value,
+                                      monthlyPriceFc: digits ? parseInt(digits, 10) : plan.monthlyPriceFc,
+                                    };
                                     setAdminSettings({ ...adminSettings, plans: updatedPlans });
                                   }}
                                   className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-indigo-500 transition"
                                   required
                                 />
                               </div>
+
+                              {planKey !== 'FREE' && (
+                                <div className="space-y-2 p-3 bg-amber-50/80 border border-amber-100 rounded-xl">
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={Boolean(plan.promoActive)}
+                                      onChange={(e) => {
+                                        const updatedPlans = { ...adminSettings.plans };
+                                        updatedPlans[planKey] = { ...plan, promoActive: e.target.checked };
+                                        setAdminSettings({ ...adminSettings, plans: updatedPlans });
+                                      }}
+                                      className="w-4 h-4 text-amber-600 border-slate-300 rounded focus:ring-amber-500"
+                                    />
+                                    <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider">
+                                      Promotion active
+                                    </span>
+                                  </label>
+                                  {plan.promoActive && (
+                                    <>
+                                      <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Prix promo (mensuel)</label>
+                                        <input
+                                          type="text"
+                                          value={plan.promoPrice || ''}
+                                          placeholder="Ex: 25.000 FC"
+                                          onChange={(e) => {
+                                            const updatedPlans = { ...adminSettings.plans };
+                                            const digits = e.target.value.replace(/[^\d]/g, '');
+                                            updatedPlans[planKey] = {
+                                              ...plan,
+                                              promoPrice: e.target.value,
+                                              promoMonthlyPriceFc: digits ? parseInt(digits, 10) : plan.promoMonthlyPriceFc,
+                                            };
+                                            setAdminSettings({ ...adminSettings, plans: updatedPlans });
+                                          }}
+                                          className="w-full px-3 py-2 bg-white border border-amber-200 rounded-xl text-xs font-bold focus:outline-none focus:border-amber-500 transition"
+                                        />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Libellé promo</label>
+                                        <input
+                                          type="text"
+                                          value={plan.promoLabel || ''}
+                                          placeholder="Ex: Offre de lancement"
+                                          onChange={(e) => {
+                                            const updatedPlans = { ...adminSettings.plans };
+                                            updatedPlans[planKey] = { ...plan, promoLabel: e.target.value };
+                                            setAdminSettings({ ...adminSettings, plans: updatedPlans });
+                                          }}
+                                          className="w-full px-3 py-2 bg-white border border-amber-200 rounded-xl text-xs font-medium focus:outline-none focus:border-amber-500 transition"
+                                        />
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              )}
 
                               <div className="grid grid-cols-2 gap-2">
                                 <div className="space-y-1">
@@ -2680,6 +2766,7 @@ function DashboardPageContent() {
                     <InvoiceListPanel
                       invoices={adminInvoices}
                       showOrganization
+                      showCommissions
                       apiPrefix="admin"
                       emptyMessage="Aucune facture générée. Les factures apparaissent ici dès qu'une demande d'abonnement est approuvée."
                     />
@@ -3444,6 +3531,7 @@ function DashboardPageContent() {
                         </div>
                         <BillingDiscountFields
                           planId={modalPlan}
+                          catalogPriceFc={planCatalogPrices?.[modalPlan]}
                           discountMode={modalDiscountMode}
                           onDiscountModeChange={setModalDiscountMode}
                           discountPercent={modalDiscountPercent}
@@ -4396,6 +4484,8 @@ function DashboardPageContent() {
       <SubscriptionApprovalModal
         request={approvalModalRequest}
         onClose={() => setApprovalModalRequest(null)}
+        catalogPrices={planCatalogPrices}
+        promoByPlan={planPromoByPlan}
         onConfirm={async ({ discountPercent, approvedAmount }) => {
           if (!approvalModalRequest) return;
           await handleApproveSubscription(approvalModalRequest.id, { discountPercent, approvedAmount });

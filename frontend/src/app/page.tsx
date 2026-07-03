@@ -404,10 +404,14 @@ export default function Home() {
                             <span className="text-[10px] bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                               {getCategoryLabel(t.category)}
                             </span>
-                            <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setModalTemplate(t)}
+                              className="text-xs font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1 hover:text-indigo-700 dark:hover:text-indigo-300 transition cursor-pointer"
+                            >
                               Apercevoir
                               <ArrowRight className="w-3.5 h-3.5" />
-                            </span>
+                            </button>
                           </div>
 
                           <h3 className="font-extrabold text-slate-900 dark:text-white text-base leading-tight">{t.name}</h3>

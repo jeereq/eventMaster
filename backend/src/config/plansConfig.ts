@@ -17,6 +17,11 @@ export interface PlanDefinition {
   name: string;
   price: string;
   monthlyPriceFc: number;
+  /** Promotion active — prix réduit affiché sur la landing et appliqué par défaut à la facturation. */
+  promoActive?: boolean;
+  promoPrice?: string;
+  promoMonthlyPriceFc?: number;
+  promoLabel?: string;
   description: string;
   maxEvents: number;
   maxGuests: number;
@@ -210,6 +215,10 @@ function mergePlan(base: PlanDefinition, override?: Partial<PlanDefinition>): Pl
     name: override.name ?? base.name,
     price: override.price ?? base.price,
     monthlyPriceFc: override.monthlyPriceFc ?? base.monthlyPriceFc,
+    promoActive: override.promoActive ?? base.promoActive ?? false,
+    promoPrice: override.promoPrice ?? base.promoPrice,
+    promoMonthlyPriceFc: override.promoMonthlyPriceFc ?? base.promoMonthlyPriceFc,
+    promoLabel: override.promoLabel ?? base.promoLabel,
     description: override.description ?? base.description,
     maxEvents: override.maxEvents ?? base.maxEvents,
     maxGuests: override.maxGuests ?? base.maxGuests,
@@ -230,7 +239,23 @@ function mergePlan(base: PlanDefinition, override?: Partial<PlanDefinition>): Pl
     const digits = override.price.replace(/[^\d]/g, '');
     merged.monthlyPriceFc = digits ? parseInt(digits, 10) : base.monthlyPriceFc;
   }
+  if (override.promoPrice && override.promoMonthlyPriceFc === undefined) {
+    const digits = override.promoPrice.replace(/[^\d]/g, '');
+    merged.promoMonthlyPriceFc = digits ? parseInt(digits, 10) : base.promoMonthlyPriceFc;
+  }
   return merged;
+}
+
+export function getCatalogMonthlyPriceFc(planKey: string): number {
+  return getPlanLimits(planKey).monthlyPriceFc;
+}
+
+export function getEffectiveMonthlyPriceFc(planKey: string): number {
+  const plan = getPlanLimits(planKey);
+  if (plan.promoActive && plan.promoMonthlyPriceFc != null && plan.promoMonthlyPriceFc >= 0) {
+    return plan.promoMonthlyPriceFc;
+  }
+  return plan.monthlyPriceFc;
 }
 
 export function getPlansConfiguration(): PlansConfiguration {

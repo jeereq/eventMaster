@@ -3,7 +3,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { PlanType } from '@prisma/client';
 import { isPlatformStaff } from '../middleware/platformAccess';
-import { getPlansConfiguration, PAID_PLAN_KEYS } from '../config/plansConfig';
+import { getPlansConfiguration, getPlanLimits, PAID_PLAN_KEYS } from '../config/plansConfig';
 import { issueTenantPlanInvoice } from '../services/tenantBillingService';
 import { computeApprovedAmount, getPlanAmount } from '../services/invoiceService';
 
@@ -146,9 +146,21 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
     }
 
     const baseAmount = getPlanAmount(request.requestedPlan);
+    const planDef = getPlanLimits(request.requestedPlan);
+    let resolvedApproved = parsedApproved;
+    let resolvedDiscount = parsedDiscount;
+
+    const hasExplicitDiscount =
+      (resolvedDiscount !== undefined && resolvedDiscount > 0) ||
+      resolvedApproved !== undefined;
+
+    if (!hasExplicitDiscount && planDef.promoActive && planDef.promoMonthlyPriceFc != null) {
+      resolvedApproved = planDef.promoMonthlyPriceFc;
+    }
+
     const pricing = computeApprovedAmount(baseAmount, {
-      discountPercent: parsedDiscount,
-      approvedAmount: parsedApproved,
+      discountPercent: resolvedDiscount,
+      approvedAmount: resolvedApproved,
     });
 
     // Calculate expiry date (30 days or custom duration)
@@ -196,8 +208,8 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
       billing: {
         action: 'ACTIVATION',
         durationDays: request.durationDays,
-        discountPercent: parsedDiscount,
-        approvedAmount: parsedApproved,
+        discountPercent: resolvedDiscount,
+        approvedAmount: resolvedApproved,
         periodStart,
         periodEnd,
       },

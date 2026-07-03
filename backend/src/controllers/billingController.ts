@@ -137,6 +137,13 @@ export async function getTenantInvoices(req: AuthenticatedRequest, res: Response
 
     const invoices = await prisma.platformInvoice.findMany({
       where: { tenantId },
+      include: {
+        commercialCommissions: {
+          include: {
+            commercial: { select: { name: true, email: true } },
+          },
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
 

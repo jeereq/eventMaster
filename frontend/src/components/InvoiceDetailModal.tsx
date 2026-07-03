@@ -24,6 +24,19 @@ export interface PlatformInvoiceItem {
   sentAt: string | null;
   createdAt: string;
   tenantName?: string | null;
+  hasCommission?: boolean;
+  totalCommission?: number | null;
+  totalCommissionFormatted?: string | null;
+  commissions?: Array<{
+    id: string;
+    commercialName: string | null;
+    commercialEmail: string | null;
+    commissionRate: number;
+    commissionRatePercent: number;
+    commissionAmount: number;
+    commissionAmountFormatted: string;
+    source: string;
+  }>;
 }
 
 export interface InvoiceDetail extends PlatformInvoiceItem {
@@ -157,6 +170,34 @@ export default function InvoiceDetailModal({
                 <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Montant TTC</span>
                 <p className="text-2xl font-black text-indigo-700 dark:text-indigo-400 mt-1">{invoice.amountFormatted}</p>
               </div>
+
+              {invoice.commissions && invoice.commissions.length > 0 && (
+                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/40 rounded-xl p-4 space-y-2">
+                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+                    Commissions applicables
+                  </span>
+                  <ul className="space-y-2">
+                    {invoice.commissions.map((c) => (
+                      <li key={c.id} className="flex items-center justify-between text-sm gap-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-800 dark:text-white truncate">
+                            {c.commercialName || c.commercialEmail || 'Commercial'}
+                          </p>
+                          <p className="text-[10px] text-slate-500">{c.commissionRatePercent} % · {c.source}</p>
+                        </div>
+                        <span className="font-bold text-amber-700 dark:text-amber-400 shrink-0">
+                          {c.commissionAmountFormatted}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  {invoice.totalCommissionFormatted && invoice.commissions.length > 1 && (
+                    <p className="text-xs font-bold text-amber-800 dark:text-amber-300 pt-2 border-t border-amber-200/60 dark:border-amber-900/40">
+                      Total commissions : {invoice.totalCommissionFormatted}
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3 text-sm">
                 {invoice.tenantName && (

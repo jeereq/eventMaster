@@ -1,7 +1,7 @@
 import { InvoiceType, PlanType } from '@prisma/client';
 import PDFDocument from 'pdfkit';
 import { prisma } from '../db';
-import { getPlanLimits } from '../config/plansConfig';
+import { getPlanLimits, getCatalogMonthlyPriceFc, getEffectiveMonthlyPriceFc } from '../config/plansConfig';
 import { parsePlanPrice, getBillingPeriod } from './commercialService';
 import { sendRealEmail, sendRealWhatsApp } from './notificationService';
 
@@ -11,7 +11,12 @@ export function formatAmountFc(amount: number): string {
 
 export function getPlanAmount(plan: PlanType): number {
   if (plan === 'FREE') return 0;
-  return parsePlanPrice(getPlanLimits(plan).price);
+  return getCatalogMonthlyPriceFc(plan);
+}
+
+export function getEffectivePlanAmount(plan: PlanType): number {
+  if (plan === 'FREE') return 0;
+  return getEffectiveMonthlyPriceFc(plan);
 }
 
 export function computeApprovedAmount(
@@ -395,6 +400,28 @@ const INVOICE_STATUS_LABELS: Record<string, string> = {
   PENDING: 'En attente',
 };
 
+type InvoiceCommissionRecord = {
+  id: string;
+  commissionRate: number;
+  commissionAmount: number;
+  source: string;
+  commercial?: { name: string | null; email: string } | null;
+};
+
+function formatInvoiceCommissions(commissions?: InvoiceCommissionRecord[]) {
+  if (!commissions?.length) return [];
+  return commissions.map((c) => ({
+    id: c.id,
+    commercialName: c.commercial?.name ?? null,
+    commercialEmail: c.commercial?.email ?? null,
+    commissionRate: c.commissionRate,
+    commissionRatePercent: Math.round(c.commissionRate * 1000) / 10,
+    commissionAmount: c.commissionAmount,
+    commissionAmountFormatted: formatAmountFc(c.commissionAmount),
+    source: c.source,
+  }));
+}
+
 export function formatInvoiceForApi(invoice: {
   id: string;
   invoiceNumber: string;
@@ -410,7 +437,11 @@ export function formatInvoiceForApi(invoice: {
   sentAt: Date | null;
   createdAt: Date;
   tenant?: { name: string } | null;
+  commercialCommissions?: InvoiceCommissionRecord[];
 }) {
+  const commissions = formatInvoiceCommissions(invoice.commercialCommissions);
+  const totalCommission = commissions.reduce((sum, c) => sum + c.commissionAmount, 0);
+
   return {
     id: invoice.id,
     invoiceNumber: invoice.invoiceNumber,
@@ -429,6 +460,10 @@ export function formatInvoiceForApi(invoice: {
     sentAt: invoice.sentAt,
     createdAt: invoice.createdAt,
     tenantName: invoice.tenant?.name ?? null,
+    commissions,
+    totalCommission: totalCommission > 0 ? totalCommission : null,
+    totalCommissionFormatted: totalCommission > 0 ? formatAmountFc(totalCommission) : null,
+    hasCommission: commissions.length > 0,
   };
 }
 
@@ -450,6 +485,7 @@ type InvoiceWithTenant = {
   recipientEmails: unknown;
   details: unknown;
   tenant?: { name: string } | null;
+  commercialCommissions?: InvoiceCommissionRecord[];
 };
 
 export function formatInvoiceDetailForApi(invoice: InvoiceWithTenant) {
@@ -472,7 +508,14 @@ export function formatInvoiceDetailForApi(invoice: InvoiceWithTenant) {
 export async function findInvoiceById(invoiceId: string) {
   return prisma.platformInvoice.findUnique({
     where: { id: invoiceId },
-    include: { tenant: { select: { name: true } } },
+    include: {
+      tenant: { select: { name: true } },
+      commercialCommissions: {
+        include: {
+          commercial: { select: { name: true, email: true } },
+        },
+      },
+    },
   });
 }
 

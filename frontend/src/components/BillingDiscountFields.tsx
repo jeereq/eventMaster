@@ -6,6 +6,7 @@ import { LANDING_PLANS, type PlanId } from '@/config/landingPricing';
 
 interface BillingDiscountFieldsProps {
   planId: string;
+  catalogPriceFc?: number;
   discountMode: 'percent' | 'amount';
   onDiscountModeChange: (mode: 'percent' | 'amount') => void;
   discountPercent: string;
@@ -21,6 +22,7 @@ function getPlanPriceFc(planId: string): number {
 
 export default function BillingDiscountFields({
   planId,
+  catalogPriceFc,
   discountMode,
   onDiscountModeChange,
   discountPercent,
@@ -29,7 +31,10 @@ export default function BillingDiscountFields({
   onApprovedAmountChange,
   compact = false,
 }: BillingDiscountFieldsProps) {
-  const baseAmount = useMemo(() => getPlanPriceFc(planId), [planId]);
+  const baseAmount = useMemo(
+    () => catalogPriceFc ?? getPlanPriceFc(planId),
+    [planId, catalogPriceFc],
+  );
 
   const pricing = useMemo(() => {
     if (planId === 'FREE' || baseAmount <= 0) {
@@ -124,8 +129,9 @@ export function getBillingPricingFromFields(
   discountMode: 'percent' | 'amount',
   discountPercent: string,
   approvedAmount: string,
+  catalogPriceFc?: number,
 ) {
-  const baseAmount = getPlanPriceFc(planId);
+  const baseAmount = catalogPriceFc ?? getPlanPriceFc(planId);
   if (discountMode === 'amount' && approvedAmount !== '') {
     const final = Math.max(0, Math.round(parseFloat(approvedAmount) || 0));
     const discountAmount = Math.max(0, baseAmount - final);

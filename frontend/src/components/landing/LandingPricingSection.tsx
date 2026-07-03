@@ -17,6 +17,11 @@ import { PlanQuotaLimits } from '@/components/QuotaUsagePanel';
 interface DbPlan {
   name?: string;
   price?: string;
+  monthlyPriceFc?: number;
+  promoActive?: boolean;
+  promoPrice?: string;
+  promoMonthlyPriceFc?: number;
+  promoLabel?: string;
   description?: string;
   maxEvents?: number;
   maxGuests?: number;
@@ -55,10 +60,20 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
   const plans = useMemo(() => {
     return LANDING_PLANS.map((plan) => {
       const db = dbPlans?.[plan.id];
+      const promoActive = Boolean(db?.promoActive && db?.promoMonthlyPriceFc != null && plan.id !== 'FREE');
+      const catalogPrice = getPlanDisplayPrice(plan, billing, db?.price);
+      const promoPriceStr =
+        db?.promoPrice ||
+        (db?.promoMonthlyPriceFc != null ? `${db.promoMonthlyPriceFc.toLocaleString('fr-FR')} FC` : undefined);
+      const promoPriceLabel =
+        promoActive && promoPriceStr ? getPlanDisplayPrice(plan, billing, promoPriceStr) : null;
       return {
         ...plan,
         displayName: db?.name?.replace('Plan ', '') || plan.ms365Name,
-        price: getPlanDisplayPrice(plan, billing, db?.price),
+        price: promoActive && promoPriceLabel ? promoPriceLabel : catalogPrice,
+        catalogPrice: promoActive ? catalogPrice : null,
+        promoActive,
+        promoLabel: db?.promoLabel || 'Promotion',
         description: db?.description || plan.tagline,
         limits: {
           events: db?.maxEvents ?? parseComparisonQuota(plan.id, 'Événements actifs'),
@@ -167,6 +182,14 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
                       </p>
 
                       <div className="mt-6 mb-6">
+                        {plan.promoActive && plan.catalogPrice && (
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-xs font-bold uppercase tracking-wider bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 px-2 py-0.5 rounded-full">
+                              {plan.promoLabel}
+                            </span>
+                            <span className="text-sm text-slate-400 line-through">{plan.catalogPrice}</span>
+                          </div>
+                        )}
                         <div className="flex items-baseline gap-1 flex-wrap">
                           <span
                             className={`text-3xl font-bold tracking-tight ${
