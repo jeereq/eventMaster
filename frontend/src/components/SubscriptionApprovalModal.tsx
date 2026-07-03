@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
-import { X, Percent, UserCheck, Loader2 } from 'lucide-react';
+import { X, Percent, UserCheck, Loader2, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
 import { LANDING_PLANS } from '@/config/landingPricing';
 
 export interface SubscriptionApprovalRequest {
@@ -10,15 +10,24 @@ export interface SubscriptionApprovalRequest {
   durationDays: number;
   tenant?: {
     name?: string;
+    plan?: string;
+    licenseActive?: boolean;
+    licenseExpiresAt?: string | null;
     referredByCommercial?: { id: string; name: string | null; email: string } | null;
     referredByOrgUser?: { id: string; name: string | null; email: string; orgRole?: string | null } | null;
   };
 }
 
+export interface SubscriptionApprovalResult {
+  message: string;
+  billingAction?: string;
+  tenant?: { previousPlan?: string; plan?: string };
+}
+
 interface SubscriptionApprovalModalProps {
   request: SubscriptionApprovalRequest | null;
   onClose: () => void;
-  onConfirm: (params: { discountPercent: number; approvedAmount?: number }) => Promise<void>;
+  onConfirm: (params: { discountPercent: number; approvedAmount?: number }) => Promise<SubscriptionApprovalResult>;
   catalogPrices?: Record<string, number>;
   promoByPlan?: Record<string, { price: number; label?: string }>;
 }
@@ -26,6 +35,15 @@ interface SubscriptionApprovalModalProps {
 function getPlanPriceFc(planId: string, catalogPrices?: Record<string, number>): number {
   if (catalogPrices?.[planId] != null) return catalogPrices[planId];
   return LANDING_PLANS.find((p) => p.id === planId)?.monthlyPriceFc ?? 0;
+}
+
+function formatExpiry(iso?: string | null): string | null {
+  if (!iso) return null;
+  return new Date(iso).toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
 }
 
 export default function SubscriptionApprovalModal({
@@ -39,6 +57,7 @@ export default function SubscriptionApprovalModal({
   const [discountPercent, setDiscountPercent] = useState('0');
   const [approvedAmount, setApprovedAmount] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const baseAmount = useMemo(
     () => (request ? getPlanPriceFc(request.requestedPlan, catalogPrices) : 0),
@@ -46,9 +65,12 @@ export default function SubscriptionApprovalModal({
   );
 
   const activePromo = request ? promoByPlan?.[request.requestedPlan] : undefined;
+  const currentPlan = request?.tenant?.plan;
+  const isPlanChange = currentPlan && currentPlan !== 'FREE' && currentPlan !== request?.requestedPlan;
 
   useEffect(() => {
     if (!request) return;
+    setFeedback(null);
     if (activePromo?.price != null) {
       setDiscountMode('amount');
       setApprovedAmount(String(activePromo.price));
@@ -98,14 +120,21 @@ export default function SubscriptionApprovalModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    setFeedback(null);
     try {
-      await onConfirm({
+      const result = await onConfirm({
         discountPercent: pricing.discountPercent,
         approvedAmount: discountMode === 'amount' ? pricing.finalAmount : undefined,
       });
-      onClose();
-    } catch {
-      // L'erreur est affichée par handleApproveSubscription (alert)
+      setFeedback({ type: 'success', message: result.message || 'Demande approuvée avec succès.' });
+      window.setTimeout(() => {
+        onClose();
+        setFeedback(null);
+      }, 2200);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : 'Erreur lors de l\'approbation de la demande.';
+      setFeedback({ type: 'error', message });
     } finally {
       setSubmitting(false);
     }
@@ -119,17 +148,62 @@ export default function SubscriptionApprovalModal({
           <button
             type="button"
             onClick={onClose}
+            disabled={submitting}
             className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
+        {feedback && (
+          <div
+            className={`mx-6 mt-4 flex items-start gap-2.5 rounded-xl px-4 py-3 text-sm ${
+              feedback.type === 'success'
+                ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                : 'bg-rose-50 border border-rose-200 text-rose-800'
+            }`}
+          >
+            {feedback.type === 'success' ? (
+              <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
+            ) : (
+              <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+            )}
+            <p className="font-medium leading-snug">{feedback.message}</p>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          <div className="text-sm space-y-1">
+          <div className="text-sm space-y-2">
             <p className="font-bold text-slate-900 dark:text-white">{request.tenant?.name || 'Organisation'}</p>
+
+            {currentPlan && (
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="text-slate-500">Forfait actuel :</span>
+                <span className="font-bold px-2 py-0.5 rounded border border-slate-200 bg-slate-50 text-slate-700">
+                  {currentPlan}
+                </span>
+                {isPlanChange && (
+                  <>
+                    <ArrowRight className="w-3.5 h-3.5 text-indigo-500" />
+                    <span className="font-bold px-2 py-0.5 rounded border border-indigo-200 bg-indigo-50 text-indigo-700">
+                      {request.requestedPlan}
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
+
+            {request.tenant?.licenseActive && request.tenant.licenseExpiresAt && (
+              <p className="text-xs text-slate-500">
+                Licence actuelle expire le{' '}
+                <span className="font-semibold">{formatExpiry(request.tenant.licenseExpiresAt)}</span>
+                {isPlanChange && ' — une nouvelle période sera appliquée au nouveau forfait.'}
+              </p>
+            )}
+
             <p className="text-slate-500">
-              Forfait <span className="font-semibold text-indigo-600">{request.requestedPlan}</span> ·{' '}
+              Forfait demandé :{' '}
+              <span className="font-semibold text-indigo-600">{request.requestedPlan}</span> ·{' '}
               {request.durationDays} jours
             </p>
             <p className="text-slate-600">
@@ -152,6 +226,7 @@ export default function SubscriptionApprovalModal({
               <button
                 type="button"
                 onClick={() => setDiscountMode('percent')}
+                disabled={submitting || feedback?.type === 'success'}
                 className={`flex-1 py-2 text-xs font-bold rounded-lg border transition cursor-pointer ${
                   discountMode === 'percent'
                     ? 'bg-indigo-600 text-white border-indigo-600'
@@ -163,6 +238,7 @@ export default function SubscriptionApprovalModal({
               <button
                 type="button"
                 onClick={() => setDiscountMode('amount')}
+                disabled={submitting || feedback?.type === 'success'}
                 className={`flex-1 py-2 text-xs font-bold rounded-lg border transition cursor-pointer ${
                   discountMode === 'amount'
                     ? 'bg-indigo-600 text-white border-indigo-600'
@@ -182,6 +258,7 @@ export default function SubscriptionApprovalModal({
                   step={0.5}
                   value={discountPercent}
                   onChange={(e) => setDiscountPercent(e.target.value)}
+                  disabled={submitting || feedback?.type === 'success'}
                   className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-slate-50 dark:bg-slate-950"
                 />
                 <span className="text-sm font-semibold text-slate-500">%</span>
@@ -193,6 +270,7 @@ export default function SubscriptionApprovalModal({
                 step={1000}
                 value={approvedAmount}
                 onChange={(e) => setApprovedAmount(e.target.value)}
+                disabled={submitting || feedback?.type === 'success'}
                 placeholder={`Ex: ${baseAmount}`}
                 className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-slate-50 dark:bg-slate-950"
               />
@@ -236,15 +314,15 @@ export default function SubscriptionApprovalModal({
               disabled={submitting}
               className="flex-1 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
             >
-              Annuler
+              {feedback?.type === 'success' ? 'Fermer' : 'Annuler'}
             </button>
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || feedback?.type === 'success'}
               className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 cursor-pointer"
             >
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              Approuver & facturer
+              {submitting ? 'Traitement…' : isPlanChange ? 'Changer le forfait' : 'Approuver & facturer'}
             </button>
           </div>
         </form>

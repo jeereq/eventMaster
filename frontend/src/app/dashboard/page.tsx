@@ -745,29 +745,21 @@ function DashboardPageContent() {
     id: string,
     options?: { discountPercent?: number; approvedAmount?: number },
   ) => {
-    try {
-      const response = await api.post(`/admin/subscriptions/requests/${id}/approve`, {
-        discountPercent: options?.discountPercent ?? 0,
-        approvedAmount: options?.approvedAmount,
-      });
-      const invoiceInfo = response.invoice
-        ? `\n\nFacture ${response.invoice.invoiceNumber} — ${response.invoice.amount?.toLocaleString('fr-FR')} FC\nConsultable dans Administration → Factures.`
-        : '';
-      const commercialInfo = response.commercialNotified?.length
-        ? `\n\nCommerciaux informés : ${response.commercialNotified.join(', ')}`
-        : '';
-      alert((response.message || 'Demande approuvée avec succès !') + invoiceInfo + commercialInfo);
-      await loadSubscriptionRequests();
-      await refreshStats();
-      if (activeTab === 'invoices') {
-        const data = await api.get('/admin/invoices');
-        setAdminInvoices(data.invoices || []);
-      }
-    } catch (err: any) {
-      const detail = err?.data?.details || err?.data?.error || err.message;
-      alert(detail || 'Erreur lors de l\'approbation de la demande.');
-      throw err;
+    const response = await api.post(`/admin/subscriptions/requests/${id}/approve`, {
+      discountPercent: options?.discountPercent ?? 0,
+      approvedAmount: options?.approvedAmount,
+    });
+    await loadSubscriptionRequests();
+    await refreshStats();
+    if (activeTab === 'invoices') {
+      const data = await api.get('/admin/invoices');
+      setAdminInvoices(data.invoices || []);
     }
+    return {
+      message: response.message || 'Demande approuvée avec succès !',
+      billingAction: response.billingAction,
+      tenant: response.tenant,
+    };
   };
 
   const handleRejectSubscription = async (id: string) => {
@@ -2509,6 +2501,7 @@ function DashboardPageContent() {
                         <thead>
                           <tr className="border-b border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">
                             <th className="pb-3 font-semibold">Organisation</th>
+                            <th className="pb-3 font-semibold">Forfait actuel</th>
                             <th className="pb-3 font-semibold">Plan Demandé</th>
                             <th className="pb-3 font-semibold">Durée</th>
                             <th className="pb-3 font-semibold">Preuve / Référence</th>
@@ -2526,6 +2519,16 @@ function DashboardPageContent() {
                                   <span className="font-bold text-slate-900">{req.tenant?.name || 'Inconnue'}</span>
                                   <span className="text-xs text-slate-400">ID: {req.tenantId}</span>
                                 </div>
+                              </td>
+                              <td className="py-4">
+                                <span className={`px-2 py-0.5 rounded text-xs font-extrabold border ${planBadgeClass(req.tenant?.plan || 'FREE')}`}>
+                                  {req.tenant?.plan || 'FREE'}
+                                </span>
+                                {req.tenant?.licenseExpiresAt && req.tenant?.licenseActive && (
+                                  <p className="text-[10px] text-slate-400 mt-1">
+                                    exp. {new Date(req.tenant.licenseExpiresAt).toLocaleDateString('fr-FR')}
+                                  </p>
+                                )}
                               </td>
                               <td className="py-4">
                                 <span className={`px-2 py-0.5 rounded text-xs font-extrabold border ${planBadgeClass(req.requestedPlan)}`}>
@@ -4585,8 +4588,10 @@ function DashboardPageContent() {
         catalogPrices={planCatalogPrices}
         promoByPlan={planPromoByPlan}
         onConfirm={async ({ discountPercent, approvedAmount }) => {
-          if (!approvalModalRequest) return;
-          await handleApproveSubscription(approvalModalRequest.id, { discountPercent, approvedAmount });
+          if (!approvalModalRequest) {
+            throw new Error('Demande introuvable.');
+          }
+          return handleApproveSubscription(approvalModalRequest.id, { discountPercent, approvedAmount });
         }}
       />
     </div>

@@ -36,7 +36,18 @@ async function request(path: string, options: FetchOptions = {}) {
       return null;
     }
 
-    const data = await response.json();
+    const contentType = response.headers.get('content-type') || '';
+    let data: any;
+
+    if (contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      if (!response.ok) {
+        throw new Error(text || `Erreur serveur (${response.status})`);
+      }
+      return null;
+    }
 
     if (!response.ok) {
       const err = new Error(data.error || 'Une erreur est survenue') as Error & {
@@ -52,7 +63,10 @@ async function request(path: string, options: FetchOptions = {}) {
     }
 
     return data;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    if (error instanceof TypeError) {
+      throw new Error('Impossible de joindre le serveur. Vérifiez que le backend est démarré (port 5001).');
+    }
     console.error(`API Fetch Error [${path}]:`, error);
     throw error;
   }

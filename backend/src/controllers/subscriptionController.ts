@@ -9,7 +9,7 @@ import {
   isPlatformCommercial,
 } from '../services/platformCommercialScope';
 import { getPlansConfiguration, getPlanLimits, PAID_PLAN_KEYS } from '../config/plansConfig';
-import { issueTenantPlanInvoice } from '../services/tenantBillingService';
+import { issueTenantPlanInvoice, computeExtendedExpiry } from '../services/tenantBillingService';
 import { computeApprovedAmount, getPlanAmount } from '../services/invoiceService';
 
 // 1. Submit a subscription request (Tenant)
@@ -143,7 +143,14 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
     const request = await prisma.subscriptionRequest.findUnique({
       where: { id: requestId },
       include: {
-        tenant: { select: { name: true } },
+        tenant: {
+          select: {
+            name: true,
+            plan: true,
+            licenseActive: true,
+            licenseExpiresAt: true,
+          },
+        },
       },
     });
 
@@ -180,9 +187,27 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
       approvedAmount: resolvedApproved,
     });
 
-    // Calculate expiry date (30 days or custom duration)
-    const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + request.durationDays);
+    // Expiration : prolongation si même forfait actif, sinon nouvelle période (changement de plan)
+    const tenantBefore = request.tenant;
+    const isSamePlanRenewal =
+      tenantBefore.licenseActive &&
+      tenantBefore.licenseExpiresAt &&
+      tenantBefore.plan === request.requestedPlan;
+
+    const expiryDate = isSamePlanRenewal
+      ? computeExtendedExpiry(tenantBefore.licenseExpiresAt, request.durationDays)
+      : (() => {
+          const d = new Date();
+          d.setDate(d.getDate() + request.durationDays);
+          return d;
+        })();
+
+    const billingAction =
+      tenantBefore.plan === 'FREE' || !tenantBefore.licenseActive
+        ? 'ACTIVATION'
+        : tenantBefore.plan === request.requestedPlan
+          ? 'RENEWAL'
+          : 'PLAN_CHANGE';
 
     // Generate a unique license key EM-XXXX-XXXX-XXXX
     const generateLicenseKey = () => {
@@ -218,56 +243,21 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
       }),
     ]);
 
-    let invoiceResult: Awaited<ReturnType<typeof issueTenantPlanInvoice>> | null = null;
-    let billingWarning: string | null = null;
+    const successMessage =
+      billingAction === 'PLAN_CHANGE'
+        ? `Forfait changé (${tenantBefore.plan} → ${request.requestedPlan}). Licence active jusqu'au ${expiryDate.toLocaleDateString('fr-FR')}.`
+        : billingAction === 'RENEWAL'
+          ? `Abonnement renouvelé jusqu'au ${expiryDate.toLocaleDateString('fr-FR')}.`
+          : `La demande d'abonnement a été approuvée. Licence active jusqu'au ${expiryDate.toLocaleDateString('fr-FR')}.`;
 
-    try {
-      invoiceResult = await issueTenantPlanInvoice({
-        tenantId: request.tenantId,
-        tenantName: request.tenant?.name ?? 'Organisation',
-        plan: request.requestedPlan,
-        billing: {
-          action: 'ACTIVATION',
-          durationDays: request.durationDays,
-          discountPercent: resolvedDiscount,
-          approvedAmount: resolvedApproved,
-          periodStart,
-          periodEnd,
-        },
-        subscriptionRequestId: requestId,
-      });
-    } catch (billingError: unknown) {
-      const billingMessage =
-        billingError instanceof Error ? billingError.message : 'Erreur facturation inconnue';
-      console.error('Erreur facturation après approbation abonnement:', billingError);
-      billingWarning = `Licence activée, mais la facture n'a pas pu être générée (${billingMessage}).`;
-    }
-
-    const discountNote =
-      invoiceResult && invoiceResult.pricing.discountAmount > 0
-        ? ` Réduction spéciale de ${invoiceResult.pricing.discountPercent} % appliquée (− ${invoiceResult.pricing.discountAmount.toLocaleString('fr-FR')} FC).`
-        : '';
-
-    const commercialNote =
-      invoiceResult && invoiceResult.commercialNotified.length > 0
-        ? ` Commercial(s) informé(s) : ${invoiceResult.commercialNotified.join(', ')}.`
-        : '';
-
-    const invoiceNote = invoiceResult?.invoice
-      ? ' Facture envoyée au propriétaire et aux managers.'
-      : billingWarning
-        ? ` ${billingWarning}`
-        : '';
-
-    return res.json({
-      message: `La demande d'abonnement a été approuvée. Licence active jusqu'au ${expiryDate.toLocaleDateString('fr-FR')}.${invoiceNote}${discountNote}${commercialNote}`,
+    res.json({
+      message: successMessage,
       request: updatedRequest,
-      pricing: invoiceResult?.pricing ?? pricing,
-      commercialNotified: invoiceResult?.commercialNotified ?? [],
-      invoice: invoiceResult?.invoice
-        ? { id: invoiceResult.invoice.id, invoiceNumber: invoiceResult.invoice.invoiceNumber, amount: invoiceResult.invoice.amount }
-        : null,
-      billingWarning,
+      pricing,
+      commercialNotified: [],
+      invoice: null,
+      billingWarning: null,
+      billingAction,
       tenant: {
         id: updatedTenant.id,
         name: updatedTenant.name,
@@ -275,8 +265,36 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
         licenseActive: updatedTenant.licenseActive,
         licenseExpiresAt: updatedTenant.licenseExpiresAt,
         licenseKey: updatedTenant.licenseKey,
+        previousPlan: tenantBefore.plan,
       },
     });
+
+    // Facturation et notifications en arrière-plan (réponse immédiate à l'interface)
+    void (async () => {
+      try {
+        const invoiceResult = await issueTenantPlanInvoice({
+          tenantId: request.tenantId,
+          tenantName: tenantBefore?.name ?? 'Organisation',
+          plan: request.requestedPlan,
+          billing: {
+            action: billingAction,
+            durationDays: request.durationDays,
+            discountPercent: resolvedDiscount,
+            approvedAmount: resolvedApproved,
+            periodStart,
+            periodEnd,
+          },
+          subscriptionRequestId: requestId,
+        });
+        if (invoiceResult.invoice) {
+          console.log(
+            `[Subscription] Facture ${invoiceResult.invoice.invoiceNumber} générée pour la demande ${requestId}`,
+          );
+        }
+      } catch (billingError: unknown) {
+        console.error('Erreur facturation après approbation abonnement:', billingError);
+      }
+    })();
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Erreur inconnue';
     console.error('Erreur lors de l\'approbation de la demande d\'abonnement:', error);
