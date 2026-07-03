@@ -8,6 +8,7 @@ router.use(auth_1.requireAuth);
 router.use(auth_1.requireActiveLicense);
 router.get('/', templateController_1.getTemplates);
 router.post('/', templateController_1.createTemplate);
+router.post('/:id/duplicate', templateController_1.duplicateTemplate);
 router.get('/:id', templateController_1.getTemplateById);
 router.put('/:id', templateController_1.updateTemplate);
 router.delete('/:id', templateController_1.deleteTemplate);

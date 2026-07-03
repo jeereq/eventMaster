@@ -75,6 +75,8 @@ async function issueAndSendOtp(params) {
         phone: params.phone,
         code,
         method: params.method,
+        invitedToTeam: params.invitedToTeam,
+        invitedByCommercial: params.invitedByCommercial,
     });
     return sentVia;
 }

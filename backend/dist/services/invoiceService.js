@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.formatAmountFc = formatAmountFc;
+exports.formatAmountFc = void 0;
 exports.getPlanAmount = getPlanAmount;
 exports.getEffectivePlanAmount = getEffectivePlanAmount;
 exports.computeApprovedAmount = computeApprovedAmount;
@@ -22,9 +22,8 @@ const db_1 = require("../db");
 const plansConfig_1 = require("../config/plansConfig");
 const commercialService_1 = require("./commercialService");
 const notificationService_1 = require("./notificationService");
-function formatAmountFc(amount) {
-    return `${amount.toLocaleString('fr-FR')} FC`;
-}
+const invoiceText_1 = require("../utils/invoiceText");
+Object.defineProperty(exports, "formatAmountFc", { enumerable: true, get: function () { return invoiceText_1.formatAmountFc; } });
 function getPlanAmount(plan) {
     if (plan === 'FREE')
         return 0;
@@ -111,41 +110,58 @@ async function getTenantBillingRecipients(tenantId, includeManagers = true) {
     return recipients;
 }
 function renderInvoiceHtml(params) {
+    const safeTenant = (0, invoiceText_1.escapeHtml)((0, invoiceText_1.normalizeInvoiceText)(params.tenantName));
+    const safePlan = (0, invoiceText_1.escapeHtml)((0, invoiceText_1.normalizeInvoiceText)(params.planName));
+    const safeRecipient = params.recipientName
+        ? (0, invoiceText_1.escapeHtml)((0, invoiceText_1.normalizeInvoiceText)(params.recipientName))
+        : '';
+    const safeInvoiceNumber = (0, invoiceText_1.escapeHtml)(params.invoiceNumber);
     const discountRows = params.discountAmount && params.discountAmount > 0
-        ? `<tr><td style="padding:8px 0;color:#64748b;">Prix catalogue</td><td style="padding:8px 0;font-weight:600;">${formatAmountFc(params.baseAmount ?? params.amount + params.discountAmount)}</td></tr>
-         <tr><td style="padding:8px 0;color:#64748b;">Réduction spéciale</td><td style="padding:8px 0;font-weight:600;color:#059669;">− ${formatAmountFc(params.discountAmount)}${params.discountPercent ? ` (${params.discountPercent} %)` : ''}</td></tr>`
+        ? `<tr><td style="padding:8px 0;color:#64748b;">Prix catalogue</td><td style="padding:8px 0;font-weight:600;">${(0, invoiceText_1.escapeHtml)((0, invoiceText_1.formatAmountFc)(params.baseAmount ?? params.amount + params.discountAmount))}</td></tr>
+         <tr><td style="padding:8px 0;color:#64748b;">Réduction spéciale</td><td style="padding:8px 0;font-weight:600;color:#059669;">- ${(0, invoiceText_1.escapeHtml)((0, invoiceText_1.formatAmountFc)(params.discountAmount))}${params.discountPercent ? ` (${params.discountPercent} %)` : ''}</td></tr>`
         : '';
     const periodLine = params.periodStart && params.periodEnd
-        ? `<tr><td style="padding:8px 0;color:#64748b;">Période</td><td style="padding:8px 0;font-weight:600;">${params.periodStart.toLocaleDateString('fr-FR')} → ${params.periodEnd.toLocaleDateString('fr-FR')}</td></tr>`
+        ? `<tr><td style="padding:8px 0;color:#64748b;">Période</td><td style="padding:8px 0;font-weight:600;">${(0, invoiceText_1.escapeHtml)((0, invoiceText_1.formatFrenchDateRange)(params.periodStart, params.periodEnd))}</td></tr>`
         : params.durationDays
             ? `<tr><td style="padding:8px 0;color:#64748b;">Durée</td><td style="padding:8px 0;font-weight:600;">${params.durationDays} jours</td></tr>`
             : '';
+    const commissionRows = params.commissions && params.commissions.length > 0
+        ? `<tr><td colspan="2" style="padding:12px 0 4px;color:#64748b;font-size:12px;font-weight:700;text-transform:uppercase;">Commissions commerciales</td></tr>
+         ${params.commissions
+            .map((c) => `<tr><td style="padding:6px 0;color:#64748b;">${(0, invoiceText_1.escapeHtml)((0, invoiceText_1.normalizeInvoiceText)(c.commercialName || c.commercialEmail || 'Commercial'))} (${c.commissionRatePercent} %)</td><td style="padding:6px 0;font-weight:600;color:#b45309;">${(0, invoiceText_1.escapeHtml)(c.commissionAmountFormatted)}</td></tr>`)
+            .join('')}`
+        : '';
     const typeLabel = params.type === 'SUBSCRIPTION_APPROVAL'
         ? 'Activation abonnement'
         : params.type === 'RENEWAL'
             ? 'Renouvellement abonnement'
             : 'Paiement abonnement';
-    return `
-<!DOCTYPE html>
+    return `<!DOCTYPE html>
 <html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Facture ${safeInvoiceNumber}</title>
+</head>
 <body style="font-family:Segoe UI,Arial,sans-serif;background:#f8fafc;margin:0;padding:24px;">
   <div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;">
     <div style="background:#4f46e5;color:#fff;padding:24px;">
-      <h1 style="margin:0;font-size:20px;">EventMaster — Facture</h1>
-      <p style="margin:8px 0 0;opacity:0.9;font-size:14px;">${params.invoiceNumber}</p>
+      <h1 style="margin:0;font-size:20px;">EventMaster - Facture</h1>
+      <p style="margin:8px 0 0;opacity:0.9;font-size:14px;">${safeInvoiceNumber}</p>
     </div>
     <div style="padding:24px;">
-      <p style="margin:0 0 16px;">Bonjour${params.recipientName ? ` ${params.recipientName}` : ''},</p>
+      <p style="margin:0 0 16px;">Bonjour${safeRecipient ? ` ${safeRecipient}` : ''},</p>
       <p style="margin:0 0 20px;color:#334155;">Veuillez trouver ci-dessous les détails de votre facture EventMaster.</p>
       <table style="width:100%;border-collapse:collapse;font-size:14px;">
-        <tr><td style="padding:8px 0;color:#64748b;">Organisation</td><td style="padding:8px 0;font-weight:600;">${params.tenantName}</td></tr>
+        <tr><td style="padding:8px 0;color:#64748b;">Organisation</td><td style="padding:8px 0;font-weight:600;">${safeTenant}</td></tr>
         <tr><td style="padding:8px 0;color:#64748b;">Type</td><td style="padding:8px 0;font-weight:600;">${typeLabel}</td></tr>
-        <tr><td style="padding:8px 0;color:#64748b;">Forfait</td><td style="padding:8px 0;font-weight:600;">${params.planName}</td></tr>
+        <tr><td style="padding:8px 0;color:#64748b;">Forfait</td><td style="padding:8px 0;font-weight:600;">${safePlan}</td></tr>
         ${periodLine}
         ${discountRows}
-        <tr><td style="padding:12px 0;color:#64748b;border-top:1px solid #e2e8f0;">Montant TTC</td><td style="padding:12px 0;font-weight:800;font-size:18px;color:#4f46e5;border-top:1px solid #e2e8f0;">${formatAmountFc(params.amount)}</td></tr>
+        ${commissionRows}
+        <tr><td style="padding:12px 0;color:#64748b;border-top:1px solid #e2e8f0;">Montant TTC</td><td style="padding:12px 0;font-weight:800;font-size:18px;color:#4f46e5;border-top:1px solid #e2e8f0;">${(0, invoiceText_1.escapeHtml)((0, invoiceText_1.formatAmountFc)(params.amount))}</td></tr>
       </table>
-      <p style="margin:24px 0 0;font-size:13px;color:#64748b;">Pour renouveler ou mettre à jour votre abonnement, connectez-vous à votre espace EventMaster → Facturation.</p>
+      <p style="margin:24px 0 0;font-size:13px;color:#64748b;">Pour renouveler ou mettre à jour votre abonnement, connectez-vous à votre espace EventMaster, section Facturation.</p>
     </div>
   </div>
 </body>
@@ -153,17 +169,23 @@ function renderInvoiceHtml(params) {
 }
 function renderInvoiceText(params) {
     const lines = [
-        `Facture EventMaster — ${params.invoiceNumber}`,
-        `Organisation : ${params.tenantName}`,
-        `Forfait : ${params.planName}`,
+        `Facture EventMaster - ${(0, invoiceText_1.normalizeInvoiceText)(params.invoiceNumber)}`,
+        `Organisation : ${(0, invoiceText_1.normalizeInvoiceText)(params.tenantName)}`,
+        `Forfait : ${(0, invoiceText_1.normalizeInvoiceText)(params.planName)}`,
     ];
     if (params.discountAmount && params.discountAmount > 0) {
-        lines.push(`Prix catalogue : ${formatAmountFc(params.baseAmount ?? params.amount + params.discountAmount)}`);
-        lines.push(`Réduction spéciale : − ${formatAmountFc(params.discountAmount)}${params.discountPercent ? ` (${params.discountPercent} %)` : ''}`);
+        lines.push(`Prix catalogue : ${(0, invoiceText_1.formatAmountFc)(params.baseAmount ?? params.amount + params.discountAmount)}`);
+        lines.push(`Réduction spéciale : - ${(0, invoiceText_1.formatAmountFc)(params.discountAmount)}${params.discountPercent ? ` (${params.discountPercent} %)` : ''}`);
     }
-    lines.push(`Montant : ${formatAmountFc(params.amount)}`);
+    if (params.commissions?.length) {
+        lines.push('Commissions commerciales :');
+        for (const c of params.commissions) {
+            lines.push(`  - ${(0, invoiceText_1.normalizeInvoiceText)(c.commercialName || c.commercialEmail || 'Commercial')} (${c.commissionRatePercent} %) : ${c.commissionAmountFormatted}`);
+        }
+    }
+    lines.push(`Montant : ${(0, invoiceText_1.formatAmountFc)(params.amount)}`);
     if (params.periodStart && params.periodEnd) {
-        lines.push(`Période : ${params.periodStart.toLocaleDateString('fr-FR')} → ${params.periodEnd.toLocaleDateString('fr-FR')}`);
+        lines.push(`Période : ${(0, invoiceText_1.formatFrenchDateRange)(params.periodStart, params.periodEnd)}`);
     }
     else if (params.durationDays) {
         lines.push(`Durée : ${params.durationDays} jours`);
@@ -218,8 +240,8 @@ async function createAndSendInvoice(params) {
         },
     });
     const subject = params.type === 'RENEWAL'
-        ? `EventMaster — Facture de renouvellement ${invoiceNumber}`
-        : `EventMaster — Facture abonnement ${invoiceNumber}`;
+        ? `EventMaster - Facture de renouvellement ${invoiceNumber}`
+        : `EventMaster - Facture abonnement ${invoiceNumber}`;
     for (const recipient of recipients) {
         const html = renderInvoiceHtml({
             invoiceNumber,
@@ -261,31 +283,29 @@ async function createAndSendInvoice(params) {
 async function sendLicenseExpiryWarning(params) {
     const planDef = (0, plansConfig_1.getPlanLimits)(params.plan);
     const amount = getPlanAmount(params.plan);
-    const expiryStr = params.expiresAt.toLocaleDateString('fr-FR', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-    });
-    const subject = `EventMaster — Votre abonnement expire dans 7 jours`;
+    const expiryStr = (0, invoiceText_1.formatFrenchDate)(params.expiresAt);
+    const subject = 'EventMaster - Votre abonnement expire dans 7 jours';
+    const safeTenant = (0, invoiceText_1.escapeHtml)((0, invoiceText_1.normalizeInvoiceText)(params.tenantName));
+    const safeName = params.ownerName ? (0, invoiceText_1.escapeHtml)((0, invoiceText_1.normalizeInvoiceText)(params.ownerName)) : '';
+    const safePlan = (0, invoiceText_1.escapeHtml)((0, invoiceText_1.normalizeInvoiceText)(planDef.name));
     const text = [
-        `Bonjour${params.ownerName ? ` ${params.ownerName}` : ''},`,
+        `Bonjour${params.ownerName ? ` ${(0, invoiceText_1.normalizeInvoiceText)(params.ownerName)}` : ''},`,
         '',
-        `L'abonnement de l'organisation « ${params.tenantName} » (forfait ${planDef.name}) expire le ${expiryStr}.`,
-        `Montant du renouvellement : ${formatAmountFc(amount)}.`,
+        `L'abonnement de l'organisation « ${(0, invoiceText_1.normalizeInvoiceText)(params.tenantName)} » (forfait ${(0, invoiceText_1.normalizeInvoiceText)(planDef.name)}) expire le ${expiryStr}.`,
+        `Montant du renouvellement : ${(0, invoiceText_1.formatAmountFc)(amount)}.`,
         '',
-        'Connectez-vous à EventMaster pour soumettre une demande de renouvellement ou mettre à jour votre paiement.',
+        'Connectez-vous a EventMaster pour soumettre une demande de renouvellement ou mettre a jour votre paiement.',
     ].join('\n');
-    const html = `
-<!DOCTYPE html>
+    const html = `<!DOCTYPE html>
 <html lang="fr">
+<head><meta charset="UTF-8" /></head>
 <body style="font-family:Segoe UI,Arial,sans-serif;background:#f8fafc;margin:0;padding:24px;">
   <div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:24px;">
-    <h2 style="margin:0 0 16px;color:#b45309;">Rappel — expiration dans 7 jours</h2>
-    <p>Bonjour${params.ownerName ? ` ${params.ownerName}` : ''},</p>
-    <p>L'abonnement de <strong>${params.tenantName}</strong> (forfait <strong>${planDef.name}</strong>) expire le <strong>${expiryStr}</strong>.</p>
-    <p>Montant estimé du renouvellement : <strong style="color:#4f46e5;">${formatAmountFc(amount)}</strong>.</p>
-    <p style="color:#64748b;font-size:14px;">Connectez-vous à EventMaster → Facturation pour renouveler avant la date limite.</p>
+    <h2 style="margin:0 0 16px;color:#b45309;">Rappel - expiration dans 7 jours</h2>
+    <p>Bonjour${safeName ? ` ${safeName}` : ''},</p>
+    <p>L'abonnement de <strong>${safeTenant}</strong> (forfait <strong>${safePlan}</strong>) expire le <strong>${(0, invoiceText_1.escapeHtml)(expiryStr)}</strong>.</p>
+    <p>Montant estime du renouvellement : <strong style="color:#4f46e5;">${(0, invoiceText_1.escapeHtml)((0, invoiceText_1.formatAmountFc)(amount))}</strong>.</p>
+    <p style="color:#64748b;font-size:14px;">Connectez-vous a EventMaster, section Facturation, pour renouveler avant la date limite.</p>
   </div>
 </body>
 </html>`;
@@ -295,12 +315,12 @@ async function sendLicenseExpiryWarning(params) {
     }
     if (params.ownerPhone?.trim()) {
         const waBody = [
-            `EventMaster — Rappel abonnement`,
+            'EventMaster - Rappel abonnement',
             '',
-            `Bonjour${params.ownerName ? ` ${params.ownerName}` : ''},`,
-            `L'organisation « ${params.tenantName} » (${planDef.name}) expire le ${expiryStr}.`,
-            `Renouvellement estimé : ${formatAmountFc(amount)}.`,
-            'Connectez-vous à EventMaster → Facturation pour renouveler.',
+            `Bonjour${params.ownerName ? ` ${(0, invoiceText_1.normalizeInvoiceText)(params.ownerName)}` : ''},`,
+            `L'organisation « ${(0, invoiceText_1.normalizeInvoiceText)(params.tenantName)} » (${(0, invoiceText_1.normalizeInvoiceText)(planDef.name)}) expire le ${expiryStr}.`,
+            `Renouvellement estime : ${(0, invoiceText_1.formatAmountFc)(amount)}.`,
+            'Connectez-vous a EventMaster, section Facturation, pour renouveler.',
         ].join('\n');
         const waResult = await (0, notificationService_1.sendRealWhatsApp)(params.ownerPhone, waBody);
         if (waResult.success && !waResult.simulated) {
@@ -331,7 +351,7 @@ function formatInvoiceCommissions(commissions) {
         commissionRate: c.commissionRate,
         commissionRatePercent: Math.round(c.commissionRate * 1000) / 10,
         commissionAmount: c.commissionAmount,
-        commissionAmountFormatted: formatAmountFc(c.commissionAmount),
+        commissionAmountFormatted: (0, invoiceText_1.formatAmountFc)(c.commissionAmount),
         source: c.source,
     }));
 }
@@ -343,7 +363,7 @@ function formatInvoiceForApi(invoice) {
         invoiceNumber: invoice.invoiceNumber,
         plan: invoice.plan,
         amount: invoice.amount,
-        amountFormatted: formatAmountFc(invoice.amount),
+        amountFormatted: (0, invoiceText_1.formatAmountFc)(invoice.amount),
         currency: invoice.currency,
         type: invoice.type,
         typeLabel: INVOICE_TYPE_LABELS[invoice.type] || invoice.type,
@@ -358,7 +378,7 @@ function formatInvoiceForApi(invoice) {
         tenantName: invoice.tenant?.name ?? null,
         commissions,
         totalCommission: totalCommission > 0 ? totalCommission : null,
-        totalCommissionFormatted: totalCommission > 0 ? formatAmountFc(totalCommission) : null,
+        totalCommissionFormatted: totalCommission > 0 ? (0, invoiceText_1.formatAmountFc)(totalCommission) : null,
         hasCommission: commissions.length > 0,
     };
 }
@@ -395,10 +415,11 @@ function getInvoicePlanName(invoice) {
     return details?.planName ?? (0, plansConfig_1.getPlanLimits)(invoice.plan).name;
 }
 function buildInvoicePdf(invoice) {
-    const planName = getInvoicePlanName(invoice);
-    const tenantName = invoice.tenant?.name ?? 'Organisation';
-    const typeLabel = INVOICE_TYPE_LABELS[invoice.type] || invoice.type;
-    const statusLabel = INVOICE_STATUS_LABELS[invoice.status] || invoice.status;
+    const planName = (0, invoiceText_1.normalizeInvoiceText)(getInvoicePlanName(invoice));
+    const tenantName = (0, invoiceText_1.normalizeInvoiceText)(invoice.tenant?.name ?? 'Organisation');
+    const typeLabel = (0, invoiceText_1.normalizeInvoiceText)(INVOICE_TYPE_LABELS[invoice.type] || invoice.type);
+    const statusLabel = (0, invoiceText_1.normalizeInvoiceText)(INVOICE_STATUS_LABELS[invoice.status] || invoice.status);
+    const commissions = formatInvoiceCommissions(invoice.commercialCommissions);
     return new Promise((resolve, reject) => {
         const doc = new pdfkit_1.default({ margin: 50, size: 'A4' });
         const chunks = [];
@@ -406,14 +427,14 @@ function buildInvoicePdf(invoice) {
         doc.on('end', () => resolve(Buffer.concat(chunks)));
         doc.on('error', reject);
         doc.fontSize(20).font('Helvetica-Bold').fillColor('#4f46e5').text('EventMaster', { align: 'left' });
-        doc.fontSize(10).font('Helvetica').fillColor('#64748b').text('Facture d\'abonnement', { align: 'left' });
+        doc.fontSize(10).font('Helvetica').fillColor('#64748b').text("Facture d'abonnement", { align: 'left' });
         doc.moveDown(1);
-        doc.fontSize(16).font('Helvetica-Bold').fillColor('#0f172a').text(invoice.invoiceNumber);
+        doc.fontSize(16).font('Helvetica-Bold').fillColor('#0f172a').text((0, invoiceText_1.normalizeInvoiceText)(invoice.invoiceNumber));
         doc.moveDown(0.5);
         doc.fontSize(10).font('Helvetica').fillColor('#64748b');
-        doc.text(`Émise le ${invoice.createdAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`);
+        doc.text(`Émise le ${(0, invoiceText_1.formatFrenchDate)(invoice.createdAt)}`);
         if (invoice.sentAt) {
-            doc.text(`Envoyée le ${invoice.sentAt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}`);
+            doc.text(`Envoyée le ${(0, invoiceText_1.formatFrenchDate)(invoice.sentAt)}`);
         }
         doc.moveDown(1.5);
         doc.fontSize(12).font('Helvetica-Bold').fillColor('#0f172a').text('Organisation');
@@ -425,9 +446,9 @@ function buildInvoicePdf(invoice) {
         doc.text(`Type : ${typeLabel}`);
         doc.text(`Forfait : ${planName} (${invoice.plan})`);
         doc.text(`Statut : ${statusLabel}`);
-        doc.text(`Période de facturation : ${invoice.billingPeriod}`);
+        doc.text(`Période de facturation : ${(0, invoiceText_1.normalizeInvoiceText)(invoice.billingPeriod)}`);
         if (invoice.periodStart && invoice.periodEnd) {
-            doc.text(`Couverture : ${invoice.periodStart.toLocaleDateString('fr-FR')} → ${invoice.periodEnd.toLocaleDateString('fr-FR')}`);
+            doc.text(`Couverture : ${(0, invoiceText_1.formatFrenchDateRange)(invoice.periodStart, invoice.periodEnd)}`);
         }
         else if (invoice.durationDays) {
             doc.text(`Durée : ${invoice.durationDays} jours`);
@@ -435,20 +456,30 @@ function buildInvoicePdf(invoice) {
         const details = invoice.details;
         if (details?.discountAmount && details.discountAmount > 0) {
             doc.fontSize(11).font('Helvetica').fillColor('#334155');
-            doc.text(`Prix catalogue : ${formatAmountFc(details.baseAmount ?? invoice.amount + details.discountAmount)}`);
-            doc.text(`Réduction spéciale : − ${formatAmountFc(details.discountAmount)}${details.discountPercent ? ` (${details.discountPercent} %)` : ''}`);
+            doc.text(`Prix catalogue : ${(0, invoiceText_1.formatAmountFc)(details.baseAmount ?? invoice.amount + details.discountAmount)}`);
+            doc.text(`Réduction spéciale : - ${(0, invoiceText_1.formatAmountFc)(details.discountAmount)}${details.discountPercent ? ` (${details.discountPercent} %)` : ''}`);
+            doc.moveDown(0.5);
+        }
+        if (commissions.length > 0) {
+            doc.moveDown(0.5);
+            doc.fontSize(11).font('Helvetica-Bold').fillColor('#0f172a').text('Commissions commerciales');
+            doc.fontSize(10).font('Helvetica').fillColor('#334155');
+            for (const c of commissions) {
+                const label = (0, invoiceText_1.normalizeInvoiceText)(c.commercialName || c.commercialEmail || 'Commercial');
+                doc.text(`  ${label} (${c.commissionRatePercent} %) : ${c.commissionAmountFormatted}`);
+            }
             doc.moveDown(0.5);
         }
         doc.moveDown(1.5);
         doc.fontSize(14).font('Helvetica-Bold').fillColor('#4f46e5');
-        doc.text(`Montant TTC : ${formatAmountFc(invoice.amount)}`, { align: 'right' });
+        doc.text(`Montant TTC : ${(0, invoiceText_1.formatAmountFc)(invoice.amount)}`, { align: 'right' });
         doc.moveDown(2);
         const recipients = Array.isArray(invoice.recipientEmails)
             ? invoice.recipientEmails
             : [];
         if (recipients.length > 0) {
             doc.fontSize(10).font('Helvetica').fillColor('#64748b');
-            doc.text(`Destinataires : ${recipients.join(', ')}`);
+            doc.text(`Destinataires : ${recipients.map((e) => (0, invoiceText_1.normalizeInvoiceText)(e)).join(', ')}`);
         }
         doc.moveDown(2);
         doc.fontSize(9).font('Helvetica').fillColor('#94a3b8');
@@ -470,10 +501,11 @@ async function resendInvoiceByEmail(invoiceId, targetEmail) {
         throw new Error('Aucun destinataire e-mail disponible.');
     }
     const subject = invoice.type === 'RENEWAL'
-        ? `EventMaster — Facture de renouvellement ${invoice.invoiceNumber}`
-        : `EventMaster — Facture abonnement ${invoice.invoiceNumber}`;
+        ? `EventMaster - Facture de renouvellement ${invoice.invoiceNumber}`
+        : `EventMaster - Facture abonnement ${invoice.invoiceNumber}`;
     const results = [];
     const details = invoice.details;
+    const commissions = formatInvoiceCommissions(invoice.commercialCommissions);
     for (const email of emails) {
         const html = renderInvoiceHtml({
             invoiceNumber: invoice.invoiceNumber,
@@ -488,6 +520,7 @@ async function resendInvoiceByEmail(invoiceId, targetEmail) {
             baseAmount: details?.baseAmount,
             discountPercent: details?.discountPercent,
             discountAmount: details?.discountAmount,
+            commissions,
         });
         const text = renderInvoiceText({
             invoiceNumber: invoice.invoiceNumber,
@@ -500,6 +533,7 @@ async function resendInvoiceByEmail(invoiceId, targetEmail) {
             baseAmount: details?.baseAmount,
             discountPercent: details?.discountPercent,
             discountAmount: details?.discountAmount,
+            commissions,
         });
         const result = await (0, notificationService_1.sendRealEmail)(email, subject, text, html);
         results.push({ email, success: result.success, error: result.error });

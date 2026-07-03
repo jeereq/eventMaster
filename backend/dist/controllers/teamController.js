@@ -8,6 +8,7 @@ exports.createTeamMember = createTeamMember;
 exports.updateTeamMember = updateTeamMember;
 exports.updateMemberCommissionRate = updateMemberCommissionRate;
 exports.updateOrgCommercialSettings = updateOrgCommercialSettings;
+exports.resendTeamMemberVerification = resendTeamMemberVerification;
 exports.deleteTeamMember = deleteTeamMember;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const db_1 = require("../db");
@@ -150,15 +151,16 @@ async function createTeamMember(req, res) {
             email,
             phone,
             method,
+            invitedToTeam: true,
         });
+        const channelLabel = method === 'WHATSAPP' ? 'WhatsApp' : 'e-mail';
         const refreshed = await db_1.prisma.user.findUnique({
             where: { id: newUser.id },
             select: userSelect,
         });
         return res.status(201).json({
-            message: method === 'WHATSAPP'
-                ? 'Utilisateur créé. Un code OTP a été envoyé sur WhatsApp pour valider le compte.'
-                : 'Utilisateur créé. Un code OTP a été envoyé par e-mail pour valider le compte.',
+            message: `Utilisateur créé. Un code OTP a été envoyé par ${channelLabel} à ${email}. ` +
+                `Le membre doit se connecter sur /login avec son mot de passe, saisir le code OTP, puis accéder au tableau de bord.`,
             member: {
                 ...refreshed,
                 isOwner: false,
@@ -331,6 +333,49 @@ async function updateOrgCommercialSettings(req, res) {
     catch (error) {
         console.error('Erreur updateOrgCommercialSettings:', error);
         return res.status(500).json({ error: 'Impossible de mettre à jour les paramètres.' });
+    }
+}
+async function resendTeamMemberVerification(req, res) {
+    try {
+        const tenantId = req.user?.tenantId;
+        const userId = req.user?.id;
+        const memberId = req.params.id;
+        if (!tenantId || !userId) {
+            return res.status(403).json({ error: 'Organisation non identifiée.' });
+        }
+        const access = await (0, permissionsService_1.resolveOrgAccess)(userId, tenantId);
+        if (!access.canManageTeam) {
+            return res.status(403).json({ error: 'Seuls le propriétaire et les managers peuvent renvoyer un code OTP.' });
+        }
+        const member = await db_1.prisma.user.findFirst({
+            where: { id: memberId, tenantId, role: 'USER' },
+        });
+        if (!member) {
+            return res.status(404).json({ error: 'Utilisateur introuvable dans votre organisation.' });
+        }
+        if (member.isEmailVerified) {
+            return res.status(400).json({ error: 'Ce compte est déjà validé.' });
+        }
+        const method = (member.verificationMethod === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL');
+        if (method === 'WHATSAPP' && !member.phone) {
+            return res.status(400).json({ error: 'Aucun numéro WhatsApp associé à ce compte.' });
+        }
+        await (0, authController_1.setupUserOtpVerification)({
+            userId: member.id,
+            name: member.name || 'Utilisateur',
+            email: member.email,
+            phone: member.phone,
+            method,
+            invitedToTeam: true,
+        });
+        const channelLabel = method === 'WHATSAPP' ? 'WhatsApp' : 'e-mail';
+        return res.json({
+            message: `Un nouveau code OTP a été envoyé par ${channelLabel} à ${member.email}.`,
+        });
+    }
+    catch (error) {
+        console.error('Erreur resendTeamMemberVerification:', error);
+        return res.status(500).json({ error: 'Impossible de renvoyer le code OTP.' });
     }
 }
 async function deleteTeamMember(req, res) {
