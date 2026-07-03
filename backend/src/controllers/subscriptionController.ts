@@ -4,8 +4,8 @@ import { prisma } from '../db';
 import { PlanType } from '@prisma/client';
 import { isPlatformStaff } from '../middleware/platformAccess';
 import { getPlansConfiguration, PAID_PLAN_KEYS } from '../config/plansConfig';
-import { recordCommercialCommission } from '../services/commercialService';
-import { createAndSendInvoice } from '../services/invoiceService';
+import { recordCommercialCommission, notifyCommercialsOnSubscriptionApproval } from '../services/commercialService';
+import { createAndSendInvoice, computeApprovedAmount, getPlanAmount } from '../services/invoiceService';
 
 // 1. Submit a subscription request (Tenant)
 export async function submitSubscriptionRequest(req: AuthenticatedRequest, res: Response) {
@@ -67,6 +67,20 @@ export async function getMySubscriptionRequests(req: AuthenticatedRequest, res: 
   }
 }
 
+const tenantCommercialSelect = {
+  id: true,
+  name: true,
+  plan: true,
+  licenseActive: true,
+  licenseExpiresAt: true,
+  referredByCommercial: {
+    select: { id: true, name: true, email: true, referralCode: true },
+  },
+  referredByOrgUser: {
+    select: { id: true, name: true, email: true, referralCode: true, orgRole: true },
+  },
+} as const;
+
 // 3. Get all subscription requests (Super Admin)
 export async function getAdminSubscriptionRequests(req: AuthenticatedRequest, res: Response) {
   try {
@@ -77,13 +91,7 @@ export async function getAdminSubscriptionRequests(req: AuthenticatedRequest, re
     const requests = await prisma.subscriptionRequest.findMany({
       include: {
         tenant: {
-          select: {
-            id: true,
-            name: true,
-            plan: true,
-            licenseActive: true,
-            licenseExpiresAt: true,
-          },
+          select: tenantCommercialSelect,
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -104,9 +112,29 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
     }
 
     const requestId = req.params.id as string;
+    const { discountPercent, approvedAmount } = req.body ?? {};
+
+    const parsedDiscount =
+      discountPercent !== undefined && discountPercent !== null && discountPercent !== ''
+        ? parseFloat(String(discountPercent))
+        : undefined;
+    const parsedApproved =
+      approvedAmount !== undefined && approvedAmount !== null && approvedAmount !== ''
+        ? parseFloat(String(approvedAmount))
+        : undefined;
+
+    if (parsedDiscount !== undefined && (isNaN(parsedDiscount) || parsedDiscount < 0 || parsedDiscount > 100)) {
+      return res.status(400).json({ error: 'La réduction doit être entre 0 et 100 %.' });
+    }
+    if (parsedApproved !== undefined && (isNaN(parsedApproved) || parsedApproved < 0)) {
+      return res.status(400).json({ error: 'Le montant approuvé est invalide.' });
+    }
 
     const request = await prisma.subscriptionRequest.findUnique({
       where: { id: requestId },
+      include: {
+        tenant: { select: { name: true } },
+      },
     });
 
     if (!request) {
@@ -116,6 +144,12 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
     if (request.status !== 'PENDING') {
       return res.status(400).json({ error: 'Cette demande a déjà été traitée.' });
     }
+
+    const baseAmount = getPlanAmount(request.requestedPlan);
+    const pricing = computeApprovedAmount(baseAmount, {
+      discountPercent: parsedDiscount,
+      approvedAmount: parsedApproved,
+    });
 
     // Calculate expiry date (30 days or custom duration)
     const expiryDate = new Date();
@@ -136,7 +170,12 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
     const [updatedRequest, updatedTenant] = await prisma.$transaction([
       prisma.subscriptionRequest.update({
         where: { id: requestId },
-        data: { status: 'APPROVED' },
+        data: {
+          status: 'APPROVED',
+          specialDiscountPercent: pricing.discountPercent > 0 ? pricing.discountPercent : null,
+          baseAmount: pricing.baseAmount,
+          approvedAmount: pricing.finalAmount,
+        },
       }),
       prisma.tenant.update({
         where: { id: request.tenantId },
@@ -154,6 +193,10 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
       tenantId: request.tenantId,
       plan: request.requestedPlan,
       type: 'SUBSCRIPTION_APPROVAL',
+      amount: pricing.finalAmount,
+      baseAmount: pricing.baseAmount,
+      discountPercent: pricing.discountPercent,
+      discountAmount: pricing.discountAmount,
       durationDays: request.durationDays,
       periodStart,
       periodEnd,
@@ -165,13 +208,37 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
       tenantId: request.tenantId,
       plan: request.requestedPlan,
       source: 'SUBSCRIPTION_APPROVAL',
-      invoiceAmount: invoice?.amount,
+      invoiceAmount: pricing.finalAmount,
       platformInvoiceId: invoice?.id,
     });
 
+    const commercialNotification = await notifyCommercialsOnSubscriptionApproval({
+      tenantId: request.tenantId,
+      tenantName: request.tenant?.name ?? 'Organisation',
+      plan: request.requestedPlan,
+      durationDays: request.durationDays,
+      baseAmount: pricing.baseAmount,
+      finalAmount: pricing.finalAmount,
+      discountPercent: pricing.discountPercent,
+      discountAmount: pricing.discountAmount,
+      invoiceNumber: invoice?.invoiceNumber,
+    });
+
+    const discountNote =
+      pricing.discountAmount > 0
+        ? ` Réduction spéciale de ${pricing.discountPercent} % appliquée (− ${pricing.discountAmount.toLocaleString('fr-FR')} FC).`
+        : '';
+
+    const commercialNote =
+      commercialNotification.notified.length > 0
+        ? ` Commercial(s) informé(s) : ${commercialNotification.notified.join(', ')}.`
+        : '';
+
     return res.json({
-      message: `La demande d'abonnement a été approuvée. Licence active jusqu'au ${expiryDate.toLocaleDateString('fr-FR')}. Facture envoyée au propriétaire et aux managers.`,
+      message: `La demande d'abonnement a été approuvée. Licence active jusqu'au ${expiryDate.toLocaleDateString('fr-FR')}. Facture envoyée au propriétaire et aux managers.${discountNote}${commercialNote}`,
       request: updatedRequest,
+      pricing,
+      commercialNotified: commercialNotification.notified,
       invoice: invoice
         ? { id: invoice.id, invoiceNumber: invoice.invoiceNumber, amount: invoice.amount }
         : null,

@@ -14,6 +14,30 @@ export function getPlanAmount(plan: PlanType): number {
   return parsePlanPrice(getPlanLimits(plan).price);
 }
 
+export function computeApprovedAmount(
+  baseAmount: number,
+  options?: { discountPercent?: number; approvedAmount?: number },
+): {
+  baseAmount: number;
+  discountPercent: number;
+  discountAmount: number;
+  finalAmount: number;
+} {
+  const base = Math.max(0, Math.round(baseAmount));
+
+  if (options?.approvedAmount !== undefined && options.approvedAmount !== null) {
+    const finalAmount = Math.max(0, Math.round(options.approvedAmount));
+    const discountAmount = Math.max(0, base - finalAmount);
+    const discountPercent = base > 0 ? Math.round((discountAmount / base) * 1000) / 10 : 0;
+    return { baseAmount: base, discountPercent, discountAmount, finalAmount };
+  }
+
+  const pct = Math.min(100, Math.max(0, options?.discountPercent ?? 0));
+  const discountAmount = Math.round(base * (pct / 100));
+  const finalAmount = Math.max(0, base - discountAmount);
+  return { baseAmount: base, discountPercent: pct, discountAmount, finalAmount };
+}
+
 async function generateInvoiceNumber(): Promise<string> {
   const now = new Date();
   const prefix = `EM-INV-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -98,7 +122,15 @@ function renderInvoiceHtml(params: {
   periodEnd?: Date | null;
   durationDays?: number | null;
   recipientName?: string | null;
+  baseAmount?: number;
+  discountPercent?: number;
+  discountAmount?: number;
 }): string {
+  const discountRows =
+    params.discountAmount && params.discountAmount > 0
+      ? `<tr><td style="padding:8px 0;color:#64748b;">Prix catalogue</td><td style="padding:8px 0;font-weight:600;">${formatAmountFc(params.baseAmount ?? params.amount + params.discountAmount)}</td></tr>
+         <tr><td style="padding:8px 0;color:#64748b;">Réduction spéciale</td><td style="padding:8px 0;font-weight:600;color:#059669;">− ${formatAmountFc(params.discountAmount)}${params.discountPercent ? ` (${params.discountPercent} %)` : ''}</td></tr>`
+      : '';
   const periodLine =
     params.periodStart && params.periodEnd
       ? `<tr><td style="padding:8px 0;color:#64748b;">Période</td><td style="padding:8px 0;font-weight:600;">${params.periodStart.toLocaleDateString('fr-FR')} → ${params.periodEnd.toLocaleDateString('fr-FR')}</td></tr>`
@@ -130,6 +162,7 @@ function renderInvoiceHtml(params: {
         <tr><td style="padding:8px 0;color:#64748b;">Type</td><td style="padding:8px 0;font-weight:600;">${typeLabel}</td></tr>
         <tr><td style="padding:8px 0;color:#64748b;">Forfait</td><td style="padding:8px 0;font-weight:600;">${params.planName}</td></tr>
         ${periodLine}
+        ${discountRows}
         <tr><td style="padding:12px 0;color:#64748b;border-top:1px solid #e2e8f0;">Montant TTC</td><td style="padding:12px 0;font-weight:800;font-size:18px;color:#4f46e5;border-top:1px solid #e2e8f0;">${formatAmountFc(params.amount)}</td></tr>
       </table>
       <p style="margin:24px 0 0;font-size:13px;color:#64748b;">Pour renouveler ou mettre à jour votre abonnement, connectez-vous à votre espace EventMaster → Facturation.</p>
@@ -147,13 +180,22 @@ function renderInvoiceText(params: {
   periodStart?: Date | null;
   periodEnd?: Date | null;
   durationDays?: number | null;
+  baseAmount?: number;
+  discountPercent?: number;
+  discountAmount?: number;
 }): string {
   const lines = [
     `Facture EventMaster — ${params.invoiceNumber}`,
     `Organisation : ${params.tenantName}`,
     `Forfait : ${params.planName}`,
-    `Montant : ${formatAmountFc(params.amount)}`,
   ];
+  if (params.discountAmount && params.discountAmount > 0) {
+    lines.push(`Prix catalogue : ${formatAmountFc(params.baseAmount ?? params.amount + params.discountAmount)}`);
+    lines.push(
+      `Réduction spéciale : − ${formatAmountFc(params.discountAmount)}${params.discountPercent ? ` (${params.discountPercent} %)` : ''}`,
+    );
+  }
+  lines.push(`Montant : ${formatAmountFc(params.amount)}`);
   if (params.periodStart && params.periodEnd) {
     lines.push(`Période : ${params.periodStart.toLocaleDateString('fr-FR')} → ${params.periodEnd.toLocaleDateString('fr-FR')}`);
   } else if (params.durationDays) {
@@ -167,6 +209,9 @@ export async function createAndSendInvoice(params: {
   plan: PlanType;
   type: InvoiceType;
   amount?: number;
+  baseAmount?: number;
+  discountPercent?: number;
+  discountAmount?: number;
   durationDays?: number;
   periodStart?: Date;
   periodEnd?: Date;
@@ -219,6 +264,9 @@ export async function createAndSendInvoice(params: {
         planName: planDef.name,
         planPriceLabel: planDef.price,
         tenantName: tenant.name,
+        baseAmount: params.baseAmount ?? amount,
+        discountPercent: params.discountPercent ?? 0,
+        discountAmount: params.discountAmount ?? 0,
       },
       sentAt: now,
     },
@@ -241,6 +289,9 @@ export async function createAndSendInvoice(params: {
       periodEnd: params.periodEnd,
       durationDays: params.durationDays,
       recipientName: recipient.name,
+      baseAmount: params.baseAmount,
+      discountPercent: params.discountPercent,
+      discountAmount: params.discountAmount,
     });
     const text = renderInvoiceText({
       invoiceNumber,
@@ -250,6 +301,9 @@ export async function createAndSendInvoice(params: {
       periodStart: params.periodStart,
       periodEnd: params.periodEnd,
       durationDays: params.durationDays,
+      baseAmount: params.baseAmount,
+      discountPercent: params.discountPercent,
+      discountAmount: params.discountAmount,
     });
 
     const result = await sendRealEmail(recipient.email, subject, text, html);
@@ -474,6 +528,20 @@ export function buildInvoicePdf(invoice: InvoiceWithTenant): Promise<Buffer> {
       doc.text(`Durée : ${invoice.durationDays} jours`);
     }
 
+    const details = invoice.details as {
+      baseAmount?: number;
+      discountPercent?: number;
+      discountAmount?: number;
+    } | null;
+    if (details?.discountAmount && details.discountAmount > 0) {
+      doc.fontSize(11).font('Helvetica').fillColor('#334155');
+      doc.text(`Prix catalogue : ${formatAmountFc(details.baseAmount ?? invoice.amount + details.discountAmount)}`);
+      doc.text(
+        `Réduction spéciale : − ${formatAmountFc(details.discountAmount)}${details.discountPercent ? ` (${details.discountPercent} %)` : ''}`,
+      );
+      doc.moveDown(0.5);
+    }
+
     doc.moveDown(1.5);
     doc.fontSize(14).font('Helvetica-Bold').fillColor('#4f46e5');
     doc.text(`Montant TTC : ${formatAmountFc(invoice.amount)}`, { align: 'right' });
@@ -521,6 +589,12 @@ export async function resendInvoiceByEmail(invoiceId: string, targetEmail?: stri
 
   const results: Array<{ email: string; success: boolean; error?: string }> = [];
 
+  const details = invoice.details as {
+    baseAmount?: number;
+    discountPercent?: number;
+    discountAmount?: number;
+  } | null;
+
   for (const email of emails) {
     const html = renderInvoiceHtml({
       invoiceNumber: invoice.invoiceNumber,
@@ -532,6 +606,9 @@ export async function resendInvoiceByEmail(invoiceId: string, targetEmail?: stri
       periodStart: invoice.periodStart,
       periodEnd: invoice.periodEnd,
       durationDays: invoice.durationDays,
+      baseAmount: details?.baseAmount,
+      discountPercent: details?.discountPercent,
+      discountAmount: details?.discountAmount,
     });
     const text = renderInvoiceText({
       invoiceNumber: invoice.invoiceNumber,
@@ -541,6 +618,9 @@ export async function resendInvoiceByEmail(invoiceId: string, targetEmail?: stri
       periodStart: invoice.periodStart,
       periodEnd: invoice.periodEnd,
       durationDays: invoice.durationDays,
+      baseAmount: details?.baseAmount,
+      discountPercent: details?.discountPercent,
+      discountAmount: details?.discountAmount,
     });
 
     const result = await sendRealEmail(email, subject, text, html);

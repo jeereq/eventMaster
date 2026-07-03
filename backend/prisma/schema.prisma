@@ -315,16 +315,19 @@ enum SubscriptionRequestStatus {
 }
 
 model SubscriptionRequest {
-  id             String                    @id @default(uuid())
-  tenantId       String
-  tenant         Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  requestedPlan  PlanType
-  durationDays   Int                       @default(30)
-  proofOfPayment String?
-  status         SubscriptionRequestStatus @default(PENDING)
-  platformInvoice PlatformInvoice?
-  createdAt      DateTime                  @default(now())
-  updatedAt      DateTime                  @updatedAt
+  id                     String                    @id @default(uuid())
+  tenantId               String
+  tenant                 Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requestedPlan          PlanType
+  durationDays           Int                       @default(30)
+  proofOfPayment         String?
+  status                 SubscriptionRequestStatus @default(PENDING)
+  specialDiscountPercent Float?
+  baseAmount             Float?
+  approvedAmount         Float?
+  platformInvoice        PlatformInvoice?
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
 }
 
 model GuestMessageTemplate {

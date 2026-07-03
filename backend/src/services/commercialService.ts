@@ -1,6 +1,11 @@
 import { PlanType } from '@prisma/client';
 import { prisma } from '../db';
 import { getPlanLimits } from '../config/plansConfig';
+import { sendRealEmail, sendRealWhatsApp } from './notificationService';
+
+function formatAmountFc(amount: number): string {
+  return `${amount.toLocaleString('fr-FR')} FC`;
+}
 
 const DEFAULT_COMMISSION_RATE = 0.2;
 
@@ -229,6 +234,127 @@ export async function recordCommercialCommission(params: {
   }
 
   return results[0] ?? null;
+}
+
+type CommercialContact = {
+  id: string;
+  name: string | null;
+  email: string;
+  phone: string | null;
+  kind: 'platform' | 'org';
+};
+
+async function getTenantCommercialContacts(tenantId: string): Promise<CommercialContact[]> {
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: {
+      referredByCommercial: {
+        select: { id: true, name: true, email: true, phone: true, role: true },
+      },
+      referredByOrgUser: {
+        select: { id: true, name: true, email: true, phone: true, orgRole: true },
+      },
+    },
+  });
+
+  const contacts: CommercialContact[] = [];
+  const seen = new Set<string>();
+
+  if (tenant?.referredByCommercial?.role === 'COMMERCIAL') {
+    seen.add(tenant.referredByCommercial.id);
+    contacts.push({
+      id: tenant.referredByCommercial.id,
+      name: tenant.referredByCommercial.name,
+      email: tenant.referredByCommercial.email,
+      phone: tenant.referredByCommercial.phone,
+      kind: 'platform',
+    });
+  }
+
+  if (tenant?.referredByOrgUser?.orgRole === 'COMMERCIAL' && !seen.has(tenant.referredByOrgUser.id)) {
+    contacts.push({
+      id: tenant.referredByOrgUser.id,
+      name: tenant.referredByOrgUser.name,
+      email: tenant.referredByOrgUser.email,
+      phone: tenant.referredByOrgUser.phone,
+      kind: 'org',
+    });
+  }
+
+  return contacts;
+}
+
+export async function notifyCommercialsOnSubscriptionApproval(params: {
+  tenantId: string;
+  tenantName: string;
+  plan: PlanType;
+  durationDays: number;
+  baseAmount: number;
+  finalAmount: number;
+  discountPercent: number;
+  discountAmount: number;
+  invoiceNumber?: string;
+}): Promise<{ notified: string[] }> {
+  const contacts = await getTenantCommercialContacts(params.tenantId);
+  if (contacts.length === 0) {
+    return { notified: [] };
+  }
+
+  const planName = getPlanLimits(params.plan).name;
+  const discountLine =
+    params.discountAmount > 0
+      ? `\nRéduction accordée : − ${formatAmountFc(params.discountAmount)} (${params.discountPercent} %)\nMontant facturé : ${formatAmountFc(params.finalAmount)}`
+      : `\nMontant facturé : ${formatAmountFc(params.finalAmount)}`;
+
+  const notified: string[] = [];
+
+  for (const contact of contacts) {
+    const roleLabel = contact.kind === 'platform' ? 'commercial plateforme' : 'commercial organisation';
+    const subject = `EventMaster — Abonnement approuvé pour ${params.tenantName}`;
+    const text = [
+      `Bonjour${contact.name ? ` ${contact.name}` : ''},`,
+      '',
+      `L'abonnement de l'organisation « ${params.tenantName} » vient d'être approuvé.`,
+      '',
+      `Forfait : ${planName} (${params.plan})`,
+      `Durée : ${params.durationDays} jours`,
+      `Prix catalogue : ${formatAmountFc(params.baseAmount)}`,
+      discountLine.trim(),
+      params.invoiceNumber ? `Facture : ${params.invoiceNumber}` : '',
+      '',
+      `Votre commission sera calculée sur le montant facturé (${formatAmountFc(params.finalAmount)}).`,
+      '',
+      '— EventMaster',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const html = `
+      <p>Bonjour${contact.name ? ` ${contact.name}` : ''},</p>
+      <p>L'abonnement de l'organisation <strong>${params.tenantName}</strong> vient d'être approuvé.</p>
+      <ul>
+        <li>Forfait : <strong>${planName}</strong> (${params.plan})</li>
+        <li>Durée : ${params.durationDays} jours</li>
+        <li>Prix catalogue : ${formatAmountFc(params.baseAmount)}</li>
+        ${params.discountAmount > 0 ? `<li>Réduction accordée : <strong style="color:#059669">− ${formatAmountFc(params.discountAmount)} (${params.discountPercent} %)</strong></li>` : ''}
+        <li>Montant facturé : <strong>${formatAmountFc(params.finalAmount)}</strong></li>
+        ${params.invoiceNumber ? `<li>Facture : ${params.invoiceNumber}</li>` : ''}
+      </ul>
+      <p style="color:#64748b;font-size:13px;">En tant que ${roleLabel}, votre commission sera calculée sur le montant facturé.</p>
+    `;
+
+    const emailResult = await sendRealEmail(contact.email, subject, text, html);
+    if (emailResult.success) {
+      notified.push(contact.email);
+    }
+
+    if (contact.phone) {
+      const waBody = `EventMaster — Abonnement approuvé pour ${params.tenantName} (${planName}). Montant facturé : ${formatAmountFc(params.finalAmount)}.${params.discountAmount > 0 ? ` Réduction : ${params.discountPercent}%.` : ''} Votre commission sera mise à jour.`;
+      await sendRealWhatsApp(contact.phone, waBody);
+    }
+  }
+
+  return { notified };
 }
 
 export function findGuestSeatInTablePlan(
