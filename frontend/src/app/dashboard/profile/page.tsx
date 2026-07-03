@@ -1,29 +1,64 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { 
-  User, Mail, Phone, Lock, Building, Loader2, 
-  AlertCircle, CheckCircle2, ShieldCheck, Save, Award, Calendar
+import {
+  User, Mail, Phone, Lock, Building, Loader2,
+  Save, Award, Calendar, Users, LayoutGrid,
 } from 'lucide-react';
 import TeamManagement from '../TeamManagement';
 import RoomsManagement from '../RoomsManagement';
 import { PageHeader, Alert } from '@/components/ui';
+import { cn } from '@/lib/cn';
 
-export default function ProfilePage() {
+type ProfileTab = 'profil' | 'salles' | 'equipe';
+
+function ProfilePageContent() {
   const { user, tenant, updateUserAndTenant, access } = useAuth();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [tenantName, setTenantName] = useState('');
-  
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  const canManageRooms = Boolean(user?.role === 'USER' && tenant && access?.canManageRooms);
+  const canManageTeam = Boolean(user?.role === 'USER' && tenant && access?.canManageTeam);
+
+  const tabs = useMemo(() => {
+    const items: Array<{ id: ProfileTab; label: string; icon: React.ComponentType<{ className?: string }> }> = [
+      { id: 'profil', label: 'Mon profil', icon: User },
+    ];
+    if (canManageRooms) {
+      items.push({ id: 'salles', label: 'Salles', icon: LayoutGrid });
+    }
+    if (canManageTeam) {
+      items.push({ id: 'equipe', label: 'Équipe', icon: Users });
+    }
+    return items;
+  }, [canManageRooms, canManageTeam]);
+
+  const tabParam = searchParams.get('tab') as ProfileTab | null;
+  const activeTab: ProfileTab =
+    tabParam && tabs.some((t) => t.id === tabParam) ? tabParam : 'profil';
+
+  const setActiveTab = (tab: ProfileTab) => {
+    router.replace(`/dashboard/profile?tab=${tab}`, { scroll: false });
+  };
+
+  useEffect(() => {
+    if (tabParam && !tabs.some((t) => t.id === tabParam)) {
+      router.replace('/dashboard/profile?tab=profil', { scroll: false });
+    }
+  }, [tabParam, tabs, router]);
 
   useEffect(() => {
     if (user) {
@@ -54,50 +89,48 @@ export default function ProfilePage() {
         email,
         phone,
         password: password || undefined,
-        tenantName: user?.role !== 'SUPER_ADMIN' ? tenantName : undefined,
+        tenantName: user?.role !== 'SUPER_ADMIN' && user?.role !== 'COMMERCIAL' ? tenantName : undefined,
       });
 
-      // Update local state and localStorage
       updateUserAndTenant(data.user, data.tenant);
-      
       setSuccess(data.message || 'Profil mis à jour avec succès !');
       setPassword('');
       setConfirmPassword('');
     } catch (err: any) {
-      console.error('Error updating profile:', err);
       setError(err.message || 'Une erreur est survenue lors de la mise à jour du profil.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Get user initials
   const getInitials = (userName: string) => {
     if (!userName) return 'U';
     return userName
       .split(' ')
-      .map(n => n[0])
+      .map((n) => n[0])
       .slice(0, 2)
       .join('')
       .toUpperCase();
   };
 
+  const tabDescriptions: Record<ProfileTab, string> = {
+    profil: 'Informations personnelles, contact et sécurité du compte.',
+    salles: 'Salles de l\'organisation, plans 2D et staff assigné.',
+    equipe: 'Managers, agents protocole et commerciaux de l\'organisation.',
+  };
+
   return (
-    <div className="space-y-8 w-full">
+    <div className="space-y-6 w-full max-w-5xl mx-auto">
       <PageHeader
         title="Mon compte"
-        description="Gérez vos informations personnelles, de contact, de sécurité et visualisez votre statut d'organisation."
+        description={tabDescriptions[activeTab]}
       />
 
-      {error && <Alert variant="error">{error}</Alert>}
-
-      {success && <Alert variant="success">{success}</Alert>}
-
-      {/* Profile Header Card */}
+      {/* En-tête profil (toujours visible) */}
       <div className="bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-950 text-white rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-md relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="absolute inset-0 bg-grid-slate-100/[0.02] [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.5))]" />
         <div className="absolute top-[-20%] left-[-20%] w-[50%] h-[50%] rounded-full bg-indigo-500/10 blur-[80px] pointer-events-none" />
-        
+
         <div className="flex flex-col sm:flex-row items-center gap-5 relative z-10 text-center sm:text-left">
           <div className="w-20 h-20 rounded-2xl bg-indigo-600 border-2 border-indigo-400 flex items-center justify-center text-2xl font-black text-white shadow-lg shadow-indigo-500/20">
             {getInitials(name)}
@@ -105,7 +138,9 @@ export default function ProfilePage() {
           <div className="space-y-1">
             <h2 className="text-2xl font-black tracking-tight">{name || 'Utilisateur'}</h2>
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5 text-xs text-slate-300 font-semibold">
-              <span className="bg-white/10 border border-white/10 px-2.5 py-0.5 rounded-full uppercase tracking-wider">{user?.role}</span>
+              <span className="bg-white/10 border border-white/10 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                {user?.role}
+              </span>
               {tenant && (
                 <span className="flex items-center gap-1">
                   <Building className="w-3.5 h-3.5 text-indigo-400" />
@@ -116,185 +151,190 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {tenant && user?.role !== 'SUPER_ADMIN' && (
+        {tenant && user?.role === 'USER' && (
           <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-4 min-w-[220px] relative z-10 space-y-3">
             <div className="flex items-center gap-2">
               <Award className="w-5 h-5 text-indigo-400" />
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Abonnement Actuel</span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Abonnement</span>
             </div>
             <div>
               <div className="text-lg font-black text-white">Plan {tenant.plan}</div>
               {tenant.licenseExpiresAt ? (
                 <div className="flex items-center gap-1 text-[11px] text-slate-400 font-medium mt-1">
                   <Calendar className="w-3.5 h-3.5 text-indigo-400" />
-                  Expire le : {new Date(tenant.licenseExpiresAt).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  Expire le {new Date(tenant.licenseExpiresAt).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
                 </div>
               ) : (
-                <div className="text-[11px] text-emerald-400 font-medium mt-1">Licence à vie active</div>
+                <div className="text-[11px] text-emerald-400 font-medium mt-1">Licence active</div>
               )}
             </div>
           </div>
         )}
       </div>
 
-      <form onSubmit={handleUpdateProfile} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Profile Information Card */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xs space-y-5">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
-              <User className="w-5 h-5 text-indigo-600" />
-              Informations Personnelles
-            </h2>
+      {/* Onglets */}
+      {tabs.length > 1 && (
+        <div className="flex flex-wrap gap-2 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl">
+          {tabs.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setActiveTab(id)}
+              className={cn(
+                'inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all',
+                activeTab === id
+                  ? 'bg-white dark:bg-slate-900 text-indigo-600 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white',
+              )}
+            >
+              <Icon className="w-4 h-4" />
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Nom Complet</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
-                    <User className="w-4.5 h-4.5" />
-                  </div>
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="block w-full pl-11 pr-3.5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-900 dark:text-white transition"
-                    placeholder="Jean Dupont"
-                  />
-                </div>
-              </div>
+      {/* Contenu par onglet */}
+      {activeTab === 'profil' && (
+        <>
+          {error && <Alert variant="error">{error}</Alert>}
+          {success && <Alert variant="success">{success}</Alert>}
 
-              <div>
-                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Adresse Email</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
-                    <Mail className="w-4.5 h-4.5" />
-                  </div>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full pl-11 pr-3.5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-900 dark:text-white transition"
-                    placeholder="jean.dupont@exemple.com"
-                  />
-                </div>
-              </div>
+          <form onSubmit={handleUpdateProfile} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xs space-y-5">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+                  <User className="w-5 h-5 text-indigo-600" />
+                  Informations personnelles
+                </h2>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Numéro de Téléphone (WhatsApp)</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
-                    <Phone className="w-4.5 h-4.5" />
-                  </div>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="block w-full pl-11 pr-3.5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-900 dark:text-white transition"
-                    placeholder="Ex: +243990000000"
-                  />
-                </div>
-              </div>
-
-              {user?.role !== 'SUPER_ADMIN' && (
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Nom de l'Organisation</label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
-                      <Building className="w-4.5 h-4.5" />
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Nom complet</label>
+                    <div className="relative">
+                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type="text"
+                        required
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="block w-full pl-11 pr-3.5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                      />
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">E-mail</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="block w-full pl-11 pr-3.5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Téléphone (WhatsApp)</label>
+                    <div className="relative">
+                      <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="block w-full pl-11 pr-3.5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                        placeholder="+243..."
+                      />
+                    </div>
+                  </div>
+
+                  {user?.role === 'USER' && tenant && (
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Nom de l&apos;organisation</label>
+                      <div className="relative">
+                        <Building className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                          type="text"
+                          required
+                          value={tenantName}
+                          onChange={(e) => setTenantName(e.target.value)}
+                          className="block w-full pl-11 pr-3.5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xs space-y-5">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+                  <Lock className="w-5 h-5 text-indigo-600" />
+                  Sécurité
+                </h2>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Nouveau mot de passe</label>
                     <input
-                      type="text"
-                      required
-                      value={tenantName}
-                      onChange={(e) => setTenantName(e.target.value)}
-                      className="block w-full pl-11 pr-3.5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-900 dark:text-white transition"
-                      placeholder="Ma Compagnie"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="block w-full px-3.5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                      placeholder="Laisser vide pour ne pas modifier"
+                      minLength={6}
                     />
                   </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Security / Password Card */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xs space-y-5">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
-              <Lock className="w-5 h-5 text-indigo-600" />
-              Sécurité du Compte
-            </h2>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Nouveau mot de passe</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
-                    <Lock className="w-4.5 h-4.5" />
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Confirmer</label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="block w-full px-3.5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                      placeholder="Laisser vide pour ne pas modifier"
+                      minLength={6}
+                    />
                   </div>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full pl-11 pr-3.5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-900 dark:text-white transition"
-                    placeholder="Laisser vide pour ne pas modifier"
-                    minLength={6}
-                  />
+                  <p className="text-xs text-slate-500 bg-slate-50 dark:bg-slate-950 border rounded-xl p-3">
+                    Minimum 6 caractères. Laissez vide si vous ne souhaitez pas changer le mot de passe.
+                  </p>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Confirmer le nouveau mot de passe</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
-                    <Lock className="w-4.5 h-4.5" />
-                  </div>
-                  <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="block w-full pl-11 pr-3.5 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-900 dark:text-white transition"
-                    placeholder="Laisser vide pour ne pas modifier"
-                    minLength={6}
-                  />
-                </div>
-              </div>
-
-              <div className="bg-slate-50 dark:bg-slate-950 border border-slate-150 dark:border-slate-800 p-4 rounded-2xl text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                <p className="font-bold text-slate-700 dark:text-slate-300 mb-1">Règles de sécurité :</p>
-                <ul className="list-disc list-inside space-y-0.5 font-medium">
-                  <li>Le mot de passe doit comporter au moins 6 caractères.</li>
-                  <li>Utilisez des lettres, chiffres et caractères spéciaux pour plus de sécurité.</li>
-                </ul>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Action Bar */}
-        <div className="flex justify-end pt-4">
-          <button
-            type="submit"
-            disabled={loading}
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold rounded-xl text-sm transition shadow-md shadow-indigo-500/20 cursor-pointer"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Enregistrement...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                Enregistrer les Modifications
-              </>
-            )}
-          </button>
-        </div>
-      </form>
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={loading}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold rounded-xl text-sm transition shadow-md"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Enregistrer
+              </button>
+            </div>
+          </form>
+        </>
+      )}
 
-      {user?.role === 'USER' && tenant && access?.canManageTeam && <TeamManagement />}
-      {user?.role === 'USER' && tenant && access?.canManageRooms && <RoomsManagement />}
+      {activeTab === 'salles' && canManageRooms && <RoomsManagement />}
+      {activeTab === 'equipe' && canManageTeam && <TeamManagement />}
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+        </div>
+      }
+    >
+      <ProfilePageContent />
+    </Suspense>
   );
 }
