@@ -80,7 +80,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     ctaHref: '/register',
     ctaVariant: 'primary',
     tier: 'business',
-    highlights: ['8 événements · 150 invités', 'Protocole QR & confirmation de présence', '3 salles · thèmes & fixtures'],
+    highlights: ['8 événements · 150 invités', 'Protocole QR web & mobile', '3 salles · thèmes & fixtures'],
   },
   {
     id: 'PREMIUM_1',
@@ -106,7 +106,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tier: 'premium',
     highlighted: true,
     badge: 'Le plus populaire',
-    highlights: ['20 événements · 1 000 invités', 'OCR texte sur maquette', 'Vérification siège · WhatsApp'],
+    highlights: ['20 événements · 1 000 invités', 'OCR texte · PDF après check-in', 'GPS WhatsApp · vérification siège'],
   },
   {
     id: 'ENTERPRISE_1',
@@ -319,6 +319,58 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     },
   },
   {
+    category: 'Protocole',
+    label: 'Livraison différée PDF + GPS après check-in',
+    values: {
+      FREE: false,
+      STANDARD: false,
+      PREMIUM_1: true,
+      PREMIUM_2: true,
+      ENTERPRISE_1: true,
+      ENTERPRISE_2: true,
+      ENTERPRISE_3: true,
+    },
+  },
+  {
+    category: 'Mobile',
+    label: 'Application iOS & Android',
+    values: {
+      FREE: true,
+      STANDARD: true,
+      PREMIUM_1: true,
+      PREMIUM_2: true,
+      ENTERPRISE_1: true,
+      ENTERPRISE_2: true,
+      ENTERPRISE_3: true,
+    },
+  },
+  {
+    category: 'Mobile',
+    label: 'Scan QR protocole (caméra native)',
+    values: {
+      FREE: false,
+      STANDARD: true,
+      PREMIUM_1: true,
+      PREMIUM_2: true,
+      ENTERPRISE_1: true,
+      ENTERPRISE_2: true,
+      ENTERPRISE_3: true,
+    },
+  },
+  {
+    category: 'Mobile',
+    label: 'Notifications push (Expo)',
+    values: {
+      FREE: false,
+      STANDARD: true,
+      PREMIUM_1: true,
+      PREMIUM_2: true,
+      ENTERPRISE_1: true,
+      ENTERPRISE_2: true,
+      ENTERPRISE_3: true,
+    },
+  },
+  {
     category: 'Invités',
     label: 'Portail RSVP + badge QR',
     values: {
@@ -406,7 +458,7 @@ export const ROLE_HIGHLIGHTS = [
   },
   {
     title: 'Protocole',
-    description: 'Scan QR, authentification invités, vérification des sièges et commentaires — sans créer d\'événements.',
+    description: 'Scan QR caméra (web ou app mobile), confirmation de présence, validation du siège et déclenchement automatique de la livraison placement.',
     icon: 'scan',
   },
   {
@@ -429,18 +481,23 @@ export const PLATFORM_PILLARS = [
   },
   {
     title: 'Protocole intelligent',
-    description: 'Scan caméra du QR invité, confirmation de présence, validation du siège et notification automatique (e-mail, WhatsApp).',
+    description: 'Scan QR web ou application mobile, confirmation de présence, validation du siège et livraison automatique PDF + plan + GPS.',
     icon: 'qr',
+  },
+  {
+    title: 'Application mobile native',
+    description: 'iOS & Android : RSVP invité, protocole jour J, scan caméra, notifications push, deep links et thème sombre.',
+    icon: 'smartphone',
+  },
+  {
+    title: 'RSVP & invitations',
+    description: 'Modèles visuels, diffusion multi-canal (e-mail, WhatsApp), portail invité responsive avec badge QR et fil d\'actualité privé.',
+    icon: 'mail',
   },
   {
     title: 'Rôles granulaires',
     description: 'Propriétaire, manager org., protocole, managers salle/événement — chacun voit uniquement ce qu\'il doit gérer.',
     icon: 'users',
-  },
-  {
-    title: 'RSVP & invitations',
-    description: 'Neuf modèles, diffusion multi-canal, portail invité responsive avec plan de table et fil d\'actualité privé.',
-    icon: 'mail',
   },
   {
     title: 'Multi-tenant sécurisé',

@@ -1,13 +1,14 @@
 'use client';
 
 import React from 'react';
-import { Shield, ScanLine, Building2, Briefcase, Users, Mail, Lock, TrendingUp, LayoutGrid } from 'lucide-react';
+import { Shield, ScanLine, Building2, Briefcase, Users, Mail, Lock, TrendingUp, LayoutGrid, Smartphone } from 'lucide-react';
 import { ROLE_HIGHLIGHTS, PLATFORM_PILLARS } from '@/config/landingPricing';
 
 const roleIcons = { shield: Shield, scan: ScanLine, building: Building2, briefcase: Briefcase };
 const pillarIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   layout: LayoutGrid,
   qr: ScanLine,
+  smartphone: Smartphone,
   users: Users,
   mail: Mail,
   lock: Lock,
@@ -84,7 +85,7 @@ export default function LandingRolesSection() {
               De la conception de salle au scan QR en passant par les notifications de placement.
             </p>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {PLATFORM_PILLARS.map((pillar) => {
               const Icon = pillarIcons[pillar.icon] || Shield;
               return (

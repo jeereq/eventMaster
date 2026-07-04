@@ -12,12 +12,14 @@ export const SITE_CONTACT = {
 } as const;
 
 export const FOOTER_FEATURES = [
+  'Application mobile iOS & Android (Expo)',
   'Salles 2D & éditeur de layout',
-  'Protocole QR & scan caméra',
+  'Protocole QR — web & scan caméra natif',
+  'Livraison différée : PDF, plan & GPS après check-in',
+  'Portail RSVP, badge QR & notifications push',
   'Rôles manager / protocole / commercial',
-  'Portail RSVP & notifications placement',
-  'Modèles d\'invitation & rappels automatiques',
-  'Facturation, quotas & historique abonnements',
+  'Modèles d\'invitation, OCR & rappels automatiques',
+  'Facturation, quotas & réseau commercial',
 ] as const;
 
 export const FOOTER_RESOURCES = [
@@ -31,7 +33,7 @@ export const FOOTER_RESOURCES = [
 ] as const;
 
 export const FOOTER_BRAND_DESCRIPTION =
-  'Plateforme SaaS multi-tenant pour événements privés et professionnels : salles 2D, protocole QR, RSVP, rôles granulaires, réseau commercial et forfaits par organisation (Essentials à Enterprise).';
+  'Plateforme SaaS multi-tenant pour événements privés et professionnels : web + mobile natif, salles 2D, protocole QR, RSVP, livraison intelligente du placement après validation invité, rôles granulaires, réseau commercial et forfaits par organisation (Essentials à Enterprise).';
 
 export interface FaqItem {
   id: string;
@@ -44,7 +46,19 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'what-is-eventmaster',
     question: 'Qu\'est-ce qu\'EventMaster ?',
     answer:
-      'EventMaster est une plateforme SaaS qui centralise la gestion d\'événements : invitations et RSVP, plans de salle 2D, protocole avec scan QR, fil d\'actualité, livre d\'or, modèles de messages et gestion d\'équipe. Chaque organisation dispose de son propre espace isolé.',
+      'EventMaster est une plateforme SaaS web et mobile qui centralise la gestion d\'événements : invitations et RSVP, plans de salle 2D, protocole avec scan QR (navigateur ou application native), fil d\'actualité, livre d\'or, modèles de messages, notifications push et gestion d\'équipe. Chaque organisation dispose de son propre espace isolé.',
+  },
+  {
+    id: 'mobile-app',
+    question: 'Existe-t-il une application mobile ?',
+    answer:
+      'Oui. EventMaster propose une application native iOS et Android (React Native + Expo) : portail RSVP invité, badge QR, protocole jour J avec scan caméra, consultation événements et invités, notifications push et deep links (eventmaster://). L\'édition avancée (modèles, plan de table) reste sur le web.',
+  },
+  {
+    id: 'placement-delivery',
+    question: 'Quand l\'invité reçoit-il son plan de table, PDF et localisation GPS ?',
+    answer:
+      'L\'invitation initiale contient uniquement le lien RSVP (e-mail ou WhatsApp). Le PDF personnalisé, le plan de table interactif et la localisation GPS WhatsApp sont envoyés automatiquement après la confirmation de présence à l\'entrée (scan QR protocole) ou la validation du siège — jamais à l\'envoi de l\'invitation.',
   },
   {
     id: 'free-trial',
@@ -74,7 +88,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'protocol-qr',
     question: 'Comment fonctionne le protocole QR ?',
     answer:
-      'Chaque invité reçoit un badge QR unique. Le personnel protocole scanne le code à l\'entrée via la caméra du navigateur ou de l\'application. EventMaster vérifie la confirmation de présence, le placement et peut envoyer une notification de table à l\'invité. Disponible à partir du forfait Business.',
+      'Chaque invité qui accepte reçoit un badge QR unique sur son portail RSVP. Le personnel protocole scanne le code à l\'entrée via le navigateur web ou l\'application mobile (scan caméra natif). EventMaster enregistre la présence, peut valider le siège et déclenche l\'envoi automatique du PDF, du plan de table et de la localisation GPS. Disponible à partir du forfait Business ; notifications placement à partir de Premium 1.',
   },
   {
     id: 'roles',

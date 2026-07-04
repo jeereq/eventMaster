@@ -12,6 +12,8 @@ import {
 import { fetchPublicLandingTemplates } from '@/lib/landingTemplateAdapter';
 import LandingPricingSection from '@/components/landing/LandingPricingSection';
 import LandingRolesSection from '@/components/landing/LandingRolesSection';
+import LandingWorkflowSection from '@/components/landing/LandingWorkflowSection';
+import LandingMobileSection from '@/components/landing/LandingMobileSection';
 import FaqSection from '@/components/landing/FaqSection';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import SiteFooter from '@/components/SiteFooter';
@@ -132,6 +134,12 @@ export default function Home() {
             <Link href="/faq" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
               FAQ
             </Link>
+            <a href="#parcours" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+              Parcours
+            </a>
+            <a href="#mobile" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+              Mobile
+            </a>
             <a href="#tarifs" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
               Tarifs
             </a>
@@ -199,6 +207,27 @@ export default function Home() {
               >
                 FAQ
               </Link>
+              <a 
+                href="#parcours" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition py-2 border-b border-slate-100 dark:border-slate-900"
+              >
+                Parcours invité
+              </a>
+              <a 
+                href="#mobile" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition py-2 border-b border-slate-100 dark:border-slate-900"
+              >
+                Application mobile
+              </a>
+              <a 
+                href="#tarifs" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition py-2 border-b border-slate-100 dark:border-slate-900"
+              >
+                Tarifs
+              </a>
               {user ? (
                 <>
                   <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold py-1">
@@ -250,17 +279,21 @@ export default function Home() {
             <div className="space-y-8 text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-bold">
                 <Sparkles className="w-4 h-4" />
-                <span>Salles 2D · Protocole QR · Rôles multi-niveaux</span>
+                <span>Web + Mobile · Protocole QR · Livraison placement intelligente</span>
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
                 L&apos;événementiel professionnel, de la salle au{' '}
                 <span className="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">scan invité</span>.
               </h1>
               <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl">
-                EventMaster unifie plans de salle 2D, RSVP, protocole avec scan caméra, rôles granulaires (manager, protocole, commercial)
-                et notifications automatiques de placement — le tout isolé par organisation.
+                EventMaster unifie plans de salle 2D, RSVP multi-canal, protocole QR (web et app native),
+                livraison automatique PDF + GPS après check-in, rôles granulaires et réseau commercial —
+                le tout isolé par organisation.
               </p>
               <ul className="flex flex-wrap gap-3 text-xs font-semibold text-slate-600 dark:text-slate-400">
+                <li className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-full">
+                  <Smartphone className="w-3.5 h-3.5 text-indigo-500" /> App iOS & Android
+                </li>
                 <li className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-full">
                   <ScanLine className="w-3.5 h-3.5 text-indigo-500" /> Protocole QR
                 </li>
@@ -269,9 +302,6 @@ export default function Home() {
                 </li>
                 <li className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-full">
                   <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" /> Rôles & permissions
-                </li>
-                <li className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-full">
-                  <Briefcase className="w-3.5 h-3.5 text-indigo-500" /> Réseau commercial
                 </li>
               </ul>
               <div className="flex flex-col sm:flex-row gap-4">
@@ -337,6 +367,10 @@ export default function Home() {
       </section>
 
       <LandingRolesSection />
+
+      <LandingWorkflowSection />
+
+      <LandingMobileSection />
 
       {/* Nos Modèles Possibles (Invitation Models Showcase) */}
       <section className="py-20 bg-white dark:bg-slate-950">
@@ -465,7 +499,8 @@ export default function Home() {
             Donnez à vos événements l'élégance qu'ils méritent
           </h2>
           <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            Rejoignez des milliers d'organisateurs d'événements privés et professionnels qui font confiance à EventMaster pour simplifier leurs invitations, leurs plans de table et leur suivi RSVP.
+            Rejoignez les organisateurs d&apos;événements privés et professionnels qui font confiance à EventMaster
+            pour leurs invitations, plans de table, protocole jour J et parcours invité web + mobile.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
             {user ? (
