@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useCallback } from 'react';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers,
 } from 'lucide-react';
 import ChairRenderer from '@/components/ChairRenderer';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
@@ -35,7 +35,9 @@ import {
 import { prependLayoutAction, LayoutActionEntry } from '@/lib/layoutActionLog';
 import { getSeatCoordinates, getTableVisualStyle } from '@/lib/tablePlanUtils';
 import { readImageFile } from '@/lib/imageCropUtils';
-import { applyRoomTheme, getRoomTheme, roomThemeList, RoomThemeId } from '@/lib/roomThemeUtils';
+import { applyRoomTheme, getRoomTheme, listAvailableThemes, RoomThemeId, type FloorType } from '@/lib/roomThemeUtils';
+import { floorTypeLabels, resolveFloorStyle } from '@/lib/roomFloorUtils';
+import CustomRoomThemePanel from '@/components/CustomRoomThemePanel';
 
 type SelectableKind = 'table' | 'row' | 'zone' | 'fixture';
 
@@ -240,29 +242,62 @@ export default function RoomLayoutEditor({
   const applyTheme = (themeId: RoomThemeId) => {
     const next = applyRoomTheme(blueprint, themeId);
     onChange(refreshBlueprintMetadata(ensureBlueprintDefaults(next)));
-    log(`Thème « ${getRoomTheme(themeId).name} » appliqué`, 'settings');
+    log(`Thème « ${getRoomTheme(themeId, blueprint).name} » appliqué`, 'settings');
   };
 
-  const activeTheme = getRoomTheme(blueprint.metadata.roomThemeId);
+  const setFloorType = (floorType: FloorType) => {
+    updateBlueprint({
+      ...blueprint,
+      metadata: { ...blueprint.metadata, floorType, floorImageUrl: undefined },
+    }, { message: `Sol : ${floorTypeLabels[floorType]}`, kind: 'settings' });
+  };
+
+  const setFloorImage = async (file: File) => {
+    const url = await readImageFile(file);
+    updateBlueprint({
+      ...blueprint,
+      metadata: { ...blueprint.metadata, floorImageUrl: url, floorType: 'custom' },
+    }, { message: 'Image de sol importée', kind: 'settings' });
+  };
+
+  const activeTheme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
+  const effectiveFloorType = blueprint.metadata.floorType ?? activeTheme.defaultFloorType;
+  const availableThemes = listAvailableThemes(blueprint);
 
   const outline = blueprint.roomOutline!;
   const clipPath = getRoomOutlineClipPath(outline.shape);
 
-  const renderRoomOutline = () => (
-    <div
-      className="absolute pointer-events-none z-0"
-      style={{
-        left: `${outline.x}%`,
-        top: `${outline.y}%`,
-        width: `${outline.w}%`,
-        height: `${outline.h}%`,
-        background: outline.fill,
-        border: `${outline.strokeWidth ?? 2}px solid ${outline.stroke}`,
-        borderRadius: outline.shape === 'circle' ? '50%' : outline.shape === 'square' ? '4%' : '8px',
-        clipPath: clipPath,
-      }}
-    />
-  );
+  const renderRoomOutline = () => {
+    const floorStyle = resolveFloorStyle(
+      effectiveFloorType,
+      blueprint.metadata.floorImageUrl,
+      activeTheme.accentColor,
+    );
+    return (
+      <div
+        className="absolute pointer-events-none z-0 overflow-hidden"
+        style={{
+          left: `${outline.x}%`,
+          top: `${outline.y}%`,
+          width: `${outline.w}%`,
+          height: `${outline.h}%`,
+          borderRadius: outline.shape === 'circle' ? '50%' : outline.shape === 'square' ? '4%' : '8px',
+          clipPath: clipPath,
+          border: `${outline.strokeWidth ?? 2}px solid ${outline.stroke}`,
+          boxShadow: activeTheme.roomOutline.innerGlow,
+        }}
+      >
+        <div className="absolute inset-0" style={floorStyle} />
+        {activeTheme.ambientOverlay && (
+          <div className="absolute inset-0 pointer-events-none" style={{ background: activeTheme.ambientOverlay }} />
+        )}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: outline.fill, mixBlendMode: 'multiply', opacity: 0.35 }}
+        />
+      </div>
+    );
+  };
 
   const renderCanvas = (className: string) => (
     <div
@@ -273,9 +308,11 @@ export default function RoomLayoutEditor({
       onClick={() => setSelected(null)}
       className={`relative w-full ${className} border-2 rounded-2xl overflow-hidden shadow-inner`}
       style={{
-        backgroundColor: activeTheme.canvasBackground,
-        backgroundImage: `linear-gradient(${activeTheme.gridColor} 1px, transparent 1px), linear-gradient(90deg, ${activeTheme.gridColor} 1px, transparent 1px)`,
-        backgroundSize: '24px 24px',
+        background: activeTheme.canvasBackground,
+        backgroundImage: activeTheme.canvasPattern
+          ? `${activeTheme.canvasPattern}, linear-gradient(${activeTheme.gridColor} 1px, transparent 1px), linear-gradient(90deg, ${activeTheme.gridColor} 1px, transparent 1px)`
+          : `linear-gradient(${activeTheme.gridColor} 1px, transparent 1px), linear-gradient(90deg, ${activeTheme.gridColor} 1px, transparent 1px)`,
+        backgroundSize: activeTheme.canvasPattern ? '100% 100%, 24px 24px, 24px 24px' : '24px 24px',
       }}
     >
       {renderRoomOutline()}
@@ -340,7 +377,7 @@ export default function RoomLayoutEditor({
 
         const isSel = selected?.kind === 'table' && selected.id === item.id;
         const tableColor = resolveTableColor(item.tableColor, blueprint.metadata.defaultTableColor);
-        const { className: tableClass, style: tableStyle } = getTableVisualStyle(item.shape, isSel, tableColor);
+        const { className: tableClass, style: tableStyle } = getTableVisualStyle(item.shape, isSel, tableColor, item.tableImageUrl);
         return (
           <div
             key={item.id}
@@ -349,7 +386,14 @@ export default function RoomLayoutEditor({
             className={`absolute -translate-x-1/2 -translate-y-1/2 cursor-move ${isSel ? 'z-40' : 'z-20'}`}
             style={{ left: `${item.x}%`, top: `${item.y}%` }}
           >
-            <div className={`relative flex items-center justify-center ${tableClass} border-2`} style={tableStyle}>
+            <div
+              className={`relative flex items-center justify-center ${tableClass} border-2`}
+              style={{
+                ...tableStyle,
+                borderColor: tableStyle?.borderColor ?? activeTheme.tableBorderColor ?? '#cbd5e1',
+                boxShadow: isSel ? undefined : '0 4px 14px rgba(0,0,0,0.12)',
+              }}
+            >
               <div className="px-2 text-center z-10">
                 <div className="text-[10px] font-black truncate max-w-[80px]">{item.name}</div>
                 <div className="text-[8px] opacity-80">{item.capacity} pl.</div>
@@ -406,6 +450,28 @@ export default function RoomLayoutEditor({
     </label>
   );
 
+  const renderTableImageUpload = (id: string, currentUrl?: string) => (
+    <label className="block text-xs space-y-1">
+      <span className="font-semibold text-slate-600 flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> Image de table (nappage, bois…)</span>
+      <input
+        type="file"
+        accept="image/*"
+        className="w-full text-[10px]"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          const url = await readImageFile(file);
+          updateFurniture(id, { tableImageUrl: url }, 'Image de table importée');
+        }}
+      />
+      {currentUrl && (
+        <button type="button" className="text-[10px] text-rose-600 font-bold" onClick={() => updateFurniture(id, { tableImageUrl: undefined }, 'Image de table retirée')}>
+          Retirer l&apos;image
+        </button>
+      )}
+    </label>
+  );
+
   const renderEditPanel = () => {
     if (readOnly) return null;
 
@@ -415,25 +481,86 @@ export default function RoomLayoutEditor({
           <div className="p-4 bg-slate-50 rounded-xl border space-y-3">
             <p className="text-xs font-bold uppercase text-slate-500 flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> Thème de la salle</p>
             <div className="grid grid-cols-2 gap-2">
-              {roomThemeList.map((theme) => (
+              {availableThemes.map((theme) => (
                 <button
                   key={theme.id}
                   type="button"
                   onClick={() => applyTheme(theme.id)}
-                  className={`text-left py-2 px-2.5 rounded-lg border text-[10px] font-bold transition ${
+                  className={`text-left py-2 px-2.5 rounded-lg border text-[10px] font-bold transition overflow-hidden ${
                     blueprint.metadata.roomThemeId === theme.id || (!blueprint.metadata.roomThemeId && theme.id === 'classic')
                       ? 'bg-indigo-50 border-indigo-400 text-indigo-800 ring-1 ring-indigo-200'
                       : 'border-slate-200 text-slate-600 hover:bg-white'
                   }`}
                 >
+                  <span
+                    className="block h-8 rounded-md mb-1.5 border border-black/5"
+                    style={{
+                      background: `${theme.canvasPattern ? `${theme.canvasPattern}, ` : ''}${theme.canvasBackground}`,
+                    }}
+                  />
                   <span className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded-full border shrink-0" style={{ background: theme.roomOutline.fill, borderColor: theme.roomOutline.stroke }} />
+                    <span className="w-3 h-3 rounded-full border shrink-0" style={{ background: theme.accentColor, borderColor: theme.roomOutline.stroke }} />
                     {theme.name}
+                    {theme.isCustom && <span className="text-[8px] text-indigo-500 font-normal">perso.</span>}
                   </span>
                   <span className="font-normal text-slate-400 block mt-0.5 line-clamp-1">{theme.description}</span>
                 </button>
               ))}
             </div>
+            <CustomRoomThemePanel
+              blueprint={blueprint}
+              onChange={(next) => updateBlueprint(next)}
+              onApplyTheme={(id) => applyTheme(id as RoomThemeId)}
+              activeThemeId={blueprint.metadata.roomThemeId}
+            />
+          </div>
+          <div className="p-4 bg-slate-50 rounded-xl border space-y-3">
+            <p className="text-xs font-bold uppercase text-slate-500 flex items-center gap-1"><Layers className="w-3.5 h-3.5" /> Sol de la salle</p>
+            <div className="grid grid-cols-2 gap-2">
+              {(Object.keys(floorTypeLabels) as FloorType[]).filter((k) => k !== 'custom').map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setFloorType(type)}
+                  className={`py-2 px-2 rounded-lg border text-[10px] font-bold transition overflow-hidden ${
+                    effectiveFloorType === type && !blueprint.metadata.floorImageUrl
+                      ? 'bg-emerald-50 border-emerald-400 text-emerald-800 ring-1 ring-emerald-200'
+                      : 'border-slate-200 text-slate-600 hover:bg-white'
+                  }`}
+                >
+                  <span
+                    className="block h-6 rounded mb-1 border border-black/5"
+                    style={resolveFloorStyle(type, undefined, activeTheme.accentColor)}
+                  />
+                  {floorTypeLabels[type]}
+                </button>
+              ))}
+            </div>
+            <label className="block text-xs space-y-1">
+              <span className="font-semibold text-slate-600 flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> Importer une texture (photo de sol)</span>
+              <input
+                type="file"
+                accept="image/*"
+                className="w-full text-[10px]"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) await setFloorImage(file);
+                  e.target.value = '';
+                }}
+              />
+              {blueprint.metadata.floorImageUrl && (
+                <button
+                  type="button"
+                  className="text-[10px] text-rose-600 font-bold"
+                  onClick={() => updateBlueprint({
+                    ...blueprint,
+                    metadata: { ...blueprint.metadata, floorImageUrl: undefined, floorType: activeTheme.defaultFloorType },
+                  }, { message: 'Image de sol retirée', kind: 'settings' })}
+                >
+                  Retirer l&apos;image de sol
+                </button>
+              )}
+            </label>
           </div>
           <div className="p-4 bg-slate-50 rounded-xl border space-y-3">
             <p className="text-xs font-bold uppercase text-slate-500 flex items-center gap-1"><Palette className="w-3.5 h-3.5" /> Couleur des tables</p>
@@ -619,6 +746,7 @@ export default function RoomLayoutEditor({
               </select>
             </label>
             {renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl)}
+            {renderTableImageUpload(selectedFurniture.id, selectedFurniture.tableImageUrl)}
           </div>
           <LayoutActionPanel actions={actionLog} />
         </div>

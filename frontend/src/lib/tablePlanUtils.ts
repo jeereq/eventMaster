@@ -78,6 +78,7 @@ export function getTableVisualStyle(
   shape: TableShape | string,
   active = false,
   tableColor?: string,
+  tableImageUrl?: string,
 ): { className: string; style?: React.CSSProperties } {
   const size =
     shape === 'round'
@@ -87,6 +88,18 @@ export function getTableVisualStyle(
         : shape === 'square'
           ? 'w-20 h-20 rounded-xl'
           : 'w-32 h-16 rounded-xl';
+
+  if (tableImageUrl && !active) {
+    return {
+      className: `${size} border-2 text-slate-800 shadow-lg overflow-hidden`,
+      style: {
+        backgroundImage: `url(${tableImageUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        borderColor: tableColor ?? 'rgba(148,163,184,0.6)',
+      },
+    };
+  }
 
   if (tableColor && !active) {
     return {

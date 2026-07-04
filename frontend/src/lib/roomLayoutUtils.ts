@@ -67,6 +67,7 @@ export interface RoomLayoutBlueprint {
         chairType: ChairType;
         chairImageUrl?: string;
         tableColor?: string;
+        tableImageUrl?: string;
         x: number;
         y: number;
         locked?: boolean;
@@ -99,6 +100,9 @@ export interface RoomLayoutBlueprint {
     totalSeats: number;
     defaultTableColor?: string;
     roomThemeId?: string;
+    floorType?: import('@/lib/roomThemeUtils').FloorType;
+    floorImageUrl?: string;
+    customThemes?: import('@/lib/roomThemeUtils').CustomRoomTheme[];
   };
 }
 
@@ -583,6 +587,7 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
           chairType: item.chairType,
           chairImageUrl: item.chairImageUrl,
           tableColor: item.tableColor,
+          tableImageUrl: item.tableImageUrl,
           x: item.x,
           y: item.y,
           seats,
@@ -612,6 +617,8 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
     fixtures: blueprint.fixtures,
     defaultTableColor: blueprint.metadata.defaultTableColor,
     roomThemeId: blueprint.metadata.roomThemeId,
+    floorType: blueprint.metadata.floorType,
+    floorImageUrl: blueprint.metadata.floorImageUrl,
     roomOutline: blueprint.roomOutline,
     sourceRoomType: blueprint.roomType,
     importedAt: new Date().toISOString(),

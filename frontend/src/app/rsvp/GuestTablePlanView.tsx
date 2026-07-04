@@ -36,6 +36,7 @@ export interface GuestTablePlanOverviewItem {
   chairType?: ChairType;
   chairImageUrl?: string;
   tableColor?: string;
+  tableImageUrl?: string;
 }
 
 export interface GuestPlanFixture {
@@ -72,6 +73,8 @@ interface GuestTablePlanViewProps {
   planFixtures?: GuestPlanFixture[] | null;
   roomOutline?: GuestRoomOutline | null;
   roomThemeId?: string | null;
+  floorType?: string | null;
+  floorImageUrl?: string | null;
   guestFirstName: string;
   guestLastName: string;
 }
@@ -106,6 +109,8 @@ export default function GuestTablePlanView({
   planFixtures,
   roomOutline,
   roomThemeId,
+  floorType,
+  floorImageUrl,
   guestFirstName,
   guestLastName,
 }: GuestTablePlanViewProps) {
@@ -154,6 +159,8 @@ export default function GuestTablePlanView({
           fixtures={planFixtures}
           roomOutline={roomOutline}
           roomThemeId={roomThemeId}
+          floorType={floorType}
+          floorImageUrl={floorImageUrl}
           guestTableId={guestTableId}
           guestFullName={guestFullName}
           neighborNames={neighborNames}

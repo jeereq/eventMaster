@@ -6,8 +6,11 @@ import {
   getRoomOutlineClipPath,
   resolveTableColor,
   roomTypeLabels,
+  ensureBlueprintDefaults,
 } from '@/lib/roomLayoutUtils';
 import { getTableVisualStyle } from '@/lib/tablePlanUtils';
+import { getRoomTheme } from '@/lib/roomThemeUtils';
+import { resolveFloorStyle } from '@/lib/roomFloorUtils';
 import ChairRenderer from '@/components/ChairRenderer';
 import FixtureRenderer from '@/components/FixtureRenderer';
 
@@ -16,8 +19,8 @@ interface RoomLayoutPreviewProps {
   className?: string;
 }
 
-export default function RoomLayoutPreview({ blueprint, className = '' }: RoomLayoutPreviewProps) {
-  if (!blueprint) {
+export default function RoomLayoutPreview({ blueprint: rawBlueprint, className = '' }: RoomLayoutPreviewProps) {
+  if (!rawBlueprint) {
     return (
       <div className={`aspect-[4/3] bg-slate-100 rounded-2xl border border-dashed border-slate-200 flex items-center justify-center text-xs text-slate-400 ${className}`}>
         Aperçu indisponible
@@ -25,36 +28,48 @@ export default function RoomLayoutPreview({ blueprint, className = '' }: RoomLay
     );
   }
 
+  const blueprint = ensureBlueprintDefaults(rawBlueprint);
   const outline = blueprint.roomOutline;
   const clipPath = outline ? getRoomOutlineClipPath(outline.shape) : undefined;
+  const theme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
+  const floorType = blueprint.metadata.floorType ?? theme.defaultFloorType;
+  const floorStyle = resolveFloorStyle(floorType, blueprint.metadata.floorImageUrl, theme.accentColor);
 
   return (
     <div className={`space-y-2 ${className}`}>
       <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-500">
-        <span>{roomTypeLabels[blueprint.roomType]}</span>
+        <span>{roomTypeLabels[blueprint.roomType]} · {theme.name}</span>
         <span>{blueprint.metadata.totalSeats} places · {blueprint.canvas.widthM}×{blueprint.canvas.heightM} m</span>
       </div>
       <div
-        className="relative aspect-[4/3] bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden"
+        className="relative aspect-[4/3] border border-slate-200 rounded-2xl overflow-hidden"
         style={{
-          backgroundImage: 'linear-gradient(rgba(148,163,184,0.25) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.25) 1px, transparent 1px)',
-          backgroundSize: '20px 20px',
+          background: theme.canvasBackground,
+          backgroundImage: theme.canvasPattern
+            ? `${theme.canvasPattern}, linear-gradient(${theme.gridColor} 1px, transparent 1px), linear-gradient(90deg, ${theme.gridColor} 1px, transparent 1px)`
+            : `linear-gradient(${theme.gridColor} 1px, transparent 1px), linear-gradient(90deg, ${theme.gridColor} 1px, transparent 1px)`,
+          backgroundSize: theme.canvasPattern ? '100% 100%, 20px 20px, 20px 20px' : '20px 20px',
         }}
       >
         {outline && (
           <div
-            className="absolute pointer-events-none z-0"
+            className="absolute pointer-events-none z-0 overflow-hidden"
             style={{
               left: `${outline.x}%`,
               top: `${outline.y}%`,
               width: `${outline.w}%`,
               height: `${outline.h}%`,
-              background: outline.fill ?? 'rgba(241,245,249,0.8)',
-              border: `2px solid ${outline.stroke ?? '#cbd5e1'}`,
+              border: `2px solid ${outline.stroke ?? theme.roomOutline.stroke}`,
               borderRadius: outline.shape === 'circle' ? '50%' : '4px',
               clipPath,
+              boxShadow: theme.roomOutline.innerGlow,
             }}
-          />
+          >
+            <div className="absolute inset-0" style={floorStyle} />
+            {theme.ambientOverlay && (
+              <div className="absolute inset-0" style={{ background: theme.ambientOverlay }} />
+            )}
+          </div>
         )}
 
         {blueprint.fixtures.map((fixture) => (
@@ -95,7 +110,7 @@ export default function RoomLayoutPreview({ blueprint, className = '' }: RoomLay
           }
 
           const tableColor = resolveTableColor(item.tableColor, blueprint.metadata.defaultTableColor);
-          const { className: tableClass, style: tableStyle } = getTableVisualStyle(item.shape, false, tableColor);
+          const { className: tableClass, style: tableStyle } = getTableVisualStyle(item.shape, false, tableColor, item.tableImageUrl);
 
           return (
             <div

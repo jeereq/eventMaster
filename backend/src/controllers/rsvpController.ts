@@ -231,6 +231,8 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
       stroke?: string;
     } | null = null;
     let roomThemeId: string | null = null;
+    let floorType: string | null = null;
+    let floorImageUrl: string | null = null;
 
     const eventObj = guest.event as any;
     if (eventObj && eventObj.tablePlan && typeof eventObj.tablePlan === 'object') {
@@ -248,6 +250,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
           chairType: table.chairType,
           chairImageUrl: table.chairImageUrl,
           tableColor: table.tableColor,
+          tableImageUrl: table.tableImageUrl,
         }));
 
         if (Array.isArray(plan.fixtures)) {
@@ -309,6 +312,16 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
       } else if (plan.roomThemeId) {
         roomThemeId = plan.roomThemeId;
       }
+      if (room?.layoutBlueprint?.metadata?.floorType) {
+        floorType = room.layoutBlueprint.metadata.floorType;
+      } else if (plan.floorType) {
+        floorType = plan.floorType;
+      }
+      if (room?.layoutBlueprint?.metadata?.floorImageUrl) {
+        floorImageUrl = room.layoutBlueprint.metadata.floorImageUrl;
+      } else if (plan.floorImageUrl) {
+        floorImageUrl = plan.floorImageUrl;
+      }
     }
 
     return res.json({
@@ -318,6 +331,8 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
       planFixtures,
       roomOutline,
       roomThemeId,
+      floorType,
+      floorImageUrl,
       eventPassed: isEventDatePassed(guest.event.date),
       rsvpLocked: isEventDatePassed(guest.event.date),
     });

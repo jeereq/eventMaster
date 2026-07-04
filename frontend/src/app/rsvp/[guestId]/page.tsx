@@ -73,6 +73,8 @@ interface GuestRsvpData {
     strokeWidth?: number;
   } | null;
   roomThemeId?: string | null;
+  floorType?: string | null;
+  floorImageUrl?: string | null;
   eventPassed?: boolean;
   rsvpLocked?: boolean;
   event: {
@@ -610,6 +612,8 @@ export default function RsvpPage() {
                   shape: guest.roomOutline.shape as RoomOutlineShape,
                 } : null}
                 roomThemeId={guest.roomThemeId ?? null}
+                floorType={guest.floorType ?? null}
+                floorImageUrl={guest.floorImageUrl ?? null}
                 guestFirstName={guest.firstName}
                 guestLastName={guest.lastName}
               />

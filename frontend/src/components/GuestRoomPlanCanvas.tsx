@@ -2,7 +2,9 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { getRoomOutlineClipPath } from '@/lib/roomLayoutUtils';
-import { getRoomTheme, RoomThemeId } from '@/lib/roomThemeUtils';
+import { getRoomTheme } from '@/lib/roomThemeUtils';
+import { resolveFloorStyle } from '@/lib/roomFloorUtils';
+import { getTableVisualStyle } from '@/lib/tablePlanUtils';
 import {
   computeFitZoom,
   getGuestTableMarkerSize,
@@ -22,6 +24,8 @@ interface GuestRoomPlanCanvasProps {
   fixtures?: GuestPlanFixture[] | null;
   roomOutline?: GuestRoomOutline | null;
   roomThemeId?: string | null;
+  floorType?: string | null;
+  floorImageUrl?: string | null;
   guestTableId?: string | null;
   guestFullName?: string;
   neighborNames?: string[];
@@ -66,6 +70,8 @@ export default function GuestRoomPlanCanvas({
   fixtures,
   roomOutline,
   roomThemeId,
+  floorType,
+  floorImageUrl,
   guestTableId,
   guestFullName,
   neighborNames = [],
@@ -77,6 +83,8 @@ export default function GuestRoomPlanCanvas({
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
 
   const theme = getRoomTheme(roomThemeId);
+  const effectiveFloorType = (floorType as import('@/lib/roomThemeUtils').FloorType | undefined) ?? theme.defaultFloorType;
+  const floorStyle = resolveFloorStyle(effectiveFloorType, floorImageUrl ?? undefined, theme.accentColor);
   const outline = roomOutline;
   const clipPath = outline ? getRoomOutlineClipPath(outline.shape) : undefined;
 
@@ -145,24 +153,32 @@ export default function GuestRoomPlanCanvas({
               transform: `scale(${zoom})`,
               transformOrigin: 'top left',
               position: 'relative',
-              backgroundImage: `linear-gradient(${theme.gridColor} 1px, transparent 1px), linear-gradient(90deg, ${theme.gridColor} 1px, transparent 1px)`,
-              backgroundSize: '40px 40px',
+              backgroundImage: theme.canvasPattern
+                ? `${theme.canvasPattern}, linear-gradient(${theme.gridColor} 1px, transparent 1px), linear-gradient(90deg, ${theme.gridColor} 1px, transparent 1px)`
+                : `linear-gradient(${theme.gridColor} 1px, transparent 1px), linear-gradient(90deg, ${theme.gridColor} 1px, transparent 1px)`,
+              backgroundSize: theme.canvasPattern ? '100% 100%, 40px 40px, 40px 40px' : '40px 40px',
+              background: theme.canvasBackground,
             }}
           >
             {outline && (
               <div
-                className="absolute pointer-events-none z-0"
+                className="absolute pointer-events-none z-0 overflow-hidden"
                 style={{
                   left: (outline.x / 100) * GUEST_PLAN_LOGICAL_W,
                   top: (outline.y / 100) * GUEST_PLAN_LOGICAL_H,
                   width: (outline.w / 100) * GUEST_PLAN_LOGICAL_W,
                   height: (outline.h / 100) * GUEST_PLAN_LOGICAL_H,
-                  background: outline.fill ?? theme.roomOutline.fill,
                   border: `${outline.strokeWidth ?? 2}px solid ${outline.stroke ?? theme.roomOutline.stroke}`,
                   borderRadius: outline.shape === 'circle' ? '50%' : 8,
                   clipPath,
+                  boxShadow: theme.roomOutline.innerGlow,
                 }}
-              />
+              >
+                <div className="absolute inset-0" style={floorStyle} />
+                {theme.ambientOverlay && (
+                  <div className="absolute inset-0" style={{ background: theme.ambientOverlay }} />
+                )}
+              </div>
             )}
 
             {(fixtures ?? []).map((fixture) => {
@@ -203,6 +219,7 @@ export default function GuestRoomPlanCanvas({
               const isGuest = table.isGuestTable || table.id === guestTableId;
               const isSelected = selectedTableId === table.id;
               const color = table.tableColor ?? theme.defaultTableColor;
+              const tableVisual = getTableVisualStyle(table.shape, isGuest || isSelected, color, table.tableImageUrl);
 
               return (
                 <div
@@ -225,7 +242,9 @@ export default function GuestRoomPlanCanvas({
                   <button
                     type="button"
                     onClick={() => setSelectedTableId(isSelected ? null : table.id)}
-                    className={`rounded-full border-2 flex items-center justify-center shrink-0 transition-all shadow-md ${
+                    className={`flex items-center justify-center shrink-0 transition-all shadow-md overflow-hidden ${
+                      tableVisual.className
+                    } ${
                       isGuest
                         ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-950 border-amber-500'
                         : isSelected
@@ -235,7 +254,8 @@ export default function GuestRoomPlanCanvas({
                     style={{
                       width: markerSize,
                       height: markerSize,
-                      backgroundColor: color,
+                      ...tableVisual.style,
+                      backgroundColor: tableVisual.style?.backgroundColor ?? tableVisual.style?.backgroundImage ? undefined : color,
                     }}
                     aria-label={`Table ${table.name}`}
                   >
