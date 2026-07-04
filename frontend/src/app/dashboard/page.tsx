@@ -24,6 +24,12 @@ import { PLAN_IDS, type PlanId } from '@/config/landingPricing';
 import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
 import { getTemplateElementSummary } from '@/lib/landingTemplateAdapter';
+import {
+  TenantsMobileList,
+  UsersMobileList,
+  EventsMobileList,
+  GuestsMobileList,
+} from '@/components/admin/AdminTabMobileLists';
 
 function isPlatformStaff(role?: string) {
   return role === 'SUPER_ADMIN' || role === 'COMMERCIAL';
@@ -1712,8 +1718,18 @@ function DashboardPageContent() {
           <div className="p-6 bg-white dark:bg-slate-950">
             {/* Tenants Tab */}
             {activeTab === 'tenants' && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+              <div>
+                <div className="md:hidden space-y-3">
+                  <TenantsMobileList
+                    tenants={paginatedTenants}
+                    isCommercialPlatform={isCommercialPlatform}
+                    onView={(t) => handleOpenDetailsModal('tenant', t)}
+                    onEdit={handleOpenEditTenantModal}
+                    onDelete={handleDeleteTenant}
+                  />
+                </div>
+                <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[800px]">
                   <thead>
                     <tr className="border-b border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">
                       <th className="pb-3 font-semibold">Nom de l'organisation</th>
@@ -1813,6 +1829,7 @@ function DashboardPageContent() {
                     )}
                   </tbody>
                 </table>
+                </div>
 
                 {/* Pagination pour les organisations */}
                 {filteredTenants.length > ITEMS_PER_PAGE && (
@@ -1820,7 +1837,7 @@ function DashboardPageContent() {
                     <span className="text-xs text-slate-500 font-medium">
                       Affichage de {(tenantsPage - 1) * ITEMS_PER_PAGE + 1} à {Math.min(tenantsPage * ITEMS_PER_PAGE, filteredTenants.length)} sur {filteredTenants.length} organisations
                     </span>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 overflow-x-auto max-w-full pb-1">
                       <button
                         onClick={() => setTenantsPage(prev => Math.max(prev - 1, 1))}
                         disabled={tenantsPage === 1}
@@ -1856,7 +1873,7 @@ function DashboardPageContent() {
 
             {/* Users Tab */}
             {activeTab === 'users' && (
-              <div className="overflow-x-auto">
+              <div>
                 {usersLoading ? (
                   <div className="py-12 flex flex-col items-center justify-center gap-3">
                     <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
@@ -1864,7 +1881,17 @@ function DashboardPageContent() {
                   </div>
                 ) : (
                   <>
-                    <table className="w-full text-left border-collapse">
+                    <div className="md:hidden space-y-3">
+                      <UsersMobileList
+                        users={paginatedUsers}
+                        currentUserId={user?.id}
+                        onView={(u) => handleOpenDetailsModal('user', u)}
+                        onEdit={handleOpenEditUserModal}
+                        onDelete={handleDeleteUser}
+                      />
+                    </div>
+                    <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[720px]">
                     <thead>
                       <tr className="border-b border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">
                         <th className="pb-3 font-semibold">Utilisateur</th>
@@ -1939,6 +1966,7 @@ function DashboardPageContent() {
                       )}
                     </tbody>
                   </table>
+                    </div>
 
                   {/* Pagination pour les utilisateurs */}
                   {filteredUsers.length > ITEMS_PER_PAGE && (
@@ -1946,7 +1974,7 @@ function DashboardPageContent() {
                       <span className="text-xs text-slate-500 font-medium">
                         Affichage de {(usersPage - 1) * ITEMS_PER_PAGE + 1} à {Math.min(usersPage * ITEMS_PER_PAGE, filteredUsers.length)} sur {filteredUsers.length} utilisateurs
                       </span>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 overflow-x-auto max-w-full pb-1">
                         <button
                           onClick={() => setUsersPage(prev => Math.max(prev - 1, 1))}
                           disabled={usersPage === 1}
@@ -2089,7 +2117,7 @@ function DashboardPageContent() {
 
             {/* Events Tab */}
             {activeTab === 'events' && (
-              <div className="overflow-x-auto">
+              <div>
                 {adminEventsLoading ? (
                   <div className="py-12 flex flex-col items-center justify-center gap-3">
                     <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
@@ -2097,7 +2125,16 @@ function DashboardPageContent() {
                   </div>
                 ) : (
                   <>
-                    <table className="w-full text-left border-collapse">
+                    <div className="md:hidden space-y-3">
+                      <EventsMobileList
+                        events={paginatedEvents}
+                        onView={(e) => handleOpenDetailsModal('event', e)}
+                        onEdit={handleOpenEditEventModal}
+                        onDelete={handleDeleteEvent}
+                      />
+                    </div>
+                    <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[720px]">
                     <thead>
                       <tr className="border-b border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">
                         <th className="pb-3 font-semibold">Événement</th>
@@ -2167,6 +2204,7 @@ function DashboardPageContent() {
                       )}
                     </tbody>
                   </table>
+                    </div>
 
                   {/* Pagination pour les événements */}
                   {filteredEvents.length > ITEMS_PER_PAGE && (
@@ -2174,7 +2212,7 @@ function DashboardPageContent() {
                       <span className="text-xs text-slate-500 font-medium">
                         Affichage de {(eventsPage - 1) * ITEMS_PER_PAGE + 1} à {Math.min(eventsPage * ITEMS_PER_PAGE, filteredEvents.length)} sur {filteredEvents.length} événements
                       </span>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 overflow-x-auto max-w-full pb-1">
                         <button
                           onClick={() => setEventsPage(prev => Math.max(prev - 1, 1))}
                           disabled={eventsPage === 1}
@@ -2212,7 +2250,7 @@ function DashboardPageContent() {
 
             {/* Guests Tab */}
             {activeTab === 'guests' && (
-              <div className="overflow-x-auto">
+              <div>
                 {adminGuestsLoading ? (
                   <div className="py-12 flex flex-col items-center justify-center gap-3">
                     <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
@@ -2220,7 +2258,16 @@ function DashboardPageContent() {
                   </div>
                 ) : (
                   <>
-                    <table className="w-full text-left border-collapse">
+                    <div className="md:hidden space-y-3">
+                      <GuestsMobileList
+                        guests={paginatedGuests}
+                        onView={(g) => handleOpenDetailsModal('guest', g)}
+                        onEdit={handleOpenEditGuestModal}
+                        onDelete={handleDeleteGuest}
+                      />
+                    </div>
+                    <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full text-left border-collapse min-w-[800px]">
                       <thead>
                         <tr className="border-b border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">
                           <th className="pb-3 font-semibold">Invité</th>
@@ -2297,6 +2344,7 @@ function DashboardPageContent() {
                         )}
                       </tbody>
                     </table>
+                    </div>
 
                     {/* Pagination pour les invités */}
                     {filteredGuests.length > ITEMS_PER_PAGE && (
@@ -2304,7 +2352,7 @@ function DashboardPageContent() {
                         <span className="text-xs text-slate-500 font-medium">
                           Affichage de {(guestsPage - 1) * ITEMS_PER_PAGE + 1} à {Math.min(guestsPage * ITEMS_PER_PAGE, filteredGuests.length)} sur {filteredGuests.length} invités
                         </span>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 overflow-x-auto max-w-full pb-1">
                           <button
                             onClick={() => setGuestsPage(prev => Math.max(prev - 1, 1))}
                             disabled={guestsPage === 1}
