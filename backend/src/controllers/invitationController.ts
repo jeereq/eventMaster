@@ -42,7 +42,7 @@ export async function getInvitations(req: AuthenticatedRequest, res: Response) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
 
-    if (!(await verifyEventAccess(userId, tenantId, eventId, true))) {
+    if (!(await verifyEventAccess(userId, tenantId, eventId))) {
       return res.status(403).json({ error: 'Événement non trouvé ou non autorisé' });
     }
 

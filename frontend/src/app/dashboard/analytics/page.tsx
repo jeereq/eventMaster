@@ -92,17 +92,29 @@ export default function AnalyticsPage() {
     setLoadingStats(true);
     setError('');
     try {
-      const [guestsData, templatesData, invitesData] = await Promise.all([
+      const [guestsResult, templatesResult, invitesResult] = await Promise.allSettled([
         api.get(`/events/${eventId}/guests`),
         api.get('/templates'),
         api.get(`/events/${eventId}/invitations`),
       ]);
-      setGuests(guestsData);
-      setTemplates(templatesData);
-      setInvitations(invitesData);
+
+      if (guestsResult.status === 'rejected') {
+        throw guestsResult.reason;
+      }
+
+      setGuests(guestsResult.value);
+      setTemplates(templatesResult.status === 'fulfilled' ? templatesResult.value : []);
+      setInvitations(invitesResult.status === 'fulfilled' ? invitesResult.value : []);
+
+      if (templatesResult.status === 'rejected' || invitesResult.status === 'rejected') {
+        console.warn('Partial analytics load:', {
+          templates: templatesResult.status,
+          invitations: invitesResult.status,
+        });
+      }
     } catch (err: any) {
       console.error('Error loading stats for event:', err);
-      setError('Erreur lors du chargement des données statistiques de l\'événement.');
+      setError(err?.message || 'Erreur lors du chargement des données statistiques de l\'événement.');
     } finally {
       setLoadingStats(false);
     }
