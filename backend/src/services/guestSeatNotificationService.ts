@@ -99,8 +99,11 @@ export async function notifyGuestTableAssignment(params: {
   tableMates: Array<{ firstName: string; lastName: string }>;
   invitation?: { channel: string; subject?: string | null; body?: string | null } | null;
   dressCode?: string | null;
+  /** announcement = table + voisins sans PDF/GPS ; full = livraison complète (check-in). */
+  delivery?: 'announcement' | 'full';
 }): Promise<SeatNotificationResult> {
-  const { guest, eventId, event, assignedSeat, tableMates, invitation, dressCode } = params;
+  const { guest, eventId, event, assignedSeat, tableMates, invitation, dressCode, delivery = 'full' } = params;
+  const isAnnouncement = delivery === 'announcement';
   const channels: string[] = [];
   const errors: string[] = [];
 
@@ -126,27 +129,51 @@ export async function notifyGuestTableAssignment(params: {
     tableMatesInline,
   };
 
-  const defaultSubject = `Votre placement — ${event.title}`;
-  const defaultBody = [
-    `Bonjour ${guest.firstName},`,
-    '',
-    `Votre place est confirmée pour « ${event.title} ».`,
-    '',
-    `Table : ${assignedSeat.tableName}`,
-    `Siège : n°${seatNumber}`,
-    '',
-    'Vous serez accompagné(e) de :',
-    tableMatesText,
-    '',
-    formattedDate ? `Date : ${formattedDate}` : '',
-    event.location ? `Lieu : ${event.location}` : '',
-    '',
-    `Consultez votre invitation et plan de table : ${rsvpUrl}`,
-    '',
-    'Votre invitation PDF est jointe à cet e-mail.',
-  ]
-    .filter(Boolean)
-    .join('\n');
+  const defaultSubject = isAnnouncement
+    ? `Votre table — ${event.title}`
+    : `Votre placement — ${event.title}`;
+
+  const defaultBody = isAnnouncement
+    ? [
+        `Bonjour ${guest.firstName},`,
+        '',
+        `Votre placement pour « ${event.title} » vient d'être confirmé par l'organisateur.`,
+        '',
+        `Table : ${assignedSeat.tableName}`,
+        `Siège : n°${seatNumber}`,
+        '',
+        tableMates.length > 0 ? 'Vous serez accompagné(e) de :' : 'Aucun autre invité n\'est encore assigné à votre table.',
+        tableMatesText,
+        '',
+        formattedDate ? `Date : ${formattedDate}` : '',
+        event.location ? `Lieu : ${event.location}` : '',
+        '',
+        `Consultez les détails sur votre portail : ${rsvpUrl}`,
+        '',
+        'Votre invitation PDF et la localisation GPS vous seront envoyées à votre arrivée à l\'événement.',
+      ]
+        .filter(Boolean)
+        .join('\n')
+    : [
+        `Bonjour ${guest.firstName},`,
+        '',
+        `Votre place est confirmée pour « ${event.title} ».`,
+        '',
+        `Table : ${assignedSeat.tableName}`,
+        `Siège : n°${seatNumber}`,
+        '',
+        'Vous serez accompagné(e) de :',
+        tableMatesText,
+        '',
+        formattedDate ? `Date : ${formattedDate}` : '',
+        event.location ? `Lieu : ${event.location}` : '',
+        '',
+        `Consultez votre invitation et plan de table : ${rsvpUrl}`,
+        '',
+        'Votre invitation PDF est jointe à cet e-mail.',
+      ]
+        .filter(Boolean)
+        .join('\n');
 
   const subject = applyPlacementVariables(
     invitation?.subject?.trim() || defaultSubject,
@@ -159,24 +186,49 @@ export async function notifyGuestTableAssignment(params: {
     event.guestGuidelines,
   );
 
-  const storedPdf = await generateAndStoreSeatingInvitationPdf({
-    guestId: guest.id,
-    eventId,
-    guest: { firstName: guest.firstName, lastName: guest.lastName },
-    event,
-    assignedSeat,
-    tableMates,
-    dressCode,
-  });
+  let pdfBuffer: Buffer | null = null;
+  let storedPdfUrl: string | null = null;
 
-  const pdfBuffer = storedPdf.buffer;
-  const pdfUrl = storedPdf.url || `${FRONTEND_URL}/rsvp/${guest.id}`;
+  if (!isAnnouncement) {
+    const storedPdf = await generateAndStoreSeatingInvitationPdf({
+      guestId: guest.id,
+      eventId,
+      guest: { firstName: guest.firstName, lastName: guest.lastName },
+      event,
+      assignedSeat,
+      tableMates,
+      dressCode,
+    });
 
-  if (!storedPdf.url) {
-    errors.push('Cloudinary: PDF non stocké (configuration manquante ou erreur d\'upload).');
+    pdfBuffer = storedPdf.buffer;
+    storedPdfUrl = storedPdf.url;
+
+    if (!storedPdf.url) {
+      errors.push('Cloudinary: PDF non stocké (configuration manquante ou erreur d\'upload).');
+    }
   }
 
-  const htmlBody = `
+  const htmlBody = isAnnouncement
+    ? `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
+      <h2 style="color: #1e1b4b; text-align: center; margin-bottom: 8px;">Votre table est assignée</h2>
+      <p style="text-align: center; color: #4f46e5; font-weight: bold; margin-top: 0;">Bonjour ${guest.firstName} !</p>
+      <div style="background-color: #eef2ff; border: 1px solid #c7d2fe; border-radius: 12px; padding: 20px; margin: 20px 0; text-align: center;">
+        <p style="margin: 0 0 8px; font-size: 12px; font-weight: bold; color: #4338ca; text-transform: uppercase;">Votre place</p>
+        <p style="margin: 0; font-size: 20px; font-weight: bold; color: #1e1b4b;">${assignedSeat.tableName}</p>
+        <p style="margin: 8px 0 0; font-size: 16px; color: #4f46e5;">Siège n°${seatNumber}</p>
+      </div>
+      <div style="background-color: #f8fafc; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+        <p style="margin: 0 0 8px; font-size: 13px; font-weight: bold; color: #0f172a;">${tableMates.length > 0 ? 'Vous serez accompagné(e) de :' : 'Votre table'}</p>
+        <p style="margin: 0; font-size: 14px; color: #334155; white-space: pre-line;">${tableMatesText}</p>
+      </div>
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="${rsvpUrl}" style="display: inline-block; background-color: #4f46e5; color: #ffffff; padding: 14px 28px; font-weight: bold; text-decoration: none; border-radius: 12px;">Voir mon portail RSVP</a>
+      </div>
+      <p style="font-size: 12px; color: #64748b; text-align: center;">Votre invitation PDF et la localisation GPS vous seront envoyées à votre arrivée.</p>
+    </div>
+  `
+    : `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
       <h2 style="color: #1e1b4b; text-align: center; margin-bottom: 8px;">Votre placement est confirmé</h2>
       <p style="text-align: center; color: #4f46e5; font-weight: bold; margin-top: 0;">Bonjour ${guest.firstName} !</p>
@@ -194,38 +246,62 @@ export async function notifyGuestTableAssignment(params: {
       <div style="text-align: center; margin: 24px 0;">
         <a href="${rsvpUrl}" style="display: inline-block; background-color: #4f46e5; color: #ffffff; padding: 14px 28px; font-weight: bold; text-decoration: none; border-radius: 12px;">Voir mon invitation</a>
       </div>
-      <p style="font-size: 12px; color: #64748b; text-align: center;">Votre invitation PDF est jointe à cet e-mail${storedPdf.url ? ' et disponible en ligne.' : '.'}</p>
+      <p style="font-size: 12px; color: #64748b; text-align: center;">Votre invitation PDF est jointe à cet e-mail${storedPdfUrl ? ' et disponible en ligne.' : '.'}</p>
     </div>
   `;
 
-  const whatsappBody = [
-    `Bonjour ${guest.firstName} 👋`,
-    '',
-    `Votre placement pour *${event.title}* est confirmé ✅`,
-    '',
-    `🪑 *${assignedSeat.tableName}* — Siège n°${seatNumber}`,
-    tableMatesInline ? `\n👥 Avec : ${tableMatesInline}` : '',
-    event.location ? `\n📍 ${event.location}` : '',
-    formattedDate ? `\n📅 ${formattedDate}` : '',
-    '',
-    `📄 Invitation PDF : ${storedPdf.url || 'voir pièce jointe'}`,
-    `\n🔗 Plan de table : ${rsvpUrl}`,
-  ]
-    .filter(Boolean)
-    .join('\n');
+  const whatsappBody = isAnnouncement
+    ? [
+        `Bonjour ${guest.firstName} 👋`,
+        '',
+        `Votre table pour *${event.title}* vient d'être assignée ✅`,
+        '',
+        `🪑 *${assignedSeat.tableName}* — Siège n°${seatNumber}`,
+        tableMates.length > 0 ? '\n👥 *Vous serez avec :*' : '',
+        ...tableMates.map((m) => `• ${m.firstName} ${m.lastName}`.trim()),
+        tableMates.length === 0 ? '\n_Aucun autre invité assigné pour le moment._' : '',
+        formattedDate ? `\n📅 ${formattedDate}` : '',
+        event.location ? `\n📍 ${event.location}` : '',
+        '',
+        `🔗 Portail RSVP : ${rsvpUrl}`,
+        '',
+        '_Votre PDF et la localisation GPS vous seront envoyés à votre arrivée._',
+      ]
+        .filter((line) => line !== '')
+        .join('\n')
+    : [
+        `Bonjour ${guest.firstName} 👋`,
+        '',
+        `Votre placement pour *${event.title}* est confirmé ✅`,
+        '',
+        `🪑 *${assignedSeat.tableName}* — Siège n°${seatNumber}`,
+        tableMatesInline ? `\n👥 Avec : ${tableMatesInline}` : '',
+        event.location ? `\n📍 ${event.location}` : '',
+        formattedDate ? `\n📅 ${formattedDate}` : '',
+        '',
+        `📄 Invitation PDF : ${storedPdfUrl || 'voir pièce jointe'}`,
+        `\n🔗 Plan de table : ${rsvpUrl}`,
+      ]
+        .filter(Boolean)
+        .join('\n');
 
   const channelsToSend = resolveDeliveryChannels(invitation?.channel);
   const tasks: Promise<void>[] = [];
 
   if (channelsToSend.includes('EMAIL') && email) {
+    const attachments =
+      pdfBuffer && !isAnnouncement
+        ? [
+            {
+              filename: `invitation-${guest.lastName || 'invite'}.pdf`,
+              content: pdfBuffer,
+              type: 'application/pdf',
+            },
+          ]
+        : undefined;
+
     tasks.push(
-      sendRealEmail(email, subject, textBody, htmlBody, [
-        {
-          filename: `invitation-${guest.lastName || 'invite'}.pdf`,
-          content: pdfBuffer,
-          type: 'application/pdf',
-        },
-      ]).then((r) => {
+      sendRealEmail(email, subject, textBody, htmlBody, attachments).then((r) => {
         if (r.success) channels.push(r.simulated ? 'email (simulation)' : 'email');
         else if (r.error) errors.push(`email: ${r.error}`);
       }),
@@ -239,10 +315,10 @@ export async function notifyGuestTableAssignment(params: {
       sendRealWhatsApp(phone, whatsappBody).then(async (r) => {
         if (r.success) {
           channels.push(r.simulated ? 'WhatsApp (simulation)' : 'WhatsApp');
-          if (!r.simulated && storedPdf.url) {
+          if (!isAnnouncement && !r.simulated && storedPdfUrl) {
             const docResult = await sendRealWhatsAppDocument(
               phone,
-              storedPdf.url,
+              storedPdfUrl,
               `invitation-${guest.lastName || 'invite'}.pdf`,
               'Votre invitation PDF',
             );
@@ -251,6 +327,7 @@ export async function notifyGuestTableAssignment(params: {
             }
           }
           if (
+            !isAnnouncement &&
             event.latitude != null &&
             event.longitude != null &&
             Number.isFinite(event.latitude) &&

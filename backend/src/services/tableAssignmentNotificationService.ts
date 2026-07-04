@@ -36,7 +36,7 @@ export async function notifyTableAssignmentChanges(params: {
   const { eventId, tenantId, oldPlan, newPlan } = params;
 
   const snapshot = await getTenantPlanSnapshot(tenantId);
-  if (!snapshot?.features.seatNotifications) {
+  if (!snapshot || snapshot.plan === 'FREE') {
     return null;
   }
 
@@ -118,6 +118,7 @@ export async function notifyTableAssignmentChanges(params: {
       tableMates: mateGuests,
       invitation,
       dressCode,
+      delivery: 'announcement',
     });
 
     if (notification.sent) notified += 1;

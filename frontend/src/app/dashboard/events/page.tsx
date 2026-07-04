@@ -737,7 +737,14 @@ export default function EventsPage() {
       });
       setSelectedEvent(updatedEvent);
       setEvents(events.map(e => e.id === selectedEvent.id ? updatedEvent : e));
-      setSuccess('Plan de table enregistré. La carte et le PDF seront envoyés aux invités après leur confirmation de présence.');
+      const notified = updatedEvent.assignmentNotifications?.notified ?? 0;
+      if (notified > 0) {
+        setSuccess(
+          `Plan enregistré. ${notified} invité${notified > 1 ? 's' : ''} notifié${notified > 1 ? 's' : ''} (table, siège et voisins de table). Le PDF et le GPS seront envoyés à l'arrivée.`,
+        );
+      } else {
+        setSuccess('Plan de table enregistré.');
+      }
     } catch (err: any) {
       console.error('Erreur lors de la sauvegarde du plan de table:', err);
       throw err;
