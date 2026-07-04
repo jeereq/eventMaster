@@ -70,6 +70,7 @@ export interface GuestRoomOutline {
 
 interface GuestTablePlanViewProps {
   guestId?: string;
+  seatingInvitationPdfUrl?: string | null;
   tableDetails: GuestTableDetails | null;
   tablePlanOverview: GuestTablePlanOverviewItem[] | null;
   planFixtures?: GuestPlanFixture[] | null;
@@ -107,6 +108,7 @@ function getSeatOccupant(
 
 export default function GuestTablePlanView({
   guestId,
+  seatingInvitationPdfUrl,
   tableDetails,
   tablePlanOverview,
   planFixtures,
@@ -202,10 +204,18 @@ export default function GuestTablePlanView({
             <p className="text-sm font-bold text-white mt-1">{tableDetails.capacity} places</p>
           </div>
         </div>
-        {guestId && (
+        {(guestId || seatingInvitationPdfUrl) && (
           <button
             type="button"
-            onClick={() => api.download(`/rsvp/${guestId}/seating-invitation.pdf`, `invitation-${guestLastName || 'invite'}.pdf`)}
+            onClick={() => {
+              if (seatingInvitationPdfUrl) {
+                window.open(seatingInvitationPdfUrl, '_blank', 'noopener,noreferrer');
+                return;
+              }
+              if (guestId) {
+                void api.download(`/rsvp/${guestId}/seating-invitation.pdf`, `invitation-${guestLastName || 'invite'}.pdf`);
+              }
+            }}
             className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold transition hover:opacity-90"
             style={{ backgroundColor: theme.accentColor, color: '#fff' }}
           >

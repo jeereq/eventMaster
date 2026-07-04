@@ -161,6 +161,8 @@ model Guest {
   seatVerifiedAt DateTime?
   seatVerifiedByUserId String?
   seatVerifiedBy User?     @relation("GuestSeatVerifications", fields: [seatVerifiedByUserId], references: [id], onDelete: SetNull)
+  seatingInvitationPdfUrl       String?
+  seatingInvitationPdfPublicId  String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 

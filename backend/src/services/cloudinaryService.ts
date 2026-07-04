@@ -57,6 +57,38 @@ export async function uploadImageBuffer(
   });
 }
 
+export async function uploadPdfBuffer(
+  buffer: Buffer,
+  folder: string,
+  publicId?: string,
+): Promise<CloudinaryUploadResult> {
+  ensureConfigured();
+
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        resource_type: 'raw',
+        public_id: publicId,
+        overwrite: true,
+        format: 'pdf',
+      },
+      (error, result) => {
+        if (error || !result) {
+          reject(error || new Error('Échec upload PDF Cloudinary'));
+          return;
+        }
+        resolve({
+          url: result.secure_url,
+          publicId: result.public_id,
+          bytes: result.bytes,
+        });
+      },
+    );
+    stream.end(buffer);
+  });
+}
+
 export async function uploadDataUrl(dataUrl: string, folder: string): Promise<CloudinaryUploadResult> {
   ensureConfigured();
 

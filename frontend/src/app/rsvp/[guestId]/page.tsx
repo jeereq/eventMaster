@@ -31,6 +31,7 @@ interface GuestRsvpData {
   email: string;
   rsvp: 'PENDING' | 'ACCEPTED' | 'DECLINED';
   preferences: any;
+  seatingInvitationPdfUrl?: string | null;
   tableDetails?: {
     tableName: string;
     shape: 'round' | 'rectangular' | 'square' | 'oval';
@@ -609,6 +610,7 @@ export default function RsvpPage() {
             {activeGuestTab === 'table' && (
               <GuestTablePlanView
                 guestId={guestId}
+                seatingInvitationPdfUrl={guest.seatingInvitationPdfUrl}
                 tableDetails={guest.tableDetails ? {
                   ...guest.tableDetails,
                   chairType: guest.tableDetails.chairType as ChairType | undefined,

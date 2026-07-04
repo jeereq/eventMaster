@@ -6,7 +6,9 @@ import { renderGuestMessage, polishWhatsAppBody } from '../services/messageTempl
 import { findGuestsByIdentity } from '../services/legalService';
 import { extractGuestEmail, extractGuestPhone } from '../utils/guestIdentity';
 import { findGuestSeatInTablePlan } from '../services/commercialService';
-import { buildInvitationPdfBuffer } from '../services/guestSeatNotificationService';
+import {
+  generateAndStoreSeatingInvitationPdf,
+} from '../services/seatingInvitationStorageService';
 import { getTableMateGuestIds } from '../utils/tablePlanAssignment';
 import { normalizeGuestGuidelines, formatDressCodeText } from '../utils/guestGuidelines';
 
@@ -331,6 +333,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
 
     return res.json({
       ...guest,
+      seatingInvitationPdfUrl: guest.seatingInvitationPdfUrl ?? null,
       tableDetails,
       tablePlanOverview,
       planFixtures,
@@ -604,22 +607,30 @@ export async function downloadSeatingInvitationPdf(req: Request, res: Response) 
 
     const dressCode = formatDressCodeText(normalizeGuestGuidelines(guest.event.guestGuidelines)) || null;
 
-    const pdf = await buildInvitationPdfBuffer({
-      guest: {
-        id: guest.id,
-        firstName: guest.firstName,
-        lastName: guest.lastName,
-      },
+    const pdfInput = {
+      guestId: guest.id,
+      eventId: guest.eventId,
+      guest: { firstName: guest.firstName, lastName: guest.lastName },
       event: guest.event,
       assignedSeat: assigned,
       tableMates,
       dressCode,
-    });
+    };
+
+    if (guest.seatingInvitationPdfUrl) {
+      return res.redirect(302, guest.seatingInvitationPdfUrl);
+    }
+
+    const stored = await generateAndStoreSeatingInvitationPdf(pdfInput);
+
+    if (stored.url) {
+      return res.redirect(302, stored.url);
+    }
 
     const filename = `invitation-${guest.lastName || 'invite'}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
-    return res.send(pdf);
+    return res.send(stored.buffer);
   } catch (error: any) {
     console.error('Erreur génération PDF invitation:', error);
     return res.status(500).json({ error: 'Impossible de générer le PDF.' });

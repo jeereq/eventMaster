@@ -3,20 +3,12 @@ import {
   sendRealWhatsApp,
   sendRealWhatsAppDocument,
 } from './notificationService';
-import { buildSeatingInvitationPdf } from './invitationPdfService';
+import { generateAndStoreSeatingInvitationPdf } from './seatingInvitationStorageService';
 import { extractGuestEmail, extractGuestPhone } from '../utils/guestIdentity';
 import { resolveDeliveryChannels } from '../utils/notificationChannels';
 import { applyInvitationGuidelineVariables } from '../utils/guestGuidelines';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
-
-function getPublicApiUrl(): string {
-  return (
-    process.env.PUBLIC_API_URL
-    || process.env.BACKEND_URL
-    || `http://localhost:${process.env.PORT || 5001}`
-  );
-}
 
 export interface SeatNotificationResult {
   sent: boolean;
@@ -79,33 +71,6 @@ function applyPlacementVariables(
   return applyInvitationGuidelineVariables(result, guestGuidelines);
 }
 
-async function buildInvitationPdfBuffer(params: {
-  guest: { id: string; firstName: string; lastName: string };
-  event: {
-    title: string;
-    description?: string | null;
-    date?: Date | string | null;
-    location?: string | null;
-  };
-  assignedSeat: { tableName: string; seatIndex: number };
-  tableMates: Array<{ firstName: string; lastName: string }>;
-  dressCode?: string | null;
-}): Promise<Buffer> {
-  return buildSeatingInvitationPdf({
-    guestFirstName: params.guest.firstName,
-    guestLastName: params.guest.lastName,
-    eventTitle: params.event.title,
-    eventDate: params.event.date,
-    eventLocation: params.event.location,
-    eventDescription: params.event.description,
-    tableName: params.assignedSeat.tableName,
-    seatNumber: params.assignedSeat.seatIndex + 1,
-    tableMates: params.tableMates,
-    rsvpUrl: `${FRONTEND_URL}/rsvp/${params.guest.id}`,
-    dressCode: params.dressCode,
-  });
-}
-
 /** Notification lors de l'assignation au plan de table (canaux de l'invitation + PDF). */
 export async function notifyGuestTableAssignment(params: {
   guest: {
@@ -116,6 +81,7 @@ export async function notifyGuestTableAssignment(params: {
     phone?: string | null;
     preferences?: unknown;
   };
+  eventId: string;
   event: {
     title: string;
     description?: string | null;
@@ -131,14 +97,13 @@ export async function notifyGuestTableAssignment(params: {
   invitation?: { channel: string; subject?: string | null; body?: string | null } | null;
   dressCode?: string | null;
 }): Promise<SeatNotificationResult> {
-  const { guest, event, assignedSeat, tableMates, invitation, dressCode } = params;
+  const { guest, eventId, event, assignedSeat, tableMates, invitation, dressCode } = params;
   const channels: string[] = [];
   const errors: string[] = [];
 
   const email = extractGuestEmail(guest);
   const phone = extractGuestPhone(guest);
   const rsvpUrl = `${FRONTEND_URL}/rsvp/${guest.id}`;
-  const pdfUrl = `${getPublicApiUrl()}/api/rsvp/${guest.id}/seating-invitation.pdf`;
   const seatNumber = String(assignedSeat.seatIndex + 1);
   const formattedDate = formatFrenchDate(event.date);
   const tableMatesText = formatTableMatesList(tableMates);
@@ -191,13 +156,22 @@ export async function notifyGuestTableAssignment(params: {
     event.guestGuidelines,
   );
 
-  const pdfBuffer = await buildInvitationPdfBuffer({
-    guest,
+  const storedPdf = await generateAndStoreSeatingInvitationPdf({
+    guestId: guest.id,
+    eventId,
+    guest: { firstName: guest.firstName, lastName: guest.lastName },
     event,
     assignedSeat,
     tableMates,
     dressCode,
   });
+
+  const pdfBuffer = storedPdf.buffer;
+  const pdfUrl = storedPdf.url || `${FRONTEND_URL}/rsvp/${guest.id}`;
+
+  if (!storedPdf.url) {
+    errors.push('Cloudinary: PDF non stocké (configuration manquante ou erreur d\'upload).');
+  }
 
   const htmlBody = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
@@ -217,7 +191,7 @@ export async function notifyGuestTableAssignment(params: {
       <div style="text-align: center; margin: 24px 0;">
         <a href="${rsvpUrl}" style="display: inline-block; background-color: #4f46e5; color: #ffffff; padding: 14px 28px; font-weight: bold; text-decoration: none; border-radius: 12px;">Voir mon invitation</a>
       </div>
-      <p style="font-size: 12px; color: #64748b; text-align: center;">Votre invitation PDF est jointe à cet e-mail.</p>
+      <p style="font-size: 12px; color: #64748b; text-align: center;">Votre invitation PDF est jointe à cet e-mail${storedPdf.url ? ' et disponible en ligne.' : '.'}</p>
     </div>
   `;
 
@@ -231,7 +205,7 @@ export async function notifyGuestTableAssignment(params: {
     event.location ? `\n📍 ${event.location}` : '',
     formattedDate ? `\n📅 ${formattedDate}` : '',
     '',
-    `📄 Invitation PDF : ${pdfUrl}`,
+    `📄 Invitation PDF : ${storedPdf.url || 'voir pièce jointe'}`,
     `\n🔗 Plan de table : ${rsvpUrl}`,
   ]
     .filter(Boolean)
@@ -262,10 +236,10 @@ export async function notifyGuestTableAssignment(params: {
       sendRealWhatsApp(phone, whatsappBody).then(async (r) => {
         if (r.success) {
           channels.push(r.simulated ? 'WhatsApp (simulation)' : 'WhatsApp');
-          if (!r.simulated) {
+          if (!r.simulated && storedPdf.url) {
             const docResult = await sendRealWhatsAppDocument(
               phone,
-              pdfUrl,
+              storedPdf.url,
               `invitation-${guest.lastName || 'invite'}.pdf`,
               'Votre invitation PDF',
             );
@@ -308,6 +282,7 @@ export async function notifyGuestSeatConfirmed(params: {
     phone?: string | null;
     preferences?: unknown;
   };
+  eventId: string;
   event: {
     title: string;
     date?: Date | string | null;
@@ -320,11 +295,10 @@ export async function notifyGuestSeatConfirmed(params: {
 }): Promise<SeatNotificationResult> {
   return notifyGuestTableAssignment({
     guest: params.guest,
+    eventId: params.eventId,
     event: params.event,
     assignedSeat: params.assignedSeat,
     tableMates: [],
     invitation: { channel: 'EMAIL_AND_WHATSAPP' },
   });
 }
-
-export { buildInvitationPdfBuffer };

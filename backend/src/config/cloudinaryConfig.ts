@@ -18,3 +18,7 @@ export function getTemplateUploadFolder(tenantId: string | null | undefined): st
   const scope = tenantId || 'global';
   return `eventmaster/templates/${scope}`;
 }
+
+export function getSeatingInvitationUploadFolder(eventId: string, guestId: string): string {
+  return `eventmaster/seating-invitations/${eventId}/${guestId}`;
+}

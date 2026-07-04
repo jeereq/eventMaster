@@ -106,6 +106,7 @@ export async function notifyTableAssignmentChanges(params: {
 
     const notification = await notifyGuestTableAssignment({
       guest,
+      eventId,
       event: {
         title: event.title,
         description: event.description,

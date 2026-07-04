@@ -224,6 +224,7 @@ export async function verifyGuestSeat(req: AuthenticatedRequest, res: Response) 
             phone: guest.phone,
             preferences: guest.preferences,
           },
+          eventId,
           event: {
             title: event.title,
             date: event.date,
