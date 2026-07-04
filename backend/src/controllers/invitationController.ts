@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
-import { sendRealEmail, sendRealWhatsApp, sendRealWhatsAppLocation } from '../services/notificationService';
+import { sendRealEmail, sendRealWhatsApp } from '../services/notificationService';
 import { resolveDeliveryChannels } from '../utils/notificationChannels';
 import { renderGuestMessage, polishWhatsAppBody, applyTemplateVariables } from '../services/messageTemplateService';
 import { applyInvitationGuidelineVariables } from '../utils/guestGuidelines';
@@ -269,23 +269,6 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
 
             whatsappBody = polishWhatsAppBody(whatsappBody);
             sendResult = await sendRealWhatsApp(phone, whatsappBody);
-            // If the main message succeeded and the event has GPS coordinates, send the location as a second message
-            if (sendResult.success && event.latitude && event.longitude) {
-              try {
-                console.log(`[Invitation Controller] Sending WhatsApp Location for event "${event.title}" to ${guest.firstName} ${guest.lastName}...`);
-                const locResult = await sendRealWhatsAppLocation(
-                  phone, 
-                  event.location || 'Lieu de l\'événement', 
-                  event.latitude, 
-                  event.longitude
-                );
-                if (!locResult.success) {
-                  console.warn(`[Invitation Controller] Location message failed but main message succeeded:`, locResult.error);
-                }
-              } catch (locErr) {
-                console.error(`[Invitation Controller] Error sending WhatsApp Location:`, locErr);
-              }
-            }
           } else {
             console.warn(`[Invitation Controller] Guest ${guest.firstName} ${guest.lastName} has no valid phone number for WhatsApp sending.`);
             sendResult = { success: false, simulated: false, error: 'No valid phone number' };

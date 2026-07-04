@@ -1,5 +1,5 @@
 import { prisma } from '../db';
-import { sendRealEmail, sendRealWhatsApp, sendRealWhatsAppLocation } from './notificationService';
+import { sendRealEmail, sendRealWhatsApp } from './notificationService';
 import { resolveDeliveryChannels } from '../utils/notificationChannels';
 import { renderGuestMessage, polishWhatsAppBody, applyTemplateVariables } from './messageTemplateService';
 import { applyInvitationGuidelineVariables } from '../utils/guestGuidelines';
@@ -241,10 +241,7 @@ export async function processReminders() {
           } else if (chan === 'WHATSAPP') {
             const phone = getGuestPhone(guest);
             if (phone) {
-              const sendResult = await sendRealWhatsApp(phone, body);
-              if (sendResult.success && event.latitude && event.longitude) {
-                await sendRealWhatsAppLocation(phone, event.location || 'Lieu de l\'événement', event.latitude, event.longitude);
-              }
+              await sendRealWhatsApp(phone, body);
             }
           }
         }

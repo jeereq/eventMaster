@@ -63,6 +63,8 @@ export async function deliverGuestPlacementIfEligible(params: {
       description: true,
       date: true,
       location: true,
+      latitude: true,
+      longitude: true,
       guestGuidelines: true,
       tablePlan: true,
     },

@@ -334,8 +334,14 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
       }
     }
 
+    const { event: guestEvent, ...guestWithoutEvent } = guest;
+    const eventForClient = placementAccessible
+      ? guestEvent
+      : { ...guestEvent, latitude: null, longitude: null };
+
     return res.json({
-      ...guest,
+      ...guestWithoutEvent,
+      event: eventForClient,
       placementAccessible,
       seatingInvitationPdfUrl: placementAccessible ? guest.seatingInvitationPdfUrl ?? null : null,
       tableDetails,

@@ -2,6 +2,7 @@ import {
   sendRealEmail,
   sendRealWhatsApp,
   sendRealWhatsAppDocument,
+  sendRealWhatsAppLocation,
 } from './notificationService';
 import { generateAndStoreSeatingInvitationPdf } from './seatingInvitationStorageService';
 import { extractGuestEmail, extractGuestPhone } from '../utils/guestIdentity';
@@ -87,6 +88,8 @@ export async function notifyGuestTableAssignment(params: {
     description?: string | null;
     date?: Date | string | null;
     location?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
     guestGuidelines?: unknown;
   };
   assignedSeat: {
@@ -245,6 +248,22 @@ export async function notifyGuestTableAssignment(params: {
             );
             if (!docResult.success && docResult.error) {
               errors.push(`WhatsApp PDF: ${docResult.error}`);
+            }
+          }
+          if (
+            event.latitude != null &&
+            event.longitude != null &&
+            Number.isFinite(event.latitude) &&
+            Number.isFinite(event.longitude)
+          ) {
+            const locResult = await sendRealWhatsAppLocation(
+              phone,
+              event.location || "Lieu de l'événement",
+              event.latitude,
+              event.longitude,
+            );
+            if (!locResult.success && locResult.error) {
+              errors.push(`WhatsApp localisation: ${locResult.error}`);
             }
           }
         } else if (r.error) {

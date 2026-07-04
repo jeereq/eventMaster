@@ -2138,51 +2138,60 @@ export default function RsvpPage() {
             </p>
           </div>
 
-          {/* Interactive Map Embed */}
-          <div className="w-full overflow-hidden rounded-2xl border border-slate-100 shadow-inner h-[250px] relative bg-slate-50">
-            <iframe
-              width="100%"
-              height="100%"
-              style={{ border: 0 }}
-              loading="lazy"
-              allowFullScreen
-              referrerPolicy="no-referrer-when-downgrade"
-              src={
-                guest.event.latitude && guest.event.longitude
-                  ? `https://maps.google.com/maps?q=${guest.event.latitude},${guest.event.longitude}&z=16&output=embed`
-                  : `https://maps.google.com/maps?q=${encodeURIComponent(guest.event.location)}&z=15&output=embed`
-              }
-              className="absolute inset-0"
-            ></iframe>
-          </div>
+          {guest.placementAccessible ? (
+            <>
+              {/* Interactive Map Embed */}
+              <div className="w-full overflow-hidden rounded-2xl border border-slate-100 shadow-inner h-[250px] relative bg-slate-50">
+                <iframe
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  loading="lazy"
+                  allowFullScreen
+                  referrerPolicy="no-referrer-when-downgrade"
+                  src={
+                    guest.event.latitude && guest.event.longitude
+                      ? `https://maps.google.com/maps?q=${guest.event.latitude},${guest.event.longitude}&z=16&output=embed`
+                      : `https://maps.google.com/maps?q=${encodeURIComponent(guest.event.location)}&z=15&output=embed`
+                  }
+                  className="absolute inset-0"
+                ></iframe>
+              </div>
 
-          <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
-            <a 
-              href={
-                guest.event.latitude && guest.event.longitude
-                  ? `https://www.google.com/maps/search/?api=1&query=${guest.event.latitude},${guest.event.longitude}`
-                  : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(guest.event.location)}`
-              }
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition shadow-md shadow-slate-200 hover:shadow-lg"
-            >
-              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-              </svg>
-              Ouvrir dans Google Maps
-            </a>
-            {guest.event.latitude && guest.event.longitude && (
-              <a 
-                href={`https://www.waze.com/ul?ll=${guest.event.latitude},${guest.event.longitude}&navigate=yes`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition shadow-md shadow-sky-100 hover:shadow-lg"
-              >
-                🚗 Naviguer avec Waze
-              </a>
-            )}
-          </div>
+              <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
+                <a 
+                  href={
+                    guest.event.latitude && guest.event.longitude
+                      ? `https://www.google.com/maps/search/?api=1&query=${guest.event.latitude},${guest.event.longitude}`
+                      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(guest.event.location)}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition shadow-md shadow-slate-200 hover:shadow-lg"
+                >
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                  </svg>
+                  Ouvrir dans Google Maps
+                </a>
+                {guest.event.latitude && guest.event.longitude && (
+                  <a 
+                    href={`https://www.waze.com/ul?ll=${guest.event.latitude},${guest.event.longitude}&navigate=yes`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition shadow-md shadow-sky-100 hover:shadow-lg"
+                  >
+                    🚗 Naviguer avec Waze
+                  </a>
+                )}
+              </div>
+            </>
+          ) : (
+            <p className="text-xs text-slate-500 leading-relaxed max-w-sm mx-auto">
+              La localisation GPS et l&apos;itinéraire vous seront partagés après votre confirmation de
+              présence à l&apos;entrée de l&apos;événement.
+            </p>
+          )}
         </div>
       )}
     </div>
