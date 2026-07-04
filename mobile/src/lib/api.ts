@@ -1,7 +1,5 @@
-import * as SecureStore from 'expo-secure-store';
 import { env } from '../config/env';
-
-const TOKEN_KEY = 'eventmaster_token';
+import { readStoredToken, writeStoredToken, TOKEN_KEY } from './tokenStorage';
 
 export interface ApiError extends Error {
   status?: number;
@@ -13,19 +11,11 @@ interface FetchOptions extends Omit<RequestInit, 'body'> {
 }
 
 async function getToken(): Promise<string | null> {
-  try {
-    return await SecureStore.getItemAsync(TOKEN_KEY);
-  } catch {
-    return null;
-  }
+  return readStoredToken();
 }
 
 export async function setToken(token: string | null): Promise<void> {
-  if (token) {
-    await SecureStore.setItemAsync(TOKEN_KEY, token);
-  } else {
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
-  }
+  await writeStoredToken(token);
 }
 
 export async function hasStoredToken(): Promise<boolean> {

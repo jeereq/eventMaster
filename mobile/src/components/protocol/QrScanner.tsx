@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { colors } from '../../theme/colors';
 
@@ -10,6 +10,21 @@ interface QrScannerProps {
 }
 
 export function QrScanner({ active, onScan, onError }: QrScannerProps) {
+  if (Platform.OS === 'web') {
+    if (!active) return null;
+    return (
+      <View style={styles.placeholder}>
+        <Text style={styles.placeholderText}>
+          Le scan caméra n&apos;est pas disponible sur le web. Utilisez la saisie manuelle ci-dessous.
+        </Text>
+      </View>
+    );
+  }
+
+  return <NativeQrScanner active={active} onScan={onScan} onError={onError} />;
+}
+
+function NativeQrScanner({ active, onScan, onError }: QrScannerProps) {
   const [permission, requestPermission] = useCameraPermissions();
   const handledRef = useRef(false);
   const [requesting, setRequesting] = useState(false);

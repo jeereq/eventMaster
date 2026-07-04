@@ -19,7 +19,17 @@ cp .env.example .env
 npm start
 ```
 
-Puis scanner le QR code avec Expo Go, ou appuyer sur `i` (iOS) / `a` (Android).
+Puis scanner le QR code avec Expo Go, appuyer sur `w` (web), `i` (iOS) ou `a` (Android).
+
+### Tester dans le navigateur
+
+```bash
+npm run web
+```
+
+Ouvre **http://localhost:8081** (ou le port indiqué). Le backend doit tourner sur le port 5001.
+
+> **Limites web** : pas de scan caméra ni de push notifications — le protocole QR fonctionne en saisie manuelle uniquement.
 
 ## Configuration API
 
@@ -37,7 +47,7 @@ Puis scanner le QR code avec Expo Go, ou appuyer sur `i` (iOS) / `a` (Android).
 | `npm start` | Dev server Expo |
 | `npm run android` | Lancer sur Android |
 | `npm run ios` | Lancer sur iOS |
-| `npm run web` | Version web Expo (debug) |
+| `npm run web` | Version web Expo (navigateur, port 8081) |
 
 ## Deep links
 

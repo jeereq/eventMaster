@@ -4,15 +4,19 @@ import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { api } from './api';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+const isNative = Platform.OS !== 'web';
+
+if (isNative) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+}
 
 let registeredToken: string | null = null;
 
@@ -25,7 +29,7 @@ async function getExpoProjectId(): Promise<string | undefined> {
 }
 
 export async function requestPushPermissions(): Promise<boolean> {
-  if (!Device.isDevice) {
+  if (!isNative || !Device.isDevice) {
     return false;
   }
 
@@ -37,7 +41,7 @@ export async function requestPushPermissions(): Promise<boolean> {
 }
 
 export async function getExpoPushToken(): Promise<string | null> {
-  if (!Device.isDevice) {
+  if (!isNative || !Device.isDevice) {
     return null;
   }
 
@@ -105,5 +109,6 @@ export async function getInitialNotificationData(): Promise<Record<string, unkno
 }
 
 export async function setBadgeCount(count: number): Promise<void> {
+  if (!isNative) return;
   await Notifications.setBadgeCountAsync(count);
 }
