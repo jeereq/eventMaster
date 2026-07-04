@@ -167,10 +167,20 @@ export const USER_GUIDES: UserGuide[] = [
     ],
     workflows: [
       {
+        id: 'event-lifecycle',
+        title: 'Parcours complet d\'un événement',
+        content:
+          '1. Créez l\'événement (titre, date, lieu, salle).\n2. Ajoutez ou importez vos invités.\n3. Configurez un modèle visuel et une invitation (e-mail / WhatsApp).\n4. Diffusez l\'invitation — un PDF du modèle est joint automatiquement.\n5. Les invités répondent via leur lien RSVP personnel.\n6. Organisez le plan de table 2D et assignez les places.\n7. À la sauvegarde, les notifications de placement partent (PDF + voisins de table).\n8. Le jour J, utilisez le mode Protocole (scan QR).\n9. Consultez les statistiques RSVP et participation.',
+        links: [
+          { label: 'Événements', href: '/dashboard/events' },
+          { label: 'Statistiques', href: '/dashboard/analytics' },
+        ],
+      },
+      {
         id: 'create-event',
         title: 'Créer un événement complet',
         content:
-          '1. Allez dans Événements → Créer.\n2. Renseignez titre, date, lieu et associez une salle si disponible.\n3. Ajoutez des invités, assignez un modèle d\'invitation.\n4. Envoyez les invitations par e-mail ou WhatsApp.',
+          '1. Allez dans Événements → Créer.\n2. Renseignez titre, date, lieu et associez une salle si disponible.\n3. Suivez le parcours guidé affiché en haut de l\'événement : invités → modèle → envoi PDF → RSVP → plan de table → protocole → stats.',
         links: [{ label: 'Événements', href: '/dashboard/events' }],
       },
       {
@@ -220,6 +230,16 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Équipe & Salles', href: '/dashboard/profile' },
     ],
     workflows: [
+      {
+        id: 'event-lifecycle',
+        title: 'Parcours complet d\'un événement',
+        content:
+          '1. Créez l\'événement et associez une salle 2D.\n2. Importez ou ajoutez la liste d\'invités.\n3. Choisissez un modèle et rédigez l\'invitation.\n4. Lancez la diffusion (PDF automatique).\n5. Suivez les réponses RSVP.\n6. Placez les invités sur le plan de table — notifications envoyées à la sauvegarde.\n7. Jour J : mode Protocole pour l\'accueil.\n8. Analysez les statistiques de participation.',
+        links: [
+          { label: 'Événements', href: '/dashboard/events' },
+          { label: 'Statistiques', href: '/dashboard/analytics' },
+        ],
+      },
       {
         id: 'setup-room',
         title: 'Configurer une salle 2D',

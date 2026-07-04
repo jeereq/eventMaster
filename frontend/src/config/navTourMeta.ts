@@ -94,7 +94,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-events': {
     title: 'Événements',
     description:
-      'Cœur de l\'application : créez un événement, gérez la liste d\'invités, assignez les tables sur le plan 2D, envoyez les invitations (e-mail, WhatsApp) et configurez les rappels automatiques.',
+      'Parcours guidé de bout en bout : création, invités, modèle & invitation, envoi PDF, RSVP, plan de table avec notifications, protocole jour J et statistiques.',
     route: '/dashboard/events',
   },
   'nav-protocol': {

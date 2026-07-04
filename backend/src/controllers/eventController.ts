@@ -186,6 +186,7 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
     });
 
     let assignmentNotifications = null;
+    let eventForResponse = updatedEvent;
     if (
       tablePlan !== undefined
       && notifyTableAssignments !== false
@@ -196,10 +197,22 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
         oldPlan: existingEvent.tablePlan,
         newPlan: tablePlan,
       });
+
+      if ((assignmentNotifications?.notified ?? 0) > 0) {
+        const planWithMeta = {
+          ...(typeof tablePlan === 'object' && tablePlan !== null ? tablePlan : {}),
+          placementNotifiedAt: new Date().toISOString(),
+        };
+        eventForResponse = await prisma.event.update({
+          where: { id },
+          data: { tablePlan: planWithMeta },
+          include: { room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } } },
+        });
+      }
     }
 
     return res.json({
-      ...updatedEvent,
+      ...eventForResponse,
       assignmentNotifications,
     });
   } catch (error: any) {

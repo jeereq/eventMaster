@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -17,6 +17,11 @@ import EventStaffPanel from './EventStaffPanel';
 import EventFeedManager from './EventFeedManager';
 import GuestProtocolPanel from './GuestProtocolPanel';
 import EventGuestGuidelinesEditor from '@/components/EventGuestGuidelinesEditor';
+import EventWorkflowPanel from '@/components/EventWorkflowPanel';
+import {
+  computeEventWorkflowState,
+  type EventWorkflowTab,
+} from '@/lib/eventWorkflow';
 import {
   type GuestGuidelines,
   defaultGuestGuidelines,
@@ -74,6 +79,8 @@ interface GuestItem {
   category: string;
   rsvp: 'PENDING' | 'ACCEPTED' | 'DECLINED';
   preferences: any;
+  seatingInvitationPdfUrl?: string | null;
+  checkedInAt?: string | null;
 }
 
 interface TemplateItem {
@@ -378,6 +385,46 @@ export default function EventsPage() {
   });
 
   const isAllFilteredSelected = filteredGuests.length > 0 && filteredGuests.every(g => selectedGuestIds.includes(g.id));
+
+  const eventWorkflow = useMemo(
+    () =>
+      computeEventWorkflowState({
+        guests,
+        invitations,
+        tablePlan: selectedEvent?.tablePlan,
+        eventDate: selectedEvent?.date,
+        isProtocolOnly,
+      }),
+    [guests, invitations, selectedEvent?.tablePlan, selectedEvent?.date, isProtocolOnly],
+  );
+
+  const handleWorkflowNavigate = useCallback((tab: EventWorkflowTab) => {
+    if (tab === 'analytics') return;
+    setActiveTab(tab);
+  }, []);
+
+  const handleWorkflowAction = useCallback((stepId: string) => {
+    switch (stepId) {
+      case 'guests':
+        if (guests.length === 0) setShowGuestModal(true);
+        break;
+      case 'invitation':
+        if (invitations.length === 0) setShowInviteModal(true);
+        break;
+      default:
+        break;
+    }
+  }, [guests.length, invitations.length]);
+
+  const refreshGuests = useCallback(async () => {
+    if (!selectedEvent) return;
+    try {
+      const guestsData = await api.get(`/events/${selectedEvent.id}/guests`);
+      setGuests(guestsData);
+    } catch {
+      /* ignore refresh errors */
+    }
+  }, [selectedEvent]);
 
   const loadEvents = async () => {
     try {
@@ -1197,6 +1244,7 @@ export default function EventsPage() {
       setBroadcastMessage(response.message || '');
       setBroadcastSummary(response.summary || null);
       setShowBroadcastModal(true);
+      await refreshGuests();
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la diffusion.');
     } finally {
@@ -1225,7 +1273,8 @@ export default function EventsPage() {
       setBroadcastSummary(response.summary || null);
       setShowBulkInviteModal(false);
       setShowBroadcastModal(true);
-      setSelectedGuestIds([]); // Clear selection after successful send
+      setSelectedGuestIds([]);
+      await refreshGuests();
     } catch (err: any) {
       setError(err.message || "Erreur lors de l'envoi groupé.");
     } finally {
@@ -1476,6 +1525,14 @@ export default function EventsPage() {
       {/* Event Management View (Tabs) */}
       {selectedEvent && (
         <div className="space-y-8">
+          <EventWorkflowPanel
+            workflow={eventWorkflow}
+            activeTab={activeTab}
+            onNavigateTab={handleWorkflowNavigate}
+            onAction={handleWorkflowAction}
+            compact={isProtocolOnly}
+          />
+
           {/* Tabs Selector */}
           <div className="flex border-b border-slate-200 overflow-x-auto">
             {!isProtocolOnly && (

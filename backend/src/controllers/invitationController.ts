@@ -345,6 +345,22 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
       const allSimulated = channelResults.every(r => r.simulated);
       const errors = channelResults.filter(r => r.error).map(r => `${r.channel}: ${r.error}`).join('; ');
 
+      if (anySuccess) {
+        const prefs =
+          guest.preferences && typeof guest.preferences === 'object'
+            ? (guest.preferences as Record<string, unknown>)
+            : {};
+        await prisma.guest.update({
+          where: { id: guest.id },
+          data: {
+            preferences: {
+              ...prefs,
+              invitationSentAt: new Date().toISOString(),
+            },
+          },
+        });
+      }
+
       return {
         guestId: guest.id,
         guestEmail: guest.email,
