@@ -1,5 +1,5 @@
 import { prisma } from '../db';
-import { buildSeatingInvitationPdf } from './invitationPdfService';
+import { buildGuestInvitationPdfWithFallback } from './guestInvitationPdfService';
 import { uploadPdfBuffer } from './cloudinaryService';
 import {
   getSeatingInvitationUploadFolder,
@@ -33,7 +33,7 @@ export type StoredSeatingInvitationPdf = {
 export async function generateAndStoreSeatingInvitationPdf(
   input: SeatingInvitationPdfInput,
 ): Promise<StoredSeatingInvitationPdf> {
-  const buffer = await buildSeatingInvitationPdf({
+  const buffer = await buildGuestInvitationPdfWithFallback(input.guestId, {
     guestFirstName: input.guest.firstName,
     guestLastName: input.guest.lastName,
     eventTitle: input.event.title,

@@ -1,0 +1,122 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+import { api } from '@/lib/api';
+import GuestInvitationPrintDocument, {
+  type GuestPrintDocumentData,
+} from '@/components/GuestInvitationPrintDocument';
+import type { GuestGuidelines } from '@/lib/guestGuidelines';
+import { Loader2 } from 'lucide-react';
+
+type GuestApiResponse = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  rsvp: 'PENDING' | 'ACCEPTED' | 'DECLINED';
+  tableDetails?: {
+    tableName: string;
+    seatIndex?: number;
+    neighbors?: Array<{ firstName: string; lastName: string }>;
+  } | null;
+  event: {
+    title: string;
+    description?: string | null;
+    date: string;
+    location: string;
+    guestGuidelines?: GuestGuidelines | null;
+    invitations?: Array<{
+      template?: {
+        content?: GuestPrintDocumentData['templateContent'];
+      } | null;
+    }>;
+  };
+};
+
+export default function GuestInvitationPrintPage() {
+  const params = useParams();
+  const guestId = params.guestId as string;
+  const [data, setData] = useState<GuestPrintDocumentData | null>(null);
+  const [error, setError] = useState('');
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const guest = await api.get(`/rsvp/${guestId}`) as GuestApiResponse;
+        if (cancelled) return;
+
+        const templateContent = guest.event?.invitations?.[0]?.template?.content ?? null;
+
+        setData({
+          guestId: guest.id,
+          firstName: guest.firstName,
+          lastName: guest.lastName,
+          rsvp: guest.rsvp,
+          event: {
+            title: guest.event.title,
+            description: guest.event.description,
+            date: guest.event.date,
+            location: guest.event.location,
+            guestGuidelines: guest.event.guestGuidelines,
+          },
+          templateContent,
+          tableDetails: guest.tableDetails
+            ? {
+                tableName: guest.tableDetails.tableName,
+                seatIndex: guest.tableDetails.seatIndex,
+                neighbors: guest.tableDetails.neighbors,
+              }
+            : null,
+        });
+      } catch (err: unknown) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Invitation introuvable.');
+        }
+      }
+    }
+
+    void load();
+    return () => { cancelled = true; };
+  }, [guestId]);
+
+  useEffect(() => {
+    if (!data) return;
+
+    const markReady = () => {
+      if (document.fonts?.ready) {
+        void document.fonts.ready.then(() => {
+          setTimeout(() => setReady(true), 800);
+        });
+      } else {
+        setTimeout(() => setReady(true), 1200);
+      }
+    };
+
+    markReady();
+  }, [data]);
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 text-sm text-rose-600">
+        {error}
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+      </div>
+    );
+  }
+
+  return (
+    <div data-pdf-ready={ready ? 'true' : 'false'}>
+      <GuestInvitationPrintDocument data={data} />
+    </div>
+  );
+}
