@@ -17,15 +17,15 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.eventmaster.example/api",
-        "EXPO_PUBLIC_WEB_URL": "https://eventmaster.example"
+        "EXPO_PUBLIC_API_URL": "https://api.eventmaster.neevo.app/api",
+        "EXPO_PUBLIC_WEB_URL": "https://eventmaster.neevo.app/"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.eventmaster.example/api",
-        "EXPO_PUBLIC_WEB_URL": "https://eventmaster.example"
+        "EXPO_PUBLIC_API_URL": "https://api.eventmaster.neevo.app/api",
+        "EXPO_PUBLIC_WEB_URL": "https://eventmaster.neevo.app/"
       }
     }
   },

@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "EventMaster",
-    "slug": "eventmaster",
+    "slug": "event-master",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -42,7 +42,8 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -50,8 +51,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "eventmaster-mobile"
-      }
+        "projectId": "67c72a2f-6f1e-479e-acda-d8f81339035e"
+      },
+      "router": {}
     },
     "plugins": [
       "expo-secure-store",
@@ -70,6 +72,7 @@
           "sounds": []
         }
       ]
-    ]
+    ],
+    "owner": "org_freelance"
   }
 }
