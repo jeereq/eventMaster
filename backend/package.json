@@ -14,7 +14,8 @@
     "test:cloudinary": "ts-node -P tsconfig.scripts.json scripts/testCloudinary.ts",
     "migrate:template-images": "ts-node -P tsconfig.scripts.json scripts/migrateTemplateImagesToCloudinary.ts",
     "migrate:template-images:dry": "ts-node -P tsconfig.scripts.json scripts/migrateTemplateImagesToCloudinary.ts --dry-run",
-    "verify:subscription-approval": "ts-node -P tsconfig.scripts.json scripts/verifySubscriptionApproval.ts"
+    "verify:subscription-approval": "ts-node -P tsconfig.scripts.json scripts/verifySubscriptionApproval.ts",
+    "generate:platform-pdf": "ts-node -P tsconfig.scripts.json scripts/generatePlatformPdf.ts"
   },
   "keywords": [],
   "author": "",
