@@ -6,7 +6,7 @@ EventMaster est une solution logicielle complète en modèle SaaS (Software as a
 
 ## 1. Architecture Globale
 
-L'application est découpée en deux entités distinctes :
+L'application est découpée en **trois entités distinctes** :
 
 - **Backend (backend/)** :
   - Serveur Node.js + Express développé entièrement en TypeScript.
@@ -18,6 +18,12 @@ L'application est découpée en deux entités distinctes :
   - Application moderne basée sur le framework Next.js (React) avec l'App Router.
   - Interface soignée réalisée à l'aide de Tailwind CSS et de la bibliothèque d'icônes Lucide React.
   - Gestion d'état unifiée pour l'authentification et le contexte d'organisation (Multi-tenant).
+
+- **Mobile (mobile/)** :
+  - Application React Native + Expo (TypeScript).
+  - Consomme la même API REST que le frontend web.
+  - Cible prioritaire : RSVP invité, protocole (scan QR, confirmation de présence), consultation événements/invités.
+  - Voir `mobile/PLAN.md` pour la feuille de route détaillée.
 
 ---
 
@@ -38,17 +44,26 @@ eventmaster/
 │   ├── package.json
 │   └── tsconfig.json
 │
-└── frontend/
+├── frontend/
+│   ├── src/
+│   │   ├── app/                 # Pages (Next.js App Router)
+│   │   │   ├── dashboard/       # Interface privée d'administration
+│   │   │   ├── login/           # Formulaire de connexion
+│   │   │   ├── register/        # Formulaire de création de compte SaaS (Tenant automatique)
+│   │   │   └── rsvp/[guestId]/  # Portail RSVP public personnalisé d'un invité
+│   │   ├── context/             # Contexte d'authentification et d'organisation
+│   │   └── lib/                 # Service d'appel API d'envoi et d'authentification
+│   ├── package.json
+│   └── tsconfig.json
+│
+└── mobile/
+    ├── App.tsx                  # Point d'entrée Expo
     ├── src/
-    │   ├── app/                 # Pages (Next.js App Router)
-    │   │   ├── dashboard/       # Interface privée d'administration
-    │   │   ├── login/           # Formulaire de connexion
-    │   │   ├── register/        # Formulaire de création de compte SaaS (Tenant automatique)
-    │   │   └── rsvp/[guestId]/  # Portail RSVP public personnalisé d'un invité
-    │   ├── context/             # Contexte d'authentification et d'organisation
-    │   └── lib/                 # Service d'appel API d'envoi et d'authentification
-    ├── package.json
-    └── tsconfig.json
+    │   ├── config/              # Variables d'environnement
+    │   └── lib/                 # Client API (JWT + SecureStore)
+    ├── PLAN.md                  # Feuille de route mobile (phases 0–6)
+    ├── app.json                 # Configuration Expo
+    └── package.json
 ```
 
 ---
@@ -125,6 +140,21 @@ eventmaster/
    npm run dev
    ```
    L'application démarrera sur http://localhost:3000.
+
+### Étape 4 : Configuration du Mobile (optionnel)
+1. Naviguez dans le dossier mobile :
+   ```bash
+   cd ../mobile
+   ```
+2. Copiez les variables d'environnement :
+   ```bash
+   cp .env.example .env
+   ```
+3. Lancez Expo :
+   ```bash
+   npm start
+   ```
+4. Consultez `mobile/PLAN.md` pour la feuille de route complète (auth, RSVP, protocole QR).
 
 ---
 
