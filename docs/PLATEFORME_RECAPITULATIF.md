@@ -4,6 +4,14 @@
 > **Public** : équipe produit, commerciaux, support et partenaires  
 > **Monorepo** : `backend/` · `frontend/` · `mobile/`
 
+📄 **Brochure PDF designée** : [`EventMaster-Plateforme-Fonctionnalites.pdf`](./EventMaster-Plateforme-Fonctionnalites.pdf)  
+*(8 pages A4, couleurs indigo/violet alignées sur la plateforme)*
+
+Pour régénérer le PDF :
+```bash
+cd backend && npm run generate:platform-pdf
+```
+
 ---
 
 ## 1. Vision produit

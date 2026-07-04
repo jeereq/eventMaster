@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EventMaster — Fonctionnalités de la plateforme</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+    rel="stylesheet" />
   <style>
     :root {
       --indigo: #4f46e5;
@@ -26,9 +28,16 @@
       --sky: #0ea5e9;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-    @page { size: A4; margin: 0; }
+    @page {
+      size: A4;
+      margin: 0;
+    }
 
     body {
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -41,6 +50,7 @@
     .page {
       width: 210mm;
       min-height: 297mm;
+      margin: auto;
       padding: 0;
       page-break-after: always;
       position: relative;
@@ -48,7 +58,9 @@
       background: #fff;
     }
 
-    .page:last-child { page-break-after: auto; }
+    .page:last-child {
+      page-break-after: auto;
+    }
 
     /* ── Cover ── */
     .cover {
@@ -64,7 +76,7 @@
     .cover-grid {
       position: absolute;
       inset: 0;
-      background-image: radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px);
+      background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
       background-size: 20px 20px;
       pointer-events: none;
     }
@@ -74,7 +86,7 @@
       width: 400px;
       height: 400px;
       border-radius: 50%;
-      background: rgba(167,139,250,0.25);
+      background: rgba(167, 139, 250, 0.25);
       filter: blur(80px);
       top: -100px;
       right: -80px;
@@ -91,8 +103,8 @@
     .cover-logo-icon {
       width: 52px;
       height: 52px;
-      background: rgba(255,255,255,0.15);
-      border: 1px solid rgba(255,255,255,0.25);
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.25);
       border-radius: 14px;
       display: flex;
       align-items: center;
@@ -120,8 +132,8 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      background: rgba(255,255,255,0.12);
-      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 999px;
       padding: 8px 16px;
       font-size: 11px;
@@ -151,7 +163,7 @@
     .cover-sub {
       font-size: 16px;
       line-height: 1.65;
-      color: rgba(255,255,255,0.85);
+      color: rgba(255, 255, 255, 0.85);
       max-width: 480px;
       font-weight: 500;
     }
@@ -164,8 +176,8 @@
     }
 
     .cover-tag {
-      background: rgba(255,255,255,0.1);
-      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: 999px;
       padding: 7px 14px;
       font-size: 11px;
@@ -178,20 +190,20 @@
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      border-top: 1px solid rgba(255,255,255,0.15);
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
       padding-top: 24px;
     }
 
     .cover-footer p {
       font-size: 11px;
-      color: rgba(255,255,255,0.65);
+      color: rgba(255, 255, 255, 0.65);
       line-height: 1.6;
     }
 
     .cover-version {
       font-size: 12px;
       font-weight: 700;
-      color: rgba(255,255,255,0.9);
+      color: rgba(255, 255, 255, 0.9);
       text-align: right;
     }
 
@@ -269,9 +281,23 @@
     }
 
     /* Cards grid */
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-    .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 10px;
+    }
 
     .card {
       background: var(--slate-50);
@@ -295,12 +321,29 @@
       margin-bottom: 10px;
     }
 
-    .card-icon.indigo { background: #eef2ff; }
-    .card-icon.violet { background: #f5f3ff; }
-    .card-icon.emerald { background: #ecfdf5; }
-    .card-icon.amber { background: #fffbeb; }
-    .card-icon.rose { background: #fff1f2; }
-    .card-icon.sky { background: #f0f9ff; }
+    .card-icon.indigo {
+      background: #eef2ff;
+    }
+
+    .card-icon.violet {
+      background: #f5f3ff;
+    }
+
+    .card-icon.emerald {
+      background: #ecfdf5;
+    }
+
+    .card-icon.amber {
+      background: #fffbeb;
+    }
+
+    .card-icon.rose {
+      background: #fff1f2;
+    }
+
+    .card-icon.sky {
+      background: #f0f9ff;
+    }
 
     .card h3 {
       font-size: 12px;
@@ -353,10 +396,21 @@
       color: var(--slate-500);
     }
 
-    .step-1 { border-top: 3px solid var(--indigo); }
-    .step-2 { border-top: 3px solid var(--violet); }
-    .step-3 { border-top: 3px solid var(--amber); }
-    .step-4 { border-top: 3px solid var(--emerald); }
+    .step-1 {
+      border-top: 3px solid var(--indigo);
+    }
+
+    .step-2 {
+      border-top: 3px solid var(--violet);
+    }
+
+    .step-3 {
+      border-top: 3px solid var(--amber);
+    }
+
+    .step-4 {
+      border-top: 3px solid var(--emerald);
+    }
 
     .banner {
       background: linear-gradient(135deg, var(--indigo), var(--violet));
@@ -375,7 +429,7 @@
     .banner p {
       font-size: 10px;
       line-height: 1.55;
-      color: rgba(255,255,255,0.88);
+      color: rgba(255, 255, 255, 0.88);
     }
 
     .banner-tags {
@@ -386,8 +440,8 @@
     }
 
     .banner-tag {
-      background: rgba(255,255,255,0.15);
-      border: 1px solid rgba(255,255,255,0.25);
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.25);
       border-radius: 8px;
       padding: 5px 10px;
       font-size: 9px;
@@ -413,8 +467,13 @@
       letter-spacing: 0.05em;
     }
 
-    thead th:first-child { border-radius: 10px 0 0 0; }
-    thead th:last-child { border-radius: 0 10px 0 0; }
+    thead th:first-child {
+      border-radius: 10px 0 0 0;
+    }
+
+    thead th:last-child {
+      border-radius: 0 10px 0 0;
+    }
 
     tbody td {
       padding: 9px 12px;
@@ -422,12 +481,26 @@
       color: var(--slate-700);
     }
 
-    tbody tr:nth-child(even) td { background: var(--slate-50); }
-    tbody tr:last-child td:first-child { border-radius: 0 0 0 10px; }
-    tbody tr:last-child td:last-child { border-radius: 0 0 10px 0; }
+    tbody tr:nth-child(even) td {
+      background: var(--slate-50);
+    }
 
-    .check { color: var(--emerald); font-weight: 800; }
-    .cross { color: var(--slate-400); }
+    tbody tr:last-child td:first-child {
+      border-radius: 0 0 0 10px;
+    }
+
+    tbody tr:last-child td:last-child {
+      border-radius: 0 0 10px 0;
+    }
+
+    .check {
+      color: var(--emerald);
+      font-weight: 800;
+    }
+
+    .cross {
+      color: var(--slate-400);
+    }
 
     /* Architecture blocks */
     .arch-row {
@@ -444,9 +517,17 @@
       min-height: 120px;
     }
 
-    .arch-block.backend { background: linear-gradient(145deg, #312e81, var(--indigo)); }
-    .arch-block.frontend { background: linear-gradient(145deg, var(--indigo), var(--violet)); }
-    .arch-block.mobile { background: linear-gradient(145deg, #1e1b4b, #312e81); }
+    .arch-block.backend {
+      background: linear-gradient(145deg, #312e81, var(--indigo));
+    }
+
+    .arch-block.frontend {
+      background: linear-gradient(145deg, var(--indigo), var(--violet));
+    }
+
+    .arch-block.mobile {
+      background: linear-gradient(145deg, #1e1b4b, #312e81);
+    }
 
     .arch-block h3 {
       font-size: 14px;
@@ -467,7 +548,10 @@
       opacity: 0.9;
     }
 
-    .arch-block li::before { content: "▸ "; opacity: 0.7; }
+    .arch-block li::before {
+      content: "▸ ";
+      opacity: 0.7;
+    }
 
     /* Feature list */
     .feature-list {
@@ -555,8 +639,8 @@
 
     .cta-url {
       display: inline-block;
-      background: rgba(255,255,255,0.2);
-      border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
       border-radius: 10px;
       padding: 10px 24px;
       font-size: 13px;
@@ -581,556 +665,612 @@
       margin-right: 4px;
     }
 
-    .highlight-row td:first-child { font-weight: 700; color: var(--slate-900); }
+    .highlight-row td:first-child {
+      font-weight: 700;
+      color: var(--slate-900);
+    }
   </style>
 </head>
+
 <body>
 
-<!-- PAGE 1 — COVER -->
-<div class="page cover">
-  <div class="cover-grid"></div>
-  <div class="cover-glow"></div>
+  <!-- PAGE 1 — COVER -->
+  <div class="page cover">
+    <div class="cover-grid"></div>
+    <div class="cover-glow"></div>
 
-  <div class="cover-logo">
-    <div class="cover-logo-icon">🎉</div>
-    <div class="cover-logo-text">EventMaster</div>
-  </div>
+    <div class="cover-logo">
+      <div class="cover-logo-icon">🎉</div>
+      <div class="cover-logo-text">EventMaster</div>
+    </div>
 
-  <div class="cover-main">
-    <div class="cover-badge">✦ Guide des fonctionnalités · 2026</div>
-    <h1>La plateforme événementielle <span>professionnelle</span> de bout en bout</h1>
-    <p class="cover-sub">
-      Web + mobile natif · Salles 2D · Protocole QR · RSVP multi-canal · Livraison intelligente
-      du placement après check-in · Forfaits Essentials à Enterprise
-    </p>
-    <div class="cover-tags">
-      <span class="cover-tag">📱 iOS & Android</span>
-      <span class="cover-tag">🔐 Multi-tenant</span>
-      <span class="cover-tag">📍 GPS WhatsApp</span>
-      <span class="cover-tag">🪑 Plans de table 2D</span>
-      <span class="cover-tag">💼 Réseau commercial</span>
+    <div class="cover-main">
+      <div class="cover-badge">✦ Guide des fonctionnalités · 2026</div>
+      <h1>La plateforme événementielle <span>professionnelle</span> de bout en bout</h1>
+      <p class="cover-sub">
+        Web + mobile natif · Salles 2D · Protocole QR · RSVP multi-canal · Livraison intelligente
+        du placement après check-in · Forfaits Essentials à Enterprise
+      </p>
+      <div class="cover-tags">
+        <span class="cover-tag">📱 iOS & Android</span>
+        <span class="cover-tag">🔐 Multi-tenant</span>
+        <span class="cover-tag">📍 GPS WhatsApp</span>
+        <span class="cover-tag">🪑 Plans de table 2D</span>
+        <span class="cover-tag">💼 Réseau commercial</span>
+      </div>
+    </div>
+
+    <div class="cover-footer">
+      <div>
+        <p>mingandajeereq@gmail.com · +243 817 125 577</p>
+        <p>Boulevard du 30 Juin, Gombe — Kinshasa, RD Congo</p>
+      </div>
+      <div class="cover-version">Juillet 2026<br />Version 1.0</div>
     </div>
   </div>
 
-  <div class="cover-footer">
-    <div>
-      <p>mingandajeereq@gmail.com · +243 817 125 577</p>
-      <p>Boulevard du 30 Juin, Gombe — Kinshasa, RD Congo</p>
-    </div>
-    <div class="cover-version">Juillet 2026<br/>Version 1.0</div>
-  </div>
-</div>
-
-<!-- PAGE 2 — VISION -->
-<div class="page">
-  <div class="inner">
-    <div class="page-header">
-      <div class="page-header-brand">
-        <div class="page-header-icon">🎉</div>
-        <span class="page-header-title">EventMaster</span>
-      </div>
-      <span class="page-num">02 / 08</span>
-    </div>
-
-    <div class="section-label">Vision produit</div>
-    <h2 class="section-title">Une solution SaaS complète pour vos événements</h2>
-    <p class="section-sub">
-      EventMaster centralise la gestion d'événements privés et professionnels — de la conception de salle
-      au scan QR en passant par les invitations WhatsApp et la facturation par organisation.
-    </p>
-
-    <div class="grid-3" style="margin-bottom: 20px;">
-      <div class="card card-accent">
-        <div class="card-icon indigo">🎨</div>
-        <h3>Conception</h3>
-        <p>Salles 2D, modèles visuels, consignes invités, import maquette & OCR</p>
-      </div>
-      <div class="card card-accent" style="border-top-color: var(--violet);">
-        <div class="card-icon violet">📨</div>
-        <h3>Diffusion</h3>
-        <p>E-mail, WhatsApp, liens RSVP personnalisés, rappels automatiques</p>
-      </div>
-      <div class="card card-accent" style="border-top-color: var(--emerald);">
-        <div class="card-icon emerald">✅</div>
-        <h3>Réponse</h3>
-        <p>Portail web + mobile, formulaires analytiques, badge QR invité</p>
-      </div>
-      <div class="card card-accent" style="border-top-color: var(--amber);">
-        <div class="card-icon amber">📲</div>
-        <h3>Jour J</h3>
-        <p>Protocole QR web & natif, check-in, validation siège, push notifications</p>
-      </div>
-      <div class="card card-accent" style="border-top-color: var(--rose);">
-        <div class="card-icon rose">📄</div>
-        <h3>Livraison</h3>
-        <p>PDF placement, plan de table & GPS envoyés après confirmation de présence</p>
-      </div>
-      <div class="card card-accent" style="border-top-color: var(--sky);">
-        <div class="card-icon sky">📊</div>
-        <h3>Post-événement</h3>
-        <p>Fil d'actualité, livre d'or, rapports exportables, facturation & quotas</p>
-      </div>
-    </div>
-
-    <div class="section-label" style="margin-top: 8px;">Architecture</div>
-    <div class="arch-row">
-      <div class="arch-block backend">
-        <h3>Backend</h3>
-        <div class="port">Node.js · Express · Prisma · :5001</div>
-        <ul>
-          <li>API REST multi-tenant</li>
-          <li>JWT + OTP e-mail/WhatsApp</li>
-          <li>UltraMsg · SMTP · Expo Push</li>
-          <li>Cloudinary · Stripe</li>
-        </ul>
-      </div>
-      <div class="arch-block frontend">
-        <h3>Frontend Web</h3>
-        <div class="port">Next.js · Tailwind · :3000</div>
-        <ul>
-          <li>Dashboard organisateur</li>
-          <li>Concepteur visuel invitations</li>
-          <li>Portail RSVP public</li>
-          <li>Protocole scan caméra web</li>
-        </ul>
-      </div>
-      <div class="arch-block mobile">
-        <h3>Mobile</h3>
-        <div class="port">React Native · Expo SDK 57</div>
-        <ul>
-          <li>RSVP invité deep link</li>
-          <li>Scan QR caméra natif</li>
-          <li>Push notifications</li>
-          <li>Thème sombre · EAS builds</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- PAGE 3 — PARCOURS INVITÉ -->
-<div class="page">
-  <div class="inner">
-    <div class="page-header">
-      <div class="page-header-brand">
-        <div class="page-header-icon">🎉</div>
-        <span class="page-header-title">EventMaster</span>
-      </div>
-      <span class="page-num">03 / 08</span>
-    </div>
-
-    <div class="section-label">Parcours invité intelligent</div>
-    <h2 class="section-title">De l'invitation à la table en 4 étapes</h2>
-    <p class="section-sub">
-      EventMaster sépare l'invitation RSVP de la livraison sensible. Le PDF, le plan de table et la
-      localisation GPS ne sont partagés qu'après confirmation de présence à l'entrée.
-    </p>
-
-    <div class="workflow">
-      <div class="step step-1">
-        <div class="step-num">Étape 1</div>
-        <h4>📧 Invitation</h4>
-        <p>Envoi e-mail ou WhatsApp avec lien RSVP personnalisé. Pas de PDF ni GPS.</p>
-      </div>
-      <div class="step step-2">
-        <div class="step-num">Étape 2</div>
-        <h4>💬 RSVP</h4>
-        <p>Confirmation ou déclin, préférences alimentaires, badge QR sur portail web/mobile.</p>
-      </div>
-      <div class="step step-3">
-        <div class="step-num">Étape 3</div>
-        <h4>📲 Check-in</h4>
-        <p>Scan QR protocole (navigateur ou app mobile). Validation présence & siège.</p>
-      </div>
-      <div class="step step-4">
-        <div class="step-num">Étape 4</div>
-        <h4>🎁 Livraison</h4>
-        <p>PDF + plan de table + pin GPS WhatsApp envoyés automatiquement.</p>
-      </div>
-    </div>
-
-    <table>
-      <thead>
-        <tr>
-          <th>Moment</th>
-          <th>PDF</th>
-          <th>Plan de table</th>
-          <th>GPS WhatsApp</th>
-          <th>Carte web RSVP</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Envoi invitation</td>
-          <td class="cross">✗</td>
-          <td class="cross">✗</td>
-          <td class="cross">✗</td>
-          <td>Lieu texte seul</td>
-        </tr>
-        <tr>
-          <td>Rappel RSVP</td>
-          <td class="cross">✗</td>
-          <td class="cross">✗</td>
-          <td class="cross">✗</td>
-          <td class="cross">✗</td>
-        </tr>
-        <tr class="highlight-row">
-          <td>Après check-in / verify-seat</td>
-          <td class="check">✓</td>
-          <td class="check">✓</td>
-          <td class="check">✓</td>
-          <td class="check">✓</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div class="banner">
-      <h3>⚡ Déclenchement automatique — zéro action manuelle</h3>
-      <p>Dès qu'un invité est validé (scan QR ou vérification siège), EventMaster orchestre l'envoi complet via e-mail et WhatsApp.</p>
-      <div class="banner-tags">
-        <span class="banner-tag">📄 Invitation PDF avec placement</span>
-        <span class="banner-tag">🗺 Plan de table interactif</span>
-        <span class="banner-tag">📍 Localisation GPS WhatsApp</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- PAGE 4 — FONCTIONNALITÉS WEB -->
-<div class="page">
-  <div class="inner">
-    <div class="page-header">
-      <div class="page-header-brand">
-        <div class="page-header-icon">🎉</div>
-        <span class="page-header-title">EventMaster</span>
-      </div>
-      <span class="page-num">04 / 08</span>
-    </div>
-
-    <div class="section-label">Tableau de bord web</div>
-    <h2 class="section-title">Fonctionnalités organisateur</h2>
-    <p class="section-sub">Interface Next.js complète pour piloter vos événements, équipes et forfaits.</p>
-
-    <div class="grid-2" style="margin-bottom: 18px;">
-      <div class="card">
-        <div class="card-icon indigo">📅</div>
-        <h3>Gestion d'événements</h3>
-        <p>CRUD événements, quotas par forfait, guidelines invités, coordonnées GPS, fil d'actualité et livre d'or.</p>
-      </div>
-      <div class="card">
-        <div class="card-icon violet">👥</div>
-        <h3>Gestion des invités</h3>
-        <p>Ajout unitaire, import CSV, catégories, RSVP en temps réel, préférences alimentaires et badge QR.</p>
-      </div>
-      <div class="card">
-        <div class="card-icon emerald">✉️</div>
-        <h3>Invitations & envois</h3>
-        <p>Modèles visuels, variables dynamiques, diffusion e-mail + WhatsApp, suivi des envois par canal.</p>
-      </div>
-      <div class="card">
-        <div class="card-icon amber">🏛</div>
-        <h3>Salles & plans 2D</h3>
-        <p>Éditeur drag-and-drop, thèmes visuels, fixtures (scène, fleurs), placement invités par table.</p>
-      </div>
-      <div class="card">
-        <div class="card-icon rose">🎨</div>
-        <h3>Concepteur visuel</h3>
-        <p>Éditeur drag-and-drop, 9+ modèles, import maquette image (Premium), OCR texte (Premium 2+).</p>
-      </div>
-      <div class="card">
-        <div class="card-icon sky">📊</div>
-        <h3>Analytics & rapports</h3>
-        <p>Statistiques RSVP, export CSV formulaires analytiques, rapports revenus & commissions (Enterprise).</p>
-      </div>
-    </div>
-
-    <div class="section-label">Protocole web</div>
-    <div class="feature-list">
-      <div class="feature-item"><span class="dot">✓</span> Scan QR via caméra navigateur</div>
-      <div class="feature-item"><span class="dot">✓</span> Confirmation de présence (check-in)</div>
-      <div class="feature-item"><span class="dot">✓</span> Vérification du siège assigné</div>
-      <div class="feature-item"><span class="dot">✓</span> Notes protocole par invité</div>
-      <div class="feature-item"><span class="dot">✓</span> Recherche manuelle invité</div>
-      <div class="feature-item"><span class="dot">✓</span> Déclenchement livraison placement</div>
-    </div>
-
-    <div class="section-label">Portail RSVP invité (web)</div>
-    <div class="feature-list">
-      <div class="feature-item"><span class="dot">✓</span> Invitation stylisée responsive</div>
-      <div class="feature-item"><span class="dot">✓</span> Formulaire RSVP + champs custom</div>
-      <div class="feature-item"><span class="dot">✓</span> Badge QR après acceptation</div>
-      <div class="feature-item"><span class="dot">✓</span> Plan de table (post check-in)</div>
-      <div class="feature-item"><span class="dot">✓</span> Téléchargement PDF invitation</div>
-      <div class="feature-item"><span class="dot">✓</span> Carte Google Maps / Waze (post check-in)</div>
-    </div>
-  </div>
-</div>
-
-<!-- PAGE 5 — MOBILE -->
-<div class="page">
-  <div class="inner">
-    <div class="page-header">
-      <div class="page-header-brand">
-        <div class="page-header-icon">🎉</div>
-        <span class="page-header-title">EventMaster</span>
-      </div>
-      <span class="page-num">05 / 08</span>
-    </div>
-
-    <div class="section-label">Application mobile native</div>
-    <h2 class="section-title">iOS & Android — React Native + Expo</h2>
-    <p class="section-sub">
-      L'application mobile complète le tableau de bord web sans dupliquer la logique métier.
-      Protocole jour J, RSVP invité et notifications push en natif.
-    </p>
-
-    <div class="grid-2" style="margin-bottom: 18px;">
-      <div class="card" style="background: linear-gradient(145deg, #eef2ff, #f5f3ff); border-color: #c7d2fe;">
-        <div class="card-icon indigo">📱</div>
-        <h3>Parcours invité</h3>
-        <p>Deep link RSVP, badge QR, plan de table, PDF, consignes invités, liste multi-invitations.</p>
-        <p style="margin-top:8px;"><span class="pill">eventmaster://rsvp/:id</span></p>
-      </div>
-      <div class="card" style="background: linear-gradient(145deg, #ecfdf5, #f0fdf4); border-color: #a7f3d0;">
-        <div class="card-icon emerald">📷</div>
-        <h3>Protocole jour J</h3>
-        <p>Scan caméra natif, check-in & verify-seat en &lt; 3 s, recherche manuelle, accès protocole-only.</p>
-        <p style="margin-top:8px;"><span class="pill">eventmaster://protocol/:id</span></p>
-      </div>
-      <div class="card">
-        <div class="card-icon violet">🔔</div>
-        <h3>Notifications push</h3>
-        <p>Expo Push Notifications, token enregistré backend, navigation deep link au tap.</p>
-      </div>
-      <div class="card">
-        <div class="card-icon amber">🌙</div>
-        <h3>Thème sombre</h3>
-        <p>Interface adaptée au réglage système iOS/Android. Idéal pour les événements en soirée.</p>
-      </div>
-    </div>
-
-    <div class="section-label">Organisateur mobile</div>
-    <div class="feature-list">
-      <div class="feature-item"><span class="dot">✓</span> Liste événements & détail</div>
-      <div class="feature-item"><span class="dot">✓</span> Invités + filtres RSVP</div>
-      <div class="feature-item"><span class="dot">✓</span> Statistiques RSVP agrégées</div>
-      <div class="feature-item"><span class="dot">✓</span> Notifications in-app</div>
-      <div class="feature-item"><span class="dot">✓</span> Parcours guidé événement</div>
-      <div class="feature-item"><span class="dot">✓</span> Builds EAS (preview & production)</div>
-    </div>
-
-    <div class="banner" style="margin-top: 20px;">
-      <h3>🚀 Publication stores — en préparation</h3>
-      <p>Checklist App Store / Play Store, listings FR, CI GitHub Actions EAS Build. Édition avancée (modèles, plan 2D) reste sur le web.</p>
-    </div>
-  </div>
-</div>
-
-<!-- PAGE 6 — RÔLES & SÉCURITÉ -->
-<div class="page">
-  <div class="inner">
-    <div class="page-header">
-      <div class="page-header-brand">
-        <div class="page-header-icon">🎉</div>
-        <span class="page-header-title">EventMaster</span>
-      </div>
-      <span class="page-num">06 / 08</span>
-    </div>
-
-    <div class="section-label">Gouvernance</div>
-    <h2 class="section-title">Rôles granulaires & sécurité</h2>
-    <p class="section-sub">Chaque profil n'accède qu'aux ressources autorisées — isolation stricte par organisation.</p>
-
-    <table style="margin-bottom: 20px;">
-      <thead>
-        <tr>
-          <th>Rôle</th>
-          <th>Périmètre</th>
-          <th>Créer event/salle</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr class="highlight-row"><td>Propriétaire / Manager org.</td><td>Toute l'organisation</td><td class="check">✓</td></tr>
-        <tr><td>Protocole org.</td><td>Invités (tous événements)</td><td class="cross">✗</td></tr>
-        <tr><td>Manager salle</td><td>Événements de la salle</td><td class="cross">✗</td></tr>
-        <tr><td>Protocole événement</td><td>Invités de l'événement</td><td class="cross">✗</td></tr>
-        <tr><td>Commercial</td><td>Organisations parrainées</td><td>N/A</td></tr>
-      </tbody>
-    </table>
-
-    <div class="grid-3">
-      <div class="card">
-        <div class="card-icon indigo">🔐</div>
-        <h3>Multi-tenant</h3>
-        <p>Isolation stricte par organisation. Toutes les requêtes API filtrent par tenantId.</p>
-      </div>
-      <div class="card">
-        <div class="card-icon violet">🔑</div>
-        <h3>Authentification</h3>
-        <p>JWT, OTP e-mail/WhatsApp, mots de passe hashés, acceptation légale CGU.</p>
-      </div>
-      <div class="card">
-        <div class="card-icon emerald">💼</div>
-        <h3>Réseau commercial</h3>
-        <p>Code parrainage, création d'organisations, commissions 20 % sur facturation mensuelle.</p>
-      </div>
-    </div>
-
-    <div class="section-label" style="margin-top: 20px;">7 piliers de la plateforme</div>
-    <div class="grid-4" style="margin-top: 10px;">
-      <div class="card" style="padding: 12px;"><h3 style="font-size:10px;">Salles 2D</h3><p>Plans drag-and-drop</p></div>
-      <div class="card" style="padding: 12px;"><h3 style="font-size:10px;">Protocole QR</h3><p>Web + mobile natif</p></div>
-      <div class="card" style="padding: 12px;"><h3 style="font-size:10px;">App mobile</h3><p>iOS & Android Expo</p></div>
-      <div class="card" style="padding: 12px;"><h3 style="font-size:10px;">RSVP</h3><p>Multi-canal WA/e-mail</p></div>
-      <div class="card" style="padding: 12px;"><h3 style="font-size:10px;">Rôles</h3><p>Permissions granulaires</p></div>
-      <div class="card" style="padding: 12px;"><h3 style="font-size:10px;">Sécurité</h3><p>OTP · HTTPS · RBAC</p></div>
-      <div class="card" style="padding: 12px;"><h3 style="font-size:10px;">Commercial</h3><p>Parrainage 20 %</p></div>
-      <div class="card" style="padding: 12px;"><h3 style="font-size:10px;">Facturation</h3><p>7 forfaits · Stripe</p></div>
-    </div>
-  </div>
-</div>
-
-<!-- PAGE 7 — FORFAITS -->
-<div class="page">
-  <div class="inner">
-    <div class="page-header">
-      <div class="page-header-brand">
-        <div class="page-header-icon">🎉</div>
-        <span class="page-header-title">EventMaster</span>
-      </div>
-      <span class="page-num">07 / 08</span>
-    </div>
-
-    <div class="section-label">Tarification</div>
-    <h2 class="section-title">Forfaits Essentials à Enterprise</h2>
-    <p class="section-sub">Facturation par organisation · −10 % en paiement annuel · Tarifs en Francs Congolais (FC)</p>
-
-    <table>
-      <thead>
-        <tr>
-          <th>Forfait</th>
-          <th>Prix / mois</th>
-          <th>Événements</th>
-          <th>Invités</th>
-          <th>Points clés</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><strong>Essentials</strong></td>
-          <td>0 FC</td>
-          <td>3</td>
-          <td>50</td>
-          <td>RSVP, portail, 2 modèles, app mobile</td>
-        </tr>
-        <tr>
-          <td><strong>Business</strong></td>
-          <td>30 000 FC</td>
-          <td>8</td>
-          <td>150</td>
-          <td>Protocole QR, 3 salles, scan mobile</td>
-        </tr>
-        <tr>
-          <td><strong>Premium 1</strong></td>
-          <td>55 000 FC</td>
-          <td>12</td>
-          <td>500</td>
-          <td>Modèles custom, RSVP analytique, notifications</td>
-        </tr>
-        <tr class="highlight-row">
-          <td><strong>Premium 2 ★</strong></td>
-          <td>85 000 FC</td>
-          <td>20</td>
-          <td>1 000</td>
-          <td>OCR, verify-seat, livraison PDF+GPS</td>
-        </tr>
-        <tr>
-          <td><strong>Enterprise 1</strong></td>
-          <td>350 000 FC</td>
-          <td>40</td>
-          <td>3 500</td>
-          <td>Rapports, export, support prioritaire</td>
-        </tr>
-        <tr>
-          <td><strong>Enterprise 2</strong></td>
-          <td>525 000 FC</td>
-          <td>70</td>
-          <td>5 000</td>
-          <td>Réseau commercial 20 %, 50 salles</td>
-        </tr>
-        <tr>
-          <td><strong>Enterprise 3</strong></td>
-          <td>700 000 FC</td>
-          <td>Illimité</td>
-          <td>Illimité</td>
-          <td>Multi-agences, SLA 24/7, API</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div class="grid-2">
-      <div class="card card-accent">
-        <div class="card-icon indigo">🆓</div>
-        <h3>Essai gratuit</h3>
-        <p>Forfait Essentials sans carte bancaire : 3 événements, 50 invités, RSVP complet et portail invité.</p>
-      </div>
-      <div class="card card-accent" style="border-top-color: var(--violet);">
-        <div class="card-icon violet">📈</div>
-        <h3>Upgrade flexible</h3>
-        <p>Demande d'activation depuis le dashboard · Factures PDF · Historique abonnements · Quotas en temps réel.</p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- PAGE 8 — CONTACT & CTA -->
-<div class="page">
-  <div class="inner" style="justify-content: space-between;">
-    <div>
+  <!-- PAGE 2 — VISION -->
+  <div class="page">
+    <div class="inner">
       <div class="page-header">
         <div class="page-header-brand">
           <div class="page-header-icon">🎉</div>
           <span class="page-header-title">EventMaster</span>
         </div>
-        <span class="page-num">08 / 08</span>
+        <span class="page-num">02 / 08</span>
       </div>
 
-      <div class="section-label">Contact & support</div>
-      <h2 class="section-title">Parlons de votre prochain événement</h2>
-      <p class="section-sub">Notre équipe répond aux questions commerciales, techniques et de facturation.</p>
+      <div class="section-label">Vision produit</div>
+      <h2 class="section-title">Une solution SaaS complète pour vos événements</h2>
+      <p class="section-sub">
+        EventMaster centralise la gestion d'événements privés et professionnels — de la conception de salle
+        au scan QR en passant par les invitations WhatsApp et la facturation par organisation.
+      </p>
 
-      <div class="contact-grid">
-        <div class="contact-card">
-          <h3>📧 E-mail</h3>
-          <p>mingandajeereq@gmail.com</p>
+      <div class="grid-3" style="margin-bottom: 20px;">
+        <div class="card card-accent">
+          <div class="card-icon indigo">🎨</div>
+          <h3>Conception</h3>
+          <p>Salles 2D, modèles visuels, consignes invités, import maquette & OCR</p>
         </div>
-        <div class="contact-card">
-          <h3>📞 Téléphone & WhatsApp</h3>
-          <p>+243 817 125 577<br/>WhatsApp disponible</p>
+        <div class="card card-accent" style="border-top-color: var(--violet);">
+          <div class="card-icon violet">📨</div>
+          <h3>Diffusion</h3>
+          <p>E-mail, WhatsApp, liens RSVP personnalisés, rappels automatiques</p>
         </div>
-        <div class="contact-card">
-          <h3>📍 Adresse</h3>
-          <p>Boulevard du 30 Juin, Gombe<br/>Kinshasa, RD Congo</p>
+        <div class="card card-accent" style="border-top-color: var(--emerald);">
+          <div class="card-icon emerald">✅</div>
+          <h3>Réponse</h3>
+          <p>Portail web + mobile, formulaires analytiques, badge QR invité</p>
         </div>
-        <div class="contact-card">
-          <h3>🕐 Horaires</h3>
-          <p>Lundi – Samedi<br/>8h – 20h (heure de Kinshasa)</p>
+        <div class="card card-accent" style="border-top-color: var(--amber);">
+          <div class="card-icon amber">📲</div>
+          <h3>Jour J</h3>
+          <p>Protocole QR web & natif, check-in, validation siège, push notifications</p>
+        </div>
+        <div class="card card-accent" style="border-top-color: var(--rose);">
+          <div class="card-icon rose">📄</div>
+          <h3>Livraison</h3>
+          <p>PDF placement, plan de table & GPS envoyés après confirmation de présence</p>
+        </div>
+        <div class="card card-accent" style="border-top-color: var(--sky);">
+          <div class="card-icon sky">📊</div>
+          <h3>Post-événement</h3>
+          <p>Fil d'actualité, livre d'or, rapports exportables, facturation & quotas</p>
+        </div>
+      </div>
+
+      <div class="section-label" style="margin-top: 8px;">Architecture</div>
+      <div class="arch-row">
+        <div class="arch-block backend">
+          <h3>Backend</h3>
+          <div class="port">Node.js · Express · Prisma · :5001</div>
+          <ul>
+            <li>API REST multi-tenant</li>
+            <li>JWT + OTP e-mail/WhatsApp</li>
+            <li>UltraMsg · SMTP · Expo Push</li>
+            <li>Cloudinary · Stripe</li>
+          </ul>
+        </div>
+        <div class="arch-block frontend">
+          <h3>Frontend Web</h3>
+          <div class="port">Next.js · Tailwind · :3000</div>
+          <ul>
+            <li>Dashboard organisateur</li>
+            <li>Concepteur visuel invitations</li>
+            <li>Portail RSVP public</li>
+            <li>Protocole scan caméra web</li>
+          </ul>
+        </div>
+        <div class="arch-block mobile">
+          <h3>Mobile</h3>
+          <div class="port">React Native · Expo SDK 57</div>
+          <ul>
+            <li>RSVP invité deep link</li>
+            <li>Scan QR caméra natif</li>
+            <li>Push notifications</li>
+            <li>Thème sombre · EAS builds</li>
+          </ul>
         </div>
       </div>
     </div>
-
-    <div class="cta-box">
-      <h2>Commencez gratuitement dès aujourd'hui</h2>
-      <p>Créez votre organisation en quelques minutes — sans carte bancaire.<br/>3 événements · 50 invités · RSVP & portail invité inclus.</p>
-      <div class="cta-url">eventmaster.cd · /register</div>
-    </div>
-
-    <p class="page-footer-note">
-      © 2026 EventMaster · Document généré automatiquement · Tous droits réservés<br/>
-      Plateforme SaaS multi-tenant · Web + Mobile · Kinshasa, RD Congo
-    </p>
   </div>
-</div>
+
+  <!-- PAGE 3 — PARCOURS INVITÉ -->
+  <div class="page">
+    <div class="inner">
+      <div class="page-header">
+        <div class="page-header-brand">
+          <div class="page-header-icon">🎉</div>
+          <span class="page-header-title">EventMaster</span>
+        </div>
+        <span class="page-num">03 / 08</span>
+      </div>
+
+      <div class="section-label">Parcours invité intelligent</div>
+      <h2 class="section-title">De l'invitation à la table en 4 étapes</h2>
+      <p class="section-sub">
+        EventMaster sépare l'invitation RSVP de la livraison sensible. Le PDF, le plan de table et la
+        localisation GPS ne sont partagés qu'après confirmation de présence à l'entrée.
+      </p>
+
+      <div class="workflow">
+        <div class="step step-1">
+          <div class="step-num">Étape 1</div>
+          <h4>📧 Invitation</h4>
+          <p>Envoi e-mail ou WhatsApp avec lien RSVP personnalisé. Pas de PDF ni GPS.</p>
+        </div>
+        <div class="step step-2">
+          <div class="step-num">Étape 2</div>
+          <h4>💬 RSVP</h4>
+          <p>Confirmation ou déclin, préférences alimentaires, badge QR sur portail web/mobile.</p>
+        </div>
+        <div class="step step-3">
+          <div class="step-num">Étape 3</div>
+          <h4>📲 Check-in</h4>
+          <p>Scan QR protocole (navigateur ou app mobile). Validation présence & siège.</p>
+        </div>
+        <div class="step step-4">
+          <div class="step-num">Étape 4</div>
+          <h4>🎁 Livraison</h4>
+          <p>PDF + plan de table + pin GPS WhatsApp envoyés automatiquement.</p>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Moment</th>
+            <th>PDF</th>
+            <th>Plan de table</th>
+            <th>GPS WhatsApp</th>
+            <th>Carte web RSVP</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Envoi invitation</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td>Lieu texte seul</td>
+          </tr>
+          <tr>
+            <td>Rappel RSVP</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+          </tr>
+          <tr class="highlight-row">
+            <td>Après check-in / verify-seat</td>
+            <td class="check">✓</td>
+            <td class="check">✓</td>
+            <td class="check">✓</td>
+            <td class="check">✓</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="banner">
+        <h3>⚡ Déclenchement automatique — zéro action manuelle</h3>
+        <p>Dès qu'un invité est validé (scan QR ou vérification siège), EventMaster orchestre l'envoi complet via e-mail
+          et WhatsApp.</p>
+        <div class="banner-tags">
+          <span class="banner-tag">📄 Invitation PDF avec placement</span>
+          <span class="banner-tag">🗺 Plan de table interactif</span>
+          <span class="banner-tag">📍 Localisation GPS WhatsApp</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE 4 — FONCTIONNALITÉS WEB -->
+  <div class="page">
+    <div class="inner">
+      <div class="page-header">
+        <div class="page-header-brand">
+          <div class="page-header-icon">🎉</div>
+          <span class="page-header-title">EventMaster</span>
+        </div>
+        <span class="page-num">04 / 08</span>
+      </div>
+
+      <div class="section-label">Tableau de bord web</div>
+      <h2 class="section-title">Fonctionnalités organisateur</h2>
+      <p class="section-sub">Interface Next.js complète pour piloter vos événements, équipes et forfaits.</p>
+
+      <div class="grid-2" style="margin-bottom: 18px;">
+        <div class="card">
+          <div class="card-icon indigo">📅</div>
+          <h3>Gestion d'événements</h3>
+          <p>CRUD événements, quotas par forfait, guidelines invités, coordonnées GPS, fil d'actualité et livre d'or.
+          </p>
+        </div>
+        <div class="card">
+          <div class="card-icon violet">👥</div>
+          <h3>Gestion des invités</h3>
+          <p>Ajout unitaire, import CSV, catégories, RSVP en temps réel, préférences alimentaires et badge QR.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon emerald">✉️</div>
+          <h3>Invitations & envois</h3>
+          <p>Modèles visuels, variables dynamiques, diffusion e-mail + WhatsApp, suivi des envois par canal.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon amber">🏛</div>
+          <h3>Salles & plans 2D</h3>
+          <p>Éditeur drag-and-drop, thèmes visuels, fixtures (scène, fleurs), placement invités par table.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon rose">🎨</div>
+          <h3>Concepteur visuel</h3>
+          <p>Éditeur drag-and-drop, 9+ modèles, import maquette image (Premium), OCR texte (Premium 2+).</p>
+        </div>
+        <div class="card">
+          <div class="card-icon sky">📊</div>
+          <h3>Analytics & rapports</h3>
+          <p>Statistiques RSVP, export CSV formulaires analytiques, rapports revenus & commissions (Enterprise).</p>
+        </div>
+      </div>
+
+      <div class="section-label">Protocole web</div>
+      <div class="feature-list">
+        <div class="feature-item"><span class="dot">✓</span> Scan QR via caméra navigateur</div>
+        <div class="feature-item"><span class="dot">✓</span> Confirmation de présence (check-in)</div>
+        <div class="feature-item"><span class="dot">✓</span> Vérification du siège assigné</div>
+        <div class="feature-item"><span class="dot">✓</span> Notes protocole par invité</div>
+        <div class="feature-item"><span class="dot">✓</span> Recherche manuelle invité</div>
+        <div class="feature-item"><span class="dot">✓</span> Déclenchement livraison placement</div>
+      </div>
+
+      <div class="section-label">Portail RSVP invité (web)</div>
+      <div class="feature-list">
+        <div class="feature-item"><span class="dot">✓</span> Invitation stylisée responsive</div>
+        <div class="feature-item"><span class="dot">✓</span> Formulaire RSVP + champs custom</div>
+        <div class="feature-item"><span class="dot">✓</span> Badge QR après acceptation</div>
+        <div class="feature-item"><span class="dot">✓</span> Plan de table (post check-in)</div>
+        <div class="feature-item"><span class="dot">✓</span> Téléchargement PDF invitation</div>
+        <div class="feature-item"><span class="dot">✓</span> Carte Google Maps / Waze (post check-in)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE 5 — MOBILE -->
+  <div class="page">
+    <div class="inner">
+      <div class="page-header">
+        <div class="page-header-brand">
+          <div class="page-header-icon">🎉</div>
+          <span class="page-header-title">EventMaster</span>
+        </div>
+        <span class="page-num">05 / 08</span>
+      </div>
+
+      <div class="section-label">Application mobile native</div>
+      <h2 class="section-title">iOS & Android — React Native + Expo</h2>
+      <p class="section-sub">
+        L'application mobile complète le tableau de bord web sans dupliquer la logique métier.
+        Protocole jour J, RSVP invité et notifications push en natif.
+      </p>
+
+      <div class="grid-2" style="margin-bottom: 18px;">
+        <div class="card" style="background: linear-gradient(145deg, #eef2ff, #f5f3ff); border-color: #c7d2fe;">
+          <div class="card-icon indigo">📱</div>
+          <h3>Parcours invité</h3>
+          <p>Deep link RSVP, badge QR, plan de table, PDF, consignes invités, liste multi-invitations.</p>
+          <p style="margin-top:8px;"><span class="pill">eventmaster://rsvp/:id</span></p>
+        </div>
+        <div class="card" style="background: linear-gradient(145deg, #ecfdf5, #f0fdf4); border-color: #a7f3d0;">
+          <div class="card-icon emerald">📷</div>
+          <h3>Protocole jour J</h3>
+          <p>Scan caméra natif, check-in & verify-seat en &lt; 3 s, recherche manuelle, accès protocole-only.</p>
+          <p style="margin-top:8px;"><span class="pill">eventmaster://protocol/:id</span></p>
+        </div>
+        <div class="card">
+          <div class="card-icon violet">🔔</div>
+          <h3>Notifications push</h3>
+          <p>Expo Push Notifications, token enregistré backend, navigation deep link au tap.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon amber">🌙</div>
+          <h3>Thème sombre</h3>
+          <p>Interface adaptée au réglage système iOS/Android. Idéal pour les événements en soirée.</p>
+        </div>
+      </div>
+
+      <div class="section-label">Organisateur mobile</div>
+      <div class="feature-list">
+        <div class="feature-item"><span class="dot">✓</span> Liste événements & détail</div>
+        <div class="feature-item"><span class="dot">✓</span> Invités + filtres RSVP</div>
+        <div class="feature-item"><span class="dot">✓</span> Statistiques RSVP agrégées</div>
+        <div class="feature-item"><span class="dot">✓</span> Notifications in-app</div>
+        <div class="feature-item"><span class="dot">✓</span> Parcours guidé événement</div>
+        <div class="feature-item"><span class="dot">✓</span> Builds EAS (preview & production)</div>
+      </div>
+
+      <div class="banner" style="margin-top: 20px;">
+        <h3>🚀 Publication stores — en préparation</h3>
+        <p>Checklist App Store / Play Store, listings FR, CI GitHub Actions EAS Build. Édition avancée (modèles, plan
+          2D) reste sur le web.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE 6 — RÔLES & SÉCURITÉ -->
+  <div class="page">
+    <div class="inner">
+      <div class="page-header">
+        <div class="page-header-brand">
+          <div class="page-header-icon">🎉</div>
+          <span class="page-header-title">EventMaster</span>
+        </div>
+        <span class="page-num">06 / 08</span>
+      </div>
+
+      <div class="section-label">Gouvernance</div>
+      <h2 class="section-title">Rôles granulaires & sécurité</h2>
+      <p class="section-sub">Chaque profil n'accède qu'aux ressources autorisées — isolation stricte par organisation.
+      </p>
+
+      <table style="margin-bottom: 20px;">
+        <thead>
+          <tr>
+            <th>Rôle</th>
+            <th>Périmètre</th>
+            <th>Créer event/salle</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="highlight-row">
+            <td>Propriétaire / Manager org.</td>
+            <td>Toute l'organisation</td>
+            <td class="check">✓</td>
+          </tr>
+          <tr>
+            <td>Protocole org.</td>
+            <td>Invités (tous événements)</td>
+            <td class="cross">✗</td>
+          </tr>
+          <tr>
+            <td>Manager salle</td>
+            <td>Événements de la salle</td>
+            <td class="cross">✗</td>
+          </tr>
+          <tr>
+            <td>Protocole événement</td>
+            <td>Invités de l'événement</td>
+            <td class="cross">✗</td>
+          </tr>
+          <tr>
+            <td>Commercial</td>
+            <td>Organisations parrainées</td>
+            <td>N/A</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-icon indigo">🔐</div>
+          <h3>Multi-tenant</h3>
+          <p>Isolation stricte par organisation. Toutes les requêtes API filtrent par tenantId.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon violet">🔑</div>
+          <h3>Authentification</h3>
+          <p>JWT, OTP e-mail/WhatsApp, mots de passe hashés, acceptation légale CGU.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon emerald">💼</div>
+          <h3>Réseau commercial</h3>
+          <p>Code parrainage, création d'organisations, commissions 20 % sur facturation mensuelle.</p>
+        </div>
+      </div>
+
+      <div class="section-label" style="margin-top: 20px;">7 piliers de la plateforme</div>
+      <div class="grid-4" style="margin-top: 10px;">
+        <div class="card" style="padding: 12px;">
+          <h3 style="font-size:10px;">Salles 2D</h3>
+          <p>Plans drag-and-drop</p>
+        </div>
+        <div class="card" style="padding: 12px;">
+          <h3 style="font-size:10px;">Protocole QR</h3>
+          <p>Web + mobile natif</p>
+        </div>
+        <div class="card" style="padding: 12px;">
+          <h3 style="font-size:10px;">App mobile</h3>
+          <p>iOS & Android Expo</p>
+        </div>
+        <div class="card" style="padding: 12px;">
+          <h3 style="font-size:10px;">RSVP</h3>
+          <p>Multi-canal WA/e-mail</p>
+        </div>
+        <div class="card" style="padding: 12px;">
+          <h3 style="font-size:10px;">Rôles</h3>
+          <p>Permissions granulaires</p>
+        </div>
+        <div class="card" style="padding: 12px;">
+          <h3 style="font-size:10px;">Sécurité</h3>
+          <p>OTP · HTTPS · RBAC</p>
+        </div>
+        <div class="card" style="padding: 12px;">
+          <h3 style="font-size:10px;">Commercial</h3>
+          <p>Parrainage 20 %</p>
+        </div>
+        <div class="card" style="padding: 12px;">
+          <h3 style="font-size:10px;">Facturation</h3>
+          <p>7 forfaits · Stripe</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE 7 — FORFAITS -->
+  <div class="page">
+    <div class="inner">
+      <div class="page-header">
+        <div class="page-header-brand">
+          <div class="page-header-icon">🎉</div>
+          <span class="page-header-title">EventMaster</span>
+        </div>
+        <span class="page-num">07 / 08</span>
+      </div>
+
+      <div class="section-label">Tarification</div>
+      <h2 class="section-title">Forfaits Essentials à Enterprise</h2>
+      <p class="section-sub">Facturation par organisation · −10 % en paiement annuel · Tarifs en Francs Congolais (FC)
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Forfait</th>
+            <th>Prix / mois</th>
+            <th>Événements</th>
+            <th>Invités</th>
+            <th>Points clés</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Essentials</strong></td>
+            <td>0 FC</td>
+            <td>3</td>
+            <td>50</td>
+            <td>RSVP, portail, 2 modèles, app mobile</td>
+          </tr>
+          <tr>
+            <td><strong>Business</strong></td>
+            <td>30 000 FC</td>
+            <td>8</td>
+            <td>150</td>
+            <td>Protocole QR, 3 salles, scan mobile</td>
+          </tr>
+          <tr>
+            <td><strong>Premium 1</strong></td>
+            <td>55 000 FC</td>
+            <td>12</td>
+            <td>500</td>
+            <td>Modèles custom, RSVP analytique, notifications</td>
+          </tr>
+          <tr class="highlight-row">
+            <td><strong>Premium 2 ★</strong></td>
+            <td>85 000 FC</td>
+            <td>20</td>
+            <td>1 000</td>
+            <td>OCR, verify-seat, livraison PDF+GPS</td>
+          </tr>
+          <tr>
+            <td><strong>Enterprise 1</strong></td>
+            <td>350 000 FC</td>
+            <td>40</td>
+            <td>3 500</td>
+            <td>Rapports, export, support prioritaire</td>
+          </tr>
+          <tr>
+            <td><strong>Enterprise 2</strong></td>
+            <td>525 000 FC</td>
+            <td>70</td>
+            <td>5 000</td>
+            <td>Réseau commercial 20 %, 50 salles</td>
+          </tr>
+          <tr>
+            <td><strong>Enterprise 3</strong></td>
+            <td>700 000 FC</td>
+            <td>Illimité</td>
+            <td>Illimité</td>
+            <td>Multi-agences, SLA 24/7, API</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="grid-2">
+        <div class="card card-accent">
+          <div class="card-icon indigo">🆓</div>
+          <h3>Essai gratuit</h3>
+          <p>Forfait Essentials sans carte bancaire : 3 événements, 50 invités, RSVP complet et portail invité.</p>
+        </div>
+        <div class="card card-accent" style="border-top-color: var(--violet);">
+          <div class="card-icon violet">📈</div>
+          <h3>Upgrade flexible</h3>
+          <p>Demande d'activation depuis le dashboard · Factures PDF · Historique abonnements · Quotas en temps réel.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE 8 — CONTACT & CTA -->
+  <div class="page">
+    <div class="inner" style="justify-content: space-between;">
+      <div>
+        <div class="page-header">
+          <div class="page-header-brand">
+            <div class="page-header-icon">🎉</div>
+            <span class="page-header-title">EventMaster</span>
+          </div>
+          <span class="page-num">08 / 08</span>
+        </div>
+
+        <div class="section-label">Contact & support</div>
+        <h2 class="section-title">Parlons de votre prochain événement</h2>
+        <p class="section-sub">Notre équipe répond aux questions commerciales, techniques et de facturation.</p>
+
+        <div class="contact-grid">
+          <div class="contact-card">
+            <h3>📧 E-mail</h3>
+            <p>mingandajeereq@gmail.com</p>
+          </div>
+          <div class="contact-card">
+            <h3>📞 Téléphone & WhatsApp</h3>
+            <p>+243 817 125 577<br />WhatsApp disponible</p>
+          </div>
+          <div class="contact-card">
+            <h3>📍 Adresse</h3>
+            <p>Boulevard du 30 Juin, Gombe<br />Kinshasa, RD Congo</p>
+          </div>
+          <div class="contact-card">
+            <h3>🕐 Horaires</h3>
+            <p>Lundi – Samedi<br />8h – 20h (heure de Kinshasa)</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="cta-box">
+        <h2>Commencez gratuitement dès aujourd'hui</h2>
+        <p>Créez votre organisation en quelques minutes — sans carte bancaire.<br />3 événements · 50 invités · RSVP &
+          portail invité inclus.</p>
+        <div class="cta-url">eventmaster.cd · /register</div>
+      </div>
+
+      <p class="page-footer-note">
+        © 2026 EventMaster · Document généré automatiquement · Tous droits réservés<br />
+        Plateforme SaaS multi-tenant · Web + Mobile · Kinshasa, RD Congo
+      </p>
+    </div>
+  </div>
 
 </body>
+
 </html>
