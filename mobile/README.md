@@ -66,6 +66,17 @@ eas login
 eas build --profile preview --platform android
 ```
 
+## Publication stores
+
+Voir `store/SUBMISSION.md` pour la checklist complète et `store/LISTING.fr.md` pour les textes App Store / Play Store.
+
+```bash
+eas build --profile preview --platform android   # APK test
+eas build --profile production --platform all      # stores
+```
+
+CI : workflow **Mobile EAS Build** (secret GitHub `EXPO_TOKEN` requis).
+
 ## Structure
 
 ```

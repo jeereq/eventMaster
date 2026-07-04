@@ -127,6 +127,7 @@ export default function HomeTab() {
       )}
 
       <Button title="Voir tous les événements" onPress={() => router.push('/(app)/(tabs)/events')} />
+      <Button title="À propos & confidentialité" onPress={() => router.push('/(app)/about' as never)} variant="secondary" />
       <Button title="Se déconnecter" onPress={handleLogout} variant="secondary" />
     </ScrollView>
   );

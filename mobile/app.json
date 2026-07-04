@@ -7,12 +7,28 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "scheme": "eventmaster",
+    "description": "Organisez vos événements privés : invitations, RSVP, protocole jour J et plan de table.",
+    "primaryColor": "#4f46e5",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#312e81"
+    },
     "experiments": {
       "typedRoutes": true
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.eventmaster.app"
+      "bundleIdentifier": "com.eventmaster.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "EventMaster utilise la caméra pour scanner les QR codes des invités lors du protocole jour J.",
+        "NSPhotoLibraryUsageDescription": "EventMaster peut accéder à vos photos pour partager des visuels d'événement.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -22,7 +38,12 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.eventmaster.app",
-      "predictiveBackGestureEnabled": false
+      "versionCode": 1,
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.POST_NOTIFICATIONS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"

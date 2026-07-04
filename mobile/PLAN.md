@@ -182,13 +182,21 @@ cd backend && npx prisma migrate deploy
 
 ---
 
-### Phase 6 — Publication stores (Semaine 8+)
+### Phase 6 — Publication stores (Semaine 8+) ✅ (préparation)
 
-- [ ] Comptes Apple Developer + Google Play Console
-- [ ] Icônes, splash, captures d'écran stores
-- [ ] Politique de confidentialité (lien vers `/privacy`)
-- [ ] Soumission App Store / Play Store
-- [ ] CI/CD GitHub Actions (`eas build`)
+- [ ] Comptes Apple Developer + Google Play Console *(manuel)*
+- [x] Icônes & splash configurés (`app.json`)
+- [x] Politique de confidentialité (liens in-app → `/privacy`, écran À propos)
+- [ ] Soumission App Store / Play Store *(manuel après build)*
+- [x] CI/CD GitHub Actions (`.github/workflows/mobile-eas-build.yml`)
+- [x] Fiches store & checklist (`mobile/store/`)
+
+**Avant soumission**
+
+1. Mettre à jour les URLs production dans `eas.json`
+2. `eas build --profile production --platform all`
+3. Produire les captures d'écran (voir `store/LISTING.fr.md`)
+4. `eas submit` ou soumission manuelle via les consoles
 
 ---
 

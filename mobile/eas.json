@@ -15,13 +15,31 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.eventmaster.example/api",
+        "EXPO_PUBLIC_WEB_URL": "https://eventmaster.example"
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.eventmaster.example/api",
+        "EXPO_PUBLIC_WEB_URL": "https://eventmaster.example"
+      }
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "your-apple-id@example.com",
+        "ascAppId": "0000000000",
+        "appleTeamId": "XXXXXXXXXX"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./store/google-play-service-account.json",
+        "track": "internal"
+      }
+    }
   }
 }

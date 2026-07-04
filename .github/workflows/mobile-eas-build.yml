@@ -1,0 +1,71 @@
+name: Mobile EAS Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Plateforme cible
+        required: true
+        default: android
+        type: choice
+        options:
+          - android
+          - ios
+          - all
+      profile:
+        description: Profil EAS
+        required: true
+        default: preview
+        type: choice
+        options:
+          - preview
+          - production
+  push:
+    tags:
+      - 'mobile-v*'
+
+jobs:
+  build:
+    name: EAS Build (${{ inputs.profile || 'preview' }} / ${{ inputs.platform || 'android' }})
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build (workflow_dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          eas build \
+            --platform "${{ inputs.platform }}" \
+            --profile "${{ inputs.profile }}" \
+            --non-interactive \
+            --no-wait
+
+      - name: Build (tag release)
+        if: github.event_name == 'push'
+        run: |
+          eas build \
+            --platform all \
+            --profile production \
+            --non-interactive \
+            --no-wait

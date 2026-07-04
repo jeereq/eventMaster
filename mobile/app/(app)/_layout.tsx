@@ -26,6 +26,7 @@ export default function AppLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="about" options={{ ...headerOptions, title: 'À propos' }} />
       <Stack.Screen name="events/[id]" options={{ ...headerOptions, title: 'Événement' }} />
       <Stack.Screen name="protocol/[eventId]" options={{ ...headerOptions, title: 'Protocole jour J' }} />
     </Stack>

@@ -7,6 +7,7 @@ import { Screen } from '../../src/components/ui/Screen';
 import { Input } from '../../src/components/ui/Input';
 import { Button } from '../../src/components/ui/Button';
 import { Alert } from '../../src/components/ui/Alert';
+import { LegalLinksText } from '../../src/components/legal/LegalLinks';
 import { colors } from '../../src/theme/colors';
 
 export default function RegisterScreen() {
@@ -126,9 +127,7 @@ export default function RegisterScreen() {
           <View style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}>
             {acceptTerms ? <Text style={styles.checkmark}>✓</Text> : null}
           </View>
-          <Text style={styles.termsText}>
-            J&apos;accepte les conditions d&apos;utilisation et la politique de confidentialité.
-          </Text>
+          <LegalLinksText />
         </Pressable>
 
         <Button title="Créer mon compte" onPress={handleSubmit} loading={loading} />
