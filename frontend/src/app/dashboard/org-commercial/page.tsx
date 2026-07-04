@@ -111,8 +111,27 @@ export default function OrgCommercialPage() {
         <ReferralShareButtons referralCode={data.referralCode} />
       </div>
 
-      <div className="bg-white dark:bg-slate-900 border rounded-2xl overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="md:hidden space-y-3">
+        {data.organizations.length === 0 ? (
+          <p className="text-center text-slate-400 italic py-8 bg-white dark:bg-slate-900 border rounded-2xl">
+            Aucune organisation parrainée pour le moment.
+          </p>
+        ) : (
+          data.organizations.map((o) => (
+            <div key={o.id} className="bg-white dark:bg-slate-900 border rounded-2xl p-4 space-y-1">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-semibold text-slate-900 dark:text-white">{o.name}</p>
+                <span className="text-xs font-bold text-indigo-600 shrink-0">{o.plan}</span>
+              </div>
+              <p className="text-xs text-slate-500">{o.managerName || '—'}</p>
+              <p className="text-xs text-slate-400">{o.eventsCount} événement{o.eventsCount !== 1 ? 's' : ''}</p>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="hidden md:block bg-white dark:bg-slate-900 border rounded-2xl overflow-x-auto">
+        <table className="w-full text-sm min-w-[560px]">
           <thead className="bg-slate-50 dark:bg-slate-950 text-left text-xs uppercase text-slate-400">
             <tr>
               <th className="px-4 py-3">Organisation</th>
@@ -147,8 +166,23 @@ export default function OrgCommercialPage() {
           <h2 className="font-bold text-lg mb-3 flex items-center gap-2">
             <Users className="w-5 h-5" /> Historique commissions
           </h2>
-          <div className="bg-white dark:bg-slate-900 border rounded-2xl overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="md:hidden space-y-3">
+            {data.commissions.map((c) => (
+              <div key={c.id} className="bg-white dark:bg-slate-900 border rounded-2xl p-4 space-y-1">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-semibold text-sm text-slate-900 dark:text-white">{c.tenant.name}</p>
+                  <p className="font-bold text-emerald-600 text-sm shrink-0">{c.commissionAmount.toLocaleString('fr-FR')} FC</p>
+                </div>
+                <p className="text-xs text-slate-500">{c.billingPeriod}</p>
+                <p className="text-xs text-slate-400">
+                  Facture : {c.invoiceAmount.toLocaleString('fr-FR')} FC
+                  {c.commissionRate != null && ` (${Math.round(c.commissionRate * 100)} %)`}
+                </p>
+              </div>
+            ))}
+          </div>
+          <div className="hidden md:block bg-white dark:bg-slate-900 border rounded-2xl overflow-x-auto">
+            <table className="w-full text-sm min-w-[560px]">
               <thead className="bg-slate-50 dark:bg-slate-950 text-left text-xs uppercase text-slate-400">
                 <tr>
                   <th className="px-4 py-3">Période</th>

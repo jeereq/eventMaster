@@ -162,9 +162,9 @@ export default function CommercialDashboardPage() {
         <ReferralShareButtons referralCode={data.referralCode} />
       </div>
 
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h2 className="font-bold text-lg">Organisations parrainées</h2>
-        <Button onClick={() => setShowForm(!showForm)}>
+        <Button onClick={() => setShowForm(!showForm)} className="w-full sm:w-auto">
           <PlusCircle className="w-4 h-4" />
           Nouvelle organisation
         </Button>
@@ -222,8 +222,48 @@ export default function CommercialDashboardPage() {
         </form>
       )}
 
-      <div className="bg-white dark:bg-slate-900 border rounded-2xl overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="md:hidden space-y-3">
+        {data.organizations.map((o) => (
+          <div key={o.id} className="bg-white dark:bg-slate-900 border rounded-2xl p-4 space-y-2">
+            <div className="flex items-start justify-between gap-2">
+              <p className="font-semibold text-slate-900 dark:text-white">{o.name}</p>
+              <span className="text-xs font-bold text-indigo-600 shrink-0">{o.plan}</span>
+            </div>
+            <div className="text-xs text-slate-500 space-y-0.5">
+              <p>{o.managerName || '—'}</p>
+              {o.managerEmail && <p className="text-slate-400 break-all">{o.managerEmail}</p>}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              {o.managerIsEmailVerified === false ? (
+                <>
+                  <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                    En attente OTP
+                  </span>
+                  {o.managerId && (
+                    <button
+                      type="button"
+                      onClick={() => handleResendManagerOtp(o.managerId!)}
+                      disabled={resendingManagerId === o.managerId}
+                      className="text-[10px] font-bold text-amber-700 hover:underline inline-flex items-center gap-1"
+                    >
+                      {resendingManagerId === o.managerId ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                      Renvoyer OTP
+                    </button>
+                  )}
+                </>
+              ) : (
+                <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  Validé
+                </span>
+              )}
+              <span className="text-slate-400">{o.eventsCount} événement{o.eventsCount !== 1 ? 's' : ''}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden md:block bg-white dark:bg-slate-900 border rounded-2xl overflow-x-auto">
+        <table className="w-full text-sm min-w-[640px]">
           <thead className="bg-slate-50 dark:bg-slate-950 text-left text-xs uppercase text-slate-400">
             <tr>
               <th className="px-4 py-3">Organisation</th>
@@ -278,8 +318,20 @@ export default function CommercialDashboardPage() {
           <h2 className="font-bold text-lg mb-3 flex items-center gap-2">
             <Users className="w-5 h-5" /> Historique commissions
           </h2>
-          <div className="bg-white dark:bg-slate-900 border rounded-2xl overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="md:hidden space-y-3">
+            {data.commissions.map((c) => (
+              <div key={c.id} className="bg-white dark:bg-slate-900 border rounded-2xl p-4 space-y-1">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-semibold text-sm text-slate-900 dark:text-white">{c.tenant.name}</p>
+                  <p className="font-bold text-emerald-600 text-sm shrink-0">{c.commissionAmount.toLocaleString('fr-FR')} FC</p>
+                </div>
+                <p className="text-xs text-slate-500">{c.billingPeriod}</p>
+                <p className="text-xs text-slate-400">Facture : {c.invoiceAmount.toLocaleString('fr-FR')} FC ({Math.round(data.commissionRate * 100)} %)</p>
+              </div>
+            ))}
+          </div>
+          <div className="hidden md:block bg-white dark:bg-slate-900 border rounded-2xl overflow-x-auto">
+            <table className="w-full text-sm min-w-[560px]">
               <thead className="bg-slate-50 dark:bg-slate-950 text-left text-xs uppercase text-slate-400">
                 <tr>
                   <th className="px-4 py-3">Période</th>

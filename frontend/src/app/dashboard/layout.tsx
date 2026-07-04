@@ -278,9 +278,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800',
+          'fixed top-14 bottom-0 left-0 z-40 w-72 max-w-[85vw] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800',
           'flex flex-col transform transition-transform duration-300 ease-out',
-          'md:translate-x-0 md:sticky md:top-0 md:h-screen md:w-64 md:max-w-none md:z-30',
+          'md:top-0 md:bottom-auto md:inset-y-0 md:translate-x-0 md:sticky md:h-screen md:w-64 md:max-w-none md:z-30',
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
         )}
       >

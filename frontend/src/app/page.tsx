@@ -93,7 +93,7 @@ export default function Home() {
     <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950 font-sans antialiased text-slate-900 dark:text-slate-100 transition-colors duration-200">
       {/* Header */}
       <header className="border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-50 transition-all">
-        <div className="w-10/12 max-w-7xl mx-auto h-16 flex items-center justify-between">
+        <div className="w-full px-4 sm:px-6 max-w-7xl mx-auto h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition">
               <div className="bg-indigo-600 p-2 rounded-lg text-white">
@@ -244,7 +244,7 @@ export default function Home() {
       {/* Hero Section */}
       <section className="py-20 lg:py-28 bg-white dark:bg-slate-950 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-80" />
-        <div className="w-10/12 max-w-7xl mx-auto relative">
+        <div className="w-full px-4 sm:px-6 max-w-7xl mx-auto relative">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Hero Left: Value Proposition */}
             <div className="space-y-8 text-left">
@@ -340,7 +340,7 @@ export default function Home() {
 
       {/* Nos Modèles Possibles (Invitation Models Showcase) */}
       <section className="py-20 bg-white dark:bg-slate-950">
-        <div className="w-10/12 max-w-7xl mx-auto">
+        <div className="w-full px-4 sm:px-6 max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
             <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Nos Modèles Possibles</h2>
             <p className="text-slate-600 dark:text-slate-400">
@@ -456,7 +456,7 @@ export default function Home() {
         <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] rounded-full bg-indigo-500/20 blur-[120px] pointer-events-none" />
         <div className="absolute bottom-[-20%] right-[-20%] w-[60%] h-[60%] rounded-full bg-violet-500/20 blur-[120px] pointer-events-none" />
 
-        <div className="w-10/12 max-w-5xl mx-auto text-center space-y-8 relative z-10">
+        <div className="w-full px-4 sm:px-6 max-w-5xl mx-auto text-center space-y-8 relative z-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-bold">
             <Sparkles className="w-4 h-4" />
             <span>Prêt à commencer ?</span>

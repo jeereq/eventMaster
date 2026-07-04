@@ -273,7 +273,7 @@ export default function TeamManagement() {
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Rôle dans l&apos;organisation</label>
-            <div className={`grid gap-3 ${hasCommercialNetwork ? 'grid-cols-3' : 'grid-cols-2'}`}>
+            <div className={`grid gap-3 ${hasCommercialNetwork ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2'}`}>
               <button type="button" onClick={() => setOrgRole('MANAGER')} className={`py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 ${orgRole === 'MANAGER' ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'border-slate-200 text-slate-600'}`}>
                 <Shield className="w-4 h-4" /> Manager
               </button>
@@ -324,7 +324,7 @@ export default function TeamManagement() {
       ) : (
         <div className="space-y-3">
           {members.map((member) => (
-            <div key={member.id} className="flex items-center justify-between gap-3 p-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl">
+            <div key={member.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-bold text-sm text-slate-900 dark:text-white truncate">{member.name || 'Sans nom'}</span>

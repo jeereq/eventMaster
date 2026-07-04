@@ -1350,7 +1350,7 @@ function DashboardPageContent() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
               {isCommercialPlatform ? (
                 <Briefcase className="w-8 h-8 text-amber-600" />
               ) : (
@@ -1985,7 +1985,7 @@ function DashboardPageContent() {
             {/* Templates Tab */}
             {activeTab === 'templates' && isSuperAdmin && (
               <div className="space-y-6">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40 rounded-xl p-4">
                     <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Modèles globaux</p>
                     <p className="text-2xl font-extrabold text-indigo-700 dark:text-indigo-300 mt-1">{templates.filter((t) => t.isGlobal).length}</p>
@@ -2502,8 +2502,77 @@ function DashboardPageContent() {
                       <p className="text-slate-500 text-xs font-medium">Aucune demande d'abonnement soumise pour le moment.</p>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse">
+                    <>
+                    <div className="md:hidden space-y-3">
+                      {subscriptionRequests.map((req) => (
+                        <div key={req.id} className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 space-y-3 bg-white dark:bg-slate-950">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="font-bold text-slate-900 dark:text-white truncate">{req.tenant?.name || 'Inconnue'}</p>
+                              <p className="text-[10px] text-slate-400">ID: {req.tenantId}</p>
+                            </div>
+                            <span className={`text-[10px] font-extrabold px-2 py-1 rounded-full uppercase tracking-wider border shrink-0 ${
+                              req.status === 'APPROVED' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
+                              req.status === 'REJECTED' ? 'bg-rose-50 border-rose-100 text-rose-700' :
+                              'bg-amber-50 border-amber-100 text-amber-700'
+                            }`}>
+                              {req.status === 'APPROVED' ? 'Approuvée' :
+                               req.status === 'REJECTED' ? 'Rejetée' : 'En attente'}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 text-xs">
+                            <span className="text-slate-400">Actuel :</span>
+                            <span className={`px-2 py-0.5 rounded text-xs font-extrabold border ${planBadgeClass(req.tenant?.plan || 'FREE')}`}>
+                              {req.tenant?.plan || 'FREE'}
+                            </span>
+                            <span className="text-slate-400">→</span>
+                            <span className={`px-2 py-0.5 rounded text-xs font-extrabold border ${planBadgeClass(req.requestedPlan)}`}>
+                              {req.requestedPlan}
+                            </span>
+                            <span className="text-slate-500 font-semibold">{req.durationDays} j</span>
+                          </div>
+                          {req.proofOfPayment && (
+                            <p className="text-xs text-slate-600 italic break-words">&quot;{req.proofOfPayment}&quot;</p>
+                          )}
+                          <p className="text-[10px] text-slate-400">
+                            {new Date(req.createdAt).toLocaleDateString('fr-FR', {
+                              day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+                            })}
+                          </p>
+                          {req.status === 'PENDING' ? (
+                            <div className="flex flex-col gap-2 pt-1">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setApprovalModalRequest({
+                                    id: req.id,
+                                    requestedPlan: req.requestedPlan,
+                                    durationDays: req.durationDays,
+                                    tenant: req.tenant,
+                                  });
+                                }}
+                                className="w-full px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition shadow-sm"
+                              >
+                                Approuver
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRejectSubscription(req.id)}
+                                className="w-full px-3 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition shadow-sm"
+                              >
+                                Rejeter
+                              </button>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-slate-400 italic">Demande traitée</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full text-left border-collapse min-w-[900px]">
                         <thead>
                           <tr className="border-b border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">
                             <th className="pb-3 font-semibold">Organisation</th>
@@ -2618,6 +2687,7 @@ function DashboardPageContent() {
                         </tbody>
                       </table>
                     </div>
+                    </>
                   )}
                 </div>
               </div>
@@ -4519,17 +4589,17 @@ function DashboardPageContent() {
             ) : (
               <div className="space-y-4">
                 {events.map((event) => (
-                  <div key={event.id} className="p-4 border border-slate-150 rounded-xl hover:bg-slate-50 transition flex items-center justify-between">
-                    <div className="space-y-1">
+                  <div key={event.id} className="p-4 border border-slate-150 rounded-xl hover:bg-slate-50 transition flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="space-y-1 min-w-0">
                       <h3 className="font-bold text-slate-900">{event.title}</h3>
-                      <p className="text-xs text-slate-500 font-medium">
+                      <p className="text-xs text-slate-500 font-medium break-words">
                         {new Date(event.date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} • {event.location}
                       </p>
                       {event.description && <p className="text-sm text-slate-600 line-clamp-1">{event.description}</p>}
                     </div>
                     <Link 
                       href={`/dashboard/events?id=${event.id}`}
-                      className="p-2 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 rounded-lg transition"
+                      className="p-2 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 rounded-lg transition self-end sm:self-auto shrink-0"
                     >
                       <ChevronRight className="w-5 h-5" />
                     </Link>

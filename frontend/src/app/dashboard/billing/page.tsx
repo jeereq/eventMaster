@@ -379,7 +379,25 @@ export default function BillingPage() {
         {requests.length === 0 ? (
           <p className="text-xs text-slate-400 py-6 text-center italic">Aucune demande.</p>
         ) : (
-          <table className="w-full text-xs mt-4">
+          <>
+            <div className="md:hidden space-y-3 mt-4">
+              {requests.map((req) => (
+                <div key={req.id} className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-sm">{req.requestedPlan}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      req.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-700' :
+                      req.status === 'REJECTED' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'
+                    }`}>
+                      {req.status === 'APPROVED' ? 'Approuvée' : req.status === 'REJECTED' ? 'Refusée' : 'En attente'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500">{req.durationDays} jours · {new Date(req.createdAt).toLocaleDateString('fr-FR')}</p>
+                </div>
+              ))}
+            </div>
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-xs mt-4">
             <thead>
               <tr className="text-slate-400 uppercase">
                 <th className="py-2 text-left">Forfait</th>
@@ -406,6 +424,8 @@ export default function BillingPage() {
               ))}
             </tbody>
           </table>
+            </div>
+          </>
         )}
       </div>
     </div>
