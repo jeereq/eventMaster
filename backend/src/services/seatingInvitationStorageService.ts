@@ -5,6 +5,7 @@ import {
   getSeatingInvitationUploadFolder,
   isCloudinaryConfigured,
 } from '../config/cloudinaryConfig';
+import { extractTablePlanSummaryForPdf } from '../utils/tablePlanPdfSummary';
 import type { SeatingInvitationPdfInput } from './invitationPdfService';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -30,7 +31,11 @@ export type StoredGuestInvitationPdf = {
   buffer: Buffer;
 };
 
-function buildFallbackInput(input: GuestInvitationPdfStoreInput): SeatingInvitationPdfInput {
+function buildFallbackInput(
+  input: GuestInvitationPdfStoreInput,
+  tablePlan: unknown,
+): SeatingInvitationPdfInput {
+  const summary = extractTablePlanSummaryForPdf(tablePlan, input.guestId);
   return {
     guestFirstName: input.guest.firstName,
     guestLastName: input.guest.lastName,
@@ -43,6 +48,8 @@ function buildFallbackInput(input: GuestInvitationPdfStoreInput): SeatingInvitat
     tableMates: input.tableMates ?? [],
     rsvpUrl: `${FRONTEND_URL}/rsvp/${input.guestId}`,
     dressCode: input.dressCode,
+    tablePlanTables: summary?.tables,
+    includeQrCode: true,
   };
 }
 
@@ -50,9 +57,14 @@ function buildFallbackInput(input: GuestInvitationPdfStoreInput): SeatingInvitat
 export async function generateAndStoreGuestInvitationPdf(
   input: GuestInvitationPdfStoreInput,
 ): Promise<StoredGuestInvitationPdf> {
+  const eventRecord = await prisma.event.findUnique({
+    where: { id: input.eventId },
+    select: { tablePlan: true },
+  });
+
   const buffer = await buildGuestInvitationPdfWithFallback(
     input.guestId,
-    buildFallbackInput(input),
+    buildFallbackInput(input, eventRecord?.tablePlan),
   );
 
   if (!isCloudinaryConfigured()) {

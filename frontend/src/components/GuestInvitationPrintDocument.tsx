@@ -5,7 +5,17 @@ import { getCanvasStyle } from '@/lib/rsvpFormFields';
 import { getTemplateBackgroundStyle } from '@/lib/templateBackgroundStyle';
 import { formatGuestInvitationText, type GuestInvitationContext } from '@/lib/guestInvitationText';
 import GuestGuidelinesView from '@/components/GuestGuidelinesView';
+import GuestRoomPlanCanvas from '@/components/GuestRoomPlanCanvas';
 import type { GuestGuidelines } from '@/lib/guestGuidelines';
+import type {
+  GuestPlanFixture,
+  GuestRoomOutline,
+  GuestTablePlanOverviewItem,
+} from '@/app/rsvp/GuestTablePlanView';
+
+function buildQrCodeUrl(rsvpUrl: string, size = 200): string {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(rsvpUrl)}&color=4f-46e5&bgcolor=ffffff&qzone=2`;
+}
 
 const PRINT_FONTS =
   'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Great+Vibes&family=Montserrat:wght@400;600;700&family=Playfair+Display:wght@400;700&family=Alex+Brush&family=Cinzel:wght@400;600;700&family=Dancing+Script:wght@500;700&family=Pinyon+Script&display=swap';
@@ -53,6 +63,13 @@ export type GuestPrintDocumentData = {
     seatIndex?: number;
     neighbors?: Array<{ firstName: string; lastName: string }>;
   } | null;
+  tablePlanOverview?: GuestTablePlanOverviewItem[] | null;
+  planFixtures?: GuestPlanFixture[] | null;
+  roomOutline?: GuestRoomOutline | null;
+  roomThemeId?: string | null;
+  floorType?: string | null;
+  floorImageUrl?: string | null;
+  showQrCode?: boolean;
 };
 
 function widthClass(width?: string) {
@@ -74,11 +91,16 @@ function rsvpStatusLabel(status: string) {
 }
 
 export default function GuestInvitationPrintDocument({ data }: { data: GuestPrintDocumentData }) {
+  const rsvpLink =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/rsvp/${data.guestId}`
+      : `${process.env.NEXT_PUBLIC_APP_URL || ''}/rsvp/${data.guestId}`;
+
   const ctx: GuestInvitationContext = {
     firstName: data.firstName,
     lastName: data.lastName,
     event: data.event,
-    rsvpLink: typeof window !== 'undefined' ? `${window.location.origin}/rsvp/${data.guestId}` : '',
+    rsvpLink,
   };
 
   const global = (data.templateContent?.global || {}) as Record<string, string | number | undefined>;
@@ -197,6 +219,13 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
   );
 
   const hasTemplate = Boolean(data.templateContent?.elements?.length);
+  const showQr = data.showQrCode !== false && data.rsvp === 'ACCEPTED';
+  const guestTableId =
+    data.tablePlanOverview?.find((t) => t.isGuestTable)?.id ??
+    data.tablePlanOverview?.find((t) => t.name === data.tableDetails?.tableName)?.id ??
+    null;
+  const neighborNames =
+    data.tableDetails?.neighbors?.map((n) => `${n.firstName} ${n.lastName}`.trim()) ?? [];
 
   return (
     <div className="min-h-screen bg-white print:bg-white" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
@@ -267,7 +296,7 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
 
         {data.tableDetails && (
           <div
-            className="w-full rounded-2xl border border-indigo-200 bg-indigo-50/60 p-6 space-y-3"
+            className="w-full rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-violet-50 p-6 space-y-3"
             style={{ maxWidth: canvasStyle.maxWidth || 480 }}
           >
             <p className="text-xs font-bold uppercase tracking-wider text-indigo-700">Votre placement</p>
@@ -276,13 +305,63 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
               <p className="text-indigo-700 font-semibold">Siège n°{data.tableDetails.seatIndex + 1}</p>
             )}
             {data.tableDetails.neighbors && data.tableDetails.neighbors.length > 0 && (
-              <div className="text-sm text-slate-700 space-y-1">
-                <p className="font-bold">À votre table :</p>
+              <div className="text-sm text-slate-700 space-y-1 pt-2 border-t border-indigo-100">
+                <p className="font-bold text-indigo-900">À votre table :</p>
                 {data.tableDetails.neighbors.map((n, i) => (
                   <p key={i}>• {n.firstName} {n.lastName}</p>
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {data.tablePlanOverview && data.tablePlanOverview.length > 0 && (
+          <div
+            className="w-full rounded-2xl border border-slate-200 bg-white overflow-hidden"
+            style={{ maxWidth: canvasStyle.maxWidth || 480 }}
+          >
+            <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
+              <p className="text-xs font-bold uppercase tracking-wider text-indigo-700">Plan de la salle</p>
+              <p className="text-[10px] text-slate-500 mt-0.5">Votre table est mise en évidence</p>
+            </div>
+            <GuestRoomPlanCanvas
+              tables={data.tablePlanOverview}
+              fixtures={data.planFixtures}
+              roomOutline={data.roomOutline}
+              roomThemeId={data.roomThemeId}
+              floorType={data.floorType}
+              floorImageUrl={data.floorImageUrl}
+              guestTableId={guestTableId}
+              guestFullName={`${data.firstName} ${data.lastName}`}
+              neighborNames={neighborNames}
+              height={300}
+              className="rounded-none border-0"
+            />
+          </div>
+        )}
+
+        {showQr && (
+          <div
+            className="w-full rounded-2xl border border-indigo-200 bg-white p-6 text-center space-y-3"
+            style={{ maxWidth: canvasStyle.maxWidth || 480 }}
+          >
+            <p className="text-xs font-bold uppercase tracking-wider text-indigo-700">
+              Badge QR — confirmation de présence
+            </p>
+            <div className="flex justify-center">
+              <div className="p-3 bg-white rounded-2xl border border-slate-200 shadow-sm">
+                <img
+                  src={buildQrCodeUrl(rsvpLink, 180)}
+                  alt="QR Code de confirmation de présence"
+                  width={180}
+                  height={180}
+                  className="w-[180px] h-[180px]"
+                />
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-500 leading-relaxed max-w-xs mx-auto">
+              Présentez ce QR code à l&apos;entrée de l&apos;événement pour valider votre présence.
+            </p>
           </div>
         )}
 

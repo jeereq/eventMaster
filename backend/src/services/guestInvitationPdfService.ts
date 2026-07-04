@@ -30,8 +30,9 @@ export async function buildGuestInvitationPdfFromPrintPage(guestId: string): Pro
     const browser = await getBrowser();
     page = await browser.newPage();
     await page.setViewport({ width: 900, height: 1280, deviceScaleFactor: 2 });
-    await page.goto(printUrl, { waitUntil: 'networkidle0', timeout: 90000 });
+    await page.goto(printUrl, { waitUntil: 'load', timeout: 90000 });
     await page.waitForSelector('[data-pdf-ready="true"]', { timeout: 45000 });
+    await new Promise((r) => setTimeout(r, 1500));
 
     const pdf = await page.pdf({
       format: 'A4',

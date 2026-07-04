@@ -7,6 +7,11 @@ import GuestInvitationPrintDocument, {
   type GuestPrintDocumentData,
 } from '@/components/GuestInvitationPrintDocument';
 import type { GuestGuidelines } from '@/lib/guestGuidelines';
+import type {
+  GuestPlanFixture,
+  GuestRoomOutline,
+  GuestTablePlanOverviewItem,
+} from '@/app/rsvp/GuestTablePlanView';
 import { Loader2 } from 'lucide-react';
 
 type GuestApiResponse = {
@@ -14,11 +19,18 @@ type GuestApiResponse = {
   firstName: string;
   lastName: string;
   rsvp: 'PENDING' | 'ACCEPTED' | 'DECLINED';
+  placementAccessible?: boolean;
   tableDetails?: {
     tableName: string;
     seatIndex?: number;
     neighbors?: Array<{ firstName: string; lastName: string }>;
   } | null;
+  tablePlanOverview?: GuestTablePlanOverviewItem[] | null;
+  planFixtures?: GuestPlanFixture[] | null;
+  roomOutline?: GuestRoomOutline | null;
+  roomThemeId?: string | null;
+  floorType?: string | null;
+  floorImageUrl?: string | null;
   event: {
     title: string;
     description?: string | null;
@@ -45,7 +57,7 @@ export default function GuestInvitationPrintPage() {
 
     async function load() {
       try {
-        const guest = await api.get(`/rsvp/${guestId}`) as GuestApiResponse;
+        const guest = await api.get(`/rsvp/${guestId}?print=1`) as GuestApiResponse;
         if (cancelled) return;
 
         const templateContent = guest.event?.invitations?.[0]?.template?.content ?? null;
@@ -70,6 +82,13 @@ export default function GuestInvitationPrintPage() {
                 neighbors: guest.tableDetails.neighbors,
               }
             : null,
+          tablePlanOverview: guest.placementAccessible ? guest.tablePlanOverview ?? null : null,
+          planFixtures: guest.placementAccessible ? guest.planFixtures ?? null : null,
+          roomOutline: guest.placementAccessible ? guest.roomOutline ?? null : null,
+          roomThemeId: guest.placementAccessible ? guest.roomThemeId ?? null : null,
+          floorType: guest.placementAccessible ? guest.floorType ?? null : null,
+          floorImageUrl: guest.placementAccessible ? guest.floorImageUrl ?? null : null,
+          showQrCode: guest.rsvp === 'ACCEPTED',
         });
       } catch (err: unknown) {
         if (!cancelled) {
@@ -88,10 +107,10 @@ export default function GuestInvitationPrintPage() {
     const markReady = () => {
       if (document.fonts?.ready) {
         void document.fonts.ready.then(() => {
-          setTimeout(() => setReady(true), 800);
+          setTimeout(() => setReady(true), 1200);
         });
       } else {
-        setTimeout(() => setReady(true), 1200);
+        setTimeout(() => setReady(true), 1500);
       }
     };
 

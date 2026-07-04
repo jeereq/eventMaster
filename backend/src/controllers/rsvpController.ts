@@ -203,7 +203,10 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
       return res.status(404).json({ error: 'Invité non trouvé ou lien RSVP invalide.' });
     }
 
-    const placementAccessible = canGuestAccessPlacement(guest);
+    const forPrint = req.query.print === '1';
+    const hasSeatAssignment = Boolean(findGuestSeatInTablePlan(guest.event.tablePlan, guestId));
+    const placementAccessible =
+      canGuestAccessPlacement(guest) || (forPrint && hasSeatAssignment);
 
     // Extract table details if the guest is assigned to a table (after validation only)
     let tableDetails = null;
