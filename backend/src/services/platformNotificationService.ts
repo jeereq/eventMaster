@@ -1,6 +1,7 @@
 import { PlanType } from '@prisma/client';
 import { prisma } from '../db';
 import { getPlanLimits } from '../config/plansConfig';
+import { sendExpoPushToUser } from './expoPushService';
 
 function formatAmountFc(amount: number): string {
   return `${amount.toLocaleString('fr-FR')} FC`;
@@ -78,6 +79,17 @@ export async function createCommercialBillingNotification(params: {
         commissionAmount: params.commissionAmount ?? null,
       },
     },
+  }).then(async (notification) => {
+    void sendExpoPushToUser(params.userId, {
+      title: notification.title,
+      body: notification.message,
+      data: {
+        notificationId: notification.id,
+        type: notification.type,
+        ...(notification.metadata as Record<string, unknown> | null),
+      },
+    });
+    return notification;
   });
 }
 

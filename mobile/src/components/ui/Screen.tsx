@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
 
 interface ScreenProps {
   title?: string;
@@ -20,9 +20,11 @@ interface ScreenProps {
 }
 
 export function Screen({ title, subtitle, children, loading, header }: ScreenProps) {
+  const { colors } = useTheme();
+
   if (loading) {
     return (
-      <View style={styles.loading}>
+      <View style={[styles.loading, { backgroundColor: colors.indigo900 }]}>
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Chargement…</Text>
       </View>
@@ -30,7 +32,7 @@ export function Screen({ title, subtitle, children, loading, header }: ScreenPro
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.indigo900 }]} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -47,7 +49,7 @@ export function Screen({ title, subtitle, children, loading, header }: ScreenPro
               {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
             </View>
           )}
-          <View style={styles.card}>{children}</View>
+          <View style={[styles.card, { backgroundColor: colors.surface }]}>{children}</View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -57,7 +59,6 @@ export function Screen({ title, subtitle, children, loading, header }: ScreenPro
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: colors.indigo900,
   },
   flex: {
     flex: 1,
@@ -71,7 +72,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.indigo900,
     gap: 12,
   },
   loadingText: {
@@ -100,7 +100,6 @@ const styles = StyleSheet.create({
     color: '#c7d2fe',
   },
   card: {
-    backgroundColor: colors.surface,
     borderRadius: 24,
     padding: 24,
     shadowColor: '#000',

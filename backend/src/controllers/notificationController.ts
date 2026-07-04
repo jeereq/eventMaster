@@ -5,6 +5,10 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from '../services/platformNotificationService';
+import {
+  removePushDeviceToken,
+  upsertPushDeviceToken,
+} from '../services/pushDeviceTokenService';
 
 export async function listNotifications(req: AuthenticatedRequest, res: Response) {
   try {
@@ -51,5 +55,46 @@ export async function readAllNotifications(req: AuthenticatedRequest, res: Respo
   } catch (error: any) {
     console.error('[readAllNotifications]', error);
     return res.status(500).json({ error: 'Impossible de marquer les notifications comme lues.' });
+  }
+}
+
+export async function registerPushToken(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Non authentifié.' });
+    }
+
+    const { token, platform } = req.body;
+    if (!token || typeof token !== 'string') {
+      return res.status(400).json({ error: 'Token push requis.' });
+    }
+    if (!platform || typeof platform !== 'string') {
+      return res.status(400).json({ error: 'Plateforme requise (ios, android, web).' });
+    }
+
+    const record = await upsertPushDeviceToken(req.user.id, token.trim(), platform.trim());
+    return res.json({ id: record.id, token: record.token, platform: record.platform });
+  } catch (error: any) {
+    console.error('[registerPushToken]', error);
+    return res.status(500).json({ error: 'Impossible d\'enregistrer le token push.' });
+  }
+}
+
+export async function unregisterPushToken(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Non authentifié.' });
+    }
+
+    const token = String(req.body?.token ?? req.query.token ?? '');
+    if (!token) {
+      return res.status(400).json({ error: 'Token push requis.' });
+    }
+
+    const count = await removePushDeviceToken(req.user.id, token.trim());
+    return res.json({ removed: count });
+  } catch (error: any) {
+    console.error('[unregisterPushToken]', error);
+    return res.status(500).json({ error: 'Impossible de supprimer le token push.' });
   }
 }

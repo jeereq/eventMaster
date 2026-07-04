@@ -158,13 +158,27 @@ Fonctionnalité clé différenciante sur mobile.
 
 ---
 
-### Phase 5 — Notifications & polish (Semaine 7)
+### Phase 5 — Notifications & polish (Semaine 7) ✅ (partiel)
 
-- [ ] Push notifications (Expo Notifications + token enregistré backend)
-- [ ] Deep links : `eventmaster://rsvp/:guestId`, `eventmaster://event/:id`
-- [ ] Thème sombre
+- [x] Push notifications (Expo Notifications + token enregistré backend)
+- [x] Deep links : `eventmaster://rsvp/:guestId`, `eventmaster://event/:id`, `eventmaster://protocol/:eventId`
+- [x] Thème sombre (suit le réglage système iOS/Android)
+- [x] Config EAS builds (`eas.json` — profils development / preview / production)
 - [ ] Tests E2E (Detox ou Maestro)
-- [ ] Builds EAS (Android APK/AAB, iOS TestFlight)
+- [ ] Builds EAS exécutés (Android APK/AAB, iOS TestFlight)
+
+**Fichiers**
+
+- `src/lib/pushNotifications.ts`, `src/lib/deepLinks.ts`, `src/components/AppBootstrap.tsx`
+- `src/theme/ThemeContext.tsx`, `app/event/[id].tsx`
+- `backend`: `PushDeviceToken`, `expoPushService.ts`, routes `/notifications/push-token`
+
+**Backend (migration requise)**
+
+```bash
+cd backend && npx prisma migrate deploy
+# Optionnel : EXPO_ACCESS_TOKEN pour l'API Expo Push en production
+```
 
 ---
 

@@ -67,6 +67,7 @@ export interface PlatformNotification {
   message: string;
   readAt: string | null;
   createdAt: string;
+  metadata?: Record<string, unknown> | null;
 }
 
 export interface NotificationsResponse {

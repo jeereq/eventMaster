@@ -1,9 +1,11 @@
 import { Redirect, Stack } from 'expo-router';
 import { useAuth } from '../../src/context/AuthContext';
 import { Screen } from '../../src/components/ui/Screen';
+import { useTheme } from '../../src/theme/ThemeContext';
 
 export default function AppLayout() {
   const { loading, isAuthenticated } = useAuth();
+  const { colors } = useTheme();
 
   if (loading) {
     return <Screen loading />;
@@ -13,31 +15,19 @@ export default function AppLayout() {
     return <Redirect href="/(auth)/login" />;
   }
 
+  const headerOptions = {
+    headerShown: true as const,
+    headerStyle: { backgroundColor: colors.headerBg },
+    headerTintColor: colors.headerText,
+    headerTitleStyle: { fontWeight: '700' as const },
+    presentation: 'card' as const,
+  };
+
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
-      <Stack.Screen
-        name="events/[id]"
-        options={{
-          headerShown: true,
-          title: 'Événement',
-          headerStyle: { backgroundColor: '#312e81' },
-          headerTintColor: '#ffffff',
-          headerTitleStyle: { fontWeight: '700' },
-          presentation: 'card',
-        }}
-      />
-      <Stack.Screen
-        name="protocol/[eventId]"
-        options={{
-          headerShown: true,
-          title: 'Protocole jour J',
-          headerStyle: { backgroundColor: '#312e81' },
-          headerTintColor: '#ffffff',
-          headerTitleStyle: { fontWeight: '700' },
-          presentation: 'card',
-        }}
-      />
+      <Stack.Screen name="events/[id]" options={{ ...headerOptions, title: 'Événement' }} />
+      <Stack.Screen name="protocol/[eventId]" options={{ ...headerOptions, title: 'Protocole jour J' }} />
     </Stack>
   );
 }

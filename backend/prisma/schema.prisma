@@ -116,6 +116,7 @@ model User {
   protocolNotes  GuestProtocolNote[]
   commercialCommissions CommercialCommission[]
   platformNotifications PlatformNotification[]
+  pushDeviceTokens      PushDeviceToken[]
 }
 
 model Event {
@@ -428,4 +429,16 @@ model PlatformNotification {
 
   @@index([userId, readAt])
   @@index([userId, createdAt])
+}
+
+model PushDeviceToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  platform  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }

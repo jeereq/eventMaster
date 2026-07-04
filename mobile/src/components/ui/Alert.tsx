@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
 
 interface AlertProps {
   variant: 'error' | 'success' | 'info';
@@ -8,25 +8,22 @@ interface AlertProps {
 }
 
 export function Alert({ variant, message }: AlertProps) {
+  const { colors } = useTheme();
+
+  const variantStyles = {
+    error: { bg: colors.errorBg, border: colors.error, text: colors.error },
+    success: { bg: colors.successBg, border: colors.success, text: colors.success },
+    info: { bg: colors.primaryLight, border: colors.primary, text: colors.primaryDark },
+  }[variant];
+
   return (
     <View
       style={[
         styles.base,
-        variant === 'error' && styles.error,
-        variant === 'success' && styles.success,
-        variant === 'info' && styles.info,
+        { backgroundColor: variantStyles.bg, borderColor: variantStyles.border },
       ]}
     >
-      <Text
-        style={[
-          styles.text,
-          variant === 'error' && styles.textError,
-          variant === 'success' && styles.textSuccess,
-          variant === 'info' && styles.textInfo,
-        ]}
-      >
-        {message}
-      </Text>
+      <Text style={[styles.text, { color: variantStyles.text }]}>{message}</Text>
     </View>
   );
 }
@@ -37,29 +34,8 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
   },
-  error: {
-    backgroundColor: colors.errorBg,
-    borderColor: '#fecdd3',
-  },
-  success: {
-    backgroundColor: colors.successBg,
-    borderColor: '#a7f3d0',
-  },
-  info: {
-    backgroundColor: colors.primaryLight,
-    borderColor: '#c7d2fe',
-  },
   text: {
     fontSize: 14,
     lineHeight: 20,
-  },
-  textError: {
-    color: '#be123c',
-  },
-  textSuccess: {
-    color: '#047857',
-  },
-  textInfo: {
-    color: '#4338ca',
   },
 });

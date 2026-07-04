@@ -39,6 +39,33 @@ Puis scanner le QR code avec Expo Go, ou appuyer sur `i` (iOS) / `a` (Android).
 | `npm run ios` | Lancer sur iOS |
 | `npm run web` | Version web Expo (debug) |
 
+## Deep links
+
+| Lien | Destination |
+|------|-------------|
+| `eventmaster://rsvp/:guestId` | Portail RSVP invité |
+| `eventmaster://event/:id` | Détail événement (auth requise) |
+| `eventmaster://protocol/:eventId` | Protocole jour J (auth requise) |
+
+## Notifications push
+
+Sur appareil physique (pas simulateur), l'app enregistre automatiquement un token Expo auprès du backend après connexion.
+
+```bash
+# Backend — appliquer la migration push tokens
+cd ../backend && npx prisma migrate deploy
+```
+
+Variable optionnelle backend : `EXPO_ACCESS_TOKEN` pour l'API Expo Push en production.
+
+## Builds EAS
+
+```bash
+npm install -g eas-cli
+eas login
+eas build --profile preview --platform android
+```
+
 ## Structure
 
 ```
@@ -47,7 +74,9 @@ mobile/
 │   ├── (auth)/              # login, register, verify-otp, forgot-password
 │   ├── (app)/
 │   │   ├── (tabs)/          # Accueil, Événements, Alertes
-│   │   └── events/[id]      # détail événement
+│   │   ├── events/[id]      # détail événement
+│   │   └── protocol/[eventId]  # protocole jour J
+│   ├── event/[id]           # deep link eventmaster://event/:id
 │   ├── rsvp/[guestId]       # portail RSVP invité (public)
 │   └── _layout.tsx
 ├── src/

@@ -4,11 +4,10 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextStyle,
   View,
   ViewStyle,
 } from 'react-native';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
 
 interface ButtonProps {
   title: string;
@@ -27,6 +26,7 @@ export function Button({
   variant = 'primary',
   style,
 }: ButtonProps) {
+  const { colors } = useTheme();
   const isDisabled = disabled || loading;
 
   return (
@@ -35,8 +35,12 @@ export function Button({
       disabled={isDisabled}
       style={({ pressed }) => [
         styles.base,
-        variant === 'primary' && styles.primary,
-        variant === 'secondary' && styles.secondary,
+        variant === 'primary' && { backgroundColor: colors.primary },
+        variant === 'secondary' && {
+          backgroundColor: colors.primaryLight,
+          borderWidth: 1,
+          borderColor: colors.border,
+        },
         variant === 'ghost' && styles.ghost,
         pressed && !isDisabled && styles.pressed,
         isDisabled && styles.disabled,
@@ -50,8 +54,8 @@ export function Button({
           style={[
             styles.text,
             variant === 'primary' && styles.textPrimary,
-            variant === 'secondary' && styles.textSecondary,
-            variant === 'ghost' && styles.textGhost,
+            variant === 'secondary' && { color: colors.primary },
+            variant === 'ghost' && { color: colors.primary },
           ]}
         >
           {title}
@@ -70,14 +74,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minHeight: 52,
   },
-  primary: {
-    backgroundColor: colors.primary,
-  },
-  secondary: {
-    backgroundColor: colors.primaryLight,
-    borderWidth: 1,
-    borderColor: '#c7d2fe',
-  },
   ghost: {
     backgroundColor: 'transparent',
   },
@@ -93,11 +89,5 @@ const styles = StyleSheet.create({
   },
   textPrimary: {
     color: '#ffffff',
-  },
-  textSecondary: {
-    color: colors.primary,
-  },
-  textGhost: {
-    color: colors.primary,
   },
 });

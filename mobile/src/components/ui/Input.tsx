@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
-import { colors } from '../../theme/colors';
+import { useTheme } from '../../theme/ThemeContext';
 
 interface InputProps extends TextInputProps {
   label: string;
@@ -9,15 +9,29 @@ interface InputProps extends TextInputProps {
 }
 
 export function Input({ label, hint, error, style, ...props }: InputProps) {
+  const { colors } = useTheme();
+
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, { color: colors.textMuted }]}>{label}</Text>
       <TextInput
-        placeholderTextColor="#94a3b8"
-        style={[styles.input, error ? styles.inputError : null, style]}
+        placeholderTextColor={colors.textMuted}
+        style={[
+          styles.input,
+          {
+            borderColor: error ? colors.error : colors.border,
+            color: colors.text,
+            backgroundColor: colors.surface,
+          },
+          style,
+        ]}
         {...props}
       />
-      {error ? <Text style={styles.error}>{error}</Text> : hint ? <Text style={styles.hint}>{hint}</Text> : null}
+      {error ? (
+        <Text style={[styles.error, { color: colors.error }]}>{error}</Text>
+      ) : hint ? (
+        <Text style={[styles.hint, { color: colors.textMuted }]}>{hint}</Text>
+      ) : null}
     </View>
   );
 }
@@ -29,30 +43,21 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 12,
     fontWeight: '700',
-    color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
   },
   input: {
     borderWidth: 1,
-    borderColor: colors.border,
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 15,
-    color: colors.text,
-    backgroundColor: colors.surface,
-  },
-  inputError: {
-    borderColor: colors.error,
   },
   hint: {
     fontSize: 12,
-    color: colors.textMuted,
   },
   error: {
     fontSize: 12,
-    color: colors.error,
     fontWeight: '600',
   },
 });
