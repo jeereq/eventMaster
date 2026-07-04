@@ -187,10 +187,7 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
 
     let assignmentNotifications = null;
     let eventForResponse = updatedEvent;
-    if (
-      tablePlan !== undefined
-      && notifyTableAssignments !== false
-    ) {
+    if (tablePlan !== undefined && notifyTableAssignments === true) {
       assignmentNotifications = await notifyTableAssignmentChanges({
         eventId: id,
         tenantId,

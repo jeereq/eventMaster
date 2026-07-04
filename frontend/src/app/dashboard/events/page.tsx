@@ -734,32 +734,10 @@ export default function EventsPage() {
     try {
       const updatedEvent = await api.put(`/events/${selectedEvent.id}`, {
         tablePlan: newTablePlan,
-        notifyTableAssignments: true,
       });
       setSelectedEvent(updatedEvent);
       setEvents(events.map(e => e.id === selectedEvent.id ? updatedEvent : e));
-
-      const notif = updatedEvent.assignmentNotifications as {
-        notified?: number;
-        skipped?: number;
-        results?: Array<{ guestName: string; sent: boolean; channels?: string[] }>;
-      } | null | undefined;
-
-      if (notif && (notif.notified ?? 0) > 0) {
-        const names = (notif.results || [])
-          .filter((r) => r.sent)
-          .slice(0, 3)
-          .map((r) => r.guestName)
-          .join(', ');
-        const suffix = (notif.notified ?? 0) > 3 ? ` (+${(notif.notified ?? 0) - 3} autres)` : '';
-        setSuccess(
-          `Plan de table enregistré. ${notif.notified} invité(s) notifié(s)${names ? ` : ${names}${suffix}` : ''}.`,
-        );
-      } else if (notif && (notif.results?.length ?? 0) > 0 && (notif.notified ?? 0) === 0) {
-        setSuccess('Plan de table enregistré. Notifications non envoyées (coordonnées manquantes ou forfait).');
-      } else {
-        setSuccess('Plan de table enregistré.');
-      }
+      setSuccess('Plan de table enregistré. La carte et le PDF seront envoyés aux invités après leur confirmation de présence.');
     } catch (err: any) {
       console.error('Erreur lors de la sauvegarde du plan de table:', err);
       throw err;

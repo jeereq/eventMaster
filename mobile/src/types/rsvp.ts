@@ -43,6 +43,9 @@ export interface GuestRsvpData {
   email: string;
   rsvp: RsvpStatus;
   preferences: GuestRsvpPreferences | null;
+  placementAccessible?: boolean;
+  checkedInAt?: string | null;
+  seatVerified?: boolean;
   seatingInvitationPdfUrl?: string | null;
   tableDetails?: RsvpTableDetails | null;
   eventPassed?: boolean;

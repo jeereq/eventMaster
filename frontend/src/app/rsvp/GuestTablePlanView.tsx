@@ -71,6 +71,7 @@ export interface GuestRoomOutline {
 interface GuestTablePlanViewProps {
   guestId?: string;
   seatingInvitationPdfUrl?: string | null;
+  placementAccessible?: boolean;
   tableDetails: GuestTableDetails | null;
   tablePlanOverview: GuestTablePlanOverviewItem[] | null;
   planFixtures?: GuestPlanFixture[] | null;
@@ -118,12 +119,28 @@ export default function GuestTablePlanView({
   floorImageUrl,
   guestFirstName,
   guestLastName,
+  placementAccessible = false,
 }: GuestTablePlanViewProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const guestFullName = `${guestFirstName} ${guestLastName}`;
   const theme = getRoomTheme(roomThemeId);
   const neighborNames = tableDetails?.neighbors.map((n) => `${n.firstName} ${n.lastName}`) ?? [];
   const guestTableId = tablePlanOverview?.find((t) => t.isGuestTable)?.id;
+
+  if (!placementAccessible) {
+    return (
+      <div className="text-center py-16 space-y-4 max-w-xs mx-auto">
+        <div className="inline-flex items-center justify-center bg-indigo-500/10 p-5 rounded-full text-indigo-400">
+          <LayoutGrid className="w-8 h-8" />
+        </div>
+        <h3 className="font-bold text-white text-base">Placement bientôt disponible</h3>
+        <p className="text-slate-400 text-xs leading-relaxed">
+          Votre plan de table et invitation PDF vous seront envoyés après votre confirmation de
+          présence à l&apos;entrée.
+        </p>
+      </div>
+    );
+  }
 
   if (!tableDetails && (!tablePlanOverview || tablePlanOverview.length === 0)) {
     return (

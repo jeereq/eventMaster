@@ -9,8 +9,8 @@ import {
   extractGuestIdFromScanPayload,
   findGuestSeatInTablePlan,
 } from '../services/commercialService';
-import { notifyGuestSeatConfirmed } from '../services/guestSeatNotificationService';
-import { assertPlanFeature, PlanFeatureError, getTenantPlanSnapshot } from '../services/planFeaturesService';
+import { deliverGuestPlacementIfEligible } from '../services/guestPlacementDeliveryService';
+import { assertPlanFeature, PlanFeatureError } from '../services/planFeaturesService';
 
 async function ensureProtocolPlan(tenantId: string) {
   await assertPlanFeature(tenantId, 'protocolQr');
@@ -138,9 +138,21 @@ export async function checkInGuest(req: AuthenticatedRequest, res: Response) {
       },
     });
 
+    const placementDelivery = await deliverGuestPlacementIfEligible({
+      guestId,
+      eventId,
+      tenantId,
+    });
+
+    let placementHint = '';
+    if (placementDelivery.delivered && placementDelivery.notification?.channels.length) {
+      placementHint = ` Placement envoyé par ${placementDelivery.notification.channels.join(', ')}.`;
+    }
+
     return res.json({
-      message: `${guest.firstName} ${guest.lastName} authentifié avec succès.`,
+      message: `${guest.firstName} ${guest.lastName} authentifié avec succès.${placementHint}`,
       guest: updated,
+      placementDelivery,
     });
   } catch (error) {
     console.error('checkInGuest:', error);
@@ -185,7 +197,6 @@ export async function verifyGuestSeat(req: AuthenticatedRequest, res: Response) 
       return res.status(404).json({ error: 'Invité introuvable.' });
     }
 
-    const wasAlreadyVerified = guest.seatVerified;
     const assigned = findGuestSeatInTablePlan(event.tablePlan, guestId);
     let seatMatch = true;
     let mismatchReason: string | null = null;
@@ -210,34 +221,22 @@ export async function verifyGuestSeat(req: AuthenticatedRequest, res: Response) 
       },
     });
 
-    let notification: Awaited<ReturnType<typeof notifyGuestSeatConfirmed>> | null = null;
+    let placementDelivery: Awaited<ReturnType<typeof deliverGuestPlacementIfEligible>> | null = null;
 
-    if (seatMatch && assigned && !wasAlreadyVerified) {
-      const snapshot = await getTenantPlanSnapshot(tenantId);
-      if (snapshot?.features.seatNotifications) {
-        notification = await notifyGuestSeatConfirmed({
-          guest: {
-            id: guest.id,
-            firstName: guest.firstName,
-            lastName: guest.lastName,
-            email: guest.email,
-            phone: guest.phone,
-            preferences: guest.preferences,
-          },
-          eventId,
-          event: {
-            title: event.title,
-            date: event.date,
-            location: event.location,
-          },
-          assignedSeat: assigned,
-        });
+    if (seatMatch && assigned) {
+      placementDelivery = await deliverGuestPlacementIfEligible({
+        guestId,
+        eventId,
+        tenantId,
+      });
 
-        if (!notification.sent) {
-          console.warn('[Protocol] Notification placement non envoyée:', notification.errors);
-        } else {
-          console.log('[Protocol] Notification placement envoyée:', notification.channels.join(', '));
-        }
+      if (placementDelivery.delivered) {
+        console.log(
+          '[Protocol] Placement envoyé:',
+          placementDelivery.notification?.channels.join(', '),
+        );
+      } else if (placementDelivery.skippedReason === 'delivery_failed') {
+        console.warn('[Protocol] Notification placement non envoyée:', placementDelivery.notification?.errors);
       }
     }
 
@@ -246,9 +245,9 @@ export async function verifyGuestSeat(req: AuthenticatedRequest, res: Response) 
       : mismatchReason || 'Siège non conforme.';
 
     const notificationHint =
-      seatMatch && notification?.sent
-        ? ` Notification envoyée (${notification.channels.join(', ')}).`
-        : seatMatch && notification && !notification.sent
+      seatMatch && placementDelivery?.delivered && placementDelivery.notification?.channels.length
+        ? ` Notification envoyée (${placementDelivery.notification.channels.join(', ')}).`
+        : seatMatch && placementDelivery?.skippedReason === 'delivery_failed'
           ? ' Notification non envoyée (coordonnées invité manquantes ou erreur d\'envoi).'
           : '';
 
@@ -257,9 +256,14 @@ export async function verifyGuestSeat(req: AuthenticatedRequest, res: Response) 
       seatMatch,
       assignedSeat: assigned,
       guest: updated,
-      notification: notification
-        ? { sent: notification.sent, channels: notification.channels, errors: notification.errors }
+      notification: placementDelivery?.notification
+        ? {
+            sent: placementDelivery.notification.sent,
+            channels: placementDelivery.notification.channels,
+            errors: placementDelivery.notification.errors,
+          }
         : undefined,
+      placementDelivery,
     });
   } catch (error) {
     console.error('verifyGuestSeat:', error);

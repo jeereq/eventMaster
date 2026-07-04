@@ -11,6 +11,7 @@ import {
 } from '../services/seatingInvitationStorageService';
 import { getTableMateGuestIds } from '../utils/tablePlanAssignment';
 import { normalizeGuestGuidelines, formatDressCodeText } from '../utils/guestGuidelines';
+import { canGuestAccessPlacement } from '../utils/guestPlacementAccess';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -202,7 +203,9 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
       return res.status(404).json({ error: 'Invité non trouvé ou lien RSVP invalide.' });
     }
 
-    // Extract table details if the guest is assigned to a table
+    const placementAccessible = canGuestAccessPlacement(guest);
+
+    // Extract table details if the guest is assigned to a table (after validation only)
     let tableDetails = null;
     let tablePlanOverview: Array<{
       id: string;
@@ -242,7 +245,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
     let floorImageUrl: string | null = null;
 
     const eventObj = guest.event as any;
-    if (eventObj && eventObj.tablePlan && typeof eventObj.tablePlan === 'object') {
+    if (placementAccessible && eventObj && eventObj.tablePlan && typeof eventObj.tablePlan === 'object') {
       const plan = eventObj.tablePlan;
       if (Array.isArray(plan.tables)) {
         tablePlanOverview = plan.tables.map((table: any) => ({
@@ -333,7 +336,8 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
 
     return res.json({
       ...guest,
-      seatingInvitationPdfUrl: guest.seatingInvitationPdfUrl ?? null,
+      placementAccessible,
+      seatingInvitationPdfUrl: placementAccessible ? guest.seatingInvitationPdfUrl ?? null : null,
       tableDetails,
       tablePlanOverview,
       planFixtures,
@@ -589,6 +593,12 @@ export async function downloadSeatingInvitationPdf(req: Request, res: Response) 
 
     if (!guest?.event) {
       return res.status(404).json({ error: 'Invitation introuvable.' });
+    }
+
+    if (!canGuestAccessPlacement(guest)) {
+      return res.status(403).json({
+        error: 'Votre plan de table et invitation PDF seront disponibles après votre confirmation de présence à l\'entrée.',
+      });
     }
 
     const assigned = findGuestSeatInTablePlan(guest.event.tablePlan, guestId);

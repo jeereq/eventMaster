@@ -28,6 +28,7 @@ export interface EventWorkflowGuest {
   checkedInAt?: string | null;
   preferences?: {
     invitationSentAt?: string;
+    placementNotifiedAt?: string;
     [key: string]: unknown;
   } | null;
 }
@@ -79,9 +80,11 @@ function hasInvitationTemplate(invitations: EventWorkflowInvitation[]): boolean 
 }
 
 function countInvitationSent(guests: EventWorkflowGuest[]): number {
-  return guests.filter(
-    (g) => g.preferences?.invitationSentAt || g.seatingInvitationPdfUrl,
-  ).length;
+  return guests.filter((g) => g.preferences?.invitationSentAt).length;
+}
+
+function countPlacementDelivered(guests: EventWorkflowGuest[]): number {
+  return guests.filter((g) => g.preferences?.placementNotifiedAt).length;
 }
 
 function countRsvpResponses(guests: EventWorkflowGuest[]): number {
@@ -90,10 +93,6 @@ function countRsvpResponses(guests: EventWorkflowGuest[]): number {
 
 function countCheckedIn(guests: EventWorkflowGuest[]): number {
   return guests.filter((g) => g.checkedInAt).length;
-}
-
-function placementNotified(tablePlan: TablePlanMeta | null | undefined): boolean {
-  return Boolean(tablePlan?.placementNotifiedAt || tablePlan?.notifiedAt);
 }
 
 function resolveStatuses(
@@ -136,9 +135,9 @@ export function computeEventWorkflowState(input: {
   const sentCount = countInvitationSent(guests);
   const rsvpCount = countRsvpResponses(guests);
   const checkedInCount = countCheckedIn(guests);
+  const placementDeliveredCount = countPlacementDelivered(guests);
   const hasTemplate = hasInvitationTemplate(invitations);
   const hasInviteConfig = invitations.length > 0 && hasTemplate;
-  const tableNotified = placementNotified(tablePlan ?? undefined);
 
   const eventPassed = eventDate ? new Date(eventDate).getTime() < Date.now() : false;
 
@@ -199,12 +198,12 @@ export function computeEventWorkflowState(input: {
     },
     {
       id: 'send',
-      title: 'Envoi (PDF)',
-      description: 'Diffusez l\'invitation avec le PDF du modèle choisi.',
+      title: 'Envoi invitation',
+      description: 'Diffusez le lien RSVP (sans placement — envoyé après protocole).',
       tab: 'invitations',
       detail:
         sentCount > 0
-          ? `✓ ${sentCount} envoi(s) avec PDF`
+          ? `✓ ${sentCount} envoi(s)`
           : hasInviteConfig && guestCount > 0
             ? 'Lancez la diffusion'
             : 'Configurez d\'abord invités et invitation',
@@ -236,13 +235,14 @@ export function computeEventWorkflowState(input: {
     {
       id: 'tableNotify',
       title: 'Notification placement',
-      description: 'Envoi automatique e-mail / WhatsApp avec PDF et voisins de table.',
+      description: 'Carte et PDF envoyés après confirmation de présence au protocole.',
       tab: 'tablePlan',
-      detail: tableNotified
-        ? '✓ Notifications envoyées'
-        : assignedCount > 0
-          ? 'Sauvegardez le plan pour notifier'
-          : 'Assignez des places d\'abord',
+      detail:
+        placementDeliveredCount > 0
+          ? `✓ ${placementDeliveredCount} placement(s) envoyé(s)`
+          : assignedCount > 0
+            ? 'Après validation à l\'entrée (protocole)'
+            : 'Assignez des places d\'abord',
     },
     {
       id: 'protocol',

@@ -32,6 +32,7 @@ interface GuestRsvpData {
   rsvp: 'PENDING' | 'ACCEPTED' | 'DECLINED';
   preferences: any;
   seatingInvitationPdfUrl?: string | null;
+  placementAccessible?: boolean;
   tableDetails?: {
     tableName: string;
     shape: 'round' | 'rectangular' | 'square' | 'oval';
@@ -610,6 +611,7 @@ export default function RsvpPage() {
             {activeGuestTab === 'table' && (
               <GuestTablePlanView
                 guestId={guestId}
+                placementAccessible={guest.placementAccessible}
                 seatingInvitationPdfUrl={guest.seatingInvitationPdfUrl}
                 tableDetails={guest.tableDetails ? {
                   ...guest.tableDetails,

@@ -26,6 +26,7 @@ export interface EventWorkflowGuest {
   checkedInAt?: string | null;
   preferences?: {
     invitationSentAt?: string;
+    placementNotifiedAt?: string;
     [key: string]: unknown;
   } | null;
 }
@@ -80,7 +81,11 @@ function hasInvitationTemplate(invitations: EventWorkflowInvitation[]): boolean 
 }
 
 function countInvitationSent(guests: EventWorkflowGuest[]): number {
-  return guests.filter((g) => g.preferences?.invitationSentAt || g.seatingInvitationPdfUrl).length;
+  return guests.filter((g) => g.preferences?.invitationSentAt).length;
+}
+
+function countPlacementDelivered(guests: EventWorkflowGuest[]): number {
+  return guests.filter((g) => g.preferences?.placementNotifiedAt).length;
 }
 
 function countRsvpResponses(guests: EventWorkflowGuest[]): number {
@@ -89,10 +94,6 @@ function countRsvpResponses(guests: EventWorkflowGuest[]): number {
 
 function countCheckedIn(guests: EventWorkflowGuest[]): number {
   return guests.filter((g) => g.checkedInAt).length;
-}
-
-function placementNotified(tablePlan: TablePlanMeta | null | undefined): boolean {
-  return Boolean(tablePlan?.placementNotifiedAt || tablePlan?.notifiedAt);
 }
 
 function resolveStatuses(steps: Omit<EventWorkflowStep, 'status'>[]): EventWorkflowStep[] {
@@ -133,8 +134,8 @@ export function computeEventWorkflowState(input: {
   const sentCount = countInvitationSent(guests);
   const rsvpCount = countRsvpResponses(guests);
   const checkedInCount = countCheckedIn(guests);
+  const placementDeliveredCount = countPlacementDelivered(guests);
   const hasInviteConfig = invitations.length > 0 && hasInvitationTemplate(invitations);
-  const tableNotified = placementNotified(tablePlan ?? undefined);
   const eventPassed = eventDate ? new Date(eventDate).getTime() < Date.now() : false;
 
   if (isProtocolOnly) {
@@ -225,13 +226,14 @@ export function computeEventWorkflowState(input: {
     {
       id: 'tableNotify',
       title: 'Notification placement',
-      description: 'Envoi auto',
+      description: 'Carte + PDF après protocole',
       tab: 'tablePlan',
-      detail: tableNotified
-        ? '✓ Notifications envoyées'
-        : assignedCount > 0
-          ? 'Sauvegardez le plan'
-          : 'Assignez des places',
+      detail:
+        placementDeliveredCount > 0
+          ? `✓ ${placementDeliveredCount} envoyé(s)`
+          : assignedCount > 0
+            ? 'Après confirmation présence'
+            : 'Assignez des places',
     },
     {
       id: 'protocol',

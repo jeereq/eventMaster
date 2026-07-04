@@ -135,17 +135,27 @@ export default function RsvpGuestScreen() {
             <RsvpBadgePanel qrUrl={qrUrl} guestName={guest.firstName} />
           ) : null}
 
-          {guest.tableDetails ? <RsvpTablePanel tableDetails={guest.tableDetails} /> : null}
+          {guest.placementAccessible && guest.tableDetails ? (
+            <RsvpTablePanel tableDetails={guest.tableDetails} />
+          ) : null}
 
-          {(guest.seatingInvitationPdfUrl || guest.rsvp === 'ACCEPTED') && (
+          {guest.placementAccessible && guest.seatingInvitationPdfUrl ? (
             <View style={styles.pdfCard}>
               <Text style={styles.pdfTitle}>Invitation PDF</Text>
               <Text style={styles.pdfText}>
-                Téléchargez votre invitation personnalisée avec le modèle choisi par l&apos;organisateur.
+                Votre invitation avec placement de table, disponible après votre confirmation de présence.
               </Text>
               <Button title="Ouvrir le PDF" onPress={openPdf} variant="secondary" />
             </View>
-          )}
+          ) : guest.rsvp === 'ACCEPTED' && !guest.placementAccessible ? (
+            <View style={styles.pdfCard}>
+              <Text style={styles.pdfTitle}>Plan de table & PDF</Text>
+              <Text style={styles.pdfText}>
+                Votre carte de placement et invitation PDF vous seront envoyés après validation à
+                l&apos;entrée de l&apos;événement.
+              </Text>
+            </View>
+          ) : null}
 
           {otherInvites.length > 0 ? (
             <View style={styles.otherCard}>
