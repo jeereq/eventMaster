@@ -27,6 +27,7 @@ export async function sendRealEmail(
   subject: string,
   textBody: string,
   htmlBody?: string,
+  attachments?: Array<{ filename: string; content: Buffer; type?: string }>,
 ): Promise<{ success: boolean; simulated: boolean; messageId?: string; error?: string }> {
   if (!isSendGridConfigured()) {
     const errMsg =
@@ -39,13 +40,22 @@ export async function sendRealEmail(
 
   try {
     sgMail.setApiKey(sendgridApiKey);
-    const msg = {
+    const msg: sgMail.MailDataRequired = {
       to,
       from: sendgridFrom,
       subject,
       text: textBody,
       html: htmlBody || textBody.replace(/\n/g, '<br>'),
     };
+
+    if (attachments?.length) {
+      msg.attachments = attachments.map((a) => ({
+        content: a.content.toString('base64'),
+        filename: a.filename,
+        type: a.type || 'application/octet-stream',
+        disposition: 'attachment',
+      }));
+    }
 
     const response = await sgMail.send(msg);
     const messageId = response[0]?.headers?.['x-message-id'] || 'sg-sent';
@@ -59,7 +69,7 @@ export async function sendRealEmail(
 }
 
 async function sendUltraMsgRequest(
-  endpoint: 'chat' | 'location' | 'image',
+  endpoint: 'chat' | 'location' | 'image' | 'document',
   formattedTo: string,
   params: URLSearchParams
 ): Promise<{ success: boolean; simulated: boolean; messageSid?: string; error?: string }> {
@@ -164,4 +174,31 @@ export async function sendRealWhatsAppImage(
   params.append('image', imageUrl);
   params.append('caption', caption);
   return sendUltraMsgRequest('image', formattedTo, params);
+}
+
+/**
+ * Send a WhatsApp document (PDF) using UltraMsg or fall back to simulation
+ */
+export async function sendRealWhatsAppDocument(
+  to: string,
+  documentUrl: string,
+  filename: string,
+  caption?: string,
+): Promise<{ success: boolean; simulated: boolean; messageSid?: string; error?: string }> {
+  const formattedTo = formatPhoneE164(to);
+  const { ultramsgInstanceId, ultramsgToken } = getNotificationCredentials();
+
+  if (!ultramsgInstanceId || !ultramsgToken) {
+    console.log(
+      `[Simulation] Sending UltraMsg WhatsApp Document to ${formattedTo}:\nDocument: ${documentUrl}\nFilename: ${filename}\n`,
+    );
+    return { success: true, simulated: true };
+  }
+
+  const params = new URLSearchParams();
+  params.append('to', formattedTo);
+  params.append('document', documentUrl);
+  params.append('filename', filename);
+  if (caption?.trim()) params.append('caption', caption.trim());
+  return sendUltraMsgRequest('document', formattedTo, params);
 }

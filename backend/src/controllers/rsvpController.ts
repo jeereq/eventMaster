@@ -5,6 +5,10 @@ import { sendRealEmail, sendRealWhatsApp, sendRealWhatsAppImage } from '../servi
 import { renderGuestMessage, polishWhatsAppBody } from '../services/messageTemplateService';
 import { findGuestsByIdentity } from '../services/legalService';
 import { extractGuestEmail, extractGuestPhone } from '../utils/guestIdentity';
+import { findGuestSeatInTablePlan } from '../services/commercialService';
+import { buildInvitationPdfBuffer } from '../services/guestSeatNotificationService';
+import { getTableMateGuestIds } from '../utils/tablePlanAssignment';
+import { normalizeGuestGuidelines, formatDressCodeText } from '../utils/guestGuidelines';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -557,5 +561,67 @@ export async function submitRsvp(req: Request, res: Response) {
   } catch (error: any) {
     console.error('Erreur lors de la soumission du RSVP:', error);
     return res.status(500).json({ error: 'Erreur lors de l\'enregistrement de votre réponse RSVP.' });
+  }
+}
+
+export async function downloadSeatingInvitationPdf(req: Request, res: Response) {
+  try {
+    const guestId = req.params.guestId as string;
+
+    const guest = await prisma.guest.findUnique({
+      where: { id: guestId },
+      include: {
+        event: {
+          select: {
+            title: true,
+            description: true,
+            date: true,
+            location: true,
+            guestGuidelines: true,
+            tablePlan: true,
+          },
+        },
+      },
+    });
+
+    if (!guest?.event) {
+      return res.status(404).json({ error: 'Invitation introuvable.' });
+    }
+
+    const assigned = findGuestSeatInTablePlan(guest.event.tablePlan, guestId);
+    if (!assigned) {
+      return res.status(404).json({ error: 'Aucun placement de table pour cet invité.' });
+    }
+
+    const mateIds = getTableMateGuestIds(guest.event.tablePlan, guestId);
+    const tableMates = mateIds.length
+      ? await prisma.guest.findMany({
+          where: { id: { in: mateIds } },
+          select: { firstName: true, lastName: true },
+          orderBy: { lastName: 'asc' },
+        })
+      : [];
+
+    const dressCode = formatDressCodeText(normalizeGuestGuidelines(guest.event.guestGuidelines)) || null;
+
+    const pdf = await buildInvitationPdfBuffer({
+      guest: {
+        id: guest.id,
+        firstName: guest.firstName,
+        lastName: guest.lastName,
+      },
+      event: guest.event,
+      assignedSeat: assigned,
+      tableMates,
+      dressCode,
+    });
+
+    const filename = `invitation-${guest.lastName || 'invite'}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    return res.send(pdf);
+  } catch (error: any) {
+    console.error('Erreur génération PDF invitation:', error);
+    return res.status(500).json({ error: 'Impossible de générer le PDF.' });
   }
 }

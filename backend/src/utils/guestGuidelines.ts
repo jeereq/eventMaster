@@ -97,7 +97,7 @@ export function normalizeGuestGuidelines(raw: unknown): GuestGuidelines {
   };
 }
 
-function formatDressCodeText(guidelines: GuestGuidelines): string {
+export function formatDressCodeText(guidelines: GuestGuidelines): string {
   const dc = guidelines.dressCode;
   if (!dc.enabled) return '';
   const parts: string[] = [];

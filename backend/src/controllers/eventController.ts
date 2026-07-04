@@ -9,6 +9,7 @@ import {
   resolveOrgAccess,
 } from '../services/permissionsService';
 import { blueprintToTablePlan } from '../services/roomLayoutService';
+import { notifyTableAssignmentChanges } from '../services/tableAssignmentNotificationService';
 import { toPrismaJson } from '../utils/prismaJson';
 
 // List all events for the current tenant
@@ -149,7 +150,7 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
     const tenantId = req.user?.tenantId;
     const userId = req.user?.id;
     const id = req.params.id as string;
-    const { title, description, date, location, reminderFrequency, latitude, longitude, tablePlan, roomId, guestGuidelines } = req.body;
+    const { title, description, date, location, reminderFrequency, latitude, longitude, tablePlan, roomId, guestGuidelines, notifyTableAssignments } = req.body;
 
     if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
@@ -184,7 +185,23 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
       include: { room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } } },
     });
 
-    return res.json(updatedEvent);
+    let assignmentNotifications = null;
+    if (
+      tablePlan !== undefined
+      && notifyTableAssignments !== false
+    ) {
+      assignmentNotifications = await notifyTableAssignmentChanges({
+        eventId: id,
+        tenantId,
+        oldPlan: existingEvent.tablePlan,
+        newPlan: tablePlan,
+      });
+    }
+
+    return res.json({
+      ...updatedEvent,
+      assignmentNotifications,
+    });
   } catch (error: any) {
     console.error('Erreur lors de la modification de l\'événement:', error);
     return res.status(500).json({ error: 'Erreur lors de la modification de l\'événement' });

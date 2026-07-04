@@ -10,7 +10,8 @@ import {
 import { getRoomTheme } from '@/lib/roomThemeUtils';
 import ChairRenderer from '@/components/ChairRenderer';
 import GuestRoomPlanCanvas from '@/components/GuestRoomPlanCanvas';
-import { LayoutGrid, Users, Maximize2 } from 'lucide-react';
+import { LayoutGrid, Users, Maximize2, Download } from 'lucide-react';
+import { api } from '@/lib/api';
 import { ChairType } from '@/lib/roomLayoutUtils';
 import type { TableShape } from '@/lib/tablePlanUtils';
 
@@ -68,6 +69,7 @@ export interface GuestRoomOutline {
 }
 
 interface GuestTablePlanViewProps {
+  guestId?: string;
   tableDetails: GuestTableDetails | null;
   tablePlanOverview: GuestTablePlanOverviewItem[] | null;
   planFixtures?: GuestPlanFixture[] | null;
@@ -104,6 +106,7 @@ function getSeatOccupant(
 }
 
 export default function GuestTablePlanView({
+  guestId,
   tableDetails,
   tablePlanOverview,
   planFixtures,
@@ -199,6 +202,17 @@ export default function GuestTablePlanView({
             <p className="text-sm font-bold text-white mt-1">{tableDetails.capacity} places</p>
           </div>
         </div>
+        {guestId && (
+          <button
+            type="button"
+            onClick={() => api.download(`/rsvp/${guestId}/seating-invitation.pdf`, `invitation-${guestLastName || 'invite'}.pdf`)}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold transition hover:opacity-90"
+            style={{ backgroundColor: theme.accentColor, color: '#fff' }}
+          >
+            <Download className="w-4 h-4" />
+            Télécharger l&apos;invitation PDF
+          </button>
+        )}
       </div>
 
       <div className="bg-slate-800/40 border border-slate-700/40 rounded-3xl p-4 sm:p-6">

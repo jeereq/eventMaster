@@ -608,6 +608,7 @@ export default function RsvpPage() {
             {/* 2. MA TABLE TAB */}
             {activeGuestTab === 'table' && (
               <GuestTablePlanView
+                guestId={guestId}
                 tableDetails={guest.tableDetails ? {
                   ...guest.tableDetails,
                   chairType: guest.tableDetails.chairType as ChairType | undefined,

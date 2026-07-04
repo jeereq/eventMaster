@@ -686,10 +686,33 @@ export default function EventsPage() {
     if (!selectedEvent) return;
     try {
       const updatedEvent = await api.put(`/events/${selectedEvent.id}`, {
-        tablePlan: newTablePlan
+        tablePlan: newTablePlan,
+        notifyTableAssignments: true,
       });
       setSelectedEvent(updatedEvent);
       setEvents(events.map(e => e.id === selectedEvent.id ? updatedEvent : e));
+
+      const notif = updatedEvent.assignmentNotifications as {
+        notified?: number;
+        skipped?: number;
+        results?: Array<{ guestName: string; sent: boolean; channels?: string[] }>;
+      } | null | undefined;
+
+      if (notif && (notif.notified ?? 0) > 0) {
+        const names = (notif.results || [])
+          .filter((r) => r.sent)
+          .slice(0, 3)
+          .map((r) => r.guestName)
+          .join(', ');
+        const suffix = (notif.notified ?? 0) > 3 ? ` (+${(notif.notified ?? 0) - 3} autres)` : '';
+        setSuccess(
+          `Plan de table enregistré. ${notif.notified} invité(s) notifié(s)${names ? ` : ${names}${suffix}` : ''}.`,
+        );
+      } else if (notif && (notif.results?.length ?? 0) > 0 && (notif.notified ?? 0) === 0) {
+        setSuccess('Plan de table enregistré. Notifications non envoyées (coordonnées manquantes ou forfait).');
+      } else {
+        setSuccess('Plan de table enregistré.');
+      }
     } catch (err: any) {
       console.error('Erreur lors de la sauvegarde du plan de table:', err);
       throw err;
@@ -2748,7 +2771,7 @@ export default function EventsPage() {
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Corps du message</label>
                   <span className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider flex flex-wrap items-center gap-x-2 gap-y-0.5">
                     <HelpCircle className="w-3.5 h-3.5" /> 
-                    <span>Variables: {'{{firstName}}'}, {'{{lastName}}'}, {'{{rsvpLink}}'}, {'{{title}}'}, {'{{date}}'}, {'{{location}}'}, {'{{description}}'}, {'{{dressCode}}'}, {'{{recommendations}}'}, {'{{guestGuidelines}}'}</span>
+                    <span>Variables: {'{{firstName}}'}, {'{{lastName}}'}, {'{{rsvpLink}}'}, {'{{title}}'}, {'{{date}}'}, {'{{location}}'}, {'{{description}}'}, {'{{dressCode}}'}, {'{{recommendations}}'}, {'{{guestGuidelines}}'}, {'{{tableName}}'}, {'{{seatNumber}}'}, {'{{tableMates}}'}, {'{{tableMatesInline}}'}</span>
                   </span>
                 </div>
                 <textarea 
