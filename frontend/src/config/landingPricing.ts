@@ -80,7 +80,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     ctaHref: '/register',
     ctaVariant: 'primary',
     tier: 'business',
-    highlights: ['8 événements · 150 invités', 'Protocole QR & émargement', '3 salles · thèmes & fixtures'],
+    highlights: ['8 événements · 150 invités', 'Protocole QR & confirmation de présence', '3 salles · thèmes & fixtures'],
   },
   {
     id: 'PREMIUM_1',
@@ -294,7 +294,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
   },
   {
     category: 'Protocole',
-    label: 'Scan QR caméra (émargement)',
+    label: 'Scan QR caméra (confirmation de présence)',
     values: {
       FREE: false,
       STANDARD: true,
@@ -429,7 +429,7 @@ export const PLATFORM_PILLARS = [
   },
   {
     title: 'Protocole intelligent',
-    description: 'Scan caméra du QR invité, émargement, confirmation du siège et notification automatique (e-mail, WhatsApp).',
+    description: 'Scan caméra du QR invité, confirmation de présence, validation du siège et notification automatique (e-mail, WhatsApp).',
     icon: 'qr',
   },
   {

@@ -144,7 +144,7 @@ export async function checkInGuest(req: AuthenticatedRequest, res: Response) {
     });
   } catch (error) {
     console.error('checkInGuest:', error);
-    return res.status(500).json({ error: 'Erreur lors de l\'émargement.' });
+    return res.status(500).json({ error: 'Erreur lors de la confirmation de présence.' });
   }
 }
 

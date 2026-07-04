@@ -107,7 +107,7 @@ export default function QrCameraScanner({ active, onScan, onError }: QrCameraSca
         <p className="text-sm text-rose-600 font-medium">{cameraError}</p>
       )}
       <p className="text-xs text-slate-500 text-center">
-        Placez le QR code d&apos;émargement de l&apos;invité dans le cadre.
+        Placez le QR code de confirmation de présence de l&apos;invité dans le cadre.
       </p>
     </div>
   );

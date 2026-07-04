@@ -147,7 +147,7 @@ export function computeEventWorkflowState(input: {
       {
         id: 'protocol',
         title: 'Protocole jour J',
-        description: 'Scan QR, émargement et accueil des invités.',
+        description: 'Scan QR, confirmation de présence et accueil des invités.',
         tab: 'protocol',
         detail: checkedInCount > 0 ? `✓ ${checkedInCount} invité(s) enregistré(s)` : `${guestCount} invité(s) à accueillir`,
       },
@@ -247,7 +247,7 @@ export function computeEventWorkflowState(input: {
     {
       id: 'protocol',
       title: 'Protocole jour J',
-      description: 'Scan QR, contrôle d\'accès et émargement.',
+      description: 'Scan QR, contrôle d\'accès et confirmation de présence.',
       tab: 'protocol',
       detail:
         checkedInCount > 0

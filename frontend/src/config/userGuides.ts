@@ -266,7 +266,7 @@ export const USER_GUIDES: UserGuide[] = [
     title: 'Guide Protocole organisation',
     badge: 'Organisation',
     summary:
-      'Vous gérez l\'accueil et le contrôle des invités sur tous les événements de l\'organisation : scan QR, émargement et notifications de placement.',
+      'Vous gérez l\'accueil et le contrôle des invités sur tous les événements de l\'organisation : scan QR, confirmation de présence et notifications de placement.',
     canDo: [
       'Accéder au mode Protocole sur tous les événements',
       'Scanner les QR codes invités avec la caméra',

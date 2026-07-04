@@ -100,7 +100,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-protocol': {
     title: 'Protocole',
     description:
-      'Mode accueil le jour J : scan caméra du QR invité, vérification d\'identité, émargement et envoi de la notification de placement (e-mail / WhatsApp).',
+      'Mode accueil le jour J : scan caméra du QR invité, vérification d\'identité, confirmation de présence et envoi de la notification de placement (e-mail / WhatsApp).',
     route: '/dashboard/events?mode=protocol',
   },
   'nav-analytics-org': {

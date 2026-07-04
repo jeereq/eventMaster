@@ -15,7 +15,7 @@ export default function TermsPage() {
       <Section title="1. Objet">
         <p>
           EventMaster est une solution SaaS multi-tenant destinée à la gestion d&apos;événements privés et professionnels :
-          invitations et RSVP, plans de table 2D, protocole (scan QR, émargement), fil d&apos;actualité, livre d&apos;or,
+          invitations et RSVP, plans de table 2D, protocole (scan QR, confirmation de présence), fil d&apos;actualité, livre d&apos;or,
           modèles de messages, gestion d&apos;équipe et facturation par abonnement.
         </p>
         <p>

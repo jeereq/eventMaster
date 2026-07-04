@@ -47,7 +47,7 @@ interface BillingStatus {
 }
 
 const CAPABILITY_LABELS: Array<{ key: keyof NonNullable<BillingStatus['capabilities']>; label: string }> = [
-  { key: 'protocolQr', label: 'Protocole QR & émargement' },
+  { key: 'protocolQr', label: 'Protocole QR & confirmation de présence' },
   { key: 'seatNotifications', label: 'Notifications de siège' },
   { key: 'customTemplates', label: 'Modèles personnalisés' },
   { key: 'mockupOcr', label: 'OCR import maquette' },

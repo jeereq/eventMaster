@@ -465,7 +465,7 @@ export async function submitRsvp(req: Request, res: Response) {
       const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(rsvpUrl)}&color=4f-46-e5&bgcolor=ffffff&qzone=2`;
 
       const subject = `Confirmation de votre présence - ${guest.event.title}`;
-      const textBody = `Bonjour ${guest.firstName},\n\nVotre présence à l'événement "${guest.event.title}" a été confirmée avec succès !\n\nVoici votre badge d'émargement QR Code : ${qrCodeUrl}\n\nPrésentez ce QR Code à l'entrée pour valider votre présence.\n\nDate : ${formattedDate}\nLieu : ${guest.event.location || 'Non défini'}\n\nMerci et à très bientôt !`;
+      const textBody = `Bonjour ${guest.firstName},\n\nVotre présence à l'événement "${guest.event.title}" a été confirmée avec succès !\n\nVoici votre badge de confirmation de présence (QR Code) : ${qrCodeUrl}\n\nPrésentez ce QR Code à l'entrée pour valider votre présence.\n\nDate : ${formattedDate}\nLieu : ${guest.event.location || 'Non défini'}\n\nMerci et à très bientôt !`;
       const htmlBody = `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
           <h2 style="color: #1e1b4b; text-align: center; margin-bottom: 5px;">Présence Confirmée !</h2>
@@ -474,8 +474,8 @@ export async function submitRsvp(req: Request, res: Response) {
           <p>Votre présence à l'événement <strong>${guest.event.title}</strong> a été enregistrée avec succès.</p>
           
           <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
-            <span style="font-size: 12px; font-weight: bold; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 10px;">Votre Badge d'Émargement</span>
-            <img src="${qrCodeUrl}" alt="QR Code d'émargement" style="width: 180px; height: 180px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 5px; background-color: white;" />
+            <span style="font-size: 12px; font-weight: bold; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 10px;">Votre badge de confirmation de présence</span>
+            <img src="${qrCodeUrl}" alt="QR Code de confirmation de présence" style="width: 180px; height: 180px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 5px; background-color: white;" />
             <p style="font-size: 12px; color: #64748b; margin-top: 10px; margin-bottom: 0;">Présentez ce QR Code à l'entrée pour valider votre présence.</p>
           </div>
 

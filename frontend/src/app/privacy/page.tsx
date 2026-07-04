@@ -49,7 +49,7 @@ export default function PrivacyPage() {
         <ul className="list-disc pl-5 space-y-1">
           <li>Création et gestion des comptes et des organisations ;</li>
           <li>Envoi d&apos;invitations, rappels RSVP et notifications (e-mail et WhatsApp) sur instruction de l&apos;organisateur ;</li>
-          <li>Protocole : scan QR, émargement, vérification de placement ;</li>
+          <li>Protocole : scan QR, confirmation de présence, vérification de placement ;</li>
           <li>Gestion des abonnements, quotas, factures et demandes de support ;</li>
           <li>Sécurité, prévention des abus, sauvegardes et continuité du service ;</li>
           <li>Respect des obligations légales et comptables.</li>

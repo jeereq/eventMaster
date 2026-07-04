@@ -40,7 +40,7 @@ router.post('/:eventId/guests/import', importGuests);
 router.put('/:eventId/guests/:id', updateGuest);
 router.delete('/:eventId/guests/:id', deleteGuest);
 
-// Protocol — scan QR, émargement, siège, commentaires
+// Protocol — scan QR, confirmation de présence, siège, commentaires
 router.get('/:eventId/protocol/guests', listProtocolGuests);
 router.post('/:eventId/protocol/scan', scanGuest);
 router.post('/:eventId/guests/:guestId/check-in', checkInGuest);

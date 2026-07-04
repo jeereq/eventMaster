@@ -74,7 +74,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'protocol-qr',
     question: 'Comment fonctionne le protocole QR ?',
     answer:
-      'Chaque invité reçoit un badge QR unique. Le personnel protocole scanne le code à l\'entrée via la caméra du navigateur ou de l\'application. EventMaster vérifie l\'émargement, le placement et peut envoyer une notification de table à l\'invité. Disponible à partir du forfait Business.',
+      'Chaque invité reçoit un badge QR unique. Le personnel protocole scanne le code à l\'entrée via la caméra du navigateur ou de l\'application. EventMaster vérifie la confirmation de présence, le placement et peut envoyer une notification de table à l\'invité. Disponible à partir du forfait Business.',
   },
   {
     id: 'roles',

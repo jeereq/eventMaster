@@ -539,12 +539,12 @@ export default function RsvpPage() {
 
                 {/* QR Badge Card */}
                 <div className="bg-slate-800/50 border border-slate-700/50 rounded-3xl p-6 text-center space-y-4">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Votre Badge d'Émargement QR Code</span>
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Votre badge QR de confirmation de présence</span>
                   <div className="flex justify-center">
                     <div className="relative p-3 bg-white rounded-3xl shadow-lg">
                       <img 
                         src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(window.location.href)}&color=4f-46-e5&bgcolor=ffffff&qzone=1`} 
-                        alt="QR Code d'émargement"
+                        alt="QR Code de confirmation de présence"
                         className="w-40 h-40"
                       />
                       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-1.5 rounded-xl border border-slate-150 shadow-xs flex items-center justify-center w-9 h-9">

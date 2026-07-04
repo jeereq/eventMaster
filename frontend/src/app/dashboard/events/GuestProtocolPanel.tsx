@@ -55,7 +55,7 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
         <QrCode className="w-10 h-10 text-amber-600 mx-auto" />
         <h3 className="font-bold text-amber-900">Protocole QR non inclus</h3>
         <p className="text-sm text-amber-800">
-          Le scan QR, l&apos;émargement et la vérification des sièges nécessitent le forfait{' '}
+          Le scan QR, la confirmation de présence et la vérification des sièges nécessitent le forfait{' '}
           <strong>Business</strong> ou supérieur. Forfait actuel : {tenant?.plan || 'FREE'}.
         </p>
         <Link href="/dashboard/billing" className="inline-block text-sm font-bold text-indigo-600 hover:underline">
@@ -105,7 +105,7 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
         setSelectedGuest({ ...selectedGuest, checkedInAt: new Date().toISOString() });
       }
     } catch (err: any) {
-      setMessage({ type: 'error', text: err?.data?.error || 'Émargement impossible.' });
+      setMessage({ type: 'error', text: err?.data?.error || 'Confirmation de présence impossible.' });
     } finally {
       setBusy(false);
     }
@@ -228,7 +228,7 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
           <div className="flex flex-wrap gap-2">
             <Button size="sm" onClick={() => handleCheckIn(selectedGuest.id)} disabled={busy || !!selectedGuest.checkedInAt}>
               <UserCheck className="w-4 h-4" />
-              {selectedGuest.checkedInAt ? 'Déjà authentifié' : 'Authentifier (émargement)'}
+              {selectedGuest.checkedInAt ? 'Déjà authentifié' : 'Confirmer la présence'}
             </Button>
             <Button size="sm" variant="secondary" onClick={() => handleVerifySeat(selectedGuest.id)} disabled={busy}>
               <Armchair className="w-4 h-4" />
