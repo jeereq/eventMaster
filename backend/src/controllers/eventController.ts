@@ -56,7 +56,7 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
       return res.status(403).json({ error: 'Vous n\'avez pas la permission de créer des événements.' });
     }
 
-    const { title, description, date, location, reminderFrequency, latitude, longitude, roomId, importRoomLayout } = req.body;
+    const { title, description, date, location, reminderFrequency, latitude, longitude, roomId, importRoomLayout, guestGuidelines } = req.body;
 
     if (!title || !date || !location) {
       return res.status(400).json({ error: 'Les champs title, date et location sont requis' });
@@ -100,6 +100,7 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
         latitude: latitude !== undefined && latitude !== null ? parseFloat(latitude) : null,
         longitude: longitude !== undefined && longitude !== null ? parseFloat(longitude) : null,
         tablePlan: tablePlanData ? toPrismaJson(tablePlanData) : undefined,
+        guestGuidelines: guestGuidelines !== undefined ? toPrismaJson(guestGuidelines) : undefined,
       },
       include: { room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } } },
     });
@@ -148,7 +149,7 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
     const tenantId = req.user?.tenantId;
     const userId = req.user?.id;
     const id = req.params.id as string;
-    const { title, description, date, location, reminderFrequency, latitude, longitude, tablePlan, roomId } = req.body;
+    const { title, description, date, location, reminderFrequency, latitude, longitude, tablePlan, roomId, guestGuidelines } = req.body;
 
     if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
@@ -178,6 +179,7 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
         longitude: longitude !== undefined ? (longitude !== null ? parseFloat(longitude) : null) : existingEvent.longitude,
         tablePlan: tablePlan !== undefined ? tablePlan : existingEvent.tablePlan,
         roomId: roomId !== undefined ? roomId : existingEvent.roomId,
+        guestGuidelines: guestGuidelines !== undefined ? toPrismaJson(guestGuidelines) : existingEvent.guestGuidelines ?? undefined,
       },
       include: { room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } } },
     });

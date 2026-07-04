@@ -172,6 +172,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
             latitude: true,
             longitude: true,
             tablePlan: true,
+            guestGuidelines: true,
             room: {
               select: {
                 layoutBlueprint: true,

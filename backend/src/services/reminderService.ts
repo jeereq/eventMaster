@@ -2,6 +2,7 @@ import { prisma } from '../db';
 import { sendRealEmail, sendRealWhatsApp, sendRealWhatsAppLocation } from './notificationService';
 import { resolveDeliveryChannels } from '../utils/notificationChannels';
 import { renderGuestMessage, polishWhatsAppBody, applyTemplateVariables } from './messageTemplateService';
+import { applyInvitationGuidelineVariables } from '../utils/guestGuidelines';
 import fs from 'fs';
 import path from 'path';
 
@@ -167,7 +168,8 @@ export async function processReminders() {
 
         let body = (await renderGuestMessage('REMINDER_WHATSAPP', templateVars)).body;
         if (latestInvitation.body?.trim()) {
-          const customPart = applyTemplateVariables(latestInvitation.body, templateVars);
+          let customPart = applyTemplateVariables(latestInvitation.body, templateVars);
+          customPart = applyInvitationGuidelineVariables(customPart, event.guestGuidelines);
           body = `${body}\n\n---\n\n${customPart}`;
         }
         body = polishWhatsAppBody(body);

@@ -132,6 +132,7 @@ model Event {
   latitude          Float?
   longitude         Float?
   tablePlan         Json?        // Added for visual table planning
+  guestGuidelines   Json?        // Dress code & practical recommendations for guests
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 

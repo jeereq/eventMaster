@@ -7,6 +7,8 @@ import { downloadMedia, getMediaExtension, sanitizeFilenamePart } from '@/lib/do
 import { GuestPortalHomeLink } from '@/components/GuestPortalNav';
 import Link from 'next/link';
 import GuestTablePlanView from '@/app/rsvp/GuestTablePlanView';
+import GuestGuidelinesView from '@/components/GuestGuidelinesView';
+import type { GuestGuidelines } from '@/lib/guestGuidelines';
 import type { ChairType, RoomOutlineShape } from '@/lib/roomLayoutUtils';
 import { 
   Calendar, MapPin, CheckCircle2, XCircle, AlertCircle, 
@@ -85,6 +87,7 @@ interface GuestRsvpData {
     location: string;
     latitude?: number;
     longitude?: number;
+    guestGuidelines?: GuestGuidelines | null;
     invitations?: Array<{
       template?: {
         id: string;
@@ -583,6 +586,13 @@ export default function RsvpPage() {
                     </div>
                   </div>
                 </div>
+
+                <GuestGuidelinesView
+                  guidelines={guest.event.guestGuidelines}
+                  variant="dark"
+                  accentColor="#818cf8"
+                  className="pt-2"
+                />
 
                 {!rsvpLocked && (
                 <button 
@@ -1990,6 +2000,12 @@ export default function RsvpPage() {
                   </div>
                 </div>
               </div>
+
+              <GuestGuidelinesView
+                guidelines={guest.event.guestGuidelines}
+                variant="light"
+                className="text-left"
+              />
 
               {/* Default RSVP Form */}
               <form onSubmit={handleSubmitRsvp} className="space-y-6">

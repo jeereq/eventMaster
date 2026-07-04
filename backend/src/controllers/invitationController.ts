@@ -4,6 +4,7 @@ import { prisma } from '../db';
 import { sendRealEmail, sendRealWhatsApp, sendRealWhatsAppLocation } from '../services/notificationService';
 import { resolveDeliveryChannels } from '../utils/notificationChannels';
 import { renderGuestMessage, polishWhatsAppBody, applyTemplateVariables } from '../services/messageTemplateService';
+import { applyInvitationGuidelineVariables } from '../utils/guestGuidelines';
 import { canManageEvent, canAccessEvent } from '../services/permissionsService';
 
 async function verifyEventAccess(
@@ -173,6 +174,9 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
         .replaceAll('{{description}}', event.description || '')
         .replaceAll('{{location}}', event.location || '')
         .replaceAll('{{date}}', formattedDate);
+
+      subject = applyInvitationGuidelineVariables(subject, event.guestGuidelines);
+      body = applyInvitationGuidelineVariables(body, event.guestGuidelines);
 
       // Canaux : e-mail et WhatsApp uniquement (SMS / alias legacy convertis)
       const channelsToSend = resolveDeliveryChannels(activeChannel);

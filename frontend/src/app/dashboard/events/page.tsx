@@ -10,12 +10,19 @@ import {
   ChevronRight, ArrowLeft, Check, Upload, Mail, Send, 
   Sparkles, CheckCircle2, XCircle, AlertCircle, HelpCircle, Loader2,
   Copy, MessageSquare, Share2, Search, Filter, RefreshCw,
-  Eye, Utensils, FileSpreadsheet, Download, LayoutGrid, Building2, ScanLine
+  Eye, Utensils, FileSpreadsheet, Download, LayoutGrid, Building2, ScanLine, Shirt
 } from 'lucide-react';
 import TablePlanner from './TablePlanner';
 import EventStaffPanel from './EventStaffPanel';
 import EventFeedManager from './EventFeedManager';
 import GuestProtocolPanel from './GuestProtocolPanel';
+import EventGuestGuidelinesEditor from '@/components/EventGuestGuidelinesEditor';
+import {
+  type GuestGuidelines,
+  defaultGuestGuidelines,
+  normalizeGuestGuidelines,
+  applyInvitationGuidelineVariables,
+} from '@/lib/guestGuidelines';
 import { PageHeader, Button } from '@/components/ui';
 import {
   extractRsvpFieldsFromTemplateContent,
@@ -45,6 +52,7 @@ interface EventItem {
     floor?: string | null;
   } | null;
   tablePlan?: any;
+  guestGuidelines?: GuestGuidelines | null;
   tenant?: { name: string };
 }
 
@@ -221,7 +229,7 @@ export default function EventsPage() {
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   
   // Tabs
-  const [activeTab, setActiveTab] = useState<'guests' | 'invitations' | 'tablePlan' | 'feed' | 'staff' | 'protocol'>(
+  const [activeTab, setActiveTab] = useState<'guests' | 'invitations' | 'tablePlan' | 'feed' | 'staff' | 'protocol' | 'guestInfo'>(
     isProtocolOnly ? 'protocol' : 'guests',
   );
 
@@ -240,6 +248,8 @@ export default function EventsPage() {
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [savingEvent, setSavingEvent] = useState(false);
   const [importingLayout, setImportingLayout] = useState(false);
+  const [guestGuidelines, setGuestGuidelines] = useState<GuestGuidelines>(defaultGuestGuidelines());
+  const [savingGuidelines, setSavingGuidelines] = useState(false);
 
   // Map Picker States & Refs
   const [searchingLocation, setSearchingLocation] = useState(false);
@@ -723,6 +733,7 @@ export default function EventsPage() {
   // Manage Event Details
   const handleManageEvent = async (event: EventItem) => {
     setSelectedEvent(event);
+    setGuestGuidelines(normalizeGuestGuidelines(event.guestGuidelines));
     setLoading(true);
     setError('');
     setSuccess('');
@@ -739,6 +750,24 @@ export default function EventsPage() {
       setError('Erreur lors du chargement des invités ou modèles.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveGuestGuidelines = async () => {
+    if (!selectedEvent) return;
+    setSavingGuidelines(true);
+    setError('');
+    try {
+      const updatedEvent = await api.put(`/events/${selectedEvent.id}`, {
+        guestGuidelines,
+      });
+      setSelectedEvent((prev) => (prev ? { ...prev, ...updatedEvent } : prev));
+      setEvents((prev) => prev.map((e) => (e.id === selectedEvent.id ? { ...e, ...updatedEvent } : e)));
+      setSuccess('Infos invités enregistrées.');
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de l\'enregistrement des infos invités.');
+    } finally {
+      setSavingGuidelines(false);
     }
   };
 
@@ -1206,6 +1235,7 @@ export default function EventsPage() {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
       });
       body = body.replaceAll('{{date}}', formattedDate);
+      body = applyInvitationGuidelineVariables(body, selectedEvent.guestGuidelines);
     }
     return body;
   };
@@ -1463,6 +1493,15 @@ export default function EventsPage() {
               <span className="flex items-center gap-2">
                 <LayoutGrid className="w-4.5 h-4.5" />
                 Plan de table
+              </span>
+            </button>
+            <button
+              onClick={() => setActiveTab('guestInfo')}
+              className={`pb-4 px-6 text-sm font-bold border-b-2 transition whitespace-nowrap ${activeTab === 'guestInfo' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
+            >
+              <span className="flex items-center gap-2">
+                <Shirt className="w-4.5 h-4.5" />
+                Infos invités
               </span>
             </button>
             <button
@@ -1929,6 +1968,20 @@ export default function EventsPage() {
           )}
 
           {/* Tab Content: Table Plan */}
+          {activeTab === 'guestInfo' && selectedEvent && !isProtocolOnly && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              <p className="text-sm text-slate-500">
+                Définissez le code vestimentaire et les recommandations pratiques visibles par vos invités sur le portail RSVP et dans les invitations.
+              </p>
+              <EventGuestGuidelinesEditor
+                value={guestGuidelines}
+                onChange={setGuestGuidelines}
+                onSave={handleSaveGuestGuidelines}
+                saving={savingGuidelines}
+              />
+            </div>
+          )}
+
           {activeTab === 'tablePlan' && (
             <TablePlanner
               key={`${selectedEvent.id}_${selectedEvent.tablePlan?.importedAt ?? 'empty'}`}
@@ -2695,7 +2748,7 @@ export default function EventsPage() {
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Corps du message</label>
                   <span className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider flex flex-wrap items-center gap-x-2 gap-y-0.5">
                     <HelpCircle className="w-3.5 h-3.5" /> 
-                    <span>Variables: {'{{firstName}}'}, {'{{lastName}}'}, {'{{rsvpLink}}'}, {'{{title}}'}, {'{{date}}'}, {'{{location}}'}, {'{{description}}'}</span>
+                    <span>Variables: {'{{firstName}}'}, {'{{lastName}}'}, {'{{rsvpLink}}'}, {'{{title}}'}, {'{{date}}'}, {'{{location}}'}, {'{{description}}'}, {'{{dressCode}}'}, {'{{recommendations}}'}, {'{{guestGuidelines}}'}</span>
                   </span>
                 </div>
                 <textarea 
