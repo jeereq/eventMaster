@@ -7,7 +7,7 @@ import { findGuestsByIdentity } from '../services/legalService';
 import { extractGuestEmail, extractGuestPhone } from '../utils/guestIdentity';
 import { findGuestSeatInTablePlan } from '../services/commercialService';
 import {
-  generateAndStoreSeatingInvitationPdf,
+  generateAndStoreGuestInvitationPdf,
 } from '../services/seatingInvitationStorageService';
 import { getTableMateGuestIds } from '../utils/tablePlanAssignment';
 import { normalizeGuestGuidelines, formatDressCodeText } from '../utils/guestGuidelines';
@@ -621,7 +621,7 @@ export async function downloadSeatingInvitationPdf(req: Request, res: Response) 
       return res.redirect(302, guest.seatingInvitationPdfUrl);
     }
 
-    const stored = await generateAndStoreSeatingInvitationPdf(pdfInput);
+    const stored = await generateAndStoreGuestInvitationPdf(pdfInput);
 
     if (stored.url) {
       return res.redirect(302, stored.url);

@@ -1,11 +1,12 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
-import { sendRealEmail, sendRealWhatsApp, sendRealWhatsAppLocation } from '../services/notificationService';
+import { sendRealEmail, sendRealWhatsApp, sendRealWhatsAppLocation, sendRealWhatsAppDocument } from '../services/notificationService';
 import { resolveDeliveryChannels } from '../utils/notificationChannels';
 import { renderGuestMessage, polishWhatsAppBody, applyTemplateVariables } from '../services/messageTemplateService';
 import { applyInvitationGuidelineVariables } from '../utils/guestGuidelines';
 import { canManageEvent, canAccessEvent } from '../services/permissionsService';
+import { generateAndStoreGuestInvitationPdf } from '../services/seatingInvitationStorageService';
 
 async function verifyEventAccess(
   userId: string,
@@ -178,6 +179,25 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
       subject = applyInvitationGuidelineVariables(subject, event.guestGuidelines);
       body = applyInvitationGuidelineVariables(body, event.guestGuidelines);
 
+      let invitationPdf: Awaited<ReturnType<typeof generateAndStoreGuestInvitationPdf>> | null = null;
+      try {
+        invitationPdf = await generateAndStoreGuestInvitationPdf({
+          guestId: guest.id,
+          eventId,
+          guest: { firstName: guest.firstName, lastName: guest.lastName },
+          event: {
+            title: event.title,
+            description: event.description,
+            date: event.date,
+            location: event.location,
+          },
+        });
+      } catch (pdfErr) {
+        console.warn(`[Invitation Controller] PDF invitation non généré pour ${guest.firstName} ${guest.lastName}:`, pdfErr);
+      }
+
+      const pdfFilename = `invitation-${guest.lastName || 'invite'}.pdf`;
+
       // Canaux : e-mail et WhatsApp uniquement (SMS / alias legacy convertis)
       const channelsToSend = resolveDeliveryChannels(activeChannel);
 
@@ -230,6 +250,7 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
                   
                   <p style="text-align: center; font-size: 12px; color: #94a3b8; margin-top: 25px; margin-bottom: 0;">
                     Merci de bien vouloir répondre avant la date de l'événement.
+                    ${invitationPdf?.url ? '<br />Votre invitation PDF est jointe à cet e-mail.' : ''}
                   </p>
                 </div>
 
@@ -244,7 +265,15 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
               </div>
             </div>
           `;
-          sendResult = await sendRealEmail(guest.email, subject, body, htmlBody);
+          sendResult = await sendRealEmail(
+            guest.email,
+            subject,
+            body,
+            htmlBody,
+            invitationPdf?.buffer?.length
+              ? [{ filename: pdfFilename, content: invitationPdf.buffer, type: 'application/pdf' }]
+              : undefined,
+          );
         } else if (chan === 'WHATSAPP') {
           const phone = getGuestPhone(guest);
           if (phone) {
@@ -263,7 +292,22 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
               : (await renderGuestMessage('INVITATION_WHATSAPP', templateVars)).body;
 
             whatsappBody = polishWhatsAppBody(whatsappBody);
+            if (invitationPdf?.url) {
+              whatsappBody += `\n\n📄 Invitation PDF : ${invitationPdf.url}`;
+            }
             sendResult = await sendRealWhatsApp(phone, whatsappBody);
+
+            if (sendResult.success && invitationPdf?.url && !sendResult.simulated) {
+              const docResult = await sendRealWhatsAppDocument(
+                phone,
+                invitationPdf.url,
+                pdfFilename,
+                'Votre invitation PDF',
+              );
+              if (!docResult.success && docResult.error) {
+                console.warn('[Invitation Controller] WhatsApp PDF failed:', docResult.error);
+              }
+            }
             
             // If the main message succeeded and the event has GPS coordinates, send the location as a second message
             if (sendResult.success && event.latitude && event.longitude) {
@@ -307,6 +351,7 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
         subject,
         body,
         rsvpUrl: `${FRONTEND_URL}/rsvp/${guest.id}`,
+        invitationPdfUrl: invitationPdf?.url || null,
         status: anySuccess ? (allSimulated ? 'SENT_SIMULATED' : 'SENT') : 'FAILED',
         channel: channelsToSend.join(', '),
         simulated: allSimulated,

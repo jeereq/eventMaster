@@ -8,9 +8,9 @@ export type SeatingInvitationPdfInput = {
   eventDate?: Date | string | null;
   eventLocation?: string | null;
   eventDescription?: string | null;
-  tableName: string;
-  seatNumber: number;
-  tableMates: Array<{ firstName: string; lastName: string }>;
+  tableName?: string | null;
+  seatNumber?: number | null;
+  tableMates?: Array<{ firstName: string; lastName: string }>;
   rsvpUrl: string;
   dressCode?: string | null;
 };
@@ -45,7 +45,7 @@ export function buildSeatingInvitationPdf(input: SeatingInvitationPdfInput): Pro
   const title = normalizeInvoiceText(eventTitle);
   const location = eventLocation ? normalizeInvoiceText(eventLocation) : '';
   const description = eventDescription ? normalizeInvoiceText(eventDescription) : '';
-  const table = normalizeInvoiceText(tableName);
+  const table = tableName ? normalizeInvoiceText(tableName) : '';
   const formattedDate = eventDate ? normalizeInvoiceText(formatFrenchDate(eventDate)) : '';
 
   return new Promise((resolve, reject) => {
@@ -66,7 +66,7 @@ export function buildSeatingInvitationPdf(input: SeatingInvitationPdfInput): Pro
 
     doc.fontSize(12).font('Helvetica').fillColor('#334155').text(`Cher/Chere ${guestName},`, { align: 'left' });
     doc.moveDown(0.5);
-    doc.text('Nous avons le plaisir de vous confirmer votre invitation et votre placement a table.');
+    doc.text('Nous avons le plaisir de vous adresser votre invitation personnalisee.');
     doc.moveDown(1);
 
     if (formattedDate || location) {
@@ -78,14 +78,18 @@ export function buildSeatingInvitationPdf(input: SeatingInvitationPdfInput): Pro
       doc.moveDown(1);
     }
 
-    doc.roundedRect(50, doc.y, 495, 90, 12).fill('#eef2ff');
-    const boxY = doc.y + 18;
-    doc.fillColor('#4338ca').fontSize(10).font('Helvetica-Bold').text('VOTRE PLACEMENT', 70, boxY, { width: 455, align: 'center' });
-    doc.fillColor('#1e1b4b').fontSize(16).font('Helvetica-Bold').text(table, 70, boxY + 18, { width: 455, align: 'center' });
-    doc.fillColor('#4f46e5').fontSize(13).font('Helvetica').text(`Siege n°${seatNumber}`, 70, boxY + 42, { width: 455, align: 'center' });
-    doc.moveDown(5.5);
+    if (table?.trim()) {
+      doc.roundedRect(50, doc.y, 495, 90, 12).fill('#eef2ff');
+      const boxY = doc.y + 18;
+      doc.fillColor('#4338ca').fontSize(10).font('Helvetica-Bold').text('VOTRE PLACEMENT', 70, boxY, { width: 455, align: 'center' });
+      doc.fillColor('#1e1b4b').fontSize(16).font('Helvetica-Bold').text(table, 70, boxY + 18, { width: 455, align: 'center' });
+      if (seatNumber) {
+        doc.fillColor('#4f46e5').fontSize(13).font('Helvetica').text(`Siege n°${seatNumber}`, 70, boxY + 42, { width: 455, align: 'center' });
+      }
+      doc.moveDown(5.5);
+    }
 
-    if (tableMates.length > 0) {
+    if (tableMates && tableMates.length > 0) {
       doc.fontSize(11).font('Helvetica-Bold').fillColor('#0f172a').text('Vous serez accompagne(e) de :');
       doc.moveDown(0.4);
       doc.fontSize(11).font('Helvetica').fillColor('#334155');

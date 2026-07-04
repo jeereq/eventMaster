@@ -5,10 +5,11 @@ import {
   getSeatingInvitationUploadFolder,
   isCloudinaryConfigured,
 } from '../config/cloudinaryConfig';
+import type { SeatingInvitationPdfInput } from './invitationPdfService';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
-export type SeatingInvitationPdfInput = {
+export type GuestInvitationPdfStoreInput = {
   guestId: string;
   eventId: string;
   guest: { firstName: string; lastName: string };
@@ -18,37 +19,44 @@ export type SeatingInvitationPdfInput = {
     date?: Date | string | null;
     location?: string | null;
   };
-  assignedSeat: { tableName: string; seatIndex: number };
-  tableMates: Array<{ firstName: string; lastName: string }>;
+  assignedSeat?: { tableName: string; seatIndex: number } | null;
+  tableMates?: Array<{ firstName: string; lastName: string }>;
   dressCode?: string | null;
 };
 
-export type StoredSeatingInvitationPdf = {
+export type StoredGuestInvitationPdf = {
   url: string | null;
   publicId: string | null;
   buffer: Buffer;
 };
 
-/** Génère le PDF, l'envoie sur Cloudinary et enregistre l'URL sur l'invité. */
-export async function generateAndStoreSeatingInvitationPdf(
-  input: SeatingInvitationPdfInput,
-): Promise<StoredSeatingInvitationPdf> {
-  const buffer = await buildGuestInvitationPdfWithFallback(input.guestId, {
+function buildFallbackInput(input: GuestInvitationPdfStoreInput): SeatingInvitationPdfInput {
+  return {
     guestFirstName: input.guest.firstName,
     guestLastName: input.guest.lastName,
     eventTitle: input.event.title,
     eventDate: input.event.date,
     eventLocation: input.event.location,
     eventDescription: input.event.description,
-    tableName: input.assignedSeat.tableName,
-    seatNumber: input.assignedSeat.seatIndex + 1,
-    tableMates: input.tableMates,
+    tableName: input.assignedSeat?.tableName ?? null,
+    seatNumber: input.assignedSeat ? input.assignedSeat.seatIndex + 1 : null,
+    tableMates: input.tableMates ?? [],
     rsvpUrl: `${FRONTEND_URL}/rsvp/${input.guestId}`,
     dressCode: input.dressCode,
-  });
+  };
+}
+
+/** Génère le PDF (page print invité), l'envoie sur Cloudinary et enregistre l'URL sur l'invité. */
+export async function generateAndStoreGuestInvitationPdf(
+  input: GuestInvitationPdfStoreInput,
+): Promise<StoredGuestInvitationPdf> {
+  const buffer = await buildGuestInvitationPdfWithFallback(
+    input.guestId,
+    buildFallbackInput(input),
+  );
 
   if (!isCloudinaryConfigured()) {
-    console.warn('[Seating PDF] Cloudinary non configuré — PDF généré localement sans stockage distant.');
+    console.warn('[Guest PDF] Cloudinary non configuré — PDF généré localement sans stockage distant.');
     return { url: null, publicId: null, buffer };
   }
 
@@ -72,16 +80,25 @@ export async function generateAndStoreSeatingInvitationPdf(
       buffer,
     };
   } catch (error) {
-    console.error('[Seating PDF] Échec upload Cloudinary:', error);
+    console.error('[Guest PDF] Échec upload Cloudinary:', error);
     return { url: null, publicId: null, buffer };
   }
 }
 
+/** Alias pour la notification de placement à table. */
+export async function generateAndStoreSeatingInvitationPdf(
+  input: GuestInvitationPdfStoreInput & {
+    assignedSeat: { tableName: string; seatIndex: number };
+  },
+): Promise<StoredGuestInvitationPdf> {
+  return generateAndStoreGuestInvitationPdf(input);
+}
+
 /** Retourne l'URL Cloudinary stockée ou régénère et stocke si absente. */
-export async function resolveSeatingInvitationPdf(
-  input: SeatingInvitationPdfInput,
+export async function resolveGuestInvitationPdf(
+  input: GuestInvitationPdfStoreInput,
   existingUrl?: string | null,
-): Promise<StoredSeatingInvitationPdf> {
+): Promise<StoredGuestInvitationPdf> {
   if (existingUrl?.trim()) {
     return {
       url: existingUrl,
@@ -89,5 +106,5 @@ export async function resolveSeatingInvitationPdf(
       buffer: Buffer.alloc(0),
     };
   }
-  return generateAndStoreSeatingInvitationPdf(input);
+  return generateAndStoreGuestInvitationPdf(input);
 }
