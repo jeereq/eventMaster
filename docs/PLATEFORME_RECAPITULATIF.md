@@ -5,11 +5,12 @@
 > **Monorepo** : `backend/` · `frontend/` · `mobile/`
 
 📄 **Brochure PDF designée** : [`EventMaster-Plateforme-Fonctionnalites.pdf`](./EventMaster-Plateforme-Fonctionnalites.pdf)  
-*(8 pages A4, couleurs indigo/violet alignées sur la plateforme)*
+📄 **Analyse des flux (PDF)** : [`EventMaster-Analyse-Flux.pdf`](./EventMaster-Analyse-Flux.pdf) · [markdown](./ANALYSE-FLUX-PLATEFORME.md)
 
-Pour régénérer le PDF :
+Pour régénérer les PDF :
 ```bash
 cd backend && npm run generate:platform-pdf
+cd backend && npm run generate:flows-pdf
 ```
 
 ---

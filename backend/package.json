@@ -15,7 +15,8 @@
     "migrate:template-images": "ts-node -P tsconfig.scripts.json scripts/migrateTemplateImagesToCloudinary.ts",
     "migrate:template-images:dry": "ts-node -P tsconfig.scripts.json scripts/migrateTemplateImagesToCloudinary.ts --dry-run",
     "verify:subscription-approval": "ts-node -P tsconfig.scripts.json scripts/verifySubscriptionApproval.ts",
-    "generate:platform-pdf": "ts-node -P tsconfig.scripts.json scripts/generatePlatformPdf.ts"
+    "generate:platform-pdf": "ts-node -P tsconfig.scripts.json scripts/generatePlatformPdf.ts",
+    "generate:flows-pdf": "ts-node -P tsconfig.scripts.json scripts/generateFlowsPdf.ts"
   },
   "keywords": [],
   "author": "",

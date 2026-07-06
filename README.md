@@ -25,6 +25,17 @@ L'application est découpée en **trois entités distinctes** :
   - Cible prioritaire : RSVP invité, protocole (scan QR, confirmation de présence), consultation événements/invités.
   - Voir `mobile/PLAN.md` pour la feuille de route détaillée.
 
+### Documentation
+
+| Document | Description |
+|----------|-------------|
+| [`docs/ANALYSE-FLUX-PLATEFORME.md`](docs/ANALYSE-FLUX-PLATEFORME.md) | Analyse détaillée des flux métier implémentés |
+| [`docs/EventMaster-Analyse-Flux.pdf`](docs/EventMaster-Analyse-Flux.pdf) | Version PDF designée (7 pages) |
+| [`docs/PLATEFORME_RECAPITULATIF.md`](docs/PLATEFORME_RECAPITULATIF.md) | Récapitulatif plateforme |
+| [`docs/EventMaster-Plateforme-Fonctionnalites.pdf`](docs/EventMaster-Plateforme-Fonctionnalites.pdf) | Brochure fonctionnalités (8 pages) |
+
+Génération PDF : `cd backend && npm run generate:flows-pdf` ou `npm run generate:platform-pdf`
+
 ---
 
 ## 2. Structure du Code
