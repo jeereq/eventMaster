@@ -4,13 +4,13 @@ import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { PageHeader } from '@/components/ui';
+import { PageHeader, Breadcrumbs, Button } from '@/components/ui';
 import UserGuideView from '@/components/guide/UserGuideView';
 import GuideTourPanel from '@/components/guide/GuideTourPanel';
 import { DASHBOARD_GUIDE_IDS, type UserGuideId } from '@/config/userGuides';
 import { getGuideLabel, resolveUserGuideRole } from '@/lib/resolveUserGuideRole';
 import { useTour } from '@/context/TourContext';
-import { BookOpen, HelpCircle, Map } from 'lucide-react';
+import { BookOpen, HelpCircle, Map, Play } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 type GuideViewTab = 'doc' | 'tour';
@@ -57,80 +57,119 @@ function DashboardGuidePageContent() {
   }, [searchParams, activeTab, activeGuideId, access, startTour, router]);
 
   return (
-    <div className="space-y-8 w-full">
+    <div className="space-y-6 w-full">
       <PageHeader
         title="Guide utilisateur"
         description="Documentation et visite guidée adaptées à votre rôle sur EventMaster."
+        breadcrumbs={
+          <Breadcrumbs
+            items={[
+              { label: 'Accueil', href: '/dashboard' },
+              { label: 'Guide utilisateur' },
+            ]}
+          />
+        }
+        action={
+          activeTab === 'doc' ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              leftIcon={<Play className="w-3.5 h-3.5" />}
+              onClick={() => {
+                setTab('tour');
+                setTimeout(() => startTour(activeGuideId, access), 100);
+              }}
+            >
+              Visite guidée
+            </Button>
+          ) : undefined
+        }
       />
 
-      <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 w-fit">
-        <button
-          type="button"
-          onClick={() => setTab('doc')}
-          className={cn(
-            'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition',
-            activeTab === 'doc'
-              ? 'bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white',
-          )}
-        >
-          <BookOpen className="w-4 h-4" />
-          Documentation
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('tour')}
-          className={cn(
-            'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition',
-            activeTab === 'tour'
-              ? 'bg-white dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white',
-          )}
-        >
-          <Map className="w-4 h-4" />
-          Visite guidée
-        </button>
-      </div>
-
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-            Votre profil
-          </p>
-          <p className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">{resolved.label}</p>
-        </div>
-        {isSuperAdmin && (
-          <div className="flex items-center gap-2">
-            <label htmlFor="guide-select" className="text-xs font-semibold text-slate-600 dark:text-slate-400 shrink-0">
-              Consulter un autre profil :
-            </label>
-            <select
-              id="guide-select"
-              value={activeGuideId}
-              onChange={(e) => setSelectedGuideId(e.target.value as UserGuideId)}
-              className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+      <div className="flex flex-col lg:flex-row gap-4 lg:items-stretch">
+        <div className="lg:w-56 shrink-0 space-y-3">
+          <div className="inline-flex w-full gap-1 p-1 bg-surface-muted border border-border rounded-[var(--radius-button)]">
+            <button
+              type="button"
+              onClick={() => setTab('doc')}
+              className={cn(
+                'flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-[var(--radius-button)] text-xs font-semibold transition',
+                activeTab === 'doc'
+                  ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
+                  : 'text-muted hover:text-foreground',
+              )}
             >
-              {DASHBOARD_GUIDE_IDS.map((id) => (
-                <option key={id} value={id}>
-                  {getGuideLabel(id)}
-                </option>
-              ))}
-            </select>
+              <BookOpen className="w-3.5 h-3.5" />
+              Doc
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('tour')}
+              className={cn(
+                'flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-[var(--radius-button)] text-xs font-semibold transition',
+                activeTab === 'tour'
+                  ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
+                  : 'text-muted hover:text-foreground',
+              )}
+            >
+              <Map className="w-3.5 h-3.5" />
+              Visite
+            </button>
           </div>
-        )}
+
+          <div className="rounded-[var(--radius-card)] border border-border bg-surface p-3.5 space-y-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Votre profil</p>
+            <p className="text-sm font-semibold text-foreground leading-snug">{resolved.label}</p>
+            {isSuperAdmin && (
+              <div className="pt-2 border-t border-border space-y-1.5">
+                <label htmlFor="guide-select" className="text-[10px] font-medium text-muted block">
+                  Consulter un autre profil
+                </label>
+                <select
+                  id="guide-select"
+                  value={activeGuideId}
+                  onChange={(e) => setSelectedGuideId(e.target.value as UserGuideId)}
+                  className="w-full px-2.5 py-2 bg-background border border-border rounded-[var(--radius-button)] text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
+                >
+                  {DASHBOARD_GUIDE_IDS.map((id) => (
+                    <option key={id} value={id}>
+                      {getGuideLabel(id)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          <Link
+            href="/faq"
+            className="hidden lg:flex items-center gap-2 text-xs font-medium text-muted hover:text-primary transition px-1"
+          >
+            <HelpCircle className="w-3.5 h-3.5" />
+            FAQ publique
+          </Link>
+        </div>
+
+        <div className="flex-1 min-w-0">
+          {activeTab === 'doc' ? (
+            <UserGuideView
+              guideId={activeGuideId}
+              onStartTour={() => {
+                setTab('tour');
+                setTimeout(() => startTour(activeGuideId, access), 120);
+              }}
+            />
+          ) : (
+            <GuideTourPanel guideId={activeGuideId} />
+          )}
+        </div>
       </div>
 
-      {activeTab === 'doc' ? (
-        <UserGuideView guideId={activeGuideId} />
-      ) : (
-        <GuideTourPanel guideId={activeGuideId} />
-      )}
-
-      <p className="text-center text-xs text-slate-500 dark:text-slate-400 pt-4 border-t border-slate-200 dark:border-slate-800">
-        Questions générales (forfaits, légal) ?{' '}
-        <Link href="/faq" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline inline-flex items-center gap-1">
+      <p className="lg:hidden text-center text-xs text-muted pt-2 border-t border-border">
+        Questions générales ?{' '}
+        <Link href="/faq" className="text-primary font-semibold hover:underline inline-flex items-center gap-1">
           <HelpCircle className="w-3.5 h-3.5" />
-          Consulter la FAQ
+          FAQ
         </Link>
       </p>
     </div>
@@ -141,7 +180,7 @@ export default function DashboardGuidePage() {
   return (
     <Suspense
       fallback={
-        <div className="py-12 text-center text-sm text-slate-500">Chargement du guide…</div>
+        <div className="py-12 text-center text-sm text-muted">Chargement du guide…</div>
       }
     >
       <DashboardGuidePageContent />

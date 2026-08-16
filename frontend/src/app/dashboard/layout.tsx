@@ -15,6 +15,7 @@ import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import UserLegalGate from '@/components/UserLegalGate';
 import { NotificationBell } from '@/components/CommercialNotifications';
 import DashboardTopBar from '@/components/DashboardTopBar';
+import { Tooltip } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { TourProvider } from '@/context/TourContext';
 import ProductTourOverlay from '@/components/guide/ProductTourOverlay';
@@ -24,12 +25,48 @@ interface NavItem {
   href: string;
   tab?: string;
   tourId?: string;
+  /** Texte d’aide pour l’infobulle */
+  description?: string;
   icon: React.ComponentType<{ className?: string }>;
 }
 
 interface NavSection {
   label?: string;
   items: NavItem[];
+}
+
+/** Infobulles par défaut (sidebar réduite). */
+const NAV_TOOLTIPS: Record<string, string> = {
+  Organisations: 'Gérer les organisations et licences',
+  Utilisateurs: 'Comptes plateforme et rôles',
+  Événements: 'Créer et suivre vos événements',
+  Invités: 'Liste globale des invités',
+  'Modèles invitation': 'Modèles globaux et vitrine landing',
+  'Messages automatiques': 'Textes e-mail / WhatsApp invités',
+  Analyses: 'Statistiques et rapports plateforme',
+  'Demandes abonnement': 'Approuver ou refuser les forfaits',
+  'Forfaits & tarifs': 'Configurer les plans SaaS',
+  Factures: 'Historique et détail des factures',
+  'Réglages plateforme': 'Intégrations e-mail, WhatsApp…',
+  'Guide utilisateur': 'Documentation et visite guidée',
+  'Mon compte': 'Profil, salles et équipe',
+  'Parrainage & commissions': 'Code parrainage et gains',
+  'Réseau commercial': 'Organisations que vous parrainez',
+  Protocole: 'Scan QR et accueil invités',
+  'Tableau de bord': 'Vue d’ensemble et quotas',
+  Statistiques: 'RSVP et analyses d’événements',
+  Modèles: 'Concepteur d’invitations',
+  'Facturation & plan': 'Forfait, quotas et upgrade',
+};
+
+function withNavTips(sections: NavSection[]): NavSection[] {
+  return sections.map((section) => ({
+    ...section,
+    items: section.items.map((item) => ({
+      ...item,
+      description: item.description || NAV_TOOLTIPS[item.name],
+    })),
+  }));
 }
 
 function SidebarNav({
@@ -47,7 +84,7 @@ function SidebarNav({
   const currentTab = searchParams.get('tab') || 'tenants';
 
   return (
-    <nav className={cn('space-y-5', collapsed && 'space-y-3')}>
+    <nav className={cn('space-y-4', collapsed && 'space-y-2.5')} aria-label="Navigation principale">
       {sections.map((section, sectionIdx) => (
         <div key={section.label ?? sectionIdx}>
           {section.label && !collapsed && (
@@ -56,7 +93,7 @@ function SidebarNav({
             </p>
           )}
           {section.label && collapsed && (
-            <div className="mx-auto mb-1 h-px w-6 bg-border" aria-hidden />
+            <div className="mx-auto mb-1.5 h-px w-5 bg-border" aria-hidden title={section.label} />
           )}
           <div className="space-y-0.5">
             {section.items.map((item) => {
@@ -65,24 +102,60 @@ function SidebarNav({
                 ? pathname === '/dashboard' && currentTab === item.tab
                 : pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
 
+              const tip = item.description ? (
+                <span className="flex flex-col gap-0.5 text-left">
+                  <span className="font-semibold">{item.name}</span>
+                  <span className="font-normal opacity-80 max-w-[12rem] whitespace-normal leading-snug">
+                    {item.description}
+                  </span>
+                </span>
+              ) : (
+                item.name
+              );
+
               return (
-                <Link
+                <Tooltip
                   key={item.name}
-                  href={item.href}
-                  data-tour={item.tourId}
-                  title={collapsed ? item.name : undefined}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={cn(
-                    'flex items-center rounded-lg text-sm font-medium transition-colors duration-150',
-                    collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2',
-                    isActive
-                      ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
-                      : 'text-muted hover:text-foreground hover:bg-surface-muted/80',
-                  )}
+                  content={tip}
+                  side="right"
+                  disabled={!collapsed}
+                  className="flex w-full"
                 >
-                  <Icon className={cn('w-[18px] h-[18px] shrink-0', isActive ? 'text-primary' : '')} />
-                  {!collapsed && <span className="truncate text-[13px] font-medium leading-snug">{item.name}</span>}
-                </Link>
+                  <Link
+                    href={item.href}
+                    data-tour={item.tourId}
+                    onClick={() => setMobileMenuOpen(false)}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={cn(
+                      'group relative flex w-full items-center rounded-[var(--radius-button)] text-sm font-medium transition-colors duration-150',
+                      collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2',
+                      isActive
+                        ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
+                        : 'text-muted hover:text-foreground hover:bg-surface-muted/80',
+                    )}
+                  >
+                    {isActive && (
+                      <span
+                        className={cn(
+                          'absolute bg-primary rounded-full',
+                          collapsed
+                            ? 'left-1 top-1/2 -translate-y-1/2 h-4 w-0.5'
+                            : 'left-0 top-1/2 -translate-y-1/2 h-5 w-0.5',
+                        )}
+                        aria-hidden
+                      />
+                    )}
+                    <Icon
+                      className={cn(
+                        'w-[18px] h-[18px] shrink-0 transition-colors',
+                        isActive ? 'text-primary' : 'text-muted group-hover:text-foreground',
+                      )}
+                    />
+                    {!collapsed && (
+                      <span className="truncate text-[13px] font-medium leading-snug">{item.name}</span>
+                    )}
+                  </Link>
+                </Tooltip>
               );
             })}
           </div>
@@ -340,23 +413,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
             <div className={cn('flex items-center gap-1', sidebarCollapsed && 'flex-col')}>
               {showCommercialNotifications && !sidebarCollapsed && <NotificationBell />}
-              <button
-                type="button"
-                onClick={toggleSidebarCollapsed}
-                className="p-2 rounded-lg border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
-                aria-label={sidebarCollapsed ? 'Agrandir la barre latérale' : 'Réduire la barre latérale'}
-                title={sidebarCollapsed ? 'Agrandir' : 'Réduire'}
-              >
-                {sidebarCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
-              </button>
-              {!sidebarCollapsed && (
+              <Tooltip content={sidebarCollapsed ? 'Agrandir le menu' : 'Réduire le menu'} side="right">
                 <button
-                  onClick={toggleTheme}
-                  className="p-2 rounded-lg border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
-                  aria-label="Changer de thème"
+                  type="button"
+                  onClick={toggleSidebarCollapsed}
+                  className="p-2 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
+                  aria-label={sidebarCollapsed ? 'Agrandir la barre latérale' : 'Réduire la barre latérale'}
                 >
-                  {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                  {sidebarCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
                 </button>
+              </Tooltip>
+              {!sidebarCollapsed && (
+                <Tooltip content={theme === 'light' ? 'Passer en sombre' : 'Passer en clair'} side="bottom">
+                  <button
+                    type="button"
+                    onClick={toggleTheme}
+                    className="p-2 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
+                    aria-label="Changer de thème"
+                  >
+                    {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                  </button>
+                </Tooltip>
               )}
             </div>
           </div>
@@ -407,7 +484,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             }
           >
             <SidebarNav
-              sections={navSections}
+              sections={withNavTips(navSections)}
               pathname={pathname}
               setMobileMenuOpen={setMobileMenuOpen}
               collapsed={sidebarCollapsed}
@@ -416,48 +493,64 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Profil & déconnexion */}
-        <div className={cn('border-t border-border shrink-0', sidebarCollapsed ? 'p-2' : 'p-4 space-y-2')}>
-          <Link
-            href="/dashboard/profile"
-            data-tour="nav-profile"
-            title={sidebarCollapsed ? user.name : undefined}
-            onClick={() => setMobileMenuOpen(false)}
-            className={cn(
-              'flex items-center rounded-lg hover:bg-surface-muted transition group',
-              sidebarCollapsed ? 'justify-center p-2' : 'gap-3 p-2',
-            )}
+        <div className={cn('border-t border-border shrink-0', sidebarCollapsed ? 'p-2 space-y-1' : 'p-4 space-y-2')}>
+          <Tooltip
+            content={
+              <span className="flex flex-col gap-0.5 text-left">
+                <span className="font-semibold">{user.name}</span>
+                <span className="opacity-80 font-normal">Mon compte</span>
+              </span>
+            }
+            side="right"
+            disabled={!sidebarCollapsed}
+            className="flex w-full"
           >
-            <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center font-bold text-primary text-xs shrink-0">
-              {user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}
-            </div>
-            {!sidebarCollapsed && (
-              <div className="min-w-0 flex-1">
-                <span className="font-semibold text-foreground text-sm truncate block group-hover:text-primary transition-colors">
-                  {user.name}
-                </span>
-                <span className="text-xs text-muted truncate block">{user.email}</span>
-              </div>
-            )}
-          </Link>
-          <button
-            onClick={logout}
-            title={sidebarCollapsed ? 'Déconnexion' : undefined}
-            className={cn(
-              'flex items-center w-full rounded-lg text-sm font-medium text-rose-500 hover:bg-rose-500/10 transition',
-              sidebarCollapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
-            )}
-          >
-            <LogOut className="w-4 h-4" />
-            {!sidebarCollapsed && 'Déconnexion'}
-          </button>
-          {sidebarCollapsed && (
-            <button
-              onClick={toggleTheme}
-              className="flex w-full items-center justify-center p-2 rounded-lg border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
-              aria-label="Changer de thème"
+            <Link
+              href="/dashboard/profile"
+              data-tour="nav-profile"
+              onClick={() => setMobileMenuOpen(false)}
+              className={cn(
+                'flex w-full items-center rounded-[var(--radius-button)] hover:bg-surface-muted transition group',
+                sidebarCollapsed ? 'justify-center p-2' : 'gap-3 p-2',
+              )}
             >
-              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+              <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center font-bold text-primary text-xs shrink-0 ring-1 ring-primary/20">
+                {user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}
+              </div>
+              {!sidebarCollapsed && (
+                <div className="min-w-0 flex-1">
+                  <span className="font-semibold text-foreground text-sm truncate block group-hover:text-primary transition-colors">
+                    {user.name}
+                  </span>
+                  <span className="text-xs text-muted truncate block">{user.email}</span>
+                </div>
+              )}
+            </Link>
+          </Tooltip>
+          <Tooltip content="Se déconnecter" side="right" disabled={!sidebarCollapsed} className="flex w-full">
+            <button
+              type="button"
+              onClick={logout}
+              className={cn(
+                'flex w-full items-center rounded-[var(--radius-button)] text-sm font-medium text-rose-500 hover:bg-rose-500/10 transition',
+                sidebarCollapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
+              )}
+            >
+              <LogOut className="w-4 h-4" />
+              {!sidebarCollapsed && 'Déconnexion'}
             </button>
+          </Tooltip>
+          {sidebarCollapsed && (
+            <Tooltip content={theme === 'light' ? 'Passer en sombre' : 'Passer en clair'} side="right" className="flex w-full">
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="flex w-full items-center justify-center p-2 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
+                aria-label="Changer de thème"
+              >
+                {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+              </button>
+            </Tooltip>
           )}
         </div>
       </aside>
