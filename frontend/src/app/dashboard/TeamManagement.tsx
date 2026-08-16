@@ -4,10 +4,13 @@ import React, { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
-  Users, UserPlus, Trash2, Loader2, Crown, Mail, Phone, AlertCircle, CheckCircle2,
+  Users, UserPlus, Trash2, Loader2, Crown, Mail, Phone,
   Shield, Briefcase, MessageSquare, TrendingUp, Copy, RefreshCw,
 } from 'lucide-react';
-import { SkeletonGrid, ViewModeToggle, useViewMode } from '@/components/ui';
+import {
+  SkeletonGrid, ViewModeToggle, useViewMode,
+  Button, Modal, EmptyState, Alert, Input, Badge,
+} from '@/components/ui';
 import { cn } from '@/lib/cn';
 
 interface TeamMember {
@@ -30,6 +33,28 @@ const orgRoleLabels: Record<string, string> = {
   PROTOCOL: 'Protocole organisation',
   COMMERCIAL: 'Commercial organisation',
 };
+
+const ROLE_OPTIONS = [
+  {
+    id: 'MANAGER' as const,
+    label: 'Manager',
+    description: 'Gère salles, équipe et événements.',
+    icon: Shield,
+  },
+  {
+    id: 'PROTOCOL' as const,
+    label: 'Protocole',
+    description: 'Accueil, check-in et suivi invités.',
+    icon: Briefcase,
+  },
+  {
+    id: 'COMMERCIAL' as const,
+    label: 'Commercial',
+    description: 'Apporte des clients et suit ses commissions.',
+    icon: TrendingUp,
+    requiresCommercial: true,
+  },
+];
 
 export default function TeamManagement() {
   const { user, tenant, planQuota, planFeatures } = useAuth();
@@ -87,6 +112,27 @@ export default function TeamManagement() {
     }
   }, [user, tenant]);
 
+  const resetForm = () => {
+    setName('');
+    setEmail('');
+    setPhone('');
+    setPassword('');
+    setOrgRole('MANAGER');
+    setCommissionRate(String(Math.round(defaultCommissionRate * 100)));
+    setVerificationMethod('EMAIL');
+  };
+
+  const openForm = () => {
+    resetForm();
+    setError('');
+    setShowForm(true);
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    resetForm();
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -111,14 +157,7 @@ export default function TeamManagement() {
       }
       const data = await api.post('/team', payload);
       setSuccess(data.message || 'Utilisateur créé.');
-      setName('');
-      setEmail('');
-      setPhone('');
-      setPassword('');
-      setOrgRole('MANAGER');
-      setCommissionRate(String(Math.round(defaultCommissionRate * 100)));
-      setVerificationMethod('EMAIL');
-      setShowForm(false);
+      closeForm();
       await loadTeam();
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la création.');
@@ -178,159 +217,27 @@ export default function TeamManagement() {
 
   if (user?.role !== 'USER' || !tenant) return null;
 
+  const visibleRoles = ROLE_OPTIONS.filter((r) => !r.requiresCommercial || hasCommercialNetwork);
+
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xs space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+    <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 sm:p-6 space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border">
         <div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Users className="w-5 h-5 text-indigo-600" />
+          <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+            <Users className="w-5 h-5 text-primary" />
             Équipe de l&apos;organisation
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Managers, protocole et commerciaux (Enterprise 2+).
+          <p className="text-xs text-muted mt-1">
+            Invitez managers, protocole{hasCommercialNetwork ? ' et commerciaux' : ''}.
             {planQuota && maxManagers !== null && (
-              <span className="block mt-1 font-semibold text-indigo-600">
+              <span className="block mt-1 font-medium text-primary">
                 Managers : {managerCount} / {maxManagers >= 9999 ? '∞' : maxManagers}
               </span>
             )}
           </p>
         </div>
-        {canManageTeam && (
-          <button
-            type="button"
-            onClick={() => setShowForm((v) => !v)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition"
-          >
-            <UserPlus className="w-4 h-4" />
-            Ajouter un utilisateur
-          </button>
-        )}
-      </div>
-
-      {hasCommercialNetwork && canManageTeam && (
-        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-2xl p-4 space-y-3">
-          <div className="flex items-center gap-2 text-sm font-bold text-amber-900 dark:text-amber-200">
-            <TrendingUp className="w-4 h-4" />
-            Réseau commercial — commission par défaut
-          </div>
-          <div className="flex flex-wrap items-end gap-3">
-            <div>
-              <label className="text-[10px] font-bold uppercase text-amber-700 block mb-1">Nouveaux commerciaux (%)</label>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={Math.round(defaultCommissionRate * 100)}
-                onChange={(e) => setDefaultCommissionRate(parseFloat(e.target.value) / 100 || 0)}
-                className="w-24 px-3 py-2 rounded-xl border text-sm"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  await api.put('/team/commercial-settings', { defaultCommissionRate });
-                  setSuccess('Commission par défaut enregistrée.');
-                  await loadTeam();
-                } catch (err: any) {
-                  setError(err.message || 'Erreur lors de la mise à jour.');
-                }
-              }}
-              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl"
-            >
-              Enregistrer
-            </button>
-          </div>
-          <p className="text-[11px] text-amber-800 dark:text-amber-300">
-            Le propriétaire et les managers peuvent modifier la commission de chaque commercial individuellement.
-          </p>
-        </div>
-      )}
-
-      {error && (
-        <div className="p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 text-rose-800 dark:text-rose-300 rounded-xl flex items-center gap-2 text-xs">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          {error}
-        </div>
-      )}
-      {success && (
-        <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 text-emerald-800 dark:text-emerald-300 rounded-xl flex items-center gap-2 text-xs">
-          <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-          {success}
-        </div>
-      )}
-
-      {showForm && canManageTeam && (
-        <form onSubmit={handleCreate} className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white">Nouvel utilisateur</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <input type="text" required placeholder="Nom complet" value={name} onChange={(e) => setName(e.target.value)} className="px-4 py-2.5 bg-white dark:bg-slate-900 border rounded-xl text-sm" />
-            <input type="email" required placeholder="E-mail" value={email} onChange={(e) => setEmail(e.target.value)} className="px-4 py-2.5 bg-white dark:bg-slate-900 border rounded-xl text-sm" />
-            <input type="tel" placeholder="Téléphone WhatsApp (+243...)" value={phone} onChange={(e) => setPhone(e.target.value)} className="px-4 py-2.5 bg-white dark:bg-slate-900 border rounded-xl text-sm" />
-            <input type="password" required minLength={6} placeholder="Mot de passe (min. 6 caractères)" value={password} onChange={(e) => setPassword(e.target.value)} className="px-4 py-2.5 bg-white dark:bg-slate-900 border rounded-xl text-sm" />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Validation du compte (OTP)</label>
-            <div className="grid grid-cols-2 gap-3">
-              <button type="button" onClick={() => setVerificationMethod('EMAIL')} className={`py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 ${verificationMethod === 'EMAIL' ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'border-slate-200 text-slate-600'}`}>
-                <Mail className="w-4 h-4" /> OTP par e-mail
-              </button>
-              <button type="button" onClick={() => setVerificationMethod('WHATSAPP')} className={`py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 ${verificationMethod === 'WHATSAPP' ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'border-slate-200 text-slate-600'}`}>
-                <MessageSquare className="w-4 h-4" /> OTP WhatsApp
-              </button>
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Rôle dans l&apos;organisation</label>
-            <div className={`grid gap-3 ${hasCommercialNetwork ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2'}`}>
-              <button type="button" onClick={() => setOrgRole('MANAGER')} className={`py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 ${orgRole === 'MANAGER' ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'border-slate-200 text-slate-600'}`}>
-                <Shield className="w-4 h-4" /> Manager
-              </button>
-              <button type="button" onClick={() => setOrgRole('PROTOCOL')} className={`py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 ${orgRole === 'PROTOCOL' ? 'bg-violet-50 border-violet-300 text-violet-700' : 'border-slate-200 text-slate-600'}`}>
-                <Briefcase className="w-4 h-4" /> Protocole
-              </button>
-              {hasCommercialNetwork && (
-                <button type="button" onClick={() => setOrgRole('COMMERCIAL')} className={`py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 ${orgRole === 'COMMERCIAL' ? 'bg-amber-50 border-amber-300 text-amber-700' : 'border-slate-200 text-slate-600'}`}>
-                  <TrendingUp className="w-4 h-4" /> Commercial
-                </button>
-              )}
-            </div>
-          </div>
-          {orgRole === 'COMMERCIAL' && (
-            <div>
-              <label className="text-xs font-bold text-slate-500 uppercase">Commission (%)</label>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={commissionRate}
-                onChange={(e) => setCommissionRate(e.target.value)}
-                className="mt-1 w-32 px-3 py-2 rounded-xl border text-sm"
-              />
-            </div>
-          )}
-          {orgRole === 'MANAGER' && managersAtLimit && (
-            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-              Quota managers atteint. Les agents protocole restent disponibles, ou passez à un forfait supérieur.
-            </p>
-          )}
-          <div className="flex gap-2">
-            <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 border rounded-xl text-xs font-bold text-slate-600">Annuler</button>
-            <button type="submit" disabled={submitting || (orgRole === 'MANAGER' && managersAtLimit)} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl text-xs font-bold flex items-center gap-2">
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-              Créer l&apos;utilisateur
-            </button>
-          </div>
-        </form>
-      )}
-
-      {loading ? (
-        <SkeletonGrid count={4} columns={2} />
-      ) : members.length === 0 ? (
-        <p className="text-sm text-slate-500 text-center py-6">Aucun membre trouvé.</p>
-      ) : (
-        <div className="space-y-3">
-          <div className="flex justify-end">
+        <div className="flex flex-wrap items-center gap-2">
+          {members.length > 0 && (
             <ViewModeToggle
               storageKey="em-view-team"
               value={teamViewMode}
@@ -340,43 +247,225 @@ export default function TeamManagement() {
               defaultMode="grid"
               defaultColumns={2}
             />
+          )}
+          {canManageTeam && (
+            <Button type="button" size="sm" onClick={openForm} leftIcon={<UserPlus className="w-4 h-4" />}>
+              Ajouter un membre
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {hasCommercialNetwork && canManageTeam && (
+        <div className="bg-surface-muted border border-border rounded-[var(--radius-card)] p-4 space-y-3">
+          <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <TrendingUp className="w-4 h-4 text-primary" />
+            Commission commerciale par défaut
           </div>
-          <div className={teamViewMode === 'list' ? 'flex flex-col gap-2' : teamGridClass}>
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="text-[10px] font-semibold uppercase tracking-wide text-muted block mb-1.5">
+                Nouveaux commerciaux (%)
+              </label>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={Math.round(defaultCommissionRate * 100)}
+                onChange={(e) => setDefaultCommissionRate(parseFloat(e.target.value) / 100 || 0)}
+                className="w-24 px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface text-sm"
+              />
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={async () => {
+                try {
+                  await api.put('/team/commercial-settings', { defaultCommissionRate });
+                  setSuccess('Commission par défaut enregistrée.');
+                  await loadTeam();
+                } catch (err: any) {
+                  setError(err.message || 'Erreur lors de la mise à jour.');
+                }
+              }}
+            >
+              Enregistrer
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted">
+            Vous pourrez ensuite ajuster la commission de chaque commercial individuellement.
+          </p>
+        </div>
+      )}
+
+      {error && <Alert variant="error">{error}</Alert>}
+      {success && <Alert variant="success">{success}</Alert>}
+
+      <Modal
+        open={showForm && canManageTeam}
+        onClose={closeForm}
+        title="Ajouter un membre"
+        description="Créez un compte et envoyez un code OTP pour validation."
+        size="lg"
+        footer={
+          <div className="flex w-full justify-end gap-2">
+            <Button type="button" variant="secondary" size="sm" onClick={closeForm}>
+              Annuler
+            </Button>
+            <Button
+              type="submit"
+              form="team-create-form"
+              size="sm"
+              loading={submitting}
+              disabled={orgRole === 'MANAGER' && managersAtLimit}
+              leftIcon={<UserPlus className="w-4 h-4" />}
+            >
+              Créer le compte
+            </Button>
+          </div>
+        }
+      >
+        <form id="team-create-form" onSubmit={handleCreate} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input label="Nom complet" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Prénom Nom" />
+            <Input label="E-mail" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} leftIcon={<Mail className="w-4 h-4" />} />
+            <Input label="Téléphone WhatsApp" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+243..." leftIcon={<Phone className="w-4 h-4" />} />
+            <Input label="Mot de passe temporaire" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} hint="Minimum 6 caractères" />
+          </div>
+
+          <div>
+            <p className="text-xs font-medium text-muted mb-2">Validation du compte (OTP)</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setVerificationMethod('EMAIL')}
+                className={cn(
+                  'py-2.5 px-3 rounded-[var(--radius-button)] border text-xs font-medium flex items-center justify-center gap-2 transition-colors',
+                  verificationMethod === 'EMAIL'
+                    ? 'bg-primary/10 border-primary/30 text-primary'
+                    : 'border-border text-muted hover:bg-surface-muted',
+                )}
+              >
+                <Mail className="w-4 h-4" /> E-mail
+              </button>
+              <button
+                type="button"
+                onClick={() => setVerificationMethod('WHATSAPP')}
+                className={cn(
+                  'py-2.5 px-3 rounded-[var(--radius-button)] border text-xs font-medium flex items-center justify-center gap-2 transition-colors',
+                  verificationMethod === 'WHATSAPP'
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-300'
+                    : 'border-border text-muted hover:bg-surface-muted',
+                )}
+              >
+                <MessageSquare className="w-4 h-4" /> WhatsApp
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-medium text-muted mb-2">Rôle dans l&apos;organisation</p>
+            <div className={cn('grid gap-2', visibleRoles.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2')}>
+              {visibleRoles.map(({ id, label, description, icon: Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setOrgRole(id)}
+                  className={cn(
+                    'text-left p-3 rounded-[var(--radius-card)] border transition-colors',
+                    orgRole === id
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:bg-surface-muted',
+                  )}
+                >
+                  <Icon className={cn('w-4 h-4 mb-2', orgRole === id ? 'text-primary' : 'text-muted')} />
+                  <p className="text-xs font-semibold text-foreground">{label}</p>
+                  <p className="text-[11px] text-muted mt-0.5 leading-snug">{description}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {orgRole === 'COMMERCIAL' && (
+            <Input
+              label="Commission (%)"
+              type="number"
+              min={0}
+              max={100}
+              value={commissionRate}
+              onChange={(e) => setCommissionRate(e.target.value)}
+            />
+          )}
+
+          {orgRole === 'MANAGER' && managersAtLimit && (
+            <Alert variant="warning">
+              Quota managers atteint. Les agents protocole restent disponibles, ou passez à un forfait supérieur.
+            </Alert>
+          )}
+        </form>
+      </Modal>
+
+      {loading ? (
+        <SkeletonGrid count={4} columns={2} />
+      ) : members.length === 0 ? (
+        <EmptyState
+          icon={<Users className="w-5 h-5" />}
+          title="Aucun membre pour l’instant"
+          description="Ajoutez un manager ou un agent protocole pour déléguer la gestion des événements."
+          action={
+            canManageTeam ? (
+              <Button type="button" size="sm" onClick={openForm} leftIcon={<UserPlus className="w-4 h-4" />}>
+                Ajouter un membre
+              </Button>
+            ) : undefined
+          }
+        />
+      ) : (
+        <div className={teamViewMode === 'list' ? 'flex flex-col gap-2' : teamGridClass}>
           {members.map((member) => (
-            <div key={member.id} className={cn(
-              'flex flex-col gap-3 p-4 bg-surface border border-border rounded-[var(--radius-card)]',
-              teamViewMode === 'list' && 'sm:flex-row sm:items-center sm:justify-between',
-            )}>
+            <div
+              key={member.id}
+              className={cn(
+                'flex flex-col gap-3 p-4 bg-surface border border-border rounded-[var(--radius-card)] em-soft-hover',
+                teamViewMode === 'list' && 'sm:flex-row sm:items-center sm:justify-between',
+              )}
+            >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold text-sm text-slate-900 dark:text-white truncate">{member.name || 'Sans nom'}</span>
+                  <span className="font-semibold text-sm text-foreground truncate">
+                    {member.name || 'Sans nom'}
+                  </span>
                   {member.isOwner ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                    <Badge variant="warning" className="inline-flex items-center gap-1">
                       <Crown className="w-3 h-3" /> Propriétaire
-                    </span>
+                    </Badge>
                   ) : (
                     <>
-                      <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
-                        member.orgRole === 'PROTOCOL' ? 'bg-violet-50 text-violet-700 border-violet-200' :
-                        member.orgRole === 'COMMERCIAL' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                        'bg-indigo-50 text-indigo-700 border-indigo-200'
-                      }`}>
+                      <span
+                        className={cn(
+                          'inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md border',
+                          member.orgRole === 'PROTOCOL'
+                            ? 'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/30 dark:text-violet-300 dark:border-violet-800'
+                            : member.orgRole === 'COMMERCIAL'
+                              ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800'
+                              : 'bg-primary/10 text-primary border-primary/20',
+                        )}
+                      >
                         {member.orgRole === 'PROTOCOL' ? <Briefcase className="w-3 h-3" /> :
                          member.orgRole === 'COMMERCIAL' ? <TrendingUp className="w-3 h-3" /> :
                          <Shield className="w-3 h-3" />}
                         {orgRoleLabels[member.orgRoleLabel] || member.orgRoleLabel}
                       </span>
                       {!member.isEmailVerified && (
-                        <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                          En attente OTP
-                        </span>
+                        <Badge variant="warning">En attente OTP</Badge>
                       )}
                       {!member.isEmailVerified && canManageTeam && (
                         <button
                           type="button"
                           onClick={() => handleResendOtp(member)}
                           disabled={resendingId === member.id}
-                          className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border border-amber-300 text-amber-700 hover:bg-amber-50 inline-flex items-center gap-1"
+                          className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md border border-border text-muted hover:bg-surface-muted inline-flex items-center gap-1"
                         >
                           {resendingId === member.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
                           Renvoyer OTP
@@ -385,11 +474,11 @@ export default function TeamManagement() {
                     </>
                   )}
                 </div>
-                <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-slate-500">
+                <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-muted">
                   <span className="inline-flex items-center gap-1"><Mail className="w-3 h-3" />{member.email}</span>
                   {member.phone && <span className="inline-flex items-center gap-1"><Phone className="w-3 h-3" />{member.phone}</span>}
                   {member.orgRole === 'COMMERCIAL' && member.referralCode && (
-                    <span className="inline-flex items-center gap-1 font-mono text-amber-700">
+                    <span className="inline-flex items-center gap-1 font-mono text-foreground/80">
                       <Copy className="w-3 h-3" />{member.referralCode}
                     </span>
                   )}
@@ -404,11 +493,15 @@ export default function TeamManagement() {
                           max={100}
                           value={editCommissionValue}
                           onChange={(e) => setEditCommissionValue(e.target.value)}
-                          className="w-20 px-2 py-1 rounded-lg border text-xs"
+                          className="w-20 px-2 py-1 rounded-[var(--radius-button)] border border-border text-xs"
                         />
-                        <span className="text-xs">%</span>
-                        <button type="button" onClick={() => handleSaveCommission(member.id)} className="text-[10px] font-bold px-2 py-1 rounded-lg bg-emerald-600 text-white">OK</button>
-                        <button type="button" onClick={() => setEditingCommissionId(null)} className="text-[10px] font-bold px-2 py-1 rounded-lg border">Annuler</button>
+                        <span className="text-xs text-muted">%</span>
+                        <Button type="button" size="sm" variant="success" onClick={() => handleSaveCommission(member.id)}>
+                          OK
+                        </Button>
+                        <Button type="button" size="sm" variant="ghost" onClick={() => setEditingCommissionId(null)}>
+                          Annuler
+                        </Button>
                       </>
                     ) : (
                       <button
@@ -417,7 +510,7 @@ export default function TeamManagement() {
                           setEditingCommissionId(member.id);
                           setEditCommissionValue(String(Math.round((member.commissionRate ?? defaultCommissionRate) * 100)));
                         }}
-                        className="text-[10px] font-bold px-2 py-1 rounded-lg border border-amber-200 text-amber-700"
+                        className="text-[10px] font-semibold px-2 py-1 rounded-md border border-border text-muted hover:bg-surface-muted"
                       >
                         Commission : {Math.round((member.commissionRate ?? defaultCommissionRate) * 100)} % — Modifier
                       </button>
@@ -425,23 +518,45 @@ export default function TeamManagement() {
                   </div>
                 )}
                 {canManageTeam && !member.isOwner && member.orgRole !== 'COMMERCIAL' && (
-                  <div className="flex gap-2 mt-2 flex-wrap">
-                    <button type="button" onClick={() => handleRoleChange(member, 'MANAGER')} className="text-[10px] font-bold px-2 py-1 rounded-lg border border-indigo-200 text-indigo-600">→ Manager</button>
-                    <button type="button" onClick={() => handleRoleChange(member, 'PROTOCOL')} className="text-[10px] font-bold px-2 py-1 rounded-lg border border-violet-200 text-violet-600">→ Protocole</button>
+                  <div className="flex gap-2 mt-2.5 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => handleRoleChange(member, 'MANAGER')}
+                      className="text-[10px] font-medium px-2 py-1 rounded-md border border-border text-muted hover:border-primary/30 hover:text-primary"
+                    >
+                      → Manager
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRoleChange(member, 'PROTOCOL')}
+                      className="text-[10px] font-medium px-2 py-1 rounded-md border border-border text-muted hover:border-primary/30 hover:text-primary"
+                    >
+                      → Protocole
+                    </button>
                     {hasCommercialNetwork && (
-                      <button type="button" onClick={() => handleRoleChange(member, 'COMMERCIAL')} className="text-[10px] font-bold px-2 py-1 rounded-lg border border-amber-200 text-amber-600">→ Commercial</button>
+                      <button
+                        type="button"
+                        onClick={() => handleRoleChange(member, 'COMMERCIAL')}
+                        className="text-[10px] font-medium px-2 py-1 rounded-md border border-border text-muted hover:border-primary/30 hover:text-primary"
+                      >
+                        → Commercial
+                      </button>
                     )}
                   </div>
                 )}
               </div>
               {canManageTeam && !member.isOwner && (
-                <button type="button" onClick={() => handleDelete(member)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition flex-shrink-0" title="Retirer de l'organisation">
+                <button
+                  type="button"
+                  onClick={() => handleDelete(member)}
+                  className="p-2 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-[var(--radius-button)] transition flex-shrink-0 self-start"
+                  title="Retirer de l'organisation"
+                >
                   <Trash2 className="w-4 h-4" />
                 </button>
               )}
             </div>
           ))}
-          </div>
         </div>
       )}
     </div>

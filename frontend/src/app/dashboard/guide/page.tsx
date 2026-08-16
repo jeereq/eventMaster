@@ -57,7 +57,7 @@ function DashboardGuidePageContent() {
   }, [searchParams, activeTab, activeGuideId, access, startTour, router]);
 
   return (
-    <div className="space-y-8 max-w-4xl">
+    <div className="space-y-8 w-full">
       <PageHeader
         title="Guide utilisateur"
         description="Documentation et visite guidée adaptées à votre rôle sur EventMaster."

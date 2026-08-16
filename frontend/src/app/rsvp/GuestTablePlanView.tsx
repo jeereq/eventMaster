@@ -336,7 +336,7 @@ export default function GuestTablePlanView({
   }
 
   return (
-    <div className="space-y-6 animate-fade-in w-full max-w-3xl mx-auto">
+    <div className="space-y-6 animate-fade-in w-full">
       {seatDetailSection}
       {planSection(420)}
     </div>

@@ -32,7 +32,7 @@ export default function OrgInvoicesPage() {
   }
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
+    <div className="space-y-8 w-full">
       <PageHeader
         title="Factures"
         description={`Historique des factures EventMaster pour ${tenant.name}. Générées automatiquement après validation d'une demande d'abonnement, paiement ou renouvellement.`}

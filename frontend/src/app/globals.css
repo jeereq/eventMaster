@@ -101,10 +101,10 @@ h1, h2, h3, h4 {
   animation: slide-up 0.22s ease-out;
 }
 
-/* Conteneur page — dashboard + landing */
+/* Conteneur page standard — w-11/12 sur toutes les vues */
 .app-container,
 .page-container {
-  width: 91.666667%;
+  width: 91.666667%; /* Tailwind w-11/12 */
   max-width: none;
   margin-left: auto;
   margin-right: auto;
@@ -115,7 +115,7 @@ h1, h2, h3, h4 {
 @media (max-width: 640px) {
   .app-container,
   .page-container {
-    width: 94%;
+    width: 91.666667%; /* garder w-11/12 aussi sur mobile */
   }
 }
 

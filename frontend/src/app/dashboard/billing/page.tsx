@@ -155,7 +155,7 @@ export default function BillingPage() {
 
   return (
     <div className="space-y-10 w-full">
-      <div className="text-center max-w-3xl mx-auto space-y-3">
+      <div className="text-center space-y-3">
         <p className="text-sm font-semibold text-indigo-600 uppercase tracking-widest">Facturation</p>
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
           Forfait de {tenant?.name || 'votre organisation'}
@@ -238,7 +238,7 @@ export default function BillingPage() {
           <h2 className="text-sm font-bold uppercase tracking-widest text-slate-500 mb-4 text-center">{label}</h2>
           <div
             className={`grid gap-4 ${
-              ids.length === 2 ? 'md:grid-cols-2 max-w-3xl mx-auto' : ids.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2 max-w-4xl mx-auto'
+              ids.length === 2 ? 'md:grid-cols-2' : ids.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
             }`}
           >
             {plans
