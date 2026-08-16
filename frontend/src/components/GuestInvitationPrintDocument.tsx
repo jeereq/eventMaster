@@ -208,20 +208,20 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
   };
 
   const renderRsvpBlock = (el: TemplateElement) => (
-    <div className="bg-white/90 border border-slate-200 rounded-2xl p-6 text-center space-y-4 shadow-sm">
-      <p className="font-bold text-slate-800 text-base" style={{ fontFamily: '"Cormorant Garamond", serif' }}>
+    <div className="bg-surface/90 border border-border rounded-2xl p-6 text-center space-y-4 shadow-sm">
+      <p className="font-bold text-foreground text-base" style={{ fontFamily: '"Cormorant Garamond", serif' }}>
         {formatGuestInvitationText(el.text || 'Merci de confirmer votre présence', ctx)}
       </p>
       <div className="grid grid-cols-2 gap-3 text-xs font-bold">
-        <div className={`py-3 rounded-xl border-2 ${data.rsvp === 'ACCEPTED' ? 'border-emerald-600 bg-emerald-50 text-emerald-800' : 'border-slate-200 text-slate-500'}`}>
+        <div className={`py-3 rounded-xl border-2 ${data.rsvp === 'ACCEPTED' ? 'border-emerald-600 bg-emerald-50 text-emerald-800' : 'border-border text-muted'}`}>
           Oui, avec joie !
         </div>
-        <div className={`py-3 rounded-xl border-2 ${data.rsvp === 'DECLINED' ? 'border-rose-600 bg-rose-50 text-rose-800' : 'border-slate-200 text-slate-500'}`}>
+        <div className={`py-3 rounded-xl border-2 ${data.rsvp === 'DECLINED' ? 'border-rose-600 bg-rose-50 text-rose-800' : 'border-border text-muted'}`}>
           Non, désolé(e)
         </div>
       </div>
-      <p className="text-xs text-slate-500 font-semibold">Statut actuel : {rsvpStatusLabel(data.rsvp)}</p>
-      <p className="text-[11px] text-indigo-600 break-all">{ctx.rsvpLink}</p>
+      <p className="text-xs text-muted font-semibold">Statut actuel : {rsvpStatusLabel(data.rsvp)}</p>
+      <p className="text-[11px] text-primary break-all">{ctx.rsvpLink}</p>
     </div>
   );
 
@@ -235,12 +235,12 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
     data.tableDetails?.neighbors?.map((n) => `${n.firstName} ${n.lastName}`.trim()) ?? [];
 
   return (
-    <div className="min-h-screen bg-white print:bg-white" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+    <div className="min-h-screen bg-surface print:bg-surface" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
       <link href={PRINT_FONTS} rel="stylesheet" />
 
       <div className="mx-auto py-8 px-4 flex flex-col items-center gap-6" style={{ maxWidth: canvasStyle.maxWidth || 520 }}>
         <div
-          className="w-full relative overflow-hidden flex flex-col shadow-none border border-slate-200 rounded-3xl"
+          className="w-full relative overflow-hidden flex flex-col shadow-none border border-border rounded-3xl"
           style={{
             ...backgroundStyle,
             minHeight: canvasStyle.minHeight || 640,
@@ -248,7 +248,7 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
           }}
         >
           {!hasTemplate && (
-            <div className="h-2 bg-gradient-to-r from-indigo-500 to-violet-500" />
+            <div className="h-2 bg-gradient-to-r from-primary to-primary/80" />
           )}
 
           {frameType === 'double-border' && (
@@ -296,10 +296,10 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
               </div>
             ) : (
               <div className="text-center space-y-4" style={{ fontFamily: '"Cormorant Garamond", serif' }}>
-                <p className="text-sm uppercase tracking-widest text-indigo-600 font-bold">Invitation</p>
-                <h1 className="text-3xl font-bold text-slate-900">{data.event.title}</h1>
-                <p className="text-slate-600 whitespace-pre-line">{data.event.description || ''}</p>
-                <p className="text-slate-700 font-semibold">
+                <p className="text-sm uppercase tracking-widest text-primary font-bold">Invitation</p>
+                <h1 className="text-3xl font-bold text-foreground">{data.event.title}</h1>
+                <p className="text-muted whitespace-pre-line">{data.event.description || ''}</p>
+                <p className="text-foreground font-semibold">
                   {new Date(data.event.date).toLocaleDateString('fr-FR', {
                     weekday: 'long',
                     year: 'numeric',
@@ -309,8 +309,8 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
                     minute: '2-digit',
                   })}
                 </p>
-                <p className="text-slate-600">{data.event.location}</p>
-                <p className="text-lg text-slate-800">
+                <p className="text-muted">{data.event.location}</p>
+                <p className="text-lg text-foreground">
                   Cher/Chère {data.firstName} {data.lastName},
                 </p>
               </div>
@@ -326,17 +326,17 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
 
         {data.tableDetails && (
           <div
-            className="w-full rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-violet-50 p-6 space-y-3"
+            className="w-full rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-6 space-y-3"
             style={{ maxWidth: canvasStyle.maxWidth || 480 }}
           >
-            <p className="text-xs font-bold uppercase tracking-wider text-indigo-700">Votre placement</p>
-            <p className="text-2xl font-black text-slate-900">{data.tableDetails.tableName}</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-primary">Votre placement</p>
+            <p className="text-2xl font-black text-foreground">{data.tableDetails.tableName}</p>
             {typeof data.tableDetails.seatIndex === 'number' && (
-              <p className="text-indigo-700 font-semibold">Siège n°{data.tableDetails.seatIndex + 1}</p>
+              <p className="text-primary font-semibold">Siège n°{data.tableDetails.seatIndex + 1}</p>
             )}
             {data.tableDetails.neighbors && data.tableDetails.neighbors.length > 0 && (
-              <div className="text-sm text-slate-700 space-y-1 pt-2 border-t border-indigo-100">
-                <p className="font-bold text-indigo-900">À votre table :</p>
+              <div className="text-sm text-foreground space-y-1 pt-2 border-t border-primary/20">
+                <p className="font-bold text-primary">À votre table :</p>
                 {data.tableDetails.neighbors.map((n, i) => (
                   <p key={i}>• {n.firstName} {n.lastName}</p>
                 ))}
@@ -347,12 +347,12 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
 
         {data.tablePlanOverview && data.tablePlanOverview.length > 0 && (
           <div
-            className="w-full rounded-2xl border border-slate-200 bg-white overflow-hidden"
+            className="w-full rounded-2xl border border-border bg-surface overflow-hidden"
             style={{ maxWidth: canvasStyle.maxWidth || 480 }}
           >
-            <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
-              <p className="text-xs font-bold uppercase tracking-wider text-indigo-700">Plan de la salle</p>
-              <p className="text-[10px] text-slate-500 mt-0.5">Votre table est mise en évidence</p>
+            <div className="px-5 py-3 border-b border-border bg-surface-muted">
+              <p className="text-xs font-bold uppercase tracking-wider text-primary">Plan de la salle</p>
+              <p className="text-[10px] text-muted mt-0.5">Votre table est mise en évidence</p>
             </div>
             <GuestRoomPlanCanvas
               tables={data.tablePlanOverview}
@@ -372,14 +372,14 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
 
         {showQr && (
           <div
-            className="w-full rounded-2xl border border-indigo-200 bg-white p-6 text-center space-y-3"
+            className="w-full rounded-2xl border border-primary/30 bg-surface p-6 text-center space-y-3"
             style={{ maxWidth: canvasStyle.maxWidth || 480 }}
           >
-            <p className="text-xs font-bold uppercase tracking-wider text-indigo-700">
+            <p className="text-xs font-bold uppercase tracking-wider text-primary">
               Badge QR — confirmation de présence
             </p>
             <div className="flex justify-center">
-              <div className="p-3 bg-white rounded-2xl border border-slate-200 shadow-sm">
+              <div className="p-3 bg-surface rounded-2xl border border-border shadow-sm">
                 <img
                   src={buildQrCodeUrl(data.guestId, 180)}
                   alt="QR Code de confirmation de présence"
@@ -389,7 +389,7 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
                 />
               </div>
             </div>
-            <p className="text-[11px] text-slate-500 leading-relaxed max-w-xs mx-auto">
+            <p className="text-[11px] text-muted leading-relaxed max-w-xs mx-auto">
               Présentez ce QR code à l&apos;entrée de l&apos;événement pour valider votre présence.
             </p>
           </div>
@@ -401,7 +401,7 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
           </div>
         )}
 
-        <div className="text-center text-[10px] text-slate-400 pb-4">
+        <div className="text-center text-[10px] text-muted pb-4">
           Document généré pour {data.firstName} {data.lastName} — EventMaster
         </div>
       </div>

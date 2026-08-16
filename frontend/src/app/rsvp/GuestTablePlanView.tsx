@@ -130,15 +130,15 @@ export default function GuestTablePlanView({
   if (!placementAccessible) {
     return (
       <div className="text-center py-16 space-y-4 max-w-sm mx-auto">
-        <div className="inline-flex items-center justify-center bg-indigo-500/10 p-5 rounded-full text-indigo-400">
+        <div className="inline-flex items-center justify-center bg-primary/10 p-5 rounded-full text-primary">
           <LayoutGrid className="w-8 h-8" />
         </div>
-        <h3 className="font-bold text-white text-base">Placement après l&apos;accueil</h3>
-        <p className="text-slate-400 text-xs leading-relaxed">
+        <h3 className="font-bold text-foreground text-base">Placement après l&apos;accueil</h3>
+        <p className="text-muted text-xs leading-relaxed">
           Votre plan de table, invitation PDF et localisation GPS seront débloqués une fois votre
           présence confirmée à l&apos;entrée (scan QR protocole).
         </p>
-        <p className="text-slate-500 text-[11px] leading-relaxed">
+        <p className="text-muted text-[11px] leading-relaxed">
           Présentez votre badge QR à l&apos;accueil — vous recevrez ensuite le détail par e-mail ou
           WhatsApp.
         </p>
@@ -149,11 +149,11 @@ export default function GuestTablePlanView({
   if (!tableDetails && (!tablePlanOverview || tablePlanOverview.length === 0)) {
     return (
       <div className="text-center py-16 space-y-4 max-w-xs mx-auto">
-        <div className="inline-flex items-center justify-center bg-indigo-500/10 p-5 rounded-full text-indigo-400">
+        <div className="inline-flex items-center justify-center bg-primary/10 p-5 rounded-full text-primary">
           <LayoutGrid className="w-8 h-8" />
         </div>
-        <h3 className="font-bold text-white text-base">Plan de table en cours</h3>
-        <p className="text-slate-400 text-xs leading-relaxed">
+        <h3 className="font-bold text-foreground text-base">Plan de table en cours</h3>
+        <p className="text-muted text-xs leading-relaxed">
           Les organisateurs finalisent le placement des invités. Revenez bientôt !
         </p>
       </div>
@@ -165,8 +165,8 @@ export default function GuestTablePlanView({
       <div className="space-y-3 w-full">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <h4 className="font-extrabold text-white text-xs uppercase tracking-wider">Plan de la salle</h4>
-            <p className="text-[10px] text-slate-500 mt-1">
+            <h4 className="font-extrabold text-foreground text-xs uppercase tracking-wider">Plan de la salle</h4>
+            <p className="text-[10px] text-muted mt-1">
               Thème : <span style={{ color: theme.accentColor }}>{theme.name}</span>
             </p>
           </div>
@@ -174,7 +174,7 @@ export default function GuestTablePlanView({
             <button
               type="button"
               onClick={() => setIsFullscreen(true)}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-700 text-[10px] font-bold text-slate-300 hover:bg-slate-800"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border text-[10px] font-bold text-foreground/80 hover:bg-surface-muted"
             >
               <Maximize2 className="w-3.5 h-3.5" /> Agrandir
             </button>
@@ -209,20 +209,20 @@ export default function GuestTablePlanView({
             <span className="text-[10px] font-bold uppercase tracking-widest block" style={{ color: theme.accentColor }}>
               Votre placement
             </span>
-            <h3 className="text-xl font-black text-white leading-none">{tableDetails.tableName}</h3>
+            <h3 className="text-xl font-black text-foreground leading-none">{tableDetails.tableName}</h3>
           </div>
           <div className="text-3xl p-3 rounded-2xl shrink-0" style={{ background: `${theme.accentColor}18` }}>
             {getTableShapeEmoji(tableDetails.shape)}
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <div className="bg-slate-900/40 border border-slate-700/50 rounded-2xl p-3">
-            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Type</p>
-            <p className="text-sm font-bold text-white mt-1">{getTableShapeLabel(tableDetails.shape)}</p>
+          <div className="bg-surface-muted/80 border border-border rounded-2xl p-3">
+            <p className="text-[9px] font-bold text-muted uppercase tracking-wider">Type</p>
+            <p className="text-sm font-bold text-foreground mt-1">{getTableShapeLabel(tableDetails.shape)}</p>
           </div>
-          <div className="bg-slate-900/40 border border-slate-700/50 rounded-2xl p-3">
-            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Capacité</p>
-            <p className="text-sm font-bold text-white mt-1">{tableDetails.capacity} places</p>
+          <div className="bg-surface-muted/80 border border-border rounded-2xl p-3">
+            <p className="text-[9px] font-bold text-muted uppercase tracking-wider">Capacité</p>
+            <p className="text-sm font-bold text-foreground mt-1">{tableDetails.capacity} places</p>
           </div>
         </div>
         {(guestId || seatingInvitationPdfUrl) && (
@@ -246,8 +246,8 @@ export default function GuestTablePlanView({
         )}
       </div>
 
-      <div className="bg-slate-800/40 border border-slate-700/40 rounded-3xl p-4 sm:p-6">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-4 text-center">
+      <div className="bg-surface-muted/80 border border-border rounded-3xl p-4 sm:p-6">
+        <p className="text-[10px] font-bold text-muted uppercase tracking-wider mb-4 text-center">
           Votre place à la table
         </p>
         <div className="relative flex items-center justify-center py-4" style={{ minHeight: Math.max(180, tableDetails.capacity * 28 + 80) }}>
@@ -279,10 +279,10 @@ export default function GuestTablePlanView({
                       {occupant.type === 'guest' || occupant.type === 'neighbor' ? (
                         <div
                           className={`w-9 h-9 rounded-full border flex items-center justify-center text-[8px] font-bold shadow-md ${
-                            occupant.type === 'guest'
-                              ? 'bg-amber-400 border-amber-500 text-amber-950 ring-2 ring-amber-300/50'
-                              : 'bg-emerald-500 border-emerald-600 text-white'
-                          }`}
+ occupant.type === 'guest'
+ ? 'bg-amber-400 border-amber-500 text-amber-950 ring-2 ring-amber-300/50'
+ : 'bg-emerald-500 border-emerald-600 text-white'
+ }`}
                         >
                           {occupant.initials}
                         </div>
@@ -300,22 +300,22 @@ export default function GuestTablePlanView({
       </div>
 
       <div className="space-y-3">
-        <h4 className="font-extrabold text-white text-xs uppercase tracking-wider flex items-center gap-2">
+        <h4 className="font-extrabold text-foreground text-xs uppercase tracking-wider flex items-center gap-2">
           <Users className="w-4 h-4" style={{ color: theme.accentColor }} />
           Vos voisins de table
         </h4>
         {tableDetails.neighbors.length === 0 ? (
-          <p className="text-slate-500 text-xs italic">Vous êtes seul(e) à cette table pour le moment.</p>
+          <p className="text-muted text-xs italic">Vous êtes seul(e) à cette table pour le moment.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {tableDetails.neighbors.map((neighbor) => (
-              <div key={neighbor.id} className="bg-slate-800/40 border border-slate-700/40 rounded-2xl p-4 flex items-center gap-3">
+              <div key={neighbor.id} className="bg-surface-muted/80 border border-border rounded-2xl p-4 flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full flex items-center justify-center font-black text-xs border" style={{ background: `${theme.accentColor}15`, borderColor: `${theme.accentColor}33`, color: theme.accentColor }}>
                   {neighbor.firstName[0]}{neighbor.lastName[0]}
                 </div>
                 <div>
-                  <span className="font-bold text-white text-xs block">{neighbor.firstName} {neighbor.lastName}</span>
-                  <span className="text-[9px] text-slate-400">{neighbor.seatIndex !== undefined ? `Siège ${neighbor.seatIndex + 1}` : 'Invité'}</span>
+                  <span className="font-bold text-foreground text-xs block">{neighbor.firstName} {neighbor.lastName}</span>
+                  <span className="text-[9px] text-muted">{neighbor.seatIndex !== undefined ? `Siège ${neighbor.seatIndex + 1}` : 'Invité'}</span>
                 </div>
               </div>
             ))}
@@ -327,10 +327,10 @@ export default function GuestTablePlanView({
 
   if (isFullscreen) {
     return (
-      <div className="fixed inset-0 z-[80] bg-slate-950/98 flex flex-col p-3 sm:p-4">
+      <div className="fixed inset-0 z-[80] bg-background/98 flex flex-col p-3 sm:p-4">
         <div className="flex items-center justify-between mb-3 shrink-0">
-          <p className="text-sm font-bold text-white">Plan de la salle · {theme.name}</p>
-          <button type="button" onClick={() => setIsFullscreen(false)} className="px-4 py-2 bg-white/10 text-white rounded-xl text-xs font-bold">
+          <p className="text-sm font-bold text-foreground">Plan de la salle · {theme.name}</p>
+          <button type="button" onClick={() => setIsFullscreen(false)} className="px-4 py-2 bg-surface/10 text-foreground rounded-xl text-xs font-bold">
             Fermer
           </button>
         </div>

@@ -280,19 +280,20 @@ function ProfilePageContent() {
                   <Palette className="w-4 h-4 text-primary" />
                   Couleurs de l&apos;organisation
                 </h2>
-                <p className="text-xs text-muted">
-                  Appliquées au tableau de bord (boutons, liens actifs, accents).
+                <p className="text-xs text-muted leading-relaxed">
+                  Marque partagée pour toute l&apos;équipe : boutons, liens actifs et accents du tableau de bord.
+                  Distinct de l&apos;accent personnel (icône palette dans l&apos;en-tête), qui ne s&apos;applique qu&apos;à cet appareil et peut masquer temporairement ces couleurs.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <label className="space-y-1.5 text-xs font-medium text-muted">
-                    Primary
+                    Couleur principale
                     <div className="flex items-center gap-3">
                       <input type="color" value={brandPrimary} onChange={(e) => setBrandPrimary(e.target.value)} className="h-10 w-14 rounded-[var(--radius-button)] border border-border cursor-pointer bg-transparent" />
                       <input type="text" value={brandPrimary} onChange={(e) => setBrandPrimary(e.target.value)} className="flex-1 px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm font-mono" />
                     </div>
                   </label>
                   <label className="space-y-1.5 text-xs font-medium text-muted">
-                    Accent
+                    Couleur d&apos;accent
                     <div className="flex items-center gap-3">
                       <input type="color" value={brandAccent} onChange={(e) => setBrandAccent(e.target.value)} className="h-10 w-14 rounded-[var(--radius-button)] border border-border cursor-pointer bg-transparent" />
                       <input type="text" value={brandAccent} onChange={(e) => setBrandAccent(e.target.value)} className="flex-1 px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm font-mono" />

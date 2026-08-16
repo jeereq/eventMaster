@@ -57,13 +57,13 @@ export default function ProductTourOverlay() {
     <>
       <div className="fixed inset-0 z-[10000] pointer-events-none" aria-hidden>
         {!targetRect && (
-          <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-[2px] pointer-events-auto" />
+          <div className="absolute inset-0 bg-foreground/60 backdrop-blur-[2px] pointer-events-auto" />
         )}
       </div>
 
       {targetRect && (
         <div
-          className="fixed z-[10001] pointer-events-none rounded-xl ring-4 ring-indigo-500 ring-offset-2 ring-offset-transparent transition-all duration-300"
+          className="fixed z-[10001] pointer-events-none rounded-xl ring-4 ring-primary ring-offset-2 ring-offset-transparent transition-all duration-300"
           style={{
             top: targetRect.top - 4,
             left: targetRect.left - 4,
@@ -78,12 +78,12 @@ export default function ProductTourOverlay() {
         role="dialog"
         aria-labelledby="tour-title"
         aria-describedby="tour-desc"
-        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-5 space-y-4 pointer-events-auto"
+        className="bg-surface border border-border rounded-[var(--radius-card)] shadow-2xl p-5 space-y-4 pointer-events-auto"
         style={cardStyle}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+            <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-primary">
               <MapPin className="w-3.5 h-3.5 shrink-0" />
               {currentStep.target ? (
                 <span>Onglet du menu · {stepIndex + 1}/{steps.length}</span>
@@ -91,33 +91,33 @@ export default function ProductTourOverlay() {
                 <span>Étape {stepIndex + 1}/{steps.length}</span>
               )}
             </div>
-            <h2 id="tour-title" className="font-extrabold text-slate-900 dark:text-white text-sm leading-snug">
+            <h2 id="tour-title" className="font-extrabold text-foreground text-sm leading-snug">
               {currentStep.title}
             </h2>
           </div>
           <button
             type="button"
             onClick={stopTour}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition shrink-0"
+            className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition shrink-0"
             aria-label="Quitter la visite"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <p id="tour-desc" className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+        <p id="tour-desc" className="text-xs text-muted leading-relaxed">
           {currentStep.description}
         </p>
 
-        <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+        <div className="h-1.5 bg-surface-muted rounded-full overflow-hidden">
           <div
-            className="h-full bg-indigo-600 rounded-full transition-all duration-300"
+            className="h-full bg-primary rounded-full transition-all duration-300"
             style={{ width: `${progress}%` }}
           />
         </div>
 
         {waitingForTarget && (
-          <p className="text-[10px] text-slate-400 flex items-center gap-1.5">
+          <p className="text-[10px] text-muted flex items-center gap-1.5">
             <Loader2 className="w-3 h-3 animate-spin" />
             Chargement de l&apos;élément…
           </p>
@@ -128,7 +128,7 @@ export default function ProductTourOverlay() {
             type="button"
             onClick={prevStep}
             disabled={isFirst}
-            className="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+            className="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold text-muted border border-border disabled:opacity-40 hover:bg-surface-muted transition"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
             Précédent
@@ -136,7 +136,7 @@ export default function ProductTourOverlay() {
           <button
             type="button"
             onClick={nextStep}
-            className="inline-flex items-center gap-1 px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition"
+            className="inline-flex items-center gap-1 px-4 py-2 rounded-xl text-xs font-bold bg-primary hover:bg-primary/90 text-white transition"
           >
             {isLast ? 'Terminer' : 'Suivant'}
             {!isLast && <ChevronRight className="w-3.5 h-3.5" />}

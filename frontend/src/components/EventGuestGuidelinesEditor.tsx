@@ -93,18 +93,18 @@ export default function EventGuestGuidelinesEditor({
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="space-y-5">
         {/* Dress code */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
+        <div className="bg-surface border border-border rounded-2xl p-5 space-y-4">
           <div className="flex items-center justify-between gap-3">
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Shirt className="w-4 h-4 text-indigo-600" />
+            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+              <Shirt className="w-4 h-4 text-primary" />
               Code vestimentaire
             </h3>
-            <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
+            <label className="flex items-center gap-2 text-xs font-bold text-muted cursor-pointer">
               <input
                 type="checkbox"
                 checked={guidelines.dressCode.enabled}
                 onChange={(e) => updateDressCode({ enabled: e.target.checked })}
-                className="rounded border-slate-300 text-indigo-600"
+                className="rounded border-border text-primary"
               />
               Activer
             </label>
@@ -119,13 +119,13 @@ export default function EventGuestGuidelinesEditor({
                     type="button"
                     onClick={() => selectDressPreset(id)}
                     className={`text-left p-2.5 rounded-xl border text-[10px] font-bold transition ${
-                      guidelines.dressCode.presetId === id
-                        ? 'bg-indigo-50 border-indigo-400 text-indigo-800 ring-1 ring-indigo-200'
-                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}
+ guidelines.dressCode.presetId === id
+ ? 'bg-primary/10 border-primary text-primary ring-1 ring-primary/30'
+ : 'border-border text-muted hover:bg-surface-muted'
+ }`}
                   >
                     {DRESS_CODE_PRESETS[id].label}
-                    <span className="block font-normal text-slate-400 mt-0.5 line-clamp-2">
+                    <span className="block font-normal text-muted mt-0.5 line-clamp-2">
                       {DRESS_CODE_PRESETS[id].description}
                     </span>
                   </button>
@@ -135,7 +135,7 @@ export default function EventGuestGuidelinesEditor({
               {guidelines.dressCode.presetId === 'theme_color' && (
                 <div className="grid grid-cols-2 gap-3">
                   <label className="text-xs space-y-1">
-                    <span className="font-semibold text-slate-600">Couleur</span>
+                    <span className="font-semibold text-muted">Couleur</span>
                     <input
                       type="color"
                       value={guidelines.dressCode.themeColor ?? '#7c3aed'}
@@ -144,7 +144,7 @@ export default function EventGuestGuidelinesEditor({
                     />
                   </label>
                   <label className="text-xs space-y-1">
-                    <span className="font-semibold text-slate-600">Libellé couleurs</span>
+                    <span className="font-semibold text-muted">Libellé couleurs</span>
                     <input
                       value={guidelines.dressCode.themeColorLabel ?? ''}
                       onChange={(e) => updateDressCode({ themeColorLabel: e.target.value })}
@@ -156,7 +156,7 @@ export default function EventGuestGuidelinesEditor({
               )}
 
               <label className="block text-xs space-y-1">
-                <span className="font-semibold text-slate-600">Précisions</span>
+                <span className="font-semibold text-muted">Précisions</span>
                 <textarea
                   value={guidelines.dressCode.customText ?? ''}
                   onChange={(e) => updateDressCode({ customText: e.target.value })}
@@ -167,8 +167,8 @@ export default function EventGuestGuidelinesEditor({
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-600">Exemples</span>
-                  <button type="button" onClick={addExample} className="text-[10px] font-bold text-indigo-600 flex items-center gap-1">
+                  <span className="text-xs font-semibold text-muted">Exemples</span>
+                  <button type="button" onClick={addExample} className="text-[10px] font-bold text-primary flex items-center gap-1">
                     <Plus className="w-3 h-3" /> Ajouter
                   </button>
                 </div>
@@ -191,8 +191,8 @@ export default function EventGuestGuidelinesEditor({
         </div>
 
         {/* Recommendations */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
-          <h3 className="text-sm font-bold text-slate-900">Recommandations pratiques</h3>
+        <div className="bg-surface border border-border rounded-2xl p-5 space-y-4">
+          <h3 className="text-sm font-bold text-foreground">Recommandations pratiques</h3>
 
           <div className="flex flex-wrap gap-1.5">
             {(Object.keys(RECOMMENDATION_PRESETS) as RecommendationType[]).filter((t) => t !== 'custom').map((type) => (
@@ -201,7 +201,7 @@ export default function EventGuestGuidelinesEditor({
                 type="button"
                 onClick={() => addRecommendation(type)}
                 disabled={guidelines.recommendations.some((r) => r.type === type)}
-                className="px-2.5 py-1 rounded-lg border border-slate-200 text-[10px] font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-2.5 py-1 rounded-lg border border-border text-[10px] font-bold text-muted hover:bg-surface-muted disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 + {RECOMMENDATION_PRESETS[type].label}
               </button>
@@ -209,7 +209,7 @@ export default function EventGuestGuidelinesEditor({
             <button
               type="button"
               onClick={() => addRecommendation('custom')}
-              className="px-2.5 py-1 rounded-lg border border-indigo-200 text-[10px] font-bold text-indigo-600 hover:bg-indigo-50"
+              className="px-2.5 py-1 rounded-lg border border-primary/30 text-[10px] font-bold text-primary hover:bg-primary/10"
             >
               + Autre
             </button>
@@ -217,17 +217,17 @@ export default function EventGuestGuidelinesEditor({
 
           <div className="space-y-3">
             {guidelines.recommendations.length === 0 && (
-              <p className="text-xs text-slate-400 italic text-center py-4">Aucune recommandation — ajoutez-en ci-dessus.</p>
+              <p className="text-xs text-muted italic text-center py-4">Aucune recommandation — ajoutez-en ci-dessus.</p>
             )}
             {guidelines.recommendations.map((rec) => (
-              <div key={rec.id} className="border border-slate-200 rounded-xl p-3 space-y-2 bg-slate-50/50">
+              <div key={rec.id} className="border border-border rounded-xl p-3 space-y-2 bg-surface-muted/50">
                 <div className="flex items-center justify-between gap-2">
-                  <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                  <label className="flex items-center gap-2 text-xs font-bold text-foreground">
                     <input
                       type="checkbox"
                       checked={rec.enabled}
                       onChange={(e) => toggleRecommendation(rec.id, e.target.checked)}
-                      className="rounded border-slate-300 text-indigo-600"
+                      className="rounded border-border text-primary"
                     />
                     {rec.title || RECOMMENDATION_PRESETS[rec.type]?.label || 'Recommandation'}
                   </label>
@@ -246,7 +246,7 @@ export default function EventGuestGuidelinesEditor({
                 <textarea
                   value={rec.content}
                   onChange={(e) => updateRecommendation(rec.id, { content: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border text-xs h-16 resize-none bg-white"
+                  className="w-full px-3 py-2 rounded-lg border text-xs h-16 resize-none bg-surface"
                 />
               </div>
             ))}
@@ -254,9 +254,9 @@ export default function EventGuestGuidelinesEditor({
         </div>
 
         {/* Notes & visibility */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
+        <div className="bg-surface border border-border rounded-2xl p-5 space-y-4">
           <label className="block text-xs space-y-1">
-            <span className="font-semibold text-slate-600">Notes complémentaires</span>
+            <span className="font-semibold text-muted">Notes complémentaires</span>
             <textarea
               value={guidelines.additionalNotes ?? ''}
               onChange={(e) => update({ additionalNotes: e.target.value })}
@@ -265,21 +265,21 @@ export default function EventGuestGuidelinesEditor({
             />
           </label>
           <div className="space-y-2 text-xs">
-            <label className="flex items-center gap-2 font-semibold text-slate-600 cursor-pointer">
+            <label className="flex items-center gap-2 font-semibold text-muted cursor-pointer">
               <input
                 type="checkbox"
                 checked={guidelines.showOnRsvp}
                 onChange={(e) => update({ showOnRsvp: e.target.checked })}
-                className="rounded border-slate-300 text-indigo-600"
+                className="rounded border-border text-primary"
               />
               Afficher sur le portail RSVP invité
             </label>
-            <label className="flex items-center gap-2 font-semibold text-slate-600 cursor-pointer">
+            <label className="flex items-center gap-2 font-semibold text-muted cursor-pointer">
               <input
                 type="checkbox"
                 checked={guidelines.showOnInvitation}
                 onChange={(e) => update({ showOnInvitation: e.target.checked })}
-                className="rounded border-slate-300 text-indigo-600"
+                className="rounded border-border text-primary"
               />
               Inclure dans les variables d&apos;invitation
             </label>
@@ -288,7 +288,7 @@ export default function EventGuestGuidelinesEditor({
             type="button"
             onClick={onSave}
             disabled={saving}
-            className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2"
+            className="w-full py-2.5 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2"
           >
             {saving ? <span>Enregistrement…</span> : <><Save className="w-4 h-4" /> Enregistrer les infos invités</>}
           </button>
@@ -297,20 +297,20 @@ export default function EventGuestGuidelinesEditor({
 
       {/* Preview */}
       <div className="space-y-3">
-        <p className="text-xs font-bold uppercase text-slate-500 flex items-center gap-1.5">
+        <p className="text-xs font-bold uppercase text-muted flex items-center gap-1.5">
           <Eye className="w-3.5 h-3.5" /> Aperçu invité
         </p>
         {hasVisibleGuestGuidelines(guidelines) ? (
           <GuestGuidelinesView guidelines={guidelines} variant="light" />
         ) : (
-          <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-xs text-slate-400">
+          <div className="rounded-2xl border border-dashed border-border p-8 text-center text-xs text-muted">
             Activez le code vestimentaire ou ajoutez des recommandations pour voir l&apos;aperçu.
             {guidelines.dressCode.enabled && !formatDressCodeText(guidelines) && (
               <p className="mt-2 text-amber-600">Le code vestimentaire est activé mais le texte est vide.</p>
             )}
           </div>
         )}
-        <p className="text-[10px] text-slate-400 leading-relaxed">
+        <p className="text-[10px] text-muted leading-relaxed">
           Variables invitation : {'{{dressCode}}'}, {'{{dressCodeShort}}'}, {'{{recommendations}}'}, {'{{guestNotes}}'}, {'{{guestGuidelines}}'}
         </p>
       </div>
