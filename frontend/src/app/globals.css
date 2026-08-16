@@ -3,29 +3,34 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #f6f7f8;
+  --foreground: #1e1f21;
   --surface: #ffffff;
-  --surface-muted: #f1f5f9;
-  --border: #e2e8f0;
-  --border-subtle: #f1f5f9;
+  --surface-muted: #f0f1f3;
+  --border: #e0e1e3;
+  --border-subtle: #eceef0;
   --primary: #4f46e5;
   --primary-hover: #4338ca;
-  --muted: #64748b;
-  --radius-card: 1rem;
-  --radius-button: 0.75rem;
+  --muted: #6d6e6f;
+  --sidebar: #f0f1f3;
+  --card-hover: #fafbfc;
+  --radius-card: 0.75rem;
+  --radius-button: 0.5rem;
 }
 
 .dark {
-  --background: #020617;
-  --foreground: #f8fafc;
-  --surface: #0f172a;
-  --surface-muted: #1e293b;
-  --border: #1e293b;
-  --border-subtle: #334155;
+  /* Asana-like charcoal (warm, not blue-slate) */
+  --background: #1e1f21;
+  --foreground: #f5f5f5;
+  --surface: #2a2b2d;
+  --surface-muted: #323437;
+  --border: #3e3f42;
+  --border-subtle: #48494b;
   --primary: #6366f1;
   --primary-hover: #818cf8;
-  --muted: #94a3b8;
+  --muted: #a2a0a2;
+  --sidebar: #191a1c;
+  --card-hover: #323437;
 }
 
 @theme inline {
@@ -38,6 +43,8 @@
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-muted: var(--muted);
+  --color-sidebar: var(--sidebar);
+  --color-card-hover: var(--card-hover);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --radius-card: var(--radius-card);
@@ -105,88 +112,86 @@ body {
   }
 }
 
-/* Dark Mode Global Overrides for Dashboard & Forms */
+/* Dark Mode Global Overrides for Dashboard & Forms — Asana charcoal */
 .dark {
-  /* Background overrides */
   .bg-white {
-    background-color: #0f172a !important;
+    background-color: var(--surface) !important;
   }
   .bg-slate-50 {
-    background-color: #020617 !important;
+    background-color: var(--background) !important;
   }
   .bg-slate-100 {
-    background-color: #1e293b !important;
+    background-color: var(--surface-muted) !important;
   }
-  
-  /* Hover overrides */
+  .bg-slate-900 {
+    background-color: var(--surface) !important;
+  }
+
   .hover\:bg-slate-50:hover {
-    background-color: #1e293b !important;
+    background-color: var(--card-hover) !important;
   }
   .hover\:bg-slate-100:hover {
-    background-color: #334155 !important;
+    background-color: var(--surface-muted) !important;
   }
   .hover\:text-slate-900:hover {
     color: #ffffff !important;
   }
-  
-  /* Text overrides */
+
   .text-slate-900 {
-    color: #f8fafc !important;
+    color: #f5f5f5 !important;
   }
   .text-slate-800 {
-    color: #f1f5f9 !important;
+    color: #ececec !important;
   }
   .text-slate-700 {
-    color: #e2e8f0 !important;
+    color: #d8d8d8 !important;
   }
   .text-slate-600 {
-    color: #cbd5e1 !important;
+    color: #c0c0c0 !important;
   }
   .text-slate-500 {
-    color: #94a3b8 !important;
+    color: var(--muted) !important;
   }
   .text-slate-400 {
-    color: #64748b !important;
+    color: #8b8a8b !important;
   }
-  
-  /* Border overrides */
+
   .border-slate-100,
   .border-slate-150,
   .border-slate-200,
-  .border-slate-300 {
-    border-color: #1e293b !important;
+  .border-slate-300,
+  .border-slate-800 {
+    border-color: var(--border) !important;
   }
-  
-  /* Inputs, Textareas, Selects */
+
   input, textarea, select {
-    background-color: #020617 !important;
-    color: #f8fafc !important;
-    border-color: #1e293b !important;
+    background-color: var(--background) !important;
+    color: var(--foreground) !important;
+    border-color: var(--border) !important;
   }
   input::placeholder, textarea::placeholder {
-    color: #475569 !important;
+    color: #6d6e6f !important;
   }
   input:focus, textarea:focus, select:focus {
-    border-color: #6366f1 !important;
-    background-color: #020617 !important;
+    border-color: var(--primary) !important;
+    background-color: var(--background) !important;
   }
-  
-  /* Tables */
+
   table {
-    background-color: #0f172a !important;
-    border-color: #1e293b !important;
+    background-color: var(--surface) !important;
+    border-color: var(--border) !important;
   }
   th {
-    background-color: #020617 !important;
-    color: #94a3b8 !important;
-    border-color: #1e293b !important;
+    background-color: var(--background) !important;
+    color: var(--muted) !important;
+    border-color: var(--border) !important;
   }
   td {
-    border-color: #1e293b !important;
+    border-color: var(--border) !important;
   }
 }
 
-/* ─── Theme-aware shadows ─── */
+/* ─── Theme-aware shadows (Asana: soft / minimal) ─── */
 .dark {
   .dark\:shadow-none {
     --tw-shadow: 0 0 #0000 !important;
@@ -194,35 +199,33 @@ body {
     box-shadow: none !important;
   }
 
-  .shadow-xs {
-    box-shadow: 0 1px 1px 0 rgb(0 0 0 / 0.28);
-  }
+  .shadow-xs,
   .shadow-sm {
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.32), 0 1px 2px -1px rgb(0 0 0 / 0.28);
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.35);
   }
   .shadow-md {
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.38), 0 2px 4px -2px rgb(0 0 0 / 0.32);
+    box-shadow: 0 2px 8px 0 rgb(0 0 0 / 0.4);
   }
   .shadow-lg {
-    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.42), 0 4px 6px -4px rgb(0 0 0 / 0.36);
+    box-shadow: 0 8px 16px -4px rgb(0 0 0 / 0.45);
   }
   .shadow-xl {
-    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.48), 0 8px 10px -6px rgb(0 0 0 / 0.42);
+    box-shadow: 0 12px 24px -6px rgb(0 0 0 / 0.5);
   }
   .shadow-2xl {
-    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.58);
+    box-shadow: 0 20px 40px -10px rgb(0 0 0 / 0.55);
   }
 
   .shadow-indigo-100,
   .shadow-indigo-150 {
-    --tw-shadow-color: rgb(99 102 241 / 0.22);
+    --tw-shadow-color: rgb(99 102 241 / 0.18);
   }
   .shadow-indigo-500\/10 {
-    --tw-shadow-color: rgb(99 102 241 / 0.12);
+    --tw-shadow-color: rgb(99 102 241 / 0.1);
   }
   .shadow-indigo-500\/20,
   .shadow-indigo-500\/30 {
-    --tw-shadow-color: rgb(99 102 241 / 0.2);
+    --tw-shadow-color: rgb(99 102 241 / 0.16);
   }
   .shadow-slate-100,
   .shadow-slate-200 {
@@ -241,13 +244,13 @@ body {
   }
 
   .hover\:shadow-md:hover {
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.38), 0 2px 4px -2px rgb(0 0 0 / 0.32);
+    box-shadow: 0 2px 8px 0 rgb(0 0 0 / 0.4);
   }
   .hover\:shadow-lg:hover {
-    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.42), 0 4px 6px -4px rgb(0 0 0 / 0.36);
+    box-shadow: 0 8px 16px -4px rgb(0 0 0 / 0.45);
   }
   .hover\:shadow-xl:hover {
-    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.48), 0 8px 10px -6px rgb(0 0 0 / 0.42);
+    box-shadow: 0 12px 24px -6px rgb(0 0 0 / 0.5);
   }
 }
 
@@ -261,11 +264,11 @@ body {
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: #c8c9cc;
     border-radius: 9999px;
   }
   .dark ::-webkit-scrollbar-thumb {
-    background: #334155;
+    background: #48494b;
   }
 }
 

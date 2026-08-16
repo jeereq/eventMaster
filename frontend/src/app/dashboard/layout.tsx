@@ -47,11 +47,11 @@ function SidebarNav({
       {sections.map((section, sectionIdx) => (
         <div key={section.label ?? sectionIdx}>
           {section.label && (
-            <p className="px-4 mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted">
               {section.label}
             </p>
           )}
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {section.items.map((item) => {
               const Icon = item.icon;
               const isActive = item.tab
@@ -65,13 +65,13 @@ function SidebarNav({
                   data-tour={item.tourId}
                   onClick={() => setMobileMenuOpen(false)}
                   className={cn(
-                    'flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-150',
+                    'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-150',
                     isActive
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800',
+                      ? 'bg-surface-muted text-primary'
+                      : 'text-muted hover:text-foreground hover:bg-surface-muted/70',
                   )}
                 >
-                  <Icon className="w-[18px] h-[18px] shrink-0" />
+                  <Icon className={cn('w-[18px] h-[18px] shrink-0', isActive && 'text-primary')} />
                   <span className="truncate">{item.name}</span>
                 </Link>
               );
@@ -109,13 +109,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (loading || !token || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4 animate-fade-in">
-          <div className="bg-indigo-600 p-3 rounded-2xl text-white shadow-lg shadow-indigo-500/20">
+          <div className="bg-indigo-600 p-3 rounded-xl text-white">
             <PartyPopper className="w-8 h-8" />
           </div>
           <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
-          <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+          <p className="text-sm font-medium text-muted">
             Chargement de votre espace…
           </p>
         </div>
@@ -230,43 +230,43 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="min-h-screen flex items-center justify-center bg-background">
           <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
         </div>
       }
     >
       <TourProvider>
-        <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
+        <div className="min-h-screen flex flex-col md:flex-row bg-background text-foreground transition-colors duration-200">
       {/* Overlay mobile */}
       {mobileMenuOpen && (
         <button
           type="button"
           aria-label="Fermer le menu"
-          className="fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-sm md:hidden animate-fade-in"
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden animate-fade-in"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
       {/* Header mobile */}
-      <header className="md:hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 h-14 px-4 flex items-center justify-between sticky top-0 z-50">
+      <header className="md:hidden bg-sidebar border-b border-border h-14 px-4 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-2.5">
           <div className="bg-indigo-600 p-1.5 rounded-lg text-white">
             <PartyPopper className="w-4 h-4" />
           </div>
-          <span className="font-bold text-base text-slate-900 dark:text-white">EventMaster</span>
+          <span className="font-semibold text-base text-foreground">EventMaster</span>
         </div>
         <div className="flex items-center gap-1.5">
           {showCommercialNotifications && <NotificationBell />}
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+            className="p-2 rounded-lg border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
             aria-label="Changer de thème"
           >
             {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
           </button>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+            className="p-2 rounded-lg text-muted hover:bg-surface-muted hover:text-foreground transition"
             aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
             aria-expanded={mobileMenuOpen}
           >
@@ -278,31 +278,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed top-14 bottom-0 left-0 z-40 w-72 max-w-[85vw] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800',
+          'fixed top-14 bottom-0 left-0 z-40 w-72 max-w-[85vw] bg-sidebar border-r border-border',
           'flex flex-col transform transition-transform duration-300 ease-out',
           'md:top-0 md:bottom-auto md:inset-y-0 md:translate-x-0 md:sticky md:h-screen md:w-64 md:max-w-none md:z-30',
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
         )}
       >
-        <div className="flex-1 overflow-y-auto p-5 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 space-y-5">
           {/* Logo desktop */}
           <div className="hidden md:flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-md shadow-indigo-500/20">
+            <div className="flex items-center gap-2.5">
+              <div className="bg-indigo-600 p-2 rounded-lg text-white">
                 <PartyPopper className="w-5 h-5" />
               </div>
               <div>
-                <span className="font-bold text-base text-slate-900 dark:text-white block leading-none">EventMaster</span>
-                <span className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mt-1 block">
+                <span className="font-semibold text-base text-foreground block leading-none">EventMaster</span>
+                <span className="text-[10px] font-semibold text-muted uppercase tracking-wider mt-1 block">
                   Workspace
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               {showCommercialNotifications && <NotificationBell />}
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+                className="p-2 rounded-lg border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
                 aria-label="Changer de thème"
               >
                 {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
@@ -312,32 +312,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* Contexte tenant / admin */}
           {user?.role === 'SUPER_ADMIN' ? (
-            <div className="p-3.5 bg-slate-900 dark:bg-slate-950 text-white border border-slate-800 rounded-xl">
-              <div className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider">Rôle global</div>
-              <div className="font-semibold text-sm mt-0.5">Super Admin</div>
-              <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-bold text-indigo-300">
+            <div className="p-3 bg-surface border border-border rounded-lg">
+              <div className="text-[10px] text-muted font-semibold uppercase tracking-wider">Rôle global</div>
+              <div className="font-semibold text-sm mt-0.5 text-foreground">Super Admin</div>
+              <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-indigo-500/10 text-[10px] font-bold text-primary">
                 <ShieldCheck className="w-3 h-3" />
                 Plateforme SaaS
               </div>
             </div>
           ) : user?.role === 'COMMERCIAL' ? (
-            <div className="p-3.5 bg-amber-950 text-white border border-amber-800 rounded-xl">
+            <div className="p-3 bg-amber-950/40 text-white border border-amber-800/50 rounded-lg">
               <div className="text-[10px] text-amber-300 font-bold uppercase tracking-wider">Rôle global</div>
               <div className="font-semibold text-sm mt-0.5">Commercial plateforme</div>
-              <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-[10px] font-bold text-amber-300">
+              <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/10 text-[10px] font-bold text-amber-300">
                 <Briefcase className="w-3 h-3" />
                 Sans organisation
               </div>
             </div>
           ) : tenant ? (
-            <div className="p-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl">
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">
+            <div className="p-3 bg-surface border border-border rounded-lg">
+              <div className="text-[10px] text-muted font-semibold uppercase tracking-wider">
                 Organisation
               </div>
-              <div className="font-semibold text-slate-800 dark:text-slate-100 text-sm truncate mt-0.5">
+              <div className="font-semibold text-foreground text-sm truncate mt-0.5">
                 {tenant.name}
               </div>
-              <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-[10px] font-bold text-indigo-700 dark:text-indigo-300">
+              <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-indigo-500/10 text-[10px] font-bold text-primary">
                 <ShieldCheck className="w-3 h-3" />
                 Plan {tenant.plan}
               </div>
@@ -356,26 +356,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Profil & déconnexion */}
-        <div className="border-t border-slate-200 dark:border-slate-800 p-5 space-y-3 shrink-0">
+        <div className="border-t border-border p-4 space-y-2 shrink-0">
           <Link
             href="/dashboard/profile"
             data-tour="nav-profile"
             onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition group"
+            className="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-muted transition group"
           >
-            <div className="w-9 h-9 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center font-bold text-indigo-700 dark:text-indigo-300 text-xs">
+            <div className="w-8 h-8 rounded-full bg-indigo-500/15 flex items-center justify-center font-bold text-primary text-xs">
               {user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}
             </div>
             <div className="min-w-0 flex-1">
-              <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm truncate block group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              <span className="font-semibold text-foreground text-sm truncate block group-hover:text-primary transition-colors">
                 {user.name}
               </span>
-              <span className="text-xs text-slate-500 dark:text-slate-400 truncate block">{user.email}</span>
+              <span className="text-xs text-muted truncate block">{user.email}</span>
             </div>
           </Link>
           <button
             onClick={logout}
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition"
+            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium text-rose-500 hover:bg-rose-500/10 transition"
           >
             <LogOut className="w-4 h-4" />
             Déconnexion
@@ -384,8 +384,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Contenu principal */}
-      <main className="flex-1 min-w-0 overflow-y-auto">
-        <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+      <main className="flex-1 min-w-0 overflow-y-auto bg-background">
+        <div className="max-w-7xl mx-auto p-5 sm:p-6 lg:p-8">
           <UserLegalGate>{children}</UserLegalGate>
         </div>
       </main>
