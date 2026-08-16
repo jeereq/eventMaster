@@ -46,6 +46,8 @@ import {
   formatCustomFieldValueForDisplay,
   isBooleanFieldType,
   type RsvpFormDataEntry,
+  SPECIAL_MEAL_OPTIONS,
+  specialMealLabel,
 } from '@/lib/rsvpFormFields';
 
 interface EventItem {
@@ -304,6 +306,9 @@ export default function EventsPage() {
   const [guestPhoneNational, setGuestPhoneNational] = useState('');
   const [guestCategory, setGuestCategory] = useState('Famille');
   const [guestPrefs, setGuestPreferences] = useState('');
+  const [guestAllergies, setGuestAllergies] = useState('');
+  const [guestSpecialMeal, setGuestSpecialMeal] = useState('none');
+  const [guestRsvp, setGuestRsvp] = useState<'PENDING' | 'ACCEPTED' | 'DECLINED'>('PENDING');
   const [guests, setGuests] = useState<GuestItem[]>([]);
   const [editingGuestId, setEditingGuestId] = useState<string | null>(null);
   const [savingGuest, setSavingGuest] = useState(false);
@@ -696,6 +701,9 @@ export default function EventsPage() {
     setGuestPhoneCountryCode(DEFAULT_PHONE_COUNTRY_CODE);
     setGuestPhoneNational('');
     setGuestPreferences('');
+    setGuestAllergies('');
+    setGuestSpecialMeal('none');
+    setGuestRsvp('PENDING');
     setGuestCategory('Famille');
     setShowGuestModal(true);
   };
@@ -930,11 +938,14 @@ export default function EventsPage() {
         lastName: guestLastName,
         email: guestEmail,
         category: guestCategory,
+        rsvp: guestRsvp,
         phone: e164,
         phoneCountryCode: guestPhoneCountryCode,
         nationalNumber: guestPhoneNational,
         preferences: {
-          notes: guestPrefs || undefined,
+          notes: guestPrefs.trim() || undefined,
+          allergies: guestAllergies.trim() || undefined,
+          specialMeal: guestSpecialMeal || 'none',
           phone: e164,
         },
       };
@@ -955,6 +966,9 @@ export default function EventsPage() {
       setGuestPhoneCountryCode(DEFAULT_PHONE_COUNTRY_CODE);
       setGuestPhoneNational('');
       setGuestPreferences('');
+      setGuestAllergies('');
+      setGuestSpecialMeal('none');
+      setGuestRsvp('PENDING');
       setEditingGuestId(null);
       setShowGuestModal(false);
     } catch (err: any) {
@@ -972,9 +986,13 @@ export default function EventsPage() {
     setGuestCategory(guest.category || 'Famille');
 
     let notes = '';
+    let allergies = '';
+    let specialMeal = 'none';
     if (guest.preferences && typeof guest.preferences === 'object') {
-      const prefs = guest.preferences as { notes?: string; phone?: string };
+      const prefs = guest.preferences as { notes?: string; phone?: string; allergies?: string; specialMeal?: string };
       notes = prefs.notes || '';
+      allergies = prefs.allergies || '';
+      specialMeal = prefs.specialMeal || 'none';
     }
     const parts = parseStoredPhone(
       guest.phone || (guest.preferences as { phone?: string } | undefined)?.phone,
@@ -983,6 +1001,9 @@ export default function EventsPage() {
     setGuestPhoneCountryCode(parts.countryCode);
     setGuestPhoneNational(parts.national);
     setGuestPreferences(notes);
+    setGuestAllergies(allergies);
+    setGuestSpecialMeal(specialMeal);
+    setGuestRsvp((guest.rsvp as 'PENDING' | 'ACCEPTED' | 'DECLINED') || 'PENDING');
     setShowGuestModal(true);
   };
 
@@ -1005,10 +1026,12 @@ export default function EventsPage() {
       return;
     }
     
-    const headers = ["Prénom", "Nom", "Email", "Téléphone", "Catégorie", "Statut RSVP", "Préférences & Notes"];
+    const headers = ["Prénom", "Nom", "Email", "Téléphone", "Catégorie", "Statut RSVP", "Régime", "Allergies", "Notes"];
     const rows = guests.map(g => {
-      const phone = g.preferences?.phone || g.preferences?.telephone || "";
+      const phone = g.phone || g.preferences?.phone || g.preferences?.telephone || "";
       const notes = g.preferences?.notes || "";
+      const allergies = g.preferences?.allergies || "";
+      const meal = specialMealLabel(g.preferences?.specialMeal);
       return [
         g.firstName,
         g.lastName,
@@ -1016,6 +1039,8 @@ export default function EventsPage() {
         phone,
         g.category || "Général",
         g.rsvp === "ACCEPTED" ? "Accepté" : g.rsvp === "DECLINED" ? "Décliné" : "En attente",
+        meal,
+        allergies,
         notes
       ];
     });
@@ -1067,7 +1092,9 @@ export default function EventsPage() {
               email: cols[2],
               category: cols[3] || 'Général',
               phone: cols[4] || '',
-              notes: cols[5] || '',
+              specialMeal: cols[5] || 'none',
+              allergies: cols[6] || '',
+              notes: cols[7] || '',
             });
           }
         });
@@ -1136,6 +1163,8 @@ export default function EventsPage() {
         const categoryIdx = headers.findIndex(h => h.includes('cat') || h.includes('groupe') || h.includes('type'));
         const phoneIdx = headers.findIndex(h => h.includes('tel') || h.includes('tél') || h.includes('phone') || h.includes('whatsapp') || h.includes('mobile'));
         const notesIdx = headers.findIndex(h => h.includes('note') || h.includes('pref') || h.includes('remarque') || h.includes('commentaire'));
+        const allergiesIdx = headers.findIndex(h => h.includes('allerg'));
+        const mealIdx = headers.findIndex(h => h.includes('régime') || h.includes('regime') || h.includes('repas') || h.includes('meal') || h.includes('diet'));
 
         // Fallback to default indices if not found
         const finalFirstNameIdx = firstNameIdx !== -1 ? firstNameIdx : 0;
@@ -1143,7 +1172,20 @@ export default function EventsPage() {
         const finalEmailIdx = emailIdx !== -1 ? emailIdx : 2;
         const finalCategoryIdx = categoryIdx !== -1 ? categoryIdx : 3;
         const finalPhoneIdx = phoneIdx !== -1 ? phoneIdx : 4;
-        const finalNotesIdx = notesIdx !== -1 ? notesIdx : 5;
+        const finalMealIdx = mealIdx !== -1 ? mealIdx : 5;
+        const finalAllergiesIdx = allergiesIdx !== -1 ? allergiesIdx : 6;
+        const finalNotesIdx = notesIdx !== -1 ? notesIdx : 7;
+
+        const normalizeMeal = (raw: string) => {
+          const v = raw.toLowerCase().trim();
+          if (!v || v === 'standard' || v === 'aucun' || v === 'none') return 'none';
+          if (v.includes('vegan') || v.includes('végétal')) return 'vegan';
+          if (v.includes('végét') || v.includes('veget')) return 'vegetarian';
+          if (v.includes('halal')) return 'halal';
+          if (v.includes('casher') || v.includes('kosher')) return 'kosher';
+          if (['none', 'vegetarian', 'vegan', 'halal', 'kosher'].includes(v)) return v;
+          return 'none';
+        };
 
         const guestsList: any[] = [];
         for (let i = 1; i < jsonData.length; i++) {
@@ -1163,6 +1205,8 @@ export default function EventsPage() {
             email: email || `invite.${i}@simulation.com`,
             category: row[finalCategoryIdx]?.toString().trim() || 'Général',
             phone: row[finalPhoneIdx]?.toString().trim() || '',
+            specialMeal: normalizeMeal(row[finalMealIdx]?.toString() || ''),
+            allergies: row[finalAllergiesIdx]?.toString().trim() || '',
             notes: row[finalNotesIdx]?.toString().trim() || '',
           });
         }
@@ -1222,11 +1266,11 @@ export default function EventsPage() {
 
   // Download Sample Template File
   const downloadSampleTemplate = (type: 'excel' | 'csv') => {
-    const headers = ['Prénom', 'Nom', 'Email', 'Catégorie', 'Téléphone', 'Notes/Préférences'];
+    const headers = ['Prénom', 'Nom', 'Email', 'Catégorie', 'Téléphone', 'Régime', 'Allergies', 'Notes'];
     const sampleRows = [
-      ['Jean', 'Kabeya', 'jean.kabeya@gmail.com', 'VIP', '+243812345678', 'Besoin de transport, régime Halal'],
-      ['Sarah', 'Mwamba', 'sarah.m@outlook.com', 'Ami', '+243998765432', 'Allergique aux arachides'],
-      ['Christian', 'Tshilombo', 'c.tshilombo@gmail.com', 'Famille', '', 'Végétarien, vient avec un accompagnateur'],
+      ['Jean', 'Kabeya', 'jean.kabeya@gmail.com', 'VIP', '+243812345678', 'halal', '', 'Besoin de transport'],
+      ['Sarah', 'Mwamba', 'sarah.m@outlook.com', 'Ami', '+243998765432', 'none', 'Arachides', ''],
+      ['Christian', 'Tshilombo', 'c.tshilombo@gmail.com', 'Famille', '', 'vegetarian', 'Gluten', 'Vient avec un accompagnateur'],
     ];
 
     if (type === 'excel') {
@@ -1235,7 +1279,7 @@ export default function EventsPage() {
       XLSX.utils.book_append_sheet(wb, ws, 'Modèle Invités');
       XLSX.writeFile(wb, 'modele_invites_eventmaster.xlsx');
     } else {
-      const csvContent = [headers.join(','), ...sampleRows.map(row => row.map(val => `"${val.replace(/"/g, '""')}"`).join(','))].join('\n');
+      const csvContent = [headers.join(','), ...sampleRows.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))].join('\n');
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -2619,7 +2663,7 @@ export default function EventsPage() {
                   hint="Indicatif + numéro national (sans le 0)."
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-muted uppercase tracking-wider">Catégorie</label>
                   <select 
@@ -2635,15 +2679,60 @@ export default function EventsPage() {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-muted uppercase tracking-wider">Notes (Optionnel)</label>
-                  <input 
-                    type="text" 
+                  <label className="text-xs font-bold text-muted uppercase tracking-wider">Statut RSVP</label>
+                  <select
+                    value={guestRsvp}
+                    onChange={(e) => setGuestRsvp(e.target.value as 'PENDING' | 'ACCEPTED' | 'DECLINED')}
+                    className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
+                  >
+                    <option value="PENDING">En attente</option>
+                    <option value="ACCEPTED">Accepté</option>
+                    <option value="DECLINED">Décliné</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/50 p-3 space-y-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                  Reporting restauration
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted">Régime alimentaire</label>
+                    <select
+                      value={guestSpecialMeal}
+                      onChange={(e) => setGuestSpecialMeal(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
+                    >
+                      {SPECIAL_MEAL_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted">Allergies</label>
+                    <input
+                      type="text"
+                      value={guestAllergies}
+                      onChange={(e) => setGuestAllergies(e.target.value)}
+                      placeholder="ex. Arachides, gluten"
+                      className="w-full px-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted">Notes (optionnel)</label>
+                  <input
+                    type="text"
                     value={guestPrefs}
                     onChange={(e) => setGuestPreferences(e.target.value)}
-                    placeholder="ex. Table d'honneur"
-                    className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
+                    placeholder="ex. Table d'honneur, mobilité réduite"
+                    className="w-full px-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
                   />
                 </div>
+                <p className="text-[10px] text-muted leading-relaxed">
+                  Ces informations alimentent les filtres, statistiques et exports CSV de reporting.
+                </p>
               </div>
               <div className="pt-4 flex gap-3 border-t border-border">
                 <button 
@@ -2750,7 +2839,7 @@ export default function EventsPage() {
                         Modèle de document requis
                       </div>
                       <p className="text-[11px] text-primary/80">
-                        Pour garantir un import parfait, utilisez notre modèle contenant les en-têtes corrects.
+                        Colonnes : Prénom, Nom, Email, Catégorie, Téléphone, Régime, Allergies, Notes.
                       </p>
                     </div>
                     <button
@@ -2809,9 +2898,9 @@ export default function EventsPage() {
                     </div>
                     <p>Copiez et collez vos lignes d'invités en respectant l'ordre des colonnes séparées par des virgules :</p>
                     <pre className="bg-surface p-2.5 rounded-xl border border-primary/20 font-mono text-[11px] text-foreground overflow-x-auto">
-                      Prénom, Nom, Email, Catégorie, Téléphone, Notes{'\n'}
-                      Jean, Kabeya, jean.kabeya@gmail.com, VIP, +243812345678, Table d'honneur{'\n'}
-                      Sarah, Mwamba, sarah.m@outlook.com, Ami, +243998765432, Allergie arachides
+                      Prénom, Nom, Email, Catégorie, Téléphone, Régime, Allergies, Notes{'\n'}
+                      Jean, Kabeya, jean.kabeya@gmail.com, VIP, +243812345678, halal, , Table d&apos;honneur{'\n'}
+                      Sarah, Mwamba, sarah.m@outlook.com, Ami, +243998765432, none, Arachides,
                     </pre>
                   </div>
                   <div className="space-y-1.5">
@@ -2819,7 +2908,7 @@ export default function EventsPage() {
                     <textarea 
                       value={importText}
                       onChange={(e) => setImportText(e.target.value)}
-                      placeholder="Prénom, Nom, Email, Catégorie, Téléphone, Notes..."
+                      placeholder="Prénom, Nom, Email, Catégorie, Téléphone, Régime, Allergies, Notes..."
                       className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm font-mono focus:outline-none focus:border-primary transition h-40 resize-none"
                       required
                     />

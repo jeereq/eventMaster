@@ -254,6 +254,8 @@ export async function importGuests(req: AuthenticatedRequest, res: Response) {
 
       const guestPrefs: any = g.preferences || {};
       if (g.notes) guestPrefs.notes = g.notes;
+      if (g.allergies) guestPrefs.allergies = g.allergies;
+      if (g.specialMeal) guestPrefs.specialMeal = g.specialMeal;
       const { phone: normalizedPhone, phoneCountryCode } = resolveGuestPhoneFields(g, guestPrefs);
       if (normalizedPhone) guestPrefs.phone = normalizedPhone;
 
