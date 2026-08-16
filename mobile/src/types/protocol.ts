@@ -31,6 +31,10 @@ export interface ProtocolScanResponse {
 export interface ProtocolCheckInResponse {
   message: string;
   guest: ProtocolGuest;
+  placementDelivery?: {
+    delivered: boolean;
+    skippedReason?: string;
+  };
 }
 
 export interface ProtocolVerifySeatResponse {
@@ -42,5 +46,9 @@ export interface ProtocolVerifySeatResponse {
     sent: boolean;
     channels: string[];
     errors?: string[];
+  };
+  placementDelivery?: {
+    delivered: boolean;
+    skippedReason?: string;
   };
 }

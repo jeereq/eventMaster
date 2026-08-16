@@ -104,7 +104,15 @@ export default function ProtocolScreen() {
     setMessage(null);
     try {
       const data = await checkInGuest(eventId, guestId);
-      setMessage({ type: 'success', text: data.message });
+      let text = data.message;
+      if (
+        data.placementDelivery?.skippedReason === 'forfait' &&
+        !text.includes('forfait')
+      ) {
+        text +=
+          ' Le PDF et le GPS de placement ne sont pas inclus dans votre forfait (Premium ou supérieur requis).';
+      }
+      setMessage({ type: 'success', text });
       await loadGuests();
       if (selectedGuest?.id === guestId) {
         setSelectedGuest({ ...selectedGuest, checkedInAt: new Date().toISOString() });
@@ -126,6 +134,13 @@ export default function ProtocolScreen() {
       let text = data.message;
       if (data.seatMatch && data.notification?.sent && data.notification.channels.length) {
         text += ` L'invité a été notifié par ${data.notification.channels.join(', ')}.`;
+      } else if (
+        data.seatMatch &&
+        data.placementDelivery?.skippedReason === 'forfait' &&
+        !text.includes('forfait')
+      ) {
+        text +=
+          ' Le PDF et le GPS de placement ne sont pas inclus dans votre forfait (Premium ou supérieur requis).';
       }
       setMessage({ type: data.seatMatch ? 'success' : 'error', text });
       await loadGuests();

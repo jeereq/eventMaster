@@ -147,6 +147,11 @@ export async function checkInGuest(req: AuthenticatedRequest, res: Response) {
     let placementHint = '';
     if (placementDelivery.delivered && placementDelivery.notification?.channels.length) {
       placementHint = ` Placement envoyé par ${placementDelivery.notification.channels.join(', ')}.`;
+    } else if (placementDelivery.skippedReason === 'forfait') {
+      placementHint =
+        ' Le PDF et le GPS de placement ne sont pas inclus dans votre forfait (Premium ou supérieur requis).';
+    } else if (placementDelivery.skippedReason === 'delivery_failed') {
+      placementHint = ' Notification de placement non envoyée (coordonnées manquantes ou erreur d\'envoi).';
     }
 
     return res.json({
@@ -247,9 +252,11 @@ export async function verifyGuestSeat(req: AuthenticatedRequest, res: Response) 
     const notificationHint =
       seatMatch && placementDelivery?.delivered && placementDelivery.notification?.channels.length
         ? ` Notification envoyée (${placementDelivery.notification.channels.join(', ')}).`
-        : seatMatch && placementDelivery?.skippedReason === 'delivery_failed'
-          ? ' Notification non envoyée (coordonnées invité manquantes ou erreur d\'envoi).'
-          : '';
+        : seatMatch && placementDelivery?.skippedReason === 'forfait'
+          ? ' Le PDF et le GPS de placement ne sont pas inclus dans votre forfait (Premium ou supérieur requis).'
+          : seatMatch && placementDelivery?.skippedReason === 'delivery_failed'
+            ? ' Notification non envoyée (coordonnées invité manquantes ou erreur d\'envoi).'
+            : '';
 
     return res.json({
       message: baseMessage + notificationHint,

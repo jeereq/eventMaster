@@ -46,6 +46,8 @@ interface RoomLayoutEditorProps {
   onChange: (blueprint: RoomLayoutBlueprint) => void;
   onRegenerate?: () => void;
   readOnly?: boolean;
+  /** Thèmes, textures de sol et fixtures décoratives (scène, fleurs…). */
+  allowThemesFixtures?: boolean;
 }
 
 type CropTarget = { kind: 'fixture'; id: string } | null;
@@ -55,6 +57,7 @@ export default function RoomLayoutEditor({
   onChange,
   onRegenerate,
   readOnly = false,
+  allowThemesFixtures = true,
 }: RoomLayoutEditorProps) {
   const blueprint = ensureBlueprintDefaults(rawBlueprint);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -180,6 +183,10 @@ export default function RoomLayoutEditor({
   };
 
   const addFixture = (kind: RoomLayoutBlueprint['fixtures'][number]['kind']) => {
+    if (!allowThemesFixtures) {
+      log('Thèmes & fixtures non inclus dans votre forfait', 'info');
+      return;
+    }
     const fixture = createBlueprintFixture(kind);
     updateBlueprint({ ...blueprint, fixtures: [...blueprint.fixtures, fixture] }, { message: `${fixture.label || kind} ajouté`, kind: 'add' });
     setSelected({ kind: 'fixture', id: fixture.id });
@@ -478,6 +485,20 @@ export default function RoomLayoutEditor({
     if (!selected) {
       return (
         <div className="space-y-4">
+          {!allowThemesFixtures ? (
+            <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 space-y-2">
+              <p className="text-xs font-bold uppercase text-amber-800 flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5" /> Thèmes & fixtures
+              </p>
+              <p className="text-xs text-amber-900/80">
+                Les thèmes de salle, textures de sol et éléments décoratifs (scène, fleurs…) ne sont pas inclus dans votre forfait actuel.
+              </p>
+              <a href="/dashboard/billing" className="inline-block text-xs font-bold text-indigo-700 hover:underline">
+                Voir les forfaits →
+              </a>
+            </div>
+          ) : (
+            <>
           <div className="p-4 bg-slate-50 rounded-xl border space-y-3">
             <p className="text-xs font-bold uppercase text-slate-500 flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> Thème de la salle</p>
             <div className="grid grid-cols-2 gap-2">
@@ -562,6 +583,8 @@ export default function RoomLayoutEditor({
               )}
             </label>
           </div>
+            </>
+          )}
           <div className="p-4 bg-slate-50 rounded-xl border space-y-3">
             <p className="text-xs font-bold uppercase text-slate-500 flex items-center gap-1"><Palette className="w-3.5 h-3.5" /> Couleur des tables</p>
             <div className="flex gap-2 items-center">
@@ -813,15 +836,19 @@ export default function RoomLayoutEditor({
       <button type="button" onClick={addRow} className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold">
         <Plus className="w-3.5 h-3.5" /> Rangée
       </button>
-      <button type="button" onClick={() => addFixture('stage')} className="px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-xs font-bold">Scène</button>
-      <button type="button" onClick={() => addFixture('podium')} className="px-3 py-1.5 bg-orange-50 border border-orange-200 text-orange-800 rounded-lg text-xs font-bold">Podium</button>
-      <button type="button" onClick={() => addFixture('column')} className="inline-flex items-center gap-1 px-3 py-1.5 bg-stone-100 border border-stone-300 text-stone-700 rounded-lg text-xs font-bold">
-        <Columns3 className="w-3.5 h-3.5" /> Colonne
-      </button>
-      <button type="button" onClick={() => addFixture('flower')} className="inline-flex items-center gap-1 px-3 py-1.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-xs font-bold">
-        <Flower2 className="w-3.5 h-3.5" /> Fleurs
-      </button>
-      <button type="button" onClick={() => addFixture('aisle')} className="px-3 py-1.5 bg-slate-100 border border-slate-200 text-slate-600 rounded-lg text-xs font-bold">Allée</button>
+      {allowThemesFixtures ? (
+        <>
+          <button type="button" onClick={() => addFixture('stage')} className="px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-xs font-bold">Scène</button>
+          <button type="button" onClick={() => addFixture('podium')} className="px-3 py-1.5 bg-orange-50 border border-orange-200 text-orange-800 rounded-lg text-xs font-bold">Podium</button>
+          <button type="button" onClick={() => addFixture('column')} className="inline-flex items-center gap-1 px-3 py-1.5 bg-stone-100 border border-stone-300 text-stone-700 rounded-lg text-xs font-bold">
+            <Columns3 className="w-3.5 h-3.5" /> Colonne
+          </button>
+          <button type="button" onClick={() => addFixture('flower')} className="inline-flex items-center gap-1 px-3 py-1.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-xs font-bold">
+            <Flower2 className="w-3.5 h-3.5" /> Fleurs
+          </button>
+          <button type="button" onClick={() => addFixture('aisle')} className="px-3 py-1.5 bg-slate-100 border border-slate-200 text-slate-600 rounded-lg text-xs font-bold">Allée</button>
+        </>
+      ) : null}
       {selected && (
         <button type="button" onClick={deleteSelected} className="inline-flex items-center gap-1 px-3 py-1.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-xs font-bold ml-auto">
           <Trash2 className="w-3.5 h-3.5" /> Supprimer

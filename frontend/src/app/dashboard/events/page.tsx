@@ -228,7 +228,7 @@ A très vite !`
 ];
 
 export default function EventsPage() {
-  const { user, access } = useAuth();
+  const { user, access, planFeatures, tenant } = useAuth();
   const isProtocolOnly = access?.isProtocolOnly ?? false;
   const canManageEvents = access?.canManageAllEvents ?? false;
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -738,10 +738,23 @@ export default function EventsPage() {
       setSelectedEvent(updatedEvent);
       setEvents(events.map(e => e.id === selectedEvent.id ? updatedEvent : e));
       const notified = updatedEvent.assignmentNotifications?.notified ?? 0;
-      if (notified > 0) {
+      const skippedReason = updatedEvent.assignmentNotifications?.skippedReason as string | undefined;
+      const isFreePlan = tenant?.plan === 'FREE' || skippedReason === 'forfait';
+
+      if (isFreePlan) {
         setSuccess(
-          `Plan enregistré. ${notified} invité${notified > 1 ? 's' : ''} notifié${notified > 1 ? 's' : ''} (table, siège et voisins de table). Le PDF et le GPS seront envoyés à l'arrivée.`,
+          'Plan de table enregistré. Les notifications de placement aux invités nécessitent un forfait payant.',
         );
+      } else if (notified > 0) {
+        if (planFeatures?.seatNotifications) {
+          setSuccess(
+            `Plan enregistré. ${notified} invité${notified > 1 ? 's' : ''} notifié${notified > 1 ? 's' : ''} (table, siège et voisins de table). Le PDF et le GPS seront envoyés à l'arrivée.`,
+          );
+        } else {
+          setSuccess(
+            `Plan enregistré. ${notified} invité${notified > 1 ? 's' : ''} notifié${notified > 1 ? 's' : ''} (table, siège et voisins de table). Le PDF et le GPS au check-in nécessitent un forfait Premium ou supérieur.`,
+          );
+        }
       } else {
         setSuccess('Plan de table enregistré.');
       }

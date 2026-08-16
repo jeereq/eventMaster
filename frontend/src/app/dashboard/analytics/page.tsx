@@ -58,7 +58,8 @@ interface InvitationItem {
 }
 
 export default function AnalyticsPage() {
-  const { user } = useAuth();
+  const { user, planFeatures } = useAuth();
+  const canExportReports = user?.role === 'SUPER_ADMIN' || planFeatures?.adminReports === true;
   const [events, setEvents] = useState<EventItem[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   const [guests, setGuests] = useState<GuestItem[]>([]);
@@ -166,6 +167,10 @@ export default function AnalyticsPage() {
   };
 
   const exportToCSV = () => {
+    if (!canExportReports) {
+      setError('L\'export de rapports avancés nécessite un forfait Enterprise. Consultez la page Facturation.');
+      return;
+    }
     if (guests.length === 0) return;
     
     const customFields = getCustomRsvpFields();
@@ -464,6 +469,7 @@ export default function AnalyticsPage() {
               </div>
 
               {guests.length > 0 && (
+                canExportReports ? (
                 <button
                   onClick={exportToCSV}
                   className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition shadow-md cursor-pointer"
@@ -471,6 +477,22 @@ export default function AnalyticsPage() {
                   <Download className="w-4 h-4" />
                   Exporter en CSV
                 </button>
+                ) : (
+                  <div className="text-right space-y-1">
+                    <button
+                      type="button"
+                      disabled
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-slate-200 text-slate-500 font-bold rounded-xl text-xs cursor-not-allowed"
+                    >
+                      <Download className="w-4 h-4" />
+                      Exporter en CSV
+                    </button>
+                    <p className="text-[10px] text-amber-700">
+                      Export réservé Enterprise.{' '}
+                      <Link href="/dashboard/billing" className="font-bold underline">Voir les forfaits</Link>
+                    </p>
+                  </div>
+                )
               )}
             </div>
 
