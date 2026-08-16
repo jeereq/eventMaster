@@ -1,7 +1,7 @@
 export { default as Button } from './Button';
 export { Card, CardHeader } from './Card';
-export { ProjectCard, accentFromId } from './ProjectCard';
-export type { ProjectCardProps, ProjectCardLayout } from './ProjectCard';
+export { ProjectCard, accentFromId, StatusPill, ListRowAction, LIST_STACK_CLASS } from './ProjectCard';
+export type { ProjectCardProps, ProjectCardLayout, StatusPillTone } from './ProjectCard';
 export { ViewModeToggle, useViewMode, gridColsClass } from './ViewModeToggle';
 export type { ViewMode, GridColumns } from './ViewModeToggle';
 export {

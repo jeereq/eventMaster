@@ -88,6 +88,8 @@ model User {
   passwordHash  String
   name          String?
   phone         String?
+  /** Indicatif pays dédié, ex. +243 — saisi séparément du numéro national */
+  phoneCountryCode String?
   role          Role       @default(USER)
   orgRole       OrgRole?
   tenantId      String?
@@ -154,6 +156,8 @@ model Guest {
   lastName    String
   email       String
   phone       String?
+  /** Indicatif pays dédié, ex. +243 */
+  phoneCountryCode String?
   category    String?
   rsvp        String       @default("PENDING") // PENDING, ACCEPTED, DECLINED
   preferences Json?

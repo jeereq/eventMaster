@@ -10,12 +10,14 @@ import {
 } from '../services/commercialService';
 import { setupUserOtpVerification } from './authController';
 import { VerificationMethod } from '../services/otpService';
+import { resolvePhoneFields } from '../utils/phone';
 
 const userSelect = {
   id: true,
   name: true,
   email: true,
   phone: true,
+  phoneCountryCode: true,
   orgRole: true,
   referralCode: true,
   commissionRate: true,
@@ -85,14 +87,15 @@ export async function createTeamMember(req: AuthenticatedRequest, res: Response)
       return res.status(403).json({ error: 'Seuls le propriétaire et les managers peuvent créer des utilisateurs.' });
     }
 
-    const { name, email, password, phone, orgRole = 'MANAGER', verificationMethod = 'EMAIL', commissionRate } = req.body;
+    const { name, email, password, phone, phoneCountryCode, nationalNumber, orgRole = 'MANAGER', verificationMethod = 'EMAIL', commissionRate } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Le nom, l\'e-mail et le mot de passe sont requis.' });
     }
 
     const method = (verificationMethod === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL') as VerificationMethod;
-    if (method === 'WHATSAPP' && !phone) {
+    const phoneFields = resolvePhoneFields({ phone, phoneCountryCode, nationalNumber });
+    if (method === 'WHATSAPP' && !phoneFields.phone) {
       return res.status(400).json({ error: 'Le téléphone est obligatoire pour la validation par WhatsApp.' });
     }
 
@@ -149,7 +152,8 @@ export async function createTeamMember(req: AuthenticatedRequest, res: Response)
       data: {
         name,
         email,
-        phone: phone || null,
+        phone: phoneFields.phone,
+        phoneCountryCode: phoneFields.phoneCountryCode,
         passwordHash,
         role: 'USER',
         orgRole,
@@ -169,7 +173,7 @@ export async function createTeamMember(req: AuthenticatedRequest, res: Response)
       userId: newUser.id,
       name,
       email,
-      phone,
+      phone: phoneFields.phone,
       method,
       invitedToTeam: true,
     });
