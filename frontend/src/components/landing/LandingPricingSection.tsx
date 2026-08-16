@@ -61,18 +61,18 @@ function FeatureCell({ value }: { value: string | boolean }) {
 }
 
 const BADGE_TONE: Record<PlanCapabilityBadge['tone'], string> = {
-  indigo: 'bg-primary/10 dark:bg-primary/15 text-primary dark:text-primary/80 border-primary/20 dark:border-primary/30',
-  violet: 'bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border-violet-100 dark:border-violet-900/50',
-  emerald: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-900/50',
-  amber: 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-100 dark:border-amber-900/50',
-  rose: 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-100 dark:border-rose-900/50',
+  indigo: 'bg-surface-muted text-foreground border-border',
+  violet: 'bg-surface-muted text-foreground border-border',
+  emerald: 'bg-surface-muted text-foreground border-border',
+  amber: 'bg-surface-muted text-foreground border-border',
+  rose: 'bg-surface-muted text-foreground border-border',
 };
 
 const TIER_ACCENT: Record<string, string> = {
-  essentials: 'from-slate-400 to-slate-500',
-  business: 'from-blue-500 to-indigo-600',
-  premium: 'from-primary to-[var(--brand-accent,#6366f1)]',
-  enterprise: 'from-violet-600 to-fuchsia-700',
+  essentials: 'bg-muted',
+  business: 'bg-foreground/40',
+  premium: 'bg-foreground/70',
+  enterprise: 'bg-foreground',
 };
 
 export default function LandingPricingSection({ dbPlans }: LandingPricingSectionProps) {
@@ -150,48 +150,45 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
   return (
     <section
       id="tarifs"
-      className="py-24 bg-gradient-to-b from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 border-t border-slate-200 dark:border-slate-800"
+      className="py-16 sm:py-20 bg-background border-t border-border"
     >
       <div className="page-container">
-        <div className="text-center max-w-3xl mx-auto mb-10 space-y-4">
-          <p className="text-sm font-semibold text-primary dark:text-primary uppercase tracking-widest">
-            Forfaits & abonnements
+        <div className="max-w-2xl mb-10 space-y-2">
+          <p className="text-xs font-medium text-muted uppercase tracking-wider">
+            Forfaits
           </p>
-          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
-            Une offre calibrée sur vos ambitions événementielles
+          <h2 className="text-2xl font-semibold text-foreground tracking-tight">
+            Une offre adaptée à votre volume
           </h2>
-          <p className="text-slate-600 dark:text-slate-400 text-base leading-relaxed">
-            De Essentials à Enterprise 3 : invitations personnalisées, protocole QR, salles 2D,
-            formulaires RSVP exportables et réseau commercial. Facturation annuelle avec{' '}
-            <strong className="text-emerald-600 dark:text-emerald-400">{ANNUAL_DISCOUNT_PERCENT} %</strong> de réduction.
+          <p className="text-sm text-muted leading-relaxed">
+            D&apos;Essentials à Enterprise : invitations, protocole QR, salles 2D et RSVP.
+            Facturation annuelle avec {ANNUAL_DISCOUNT_PERCENT} % de réduction.
           </p>
         </div>
 
         {activePromos.length > 0 && (
-          <div className="mb-10 max-w-3xl mx-auto rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-gradient-to-r from-rose-50 via-white to-rose-50 dark:from-rose-950/30 dark:via-slate-900 dark:to-rose-950/20 p-5 flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
-            <div className="p-3 rounded-xl bg-rose-100 dark:bg-rose-950/50 text-rose-600 shrink-0">
-              <Tag className="w-6 h-6" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-rose-800 dark:text-rose-200">
-                Promotions en cours sur {activePromos.length} forfait{activePromos.length > 1 ? 's' : ''}
+          <div className="mb-8 max-w-2xl rounded-[var(--radius-card)] border border-border bg-surface-muted p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <Tag className="w-5 h-5 text-muted shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground">
+                Promotions sur {activePromos.length} forfait{activePromos.length > 1 ? 's' : ''}
               </p>
-              <p className="text-xs text-rose-700/80 dark:text-rose-300/80 mt-1">
-                {activePromos.map((p) => p.displayName).join(' · ')} — tarifs réduits affichés ci-dessous.
+              <p className="text-xs text-muted mt-0.5">
+                {activePromos.map((p) => p.displayName).join(' · ')}
               </p>
             </div>
           </div>
         )}
 
-        <div className="flex flex-col items-center gap-3 mb-14">
-          <div className="inline-flex items-center p-1 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="flex flex-col items-start gap-2 mb-10">
+          <div className="inline-flex items-center p-0.5 rounded-[var(--radius-button)] bg-surface-muted border border-border">
             <button
               type="button"
               onClick={() => setBilling('monthly')}
-              className={`px-5 py-2.5 rounded-full text-sm font-semibold transition ${
+              className={`px-4 py-2 rounded-md text-xs font-medium transition ${
                 billing === 'monthly'
-                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
+                  : 'text-muted hover:text-foreground'
               }`}
             >
               Mensuel
@@ -199,22 +196,22 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
             <button
               type="button"
               onClick={() => setBilling('annual')}
-              className={`px-5 py-2.5 rounded-full text-sm font-semibold transition flex items-center gap-2 ${
+              className={`px-4 py-2 rounded-md text-xs font-medium transition flex items-center gap-2 ${
                 billing === 'annual'
-                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
+                  : 'text-muted hover:text-foreground'
               }`}
             >
               Annuel
-              <span className="text-[10px] font-bold uppercase bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full">
+              <span className="text-[10px] font-semibold text-muted">
                 −{ANNUAL_DISCOUNT_PERCENT} %
               </span>
             </button>
           </div>
-          <p className="text-xs text-slate-500 max-w-md text-center">
+          <p className="text-xs text-muted">
             {billing === 'annual'
-              ? `Équivalent mensuel avec ${ANNUAL_DISCOUNT_PERCENT} % de réduction · facturation annuelle`
-              : 'Renouvellement mensuel · activation par le Super Admin après demande'}
+              ? `Équivalent mensuel avec ${ANNUAL_DISCOUNT_PERCENT} % de réduction`
+              : 'Activation après demande validée par la plateforme'}
           </p>
         </div>
 
@@ -240,15 +237,15 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
                 .map((plan) => (
                   <article
                     key={plan.id}
-                    className={`relative flex flex-col rounded-2xl border bg-white dark:bg-slate-900 overflow-hidden transition-all duration-300 ${
+                    className={`relative flex flex-col rounded-[var(--radius-card)] border bg-surface overflow-hidden transition ${
                       plan.highlighted
-                        ? 'border-primary shadow-xl shadow-primary/10 ring-2 ring-primary/20 scale-[1.02] z-10'
+                        ? 'border-foreground/30'
                         : plan.promoActive
-                          ? 'border-rose-200 dark:border-rose-900/40 shadow-md hover:shadow-lg'
-                          : 'border-slate-200 dark:border-slate-800 hover:shadow-lg hover:border-slate-300 dark:hover:border-slate-700'
+                          ? 'border-border'
+                          : 'border-border'
                     }`}
                   >
-                    <div className={`h-1.5 w-full bg-gradient-to-r ${TIER_ACCENT[plan.tier]}`} />
+                    <div className={`h-1 w-full ${TIER_ACCENT[plan.tier]}`} />
 
                     {plan.badge && (
                       <div className="absolute top-4 right-4 bg-primary text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
@@ -298,7 +295,7 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
                         )}
                         <div className="flex items-baseline gap-1.5 flex-wrap">
                           <span
-                            className={`text-4xl font-black tracking-tight ${
+                            className={`text-3xl font-semibold tracking-tight ${
                               plan.highlighted
                                 ? 'text-primary dark:text-primary'
                                 : plan.promoActive
@@ -344,16 +341,12 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
                     <div className="px-6 sm:px-7 pb-6 sm:pb-7 pt-0">
                       <Link
                         href={plan.ctaHref}
-                        className={`block w-full text-center py-3 rounded-xl text-sm font-bold transition ${
-                          plan.ctaVariant === 'outline'
-                            ? 'border-2 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
-                            : plan.ctaVariant === 'contact'
-                              ? 'border-2 border-slate-800 dark:border-slate-500 text-slate-800 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
-                              : plan.highlighted
-                                ? 'bg-primary hover:bg-primary-hover text-white shadow-lg shadow-primary/20'
-                                : plan.promoActive
-                                  ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-md'
-                                  : 'bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-900'
+                        className={`block w-full text-center py-2.5 rounded-[var(--radius-button)] text-sm font-medium transition ${
+                          plan.ctaVariant === 'outline' || plan.ctaVariant === 'contact'
+                            ? 'border border-border text-foreground hover:bg-surface-muted'
+                            : plan.highlighted
+                              ? 'bg-foreground hover:opacity-90 text-background'
+                              : 'bg-surface-muted hover:bg-border text-foreground border border-border'
                         }`}
                       >
                         {plan.cta}

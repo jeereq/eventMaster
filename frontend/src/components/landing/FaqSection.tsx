@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ChevronDown, HelpCircle } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { FAQ_ITEMS } from '@/config/siteContent';
+import { cn } from '@/lib/cn';
 
 interface FaqSectionProps {
   id?: string;
@@ -16,45 +17,41 @@ interface FaqSectionProps {
 export default function FaqSection({
   id = 'faq',
   title = 'Questions fréquentes',
-  subtitle = 'Tout ce qu\'il faut savoir sur EventMaster, les forfaits, la sécurité des données et le support.',
+  subtitle = 'Forfaits, sécurité des données et support.',
   showContactLink = true,
   className = '',
 }: FaqSectionProps) {
   const [openId, setOpenId] = useState<string | null>(FAQ_ITEMS[0]?.id ?? null);
 
   return (
-    <section id={id} className={`py-20 bg-slate-50 dark:bg-slate-900/50 scroll-mt-24 ${className}`}>
+    <section id={id} className={cn('py-16 sm:py-20 bg-surface border-t border-border scroll-mt-16', className)}>
       <div className="page-container">
-        <div className="text-center max-w-2xl mx-auto mb-12 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 dark:bg-primary/15 border border-primary/20 dark:border-primary/30 text-primary dark:text-primary/80 text-xs font-bold">
-            <HelpCircle className="w-4 h-4" />
-            <span>FAQ</span>
-          </div>
-          <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">{title}</h2>
-          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{subtitle}</p>
+        <div className="max-w-2xl mb-8 space-y-2">
+          <h2 className="text-2xl font-semibold text-foreground tracking-tight">{title}</h2>
+          <p className="text-sm text-muted leading-relaxed">{subtitle}</p>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2 max-w-3xl">
           {FAQ_ITEMS.map((item) => {
             const isOpen = openId === item.id;
             return (
               <div
                 key={item.id}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm"
+                className="bg-background border border-border rounded-[var(--radius-card)] overflow-hidden"
               >
                 <button
                   type="button"
                   onClick={() => setOpenId(isOpen ? null : item.id)}
-                  className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition"
+                  className="w-full flex items-center justify-between gap-4 px-4 py-3.5 text-left hover:bg-surface-muted/50 transition"
                   aria-expanded={isOpen}
                 >
-                  <span className="text-sm font-bold text-slate-900 dark:text-white">{item.question}</span>
+                  <span className="text-sm font-medium text-foreground">{item.question}</span>
                   <ChevronDown
-                    className={`w-5 h-5 text-slate-400 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                    className={cn('w-4 h-4 text-muted shrink-0 transition-transform', isOpen && 'rotate-180')}
                   />
                 </button>
                 {isOpen && (
-                  <div className="px-5 pb-4 text-sm text-slate-600 dark:text-slate-400 leading-relaxed border-t border-slate-100 dark:border-slate-800 pt-3">
+                  <div className="px-4 pb-4 text-sm text-muted leading-relaxed border-t border-border pt-3">
                     {item.answer}
                   </div>
                 )}
@@ -64,10 +61,10 @@ export default function FaqSection({
         </div>
 
         {showContactLink && (
-          <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-8">
-            Vous ne trouvez pas votre réponse ?{' '}
-            <Link href="/contact" className="text-primary dark:text-primary font-semibold hover:underline">
-              Contactez notre équipe
+          <p className="text-xs text-muted mt-8">
+            Pas de réponse ?{' '}
+            <Link href="/contact" className="font-medium text-foreground underline underline-offset-2 hover:no-underline">
+              Contactez-nous
             </Link>
           </p>
         )}

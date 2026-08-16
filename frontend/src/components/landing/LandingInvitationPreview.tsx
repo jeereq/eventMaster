@@ -258,7 +258,7 @@ export default function LandingInvitationPreview({
     <>
       <link href={LANDING_PREVIEW_FONTS} rel="stylesheet" />
       <div
-        className={`rounded-2xl border shadow-md transition-all duration-300 flex flex-col relative overflow-hidden ${compact ? 'min-h-[180px]' : 'p-6 sm:p-8 min-h-[340px]'} ${className}`}
+        className={`rounded-[var(--radius-card)] border shadow-[var(--shadow-soft)] transition-all duration-300 flex flex-col relative overflow-hidden ${compact ? 'min-h-[180px]' : 'p-6 sm:p-8 min-h-[340px]'} ${className}`}
         style={{
           ...backgroundStyle,
           borderColor: template.style.borderColor || 'rgba(226,232,240,0.9)',
@@ -266,16 +266,12 @@ export default function LandingInvitationPreview({
         }}
       >
         {hasBackgroundImage && compact && (
-          <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent pointer-events-none z-[1]" />
-        )}
-
-        {!compact && (
-          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-primary to-[var(--brand-accent,#6366f1)] z-[2]" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none z-[1]" />
         )}
 
         <div
           className={`relative z-10 flex flex-wrap gap-y-2 w-full ${
-            compact && hasBackgroundImage ? 'mt-auto pt-8' : compact ? '' : 'pt-2'
+            compact && hasBackgroundImage ? 'mt-auto pt-8' : compact ? '' : ''
           }`}
         >
           {useLegacyOnly
