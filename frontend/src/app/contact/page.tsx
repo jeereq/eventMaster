@@ -1,23 +1,18 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/context/AuthContext';
-import { useTheme } from '@/context/ThemeContext';
 import { api } from '@/lib/api';
 import { SITE_CONTACT } from '@/config/siteContent';
 import FaqSection from '@/components/landing/FaqSection';
 import SiteFooter from '@/components/SiteFooter';
+import SiteHeader from '@/components/SiteHeader';
 import { 
   Mail, Phone, MapPin, Send, MessageSquare, 
-  CheckCircle2, AlertCircle, Loader2, ArrowLeft, PartyPopper, Sparkles, ArrowRight, Sun, Moon, Menu, X
+  CheckCircle2, AlertCircle, Loader2, Sparkles,
 } from 'lucide-react';
 
 export default function ContactPage() {
-  const { user, tenant, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('');
@@ -27,22 +22,6 @@ export default function ContactPage() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-
-  useEffect(() => {
-    async function checkServer() {
-      try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}/health`);
-        if (response.ok) {
-          setServerStatus('online');
-        } else {
-          setServerStatus('offline');
-        }
-      } catch (err) {
-        setServerStatus('offline');
-      }
-    }
-    checkServer();
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,170 +57,25 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col font-sans antialiased text-slate-900 dark:text-slate-100 transition-colors duration-200">
-      {/* Header */}
-      <header className="border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-50 transition-all">
-        <div className="page-container h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition">
-              <div className="bg-indigo-600 p-2 rounded-lg text-white">
-                <PartyPopper className="w-5 h-5" />
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-                EventMaster
-              </span>
-            </Link>
-            
-            {/* Indicateur de connexion API en temps réel */}
-            <div className="hidden sm:flex items-center gap-1.5 ml-4 px-2.5 py-1 rounded-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[10px] font-bold text-slate-500 dark:text-slate-400">
-              <span className={`w-2 h-2 rounded-full ${
-                serverStatus === 'online' ? 'bg-emerald-500 animate-pulse' : 
-                serverStatus === 'offline' ? 'bg-rose-500' : 'bg-amber-500 animate-pulse'
-              }`} />
-              <span>
-                {serverStatus === 'online' ? 'API Connectée' : 
-                 serverStatus === 'offline' ? 'API Déconnectée' : 'Vérification API...'}
-              </span>
-            </div>
-          </div>
-
-          {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-4">
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 transition cursor-pointer"
-              aria-label="Changer de thème"
-            >
-              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-            </button>
-            <Link href="/contact" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
-              Contact
-            </Link>
-            <a href="#faq" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
-              FAQ
-            </a>
-            {user ? (
-              <>
-                <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
-                  Connecté en tant que <span className="font-bold text-indigo-600">{user.name}</span> {tenant ? `(${tenant.name})` : ''}
-                </span>
-                <Link href="/dashboard" className="text-sm font-semibold bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-500/20">
-                  Tableau de Bord
-                </Link>
-                <button 
-                  onClick={logout}
-                  className="text-sm font-semibold border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 px-4 py-2 rounded-xl transition cursor-pointer"
-                >
-                  Déconnexion
-                </button>
-              </>
-            ) : (
-              <>
-                <Link href="/login" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
-                  Connexion
-                </Link>
-                <Link href="/register" className="text-sm font-semibold bg-indigo-600 text-white px-4.5 py-2 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-500/20">
-                  Essai Gratuit
-                </Link>
-              </>
-            )}
-          </nav>
-
-          {/* Mobile Menu Button */}
-          <div className="flex items-center gap-3 lg:hidden">
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 transition cursor-pointer"
-              aria-label="Changer de thème"
-            >
-              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-            </button>
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 transition cursor-pointer"
-              aria-label="Ouvrir le menu"
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Dropdown Menu */}
-        {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-6 space-y-4 animate-fade-in shadow-xl dark:shadow-lg">
-            <div className="flex flex-col gap-3">
-              <Link 
-                href="/contact" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition py-2 border-b border-slate-100 dark:border-slate-900"
-              >
-                Contact
-              </Link>
-              <a 
-                href="#faq" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition py-2 border-b border-slate-100 dark:border-slate-900"
-              >
-                FAQ
-              </a>
-              {user ? (
-                <>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold py-1">
-                    Connecté en tant que <span className="font-bold text-indigo-600">{user.name}</span> {tenant ? `(${tenant.name})` : ''}
-                  </div>
-                  <Link 
-                    href="/dashboard" 
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm font-semibold bg-indigo-600 text-white px-4 py-2.5 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-500/20 text-center"
-                  >
-                    Tableau de Bord
-                  </Link>
-                  <button 
-                    onClick={() => { logout(); setMobileMenuOpen(false); }}
-                    className="text-sm font-semibold border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 px-4 py-2.5 rounded-xl transition cursor-pointer text-center w-full"
-                  >
-                    Déconnexion
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link 
-                    href="/login" 
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition py-2 border-b border-slate-100 dark:border-slate-900 text-center"
-                  >
-                    Connexion
-                  </Link>
-                  <Link 
-                    href="/register" 
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm font-semibold bg-indigo-600 text-white px-4.5 py-2.5 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-500/20 text-center"
-                  >
-                    Essai Gratuit
-                  </Link>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-      </header>
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans antialiased transition-colors duration-200">
+      <SiteHeader variant="contact" showServerStatus />
 
       {/* Main Content */}
       <main className="flex-1 py-16 sm:py-24 relative overflow-hidden">
         {/* Background decorative elements */}
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-100/40 dark:bg-indigo-950/20 blur-[100px] pointer-events-none" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-violet-100/40 dark:bg-violet-950/20 blur-[100px] pointer-events-none" />
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-primary/5 blur-[100px] pointer-events-none" />
 
         <div className="page-container relative z-10">
           <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-bold">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold">
               <Sparkles className="w-4 h-4" />
               <span>Contactez-nous</span>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-semibold text-foreground tracking-tight">
               Une question ? Un projet ? Parlons-en !
             </h1>
-            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed">
+            <p className="text-sm sm:text-base text-muted leading-relaxed">
               Que vous soyez un particulier organisant un mariage ou une entreprise planifiant un gala, notre équipe est là pour vous accompagner.
             </p>
           </div>
@@ -250,7 +84,7 @@ export default function ContactPage() {
             {/* Contact Info (2 columns) */}
             <div className="md:col-span-2 space-y-6">
               <div className="bg-slate-950 text-white rounded-3xl p-8 shadow-xl space-y-8 relative overflow-hidden border border-slate-900 dark:border-slate-800">
-                <div className="absolute top-[-20%] right-[-20%] w-48 h-48 rounded-full bg-indigo-500/20 blur-[60px]" />
+                <div className="absolute top-[-20%] right-[-20%] w-48 h-48 rounded-full bg-primary/25 blur-[60px]" />
                 
                 <div className="space-y-2">
                   <h3 className="text-xl font-extrabold tracking-tight">Nos coordonnées</h3>
@@ -261,24 +95,24 @@ export default function ContactPage() {
 
                 <div className="space-y-6">
                   <div className="flex items-start gap-4">
-                    <div className="bg-slate-900 p-3 rounded-xl text-indigo-400 border border-slate-800/50">
+                    <div className="bg-slate-900 p-3 rounded-xl text-primary border border-slate-800/50">
                       <Mail className="w-5 h-5" />
                     </div>
                     <div>
                       <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Email</span>
-                      <a href={`mailto:${SITE_CONTACT.email}`} className="text-sm font-semibold hover:text-indigo-300 transition">
+                      <a href={`mailto:${SITE_CONTACT.email}`} className="text-sm font-semibold hover:text-primary transition">
                         {SITE_CONTACT.email}
                       </a>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-4">
-                    <div className="bg-slate-900 p-3 rounded-xl text-indigo-400 border border-slate-800/50">
+                    <div className="bg-slate-900 p-3 rounded-xl text-primary border border-slate-800/50">
                       <Phone className="w-5 h-5" />
                     </div>
                     <div>
                       <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Téléphone</span>
-                      <a href={SITE_CONTACT.phoneHref} className="text-sm font-semibold hover:text-indigo-300 transition">
+                      <a href={SITE_CONTACT.phoneHref} className="text-sm font-semibold hover:text-primary transition">
                         {SITE_CONTACT.phone}
                       </a>
                       <p className="text-[10px] text-slate-500 mt-0.5">{SITE_CONTACT.whatsappNote}</p>
@@ -286,7 +120,7 @@ export default function ContactPage() {
                   </div>
 
                   <div className="flex items-start gap-4">
-                    <div className="bg-slate-900 p-3 rounded-xl text-indigo-400 border border-slate-800/50">
+                    <div className="bg-slate-900 p-3 rounded-xl text-primary border border-slate-800/50">
                       <MapPin className="w-5 h-5" />
                     </div>
                     <div>
@@ -303,15 +137,15 @@ export default function ContactPage() {
                   <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pourquoi nous contacter ?</h4>
                   <ul className="space-y-2 text-xs text-slate-300">
                     <li className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full" />
+                      <span className="w-1.5 h-1.5 bg-primary rounded-full" />
                       Démonstration personnalisée du produit
                     </li>
                     <li className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full" />
+                      <span className="w-1.5 h-1.5 bg-primary rounded-full" />
                       Offres sur-mesure pour grands comptes
                     </li>
                     <li className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full" />
+                      <span className="w-1.5 h-1.5 bg-primary rounded-full" />
                       Support technique 24/7
                     </li>
                   </ul>
@@ -334,7 +168,7 @@ export default function ContactPage() {
                   </div>
                   <button
                     onClick={() => setSuccess(false)}
-                    className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs transition shadow-md dark:shadow-none cursor-pointer"
+                    className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl text-xs transition shadow-md dark:shadow-none cursor-pointer"
                   >
                     Envoyer un autre message
                   </button>
@@ -342,7 +176,7 @@ export default function ContactPage() {
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <h3 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-                    <MessageSquare className="w-5 h-5 text-indigo-500" />
+                    <MessageSquare className="w-5 h-5 text-primary" />
                     Écrivez-nous
                   </h3>
 
@@ -361,7 +195,7 @@ export default function ContactPage() {
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="Ex: Jean Dupont"
-                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-950 transition text-slate-900 dark:text-white"
+                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-950 transition text-slate-900 dark:text-white"
                         required
                         disabled={submitting}
                       />
@@ -374,7 +208,7 @@ export default function ContactPage() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="Ex: jean.dupont@gmail.com"
-                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-950 transition text-slate-900 dark:text-white"
+                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-950 transition text-slate-900 dark:text-white"
                         required
                         disabled={submitting}
                       />
@@ -388,7 +222,7 @@ export default function ContactPage() {
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
                       placeholder="Ex: Demande de tarif Premium / Question technique"
-                      className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-950 transition text-slate-900 dark:text-white"
+                      className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-950 transition text-slate-900 dark:text-white"
                       required
                       disabled={submitting}
                     />
@@ -401,7 +235,7 @@ export default function ContactPage() {
                       onChange={(e) => setMessage(e.target.value)}
                       placeholder="Décrivez votre besoin en détail..."
                       rows={5}
-                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-950 transition resize-none text-slate-900 dark:text-white"
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-950 transition resize-none text-slate-900 dark:text-white"
                       required
                       disabled={submitting}
                     />
@@ -410,7 +244,7 @@ export default function ContactPage() {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold rounded-xl text-xs transition shadow-lg dark:shadow-none flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full py-3 bg-primary hover:bg-primary-hover disabled:opacity-60 text-white font-bold rounded-xl text-xs transition shadow-lg dark:shadow-none flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {submitting ? (
                       <>

@@ -14,6 +14,7 @@ import {
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import UserLegalGate from '@/components/UserLegalGate';
 import { NotificationBell } from '@/components/CommercialNotifications';
+import DashboardTopBar from '@/components/DashboardTopBar';
 import { cn } from '@/lib/cn';
 import { TourProvider } from '@/context/TourContext';
 import ProductTourOverlay from '@/components/guide/ProductTourOverlay';
@@ -462,8 +463,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Contenu principal */}
-      <main id="main-content" className="flex-1 min-w-0 overflow-y-auto bg-background">
-        <div className="page-container py-5 sm:py-6 lg:py-8">
+      <main id="main-content" className="flex-1 min-w-0 overflow-y-auto bg-background flex flex-col">
+        <DashboardTopBar showCommercialNotifications={showCommercialNotifications} />
+        <div className="page-container py-5 sm:py-6 lg:py-8 flex-1">
           <UserLegalGate>{children}</UserLegalGate>
         </div>
       </main>

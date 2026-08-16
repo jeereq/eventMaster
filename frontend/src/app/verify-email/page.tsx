@@ -1,16 +1,24 @@
 'use client';
 
 import React, { useEffect, useState, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { CheckCircle, XCircle, Loader2, Calendar, ArrowRight, PartyPopper } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, Sparkles, Calendar, Table, MessageSquare } from 'lucide-react';
+import { AuthSplitLayout } from '@/components/AuthSplitLayout';
+import { Button, Alert, Card } from '@/components/ui';
+
+const FEATURES = [
+  { icon: Calendar, title: "Gestion d'événements & RSVP", desc: 'Invitations par e-mail ou WhatsApp, suivi des réponses en temps réel.' },
+  { icon: Table, title: 'Planificateur de table', desc: 'Placement intuitif par glisser-déposer sur un plan 2D.' },
+  { icon: MessageSquare, title: "Fil d'actualité & livre d'or", desc: 'Photos, vidéos et commentaires dans un espace privé.' },
+  { icon: Sparkles, title: 'Statistiques & analyses', desc: 'Régimes alimentaires, réponses et exports en un clic.' },
+];
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const token = searchParams.get('token');
-  
+
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Vérification de votre adresse e-mail en cours...');
 
@@ -27,105 +35,91 @@ function VerifyEmailContent() {
         setStatus('success');
         setMessage(res.message || 'Votre e-mail a été vérifié avec succès !');
 
-        // If the response contains a session token, log the user in automatically
         if (res.token && res.user) {
           localStorage.setItem('token', res.token);
           localStorage.setItem('user', JSON.stringify(res.user));
           if (res.tenant) {
             localStorage.setItem('tenant', JSON.stringify(res.tenant));
           }
-          
-          // Trigger a page reload or state refresh and redirect to dashboard after 2.5 seconds
+
           setTimeout(() => {
             window.location.href = '/dashboard';
           }, 2500);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         setStatus('error');
-        setMessage(err.message || 'Le lien de vérification est invalide ou a expiré.');
+        setMessage(err instanceof Error ? err.message : 'Le lien de vérification est invalide ou a expiré.');
       }
     };
 
     verify();
-  }, [token, router]);
+  }, [token]);
 
   return (
-    <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl border border-slate-200 shadow-xl relative z-10 my-8">
-      <div className="text-center">
-        <div className="inline-flex items-center justify-center bg-indigo-600 p-3 rounded-2xl text-white mb-6 shadow-lg shadow-indigo-100">
-          <PartyPopper className="w-8 h-8" />
+    <Card padding="lg" className="border-border shadow-sm text-center">
+      {status === 'loading' && (
+        <div className="space-y-4 py-4">
+          <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto" />
+          <h2 className="text-2xl font-semibold text-foreground">Vérification en cours</h2>
+          <p className="text-muted text-sm">{message}</p>
         </div>
-        
-        {status === 'loading' && (
-          <div className="space-y-4 py-4">
-            <div className="flex justify-center">
-              <Loader2 className="w-12 h-12 text-indigo-600 animate-spin" />
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900">Vérification en cours</h2>
-            <p className="text-slate-600 text-sm">{message}</p>
-          </div>
-        )}
+      )}
 
-        {status === 'success' && (
-          <div className="space-y-6 py-4">
-            <div className="flex justify-center animate-bounce">
-              <div className="bg-emerald-100 p-4 rounded-full text-emerald-600 shadow-inner">
-                <CheckCircle className="w-12 h-12" />
-              </div>
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900">Compte activé !</h2>
-            <p className="text-slate-600 text-sm leading-relaxed">{message}</p>
-            <div className="pt-4">
-              <div className="flex items-center justify-center gap-2 text-indigo-600 font-bold text-sm">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Redirection automatique vers le tableau de bord...
-              </div>
-            </div>
+      {status === 'success' && (
+        <div className="space-y-5 py-2">
+          <div className="inline-flex bg-emerald-100 dark:bg-emerald-950/40 p-4 rounded-full text-emerald-600">
+            <CheckCircle className="w-12 h-12" />
           </div>
-        )}
+          <h2 className="text-2xl font-semibold text-foreground">Compte activé !</h2>
+          <p className="text-muted text-sm leading-relaxed">{message}</p>
+          <div className="flex items-center justify-center gap-2 text-primary font-semibold text-sm">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Redirection vers le tableau de bord…
+          </div>
+        </div>
+      )}
 
-        {status === 'error' && (
-          <div className="space-y-6 py-4">
-            <div className="flex justify-center">
-              <div className="bg-rose-100 p-4 rounded-full text-rose-600 shadow-inner">
-                <XCircle className="w-12 h-12" />
-              </div>
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900">Échec de la vérification</h2>
-            <p className="text-rose-600 text-sm leading-relaxed">{message}</p>
-            <div className="pt-4 space-y-3">
-              <Link
-                href="/register"
-                className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl text-base font-semibold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition shadow-lg shadow-indigo-100"
-              >
-                Créer un nouveau compte
-              </Link>
-              <Link
-                href="/login"
-                className="block text-sm font-semibold text-indigo-600 hover:text-indigo-500 transition"
-              >
-                Retour à la page de connexion
-              </Link>
-            </div>
+      {status === 'error' && (
+        <div className="space-y-5 py-2">
+          <div className="inline-flex bg-rose-100 dark:bg-rose-950/40 p-4 rounded-full text-rose-600">
+            <XCircle className="w-12 h-12" />
           </div>
-        )}
-      </div>
-    </div>
+          <h2 className="text-2xl font-semibold text-foreground">Échec de la vérification</h2>
+          <Alert variant="error">{message}</Alert>
+          <div className="space-y-3 pt-1">
+            <Link href="/register">
+              <Button fullWidth>Créer un nouveau compte</Button>
+            </Link>
+            <Link href="/login" className="block text-sm font-semibold text-primary hover:underline">
+              Retour à la connexion
+            </Link>
+          </div>
+        </div>
+      )}
+    </Card>
   );
 }
 
 export default function VerifyEmailPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))]" />
-      <Suspense fallback={
-        <div className="max-w-md w-full bg-white p-8 rounded-2xl border border-slate-200 shadow-xl relative z-10 text-center py-12">
-          <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto mb-4" />
-          <p className="text-slate-600">Chargement...</p>
-        </div>
-      }>
+    <AuthSplitLayout
+      badge="Confirmation"
+      title="Activez votre compte EventMaster."
+      description="Nous vérifions votre adresse e-mail pour sécuriser l'accès à votre organisation."
+      features={FEATURES}
+      backHref="/login"
+      backLabel="Retour à la connexion"
+    >
+      <Suspense
+        fallback={
+          <Card padding="lg" className="border-border shadow-sm text-center py-12">
+            <Loader2 className="w-10 h-10 text-primary animate-spin mx-auto mb-3" />
+            <p className="text-sm text-muted">Chargement…</p>
+          </Card>
+        }
+      >
         <VerifyEmailContent />
       </Suspense>
-    </div>
+    </AuthSplitLayout>
   );
 }

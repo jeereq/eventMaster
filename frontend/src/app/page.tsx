@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { useTheme } from '@/context/ThemeContext';
 import { api } from '@/lib/api';
 import {
   buildLandingTemplateGroups,
@@ -17,10 +16,11 @@ import LandingMobileSection from '@/components/landing/LandingMobileSection';
 import FaqSection from '@/components/landing/FaqSection';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import SiteFooter from '@/components/SiteFooter';
+import SiteHeader from '@/components/SiteHeader';
 import { Modal, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
-  ArrowRight, PartyPopper, Loader2, Sun, Moon, Menu, X,
+  ArrowRight, Loader2,
 } from 'lucide-react';
 
 function getCategoryLabel(category: string) {
@@ -30,13 +30,10 @@ function getCategoryLabel(category: string) {
 }
 
 export default function Home() {
-  const { user, tenant, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [previewTemplate, setPreviewTemplate] = useState<string>('');
   const [modalTemplate, setModalTemplate] = useState<LandingTemplate | null>(null);
-  const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [dbPlans, setDbPlans] = useState<any>(null);
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [publicTemplates, setPublicTemplates] = useState<LandingTemplate[]>([]);
@@ -49,14 +46,11 @@ export default function Home() {
           cache: 'no-store',
         });
         if (response.ok) {
-          setServerStatus('online');
           const plansData = await api.get('/public/plans').catch(() => null);
           if (plansData) setDbPlans(plansData);
-        } else {
-          setServerStatus('offline');
         }
       } catch {
-        setServerStatus('offline');
+        /* offline — tarifs fallback */
       } finally {
         setLoadingPlans(false);
       }
@@ -89,124 +83,9 @@ export default function Home() {
   const activePreview = publicTemplates.find((t) => t.id === previewTemplate) || publicTemplates[0];
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
-  const navLinkClass = 'text-sm font-medium text-muted hover:text-foreground transition';
-
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground font-sans antialiased transition-colors duration-200">
-      <header className="border-b border-border bg-surface/90 backdrop-blur-md sticky top-0 z-50">
-        <div className="page-container h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition">
-              <div className="bg-foreground p-1.5 rounded-[var(--radius-button)] text-background">
-                <PartyPopper className="w-3.5 h-3.5" />
-              </div>
-              <span className="text-base font-semibold tracking-tight">EventMaster</span>
-            </Link>
-            <div className="hidden sm:flex items-center gap-1.5 ml-1 px-2 py-0.5 rounded-md bg-surface-muted border border-border text-[10px] font-medium text-muted">
-              <span className={cn(
-                'w-1.5 h-1.5 rounded-full',
-                serverStatus === 'online' ? 'bg-emerald-500' :
-                serverStatus === 'offline' ? 'bg-rose-500' : 'bg-amber-500 animate-pulse',
-              )} />
-              {serverStatus === 'online' ? 'En ligne' : serverStatus === 'offline' ? 'Hors ligne' : '…'}
-            </div>
-          </div>
-
-          <nav className="hidden lg:flex items-center gap-5">
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="p-2 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
-              aria-label="Changer de thème"
-            >
-              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-            </button>
-            <a href="#modeles" className={navLinkClass}>Modèles</a>
-            <a href="#parcours" className={navLinkClass}>Parcours</a>
-            <a href="#tarifs" className={navLinkClass}>Tarifs</a>
-            <Link href="/contact" className={navLinkClass}>Contact</Link>
-            {user ? (
-              <>
-                <span className="text-xs text-muted max-w-[180px] truncate">
-                  {user.name}{tenant ? ` · ${tenant.name}` : ''}
-                </span>
-                <Link href="/dashboard">
-                  <Button size="sm">Tableau de bord</Button>
-                </Link>
-                <Button type="button" size="sm" variant="secondary" onClick={logout}>
-                  Déconnexion
-                </Button>
-              </>
-            ) : (
-              <>
-                <Link href="/login" className={navLinkClass}>Connexion</Link>
-                <Link href="/register">
-                  <Button size="sm">Essai gratuit</Button>
-                </Link>
-              </>
-            )}
-          </nav>
-
-          <div className="flex items-center gap-2 lg:hidden">
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="p-2 rounded-[var(--radius-button)] border border-border text-muted"
-              aria-label="Changer de thème"
-            >
-              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-            </button>
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-[var(--radius-button)] border border-border text-muted"
-              aria-label="Menu"
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-          </div>
-        </div>
-
-        {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-border bg-surface px-6 py-5 space-y-3">
-            {[
-              { href: '#modeles', label: 'Modèles' },
-              { href: '#parcours', label: 'Parcours' },
-              { href: '#tarifs', label: 'Tarifs' },
-              { href: '/contact', label: 'Contact' },
-              { href: '/faq', label: 'FAQ' },
-            ].map((item) => (
-              <a
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className="block text-sm font-medium text-muted hover:text-foreground py-2 border-b border-border"
-              >
-                {item.label}
-              </a>
-            ))}
-            {user ? (
-              <div className="flex flex-col gap-2 pt-2">
-                <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
-                  <Button size="sm" fullWidth>Tableau de bord</Button>
-                </Link>
-                <Button type="button" size="sm" variant="secondary" fullWidth onClick={() => { logout(); setMobileMenuOpen(false); }}>
-                  Déconnexion
-                </Button>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2 pt-2">
-                <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
-                  <Button size="sm" variant="secondary" fullWidth>Connexion</Button>
-                </Link>
-                <Link href="/register" onClick={() => setMobileMenuOpen(false)}>
-                  <Button size="sm" fullWidth>Essai gratuit</Button>
-                </Link>
-              </div>
-            )}
-          </div>
-        )}
-      </header>
+      <SiteHeader variant="landing" showServerStatus />
 
       {/* Hero — composition sobre : marque + message + CTA + aperçu modèle API */}
       <section className="relative overflow-hidden border-b border-border">
@@ -246,32 +125,50 @@ export default function Home() {
             </div>
 
             <div className="min-h-[320px] flex flex-col justify-center">
-              {loadingPlans || loadingPublicTemplates ? (
+              {loadingPublicTemplates ? (
                 <div className="h-80 flex items-center justify-center">
                   <Loader2 className="w-6 h-6 text-muted animate-spin" />
                 </div>
               ) : activePreview ? (
                 <div className="space-y-3">
+                  <LandingInvitationPreview template={activePreview} />
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-muted truncate">
+                      <span className="font-medium text-foreground">{activePreview.name}</span>
+                      {' · '}
+                      {getCategoryLabel(activePreview.category)}
+                      {publicTemplates.length > 1
+                        ? ` · 1 sur ${publicTemplates.length} modèles`
+                        : ''}
+                    </p>
+                    <a
+                      href="#modeles"
+                      className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 shrink-0"
+                    >
+                      Voir tous les modèles
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
                   {publicTemplates.length > 1 && (
-                    <div className="flex gap-1 overflow-x-auto pb-1">
+                    <div className="flex gap-1.5 overflow-x-auto pb-0.5" role="tablist" aria-label="Modèles vitrine">
                       {publicTemplates.map((t) => (
                         <button
                           key={t.id}
                           type="button"
+                          role="tab"
+                          aria-selected={previewTemplate === t.id}
                           onClick={() => setPreviewTemplate(t.id)}
                           className={cn(
-                            'px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition',
+                            'h-1.5 rounded-full transition shrink-0',
                             previewTemplate === t.id
-                              ? 'bg-foreground text-background'
-                              : 'bg-surface border border-border text-muted hover:text-foreground',
+                              ? 'w-6 bg-foreground'
+                              : 'w-1.5 bg-border hover:bg-muted',
                           )}
-                        >
-                          {t.name}
-                        </button>
+                          title={t.name}
+                        />
                       ))}
                     </div>
                   )}
-                  <LandingInvitationPreview template={activePreview} />
                 </div>
               ) : (
                 <div className="h-72 flex flex-col items-center justify-center text-center px-6 border border-dashed border-border rounded-[var(--radius-card)] bg-surface">
@@ -363,7 +260,10 @@ export default function Home() {
                       >
                         <button
                           type="button"
-                          onClick={() => setModalTemplate(t)}
+                          onClick={() => {
+                            setPreviewTemplate(t.id);
+                            setModalTemplate(t);
+                          }}
                           className="w-full text-left rounded-[var(--radius-button)] focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
                         >
                           <LandingInvitationPreview template={t} compact />

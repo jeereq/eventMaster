@@ -19,6 +19,11 @@
   --radius-card: 0.5rem; /* Asana ~8px */
   --radius-button: 0.5rem;
   --shadow-soft: 0 0 0 1px rgba(0, 0, 0, 0.04);
+  /* Panneau auth — surchargés par brandTheme / env */
+  --auth-from: #312e81;
+  --auth-via: #1e1b4b;
+  --auth-to: #0f172a;
+  --auth-glow: 79, 70, 229;
 }
 
 .dark {

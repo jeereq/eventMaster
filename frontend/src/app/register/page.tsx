@@ -100,7 +100,7 @@ function RegisterPageContent() {
       backHref="/"
       backLabel="Retour au site"
     >
-      <Card padding="lg" className="shadow-xl dark:ring-1 dark:ring-slate-800">
+      <Card padding="lg" className="border-border shadow-sm">
         {successMessage ? (
           <div className="text-center space-y-5 py-2">
             <div className="inline-flex items-center justify-center bg-emerald-100 dark:bg-emerald-950/30 p-4 rounded-full text-emerald-600 dark:text-emerald-400">
@@ -110,7 +110,7 @@ function RegisterPageContent() {
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                 {verificationMethod === 'WHATSAPP' ? 'Vérifiez votre WhatsApp' : 'Vérifiez votre boîte mail'}
               </h2>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">{successMessage}</p>
+              <p className="text-sm text-muted mt-2">{successMessage}</p>
             </div>
             <Link href="/login">
               <Button fullWidth>Aller à la connexion</Button>
@@ -119,13 +119,13 @@ function RegisterPageContent() {
         ) : (
           <>
             <div className="text-center lg:text-left mb-6">
-              <div className="inline-flex lg:hidden items-center justify-center bg-indigo-600 p-3 rounded-2xl text-white mb-4 shadow-lg shadow-indigo-500/20">
+              <div className="inline-flex lg:hidden items-center justify-center bg-primary p-3 rounded-[var(--radius-button)] text-white mb-4">
                 <PartyPopper className="w-7 h-7" />
               </div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Créer un compte</h2>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+              <h2 className="text-2xl font-semibold text-foreground tracking-tight">Créer un compte</h2>
+              <p className="mt-2 text-sm text-muted">
                 Déjà inscrit ?{' '}
-                <Link href="/login" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+                <Link href="/login" className="font-semibold text-primary hover:underline">
                   Connectez-vous
                 </Link>
               </p>
@@ -192,15 +192,15 @@ function RegisterPageContent() {
 
               <div className="space-y-2">
                 <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
-                  <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500" />
+                  <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="mt-0.5 rounded text-primary focus:ring-primary" />
                   <span className="text-xs text-slate-600 dark:text-slate-300">
-                    J&apos;accepte les <Link href="/terms" target="_blank" className="text-indigo-600 font-semibold hover:underline">conditions d&apos;utilisation</Link>.
+                    J&apos;accepte les <Link href="/terms" target="_blank" className="text-primary font-semibold hover:underline">conditions d&apos;utilisation</Link>.
                   </span>
                 </label>
                 <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
-                  <input type="checkbox" checked={acceptPrivacy} onChange={(e) => setAcceptPrivacy(e.target.checked)} className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500" />
+                  <input type="checkbox" checked={acceptPrivacy} onChange={(e) => setAcceptPrivacy(e.target.checked)} className="mt-0.5 rounded text-primary focus:ring-primary" />
                   <span className="text-xs text-slate-600 dark:text-slate-300">
-                    J&apos;accepte la <Link href="/privacy" target="_blank" className="text-indigo-600 font-semibold hover:underline">politique de confidentialité</Link>.
+                    J&apos;accepte la <Link href="/privacy" target="_blank" className="text-primary font-semibold hover:underline">politique de confidentialité</Link>.
                   </span>
                 </label>
               </div>

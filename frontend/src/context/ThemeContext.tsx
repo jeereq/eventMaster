@@ -24,6 +24,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     } else {
       document.documentElement.classList.remove('dark');
     }
+
+    // Palette par défaut / env — remplacée ensuite par le branding tenant si connecté
+    void import('@/lib/brandTheme').then(({ applyDefaultBrandToDocument }) => {
+      applyDefaultBrandToDocument();
+    });
   }, []);
 
   const toggleTheme = () => {

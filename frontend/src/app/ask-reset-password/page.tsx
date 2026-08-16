@@ -48,10 +48,10 @@ export default function AskResetPasswordPage() {
       backHref="/login"
       backLabel="Retour à la connexion"
     >
-      <Card padding="lg" className="shadow-xl dark:ring-1 dark:ring-slate-800">
+      <Card padding="lg" className="border-border shadow-sm">
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Mot de passe oublié</h2>
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+          <h2 className="text-2xl font-semibold text-foreground tracking-tight">Mot de passe oublié</h2>
+          <p className="mt-2 text-sm text-muted">
             Saisissez vos identifiants pour recevoir un lien de réinitialisation.
           </p>
         </div>
