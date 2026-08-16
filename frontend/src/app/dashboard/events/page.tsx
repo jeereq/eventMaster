@@ -28,7 +28,8 @@ import {
   normalizeGuestGuidelines,
   applyInvitationGuidelineVariables,
 } from '@/lib/guestGuidelines';
-import { PageHeader, Button, ProjectCard, ViewModeToggle, useViewMode, SkeletonEventsView, Breadcrumbs } from '@/components/ui';
+import { PageHeader, Button, ProjectCard, ViewModeToggle, useViewMode, SkeletonEventsView, Breadcrumbs, Modal, Input } from '@/components/ui';
+import { cn } from '@/lib/cn';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
 import {
   extractRsvpFieldsFromTemplateContent,
@@ -261,6 +262,7 @@ export default function EventsPage() {
   const [savingGuidelines, setSavingGuidelines] = useState(false);
 
   // Map Picker States & Refs
+  const [eventMapOpen, setEventMapOpen] = useState(false);
   const [searchingLocation, setSearchingLocation] = useState(false);
   const [searchError, setSearchError] = useState('');
   const mapRef = useRef<any>(null);
@@ -474,8 +476,7 @@ export default function EventsPage() {
 
   // Leaflet Map Initialization Effect
   useEffect(() => {
-    if (!showEventModal) {
-      // Clean up refs when modal is closed
+    if (!showEventModal || !eventMapOpen) {
       mapRef.current = null;
       markerRef.current = null;
       return;
@@ -578,7 +579,7 @@ export default function EventsPage() {
         }
       }
     };
-  }, [showEventModal]);
+  }, [showEventModal, eventMapOpen]);
 
   // Geocoding search function
   const searchLocationOnMap = async () => {
@@ -636,6 +637,8 @@ export default function EventsPage() {
     setEventLongitude('');
     setEventRoomId('');
     setEditingEventId(null);
+    setEventMapOpen(false);
+    setSearchError('');
   };
 
   const openCreateEventModal = () => {
@@ -729,6 +732,11 @@ export default function EventsPage() {
     setEventLongitude(event.longitude !== undefined && event.longitude !== null ? event.longitude.toString() : '');
     setEventRoomId(event.roomId || event.room?.id || '');
     setEditingEventId(event.id);
+    setEventMapOpen(
+      event.latitude !== undefined && event.latitude !== null &&
+      event.longitude !== undefined && event.longitude !== null,
+    );
+    setSearchError('');
     setShowEventModal(true);
   };
 
@@ -1422,8 +1430,8 @@ export default function EventsPage() {
         )}
         </>
       ) : (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-6">
-          <div className="space-y-2">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="space-y-2 min-w-0">
             <Breadcrumbs
               items={[
                 { label: 'Accueil', href: '/dashboard' },
@@ -1431,52 +1439,58 @@ export default function EventsPage() {
                 { label: selectedEvent.title },
               ]}
             />
-            <button 
+            <button
+              type="button"
               onClick={() => setSelectedEvent(null)}
-              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary-hover transition"
+              className="inline-flex items-center gap-1 text-xs font-medium text-muted hover:text-foreground transition"
             >
-              <ArrowLeft className="w-4 h-4" />
-              Retour aux événements
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Tous les événements
             </button>
-            <h1 className="text-2xl sm:text-[1.65rem] font-semibold text-foreground tracking-tight">{selectedEvent.title}</h1>
-            <p className="text-muted text-sm font-medium flex items-center gap-4 flex-wrap">
-              <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4 text-muted" /> {new Date(selectedEvent.date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-              <span className="flex items-center gap-1.5 flex-wrap">
-                <MapPin className="w-4 h-4 text-muted" /> 
-                <span>{selectedEvent.location}</span>
-                {selectedEvent.latitude !== undefined && selectedEvent.latitude !== null && selectedEvent.longitude !== undefined && selectedEvent.longitude !== null && (
-                  <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded-md font-bold">
-                    GPS: {Number(selectedEvent.latitude).toFixed(4)}, {Number(selectedEvent.longitude).toFixed(4)}
-                  </span>
-                )}
+            <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight truncate">
+              {selectedEvent.title}
+            </h1>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+              <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-muted border border-border">
+                <Calendar className="w-3.5 h-3.5" />
+                {new Date(selectedEvent.date).toLocaleDateString('fr-FR', {
+                  weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+                })}
               </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 border border-indigo-100 text-indigo-700">
-                {getReminderFrequencyLabel(selectedEvent.reminderFrequency)}
+              <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-muted border border-border max-w-xs truncate">
+                <MapPin className="w-3.5 h-3.5 shrink-0" />
+                {selectedEvent.location}
               </span>
               {selectedEvent.room && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-violet-50 border border-violet-100 text-violet-700">
+                <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-muted border border-border">
                   <Building2 className="w-3.5 h-3.5" />
-                  Salle : {selectedEvent.room.name}
+                  {selectedEvent.room.name}
                 </span>
               )}
-            </p>
+              <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-border text-muted">
+                {getReminderFrequencyLabel(selectedEvent.reminderFrequency)}
+              </span>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <button 
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
               onClick={() => handleManageEvent(selectedEvent)}
-              className="px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold rounded-xl text-sm transition flex items-center gap-1.5 shadow-sm"
-              title="Actualiser les données de l'événement"
               disabled={loading}
+              leftIcon={<RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />}
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               Actualiser
-            </button>
-            <button 
+            </Button>
+            <Button
+              type="button"
+              size="sm"
               onClick={() => handleEditEventClick(selectedEvent)}
-              className="px-4 py-2.5 border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold rounded-xl text-sm transition"
+              leftIcon={<Edit3 className="w-4 h-4" />}
             >
-              Modifier l'événement
-            </button>
+              Configurer
+            </Button>
           </div>
         </div>
       )}
@@ -1550,7 +1564,7 @@ export default function EventsPage() {
                     <button
                       type="button"
                       onClick={() => handleManageEvent(event)}
-                      className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/15 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-500/25 transition"
+                      className="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary/15 transition"
                     >
                       Gérer
                       <ChevronRight className="w-3.5 h-3.5" />
@@ -1599,7 +1613,7 @@ export default function EventsPage() {
 
       {/* Event Management View (Tabs) */}
       {selectedEvent && (
-        <div className="space-y-8">
+        <div className="space-y-5">
           <EventWorkflowPanel
             workflow={eventWorkflow}
             activeTab={activeTab}
@@ -1608,77 +1622,32 @@ export default function EventsPage() {
             compact={isProtocolOnly}
           />
 
-          {/* Tabs Selector */}
-          <div className="flex border-b border-slate-200 overflow-x-auto">
-            {!isProtocolOnly && (
-            <button
-              onClick={() => setActiveTab('guests')}
-              className={`pb-4 px-6 text-sm font-bold border-b-2 transition whitespace-nowrap ${activeTab === 'guests' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
-            >
-              <span className="flex items-center gap-2">
-                <Users className="w-4.5 h-4.5" />
-                Invités ({guests.length})
-              </span>
-            </button>
-            )}
-            <button
-              onClick={() => setActiveTab('protocol')}
-              className={`pb-4 px-6 text-sm font-bold border-b-2 transition whitespace-nowrap ${activeTab === 'protocol' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
-            >
-              <span className="flex items-center gap-2">
-                <ScanLine className="w-4.5 h-4.5" />
-                Protocole
-              </span>
-            </button>
-            {!isProtocolOnly && (
-            <>
-            <button
-              onClick={() => setActiveTab('invitations')}
-              className={`pb-4 px-6 text-sm font-bold border-b-2 transition whitespace-nowrap ${activeTab === 'invitations' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
-            >
-              <span className="flex items-center gap-2">
-                <Mail className="w-4.5 h-4.5" />
-                Invitations & Diffusion ({invitations.length})
-              </span>
-            </button>
-            <button
-              onClick={() => setActiveTab('tablePlan')}
-              className={`pb-4 px-6 text-sm font-bold border-b-2 transition whitespace-nowrap ${activeTab === 'tablePlan' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
-            >
-              <span className="flex items-center gap-2">
-                <LayoutGrid className="w-4.5 h-4.5" />
-                Plan de table
-              </span>
-            </button>
-            <button
-              onClick={() => setActiveTab('guestInfo')}
-              className={`pb-4 px-6 text-sm font-bold border-b-2 transition whitespace-nowrap ${activeTab === 'guestInfo' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
-            >
-              <span className="flex items-center gap-2">
-                <Shirt className="w-4.5 h-4.5" />
-                Infos invités
-              </span>
-            </button>
-            <button
-              onClick={() => setActiveTab('staff')}
-              className={`pb-4 px-6 text-sm font-bold border-b-2 transition whitespace-nowrap ${activeTab === 'staff' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
-            >
-              <span className="flex items-center gap-2">
-                <Users className="w-4.5 h-4.5" />
-                Équipe événement
-              </span>
-            </button>
-            <button
-              onClick={() => setActiveTab('feed')}
-              className={`pb-4 px-6 text-sm font-bold border-b-2 transition whitespace-nowrap ${activeTab === 'feed' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
-            >
-              <span className="flex items-center gap-2">
-                <MessageSquare className="w-4.5 h-4.5" />
-                Feed & Livre d'or
-              </span>
-            </button>
-            </>
-            )}
+          {/* Tabs */}
+          <div className="inline-flex flex-wrap gap-0.5 p-0.5 bg-surface-muted border border-border rounded-[var(--radius-button)] max-w-full overflow-x-auto">
+            {([
+              !isProtocolOnly && { id: 'guests' as const, label: `Invités (${guests.length})`, icon: Users },
+              { id: 'protocol' as const, label: 'Protocole', icon: ScanLine },
+              !isProtocolOnly && { id: 'invitations' as const, label: `Invitations (${invitations.length})`, icon: Mail },
+              !isProtocolOnly && { id: 'tablePlan' as const, label: 'Plan de table', icon: LayoutGrid },
+              !isProtocolOnly && { id: 'guestInfo' as const, label: 'Infos invités', icon: Shirt },
+              !isProtocolOnly && { id: 'staff' as const, label: 'Équipe', icon: Users },
+              !isProtocolOnly && { id: 'feed' as const, label: 'Feed', icon: MessageSquare },
+            ].filter(Boolean) as Array<{ id: typeof activeTab; label: string; icon: React.ComponentType<{ className?: string }> }>).map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setActiveTab(id)}
+                className={cn(
+                  'inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium whitespace-nowrap transition-colors',
+                  activeTab === id
+                    ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
+                    : 'text-muted hover:text-foreground',
+                )}
+              >
+                <Icon className={cn('w-3.5 h-3.5', activeTab === id && 'text-primary')} />
+                {label}
+              </button>
+            ))}
           </div>
 
           {activeTab === 'protocol' && selectedEvent && (
@@ -2177,229 +2146,210 @@ export default function EventsPage() {
       {/* MODALS */}
 
       {/* Event Modal */}
-      {showEventModal && (
-        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-3xl p-6 space-y-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <h3 className="text-lg font-bold text-slate-900">
-                {editingEventId ? "Modifier l'événement" : 'Créer un événement'}
-              </h3>
-              <button onClick={() => setShowEventModal(false)} className="text-slate-400 hover:text-slate-600 transition">
-                <XCircle className="w-6 h-6" />
-              </button>
-            </div>
-            <form onSubmit={handleCreateOrUpdateEvent} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Left Column: Event Details */}
-                <div className="space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Titre de l'événement</label>
-                    <input 
-                      type="text" 
-                      value={eventTitle}
-                      onChange={(e) => setEventTitle(e.target.value)}
-                      placeholder="ex. Mariage de Claire & Alexandre"
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Description (Optionnel)</label>
-                    <textarea 
-                      value={eventDesc}
-                      onChange={(e) => setEventDescription(e.target.value)}
-                      placeholder="Décrivez brièvement le déroulement de la réception..."
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition h-20 resize-none"
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Date & Heure</label>
-                      <input 
-                        type="datetime-local" 
-                        value={eventDate}
-                        onChange={(e) => setEventDate(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Lieu / Adresse</label>
-                      <input 
-                        type="text" 
-                        value={eventLoc}
-                        onChange={(e) => setEventLocation(e.target.value)}
-                        placeholder="ex. Hôtel Fleuve Congo, Kinshasa"
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                        <Building2 className="w-3.5 h-3.5 text-violet-600" />
-                        Salle de l&apos;organisation (optionnel)
-                      </label>
-                      <select
-                        value={eventRoomId}
-                        onChange={(e) => handleRoomChange(e.target.value)}
-                        disabled={loadingRooms}
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
-                      >
-                        <option value="">Aucune salle — lieu libre</option>
-                        {orgRooms.map((room) => (
-                          <option key={room.id} value={room.id}>
-                            {room.name}
-                            {room.floor ? ` (${room.floor})` : ''}
-                            {room.capacity ? ` — ${room.capacity} pl.` : ''}
-                            {room.roomType && room.roomType !== 'SIMPLE' ? ` · ${room.roomType}` : ''}
-                          </option>
-                        ))}
-                      </select>
-                      <p className="text-[11px] text-slate-400">
-                        {orgRooms.length === 0
-                          ? 'Aucune salle configurée. Créez-en dans Mon compte → Profil.'
-                          : 'La sélection d\'une salle préremplit le lieu et lie l\'événement au staff de cette salle.'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Fréquence de rappel automatique</label>
-                    <select 
-                      value={eventReminderFrequency}
-                      onChange={(e) => setEventReminderFrequency(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
-                    >
-                      <option value="NONE">Pas de rappel automatique</option>
-                      <option value="DAILY">Chaque jour (Quotidien)</option>
-                      <option value="EVERY_3_DAYS">Tous les 3 jours</option>
-                      <option value="EVERY_5_DAYS">Tous les 5 jours</option>
-                      <option value="WEEKLY">Chaque semaine (Hebdomadaire)</option>
-                    </select>
-                    <p className="text-[11px] text-slate-400">
-                      Envoie automatiquement un rappel aux invités qui n'ont pas encore répondu (RSVP En attente).
-                    </p>
-                  </div>
-                </div>
-
-                {/* Right Column: Map Picker */}
-                <div className="space-y-4 flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Sélectionner sur la carte</label>
-                      <button
-                        type="button"
-                        onClick={searchLocationOnMap}
-                        disabled={searchingLocation}
-                        className="text-xs font-semibold text-indigo-600 hover:text-indigo-500 flex items-center gap-1 disabled:opacity-50"
-                      >
-                        {searchingLocation ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Search className="w-3.5 h-3.5" />
-                        )}
-                        Rechercher le lieu saisi
-                      </button>
-                    </div>
-
-                    {searchError && (
-                      <p className="text-xs text-rose-500 font-semibold">{searchError}</p>
-                    )}
-
-                    {/* Map Container */}
-                    <div 
-                      id="map-picker" 
-                      className="w-full h-56 bg-slate-100 rounded-2xl border border-slate-200 overflow-hidden relative"
-                      style={{ minHeight: '220px' }}
-                    >
-                      <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-xs">
-                        Chargement de la carte...
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Latitude GPS</label>
-                      <input 
-                        type="number" 
-                        step="any"
-                        value={eventLatitude}
-                        onChange={(e) => {
-                          setEventLatitude(e.target.value);
-                          const lat = parseFloat(e.target.value);
-                          const lng = parseFloat(eventLongitude);
-                          const L = (window as any).L;
-                          if (!isNaN(lat) && !isNaN(lng) && L && mapRef.current) {
-                            mapRef.current.setView([lat, lng]);
-                            if (markerRef.current) {
-                              markerRef.current.setLatLng([lat, lng]);
-                            } else {
-                              markerRef.current = L.marker([lat, lng], { draggable: true }).addTo(mapRef.current);
-                            }
-                          }
-                        }}
-                        placeholder="ex. -4.3014"
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Longitude GPS</label>
-                      <input 
-                        type="number" 
-                        step="any"
-                        value={eventLongitude}
-                        onChange={(e) => {
-                          setEventLongitude(e.target.value);
-                          const lat = parseFloat(eventLatitude);
-                          const lng = parseFloat(e.target.value);
-                          const L = (window as any).L;
-                          if (!isNaN(lat) && !isNaN(lng) && L && mapRef.current) {
-                            mapRef.current.setView([lat, lng]);
-                            if (markerRef.current) {
-                              markerRef.current.setLatLng([lat, lng]);
-                            } else {
-                              markerRef.current = L.marker([lat, lng], { draggable: true }).addTo(mapRef.current);
-                            }
-                          }
-                        }}
-                        placeholder="ex. 15.3048"
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-slate-400">
-                    Cliquez sur la carte ou utilisez le bouton de recherche pour placer le repère et récupérer automatiquement les coordonnées GPS.
-                  </p>
-                </div>
-              </div>
-
-              <div className="pt-4 flex gap-3 border-t border-slate-100">
-                <button 
-                  type="button"
-                  onClick={() => setShowEventModal(false)}
-                  className="flex-1 py-2.5 border border-slate-200 text-slate-600 font-semibold rounded-xl text-sm hover:bg-slate-50 transition"
-                >
-                  Annuler
-                </button>
-                <button 
-                  type="submit"
-                  disabled={savingEvent}
-                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100 disabled:opacity-50 flex items-center justify-center gap-1.5"
-                >
-                  {savingEvent ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Enregistrement...
-                    </>
-                  ) : (
-                    'Enregistrer'
-                  )}
-                </button>
-              </div>
-            </form>
+      <Modal
+        open={showEventModal}
+        onClose={() => setShowEventModal(false)}
+        title={editingEventId ? 'Configurer l’événement' : 'Nouvel événement'}
+        description="Renseignez l’essentiel. La carte GPS est optionnelle."
+        size="lg"
+        footer={
+          <div className="flex w-full justify-end gap-2">
+            <Button type="button" variant="secondary" size="sm" onClick={() => setShowEventModal(false)}>
+              Annuler
+            </Button>
+            <Button
+              type="submit"
+              form="event-config-form"
+              size="sm"
+              loading={savingEvent}
+            >
+              Enregistrer
+            </Button>
           </div>
-        </div>
-      )}
+        }
+      >
+        <form id="event-config-form" onSubmit={handleCreateOrUpdateEvent} className="space-y-5">
+          <section className="space-y-3">
+            <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted">Essentiel</h4>
+            <Input
+              label="Titre"
+              value={eventTitle}
+              onChange={(e) => setEventTitle(e.target.value)}
+              placeholder="ex. Mariage de Claire & Alexandre"
+              required
+            />
+            <label className="block space-y-1.5">
+              <span className="block text-xs font-semibold text-slate-600 dark:text-slate-400">Description</span>
+              <textarea
+                value={eventDesc}
+                onChange={(e) => setEventDescription(e.target.value)}
+                placeholder="Optionnel — ambiance, dress code, précisions…"
+                rows={2}
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary resize-none"
+              />
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label="Date & heure"
+                type="datetime-local"
+                value={eventDate}
+                onChange={(e) => setEventDate(e.target.value)}
+                required
+              />
+              <Input
+                label="Lieu"
+                value={eventLoc}
+                onChange={(e) => setEventLocation(e.target.value)}
+                placeholder="ex. Hôtel Fleuve Congo"
+                required
+                leftIcon={<MapPin className="w-4 h-4" />}
+              />
+            </div>
+          </section>
+
+          <section className="space-y-3 pt-1 border-t border-border">
+            <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted pt-3">Salle & rappels</h4>
+            <label className="block space-y-1.5">
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400">
+                <Building2 className="w-3.5 h-3.5" />
+                Salle (optionnel)
+              </span>
+              <select
+                value={eventRoomId}
+                onChange={(e) => handleRoomChange(e.target.value)}
+                disabled={loadingRooms}
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
+              >
+                <option value="">Aucune — lieu libre</option>
+                {orgRooms.map((room) => (
+                  <option key={room.id} value={room.id}>
+                    {room.name}
+                    {room.floor ? ` (${room.floor})` : ''}
+                    {room.capacity ? ` · ${room.capacity} pl.` : ''}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-muted">
+                {orgRooms.length === 0
+                  ? 'Créez des salles dans Mon compte → Salles.'
+                  : 'Préremplit le lieu et lie le staff de la salle. À la création, le plan 2D peut être importé.'}
+              </p>
+            </label>
+            <label className="block space-y-1.5">
+              <span className="block text-xs font-semibold text-slate-600 dark:text-slate-400">Rappels RSVP</span>
+              <select
+                value={eventReminderFrequency}
+                onChange={(e) => setEventReminderFrequency(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
+              >
+                <option value="NONE">Pas de rappel automatique</option>
+                <option value="DAILY">Chaque jour</option>
+                <option value="EVERY_3_DAYS">Tous les 3 jours</option>
+                <option value="EVERY_5_DAYS">Tous les 5 jours</option>
+                <option value="WEEKLY">Chaque semaine</option>
+              </select>
+              <p className="text-[11px] text-muted">
+                Envoyés aux invités encore « en attente ».
+              </p>
+            </label>
+          </section>
+
+          <section className="pt-1 border-t border-border">
+            <button
+              type="button"
+              onClick={() => setEventMapOpen((v) => !v)}
+              className="w-full flex items-center justify-between py-3 text-left"
+            >
+              <div>
+                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted">Localisation GPS</h4>
+                <p className="text-xs text-muted mt-0.5">
+                  {eventLatitude && eventLongitude
+                    ? `${eventLatitude}, ${eventLongitude}`
+                    : 'Optionnel — pour le pin WhatsApp après check-in'}
+                </p>
+              </div>
+              <span className={cn(
+                'text-xs font-medium px-2.5 py-1 rounded-md border border-border',
+                eventMapOpen ? 'bg-foreground text-background border-transparent' : 'text-muted',
+              )}>
+                {eventMapOpen ? 'Masquer' : 'Afficher'}
+              </span>
+            </button>
+
+            {eventMapOpen && (
+              <div className="space-y-3 pb-1">
+                <div className="flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={searchLocationOnMap}
+                    disabled={searchingLocation}
+                    className="text-xs font-medium text-foreground hover:underline inline-flex items-center gap-1 disabled:opacity-50"
+                  >
+                    {searchingLocation ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                    Rechercher le lieu saisi
+                  </button>
+                </div>
+                {searchError && <p className="text-xs text-rose-600">{searchError}</p>}
+                <div
+                  id="map-picker"
+                  className="w-full h-48 bg-surface-muted rounded-[var(--radius-card)] border border-border overflow-hidden relative"
+                >
+                  <div className="absolute inset-0 flex items-center justify-center text-muted text-xs">
+                    Chargement de la carte…
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    label="Latitude"
+                    type="number"
+                    step="any"
+                    value={eventLatitude}
+                    onChange={(e) => {
+                      setEventLatitude(e.target.value);
+                      const lat = parseFloat(e.target.value);
+                      const lng = parseFloat(eventLongitude);
+                      const L = (window as any).L;
+                      if (!isNaN(lat) && !isNaN(lng) && L && mapRef.current) {
+                        mapRef.current.setView([lat, lng]);
+                        if (markerRef.current) {
+                          markerRef.current.setLatLng([lat, lng]);
+                        } else {
+                          markerRef.current = L.marker([lat, lng], { draggable: true }).addTo(mapRef.current);
+                        }
+                      }
+                    }}
+                    placeholder="-4.3014"
+                  />
+                  <Input
+                    label="Longitude"
+                    type="number"
+                    step="any"
+                    value={eventLongitude}
+                    onChange={(e) => {
+                      setEventLongitude(e.target.value);
+                      const lat = parseFloat(eventLatitude);
+                      const lng = parseFloat(e.target.value);
+                      const L = (window as any).L;
+                      if (!isNaN(lat) && !isNaN(lng) && L && mapRef.current) {
+                        mapRef.current.setView([lat, lng]);
+                        if (markerRef.current) {
+                          markerRef.current.setLatLng([lat, lng]);
+                        } else {
+                          markerRef.current = L.marker([lat, lng], { draggable: true }).addTo(mapRef.current);
+                        }
+                      }
+                    }}
+                    placeholder="15.3048"
+                  />
+                </div>
+                <p className="text-[11px] text-muted">
+                  Cliquez sur la carte ou faites glisser le marqueur.
+                </p>
+              </div>
+            )}
+          </section>
+        </form>
+      </Modal>
 
       {/* Guest Modal */}
       {showGuestModal && (
