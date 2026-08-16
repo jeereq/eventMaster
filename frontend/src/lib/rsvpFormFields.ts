@@ -117,6 +117,98 @@ export function createDefaultRsvpField(overrides?: Partial<RsvpField>): RsvpFiel
   });
 }
 
+/** Régimes alimentaires — alignés analytics / export CSV. */
+export const SPECIAL_MEAL_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: 'none', label: 'Standard' },
+  { value: 'vegetarian', label: 'Végétarien' },
+  { value: 'vegan', label: 'Végétalien (vegan)' },
+  { value: 'halal', label: 'Halal' },
+  { value: 'kosher', label: 'Casher' },
+];
+
+export function specialMealLabel(value?: string | null): string {
+  return SPECIAL_MEAL_OPTIONS.find((o) => o.value === (value || 'none'))?.label || 'Standard';
+}
+
+/**
+ * Champs RSVP recommandés pour le reporting (stats + export).
+ * Allergies / régime standard sont déjà collectés hors bloc custom sur le portail.
+ */
+export const REPORTING_RSVP_FIELD_PRESETS: Array<Omit<RsvpField, 'id'> & { id?: string }> = [
+  {
+    type: 'select',
+    label: 'Choix du menu',
+    options: 'Poulet, Poisson, Végétarien, Autre',
+    required: true,
+    analyticsKey: 'choix_menu',
+    category: 'preference',
+    helpText: 'Utilisé dans les statistiques de participation et l’export CSV.',
+  },
+  {
+    type: 'yes_no',
+    label: 'Accompagné d’un plus-one',
+    required: false,
+    analyticsKey: 'plus_one',
+    category: 'logistics',
+  },
+  {
+    type: 'number',
+    label: 'Nombre de personnes',
+    required: false,
+    analyticsKey: 'nombre_personnes',
+    category: 'logistics',
+    placeholder: 'Ex. : 2',
+  },
+];
+
+export function createDefaultReportingRsvpFields(): RsvpField[] {
+  const stamp = Date.now();
+  return REPORTING_RSVP_FIELD_PRESETS.map((preset, index) =>
+    normalizeRsvpField({
+      ...preset,
+      id: preset.id || `rf_${stamp}_${index}`,
+    }),
+  );
+}
+
+/** Ajoute les presets reporting manquants (par analyticsKey) sans dupliquer. */
+export function ensureReportingRsvpFields(fields: RsvpField[]): RsvpField[] {
+  const normalized = fields.map((f) => normalizeRsvpField(f));
+  const existingKeys = new Set(
+    normalized.map((f) => (f.analyticsKey || slugifyAnalyticsKey(f.label)).toLowerCase()),
+  );
+  const stamp = Date.now();
+  const missing = REPORTING_RSVP_FIELD_PRESETS.filter(
+    (p) => !existingKeys.has((p.analyticsKey || slugifyAnalyticsKey(p.label)).toLowerCase()),
+  ).map((preset, index) =>
+    normalizeRsvpField({
+      ...preset,
+      id: `rf_ensure_${stamp}_${index}`,
+    }),
+  );
+  return [...normalized, ...missing];
+}
+
+export function validateRsvpFieldsForReporting(fields: RsvpField[]): string[] {
+  const issues: string[] = [];
+  const keys = new Map<string, string>();
+  fields.forEach((raw, index) => {
+    const field = normalizeRsvpField(raw);
+    const key = (field.analyticsKey || '').trim();
+    if (!key) {
+      issues.push(`Champ #${index + 1} (« ${field.label} ») : clé analytique manquante.`);
+      return;
+    }
+    const lower = key.toLowerCase();
+    if (keys.has(lower)) {
+      issues.push(`Clé analytique « ${key} » dupliquée (champs « ${keys.get(lower)} » et « ${field.label} »).`);
+    } else {
+      keys.set(lower, field.label);
+    }
+  });
+  return issues;
+}
+
 export function getCanvasDimensions(global?: {
   canvasSizePreset?: CanvasSizePreset;
   canvasWidth?: number;

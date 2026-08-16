@@ -27,6 +27,9 @@ import {
   RSVP_FIELD_CATEGORIES,
   RSVP_FIELD_TYPE_LABELS,
   createDefaultRsvpField,
+  createDefaultReportingRsvpFields,
+  ensureReportingRsvpFields,
+  validateRsvpFieldsForReporting,
   getCanvasStyle,
   slugifyAnalyticsKey,
 } from '@/lib/rsvpFormFields';
@@ -336,11 +339,7 @@ export default function TemplatesPage() {
         fontSize: '16px', 
         align: 'center',
         width: 'full',
-        rsvpFields: [
-          { id: 'f1', type: 'select', label: 'Choix du menu', options: 'Poulet, Poisson, Végétarien', required: true, analyticsKey: 'choix_menu', category: 'preference' },
-          { id: 'f2', type: 'yes_no', label: 'Accompagné d\'un plus one', required: false, analyticsKey: 'plus_one', category: 'logistics' },
-          { id: 'f3', type: 'number', label: 'Nombre de personnes', required: false, analyticsKey: 'nombre_personnes', category: 'logistics', placeholder: 'Ex. : 2' },
-        ],
+        rsvpFields: createDefaultReportingRsvpFields(),
         rsvpPlacement: 'outside',
       },
     ]);
@@ -454,9 +453,7 @@ export default function TemplatesPage() {
       imageStyle: type === 'image' ? 'rounded' : undefined,
       buttonStyle: type === 'button' ? 'filled' : undefined,
       buttonLink: type === 'button' ? '' : undefined,
-      rsvpFields: type === 'rsvp-block' ? [
-        { id: 'f1', type: 'select', label: 'Choix du menu', options: 'Poulet, Poisson, Végétarien', required: true, analyticsKey: 'choix_menu', category: 'preference' },
-      ] : undefined,
+      rsvpFields: type === 'rsvp-block' ? createDefaultReportingRsvpFields() : undefined,
       rsvpPlacement: type === 'rsvp-block' ? 'inline' as const : undefined,
       ...freeDefaults,
     };
@@ -970,8 +967,15 @@ export default function TemplatesPage() {
 
   // Customizable RSVP fields management
   const handleAddRsvpField = () => {
-    const newField = createDefaultRsvpField();
+    const newField = createDefaultRsvpField({
+      analyticsKey: `champ_${elRsvpFields.length + 1}`,
+    });
     const updatedFields = [...elRsvpFields, newField];
+    handlePropertyChange('rsvpFields', updatedFields);
+  };
+
+  const handleEnsureReportingRsvpFields = () => {
+    const updatedFields = ensureReportingRsvpFields(elRsvpFields);
     handlePropertyChange('rsvpFields', updatedFields);
   };
 
@@ -1155,6 +1159,17 @@ export default function TemplatesPage() {
     if (!templateName.trim()) {
       setError('Le nom du modèle est obligatoire.');
       return;
+    }
+
+    const rsvpBlocks = canvasElements.filter((el) => el.type === 'rsvp-block');
+    for (const block of rsvpBlocks) {
+      const reportingIssues = validateRsvpFieldsForReporting(block.rsvpFields || []);
+      if (reportingIssues.length > 0) {
+        setError(
+          `Formulaire RSVP incomplet pour le reporting : ${reportingIssues[0]} Renseignez une clé analytique unique sur chaque champ.`,
+        );
+        return;
+      }
     }
 
     setSaving(true);
@@ -2857,50 +2872,71 @@ export default function TemplatesPage() {
 
                 {/* Customizable RSVP Fields Properties */}
                 {canvasElements.find(e => e.id === selectedElementId)?.type === 'rsvp-block' && (
-                  <div className="space-y-4 border-t border-slate-100 pt-4">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Champs du formulaire</label>
-                      <button 
-                        type="button"
-                        onClick={handleAddRsvpField}
-                        className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded-lg transition"
-                      >
-                        <Plus className="w-3 h-3" /> Ajouter un champ
-                      </button>
+                  <div className="space-y-4 border-t border-border pt-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <label className="text-xs font-bold text-muted uppercase tracking-wider">Champs du formulaire</label>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={handleEnsureReportingRsvpFields}
+                          className="text-[10px] font-bold text-primary hover:text-primary/80 flex items-center gap-1 bg-primary/10 px-2 py-1 rounded-lg transition"
+                          title="Ajoute menu, plus-one et nombre de personnes s'ils manquent"
+                        >
+                          <Sparkles className="w-3 h-3" /> Reporting
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={handleAddRsvpField}
+                          className="text-[10px] font-bold text-primary hover:text-primary/80 flex items-center gap-1 bg-primary/10 px-2 py-1 rounded-lg transition"
+                        >
+                          <Plus className="w-3 h-3" /> Ajouter
+                        </button>
+                      </div>
                     </div>
+
+                    <p className="text-[10px] text-muted leading-relaxed bg-surface-muted border border-border rounded-lg px-2.5 py-2">
+                      Chaque champ doit avoir une <strong className="text-foreground">clé analytique</strong> unique
+                      (exports CSV / stats). Les allergies et le régime standard sont déjà collectés sur le portail invité.
+                    </p>
+
+                    {validateRsvpFieldsForReporting(elRsvpFields).length > 0 && (
+                      <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-2">
+                        {validateRsvpFieldsForReporting(elRsvpFields)[0]}
+                      </p>
+                    )}
 
                     <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
                       {elRsvpFields.map((field, index) => (
-                        <div key={field.id} className="p-3 bg-slate-50 border border-slate-150 rounded-xl space-y-2.5 relative">
+                        <div key={field.id} className="p-3 bg-surface-muted border border-border rounded-xl space-y-2.5 relative">
                           <button 
                             type="button"
                             onClick={() => handleDeleteRsvpField(field.id)}
-                            className="absolute top-2 right-2 text-slate-400 hover:text-rose-600 transition"
+                            className="absolute top-2 right-2 text-muted hover:text-rose-600 transition"
                             title="Supprimer ce champ"
                           >
                             <Trash className="w-3.5 h-3.5" />
                           </button>
 
-                          <div className="text-[10px] font-bold text-slate-400">Champ #{index + 1}</div>
+                          <div className="text-[10px] font-bold text-muted">Champ #{index + 1}</div>
 
                           <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase">Libellé / Question</label>
+                            <label className="text-[10px] font-bold text-muted uppercase">Libellé / Question</label>
                             <input 
                               type="text" 
                               value={field.label}
                               onChange={(e) => handleUpdateRsvpField(field.id, 'label', e.target.value)}
-                              className="w-full px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition"
+                              className="w-full px-2.5 py-1 bg-surface border border-border rounded-lg text-xs focus:outline-none focus:border-primary transition"
                               required
                             />
                           </div>
 
                           <div className="grid grid-cols-2 gap-2">
                             <div className="space-y-1">
-                              <label className="text-[10px] font-bold text-slate-500 uppercase">Type</label>
+                              <label className="text-[10px] font-bold text-muted uppercase">Type</label>
                               <select 
                                 value={field.type}
                                 onChange={(e) => handleUpdateRsvpField(field.id, 'type', e.target.value)}
-                                className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition"
+                                className="w-full px-2 py-1 bg-surface border border-border rounded-lg text-xs focus:outline-none focus:border-primary transition"
                               >
                                 {Object.entries(RSVP_FIELD_TYPE_LABELS).map(([value, label]) => (
                                   <option key={value} value={value}>{label}</option>
@@ -2908,11 +2944,11 @@ export default function TemplatesPage() {
                               </select>
                             </div>
                             <div className="space-y-1">
-                              <label className="text-[10px] font-bold text-slate-500 uppercase">Catégorie analyse</label>
+                              <label className="text-[10px] font-bold text-muted uppercase">Catégorie analyse</label>
                               <select
                                 value={field.category || 'custom'}
                                 onChange={(e) => handleUpdateRsvpField(field.id, 'category', e.target.value)}
-                                className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition"
+                                className="w-full px-2 py-1 bg-surface border border-border rounded-lg text-xs focus:outline-none focus:border-primary transition"
                               >
                                 {RSVP_FIELD_CATEGORIES.map((cat) => (
                                   <option key={cat.id} value={cat.id}>{cat.label}</option>
@@ -2922,60 +2958,65 @@ export default function TemplatesPage() {
                           </div>
 
                           <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase">Clé analytique (CSV / stats)</label>
+                            <label className="text-[10px] font-bold text-muted uppercase">
+                              Clé analytique <span className="text-rose-500">*</span>
+                            </label>
                             <input
                               type="text"
                               value={field.analyticsKey || ''}
                               onChange={(e) => handleUpdateRsvpField(field.id, 'analyticsKey', slugifyAnalyticsKey(e.target.value))}
                               placeholder="ex. choix_menu"
-                              className="w-full px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs font-mono focus:outline-none focus:border-indigo-500 transition"
+                              required
+                              className={`w-full px-2.5 py-1 bg-surface border rounded-lg text-xs font-mono focus:outline-none focus:border-primary transition ${
+                                field.analyticsKey?.trim() ? 'border-border' : 'border-rose-300'
+                              }`}
                             />
-                            <p className="text-[9px] text-slate-400">Identifiant stable pour exports et graphiques.</p>
+                            <p className="text-[9px] text-muted">Obligatoire pour exports CSV et graphiques reporting.</p>
                           </div>
 
                           <div className="grid grid-cols-2 gap-2">
                             <div className="space-y-1">
-                              <label className="text-[10px] font-bold text-slate-500 uppercase">Placeholder</label>
+                              <label className="text-[10px] font-bold text-muted uppercase">Placeholder</label>
                               <input
                                 type="text"
                                 value={field.placeholder || ''}
                                 onChange={(e) => handleUpdateRsvpField(field.id, 'placeholder', e.target.value)}
-                                className="w-full px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition"
+                                className="w-full px-2.5 py-1 bg-surface border border-border rounded-lg text-xs focus:outline-none focus:border-primary transition"
                               />
                             </div>
                             <div className="flex items-end pb-1.5">
-                              <label className="flex items-center gap-1.5 cursor-pointer text-xs text-slate-600 font-semibold select-none">
+                              <label className="flex items-center gap-1.5 cursor-pointer text-xs text-muted font-semibold select-none">
                                 <input 
                                   type="checkbox" 
                                   checked={field.required}
                                   onChange={(e) => handleUpdateRsvpField(field.id, 'required', e.target.checked)}
-                                  className="rounded text-indigo-600 focus:ring-indigo-500"
+                                  className="rounded text-primary focus:ring-primary"
                                 />
-                                Requis
+                                Requis (invité)
                               </label>
                             </div>
                           </div>
 
                           <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase">Texte d&apos;aide (optionnel)</label>
+                            <label className="text-[10px] font-bold text-muted uppercase">Texte d&apos;aide (optionnel)</label>
                             <input
                               type="text"
                               value={field.helpText || ''}
                               onChange={(e) => handleUpdateRsvpField(field.id, 'helpText', e.target.value)}
                               placeholder="Ex. : Indiquez vos restrictions alimentaires"
-                              className="w-full px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition"
+                              className="w-full px-2.5 py-1 bg-surface border border-border rounded-lg text-xs focus:outline-none focus:border-primary transition"
                             />
                           </div>
 
                           {(field.type === 'select' || field.type === 'radio') && (
                             <div className="space-y-1">
-                              <label className="text-[10px] font-bold text-slate-500 uppercase">Options (séparées par virgules)</label>
+                              <label className="text-[10px] font-bold text-muted uppercase">Options (séparées par virgules)</label>
                               <input 
                                 type="text" 
                                 value={field.options || ''}
                                 onChange={(e) => handleUpdateRsvpField(field.id, 'options', e.target.value)}
                                 placeholder="Option 1, Option 2, Option 3"
-                                className="w-full px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 transition"
+                                className="w-full px-2.5 py-1 bg-surface border border-border rounded-lg text-xs focus:outline-none focus:border-primary transition"
                                 required
                               />
                             </div>
