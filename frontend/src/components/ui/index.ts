@@ -1,5 +1,9 @@
 export { default as Button } from './Button';
 export { Card, CardHeader } from './Card';
+export { ProjectCard, accentFromId } from './ProjectCard';
+export type { ProjectCardProps, ProjectCardLayout } from './ProjectCard';
+export { ViewModeToggle, useViewMode } from './ViewModeToggle';
+export type { ViewMode } from './ViewModeToggle';
 export { default as Input } from './Input';
 export { default as Alert } from './Alert';
 export { default as Modal } from './Modal';

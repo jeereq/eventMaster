@@ -11,17 +11,17 @@ export interface PageHeaderProps {
 
 export default function PageHeader({ title, description, action, breadcrumbs, className }: PageHeaderProps) {
   return (
-    <header className={cn('mb-6 sm:mb-8', className)}>
+    <header className={cn('mb-6 sm:mb-7', className)}>
       {breadcrumbs && (
-        <div className="mb-2 text-xs text-slate-500 dark:text-slate-400">{breadcrumbs}</div>
+        <div className="mb-2 text-xs text-muted">{breadcrumbs}</div>
       )}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="min-w-0 space-y-1">
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+          <h1 className="text-2xl sm:text-[1.65rem] font-semibold text-foreground tracking-tight">
             {title}
           </h1>
           {description && (
-            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
+            <p className="text-sm text-muted max-w-2xl leading-relaxed">
               {description}
             </p>
           )}

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import RoomLayoutEditor from '@/components/RoomLayoutEditor';
+import { ProjectCard, ViewModeToggle, useViewMode } from '@/components/ui';
 import {
   ChairType,
   LayoutParams,
@@ -75,6 +76,7 @@ const defaultParams: Record<RoomType, LayoutParams> = {
 
 export default function RoomsManagement() {
   const { planFeatures, planQuota, tenant } = useAuth();
+  const { mode: roomsViewMode, setViewMode: setRoomsViewMode } = useViewMode('em-view-rooms', 'grid');
   const [rooms, setRooms] = useState<RoomItem[]>([]);
   const [canManage, setCanManage] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMemberOption[]>([]);
@@ -358,14 +360,14 @@ export default function RoomsManagement() {
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xs space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+    <div className="bg-surface border border-border rounded-[var(--radius-card)] p-6 shadow-none space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3 border-b border-border">
         <div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <Building2 className="w-5 h-5 text-indigo-600" />
             Salles de l&apos;organisation
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-xs text-muted mt-1">
             Définissez le type de salle, générez un plan 2D et assignez le staff.
             {planQuota && (
               <span className="block mt-1 font-semibold text-indigo-600">
@@ -377,17 +379,26 @@ export default function RoomsManagement() {
             )}
           </p>
         </div>
-        {canManage && (
-          <button
-            type="button"
-            onClick={() => { resetWizard(); setShowWizard(true); }}
-            disabled={roomsAtLimit}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition disabled:opacity-50"
-          >
-            <Plus className="w-4 h-4" />
-            Nouvelle salle
-          </button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {rooms.length > 0 && (
+            <ViewModeToggle
+              storageKey="em-view-rooms"
+              value={roomsViewMode}
+              onChange={setRoomsViewMode}
+            />
+          )}
+          {canManage && (
+            <button
+              type="button"
+              onClick={() => { resetWizard(); setShowWizard(true); }}
+              disabled={roomsAtLimit}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition disabled:opacity-50"
+            >
+              <Plus className="w-4 h-4" />
+              Nouvelle salle
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -506,87 +517,154 @@ export default function RoomsManagement() {
       {loading ? (
         <div className="py-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-600" /></div>
       ) : rooms.length === 0 ? (
-        <p className="text-sm text-slate-500 text-center py-6">Aucune salle configurée.</p>
+        <p className="text-sm text-muted text-center py-6">Aucune salle configurée.</p>
       ) : (
-        <div className="space-y-4">
-          {rooms.map((room) => (
-            <div key={room.id} className="border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-bold text-slate-900 dark:text-white">{room.name}</h3>
-                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 border border-violet-100">
-                      {roomTypeLabels[room.roomType || 'SIMPLE']}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">
-                    {[room.floor, room.location, room.capacity ? `${room.capacity} places` : null].filter(Boolean).join(' · ') || 'Sans détails'}
-                  </p>
-                  {room.description && <p className="text-xs text-slate-600 mt-2">{room.description}</p>}
-                </div>
-                {canManage && (
-                  <div className="flex gap-1">
-                    <button type="button" onClick={() => openEditLayout(room)} className="p-2 text-slate-400 hover:text-indigo-600 rounded-xl" title="Modifier le plan 2D">
-                      <Edit3 className="w-4 h-4" />
-                    </button>
-                    <button type="button" onClick={() => handleDelete(room)} className="p-2 text-slate-400 hover:text-rose-600 rounded-xl">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-              </div>
+        <div
+          className={
+            roomsViewMode === 'grid'
+              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'
+              : 'flex flex-col gap-3'
+          }
+        >
+          {rooms.map((room) => {
+            const metaLine = [room.floor, room.location, room.capacity ? `${room.capacity} places` : null]
+              .filter(Boolean)
+              .join(' · ') || 'Sans détails';
+            const actions = canManage ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => openEditLayout(room)}
+                  className="p-2 text-muted hover:text-indigo-500 hover:bg-surface-muted rounded-lg"
+                  title="Modifier le plan 2D"
+                >
+                  <Edit3 className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(room)}
+                  className="p-2 text-muted hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </>
+            ) : undefined;
 
-              {room.layoutBlueprint && (
-                <RoomLayoutPreview blueprint={room.layoutBlueprint as RoomLayoutBlueprint} />
-              )}
-
-              <div className="space-y-2">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                  <Users className="w-3.5 h-3.5" /> Staff de la salle
-                </p>
-                {room.staff.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic">Aucun staff assigné.</p>
-                ) : (
-                  room.staff.map((s) => (
-                    <div key={s.id} className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-950 rounded-xl px-3 py-2">
-                      <div>
-                        <span className="font-semibold text-slate-800 dark:text-slate-200">{s.user.name || s.user.email}</span>
-                        <span className="ml-2 text-[10px] font-bold uppercase text-indigo-600">{roleLabels[s.staffRole]}</span>
+            return (
+              <div key={room.id} className="space-y-2">
+                <ProjectCard
+                  id={room.id}
+                  title={room.name}
+                  layout={roomsViewMode}
+                  meta={
+                    roomsViewMode === 'list' ? (
+                      <span>
+                        {roomTypeLabels[room.roomType || 'SIMPLE']} · {metaLine}
+                      </span>
+                    ) : (
+                      <div className="space-y-0.5">
+                        <span className="inline-flex text-[10px] font-bold uppercase tracking-wide text-violet-600 dark:text-violet-300">
+                          {roomTypeLabels[room.roomType || 'SIMPLE']}
+                        </span>
+                        <p>{metaLine}</p>
                       </div>
-                      {canManage && (
-                        <button type="button" onClick={() => handleRemoveStaff(room.id, s.user.id)} className="text-rose-500 hover:text-rose-700">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                    )
+                  }
+                  description={roomsViewMode === 'grid' ? room.description : undefined}
+                  actions={actions}
+                >
+                  {roomsViewMode === 'grid' && room.layoutBlueprint && (
+                    <div className="max-h-28 overflow-hidden rounded-md border border-border bg-surface-muted [&_.aspect-\[4\/3\]]:aspect-auto [&_.aspect-\[4\/3\]]:h-24">
+                      <RoomLayoutPreview
+                        blueprint={room.layoutBlueprint as RoomLayoutBlueprint}
+                        className="!space-y-0 [&_>div:first-child]:hidden"
+                      />
                     </div>
-                  ))
+                  )}
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted flex items-center gap-1">
+                      <Users className="w-3.5 h-3.5" /> Staff ({room.staff.length})
+                    </p>
+                    {room.staff.length === 0 ? (
+                      <p className="text-xs text-muted italic">Aucun staff assigné.</p>
+                    ) : (
+                      room.staff.slice(0, roomsViewMode === 'grid' ? 2 : 4).map((s) => (
+                        <div
+                          key={s.id}
+                          className="flex items-center justify-between text-xs bg-surface-muted rounded-lg px-2.5 py-1.5"
+                        >
+                          <div className="min-w-0 truncate">
+                            <span className="font-semibold text-foreground">
+                              {s.user.name || s.user.email}
+                            </span>
+                            <span className="ml-1.5 text-[10px] font-bold uppercase text-indigo-600">
+                              {roleLabels[s.staffRole]}
+                            </span>
+                          </div>
+                          {canManage && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveStaff(room.id, s.user.id)}
+                              className="text-rose-500 hover:text-rose-700 shrink-0"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </ProjectCard>
+
+                {canManage && (
+                  assignRoomId === room.id ? (
+                    <div className="flex flex-wrap gap-2 items-end p-3 border border-border rounded-[var(--radius-card)] bg-surface-muted">
+                      <select
+                        value={assignUserId}
+                        onChange={(e) => setAssignUserId(e.target.value)}
+                        className="flex-1 min-w-[140px] px-3 py-2 rounded-lg border text-xs"
+                      >
+                        <option value="">Choisir un utilisateur</option>
+                        {teamMembers.map((m) => (
+                          <option key={m.id} value={m.id}>{m.name || m.email}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={assignRole}
+                        onChange={(e) => setAssignRole(e.target.value as 'MANAGER' | 'PROTOCOL')}
+                        className="px-3 py-2 rounded-lg border text-xs"
+                      >
+                        <option value="MANAGER">Manager</option>
+                        <option value="PROTOCOL">Protocole</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => handleAssignStaff(room.id)}
+                        className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold"
+                      >
+                        Assigner
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAssignRoomId(null)}
+                        className="px-3 py-2 border rounded-lg text-xs"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setAssignRoomId(room.id)}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 px-1"
+                    >
+                      <UserPlus className="w-3.5 h-3.5" /> Assigner un staff
+                    </button>
+                  )
                 )}
               </div>
-
-              {canManage && (
-                assignRoomId === room.id ? (
-                  <div className="flex flex-wrap gap-2 items-end pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <select value={assignUserId} onChange={(e) => setAssignUserId(e.target.value)} className="flex-1 min-w-[140px] px-3 py-2 rounded-xl border text-xs">
-                      <option value="">Choisir un utilisateur</option>
-                      {teamMembers.map((m) => (
-                        <option key={m.id} value={m.id}>{m.name || m.email}</option>
-                      ))}
-                    </select>
-                    <select value={assignRole} onChange={(e) => setAssignRole(e.target.value as 'MANAGER' | 'PROTOCOL')} className="px-3 py-2 rounded-xl border text-xs">
-                      <option value="MANAGER">Manager</option>
-                      <option value="PROTOCOL">Protocole</option>
-                    </select>
-                    <button type="button" onClick={() => handleAssignStaff(room.id)} className="px-3 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold">Assigner</button>
-                    <button type="button" onClick={() => setAssignRoomId(null)} className="px-3 py-2 border rounded-xl text-xs">Annuler</button>
-                  </div>
-                ) : (
-                  <button type="button" onClick={() => setAssignRoomId(room.id)} className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600">
-                    <UserPlus className="w-3.5 h-3.5" /> Assigner un staff
-                  </button>
-                )
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

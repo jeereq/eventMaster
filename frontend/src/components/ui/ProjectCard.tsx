@@ -1,0 +1,174 @@
+'use client';
+
+import React from 'react';
+import { cn } from '@/lib/cn';
+
+/** Palette de bandeaux type Asana (couleurs chaudes + indigo EventMaster). */
+const ACCENT_STRIPES = [
+  '#4573d2',
+  '#f06a6a',
+  '#f1bd6c',
+  '#5da283',
+  '#9b51e0',
+  '#e362e3',
+  '#4f46e5',
+  '#4186e0',
+  '#aaaca6',
+  '#fc8f66',
+] as const;
+
+export function accentFromId(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  }
+  return ACCENT_STRIPES[hash % ACCENT_STRIPES.length];
+}
+
+export type ProjectCardLayout = 'grid' | 'list';
+
+export interface ProjectCardProps {
+  id: string;
+  title: string;
+  meta?: React.ReactNode;
+  description?: React.ReactNode;
+  cover?: React.ReactNode;
+  accentColor?: string;
+  actions?: React.ReactNode;
+  footer?: React.ReactNode;
+  onClick?: () => void;
+  layout?: ProjectCardLayout;
+  className?: string;
+  children?: React.ReactNode;
+}
+
+export function ProjectCard({
+  id,
+  title,
+  meta,
+  description,
+  cover,
+  accentColor,
+  actions,
+  footer,
+  onClick,
+  layout = 'grid',
+  className,
+  children,
+}: ProjectCardProps) {
+  const stripe = accentColor ?? accentFromId(id);
+  const interactive = Boolean(onClick);
+
+  if (layout === 'list') {
+    return (
+      <div className={cn('space-y-2', className)}>
+        <div
+          role={interactive ? 'button' : undefined}
+          tabIndex={interactive ? 0 : undefined}
+          onClick={onClick}
+          onKeyDown={
+            interactive
+              ? (e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onClick?.();
+                  }
+                }
+              : undefined
+          }
+          className={cn(
+            'group flex items-center gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-3 py-2.5',
+            'transition-[background-color,border-color] duration-150 hover:bg-card-hover hover:border-border-subtle',
+            interactive && 'cursor-pointer',
+          )}
+        >
+          <span
+            className="h-9 w-1.5 shrink-0 rounded-full"
+            style={{ backgroundColor: stripe }}
+            aria-hidden
+          />
+          {cover && (
+            <div className="h-10 w-14 shrink-0 overflow-hidden rounded-md bg-surface-muted">
+              {cover}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-foreground">{title}</p>
+            {meta && <div className="mt-0.5 truncate text-xs text-muted">{meta}</div>}
+          </div>
+          {actions && (
+            <div
+              className="flex shrink-0 items-center gap-1.5 opacity-80 group-hover:opacity-100"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {actions}
+            </div>
+          )}
+        </div>
+        {children && (
+          <div className="rounded-[var(--radius-card)] border border-border bg-surface px-3 py-2.5 space-y-2">
+            {children}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      role={interactive ? 'button' : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={
+        interactive
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick?.();
+              }
+            }
+          : undefined
+      }
+      className={cn(
+        'group flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface',
+        'transition-[transform,background-color,border-color] duration-150 ease-out',
+        'hover:bg-card-hover hover:border-border-subtle hover:-translate-y-px',
+        interactive && 'cursor-pointer',
+        className,
+      )}
+    >
+      <div className="relative h-14 shrink-0 overflow-hidden" style={{ backgroundColor: stripe }}>
+        {cover ? (
+          <div className="absolute inset-0">{cover}</div>
+        ) : (
+          <div
+            className="absolute inset-0 opacity-30"
+            style={{
+              backgroundImage:
+                'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, transparent 55%)',
+            }}
+          />
+        )}
+      </div>
+      <div className="flex flex-1 flex-col gap-3 p-4">
+        <div className="min-w-0 space-y-1">
+          <h3 className="truncate text-[15px] font-semibold leading-snug text-foreground tracking-tight">
+            {title}
+          </h3>
+          {meta && <div className="text-xs text-muted space-y-0.5">{meta}</div>}
+          {description && <div className="text-xs text-muted line-clamp-2">{description}</div>}
+        </div>
+        {children}
+        {(actions || footer) && (
+          <div
+            className="mt-auto flex items-center justify-between gap-2 pt-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="min-w-0 flex-1">{footer}</div>
+            {actions && <div className="flex shrink-0 items-center gap-1.5">{actions}</div>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
