@@ -5,12 +5,16 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
-  Building2, Plus, Trash2, Loader2, Users, UserPlus, AlertCircle, CheckCircle2,
+  Building2, Plus, Trash2, Users, UserPlus, CheckCircle2,
   ChevronLeft, ChevronRight, LayoutGrid, Theater, Tent, Presentation, Edit3,
 } from 'lucide-react';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import RoomLayoutEditor from '@/components/RoomLayoutEditor';
-import { ProjectCard, ViewModeToggle, useViewMode, SkeletonRoomsView } from '@/components/ui';
+import {
+  ProjectCard, ViewModeToggle, useViewMode, SkeletonRoomsView,
+  Button, Modal, EmptyState, Alert, Input,
+} from '@/components/ui';
+import { cn } from '@/lib/cn';
 import {
   ChairType,
   LayoutParams,
@@ -55,12 +59,12 @@ const roleLabels: Record<string, string> = {
 };
 
 const roomTypeIcons: Record<RoomType, React.ReactNode> = {
-  SIMPLE: <Building2 className="w-6 h-6" />,
-  BANQUET: <LayoutGrid className="w-6 h-6" />,
-  CONFERENCE: <Presentation className="w-6 h-6" />,
-  AMPHITHEATER: <Theater className="w-6 h-6" />,
-  TENT: <Tent className="w-6 h-6" />,
-  CUSTOM: <Building2 className="w-6 h-6" />,
+  SIMPLE: <Building2 className="w-5 h-5" />,
+  BANQUET: <LayoutGrid className="w-5 h-5" />,
+  CONFERENCE: <Presentation className="w-5 h-5" />,
+  AMPHITHEATER: <Theater className="w-5 h-5" />,
+  TENT: <Tent className="w-5 h-5" />,
+  CUSTOM: <Building2 className="w-5 h-5" />,
 };
 
 const selectableRoomTypes: RoomType[] = ['SIMPLE', 'BANQUET', 'CONFERENCE', 'AMPHITHEATER', 'TENT'];
@@ -73,6 +77,17 @@ const defaultParams: Record<RoomType, LayoutParams> = {
   TENT: { tentWidthM: 15, tentLengthM: 20, tableCount: 6, seatsPerTable: 8, chairType: 'BANQUET' },
   CUSTOM: {},
 };
+
+const WIZARD_STEPS = [
+  { id: 1, label: 'Infos' },
+  { id: 2, label: 'Type' },
+  { id: 3, label: 'Plan' },
+] as const;
+
+const fieldClass =
+  'w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary';
+
+const labelClass = 'block text-xs font-medium text-muted mb-1.5';
 
 export default function RoomsManagement() {
   const { planFeatures, planQuota, tenant } = useAuth();
@@ -128,9 +143,20 @@ export default function RoomsManagement() {
     setDescription('');
     setFloor('');
     setLocation('');
-    setRoomType('BANQUET');
+    setRoomType(allowedRoomTypes.includes('BANQUET') ? 'BANQUET' : allowedRoomTypes[0] || 'SIMPLE');
     setLayoutParams(defaultParams.BANQUET);
     setBlueprintDraft(null);
+  };
+
+  const closeWizard = () => {
+    setShowWizard(false);
+    resetWizard();
+  };
+
+  const openWizard = () => {
+    resetWizard();
+    setError('');
+    setShowWizard(true);
   };
 
   const goToStep = (step: number) => {
@@ -178,8 +204,7 @@ export default function RoomsManagement() {
         layoutBlueprint: blueprintDraft ?? undefined,
       });
       setSuccess('Salle créée avec son plan.');
-      setShowWizard(false);
-      resetWizard();
+      closeWizard();
       await load();
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la création.');
@@ -260,26 +285,26 @@ export default function RoomsManagement() {
       case 'BANQUET':
         return (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label className="space-y-1 text-xs">
-              <span className="font-bold text-slate-500 uppercase">Nombre de tables</span>
-              <input type="number" min={1} max={80} value={layoutParams.tableCount ?? 8} onChange={(e) => updateParam('tableCount', parseInt(e.target.value, 10))} className="w-full px-3 py-2 rounded-xl border text-sm" />
+            <label>
+              <span className={labelClass}>Nombre de tables</span>
+              <input type="number" min={1} max={80} value={layoutParams.tableCount ?? 8} onChange={(e) => updateParam('tableCount', parseInt(e.target.value, 10))} className={fieldClass} />
             </label>
-            <label className="space-y-1 text-xs">
-              <span className="font-bold text-slate-500 uppercase">Places / table</span>
-              <input type="number" min={2} max={20} value={layoutParams.seatsPerTable ?? 8} onChange={(e) => updateParam('seatsPerTable', parseInt(e.target.value, 10))} className="w-full px-3 py-2 rounded-xl border text-sm" />
+            <label>
+              <span className={labelClass}>Places / table</span>
+              <input type="number" min={2} max={20} value={layoutParams.seatsPerTable ?? 8} onChange={(e) => updateParam('seatsPerTable', parseInt(e.target.value, 10))} className={fieldClass} />
             </label>
-            <label className="space-y-1 text-xs">
-              <span className="font-bold text-slate-500 uppercase">Forme des tables</span>
-              <select value={layoutParams.tableShape ?? 'round'} onChange={(e) => updateParam('tableShape', e.target.value as LayoutParams['tableShape'])} className="w-full px-3 py-2 rounded-xl border text-sm">
+            <label>
+              <span className={labelClass}>Forme des tables</span>
+              <select value={layoutParams.tableShape ?? 'round'} onChange={(e) => updateParam('tableShape', e.target.value as LayoutParams['tableShape'])} className={fieldClass}>
                 <option value="round">Ronde</option>
                 <option value="rectangular">Rectangulaire</option>
                 <option value="square">Carrée</option>
                 <option value="oval">Ovale</option>
               </select>
             </label>
-            <label className="space-y-1 text-xs">
-              <span className="font-bold text-slate-500 uppercase">Type de chaise</span>
-              <select value={layoutParams.chairType ?? 'BANQUET'} onChange={(e) => updateParam('chairType', e.target.value as ChairType)} className="w-full px-3 py-2 rounded-xl border text-sm">
+            <label>
+              <span className={labelClass}>Type de chaise</span>
+              <select value={layoutParams.chairType ?? 'BANQUET'} onChange={(e) => updateParam('chairType', e.target.value as ChairType)} className={fieldClass}>
                 {Object.entries(chairTypeLabels).map(([k, v]) => (
                   <option key={k} value={k}>{v}</option>
                 ))}
@@ -290,17 +315,17 @@ export default function RoomsManagement() {
       case 'CONFERENCE':
         return (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label className="space-y-1 text-xs">
-              <span className="font-bold text-slate-500 uppercase">Nombre de rangées</span>
-              <input type="number" min={1} max={30} value={layoutParams.rowCount ?? 6} onChange={(e) => updateParam('rowCount', parseInt(e.target.value, 10))} className="w-full px-3 py-2 rounded-xl border text-sm" />
+            <label>
+              <span className={labelClass}>Nombre de rangées</span>
+              <input type="number" min={1} max={30} value={layoutParams.rowCount ?? 6} onChange={(e) => updateParam('rowCount', parseInt(e.target.value, 10))} className={fieldClass} />
             </label>
-            <label className="space-y-1 text-xs">
-              <span className="font-bold text-slate-500 uppercase">Places / rangée</span>
-              <input type="number" min={2} max={40} value={layoutParams.seatsPerRow ?? 10} onChange={(e) => updateParam('seatsPerRow', parseInt(e.target.value, 10))} className="w-full px-3 py-2 rounded-xl border text-sm" />
+            <label>
+              <span className={labelClass}>Places / rangée</span>
+              <input type="number" min={2} max={40} value={layoutParams.seatsPerRow ?? 10} onChange={(e) => updateParam('seatsPerRow', parseInt(e.target.value, 10))} className={fieldClass} />
             </label>
-            <label className="space-y-1 text-xs sm:col-span-2">
-              <span className="font-bold text-slate-500 uppercase">Type de siège</span>
-              <select value={layoutParams.chairType ?? 'THEATER'} onChange={(e) => updateParam('chairType', e.target.value as ChairType)} className="w-full px-3 py-2 rounded-xl border text-sm">
+            <label className="sm:col-span-2">
+              <span className={labelClass}>Type de siège</span>
+              <select value={layoutParams.chairType ?? 'THEATER'} onChange={(e) => updateParam('chairType', e.target.value as ChairType)} className={fieldClass}>
                 {Object.entries(chairTypeLabels).map(([k, v]) => (
                   <option key={k} value={k}>{v}</option>
                 ))}
@@ -311,21 +336,21 @@ export default function RoomsManagement() {
       case 'AMPHITHEATER':
         return (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label className="space-y-1 text-xs">
-              <span className="font-bold text-slate-500 uppercase">Gradins</span>
-              <input type="number" min={1} max={10} value={layoutParams.tierCount ?? 3} onChange={(e) => updateParam('tierCount', parseInt(e.target.value, 10))} className="w-full px-3 py-2 rounded-xl border text-sm" />
+            <label>
+              <span className={labelClass}>Gradins</span>
+              <input type="number" min={1} max={10} value={layoutParams.tierCount ?? 3} onChange={(e) => updateParam('tierCount', parseInt(e.target.value, 10))} className={fieldClass} />
             </label>
-            <label className="space-y-1 text-xs">
-              <span className="font-bold text-slate-500 uppercase">Rangées / gradin</span>
-              <input type="number" min={1} max={10} value={layoutParams.rowsPerTier ?? 2} onChange={(e) => updateParam('rowsPerTier', parseInt(e.target.value, 10))} className="w-full px-3 py-2 rounded-xl border text-sm" />
+            <label>
+              <span className={labelClass}>Rangées / gradin</span>
+              <input type="number" min={1} max={10} value={layoutParams.rowsPerTier ?? 2} onChange={(e) => updateParam('rowsPerTier', parseInt(e.target.value, 10))} className={fieldClass} />
             </label>
-            <label className="space-y-1 text-xs">
-              <span className="font-bold text-slate-500 uppercase">Places / rangée</span>
-              <input type="number" min={2} max={40} value={layoutParams.seatsPerRow ?? 12} onChange={(e) => updateParam('seatsPerRow', parseInt(e.target.value, 10))} className="w-full px-3 py-2 rounded-xl border text-sm" />
+            <label>
+              <span className={labelClass}>Places / rangée</span>
+              <input type="number" min={2} max={40} value={layoutParams.seatsPerRow ?? 12} onChange={(e) => updateParam('seatsPerRow', parseInt(e.target.value, 10))} className={fieldClass} />
             </label>
-            <label className="space-y-1 text-xs">
-              <span className="font-bold text-slate-500 uppercase">Type de siège</span>
-              <select value={layoutParams.chairType ?? 'THEATER'} onChange={(e) => updateParam('chairType', e.target.value as ChairType)} className="w-full px-3 py-2 rounded-xl border text-sm">
+            <label>
+              <span className={labelClass}>Type de siège</span>
+              <select value={layoutParams.chairType ?? 'THEATER'} onChange={(e) => updateParam('chairType', e.target.value as ChairType)} className={fieldClass}>
                 {Object.entries(chairTypeLabels).map(([k, v]) => (
                   <option key={k} value={k}>{v}</option>
                 ))}
@@ -336,41 +361,41 @@ export default function RoomsManagement() {
       case 'TENT':
         return (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label className="space-y-1 text-xs">
-              <span className="font-bold text-slate-500 uppercase">Largeur (m)</span>
-              <input type="number" min={5} value={layoutParams.tentWidthM ?? 15} onChange={(e) => updateParam('tentWidthM', parseInt(e.target.value, 10))} className="w-full px-3 py-2 rounded-xl border text-sm" />
+            <label>
+              <span className={labelClass}>Largeur (m)</span>
+              <input type="number" min={5} value={layoutParams.tentWidthM ?? 15} onChange={(e) => updateParam('tentWidthM', parseInt(e.target.value, 10))} className={fieldClass} />
             </label>
-            <label className="space-y-1 text-xs">
-              <span className="font-bold text-slate-500 uppercase">Longueur (m)</span>
-              <input type="number" min={5} value={layoutParams.tentLengthM ?? 20} onChange={(e) => updateParam('tentLengthM', parseInt(e.target.value, 10))} className="w-full px-3 py-2 rounded-xl border text-sm" />
+            <label>
+              <span className={labelClass}>Longueur (m)</span>
+              <input type="number" min={5} value={layoutParams.tentLengthM ?? 20} onChange={(e) => updateParam('tentLengthM', parseInt(e.target.value, 10))} className={fieldClass} />
             </label>
-            <label className="space-y-1 text-xs">
-              <span className="font-bold text-slate-500 uppercase">Tables intérieures</span>
-              <input type="number" min={0} max={40} value={layoutParams.tableCount ?? 0} onChange={(e) => updateParam('tableCount', parseInt(e.target.value, 10))} className="w-full px-3 py-2 rounded-xl border text-sm" />
+            <label>
+              <span className={labelClass}>Tables intérieures</span>
+              <input type="number" min={0} max={40} value={layoutParams.tableCount ?? 0} onChange={(e) => updateParam('tableCount', parseInt(e.target.value, 10))} className={fieldClass} />
             </label>
-            <label className="space-y-1 text-xs">
-              <span className="font-bold text-slate-500 uppercase">Places / table</span>
-              <input type="number" min={2} max={20} value={layoutParams.seatsPerTable ?? 8} onChange={(e) => updateParam('seatsPerTable', parseInt(e.target.value, 10))} className="w-full px-3 py-2 rounded-xl border text-sm" />
+            <label>
+              <span className={labelClass}>Places / table</span>
+              <input type="number" min={2} max={20} value={layoutParams.seatsPerTable ?? 8} onChange={(e) => updateParam('seatsPerTable', parseInt(e.target.value, 10))} className={fieldClass} />
             </label>
           </div>
         );
       default:
-        return <p className="text-sm text-slate-500">Aucune configuration requise pour une salle simple.</p>;
+        return <p className="text-sm text-muted">Aucune configuration requise pour une salle simple.</p>;
     }
   };
 
   return (
-    <div className="bg-surface border border-border rounded-[var(--radius-card)] p-6 shadow-none space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3 border-b border-border">
+    <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 sm:p-6 space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border">
         <div>
-          <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-indigo-600" />
+          <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-primary" />
             Salles de l&apos;organisation
           </h2>
           <p className="text-xs text-muted mt-1">
-            Définissez le type de salle, générez un plan 2D et assignez le staff.
+            Créez une salle en 3 étapes : infos, type, puis plan 2D.
             {planQuota && (
-              <span className="block mt-1 font-semibold text-indigo-600">
+              <span className="block mt-1 font-medium text-primary">
                 Salles : {planQuota.usage.rooms} / {planQuota.limits.maxRooms >= 9999 ? '∞' : planQuota.limits.maxRooms}
                 {planFeatures?.roomEditorLevel && (
                   <> · Éditeur {planFeatures.roomEditorLevel}</>
@@ -390,136 +415,203 @@ export default function RoomsManagement() {
             />
           )}
           {canManage && (
-            <button
+            <Button
               type="button"
-              onClick={() => { resetWizard(); setShowWizard(true); }}
+              size="sm"
+              onClick={openWizard}
               disabled={roomsAtLimit}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition disabled:opacity-50"
+              leftIcon={<Plus className="w-4 h-4" />}
             >
-              <Plus className="w-4 h-4" />
               Nouvelle salle
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
-      {error && (
-        <div className="p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 text-rose-800 rounded-xl flex items-center gap-2 text-xs">
-          <AlertCircle className="w-4 h-4" /> {error}
-        </div>
-      )}
-      {success && (
-        <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 text-emerald-800 rounded-xl flex items-center gap-2 text-xs">
-          <CheckCircle2 className="w-4 h-4" /> {success}
-        </div>
-      )}
+      {error && <Alert variant="error">{error}</Alert>}
+      {success && <Alert variant="success">{success}</Alert>}
 
       {roomsAtLimit && (
-        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+        <Alert variant="warning">
           Quota de salles atteint pour le forfait {tenant?.plan || 'actuel'}.{' '}
-          <Link href="/dashboard/billing" className="font-bold underline">Voir les forfaits</Link>
-        </p>
+          <Link href="/dashboard/billing" className="font-semibold underline">Voir les forfaits</Link>
+        </Alert>
       )}
 
-      {showWizard && canManage && (
-        <div className="bg-slate-50 dark:bg-slate-950 border rounded-2xl p-5 space-y-5">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-wider text-indigo-600">Étape {wizardStep} / 3</p>
-            <button type="button" onClick={() => { setShowWizard(false); resetWizard(); }} className="text-xs text-slate-500 hover:text-slate-700">Fermer</button>
-          </div>
-
-          {wizardStep === 1 && (
-            <div className="space-y-3">
-              <h3 className="font-bold text-slate-900 dark:text-white">Informations générales</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <input required placeholder="Nom de la salle *" value={name} onChange={(e) => setName(e.target.value)} className="px-4 py-2.5 rounded-xl border text-sm bg-white dark:bg-slate-900" />
-                <input placeholder="Étage / Aile" value={floor} onChange={(e) => setFloor(e.target.value)} className="px-4 py-2.5 rounded-xl border text-sm bg-white dark:bg-slate-900" />
-                <input placeholder="Emplacement" value={location} onChange={(e) => setLocation(e.target.value)} className="px-4 py-2.5 rounded-xl border text-sm bg-white dark:bg-slate-900 sm:col-span-2" />
-              </div>
-              <textarea placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="w-full px-4 py-2.5 rounded-xl border text-sm bg-white dark:bg-slate-900" />
-            </div>
-          )}
-
-          {wizardStep === 2 && (
-            <div className="space-y-3">
-              <h3 className="font-bold text-slate-900 dark:text-white">Type de salle</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {allowedRoomTypes.map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => {
-                      setRoomType(type);
-                      setLayoutParams(defaultParams[type]);
-                    }}
-                    className={`text-left p-4 rounded-2xl border-2 transition ${roomType === type ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950/30' : 'border-slate-200 hover:border-indigo-200 bg-white dark:bg-slate-900'}`}
-                  >
-                    <div className={`mb-2 ${roomType === type ? 'text-indigo-600' : 'text-slate-500'}`}>{roomTypeIcons[type]}</div>
-                    <p className="font-bold text-sm text-slate-900 dark:text-white">{roomTypeLabels[type]}</p>
-                    <p className="text-[11px] text-slate-500 mt-1">{roomTypeDescriptions[type]}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {wizardStep === 3 && blueprintDraft && (
-            <div className="space-y-5">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="space-y-3 lg:col-span-1">
-                  <h3 className="font-bold text-slate-900 dark:text-white">Paramètres — {roomTypeLabels[roomType]}</h3>
-                  {roomType !== 'SIMPLE' && renderTypeParams()}
-                  <p className="text-xs text-emerald-700 font-semibold">
-                    Capacité : {blueprintDraft.metadata.totalSeats} places
-                  </p>
-                </div>
-              </div>
-              <RoomLayoutEditor
-                blueprint={blueprintDraft}
-                onChange={setBlueprintDraft}
-                onRegenerate={roomType !== 'SIMPLE' ? regenerateBlueprint : undefined}
-                allowThemesFixtures={planFeatures?.roomThemesFixtures !== false}
-              />
-            </div>
-          )}
-
-          <div className="flex justify-between pt-2 border-t border-slate-200 dark:border-slate-800">
-            <button
+      <Modal
+        open={showWizard && canManage}
+        onClose={closeWizard}
+        title="Nouvelle salle"
+        description="Configurez la salle, choisissez un type, puis ajustez le plan."
+        size={wizardStep === 3 ? 'full' : 'lg'}
+        footer={
+          <div className="flex w-full justify-between gap-2">
+            <Button
               type="button"
+              variant="secondary"
+              size="sm"
               disabled={wizardStep === 1}
               onClick={() => goToStep(wizardStep - 1)}
-              className="inline-flex items-center gap-1 px-4 py-2 border rounded-xl text-xs font-bold disabled:opacity-40"
+              leftIcon={<ChevronLeft className="w-4 h-4" />}
             >
-              <ChevronLeft className="w-4 h-4" /> Précédent
-            </button>
+              Précédent
+            </Button>
             {wizardStep < 3 ? (
-              <button
+              <Button
                 type="button"
+                size="sm"
                 disabled={wizardStep === 1 && !name.trim()}
                 onClick={() => goToStep(wizardStep + 1)}
-                className="inline-flex items-center gap-1 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold disabled:opacity-40"
+                rightIcon={<ChevronRight className="w-4 h-4" />}
               >
-                Suivant <ChevronRight className="w-4 h-4" />
-              </button>
+                Suivant
+              </Button>
             ) : (
-              <button
+              <Button
                 type="button"
-                disabled={saving || !name.trim()}
+                variant="success"
+                size="sm"
+                loading={saving}
+                disabled={!name.trim()}
                 onClick={handleCreate}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold disabled:opacity-40"
+                leftIcon={<CheckCircle2 className="w-4 h-4" />}
               >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                 Créer la salle
-              </button>
+              </Button>
             )}
           </div>
+        }
+      >
+        {/* Stepper */}
+        <div className="flex items-center gap-1 sm:gap-2 mb-5">
+          {WIZARD_STEPS.map((step, idx) => {
+            const active = wizardStep === step.id;
+            const done = wizardStep > step.id;
+            return (
+              <React.Fragment key={step.id}>
+                {idx > 0 && (
+                  <div className={cn('h-px flex-1 min-w-2', done ? 'bg-primary' : 'bg-border')} />
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (step.id < wizardStep || (step.id === wizardStep + 1 && (wizardStep > 1 || name.trim()))) {
+                      goToStep(step.id);
+                    }
+                  }}
+                  className={cn(
+                    'inline-flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors shrink-0',
+                    active && 'bg-primary/10 text-primary',
+                    done && !active && 'text-primary',
+                    !active && !done && 'text-muted',
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold border',
+                      active && 'bg-primary text-white border-primary',
+                      done && !active && 'bg-primary/15 text-primary border-primary/30',
+                      !active && !done && 'border-border bg-surface',
+                    )}
+                  >
+                    {done && !active ? '✓' : step.id}
+                  </span>
+                  <span className="hidden sm:inline">{step.label}</span>
+                </button>
+              </React.Fragment>
+            );
+          })}
         </div>
-      )}
+
+        {wizardStep === 1 && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input label="Nom de la salle" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex. Grand salon" />
+              <Input label="Étage / Aile" value={floor} onChange={(e) => setFloor(e.target.value)} placeholder="Ex. RDC" />
+              <div className="sm:col-span-2">
+                <Input label="Emplacement" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Ex. Bâtiment A" />
+              </div>
+            </div>
+            <label className="block">
+              <span className={labelClass}>Description</span>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={2}
+                placeholder="Optionnel"
+                className={fieldClass}
+              />
+            </label>
+          </div>
+        )}
+
+        {wizardStep === 2 && (
+          <div className="space-y-3">
+            <p className="text-xs text-muted">Choisissez la configuration qui correspond le mieux à votre espace.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {allowedRoomTypes.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => {
+                    setRoomType(type);
+                    setLayoutParams(defaultParams[type]);
+                    setBlueprintDraft(null);
+                  }}
+                  className={cn(
+                    'text-left p-3.5 rounded-[var(--radius-card)] border transition-colors',
+                    roomType === type
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border bg-surface hover:bg-surface-muted',
+                  )}
+                >
+                  <div className={cn('mb-2', roomType === type ? 'text-primary' : 'text-muted')}>
+                    {roomTypeIcons[type]}
+                  </div>
+                  <p className="font-semibold text-sm text-foreground">{roomTypeLabels[type]}</p>
+                  <p className="text-[11px] text-muted mt-1 leading-relaxed">{roomTypeDescriptions[type]}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {wizardStep === 3 && blueprintDraft && (
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground">
+                Paramètres — {roomTypeLabels[roomType]}
+              </h3>
+              {roomType !== 'SIMPLE' && renderTypeParams()}
+              <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                Capacité estimée : {blueprintDraft.metadata.totalSeats} places
+              </p>
+            </div>
+            <RoomLayoutEditor
+              blueprint={blueprintDraft}
+              onChange={setBlueprintDraft}
+              onRegenerate={roomType !== 'SIMPLE' ? regenerateBlueprint : undefined}
+              allowThemesFixtures={planFeatures?.roomThemesFixtures !== false}
+            />
+          </div>
+        )}
+      </Modal>
 
       {loading ? (
         <SkeletonRoomsView mode={roomsViewMode} />
       ) : rooms.length === 0 ? (
-        <p className="text-sm text-muted text-center py-6">Aucune salle configurée.</p>
+        <EmptyState
+          icon={<Building2 className="w-5 h-5" />}
+          title="Aucune salle configurée"
+          description="Créez votre première salle pour générer un plan 2D et y assigner le staff."
+          action={
+            canManage && !roomsAtLimit ? (
+              <Button type="button" size="sm" onClick={openWizard} leftIcon={<Plus className="w-4 h-4" />}>
+                Créer une salle
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
         <div
           className={
@@ -537,7 +629,7 @@ export default function RoomsManagement() {
                 <button
                   type="button"
                   onClick={() => openEditLayout(room)}
-                  className="p-2 text-muted hover:text-indigo-500 hover:bg-surface-muted rounded-lg"
+                  className="p-2 text-muted hover:text-primary hover:bg-surface-muted rounded-[var(--radius-button)]"
                   title="Modifier le plan 2D"
                 >
                   <Edit3 className="w-4 h-4" />
@@ -545,7 +637,7 @@ export default function RoomsManagement() {
                 <button
                   type="button"
                   onClick={() => handleDelete(room)}
-                  className="p-2 text-muted hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg"
+                  className="p-2 text-muted hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-[var(--radius-button)]"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -565,7 +657,7 @@ export default function RoomsManagement() {
                       </span>
                     ) : (
                       <div className="space-y-0.5">
-                        <span className="inline-flex text-[10px] font-bold uppercase tracking-wide text-violet-600 dark:text-violet-300">
+                        <span className="inline-flex text-[10px] font-semibold uppercase tracking-wide text-primary">
                           {roomTypeLabels[room.roomType || 'SIMPLE']}
                         </span>
                         <p>{metaLine}</p>
@@ -584,7 +676,7 @@ export default function RoomsManagement() {
                     </div>
                   )}
                   <div className="space-y-1.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted flex items-center gap-1">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted flex items-center gap-1">
                       <Users className="w-3.5 h-3.5" /> Staff ({room.staff.length})
                     </p>
                     {room.staff.length === 0 ? (
@@ -593,13 +685,13 @@ export default function RoomsManagement() {
                       room.staff.slice(0, roomsViewMode === 'grid' ? 2 : 4).map((s) => (
                         <div
                           key={s.id}
-                          className="flex items-center justify-between text-xs bg-surface-muted rounded-lg px-2.5 py-1.5"
+                          className="flex items-center justify-between text-xs bg-surface-muted rounded-[var(--radius-button)] px-2.5 py-1.5"
                         >
                           <div className="min-w-0 truncate">
-                            <span className="font-semibold text-foreground">
+                            <span className="font-medium text-foreground">
                               {s.user.name || s.user.email}
                             </span>
-                            <span className="ml-1.5 text-[10px] font-bold uppercase text-indigo-600">
+                            <span className="ml-1.5 text-[10px] font-semibold uppercase text-primary">
                               {roleLabels[s.staffRole]}
                             </span>
                           </div>
@@ -624,7 +716,7 @@ export default function RoomsManagement() {
                       <select
                         value={assignUserId}
                         onChange={(e) => setAssignUserId(e.target.value)}
-                        className="flex-1 min-w-[140px] px-3 py-2 rounded-lg border text-xs"
+                        className={cn(fieldClass, 'flex-1 min-w-[140px]')}
                       >
                         <option value="">Choisir un utilisateur</option>
                         {teamMembers.map((m) => (
@@ -634,31 +726,23 @@ export default function RoomsManagement() {
                       <select
                         value={assignRole}
                         onChange={(e) => setAssignRole(e.target.value as 'MANAGER' | 'PROTOCOL')}
-                        className="px-3 py-2 rounded-lg border text-xs"
+                        className={fieldClass}
                       >
                         <option value="MANAGER">Manager</option>
                         <option value="PROTOCOL">Protocole</option>
                       </select>
-                      <button
-                        type="button"
-                        onClick={() => handleAssignStaff(room.id)}
-                        className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold"
-                      >
+                      <Button type="button" size="sm" onClick={() => handleAssignStaff(room.id)}>
                         Assigner
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setAssignRoomId(null)}
-                        className="px-3 py-2 border rounded-lg text-xs"
-                      >
+                      </Button>
+                      <Button type="button" size="sm" variant="secondary" onClick={() => setAssignRoomId(null)}>
                         Annuler
-                      </button>
+                      </Button>
                     </div>
                   ) : (
                     <button
                       type="button"
                       onClick={() => setAssignRoomId(room.id)}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 px-1"
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline px-1"
                     >
                       <UserPlus className="w-3.5 h-3.5" /> Assigner un staff
                     </button>
@@ -670,34 +754,41 @@ export default function RoomsManagement() {
         </div>
       )}
 
-      {editingRoom && editBlueprint && (
-        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-y-auto p-6 space-y-4">
-            <div className="flex items-center justify-between border-b pb-4">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Plan 2D — {editingRoom.name}</h3>
-                <p className="text-xs text-slate-500 mt-1">Modifiez la disposition, les chaises et les éléments fixes.</p>
-              </div>
-              <button type="button" onClick={() => { setEditingRoom(null); setEditBlueprint(null); }} className="text-slate-400 hover:text-slate-600 text-sm font-bold">Fermer</button>
-            </div>
-            <RoomLayoutEditor
-              blueprint={editBlueprint}
-              onChange={setEditBlueprint}
-              allowThemesFixtures={planFeatures?.roomThemesFixtures !== false}
-              onRegenerate={() => {
-                setEditBlueprint(refreshBlueprintMetadata(generateRoomBlueprint(editBlueprint.roomType)));
-              }}
-            />
-            <div className="flex justify-end gap-2 pt-2 border-t">
-              <button type="button" onClick={() => { setEditingRoom(null); setEditBlueprint(null); }} className="px-4 py-2 border rounded-xl text-xs font-bold">Annuler</button>
-              <button type="button" disabled={savingLayout} onClick={handleSaveRoomLayout} className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold disabled:opacity-50">
-                {savingLayout ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                Enregistrer le plan
-              </button>
-            </div>
+      <Modal
+        open={Boolean(editingRoom && editBlueprint)}
+        onClose={() => { setEditingRoom(null); setEditBlueprint(null); }}
+        title={editingRoom ? `Plan 2D — ${editingRoom.name}` : 'Plan 2D'}
+        description="Modifiez la disposition, les chaises et les éléments fixes."
+        size="full"
+        footer={
+          <div className="flex justify-end gap-2 w-full">
+            <Button type="button" variant="secondary" size="sm" onClick={() => { setEditingRoom(null); setEditBlueprint(null); }}>
+              Annuler
+            </Button>
+            <Button
+              type="button"
+              variant="success"
+              size="sm"
+              loading={savingLayout}
+              onClick={handleSaveRoomLayout}
+              leftIcon={<CheckCircle2 className="w-4 h-4" />}
+            >
+              Enregistrer le plan
+            </Button>
           </div>
-        </div>
-      )}
+        }
+      >
+        {editBlueprint && (
+          <RoomLayoutEditor
+            blueprint={editBlueprint}
+            onChange={setEditBlueprint}
+            allowThemesFixtures={planFeatures?.roomThemesFixtures !== false}
+            onRegenerate={() => {
+              setEditBlueprint(refreshBlueprintMetadata(generateRoomBlueprint(editBlueprint.roomType)));
+            }}
+          />
+        )}
+      </Modal>
     </div>
   );
 }

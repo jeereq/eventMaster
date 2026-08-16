@@ -229,10 +229,10 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
             <div
               className={`grid gap-5 items-stretch ${
                 ids.length === 2
-                  ? 'md:grid-cols-2 max-w-4xl mx-auto'
+                  ? 'md:grid-cols-2'
                   : ids.length === 3
                     ? 'md:grid-cols-2 lg:grid-cols-3'
-                    : 'md:grid-cols-2 max-w-4xl mx-auto'
+                    : 'md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
               }`}
             >
               {plans

@@ -160,7 +160,7 @@ export default function GuestHomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-slate-50 to-white dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
       <header className="border-b border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="page-container h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition">
             <div className="bg-indigo-600 p-2 rounded-lg text-white">
               <PartyPopper className="w-4 h-4" />
@@ -173,7 +173,7 @@ export default function GuestHomePage() {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-8 space-y-8">
+      <main className="page-container py-8 space-y-8">
         <div className="space-y-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 text-xs font-bold">
             <Sparkles className="w-3.5 h-3.5" />

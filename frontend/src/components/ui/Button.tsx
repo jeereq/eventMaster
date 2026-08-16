@@ -6,21 +6,21 @@ import { Loader2 } from 'lucide-react';
 
 const variants = {
   primary:
-    'bg-primary text-white hover:bg-primary-hover shadow-md shadow-primary/20 focus-visible:ring-primary',
+    'bg-primary text-white hover:bg-primary-hover focus-visible:ring-primary',
   secondary:
-    'bg-surface text-foreground border border-border hover:bg-card-hover focus-visible:ring-primary/40',
+    'bg-surface text-foreground border border-border hover:bg-card-hover focus-visible:ring-primary/30',
   ghost:
-    'bg-transparent text-muted hover:bg-surface-muted hover:text-foreground focus-visible:ring-primary/40',
+    'bg-transparent text-muted hover:bg-surface-muted hover:text-foreground focus-visible:ring-primary/30',
   danger:
-    'bg-rose-600 text-white hover:bg-rose-700 shadow-md shadow-rose-500/20 focus-visible:ring-rose-500',
+    'bg-rose-600 text-white hover:bg-rose-700 focus-visible:ring-rose-500',
   success:
-    'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-500/20 focus-visible:ring-emerald-500',
+    'bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-500',
 } as const;
 
 const sizes = {
-  sm: 'px-3 py-1.5 text-xs gap-1.5 rounded-md',
-  md: 'px-4 py-2 text-sm gap-2 rounded-lg',
-  lg: 'px-5 py-2.5 text-sm gap-2 rounded-lg',
+  sm: 'px-3 py-1.5 text-xs gap-1.5 rounded-[var(--radius-button)]',
+  md: 'px-3.5 py-2 text-sm gap-2 rounded-[var(--radius-button)]',
+  lg: 'px-4 py-2.5 text-sm gap-2 rounded-[var(--radius-button)]',
 } as const;
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -49,10 +49,10 @@ export default function Button({
       type="button"
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center font-medium transition-all duration-150',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950',
+        'inline-flex items-center justify-center font-medium transition-colors duration-120',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         'disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none',
-        'cursor-pointer active:scale-[0.98]',
+        'cursor-pointer',
         variants[variant],
         sizes[size],
         fullWidth && 'w-full',

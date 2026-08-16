@@ -250,7 +250,7 @@ export function SkeletonCommercialView() {
 
 export function SkeletonProfileView() {
   return (
-    <div className="space-y-6 animate-fade-in max-w-3xl">
+    <div className="space-y-6 animate-fade-in w-full">
       <SkeletonPageHeader />
       <div className="rounded-[var(--radius-card)] border border-border bg-surface p-6 space-y-4">
         {Array.from({ length: 5 }).map((_, i) => (

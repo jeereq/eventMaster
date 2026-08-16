@@ -2376,7 +2376,7 @@ function DashboardPageContent() {
 
             {/* Settings Tab */}
             {activeTab === 'settings' && (
-              <div className="max-w-4xl mx-auto">
+              <div className="w-full">
                 {adminSettingsLoading ? (
                   <SkeletonTabContent mode="grid" count={6} columns={3} />
                 ) : (

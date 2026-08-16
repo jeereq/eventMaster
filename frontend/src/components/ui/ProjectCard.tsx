@@ -131,32 +131,32 @@ export function ProjectCard({
       }
       className={cn(
         'group flex flex-col overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface',
-        'transition-[transform,background-color,border-color] duration-150 ease-out',
-        'hover:bg-card-hover hover:border-border-subtle hover:-translate-y-px',
+        'transition-[background-color,border-color] duration-120 ease-out',
+        'hover:bg-card-hover hover:border-border-subtle',
         interactive && 'cursor-pointer',
         className,
       )}
     >
-      <div className="relative h-14 shrink-0 overflow-hidden" style={{ backgroundColor: stripe }}>
+      <div className="relative h-12 shrink-0 overflow-hidden" style={{ backgroundColor: stripe }}>
         {cover ? (
           <div className="absolute inset-0">{cover}</div>
         ) : (
           <div
-            className="absolute inset-0 opacity-30"
+            className="absolute inset-0 opacity-25"
             style={{
               backgroundImage:
-                'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, transparent 55%)',
+                'linear-gradient(135deg, rgba(255,255,255,0.28) 0%, transparent 55%)',
             }}
           />
         )}
       </div>
-      <div className="flex flex-1 flex-col gap-3 p-4">
+      <div className="flex flex-1 flex-col gap-2.5 p-3.5">
         <div className="min-w-0 space-y-1">
-          <h3 className="truncate text-[15px] font-semibold leading-snug text-foreground tracking-tight">
+          <h3 className="truncate text-sm font-semibold leading-snug text-foreground tracking-tight">
             {title}
           </h3>
           {meta && <div className="text-xs text-muted space-y-0.5">{meta}</div>}
-          {description && <div className="text-xs text-muted line-clamp-2">{description}</div>}
+          {description && <div className="text-xs text-muted line-clamp-2 leading-relaxed">{description}</div>}
         </div>
         {children}
         {(actions || footer) && (
