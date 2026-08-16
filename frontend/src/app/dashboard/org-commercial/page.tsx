@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import {
   Building2, Loader2, TrendingUp, Users, Wallet,
 } from 'lucide-react';
-import { Button, PageHeader } from '@/components/ui';
+import { Button, PageHeader, SkeletonCommercialView } from '@/components/ui';
 import { CommercialNotificationsPanel } from '@/components/CommercialNotifications';
 import ReferralShareButtons from '@/components/commercial/ReferralShareButtons';
 
@@ -60,11 +60,7 @@ export default function OrgCommercialPage() {
   }
 
   if (loading || !data) {
-    return (
-      <div className="flex justify-center py-20">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-      </div>
-    );
+    return <SkeletonCommercialView />;
   }
 
   return (

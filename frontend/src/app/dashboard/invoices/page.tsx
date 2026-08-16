@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { Loader2, FileText } from 'lucide-react';
-import { PageHeader, Alert } from '@/components/ui';
+import { PageHeader, Alert, SkeletonInvoicesView, SkeletonList } from '@/components/ui';
 import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/InvoiceListPanel';
 
 export default function OrgInvoicesPage() {
@@ -46,9 +46,7 @@ export default function OrgInvoicesPage() {
           Mes factures ({invoices.length})
         </h2>
         {loading ? (
-          <div className="py-12 flex justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-          </div>
+          <SkeletonList count={5} />
         ) : (
           <InvoiceListPanel
             invoices={invoices}

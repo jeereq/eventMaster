@@ -17,7 +17,7 @@ import {
   Spline, Triangle, Plus, Trash, Layout, Palette, Square,
   ArrowUp, ArrowDown, Crop, Copy, Upload, Globe
 } from 'lucide-react';
-import { PageHeader, Alert, Button, SkeletonTemplatesView } from '@/components/ui';
+import { PageHeader, Alert, Button, SkeletonTemplatesView, ViewModeToggle, useViewMode } from '@/components/ui';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
 import {
   type RsvpField,
@@ -116,6 +116,12 @@ export default function TemplatesPage() {
   const canUseCustomTemplates = user?.role === 'SUPER_ADMIN' || planFeatures?.customTemplates !== false;
   const canUseMockupImport = canUseCustomTemplates;
   const canUseMockupOcr = user?.role === 'SUPER_ADMIN' || planFeatures?.mockupOcr === true;
+  const {
+    mode: templatesViewMode,
+    setViewMode: setTemplatesViewMode,
+    columns: templatesColumns,
+    setGridColumns: setTemplatesColumns,
+  } = useViewMode('em-view-templates', 'grid', 3);
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -674,7 +680,7 @@ export default function TemplatesPage() {
     ];
 
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+      <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-sm">
         <div className="bg-white rounded-[28px] border border-slate-100 shadow-2xl max-w-lg w-full overflow-hidden flex flex-col animate-fade-in">
           <div className="p-6 border-b border-slate-100">
             <h3 className="text-lg font-bold text-slate-900">Mode d&apos;import de la maquette</h3>
@@ -3571,6 +3577,17 @@ export default function TemplatesPage() {
         </div>
       )}
 
+      <div className="flex justify-end">
+        <ViewModeToggle
+          storageKey="em-view-templates"
+          value={templatesViewMode}
+          onChange={setTemplatesViewMode}
+          columns={templatesColumns}
+          onColumnsChange={setTemplatesColumns}
+          defaultMode="grid"
+        />
+      </div>
+
       {user?.role !== 'SUPER_ADMIN' && catalogTemplates.length > 0 && (
         <section className="space-y-4">
           <div>
@@ -3582,6 +3599,8 @@ export default function TemplatesPage() {
           <TemplateCardGrid
             templates={catalogTemplates}
             isSuperAdmin={false}
+            layout={templatesViewMode}
+            columns={templatesColumns}
             onDuplicate={canDuplicateAny ? (t) => handleDuplicateTemplate(t as TemplateItem) : undefined}
           />
         </section>
@@ -3600,6 +3619,8 @@ export default function TemplatesPage() {
         <TemplateCardGrid
           templates={user?.role === 'SUPER_ADMIN' ? templates : ownTemplates}
           isSuperAdmin={user?.role === 'SUPER_ADMIN'}
+          layout={templatesViewMode}
+          columns={templatesColumns}
           emptyMessage={
             user?.role === 'SUPER_ADMIN'
               ? "Aucun modèle. Créez un modèle global ou pour une organisation."
@@ -3615,7 +3636,7 @@ export default function TemplatesPage() {
                     type="button"
                     onClick={() => mockupInputRef.current?.click()}
                     disabled={mockupImporting}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-400 font-semibold rounded-xl text-sm transition hover:bg-indigo-50 dark:hover:bg-indigo-950/40 disabled:opacity-50"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 border border-primary/30 text-primary font-semibold rounded-xl text-sm transition hover:bg-primary/10 disabled:opacity-50"
                   >
                     {mockupImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                     Importer ma maquette
@@ -3624,7 +3645,7 @@ export default function TemplatesPage() {
                 <button
                   type="button"
                   onClick={handleCreateTemplateClick}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100 dark:shadow-none"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/20"
                 >
                   <PlusCircle className="w-4 h-4" />
                   Créer mon premier modèle

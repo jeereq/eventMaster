@@ -211,7 +211,7 @@ function renderLegacyElement(
     return (
       <div className="flex justify-center">
         <span
-          className={`inline-block rounded-xl font-bold text-white bg-indigo-600 ${compact ? 'px-3 py-1 text-[10px]' : 'px-5 py-2.5 text-sm'}`}
+          className={`inline-block rounded-xl font-bold text-white bg-primary ${compact ? 'px-3 py-1 text-[10px]' : 'px-5 py-2.5 text-sm'}`}
         >
           {el.content || 'Confirmer'}
         </span>
@@ -270,7 +270,7 @@ export default function LandingInvitationPreview({
         )}
 
         {!compact && (
-          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-500 to-violet-500 z-[2]" />
+          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-primary to-[var(--brand-accent,#6366f1)] z-[2]" />
         )}
 
         <div

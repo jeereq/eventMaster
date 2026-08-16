@@ -92,16 +92,16 @@ export default function Home() {
   const activePreview = publicTemplates.find((t) => t.id === previewTemplate) || publicTemplates[0];
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950 font-sans antialiased text-slate-900 dark:text-slate-100 transition-colors duration-200">
+    <div className="flex flex-col min-h-screen bg-background text-foreground font-sans antialiased text-slate-900 dark:text-slate-100 transition-colors duration-200">
       {/* Header */}
-      <header className="border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-50 transition-all">
+      <header className="border-b border-border bg-surface/80 backdrop-blur-md sticky top-0 z-50 transition-all">
         <div className="page-container h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition">
-              <div className="bg-indigo-600 p-2 rounded-lg text-white">
+              <div className="bg-primary p-2 rounded-lg text-white">
                 <PartyPopper className="w-5 h-5" />
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+              <span className="text-xl font-bold bg-gradient-to-r from-primary to-[var(--brand-accent,#6366f1)] bg-clip-text text-transparent">
                 EventMaster
               </span>
             </Link>
@@ -128,27 +128,27 @@ export default function Home() {
             >
               {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
             </button>
-            <Link href="/contact" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+            <Link href="/contact" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition">
               Contact
             </Link>
-            <Link href="/faq" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+            <Link href="/faq" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition">
               FAQ
             </Link>
-            <a href="#parcours" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+            <a href="#parcours" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition">
               Parcours
             </a>
-            <a href="#mobile" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+            <a href="#mobile" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition">
               Mobile
             </a>
-            <a href="#tarifs" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+            <a href="#tarifs" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition">
               Tarifs
             </a>
             {user ? (
               <>
                 <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
-                  Connecté en tant que <span className="font-bold text-indigo-600">{user.name}</span> {tenant ? `(${tenant.name})` : ''}
+                  Connecté en tant que <span className="font-bold text-primary">{user.name}</span> {tenant ? `(${tenant.name})` : ''}
                 </span>
-                <Link href="/dashboard" className="text-sm font-semibold bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-500/20">
+                <Link href="/dashboard" className="text-sm font-semibold bg-primary text-white px-4 py-2 rounded-xl hover:bg-primary-hover transition shadow-md shadow-primary/20">
                   Tableau de Bord
                 </Link>
                 <button 
@@ -160,10 +160,10 @@ export default function Home() {
               </>
             ) : (
               <>
-                <Link href="/login" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
+                <Link href="/login" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition">
                   Connexion
                 </Link>
-                <Link href="/register" className="text-sm font-semibold bg-indigo-600 text-white px-4.5 py-2 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-500/20">
+                <Link href="/register" className="text-sm font-semibold bg-primary text-white px-4.5 py-2 rounded-xl hover:bg-primary-hover transition shadow-md shadow-primary/20">
                   Essai Gratuit
                 </Link>
               </>
@@ -196,47 +196,47 @@ export default function Home() {
               <Link 
                 href="/contact" 
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition py-2 border-b border-slate-100 dark:border-slate-900"
+                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition py-2 border-b border-slate-100 dark:border-slate-900"
               >
                 Contact
               </Link>
               <Link 
                 href="/faq" 
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition py-2 border-b border-slate-100 dark:border-slate-900"
+                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition py-2 border-b border-slate-100 dark:border-slate-900"
               >
                 FAQ
               </Link>
               <a 
                 href="#parcours" 
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition py-2 border-b border-slate-100 dark:border-slate-900"
+                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition py-2 border-b border-slate-100 dark:border-slate-900"
               >
                 Parcours invité
               </a>
               <a 
                 href="#mobile" 
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition py-2 border-b border-slate-100 dark:border-slate-900"
+                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition py-2 border-b border-slate-100 dark:border-slate-900"
               >
                 Application mobile
               </a>
               <a 
                 href="#tarifs" 
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition py-2 border-b border-slate-100 dark:border-slate-900"
+                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition py-2 border-b border-slate-100 dark:border-slate-900"
               >
                 Tarifs
               </a>
               {user ? (
                 <>
                   <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold py-1">
-                    Connecté en tant que <span className="font-bold text-indigo-600">{user.name}</span> {tenant ? `(${tenant.name})` : ''}
+                    Connecté en tant que <span className="font-bold text-primary">{user.name}</span> {tenant ? `(${tenant.name})` : ''}
                   </div>
                   <Link 
                     href="/dashboard" 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm font-semibold bg-indigo-600 text-white px-4 py-2.5 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-500/20 text-center"
+                    className="text-sm font-semibold bg-primary text-white px-4 py-2.5 rounded-xl hover:bg-primary-hover transition shadow-md shadow-primary/20 text-center"
                   >
                     Tableau de Bord
                   </Link>
@@ -252,14 +252,14 @@ export default function Home() {
                   <Link 
                     href="/login" 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition py-2 border-b border-slate-100 dark:border-slate-900 text-center"
+                    className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition py-2 border-b border-slate-100 dark:border-slate-900 text-center"
                   >
                     Connexion
                   </Link>
                   <Link 
                     href="/register" 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm font-semibold bg-indigo-600 text-white px-4.5 py-2.5 rounded-xl hover:bg-indigo-700 transition shadow-md shadow-indigo-500/20 text-center"
+                    className="text-sm font-semibold bg-primary text-white px-4.5 py-2.5 rounded-xl hover:bg-primary-hover transition shadow-md shadow-primary/20 text-center"
                   >
                     Essai Gratuit
                   </Link>
@@ -277,13 +277,13 @@ export default function Home() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Hero Left: Value Proposition */}
             <div className="space-y-8 text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-bold">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 dark:bg-primary/15 border border-primary/20 dark:border-primary/30 text-primary dark:text-primary/80 text-xs font-bold">
                 <Sparkles className="w-4 h-4" />
                 <span>Web + Mobile · Protocole QR · Livraison placement intelligente</span>
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
                 L&apos;événementiel professionnel, de la salle au{' '}
-                <span className="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">scan invité</span>.
+                <span className="bg-gradient-to-r from-primary to-[var(--brand-accent,#6366f1)] bg-clip-text text-transparent">scan invité</span>.
               </h1>
               <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl">
                 EventMaster unifie plans de salle 2D, RSVP multi-canal, protocole QR (web et app native),
@@ -292,27 +292,27 @@ export default function Home() {
               </p>
               <ul className="flex flex-wrap gap-3 text-xs font-semibold text-slate-600 dark:text-slate-400">
                 <li className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-full">
-                  <Smartphone className="w-3.5 h-3.5 text-indigo-500" /> App iOS & Android
+                  <Smartphone className="w-3.5 h-3.5 text-primary" /> App iOS & Android
                 </li>
                 <li className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-full">
-                  <ScanLine className="w-3.5 h-3.5 text-indigo-500" /> Protocole QR
+                  <ScanLine className="w-3.5 h-3.5 text-primary" /> Protocole QR
                 </li>
                 <li className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-full">
-                  <Building2 className="w-3.5 h-3.5 text-indigo-500" /> Salles 2D
+                  <Building2 className="w-3.5 h-3.5 text-primary" /> Salles 2D
                 </li>
                 <li className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-full">
-                  <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" /> Rôles & permissions
+                  <ShieldCheck className="w-3.5 h-3.5 text-primary" /> Rôles & permissions
                 </li>
               </ul>
               <div className="flex flex-col sm:flex-row gap-4">
                 {user ? (
-                  <Link href="/dashboard" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-xl shadow-indigo-500/25 transition group text-base">
+                  <Link href="/dashboard" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl shadow-xl shadow-primary/25 transition group text-base">
                     Accéder à mon Tableau de Bord
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition" />
                   </Link>
                 ) : (
                   <>
-                    <Link href="/register" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-xl shadow-indigo-500/25 transition group text-base">
+                    <Link href="/register" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl shadow-xl shadow-primary/25 transition group text-base">
                       Créer mon organisation
                       <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition" />
                     </Link>
@@ -326,14 +326,14 @@ export default function Home() {
 
             {/* Hero Right: Live Interactive Presentation of Models */}
             <div className="bg-slate-100 dark:bg-slate-900 p-4 sm:p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-lg relative flex flex-col justify-between">
-              <div className="absolute -top-3 -right-3 bg-indigo-600 text-white px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider shadow z-10 flex items-center gap-1">
+              <div className="absolute -top-3 -right-3 bg-primary text-white px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider shadow z-10 flex items-center gap-1">
                 <Star className="w-3.5 h-3.5 fill-white" />
                 Aperçu du designer
               </div>
 
               {loadingPlans || loadingPublicTemplates ? (
                 <div className="h-[400px] flex items-center justify-center">
-                  <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                  <Loader2 className="w-8 h-8 text-primary animate-spin" />
                 </div>
               ) : activePreview ? (
                 <>
@@ -343,7 +343,7 @@ export default function Home() {
                       <button
                         key={t.id}
                         onClick={() => setPreviewTemplate(t.id)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap cursor-pointer ${previewTemplate === t.id ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap cursor-pointer ${previewTemplate === t.id ? 'bg-primary text-white' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                       >
                         {t.name.split(' ')[0]}
                       </button>
@@ -391,7 +391,7 @@ export default function Home() {
                 <button
                   key={c.id}
                   onClick={() => setSelectedCategory(c.id)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${selectedCategory === c.id ? 'bg-indigo-600 text-white shadow-md dark:shadow-none' : 'bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'}`}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${selectedCategory === c.id ? 'bg-primary text-white shadow-md dark:shadow-none' : 'bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'}`}
                 >
                   {c.name}
                 </button>
@@ -402,7 +402,7 @@ export default function Home() {
           <div className="space-y-16">
             {loadingPublicTemplates ? (
               <div className="flex justify-center py-16">
-                <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
               </div>
             ) : publicTemplates.length === 0 ? (
               <div className="text-center py-12 px-6 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl text-slate-500 dark:text-slate-400 font-medium max-w-lg mx-auto">
@@ -429,19 +429,19 @@ export default function Home() {
                         <button
                           type="button"
                           onClick={() => setModalTemplate(t)}
-                          className="w-full text-left rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                          className="w-full text-left rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                         >
                           <LandingInvitationPreview template={t} compact />
                         </button>
 
                           <div className="flex items-center justify-between pt-1">
-                            <span className="text-[10px] bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                            <span className="text-[10px] bg-primary/10 dark:bg-primary/15 border border-primary/20 dark:border-primary/30 text-primary dark:text-primary/80 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                               {getCategoryLabel(t.category)}
                             </span>
                             <button
                               type="button"
                               onClick={() => setModalTemplate(t)}
-                              className="text-xs font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1 hover:text-indigo-700 dark:hover:text-indigo-300 transition cursor-pointer"
+                              className="text-xs font-bold text-primary dark:text-primary flex items-center gap-1 hover:text-primary dark:hover:text-primary/80 transition cursor-pointer"
                             >
                               Apercevoir
                               <ArrowRight className="w-3.5 h-3.5" />
@@ -453,20 +453,20 @@ export default function Home() {
 
                           <div className="flex flex-wrap gap-2">
                             <span className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded-md text-[10px] text-slate-600 dark:text-slate-300 font-semibold flex items-center gap-1">
-                              <Layout className="w-3.5 h-3.5 text-indigo-500" /> Personnalisable
+                              <Layout className="w-3.5 h-3.5 text-primary" /> Personnalisable
                             </span>
                             <span className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded-md text-[10px] text-slate-600 dark:text-slate-300 font-semibold flex items-center gap-1">
-                              <Smartphone className="w-3.5 h-3.5 text-indigo-500" /> Mobile Ready
+                              <Smartphone className="w-3.5 h-3.5 text-primary" /> Mobile Ready
                             </span>
                             <span className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded-md text-[10px] text-slate-600 dark:text-slate-300 font-semibold flex items-center gap-1">
-                              <Compass className="w-3.5 h-3.5 text-indigo-500" /> RSVP Inclus
+                              <Compass className="w-3.5 h-3.5 text-primary" /> RSVP Inclus
                             </span>
                           </div>
                         </div>
 
                         <div className="border-t border-slate-200/60 dark:border-slate-800/60 pt-4 mt-5 flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
                           <span className="truncate max-w-[150px]">{t.name}</span>
-                          <Link href="/register" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                          <Link href="/register" className="text-primary dark:text-primary hover:underline">
                             Utiliser ce modèle
                           </Link>
                         </div>
@@ -485,13 +485,13 @@ export default function Home() {
       <FaqSection />
 
       {/* Section CTA (Call to Action) */}
-      <section className="py-20 bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-950 text-white relative overflow-hidden">
+      <section className="py-20 bg-gradient-to-br from-[color-mix(in_srgb,var(--primary)_55%,#0f172a)] via-[color-mix(in_srgb,var(--primary)_25%,#020617)] to-slate-950 text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(#4f46e5_1px,transparent_1px)] [background-size:24px_24px] opacity-20" />
-        <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] rounded-full bg-indigo-500/20 blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-[-20%] right-[-20%] w-[60%] h-[60%] rounded-full bg-violet-500/20 blur-[120px] pointer-events-none" />
+        <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] rounded-full bg-primary/100/20 blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-[-20%] right-[-20%] w-[60%] h-[60%] rounded-full bg-[color-mix(in_srgb,var(--brand-accent,#6366f1)_20%,transparent)] blur-[120px] pointer-events-none" />
 
         <div className="page-container text-center space-y-8 relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-bold">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/100/10 border border-primary/20 text-primary/80 text-xs font-bold">
             <Sparkles className="w-4 h-4" />
             <span>Prêt à commencer ?</span>
           </div>
@@ -504,13 +504,13 @@ export default function Home() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
             {user ? (
-              <Link href="/dashboard" className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition group text-sm">
+              <Link href="/dashboard" className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl shadow-lg shadow-primary/20 transition group text-sm">
                 Accéder à mon Tableau de Bord
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
               </Link>
             ) : (
               <>
-                <Link href="/register" className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition group text-sm">
+                <Link href="/register" className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl shadow-lg shadow-primary/20 transition group text-sm">
                   Créer mon organisation gratuitement
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
                 </Link>
@@ -528,7 +528,7 @@ export default function Home() {
       {/* Modal de prévisualisation de modèle */}
       {modalTemplate && (
         <div
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+          className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-sm"
           role="presentation"
           onClick={() => setModalTemplate(null)}
         >
@@ -536,13 +536,13 @@ export default function Home() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="landing-preview-title"
-            className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full border border-slate-200 dark:border-slate-800 p-6 space-y-6 shadow-2xl relative overflow-hidden max-h-[90vh] overflow-y-auto"
+            className="bg-surface rounded-t-2xl sm:rounded-2xl max-w-md w-full border border-border p-6 space-y-6 shadow-2xl relative overflow-hidden max-h-[92vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-indigo-500 to-violet-500" />
+            <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-primary to-[var(--brand-accent,#6366f1)]" />
             
             <div className="flex justify-between items-center">
-              <span className="text-[10px] bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+              <span className="text-[10px] bg-primary/10 dark:bg-primary/15 border border-primary/20 dark:border-primary/30 text-primary dark:text-primary/80 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                 {getCategoryLabel(modalTemplate.category)}
               </span>
               <button 
@@ -569,7 +569,7 @@ export default function Home() {
               </button>
               <Link
                 href="/register"
-                className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs text-center transition shadow-md dark:shadow-none"
+                className="flex-1 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-xs text-center transition shadow-md dark:shadow-none"
               >
                 Utiliser ce modèle
               </Link>

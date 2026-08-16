@@ -61,7 +61,7 @@ function FeatureCell({ value }: { value: string | boolean }) {
 }
 
 const BADGE_TONE: Record<PlanCapabilityBadge['tone'], string> = {
-  indigo: 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-100 dark:border-indigo-900/50',
+  indigo: 'bg-primary/10 dark:bg-primary/15 text-primary dark:text-primary/80 border-primary/20 dark:border-primary/30',
   violet: 'bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border-violet-100 dark:border-violet-900/50',
   emerald: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-100 dark:border-emerald-900/50',
   amber: 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-100 dark:border-amber-900/50',
@@ -71,7 +71,7 @@ const BADGE_TONE: Record<PlanCapabilityBadge['tone'], string> = {
 const TIER_ACCENT: Record<string, string> = {
   essentials: 'from-slate-400 to-slate-500',
   business: 'from-blue-500 to-indigo-600',
-  premium: 'from-indigo-500 to-violet-600',
+  premium: 'from-primary to-[var(--brand-accent,#6366f1)]',
   enterprise: 'from-violet-600 to-fuchsia-700',
 };
 
@@ -154,7 +154,7 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
     >
       <div className="page-container">
         <div className="text-center max-w-3xl mx-auto mb-10 space-y-4">
-          <p className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
+          <p className="text-sm font-semibold text-primary dark:text-primary uppercase tracking-widest">
             Forfaits & abonnements
           </p>
           <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
@@ -242,7 +242,7 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
                     key={plan.id}
                     className={`relative flex flex-col rounded-2xl border bg-white dark:bg-slate-900 overflow-hidden transition-all duration-300 ${
                       plan.highlighted
-                        ? 'border-indigo-500 shadow-xl shadow-indigo-500/10 ring-2 ring-indigo-500/20 scale-[1.02] z-10'
+                        ? 'border-primary shadow-xl shadow-primary/10 ring-2 ring-primary/20 scale-[1.02] z-10'
                         : plan.promoActive
                           ? 'border-rose-200 dark:border-rose-900/40 shadow-md hover:shadow-lg'
                           : 'border-slate-200 dark:border-slate-800 hover:shadow-lg hover:border-slate-300 dark:hover:border-slate-700'
@@ -251,7 +251,7 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
                     <div className={`h-1.5 w-full bg-gradient-to-r ${TIER_ACCENT[plan.tier]}`} />
 
                     {plan.badge && (
-                      <div className="absolute top-4 right-4 bg-indigo-600 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                      <div className="absolute top-4 right-4 bg-primary text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1 shadow-sm">
                         <Sparkles className="w-3 h-3" />
                         {plan.badge}
                       </div>
@@ -300,7 +300,7 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
                           <span
                             className={`text-4xl font-black tracking-tight ${
                               plan.highlighted
-                                ? 'text-indigo-600 dark:text-indigo-400'
+                                ? 'text-primary dark:text-primary'
                                 : plan.promoActive
                                   ? 'text-rose-600 dark:text-rose-400'
                                   : 'text-slate-900 dark:text-white'
@@ -350,7 +350,7 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
                             : plan.ctaVariant === 'contact'
                               ? 'border-2 border-slate-800 dark:border-slate-500 text-slate-800 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-800'
                               : plan.highlighted
-                                ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20'
+                                ? 'bg-primary hover:bg-primary-hover text-white shadow-lg shadow-primary/20'
                                 : plan.promoActive
                                   ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-md'
                                   : 'bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-900'
@@ -419,10 +419,10 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
                     return (
                       <React.Fragment key={`${row.category}-${row.label}`}>
                         {showCategory && (
-                          <tr className="bg-indigo-50/50 dark:bg-indigo-950/20">
+                          <tr className="bg-primary/10/50 dark:bg-primary/10">
                             <td
                               colSpan={PLAN_IDS.length + 1}
-                              className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400"
+                              className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-wider text-primary dark:text-primary"
                             >
                               {row.category}
                             </td>

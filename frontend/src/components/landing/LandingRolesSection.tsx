@@ -23,7 +23,7 @@ export default function LandingRolesSection() {
         <div className="page-container">
           <div className="grid lg:grid-cols-2 gap-16 items-start">
             <div className="space-y-6">
-              <span className="text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
+              <span className="text-xs font-bold uppercase tracking-widest text-primary dark:text-primary">
                 Gouvernance & équipes
               </span>
               <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
@@ -61,7 +61,7 @@ export default function LandingRolesSection() {
                 const Icon = roleIcons[role.icon as keyof typeof roleIcons] || Shield;
                 return (
                   <div key={role.title} className="p-5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
-                    <div className="w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-3">
+                    <div className="w-10 h-10 rounded-lg bg-indigo-100 dark:bg-primary/15 text-primary dark:text-primary flex items-center justify-center mb-3">
                       <Icon className="w-5 h-5" />
                     </div>
                     <h3 className="font-bold text-slate-900 dark:text-white text-sm mb-1">{role.title}</h3>
@@ -89,8 +89,8 @@ export default function LandingRolesSection() {
             {PLATFORM_PILLARS.map((pillar) => {
               const Icon = pillarIcons[pillar.icon] || Shield;
               return (
-                <div key={pillar.title} className="bg-white dark:bg-slate-900 p-6 rounded-lg border border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-800 transition">
-                  <Icon className="w-6 h-6 text-indigo-600 dark:text-indigo-400 mb-4" />
+                <div key={pillar.title} className="bg-white dark:bg-slate-900 p-6 rounded-lg border border-slate-200 dark:border-slate-800 hover:border-primary/40 dark:hover:border-primary/50 transition">
+                  <Icon className="w-6 h-6 text-primary dark:text-primary mb-4" />
                   <h3 className="font-bold text-slate-900 dark:text-white mb-2">{pillar.title}</h3>
                   <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{pillar.description}</p>
                 </div>

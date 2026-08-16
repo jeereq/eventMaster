@@ -54,7 +54,7 @@ const DELIVERABLES = [
 ];
 
 const toneClasses: Record<(typeof STEPS)[number]['tone'], string> = {
-  indigo: 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/50',
+  indigo: 'bg-primary/10 dark:bg-primary/15 text-primary dark:text-primary border-primary/20 dark:border-primary/30',
   violet: 'bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400 border-violet-100 dark:border-violet-900/50',
   amber: 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-900/50',
   emerald: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/50',
@@ -65,7 +65,7 @@ export default function LandingWorkflowSection() {
     <section id="parcours" className="py-20 bg-gradient-to-b from-white to-slate-50 dark:from-slate-950 dark:to-slate-900/40 border-t border-slate-200 dark:border-slate-800 scroll-mt-24">
       <div className="page-container">
         <div className="text-center max-w-2xl mx-auto mb-14 space-y-4">
-          <span className="text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
+          <span className="text-xs font-bold uppercase tracking-widest text-primary dark:text-primary">
             Parcours invité intelligent
           </span>
           <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
@@ -87,7 +87,7 @@ export default function LandingWorkflowSection() {
                     <ArrowRight className="w-5 h-5 text-slate-300 dark:text-slate-700 mx-auto" />
                   </div>
                 )}
-                <div className="relative z-10 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 h-full hover:border-indigo-300 dark:hover:border-indigo-800 transition">
+                <div className="relative z-10 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 h-full hover:border-primary/40 dark:hover:border-primary/50 transition">
                   <div className={`inline-flex items-center justify-center w-10 h-10 rounded-xl border mb-4 ${toneClasses[item.tone]}`}>
                     <Icon className="w-5 h-5" />
                   </div>
@@ -102,12 +102,12 @@ export default function LandingWorkflowSection() {
           })}
         </div>
 
-        <div className="bg-indigo-600 dark:bg-indigo-700 rounded-3xl p-6 sm:p-8 text-white relative overflow-hidden">
+        <div className="bg-primary dark:bg-primary rounded-3xl p-6 sm:p-8 text-white relative overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(#ffffff20_1px,transparent_1px)] [background-size:20px_20px] opacity-40" />
           <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <div className="space-y-2">
               <h3 className="text-lg font-extrabold">Déclenché automatiquement après check-in</h3>
-              <p className="text-sm text-indigo-100 max-w-xl leading-relaxed">
+              <p className="text-sm text-white/80 max-w-xl leading-relaxed">
                 Dès qu&apos;un invité est validé (scan QR ou vérification siège), EventMaster envoie en une fois
                 le PDF, le plan de table et la localisation GPS — sans action manuelle de l&apos;organisateur.
               </p>

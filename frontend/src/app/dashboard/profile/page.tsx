@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import TeamManagement from '../TeamManagement';
 import RoomsManagement from '../RoomsManagement';
-import { PageHeader, Alert } from '@/components/ui';
+import { PageHeader, Alert, SkeletonProfileView } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
 type ProfileTab = 'profil' | 'salles' | 'equipe';
@@ -433,11 +433,7 @@ function ProfilePageContent() {
 export default function ProfilePage() {
   return (
     <Suspense
-      fallback={
-        <div className="flex justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
-        </div>
-      }
+      fallback={<SkeletonProfileView />}
     >
       <ProfilePageContent />
     </Suspense>

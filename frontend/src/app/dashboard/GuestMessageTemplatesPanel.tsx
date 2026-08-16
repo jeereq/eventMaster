@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import {
   Loader2, MessageSquare, Pencil, RotateCcw, Save, X, Info,
 } from 'lucide-react';
+import { SkeletonList } from '@/components/ui';
 
 interface GuestMessageTemplateItem {
   id: string;
@@ -86,9 +87,8 @@ export default function GuestMessageTemplatesPanel() {
 
   if (loading) {
     return (
-      <div className="p-12 flex flex-col items-center justify-center gap-3">
-        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-        <p className="text-sm text-slate-500">Chargement des modèles de messages...</p>
+      <div className="p-6">
+        <SkeletonList count={4} />
       </div>
     );
   }

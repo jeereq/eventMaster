@@ -175,3 +175,92 @@ export function SkeletonBillingView() {
     </div>
   );
 }
+
+/** Stats KPI (analytics, commercial, home). */
+export function SkeletonStatsRow({ count = 4 }: { count?: number }) {
+  return (
+    <div className={cn('grid gap-4', count >= 4 ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-1 sm:grid-cols-3')}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-3">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-8 w-16" />
+          <Skeleton className="h-2 w-full rounded-full" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Contenu d’onglet / panneau générique (grille de cartes par défaut). */
+export function SkeletonTabContent({
+  mode = 'grid',
+  count = 6,
+  columns = 3,
+  withHeader = false,
+}: {
+  mode?: 'grid' | 'list';
+  count?: number;
+  columns?: 2 | 3 | 4;
+  withHeader?: boolean;
+}) {
+  return (
+    <div className="space-y-5 animate-fade-in">
+      {withHeader && <SkeletonPageHeader />}
+      {mode === 'list' ? <SkeletonList count={count} /> : <SkeletonGrid count={count} columns={columns} />}
+    </div>
+  );
+}
+
+export function SkeletonAnalyticsView() {
+  return (
+    <div className="space-y-8 animate-fade-in">
+      <SkeletonPageHeader />
+      <SkeletonStatsRow count={4} />
+      <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5 space-y-4">
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-48 w-full rounded-xl" />
+      </div>
+      <SkeletonGrid count={3} columns={3} />
+    </div>
+  );
+}
+
+export function SkeletonInvoicesView() {
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <SkeletonPageHeader />
+      <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5 space-y-4">
+        <Skeleton className="h-5 w-40" />
+        <SkeletonList count={5} />
+      </div>
+    </div>
+  );
+}
+
+export function SkeletonCommercialView() {
+  return (
+    <div className="space-y-8 animate-fade-in">
+      <SkeletonPageHeader />
+      <SkeletonStatsRow count={3} />
+      <Skeleton className="h-28 w-full rounded-[var(--radius-card)]" />
+      <SkeletonGrid count={6} columns={3} />
+    </div>
+  );
+}
+
+export function SkeletonProfileView() {
+  return (
+    <div className="space-y-6 animate-fade-in max-w-3xl">
+      <SkeletonPageHeader />
+      <div className="rounded-[var(--radius-card)] border border-border bg-surface p-6 space-y-4">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="space-y-2">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-10 w-full rounded-xl" />
+          </div>
+        ))}
+        <Skeleton className="h-10 w-40 rounded-xl" />
+      </div>
+    </div>
+  );
+}
