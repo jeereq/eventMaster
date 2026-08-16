@@ -59,17 +59,17 @@ export function getTableShapeEmoji(shape: TableShape | string): string {
 
 export function getTableVisualClasses(shape: TableShape | string, active = false): string {
   const base = active
-    ? 'bg-primary text-white'
-    : 'bg-surface border border-border text-foreground';
+    ? 'bg-primary text-white shadow-[0_0_0_3px_color-mix(in_srgb,var(--primary)_22%,transparent)]'
+    : 'bg-surface text-foreground border border-border shadow-[var(--shadow-soft)]';
 
   const size =
     shape === 'round'
       ? 'w-24 h-24 rounded-full'
       : shape === 'oval'
-        ? 'w-28 h-20 rounded-[50%]'
+        ? 'w-28 h-20 rounded-[999px]'
         : shape === 'square'
-          ? 'w-20 h-20 rounded-xl'
-          : 'w-32 h-16 rounded-xl';
+          ? 'w-20 h-20 rounded-[var(--radius-card)]'
+          : 'w-32 h-16 rounded-[var(--radius-card)]';
 
   return `${size} ${base}`;
 }
@@ -84,39 +84,38 @@ export function getTableVisualStyle(
     shape === 'round'
       ? 'w-24 h-24 rounded-full'
       : shape === 'oval'
-        ? 'w-28 h-20 rounded-[50%]'
+        ? 'w-28 h-20 rounded-[999px]'
         : shape === 'square'
-          ? 'w-20 h-20 rounded-xl'
-          : 'w-32 h-16 rounded-xl';
+          ? 'w-20 h-20 rounded-[var(--radius-card)]'
+          : 'w-32 h-16 rounded-[var(--radius-card)]';
 
   if (tableImageUrl && !active) {
     return {
-      className: `${size} border-2 text-foreground shadow-lg overflow-hidden`,
+      className: `${size} border border-border text-foreground overflow-hidden shadow-[var(--shadow-soft)]`,
       style: {
         backgroundImage: `url(${tableImageUrl})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        borderColor: tableColor ?? 'rgba(148,163,184,0.6)',
+        borderColor: tableColor ?? 'var(--border)',
       },
     };
   }
 
   if (tableColor && !active) {
     return {
-      className: `${size} border-2 text-foreground shadow-lg`,
+      className: `${size} border text-foreground shadow-[var(--shadow-soft)]`,
       style: {
         backgroundColor: tableColor,
-        borderColor: tableColor,
-        filter: 'brightness(0.92)',
+        borderColor: 'color-mix(in srgb, black 12%, transparent)',
       },
     };
   }
 
   const base = active
-    ? 'bg-primary text-white border-primary-hover'
-    : 'bg-surface border border-border text-foreground';
+    ? 'bg-primary text-white border-primary shadow-[0_0_0_3px_color-mix(in_srgb,var(--primary)_22%,transparent)]'
+    : 'bg-surface border border-border text-foreground shadow-[var(--shadow-soft)]';
 
-  return { className: `${size} ${base} shadow-lg border-2` };
+  return { className: `${size} ${base}` };
 }
 
 export function getOccupiedSeatCount(table: Pick<TablePlanTable, 'seats' | 'capacity'>): number {

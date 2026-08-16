@@ -38,6 +38,7 @@ import { readImageFile } from '@/lib/imageCropUtils';
 import { applyRoomTheme, getRoomTheme, listAvailableThemes, RoomThemeId, type FloorType } from '@/lib/roomThemeUtils';
 import { floorTypeLabels, resolveFloorStyle } from '@/lib/roomFloorUtils';
 import CustomRoomThemePanel from '@/components/CustomRoomThemePanel';
+import { cn } from '@/lib/cn';
 
 type SelectableKind = 'table' | 'row' | 'zone' | 'fixture';
 
@@ -313,25 +314,35 @@ export default function RoomLayoutEditor({
  onMouseUp={handleMouseUp}
  onMouseLeave={handleMouseUp}
  onClick={() => setSelected(null)}
- className={`relative w-full ${className} border-2 rounded-2xl overflow-hidden shadow-inner`}
+ className={cn(
+ 'em-floor-canvas relative w-full',
+ className,
+ dragging && 'em-floor-canvas--dragging',
+ )}
  style={{
- background: activeTheme.canvasBackground,
+ // Soft theme tint over the shared floor canvas
  backgroundImage: activeTheme.canvasPattern
- ? `${activeTheme.canvasPattern}, linear-gradient(${activeTheme.gridColor} 1px, transparent 1px), linear-gradient(90deg, ${activeTheme.gridColor} 1px, transparent 1px)`
- : `linear-gradient(${activeTheme.gridColor} 1px, transparent 1px), linear-gradient(90deg, ${activeTheme.gridColor} 1px, transparent 1px)`,
- backgroundSize: activeTheme.canvasPattern ? '100% 100%, 24px 24px, 24px 24px' : '24px 24px',
+ ? `${activeTheme.canvasPattern}, radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, ${activeTheme.accentColor} 12%, transparent), transparent 55%)`
+ : undefined,
+ backgroundColor: activeTheme.canvasBackground || undefined,
  }}
  >
  {renderRoomOutline()}
 
  {blueprint.fixtures.map((fixture) => {
  const isSel = selected?.kind === 'fixture' && selected.id === fixture.id;
+ const isDrag = dragging?.kind === 'fixture' && dragging.id === fixture.id;
  return (
  <div
  key={fixture.id}
  onMouseDown={(e) => handleMouseDown('fixture', fixture.id, e, 'topleft')}
  onClick={(e) => { e.stopPropagation(); setSelected({ kind: 'fixture', id: fixture.id }); }}
- className={`absolute cursor-move ${isSel ? 'ring-2 ring-primary z-30' : 'z-10'}`}
+ className={cn(
+ 'absolute cursor-grab em-floor-item',
+ isSel && 'em-floor-item--active ring-2 ring-primary/60 z-30 rounded-[var(--radius-button)]',
+ isDrag && 'opacity-90 cursor-grabbing z-40',
+ !isSel && 'z-10',
+ )}
  style={{
  left: `${fixture.x}%`,
  top: `${fixture.y}%`,
@@ -352,7 +363,10 @@ export default function RoomLayoutEditor({
  key={item.id}
  onMouseDown={(e) => handleMouseDown('zone', item.id, e, 'topleft')}
  onClick={(e) => { e.stopPropagation(); setSelected({ kind: 'zone', id: item.id }); }}
- className={`absolute border-2 border-dashed border-sky-400 bg-sky-100/50 rounded-xl flex items-center justify-center text-xs font-semibold text-sky-800 cursor-move z-10 ${isSel ? 'ring-2 ring-primary' : ''}`}
+ className={cn(
+ 'absolute border border-dashed border-primary/40 bg-primary/5 rounded-[var(--radius-card)] flex items-center justify-center text-xs font-semibold text-primary cursor-grab z-10 em-floor-item',
+ isSel && 'ring-2 ring-primary/50 bg-primary/10',
+ )}
  style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.w}%`, height: `${item.h}%` }}
  >
  {item.label}
@@ -362,16 +376,27 @@ export default function RoomLayoutEditor({
 
  if (item.kind === 'row') {
  const isSel = selected?.kind === 'row' && selected.id === item.id;
+ const isDrag = dragging?.kind === 'row' && dragging.id === item.id;
  return (
  <div
  key={item.id}
  onMouseDown={(e) => handleMouseDown('row', item.id, e)}
  onClick={(e) => { e.stopPropagation(); setSelected({ kind: 'row', id: item.id }); }}
- className={`absolute -translate-x-1/2 -translate-y-1/2 cursor-move ${isSel ? 'z-40' : 'z-20'}`}
+ className={cn(
+ 'absolute -translate-x-1/2 -translate-y-1/2 cursor-grab em-floor-item',
+ isSel && 'em-floor-item--active z-40',
+ isDrag && 'z-40 scale-105 drop-shadow-md',
+ !isSel && !isDrag && 'z-20',
+ )}
  style={{ left: `${item.x}%`, top: `${item.y}%` }}
  >
- <div className={`px-3 py-2 bg-white/95 backdrop-blur border-2 rounded-xl shadow-lg min-w-[110px] ${isSel ? 'border-primary ring-2 ring-primary/20' : 'border-border'}`}>
- <p className="text-[10px] font-bold text-foreground text-center truncate">{item.label}</p>
+ <div
+ className={cn(
+ 'px-3 py-2 bg-surface/95 backdrop-blur-sm border rounded-[var(--radius-card)] min-w-[110px] shadow-[var(--shadow-soft)]',
+ isSel ? 'border-primary ring-2 ring-primary/20' : 'border-border',
+ )}
+ >
+ <p className="text-[10px] font-semibold text-foreground text-center truncate">{item.label}</p>
  <div className="flex justify-center gap-1 mt-1.5 flex-wrap max-w-[130px]">
  {Array.from({ length: Math.min(item.seatCount, 14) }).map((_, i) => (
  <ChairRenderer key={i} chairType={item.chairType} imageUrl={item.chairImageUrl} size="sm" />
@@ -383,6 +408,7 @@ export default function RoomLayoutEditor({
  }
 
  const isSel = selected?.kind === 'table' && selected.id === item.id;
+ const isDrag = dragging?.kind === 'table' && dragging.id === item.id;
  const tableColor = resolveTableColor(item.tableColor, blueprint.metadata.defaultTableColor);
  const { className: tableClass, style: tableStyle } = getTableVisualStyle(item.shape, isSel, tableColor, item.tableImageUrl);
  return (
@@ -390,27 +416,35 @@ export default function RoomLayoutEditor({
  key={item.id}
  onMouseDown={(e) => handleMouseDown('table', item.id, e)}
  onClick={(e) => { e.stopPropagation(); setSelected({ kind: 'table', id: item.id }); }}
- className={`absolute -translate-x-1/2 -translate-y-1/2 cursor-move ${isSel ? 'z-40' : 'z-20'}`}
- style={{ left: `${item.x}%`, top: `${item.y}%` }}
+ className={cn(
+ 'absolute cursor-grab em-floor-item',
+ isSel && 'em-floor-item--active z-40',
+ isDrag && 'em-floor-item--dragging',
+ !isSel && !isDrag && 'z-20',
+ )}
+ style={{
+ left: `${item.x}%`,
+ top: `${item.y}%`,
+ transform: isDrag ? undefined : 'translate(-50%, -50%)',
+ }}
  >
  <div
- className={`relative flex items-center justify-center ${tableClass} border-2`}
+ className={cn('relative flex items-center justify-center border', tableClass)}
  style={{
  ...tableStyle,
- borderColor: tableStyle?.borderColor ?? activeTheme.tableBorderColor ?? '#cbd5e1',
- boxShadow: isSel ? undefined : '0 4px 14px rgba(0,0,0,0.12)',
+ borderColor: tableStyle?.borderColor ?? activeTheme.tableBorderColor ?? 'var(--border)',
  }}
  >
  <div className="px-2 text-center z-10">
- <div className="text-[10px] font-black truncate max-w-[80px]">{item.name}</div>
- <div className="text-[8px] opacity-80">{item.capacity} pl.</div>
+ <div className="text-[10px] font-semibold truncate max-w-[80px] tracking-tight">{item.name}</div>
+ <div className="text-[8px] opacity-80 tabular-nums">{item.capacity} pl.</div>
  </div>
  {Array.from({ length: item.capacity }).map((_, seatIndex) => {
  const coords = getSeatCoordinates(item.shape, item.capacity, seatIndex, 42);
  return (
  <span
  key={seatIndex}
- className="absolute"
+ className="absolute transition-transform duration-150 hover:scale-110"
  style={{
  left: `calc(50% + ${coords.x}px)`,
  top: `calc(50% + ${coords.y}px)`,
@@ -428,8 +462,11 @@ export default function RoomLayoutEditor({
 
  {blueprint.furniture.length === 0 && blueprint.fixtures.length <= 1 && (
  <div className="absolute inset-0 flex flex-col items-center justify-center text-muted pointer-events-none z-10">
- <LayoutGrid className="w-12 h-12 mb-2 text-muted" />
- <p className="text-sm font-semibold text-muted">Plan vide — choisissez un modèle ou ajoutez des éléments</p>
+ <div className="w-12 h-12 rounded-[var(--radius-card)] bg-surface border border-border flex items-center justify-center mb-2">
+ <LayoutGrid className="w-6 h-6 text-primary" />
+ </div>
+ <p className="text-sm font-semibold text-foreground">Plan vide</p>
+ <p className="text-xs text-muted mt-1">Choisissez un modèle ou ajoutez des éléments</p>
  </div>
  )}
  </div>
