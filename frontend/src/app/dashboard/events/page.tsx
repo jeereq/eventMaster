@@ -28,7 +28,8 @@ import {
   normalizeGuestGuidelines,
   applyInvitationGuidelineVariables,
 } from '@/lib/guestGuidelines';
-import { PageHeader, Button, ProjectCard, ViewModeToggle, useViewMode, SkeletonEventsView } from '@/components/ui';
+import { PageHeader, Button, ProjectCard, ViewModeToggle, useViewMode, SkeletonEventsView, Breadcrumbs } from '@/components/ui';
+import GettingStartedChecklist from '@/components/GettingStartedChecklist';
 import {
   extractRsvpFieldsFromTemplateContent,
   supplementFieldsFromGuestPreferences,
@@ -416,6 +417,19 @@ export default function EventsPage() {
         break;
     }
   }, [guests.length, invitations.length]);
+
+  useEffect(() => {
+    if (guests.length === 0) return;
+    try {
+      const raw = localStorage.getItem('em-getting-started');
+      const flow = raw ? JSON.parse(raw) : {};
+      if (!flow.guestsDone) {
+        localStorage.setItem('em-getting-started', JSON.stringify({ ...flow, guestsDone: true }));
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [guests.length]);
 
   const refreshGuests = useCallback(async () => {
     if (!selectedEvent) return;
@@ -1377,9 +1391,13 @@ export default function EventsPage() {
     <div className="space-y-8">
       {/* Header */}
       {!selectedEvent ? (
+        <>
         <PageHeader
           title="Vos événements"
           description="Créez et gérez vos réceptions privées, vos listes d'invités et vos invitations."
+          breadcrumbs={
+            <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Événements' }]} />
+          }
           action={
             <div className="flex flex-wrap items-center gap-2">
               {events.length > 0 && (
@@ -1399,21 +1417,32 @@ export default function EventsPage() {
             </div>
           }
         />
+        {events.length === 0 && (
+          <GettingStartedChecklist hasEvents={false} />
+        )}
+        </>
       ) : (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-6">
           <div className="space-y-2">
+            <Breadcrumbs
+              items={[
+                { label: 'Accueil', href: '/dashboard' },
+                { label: 'Événements', href: '/dashboard/events' },
+                { label: selectedEvent.title },
+              ]}
+            />
             <button 
               onClick={() => setSelectedEvent(null)}
-              className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-700 transition uppercase tracking-wider"
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary-hover transition"
             >
               <ArrowLeft className="w-4 h-4" />
               Retour aux événements
             </button>
-            <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{selectedEvent.title}</h1>
-            <p className="text-slate-500 text-sm font-medium flex items-center gap-4 flex-wrap">
-              <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4 text-slate-400" /> {new Date(selectedEvent.date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+            <h1 className="text-2xl sm:text-[1.65rem] font-semibold text-foreground tracking-tight">{selectedEvent.title}</h1>
+            <p className="text-muted text-sm font-medium flex items-center gap-4 flex-wrap">
+              <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4 text-muted" /> {new Date(selectedEvent.date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
               <span className="flex items-center gap-1.5 flex-wrap">
-                <MapPin className="w-4 h-4 text-slate-400" /> 
+                <MapPin className="w-4 h-4 text-muted" /> 
                 <span>{selectedEvent.location}</span>
                 {selectedEvent.latitude !== undefined && selectedEvent.latitude !== null && selectedEvent.longitude !== undefined && selectedEvent.longitude !== null && (
                   <span className="text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded-md font-bold">
@@ -1476,18 +1505,22 @@ export default function EventsPage() {
           }
         >
           {events.length === 0 ? (
-            <div className="col-span-full text-center py-16 bg-surface border border-border rounded-[var(--radius-card)]">
-              <Calendar className="w-16 h-12 text-muted mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-semibold text-foreground">Aucun événement planifié</h3>
-              <p className="text-sm text-muted mt-1 max-w-xs mx-auto">
-                Commencez par créer votre premier événement pour y ajouter vos invités.
+            <div className="col-span-full text-center py-14 px-6 bg-surface border border-border rounded-[var(--radius-card)]">
+              <Calendar className="w-12 h-12 text-muted mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-semibold text-foreground">Créer votre premier événement</h3>
+              <p className="text-sm text-muted mt-2 max-w-md mx-auto leading-relaxed">
+                Ensuite : ajoutez des invités, choisissez un modèle d&apos;invitation, puis envoyez les RSVP.
               </p>
-              <button
-                onClick={openCreateEventModal}
-                className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-sm transition"
-              >
-                Créer mon premier événement
-              </button>
+              <ol className="mt-5 inline-flex flex-col sm:flex-row gap-2 sm:gap-3 text-left text-xs text-muted">
+                <li className="px-3 py-2 rounded-lg bg-surface-muted border border-border">1. Événement</li>
+                <li className="px-3 py-2 rounded-lg bg-surface-muted border border-border">2. Invités</li>
+                <li className="px-3 py-2 rounded-lg bg-surface-muted border border-border">3. Invitation</li>
+              </ol>
+              {access?.canCreateEvents && (
+                <Button onClick={openCreateEventModal} className="mt-6" leftIcon={<PlusCircle className="w-4 h-4" />}>
+                  Créer mon premier événement
+                </Button>
+              )}
             </div>
           ) : (
             events.map((event) => {
@@ -1857,10 +1890,20 @@ export default function EventsPage() {
               {/* Guests Table */}
               <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
                 {guests.length === 0 ? (
-                  <div className="text-center py-16">
-                    <Users className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                    <h3 className="font-bold text-slate-700">Aucun invité</h3>
-                    <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">Ajoutez des invités pour commencer à diffuser vos invitations.</p>
+                  <div className="text-center py-14 px-6">
+                    <Users className="w-12 h-12 text-muted mx-auto mb-4 opacity-60" />
+                    <h3 className="font-semibold text-foreground">Étape suivante : ajouter des invités</h3>
+                    <p className="text-sm text-muted mt-1 max-w-sm mx-auto leading-relaxed">
+                      Importez un fichier CSV ou ajoutez-les un par un. Vous pourrez ensuite envoyer les invitations.
+                    </p>
+                    <div className="mt-5 flex flex-wrap justify-center gap-2">
+                      <Button onClick={() => setShowGuestModal(true)} leftIcon={<PlusCircle className="w-4 h-4" />}>
+                        Ajouter un invité
+                      </Button>
+                      <Button variant="secondary" onClick={() => setShowImportModal(true)}>
+                        Importer CSV
+                      </Button>
+                    </div>
                   </div>
                 ) : filteredGuests.length === 0 ? (
                   <div className="text-center py-16">

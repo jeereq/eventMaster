@@ -80,7 +80,7 @@ function SidebarNav({
                   )}
                 >
                   <Icon className={cn('w-[18px] h-[18px] shrink-0', isActive && 'text-primary')} />
-                  {!collapsed && <span className="truncate">{item.name}</span>}
+                  {!collapsed && <span className="truncate text-[13px] font-medium leading-snug">{item.name}</span>}
                 </Link>
               );
             })}
@@ -458,7 +458,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Contenu principal */}
-      <main className="flex-1 min-w-0 overflow-y-auto bg-background">
+      <main id="main-content" className="flex-1 min-w-0 overflow-y-auto bg-background">
         <div className="page-container py-5 sm:py-6 lg:py-8">
           <UserLegalGate>{children}</UserLegalGate>
         </div>
