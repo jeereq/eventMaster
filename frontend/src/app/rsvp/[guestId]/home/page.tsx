@@ -6,8 +6,10 @@ import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import {
   Calendar, MapPin, Loader2, AlertCircle, CheckCircle2, XCircle,
-  Clock, Sparkles, ArrowRight, PartyPopper,
+  Clock, ArrowRight,
 } from 'lucide-react';
+import GuestPortalShell, { GuestPortalCard } from '@/components/GuestPortalShell';
+import { cn } from '@/lib/cn';
 
 interface GuestInvitationItem {
   guestId: string;
@@ -36,20 +38,20 @@ interface GuestInvitationsResponse {
 function RsvpBadge({ status }: { status: string }) {
   if (status === 'ACCEPTED') {
     return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100">
         <CheckCircle2 className="w-3 h-3" /> Confirmé
       </span>
     );
   }
   if (status === 'DECLINED') {
     return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-100">
         <XCircle className="w-3 h-3" /> Décliné
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-100">
       <Clock className="w-3 h-3" /> En attente
     </span>
   );
@@ -68,42 +70,42 @@ function InvitationCard({ item }: { item: GuestInvitationItem }) {
   return (
     <Link
       href={`/rsvp/${item.guestId}`}
-      className={`block bg-surface border rounded-2xl p-5 shadow-xs hover:shadow-md transition group ${
- item.isCurrent
- ? 'border-primary/40 ring-2 ring-primary/20'
- : 'border-border'
- }`}
+      className={cn(
+        'block bg-surface border rounded-[var(--radius-card)] p-4 sm:p-5 shadow-[var(--shadow-soft)]',
+        'hover:bg-card-hover hover:border-border-subtle transition group',
+        item.isCurrent ? 'border-primary/40 ring-1 ring-primary/20' : 'border-border',
+      )}
     >
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="space-y-1 min-w-0">
-          <span className="text-[10px] font-bold text-primary uppercase tracking-wider">
+          <span className="text-[10px] font-semibold text-muted uppercase tracking-wider">
             {item.organizationName}
           </span>
-          <h3 className="font-extrabold text-foreground text-base leading-tight group-hover:text-primary transition">
+          <h3 className="font-semibold text-foreground text-base leading-snug group-hover:text-primary transition">
             {item.event.title}
           </h3>
         </div>
         <RsvpBadge status={item.rsvp} />
       </div>
 
-      <div className="space-y-2 text-xs text-muted mb-4">
+      <div className="space-y-1.5 text-xs text-muted mb-3">
         <div className="flex items-start gap-2">
-          <Calendar className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
+          <Calendar className="w-3.5 h-3.5 text-muted flex-shrink-0 mt-0.5" />
           <span>{formattedDate}</span>
         </div>
         <div className="flex items-start gap-2">
-          <MapPin className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
+          <MapPin className="w-3.5 h-3.5 text-muted flex-shrink-0 mt-0.5" />
           <span>{item.event.location}</span>
         </div>
       </div>
 
       <div className="flex items-center justify-between pt-3 border-t border-border">
         {item.eventPassed ? (
-          <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Événement terminé</span>
+          <span className="text-[10px] font-semibold text-muted">Terminé</span>
         ) : (
-          <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">À venir</span>
+          <span className="text-[10px] font-semibold text-emerald-600">À venir</span>
         )}
-        <span className="inline-flex items-center gap-1 text-xs font-bold text-primary group-hover:gap-2 transition-all">
+        <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">
           Ouvrir
           <ArrowRight className="w-3.5 h-3.5" />
         </span>
@@ -137,19 +139,19 @@ export default function GuestHomePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-muted">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-7 h-7 text-primary animate-spin" />
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-muted px-4">
-        <div className="max-w-md w-full bg-surface p-8 rounded-2xl border text-center space-y-4">
-          <AlertCircle className="w-10 h-10 text-rose-500 mx-auto" />
+      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+        <GuestPortalCard className="max-w-md w-full text-center space-y-3">
+          <AlertCircle className="w-8 h-8 text-rose-500 mx-auto" />
           <p className="text-sm text-muted">{error || 'Erreur de chargement.'}</p>
-        </div>
+        </GuestPortalCard>
       </div>
     );
   }
@@ -158,81 +160,59 @@ export default function GuestHomePage() {
   const past = data.invitations.filter((i) => i.eventPassed);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary/10 via-background to-background">
-      <header className="border-b border-border bg-surface/80 backdrop-blur-md sticky top-0 z-40">
-        <div className="page-container h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition">
-            <div className="bg-primary p-2 rounded-lg text-white">
-              <PartyPopper className="w-4 h-4" />
+    <GuestPortalShell
+      showBrand
+      title={`Bonjour ${data.guest.firstName}`}
+      eyebrow="Espace invité"
+      contentClassName="space-y-6"
+    >
+      <p className="text-sm text-muted -mt-3">
+        Toutes vos invitations, regroupées par e-mail et téléphone.
+      </p>
+
+      <div className="grid grid-cols-3 gap-2.5">
+        {[
+          { label: 'Total', value: data.total, tone: 'text-foreground' },
+          { label: 'À venir', value: data.upcomingCount, tone: 'text-emerald-600' },
+          { label: 'Passés', value: data.pastCount, tone: 'text-muted' },
+        ].map((stat) => (
+          <GuestPortalCard key={stat.label} padding="sm" className="text-center">
+            <div className={cn('text-xl font-semibold', stat.tone)}>{stat.value}</div>
+            <div className="text-[10px] font-semibold text-muted uppercase tracking-wider mt-0.5">
+              {stat.label}
             </div>
-            <span className="font-bold text-foreground">EventMaster</span>
-          </Link>
-          <span className="text-[10px] font-bold text-primary uppercase tracking-wider">
-            Espace Invité
-          </span>
-        </div>
-      </header>
+          </GuestPortalCard>
+        ))}
+      </div>
 
-      <main className="page-container py-8 space-y-8">
-        <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
-            <Sparkles className="w-3.5 h-3.5" />
-            Portail invité
+      {upcoming.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-foreground">À venir</h2>
+          <div className="grid gap-3">
+            {upcoming.map((item) => (
+              <InvitationCard key={item.guestId} item={item} />
+            ))}
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
-            Bonjour {data.guest.firstName} !
-          </h1>
-          <p className="text-sm text-muted">
-            Retrouvez ici toutes les célébrations auxquelles vous avez été invité(e), regroupées par email et numéro de téléphone.
-          </p>
-        </div>
+        </section>
+      )}
 
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-surface border border-border rounded-2xl p-4 text-center">
-            <div className="text-2xl font-black text-foreground">{data.total}</div>
-            <div className="text-[10px] font-bold text-muted uppercase tracking-wider mt-1">Total</div>
+      {past.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-foreground">Passés</h2>
+          <p className="text-xs text-muted">Les réponses RSVP ne peuvent plus être modifiées.</p>
+          <div className="grid gap-3">
+            {past.map((item) => (
+              <InvitationCard key={item.guestId} item={item} />
+            ))}
           </div>
-          <div className="bg-surface border border-border rounded-2xl p-4 text-center">
-            <div className="text-2xl font-black text-emerald-600">{data.upcomingCount}</div>
-            <div className="text-[10px] font-bold text-muted uppercase tracking-wider mt-1">À venir</div>
-          </div>
-          <div className="bg-surface border border-border rounded-2xl p-4 text-center">
-            <div className="text-2xl font-black text-muted">{data.pastCount}</div>
-            <div className="text-[10px] font-bold text-muted uppercase tracking-wider mt-1">Passés</div>
-          </div>
-        </div>
+        </section>
+      )}
 
-        {upcoming.length > 0 && (
-          <section className="space-y-4">
-            <h2 className="text-lg font-bold text-foreground">Événements à venir</h2>
-            <div className="grid gap-4">
-              {upcoming.map((item) => (
-                <InvitationCard key={item.guestId} item={item} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {past.length > 0 && (
-          <section className="space-y-4">
-            <h2 className="text-lg font-bold text-foreground">Événements passés</h2>
-            <p className="text-xs text-muted">
-              Les réponses RSVP ne peuvent plus être modifiées pour ces événements.
-            </p>
-            <div className="grid gap-4 opacity-90">
-              {past.map((item) => (
-                <InvitationCard key={item.guestId} item={item} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {data.invitations.length === 0 && (
-          <div className="text-center py-16 text-muted text-sm">
-            Aucune invitation trouvée pour votre profil.
-          </div>
-        )}
-      </main>
-    </div>
+      {data.invitations.length === 0 && (
+        <GuestPortalCard className="text-center py-10 text-sm text-muted">
+          Aucune invitation trouvée pour votre profil.
+        </GuestPortalCard>
+      )}
+    </GuestPortalShell>
   );
 }

@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { downloadMedia, getMediaExtension, sanitizeFilenamePart } from '@/lib/downloadMedia';
 import { GuestPortalHomeLink } from '@/components/GuestPortalNav';
+import GuestPortalShell, { GuestPortalTabBar, GuestPortalCard } from '@/components/GuestPortalShell';
 import Link from 'next/link';
 import GuestTablePlanView from '@/app/rsvp/GuestTablePlanView';
 import GuestGuidelinesView from '@/components/GuestGuidelinesView';
@@ -475,11 +476,11 @@ export default function RsvpPage() {
   if (error || !guest) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface-muted px-4">
-        <div className="max-w-md w-full bg-surface p-8 rounded-2xl border border-border shadow-xl text-center space-y-4">
+        <div className="max-w-md w-full bg-surface p-8 rounded-[var(--radius-card)] border border-border shadow-[var(--shadow-soft)] text-center space-y-4">
           <div className="bg-rose-50 text-rose-600 p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto border border-rose-100">
             <AlertCircle className="w-8 h-8" />
           </div>
-          <h2 className="text-2xl font-extrabold text-foreground tracking-tight">Erreur d'Invitation</h2>
+          <h2 className="text-xl font-semibold text-foreground tracking-tight">Erreur d'Invitation</h2>
           <p className="text-muted leading-relaxed text-sm">
             {error || 'Lien d\'invitation invalide.'}
           </p>
@@ -489,120 +490,100 @@ export default function RsvpPage() {
     );
   }
 
-    // Rich Interactive Portal for Accepted guests (Immersive Mobile App Experience)
+    // Portail invité confirmé — layout plateforme (simple / moderne)
     if (submitted && rsvpStatus === 'ACCEPTED') {
+      const guestTabs = [
+        { id: 'badge', label: 'Badge', icon: <Award className="w-3.5 h-3.5" /> },
+        { id: 'table', label: 'Ma table', icon: <LayoutGrid className="w-3.5 h-3.5" /> },
+        { id: 'guestbook', label: "Livre d'or", icon: <Heart className="w-3.5 h-3.5" /> },
+        { id: 'feed', label: 'Actualités', icon: <MessageCircle className="w-3.5 h-3.5" /> },
+      ];
+
       return (
-        <div className="min-h-screen bg-background flex items-center justify-center p-0 md:p-6 relative overflow-hidden font-sans">
-        {/* Ambient background glow */}
-        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-primary/20 blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-primary/15 blur-[120px] pointer-events-none" />
-
-        {/* Smartphone Container Frame */}
-        <div className="w-full max-w-md md:h-[840px] md:rounded-[48px] md:border-[10px] md:border-border bg-surface text-foreground relative shadow-2xl overflow-hidden flex flex-col md:ring-4 md:ring-background">
-          
-          {/* Smartphone Notch / Dynamic Island (visible on desktop) */}
-          <div className="hidden md:flex absolute top-0 inset-x-0 h-7 bg-background items-center justify-center z-40">
-            <div className="w-28 h-4 bg-black rounded-full" />
-          </div>
-
-          {/* App Header */}
-          <div className="bg-surface border-b border-border px-6 pt-8 pb-4 md:pt-11 flex items-center justify-between z-30">
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-primary to-primary/80 flex items-center justify-center font-black text-white text-sm shadow-lg shadow-primary/20">
-                ✨
-              </div>
-              <div>
-                <span className="text-[10px] font-bold text-primary uppercase tracking-widest block">Mon Invitation</span>
-                <span className="text-sm font-extrabold text-foreground leading-none block truncate max-w-[200px]">{guest.event.title}</span>
-              </div>
-            </div>
-
-            {/* Live indicator / Home link */}
-            <GuestPortalHomeLink guestId={guestId} variant="dark" />
-          </div>
-
-          {/* App Body (Scrollable) */}
-          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 scrollbar-none pb-24">
+        <GuestPortalShell
+          title={guest.event.title}
+          eyebrow="Invitation confirmée"
+          guestId={guestId}
+          tabs={
+            <GuestPortalTabBar
+              tabs={guestTabs}
+              activeId={activeGuestTab}
+              onChange={(id) => setActiveGuestTab(id as typeof activeGuestTab)}
+            />
+          }
+          contentClassName="space-y-5"
+        >
             
             {/* 1. BADGE & INFOS TAB */}
             {activeGuestTab === 'badge' && (
-              <div className="space-y-6 animate-fade-in">
-                {/* Welcome Card */}
-                <div className="bg-gradient-to-br from-primary to-primary/80 rounded-3xl p-6 text-white space-y-3 relative overflow-hidden shadow-xl shadow-primary/20">
-                  <div className="absolute -right-10 -bottom-10 w-32 h-32 bg-surface/10 rounded-full blur-2xl" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/80">Bienvenue</span>
-                  <h2 className="text-xl font-black leading-tight">
-                    Ravi de vous compter parmi nous, {guest.firstName} !
+              <div className="space-y-4 animate-fade-in">
+                <GuestPortalCard className="bg-primary text-white border-primary space-y-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-white/80">Bienvenue</span>
+                  <h2 className="text-lg font-semibold leading-snug">
+                    Bonjour {guest.firstName}, votre présence est confirmée.
                   </h2>
-                  <p className="text-white/90 text-xs leading-relaxed font-medium">
-                    Votre présence est confirmée. Préparez-vous à vivre un moment inoubliable !
+                  <p className="text-white/85 text-xs leading-relaxed">
+                    Présentez votre badge QR à l&apos;entrée le jour J.
                   </p>
-                </div>
+                </GuestPortalCard>
 
-                {/* QR Badge Card */}
-                <div className="bg-surface-muted border border-border rounded-3xl p-6 text-center space-y-4">
-                  <span className="text-xs font-bold text-muted uppercase tracking-wider block">Votre badge QR de confirmation de présence</span>
+                <GuestPortalCard className="text-center space-y-4">
+                  <span className="text-xs font-semibold text-muted block">Badge QR</span>
                   <div className="flex justify-center">
-                    <div className="relative p-3 bg-surface rounded-3xl shadow-lg">
-                      <img 
-                        src={getGuestQrImageUrl(guest.id, 180)} 
+                    <div className="p-3 bg-surface border border-border rounded-[var(--radius-card)]">
+                      <img
+                        src={getGuestQrImageUrl(guest.id, 180)}
                         alt="QR Code de confirmation de présence"
                         className="w-40 h-40"
                       />
-                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-surface p-1.5 rounded-xl border border-border shadow-xs flex items-center justify-center w-9 h-9">
-                        <span className="text-sm">✨</span>
-                      </div>
                     </div>
                   </div>
-                  <p className="text-[11px] text-muted font-medium leading-tight max-w-xs mx-auto">
-                    Présentez ce QR Code à l'entrée de l'événement pour valider votre présence.
+                  <p className="text-[11px] text-muted leading-relaxed max-w-xs mx-auto">
+                    Présentez ce code à l&apos;accueil pour valider votre présence.
                   </p>
-                </div>
+                </GuestPortalCard>
 
-                {/* Event Details Card */}
-                <div className="bg-surface-muted/80 border border-border rounded-3xl p-5 space-y-4">
+                <GuestPortalCard className="space-y-4">
                   <div className="space-y-1.5">
-                    <h3 className="font-extrabold text-foreground text-sm">Détails de l'événement</h3>
+                    <h3 className="font-semibold text-foreground text-sm">Détails de l&apos;événement</h3>
                     <p className="text-muted text-xs leading-relaxed whitespace-pre-line">
-                      {guest.event.description || "Aucune description supplémentaire fournie pour cet événement."}
+                      {guest.event.description || 'Aucune description supplémentaire.'}
                     </p>
                   </div>
 
-                  <div className="space-y-3 text-xs text-foreground/80 font-semibold pt-3 border-t border-border">
+                  <div className="space-y-3 text-xs text-muted pt-3 border-t border-border">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-primary/10 rounded-xl text-primary">
+                      <div className="p-2 bg-primary/10 rounded-[var(--radius-button)] text-primary">
                         <Calendar className="w-4 h-4" />
                       </div>
                       <div>
-                        <span className="font-bold block text-foreground">Date & Heure</span>
+                        <span className="font-semibold block text-foreground">Date & heure</span>
                         {new Date(guest.event.date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-primary/10 rounded-xl text-primary">
+                      <div className="p-2 bg-primary/10 rounded-[var(--radius-button)] text-primary">
                         <MapPin className="w-4 h-4" />
                       </div>
                       <div>
-                        <span className="font-bold block text-foreground">Lieu</span>
+                        <span className="font-semibold block text-foreground">Lieu</span>
                         {guest.event.location}
                       </div>
                     </div>
                   </div>
-                </div>
+                </GuestPortalCard>
 
                 <GuestGuidelinesView
                   guidelines={guest.event.guestGuidelines}
-                  variant="dark"
-                  accentColor="#818cf8"
-                  className="pt-2"
+                  className="pt-1"
                 />
 
                 {!rsvpLocked && (
-                <button 
+                <button
                   onClick={() => setSubmitted(false)}
-                  className="w-full py-3.5 bg-surface-muted hover:bg-surface-muted text-foreground/80 font-bold rounded-2xl text-xs transition"
+                  className="w-full py-2.5 border border-border bg-surface hover:bg-surface-muted text-muted font-semibold rounded-[var(--radius-button)] text-xs transition"
                 >
-                  Modifier ma réponse de présence
+                  Modifier ma réponse
                 </button>
                 )}
               </div>
@@ -637,18 +618,18 @@ export default function RsvpPage() {
 
             {/* 3. LIVRE D'OR TAB */}
             {activeGuestTab === 'guestbook' && (
-              <div className="space-y-6 animate-fade-in">
+              <div className="space-y-4 animate-fade-in">
                 <div className="space-y-1">
-                  <h3 className="font-extrabold text-foreground text-base">Livre d'or de l'événement</h3>
-                  <p className="text-muted text-xs">
-                    Partagez un mot doux, des félicitations ou plusieurs photos souvenirs avec les organisateurs.
+                  <h3 className="font-semibold text-foreground text-sm">Livre d&apos;or</h3>
+                  <p className="text-muted text-xs leading-relaxed">
+                    Laissez un message ou des photos pour les organisateurs.
                   </p>
                 </div>
 
                 {guestbookSuccess && (
-                  <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-3.5 rounded-2xl text-xs font-semibold flex items-center gap-2">
-                    <CheckCircle2 className="w-4.5 h-4.5 text-emerald-400" />
-                    Message et photos envoyés avec succès ! Merci.
+                  <div className="bg-emerald-50 border border-emerald-100 text-emerald-700 px-4 py-3 rounded-[var(--radius-card)] text-xs font-semibold flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    Message et photos envoyés avec succès.
                   </div>
                 )}
 
@@ -659,14 +640,14 @@ export default function RsvpPage() {
                       onChange={(e) => setGuestbookMessage(e.target.value)}
                       placeholder="Écrivez votre message de félicitations ou d'amitié ici..."
                       rows={4}
-                      className="w-full px-4 py-3 bg-surface-muted border border-border rounded-2xl text-xs focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors resize-none text-foreground placeholder:text-muted"
+                      className="w-full px-4 py-3 bg-surface border border-border shadow-[var(--shadow-soft)] rounded-[var(--radius-card)] text-xs focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors resize-none text-foreground placeholder:text-muted"
                     />
                   </div>
 
                   {/* Previews of uploaded guestbook photos */}
                   {guestbookPhotos.length > 0 && (
                     <div className="space-y-2">
-                      <span className="text-[10px] font-bold text-muted uppercase tracking-wider block">
+                      <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block">
                         Photos sélectionnées ({guestbookPhotos.length})
                       </span>
                       <div className="grid grid-cols-3 gap-2">
@@ -687,7 +668,7 @@ export default function RsvpPage() {
                   )}
 
                   {isGuestbookUploading && (
-                    <div className="flex items-center justify-center gap-2 py-3 bg-surface-muted border border-dashed border-border rounded-2xl">
+                    <div className="flex items-center justify-center gap-2 py-3 bg-surface-muted border border-dashed border-border rounded-[var(--radius-card)]">
                       <Loader2 className="w-4 h-4 text-primary animate-spin" />
                       <span className="text-xs font-semibold text-muted">Encodage des photos...</span>
                     </div>
@@ -728,7 +709,7 @@ export default function RsvpPage() {
 
                 {/* Liste des messages du Livre d'or */}
                 <div className="border-t border-border pt-6 space-y-4">
-                  <h4 className="font-extrabold text-foreground text-xs uppercase tracking-wider flex items-center gap-1.5">
+                  <h4 className="font-semibold text-foreground text-xs uppercase tracking-wider flex items-center gap-1.5">
                     <Heart className="w-4 h-4 text-primary" />
                     Messages des invités ({guestbookShares.length})
                   </h4>
@@ -739,7 +720,7 @@ export default function RsvpPage() {
                       <p className="text-[10px] text-muted">Chargement des messages...</p>
                     </div>
                   ) : guestbookShares.length === 0 ? (
-                    <div className="text-center py-8 bg-surface-muted/40 rounded-2xl border border-border p-4">
+                    <div className="text-center py-8 bg-surface-muted/40 rounded-[var(--radius-card)] border border-border p-4">
                       <p className="text-muted text-xs">Soyez le premier à laisser un message !</p>
                     </div>
                   ) : (
@@ -753,9 +734,9 @@ export default function RsvpPage() {
                         );
 
                         return (
-                          <div key={share.id} className="bg-surface-muted/60 border border-border rounded-2xl p-3 space-y-2.5">
+                          <div key={share.id} className="bg-surface border border-border shadow-[var(--shadow-soft)] rounded-[var(--radius-card)] p-3 space-y-2.5">
                             <div className="flex items-center justify-between">
-                              <span className="font-bold text-foreground text-[11px]">
+                              <span className="font-semibold text-foreground text-[11px]">
                                 {share.guest ? `${share.guest.firstName} ${share.guest.lastName}` : 'Invité'}
                               </span>
                               <span className="text-[9px] text-muted">
@@ -813,7 +794,7 @@ export default function RsvpPage() {
             {activeGuestTab === 'feed' && (
               <div className="space-y-6 animate-fade-in">
                 <div className="space-y-1">
-                  <h3 className="font-extrabold text-foreground text-base">Fil d'actualité</h3>
+                  <h3 className="font-semibold text-foreground text-sm">Actualités</h3>
                   <p className="text-muted text-xs">
                     Découvrez les publications en direct des organisateurs et commentez-les.
                   </p>
@@ -829,7 +810,7 @@ export default function RsvpPage() {
                     <div className="inline-flex items-center justify-center bg-primary/10 p-5 rounded-full text-primary">
                       <MessageCircle className="w-8 h-8" />
                     </div>
-                    <h4 className="font-bold text-foreground text-sm">Aucune publication</h4>
+                    <h4 className="font-semibold text-foreground text-sm">Aucune publication</h4>
                     <p className="text-muted text-xs">
                       Les publications en direct des organisateurs apparaîtront ici très bientôt !
                     </p>
@@ -842,14 +823,14 @@ export default function RsvpPage() {
                         : (post.mediaUrl ? [{ url: post.mediaUrl, type: post.mediaType || 'IMAGE' }] : []);
 
                       return (
-                        <div key={post.id} className="bg-surface-muted/60 border border-border rounded-3xl p-4 space-y-4">
+                        <div key={post.id} className="bg-surface border border-border shadow-[var(--shadow-soft)] rounded-[var(--radius-card)] p-4 space-y-4">
                           {/* Post Header */}
                           <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-primary text-xs">
-                              ✨
+                            <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-semibold text-primary text-xs">
+                              O
                             </div>
                             <div>
-                              <span className="font-bold text-foreground text-xs block leading-tight">Organisateur</span>
+                              <span className="font-semibold text-foreground text-xs block leading-tight">Organisateur</span>
                               <span className="text-[9px] text-muted font-medium">
                                 {new Date(post.createdAt).toLocaleDateString('fr-FR', {
                                   day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
@@ -867,7 +848,7 @@ export default function RsvpPage() {
 
                           {/* Post Media Grid */}
                           {mediaList.length > 0 && (
-                            <div className={`grid gap-1.5 rounded-2xl overflow-hidden border border-border bg-black ${
+                            <div className={`grid gap-1.5 rounded-[var(--radius-card)] overflow-hidden border border-border bg-black ${
  mediaList.length === 1 ? 'grid-cols-1' : mediaList.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
  }`}>
                               {mediaList.map((media: any, idx: number) => (
@@ -911,7 +892,7 @@ export default function RsvpPage() {
                           <div className="flex items-center gap-4 pt-1">
                             <button
                               onClick={() => handleToggleLike(post.id)}
-                              className={`flex items-center gap-1.5 text-xs font-bold transition px-3 py-1.5 rounded-full ${
+                              className={`flex items-center gap-1.5 text-xs font-semibold transition px-3 py-1.5 rounded-full ${
  post.likes && Array.isArray(post.likes) && post.likes.includes(`guest_${guest?.id}`)
  ? 'text-pink-500 bg-pink-500/10'
  : 'text-muted hover:text-foreground hover:bg-surface-muted'
@@ -926,7 +907,7 @@ export default function RsvpPage() {
 
                           {/* Comments Section */}
                           <div className="border-t border-border pt-3.5 space-y-4">
-                            <h4 className="font-bold text-muted text-[10px] uppercase tracking-wider flex items-center gap-1.5">
+                            <h4 className="font-semibold text-muted text-[10px] uppercase tracking-wider flex items-center gap-1.5">
                               <MessageCircle className="w-3.5 h-3.5 text-muted" />
                               Commentaires ({post.comments.length})
                             </h4>
@@ -934,9 +915,9 @@ export default function RsvpPage() {
                             {post.comments.length > 0 && (
                               <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
                                 {post.comments.map((comment: any) => (
-                                  <div key={comment.id} className="bg-surface-muted/80 border border-border p-3 rounded-2xl text-[11px] space-y-1">
+                                  <div key={comment.id} className="bg-surface border border-border shadow-[var(--shadow-soft)] p-3 rounded-[var(--radius-card)] text-[11px] space-y-1">
                                     <div className="flex items-center justify-between">
-                                      <span className="font-extrabold text-primary">{comment.authorName}</span>
+                                      <span className="font-semibold text-primary">{comment.authorName}</span>
                                       <span className="text-[8px] text-muted font-medium">
                                         {new Date(comment.createdAt).toLocaleDateString('fr-FR', {
                                           day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
@@ -959,7 +940,7 @@ export default function RsvpPage() {
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter') handleCreateGuestComment(post.id);
                                 }}
-                                className="flex-1 px-3.5 py-2 bg-surface-muted border border-border rounded-xl text-[11px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-foreground placeholder:text-muted"
+                                className="flex-1 px-3.5 py-2 bg-surface border border-border shadow-[var(--shadow-soft)] rounded-xl text-[11px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-foreground placeholder:text-muted"
                               />
                               <button
                                 onClick={() => handleCreateGuestComment(post.id)}
@@ -982,54 +963,13 @@ export default function RsvpPage() {
               </div>
             )}
 
-          </div>
-
-          {/* App Bottom Navigation Bar (iOS / Android Immersive Style) */}
-          <div className="absolute bottom-0 inset-x-0 bg-background/90 backdrop-blur-md border-t border-border py-2.5 px-4 flex items-center justify-around z-30">
-            <button
-              onClick={() => setActiveGuestTab('badge')}
-              className={`flex flex-col items-center gap-1 transition ${activeGuestTab === 'badge' ? 'text-primary' : 'text-muted hover:text-foreground/80'}`}
-            >
-              <Award className="w-5 h-5" />
-              <span className="text-[9px] font-bold">Badge</span>
-            </button>
-            <button
-              onClick={() => setActiveGuestTab('table')}
-              className={`flex flex-col items-center gap-1 transition ${activeGuestTab === 'table' ? 'text-primary' : 'text-muted hover:text-foreground/80'}`}
-            >
-              <LayoutGrid className="w-5 h-5" />
-              <span className="text-[9px] font-bold">Ma Table</span>
-            </button>
-            <button
-              onClick={() => setActiveGuestTab('guestbook')}
-              className={`flex flex-col items-center gap-1 transition ${activeGuestTab === 'guestbook' ? 'text-primary' : 'text-muted hover:text-foreground/80'}`}
-            >
-              <Heart className="w-5 h-5" />
-              <span className="text-[9px] font-bold">Livre d'or</span>
-            </button>
-            <button
-              onClick={() => setActiveGuestTab('feed')}
-              className={`flex flex-col items-center gap-1 transition ${activeGuestTab === 'feed' ? 'text-primary' : 'text-muted hover:text-foreground/80'}`}
-            >
-              <MessageCircle className="w-5 h-5" />
-              <span className="text-[9px] font-bold">Live Feed</span>
-            </button>
-          </div>
-
-          {/* iOS Home Indicator Bar (visible on desktop) */}
-          <div className="hidden md:block absolute bottom-1 inset-x-0 h-1 flex justify-center z-40">
-            <div className="w-32 h-1 bg-surface-muted rounded-full" />
-          </div>
-
-        </div>
-
         {/* Expanded Image Modal with Carousel */}
         {expandedImages.length > 0 && (
           <div 
             className="fixed inset-0 bg-black/95 backdrop-blur-xs flex items-center justify-center z-50 p-4"
             onClick={() => setExpandedImages([])}
           >
-            <div className="relative max-w-4xl max-h-[85vh] overflow-hidden rounded-2xl flex items-center justify-center">
+            <div className="relative max-w-4xl max-h-[85vh] overflow-hidden rounded-[var(--radius-card)] flex items-center justify-center">
               <img 
                 src={expandedImages[expandedImageIndex]} 
                 alt="Expanded" 
@@ -1083,7 +1023,7 @@ export default function RsvpPage() {
                   >
                     <ChevronRight className="w-6 h-6" />
                   </button>
-                  <div className="absolute bottom-4 bg-black/60 px-3 py-1 rounded-full text-white text-xs font-bold">
+                  <div className="absolute bottom-4 bg-black/60 px-3 py-1 rounded-full text-white text-xs font-semibold">
                     {expandedImageIndex + 1} / {expandedImages.length}
                   </div>
                 </>
@@ -1091,7 +1031,7 @@ export default function RsvpPage() {
             </div>
           </div>
         )}
-      </div>
+        </GuestPortalShell>
     );
   }
 
