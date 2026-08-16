@@ -17,7 +17,7 @@ import {
   Spline, Triangle, Plus, Trash, Layout, Palette, Square,
   ArrowUp, ArrowDown, Crop, Copy, Upload, Globe
 } from 'lucide-react';
-import { PageHeader, Alert, Button, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs } from '@/components/ui';
+import { PageHeader, Alert, Button, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, paginateItems } from '@/components/ui';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
 import {
   type RsvpField,
@@ -122,6 +122,9 @@ export default function TemplatesPage() {
     columns: templatesColumns,
     setGridColumns: setTemplatesColumns,
   } = useViewMode('em-view-templates', 'grid', 3);
+  const [catalogPage, setCatalogPage] = useState(1);
+  const [ownTemplatesPage, setOwnTemplatesPage] = useState(1);
+  const TEMPLATES_PER_PAGE = 9;
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -1207,6 +1210,9 @@ export default function TemplatesPage() {
   const catalogTemplates = templates.filter((t) => t.isGlobal ?? !t.tenantId);
   const ownTemplates = templates.filter((t) => t.isOwned ?? Boolean(t.tenantId));
   const canDuplicateAny = user?.role === 'SUPER_ADMIN' || catalogTemplates.length > 0 || canUseCustomTemplates;
+  const listTemplates = user?.role === 'SUPER_ADMIN' ? templates : ownTemplates;
+  const paginatedCatalog = paginateItems(catalogTemplates, catalogPage, TEMPLATES_PER_PAGE);
+  const paginatedOwn = paginateItems(listTemplates, ownTemplatesPage, TEMPLATES_PER_PAGE);
 
   // Helper to get background style
   const getBackgroundStyle = (type: string, color: string, url: string, pattern: string) => {
@@ -3520,7 +3526,7 @@ export default function TemplatesPage() {
   return (
     <>
       {renderMockupImportModal()}
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
         title={user?.role === 'SUPER_ADMIN' ? "Modèles d'invitation (Super Admin)" : "Vos modèles d'invitation"}
         description={
@@ -3612,11 +3618,18 @@ export default function TemplatesPage() {
             </p>
           </div>
           <TemplateCardGrid
-            templates={catalogTemplates}
+            templates={paginatedCatalog}
             isSuperAdmin={false}
             layout={templatesViewMode}
             columns={templatesColumns}
             onDuplicate={canDuplicateAny ? (t) => handleDuplicateTemplate(t as TemplateItem) : undefined}
+          />
+          <Pagination
+            page={catalogPage}
+            pageSize={TEMPLATES_PER_PAGE}
+            total={catalogTemplates.length}
+            onPageChange={setCatalogPage}
+            itemLabel="modèles"
           />
         </section>
       )}
@@ -3632,7 +3645,7 @@ export default function TemplatesPage() {
         )}
 
         <TemplateCardGrid
-          templates={user?.role === 'SUPER_ADMIN' ? templates : ownTemplates}
+          templates={paginatedOwn}
           isSuperAdmin={user?.role === 'SUPER_ADMIN'}
           layout={templatesViewMode}
           columns={templatesColumns}
@@ -3677,6 +3690,13 @@ export default function TemplatesPage() {
               : undefined
           }
           onDelete={canUseCustomTemplates ? (id) => handleDeleteTemplate(id) : undefined}
+        />
+        <Pagination
+          page={ownTemplatesPage}
+          pageSize={TEMPLATES_PER_PAGE}
+          total={listTemplates.length}
+          onPageChange={setOwnTemplatesPage}
+          itemLabel="modèles"
         />
       </section>
     </div>

@@ -19,7 +19,7 @@ import QuotaUsagePanel from '@/components/QuotaUsagePanel';
 import SubscriptionApprovalModal, { type SubscriptionApprovalRequest } from '@/components/SubscriptionApprovalModal';
 import BillingDiscountFields, { getBillingPricingFromFields } from '@/components/BillingDiscountFields';
 import type { QuotaSnapshot } from '@/lib/quotaDisplay';
-import { PageHeader, Alert, Button, ProjectCard, SkeletonDashboardHome, SkeletonTabContent, ViewModeToggle, useViewMode, Breadcrumbs } from '@/components/ui';
+import { PageHeader, Alert, Button, ProjectCard, SkeletonDashboardHome, SkeletonTabContent, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, paginateItems } from '@/components/ui';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
 import { PLAN_IDS, type PlanId } from '@/config/landingPricing';
 import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
@@ -372,9 +372,13 @@ function DashboardPageContent() {
   const [templatesPage, setTemplatesPage] = useState(1);
   const [eventsPage, setEventsPage] = useState(1);
   const [guestsPage, setGuestsPage] = useState(1);
-  const ITEMS_PER_PAGE = 5;
+  const [subRequestsPage, setSubRequestsPage] = useState(1);
+  const [homeEventsPage, setHomeEventsPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
   const TENANTS_PER_PAGE = 12;
-  const TEMPLATE_CARDS_PER_PAGE = 6;
+  const TEMPLATE_CARDS_PER_PAGE = 9;
+  const SUB_REQUESTS_PER_PAGE = 10;
+  const HOME_EVENTS_PER_PAGE = 6;
 
   // Guest CRUD Modals states (Super Admin)
   const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
@@ -465,7 +469,7 @@ function DashboardPageContent() {
         try {
           const eventsData = await api.get('/events');
           const eventsList = Array.isArray(eventsData) ? eventsData : eventsData.events || [];
-          setEvents(eventsList.slice(0, 3));
+          setEvents(eventsList);
           eventsLoaded = true;
         } catch (err) {
           console.error('Error loading events:', err);
@@ -599,6 +603,7 @@ function DashboardPageContent() {
     setTemplatesPage(1);
     setEventsPage(1);
     setGuestsPage(1);
+    setSubRequestsPage(1);
   }, [searchTerm, filterPlan, filterRole, filterType, filterRsvp]);
 
   // Leaflet Map Initialization Effect for Super Admin Event Modal
@@ -1407,12 +1412,18 @@ function DashboardPageContent() {
       return matchesSearch && matchesRsvp;
     });
 
-    // Paginated arrays
-    const paginatedTenants = filteredTenants.slice((tenantsPage - 1) * TENANTS_PER_PAGE, tenantsPage * TENANTS_PER_PAGE);
-    const paginatedUsers = filteredUsers.slice((usersPage - 1) * ITEMS_PER_PAGE, usersPage * ITEMS_PER_PAGE);
-    const paginatedTemplates = filteredTemplates.slice((templatesPage - 1) * TEMPLATE_CARDS_PER_PAGE, templatesPage * TEMPLATE_CARDS_PER_PAGE);
-    const paginatedEvents = filteredEvents.slice((eventsPage - 1) * ITEMS_PER_PAGE, eventsPage * ITEMS_PER_PAGE);
-    const paginatedGuests = filteredGuests.slice((guestsPage - 1) * ITEMS_PER_PAGE, guestsPage * ITEMS_PER_PAGE);
+    const paginatedTenants = paginateItems(filteredTenants, tenantsPage, TENANTS_PER_PAGE);
+    const paginatedUsers = paginateItems(filteredUsers, usersPage, ITEMS_PER_PAGE);
+    const paginatedTemplates = paginateItems(filteredTemplates, templatesPage, TEMPLATE_CARDS_PER_PAGE);
+    const paginatedEvents = paginateItems(filteredEvents, eventsPage, ITEMS_PER_PAGE);
+    const paginatedGuests = paginateItems(filteredGuests, guestsPage, ITEMS_PER_PAGE);
+    const paginatedSubRequests = paginateItems(subscriptionRequests, subRequestsPage, SUB_REQUESTS_PER_PAGE);
+
+    const activeLicensesCount = (adminData?.tenants || []).filter((t) => {
+      const expired = Boolean(t.licenseExpiresAt && new Date(t.licenseExpiresAt) < new Date());
+      return t.licenseActive && !expired;
+    }).length;
+    const paidPlansCount = (adminData?.tenants || []).filter((t) => t.plan !== 'FREE').length;
 
     const tabMeta = ADMIN_TAB_META[activeTab as AdminTabId] || ADMIN_TAB_META.tenants;
     const commercialOverrides: Partial<Record<AdminTabId, { description: string }>> = {
@@ -1428,7 +1439,7 @@ function DashboardPageContent() {
 
     return (
       <>
-      <div className="space-y-5">
+      <div className="space-y-6">
         <PageHeader
           title={isCommercialPlatform ? 'Espace commercial' : 'Console Super Admin'}
           description={
@@ -1449,7 +1460,7 @@ function DashboardPageContent() {
         {error && <Alert variant="error">{error}</Alert>}
 
         {adminData && (
-          <div className={`grid gap-3 ${isCommercialPlatform ? 'sm:grid-cols-3' : 'sm:grid-cols-4'}`}>
+          <div className={`grid gap-3 ${isCommercialPlatform ? 'sm:grid-cols-2 xl:grid-cols-4' : 'sm:grid-cols-2 xl:grid-cols-4'}`}>
             <div className={statCardClass}>
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">
@@ -1462,13 +1473,29 @@ function DashboardPageContent() {
               <div>
                 <span className="text-2xl font-semibold text-foreground tracking-tight">{adminData.stats.tenants}</span>
                 <p className="text-[11px] text-muted mt-1">
-                  {isCommercialPlatform ? 'Liées à votre code' : 'Comptes clients actifs'}
+                  {isCommercialPlatform
+                    ? 'Liées à votre code'
+                    : `${activeLicensesCount} licence${activeLicensesCount !== 1 ? 's' : ''} active${activeLicensesCount !== 1 ? 's' : ''}`}
                 </p>
               </div>
             </div>
 
             {isCommercialPlatform ? (
               <>
+                <div className={statCardClass}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">Membres liés</span>
+                    <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)]">
+                      <Users className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-2xl font-semibold text-foreground tracking-tight">{adminData.stats.users}</span>
+                    <p className="text-[11px] text-muted mt-1">
+                      {adminData.stats.events} événement{adminData.stats.events !== 1 ? 's' : ''} · {adminData.stats.guests} invité{adminData.stats.guests !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                </div>
                 <div className={statCardClass}>
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">En attente</span>
@@ -1493,9 +1520,10 @@ function DashboardPageContent() {
                       {(commercialOverview?.stats?.monthlyCommission ?? 0).toLocaleString('fr-FR')} FC
                     </span>
                     <p className="text-[11px] text-muted mt-1">
+                      {(commercialOverview?.stats?.totalCommission ?? 0).toLocaleString('fr-FR')} FC au total
                       {commercialOverview?.commissionRate != null
-                        ? `${Math.round(commercialOverview.commissionRate * 100)} % ce mois`
-                        : 'Ce mois'}
+                        ? ` · ${Math.round(commercialOverview.commissionRate * 100)} %`
+                        : ''}
                     </p>
                   </div>
                 </div>
@@ -1511,7 +1539,9 @@ function DashboardPageContent() {
                   </div>
                   <div>
                     <span className="text-2xl font-semibold text-foreground tracking-tight">{adminData.stats.users}</span>
-                    <p className="text-[11px] text-muted mt-1">Comptes plateforme</p>
+                    <p className="text-[11px] text-muted mt-1">
+                      {paidPlansCount} org. payante{paidPlansCount !== 1 ? 's' : ''}
+                    </p>
                   </div>
                 </div>
                 <div className={statCardClass}>
@@ -1528,14 +1558,27 @@ function DashboardPageContent() {
                 </div>
                 <div className={statCardClass}>
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">Invités</span>
-                    <div className="bg-amber-50 dark:bg-amber-950/40 text-amber-600 p-1.5 rounded-[var(--radius-button)]">
-                      <Mail className="w-4 h-4" />
+                    <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">
+                      {pendingSubscriptionCount > 0 ? 'Demandes' : 'Invités'}
+                    </span>
+                    <div className={cn(
+                      'p-1.5 rounded-[var(--radius-button)]',
+                      pendingSubscriptionCount > 0
+                        ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600'
+                        : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600',
+                    )}>
+                      {pendingSubscriptionCount > 0 ? <Clock className="w-4 h-4" /> : <Mail className="w-4 h-4" />}
                     </div>
                   </div>
                   <div>
-                    <span className="text-2xl font-semibold text-foreground tracking-tight">{adminData.stats.guests}</span>
-                    <p className="text-[11px] text-muted mt-1">Enregistrés au total</p>
+                    <span className="text-2xl font-semibold text-foreground tracking-tight">
+                      {pendingSubscriptionCount > 0 ? pendingSubscriptionCount : adminData.stats.guests}
+                    </span>
+                    <p className="text-[11px] text-muted mt-1">
+                      {pendingSubscriptionCount > 0
+                        ? `Abonnements en attente · ${adminData.stats.guests} invités`
+                        : 'Enregistrés au total'}
+                    </p>
                   </div>
                 </div>
               </>
@@ -1733,7 +1776,7 @@ function DashboardPageContent() {
           )}
 
           {/* Content area */}
-          <div className="p-6 bg-white dark:bg-slate-950">
+          <div className="p-5 sm:p-6 bg-surface">
             {/* Tenants Tab */}
             {activeTab === 'tenants' && (
               <div className="space-y-4">
@@ -1858,46 +1901,13 @@ function DashboardPageContent() {
                   </div>
                 )}
 
-                {filteredTenants.length > TENANTS_PER_PAGE && (
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-border pt-4">
-                    <span className="text-xs text-muted">
-                      {(tenantsPage - 1) * TENANTS_PER_PAGE + 1}–{Math.min(tenantsPage * TENANTS_PER_PAGE, filteredTenants.length)} sur {filteredTenants.length}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setTenantsPage((prev) => Math.max(prev - 1, 1))}
-                        disabled={tenantsPage === 1}
-                        className="p-2 border border-border rounded-[var(--radius-button)] text-muted hover:bg-surface-muted disabled:opacity-40 transition"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </button>
-                      {Array.from({ length: Math.ceil(filteredTenants.length / TENANTS_PER_PAGE) }).map((_, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => setTenantsPage(i + 1)}
-                          className={cn(
-                            'min-w-8 px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-medium transition',
-                            tenantsPage === i + 1
-                              ? 'bg-foreground text-background'
-                              : 'border border-border text-muted hover:bg-surface-muted',
-                          )}
-                        >
-                          {i + 1}
-                        </button>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => setTenantsPage((prev) => Math.min(prev + 1, Math.ceil(filteredTenants.length / TENANTS_PER_PAGE)))}
-                        disabled={tenantsPage === Math.ceil(filteredTenants.length / TENANTS_PER_PAGE)}
-                        className="p-2 border border-border rounded-[var(--radius-button)] text-muted hover:bg-surface-muted disabled:opacity-40 transition"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                )}
+                <Pagination
+                  page={tenantsPage}
+                  pageSize={TENANTS_PER_PAGE}
+                  total={filteredTenants.length}
+                  onPageChange={setTenantsPage}
+                  itemLabel="organisations"
+                />
               </div>
             )}
 
@@ -1995,43 +2005,13 @@ function DashboardPageContent() {
                   </table>
                     </div>
 
-                  {/* Pagination pour les utilisateurs */}
-                  {filteredUsers.length > ITEMS_PER_PAGE && (
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 pt-4 mt-4 bg-white">
-                      <span className="text-xs text-slate-500 font-medium">
-                        Affichage de {(usersPage - 1) * ITEMS_PER_PAGE + 1} à {Math.min(usersPage * ITEMS_PER_PAGE, filteredUsers.length)} sur {filteredUsers.length} utilisateurs
-                      </span>
-                      <div className="flex items-center gap-1 overflow-x-auto max-w-full pb-1">
-                        <button
-                          onClick={() => setUsersPage(prev => Math.max(prev - 1, 1))}
-                          disabled={usersPage === 1}
-                          className="p-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-transparent transition"
-                        >
-                          <ChevronLeft className="w-4 h-4" />
-                        </button>
-                        {Array.from({ length: Math.ceil(filteredUsers.length / ITEMS_PER_PAGE) }).map((_, i) => (
-                          <button
-                            key={i}
-                            onClick={() => setUsersPage(i + 1)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                              usersPage === i + 1 
-                                ? 'bg-primary text-white shadow-sm ' 
-                                : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
-                            }`}
-                          >
-                            {i + 1}
-                          </button>
-                        ))}
-                        <button
-                          onClick={() => setUsersPage(prev => Math.min(prev + 1, Math.ceil(filteredUsers.length / ITEMS_PER_PAGE)))}
-                          disabled={usersPage === Math.ceil(filteredUsers.length / ITEMS_PER_PAGE)}
-                          className="p-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-transparent transition"
-                        >
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                  <Pagination
+                    page={usersPage}
+                    pageSize={ITEMS_PER_PAGE}
+                    total={filteredUsers.length}
+                    onPageChange={setUsersPage}
+                    itemLabel="utilisateurs"
+                  />
                   </>
                 )}
               </div>
@@ -2093,42 +2073,13 @@ function DashboardPageContent() {
                       onToggleLanding={handleToggleTemplateLanding}
                     />
 
-                  {filteredTemplates.length > TEMPLATE_CARDS_PER_PAGE && (
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 dark:border-slate-800 pt-4 mt-6">
-                      <span className="text-xs text-slate-500 font-medium">
-                        Affichage de {(templatesPage - 1) * TEMPLATE_CARDS_PER_PAGE + 1} à {Math.min(templatesPage * TEMPLATE_CARDS_PER_PAGE, filteredTemplates.length)} sur {filteredTemplates.length} modèles
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => setTemplatesPage(prev => Math.max(prev - 1, 1))}
-                          disabled={templatesPage === 1}
-                          className="p-2 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:hover:bg-transparent transition"
-                        >
-                          <ChevronLeft className="w-4 h-4" />
-                        </button>
-                        {Array.from({ length: Math.ceil(filteredTemplates.length / TEMPLATE_CARDS_PER_PAGE) }).map((_, i) => (
-                          <button
-                            key={i}
-                            onClick={() => setTemplatesPage(i + 1)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                              templatesPage === i + 1
-                                ? 'bg-primary text-white shadow-sm '
-                                : 'border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-                            }`}
-                          >
-                            {i + 1}
-                          </button>
-                        ))}
-                        <button
-                          onClick={() => setTemplatesPage(prev => Math.min(prev + 1, Math.ceil(filteredTemplates.length / TEMPLATE_CARDS_PER_PAGE)))}
-                          disabled={templatesPage === Math.ceil(filteredTemplates.length / TEMPLATE_CARDS_PER_PAGE)}
-                          className="p-2 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:hover:bg-transparent transition"
-                        >
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                  <Pagination
+                    page={templatesPage}
+                    pageSize={TEMPLATE_CARDS_PER_PAGE}
+                    total={filteredTemplates.length}
+                    onPageChange={setTemplatesPage}
+                    itemLabel="modèles"
+                  />
                   </>
                 )}
                 </div>
@@ -2227,43 +2178,13 @@ function DashboardPageContent() {
                   </table>
                     </div>
 
-                  {/* Pagination pour les événements */}
-                  {filteredEvents.length > ITEMS_PER_PAGE && (
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 pt-4 mt-4 bg-white">
-                      <span className="text-xs text-slate-500 font-medium">
-                        Affichage de {(eventsPage - 1) * ITEMS_PER_PAGE + 1} à {Math.min(eventsPage * ITEMS_PER_PAGE, filteredEvents.length)} sur {filteredEvents.length} événements
-                      </span>
-                      <div className="flex items-center gap-1 overflow-x-auto max-w-full pb-1">
-                        <button
-                          onClick={() => setEventsPage(prev => Math.max(prev - 1, 1))}
-                          disabled={eventsPage === 1}
-                          className="p-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-transparent transition"
-                        >
-                          <ChevronLeft className="w-4 h-4" />
-                        </button>
-                        {Array.from({ length: Math.ceil(filteredEvents.length / ITEMS_PER_PAGE) }).map((_, i) => (
-                          <button
-                            key={i}
-                            onClick={() => setEventsPage(i + 1)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                              eventsPage === i + 1 
-                                ? 'bg-primary text-white shadow-sm ' 
-                                : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
-                            }`}
-                          >
-                            {i + 1}
-                          </button>
-                        ))}
-                        <button
-                          onClick={() => setEventsPage(prev => Math.min(prev + 1, Math.ceil(filteredEvents.length / ITEMS_PER_PAGE)))}
-                          disabled={eventsPage === Math.ceil(filteredEvents.length / ITEMS_PER_PAGE)}
-                          className="p-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-transparent transition"
-                        >
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                  <Pagination
+                    page={eventsPage}
+                    pageSize={ITEMS_PER_PAGE}
+                    total={filteredEvents.length}
+                    onPageChange={setEventsPage}
+                    itemLabel="événements"
+                  />
                   </>
                 )}
               </div>
@@ -2364,43 +2285,13 @@ function DashboardPageContent() {
                     </table>
                     </div>
 
-                    {/* Pagination pour les invités */}
-                    {filteredGuests.length > ITEMS_PER_PAGE && (
-                      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 pt-4 mt-4 bg-white">
-                        <span className="text-xs text-slate-500 font-medium">
-                          Affichage de {(guestsPage - 1) * ITEMS_PER_PAGE + 1} à {Math.min(guestsPage * ITEMS_PER_PAGE, filteredGuests.length)} sur {filteredGuests.length} invités
-                        </span>
-                        <div className="flex items-center gap-1 overflow-x-auto max-w-full pb-1">
-                          <button
-                            onClick={() => setGuestsPage(prev => Math.max(prev - 1, 1))}
-                            disabled={guestsPage === 1}
-                            className="p-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-transparent transition"
-                          >
-                            <ChevronLeft className="w-4 h-4" />
-                          </button>
-                          {Array.from({ length: Math.ceil(filteredGuests.length / ITEMS_PER_PAGE) }).map((_, i) => (
-                            <button
-                              key={i}
-                              onClick={() => setGuestsPage(i + 1)}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                                guestsPage === i + 1 
-                                  ? 'bg-primary text-white shadow-sm ' 
-                                  : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
-                              }`}
-                            >
-                              {i + 1}
-                            </button>
-                          ))}
-                          <button
-                            onClick={() => setGuestsPage(prev => Math.min(prev + 1, Math.ceil(filteredGuests.length / ITEMS_PER_PAGE)))}
-                            disabled={guestsPage === Math.ceil(filteredGuests.length / ITEMS_PER_PAGE)}
-                            className="p-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-transparent transition"
-                          >
-                            <ChevronRight className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                    <Pagination
+                      page={guestsPage}
+                      pageSize={ITEMS_PER_PAGE}
+                      total={filteredGuests.length}
+                      onPageChange={setGuestsPage}
+                      itemLabel="invités"
+                    />
                   </>
                 )}
               </div>
@@ -2573,7 +2464,7 @@ function DashboardPageContent() {
                   ) : (
                     <>
                     <div className="md:hidden space-y-3">
-                      {subscriptionRequests.map((req) => (
+                      {paginatedSubRequests.map((req) => (
                         <div key={req.id} className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 space-y-3 bg-white dark:bg-slate-950">
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
@@ -2656,7 +2547,7 @@ function DashboardPageContent() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-sm">
-                          {subscriptionRequests.map((req) => (
+                          {paginatedSubRequests.map((req) => (
                             <tr key={req.id} className="hover:bg-slate-50/50 transition-colors">
                               <td className="py-4">
                                 <div className="flex flex-col">
@@ -2756,6 +2647,13 @@ function DashboardPageContent() {
                         </tbody>
                       </table>
                     </div>
+                    <Pagination
+                      page={subRequestsPage}
+                      pageSize={SUB_REQUESTS_PER_PAGE}
+                      total={subscriptionRequests.length}
+                      onPageChange={setSubRequestsPage}
+                      itemLabel="demandes"
+                    />
                     </>
                   )}
                 </div>
@@ -4184,11 +4082,24 @@ function DashboardPageContent() {
   }
 
   // Render Regular Tenant Dashboard
+  const homeEvents = paginateItems(events, homeEventsPage, HOME_EVENTS_PER_PAGE);
+  const usage = orgQuota?.usage;
+  const limits = orgQuota?.limits;
+  const formatQuota = (used?: number, max?: number) => {
+    if (used == null) return '—';
+    if (max == null || max < 0) return String(used);
+    return `${used} / ${max}`;
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
         title="Tableau de bord"
-        description="Bienvenue dans votre espace d'administration de gestion d'événements privés."
+        description={
+          tenant?.name
+            ? `Bienvenue — ${tenant.name}. Suivez vos événements, quotas et abonnement.`
+            : "Bienvenue dans votre espace de gestion d'événements."
+        }
         breadcrumbs={<Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Tableau de bord' }]} />}
         action={
           <Button onClick={() => router.push('/dashboard/events')} leftIcon={<PlusCircle className="w-4 h-4" />}>
@@ -4206,6 +4117,67 @@ function DashboardPageContent() {
         />
       )}
 
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">Événements</span>
+            <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)]">
+              <Calendar className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <span className="text-2xl font-semibold text-foreground tracking-tight">
+              {usage ? formatQuota(usage.events, limits?.maxEvents) : events.length}
+            </span>
+            <p className="text-[11px] text-muted mt-1">Créés dans votre organisation</p>
+          </div>
+        </div>
+        <div className="bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">Invités</span>
+            <div className="bg-amber-50 dark:bg-amber-950/40 text-amber-600 p-1.5 rounded-[var(--radius-button)]">
+              <Users className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <span className="text-2xl font-semibold text-foreground tracking-tight">
+              {usage ? formatQuota(usage.guests, limits?.maxGuests) : '—'}
+            </span>
+            <p className="text-[11px] text-muted mt-1">Quota du forfait actuel</p>
+          </div>
+        </div>
+        <div className="bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">Modèles</span>
+            <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 p-1.5 rounded-[var(--radius-button)]">
+              <FileText className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <span className="text-2xl font-semibold text-foreground tracking-tight">
+              {usage ? formatQuota(usage.templates, limits?.maxTemplates) : '—'}
+            </span>
+            <p className="text-[11px] text-muted mt-1">Bibliothèque d&apos;invitations</p>
+          </div>
+        </div>
+        <div className="bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">Forfait</span>
+            <div className="bg-violet-50 dark:bg-violet-950/40 text-violet-600 p-1.5 rounded-[var(--radius-button)]">
+              <Award className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <span className="text-2xl font-semibold text-foreground tracking-tight">
+              {tenant?.plan || billing?.plan || '—'}
+            </span>
+            <p className="text-[11px] text-muted mt-1">
+              {usage ? `${formatQuota(usage.rooms, limits?.maxRooms)} salles` : 'Abonnement organisation'}
+            </p>
+          </div>
+        </div>
+      </div>
+
       {orgQuota && (
         <div className="space-y-3">
           <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider">
@@ -4216,7 +4188,7 @@ function DashboardPageContent() {
       )}
 
       {/* Main Row */}
-      <div className="grid lg:grid-cols-3 gap-8">
+      <div className="grid lg:grid-cols-3 gap-6">
         {/* Events List */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 space-y-5">
@@ -4252,6 +4224,7 @@ function DashboardPageContent() {
                 </Link>
               </div>
             ) : (
+              <>
               <div
                 className={
                   homeEventsMode === 'list'
@@ -4259,7 +4232,7 @@ function DashboardPageContent() {
                     : homeEventsGridClass
                 }
               >
-                {events.map((event) => {
+                {homeEvents.map((event) => {
                   const dateLabel = new Date(event.date).toLocaleDateString('fr-FR', {
                     weekday: 'short',
                     year: 'numeric',
@@ -4297,6 +4270,14 @@ function DashboardPageContent() {
                   );
                 })}
               </div>
+              <Pagination
+                page={homeEventsPage}
+                pageSize={HOME_EVENTS_PER_PAGE}
+                total={events.length}
+                onPageChange={setHomeEventsPage}
+                itemLabel="événements"
+              />
+              </>
             )}
           </div>
 
@@ -4321,9 +4302,9 @@ function DashboardPageContent() {
         </div>
 
         {/* Plan Summary Card */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between">
+        <div className="bg-surface border border-border rounded-[var(--radius-card)] p-6 flex flex-col justify-between">
           <div className="space-y-6">
-            <h2 className="text-lg font-bold text-slate-900 font-sans">Statut d'Abonnement</h2>
+            <h2 className="text-lg font-semibold text-foreground">Statut d&apos;abonnement</h2>
             
             {billing && (
               <div className="space-y-4">
@@ -4349,9 +4330,9 @@ function DashboardPageContent() {
                   <div className="flex items-center gap-2 text-sm text-slate-600">
                     <CheckCircle className="w-4 h-4 text-emerald-500" />
                     {billing.limits.customTemplates ? (
-                      <span>Modèles d'Invitation Customisés</span>
+                      <span>Modèles d&apos;Invitation Customisés</span>
                     ) : (
-                      <span className="line-through text-slate-400">Modèles d'Invitation Customisés</span>
+                      <span className="line-through text-slate-400">Modèles d&apos;Invitation Customisés</span>
                     )}
                   </div>
                 </div>
@@ -4362,7 +4343,7 @@ function DashboardPageContent() {
           <div className="mt-8">
             <Link 
               href="/dashboard/billing" 
-              className="w-full flex items-center justify-center gap-2 py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-slate-100"
+              className="w-full flex items-center justify-center gap-2 py-3 bg-foreground hover:opacity-90 text-background font-semibold rounded-xl text-sm transition"
             >
               <CreditCard className="w-4.5 h-4.5" />
               Gérer la facturation

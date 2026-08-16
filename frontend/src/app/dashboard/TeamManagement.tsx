@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import {
   SkeletonGrid, ViewModeToggle, useViewMode,
-  Button, Modal, EmptyState, Alert, Input, Badge,
+  Button, Modal, EmptyState, Alert, Input, Badge, Pagination, paginateItems,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
@@ -65,6 +65,8 @@ export default function TeamManagement() {
     setGridColumns: setTeamColumns,
     gridClassName: teamGridClass,
   } = useViewMode('em-view-team', 'grid', 2);
+  const [membersPage, setMembersPage] = useState(1);
+  const MEMBERS_PER_PAGE = 10;
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [canManageTeam, setCanManageTeam] = useState(false);
   const [defaultCommissionRate, setDefaultCommissionRate] = useState(0.2);
@@ -423,7 +425,7 @@ export default function TeamManagement() {
         />
       ) : (
         <div className={teamViewMode === 'list' ? 'flex flex-col gap-2' : teamGridClass}>
-          {members.map((member) => (
+          {paginateItems(members, membersPage, MEMBERS_PER_PAGE).map((member) => (
             <div
               key={member.id}
               className={cn(
@@ -558,6 +560,15 @@ export default function TeamManagement() {
             </div>
           ))}
         </div>
+      )}
+      {members.length > 0 && (
+        <Pagination
+          page={membersPage}
+          pageSize={MEMBERS_PER_PAGE}
+          total={members.length}
+          onPageChange={setMembersPage}
+          itemLabel="membres"
+        />
       )}
     </div>
   );

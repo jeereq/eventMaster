@@ -28,7 +28,7 @@ import {
   normalizeGuestGuidelines,
   applyInvitationGuidelineVariables,
 } from '@/lib/guestGuidelines';
-import { PageHeader, Button, ProjectCard, ViewModeToggle, useViewMode, SkeletonEventsView, Breadcrumbs, Modal, Input } from '@/components/ui';
+import { PageHeader, Button, ProjectCard, ViewModeToggle, useViewMode, SkeletonEventsView, Breadcrumbs, Modal, Input, Pagination, paginateItems } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
 import {
@@ -232,6 +232,10 @@ A très vite !`
 export default function EventsPage() {
   const { user, access, planFeatures, tenant } = useAuth();
   const { mode: eventsViewMode, setViewMode: setEventsViewMode, columns: eventsColumns, setGridColumns: setEventsColumns, gridClassName: eventsGridClass } = useViewMode('em-view-events', 'grid', 3);
+  const [eventsListPage, setEventsListPage] = useState(1);
+  const [guestsListPage, setGuestsListPage] = useState(1);
+  const EVENTS_PER_PAGE = 12;
+  const GUESTS_PER_PAGE = 15;
   const isProtocolOnly = access?.isProtocolOnly ?? false;
   const canManageEvents = access?.canManageAllEvents ?? false;
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -387,6 +391,17 @@ export default function EventsPage() {
     
     return matchesSearch && matchesRsvp && matchesCategory && matchesDiet && matchesCustom;
   });
+
+  useEffect(() => {
+    setGuestsListPage(1);
+  }, [searchQuery, rsvpFilter, categoryFilter, dietFilter, customFilters]);
+
+  useEffect(() => {
+    setEventsListPage(1);
+  }, [events.length]);
+
+  const paginatedEventsList = paginateItems(events, eventsListPage, EVENTS_PER_PAGE);
+  const paginatedGuestsList = paginateItems(filteredGuests, guestsListPage, GUESTS_PER_PAGE);
 
   const isAllFilteredSelected = filteredGuests.length > 0 && filteredGuests.every(g => selectedGuestIds.includes(g.id));
 
@@ -1396,7 +1411,7 @@ export default function EventsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       {!selectedEvent ? (
         <>
@@ -1537,7 +1552,7 @@ export default function EventsPage() {
               )}
             </div>
           ) : (
-            events.map((event) => {
+            paginatedEventsList.map((event) => {
               const dateLabel = new Date(event.date).toLocaleDateString('fr-FR', {
                 month: 'long',
                 day: 'numeric',
@@ -1609,6 +1624,16 @@ export default function EventsPage() {
             })
           )}
         </div>
+      )}
+
+      {!selectedEvent && (
+        <Pagination
+          page={eventsListPage}
+          pageSize={EVENTS_PER_PAGE}
+          total={events.length}
+          onPageChange={setEventsListPage}
+          itemLabel="événements"
+        />
       )}
 
       {/* Event Management View (Tabs) */}
@@ -1918,7 +1943,7 @@ export default function EventsPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 text-sm">
-                        {filteredGuests.map((g) => (
+                        {paginatedGuestsList.map((g) => (
                           <tr key={g.id} className={`hover:bg-slate-50/30 transition-colors ${selectedGuestIds.includes(g.id) ? 'bg-indigo-50/10' : ''}`}>
                             <td className="py-4 px-6 w-12">
                               <input 
@@ -2002,6 +2027,13 @@ export default function EventsPage() {
                     </table>
                   </div>
                 )}
+                <Pagination
+                  page={guestsListPage}
+                  pageSize={GUESTS_PER_PAGE}
+                  total={filteredGuests.length}
+                  onPageChange={setGuestsListPage}
+                  itemLabel="invités"
+                />
               </div>
             </div>
           )}

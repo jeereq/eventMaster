@@ -101,11 +101,11 @@ h1, h2, h3, h4 {
   animation: slide-up 0.22s ease-out;
 }
 
-/* Conteneur page standard — w-11/12 sur toutes les vues */
+/* Conteneur page unique — même largeur pour tous les rôles (USER, COMMERCIAL, SUPER_ADMIN) */
 .app-container,
 .page-container {
   width: 91.666667%; /* Tailwind w-11/12 */
-  max-width: none;
+  max-width: 1440px;
   margin-left: auto;
   margin-right: auto;
   padding-left: 0;
@@ -115,7 +115,7 @@ h1, h2, h3, h4 {
 @media (max-width: 640px) {
   .app-container,
   .page-container {
-    width: 91.666667%; /* garder w-11/12 aussi sur mobile */
+    width: 91.666667%;
   }
 }
 
