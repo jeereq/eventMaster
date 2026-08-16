@@ -93,13 +93,13 @@ export default function EventGuestGuidelinesEditor({
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="space-y-5">
         {/* Dress code */}
-        <div className="bg-surface border border-border rounded-2xl p-5 space-y-4">
+        <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 space-y-4">
           <div className="flex items-center justify-between gap-3">
-            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
               <Shirt className="w-4 h-4 text-primary" />
               Code vestimentaire
             </h3>
-            <label className="flex items-center gap-2 text-xs font-bold text-muted cursor-pointer">
+            <label className="flex items-center gap-2 text-xs font-semibold text-muted cursor-pointer">
               <input
                 type="checkbox"
                 checked={guidelines.dressCode.enabled}
@@ -191,8 +191,8 @@ export default function EventGuestGuidelinesEditor({
         </div>
 
         {/* Recommendations */}
-        <div className="bg-surface border border-border rounded-2xl p-5 space-y-4">
-          <h3 className="text-sm font-bold text-foreground">Recommandations pratiques</h3>
+        <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 space-y-4">
+          <h3 className="text-sm font-semibold text-foreground">Recommandations pratiques</h3>
 
           <div className="flex flex-wrap gap-1.5">
             {(Object.keys(RECOMMENDATION_PRESETS) as RecommendationType[]).filter((t) => t !== 'custom').map((type) => (
@@ -222,7 +222,7 @@ export default function EventGuestGuidelinesEditor({
             {guidelines.recommendations.map((rec) => (
               <div key={rec.id} className="border border-border rounded-xl p-3 space-y-2 bg-surface-muted/50">
                 <div className="flex items-center justify-between gap-2">
-                  <label className="flex items-center gap-2 text-xs font-bold text-foreground">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-foreground">
                     <input
                       type="checkbox"
                       checked={rec.enabled}
@@ -254,7 +254,7 @@ export default function EventGuestGuidelinesEditor({
         </div>
 
         {/* Notes & visibility */}
-        <div className="bg-surface border border-border rounded-2xl p-5 space-y-4">
+        <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 space-y-4">
           <label className="block text-xs space-y-1">
             <span className="font-semibold text-muted">Notes complémentaires</span>
             <textarea
@@ -297,13 +297,13 @@ export default function EventGuestGuidelinesEditor({
 
       {/* Preview */}
       <div className="space-y-3">
-        <p className="text-xs font-bold uppercase text-muted flex items-center gap-1.5">
+        <p className="text-xs font-semibold uppercase text-muted flex items-center gap-1.5">
           <Eye className="w-3.5 h-3.5" /> Aperçu invité
         </p>
         {hasVisibleGuestGuidelines(guidelines) ? (
           <GuestGuidelinesView guidelines={guidelines} variant="light" />
         ) : (
-          <div className="rounded-2xl border border-dashed border-border p-8 text-center text-xs text-muted">
+          <div className="rounded-[var(--radius-card)] border border-dashed border-border p-8 text-center text-xs text-muted">
             Activez le code vestimentaire ou ajoutez des recommandations pour voir l&apos;aperçu.
             {guidelines.dressCode.enabled && !formatDressCodeText(guidelines) && (
               <p className="mt-2 text-amber-600">Le code vestimentaire est activé mais le texte est vide.</p>

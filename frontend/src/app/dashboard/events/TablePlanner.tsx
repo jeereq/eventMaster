@@ -266,7 +266,7 @@ export default function TablePlanner({
  onMouseMove={handleMouseMove}
  onMouseUp={handleMouseUp}
  onMouseLeave={handleMouseUp}
- className={`relative w-full ${heightClass} bg-surface-muted border border-border rounded-3xl overflow-hidden shadow-inner bg-grid-slate-200 [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0.95))]`}
+ className={`relative w-full ${heightClass} bg-surface-muted border border-border rounded-[var(--radius-card)] overflow-hidden bg-grid-slate-200 [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0.95))]`}
  >
  {fixtures.map((fixture) => (
  <div
@@ -315,8 +315,8 @@ export default function TablePlanner({
  >
  {isHovered && !draggingTableId && (
  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-56 z-50 pointer-events-none">
- <div className="bg-background text-white rounded-xl p-3.5 shadow-2xl border border-border space-y-2 text-left">
- <p className="font-bold text-sm leading-tight">{table.name}</p>
+ <div className="bg-surface text-foreground rounded-[var(--radius-card)] p-3.5 border border-border space-y-2 text-left shadow-[var(--shadow-soft)]">
+ <p className="font-semibold text-sm leading-tight">{table.name}</p>
  <p className="text-[11px] text-primary font-semibold">
  {getTableShapeEmoji(table.shape)} Table {getTableShapeLabel(table.shape)}
  </p>
@@ -417,18 +417,22 @@ export default function TablePlanner({
  return (
  <div className="space-y-6 animate-fade-in">
  {canImportRoomLayout && onImportRoomLayout && (
- <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-primary/10 border border-primary/20 rounded-2xl">
+ <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-surface-muted border border-border rounded-[var(--radius-card)]">
  <div className="text-sm">
- <p className="font-bold text-primary">Plan de salle disponible</p>
- <p className="text-primary text-xs mt-0.5">
- {roomName ? `Importer la disposition de « ${roomName} » comme base du plan de table.` : 'Importer le modèle de la salle liée.'}
+ <p className="font-semibold text-primary">Plan de salle disponible</p>
+ <p className="text-muted text-xs mt-0.5">
+ {roomName ? (
+ <>Importer la disposition de <span className="text-primary font-medium">« {roomName} »</span> comme base du plan de table.</>
+ ) : (
+ 'Importer le modèle de la salle liée.'
+ )}
  </p>
  </div>
  <button
  type="button"
  disabled={importingLayout}
  onClick={() => onImportRoomLayout(tables.length > 0)}
- className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover disabled:opacity-60 text-white text-xs font-bold rounded-xl transition"
+ className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover disabled:opacity-60 text-white text-xs font-semibold rounded-[var(--radius-button)] transition"
  >
  {importingLayout ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
  Importer depuis la salle
@@ -438,7 +442,7 @@ export default function TablePlanner({
 
  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
  <div>
- <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+ <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
  <LayoutGrid className="w-5 h-5 text-primary" />
  Plan de Table Interactif
  </h2>
@@ -449,7 +453,7 @@ export default function TablePlanner({
  <div className="flex gap-2.5">
  <button
  onClick={() => setShowAddModal(true)}
- className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/10"
+ className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-surface border border-border text-foreground hover:bg-surface-muted font-medium rounded-[var(--radius-button)] text-sm transition"
  >
  <Plus className="w-4 h-4" />
  Ajouter une Table
@@ -457,7 +461,7 @@ export default function TablePlanner({
  <button
  onClick={handleSavePlan}
  disabled={saving}
- className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-emerald-100"
+ className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-hover disabled:opacity-60 text-white font-medium rounded-[var(--radius-button)] text-sm transition"
  >
  {saving ? (
  <>
@@ -477,34 +481,34 @@ export default function TablePlanner({
  {/* Grid Layout for Planner */}
  <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
  {/* Left Sidebar: Unassigned Guests */}
- <div className="xl:col-span-1 bg-white border border-border rounded-3xl p-5 shadow-sm flex flex-col h-[600px]">
- <div className="flex items-center justify-between pb-4 border-b border-border-subtle">
- <h3 className="font-extrabold text-foreground text-sm flex items-center gap-2">
+ <div className="xl:col-span-1 bg-surface border border-border rounded-[var(--radius-card)] p-4 flex flex-col h-[600px]">
+ <div className="flex items-center justify-between pb-3 border-b border-border">
+ <h3 className="font-semibold text-foreground text-sm flex items-center gap-2">
  <Users className="w-4 h-4 text-muted" />
  Invités non placés ({unassignedGuests.length})
  </h3>
- <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+ <span className="text-[10px] font-medium text-primary">
  {acceptedGuests.length} Présents
  </span>
  </div>
 
- <div className="flex-1 overflow-y-auto pt-4 space-y-2.5">
+ <div className="flex-1 overflow-y-auto pt-2">
  {unassignedGuests.length === 0 ? (
  <div className="text-center py-12 text-muted space-y-2">
  <HelpCircle className="w-8 h-8 mx-auto text-muted" />
- <p className="text-xs font-semibold">Tous les invités présents ont été placés !</p>
+ <p className="text-xs font-medium">Tous les invités présents ont été placés !</p>
  </div>
  ) : (
  unassignedGuests.map(g => (
  <div 
  key={g.id}
- className="p-3 bg-surface-muted border border-border rounded-2xl flex items-center justify-between text-xs hover:border-primary/40 hover:bg-primary/10 transition"
+ className="px-3 py-2.5 border-b border-border last:border-b-0 flex items-center justify-between text-xs hover:bg-surface-muted transition"
  >
  <div>
- <div className="font-bold text-foreground">{g.firstName} {g.lastName}</div>
+ <div className="font-medium text-foreground">{g.firstName} {g.lastName}</div>
  <div className="text-[10px] text-muted mt-0.5">{g.category || 'Général'}</div>
  </div>
- <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold px-2 py-0.5 rounded-full">
+ <span className="text-[10px] text-muted font-medium">
  Confirmé
  </span>
  </div>
@@ -515,13 +519,13 @@ export default function TablePlanner({
 
  {/* Visual Canvas Area */}
  <div className="xl:col-span-3 flex flex-col space-y-4">
- <div className="bg-surface-muted/80 border border-border rounded-3xl p-2 text-center text-xs text-muted font-medium flex flex-wrap items-center justify-center gap-2">
+ <div className="bg-surface-muted border border-border rounded-[var(--radius-card)] px-3 py-2 text-center text-xs text-muted font-medium flex flex-wrap items-center justify-center gap-2">
  <Move className="w-4 h-4 text-muted shrink-0" />
  <span>Glissez-déposez les tables pour organiser la salle. Survolez une table pour voir ses détails.</span>
  <button
  type="button"
  onClick={() => setIsExpanded(true)}
- className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-border rounded-full text-[10px] font-bold text-primary hover:bg-primary/10 transition ml-auto"
+ className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface border border-border rounded-[var(--radius-button)] text-[10px] font-medium text-primary hover:bg-surface-muted transition ml-auto"
  >
  <Maximize2 className="w-3.5 h-3.5" />
  Agrandir la zone
@@ -537,7 +541,7 @@ export default function TablePlanner({
  <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-sm flex flex-col p-4 md:p-6">
  <div className="flex items-center justify-between gap-4 mb-4">
  <div>
- <h3 className="text-lg font-bold text-white flex items-center gap-2">
+ <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
  <LayoutGrid className="w-5 h-5 text-primary" />
  Plan de table — vue agrandie
  </h3>
@@ -548,7 +552,7 @@ export default function TablePlanner({
  <button
  type="button"
  onClick={() => setIsExpanded(false)}
- className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl text-sm transition border border-white/10"
+ className="inline-flex items-center gap-2 px-4 py-2 bg-surface border border-border text-foreground hover:bg-surface-muted font-medium rounded-[var(--radius-button)] text-sm transition"
  >
  <Minimize2 className="w-4 h-4" />
  Réduire
@@ -563,14 +567,14 @@ export default function TablePlanner({
  {/* Seat Assignment Dropdown Modal/Popover */}
  {selectedSeat && (
  <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
- <div className="bg-white rounded-3xl border border-border shadow-2xl max-w-md w-full p-6 space-y-4 animate-scale-up">
- <div className="flex justify-between items-center pb-3 border-b border-border-subtle">
- <h3 className="font-extrabold text-foreground text-base">
+ <div className="bg-surface rounded-[var(--radius-card)] border border-border max-w-md w-full p-6 space-y-4 animate-scale-up">
+ <div className="flex justify-between items-center pb-3 border-b border-border">
+ <h3 className="font-semibold text-foreground text-base">
  Placer un invité - Siège {selectedSeat.seatIndex + 1}
  </h3>
  <button 
  onClick={() => setSelectedGuestSeat(null)}
- className="p-1.5 text-muted hover:text-muted rounded-full hover:bg-surface-muted transition"
+ className="p-1.5 text-muted hover:text-foreground rounded-[var(--radius-button)] hover:bg-surface-muted transition"
  >
  <X className="w-5 h-5" />
  </button>
@@ -578,10 +582,10 @@ export default function TablePlanner({
 
  {/* If seat is already occupied, allow freeing it */}
  {tables.find(t => t.id === selectedSeat.tableId)?.seats[selectedSeat.seatIndex] && (
- <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center justify-between">
+ <div className="p-3 bg-surface-muted border border-border rounded-[var(--radius-card)] flex items-center justify-between gap-3">
  <div>
- <div className="text-xs text-emerald-800 font-bold">Siège actuellement occupé par :</div>
- <div className="font-extrabold text-foreground text-sm mt-1">
+ <div className="text-xs text-muted font-medium">Siège actuellement occupé par :</div>
+ <div className="font-semibold text-foreground text-sm mt-1">
  {(() => {
  const guestId = tables.find(t => t.id === selectedSeat.tableId)?.seats[selectedSeat.seatIndex];
  const g = guests.find(guest => guest.id === guestId);
@@ -591,7 +595,7 @@ export default function TablePlanner({
  </div>
  <button
  onClick={() => handleAssignGuest(selectedSeat.tableId, selectedSeat.seatIndex, null)}
- className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition"
+ className="px-3 py-1.5 border border-border text-rose-600 hover:bg-surface-muted font-medium rounded-[var(--radius-button)] text-xs transition shrink-0"
  >
  Libérer le siège
  </button>
@@ -599,24 +603,24 @@ export default function TablePlanner({
  )}
 
  <div className="space-y-3">
- <label className="block text-xs font-bold text-muted uppercase tracking-wider">
+ <label className="block text-xs font-medium text-muted uppercase tracking-wider">
  Sélectionner un invité présent ({unassignedGuests.length} disponibles)
  </label>
  {unassignedGuests.length === 0 ? (
  <p className="text-xs text-muted italic">Aucun invité présent n'est disponible pour le placement.</p>
  ) : (
- <div className="max-h-60 overflow-y-auto border border-border rounded-2xl divide-y divide-border">
+ <div className="max-h-60 overflow-y-auto border border-border rounded-[var(--radius-card)] divide-y divide-border">
  {unassignedGuests.map(g => (
  <button
  key={g.id}
  onClick={() => handleAssignGuest(selectedSeat.tableId, selectedSeat.seatIndex, g.id)}
- className="w-full text-left p-3 hover:bg-primary/10 transition flex items-center justify-between text-xs"
+ className="w-full text-left px-3 py-2.5 hover:bg-surface-muted transition flex items-center justify-between text-xs"
  >
  <div>
- <span className="font-bold text-foreground">{g.firstName} {g.lastName}</span>
+ <span className="font-medium text-foreground">{g.firstName} {g.lastName}</span>
  <span className="text-[10px] text-muted block mt-0.5">{g.category || 'Général'}</span>
  </div>
- <span className="text-[10px] text-primary font-bold bg-primary/10 px-2 py-0.5 rounded-full">
+ <span className="text-[10px] text-primary font-medium">
  Installer
  </span>
  </button>
@@ -631,15 +635,15 @@ export default function TablePlanner({
  {/* Add Table Modal */}
  {showAddModal && (
  <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
- <div className="bg-white rounded-3xl border border-border shadow-2xl max-w-md w-full p-6 space-y-5 animate-scale-up">
- <div className="flex justify-between items-center pb-3 border-b border-border-subtle">
- <h3 className="font-extrabold text-foreground text-base flex items-center gap-2">
+ <div className="bg-surface rounded-[var(--radius-card)] border border-border max-w-md w-full p-6 space-y-5 animate-scale-up">
+ <div className="flex justify-between items-center pb-3 border-b border-border">
+ <h3 className="font-semibold text-foreground text-base flex items-center gap-2">
  <Plus className="w-5 h-5 text-primary" />
  Ajouter une nouvelle table
  </h3>
  <button 
  onClick={() => setShowAddModal(false)}
- className="p-1.5 text-muted hover:text-muted rounded-full hover:bg-surface-muted transition"
+ className="p-1.5 text-muted hover:text-foreground rounded-[var(--radius-button)] hover:bg-surface-muted transition"
  >
  <X className="w-5 h-5" />
  </button>
@@ -647,23 +651,23 @@ export default function TablePlanner({
 
  <div className="space-y-4">
  <div>
- <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-1.5">Nom de la table</label>
+ <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Nom de la table</label>
  <input
  type="text"
  placeholder="Ex: Table d'honneur, Table 1..."
  value={newTableName}
  onChange={(e) => setNewTableName(e.target.value)}
- className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+ className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
  />
  </div>
 
  <div className="grid grid-cols-2 gap-4">
  <div>
- <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-1.5">Forme</label>
+ <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Forme</label>
  <select
  value={newTableShape}
  onChange={(e) => setNewTableShape(e.target.value as any)}
- className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+ className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
  >
  <option value="round">Ronde 🟡</option>
  <option value="rectangular">Rectangulaire ⬜</option>
@@ -673,30 +677,30 @@ export default function TablePlanner({
  </div>
 
  <div>
- <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-1.5">Nombre de places</label>
+ <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Nombre de places</label>
  <input
  type="number"
  min={2}
  max={16}
  value={newTableCapacity}
  onChange={(e) => setNewTableCapacity(parseInt(e.target.value) || 8)}
- className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+ className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
  />
  </div>
  </div>
  </div>
 
- <div className="flex gap-3 pt-3 border-t border-border-subtle">
+ <div className="flex gap-3 pt-3 border-t border-border">
  <button
  onClick={() => setShowAddModal(false)}
- className="flex-1 px-4 py-2.5 border border-border text-muted hover:bg-surface-muted font-bold rounded-xl text-sm transition"
+ className="flex-1 px-4 py-2.5 border border-border text-muted hover:bg-surface-muted font-medium rounded-[var(--radius-button)] text-sm transition"
  >
  Annuler
  </button>
  <button
  onClick={handleAddTable}
  disabled={!newTableName.trim()}
- className="flex-1 px-4 py-2.5 bg-primary hover:bg-primary-hover disabled:bg-primary/40 text-white font-bold rounded-xl text-sm transition shadow-md shadow-primary/10"
+ className="flex-1 px-4 py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-60 text-white font-medium rounded-[var(--radius-button)] text-sm transition"
  >
  Ajouter la table
  </button>
@@ -708,14 +712,14 @@ export default function TablePlanner({
  {/* Edit Table Modal */}
  {editingTable && (
  <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
- <div className="bg-white rounded-3xl border border-border shadow-2xl max-w-md w-full p-6 space-y-5 animate-scale-up">
- <div className="flex justify-between items-center pb-3 border-b border-border-subtle">
- <h3 className="font-extrabold text-foreground text-base">
+ <div className="bg-surface rounded-[var(--radius-card)] border border-border max-w-md w-full p-6 space-y-5 animate-scale-up">
+ <div className="flex justify-between items-center pb-3 border-b border-border">
+ <h3 className="font-semibold text-foreground text-base">
  Modifier la table : {editingTable.name}
  </h3>
  <button 
  onClick={() => setEditingTable(null)}
- className="p-1.5 text-muted hover:text-muted rounded-full hover:bg-surface-muted transition"
+ className="p-1.5 text-muted hover:text-foreground rounded-[var(--radius-button)] hover:bg-surface-muted transition"
  >
  <X className="w-5 h-5" />
  </button>
@@ -723,22 +727,22 @@ export default function TablePlanner({
 
  <div className="space-y-4">
  <div>
- <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-1.5">Nom de la table</label>
+ <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Nom de la table</label>
  <input
  type="text"
  value={editingTable.name}
  onChange={(e) => setEditingTable({ ...editingTable, name: e.target.value })}
- className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+ className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
  />
  </div>
 
  <div className="grid grid-cols-2 gap-4">
  <div>
- <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-1.5">Forme</label>
+ <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Forme</label>
  <select
  value={editingTable.shape}
  onChange={(e) => setEditingTable({ ...editingTable, shape: e.target.value as any })}
- className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+ className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
  >
  <option value="round">Ronde 🟡</option>
  <option value="rectangular">Rectangulaire ⬜</option>
@@ -748,30 +752,30 @@ export default function TablePlanner({
  </div>
 
  <div>
- <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-1.5">Nombre de places</label>
+ <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Nombre de places</label>
  <input
  type="number"
  min={2}
  max={16}
  value={editingTable.capacity}
  onChange={(e) => setEditingTable({ ...editingTable, capacity: parseInt(e.target.value) || 8 })}
- className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+ className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
  />
  </div>
  </div>
  </div>
 
- <div className="flex gap-3 pt-3 border-t border-border-subtle">
+ <div className="flex gap-3 pt-3 border-t border-border">
  <button
  onClick={() => setEditingTable(null)}
- className="flex-1 px-4 py-2.5 border border-border text-muted hover:bg-surface-muted font-bold rounded-xl text-sm transition"
+ className="flex-1 px-4 py-2.5 border border-border text-muted hover:bg-surface-muted font-medium rounded-[var(--radius-button)] text-sm transition"
  >
  Annuler
  </button>
  <button
  onClick={handleSaveEditTable}
  disabled={!editingTable.name.trim()}
- className="flex-1 px-4 py-2.5 bg-primary hover:bg-primary-hover disabled:bg-primary/40 text-white font-bold rounded-xl text-sm transition shadow-md shadow-primary/10"
+ className="flex-1 px-4 py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-60 text-white font-medium rounded-[var(--radius-button)] text-sm transition"
  >
  Enregistrer
  </button>

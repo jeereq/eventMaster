@@ -250,6 +250,13 @@ A très vite !`
 export default function EventsPage() {
  const { user, access, planFeatures, planQuota, tenant } = useAuth();
  const { mode: eventsViewMode, setViewMode: setEventsViewMode, columns: eventsColumns, setGridColumns: setEventsColumns, gridClassName: eventsGridClass } = useViewMode('em-view-events', 'grid', 3);
+ const {
+   mode: guestsViewMode,
+   setViewMode: setGuestsViewMode,
+   columns: guestsColumns,
+   setGridColumns: setGuestsColumns,
+   gridClassName: guestsGridClass,
+ } = useViewMode('em-view-guests', 'list', 3);
  const [eventsListPage, setEventsListPage] = useState(1);
  const [guestsListPage, setGuestsListPage] = useState(1);
  const EVENTS_PER_PAGE = 8;
@@ -1849,13 +1856,13 @@ export default function EventsPage() {
 
  {/* Tab Content: Guests */}
  {activeTab === 'guests' && !isProtocolOnly && (
- <div className="space-y-6">
- <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
- <div>
- <h2 className="text-xl font-bold text-foreground">Liste des Invités</h2>
- <p className="text-muted text-sm mt-0.5">Ajoutez des invités manuellement ou importez-les en bloc à partir d'un fichier CSV.</p>
+ <div className="space-y-5">
+ <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+ <div className="space-y-1">
+ <h2 className="text-lg font-semibold text-foreground tracking-tight">Invités</h2>
+ <p className="text-muted text-sm">Ajoutez, importez ou filtrez votre liste d&apos;invités.</p>
  </div>
- <div className="flex gap-2.5">
+ <div className="flex flex-wrap gap-2">
  {selectedGuestIds.length > 0 && (
  <button 
  onClick={() => {
@@ -1866,10 +1873,10 @@ export default function EventsPage() {
  setBulkSelectedInviteId(invitations[0]?.id || '');
  setShowBulkInviteModal(true);
  }}
- className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-emerald-100 animate-fade-in"
+ className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-[var(--radius-button)] text-sm transition"
  >
  <Send className="w-4 h-4" />
- Inviter la sélection ({selectedGuestIds.length})
+ Inviter ({selectedGuestIds.length})
  </button>
  )}
  <button 
@@ -1879,29 +1886,29 @@ export default function EventsPage() {
  }}
  disabled={guestsAtLimit}
  title={guestsQuotaMsg || undefined}
- className="inline-flex items-center justify-center gap-1.5 px-4 py-2 border border-border text-muted hover:bg-surface-muted font-semibold rounded-xl text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
+ className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 border border-border text-muted hover:bg-surface-muted font-semibold rounded-[var(--radius-button)] text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
  >
  <FileSpreadsheet className="w-4 h-4" />
- Importer Excel / CSV
+ Importer
  </button>
  {guests.length > 0 && (
  <button 
  onClick={handleExportGuests}
- className="inline-flex items-center justify-center gap-1.5 px-4 py-2 border border-border text-muted hover:bg-surface-muted font-semibold rounded-xl text-sm transition"
+ className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 border border-border text-muted hover:bg-surface-muted font-semibold rounded-[var(--radius-button)] text-sm transition"
  title="Exporter tous les invités en fichier CSV"
  >
  <Download className="w-4 h-4" />
- Exporter CSV
+ Exporter
  </button>
  )}
  <button 
  onClick={openAddGuestModal}
  disabled={guestsAtLimit}
  title={guestsQuotaMsg || undefined}
- className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/10 disabled:opacity-50 disabled:cursor-not-allowed"
+ className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-primary hover:bg-primary-hover text-white font-semibold rounded-[var(--radius-button)] text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
  >
  <PlusCircle className="w-4 h-4" />
- Ajouter un invité
+ Ajouter
  </button>
  </div>
  </div>
@@ -1916,26 +1923,24 @@ export default function EventsPage() {
 
  {/* Search & Filtering Controls */}
  {guests.length > 0 && (
- <div className="bg-surface-muted border border-border rounded-2xl p-4 space-y-3">
- <div className="flex flex-col md:flex-row gap-3 items-center">
- {/* Search Input */}
- <div className="relative w-full md:flex-1">
- <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted w-4 h-4" />
- <input 
+ <div className="rounded-[var(--radius-card)] border border-border bg-surface p-3.5 sm:p-4 space-y-3">
+ <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
+ <div className="relative w-full lg:flex-1">
+ <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted w-4 h-4" />
+ <input
  type="text"
  value={searchQuery}
  onChange={(e) => setSearchQuery(e.target.value)}
  placeholder="Rechercher un invité par nom ou email..."
- className="w-full pl-10 pr-4 py-2 bg-surface border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition shadow-sm"
+ className="w-full pl-9 pr-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition"
  />
  </div>
 
- {/* RSVP Status Filter */}
- <div className="w-full md:w-48">
- <select 
+ <div className="w-full lg:w-44">
+ <select
  value={rsvpFilter}
  onChange={(e) => setRsvpFilter(e.target.value as any)}
- className="w-full px-3 py-2 bg-surface border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition shadow-sm font-semibold text-foreground"
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
  >
  <option value="ALL">Tous les statuts RSVP</option>
  <option value="ACCEPTED">Présent uniquement</option>
@@ -1944,12 +1949,11 @@ export default function EventsPage() {
  </select>
  </div>
 
- {/* Category Filter */}
- <div className="w-full md:w-48">
- <select 
+ <div className="w-full lg:w-44">
+ <select
  value={categoryFilter}
  onChange={(e) => setCategoryFilter(e.target.value)}
- className="w-full px-3 py-2 bg-surface border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition shadow-sm font-semibold text-foreground"
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
  >
  <option value="ALL">Toutes les catégories</option>
  {uniqueCategories.map(cat => (
@@ -1958,22 +1962,24 @@ export default function EventsPage() {
  </select>
  </div>
 
- {/* Advanced Filters Toggle */}
+ <div className="flex flex-wrap items-center gap-2">
  <button
+ type="button"
  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
- className={`w-full md:w-auto px-4 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border ${
- showAdvancedFilters 
- ? 'bg-primary/10 border-primary/30 text-primary' 
- : 'bg-surface border-border text-muted hover:bg-surface-muted'
- }`}
+ className={cn(
+ 'px-3 py-2 rounded-[var(--radius-button)] text-xs font-semibold transition inline-flex items-center gap-1.5 border',
+ showAdvancedFilters
+ ? 'bg-primary/10 border-primary/30 text-primary'
+ : 'bg-surface-muted border-border text-muted hover:bg-surface-muted/80',
+ )}
  >
  <Filter className="w-3.5 h-3.5" />
  Filtres avancés
  </button>
 
- {/* Reset Filters Button */}
  {(searchQuery || rsvpFilter !== 'ALL' || categoryFilter !== 'ALL' || dietFilter !== 'ALL' || Object.values(customFilters).some(v => v !== 'ALL' && v !== '')) && (
  <button
+ type="button"
  onClick={() => {
  setSearchQuery('');
  setRsvpFilter('ALL');
@@ -1981,24 +1987,33 @@ export default function EventsPage() {
  setDietFilter('ALL');
  setCustomFilters({});
  }}
- className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:text-primary transition bg-primary/10 hover:bg-primary/15 px-3 py-2 rounded-xl"
+ className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary transition bg-primary/10 hover:bg-primary/15 px-3 py-2 rounded-[var(--radius-button)]"
  >
- <RefreshCw className="w-3.5 h-3.5 animate-spin-once" />
+ <RefreshCw className="w-3.5 h-3.5" />
  Réinitialiser
  </button>
  )}
+
+ <ViewModeToggle
+ storageKey="em-view-guests"
+ value={guestsViewMode}
+ onChange={setGuestsViewMode}
+ columns={guestsColumns}
+ onColumnsChange={setGuestsColumns}
+ defaultMode="list"
+ defaultColumns={3}
+ />
+ </div>
  </div>
 
- {/* Advanced Collapsible Filters */}
  {showAdvancedFilters && (
  <div className="pt-3 border-t border-border grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 animate-fade-in">
- {/* Diet Filter */}
  <div className="space-y-1">
- <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Régime alimentaire</label>
- <select 
+ <label className="text-[10px] font-semibold text-muted uppercase tracking-wider">Régime alimentaire</label>
+ <select
  value={dietFilter}
  onChange={(e) => setDietFilter(e.target.value)}
- className="w-full px-3 py-2 bg-surface border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition shadow-sm font-semibold text-foreground"
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
  >
  <option value="ALL">Tous les régimes</option>
  <option value="none">Standard</option>
@@ -2009,29 +2024,28 @@ export default function EventsPage() {
  </select>
  </div>
 
- {/* Dynamic Custom Questions Filters */}
  {getCustomRsvpFields().map(field => {
  const currentValue = customFilters[field.label] || 'ALL';
  return (
  <div key={field.id} className="space-y-1">
- <label className="text-[10px] font-bold text-muted uppercase tracking-wider truncate block max-w-full" title={field.label}>
+ <label className="text-[10px] font-semibold text-muted uppercase tracking-wider truncate block max-w-full" title={field.label}>
  {field.label}
  </label>
  {isBooleanFieldType(field.type) ? (
- <select 
+ <select
  value={currentValue}
  onChange={(e) => setCustomFilters({ ...customFilters, [field.label]: e.target.value })}
- className="w-full px-3 py-2 bg-surface border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition shadow-sm font-semibold text-foreground"
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
  >
  <option value="ALL">Tous</option>
  <option value="Oui">Coché (Oui)</option>
  <option value="Non">Non coché (Non)</option>
  </select>
  ) : (field.type === 'select' || field.type === 'radio') && field.options ? (
- <select 
+ <select
  value={currentValue}
  onChange={(e) => setCustomFilters({ ...customFilters, [field.label]: e.target.value })}
- className="w-full px-3 py-2 bg-surface border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition shadow-sm font-semibold text-foreground"
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
  >
  <option value="ALL">Tous</option>
  {field.options.map(opt => (
@@ -2039,12 +2053,12 @@ export default function EventsPage() {
  ))}
  </select>
  ) : (
- <input 
+ <input
  type="text"
  value={currentValue === 'ALL' ? '' : currentValue}
  onChange={(e) => setCustomFilters({ ...customFilters, [field.label]: e.target.value || 'ALL' })}
  placeholder="Filtrer par réponse..."
- className="w-full px-3 py-2 bg-surface border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition shadow-sm font-semibold text-foreground"
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
  />
  )}
  </div>
@@ -2055,10 +2069,9 @@ export default function EventsPage() {
  </div>
  )}
 
- {/* Guests Table */}
- <div className="bg-surface border border-border rounded-3xl overflow-hidden shadow-sm">
+ {/* Guests cards */}
  {guests.length === 0 ? (
- <div className="text-center py-14 px-6">
+ <div className="rounded-[var(--radius-card)] border border-border bg-surface text-center py-14 px-6">
  <Users className="w-12 h-12 text-muted mx-auto mb-4 opacity-60" />
  <h3 className="font-semibold text-foreground">Étape suivante : ajouter des invités</h3>
  <p className="text-sm text-muted mt-1 max-w-sm mx-auto leading-relaxed">
@@ -2084,36 +2097,35 @@ export default function EventsPage() {
  </div>
  {guestsAtLimit && (
  <p className="mt-3 text-xs text-amber-700">
- <Link href="/dashboard/billing" className="font-bold hover:underline">
+ <Link href="/dashboard/billing" className="font-semibold hover:underline">
  Quota atteint — voir les forfaits →
  </Link>
  </p>
  )}
  </div>
  ) : filteredGuests.length === 0 ? (
- <div className="text-center py-16">
+ <div className="rounded-[var(--radius-card)] border border-border bg-surface text-center py-16 px-6">
  <Search className="w-12 h-12 text-muted mx-auto mb-4" />
- <h3 className="font-bold text-foreground">Aucun résultat</h3>
+ <h3 className="font-semibold text-foreground">Aucun résultat</h3>
  <p className="text-sm text-muted mt-1 max-w-xs mx-auto">Aucun invité ne correspond à vos critères de recherche ou de filtrage.</p>
  <button
+ type="button"
  onClick={() => {
  setSearchQuery('');
  setRsvpFilter('ALL');
  setCategoryFilter('ALL');
  }}
- className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-primary hover:text-primary transition bg-primary/10 hover:bg-primary/15 px-3 py-2 rounded-xl"
+ className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary transition bg-primary/10 hover:bg-primary/15 px-3 py-2 rounded-[var(--radius-button)]"
  >
  Effacer les filtres
  </button>
  </div>
  ) : (
- <div className="em-data-table-wrap">
- <table className="em-data-table">
- <thead>
- <tr>
- <th className="w-12">
- <input 
- type="checkbox" 
+ <div className="space-y-3">
+ <div className="flex items-center justify-between gap-3 px-0.5">
+ <label className="inline-flex items-center gap-2 text-xs font-semibold text-muted cursor-pointer select-none">
+ <input
+ type="checkbox"
  checked={isAllFilteredSelected}
  onChange={(e) => {
  if (e.target.checked) {
@@ -2124,115 +2136,159 @@ export default function EventsPage() {
  }}
  className="rounded border-border text-primary focus:ring-primary h-4 w-4"
  />
- </th>
- <th>Nom complet</th>
- <th>Email</th>
- <th>Catégorie</th>
- <th>Statut RSVP</th>
- <th>Préférences & Allergies</th>
- <th className="text-right">Actions</th>
- </tr>
- </thead>
- <tbody>
- {paginatedGuestsList.map((g) => (
- <tr key={g.id} className={selectedGuestIds.includes(g.id) ? 'bg-primary/5' : undefined}>
- <td className="w-12">
- <input 
- type="checkbox" 
- checked={selectedGuestIds.includes(g.id)}
- onChange={(e) => {
- if (e.target.checked) {
+ Tout sélectionner
+ {selectedGuestIds.length > 0 && (
+ <span className="text-primary font-medium">({selectedGuestIds.length})</span>
+ )}
+ </label>
+ </div>
+
+ <div className={guestsViewMode === 'grid' ? guestsGridClass : listStackClass}>
+ {paginatedGuestsList.map((g) => {
+ const isSelected = selectedGuestIds.includes(g.id);
+ const rsvpTone = (g.rsvp === 'ACCEPTED' ? 'emerald' : g.rsvp === 'DECLINED' ? 'rose' : 'amber') as 'emerald' | 'rose' | 'amber';
+ const rsvpLabel = g.rsvp === 'ACCEPTED' ? 'Présent' : g.rsvp === 'DECLINED' ? 'Absent' : 'En attente';
+ const rsvpChip = <StatusPill tone={rsvpTone}>{rsvpLabel}</StatusPill>;
+ const categoryChip = <StatusPill tone="slate">{g.category || 'Général'}</StatusPill>;
+
+ const inviteStatusNote =
+ g.preferences?.invitationLastStatus === 'FAILED' ? (
+ <span className="text-[11px] text-rose-600" title={g.preferences?.invitationLastError || 'Échec d’envoi'}>
+ Envoi échoué
+ </span>
+ ) : g.preferences?.invitationLastStatus === 'SENT' && g.preferences?.invitationSentAt ? (
+ <span className="text-[11px] text-emerald-600">Invitation envoyée</span>
+ ) : null;
+
+ const prefsLine = g.preferences ? (
+ [
+ g.preferences.diet && `Régime: ${g.preferences.diet}`,
+ g.preferences.allergies && `Allergies: ${g.preferences.allergies}`,
+ g.preferences.plusOne !== undefined && `Accompagné: ${g.preferences.plusOne ? 'Oui' : 'Non'}`,
+ g.preferences.notes && `Notes: ${g.preferences.notes}`,
+ ].filter(Boolean).join(' · ') || null
+ ) : null;
+
+ const toggleSelect = (checked: boolean) => {
+ if (checked) {
  setSelectedGuestIds([...selectedGuestIds, g.id]);
  } else {
  setSelectedGuestIds(selectedGuestIds.filter(id => id !== g.id));
  }
- }}
- className="rounded border-border text-primary focus:ring-primary h-4 w-4"
- />
- </td>
- <td className="py-4 px-6 font-bold text-foreground">{g.firstName} {g.lastName}</td>
- <td className="py-4 px-6 text-muted font-medium">{g.email}</td>
- <td className="py-4 px-6">
- <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface-muted border border-border text-muted">
- {g.category || 'Général'}
- </span>
- </td>
- <td className="py-4 px-6">
- <div className="flex flex-col gap-1">
- <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold border w-fit ${
- g.rsvp === 'ACCEPTED' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
- g.rsvp === 'DECLINED' ? 'bg-rose-50 border-rose-100 text-rose-700' :
- 'bg-amber-50 border-amber-100 text-amber-700'
- }`}>
- <span className={`w-1.5 h-1.5 rounded-full ${
- g.rsvp === 'ACCEPTED' ? 'bg-emerald-500' :
- g.rsvp === 'DECLINED' ? 'bg-rose-500' : 'bg-amber-500'
- }`} />
- {g.rsvp === 'ACCEPTED' ? 'Présent' : g.rsvp === 'DECLINED' ? 'Absent' : 'En attente'}
- </span>
- {g.preferences?.invitationLastStatus === 'FAILED' && (
- <span
- className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-100 w-fit"
- title={g.preferences?.invitationLastError || 'Échec d’envoi'}
+ };
+
+ const actions = (
+ <>
+ {guestsViewMode === 'list' ? (
+ <button
+ type="button"
+ onClick={() => setSelectedGuestDetails(g)}
+ className="inline-flex items-center"
+ title="Voir les détails et choix de l'invité"
  >
- Envoi échoué
- </span>
- )}
- {g.preferences?.invitationLastStatus === 'SENT' && g.preferences?.invitationSentAt && (
- <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 w-fit">
- Invitation envoyée
- </span>
- )}
- </div>
- </td>
- <td className="py-4 px-6 text-muted font-medium max-w-xs truncate">
- {g.preferences ? (
- <span className="text-xs">
- {g.preferences.diet && `Régime: ${g.preferences.diet}`}
- {g.preferences.allergies && ` • Allergies: ${g.preferences.allergies}`}
- {g.preferences.plusOne !== undefined && ` • Accompagné: ${g.preferences.plusOne ? 'Oui' : 'Non'}`}
- {g.preferences.notes && ` • Notes: ${g.preferences.notes}`}
- </span>
+ <ListRowAction />
+ </button>
  ) : (
- <span className="text-muted italic text-xs">Aucune préférence</span>
- )}
- </td>
- <td className="py-4 px-6 text-right flex items-center justify-end gap-1.5">
- <button 
+ <button
+ type="button"
  onClick={() => setSelectedGuestDetails(g)}
  className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition"
  title="Voir les détails et choix de l'invité"
  >
  <Eye className="w-4 h-4" />
  </button>
- <button 
+ )}
+ <button
+ type="button"
  onClick={() => handleEditGuestClick(g)}
  className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition"
  title="Modifier l'invité"
  >
  <Edit3 className="w-4 h-4" />
  </button>
- <button 
+ <button
+ type="button"
  onClick={() => setSharingGuest(g)}
  className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition"
  title="Partager l'invitation (WhatsApp, X, Instagram)"
  >
  <Share2 className="w-4 h-4" />
  </button>
- <button 
+ <button
+ type="button"
  onClick={() => handleDeleteGuest(g.id)}
  className="p-1.5 text-muted hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
  title="Supprimer l'invité"
  >
  <Trash2 className="w-4 h-4" />
  </button>
- </td>
- </tr>
- ))}
- </tbody>
- </table>
- </div>
+ </>
+ );
+
+ return (
+ <div
+ key={g.id}
+ className={cn(
+ 'relative',
+ isSelected && 'ring-2 ring-primary/25 rounded-[var(--radius-card)]',
  )}
+ >
+ <label
+ className={cn(
+ 'absolute z-10 flex items-center justify-center',
+ guestsViewMode === 'grid'
+ ? 'top-2 left-2 h-7 w-7 rounded-lg bg-surface/90 border border-border shadow-sm'
+ : 'left-3 top-1/2 -translate-y-1/2 h-7 w-7 rounded-lg bg-surface/95 border border-border shadow-sm',
+ )}
+ onClick={(e) => e.stopPropagation()}
+ onKeyDown={(e) => e.stopPropagation()}
+ >
+ <input
+ type="checkbox"
+ checked={isSelected}
+ onChange={(e) => toggleSelect(e.target.checked)}
+ className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+ aria-label={`Sélectionner ${g.firstName} ${g.lastName}`}
+ />
+ </label>
+ <ProjectCard
+ id={g.id}
+ title={`${g.firstName} ${g.lastName}`}
+ layout={guestsViewMode}
+ icon={<Users className="w-4 h-4" />}
+ onClick={() => setSelectedGuestDetails(g)}
+ meta={
+ guestsViewMode === 'list' ? (
+ <span className="truncate">{g.email}</span>
+ ) : (
+ <div className="space-y-1.5">
+ <p className="truncate text-xs">{g.email}</p>
+ <div className="flex flex-wrap gap-1.5">
+ {rsvpChip}
+ {categoryChip}
+ </div>
+ </div>
+ )
+ }
+ status={guestsViewMode === 'list' ? rsvpChip : undefined}
+ aside={guestsViewMode === 'list' ? categoryChip : undefined}
+ description={
+ <div className="space-y-0.5">
+ {inviteStatusNote}
+ {prefsLine ? (
+ <span className="line-clamp-2">{prefsLine}</span>
+ ) : guestsViewMode === 'grid' ? (
+ <span className="italic text-muted">Aucune préférence</span>
+ ) : null}
+ </div>
+ }
+ actions={actions}
+ />
+ </div>
+ );
+ })}
+ </div>
+
  <Pagination
  page={guestsListPage}
  pageSize={GUESTS_PER_PAGE}
@@ -2241,6 +2297,7 @@ export default function EventsPage() {
  itemLabel="invités"
  />
  </div>
+ )}
  </div>
  )}
 
@@ -2341,10 +2398,11 @@ export default function EventsPage() {
 
  {/* Tab Content: Table Plan */}
  {activeTab === 'guestInfo' && selectedEvent && !isProtocolOnly && (
- <div className="space-y-4 animate-in fade-in duration-200">
- <p className="text-sm text-muted">
- Définissez le code vestimentaire et les recommandations pratiques visibles par vos invités sur le portail RSVP et dans les invitations.
- </p>
+ <div className="space-y-4 animate-fade-in">
+ <div className="space-y-1">
+ <h2 className="text-lg font-semibold text-foreground tracking-tight">Infos invités</h2>
+ <p className="text-sm text-muted">Code vestimentaire et recommandations visibles sur le portail RSVP.</p>
+ </div>
  <EventGuestGuidelinesEditor
  value={guestGuidelines}
  onChange={setGuestGuidelines}
