@@ -43,7 +43,7 @@ export default function LegalAcceptanceModal({
       containerClassName="z-[200]"
       title={
         <span className="flex items-center gap-3">
-          <span className="p-2 rounded-xl bg-indigo-600 text-white shrink-0">
+          <span className="p-2 rounded-[var(--radius-button)] bg-primary text-white shrink-0">
             <ShieldCheck className="w-5 h-5" />
           </span>
           {title}
@@ -65,32 +65,32 @@ export default function LegalAcceptanceModal({
       {error && <Alert variant="error" className="mb-4">{error}</Alert>}
 
       <div className="space-y-3">
-        <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
+        <label className="flex items-start gap-3 p-3 rounded-[var(--radius-card)] border border-border cursor-pointer hover:bg-surface-muted transition">
           <input
             type="checkbox"
             checked={acceptTerms}
             onChange={(e) => setAcceptTerms(e.target.checked)}
-            className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500"
+            className="mt-0.5 rounded border-border text-primary focus:ring-primary"
           />
-          <span className="text-sm text-slate-700 dark:text-slate-300">
+          <span className="text-sm text-foreground">
             J&apos;accepte les{' '}
-            <Link href="/terms" target="_blank" className="text-indigo-600 font-semibold hover:underline">
+            <Link href="/terms" target="_blank" className="text-primary font-semibold hover:underline">
               conditions d&apos;utilisation
             </Link>{' '}
             (version {TERMS_VERSION}).
           </span>
         </label>
 
-        <label className="flex items-start gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
+        <label className="flex items-start gap-3 p-3 rounded-[var(--radius-card)] border border-border cursor-pointer hover:bg-surface-muted transition">
           <input
             type="checkbox"
             checked={acceptPrivacy}
             onChange={(e) => setAcceptPrivacy(e.target.checked)}
-            className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500"
+            className="mt-0.5 rounded border-border text-primary focus:ring-primary"
           />
-          <span className="text-sm text-slate-700 dark:text-slate-300">
+          <span className="text-sm text-foreground">
             J&apos;accepte la{' '}
-            <Link href="/privacy" target="_blank" className="text-indigo-600 font-semibold hover:underline">
+            <Link href="/privacy" target="_blank" className="text-primary font-semibold hover:underline">
               politique de confidentialité
             </Link>{' '}
             (version {PRIVACY_VERSION}).

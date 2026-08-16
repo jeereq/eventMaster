@@ -122,27 +122,27 @@ export default function PWARestrictedScreen() {
   const hasPendingRequest = requests.some(r => r.status === 'PENDING');
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col justify-between font-sans antialiased relative overflow-hidden">
+    <div className="min-h-screen bg-background text-foreground flex flex-col justify-between font-sans antialiased relative overflow-hidden">
       {/* Background ambient glow */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-500/10 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-violet-500/10 blur-[120px] pointer-events-none" />
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[120px] pointer-events-none" />
 
       {/* Top Header */}
-      <header className="border-b border-slate-800 bg-slate-950/50 backdrop-blur-md px-6 py-4 flex items-center justify-between relative z-10">
+      <header className="border-b border-border bg-surface/50 backdrop-blur-md px-6 py-4 flex items-center justify-between relative z-10">
         <div className="flex items-center gap-3">
-          <div className="bg-indigo-600 p-2 rounded-xl text-white">
+          <div className="bg-primary p-2 rounded-xl text-white">
             <ShieldAlert className="w-5 h-5" />
           </div>
           <div>
-            <span className="font-bold text-lg text-white block">EventMaster</span>
-            <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Accès Restreint</span>
+            <span className="font-bold text-lg text-foreground block">EventMaster</span>
+            <span className="text-[10px] text-muted font-semibold uppercase tracking-wider">Accès Restreint</span>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={handleRefreshStatus}
             disabled={refreshing}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-indigo-400 hover:bg-indigo-500/10 transition border border-indigo-500/20 disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-primary hover:bg-primary/10 transition border border-primary/20 disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
             {refreshing ? 'Rafraîchissement...' : 'Rafraîchrir mon statut'}
@@ -161,15 +161,15 @@ export default function PWARestrictedScreen() {
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-12 grid lg:grid-cols-5 gap-8 items-start relative z-10">
         {/* Left Column: Warning & Plans (3 cols) */}
         <div className="lg:col-span-3 space-y-8">
-          <div className="bg-slate-950/40 border border-slate-800/80 rounded-3xl p-6 sm:p-8 space-y-4">
+          <div className="bg-surface/40 border border-border rounded-3xl p-6 sm:p-8 space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-bold">
               <ShieldAlert className="w-4 h-4" />
               <span>Abonnement Expiré ou Licence Inactive</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight leading-tight">
               Votre espace {tenant?.name ? `"${tenant.name}"` : ''} requiert une activation.
             </h1>
-            <p className="text-sm text-slate-400 leading-relaxed">
+            <p className="text-sm text-muted leading-relaxed">
               Pour continuer à utiliser la plateforme EventMaster, organiser vos événements, gérer vos invités et concevoir vos invitations, vous devez souscrire à un abonnement mensuel de 30 jours. Sélectionnez le forfait de votre choix ci-dessous et soumettez votre demande d'activation.
             </p>
           </div>
@@ -182,27 +182,27 @@ export default function PWARestrictedScreen() {
                 onClick={() => setRequestedPlan(plan.id as any)}
                 className={`border rounded-2xl p-5 cursor-pointer transition relative flex flex-col justify-between h-full ${
                   requestedPlan === plan.id
-                    ? 'bg-indigo-600/10 border-indigo-500 ring-2 ring-indigo-500/30'
-                    : 'bg-slate-950/20 border-slate-800 hover:border-slate-700'
+                    ? 'bg-primary/10 border-primary ring-2 ring-primary/30'
+                    : 'bg-surface/20 border-border hover:border-border'
                 }`}
               >
                 {plan.popular && (
-                  <span className="absolute top-0 right-4 transform -translate-y-1/2 bg-indigo-600 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="absolute top-0 right-4 transform -translate-y-1/2 bg-primary text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
                     Populaire
                   </span>
                 )}
                 <div className="space-y-3">
                   <div>
-                    <h3 className="font-bold text-sm text-white">{plan.name}</h3>
+                    <h3 className="font-bold text-sm text-foreground">{plan.name}</h3>
                     <div className="flex items-baseline gap-1 mt-1">
-                      <span className="text-xl font-black text-white">{plan.price}</span>
-                      <span className="text-[10px] text-slate-400">/30j</span>
+                      <span className="text-xl font-black text-foreground">{plan.price}</span>
+                      <span className="text-[10px] text-muted">/30j</span>
                     </div>
                   </div>
-                  <ul className="space-y-1.5 border-t border-slate-800/60 pt-3">
+                  <ul className="space-y-1.5 border-t border-border pt-3">
                     {plan.features.slice(0, 3).map((feat, idx) => (
-                      <li key={idx} className="flex items-center gap-1.5 text-[10px] text-slate-300">
-                        <Check className="w-3 h-3 text-indigo-400 flex-shrink-0" />
+                      <li key={idx} className="flex items-center gap-1.5 text-[10px] text-foreground">
+                        <Check className="w-3 h-3 text-primary flex-shrink-0" />
                         <span className="truncate">{feat}</span>
                       </li>
                     ))}
@@ -211,8 +211,8 @@ export default function PWARestrictedScreen() {
                 <div className="pt-4">
                   <div className={`w-full py-1.5 rounded-lg text-center text-[10px] font-bold transition ${
                     requestedPlan === plan.id
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      ? 'bg-primary text-white'
+                      : 'bg-surface-muted text-foreground hover:bg-surface-muted'
                   }`}>
                     {requestedPlan === plan.id ? 'Sélectionné' : 'Choisir ce plan'}
                   </div>
@@ -225,9 +225,9 @@ export default function PWARestrictedScreen() {
         {/* Right Column: Request Form & History (2 cols) */}
         <div className="lg:col-span-2 space-y-6">
           {/* Request Form */}
-          <div className="bg-slate-950/60 border border-slate-800 rounded-3xl p-6 shadow-xl">
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-indigo-400" />
+          <div className="bg-surface/60 border border-border rounded-3xl p-6 shadow-xl">
+            <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-primary" />
               Demande d'activation
             </h3>
 
@@ -246,9 +246,9 @@ export default function PWARestrictedScreen() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="p-3 bg-slate-900/60 border border-slate-800 rounded-xl space-y-1">
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Plan Sélectionné</span>
-                <span className="text-sm font-extrabold text-indigo-400">
+              <div className="p-3 bg-surface-muted/60 border border-border rounded-xl space-y-1">
+                <span className="text-[10px] text-muted font-bold uppercase tracking-wider block">Plan Sélectionné</span>
+                <span className="text-sm font-extrabold text-primary">
                   {requestedPlan === 'STANDARD' ? 'Plan Standard (49 $ / 30 jours)' : 
                    requestedPlan === 'PREMIUM' ? 'Plan Premium (99 $ / 30 jours)' : 
                    'Plan Enterprise (249 $ / 30 jours)'}
@@ -256,7 +256,7 @@ export default function PWARestrictedScreen() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <label className="text-[10px] font-bold text-muted uppercase tracking-wider">
                   Référence de paiement / Message
                 </label>
                 <textarea
@@ -264,7 +264,7 @@ export default function PWARestrictedScreen() {
                   onChange={(e) => setProofOfPayment(e.target.value)}
                   placeholder="Saisissez la référence de votre virement, transaction mobile money, ou un message pour le Super Admin..."
                   rows={4}
-                  className="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:bg-slate-900/80 transition resize-none"
+                  className="w-full px-4 py-3 bg-background border border-border rounded-xl text-xs text-foreground placeholder:text-muted focus:outline-none focus:border-primary focus:bg-surface-muted/80 transition resize-none"
                   required
                 />
               </div>
@@ -272,7 +272,7 @@ export default function PWARestrictedScreen() {
               <button
                 type="submit"
                 disabled={submitting || hasPendingRequest}
-                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-bold rounded-xl text-xs transition shadow-lg shadow-indigo-500/10 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-3 bg-primary hover:bg-primary-hover disabled:bg-surface-muted disabled:text-muted disabled:cursor-not-allowed text-white font-bold rounded-xl text-xs transition shadow-lg shadow-primary/10 flex items-center justify-center gap-2 cursor-pointer"
               >
                 {submitting ? (
                   <>
@@ -295,24 +295,24 @@ export default function PWARestrictedScreen() {
           </div>
 
           {/* Request History */}
-          <div className="bg-slate-950/40 border border-slate-800/80 rounded-3xl p-6">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-1.5">
-              <Clock className="w-4 h-4 text-indigo-400" />
+          <div className="bg-surface/40 border border-border rounded-3xl p-6">
+            <h4 className="text-xs font-bold text-muted uppercase tracking-wider mb-4 flex items-center gap-1.5">
+              <Clock className="w-4 h-4 text-primary" />
               Historique des demandes ({requests.length})
             </h4>
 
             {loadingRequests ? (
               <div className="py-6 flex justify-center">
-                <Loader2 className="w-5 h-5 text-indigo-400 animate-spin" />
+                <Loader2 className="w-5 h-5 text-primary animate-spin" />
               </div>
             ) : requests.length === 0 ? (
-              <p className="text-center py-4 text-xs text-slate-500">Aucune demande soumise pour le moment.</p>
+              <p className="text-center py-4 text-xs text-muted">Aucune demande soumise pour le moment.</p>
             ) : (
               <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
                 {requests.map((req) => (
-                  <div key={req.id} className="bg-slate-900/60 border border-slate-800/50 rounded-xl p-3 space-y-2">
+                  <div key={req.id} className="bg-surface-muted/60 border border-border rounded-xl p-3 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-white">Plan {req.requestedPlan}</span>
+                      <span className="text-xs font-bold text-foreground">Plan {req.requestedPlan}</span>
                       <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider ${
                         req.status === 'APPROVED' ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' :
                         req.status === 'REJECTED' ? 'bg-rose-500/10 border border-rose-500/20 text-rose-400' :
@@ -323,11 +323,11 @@ export default function PWARestrictedScreen() {
                       </span>
                     </div>
                     {req.proofOfPayment && (
-                      <p className="text-[10px] text-slate-400 italic truncate" title={req.proofOfPayment}>
+                      <p className="text-[10px] text-muted italic truncate" title={req.proofOfPayment}>
                         "{req.proofOfPayment}"
                       </p>
                     )}
-                    <div className="text-[9px] text-slate-500">
+                    <div className="text-[9px] text-muted">
                       Soumise le {new Date(req.createdAt).toLocaleDateString('fr-FR', {
                         day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
                       })}
@@ -341,7 +341,7 @@ export default function PWARestrictedScreen() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-slate-950 border-t border-slate-800 py-6 text-center text-[10px] text-slate-500">
+      <footer className="bg-background border-t border-border py-6 text-center text-[10px] text-muted">
         <p>© 2026 EventMaster SaaS. Isolation stricte garantie. Tous droits réservés.</p>
       </footer>
     </div>

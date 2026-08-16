@@ -130,7 +130,7 @@ export function NotificationBell({ className }: { className?: string }) {
               <button
                 type="button"
                 onClick={markAllRead}
-                className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                className="text-xs font-medium text-primary dark:text-primary hover:underline flex items-center gap-1"
               >
                 <Check className="w-3 h-3" />
                 Tout marquer lu
@@ -141,7 +141,7 @@ export function NotificationBell({ className }: { className?: string }) {
           <div className="max-h-80 overflow-y-auto">
             {loading && !data ? (
               <div className="flex justify-center py-8">
-                <Loader2 className="w-5 h-5 animate-spin text-indigo-600" />
+                <Loader2 className="w-5 h-5 animate-spin text-primary" />
               </div>
             ) : !data?.items.length ? (
               <p className="text-sm text-slate-400 text-center py-8 px-4">Aucune notification.</p>
@@ -153,12 +153,12 @@ export function NotificationBell({ className }: { className?: string }) {
                   onClick={() => !n.readAt && markRead(n.id)}
                   className={cn(
                     'w-full text-left px-4 py-3 border-b border-slate-50 dark:border-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition',
-                    !n.readAt && 'bg-indigo-50/50 dark:bg-indigo-950/20',
+                    !n.readAt && 'bg-primary/10 dark:bg-primary/15',
                   )}
                 >
                   <div className="flex items-start gap-2">
                     {!n.readAt && (
-                      <span className="mt-1.5 w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+                      <span className="mt-1.5 w-2 h-2 rounded-full bg-primary/100 shrink-0" />
                     )}
                     <div className={cn(!n.readAt ? '' : 'pl-4')}>
                       <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 line-clamp-1">
@@ -218,7 +218,7 @@ export function CommercialNotificationsPanel() {
   if (loading) {
     return (
       <div className="flex justify-center py-10">
-        <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
       </div>
     );
   }
@@ -228,7 +228,7 @@ export function CommercialNotificationsPanel() {
       <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800">
         <div>
           <h2 className="font-bold text-lg flex items-center gap-2">
-            <Bell className="w-5 h-5 text-indigo-600" />
+            <Bell className="w-5 h-5 text-primary" />
             Notifications
           </h2>
           {(data?.unreadCount ?? 0) > 0 && (
@@ -239,7 +239,7 @@ export function CommercialNotificationsPanel() {
           <button
             type="button"
             onClick={markAllRead}
-            className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+            className="text-xs font-medium text-primary dark:text-primary hover:underline"
           >
             Tout marquer lu
           </button>
@@ -257,7 +257,7 @@ export function CommercialNotificationsPanel() {
               key={n.id}
               className={cn(
                 'px-5 py-4',
-                !n.readAt && 'bg-indigo-50/40 dark:bg-indigo-950/15',
+                !n.readAt && 'bg-primary/10 dark:bg-primary/10',
               )}
             >
               <div className="flex items-start justify-between gap-3">
@@ -272,7 +272,7 @@ export function CommercialNotificationsPanel() {
                   <button
                     type="button"
                     onClick={() => markRead(n.id)}
-                    className="shrink-0 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+                    className="shrink-0 text-xs font-medium text-primary dark:text-primary hover:underline"
                   >
                     Marquer lu
                   </button>
