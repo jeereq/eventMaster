@@ -49,7 +49,7 @@ export default function Button({
       type="button"
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center font-semibold transition-all duration-150',
+        'inline-flex items-center justify-center font-medium transition-all duration-150',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950',
         'disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none',
         'cursor-pointer active:scale-[0.98]',

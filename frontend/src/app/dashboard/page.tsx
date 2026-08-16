@@ -19,7 +19,8 @@ import QuotaUsagePanel from '@/components/QuotaUsagePanel';
 import SubscriptionApprovalModal, { type SubscriptionApprovalRequest } from '@/components/SubscriptionApprovalModal';
 import BillingDiscountFields, { getBillingPricingFromFields } from '@/components/BillingDiscountFields';
 import type { QuotaSnapshot } from '@/lib/quotaDisplay';
-import { PageHeader, Alert, Button, ProjectCard, SkeletonDashboardHome, SkeletonTabContent, ViewModeToggle, useViewMode } from '@/components/ui';
+import { PageHeader, Alert, Button, ProjectCard, SkeletonDashboardHome, SkeletonTabContent, ViewModeToggle, useViewMode, Breadcrumbs } from '@/components/ui';
+import GettingStartedChecklist from '@/components/GettingStartedChecklist';
 import { PLAN_IDS, type PlanId } from '@/config/landingPricing';
 import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
@@ -4566,6 +4567,7 @@ function DashboardPageContent() {
       <PageHeader
         title="Tableau de bord"
         description="Bienvenue dans votre espace d'administration de gestion d'événements privés."
+        breadcrumbs={<Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Tableau de bord' }]} />}
         action={
           <Button onClick={() => router.push('/dashboard/events')} leftIcon={<PlusCircle className="w-4 h-4" />}>
             Créer un événement
@@ -4574,6 +4576,13 @@ function DashboardPageContent() {
       />
 
       {error && <Alert variant="error">{error}</Alert>}
+
+      {user?.role === 'USER' && (
+        <GettingStartedChecklist
+          hasEvents={events.length > 0}
+          firstEventId={events[0]?.id}
+        />
+      )}
 
       {orgQuota && (
         <div className="space-y-3">

@@ -48,7 +48,7 @@
   --color-muted: var(--muted);
   --color-sidebar: var(--sidebar);
   --color-card-hover: var(--card-hover);
-  --font-sans: Candara, Calibri, "Segoe UI", Optima, Arial, sans-serif;
+  --font-sans: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --radius-card: var(--radius-card);
   --radius-button: var(--radius-button);
@@ -56,14 +56,24 @@
 
 html {
   scroll-behavior: smooth;
+  font-size: 15px; /* densité Asana-like (UI compacte, lisible) */
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Candara, Calibri, "Segoe UI", Optima, Arial, sans-serif;
+  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-weight: 400;
+  letter-spacing: -0.011em;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 {
+  letter-spacing: -0.02em;
+  font-weight: 600;
 }
 
 /* Focus visible global pour accessibilité clavier */

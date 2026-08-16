@@ -17,7 +17,7 @@ import {
   Spline, Triangle, Plus, Trash, Layout, Palette, Square,
   ArrowUp, ArrowDown, Crop, Copy, Upload, Globe
 } from 'lucide-react';
-import { PageHeader, Alert, Button, SkeletonTemplatesView, ViewModeToggle, useViewMode } from '@/components/ui';
+import { PageHeader, Alert, Button, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs } from '@/components/ui';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
 import {
   type RsvpField,
@@ -220,6 +220,18 @@ export default function TemplatesPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('em-getting-started');
+      const flow = raw ? JSON.parse(raw) : {};
+      if (!flow.templateDone) {
+        localStorage.setItem('em-getting-started', JSON.stringify({ ...flow, templateDone: true }));
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const loadTenants = async () => {
     if (user?.role === 'SUPER_ADMIN') {
@@ -3515,6 +3527,9 @@ export default function TemplatesPage() {
           user?.role === 'SUPER_ADMIN'
             ? "Gérez les modèles d'invitation globaux et privés via le concepteur visuel."
             : "Concevez des invitations interactives uniques à l'aide de notre éditeur visuel."
+        }
+        breadcrumbs={
+          <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Modèles' }]} />
         }
         action={
           canUseCustomTemplates ? (

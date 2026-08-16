@@ -9,7 +9,7 @@ import {
   Clock, Download, FileSpreadsheet, RefreshCw, HelpCircle
 } from 'lucide-react';
 import Link from 'next/link';
-import { PageHeader, Alert, EmptyState, Button, SkeletonAnalyticsView, SkeletonStatsRow} from '@/components/ui';
+import { PageHeader, Alert, EmptyState, Button, SkeletonAnalyticsView, SkeletonStatsRow, Breadcrumbs } from '@/components/ui';
 // skeletons imported below
 import {
   extractRsvpFieldsFromTemplateContent,
@@ -224,6 +224,9 @@ export default function AnalyticsPage() {
       <PageHeader
         title="Statistiques des événements"
         description="Analyse approfondie des réponses RSVP, préférences de repas et questions personnalisées."
+        breadcrumbs={
+          <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Statistiques' }]} />
+        }
         action={
           events.length > 0 ? (
             <div className="flex items-center gap-2">

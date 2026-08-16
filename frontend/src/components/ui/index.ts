@@ -29,3 +29,5 @@ export { default as Modal, modalBackdropClass, modalPanelClass } from './Modal';
 export { default as PageHeader } from './PageHeader';
 export { default as EmptyState } from './EmptyState';
 export { default as Badge } from './Badge';
+export { default as Breadcrumbs } from './Breadcrumbs';
+export type { BreadcrumbItem } from './Breadcrumbs';
