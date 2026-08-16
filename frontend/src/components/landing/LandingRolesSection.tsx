@@ -18,54 +18,49 @@ const pillarIcons: Record<string, React.ComponentType<{ className?: string }>> =
 export default function LandingRolesSection() {
   return (
     <>
-      {/* Rôles & permissions */}
-      <section className="py-20 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800">
+      <section className="py-16 sm:py-20 bg-background border-t border-border">
         <div className="page-container">
-          <div className="grid lg:grid-cols-2 gap-16 items-start">
-            <div className="space-y-6">
-              <span className="text-xs font-bold uppercase tracking-widest text-primary dark:text-primary">
-                Gouvernance & équipes
-              </span>
-              <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+            <div className="space-y-5">
+              <p className="text-xs font-medium uppercase tracking-wider text-muted">Équipes & permissions</p>
+              <h2 className="text-2xl font-semibold text-foreground tracking-tight">
                 Chaque rôle voit exactement ce qu&apos;il doit gérer
               </h2>
-              <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-                Comme Microsoft 365 attribue des licences et des droits par profil, EventMaster distingue
-                propriétaire, managers organisationnels, protocoles, responsables de salle ou d&apos;événement,
-                et commerciaux parraineurs — sans jamais mélanger les périmètres.
+              <p className="text-sm text-muted leading-relaxed">
+                Propriétaire, managers, protocole, responsables de salle et commerciaux — sans mélanger les périmètres.
               </p>
-              <div className="rounded-lg border border-slate-200 dark:border-slate-800 overflow-hidden text-xs">
-                <div className="grid grid-cols-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 font-bold text-slate-500 uppercase tracking-wider">
+              <div className="rounded-[var(--radius-card)] border border-border overflow-hidden text-xs">
+                <div className="grid grid-cols-3 bg-surface-muted border-b border-border font-semibold text-muted uppercase tracking-wider text-[10px]">
                   <div className="p-3">Rôle</div>
                   <div className="p-3">Périmètre</div>
-                  <div className="p-3">Créer event/salle</div>
+                  <div className="p-3">Créer</div>
                 </div>
                 {[
-                  ['Propriétaire / Manager org.', 'Toute l\'organisation', 'Oui'],
-                  ['Protocole org.', 'Invités (tous événements)', 'Non'],
+                  ['Propriétaire / Manager', 'Organisation', 'Oui'],
+                  ['Protocole org.', 'Tous les invités', 'Non'],
                   ['Manager salle', 'Événements de la salle', 'Non'],
                   ['Protocole événement', 'Invités de l\'événement', 'Non'],
-                  ['Commercial', 'Organisations parrainées', 'N/A'],
+                  ['Commercial', 'Parrainage', 'N/A'],
                 ].map(([role, scope, create]) => (
-                  <div key={role} className="grid grid-cols-3 border-b border-slate-100 dark:border-slate-800 last:border-0 bg-white dark:bg-slate-950">
-                    <div className="p-3 font-semibold text-slate-800 dark:text-slate-200">{role}</div>
-                    <div className="p-3 text-slate-600 dark:text-slate-400">{scope}</div>
-                    <div className="p-3 text-slate-600 dark:text-slate-400">{create}</div>
+                  <div key={role} className="grid grid-cols-3 border-b border-border last:border-0 bg-surface">
+                    <div className="p-3 font-medium text-foreground">{role}</div>
+                    <div className="p-3 text-muted">{scope}</div>
+                    <div className="p-3 text-muted">{create}</div>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid sm:grid-cols-2 gap-3">
               {ROLE_HIGHLIGHTS.map((role) => {
                 const Icon = roleIcons[role.icon as keyof typeof roleIcons] || Shield;
                 return (
-                  <div key={role.title} className="p-5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
-                    <div className="w-10 h-10 rounded-lg bg-indigo-100 dark:bg-primary/15 text-primary dark:text-primary flex items-center justify-center mb-3">
-                      <Icon className="w-5 h-5" />
+                  <div key={role.title} className="p-4 rounded-[var(--radius-card)] border border-border bg-surface">
+                    <div className="w-9 h-9 rounded-[var(--radius-button)] bg-surface-muted text-foreground flex items-center justify-center mb-3">
+                      <Icon className="w-4 h-4" />
                     </div>
-                    <h3 className="font-bold text-slate-900 dark:text-white text-sm mb-1">{role.title}</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{role.description}</p>
+                    <h3 className="font-semibold text-foreground text-sm mb-1">{role.title}</h3>
+                    <p className="text-xs text-muted leading-relaxed">{role.description}</p>
                   </div>
                 );
               })}
@@ -74,25 +69,24 @@ export default function LandingRolesSection() {
         </div>
       </section>
 
-      {/* Piliers plateforme — remplace partiellement l'ancienne grille */}
-      <section className="py-20 bg-slate-50 dark:bg-slate-900/40 border-t border-b border-slate-200 dark:border-slate-800">
+      <section className="py-16 sm:py-20 bg-surface border-t border-border">
         <div className="page-container">
-          <div className="text-center max-w-2xl mx-auto mb-14 space-y-3">
-            <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
-              Une plateforme complète pour vos événements
+          <div className="max-w-2xl mb-10 space-y-2">
+            <h2 className="text-2xl font-semibold text-foreground tracking-tight">
+              Une plateforme complète
             </h2>
-            <p className="text-slate-600 dark:text-slate-400">
-              De la conception de salle au scan QR en passant par les notifications de placement.
+            <p className="text-sm text-muted">
+              De la conception de salle au scan QR, en passant par les notifications de placement.
             </p>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {PLATFORM_PILLARS.map((pillar) => {
               const Icon = pillarIcons[pillar.icon] || Shield;
               return (
-                <div key={pillar.title} className="bg-white dark:bg-slate-900 p-6 rounded-lg border border-slate-200 dark:border-slate-800 hover:border-primary/40 dark:hover:border-primary/50 transition">
-                  <Icon className="w-6 h-6 text-primary dark:text-primary mb-4" />
-                  <h3 className="font-bold text-slate-900 dark:text-white mb-2">{pillar.title}</h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{pillar.description}</p>
+                <div key={pillar.title} className="bg-background p-5 rounded-[var(--radius-card)] border border-border">
+                  <Icon className="w-5 h-5 text-foreground mb-3" />
+                  <h3 className="font-semibold text-foreground text-sm mb-1.5">{pillar.title}</h3>
+                  <p className="text-xs text-muted leading-relaxed">{pillar.description}</p>
                 </div>
               );
             })}

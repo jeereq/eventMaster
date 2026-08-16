@@ -17,16 +17,14 @@ import LandingMobileSection from '@/components/landing/LandingMobileSection';
 import FaqSection from '@/components/landing/FaqSection';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import SiteFooter from '@/components/SiteFooter';
-import { 
-  Calendar, Users, Award, Shield, CheckCircle, Mail, 
-  ArrowRight, Lock, Layout, Sparkles, Compass, Heart, 
-  Briefcase, Smartphone, Star, ShieldCheck, Check, XCircle,
-  PartyPopper, Loader2, LayoutGrid, Sun, Moon, Menu, X, MessageSquare,
-  ScanLine, Building2,
+import { Modal, Button } from '@/components/ui';
+import { cn } from '@/lib/cn';
+import {
+  ArrowRight, PartyPopper, Loader2, Sun, Moon, Menu, X,
 } from 'lucide-react';
 
 function getCategoryLabel(category: string) {
-  if (category === 'private') return 'Événement Privé';
+  if (category === 'private') return 'Privé';
   if (category === 'corporate') return 'Professionnel';
   return 'Cocktail';
 }
@@ -81,312 +79,253 @@ export default function Home() {
   }, [publicTemplates, previewTemplate]);
 
   const categories = [
-    { id: 'all', name: 'Tous les modèles' },
-    { id: 'private', name: 'Privé & Célébrations' },
-    { id: 'corporate', name: 'Professionnel & Gala' },
-    { id: 'casual', name: 'Moderne & Cocktail' },
+    { id: 'all', name: 'Tous' },
+    { id: 'private', name: 'Privé' },
+    { id: 'corporate', name: 'Professionnel' },
+    { id: 'casual', name: 'Cocktail' },
   ];
 
   const filteredTemplateGroups = buildLandingTemplateGroups(publicTemplates, selectedCategory);
-
   const activePreview = publicTemplates.find((t) => t.id === previewTemplate) || publicTemplates[0];
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+
+  const navLinkClass = 'text-sm font-medium text-muted hover:text-foreground transition';
 
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground font-sans antialiased text-slate-900 dark:text-slate-100 transition-colors duration-200">
-      {/* Header */}
-      <header className="border-b border-border bg-surface/80 backdrop-blur-md sticky top-0 z-50 transition-all">
-        <div className="page-container h-16 flex items-center justify-between">
+    <div className="flex flex-col min-h-screen bg-background text-foreground font-sans antialiased transition-colors duration-200">
+      <header className="border-b border-border bg-surface/90 backdrop-blur-md sticky top-0 z-50">
+        <div className="page-container h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition">
-              <div className="bg-primary p-1.5 rounded-[var(--radius-button)] text-white">
-                <PartyPopper className="w-4 h-4" />
+            <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition">
+              <div className="bg-foreground p-1.5 rounded-[var(--radius-button)] text-background">
+                <PartyPopper className="w-3.5 h-3.5" />
               </div>
-              <span className="text-lg font-semibold text-foreground tracking-tight">
-                EventMaster
-              </span>
+              <span className="text-base font-semibold tracking-tight">EventMaster</span>
             </Link>
-            
-            {/* Indicateur de connexion API en temps réel */}
-            <div className="hidden sm:flex items-center gap-1.5 ml-3 px-2 py-0.5 rounded-md bg-surface-muted border border-border text-[10px] font-medium text-muted">
-              <span className={`w-1.5 h-1.5 rounded-full ${
-                serverStatus === 'online' ? 'bg-emerald-500' : 
-                serverStatus === 'offline' ? 'bg-rose-500' : 'bg-amber-500 animate-pulse'
-              }`} />
-              <span>
-                {serverStatus === 'online' ? 'API connectée' : 
-                 serverStatus === 'offline' ? 'API déconnectée' : 'Vérification…'}
-              </span>
+            <div className="hidden sm:flex items-center gap-1.5 ml-1 px-2 py-0.5 rounded-md bg-surface-muted border border-border text-[10px] font-medium text-muted">
+              <span className={cn(
+                'w-1.5 h-1.5 rounded-full',
+                serverStatus === 'online' ? 'bg-emerald-500' :
+                serverStatus === 'offline' ? 'bg-rose-500' : 'bg-amber-500 animate-pulse',
+              )} />
+              {serverStatus === 'online' ? 'En ligne' : serverStatus === 'offline' ? 'Hors ligne' : '…'}
             </div>
           </div>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-4">
+          <nav className="hidden lg:flex items-center gap-5">
             <button
+              type="button"
               onClick={toggleTheme}
-              className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 transition cursor-pointer"
+              className="p-2 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
               aria-label="Changer de thème"
             >
               {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
             </button>
-            <Link href="/contact" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition">
-              Contact
-            </Link>
-            <Link href="/faq" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition">
-              FAQ
-            </Link>
-            <a href="#parcours" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition">
-              Parcours
-            </a>
-            <a href="#mobile" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition">
-              Mobile
-            </a>
-            <a href="#tarifs" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition">
-              Tarifs
-            </a>
+            <a href="#modeles" className={navLinkClass}>Modèles</a>
+            <a href="#parcours" className={navLinkClass}>Parcours</a>
+            <a href="#tarifs" className={navLinkClass}>Tarifs</a>
+            <Link href="/contact" className={navLinkClass}>Contact</Link>
             {user ? (
               <>
-                <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
-                  Connecté en tant que <span className="font-bold text-primary">{user.name}</span> {tenant ? `(${tenant.name})` : ''}
+                <span className="text-xs text-muted max-w-[180px] truncate">
+                  {user.name}{tenant ? ` · ${tenant.name}` : ''}
                 </span>
-                <Link href="/dashboard" className="text-sm font-semibold bg-primary text-white px-4 py-2 rounded-xl hover:bg-primary-hover transition shadow-md shadow-primary/20">
-                  Tableau de Bord
+                <Link href="/dashboard">
+                  <Button size="sm">Tableau de bord</Button>
                 </Link>
-                <button 
-                  onClick={logout}
-                  className="text-sm font-semibold border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 px-4 py-2 rounded-xl transition cursor-pointer"
-                >
+                <Button type="button" size="sm" variant="secondary" onClick={logout}>
                   Déconnexion
-                </button>
+                </Button>
               </>
             ) : (
               <>
-                <Link href="/login" className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition">
-                  Connexion
-                </Link>
-                <Link href="/register" className="text-sm font-semibold bg-primary text-white px-4.5 py-2 rounded-xl hover:bg-primary-hover transition shadow-md shadow-primary/20">
-                  Essai Gratuit
+                <Link href="/login" className={navLinkClass}>Connexion</Link>
+                <Link href="/register">
+                  <Button size="sm">Essai gratuit</Button>
                 </Link>
               </>
             )}
           </nav>
 
-          {/* Mobile Menu Button */}
-          <div className="flex items-center gap-3 lg:hidden">
+          <div className="flex items-center gap-2 lg:hidden">
             <button
+              type="button"
               onClick={toggleTheme}
-              className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 transition cursor-pointer"
+              className="p-2 rounded-[var(--radius-button)] border border-border text-muted"
               aria-label="Changer de thème"
             >
               {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
             </button>
             <button
+              type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 transition cursor-pointer"
-              aria-label="Ouvrir le menu"
+              className="p-2 rounded-[var(--radius-button)] border border-border text-muted"
+              aria-label="Menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 py-6 space-y-4 animate-fade-in shadow-xl dark:shadow-lg">
-            <div className="flex flex-col gap-3">
-              <Link 
-                href="/contact" 
+          <div className="lg:hidden border-t border-border bg-surface px-6 py-5 space-y-3">
+            {[
+              { href: '#modeles', label: 'Modèles' },
+              { href: '#parcours', label: 'Parcours' },
+              { href: '#tarifs', label: 'Tarifs' },
+              { href: '/contact', label: 'Contact' },
+              { href: '/faq', label: 'FAQ' },
+            ].map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition py-2 border-b border-slate-100 dark:border-slate-900"
+                className="block text-sm font-medium text-muted hover:text-foreground py-2 border-b border-border"
               >
-                Contact
-              </Link>
-              <Link 
-                href="/faq" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition py-2 border-b border-slate-100 dark:border-slate-900"
-              >
-                FAQ
-              </Link>
-              <a 
-                href="#parcours" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition py-2 border-b border-slate-100 dark:border-slate-900"
-              >
-                Parcours invité
+                {item.label}
               </a>
-              <a 
-                href="#mobile" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition py-2 border-b border-slate-100 dark:border-slate-900"
-              >
-                Application mobile
-              </a>
-              <a 
-                href="#tarifs" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition py-2 border-b border-slate-100 dark:border-slate-900"
-              >
-                Tarifs
-              </a>
-              {user ? (
-                <>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold py-1">
-                    Connecté en tant que <span className="font-bold text-primary">{user.name}</span> {tenant ? `(${tenant.name})` : ''}
-                  </div>
-                  <Link 
-                    href="/dashboard" 
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm font-semibold bg-primary text-white px-4 py-2.5 rounded-xl hover:bg-primary-hover transition shadow-md shadow-primary/20 text-center"
-                  >
-                    Tableau de Bord
-                  </Link>
-                  <button 
-                    onClick={() => { logout(); setMobileMenuOpen(false); }}
-                    className="text-sm font-semibold border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 px-4 py-2.5 rounded-xl transition cursor-pointer text-center w-full"
-                  >
-                    Déconnexion
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link 
-                    href="/login" 
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary transition py-2 border-b border-slate-100 dark:border-slate-900 text-center"
-                  >
-                    Connexion
-                  </Link>
-                  <Link 
-                    href="/register" 
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="text-sm font-semibold bg-primary text-white px-4.5 py-2.5 rounded-xl hover:bg-primary-hover transition shadow-md shadow-primary/20 text-center"
-                  >
-                    Essai Gratuit
-                  </Link>
-                </>
-              )}
-            </div>
+            ))}
+            {user ? (
+              <div className="flex flex-col gap-2 pt-2">
+                <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
+                  <Button size="sm" fullWidth>Tableau de bord</Button>
+                </Link>
+                <Button type="button" size="sm" variant="secondary" fullWidth onClick={() => { logout(); setMobileMenuOpen(false); }}>
+                  Déconnexion
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 pt-2">
+                <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
+                  <Button size="sm" variant="secondary" fullWidth>Connexion</Button>
+                </Link>
+                <Link href="/register" onClick={() => setMobileMenuOpen(false)}>
+                  <Button size="sm" fullWidth>Essai gratuit</Button>
+                </Link>
+              </div>
+            )}
           </div>
         )}
       </header>
 
-      {/* Hero Section */}
-      <section className="py-16 lg:py-24 bg-background relative overflow-hidden">
-        <div className="page-container relative">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            {/* Hero Left: Value Proposition */}
-            <div className="space-y-6 text-left">
-              <p className="text-xs font-medium text-muted tracking-wide uppercase">
-                Web · Mobile · Protocole QR
+      {/* Hero — composition sobre : marque + message + CTA + aperçu modèle API */}
+      <section className="relative overflow-hidden border-b border-border">
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,var(--surface-muted)_0%,var(--background)_55%)]" />
+        <div className="page-container relative py-16 lg:py-22">
+          <div className="grid lg:grid-cols-[1.05fr_0.95fr] gap-12 lg:gap-16 items-center">
+            <div className="space-y-6">
+              <p className="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground">
+                EventMaster
               </p>
-              <h1 className="text-4xl sm:text-5xl font-semibold text-foreground tracking-tight leading-[1.1]">
-                L&apos;événementiel professionnel, de la salle au scan invité.
+              <h1 className="text-2xl sm:text-3xl font-semibold text-foreground/90 tracking-tight leading-snug max-w-lg">
+                Organisez vos événements, de la salle au scan invité.
               </h1>
-              <p className="text-base text-muted leading-relaxed max-w-xl">
-                Plans de salle 2D, RSVP multi-canal, protocole QR, livraison placement et rôles granulaires — isolé par organisation.
+              <p className="text-sm text-muted leading-relaxed max-w-md">
+                Plans 2D, invitations, RSVP et protocole QR — isolés par organisation.
               </p>
-              <ul className="flex flex-wrap gap-2 text-xs font-medium text-muted">
-                <li className="flex items-center gap-1.5 bg-surface border border-border px-2.5 py-1 rounded-md">
-                  <Smartphone className="w-3.5 h-3.5 text-primary" /> App iOS & Android
-                </li>
-                <li className="flex items-center gap-1.5 bg-surface border border-border px-2.5 py-1 rounded-md">
-                  <ScanLine className="w-3.5 h-3.5 text-primary" /> Protocole QR
-                </li>
-                <li className="flex items-center gap-1.5 bg-surface border border-border px-2.5 py-1 rounded-md">
-                  <Building2 className="w-3.5 h-3.5 text-primary" /> Salles 2D
-                </li>
-                <li className="flex items-center gap-1.5 bg-surface border border-border px-2.5 py-1 rounded-md">
-                  <ShieldCheck className="w-3.5 h-3.5 text-primary" /> Rôles
-                </li>
-              </ul>
-              <div className="flex flex-col sm:flex-row gap-3 pt-1">
+              <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
                 {user ? (
-                  <Link href="/dashboard" className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-medium rounded-[var(--radius-button)] transition group text-sm">
-                    Accéder au tableau de bord
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition" />
+                  <Link href="/dashboard">
+                    <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                      Accéder au tableau de bord
+                    </Button>
                   </Link>
                 ) : (
                   <>
-                    <Link href="/register" className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-medium rounded-[var(--radius-button)] transition group text-sm">
-                      Créer mon organisation
-                      <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition" />
+                    <Link href="/register">
+                      <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                        Créer mon organisation
+                      </Button>
                     </Link>
-                    <Link href="/login" className="inline-flex items-center justify-center px-5 py-2.5 border border-border hover:bg-surface text-foreground font-medium rounded-[var(--radius-button)] bg-surface transition text-sm">
-                      Se connecter
+                    <Link href="/login">
+                      <Button size="lg" variant="secondary">Se connecter</Button>
                     </Link>
                   </>
                 )}
               </div>
             </div>
 
-            {/* Hero Right: Live Interactive Presentation of Models */}
-            <div className="bg-surface p-4 sm:p-5 rounded-[var(--radius-card)] border border-border relative flex flex-col justify-between">
-              <div className="absolute -top-2.5 right-4 bg-surface border border-border text-muted px-2.5 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider z-10 flex items-center gap-1">
-                <Star className="w-3 h-3 text-primary" />
-                Aperçu
-              </div>
-
+            <div className="min-h-[320px] flex flex-col justify-center">
               {loadingPlans || loadingPublicTemplates ? (
-                <div className="h-[400px] flex items-center justify-center">
-                  <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                <div className="h-80 flex items-center justify-center">
+                  <Loader2 className="w-6 h-6 text-muted animate-spin" />
                 </div>
               ) : activePreview ? (
-                <>
-                  {/* Selector within Preview Widget */}
-                  <div className="flex gap-1.5 mb-4 border-b border-border pb-3 overflow-x-auto">
-                    {publicTemplates.map(t => (
-                      <button
-                        key={t.id}
-                        onClick={() => setPreviewTemplate(t.id)}
-                        className={`px-2.5 py-1 rounded-md text-xs font-medium transition whitespace-nowrap cursor-pointer ${previewTemplate === t.id ? 'bg-primary text-white' : 'bg-surface-muted text-muted hover:text-foreground'}`}
-                      >
-                        {t.name.split(' ')[0]}
-                      </button>
-                    ))}
-                  </div>
-
+                <div className="space-y-3">
+                  {publicTemplates.length > 1 && (
+                    <div className="flex gap-1 overflow-x-auto pb-1">
+                      {publicTemplates.map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => setPreviewTemplate(t.id)}
+                          className={cn(
+                            'px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition',
+                            previewTemplate === t.id
+                              ? 'bg-foreground text-background'
+                              : 'bg-surface border border-border text-muted hover:text-foreground',
+                          )}
+                        >
+                          {t.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <LandingInvitationPreview template={activePreview} />
-                </>
+                </div>
               ) : (
-                <div className="h-[400px] flex items-center justify-center text-muted text-sm">
-                  Aucun modèle disponible.
+                <div className="h-72 flex flex-col items-center justify-center text-center px-6 border border-dashed border-border rounded-[var(--radius-card)] bg-surface">
+                  <p className="text-sm font-medium text-foreground">Aucun modèle vitrine</p>
+                  <p className="text-xs text-muted mt-1.5 max-w-xs leading-relaxed">
+                    Le Super Admin active des modèles globaux via « Afficher sur la landing » dans le concepteur.
+                  </p>
+                  {isSuperAdmin && (
+                    <Link href="/dashboard/templates" className="mt-4">
+                      <Button size="sm" variant="secondary">Configurer les modèles</Button>
+                    </Link>
+                  )}
                 </div>
               )}
-
-              <div className="mt-4 text-center text-xs text-muted font-medium">
-                Liens RSVP sécurisés et uniques pour chaque invité.
-              </div>
             </div>
           </div>
         </div>
       </section>
 
       <LandingRolesSection />
-
       <LandingWorkflowSection />
-
       <LandingMobileSection />
 
-      {/* Nos Modèles Possibles (Invitation Models Showcase) */}
-      <section className="py-20 bg-white dark:bg-slate-950">
+      {/* Vitrine modèles — 100 % API publique / Super Admin */}
+      <section id="modeles" className="py-16 sm:py-20 bg-surface border-t border-border scroll-mt-16">
         <div className="page-container">
-          <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
-            <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Nos Modèles Possibles</h2>
-            <p className="text-slate-600 dark:text-slate-400">
+          <div className="max-w-2xl mb-10 space-y-3">
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+              Modèles d&apos;invitation
+            </h2>
+            <p className="text-sm text-muted leading-relaxed">
               {loadingPublicTemplates
-                ? 'Chargement des modèles publics…'
+                ? 'Chargement depuis la plateforme…'
                 : publicTemplates.length === 0
-                  ? 'Aucun modèle global pour le moment. Activez « Sur la landing page » sur un modèle global (sans organisation) depuis le concepteur visuel super admin.'
-                  : `${publicTemplates.length} modèle${publicTemplates.length > 1 ? 's' : ''} global${publicTemplates.length > 1 ? 'aux' : ''} affiché${publicTemplates.length > 1 ? 's' : ''} sur la vitrine, répartis en trois univers — privé, professionnel et cocktail.`}
+                  ? 'Aucun modèle publié. Le Super Admin crée un modèle global et active « Afficher sur la landing ».'
+                  : `${publicTemplates.length} modèle${publicTemplates.length > 1 ? 's' : ''} publié${publicTemplates.length > 1 ? 's' : ''} par l’équipe plateforme — personnalisables après inscription.`}
             </p>
-            
-            {/* Filter buttons */}
-            <div className="flex flex-wrap justify-center gap-2 pt-4">
-              {categories.map(c => (
+            {isSuperAdmin && (
+              <Link href="/dashboard?tab=templates" className="inline-flex text-xs font-medium text-foreground underline underline-offset-2 hover:no-underline">
+                Gérer la vitrine (Super Admin)
+              </Link>
+            )}
+            <div className="flex flex-wrap gap-1.5 pt-2">
+              {categories.map((c) => (
                 <button
                   key={c.id}
+                  type="button"
                   onClick={() => setSelectedCategory(c.id)}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${selectedCategory === c.id ? 'bg-primary text-white shadow-md dark:shadow-none' : 'bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'}`}
+                  className={cn(
+                    'px-3 py-1.5 rounded-md text-xs font-medium transition',
+                    selectedCategory === c.id
+                      ? 'bg-foreground text-background'
+                      : 'bg-surface-muted text-muted hover:text-foreground border border-border',
+                  )}
                 >
                   {c.name}
                 </button>
@@ -394,123 +333,105 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="space-y-16">
-            {loadingPublicTemplates ? (
-              <div className="flex justify-center py-16">
-                <Loader2 className="w-8 h-8 text-primary animate-spin" />
-              </div>
-            ) : publicTemplates.length === 0 ? (
-              <div className="text-center py-12 px-6 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl text-slate-500 dark:text-slate-400 font-medium max-w-lg mx-auto">
-                Aucun modèle n&apos;est affiché sur la vitrine pour l&apos;instant. Créez un modèle global dans le concepteur visuel et activez « Sur la landing page ».
-              </div>
-            ) : filteredTemplateGroups.every((g) => g.templates.length === 0) ? (
-              <div className="text-center py-12 text-slate-500 dark:text-slate-400 font-medium">
-                Aucun modèle disponible dans cette catégorie.
-              </div>
-            ) : (
-              filteredTemplateGroups.map((group) => (
-                <div key={group.id} className="space-y-8">
+          {loadingPublicTemplates ? (
+            <div className="flex justify-center py-16">
+              <Loader2 className="w-6 h-6 text-muted animate-spin" />
+            </div>
+          ) : publicTemplates.length === 0 ? (
+            <div className="py-12 px-6 border border-dashed border-border rounded-[var(--radius-card)] bg-background text-center max-w-lg">
+              <p className="text-sm text-muted leading-relaxed">
+                Créez un modèle global dans le concepteur, puis activez « Afficher sur la landing page ».
+              </p>
+            </div>
+          ) : filteredTemplateGroups.every((g) => g.templates.length === 0) ? (
+            <p className="text-sm text-muted py-8">Aucun modèle dans cette catégorie.</p>
+          ) : (
+            <div className="space-y-12">
+              {filteredTemplateGroups.map((group) => (
+                <div key={group.id} className="space-y-5">
                   {selectedCategory === 'all' && group.title && (
-                    <div className="text-center space-y-2">
-                      <h3 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">{group.title}</h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xl mx-auto">{group.subtitle}</p>
+                    <div>
+                      <h3 className="text-base font-semibold text-foreground">{group.title}</h3>
+                      <p className="text-xs text-muted mt-0.5">{group.subtitle}</p>
                     </div>
                   )}
-
-                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {group.templates.map((t) => (
-                      <div key={t.id} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-5 flex flex-col justify-between hover:shadow-md transition duration-300">
-                        <div className="space-y-4">
+                      <article
+                        key={t.id}
+                        className="bg-background border border-border rounded-[var(--radius-card)] p-4 flex flex-col em-soft-hover"
+                      >
                         <button
                           type="button"
                           onClick={() => setModalTemplate(t)}
-                          className="w-full text-left rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                          className="w-full text-left rounded-[var(--radius-button)] focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
                         >
                           <LandingInvitationPreview template={t} compact />
                         </button>
-
-                          <div className="flex items-center justify-between pt-1">
-                            <span className="text-[10px] bg-primary/10 dark:bg-primary/15 border border-primary/20 dark:border-primary/30 text-primary dark:text-primary/80 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                        <div className="mt-3 space-y-2 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">
                               {getCategoryLabel(t.category)}
                             </span>
                             <button
                               type="button"
                               onClick={() => setModalTemplate(t)}
-                              className="text-xs font-bold text-primary dark:text-primary flex items-center gap-1 hover:text-primary dark:hover:text-primary/80 transition cursor-pointer"
+                              className="text-xs font-medium text-foreground hover:underline inline-flex items-center gap-1"
                             >
-                              Apercevoir
-                              <ArrowRight className="w-3.5 h-3.5" />
+                              Aperçu <ArrowRight className="w-3 h-3" />
                             </button>
                           </div>
-
-                          <h3 className="font-extrabold text-slate-900 dark:text-white text-base leading-tight">{t.name}</h3>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{t.description}</p>
-
-                          <div className="flex flex-wrap gap-2">
-                            <span className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded-md text-[10px] text-slate-600 dark:text-slate-300 font-semibold flex items-center gap-1">
-                              <Layout className="w-3.5 h-3.5 text-primary" /> Personnalisable
-                            </span>
-                            <span className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded-md text-[10px] text-slate-600 dark:text-slate-300 font-semibold flex items-center gap-1">
-                              <Smartphone className="w-3.5 h-3.5 text-primary" /> Mobile Ready
-                            </span>
-                            <span className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 px-2 py-1 rounded-md text-[10px] text-slate-600 dark:text-slate-300 font-semibold flex items-center gap-1">
-                              <Compass className="w-3.5 h-3.5 text-primary" /> RSVP Inclus
-                            </span>
-                          </div>
+                          <h3 className="font-semibold text-sm text-foreground leading-snug">{t.name}</h3>
+                          <p className="text-xs text-muted leading-relaxed line-clamp-2">{t.description}</p>
                         </div>
-
-                        <div className="border-t border-slate-200/60 dark:border-slate-800/60 pt-4 mt-5 flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400">
-                          <span className="truncate max-w-[150px]">{t.name}</span>
-                          <Link href="/register" className="text-primary dark:text-primary hover:underline">
-                            Utiliser ce modèle
+                        <div className="border-t border-border pt-3 mt-4">
+                          <Link href="/register" className="text-xs font-medium text-foreground hover:underline">
+                            Utiliser ce modèle →
                           </Link>
                         </div>
-                      </div>
+                      </article>
                     ))}
                   </div>
                 </div>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
       <LandingPricingSection dbPlans={dbPlans} />
-
       <FaqSection />
 
-      {/* Section CTA (Call to Action) */}
-      <section className="py-20 bg-gradient-to-br from-[color-mix(in_srgb,var(--primary)_55%,#0f172a)] via-[color-mix(in_srgb,var(--primary)_25%,#020617)] to-slate-950 text-white relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(#4f46e5_1px,transparent_1px)] [background-size:24px_24px] opacity-20" />
-        <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] rounded-full bg-primary/100/20 blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-[-20%] right-[-20%] w-[60%] h-[60%] rounded-full bg-[color-mix(in_srgb,var(--brand-accent,#6366f1)_20%,transparent)] blur-[120px] pointer-events-none" />
-
-        <div className="page-container text-center space-y-8 relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/100/10 border border-primary/20 text-primary/80 text-xs font-bold">
-            <Sparkles className="w-4 h-4" />
-            <span>Prêt à commencer ?</span>
-          </div>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-none max-w-3xl mx-auto">
-            Donnez à vos événements l'élégance qu'ils méritent
+      <section className="py-16 sm:py-20 bg-foreground text-background">
+        <div className="page-container text-center space-y-5">
+          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight max-w-xl mx-auto">
+            Prêt à organiser votre prochain événement ?
           </h2>
-          <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            Rejoignez les organisateurs d&apos;événements privés et professionnels qui font confiance à EventMaster
-            pour leurs invitations, plans de table, protocole jour J et parcours invité web + mobile.
+          <p className="text-sm text-background/70 max-w-md mx-auto leading-relaxed">
+            Invitations, plan de table et protocole QR dans un seul espace, par organisation.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+          <div className="flex flex-col sm:flex-row gap-2.5 justify-center pt-2">
             {user ? (
-              <Link href="/dashboard" className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl shadow-lg shadow-primary/20 transition group text-sm">
-                Accéder à mon Tableau de Bord
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
+              <Link href="/dashboard">
+                <Button size="lg" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                  Tableau de bord
+                </Button>
               </Link>
             ) : (
               <>
-                <Link href="/register" className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl shadow-lg shadow-primary/20 transition group text-sm">
-                  Créer mon organisation gratuitement
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition" />
+                <Link href="/register">
+                  <Button size="lg" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                    Créer mon organisation
+                  </Button>
                 </Link>
-                <Link href="/contact" className="inline-flex items-center justify-center px-6 py-3 border border-slate-700 hover:border-slate-500 text-slate-200 hover:text-white font-semibold rounded-xl bg-slate-900/50 hover:bg-slate-900 transition text-sm">
-                  Parler à un conseiller
+                <Link href="/contact">
+                  <Button
+                    size="lg"
+                    variant="ghost"
+                    className="text-background/80 hover:text-background hover:bg-background/10 border border-background/20"
+                  >
+                    Nous contacter
+                  </Button>
                 </Link>
               </>
             )}
@@ -520,58 +441,32 @@ export default function Home() {
 
       <SiteFooter faqHref="/#faq" />
 
-      {/* Modal de prévisualisation de modèle */}
-      {modalTemplate && (
-        <div
-          className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-sm"
-          role="presentation"
-          onClick={() => setModalTemplate(null)}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="landing-preview-title"
-            className="bg-surface rounded-t-2xl sm:rounded-2xl max-w-md w-full border border-border p-6 space-y-6 shadow-2xl relative overflow-hidden max-h-[92vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-primary to-[var(--brand-accent,#6366f1)]" />
-            
-            <div className="flex justify-between items-center">
-              <span className="text-[10px] bg-primary/10 dark:bg-primary/15 border border-primary/20 dark:border-primary/30 text-primary dark:text-primary/80 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                {getCategoryLabel(modalTemplate.category)}
-              </span>
-              <button 
-                onClick={() => setModalTemplate(null)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 p-1 rounded-lg transition cursor-pointer"
-              >
-                <XCircle className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              <h3 id="landing-preview-title" className="text-xl font-extrabold text-slate-900 dark:text-white leading-tight">{modalTemplate.name}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{modalTemplate.description}</p>
-            </div>
-
-            <LandingInvitationPreview template={modalTemplate} />
-
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={() => setModalTemplate(null)}
-                className="flex-1 py-2.5 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition cursor-pointer"
-              >
-                Fermer
-              </button>
-              <Link
-                href="/register"
-                className="flex-1 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-xs text-center transition shadow-md dark:shadow-none"
-              >
-                Utiliser ce modèle
-              </Link>
-            </div>
+      <Modal
+        open={Boolean(modalTemplate)}
+        onClose={() => setModalTemplate(null)}
+        title={modalTemplate?.name}
+        description={modalTemplate?.description}
+        size="md"
+        footer={
+          <div className="flex w-full gap-2 justify-end">
+            <Button type="button" variant="secondary" size="sm" onClick={() => setModalTemplate(null)}>
+              Fermer
+            </Button>
+            <Link href="/register">
+              <Button size="sm">Utiliser ce modèle</Button>
+            </Link>
           </div>
-        </div>
-      )}
+        }
+      >
+        {modalTemplate && (
+          <div className="space-y-3">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">
+              {getCategoryLabel(modalTemplate.category)}
+            </span>
+            <LandingInvitationPreview template={modalTemplate} />
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

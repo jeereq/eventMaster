@@ -101,8 +101,8 @@ export function dbTemplateToLandingTemplate(t: PublicTemplateDto): LandingTempla
       borderColor: dark ? 'rgba(148,163,184,0.35)' : 'rgba(226,232,240,0.95)',
       textTitle: dark ? 'text-white' : 'text-slate-900',
       textBody: dark ? 'text-slate-400' : 'text-slate-600',
-      btnBg: 'bg-indigo-600 hover:bg-indigo-700',
-      btnText: 'text-white font-bold',
+      btnBg: 'bg-foreground hover:opacity-90',
+      btnText: 'text-background font-medium',
     },
     elements: previewElements,
     previewContent: normalizedContent
