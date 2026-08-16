@@ -125,32 +125,50 @@ export default function Home() {
             </div>
 
             <div className="min-h-[320px] flex flex-col justify-center">
-              {loadingPlans || loadingPublicTemplates ? (
+              {loadingPublicTemplates ? (
                 <div className="h-80 flex items-center justify-center">
                   <Loader2 className="w-6 h-6 text-muted animate-spin" />
                 </div>
               ) : activePreview ? (
                 <div className="space-y-3">
+                  <LandingInvitationPreview template={activePreview} />
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-muted truncate">
+                      <span className="font-medium text-foreground">{activePreview.name}</span>
+                      {' · '}
+                      {getCategoryLabel(activePreview.category)}
+                      {publicTemplates.length > 1
+                        ? ` · 1 sur ${publicTemplates.length} modèles`
+                        : ''}
+                    </p>
+                    <a
+                      href="#modeles"
+                      className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 shrink-0"
+                    >
+                      Voir tous les modèles
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
                   {publicTemplates.length > 1 && (
-                    <div className="flex gap-1 overflow-x-auto pb-1">
+                    <div className="flex gap-1.5 overflow-x-auto pb-0.5" role="tablist" aria-label="Modèles vitrine">
                       {publicTemplates.map((t) => (
                         <button
                           key={t.id}
                           type="button"
+                          role="tab"
+                          aria-selected={previewTemplate === t.id}
                           onClick={() => setPreviewTemplate(t.id)}
                           className={cn(
-                            'px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition',
+                            'h-1.5 rounded-full transition shrink-0',
                             previewTemplate === t.id
-                              ? 'bg-foreground text-background'
-                              : 'bg-surface border border-border text-muted hover:text-foreground',
+                              ? 'w-6 bg-foreground'
+                              : 'w-1.5 bg-border hover:bg-muted',
                           )}
-                        >
-                          {t.name}
-                        </button>
+                          title={t.name}
+                        />
                       ))}
                     </div>
                   )}
-                  <LandingInvitationPreview template={activePreview} />
                 </div>
               ) : (
                 <div className="h-72 flex flex-col items-center justify-center text-center px-6 border border-dashed border-border rounded-[var(--radius-card)] bg-surface">
@@ -242,7 +260,10 @@ export default function Home() {
                       >
                         <button
                           type="button"
-                          onClick={() => setModalTemplate(t)}
+                          onClick={() => {
+                            setPreviewTemplate(t.id);
+                            setModalTemplate(t);
+                          }}
                           className="w-full text-left rounded-[var(--radius-button)] focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
                         >
                           <LandingInvitationPreview template={t} compact />

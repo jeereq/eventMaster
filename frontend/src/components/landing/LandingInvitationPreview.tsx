@@ -250,30 +250,29 @@ export default function LandingInvitationPreview({
         ['text', 'button', 'image', 'divider', 'rsvp-block'].includes(el.type || ''),
       );
 
-  const elementsToRender = compact && hasBackgroundImage
-    ? (visibleElements as PreviewElement[]).filter((el) => el.type === 'image' || el.type === 'divider').slice(0, 2)
+  /** Compact : même contenu que l’aperçu plein, simplement réduit (pas une autre « version » du modèle). */
+  const elementsToRender = compact
+    ? (visibleElements as PreviewElement[]).slice(0, hasBackgroundImage ? 5 : 6)
     : visibleElements;
 
   return (
     <>
       <link href={LANDING_PREVIEW_FONTS} rel="stylesheet" />
       <div
-        className={`rounded-[var(--radius-card)] border shadow-[var(--shadow-soft)] transition-all duration-300 flex flex-col relative overflow-hidden ${compact ? 'min-h-[180px]' : 'p-6 sm:p-8 min-h-[340px]'} ${className}`}
+        className={`rounded-[var(--radius-card)] border shadow-[var(--shadow-soft)] transition-all duration-300 flex flex-col relative overflow-hidden ${compact ? 'min-h-[200px] p-3' : 'p-6 sm:p-8 min-h-[340px]'} ${className}`}
         style={{
           ...backgroundStyle,
           borderColor: template.style.borderColor || 'rgba(226,232,240,0.9)',
-          ...(compact ? { padding: hasBackgroundImage ? '0.5rem' : '0.75rem' } : { maxWidth: canvasStyle.maxWidth, minHeight: canvasStyle.minHeight }),
+          ...(compact
+            ? {}
+            : { maxWidth: canvasStyle.maxWidth, minHeight: canvasStyle.minHeight }),
         }}
       >
         {hasBackgroundImage && compact && (
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none z-[1]" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent pointer-events-none z-[1]" />
         )}
 
-        <div
-          className={`relative z-10 flex flex-wrap gap-y-2 w-full ${
-            compact && hasBackgroundImage ? 'mt-auto pt-8' : compact ? '' : ''
-          }`}
-        >
+        <div className="relative z-10 flex flex-wrap gap-y-2 w-full">
           {useLegacyOnly
             ? template.elements.map((el, i) => (
                 <div key={i} className="w-full">
