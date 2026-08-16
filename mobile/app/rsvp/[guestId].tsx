@@ -147,7 +147,7 @@ export default function RsvpGuestScreen() {
             <View style={styles.pdfCard}>
               <Text style={styles.pdfTitle}>Invitation PDF</Text>
               <Text style={styles.pdfText}>
-                Votre invitation avec placement de table, débloquée après validation à l&apos;entrée.
+                Votre invitation avec placement de table.
               </Text>
               <Button title="Ouvrir le PDF" onPress={openPdf} variant="secondary" />
             </View>
@@ -155,8 +155,9 @@ export default function RsvpGuestScreen() {
             <View style={styles.pdfCard}>
               <Text style={styles.pdfTitle}>Plan de table & PDF</Text>
               <Text style={styles.pdfText}>
-                Présentez votre badge QR à l&apos;accueil. Votre plan de table, invitation PDF et
-                localisation GPS seront débloqués et envoyés après confirmation de présence.
+                Votre présence est confirmée. Le plan de table, l&apos;invitation PDF et la
+                localisation GPS vous seront envoyés dès qu&apos;un siège vous sera assigné (selon
+                forfait).
               </Text>
             </View>
           ) : guest.rsvp === 'PENDING' ? (
@@ -164,7 +165,7 @@ export default function RsvpGuestScreen() {
               <Text style={styles.pdfTitle}>Après votre réponse</Text>
               <Text style={styles.pdfText}>
                 Une fois votre présence confirmée, vous recevrez un badge QR. Le placement détaillé
-                (PDF, plan, GPS) arrivera après l&apos;accueil le jour J.
+                (PDF, plan, GPS) partira aussi à ce moment, selon le forfait de l&apos;organisateur.
               </Text>
             </View>
           ) : null}

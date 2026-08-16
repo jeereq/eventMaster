@@ -833,11 +833,11 @@ export default function EventsPage() {
       } else if (notified > 0) {
         if (planFeatures?.seatNotifications) {
           setSuccess(
-            `Plan enregistré. ${notified} invité${notified > 1 ? 's' : ''} notifié${notified > 1 ? 's' : ''} (table, siège et voisins de table). Le PDF et le GPS seront envoyés à l'arrivée.`,
+            `Plan enregistré. ${notified} invité${notified > 1 ? 's' : ''} notifié${notified > 1 ? 's' : ''} (table, siège et voisins). Les invités déjà confirmés reçoivent aussi le PDF et le GPS.`,
           );
         } else {
           setSuccess(
-            `Plan enregistré. ${notified} invité${notified > 1 ? 's' : ''} notifié${notified > 1 ? 's' : ''} (table, siège et voisins de table). Le PDF et le GPS au check-in nécessitent un forfait Premium ou supérieur.`,
+            `Plan enregistré. ${notified} invité${notified > 1 ? 's' : ''} notifié${notified > 1 ? 's' : ''} (table, siège et voisins). Le PDF et le GPS à la confirmation RSVP nécessitent Premium ou supérieur.`,
           );
         }
       } else {
@@ -2360,7 +2360,7 @@ export default function EventsPage() {
                 <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                   <p className="font-semibold">Notifications PDF / GPS non incluses</p>
                   <p className="text-xs mt-1 text-amber-800">
-                    Vous pouvez placer les invités. L’envoi automatique du PDF, du plan et du GPS à l’accueil
+                    Vous pouvez placer les invités. L’envoi automatique du PDF, du plan et du GPS dès acceptation RSVP
                     nécessite Premium 1 ou supérieur (forfait actuel : {tenant?.plan || 'FREE'}).
                   </p>
                   <Link href="/dashboard/billing" className="inline-block mt-2 text-xs font-bold text-primary hover:underline">
@@ -2519,7 +2519,7 @@ export default function EventsPage() {
                 <p className="text-xs text-muted mt-0.5">
                   {eventLatitude && eventLongitude
                     ? `${eventLatitude}, ${eventLongitude}`
-                    : 'Optionnel — pour le pin WhatsApp après check-in'}
+                    : 'Optionnel — pour le pin WhatsApp dès acceptation RSVP'}
                 </p>
               </div>
               <span className={cn(

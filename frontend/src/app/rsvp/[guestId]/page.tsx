@@ -2156,8 +2156,8 @@ export default function RsvpPage() {
             </>
           ) : (
             <p className="text-xs text-muted leading-relaxed max-w-sm mx-auto">
-              L&apos;itinéraire GPS détaillé sera partagé après validation de votre présence à
-              l&apos;entrée (scan QR). Le lieu texte ci-dessus reste disponible pour vous orienter.
+              L&apos;itinéraire GPS détaillé est disponible dès votre confirmation RSVP,
+              dès que votre place est assignée. Le lieu texte ci-dessus reste disponible pour vous orienter.
             </p>
           )}
         </div>

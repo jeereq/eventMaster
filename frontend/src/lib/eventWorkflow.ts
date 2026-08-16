@@ -199,7 +199,7 @@ export function computeEventWorkflowState(input: {
     {
       id: 'send',
       title: 'Envoi invitation',
-      description: 'Diffusez le lien RSVP (sans placement — envoyé après protocole).',
+      description: 'Diffusez le lien RSVP (sans placement — livré dès acceptation).',
       tab: 'invitations',
       detail:
         sentCount > 0
@@ -235,13 +235,13 @@ export function computeEventWorkflowState(input: {
     {
       id: 'tableNotify',
       title: 'Notification placement',
-      description: 'PDF, plan et GPS envoyés après scan / validation à l\'entrée.',
+      description: 'PDF, plan et GPS envoyés dès acceptation RSVP (si place assignée).',
       tab: 'tablePlan',
       detail:
         placementDeliveredCount > 0
           ? `✓ ${placementDeliveredCount} placement(s) envoyé(s)`
           : assignedCount > 0
-            ? 'Après validation à l\'entrée (protocole)'
+            ? 'Dès acceptation RSVP (si forfait Premium+)'
             : 'Assignez des places d\'abord',
     },
     {

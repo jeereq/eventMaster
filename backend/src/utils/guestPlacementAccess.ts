@@ -1,10 +1,16 @@
 type GuestPreferences = Record<string, unknown> | null | undefined;
 
+/**
+ * Accès au plan / PDF / GPS : dès RSVP accepté, ou après check-in / vérification siège (legacy).
+ */
 export function canGuestAccessPlacement(guest: {
   checkedInAt?: Date | string | null;
   seatVerified?: boolean | null;
+  rsvp?: string | null;
 }): boolean {
-  return Boolean(guest.checkedInAt || guest.seatVerified);
+  return Boolean(
+    guest.rsvp === 'ACCEPTED' || guest.checkedInAt || guest.seatVerified,
+  );
 }
 
 export function getPlacementNotifiedAt(preferences: GuestPreferences): string | null {

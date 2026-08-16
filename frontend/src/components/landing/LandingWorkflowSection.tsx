@@ -29,17 +29,17 @@ const STEPS = [
   },
   {
     step: 3,
+    title: 'Livraison',
+    description:
+      'PDF, plan de table et pin GPS envoyés automatiquement dès confirmation RSVP.',
+    icon: QrCode,
+  },
+  {
+    step: 4,
     title: 'Check-in',
     description:
       'Scan QR à l’entrée. Confirmation de présence et validation du siège.',
     icon: ScanLine,
-  },
-  {
-    step: 4,
-    title: 'Livraison',
-    description:
-      'PDF, plan de table et pin GPS envoyés automatiquement après validation.',
-    icon: QrCode,
   },
 ] as const;
 
@@ -59,7 +59,7 @@ export default function LandingWorkflowSection() {
             De l&apos;invitation à la table
           </h2>
           <p className="text-sm text-muted leading-relaxed">
-            Les données de placement ne sont partagées qu&apos;après confirmation de présence à l&apos;entrée.
+            Les données de placement partent dès la confirmation RSVP (si place assignée et selon forfait).
           </p>
         </div>
 
@@ -91,7 +91,7 @@ export default function LandingWorkflowSection() {
         <div className="bg-surface-muted border border-border rounded-[var(--radius-card)] p-5 sm:p-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
             <div className="space-y-1.5">
-              <h3 className="text-sm font-semibold text-foreground">Après le check-in</h3>
+              <h3 className="text-sm font-semibold text-foreground">Dès l’acceptation RSVP</h3>
               <p className="text-xs text-muted max-w-xl leading-relaxed">
                 PDF, plan de table et localisation GPS partent automatiquement — sans action manuelle.
               </p>

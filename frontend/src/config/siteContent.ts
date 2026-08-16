@@ -59,7 +59,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'placement-delivery',
     question: 'Quand l\'invité reçoit-il son plan de table, PDF et localisation GPS ?',
     answer:
-      'L\'invitation initiale contient uniquement le lien RSVP (e-mail ou WhatsApp). Le PDF personnalisé, le plan de table interactif et la localisation GPS WhatsApp sont envoyés automatiquement après la confirmation de présence à l\'entrée (scan QR protocole) ou la validation du siège — jamais à l\'envoi de l\'invitation.',
+      'L\'invitation initiale contient uniquement le lien RSVP (e-mail ou WhatsApp). Le PDF personnalisé, le plan de table interactif et la localisation GPS WhatsApp sont envoyés automatiquement dès l\'acceptation RSVP, dès qu\'une place est assignée (forfait Premium 1+) — jamais à l\'envoi de l\'invitation.',
   },
   {
     id: 'free-trial',
@@ -89,7 +89,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'protocol-qr',
     question: 'Comment fonctionne le protocole QR ?',
     answer:
-      'Chaque invité qui accepte reçoit un badge QR unique sur son portail RSVP. Le personnel protocole scanne le code à l\'entrée via le navigateur web ou l\'application mobile (scan caméra natif). EventMaster enregistre la présence, peut valider le siège et déclenche l\'envoi automatique du PDF, du plan de table et de la localisation GPS. Disponible à partir du forfait Business ; notifications placement à partir de Premium 1.',
+      'Chaque invité qui accepte reçoit un badge QR unique sur son portail RSVP. Le personnel protocole scanne le code à l\'entrée via le navigateur web ou l\'application mobile (scan caméra natif). EventMaster enregistre la présence et peut valider le siège. Le PDF, le plan de table et la localisation GPS partent déjà à l\'acceptation RSVP (Premium 1+). Disponible à partir du forfait Business ; notifications placement à partir de Premium 1.',
   },
   {
     id: 'roles',

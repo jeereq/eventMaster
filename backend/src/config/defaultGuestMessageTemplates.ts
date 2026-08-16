@@ -33,7 +33,7 @@ export const DEFAULT_GUEST_MESSAGE_TEMPLATES: DefaultGuestMessageTemplate[] = [
 👉 *Confirmez votre présence* en un clic :
 {{rsvpLink}}
 
-_Votre plan de table, PDF et localisation GPS vous seront envoyés à l'accueil le jour J._
+_Votre plan de table, PDF et localisation GPS vous seront envoyés dès votre confirmation RSVP (si votre place est déjà assignée)._
 _Nous serons ravis de vous compter parmi nous._
 — L'équipe organisatrice · EventMaster`,
   },
@@ -55,7 +55,7 @@ Nous n'avons pas encore reçu votre réponse RSVP.
 👉 Merci de confirmer ici :
 {{rsvpLink}}
 
-_Après confirmation, présentez votre QR à l'entrée — le placement détaillé arrive alors._
+_Après confirmation, votre placement (PDF, plan, GPS) vous est envoyé dès que votre place est assignée._
 _Votre réponse nous aide à mieux organiser cette réception._
 — EventMaster`,
   },
@@ -71,8 +71,8 @@ Votre présence à *{{title}}* est bien *confirmée* !
 📅 *Date* : {{date}}
 📍 *Lieu* : {{location}}
 
-Présentez le QR Code ci-joint à l'entrée pour valider votre accès.
-Votre plan de table, invitation PDF et localisation GPS vous seront envoyés après l'accueil.
+Présentez le QR Code ci-joint à l'entrée le jour J.
+Votre plan de table, invitation PDF et localisation GPS vous sont envoyés dès maintenant (si votre place est déjà assignée).
 
 _Au plaisir de vous accueillir très bientôt !_
 — L'équipe organisatrice · EventMaster`,

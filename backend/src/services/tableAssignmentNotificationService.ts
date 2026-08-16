@@ -1,12 +1,14 @@
 import { prisma } from '../db';
 import { getTenantPlanSnapshot } from './planFeaturesService';
 import { notifyGuestTableAssignment } from './guestSeatNotificationService';
+import { deliverGuestPlacementIfEligible } from './guestPlacementDeliveryService';
 import {
   extractGuestAssignments,
   findAssignmentChanges,
   getTableMateGuestIds,
 } from '../utils/tablePlanAssignment';
 import { normalizeGuestGuidelines, formatDressCodeText } from '../utils/guestGuidelines';
+import { getPlacementNotifiedAt } from '../utils/guestPlacementAccess';
 
 export type TableAssignmentNotificationSummary = {
   notified: number;
@@ -77,11 +79,13 @@ export async function notifyTableAssignmentChanges(params: {
       email: true,
       phone: true,
       preferences: true,
+      rsvp: true,
     },
   });
 
   const guestById = new Map(guests.map((g) => [g.id, g]));
   const dressCode = extractDressCode(event.guestGuidelines);
+  const hasSeatNotifications = Boolean(snapshot.features.seatNotifications);
 
   const results: TableAssignmentNotificationSummary['results'] = [];
   let notified = 0;
@@ -104,6 +108,67 @@ export async function notifyTableAssignmentChanges(params: {
           orderBy: { lastName: 'asc' },
         })
       : [];
+
+    // Invité déjà confirmé : livraison complète PDF / GPS (si forfait)
+    if (guest.rsvp === 'ACCEPTED' && hasSeatNotifications) {
+      const alreadySent = getPlacementNotifiedAt(guest.preferences as Record<string, unknown> | null);
+
+      if (!alreadySent) {
+        const placement = await deliverGuestPlacementIfEligible({
+          guestId: guest.id,
+          eventId,
+          tenantId,
+        });
+        if (placement.delivered) {
+          notified += 1;
+          results.push({
+            guestId: guest.id,
+            guestName: `${guest.firstName} ${guest.lastName}`.trim(),
+            sent: true,
+            channels: placement.notification?.channels || [],
+            errors: placement.notification?.errors || [],
+          });
+        } else {
+          skipped += 1;
+          results.push({
+            guestId: guest.id,
+            guestName: `${guest.firstName} ${guest.lastName}`.trim(),
+            sent: false,
+            channels: [],
+            errors: [placement.skippedReason || 'skipped'],
+          });
+        }
+        continue;
+      }
+
+      // Réassignation après une première livraison : renvoyer le full
+      const notification = await notifyGuestTableAssignment({
+        guest,
+        eventId,
+        event: {
+          title: event.title,
+          description: event.description,
+          date: event.date,
+          location: event.location,
+          guestGuidelines: event.guestGuidelines,
+        },
+        assignedSeat: assigned,
+        tableMates: mateGuests,
+        invitation,
+        dressCode,
+        delivery: 'full',
+      });
+      if (notification.sent) notified += 1;
+      else skipped += 1;
+      results.push({
+        guestId: guest.id,
+        guestName: `${guest.firstName} ${guest.lastName}`.trim(),
+        sent: notification.sent,
+        channels: notification.channels,
+        errors: notification.errors,
+      });
+      continue;
+    }
 
     const notification = await notifyGuestTableAssignment({
       guest,
