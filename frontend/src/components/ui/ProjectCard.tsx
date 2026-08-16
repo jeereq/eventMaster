@@ -32,6 +32,8 @@ export interface ProjectCardProps {
   title: string;
   meta?: React.ReactNode;
   description?: React.ReactNode;
+  /** Contenu aligné à droite en vue liste (badges, statut…), style Asana */
+  aside?: React.ReactNode;
   cover?: React.ReactNode;
   accentColor?: string;
   actions?: React.ReactNode;
@@ -47,6 +49,7 @@ export function ProjectCard({
   title,
   meta,
   description,
+  aside,
   cover,
   accentColor,
   actions,
@@ -61,7 +64,7 @@ export function ProjectCard({
 
   if (layout === 'list') {
     return (
-      <div className={cn('space-y-2', className)}>
+      <div className={cn('space-y-0', className)}>
         <div
           role={interactive ? 'button' : undefined}
           tabIndex={interactive ? 0 : undefined}
@@ -77,28 +80,41 @@ export function ProjectCard({
               : undefined
           }
           className={cn(
-            'group flex items-center gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-3 py-2.5',
-            'transition-[background-color,border-color] duration-150 hover:bg-card-hover hover:border-border-subtle',
+            'group relative flex items-center gap-3 rounded-[var(--radius-button)] px-2.5 py-2',
+            'border border-transparent bg-transparent',
+            'transition-colors duration-120 em-soft-hover',
+            'hover:bg-surface hover:border-border',
             interactive && 'cursor-pointer',
           )}
         >
           <span
-            className="h-9 w-1.5 shrink-0 rounded-full"
+            className="h-8 w-1 shrink-0 rounded-full"
             style={{ backgroundColor: stripe }}
             aria-hidden
           />
           {cover && (
-            <div className="h-10 w-14 shrink-0 overflow-hidden rounded-md bg-surface-muted">
+            <div className="h-9 w-12 shrink-0 overflow-hidden rounded-md bg-surface-muted border border-border">
               {cover}
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-foreground">{title}</p>
+            <p className="truncate text-sm font-semibold text-foreground tracking-tight">{title}</p>
             {meta && <div className="mt-0.5 truncate text-xs text-muted">{meta}</div>}
+            {description && (
+              <div className="mt-0.5 text-xs text-muted line-clamp-1 leading-relaxed">{description}</div>
+            )}
           </div>
+          {aside && (
+            <div
+              className="hidden sm:flex shrink-0 items-center gap-1.5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {aside}
+            </div>
+          )}
           {actions && (
             <div
-              className="flex shrink-0 items-center gap-1.5 opacity-80 group-hover:opacity-100"
+              className="flex shrink-0 items-center gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
               onClick={(e) => e.stopPropagation()}
             >
               {actions}
@@ -106,7 +122,7 @@ export function ProjectCard({
           )}
         </div>
         {children && (
-          <div className="rounded-[var(--radius-card)] border border-border bg-surface px-3 py-2.5 space-y-2">
+          <div className="ml-3.5 pl-3 border-l border-border mb-1 space-y-1.5 py-1">
             {children}
           </div>
         )}

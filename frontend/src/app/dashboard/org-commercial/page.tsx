@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import {
   Building2, Loader2, TrendingUp, Users, Wallet,
 } from 'lucide-react';
-import { Button, PageHeader, SkeletonCommercialView } from '@/components/ui';
+import { Button, PageHeader, SkeletonCommercialView, Pagination, paginateItems } from '@/components/ui';
 import { CommercialNotificationsPanel } from '@/components/CommercialNotifications';
 import ReferralShareButtons from '@/components/commercial/ReferralShareButtons';
 
@@ -42,6 +42,10 @@ export default function OrgCommercialPage() {
   const { user, access } = useAuth();
   const [data, setData] = useState<OrgCommercialDashboard | null>(null);
   const [loading, setLoading] = useState(true);
+  const [orgsPage, setOrgsPage] = useState(1);
+  const [commPage, setCommPage] = useState(1);
+  const ORGS_PER_PAGE = 10;
+  const COMM_PER_PAGE = 10;
 
   useEffect(() => {
     if (access?.level !== 'commercial') return;
@@ -63,8 +67,11 @@ export default function OrgCommercialPage() {
     return <SkeletonCommercialView />;
   }
 
+  const paginatedOrgs = paginateItems(data.organizations, orgsPage, ORGS_PER_PAGE);
+  const paginatedComms = paginateItems(data.commissions, commPage, COMM_PER_PAGE);
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
         title="Réseau commercial"
         description={`Parrainez de nouvelles organisations pour ${data.organizationName || 'votre entreprise'} et suivez vos commissions.`}
@@ -113,7 +120,7 @@ export default function OrgCommercialPage() {
             Aucune organisation parrainée pour le moment.
           </p>
         ) : (
-          data.organizations.map((o) => (
+          paginatedOrgs.map((o) => (
             <div key={o.id} className="bg-white dark:bg-slate-900 border rounded-2xl p-4 space-y-1">
               <div className="flex items-start justify-between gap-2">
                 <p className="font-semibold text-slate-900 dark:text-white">{o.name}</p>
@@ -144,7 +151,7 @@ export default function OrgCommercialPage() {
                 </td>
               </tr>
             ) : (
-              data.organizations.map((o) => (
+              paginatedOrgs.map((o) => (
                 <tr key={o.id}>
                   <td className="px-4 py-3 font-semibold">{o.name}</td>
                   <td className="px-4 py-3 text-slate-500">{o.managerName || '—'}</td>
@@ -157,13 +164,21 @@ export default function OrgCommercialPage() {
         </table>
       </div>
 
+      <Pagination
+        page={orgsPage}
+        pageSize={ORGS_PER_PAGE}
+        total={data.organizations.length}
+        onPageChange={setOrgsPage}
+        itemLabel="organisations"
+      />
+
       {data.commissions.length > 0 && (
         <div>
           <h2 className="font-bold text-lg mb-3 flex items-center gap-2">
             <Users className="w-5 h-5" /> Historique commissions
           </h2>
           <div className="md:hidden space-y-3">
-            {data.commissions.map((c) => (
+            {paginatedComms.map((c) => (
               <div key={c.id} className="bg-white dark:bg-slate-900 border rounded-2xl p-4 space-y-1">
                 <div className="flex items-start justify-between gap-2">
                   <p className="font-semibold text-sm text-slate-900 dark:text-white">{c.tenant.name}</p>
@@ -188,7 +203,7 @@ export default function OrgCommercialPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {data.commissions.map((c) => (
+                {paginatedComms.map((c) => (
                   <tr key={c.id}>
                     <td className="px-4 py-3">{c.billingPeriod}</td>
                     <td className="px-4 py-3">{c.tenant.name}</td>
@@ -204,6 +219,13 @@ export default function OrgCommercialPage() {
               </tbody>
             </table>
           </div>
+          <Pagination
+            page={commPage}
+            pageSize={COMM_PER_PAGE}
+            total={data.commissions.length}
+            onPageChange={setCommPage}
+            itemLabel="commissions"
+          />
         </div>
       )}
     </div>

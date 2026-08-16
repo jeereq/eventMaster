@@ -12,7 +12,7 @@ import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import RoomLayoutEditor from '@/components/RoomLayoutEditor';
 import {
   ProjectCard, ViewModeToggle, useViewMode, SkeletonRoomsView,
-  Button, Modal, EmptyState, Alert, Input,
+  Button, Modal, EmptyState, Alert, Input, Pagination, paginateItems,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
@@ -92,6 +92,8 @@ const labelClass = 'block text-xs font-medium text-muted mb-1.5';
 export default function RoomsManagement() {
   const { planFeatures, planQuota, tenant } = useAuth();
   const { mode: roomsViewMode, setViewMode: setRoomsViewMode, columns: roomsColumns, setGridColumns: setRoomsColumns, gridClassName: roomsGridClass } = useViewMode('em-view-rooms', 'grid', 3);
+  const [roomsPage, setRoomsPage] = useState(1);
+  const ROOMS_PER_PAGE = 9;
   const [rooms, setRooms] = useState<RoomItem[]>([]);
   const [canManage, setCanManage] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMemberOption[]>([]);
@@ -620,7 +622,7 @@ export default function RoomsManagement() {
               : 'flex flex-col gap-3'
           }
         >
-          {rooms.map((room) => {
+          {paginateItems(rooms, roomsPage, ROOMS_PER_PAGE).map((room) => {
             const metaLine = [room.floor, room.location, room.capacity ? `${room.capacity} places` : null]
               .filter(Boolean)
               .join(' · ') || 'Sans détails';
@@ -752,6 +754,15 @@ export default function RoomsManagement() {
             );
           })}
         </div>
+      )}
+      {rooms.length > 0 && (
+        <Pagination
+          page={roomsPage}
+          pageSize={ROOMS_PER_PAGE}
+          total={rooms.length}
+          onPageChange={setRoomsPage}
+          itemLabel="salles"
+        />
       )}
 
       <Modal

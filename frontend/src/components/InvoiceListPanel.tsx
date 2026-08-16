@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { FileText, Mail, Eye } from 'lucide-react';
 import InvoiceDetailModal, { type PlatformInvoiceItem } from '@/components/InvoiceDetailModal';
+import { Pagination, paginateItems } from '@/components/ui';
 
 export type { PlatformInvoiceItem };
 
@@ -149,6 +150,9 @@ export default function InvoiceListPanel({
   apiPrefix?: 'billing' | 'admin';
 }) {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
+  const paginated = paginateItems(invoices, page, PAGE_SIZE);
 
   if (invoices.length === 0) {
     return (
@@ -166,7 +170,7 @@ export default function InvoiceListPanel({
   return (
     <>
       <div className="md:hidden space-y-3">
-        {invoices.map((inv) => (
+        {paginated.map((inv) => (
           <InvoiceMobileCard
             key={inv.id}
             inv={inv}
@@ -194,7 +198,7 @@ export default function InvoiceListPanel({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-            {invoices.map((inv) => (
+            {paginated.map((inv) => (
               <tr key={inv.id} className="bg-white dark:bg-slate-900 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
                 <InvoiceRowCells
                   inv={inv}
@@ -207,6 +211,14 @@ export default function InvoiceListPanel({
           </tbody>
         </table>
       </div>
+
+      <Pagination
+        page={page}
+        pageSize={PAGE_SIZE}
+        total={invoices.length}
+        onPageChange={setPage}
+        itemLabel="factures"
+      />
 
       <InvoiceDetailModal
         invoiceId={selectedInvoiceId}
