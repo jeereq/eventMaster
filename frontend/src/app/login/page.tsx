@@ -44,15 +44,15 @@ export default function LoginPage() {
       backHref="/"
       backLabel="Retour au site"
     >
-      <Card padding="lg" className="shadow-xl dark:ring-1 dark:ring-slate-800">
+      <Card padding="lg" className="border-border shadow-sm">
         <div className="text-center lg:text-left mb-6">
-          <div className="inline-flex lg:hidden items-center justify-center bg-indigo-600 p-3 rounded-2xl text-white mb-4 shadow-lg shadow-indigo-500/20">
+          <div className="inline-flex lg:hidden items-center justify-center bg-primary p-3 rounded-[var(--radius-button)] text-white mb-4">
             <PartyPopper className="w-7 h-7" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Connexion</h2>
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+          <h2 className="text-2xl font-semibold text-foreground tracking-tight">Connexion</h2>
+          <p className="mt-2 text-sm text-muted">
             Ravi de vous revoir !{' '}
-            <Link href="/register" className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+            <Link href="/register" className="font-semibold text-primary hover:underline">
               Créez votre compte
             </Link>
           </p>
@@ -74,10 +74,10 @@ export default function LoginPage() {
 
           <div className="space-y-1.5">
             <div className="flex justify-between items-center">
-              <label htmlFor="password" className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+              <label htmlFor="password" className="text-xs font-semibold text-muted">
                 Mot de passe
               </label>
-              <Link href="/ask-reset-password" className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+              <Link href="/ask-reset-password" className="text-xs font-semibold text-primary hover:underline">
                 Mot de passe oublié ?
               </Link>
             </div>

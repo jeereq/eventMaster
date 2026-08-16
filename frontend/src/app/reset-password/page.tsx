@@ -60,7 +60,7 @@ function ResetPasswordForm() {
 
   if (!token) {
     return (
-      <Card padding="lg" className="shadow-xl dark:ring-1 dark:ring-slate-800 space-y-4">
+      <Card padding="lg" className="border-border shadow-sm space-y-4">
         <Alert variant="error" title="Lien invalide">
           Ce lien de réinitialisation est invalide ou a expiré. Veuillez effectuer une nouvelle demande.
         </Alert>
@@ -72,10 +72,10 @@ function ResetPasswordForm() {
   }
 
   return (
-    <Card padding="lg" className="shadow-xl dark:ring-1 dark:ring-slate-800">
+    <Card padding="lg" className="border-border shadow-sm">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Nouveau mot de passe</h2>
-        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+        <h2 className="text-2xl font-semibold text-foreground tracking-tight">Nouveau mot de passe</h2>
+        <p className="mt-2 text-sm text-muted">
           Définissez votre nouveau mot de passe sécurisé.
         </p>
       </div>

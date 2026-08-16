@@ -34,43 +34,62 @@ export function AuthSplitLayout({
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className="min-h-screen flex bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
-      {/* Panneau marketing */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-950 text-white p-12 flex-col justify-between relative overflow-hidden border-r border-slate-800">
-        <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] rounded-full bg-indigo-500/10 blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-[-20%] right-[-20%] w-[60%] h-[60%] rounded-full bg-violet-500/10 blur-[120px] pointer-events-none" />
+    <div className="min-h-screen flex bg-background text-foreground transition-colors duration-200">
+      {/* Panneau marketing — couleurs via --auth-* / --primary */}
+      <div
+        className="hidden lg:flex lg:w-[46%] xl:w-1/2 text-white p-10 xl:p-12 flex-col justify-between relative overflow-hidden border-r border-white/10"
+        style={{
+          background: `linear-gradient(145deg, var(--auth-from) 0%, var(--auth-via) 48%, var(--auth-to) 100%)`,
+        }}
+      >
+        <div
+          className="absolute top-[-18%] left-[-18%] w-[55%] h-[55%] rounded-full blur-[110px] pointer-events-none opacity-40"
+          style={{ background: `rgb(var(--auth-glow))` }}
+        />
+        <div
+          className="absolute bottom-[-22%] right-[-12%] w-[50%] h-[50%] rounded-full blur-[100px] pointer-events-none opacity-25"
+          style={{ background: `rgb(var(--auth-glow))` }}
+        />
+        <div
+          className="absolute inset-0 opacity-[0.07] pointer-events-none"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle at 20% 20%, white 0.5px, transparent 0.5px), radial-gradient(circle at 80% 60%, white 0.5px, transparent 0.5px)',
+            backgroundSize: '24px 24px',
+          }}
+        />
 
-        <div className="flex items-center gap-3 relative z-10">
-          <div className="bg-indigo-600 p-2.5 rounded-2xl text-white shadow-lg shadow-indigo-500/30">
-            <PartyPopper className="w-6 h-6" />
+        <Link href="/" className="flex items-center gap-3 relative z-10 group">
+          <div className="bg-primary p-2.5 rounded-[var(--radius-button)] text-white shadow-lg transition group-hover:bg-primary-hover">
+            <PartyPopper className="w-5 h-5" />
           </div>
-          <span className="font-bold text-2xl tracking-tight">EventMaster</span>
-        </div>
+          <span className="font-semibold text-xl tracking-tight">EventMaster</span>
+        </Link>
 
-        <div className="space-y-8 my-auto relative z-10 max-w-lg">
+        <div className="space-y-8 my-auto relative z-10 max-w-md">
           <div className="space-y-3">
             {badge && (
-              <span className="text-xs bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+              <span className="inline-flex text-[10px] bg-white/10 border border-white/15 text-white/90 font-semibold px-2.5 py-1 rounded-md uppercase tracking-wider">
                 {badge}
               </span>
             )}
-            <h1 className="text-4xl font-bold tracking-tight leading-tight">{title}</h1>
-            <p className="text-slate-300 text-sm leading-relaxed">{description}</p>
+            <h1 className="text-3xl xl:text-4xl font-semibold tracking-tight leading-tight">{title}</h1>
+            <p className="text-white/70 text-sm leading-relaxed">{description}</p>
           </div>
 
           {features.length > 0 && (
-            <div className="space-y-4">
+            <div className="space-y-2.5">
               {features.map((feat) => (
                 <div
                   key={feat.title}
-                  className="flex gap-4 items-start bg-white/[0.03] border border-white/[0.06] hover:border-white/10 p-4 rounded-xl transition duration-200"
+                  className="flex gap-3.5 items-start bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.07] hover:border-white/15 p-3.5 rounded-[var(--radius-card)] transition duration-150"
                 >
-                  <div className="bg-indigo-600/20 text-indigo-400 p-2 rounded-xl shrink-0">
-                    <feat.icon className="w-5 h-5" />
+                  <div className="bg-primary/25 text-white p-2 rounded-[var(--radius-button)] shrink-0">
+                    <feat.icon className="w-4.5 h-4.5" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-sm text-white">{feat.title}</h3>
-                    <p className="text-xs text-slate-400 leading-relaxed mt-0.5">{feat.desc}</p>
+                    <p className="text-xs text-white/55 leading-relaxed mt-0.5">{feat.desc}</p>
                   </div>
                 </div>
               ))}
@@ -78,36 +97,46 @@ export function AuthSplitLayout({
           )}
         </div>
 
-        <div className="text-xs text-slate-500 relative z-10 flex justify-between items-center">
-          <span>© 2026 EventMaster</span>
-          <Link href="/contact" className="hover:text-indigo-400 transition">Support</Link>
+        <div className="text-xs text-white/40 relative z-10 flex justify-between items-center">
+          <span>© {new Date().getFullYear()} EventMaster</span>
+          <Link href="/contact" className="hover:text-white/80 transition">Support</Link>
         </div>
       </div>
 
       {/* Formulaire */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-center p-6 sm:p-12 lg:p-16 relative">
-        <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-10">
+      <div className="w-full lg:w-[54%] xl:w-1/2 flex flex-col justify-center p-5 sm:p-10 lg:p-14 relative bg-background">
+        <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-10 flex items-center gap-2">
+          <Link
+            href="/"
+            className="lg:hidden inline-flex items-center gap-2 text-sm font-semibold text-foreground"
+          >
+            <span className="bg-primary p-1.5 rounded-[var(--radius-button)] text-white">
+              <PartyPopper className="w-3.5 h-3.5" />
+            </span>
+            EventMaster
+          </Link>
           <button
+            type="button"
             onClick={toggleTheme}
-            className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition shadow-sm"
+            className="p-2.5 rounded-[var(--radius-button)] border border-border bg-surface text-muted hover:bg-surface-muted hover:text-foreground transition"
             aria-label="Changer de thème"
           >
             {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
           </button>
         </div>
 
-        <div className="max-w-md w-full mx-auto space-y-6">
+        <div className="max-w-md w-full mx-auto space-y-5 pt-10 lg:pt-0">
           {backHref && (
             <Link
               href={backHref}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-primary transition"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               {backLabel}
             </Link>
           )}
           {children}
-          <p className="text-center text-xs text-slate-400 lg:hidden">© 2026 EventMaster</p>
+          <p className="text-center text-xs text-muted lg:hidden">© {new Date().getFullYear()} EventMaster</p>
         </div>
       </div>
     </div>
@@ -125,19 +154,19 @@ export function MethodToggle<T extends string>({ value, onChange, options, label
   return (
     <div className="space-y-2">
       {label && (
-        <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">{label}</p>
+        <p className="text-xs font-semibold text-muted">{label}</p>
       )}
-      <div className={cn('grid gap-2', options.length === 2 ? 'grid-cols-2' : `grid-cols-${options.length}`)}>
+      <div className={cn('grid gap-2', options.length === 2 ? 'grid-cols-2' : 'grid-cols-1')}>
         {options.map((opt) => (
           <button
             key={opt.value}
             type="button"
             onClick={() => onChange(opt.value)}
             className={cn(
-              'py-2.5 px-3 rounded-xl border text-xs font-semibold transition flex items-center justify-center gap-2',
+              'py-2.5 px-3 rounded-[var(--radius-button)] border text-xs font-semibold transition flex items-center justify-center gap-2',
               value === opt.value
-                ? 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-400'
-                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800',
+                ? 'bg-primary/10 border-primary/30 text-primary'
+                : 'bg-surface border-border text-muted hover:bg-surface-muted hover:text-foreground',
             )}
           >
             {opt.icon}

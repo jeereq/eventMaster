@@ -101,7 +101,7 @@ function VerifyOtpForm() {
         <Card padding="lg" className="max-w-md w-full text-center space-y-4">
           <Alert variant="error">Aucune adresse e-mail fournie.</Alert>
           <div className="flex flex-col gap-2 text-sm">
-            <Link href="/login" className="text-indigo-600 font-semibold hover:underline">
+            <Link href="/login" className="text-primary font-semibold hover:underline">
               Se connecter pour valider mon compte
             </Link>
             <Link href="/register" className="text-slate-500 hover:underline">
@@ -125,9 +125,9 @@ function VerifyOtpForm() {
       backHref={fromLogin ? '/login' : '/register'}
       backLabel={fromLogin ? 'Retour à la connexion' : "Retour à l'inscription"}
     >
-      <Card padding="lg" className="shadow-xl dark:ring-1 dark:ring-slate-800">
+      <Card padding="lg" className="border-border shadow-sm">
         <div className="text-center space-y-2 mb-6">
-          <div className="inline-flex p-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600">
+          <div className="inline-flex p-3 rounded-2xl bg-primary/10 text-primary">
             {verificationMethod === 'WHATSAPP' ? <MessageSquare className="w-8 h-8" /> : <Mail className="w-8 h-8" />}
           </div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-white">Validez votre compte</h1>
@@ -152,7 +152,7 @@ function VerifyOtpForm() {
                 value={d}
                 onChange={(e) => handleDigitChange(i, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(i, e)}
-                className="w-11 h-14 text-center text-xl font-bold border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-slate-50 dark:bg-slate-950 transition"
+                className="w-11 h-14 text-center text-xl font-bold border-2 border-border rounded-[var(--radius-button)] focus:border-primary focus:ring-2 focus:ring-primary/20 bg-surface-muted transition"
                 aria-label={`Chiffre ${i + 1}`}
               />
             ))}
@@ -182,7 +182,7 @@ function VerifyOtpForm() {
 
         <p className="text-center text-xs text-slate-400 mt-4">
           Déjà validé ?{' '}
-          <Link href="/login" className="text-indigo-600 font-semibold hover:underline">Se connecter</Link>
+          <Link href="/login" className="text-primary font-semibold hover:underline">Se connecter</Link>
         </p>
       </Card>
     </AuthSplitLayout>
@@ -193,7 +193,7 @@ export default function VerifyOtpPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     }>
       <VerifyOtpForm />
