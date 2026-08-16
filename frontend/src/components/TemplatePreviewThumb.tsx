@@ -43,7 +43,7 @@ export default function TemplatePreviewThumb({
               el.type === 'button' ? (
                 <div
                   key={i}
-                  className="text-[9px] font-bold text-white bg-indigo-600 px-2 py-0.5 rounded-md text-center mx-auto w-fit mt-1"
+                  className="text-[9px] font-bold text-white bg-primary px-2 py-0.5 rounded-md text-center mx-auto w-fit mt-1"
                 >
                   {el.text?.slice(0, 24) || 'Bouton'}
                 </div>
@@ -74,7 +74,7 @@ export default function TemplatePreviewThumb({
         {elements.length > 0 ? (
           elements.map((el, i) =>
             el.type === 'button' ? (
-              <div key={i} className="h-2 rounded bg-indigo-500/80 mx-auto w-3/4 mt-auto" />
+              <div key={i} className="h-2 rounded bg-primary/100/80 mx-auto w-3/4 mt-auto" />
             ) : (
               <div
                 key={i}

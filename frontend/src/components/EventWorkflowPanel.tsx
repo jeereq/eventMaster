@@ -134,14 +134,14 @@ export default function EventWorkflowPanel({
           {currentStep && (
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-white/70 border border-primary/20 rounded-xl">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-indigo-600">Étape en cours</p>
+                <p className="text-xs font-bold uppercase tracking-wider text-primary">Étape en cours</p>
                 <p className="text-sm font-bold text-foreground mt-0.5">{currentStep.title}</p>
                 <p className="text-xs text-muted mt-1">{currentStep.description}</p>
               </div>
               {currentStep.href ? (
                 <Link
                   href={currentStep.href}
-                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-primary hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition shrink-0"
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-hover text-white text-xs font-bold rounded-[var(--radius-button)] transition shrink-0"
                 >
                   Ouvrir
                   <ExternalLink className="w-3.5 h-3.5" />
@@ -150,7 +150,7 @@ export default function EventWorkflowPanel({
                 <button
                   type="button"
                   onClick={() => onNavigateTab(currentStep.tab!)}
-                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-primary hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition shrink-0"
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-hover text-white text-xs font-bold rounded-[var(--radius-button)] transition shrink-0"
                 >
                   Continuer
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -181,7 +181,7 @@ function WorkflowStepCard({
         <span className="text-[10px] font-bold text-muted">#{index + 1}</span>
         <StepIcon step={step} />
       </div>
-      <p className="text-[11px] font-bold text-slate-800 leading-tight line-clamp-2">{step.title}</p>
+      <p className="text-[11px] font-bold text-foreground leading-tight line-clamp-2">{step.title}</p>
       <p className="text-[10px] text-muted mt-1 line-clamp-2 leading-snug">{step.detail}</p>
     </>
   );
@@ -190,12 +190,12 @@ function WorkflowStepCard({
     return (
       <Link
         href={step.href}
-        className={`block p-2.5 rounded-xl border text-left transition hover:shadow-sm ${
+        className={`block p-2.5 rounded-[var(--radius-card)] border text-left transition hover:shadow-sm ${
           step.status === 'complete'
             ? 'bg-emerald-50/80 border-emerald-200'
             : step.status === 'current'
-              ? 'bg-indigo-50 border-indigo-300 ring-1 ring-indigo-200'
-              : 'bg-white border-slate-200 hover:border-indigo-200'
+              ? 'bg-primary/10 border-primary/40 ring-1 ring-primary/20'
+              : 'bg-surface border-border hover:border-primary/30'
         }`}
       >
         {content}
@@ -208,14 +208,14 @@ function WorkflowStepCard({
       type="button"
       onClick={onClick}
       disabled={!step.tab}
-      className={`p-2.5 rounded-xl border text-left transition hover:shadow-sm disabled:cursor-default ${
+      className={`p-2.5 rounded-[var(--radius-card)] border text-left transition hover:shadow-sm disabled:cursor-default ${
         isActiveTab && step.tab
-          ? 'bg-indigo-100 border-indigo-400 ring-1 ring-indigo-300'
+          ? 'bg-primary/15 border-primary/50 ring-1 ring-primary/30'
           : step.status === 'complete'
             ? 'bg-emerald-50/80 border-emerald-200 hover:border-emerald-300'
             : step.status === 'current'
-              ? 'bg-indigo-50 border-indigo-300 ring-1 ring-indigo-200'
-              : 'bg-white border-slate-200 hover:border-indigo-200'
+              ? 'bg-primary/10 border-primary/40 ring-1 ring-primary/20'
+              : 'bg-surface border-border hover:border-primary/30'
       }`}
     >
       {content}
@@ -234,14 +234,14 @@ function WorkflowStepRow({
   isActiveTab: boolean;
   onClick: () => void;
 }) {
-  const rowClass = `w-full flex items-start gap-3 p-3 rounded-xl border text-left transition ${
+  const rowClass = `w-full flex items-start gap-3 p-3 rounded-[var(--radius-card)] border text-left transition ${
     isActiveTab && step.tab
-      ? 'bg-indigo-50 border-indigo-300'
+      ? 'bg-primary/10 border-primary/40'
       : step.status === 'complete'
         ? 'bg-emerald-50/60 border-emerald-200'
         : step.status === 'current'
-          ? 'bg-indigo-50/80 border-indigo-200'
-          : 'bg-white border-slate-200'
+          ? 'bg-primary/5 border-primary/30'
+          : 'bg-surface border-border'
   }`;
 
   const inner = (

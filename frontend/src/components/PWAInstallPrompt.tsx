@@ -100,11 +100,11 @@ export default function PWAInstallPrompt({
 
   const wrapperClass =
     variant === 'guest'
-      ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white border-indigo-500/30'
-      : 'bg-indigo-600 text-white border-indigo-500/30';
+      ? 'bg-primary text-white border-primary/40'
+      : 'bg-primary text-white border-primary/40';
 
   return (
-    <div className={`fixed bottom-4 inset-x-4 md:inset-x-auto md:right-6 md:max-w-sm z-[150] border rounded-2xl shadow-2xl p-4 ${wrapperClass}`}>
+    <div className={`fixed bottom-4 inset-x-4 md:inset-x-auto md:right-6 md:max-w-sm z-[150] border rounded-[var(--radius-card)] shadow-soft p-4 ${wrapperClass}`}>
       <button
         type="button"
         onClick={dismiss}
@@ -115,7 +115,7 @@ export default function PWAInstallPrompt({
       </button>
 
       <div className="flex items-start gap-3 pr-6">
-        <div className="p-2 rounded-xl bg-white/15 shrink-0">
+        <div className="p-2 rounded-[var(--radius-button)] bg-white/15 shrink-0">
           <Smartphone className="w-5 h-5" />
         </div>
         <div className="space-y-2">
@@ -125,7 +125,7 @@ export default function PWAInstallPrompt({
           </p>
 
           {showIosHelp ? (
-            <div className="text-[11px] bg-white/10 rounded-xl p-3 space-y-1.5">
+            <div className="text-[11px] bg-white/10 rounded-[var(--radius-card)] p-3 space-y-1.5">
               <p className="font-semibold flex items-center gap-1.5">
                 <Share className="w-3.5 h-3.5" />
                 Sur iPhone / iPad
@@ -136,7 +136,7 @@ export default function PWAInstallPrompt({
             <button
               type="button"
               onClick={handleInstall}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white text-indigo-700 text-xs font-bold hover:bg-indigo-50 transition"
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-[var(--radius-button)] bg-white text-primary text-xs font-bold hover:bg-surface-muted transition"
             >
               <Download className="w-3.5 h-3.5" />
               Installer l&apos;application

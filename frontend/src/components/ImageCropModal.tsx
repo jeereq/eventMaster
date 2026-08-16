@@ -101,7 +101,7 @@ export default function ImageCropModal({
             <div className="relative w-full aspect-video bg-slate-100 dark:bg-slate-950 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800">
               <img src={sourceUrl} alt="" className="w-full h-full object-contain" />
               <div
-                className="absolute border-2 border-indigo-500 bg-indigo-500/20 pointer-events-none"
+                className="absolute border-2 border-primary bg-primary/100/20 pointer-events-none"
                 style={{
                   left: `${crop.x * 100}%`,
                   top: `${crop.y * 100}%`,

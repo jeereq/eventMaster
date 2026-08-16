@@ -174,18 +174,18 @@ export default function SubscriptionApprovalModal({
           )}
 
           <div className="text-sm space-y-2">
-            <p className="font-bold text-slate-900 dark:text-white">{request.tenant?.name || 'Organisation'}</p>
+            <p className="font-bold text-foreground dark:text-white">{request.tenant?.name || 'Organisation'}</p>
 
             {currentPlan && (
               <div className="flex flex-wrap items-center gap-2 text-xs">
-                <span className="text-slate-500">Forfait actuel :</span>
-                <span className="font-bold px-2 py-0.5 rounded border border-slate-200 bg-slate-50 text-slate-700">
+                <span className="text-muted">Forfait actuel :</span>
+                <span className="font-bold px-2 py-0.5 rounded border border-border bg-surface-muted text-foreground">
                   {currentPlan}
                 </span>
                 {isPlanChange && (
                   <>
-                    <ArrowRight className="w-3.5 h-3.5 text-indigo-500" />
-                    <span className="font-bold px-2 py-0.5 rounded border border-indigo-200 bg-indigo-50 text-indigo-700">
+                    <ArrowRight className="w-3.5 h-3.5 text-primary" />
+                    <span className="font-bold px-2 py-0.5 rounded border border-primary/30 bg-primary/10 text-primary">
                       {request.requestedPlan}
                     </span>
                   </>
@@ -194,19 +194,19 @@ export default function SubscriptionApprovalModal({
             )}
 
             {request.tenant?.licenseActive && request.tenant.licenseExpiresAt && (
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted">
                 Licence actuelle expire le{' '}
                 <span className="font-semibold">{formatExpiry(request.tenant.licenseExpiresAt)}</span>
                 {isPlanChange && ' — une nouvelle période sera appliquée au nouveau forfait.'}
               </p>
             )}
 
-            <p className="text-slate-500">
+            <p className="text-muted">
               Forfait demandé :{' '}
-              <span className="font-semibold text-indigo-600">{request.requestedPlan}</span> ·{' '}
+              <span className="font-semibold text-primary">{request.requestedPlan}</span> ·{' '}
               {request.durationDays} jours
             </p>
-            <p className="text-slate-600">
+            <p className="text-muted">
               Prix catalogue :{' '}
               <span className="font-bold">{baseAmount.toLocaleString('fr-FR')} FC</span>
             </p>
@@ -218,7 +218,7 @@ export default function SubscriptionApprovalModal({
           </div>
 
           <div className="space-y-3">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+            <label className="text-xs font-bold text-muted uppercase tracking-wider flex items-center gap-1.5">
               <Percent className="w-3.5 h-3.5" />
               Réduction spéciale (optionnelle)
             </label>
@@ -229,8 +229,8 @@ export default function SubscriptionApprovalModal({
                 disabled={submitting || feedback?.type === 'success'}
                 className={`flex-1 py-2 text-xs font-bold rounded-lg border transition cursor-pointer ${
                   discountMode === 'percent'
-                    ? 'bg-indigo-600 text-white border-indigo-600'
-                    : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                    ? 'bg-primary text-white border-primary'
+                    : 'border-border  text-muted '
                 }`}
               >
                 Pourcentage
@@ -241,8 +241,8 @@ export default function SubscriptionApprovalModal({
                 disabled={submitting || feedback?.type === 'success'}
                 className={`flex-1 py-2 text-xs font-bold rounded-lg border transition cursor-pointer ${
                   discountMode === 'amount'
-                    ? 'bg-indigo-600 text-white border-indigo-600'
-                    : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                    ? 'bg-primary text-white border-primary'
+                    : 'border-border  text-muted '
                 }`}
               >
                 Montant final
@@ -259,9 +259,9 @@ export default function SubscriptionApprovalModal({
                   value={discountPercent}
                   onChange={(e) => setDiscountPercent(e.target.value)}
                   disabled={submitting || feedback?.type === 'success'}
-                  className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-slate-50 dark:bg-slate-950"
+                  className="flex-1 px-3 py-2 border border-border rounded-xl text-sm bg-surface-muted dark:bg-background"
                 />
-                <span className="text-sm font-semibold text-slate-500">%</span>
+                <span className="text-sm font-semibold text-muted">%</span>
               </div>
             ) : (
               <input
@@ -272,30 +272,30 @@ export default function SubscriptionApprovalModal({
                 onChange={(e) => setApprovedAmount(e.target.value)}
                 disabled={submitting || feedback?.type === 'success'}
                 placeholder={`Ex: ${baseAmount}`}
-                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-sm bg-slate-50 dark:bg-slate-950"
+                className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-surface-muted dark:bg-background"
               />
             )}
 
-            <div className="bg-slate-50 dark:bg-slate-950 rounded-xl p-3 text-xs space-y-1">
+            <div className="bg-surface-muted dark:bg-background rounded-xl p-3 text-xs space-y-1">
               {pricing.discountAmount > 0 && (
                 <p className="text-emerald-600 font-semibold">
                   Réduction : − {pricing.discountAmount.toLocaleString('fr-FR')} FC ({pricing.discountPercent} %)
                 </p>
               )}
-              <p className="text-slate-700 dark:text-slate-300">
+              <p className="text-foreground ">
                 Montant facturé :{' '}
-                <span className="font-bold text-indigo-600">{pricing.finalAmount.toLocaleString('fr-FR')} FC</span>
+                <span className="font-bold text-primary">{pricing.finalAmount.toLocaleString('fr-FR')} FC</span>
               </p>
             </div>
           </div>
 
           {commercials.length > 0 ? (
-            <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 rounded-xl p-3 space-y-2">
-              <p className="text-xs font-bold text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
+            <div className="bg-primary/10 dark:bg-primary/10 border border-primary/20 dark:border-primary/30 rounded-xl p-3 space-y-2">
+              <p className="text-xs font-bold text-primary dark:text-primary flex items-center gap-1.5">
                 <UserCheck className="w-3.5 h-3.5" />
                 Commerciaux liés — seront informés par e-mail
               </p>
-              <ul className="text-xs text-indigo-600 dark:text-indigo-400 space-y-1">
+              <ul className="text-xs text-primary dark:text-primary space-y-1">
                 {commercials.map((c) => (
                   <li key={c.email}>
                     {c.name} ({c.kind}) — {c.email}
@@ -304,7 +304,7 @@ export default function SubscriptionApprovalModal({
               </ul>
             </div>
           ) : (
-            <p className="text-xs text-slate-400 italic">Aucun commercial rattaché à cette organisation.</p>
+            <p className="text-xs text-muted italic">Aucun commercial rattaché à cette organisation.</p>
           )}
 
           <div className="flex gap-3 pt-2">

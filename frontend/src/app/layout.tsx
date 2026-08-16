@@ -7,6 +7,7 @@ import { PlatformSiteProvider } from "@/context/PlatformSiteContext";
 import PWARegister from "@/components/PWARegister";
 import ViewPreferencesBridge from "@/components/ViewPreferencesBridge";
 import MaintenanceOverlay from "@/components/MaintenanceOverlay";
+import BrandFaviconSync from "@/components/BrandFaviconSync";
 
 /** Inter ≈ substitut open-source de TWK Lausanne / Asana Sans (UI produit Asana). */
 const inter = Inter({
@@ -22,8 +23,11 @@ const geistMono = Geist_Mono({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#0f172a",
-  width: "device-width",
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#4f46e5' },
+    { media: '(prefers-color-scheme: dark)', color: '#4f46e5' },
+  ],
+  width: 'device-width',
   initialScale: 1,
 };
 
@@ -69,6 +73,7 @@ export default function RootLayout({
           <PlatformSiteProvider>
             <AuthProvider>
               <ViewPreferencesBridge>
+                <BrandFaviconSync />
                 <PWARegister />
                 <MaintenanceOverlay />
                 {children}
