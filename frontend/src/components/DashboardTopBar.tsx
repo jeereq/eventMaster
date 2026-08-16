@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { NotificationBell } from '@/components/CommercialNotifications';
+import { ViewCustomizerTrigger } from '@/components/ViewCustomizer';
 import { Sun, Moon, User } from 'lucide-react';
 
 function useDashboardTitle(): { title: string; subtitle?: string } {
@@ -78,6 +79,7 @@ export default function DashboardTopBar({
 
       <div className="flex items-center gap-2 shrink-0">
         {showCommercialNotifications && <NotificationBell />}
+        <ViewCustomizerTrigger />
         <button
           type="button"
           onClick={toggleTheme}

@@ -15,9 +15,14 @@ import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import UserLegalGate from '@/components/UserLegalGate';
 import { NotificationBell } from '@/components/CommercialNotifications';
 import DashboardTopBar from '@/components/DashboardTopBar';
+import ViewCustomizerDrawer, {
+  ViewCustomizerEdgeHandle,
+  ViewCustomizerTrigger,
+} from '@/components/ViewCustomizer';
 import { Tooltip } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { TourProvider } from '@/context/TourContext';
+import { ViewPreferencesProvider } from '@/context/ViewPreferencesContext';
 import ProductTourOverlay from '@/components/guide/ProductTourOverlay';
 
 interface NavItem {
@@ -340,6 +345,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
     >
       <TourProvider>
+      <ViewPreferencesProvider tenantBranding={tenant?.branding}>
         <div className="min-h-screen flex flex-col md:flex-row bg-background text-foreground transition-colors duration-200">
       {/* Overlay mobile */}
       {mobileMenuOpen && (
@@ -361,6 +367,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
         <div className="flex items-center gap-1.5">
           {showCommercialNotifications && <NotificationBell />}
+          <ViewCustomizerTrigger />
           <button
             onClick={toggleTheme}
             className="p-2 rounded-lg border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
@@ -558,12 +565,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Contenu principal */}
       <main id="main-content" className="flex-1 min-w-0 overflow-y-auto bg-background flex flex-col">
         <DashboardTopBar showCommercialNotifications={showCommercialNotifications} />
-        <div className="page-container py-5 sm:py-6 lg:py-8 flex-1">
+        <div className="page-container py-5 sm:py-6 lg:py-8 flex-1 em-dashboard-content">
           <UserLegalGate>{children}</UserLegalGate>
         </div>
       </main>
+        <ViewCustomizerEdgeHandle />
+        <ViewCustomizerDrawer />
         <ProductTourOverlay />
         </div>
+      </ViewPreferencesProvider>
       </TourProvider>
     </Suspense>
   );

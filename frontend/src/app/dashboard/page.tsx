@@ -21,6 +21,7 @@ import BillingDiscountFields, { getBillingPricingFromFields } from '@/components
 import type { QuotaSnapshot } from '@/lib/quotaDisplay';
 import { PageHeader, Alert, Button, ProjectCard, SkeletonDashboardHome, SkeletonTabContent, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, paginateItems } from '@/components/ui';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
+import { useViewPreferencesOptional } from '@/context/ViewPreferencesContext';
 import { PLAN_IDS, type PlanId } from '@/config/landingPricing';
 import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
@@ -249,6 +250,8 @@ interface TenantSubscriptionHistoryEntry {
 
 function DashboardPageContent() {
   const { user, tenant, access, planQuota } = useAuth();
+  const viewPrefs = useViewPreferencesOptional();
+  const widgets = viewPrefs?.prefs.widgets;
   const {
     mode: homeEventsMode,
     setViewMode: setHomeEventsMode,
@@ -4091,8 +4094,37 @@ function DashboardPageContent() {
     return `${used} / ${max}`;
   };
 
+  const showGreeting = widgets?.greeting !== false;
+  const showStats = widgets?.stats !== false;
+  const showQuota = widgets?.quota !== false;
+  const showRecentEvents = widgets?.recentEvents !== false;
+  const showBillingCard = widgets?.billingCard !== false;
+  const showAnalyticsPromo = widgets?.analyticsPromo !== false;
+
+  const greetingHour = new Date().getHours();
+  const greetingLabel =
+    greetingHour < 12 ? 'Bonjour' : greetingHour < 18 ? 'Bon après-midi' : 'Bonsoir';
+  const dateLabelLong = new Date().toLocaleDateString('fr-FR', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 em-dashboard-home">
+      {showGreeting ? (
+        <div className="space-y-1">
+          <p className="text-[11px] font-medium text-muted capitalize">{dateLabelLong}</p>
+          <h2 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">
+            {greetingLabel}, {(user?.name || 'là').split(' ')[0]}
+          </h2>
+          <p className="text-sm text-muted">
+            Voici l&apos;état de vos événements et quotas aujourd&apos;hui.
+          </p>
+        </div>
+      ) : null}
+
       <PageHeader
         title="Tableau de bord"
         description={
@@ -4117,6 +4149,7 @@ function DashboardPageContent() {
         />
       )}
 
+      {showStats && (
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div className="bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3">
           <div className="flex items-center justify-between">
@@ -4177,8 +4210,9 @@ function DashboardPageContent() {
           </div>
         </div>
       </div>
+      )}
 
-      {orgQuota && (
+      {showQuota && orgQuota && (
         <div className="space-y-3">
           <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider">
             Quotas restants — forfait {tenant?.plan || billing?.plan}
@@ -4188,9 +4222,10 @@ function DashboardPageContent() {
       )}
 
       {/* Main Row */}
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className={cn('grid gap-6', showBillingCard ? 'lg:grid-cols-3' : 'lg:grid-cols-1')}>
         {/* Events List */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className={cn('space-y-6', showBillingCard && 'lg:col-span-2')}>
+          {showRecentEvents && (
           <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-lg font-semibold text-foreground">Événements récents</h2>
@@ -4280,8 +4315,10 @@ function DashboardPageContent() {
               </>
             )}
           </div>
+          )}
 
           {/* Analytics Promo Card */}
+          {showAnalyticsPromo && (
           <div className="bg-gradient-to-br from-[color-mix(in_srgb,var(--primary)_55%,#0f172a)] via-[color-mix(in_srgb,var(--primary)_25%,#020617)] to-slate-950 text-white rounded-2xl p-6 shadow-md border border-border flex flex-col sm:flex-row items-center justify-between gap-6 relative overflow-hidden">
             <div className="absolute top-[-20%] left-[-20%] w-[50%] h-[50%] rounded-full bg-primary/20 blur-[80px] pointer-events-none" />
             <div className="space-y-2 relative z-10">
@@ -4299,9 +4336,11 @@ function DashboardPageContent() {
               Consulter les statistiques
             </Link>
           </div>
+          )}
         </div>
 
         {/* Plan Summary Card */}
+        {showBillingCard && (
         <div className="bg-surface border border-border rounded-[var(--radius-card)] p-6 flex flex-col justify-between">
           <div className="space-y-6">
             <h2 className="text-lg font-semibold text-foreground">Statut d&apos;abonnement</h2>
@@ -4350,6 +4389,7 @@ function DashboardPageContent() {
             </Link>
           </div>
         </div>
+        )}
       </div>
     </div>
   );

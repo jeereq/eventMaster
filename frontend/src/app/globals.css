@@ -66,6 +66,24 @@ html {
   font-size: 15px;
 }
 
+html[data-density="compact"] .em-dashboard-content {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+html[data-density="compact"] .em-dashboard-home.space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1rem;
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(1rem); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.22s ease-out;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

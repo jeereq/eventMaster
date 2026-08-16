@@ -311,6 +311,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else {
       applyBrandToDocument(null);
     }
+    // Laisse la personnalisation de vue (accent user) se réappliquer par-dessus
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('em-brand-applied'));
+    }
   }, [tenant?.id, tenant?.branding?.primary, tenant?.branding?.accent, tenant?.branding?.sidebar]);
 
   const updateBranding = async (payload: TenantBranding & { reset?: boolean }) => {
@@ -320,6 +324,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setTenant(next);
       localStorage.setItem('tenant', JSON.stringify(next));
       applyBrandToDocument(payload.reset ? null : data.branding);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('em-brand-applied'));
+      }
     }
     return data;
   };
