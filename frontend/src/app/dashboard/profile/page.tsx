@@ -6,7 +6,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
   User, Mail, Phone, Lock, Building, Loader2,
-  Save, Award, Calendar, Users, LayoutGrid,
+  Save, Award, Calendar, Users, LayoutGrid, Palette,
 } from 'lucide-react';
 import TeamManagement from '../TeamManagement';
 import RoomsManagement from '../RoomsManagement';
@@ -16,7 +16,7 @@ import { cn } from '@/lib/cn';
 type ProfileTab = 'profil' | 'salles' | 'equipe';
 
 function ProfilePageContent() {
-  const { user, tenant, updateUserAndTenant, access } = useAuth();
+  const { user, tenant, updateUserAndTenant, updateBranding, access } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -26,6 +26,9 @@ function ProfilePageContent() {
   const [tenantName, setTenantName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [brandPrimary, setBrandPrimary] = useState('#4f46e5');
+  const [brandAccent, setBrandAccent] = useState('#6366f1');
+  const [brandSaving, setBrandSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -68,8 +71,43 @@ function ProfilePageContent() {
     }
     if (tenant) {
       setTenantName(tenant.name || '');
+      setBrandPrimary(tenant.branding?.primary || '#4f46e5');
+      setBrandAccent(tenant.branding?.accent || '#6366f1');
     }
   }, [user, tenant]);
+
+  const canEditBranding = Boolean(
+    user?.role === 'USER' && tenant && (access?.isOwner || access?.level === 'manager'),
+  );
+
+  const handleSaveBranding = async () => {
+    setError('');
+    setSuccess('');
+    setBrandSaving(true);
+    try {
+      await updateBranding({ primary: brandPrimary, accent: brandAccent });
+      setSuccess('Couleurs de marque enregistrées.');
+    } catch (err: any) {
+      setError(err.message || 'Impossible d\'enregistrer les couleurs.');
+    } finally {
+      setBrandSaving(false);
+    }
+  };
+
+  const handleResetBranding = async () => {
+    setBrandSaving(true);
+    setError('');
+    try {
+      await updateBranding({ reset: true });
+      setBrandPrimary('#4f46e5');
+      setBrandAccent('#6366f1');
+      setSuccess('Couleurs EventMaster restaurées.');
+    } catch (err: any) {
+      setError(err.message || 'Réinitialisation impossible.');
+    } finally {
+      setBrandSaving(false);
+    }
+  };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -305,11 +343,78 @@ function ProfilePageContent() {
               </div>
             </div>
 
+            {canEditBranding && (
+              <div className="bg-surface border border-border rounded-[var(--radius-card)] p-6 space-y-5">
+                <h2 className="text-lg font-semibold text-foreground flex items-center gap-2 pb-3 border-b border-border">
+                  <Palette className="w-5 h-5 text-primary" />
+                  Couleurs de l&apos;organisation
+                </h2>
+                <p className="text-xs text-muted">
+                  Ces couleurs s&apos;appliquent au tableau de bord (boutons, liens actifs, accents).
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <label className="space-y-1.5 text-xs font-semibold text-muted">
+                    Primary
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={brandPrimary}
+                        onChange={(e) => setBrandPrimary(e.target.value)}
+                        className="h-10 w-14 rounded-lg border border-border cursor-pointer bg-transparent"
+                      />
+                      <input
+                        type="text"
+                        value={brandPrimary}
+                        onChange={(e) => setBrandPrimary(e.target.value)}
+                        className="flex-1 px-3 py-2 rounded-lg border border-border bg-surface-muted text-sm font-mono"
+                      />
+                    </div>
+                  </label>
+                  <label className="space-y-1.5 text-xs font-semibold text-muted">
+                    Accent
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={brandAccent}
+                        onChange={(e) => setBrandAccent(e.target.value)}
+                        className="h-10 w-14 rounded-lg border border-border cursor-pointer bg-transparent"
+                      />
+                      <input
+                        type="text"
+                        value={brandAccent}
+                        onChange={(e) => setBrandAccent(e.target.value)}
+                        className="flex-1 px-3 py-2 rounded-lg border border-border bg-surface-muted text-sm font-mono"
+                      />
+                    </div>
+                  </label>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={brandSaving}
+                    onClick={handleSaveBranding}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white text-xs font-bold rounded-lg disabled:opacity-50"
+                  >
+                    {brandSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    Enregistrer les couleurs
+                  </button>
+                  <button
+                    type="button"
+                    disabled={brandSaving}
+                    onClick={handleResetBranding}
+                    className="px-4 py-2 border border-border text-xs font-bold rounded-lg text-muted hover:text-foreground"
+                  >
+                    Réinitialiser
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-end">
               <button
                 type="submit"
                 disabled={loading}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-bold rounded-xl text-sm transition shadow-md"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white font-bold rounded-xl text-sm transition"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Enregistrer

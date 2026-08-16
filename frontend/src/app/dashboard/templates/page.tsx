@@ -6,6 +6,8 @@ import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import { uploadImageFile, uploadDataUrlImage, isCloudinaryUrl } from '@/lib/cloudinaryUpload';
 import { extractPaletteFromSource, type TemplatePalette } from '@/lib/imagePalette';
+import { INVITATION_COLOR_THEMES, applyPaletteToElements } from '@/lib/templateColorThemes';
+import { FONT_THEMES, applyFontThemeToElements, getFontTheme } from '@/lib/templateFontThemes';
 import { buildMockupTemplate, applyMockupToEditor, applyMockupTextMode, buildTextElementsFromOcrLines, type MockupImportTextMode } from '@/lib/templateMockupImport';
 import { extractTextFromImageSource, mergeOcrIntoMockupElements } from '@/lib/templateOcrImport';
 import { 
@@ -79,6 +81,12 @@ interface CanvasElement {
   imageStyle?: 'rounded' | 'circle' | 'arch' | 'oval' | 'gold-frame' | 'vintage' | 'shadow-luxury';
   buttonStyle?: 'filled' | 'outline' | 'pill' | 'gold-glow' | 'double-border' | 'minimalist';
   buttonLink?: string;
+  /** Disposition : flux (défaut) ou libre (x/y %) */
+  positionMode?: 'flow' | 'absolute';
+  xPct?: number;
+  yPct?: number;
+  wPct?: number;
+  zIndex?: number;
 }
 
 const darkenColor = (hex: string, percent = 30) => {
@@ -182,6 +190,11 @@ export default function TemplatesPage() {
   const [imageUploading, setImageUploading] = useState(false);
   const [mockupImporting, setMockupImporting] = useState(false);
   const [importedPalette, setImportedPalette] = useState<TemplatePalette | null>(null);
+  const [layoutMode, setLayoutMode] = useState<'flow' | 'free'>('flow');
+  const [showGuestPreview, setShowGuestPreview] = useState(false);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+  const [freeDragId, setFreeDragId] = useState<string | null>(null);
+  const freeCanvasRef = useRef<HTMLDivElement>(null);
   const [importedWithOcr, setImportedWithOcr] = useState(false);
   const [ocrProgress, setOcrProgress] = useState<number | null>(null);
   const [mockupImportModalOpen, setMockupImportModalOpen] = useState(false);
@@ -288,6 +301,7 @@ export default function TemplatesPage() {
     setBgPattern('paper');
     setFrameType('double-border');
     setFontTheme('classic');
+    setLayoutMode('flow');
     setFloralColor('#b91c1c');
     setFloralType('roses');
     setFloralDensity(40);
@@ -321,6 +335,7 @@ export default function TemplatesPage() {
     setFloralType(global.floralType || 'roses');
     setFloralDensity(global.floralDensity !== undefined ? global.floralDensity : 40);
     setImportedPalette(global.palette || null);
+    setLayoutMode(global.layoutMode === 'free' ? 'free' : 'flow');
     setLandingCategory(global.landingCategory || 'private');
     setLandingDescription(global.landingDescription || '');
     setShowOnLanding(Boolean(t.showOnLanding));
@@ -345,6 +360,17 @@ export default function TemplatesPage() {
   }, [canUseCustomTemplates]);
 
   const handleAddElement = (type: 'text' | 'image' | 'button' | 'rsvp-block' | 'curve' | 'triangle' | 'divider') => {
+    const themeFonts = getFontTheme(fontTheme);
+    const freeDefaults =
+      layoutMode === 'free'
+        ? {
+            positionMode: 'absolute' as const,
+            xPct: 8,
+            yPct: Math.min(80, 8 + canvasElements.length * 12),
+            wPct: 84,
+            zIndex: canvasElements.length + 1,
+          }
+        : { positionMode: 'flow' as const };
     const newElement: CanvasElement = {
       id: Date.now().toString(),
       type,
@@ -354,13 +380,13 @@ export default function TemplatesPage() {
             type === 'curve' ? 'Ligne courbe décorative' :
             type === 'triangle' ? 'Triangle décoratif' : 
             type === 'divider' ? '' : 'Confirmer ma présence',
-      color: type === 'button' ? '#4f46e5' : 
-             type === 'curve' || type === 'triangle' || type === 'divider' ? '#c5a059' : '#1e293b',
+      color: type === 'button' ? (importedPalette?.accent || '#4f46e5') : 
+             type === 'curve' || type === 'triangle' || type === 'divider' ? (importedPalette?.accent || '#c5a059') : (importedPalette?.primary || '#1e293b'),
       fontSize: type === 'text' ? '16px' : 
                 type === 'curve' ? '3px' : '15px',
       align: 'center',
       width: 'full',
-      fontFamily: type === 'text' || type === 'button' ? 'Cormorant Garamond' : undefined,
+      fontFamily: type === 'text' || type === 'button' ? themeFonts.bodyFont : undefined,
       letterSpacing: 'normal',
       bold: false,
       italic: false,
@@ -379,6 +405,7 @@ export default function TemplatesPage() {
         { id: 'f1', type: 'select', label: 'Choix du menu', options: 'Poulet, Poisson, Végétarien', required: true, analyticsKey: 'choix_menu', category: 'preference' },
       ] : undefined,
       rsvpPlacement: type === 'rsvp-block' ? 'inline' as const : undefined,
+      ...freeDefaults,
     };
     setCanvasElements([...canvasElements, newElement]);
     setSelectedElementId(newElement.id);
@@ -929,6 +956,145 @@ export default function TemplatesPage() {
     }
   };
 
+  const applyPaletteSlot = (slot: keyof TemplatePalette) => {
+    if (!importedPalette || slot === 'isDark') return;
+    const color = importedPalette[slot];
+    if (typeof color !== 'string') return;
+    if (selectedElementId) {
+      handlePropertyChange('color', color);
+      if (slot === 'background') setBgColor(color);
+    } else if (slot === 'background') {
+      setBgColor(color);
+      setBgType('color');
+    } else {
+      setElColor(color);
+    }
+  };
+
+  const applyColorTheme = (themeId: string, recolorElements: boolean) => {
+    const theme = INVITATION_COLOR_THEMES.find((t) => t.id === themeId);
+    if (!theme) return;
+    setImportedPalette(theme.palette);
+    setBgColor(theme.palette.background);
+    setBgType('color');
+    if (recolorElements) {
+      setCanvasElements((prev) => applyPaletteToElements(prev, theme.palette));
+    }
+  };
+
+  const applyCurrentFontTheme = (applyToAll: boolean) => {
+    if (applyToAll) {
+      setCanvasElements((prev) => applyFontThemeToElements(prev, fontTheme));
+    }
+  };
+
+  const convertToFreeLayout = () => {
+    setCanvasElements((prev) =>
+      prev.map((el, i) => ({
+        ...el,
+        positionMode: 'absolute' as const,
+        xPct: el.xPct ?? 8,
+        yPct: el.yPct ?? Math.min(85, 6 + i * 12),
+        wPct: el.wPct ?? (el.width === 'half' ? 42 : el.width === 'third' ? 28 : 84),
+        zIndex: el.zIndex ?? i + 1,
+      })),
+    );
+    setLayoutMode('free');
+  };
+
+  const convertToFlowLayout = () => {
+    setCanvasElements((prev) =>
+      prev.map((el) => ({
+        ...el,
+        positionMode: 'flow' as const,
+      })),
+    );
+    setLayoutMode('flow');
+  };
+
+  const handleFreePointerDown = (elId: string, e: React.PointerEvent) => {
+    if (layoutMode !== 'free') return;
+    e.stopPropagation();
+    handleElementSelect(elId);
+    setFreeDragId(elId);
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+  };
+
+  const handleFreePointerMove = (e: React.PointerEvent) => {
+    if (!freeDragId || !freeCanvasRef.current) return;
+    const rect = freeCanvasRef.current.getBoundingClientRect();
+    const rawX = ((e.clientX - rect.left) / rect.width) * 100;
+    const rawY = ((e.clientY - rect.top) / rect.height) * 100;
+    const snap = (v: number) => Math.round(v / 4) * 4;
+    const xPct = Math.max(0, Math.min(92, snap(rawX)));
+    const yPct = Math.max(0, Math.min(92, snap(rawY)));
+    setCanvasElements((prev) =>
+      prev.map((el) => (el.id === freeDragId ? { ...el, xPct, yPct, positionMode: 'absolute' } : el)),
+    );
+  };
+
+  const handleFreePointerUp = () => setFreeDragId(null);
+
+  const substitutePreviewVars = (text: string) =>
+    text
+      .replace(/\{\{firstName\}\}/gi, 'Amina')
+      .replace(/\{\{lastName\}\}/gi, 'Kabongo')
+      .replace(/\{\{title\}\}/gi, 'Mariage Hassan & Ayesha')
+      .replace(/\{\{location\}\}/gi, 'Kinshasa')
+      .replace(/\{\{date\}\}/gi, '15 juin 2026');
+
+  const draftKey = `em-template-draft-${editingTemplateId || 'new'}-${tenant?.id || 'global'}`;
+
+  useEffect(() => {
+    if (!editorOpen) return;
+    const timer = window.setTimeout(() => {
+      try {
+        const draft = {
+          templateName,
+          canvasElements,
+          bgType,
+          bgColor,
+          bgImageUrl,
+          bgPattern,
+          frameType,
+          fontTheme,
+          layoutMode,
+          importedPalette,
+          canvasWidth,
+          canvasHeight,
+          canvasSizePreset,
+          floralColor,
+          floralType,
+          floralDensity,
+        };
+        localStorage.setItem(draftKey, JSON.stringify(draft));
+        setDraftSavedAt(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
+      } catch {
+        /* ignore */
+      }
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [
+    editorOpen,
+    draftKey,
+    templateName,
+    canvasElements,
+    bgType,
+    bgColor,
+    bgImageUrl,
+    bgPattern,
+    frameType,
+    fontTheme,
+    layoutMode,
+    importedPalette,
+    canvasWidth,
+    canvasHeight,
+    canvasSizePreset,
+    floralColor,
+    floralType,
+    floralDensity,
+  ]);
+
   const handleSaveTemplate = async () => {
     setError('');
     setSuccess('');
@@ -951,6 +1117,7 @@ export default function TemplatesPage() {
             bgPattern,
             frameType,
             fontTheme,
+            layoutMode,
             floralColor,
             floralType,
             floralDensity,
@@ -976,6 +1143,12 @@ export default function TemplatesPage() {
         setSuccess('Modèle d\'invitation enregistré avec succès !');
       }
 
+      try {
+        localStorage.removeItem(draftKey);
+      } catch {
+        /* ignore */
+      }
+      setDraftSavedAt(null);
       setEditorOpen(false);
       loadTemplates();
     } catch (err: any) {
@@ -1170,24 +1343,58 @@ export default function TemplatesPage() {
               </div>
             </div>
           </div>
-          <button 
-            onClick={handleSaveTemplate}
-            disabled={saving}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition shadow-md shadow-indigo-100 disabled:opacity-50"
-          >
-            {saving ? (
-              <>
-                <Loader2 className="w-4.5 h-4.5 animate-spin" />
-                Sauvegarde...
-              </>
-            ) : (
-              <>
-                <Save className="w-4.5 h-4.5" />
-                Sauvegarder le modèle
-              </>
-            )}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowGuestPreview((v) => !v)}
+              className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 border font-bold rounded-xl text-sm transition ${
+                showGuestPreview
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-slate-200 text-slate-600 hover:border-primary hover:text-primary'
+              }`}
+            >
+              <Eye className="w-4 h-4" />
+              Aperçu invité
+            </button>
+            <button 
+              onClick={handleSaveTemplate}
+              disabled={saving}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-sm transition shadow-md shadow-primary/20 disabled:opacity-50"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="w-4.5 h-4.5 animate-spin" />
+                  Sauvegarde...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4.5 h-4.5" />
+                  Sauvegarder le modèle
+                </>
+              )}
+            </button>
+          </div>
         </div>
+
+        {draftSavedAt && (
+          <div className="px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold flex items-center justify-between gap-3">
+            <span>Brouillon non enregistré — sauvegarde locale {draftSavedAt}</span>
+            <button
+              type="button"
+              className="text-amber-700 hover:underline"
+              onClick={() => {
+                try {
+                  localStorage.removeItem(draftKey);
+                  setDraftSavedAt(null);
+                } catch {
+                  /* ignore */
+                }
+              }}
+            >
+              Ignorer
+            </button>
+          </div>
+        )}
 
         {error && (
           <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-center gap-3 text-sm">
@@ -1233,25 +1440,162 @@ export default function TemplatesPage() {
                 )}
                 {mockupImporting ? 'Analyse en cours…' : 'Choisir une image'}
               </button>
-              {importedPalette && (
-                <div className="flex flex-wrap gap-1.5 pt-1">
+            </div>
+            )}
+
+            {importedPalette && (
+              <div className="space-y-2 pb-4 border-b border-slate-100">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Palette active</h3>
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                  Clic = appliquer {selectedElementId ? 'à la sélection' : '(fond si background)'}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
                   {(['primary', 'secondary', 'accent', 'background'] as const).map((key) => (
-                    <span
+                    <button
                       key={key}
-                      className="inline-flex items-center gap-1 text-[9px] font-bold text-slate-500 uppercase"
-                      title={importedPalette[key]}
+                      type="button"
+                      onClick={() => applyPaletteSlot(key)}
+                      className="inline-flex items-center gap-1 text-[9px] font-bold text-slate-600 uppercase hover:opacity-80 transition"
+                      title={`${key}: ${importedPalette[key]}`}
                     >
                       <span
-                        className="w-4 h-4 rounded-md border border-slate-200 shadow-sm"
+                        className="w-5 h-5 rounded-md border border-slate-200 shadow-sm ring-offset-1 hover:ring-2 hover:ring-primary"
                         style={{ backgroundColor: importedPalette[key] }}
                       />
                       {key.slice(0, 3)}
-                    </span>
+                    </button>
                   ))}
                 </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {(['primary', 'secondary', 'accent', 'background'] as const).map((key) => (
+                    <label key={`hex-${key}`} className="flex items-center gap-1 text-[9px] font-bold text-slate-500">
+                      <input
+                        type="color"
+                        value={importedPalette[key]}
+                        onChange={(e) =>
+                          setImportedPalette((prev) => (prev ? { ...prev, [key]: e.target.value } : prev))
+                        }
+                        className="w-6 h-6 rounded border border-slate-200 cursor-pointer p-0"
+                      />
+                      {key}
+                    </label>
+                  ))}
+                </div>
+                <div className="flex flex-col gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!importedPalette) return;
+                      setCanvasElements((prev) =>
+                        prev.map((el) => {
+                          if (el.type !== 'text') return el;
+                          const size = parseInt(String(el.fontSize || '16'), 10);
+                          if (size >= 24) return { ...el, color: importedPalette.accent };
+                          return el;
+                        }),
+                      );
+                    }}
+                    className="text-[10px] font-bold text-primary hover:underline text-left"
+                  >
+                    Appliquer accent aux titres
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!importedPalette) return;
+                      setBgColor(importedPalette.background);
+                      setBgType('color');
+                    }}
+                    className="text-[10px] font-bold text-primary hover:underline text-left"
+                  >
+                    Appliquer fond à la carte
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-3 pb-4 border-b border-slate-100">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Thèmes couleurs</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {INVITATION_COLOR_THEMES.map((theme) => (
+                  <button
+                    key={theme.id}
+                    type="button"
+                    onClick={() => applyColorTheme(theme.id, true)}
+                    className="text-left p-2 rounded-xl border border-slate-150 hover:border-primary hover:bg-primary/5 transition"
+                    title={theme.description}
+                  >
+                    <div className="flex gap-0.5 mb-1.5">
+                      {(['primary', 'secondary', 'accent', 'background'] as const).map((k) => (
+                        <span
+                          key={k}
+                          className="w-3.5 h-3.5 rounded-sm border border-slate-200/80"
+                          style={{ backgroundColor: theme.palette[k] }}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-[10px] font-bold text-slate-700 block leading-tight">{theme.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2 pb-4 border-b border-slate-100">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Typographie</h3>
+              <select
+                value={fontTheme}
+                onChange={(e) => setFontTheme(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-primary"
+              >
+                {FONT_THEMES.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => applyCurrentFontTheme(true)}
+                className="w-full text-[10px] font-bold text-primary hover:bg-primary/5 py-1.5 rounded-lg transition"
+              >
+                Appliquer aux textes
+              </button>
+            </div>
+
+            <div className="space-y-2 pb-4 border-b border-slate-100">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Disposition</h3>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => convertToFlowLayout()}
+                  className={`py-2 rounded-xl text-[10px] font-bold border transition ${
+                    layoutMode === 'flow'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  Empilée
+                </button>
+                <button
+                  type="button"
+                  onClick={() => (layoutMode === 'free' ? setLayoutMode('free') : convertToFreeLayout())}
+                  className={`py-2 rounded-xl text-[10px] font-bold border transition ${
+                    layoutMode === 'free'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  Libre
+                </button>
+              </div>
+              {layoutMode === 'flow' && canvasElements.length > 0 && (
+                <button
+                  type="button"
+                  onClick={convertToFreeLayout}
+                  className="text-[10px] font-bold text-primary hover:underline"
+                >
+                  Convertir en positions libres
+                </button>
               )}
             </div>
-            )}
 
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-2">Composants</h3>
             <div className="grid grid-cols-2 gap-3">
@@ -1306,10 +1650,67 @@ export default function TemplatesPage() {
               </button>
             </div>
 
-            <div className="border-t border-slate-100 pt-4">
+            <div className="border-t border-slate-100 pt-4 space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const themeFonts = getFontTheme(fontTheme);
+                  const palette = importedPalette || INVITATION_COLOR_THEMES[0].palette;
+                  const baseId = Date.now();
+                  const presets: CanvasElement[] = [
+                    {
+                      id: `${baseId}-t`,
+                      type: 'text',
+                      text: '{{title}}',
+                      color: palette.primary,
+                      fontSize: '28px',
+                      align: 'center',
+                      width: 'full',
+                      fontFamily: themeFonts.titleFont,
+                      bold: true,
+                      ...(layoutMode === 'free'
+                        ? { positionMode: 'absolute' as const, xPct: 8, yPct: 12, wPct: 84, zIndex: 1 }
+                        : { positionMode: 'flow' as const }),
+                    },
+                    {
+                      id: `${baseId}-d`,
+                      type: 'text',
+                      text: '{{date}} · {{location}}',
+                      color: palette.secondary,
+                      fontSize: '14px',
+                      align: 'center',
+                      width: 'full',
+                      fontFamily: themeFonts.bodyFont,
+                      ...(layoutMode === 'free'
+                        ? { positionMode: 'absolute' as const, xPct: 8, yPct: 28, wPct: 84, zIndex: 2 }
+                        : { positionMode: 'flow' as const }),
+                    },
+                    {
+                      id: `${baseId}-b`,
+                      type: 'button',
+                      text: 'Confirmer ma présence',
+                      color: palette.accent,
+                      fontSize: '15px',
+                      align: 'center',
+                      width: 'full',
+                      fontFamily: themeFonts.accentFont,
+                      buttonStyle: 'filled',
+                      buttonLink: '#rsvp-section',
+                      ...(layoutMode === 'free'
+                        ? { positionMode: 'absolute' as const, xPct: 20, yPct: 70, wPct: 60, zIndex: 3 }
+                        : { positionMode: 'flow' as const }),
+                    },
+                  ];
+                  setCanvasElements((prev) => [...prev, ...presets]);
+                }}
+                className="w-full flex items-center justify-center gap-2 p-2.5 border border-dashed border-primary/30 rounded-xl hover:bg-primary/5 text-primary font-bold text-xs transition"
+              >
+                <Sparkles className="w-4 h-4" />
+                Preset titre + date + CTA
+              </button>
               <button 
                 onClick={() => setSelectedElementId(null)}
-                className="w-full flex items-center justify-center gap-2 p-2.5 border border-slate-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50/20 text-slate-600 hover:text-indigo-700 font-bold text-xs transition"
+                className="w-full flex items-center justify-center gap-2 p-2.5 border border-slate-200 rounded-xl hover:border-primary hover:bg-primary/5 text-slate-600 hover:text-primary font-bold text-xs transition"
               >
                 <Settings className="w-4 h-4" />
                 Paramètres Globaux
@@ -1321,11 +1722,13 @@ export default function TemplatesPage() {
           <div className="lg:col-span-2 space-y-4">
             <div className="text-center space-y-1">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-500 text-[10px] font-bold uppercase tracking-wider">
-                <Eye className="w-3.5 h-3.5" /> Zone de prévisualisation de l'invitation
+                <Eye className="w-3.5 h-3.5" /> Zone de prévisualisation de l&apos;invitation
               </span>
               <p className="text-[10px] text-slate-400 font-semibold">
                 {canvasWidth} × {canvasHeight} px
                 {canvasSizePreset !== 'custom' ? ` · ${CANVAS_SIZE_PRESETS[canvasSizePreset as Exclude<CanvasSizePreset, 'custom'>]?.label.split(' (')[0] || canvasSizePreset}` : ' · Personnalisé'}
+                {showGuestPreview ? ' · Variables invité (ex. Amina Kabongo)' : ''}
+                {layoutMode === 'free' ? ' · Mode libre (glisser-déposer)' : ''}
               </p>
             </div>
             
@@ -1634,7 +2037,17 @@ export default function TemplatesPage() {
               )}
 
               {/* Elements Grid Container */}
-              <div className="relative z-10 flex flex-wrap gap-y-4 -mx-2">
+              <div
+                ref={freeCanvasRef}
+                className={
+                  layoutMode === 'free'
+                    ? 'relative z-10 w-full min-h-[320px]'
+                    : 'relative z-10 flex flex-wrap gap-y-4 -mx-2'
+                }
+                onPointerMove={handleFreePointerMove}
+                onPointerUp={handleFreePointerUp}
+                onPointerLeave={handleFreePointerUp}
+              >
                 {canvasElements.length === 0 ? (
                   <div className="w-full text-center py-24 text-slate-400">
                     <Sparkles className="w-10 h-10 mx-auto mb-3 text-slate-300 animate-pulse" />
@@ -1646,15 +2059,34 @@ export default function TemplatesPage() {
                     .filter((el) => !(el.type === 'rsvp-block' && el.rsvpPlacement === 'outside'))
                     .map((el, index) => {
                     const isSelected = selectedElementId === el.id;
-                    const widthClass = el.width === 'half' ? 'w-1/2 px-2' : el.width === 'third' ? 'w-1/3 px-2' : 'w-full px-2';
+                    const isFree = layoutMode === 'free' || el.positionMode === 'absolute';
+                    const widthClass = isFree
+                      ? ''
+                      : el.width === 'half'
+                        ? 'w-1/2 px-2'
+                        : el.width === 'third'
+                          ? 'w-1/3 px-2'
+                          : 'w-full px-2';
                     
                     return (
                       <div 
                         key={el.id}
                         onClick={(e) => { e.stopPropagation(); handleElementSelect(el.id); }}
-                        className={`${widthClass} group transition cursor-pointer relative`}
+                        onPointerDown={(e) => isFree && handleFreePointerDown(el.id, e)}
+                        className={`${widthClass} group transition cursor-pointer relative ${isFree ? 'touch-none' : ''}`}
+                        style={
+                          isFree
+                            ? {
+                                position: 'absolute',
+                                left: `${el.xPct ?? 8}%`,
+                                top: `${el.yPct ?? 8}%`,
+                                width: `${el.wPct ?? 84}%`,
+                                zIndex: el.zIndex ?? index + 1,
+                              }
+                            : undefined
+                        }
                       >
-                        <div className={`p-2.5 rounded-xl border transition ${isSelected ? 'border-indigo-500 bg-indigo-50/10 shadow-sm' : 'border-dashed border-transparent hover:border-slate-300/55'}`}>
+                        <div className={`p-2.5 rounded-xl border transition ${isSelected ? 'border-primary bg-primary/5 shadow-sm' : 'border-dashed border-transparent hover:border-slate-300/55'}`}>
                           {/* Element Controls (Delete & Reorder) */}
                           <div className="absolute -top-2.5 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
                             {/* Move Up */}
@@ -1677,15 +2109,51 @@ export default function TemplatesPage() {
                                 <ArrowDown className="w-3 h-3" />
                               </button>
                             )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const clone = { ...el, id: `${Date.now()}` };
+                                if (isFree) {
+                                  clone.xPct = Math.min(88, (el.xPct ?? 8) + 4);
+                                  clone.yPct = Math.min(88, (el.yPct ?? 8) + 4);
+                                }
+                                setCanvasElements((prev) => [...prev, clone]);
+                                setSelectedElementId(clone.id);
+                              }}
+                              className="bg-slate-700 hover:bg-slate-800 text-white p-1 rounded-full shadow transition"
+                              title="Dupliquer"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </button>
                             {/* Delete */}
                             <button 
-                              onClick={(e) => { e.stopPropagation(); handleDeleteElement(el.id); }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm('Supprimer cet élément ?')) handleDeleteElement(el.id);
+                              }}
                               className="bg-rose-500 hover:bg-rose-600 text-white p-1 rounded-full shadow transition"
                               title="Supprimer cet élément"
                             >
                               <XCircle className="w-3 h-3" />
                             </button>
                           </div>
+                          {isFree && isSelected && (
+                            <input
+                              type="range"
+                              min={20}
+                              max={100}
+                              value={el.wPct ?? 84}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => {
+                                const wPct = Number(e.target.value);
+                                setCanvasElements((prev) =>
+                                  prev.map((item) => (item.id === el.id ? { ...item, wPct, positionMode: 'absolute' } : item)),
+                                );
+                              }}
+                              className="absolute -bottom-3 left-2 right-2 h-1 accent-primary cursor-ew-resize z-20"
+                              title="Largeur (%)"
+                            />
+                          )}
 
                           {el.type === 'text' && (
                             <div 
@@ -1700,7 +2168,7 @@ export default function TemplatesPage() {
                               }}
                               className="leading-relaxed break-words"
                             >
-                              {el.text}
+                              {showGuestPreview ? substitutePreviewVars(el.text) : el.text}
                             </div>
                           )}
 
@@ -1726,7 +2194,7 @@ export default function TemplatesPage() {
                                   'px-6 py-2.5 rounded-xl shadow-md'
                                 }`}
                               >
-                                {el.text}
+                                {showGuestPreview ? substitutePreviewVars(el.text) : el.text}
                                 {el.buttonLink && (
                                   <span className="text-[10px] opacity-80" title={`Lien : ${el.buttonLink}`}>🔗</span>
                                 )}

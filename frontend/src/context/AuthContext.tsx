@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '../lib/api';
 import type { PlanId } from '@/config/landingPricing';
+import { applyBrandToDocument, clearBrandFromDocument, type TenantBranding } from '@/lib/brandTheme';
 
 export interface OrgAccess {
   level: 'owner' | 'manager' | 'protocol' | 'commercial' | 'staff' | 'none';
@@ -36,6 +37,7 @@ interface Tenant {
   licenseActive?: boolean;
   licenseExpiresAt?: string | null;
   managerId?: string | null;
+  branding?: TenantBranding;
 }
 
 interface RegisterResult {
@@ -102,6 +104,7 @@ interface AuthContextType {
   refreshPlanFeatures: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   updateUserAndTenant: (user: User, tenant: Tenant | null) => void;
+  updateBranding: (payload: TenantBranding & { reset?: boolean }) => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -300,6 +303,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [token, tenant?.id, user?.role]);
 
+  useEffect(() => {
+    if (tenant?.branding) {
+      applyBrandToDocument(tenant.branding);
+    } else if (!tenant) {
+      clearBrandFromDocument();
+    } else {
+      applyBrandToDocument(null);
+    }
+  }, [tenant?.id, tenant?.branding?.primary, tenant?.branding?.accent, tenant?.branding?.sidebar]);
+
+  const updateBranding = async (payload: TenantBranding & { reset?: boolean }) => {
+    const data = await api.put('/billing/branding', payload);
+    if (data.tenant) {
+      const next = { ...data.tenant, branding: data.branding };
+      setTenant(next);
+      localStorage.setItem('tenant', JSON.stringify(next));
+      applyBrandToDocument(payload.reset ? null : data.branding);
+    }
+    return data;
+  };
+
   const refreshBilling = async () => {
     try {
       const billingData = await api.get('/billing/status');
@@ -345,7 +369,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, tenant, access, planFeatures, planQuota, token, loading, login, register, verifyOtp, resendOtp,
-      logout, refreshBilling, refreshPlanFeatures, refreshProfile, updateUserAndTenant,
+      logout, refreshBilling, refreshPlanFeatures, refreshProfile, updateUserAndTenant, updateBranding,
     }}>
       {children}
     </AuthContext.Provider>

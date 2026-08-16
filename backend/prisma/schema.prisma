@@ -65,6 +65,8 @@ model Tenant {
   referredByOrgUserId    String?
   referredByOrgUser      User? @relation("OrgCommercialReferral", fields: [referredByOrgUserId], references: [id], onDelete: SetNull)
   defaultOrgCommercialCommissionRate Float @default(0.20)
+  /** Couleurs de marque org : { primary, accent, sidebar? } */
+  branding      Json?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 

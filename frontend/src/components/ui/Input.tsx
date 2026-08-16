@@ -43,7 +43,7 @@ export default function Input({
             'block w-full py-2.5 bg-slate-50 dark:bg-slate-950 border rounded-xl',
             'text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600',
             'transition duration-150',
-            'focus:outline-none focus:ring-2 focus:ring-indigo-500/25 focus:border-indigo-500',
+            'focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary',
             error
               ? 'border-rose-300 dark:border-rose-800 focus:ring-rose-500/25 focus:border-rose-500'
               : 'border-slate-200 dark:border-slate-800',

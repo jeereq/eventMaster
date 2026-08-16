@@ -1748,12 +1748,39 @@ export default function RsvpPage() {
         <div className="p-8 space-y-8 flex-1 relative z-10">
           {/* Header */}
           {template ? (
-            <div className="flex flex-wrap gap-y-4 -mx-2 pt-2">
-              {inlineTemplateElements.map((el: any) => {
-                const widthClass = el.width === 'half' ? 'w-1/2 px-2' : el.width === 'third' ? 'w-1/3 px-2' : 'w-full px-2';
+            <div
+              className={
+                global.layoutMode === 'free'
+                  ? 'relative pt-2 min-h-[240px] w-full'
+                  : 'flex flex-wrap gap-y-4 -mx-2 pt-2'
+              }
+            >
+              {inlineTemplateElements.map((el: any, index: number) => {
+                const isFree = global.layoutMode === 'free' || el.positionMode === 'absolute';
+                const widthClass = isFree
+                  ? ''
+                  : el.width === 'half'
+                    ? 'w-1/2 px-2'
+                    : el.width === 'third'
+                      ? 'w-1/3 px-2'
+                      : 'w-full px-2';
                 
                 return (
-                  <div key={el.id} className={widthClass}>
+                  <div
+                    key={el.id}
+                    className={widthClass}
+                    style={
+                      isFree
+                        ? {
+                            position: 'absolute',
+                            left: `${el.xPct ?? 8}%`,
+                            top: `${el.yPct ?? 8}%`,
+                            width: `${el.wPct ?? 84}%`,
+                            zIndex: el.zIndex ?? index + 1,
+                          }
+                        : undefined
+                    }
+                  >
                     {el.type === 'text' && (
                       <div 
                         style={{ 
