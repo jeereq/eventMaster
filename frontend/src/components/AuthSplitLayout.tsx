@@ -6,6 +6,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { PartyPopper, Sun, Moon, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import PublicAccentPicker from '@/components/PublicAccentPicker';
+import CelebrateMood from '@/components/CelebrateMood';
 
 interface AuthFeature {
   icon: React.ComponentType<{ className?: string }>;
@@ -36,6 +37,7 @@ export function AuthSplitLayout({
 
   return (
     <div className="min-h-screen flex bg-background text-foreground transition-colors duration-200">
+      <CelebrateMood />
       {/* Panneau marketing — couleurs via --auth-* / --primary */}
       <div
         className="hidden lg:flex lg:w-[46%] xl:w-1/2 text-white p-10 xl:p-12 flex-col justify-between relative overflow-hidden border-r border-white/10"
@@ -49,7 +51,7 @@ export function AuthSplitLayout({
         />
         <div
           className="absolute bottom-[-22%] right-[-12%] w-[50%] h-[50%] rounded-full blur-[100px] pointer-events-none opacity-25"
-          style={{ background: `rgb(var(--auth-glow))` }}
+          style={{ background: `rgb(var(--celebrate-glow))` }}
         />
         <div
           className="absolute inset-0 opacity-[0.07] pointer-events-none"
@@ -64,7 +66,7 @@ export function AuthSplitLayout({
           <div className="bg-primary p-2.5 rounded-[var(--radius-button)] text-white shadow-lg transition group-hover:bg-primary-hover">
             <PartyPopper className="w-5 h-5" />
           </div>
-          <span className="font-semibold text-xl tracking-tight">EventMaster</span>
+          <span className="font-display font-semibold text-xl tracking-tight">EventMaster</span>
         </Link>
 
         <div className="space-y-8 my-auto relative z-10 max-w-md">
@@ -74,7 +76,7 @@ export function AuthSplitLayout({
                 {badge}
               </span>
             )}
-            <h1 className="text-3xl xl:text-4xl font-semibold tracking-tight leading-tight">{title}</h1>
+            <h1 className="text-3xl xl:text-4xl font-display font-semibold tracking-tight leading-tight">{title}</h1>
             <p className="text-white/70 text-sm leading-relaxed">{description}</p>
           </div>
 

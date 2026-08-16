@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { downloadMedia, getMediaExtension, sanitizeFilenamePart } from '@/lib/downloadMedia';
 import { GuestPortalHomeLink } from '@/components/GuestPortalNav';
 import GuestPortalShell, { GuestPortalTabBar, GuestPortalCard } from '@/components/GuestPortalShell';
+import FestiveConfetti from '@/components/FestiveConfetti';
 import Link from 'next/link';
 import GuestTablePlanView from '@/app/rsvp/GuestTablePlanView';
 import GuestGuidelinesView from '@/components/GuestGuidelinesView';
@@ -513,13 +514,14 @@ export default function RsvpPage() {
           }
           contentClassName="space-y-5"
         >
+            <FestiveConfetti />
             
             {/* 1. BADGE & INFOS TAB */}
             {activeGuestTab === 'badge' && (
               <div className="space-y-4 animate-fade-in">
                 <GuestPortalCard className="bg-primary text-white border-primary space-y-2">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-white/80">Bienvenue</span>
-                  <h2 className="text-lg font-semibold leading-snug">
+                  <h2 className="text-lg font-display font-semibold leading-snug">
                     Bonjour {guest.firstName}, votre présence est confirmée.
                   </h2>
                   <p className="text-white/85 text-xs leading-relaxed">

@@ -6,6 +6,8 @@ import { applyBrandToDocument, deriveAuthPanelFromPrimary, type TenantBranding }
 export type AccentPresetId = 'indigo' | 'emerald' | 'sky' | 'amber' | 'rose' | 'violet';
 export type DensityId = 'comfortable' | 'compact';
 export type FontScaleId = 'sm' | 'md' | 'lg';
+/** Work = dashboard pro ; Celebrate = surfaces tièdes (option dashboard + auto sur landing/RSVP). */
+export type MoodId = 'work' | 'celebrate';
 
 export interface AccentPreset {
   id: AccentPresetId;
@@ -74,6 +76,7 @@ export interface ViewPreferences {
   accent: AccentPresetId;
   density: DensityId;
   fontScale: FontScaleId;
+  mood: MoodId;
   widgets: DashboardWidgets;
 }
 
@@ -83,6 +86,7 @@ export const DEFAULT_VIEW_PREFERENCES: ViewPreferences = {
   accent: 'indigo',
   density: 'comfortable',
   fontScale: 'md',
+  mood: 'work',
   widgets: {
     greeting: true,
     stats: true,
@@ -111,6 +115,7 @@ function readStored(): { prefs: ViewPreferences; accentCustomized: boolean } | n
       density: parsed.density === 'compact' ? 'compact' : 'comfortable',
       fontScale:
         parsed.fontScale === 'sm' || parsed.fontScale === 'lg' ? parsed.fontScale : 'md',
+      mood: parsed.mood === 'celebrate' ? 'celebrate' : 'work',
     };
     return {
       prefs,
@@ -137,6 +142,11 @@ function applyDensityAndFont(density: DensityId, fontScale: FontScaleId) {
     root.style.setProperty('--radius-card', '0.5rem');
     root.style.setProperty('--radius-button', '0.5rem');
   }
+}
+
+export function applyMoodToDocument(mood: MoodId) {
+  if (typeof document === 'undefined') return;
+  document.documentElement.dataset.mood = mood;
 }
 
 function applyAccent(accentId: AccentPresetId, tenantBranding?: TenantBranding | null) {
@@ -169,6 +179,7 @@ interface ViewPreferencesContextValue {
   setAccent: (id: AccentPresetId) => void;
   setDensity: (d: DensityId) => void;
   setFontScale: (s: FontScaleId) => void;
+  setMood: (m: MoodId) => void;
   setWidget: (key: keyof DashboardWidgets, value: boolean) => void;
   resetPreferences: () => void;
   accentPreset: AccentPreset;
@@ -194,11 +205,13 @@ export function ViewPreferencesProvider({
       setPrefs(stored.prefs);
       setAccentCustomized(stored.accentCustomized);
       applyDensityAndFont(stored.prefs.density, stored.prefs.fontScale);
+      applyMoodToDocument(stored.prefs.mood);
       if (stored.accentCustomized) {
         applyAccent(stored.prefs.accent, tenantBranding);
       }
     } else {
       applyDensityAndFont(DEFAULT_VIEW_PREFERENCES.density, DEFAULT_VIEW_PREFERENCES.fontScale);
+      applyMoodToDocument(DEFAULT_VIEW_PREFERENCES.mood);
     }
     setReady(true);
   }, []);
@@ -254,6 +267,15 @@ export function ViewPreferencesProvider({
     [prefs, persist, accentCustomized],
   );
 
+  const setMood = useCallback(
+    (mood: MoodId) => {
+      const next = { ...prefs, mood };
+      persist(next, accentCustomized);
+      applyMoodToDocument(mood);
+    },
+    [prefs, persist, accentCustomized],
+  );
+
   const setWidget = useCallback(
     (key: keyof DashboardWidgets, value: boolean) => {
       persist(
@@ -276,6 +298,7 @@ export function ViewPreferencesProvider({
       /* ignore */
     }
     applyDensityAndFont(DEFAULT_VIEW_PREFERENCES.density, DEFAULT_VIEW_PREFERENCES.fontScale);
+    applyMoodToDocument(DEFAULT_VIEW_PREFERENCES.mood);
     restoreTenantOrDefaultBrand(tenantBranding);
   }, [tenantBranding]);
 
@@ -295,6 +318,7 @@ export function ViewPreferencesProvider({
       setAccent,
       setDensity,
       setFontScale,
+      setMood,
       setWidget,
       resetPreferences,
       accentPreset,
@@ -307,6 +331,7 @@ export function ViewPreferencesProvider({
       setAccent,
       setDensity,
       setFontScale,
+      setMood,
       setWidget,
       resetPreferences,
       accentPreset,

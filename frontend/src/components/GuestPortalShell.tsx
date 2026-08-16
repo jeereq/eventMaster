@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { PartyPopper } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { GuestPortalHomeLink } from '@/components/GuestPortalNav';
+import CelebrateMood from '@/components/CelebrateMood';
 
 interface GuestPortalShellProps {
   title: string;
@@ -19,7 +20,7 @@ interface GuestPortalShellProps {
 }
 
 /**
- * Chrome commun des vues invité — aligné sur le style plat EventMaster (Asana-like).
+ * Chrome commun des vues invité — Celebrate (surfaces tièdes + stripe accent).
  */
 export default function GuestPortalShell({
   title,
@@ -34,19 +35,22 @@ export default function GuestPortalShell({
 }: GuestPortalShellProps) {
   return (
     <div className={cn('min-h-screen bg-background flex flex-col', className)}>
-      <header className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur-sm">
-        <div className="page-container max-w-xl mx-auto h-14 flex items-center justify-between gap-3">
+      <CelebrateMood />
+      <header className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur-sm em-celebrate-stripe">
+        <div className="page-container max-w-xl mx-auto h-14 flex items-center justify-between gap-3 pl-1">
           {showBrand ? (
             <Link href="/" className="flex items-center gap-2.5 min-w-0 hover:opacity-90 transition">
               <span className="inline-flex items-center justify-center w-8 h-8 rounded-[var(--radius-button)] bg-primary text-white shrink-0">
                 <PartyPopper className="w-3.5 h-3.5" />
               </span>
-              <span className="font-semibold text-foreground truncate">EventMaster</span>
+              <span className="font-display font-semibold text-foreground truncate">EventMaster</span>
             </Link>
           ) : (
             <div className="min-w-0 space-y-0.5">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">{eyebrow}</p>
-              <h1 className="text-sm font-semibold text-foreground truncate">{title}</h1>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--festive-accent)]">
+                {eyebrow}
+              </p>
+              <h1 className="text-sm font-display font-semibold text-foreground truncate">{title}</h1>
             </div>
           )}
           <div className="flex items-center gap-2 shrink-0">
@@ -64,8 +68,12 @@ export default function GuestPortalShell({
       <main className={cn('page-container mx-auto w-full flex-1 py-5 pb-8 max-w-xl', contentClassName)}>
         {showBrand && (
           <div className="mb-5 space-y-1">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">{eyebrow}</p>
-            <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">{title}</h1>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--festive-accent)]">
+              {eyebrow}
+            </p>
+            <h1 className="text-xl sm:text-2xl font-display font-semibold text-foreground tracking-tight">
+              {title}
+            </h1>
           </div>
         )}
         {children}

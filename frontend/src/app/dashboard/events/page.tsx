@@ -43,9 +43,8 @@ import {
  extractRsvpFieldsFromTemplateContent,
  supplementFieldsFromGuestPreferences,
  getCustomFieldValue,
- formatCustomFieldValueForDisplay,
  isBooleanFieldType,
- type RsvpFormDataEntry,
+ listGuestCustomFieldDetails,
  SPECIAL_MEAL_OPTIONS,
  specialMealLabel,
 } from '@/lib/rsvpFormFields';
@@ -3642,143 +3641,180 @@ export default function EventsPage() {
  )}
 
  {/* Guest Details Modal */}
- {selectedGuestDetails && (
+ {selectedGuestDetails && (() => {
+ const customFieldDetails = listGuestCustomFieldDetails(
+ selectedGuestDetails.preferences,
+ getCustomRsvpFields(),
+ );
+ const hasPrefs =
+ Boolean(selectedGuestDetails.preferences?.specialMeal) ||
+ Boolean(selectedGuestDetails.preferences?.allergies) ||
+ Boolean(selectedGuestDetails.preferences?.notes);
+
+ return (
  <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
- <div className="bg-white rounded-3xl border border-border shadow-2xl w-full max-w-lg p-6 space-y-6">
- <div className="flex items-center justify-between border-b border-border-subtle pb-4">
- <div className="flex items-center gap-2">
- <div className="bg-primary/10 text-primary p-1.5 rounded-lg">
- <Users className="w-5 h-5" />
+ <div className="bg-surface rounded-[var(--radius-card)] border border-border shadow-[var(--shadow-soft)] w-full max-w-lg p-5 sm:p-6 space-y-5">
+ <div className="flex items-center justify-between border-b border-border pb-3">
+ <div className="flex items-center gap-2 min-w-0">
+ <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)] shrink-0">
+ <Users className="w-4.5 h-4.5" />
  </div>
- <h3 className="text-lg font-bold text-foreground">Détails de l'invité</h3>
+ <div className="min-w-0">
+ <h3 className="text-base font-semibold text-foreground tracking-tight">Détails de l&apos;invité</h3>
+ <p className="text-xs text-muted truncate">
+ {selectedGuestDetails.firstName} {selectedGuestDetails.lastName}
+ </p>
  </div>
- <button onClick={() => setSelectedGuestDetails(null)} className="text-muted hover:text-muted transition">
- <XCircle className="w-6 h-6" />
+ </div>
+ <button
+ type="button"
+ onClick={() => setSelectedGuestDetails(null)}
+ className="text-muted hover:text-foreground transition p-1"
+ aria-label="Fermer"
+ >
+ <XCircle className="w-5 h-5" />
  </button>
  </div>
- 
- <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
- {/* Contact Info */}
- <div className="grid grid-cols-2 gap-4 bg-surface-muted p-4 rounded-2xl border border-border">
+
+ <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-0.5">
+ <div className="grid grid-cols-2 gap-3 bg-surface-muted p-3.5 rounded-[var(--radius-card)] border border-border">
  <div>
- <div className="text-[10px] font-bold text-muted uppercase tracking-wider">Prénom & Nom</div>
- <div className="font-bold text-foreground text-sm mt-0.5">{selectedGuestDetails.firstName} {selectedGuestDetails.lastName}</div>
+ <div className="text-[10px] font-semibold text-muted uppercase tracking-wider">Prénom & Nom</div>
+ <div className="font-semibold text-foreground text-sm mt-0.5">
+ {selectedGuestDetails.firstName} {selectedGuestDetails.lastName}
+ </div>
  </div>
  <div>
- <div className="text-[10px] font-bold text-muted uppercase tracking-wider">Catégorie</div>
- <div className="font-bold text-foreground text-sm mt-0.5">{selectedGuestDetails.category || 'Général'}</div>
+ <div className="text-[10px] font-semibold text-muted uppercase tracking-wider">Catégorie</div>
+ <div className="font-semibold text-foreground text-sm mt-0.5">
+ {selectedGuestDetails.category || 'Général'}
+ </div>
  </div>
  <div className="col-span-2">
- <div className="text-[10px] font-bold text-muted uppercase tracking-wider">E-mail</div>
- <div className="font-bold text-foreground text-sm mt-0.5 truncate">{selectedGuestDetails.email}</div>
+ <div className="text-[10px] font-semibold text-muted uppercase tracking-wider">E-mail</div>
+ <div className="font-semibold text-foreground text-sm mt-0.5 truncate">{selectedGuestDetails.email}</div>
  </div>
- {selectedGuestDetails.preferences?.phone && (
+ {(selectedGuestDetails.preferences?.phone || selectedGuestDetails.preferences?.telephone) && (
  <div className="col-span-2">
- <div className="text-[10px] font-bold text-muted uppercase tracking-wider">Téléphone</div>
- <div className="font-bold text-foreground text-sm mt-0.5">{selectedGuestDetails.preferences.phone}</div>
+ <div className="text-[10px] font-semibold text-muted uppercase tracking-wider">Téléphone</div>
+ <div className="font-semibold text-foreground text-sm mt-0.5">
+ {selectedGuestDetails.preferences.phone || selectedGuestDetails.preferences.telephone}
+ </div>
  </div>
  )}
  </div>
 
- {/* RSVP Status */}
- <div className="flex items-center justify-between p-4 bg-white border border-border rounded-2xl">
- <span className="text-xs font-bold text-muted uppercase tracking-wider">Statut de réponse</span>
- <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-extrabold border ${
- selectedGuestDetails.rsvp === 'ACCEPTED' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
- selectedGuestDetails.rsvp === 'DECLINED' ? 'bg-rose-50 border-rose-100 text-rose-700' :
- 'bg-amber-50 border-amber-100 text-amber-700'
- }`}>
- <span className={`w-1.5 h-1.5 rounded-full ${
- selectedGuestDetails.rsvp === 'ACCEPTED' ? 'bg-emerald-500' :
- selectedGuestDetails.rsvp === 'DECLINED' ? 'bg-rose-500' : 'bg-amber-500'
- }`} />
- {selectedGuestDetails.rsvp === 'ACCEPTED' ? 'Présent' : selectedGuestDetails.rsvp === 'DECLINED' ? 'Absent' : 'En attente'}
+ <div className="flex items-center justify-between p-3.5 bg-surface border border-border rounded-[var(--radius-card)]">
+ <span className="text-xs font-semibold text-muted uppercase tracking-wider">Statut RSVP</span>
+ <StatusPill
+ tone={
+ selectedGuestDetails.rsvp === 'ACCEPTED'
+ ? 'emerald'
+ : selectedGuestDetails.rsvp === 'DECLINED'
+ ? 'rose'
+ : 'amber'
+ }
+ >
+ {selectedGuestDetails.rsvp === 'ACCEPTED'
+ ? 'Présent'
+ : selectedGuestDetails.rsvp === 'DECLINED'
+ ? 'Absent'
+ : 'En attente'}
+ </StatusPill>
+ </div>
+
+ {(selectedGuestDetails.rsvp === 'ACCEPTED' || hasPrefs) && (
+ <div className="p-3.5 border border-border rounded-[var(--radius-card)] space-y-3 bg-surface">
+ <div className="text-xs font-semibold text-muted uppercase tracking-wider border-b border-border pb-2 flex items-center gap-1.5">
+ <Utensils className="w-3.5 h-3.5 text-primary" />
+ <span>Préférences de repas & notes</span>
+ </div>
+ <div className="grid grid-cols-2 gap-3">
+ <div>
+ <div className="text-[10px] font-semibold text-muted uppercase tracking-wider">Type de menu</div>
+ <div className="font-medium text-foreground text-xs mt-1">
+ {specialMealLabel(selectedGuestDetails.preferences?.specialMeal)}
+ </div>
+ </div>
+ <div>
+ <div className="text-[10px] font-semibold text-muted uppercase tracking-wider">Allergies</div>
+ <div className="font-medium text-foreground text-xs mt-1">
+ {selectedGuestDetails.preferences?.allergies || (
+ <span className="italic text-muted">Aucune</span>
+ )}
+ </div>
+ </div>
+ <div className="col-span-2">
+ <div className="text-[10px] font-semibold text-muted uppercase tracking-wider">Notes / Remarques</div>
+ <div className="font-medium text-foreground text-xs mt-1">
+ {selectedGuestDetails.preferences?.notes || (
+ <span className="italic text-muted">Aucune note</span>
+ )}
+ </div>
+ </div>
+ </div>
+ </div>
+ )}
+
+ <div className="p-3.5 border border-border rounded-[var(--radius-card)] space-y-3 bg-surface">
+ <div className="text-xs font-semibold text-muted uppercase tracking-wider border-b border-border pb-2 flex items-center gap-1.5">
+ <Sparkles className="w-3.5 h-3.5 text-primary" />
+ <span>Champs personnalisés</span>
+ {customFieldDetails.length > 0 && (
+ <span className="ml-auto normal-case tracking-normal text-[10px] font-medium text-muted">
+ {customFieldDetails.filter((f) => f.answered).length}/{customFieldDetails.length} renseigné
+ {customFieldDetails.filter((f) => f.answered).length > 1 ? 's' : ''}
  </span>
+ )}
+ </div>
+ {customFieldDetails.length === 0 ? (
+ <p className="text-xs text-muted italic py-1">
+ Aucun champ personnalisé sur le modèle d&apos;invitation, ni réponse enregistrée.
+ </p>
+ ) : (
+ <div className="space-y-2.5">
+ {customFieldDetails.map((field) => (
+ <div
+ key={field.key}
+ className="rounded-[var(--radius-button)] border border-border bg-surface-muted/60 px-3 py-2.5"
+ >
+ <div className="flex items-start justify-between gap-2">
+ <div className="text-[11px] font-semibold text-foreground leading-snug">
+ {field.label}
+ </div>
+ {field.typeLabel && (
+ <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wider text-muted px-1.5 py-0.5 rounded bg-surface border border-border">
+ {field.typeLabel}
+ </span>
+ )}
+ </div>
+ <div className="mt-1 text-sm font-medium text-foreground break-words">
+ {field.answered ? (
+ field.displayValue
+ ) : (
+ <span className="italic text-muted text-xs">Non renseigné</span>
+ )}
+ </div>
+ </div>
+ ))}
+ </div>
+ )}
+ </div>
  </div>
 
- {/* Standard Preferences */}
- {selectedGuestDetails.rsvp === 'ACCEPTED' && (
- <div className="p-4 border border-border rounded-2xl space-y-3 bg-white">
- <div className="text-xs font-bold text-muted uppercase tracking-wider border-b border-border-subtle pb-2 flex items-center gap-1.5">
- <Utensils className="w-4 h-4 text-primary" />
- <span>Préférences de repas & Notes</span>
- </div>
- <div className="grid grid-cols-2 gap-4">
- <div>
- <div className="text-[10px] font-bold text-muted uppercase tracking-wider">Type de Menu</div>
- <div className="font-bold text-foreground text-xs mt-1">
- {selectedGuestDetails.preferences?.specialMeal === 'vegetarian' ? 'Végétarien' :
- selectedGuestDetails.preferences?.specialMeal === 'vegan' ? 'Végétalien (Vegan)' :
- selectedGuestDetails.preferences?.specialMeal === 'halal' ? 'Halal' :
- selectedGuestDetails.preferences?.specialMeal === 'kosher' ? 'Casher' : 'Standard'}
- </div>
- </div>
- <div>
- <div className="text-[10px] font-bold text-muted uppercase tracking-wider">Allergies</div>
- <div className="font-bold text-foreground text-xs mt-1">
- {selectedGuestDetails.preferences?.allergies || <span className="italic text-muted">Aucune</span>}
- </div>
- </div>
- <div className="col-span-2">
- <div className="text-[10px] font-bold text-muted uppercase tracking-wider">Notes / Remarques</div>
- <div className="font-bold text-foreground text-xs mt-1">
- {selectedGuestDetails.preferences?.notes || <span className="italic text-muted">Aucune note</span>}
- </div>
- </div>
- </div>
- </div>
- )}
-
- {/* Custom RSVP Form Fields */}
- {selectedGuestDetails.rsvp === 'ACCEPTED' && (
- (selectedGuestDetails.preferences?.rsvpFormData?.length ?? 0) > 0 ||
- (selectedGuestDetails.preferences?.customFields &&
- Object.keys(selectedGuestDetails.preferences.customFields).length > 0)
- ) && (
- <div className="p-4 border border-border rounded-2xl space-y-3 bg-white">
- <div className="text-xs font-bold text-muted uppercase tracking-wider border-b border-border-subtle pb-2 flex items-center gap-1.5">
- <Sparkles className="w-4 h-4 text-primary" />
- <span>Réponses aux questions personnalisées</span>
- </div>
- <div className="space-y-3">
- {(selectedGuestDetails.preferences?.rsvpFormData?.length
- ? selectedGuestDetails.preferences.rsvpFormData.map((entry: RsvpFormDataEntry) => (
- <div key={entry.fieldId || entry.analyticsKey} className="border-b border-border-subtle pb-2 last:border-0 last:pb-0">
- <div className="text-[10px] font-bold text-muted uppercase leading-relaxed">{entry.label}</div>
- <div className="font-bold text-foreground text-xs mt-0.5">
- {formatCustomFieldValueForDisplay(entry.value) || (
- <span className="italic text-muted">Non renseigné</span>
- )}
- </div>
- </div>
- ))
- : Object.entries(selectedGuestDetails.preferences!.customFields!).map(([question, answer]: [string, unknown]) => (
- <div key={question} className="border-b border-border-subtle pb-2 last:border-0 last:pb-0">
- <div className="text-[10px] font-bold text-muted uppercase leading-relaxed">{question}</div>
- <div className="font-bold text-foreground text-xs mt-0.5">
- {formatCustomFieldValueForDisplay(answer) || (
- <span className="italic text-muted">Non renseigné</span>
- )}
- </div>
- </div>
- ))
- )}
- </div>
- </div>
- )}
- </div>
-
- <div className="pt-4 border-t border-border-subtle">
- <button 
+ <div className="pt-3 border-t border-border">
+ <button
+ type="button"
  onClick={() => setSelectedGuestDetails(null)}
- className="w-full py-2.5 bg-surface-muted hover:bg-surface-muted text-foreground font-semibold rounded-xl text-sm transition"
+ className="w-full py-2.5 bg-surface-muted hover:bg-card-hover text-foreground font-semibold rounded-[var(--radius-button)] text-sm transition border border-border"
  >
  Fermer
  </button>
  </div>
  </div>
  </div>
- )}
+ );
+ })()}
  </div>
  );
 }

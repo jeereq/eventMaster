@@ -440,3 +440,84 @@ export function isBooleanFieldType(type: string): boolean {
 export function isNumericFieldType(type: string): boolean {
   return type === 'number' || type === 'rating';
 }
+
+export interface GuestCustomFieldDetail {
+  key: string;
+  label: string;
+  type?: RsvpFieldType;
+  typeLabel?: string;
+  category?: RsvpFieldCategory;
+  value: unknown;
+  displayValue: string;
+  answered: boolean;
+}
+
+/**
+ * Liste les champs personnalisés RSVP d’un invité pour l’affichage détail :
+ * champs du modèle (ordonnés) + réponses rsvpFormData / customFields restantes.
+ */
+export function listGuestCustomFieldDetails(
+  preferences: GuestRsvpPreferences | null | undefined,
+  templateFields: ExtractedRsvpField[] = [],
+): GuestCustomFieldDetail[] {
+  const seen = new Set<string>();
+  const rows: GuestCustomFieldDetail[] = [];
+
+  const pushRow = (row: GuestCustomFieldDetail) => {
+    const keys = [row.key, row.label].filter(Boolean);
+    if (keys.some((k) => seen.has(k))) return;
+    keys.forEach((k) => seen.add(k));
+    rows.push(row);
+  };
+
+  for (const field of templateFields) {
+    const key = field.analyticsKey || field.id;
+    const value = getCustomFieldValue(preferences, field);
+    const displayValue = formatCustomFieldValueForDisplay(value);
+    pushRow({
+      key,
+      label: field.label,
+      type: field.type,
+      typeLabel: RSVP_FIELD_TYPE_LABELS[field.type],
+      category: field.category,
+      value,
+      displayValue,
+      answered: displayValue !== '',
+    });
+  }
+
+  for (const entry of preferences?.rsvpFormData || []) {
+    const key = entry.analyticsKey || entry.fieldId || entry.label;
+    const displayValue = formatCustomFieldValueForDisplay(entry.value);
+    pushRow({
+      key,
+      label: entry.label || entry.analyticsKey || 'Champ',
+      type: entry.type,
+      typeLabel: entry.type ? RSVP_FIELD_TYPE_LABELS[entry.type] : undefined,
+      category: entry.category,
+      value: entry.value,
+      displayValue,
+      answered: displayValue !== '',
+    });
+  }
+
+  for (const [key, value] of Object.entries(preferences?.customFields || {})) {
+    const displayValue = formatCustomFieldValueForDisplay(value);
+    pushRow({
+      key,
+      label: key,
+      type: typeof value === 'boolean' ? 'checkbox' : typeof value === 'number' ? 'number' : 'text',
+      typeLabel:
+        typeof value === 'boolean'
+          ? RSVP_FIELD_TYPE_LABELS.checkbox
+          : typeof value === 'number'
+            ? RSVP_FIELD_TYPE_LABELS.number
+            : RSVP_FIELD_TYPE_LABELS.text,
+      value,
+      displayValue,
+      answered: displayValue !== '',
+    });
+  }
+
+  return rows;
+}
