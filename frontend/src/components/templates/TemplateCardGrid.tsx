@@ -6,7 +6,8 @@ import { Copy, Edit3, Eye, Globe, Trash2 } from 'lucide-react';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import { getTemplateElementSummary, templateContentToLandingPreview } from '@/lib/landingTemplateAdapter';
 import { cn } from '@/lib/cn';
-import { gridColsClass, type GridColumns, type ViewMode } from '@/components/ui/ViewModeToggle';
+import { gridColsClass, listStackClass, type GridColumns, type ViewMode } from '@/components/ui/ViewModeToggle';
+import { ProjectCard, ListRowAction, StatusPill } from '@/components/ui/ProjectCard';
 
 export interface TemplateCardItem {
   id: string;
@@ -138,7 +139,7 @@ export default function TemplateCardGrid({
   }
 
   const containerClass =
-    layout === 'list' ? cn('flex flex-col gap-2', className) : cn(gridColsClass(columns), className);
+    layout === 'list' ? cn(listStackClass, className) : cn(gridColsClass(columns), className);
 
   return (
     <div className={containerClass}>
@@ -237,10 +238,14 @@ export default function TemplateCardGrid({
               <button
                 type="button"
                 onClick={() => onViewDetails(t)}
-                className="p-2.5 text-muted hover:text-foreground hover:bg-surface-muted rounded-xl transition"
+                className={cn(
+                  layout === 'list'
+                    ? 'inline-flex items-center'
+                    : 'p-2.5 text-muted hover:text-foreground hover:bg-surface-muted rounded-xl transition',
+                )}
                 title="Voir les détails"
               >
-                <Eye className="w-4 h-4" />
+                {layout === 'list' ? <ListRowAction /> : <Eye className="w-4 h-4" />}
               </button>
             )}
 
@@ -270,22 +275,34 @@ export default function TemplateCardGrid({
 
         if (layout === 'list') {
           return (
-            <article
+            <ProjectCard
               key={t.id}
-              className="flex items-center gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-3 py-2.5 hover:bg-card-hover transition"
-            >
-              <TemplatePreviewThumb t={t} onViewDetails={onViewDetails} compact />
-              <div className="flex-1 min-w-0 space-y-1">
-                <h3 className="text-sm font-bold text-foreground tracking-tight line-clamp-1">{t.name}</h3>
-                <p className="text-xs text-muted line-clamp-1">
-                  {new Date(t.createdAt).toLocaleDateString('fr-FR', { year: 'numeric', month: 'short', day: 'numeric' })}
+              id={t.id}
+              title={t.name}
+              layout="list"
+              meta={
+                <span>
+                  {new Date(t.createdAt).toLocaleDateString('fr-FR', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                  })}
                   {' · '}
                   {summary}
-                </p>
-                <div className="flex flex-wrap gap-1">{badges}</div>
-              </div>
-              {actions}
-            </article>
+                </span>
+              }
+              status={
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {global ? <StatusPill tone="sky">Global</StatusPill> : null}
+                  {t.showOnLanding ? <StatusPill tone="emerald">Landing</StatusPill> : null}
+                  {!global && (t.tenantName || t.tenant?.name) ? (
+                    <StatusPill tone="slate">{t.tenantName || t.tenant?.name}</StatusPill>
+                  ) : null}
+                </div>
+              }
+              onClick={onViewDetails ? () => onViewDetails(t) : undefined}
+              actions={actions}
+            />
           );
         }
 

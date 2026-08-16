@@ -5,6 +5,8 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { PlatformSiteProvider } from "@/context/PlatformSiteContext";
 import PWARegister from "@/components/PWARegister";
+import ViewPreferencesBridge from "@/components/ViewPreferencesBridge";
+import MaintenanceOverlay from "@/components/MaintenanceOverlay";
 
 /** Inter ≈ substitut open-source de TWK Lausanne / Asana Sans (UI produit Asana). */
 const inter = Inter({
@@ -66,8 +68,11 @@ export default function RootLayout({
         <ThemeProvider>
           <PlatformSiteProvider>
             <AuthProvider>
-              <PWARegister />
-              {children}
+              <ViewPreferencesBridge>
+                <PWARegister />
+                <MaintenanceOverlay />
+                {children}
+              </ViewPreferencesBridge>
             </AuthProvider>
           </PlatformSiteProvider>
         </ThemeProvider>

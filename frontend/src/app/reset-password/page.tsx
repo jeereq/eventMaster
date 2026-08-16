@@ -129,7 +129,7 @@ export default function ResetPasswordPage() {
     >
       <Suspense fallback={
         <Card padding="lg" className="flex flex-col items-center py-12 gap-3">
-          <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+          <Loader2 className="w-8 h-8 text-primary animate-spin" />
           <p className="text-xs text-slate-500">Chargement…</p>
         </Card>
       }>

@@ -19,7 +19,9 @@ import QuotaUsagePanel from '@/components/QuotaUsagePanel';
 import SubscriptionApprovalModal, { type SubscriptionApprovalRequest } from '@/components/SubscriptionApprovalModal';
 import BillingDiscountFields, { getBillingPricingFromFields } from '@/components/BillingDiscountFields';
 import type { QuotaSnapshot } from '@/lib/quotaDisplay';
-import { PageHeader, Alert, Button, ProjectCard, SkeletonDashboardHome, SkeletonTabContent, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, paginateItems } from '@/components/ui';
+import { PageHeader, Alert, Button, ProjectCard, ListRowAction, StatusPill, SkeletonDashboardHome, SkeletonTabContent, ViewModeToggle, useViewMode, listStackClass, Breadcrumbs, Pagination, paginateItems, PhoneInput } from '@/components/ui';
+import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
+import { parseStoredPhone } from '@/components/ui/PhoneInput';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
 import { useViewPreferencesOptional } from '@/context/ViewPreferencesContext';
 import { PLAN_IDS, type PlanId } from '@/config/landingPricing';
@@ -377,11 +379,13 @@ function DashboardPageContent() {
   const [guestsPage, setGuestsPage] = useState(1);
   const [subRequestsPage, setSubRequestsPage] = useState(1);
   const [homeEventsPage, setHomeEventsPage] = useState(1);
-  const ITEMS_PER_PAGE = 10;
-  const TENANTS_PER_PAGE = 12;
-  const TEMPLATE_CARDS_PER_PAGE = 9;
-  const SUB_REQUESTS_PER_PAGE = 10;
+  const [plansPage, setPlansPage] = useState(1);
+  const ITEMS_PER_PAGE = 8;
+  const TENANTS_PER_PAGE = 8;
+  const TEMPLATE_CARDS_PER_PAGE = 8;
+  const SUB_REQUESTS_PER_PAGE = 8;
   const HOME_EVENTS_PER_PAGE = 6;
+  const PLANS_PER_PAGE = 4;
 
   // Guest CRUD Modals states (Super Admin)
   const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
@@ -393,6 +397,8 @@ function DashboardPageContent() {
   const [modalGuestCategory, setGuestCategory] = useState('Général');
   const [modalGuestRsvp, setGuestRsvp] = useState('PENDING');
   const [modalGuestEventId, setGuestEventId] = useState('');
+  const [modalGuestPhoneCountryCode, setModalGuestPhoneCountryCode] = useState(DEFAULT_PHONE_COUNTRY_CODE);
+  const [modalGuestPhoneNational, setModalGuestPhoneNational] = useState('');
   const [updatingGuest, setUpdatingGuest] = useState(false);
 
   // Event CRUD Modals states
@@ -1200,6 +1206,8 @@ function DashboardPageContent() {
     setGuestCategory('Général');
     setGuestRsvp('PENDING');
     setGuestEventId(adminEvents[0]?.id || '');
+    setModalGuestPhoneCountryCode(DEFAULT_PHONE_COUNTRY_CODE);
+    setModalGuestPhoneNational('');
     setIsGuestModalOpen(true);
   };
 
@@ -1212,6 +1220,12 @@ function DashboardPageContent() {
     setGuestCategory(guest.category || 'Général');
     setGuestRsvp(guest.rsvp || 'PENDING');
     setGuestEventId(guest.eventId);
+    const parts = parseStoredPhone(
+      guest.phone || guest.preferences?.phone || guest.preferences?.telephone,
+      guest.phoneCountryCode,
+    );
+    setModalGuestPhoneCountryCode(parts.countryCode);
+    setModalGuestPhoneNational(parts.national);
     setIsGuestModalOpen(true);
   };
 
@@ -1224,6 +1238,7 @@ function DashboardPageContent() {
 
     setUpdatingGuest(true);
     try {
+      const e164 = composeE164(modalGuestPhoneCountryCode, modalGuestPhoneNational) || undefined;
       const payload = {
         eventId: modalGuestEventId,
         firstName: modalGuestFirstName,
@@ -1231,6 +1246,9 @@ function DashboardPageContent() {
         email: modalGuestEmail,
         category: modalGuestCategory,
         rsvp: modalGuestRsvp,
+        phone: e164,
+        phoneCountryCode: modalGuestPhoneCountryCode,
+        nationalNumber: modalGuestPhoneNational,
         preferences: selectedGuest?.preferences || {},
       };
 
@@ -1274,7 +1292,7 @@ function DashboardPageContent() {
     
     const headers = ["Prénom", "Nom", "Email", "Téléphone", "Catégorie", "Statut RSVP", "Événement", "Organisation"];
     const rows = adminGuests.map(g => {
-      const phone = g.preferences?.phone || g.preferences?.telephone || "";
+      const phone = g.phone || g.preferences?.phone || g.preferences?.telephone || "";
       return [
         g.firstName,
         g.lastName,
@@ -1424,6 +1442,7 @@ function DashboardPageContent() {
     const paginatedEvents = paginateItems(filteredEvents, eventsPage, ITEMS_PER_PAGE);
     const paginatedGuests = paginateItems(filteredGuests, guestsPage, ITEMS_PER_PAGE);
     const paginatedSubRequests = paginateItems(subscriptionRequests, subRequestsPage, SUB_REQUESTS_PER_PAGE);
+    const paginatedPlanIds = paginateItems([...PLAN_IDS], plansPage, PLANS_PER_PAGE);
 
     const activeLicensesCount = (adminData?.tenants || []).filter((t) => {
       const expired = Boolean(t.licenseExpiresAt && new Date(t.licenseExpiresAt) < new Date());
@@ -1793,7 +1812,7 @@ function DashboardPageContent() {
                     className={
                       tenantsViewMode === 'grid'
                         ? tenantsGridClass
-                        : 'flex flex-col gap-0.5 rounded-[var(--radius-card)] border border-border bg-surface-muted/40 p-1.5'
+                        : listStackClass
                     }
                   >
                     {paginatedTenants.map((t) => {
@@ -1803,31 +1822,39 @@ function DashboardPageContent() {
                         : 'Licence désactivée';
                       const licenseShort = licenseLabel.replace('Licence ', '');
                       const planChip = (
-                        <span className={cn('inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold border', planBadgeClass(t.plan))}>
+                        <StatusPill tone={t.plan === 'FREE' ? 'slate' : t.plan.startsWith('ENTERPRISE') ? 'amber' : 'primary'}>
                           {t.plan}
-                        </span>
+                        </StatusPill>
                       );
                       const licenseChip = (
-                        <span className={cn(
-                          'inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold border',
-                          t.licenseActive && !licenseExpired
-                            ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
-                            : 'bg-rose-50 border-rose-100 text-rose-700',
-                        )}>
+                        <StatusPill
+                          tone={t.licenseActive && !licenseExpired ? 'emerald' : 'rose'}
+                        >
                           {licenseShort}
-                        </span>
+                        </StatusPill>
                       );
 
                       const actions = (
                         <>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenDetailsModal('tenant', t)}
-                            className="p-1.5 text-muted hover:text-foreground hover:bg-surface-muted rounded-md transition"
-                            title="Détails"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
+                          {tenantsViewMode === 'list' ? (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenDetailsModal('tenant', t)}
+                              className="inline-flex items-center"
+                              title="Voir détails"
+                            >
+                              <ListRowAction />
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenDetailsModal('tenant', t)}
+                              className="p-1.5 text-muted hover:text-foreground hover:bg-surface-muted rounded-md transition"
+                              title="Détails"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          )}
                           {!isCommercialPlatform && (
                             <>
                               <button
@@ -1861,11 +1888,9 @@ function DashboardPageContent() {
                           meta={
                             tenantsViewMode === 'list' ? (
                               <span>
-                                {[
-                                  t.managerName || t.managerEmail || 'Sans gérant',
-                                  `${t.usersCount} membre${t.usersCount !== 1 ? 's' : ''}`,
-                                  `${t.eventsCount} événement${t.eventsCount !== 1 ? 's' : ''}`,
-                                ].join(' · ')}
+                                {t.managerName || t.managerEmail || 'Sans gérant'}
+                                {' · '}
+                                {t.usersCount} membre{t.usersCount !== 1 ? 's' : ''}
                               </span>
                             ) : (
                               <div className="space-y-1">
@@ -1880,14 +1905,18 @@ function DashboardPageContent() {
                               </div>
                             )
                           }
-                          aside={
-                            tenantsViewMode === 'list' ? (
-                              <>
-                                {planChip}
-                                {licenseChip}
-                              </>
-                            ) : undefined
+                          value={
+                            tenantsViewMode === 'list'
+                              ? `${t.eventsCount} évén.`
+                              : undefined
                           }
+                          valueMeta={
+                            tenantsViewMode === 'list'
+                              ? `Inscrite le ${new Date(t.createdAt).toLocaleDateString('fr-FR')}`
+                              : undefined
+                          }
+                          status={tenantsViewMode === 'list' ? planChip : undefined}
+                          aside={tenantsViewMode === 'list' ? licenseChip : undefined}
                           description={
                             tenantsViewMode === 'grid'
                               ? `Inscrite le ${new Date(t.createdAt).toLocaleDateString('fr-FR')}`
@@ -1933,15 +1962,15 @@ function DashboardPageContent() {
                         onDelete={handleDeleteUser}
                       />
                     </div>
-                    <div className="hidden md:block overflow-x-auto">
-                    <table className="w-full text-left border-collapse min-w-[720px]">
+                    <div className="hidden md:block em-data-table-wrap">
+                    <table className="em-data-table min-w-[720px]">
                     <thead>
-                      <tr className="border-b border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                        <th className="pb-3 font-semibold">Utilisateur</th>
-                        <th className="pb-3 font-semibold">Rôle</th>
-                        <th className="pb-3 font-semibold">Vérification Email</th>
-                        <th className="pb-3 font-semibold">Organisation (Tenant)</th>
-                        <th className="pb-3 font-semibold text-right">Actions</th>
+                      <tr>
+                        <th>Utilisateur</th>
+                        <th>Rôle</th>
+                        <th>Vérification Email</th>
+                        <th>Organisation (Tenant)</th>
+                        <th className="text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-sm">
@@ -2111,15 +2140,15 @@ function DashboardPageContent() {
                         onDelete={handleDeleteEvent}
                       />
                     </div>
-                    <div className="hidden md:block overflow-x-auto">
-                    <table className="w-full text-left border-collapse min-w-[720px]">
+                    <div className="hidden md:block em-data-table-wrap">
+                    <table className="em-data-table min-w-[720px]">
                     <thead>
-                      <tr className="border-b border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                        <th className="pb-3 font-semibold">Événement</th>
-                        <th className="pb-3 font-semibold">Organisation</th>
-                        <th className="pb-3 font-semibold">Lieu</th>
-                        <th className="pb-3 font-semibold">Statistiques</th>
-                        <th className="pb-3 font-semibold text-right">Actions</th>
+                      <tr>
+                        <th>Événement</th>
+                        <th>Organisation</th>
+                        <th>Lieu</th>
+                        <th>Statistiques</th>
+                        <th className="text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-sm">
@@ -2211,16 +2240,16 @@ function DashboardPageContent() {
                         onDelete={handleDeleteGuest}
                       />
                     </div>
-                    <div className="hidden md:block overflow-x-auto">
-                    <table className="w-full text-left border-collapse min-w-[800px]">
+                    <div className="hidden md:block em-data-table-wrap">
+                    <table className="em-data-table min-w-[800px]">
                       <thead>
-                        <tr className="border-b border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                          <th className="pb-3 font-semibold">Invité</th>
-                          <th className="pb-3 font-semibold">Email</th>
-                          <th className="pb-3 font-semibold">Catégorie</th>
-                          <th className="pb-3 font-semibold">Statut RSVP</th>
-                          <th className="pb-3 font-semibold">Événement / Organisation</th>
-                          <th className="pb-3 font-semibold text-right">Actions</th>
+                        <tr>
+                          <th>Invité</th>
+                          <th>Email</th>
+                          <th>Catégorie</th>
+                          <th>Statut RSVP</th>
+                          <th>Événement / Organisation</th>
+                          <th className="text-right">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 text-sm">
@@ -2672,19 +2701,19 @@ function DashboardPageContent() {
                         </div>
                       ))}
                     </div>
-                    <div className="hidden md:block overflow-x-auto">
-                      <table className="w-full text-left border-collapse min-w-[900px]">
+                    <div className="hidden md:block em-data-table-wrap">
+                      <table className="em-data-table min-w-[900px]">
                         <thead>
-                          <tr className="border-b border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                            <th className="pb-3 font-semibold">Organisation</th>
-                            <th className="pb-3 font-semibold">Forfait actuel</th>
-                            <th className="pb-3 font-semibold">Plan Demandé</th>
-                            <th className="pb-3 font-semibold">Durée</th>
-                            <th className="pb-3 font-semibold">Preuve / Référence</th>
-                            <th className="pb-3 font-semibold">Date de Demande</th>
-                            <th className="pb-3 font-semibold">Commercial</th>
-                            <th className="pb-3 font-semibold">Statut</th>
-                            <th className="pb-3 font-semibold text-right">Actions</th>
+                          <tr>
+                            <th>Organisation</th>
+                            <th>Forfait actuel</th>
+                            <th>Plan Demandé</th>
+                            <th>Durée</th>
+                            <th>Preuve / Référence</th>
+                            <th>Date de Demande</th>
+                            <th>Commercial</th>
+                            <th>Statut</th>
+                            <th className="text-right">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-sm">
@@ -2816,7 +2845,7 @@ function DashboardPageContent() {
                     </div>
 
                     <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6">
-                      {PLAN_IDS.map((planKey) => {
+                      {paginatedPlanIds.map((planKey) => {
                         const plan = adminSettings.plans[planKey];
                         if (!plan) return null;
 
@@ -3006,6 +3035,14 @@ function DashboardPageContent() {
                         );
                       })}
                     </div>
+
+                    <Pagination
+                      page={plansPage}
+                      pageSize={PLANS_PER_PAGE}
+                      total={PLAN_IDS.length}
+                      onPageChange={setPlansPage}
+                      itemLabel="forfaits"
+                    />
 
                     <div className="flex justify-end border-t border-slate-100 pt-4">
                       <button
@@ -3615,6 +3652,15 @@ function DashboardPageContent() {
                     required
                   />
                 </div>
+
+                <PhoneInput
+                  label="Téléphone (WhatsApp)"
+                  countryCode={modalGuestPhoneCountryCode}
+                  national={modalGuestPhoneNational}
+                  onCountryCodeChange={setModalGuestPhoneCountryCode}
+                  onNationalChange={setModalGuestPhoneNational}
+                  hint="Indicatif + numéro national (sans le 0)."
+                />
 
                 {/* Catégorie */}
                 <div className="space-y-2">
@@ -4401,7 +4447,7 @@ function DashboardPageContent() {
               <div
                 className={
                   homeEventsMode === 'list'
-                    ? 'flex flex-col gap-2'
+                    ? listStackClass
                     : homeEventsGridClass
                 }
               >
@@ -4419,24 +4465,38 @@ function DashboardPageContent() {
                       title={event.title}
                       layout={homeEventsMode}
                       meta={
-                        <div className="space-y-0.5">
-                          <span className="font-medium text-primary">{dateLabel}</span>
+                        homeEventsMode === 'list' ? (
                           <span className="flex items-center gap-1 truncate">
                             <MapPin className="w-3 h-3 shrink-0 opacity-70" />
                             {event.location}
                           </span>
-                        </div>
+                        ) : (
+                          <div className="space-y-0.5">
+                            <span className="font-medium text-primary">{dateLabel}</span>
+                            <span className="flex items-center gap-1 truncate">
+                              <MapPin className="w-3 h-3 shrink-0 opacity-70" />
+                              {event.location}
+                            </span>
+                          </div>
+                        )
                       }
+                      value={homeEventsMode === 'list' ? dateLabel : undefined}
                       description={homeEventsMode === 'grid' ? event.description : undefined}
                       onClick={() => router.push(`/dashboard/events?id=${event.id}`)}
                       actions={
                         <Link
                           href={`/dashboard/events?id=${event.id}`}
-                          className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-primary hover:bg-surface-muted transition"
+                          className="inline-flex items-center"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          Ouvrir
-                          <ChevronRight className="w-3.5 h-3.5" />
+                          {homeEventsMode === 'list' ? (
+                            <ListRowAction />
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-primary hover:bg-surface-muted transition">
+                              Ouvrir
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </span>
+                          )}
                         </Link>
                       }
                     />

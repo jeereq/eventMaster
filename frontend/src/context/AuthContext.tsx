@@ -26,6 +26,7 @@ interface User {
   email: string;
   name: string;
   phone?: string | null;
+  phoneCountryCode?: string | null;
   role: 'SUPER_ADMIN' | 'COMMERCIAL' | 'USER';
   orgRole?: 'MANAGER' | 'PROTOCOL' | 'COMMERCIAL' | null;
 }
@@ -96,6 +97,8 @@ interface AuthContextType {
     acceptTerms?: boolean,
     acceptPrivacy?: boolean,
     referralCode?: string,
+    phoneCountryCode?: string,
+    nationalNumber?: string,
   ) => Promise<RegisterResult>;
   verifyOtp: (email: string, otp: string) => Promise<void>;
   resendOtp: (email: string, verificationMethod?: 'EMAIL' | 'WHATSAPP') => Promise<string>;
@@ -206,11 +209,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     acceptTerms?: boolean,
     acceptPrivacy?: boolean,
     referralCode?: string,
+    phoneCountryCode?: string,
+    nationalNumber?: string,
   ) => {
     setLoading(true);
     try {
       const data = await api.post('/auth/register', {
-        email, password, name, tenantName, phone, verificationMethod, acceptTerms, acceptPrivacy, referralCode,
+        email,
+        password,
+        name,
+        tenantName,
+        phone,
+        phoneCountryCode,
+        nationalNumber,
+        verificationMethod,
+        acceptTerms,
+        acceptPrivacy,
+        referralCode,
       });
       setLoading(false);
       return {

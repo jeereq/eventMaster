@@ -8,16 +8,19 @@ import {
   Shield, Briefcase, MessageSquare, TrendingUp, Copy, RefreshCw,
 } from 'lucide-react';
 import {
-  SkeletonGrid, ViewModeToggle, useViewMode,
+  SkeletonGrid, ViewModeToggle, useViewMode, listStackClass,
+  ProjectCard, StatusPill, ListRowAction, PhoneInput,
   Button, Modal, EmptyState, Alert, Input, Badge, Pagination, paginateItems,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 
 interface TeamMember {
   id: string;
   name: string | null;
   email: string;
   phone: string | null;
+  phoneCountryCode?: string | null;
   orgRole: 'MANAGER' | 'PROTOCOL' | 'COMMERCIAL' | null;
   orgRoleLabel: string;
   referralCode?: string | null;
@@ -77,7 +80,8 @@ export default function TeamManagement() {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const [phoneCountryCode, setPhoneCountryCode] = useState(DEFAULT_PHONE_COUNTRY_CODE);
+  const [phoneNational, setPhoneNational] = useState('');
   const [password, setPassword] = useState('');
   const [orgRole, setOrgRole] = useState<'MANAGER' | 'PROTOCOL' | 'COMMERCIAL'>('MANAGER');
   const [commissionRate, setCommissionRate] = useState('20');
@@ -117,7 +121,8 @@ export default function TeamManagement() {
   const resetForm = () => {
     setName('');
     setEmail('');
-    setPhone('');
+    setPhoneCountryCode(DEFAULT_PHONE_COUNTRY_CODE);
+    setPhoneNational('');
     setPassword('');
     setOrgRole('MANAGER');
     setCommissionRate(String(Math.round(defaultCommissionRate * 100)));
@@ -140,7 +145,7 @@ export default function TeamManagement() {
     setError('');
     setSuccess('');
     setSubmitting(true);
-    if (verificationMethod === 'WHATSAPP' && !phone) {
+    if (verificationMethod === 'WHATSAPP' && !phoneNational.trim()) {
       setError('Le téléphone est obligatoire pour envoyer le code OTP par WhatsApp.');
       setSubmitting(false);
       return;
@@ -151,8 +156,16 @@ export default function TeamManagement() {
       return;
     }
     try {
+      const e164 = composeE164(phoneCountryCode, phoneNational) || undefined;
       const payload: Record<string, unknown> = {
-        name, email, password, phone: phone || undefined, orgRole, verificationMethod,
+        name,
+        email,
+        password,
+        phone: e164,
+        phoneCountryCode,
+        nationalNumber: phoneNational,
+        orgRole,
+        verificationMethod,
       };
       if (orgRole === 'COMMERCIAL') {
         payload.commissionRate = parseFloat(commissionRate) / 100;
@@ -332,7 +345,15 @@ export default function TeamManagement() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="Nom complet" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Prénom Nom" />
             <Input label="E-mail" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} leftIcon={<Mail className="w-4 h-4" />} />
-            <Input label="Téléphone WhatsApp" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+243..." leftIcon={<Phone className="w-4 h-4" />} />
+            <PhoneInput
+              label="Téléphone WhatsApp"
+              countryCode={phoneCountryCode}
+              national={phoneNational}
+              onCountryCodeChange={setPhoneCountryCode}
+              onNationalChange={setPhoneNational}
+              required={verificationMethod === 'WHATSAPP'}
+              hint="Indicatif pays + numéro national (sans le 0)."
+            />
             <Input label="Mot de passe temporaire" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} hint="Minimum 6 caractères" />
           </div>
 
@@ -424,69 +445,35 @@ export default function TeamManagement() {
           }
         />
       ) : (
-        <div className={teamViewMode === 'list' ? 'flex flex-col gap-2' : teamGridClass}>
-          {paginateItems(members, membersPage, MEMBERS_PER_PAGE).map((member) => (
-            <div
-              key={member.id}
-              className={cn(
-                'flex flex-col gap-3 p-4 bg-surface border border-border rounded-[var(--radius-card)] em-soft-hover',
-                teamViewMode === 'list' && 'sm:flex-row sm:items-center sm:justify-between',
-              )}
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-semibold text-sm text-foreground truncate">
-                    {member.name || 'Sans nom'}
-                  </span>
-                  {member.isOwner ? (
-                    <Badge variant="warning" className="inline-flex items-center gap-1">
-                      <Crown className="w-3 h-3" /> Propriétaire
-                    </Badge>
-                  ) : (
-                    <>
-                      <span
-                        className={cn(
-                          'inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md border',
-                          member.orgRole === 'PROTOCOL'
-                            ? 'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/30 dark:text-violet-300 dark:border-violet-800'
-                            : member.orgRole === 'COMMERCIAL'
-                              ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800'
-                              : 'bg-primary/10 text-primary border-primary/20',
-                        )}
-                      >
-                        {member.orgRole === 'PROTOCOL' ? <Briefcase className="w-3 h-3" /> :
-                         member.orgRole === 'COMMERCIAL' ? <TrendingUp className="w-3 h-3" /> :
-                         <Shield className="w-3 h-3" />}
-                        {orgRoleLabels[member.orgRoleLabel] || member.orgRoleLabel}
-                      </span>
-                      {!member.isEmailVerified && (
-                        <Badge variant="warning">En attente OTP</Badge>
-                      )}
-                      {!member.isEmailVerified && canManageTeam && (
-                        <button
-                          type="button"
-                          onClick={() => handleResendOtp(member)}
-                          disabled={resendingId === member.id}
-                          className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md border border-border text-muted hover:bg-surface-muted inline-flex items-center gap-1"
-                        >
-                          {resendingId === member.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                          Renvoyer OTP
-                        </button>
-                      )}
-                    </>
-                  )}
-                </div>
-                <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-muted">
-                  <span className="inline-flex items-center gap-1"><Mail className="w-3 h-3" />{member.email}</span>
-                  {member.phone && <span className="inline-flex items-center gap-1"><Phone className="w-3 h-3" />{member.phone}</span>}
-                  {member.orgRole === 'COMMERCIAL' && member.referralCode && (
-                    <span className="inline-flex items-center gap-1 font-mono text-foreground/80">
-                      <Copy className="w-3 h-3" />{member.referralCode}
-                    </span>
-                  )}
-                </div>
+        <div className={teamViewMode === 'list' ? listStackClass : teamGridClass}>
+          {paginateItems(members, membersPage, MEMBERS_PER_PAGE).map((member) => {
+            const roleTone =
+              member.isOwner
+                ? 'amber'
+                : member.orgRole === 'PROTOCOL'
+                  ? 'violet'
+                  : member.orgRole === 'COMMERCIAL'
+                    ? 'amber'
+                    : 'primary';
+            const roleLabel = member.isOwner
+              ? 'Propriétaire'
+              : orgRoleLabels[member.orgRoleLabel] || member.orgRoleLabel;
+
+            const managementExtras = (
+              <>
+                {!member.isEmailVerified && canManageTeam && (
+                  <button
+                    type="button"
+                    onClick={() => handleResendOtp(member)}
+                    disabled={resendingId === member.id}
+                    className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md border border-border text-muted hover:bg-surface-muted inline-flex items-center gap-1"
+                  >
+                    {resendingId === member.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                    Renvoyer OTP
+                  </button>
+                )}
                 {member.orgRole === 'COMMERCIAL' && canManageTeam && !member.isOwner && (
-                  <div className="mt-2 flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     {editingCommissionId === member.id ? (
                       <>
                         <input
@@ -520,7 +507,7 @@ export default function TeamManagement() {
                   </div>
                 )}
                 {canManageTeam && !member.isOwner && member.orgRole !== 'COMMERCIAL' && (
-                  <div className="flex gap-2 mt-2.5 flex-wrap">
+                  <div className="flex gap-2 flex-wrap">
                     <button
                       type="button"
                       onClick={() => handleRoleChange(member, 'MANAGER')}
@@ -546,6 +533,99 @@ export default function TeamManagement() {
                     )}
                   </div>
                 )}
+              </>
+            );
+
+            if (teamViewMode === 'list') {
+              return (
+                <ProjectCard
+                  key={member.id}
+                  id={member.id}
+                  title={member.name || 'Sans nom'}
+                  layout="list"
+                  meta={
+                    <span className="inline-flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-1"><Mail className="w-3 h-3" />{member.email}</span>
+                      {member.phone && (
+                        <span className="inline-flex items-center gap-1"><Phone className="w-3 h-3" />{member.phone}</span>
+                      )}
+                    </span>
+                  }
+                  value={
+                    member.orgRole === 'COMMERCIAL' && member.referralCode
+                      ? member.referralCode
+                      : undefined
+                  }
+                  valueMeta={
+                    member.orgRole === 'COMMERCIAL'
+                      ? `Comm. ${Math.round((member.commissionRate ?? defaultCommissionRate) * 100)} %`
+                      : undefined
+                  }
+                  status={
+                    <div className="flex items-center gap-1.5">
+                      <StatusPill tone={roleTone as 'amber' | 'violet' | 'primary'}>
+                        {roleLabel}
+                      </StatusPill>
+                      {!member.isEmailVerified && !member.isOwner && (
+                        <StatusPill tone="amber">OTP</StatusPill>
+                      )}
+                    </div>
+                  }
+                  actions={
+                    canManageTeam && !member.isOwner ? (
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(member)}
+                        className="p-2 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-[var(--radius-button)]"
+                        title="Retirer de l'organisation"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <ListRowAction>Profil</ListRowAction>
+                    )
+                  }
+                >
+                  {managementExtras}
+                </ProjectCard>
+              );
+            }
+
+            return (
+            <div
+              key={member.id}
+              className="flex flex-col gap-3 p-4 bg-surface border border-border rounded-[var(--radius-card)] em-soft-hover"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-sm text-foreground truncate">
+                    {member.name || 'Sans nom'}
+                  </span>
+                  {member.isOwner ? (
+                    <Badge variant="warning" className="inline-flex items-center gap-1">
+                      <Crown className="w-3 h-3" /> Propriétaire
+                    </Badge>
+                  ) : (
+                    <>
+                      <StatusPill tone={roleTone as 'amber' | 'violet' | 'primary'}>
+                        {roleLabel}
+                      </StatusPill>
+                      {!member.isEmailVerified && (
+                        <Badge variant="warning">En attente OTP</Badge>
+                      )}
+                    </>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-muted">
+                  <span className="inline-flex items-center gap-1"><Mail className="w-3 h-3" />{member.email}</span>
+                  {member.phone && <span className="inline-flex items-center gap-1"><Phone className="w-3 h-3" />{member.phone}</span>}
+                  {member.orgRole === 'COMMERCIAL' && member.referralCode && (
+                    <span className="inline-flex items-center gap-1 font-mono text-foreground/80">
+                      <Copy className="w-3 h-3" />{member.referralCode}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-2.5 space-y-2">{managementExtras}</div>
               </div>
               {canManageTeam && !member.isOwner && (
                 <button
@@ -558,7 +638,8 @@ export default function TeamManagement() {
                 </button>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
       {members.length > 0 && (

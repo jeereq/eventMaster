@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useTheme } from '@/context/ThemeContext';
 import { PartyPopper, Sun, Moon, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import PublicAccentPicker from '@/components/PublicAccentPicker';
 
 interface AuthFeature {
   icon: React.ComponentType<{ className?: string }>;
@@ -115,6 +116,7 @@ export function AuthSplitLayout({
             </span>
             EventMaster
           </Link>
+          <PublicAccentPicker />
           <button
             type="button"
             onClick={toggleTheme}

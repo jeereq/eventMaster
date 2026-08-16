@@ -2,7 +2,7 @@ export { default as Button } from './Button';
 export { Card, CardHeader } from './Card';
 export { ProjectCard, accentFromId, StatusPill, ListRowAction, LIST_STACK_CLASS } from './ProjectCard';
 export type { ProjectCardProps, ProjectCardLayout, StatusPillTone } from './ProjectCard';
-export { ViewModeToggle, useViewMode, gridColsClass } from './ViewModeToggle';
+export { ViewModeToggle, useViewMode, gridColsClass, listStackClass } from './ViewModeToggle';
 export type { ViewMode, GridColumns } from './ViewModeToggle';
 export {
   Skeleton,
@@ -35,3 +35,5 @@ export { default as Pagination, paginateItems, totalPagesFor } from './Paginatio
 export type { PaginationProps } from './Pagination';
 export { default as Tooltip } from './Tooltip';
 export type { TooltipSide } from './Tooltip';
+export { default as PhoneInput, parseStoredPhone, phonePartsToValue } from './PhoneInput';
+export type { PhoneInputValue } from './PhoneInput';

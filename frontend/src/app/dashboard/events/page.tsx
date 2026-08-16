@@ -28,8 +28,10 @@ import {
   normalizeGuestGuidelines,
   applyInvitationGuidelineVariables,
 } from '@/lib/guestGuidelines';
-import { PageHeader, Button, ProjectCard, ViewModeToggle, useViewMode, SkeletonEventsView, Breadcrumbs, Modal, Input, Pagination, paginateItems } from '@/components/ui';
+import { PageHeader, Button, ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, Breadcrumbs, Modal, Input, Pagination, paginateItems, PhoneInput } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
+import { parseStoredPhone } from '@/components/ui/PhoneInput';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
 import {
   extractRsvpFieldsFromTemplateContent,
@@ -78,6 +80,8 @@ interface GuestItem {
   firstName: string;
   lastName: string;
   email: string;
+  phone?: string | null;
+  phoneCountryCode?: string | null;
   category: string;
   rsvp: 'PENDING' | 'ACCEPTED' | 'DECLINED';
   preferences: any;
@@ -111,6 +115,7 @@ interface BroadcastResultItem {
   guestName: string;
   email: string;
   phone?: string | null;
+  phoneCountryCode?: string | null;
   rsvpLink: string;
   subject?: string;
   body?: string;
@@ -234,8 +239,8 @@ export default function EventsPage() {
   const { mode: eventsViewMode, setViewMode: setEventsViewMode, columns: eventsColumns, setGridColumns: setEventsColumns, gridClassName: eventsGridClass } = useViewMode('em-view-events', 'grid', 3);
   const [eventsListPage, setEventsListPage] = useState(1);
   const [guestsListPage, setGuestsListPage] = useState(1);
-  const EVENTS_PER_PAGE = 12;
-  const GUESTS_PER_PAGE = 15;
+  const EVENTS_PER_PAGE = 8;
+  const GUESTS_PER_PAGE = 8;
   const isProtocolOnly = access?.isProtocolOnly ?? false;
   const canManageEvents = access?.canManageAllEvents ?? false;
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -277,7 +282,8 @@ export default function EventsPage() {
   const [guestFirstName, setGuestFirstName] = useState('');
   const [guestLastName, setGuestLastName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
-  const [guestPhone, setGuestPhone] = useState('');
+  const [guestPhoneCountryCode, setGuestPhoneCountryCode] = useState(DEFAULT_PHONE_COUNTRY_CODE);
+  const [guestPhoneNational, setGuestPhoneNational] = useState('');
   const [guestCategory, setGuestCategory] = useState('Famille');
   const [guestPrefs, setGuestPreferences] = useState('');
   const [guests, setGuests] = useState<GuestItem[]>([]);
@@ -885,14 +891,18 @@ export default function EventsPage() {
     setSavingGuest(true);
 
     try {
+      const e164 = composeE164(guestPhoneCountryCode, guestPhoneNational) || undefined;
       const payload = {
         firstName: guestFirstName,
         lastName: guestLastName,
         email: guestEmail,
         category: guestCategory,
+        phone: e164,
+        phoneCountryCode: guestPhoneCountryCode,
+        nationalNumber: guestPhoneNational,
         preferences: {
           notes: guestPrefs || undefined,
-          phone: guestPhone || undefined,
+          phone: e164,
         },
       };
 
@@ -909,7 +919,8 @@ export default function EventsPage() {
       setGuestFirstName('');
       setGuestLastName('');
       setGuestEmail('');
-      setGuestPhone('');
+      setGuestPhoneCountryCode(DEFAULT_PHONE_COUNTRY_CODE);
+      setGuestPhoneNational('');
       setGuestPreferences('');
       setEditingGuestId(null);
       setShowGuestModal(false);
@@ -926,15 +937,18 @@ export default function EventsPage() {
     setGuestLastName(guest.lastName);
     setGuestEmail(guest.email);
     setGuestCategory(guest.category || 'Famille');
-    
-    let phone = '';
+
     let notes = '';
     if (guest.preferences && typeof guest.preferences === 'object') {
-      const prefs = guest.preferences as any;
-      phone = prefs.phone || '';
+      const prefs = guest.preferences as { notes?: string; phone?: string };
       notes = prefs.notes || '';
     }
-    setGuestPhone(phone);
+    const parts = parseStoredPhone(
+      guest.phone || (guest.preferences as { phone?: string } | undefined)?.phone,
+      guest.phoneCountryCode,
+    );
+    setGuestPhoneCountryCode(parts.countryCode);
+    setGuestPhoneNational(parts.national);
     setGuestPreferences(notes);
     setShowGuestModal(true);
   };
@@ -1530,7 +1544,7 @@ export default function EventsPage() {
           className={
             eventsViewMode === 'grid'
               ? eventsGridClass
-              : 'flex flex-col gap-2'
+              : listStackClass
           }
         >
           {events.length === 0 ? (
@@ -1588,10 +1602,10 @@ export default function EventsPage() {
                     <button
                       type="button"
                       onClick={() => handleManageEvent(event)}
-                      className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-surface-muted transition"
+                      className="inline-flex items-center"
+                      title="Voir détails"
                     >
-                      Ouvrir
-                      <ChevronRight className="w-3.5 h-3.5" />
+                      <ListRowAction />
                     </button>
                   )}
                   <button
@@ -1611,7 +1625,22 @@ export default function EventsPage() {
                   id={event.id}
                   title={event.title}
                   layout={eventsViewMode}
-                  meta={eventsViewMode === 'list' ? dateLabel : meta}
+                  meta={
+                    eventsViewMode === 'list'
+                      ? event.location
+                      : meta
+                  }
+                  value={eventsViewMode === 'list' ? dateLabel : undefined}
+                  valueMeta={
+                    eventsViewMode === 'list' && event.room
+                      ? event.room.name
+                      : undefined
+                  }
+                  status={
+                    eventsViewMode === 'list' && event.room ? (
+                      <StatusPill tone="violet">Salle</StatusPill>
+                    ) : undefined
+                  }
                   description={
                     eventsViewMode === 'grid' && event.description
                       ? event.description
@@ -1727,7 +1756,8 @@ export default function EventsPage() {
                       setGuestFirstName('');
                       setGuestLastName('');
                       setGuestEmail('');
-                      setGuestPhone('');
+                      setGuestPhoneCountryCode(DEFAULT_PHONE_COUNTRY_CODE);
+                      setGuestPhoneNational('');
                       setGuestPreferences('');
                       setGuestCategory('Famille');
                       setShowGuestModal(true);
@@ -1916,11 +1946,11 @@ export default function EventsPage() {
                     </button>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
+                  <div className="em-data-table-wrap">
+                    <table className="em-data-table">
                       <thead>
-                        <tr className="border-b border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider bg-slate-50/50">
-                          <th className="py-3.5 px-6 font-semibold w-12">
+                        <tr>
+                          <th className="w-12">
                             <input 
                               type="checkbox" 
                               checked={isAllFilteredSelected}
@@ -1931,21 +1961,21 @@ export default function EventsPage() {
                                   setSelectedGuestIds([]);
                                 }
                               }}
-                              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                              className="rounded border-border text-primary focus:ring-primary h-4 w-4"
                             />
                           </th>
-                          <th className="py-3.5 px-6 font-semibold">Nom complet</th>
-                          <th className="py-3.5 px-6 font-semibold">Email</th>
-                          <th className="py-3.5 px-6 font-semibold">Catégorie</th>
-                          <th className="py-3.5 px-6 font-semibold">Statut RSVP</th>
-                          <th className="py-3.5 px-6 font-semibold">Préférences & Allergies</th>
-                          <th className="py-3.5 px-6 font-semibold text-right">Actions</th>
+                          <th>Nom complet</th>
+                          <th>Email</th>
+                          <th>Catégorie</th>
+                          <th>Statut RSVP</th>
+                          <th>Préférences & Allergies</th>
+                          <th className="text-right">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 text-sm">
+                      <tbody>
                         {paginatedGuestsList.map((g) => (
-                          <tr key={g.id} className={`hover:bg-slate-50/30 transition-colors ${selectedGuestIds.includes(g.id) ? 'bg-indigo-50/10' : ''}`}>
-                            <td className="py-4 px-6 w-12">
+                          <tr key={g.id} className={selectedGuestIds.includes(g.id) ? 'bg-primary/5' : undefined}>
+                            <td className="w-12">
                               <input 
                                 type="checkbox" 
                                 checked={selectedGuestIds.includes(g.id)}
@@ -1956,7 +1986,7 @@ export default function EventsPage() {
                                     setSelectedGuestIds(selectedGuestIds.filter(id => id !== g.id));
                                   }
                                 }}
-                                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                                className="rounded border-border text-primary focus:ring-primary h-4 w-4"
                               />
                             </td>
                             <td className="py-4 px-6 font-bold text-slate-900">{g.firstName} {g.lastName}</td>
@@ -2420,7 +2450,7 @@ export default function EventsPage() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email</label>
                   <input 
@@ -2432,16 +2462,14 @@ export default function EventsPage() {
                     required
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Téléphone (WhatsApp)</label>
-                  <input 
-                    type="text" 
-                    value={guestPhone}
-                    onChange={(e) => setGuestPhone(e.target.value)}
-                    placeholder="ex. +243812345678"
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
-                  />
-                </div>
+                <PhoneInput
+                  label="Téléphone (WhatsApp)"
+                  countryCode={guestPhoneCountryCode}
+                  national={guestPhoneNational}
+                  onCountryCodeChange={setGuestPhoneCountryCode}
+                  onNationalChange={setGuestPhoneNational}
+                  hint="Indicatif + numéro national (sans le 0)."
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
@@ -2665,16 +2693,16 @@ export default function EventsPage() {
                       Effacer
                     </button>
                   </div>
-                  <div className="border border-slate-200 rounded-2xl overflow-hidden max-h-48 overflow-y-auto">
-                    <table className="w-full text-left border-collapse">
+                  <div className="em-data-table-wrap max-h-48 overflow-y-auto">
+                    <table className="em-data-table">
                       <thead>
-                        <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                          <th className="py-2 px-3">Prénom</th>
-                          <th className="py-2 px-3">Nom</th>
-                          <th className="py-2 px-3">Email</th>
-                          <th className="py-2 px-3">Catégorie</th>
-                          <th className="py-2 px-3">Téléphone</th>
-                          <th className="py-2 px-3">Notes</th>
+                        <tr>
+                          <th>Prénom</th>
+                          <th>Nom</th>
+                          <th>Email</th>
+                          <th>Catégorie</th>
+                          <th>Téléphone</th>
+                          <th>Notes</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 text-xs text-slate-700">

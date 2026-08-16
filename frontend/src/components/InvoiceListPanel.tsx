@@ -181,25 +181,25 @@ export default function InvoiceListPanel({
         ))}
       </div>
 
-      <div className="hidden md:block overflow-x-auto border rounded-xl">
-        <table className="w-full text-sm min-w-[720px]">
-          <thead className="bg-slate-50 dark:bg-slate-950 text-left text-xs uppercase text-slate-400">
+      <div className="hidden md:block em-data-table-wrap">
+        <table className="em-data-table min-w-[720px]">
+          <thead>
             <tr>
-              <th className="px-4 py-3">N° facture</th>
-              {showOrganization && <th className="px-4 py-3">Organisation</th>}
-              <th className="px-4 py-3">Forfait</th>
-              <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3">Montant</th>
-              {showCommissions && <th className="px-4 py-3">Commission(s)</th>}
-              <th className="px-4 py-3">Période</th>
-              <th className="px-4 py-3">Statut</th>
-              <th className="px-4 py-3">Date</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+              <th>N° facture</th>
+              {showOrganization && <th>Organisation</th>}
+              <th>Forfait</th>
+              <th>Type</th>
+              <th>Montant</th>
+              {showCommissions && <th>Commission(s)</th>}
+              <th>Période</th>
+              <th>Statut</th>
+              <th>Date</th>
+              <th className="text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+          <tbody>
             {paginated.map((inv) => (
-              <tr key={inv.id} className="bg-white dark:bg-slate-900 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+              <tr key={inv.id}>
                 <InvoiceRowCells
                   inv={inv}
                   showOrganization={showOrganization}

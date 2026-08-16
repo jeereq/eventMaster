@@ -133,30 +133,30 @@ export default function OrgCommercialPage() {
         )}
       </div>
 
-      <div className="hidden md:block bg-white dark:bg-slate-900 border rounded-2xl overflow-x-auto">
-        <table className="w-full text-sm min-w-[560px]">
-          <thead className="bg-slate-50 dark:bg-slate-950 text-left text-xs uppercase text-slate-400">
+      <div className="hidden md:block em-data-table-wrap">
+        <table className="em-data-table min-w-[560px]">
+          <thead>
             <tr>
-              <th className="px-4 py-3">Organisation</th>
-              <th className="px-4 py-3">Manager</th>
-              <th className="px-4 py-3">Plan</th>
-              <th className="px-4 py-3">Événements</th>
+              <th>Organisation</th>
+              <th>Manager</th>
+              <th>Plan</th>
+              <th>Événements</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+          <tbody>
             {data.organizations.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-slate-400 italic">
+                <td colSpan={4} className="text-center text-muted italic py-8">
                   Aucune organisation parrainée pour le moment.
                 </td>
               </tr>
             ) : (
               paginatedOrgs.map((o) => (
                 <tr key={o.id}>
-                  <td className="px-4 py-3 font-semibold">{o.name}</td>
-                  <td className="px-4 py-3 text-slate-500">{o.managerName || '—'}</td>
-                  <td className="px-4 py-3">{o.plan}</td>
-                  <td className="px-4 py-3">{o.eventsCount}</td>
+                  <td className="font-semibold">{o.name}</td>
+                  <td className="text-muted">{o.managerName || '—'}</td>
+                  <td>{o.plan}</td>
+                  <td>{o.eventsCount}</td>
                 </tr>
               ))
             )}
@@ -192,26 +192,26 @@ export default function OrgCommercialPage() {
               </div>
             ))}
           </div>
-          <div className="hidden md:block bg-white dark:bg-slate-900 border rounded-2xl overflow-x-auto">
-            <table className="w-full text-sm min-w-[560px]">
-              <thead className="bg-slate-50 dark:bg-slate-950 text-left text-xs uppercase text-slate-400">
+          <div className="hidden md:block em-data-table-wrap">
+            <table className="em-data-table min-w-[560px]">
+              <thead>
                 <tr>
-                  <th className="px-4 py-3">Période</th>
-                  <th className="px-4 py-3">Organisation</th>
-                  <th className="px-4 py-3">Facture</th>
-                  <th className="px-4 py-3">Commission</th>
+                  <th>Période</th>
+                  <th>Organisation</th>
+                  <th>Facture</th>
+                  <th>Commission</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              <tbody>
                 {paginatedComms.map((c) => (
                   <tr key={c.id}>
-                    <td className="px-4 py-3">{c.billingPeriod}</td>
-                    <td className="px-4 py-3">{c.tenant.name}</td>
-                    <td className="px-4 py-3">{c.invoiceAmount.toLocaleString('fr-FR')} FC</td>
-                    <td className="px-4 py-3 font-bold text-emerald-600">
+                    <td>{c.billingPeriod}</td>
+                    <td>{c.tenant.name}</td>
+                    <td>{c.invoiceAmount.toLocaleString('fr-FR')} FC</td>
+                    <td className="font-bold text-emerald-600">
                       {c.commissionAmount.toLocaleString('fr-FR')} FC
                       {c.commissionRate != null && (
-                        <span className="text-slate-400 font-normal ml-1">({Math.round(c.commissionRate * 100)} %)</span>
+                        <span className="text-muted font-normal ml-1">({Math.round(c.commissionRate * 100)} %)</span>
                       )}
                     </td>
                   </tr>

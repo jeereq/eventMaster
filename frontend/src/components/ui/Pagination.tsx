@@ -49,31 +49,35 @@ export default function Pagination({
   className,
   maxButtons = 7,
 }: PaginationProps) {
-  if (total <= pageSize) return null;
+  if (total <= 0) return null;
 
   const totalPages = totalPagesFor(total, pageSize);
   const safePage = Math.min(Math.max(1, page), totalPages);
-  const from = (safePage - 1) * pageSize + 1;
+  const from = total === 0 ? 0 : (safePage - 1) * pageSize + 1;
   const to = Math.min(safePage * pageSize, total);
   const pages = pageWindow(safePage, totalPages, maxButtons);
+  const singlePage = totalPages <= 1;
 
   return (
-    <div
+    <nav
+      aria-label="Pagination"
       className={cn(
-        'flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-border pt-4',
+        'flex flex-col sm:flex-row items-center justify-between gap-3',
+        'mt-4 rounded-[var(--radius-button)] border border-border bg-surface-muted/60 px-3 py-2.5',
         className,
       )}
     >
-      <span className="text-xs text-muted">
+      <span className="text-xs font-medium text-foreground/80">
         {from}–{to} sur {total}
         {itemLabel ? ` ${itemLabel}` : ''}
+        {singlePage ? ' · 1 page' : ` · ${totalPages} pages`}
       </span>
       <div className="flex items-center gap-1 overflow-x-auto max-w-full pb-0.5">
         <button
           type="button"
           onClick={() => onPageChange(Math.max(1, safePage - 1))}
           disabled={safePage <= 1}
-          className="p-2 border border-border rounded-[var(--radius-button)] text-muted hover:bg-surface-muted disabled:opacity-40 transition"
+          className="p-2 border border-border rounded-[var(--radius-button)] bg-surface text-muted hover:bg-surface-muted disabled:opacity-40 transition"
           aria-label="Page précédente"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -83,11 +87,12 @@ export default function Pagination({
             key={p}
             type="button"
             onClick={() => onPageChange(p)}
+            disabled={singlePage}
             className={cn(
-              'min-w-8 px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-medium transition',
+              'min-w-8 px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-semibold transition',
               safePage === p
-                ? 'bg-foreground text-background'
-                : 'border border-border text-muted hover:bg-surface-muted',
+                ? 'bg-primary text-white shadow-sm'
+                : 'border border-border bg-surface text-muted hover:bg-surface-muted',
             )}
             aria-current={safePage === p ? 'page' : undefined}
           >
@@ -98,12 +103,12 @@ export default function Pagination({
           type="button"
           onClick={() => onPageChange(Math.min(totalPages, safePage + 1))}
           disabled={safePage >= totalPages}
-          className="p-2 border border-border rounded-[var(--radius-button)] text-muted hover:bg-surface-muted disabled:opacity-40 transition"
+          className="p-2 border border-border rounded-[var(--radius-button)] bg-surface text-muted hover:bg-surface-muted disabled:opacity-40 transition"
           aria-label="Page suivante"
         >
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
-    </div>
+    </nav>
   );
 }

@@ -57,6 +57,9 @@ export function gridColsClass(columns: GridColumns): string {
   }
 }
 
+/** Empilement des lignes liste (style activité récente). */
+export const listStackClass = 'em-list-stack';
+
 export function useViewMode(
   storageKey: string,
   defaultMode: ViewMode = 'grid',
@@ -153,7 +156,7 @@ export function ViewModeToggle({
           className={cn(
             'inline-flex items-center justify-center rounded-md px-2.5 py-1.5 transition-colors',
             mode === 'list'
-              ? 'bg-surface text-foreground shadow-sm ring-1 ring-border'
+              ? 'bg-surface text-primary shadow-sm ring-1 ring-border'
               : 'text-muted hover:text-foreground',
           )}
         >

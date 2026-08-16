@@ -45,13 +45,18 @@ export function SkeletonProjectCard() {
 
 export function SkeletonListRow() {
   return (
-    <div className="flex items-center gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-3 py-2.5">
-      <Skeleton className="h-9 w-1.5 rounded-full shrink-0" />
+    <div className="flex items-center gap-3 sm:gap-4 rounded-[var(--radius-card)] border border-border bg-surface px-3.5 py-3 sm:px-4">
+      <Skeleton className="h-10 w-10 rounded-xl shrink-0" />
       <div className="flex-1 space-y-1.5 min-w-0">
         <Skeleton className="h-3.5 w-2/5" />
         <Skeleton className="h-3 w-1/3" />
       </div>
-      <Skeleton className="h-7 w-16 rounded-lg shrink-0" />
+      <div className="hidden sm:flex flex-col items-end gap-1.5 shrink-0">
+        <Skeleton className="h-3.5 w-16" />
+        <Skeleton className="h-3 w-12" />
+      </div>
+      <Skeleton className="hidden md:block h-6 w-20 rounded-full shrink-0" />
+      <Skeleton className="h-4 w-4 rounded shrink-0" />
     </div>
   );
 }
@@ -83,7 +88,7 @@ export function SkeletonGrid({
 
 export function SkeletonList({ count = 5, className }: { count?: number; className?: string }) {
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
+    <div className={cn('flex flex-col gap-2.5', className)}>
       {Array.from({ length: count }).map((_, i) => (
         <SkeletonListRow key={i} />
       ))}

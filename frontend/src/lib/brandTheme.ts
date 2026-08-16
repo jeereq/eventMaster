@@ -103,15 +103,40 @@ export function hexToRgbChannels(hex: string): string {
   return `${(num >> 16) & 0xff}, ${(num >> 8) & 0xff}, ${num & 0xff}`;
 }
 
+/** Dégradé du panneau marketing auth dérivé de la couleur primaire. */
+export function deriveAuthPanelFromPrimary(primary: string): {
+  authFrom: string;
+  authVia: string;
+  authTo: string;
+} {
+  return {
+    authFrom: adjustHex(primary, -18),
+    authVia: adjustHex(primary, -42),
+    authTo: '#0f172a',
+  };
+}
+
 function setAuthPanelVars(
   root: HTMLElement,
   branding: TenantBranding | null | undefined,
   defaults: BrandPalette,
 ) {
   const primary = branding?.primary || defaults.primary;
-  root.style.setProperty('--auth-from', branding?.authFrom || defaults.authFrom);
-  root.style.setProperty('--auth-via', branding?.authVia || defaults.authVia);
-  root.style.setProperty('--auth-to', branding?.authTo || defaults.authTo);
+  const derived = deriveAuthPanelFromPrimary(primary);
+  const useDerived = Boolean(branding?.primary) && !branding?.authFrom;
+
+  root.style.setProperty(
+    '--auth-from',
+    branding?.authFrom || (useDerived ? derived.authFrom : defaults.authFrom),
+  );
+  root.style.setProperty(
+    '--auth-via',
+    branding?.authVia || (useDerived ? derived.authVia : defaults.authVia),
+  );
+  root.style.setProperty(
+    '--auth-to',
+    branding?.authTo || (useDerived ? derived.authTo : defaults.authTo),
+  );
   root.style.setProperty('--auth-glow', hexToRgbChannels(primary));
 }
 

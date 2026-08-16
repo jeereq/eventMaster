@@ -22,7 +22,6 @@ import ViewCustomizerDrawer, {
 import { Tooltip } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { TourProvider } from '@/context/TourContext';
-import { ViewPreferencesProvider } from '@/context/ViewPreferencesContext';
 import ProductTourOverlay from '@/components/guide/ProductTourOverlay';
 
 interface NavItem {
@@ -131,6 +130,7 @@ function SidebarNav({
                     data-tour={item.tourId}
                     onClick={() => setMobileMenuOpen(false)}
                     aria-current={isActive ? 'page' : undefined}
+                    title={collapsed ? item.name : undefined}
                     className={cn(
                       'group relative flex w-full items-center rounded-[var(--radius-button)] text-sm font-medium transition-colors duration-150',
                       collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2',
@@ -345,7 +345,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
     >
       <TourProvider>
-      <ViewPreferencesProvider tenantBranding={tenant?.branding}>
         <div className="min-h-screen flex flex-col md:flex-row bg-background text-foreground transition-colors duration-200">
       {/* Overlay mobile */}
       {mobileMenuOpen && (
@@ -573,7 +572,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <ViewCustomizerDrawer />
         <ProductTourOverlay />
         </div>
-      </ViewPreferencesProvider>
       </TourProvider>
     </Suspense>
   );

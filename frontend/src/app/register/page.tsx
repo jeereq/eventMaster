@@ -8,9 +8,10 @@ import {
   Calendar, Mail, Lock, User, Building, PartyPopper, Phone, MessageSquare, Table, Sparkles, UserCheck,
 } from 'lucide-react';
 import { AuthSplitLayout, MethodToggle } from '@/components/AuthSplitLayout';
-import { Button, Alert, Input, Card } from '@/components/ui';
+import { Button, Alert, Input, Card, PhoneInput } from '@/components/ui';
 import { parseReferralFromSearchParams } from '@/lib/referralLink';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 
 const FEATURES = [
   { icon: Calendar, title: "Gestion d'événements & RSVP", desc: 'Invitations par e-mail ou WhatsApp, suivi des réponses en temps réel.' },
@@ -44,7 +45,8 @@ function RegisterPageContent() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [tenantName, setTenantName] = useState('');
-  const [phone, setPhone] = useState('');
+  const [phoneCountryCode, setPhoneCountryCode] = useState(DEFAULT_PHONE_COUNTRY_CODE);
+  const [phoneNational, setPhoneNational] = useState('');
   const [verificationMethod, setVerificationMethod] = useState<'EMAIL' | 'WHATSAPP'>('EMAIL');
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
@@ -67,7 +69,7 @@ function RegisterPageContent() {
     setError('');
     setLoading(true);
 
-    if (verificationMethod === 'WHATSAPP' && !phone) {
+    if (verificationMethod === 'WHATSAPP' && !phoneNational.trim()) {
       setError('Le numéro de téléphone est obligatoire pour la confirmation par WhatsApp.');
       setLoading(false);
       return;
@@ -80,7 +82,20 @@ function RegisterPageContent() {
     }
 
     try {
-      const res = await register(email, password, name, tenantName, phone, verificationMethod, acceptTerms, acceptPrivacy, referralCode || undefined);
+      const e164 = composeE164(phoneCountryCode, phoneNational) || undefined;
+      const res = await register(
+        email,
+        password,
+        name,
+        tenantName,
+        e164,
+        verificationMethod,
+        acceptTerms,
+        acceptPrivacy,
+        referralCode || undefined,
+        phoneCountryCode,
+        phoneNational,
+      );
       if (res.requiresVerification && res.email) {
         router.push(`/verify-otp?email=${encodeURIComponent(res.email)}&method=${res.verificationMethod || verificationMethod}`);
         return;
@@ -174,16 +189,19 @@ function RegisterPageContent() {
 
               <Input label="Adresse email" id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="jean@exemple.com" leftIcon={<Mail className="w-4 h-4" />} />
 
-              <Input
-                label="Téléphone WhatsApp"
+              <PhoneInput
                 id="phone"
-                type="tel"
+                label="Téléphone WhatsApp"
+                countryCode={phoneCountryCode}
+                national={phoneNational}
+                onCountryCodeChange={setPhoneCountryCode}
+                onNationalChange={setPhoneNational}
                 required={verificationMethod === 'WHATSAPP'}
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+243812345678"
-                hint={verificationMethod === 'WHATSAPP' ? 'Obligatoire pour la validation par WhatsApp.' : 'Optionnel si validation par e-mail.'}
-                leftIcon={<Phone className="w-4 h-4" />}
+                hint={
+                  verificationMethod === 'WHATSAPP'
+                    ? 'Indicatif pays + numéro national (sans le 0).'
+                    : 'Optionnel si validation par e-mail.'
+                }
               />
 
               <Input label="Mot de passe" id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" leftIcon={<Lock className="w-4 h-4" />} />
