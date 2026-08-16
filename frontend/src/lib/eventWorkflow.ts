@@ -235,7 +235,7 @@ export function computeEventWorkflowState(input: {
     {
       id: 'tableNotify',
       title: 'Notification placement',
-      description: 'Carte et PDF envoyés après confirmation de présence au protocole.',
+      description: 'PDF, plan et GPS envoyés après scan / validation à l\'entrée.',
       tab: 'tablePlan',
       detail:
         placementDeliveredCount > 0

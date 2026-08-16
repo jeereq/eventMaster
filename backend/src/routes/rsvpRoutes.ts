@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getGuestRsvpDetails, submitRsvp, getGuestAllInvitations, downloadSeatingInvitationPdf } from '../controllers/rsvpController';
+import { getGuestRsvpDetails, submitRsvp, getGuestAllInvitations, downloadSeatingInvitationPdf, getGuestQrPng } from '../controllers/rsvpController';
 import { submitGuestShare, getEventFeed, createEventComment, getPublicEventShares, toggleLikeEventPost } from '../controllers/feedController';
 import { acceptGuestLegalHandler, getGuestLegalStatusHandler } from '../controllers/legalController';
 
@@ -9,6 +9,7 @@ router.get('/:guestId/legal-status', getGuestLegalStatusHandler);
 router.post('/:guestId/legal-accept', acceptGuestLegalHandler);
 router.get('/:guestId/invitations', getGuestAllInvitations);
 router.get('/:guestId/seating-invitation.pdf', downloadSeatingInvitationPdf);
+router.get('/:guestId/qr.png', getGuestQrPng);
 router.get('/:guestId', getGuestRsvpDetails);
 router.post('/:guestId', submitRsvp);
 

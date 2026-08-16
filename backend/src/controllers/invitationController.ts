@@ -185,6 +185,15 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
         let sendResult: any = { success: true, simulated: true };
 
         if (chan === 'EMAIL') {
+          const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(guest.email || '').trim());
+          if (!isEmail) {
+            sendResult = {
+              success: false,
+              simulated: false,
+              error: 'Adresse e-mail invalide ou manquante',
+              failureCode: 'noEmail',
+            };
+          } else {
           const htmlBody = `
             <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f8fafc; padding: 40px 15px; margin: 0; width: 100%;">
               <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0;">
@@ -228,8 +237,9 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
                   </div>
                   
                   <p style="text-align: center; font-size: 12px; color: #94a3b8; margin-top: 25px; margin-bottom: 0;">
-                    Merci de bien vouloir répondre avant la date de l'événement.
-                    Votre plan de table et invitation PDF vous seront envoyés après validation à l'entrée.
+                    Merci de répondre avant la date de l'événement.<br />
+                    Après confirmation RSVP, présentez votre badge QR à l'accueil.<br />
+                    Votre plan de table, invitation PDF et localisation GPS vous seront envoyés après validation à l'entrée.
                   </p>
                 </div>
 
@@ -250,6 +260,7 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
             body,
             htmlBody,
           );
+          }
         } else if (chan === 'WHATSAPP') {
           const phone = getGuestPhone(guest);
           if (phone) {
@@ -271,7 +282,12 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
             sendResult = await sendRealWhatsApp(phone, whatsappBody);
           } else {
             console.warn(`[Invitation Controller] Guest ${guest.firstName} ${guest.lastName} has no valid phone number for WhatsApp sending.`);
-            sendResult = { success: false, simulated: false, error: 'No valid phone number' };
+            sendResult = {
+              success: false,
+              simulated: false,
+              error: 'Numéro WhatsApp manquant ou invalide',
+              failureCode: 'noPhone',
+            };
           }
         }
 
@@ -280,6 +296,7 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
           success: sendResult.success,
           simulated: sendResult.simulated,
           error: sendResult.error || null,
+          failureCode: sendResult.failureCode || null,
         });
       }
 
@@ -287,22 +304,26 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
       const anySuccess = channelResults.some(r => r.success);
       const allSimulated = channelResults.every(r => r.simulated);
       const errors = channelResults.filter(r => r.error).map(r => `${r.channel}: ${r.error}`).join('; ');
+      const status = anySuccess ? (allSimulated ? 'SENT_SIMULATED' : 'SENT') : 'FAILED';
+      const nowIso = new Date().toISOString();
 
-      if (anySuccess) {
-        const prefs =
-          guest.preferences && typeof guest.preferences === 'object'
-            ? (guest.preferences as Record<string, unknown>)
-            : {};
-        await prisma.guest.update({
-          where: { id: guest.id },
-          data: {
-            preferences: {
-              ...prefs,
-              invitationSentAt: new Date().toISOString(),
-            },
+      const prefs =
+        guest.preferences && typeof guest.preferences === 'object'
+          ? (guest.preferences as Record<string, unknown>)
+          : {};
+      await prisma.guest.update({
+        where: { id: guest.id },
+        data: {
+          preferences: {
+            ...prefs,
+            ...(anySuccess ? { invitationSentAt: nowIso } : {}),
+            invitationLastAttemptAt: nowIso,
+            invitationLastStatus: status,
+            invitationLastError: errors || null,
+            invitationLastChannels: channelsToSend.join(', '),
           },
-        });
-      }
+        },
+      });
 
       return {
         guestId: guest.id,
@@ -311,7 +332,7 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
         body,
         rsvpUrl: `${FRONTEND_URL}/rsvp/${guest.id}`,
         invitationPdfUrl: null,
-        status: anySuccess ? (allSimulated ? 'SENT_SIMULATED' : 'SENT') : 'FAILED',
+        status,
         channel: channelsToSend.join(', '),
         simulated: allSimulated,
         error: errors || null,
@@ -323,6 +344,24 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
     const failedCount = sentInvitations.filter(inv => inv.status === 'FAILED').length;
     const simulatedCount = sentInvitations.filter(inv => inv.status === 'SENT_SIMULATED').length;
     const sentCount = sentInvitations.filter(inv => inv.status === 'SENT').length;
+
+    const failureReasons = { noPhone: 0, noEmail: 0, provider: 0 };
+    for (const inv of sentInvitations) {
+      if (inv.status !== 'FAILED') continue;
+      const codes = (inv.channelResults || [])
+        .filter((r: { success?: boolean }) => !r.success)
+        .map((r: { failureCode?: string | null; error?: string | null }) => {
+          if (r.failureCode === 'noPhone' || r.failureCode === 'noEmail') return r.failureCode;
+          const err = String(r.error || '').toLowerCase();
+          if (err.includes('phone') || err.includes('whatsapp') || err.includes('numéro')) return 'noPhone';
+          if (err.includes('e-mail') || err.includes('email')) return 'noEmail';
+          return 'provider';
+        });
+      const unique = Array.from(new Set(codes));
+      if (unique.includes('noPhone')) failureReasons.noPhone += 1;
+      else if (unique.includes('noEmail')) failureReasons.noEmail += 1;
+      else failureReasons.provider += 1;
+    }
 
     let message: string;
     if (failedCount === sentInvitations.length) {
@@ -343,6 +382,7 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
         simulated: simulatedCount,
         failed: failedCount,
         allSimulated,
+        failureReasons,
       },
       invitationsSent: sentInvitations,
       results: sentInvitations.map(inv => {

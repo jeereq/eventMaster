@@ -12,6 +12,7 @@ import {
 import { getTableMateGuestIds } from '../utils/tablePlanAssignment';
 import { normalizeGuestGuidelines, formatDressCodeText } from '../utils/guestGuidelines';
 import { canGuestAccessPlacement } from '../utils/guestPlacementAccess';
+import { buildGuestQrImageUrl, generateQrPngBuffer } from '../utils/qrCode';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -473,9 +474,7 @@ export async function submitRsvp(req: Request, res: Response) {
     }) : '';
 
     if (rsvp === 'ACCEPTED') {
-      // Customized QR Code with platform colors (Indigo: #4f46e5) - point to the public RSVP landing page for this guest
-      const rsvpUrl = `${FRONTEND_URL}/rsvp/${guest.id}`;
-      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(rsvpUrl)}&color=4f-46-e5&bgcolor=ffffff&qzone=2`;
+      const qrCodeUrl = buildGuestQrImageUrl(guest.id, 300);
 
       const subject = `Confirmation de votre présence - ${guest.event.title}`;
       const textBody = `Bonjour ${guest.firstName},\n\nVotre présence à l'événement "${guest.event.title}" a été confirmée avec succès !\n\nVoici votre badge de confirmation de présence (QR Code) : ${qrCodeUrl}\n\nPrésentez ce QR Code à l'entrée pour valider votre présence.\n\nDate : ${formattedDate}\nLieu : ${guest.event.location || 'Non défini'}\n\nMerci et à très bientôt !`;
@@ -606,7 +605,7 @@ export async function downloadSeatingInvitationPdf(req: Request, res: Response) 
 
     if (!canGuestAccessPlacement(guest)) {
       return res.status(403).json({
-        error: 'Votre plan de table et invitation PDF seront disponibles après votre confirmation de présence à l\'entrée.',
+        error: 'Votre plan de table, invitation PDF et localisation GPS seront disponibles après validation de votre présence à l\'entrée.',
       });
     }
 
@@ -653,5 +652,34 @@ export async function downloadSeatingInvitationPdf(req: Request, res: Response) 
   } catch (error: any) {
     console.error('Erreur génération PDF invitation:', error);
     return res.status(500).json({ error: 'Impossible de générer le PDF.' });
+  }
+}
+
+/** PNG QR auto-hébergé pour badge invité (e-mail, WhatsApp, portail). */
+export async function getGuestQrPng(req: Request, res: Response) {
+  try {
+    const guestId = req.params.guestId as string;
+    const sizeRaw = Number(req.query.size);
+    const size = Number.isFinite(sizeRaw) ? Math.min(600, Math.max(80, Math.round(sizeRaw))) : 300;
+
+    const guest = await prisma.guest.findUnique({
+      where: { id: guestId },
+      select: { id: true },
+    });
+    if (!guest) {
+      return res.status(404).json({ error: 'Invité introuvable.' });
+    }
+
+    const FRONTEND = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const rsvpUrl = `${FRONTEND}/rsvp/${guest.id}`;
+    const png = await generateQrPngBuffer(rsvpUrl, { size });
+
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('Content-Disposition', `inline; filename="qr-${guest.id}.png"`);
+    return res.send(png);
+  } catch (error: any) {
+    console.error('Erreur génération QR:', error);
+    return res.status(500).json({ error: 'Impossible de générer le QR code.' });
   }
 }

@@ -170,7 +170,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'event-lifecycle',
         title: 'Parcours complet d\'un événement',
         content:
-          '1. Créez l\'événement (titre, date, lieu, salle).\n2. Ajoutez ou importez vos invités.\n3. Configurez un modèle visuel et une invitation (e-mail / WhatsApp).\n4. Diffusez l\'invitation — un PDF du modèle est joint automatiquement.\n5. Les invités répondent via leur lien RSVP personnel.\n6. Organisez le plan de table 2D et assignez les places.\n7. À la sauvegarde, les notifications de placement partent (PDF + voisins de table).\n8. Le jour J, utilisez le mode Protocole (scan QR).\n9. Consultez les statistiques RSVP et participation.',
+          '1. Créez l\'événement (titre, date, lieu, salle).\n2. Ajoutez ou importez vos invités.\n3. Configurez un modèle visuel et une invitation (e-mail / WhatsApp).\n4. Diffusez l\'invitation : les invités reçoivent uniquement le lien RSVP (pas de PDF ni GPS).\n5. Les invités confirment ou déclinent via leur lien personnel.\n6. Organisez le plan de table 2D et assignez les places — une annonce (table + voisins) peut partir à la sauvegarde.\n7. Le jour J, utilisez le mode Protocole (scan QR) pour confirmer la présence : le PDF, le plan et le GPS partent alors à l\'invité.\n8. Consultez les statistiques RSVP et participation.',
         links: [
           { label: 'Événements', href: '/dashboard/events' },
           { label: 'Statistiques', href: '/dashboard/analytics' },
@@ -180,7 +180,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'create-event',
         title: 'Créer un événement complet',
         content:
-          '1. Allez dans Événements → Créer.\n2. Renseignez titre, date, lieu et associez une salle si disponible.\n3. Suivez le parcours guidé affiché en haut de l\'événement : invités → modèle → envoi PDF → RSVP → plan de table → protocole → stats.',
+          '1. Allez dans Événements → Créer.\n2. Renseignez titre, date, lieu et associez une salle si disponible.\n3. Suivez le parcours guidé : invités → modèle & invitation → envoi RSVP → réponses → plan de table → protocole (PDF/GPS à l\'entrée) → stats.',
         links: [{ label: 'Événements', href: '/dashboard/events' }],
       },
       {
@@ -234,7 +234,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'event-lifecycle',
         title: 'Parcours complet d\'un événement',
         content:
-          '1. Créez l\'événement et associez une salle 2D.\n2. Importez ou ajoutez la liste d\'invités.\n3. Choisissez un modèle et rédigez l\'invitation.\n4. Lancez la diffusion (PDF automatique).\n5. Suivez les réponses RSVP.\n6. Placez les invités sur le plan de table — notifications envoyées à la sauvegarde.\n7. Jour J : mode Protocole pour l\'accueil.\n8. Analysez les statistiques de participation.',
+          '1. Créez l\'événement et associez une salle 2D.\n2. Importez ou ajoutez la liste d\'invités.\n3. Choisissez un modèle et rédigez l\'invitation.\n4. Lancez la diffusion du lien RSVP (sans PDF ni GPS).\n5. Suivez les réponses RSVP.\n6. Placez les invités sur le plan de table — une annonce table/voisins peut partir à la sauvegarde.\n7. Jour J : mode Protocole pour l\'accueil ; PDF, plan et GPS partent après confirmation de présence.\n8. Analysez les statistiques de participation.',
         links: [
           { label: 'Événements', href: '/dashboard/events' },
           { label: 'Statistiques', href: '/dashboard/analytics' },
@@ -266,12 +266,12 @@ export const USER_GUIDES: UserGuide[] = [
     title: 'Guide Protocole organisation',
     badge: 'Organisation',
     summary:
-      'Vous gérez l\'accueil et le contrôle des invités sur tous les événements de l\'organisation : scan QR, confirmation de présence et notifications de placement.',
+      'Vous gérez l\'accueil et le contrôle des invités sur tous les événements de l\'organisation : scan QR, confirmation de présence et déclenchement de la livraison placement (PDF / GPS).',
     canDo: [
       'Accéder au mode Protocole sur tous les événements',
       'Scanner les QR codes invités avec la caméra',
       'Consulter et mettre à jour le statut RSVP des invités',
-      'Envoyer les notifications de placement (e-mail, WhatsApp)',
+      'Confirmer la présence et déclencher l\'envoi PDF / GPS (selon forfait)',
     ],
     cannotDo: [
       'Créer des événements ou des salles',
@@ -287,7 +287,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'protocol-scan',
         title: 'Accueillir un invité (scan QR)',
         content:
-          '1. Ouvrez Mode Protocole ou sélectionnez un événement.\n2. Activez la caméra pour scanner le QR de l\'invité.\n3. Confirmez l\'identité et le placement affiché.\n4. L\'invité peut recevoir une notification de siège assigné.',
+          '1. Ouvrez Mode Protocole ou sélectionnez un événement.\n2. Activez la caméra pour scanner le QR de l\'invité (ou recherchez par nom).\n3. Vérifiez que le RSVP est « Confirmé » — sinon orientez l\'invité vers son lien.\n4. Confirmez la présence : le PDF, le plan et le GPS partent automatiquement si le forfait le permet.',
         links: [{ label: 'Mode Protocole', href: '/dashboard/events?mode=protocol' }],
       },
       {
@@ -387,13 +387,15 @@ export const USER_GUIDES: UserGuide[] = [
     canDo: [
       'Confirmer ou décliner votre présence (RSVP)',
       'Consulter les détails de l\'événement (date, lieu, description)',
-      'Voir votre placement et plan de table',
+      'Afficher votre badge QR pour l\'accueil',
+      'Recevoir votre placement (PDF, plan, GPS) après validation à l\'entrée',
       'Participer au fil d\'actualité et au livre d\'or si activés',
     ],
     cannotDo: [
       'Modifier la liste d\'invités ou créer des événements',
       'Accéder au dashboard organisateur',
-      'Voir les informations d\'autres invités (hors voisins de table affichés)',
+      'Voir le plan de table / GPS avant l\'accueil protocole',
+      'Voir les informations d\'autres invités (hors voisins de table affichés après l\'entrée)',
     ],
     navLinks: [],
     workflows: [
@@ -401,25 +403,25 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'confirm-rsvp',
         title: 'Confirmer votre présence',
         content:
-          '1. Ouvrez le lien reçu dans votre invitation.\n2. Consultez les détails de l\'événement.\n3. Choisissez Accepter ou Décliner.\n4. Remplissez les champs demandés (menu, plus-one…) si présents.',
+          '1. Ouvrez le lien reçu dans votre invitation.\n2. Acceptez les conditions d\'utilisation si demandé.\n3. Consultez les détails de l\'événement.\n4. Choisissez Accepter ou Décliner et remplissez les champs demandés (menu, plus-one…).',
       },
       {
         id: 'view-seating',
         title: 'Consulter votre placement',
         content:
-          '1. Après confirmation, consultez l\'onglet Placement ou Plan de table.\n2. Votre table et siège sont affichés une fois assignés par l\'organisateur.\n3. Vous pouvez voir vos voisins de table.',
+          '1. Après avoir accepté l\'invitation, votre badge QR est disponible — le plan détaillé, le PDF et le GPS restent masqués.\n2. Présentez le QR à l\'accueil le jour J.\n3. Une fois votre présence confirmée, le portail affiche votre table et vous recevez le PDF / GPS par e-mail ou WhatsApp.',
       },
       {
         id: 'event-day',
         title: 'Le jour de l\'événement',
         content:
-          '1. Présentez votre QR code (dans l\'invitation ou sur cette page) à l\'accueil.\n2. Le protocole scanne votre code pour valider votre entrée.\n3. Consultez le fil d\'actualité pour les annonces en direct.',
+          '1. Présentez votre QR code (portail ou message de confirmation) à l\'accueil.\n2. Le protocole scanne votre code pour valider votre entrée.\n3. Consultez ensuite votre placement et le fil d\'actualité pour les annonces en direct.',
       },
     ],
     tips: [
       'Conservez le lien RSVP — il est unique et personnel.',
+      'Le PDF et la localisation GPS arrivent après l\'accueil, pas dès la confirmation RSVP.',
       'Si le lien ne fonctionne pas, contactez directement l\'organisateur.',
-      'Activez les notifications e-mail pour recevoir les rappels automatiques.',
     ],
   },
 ];

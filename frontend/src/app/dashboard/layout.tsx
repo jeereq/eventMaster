@@ -171,7 +171,7 @@ function SidebarNav({
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, tenant, token, loading, logout, access } = useAuth();
+  const { user, tenant, token, loading, logout, access, planFeatures } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
@@ -320,7 +320,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             { name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard },
             { name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar },
             ...(access?.canProtocolAllEvents || access?.level === 'staff'
-              ? [{ name: 'Protocole', href: '/dashboard/events?mode=protocol', tourId: 'nav-protocol', icon: ScanLine }]
+              ? planFeatures?.protocolQr === false
+                ? []
+                : [{ name: 'Protocole', href: '/dashboard/events?mode=protocol', tourId: 'nav-protocol', icon: ScanLine }]
               : []),
             ...(!access?.isProtocolOnly ? [
               { name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3 },

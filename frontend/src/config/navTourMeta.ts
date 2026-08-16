@@ -94,7 +94,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-events': {
     title: 'Événements',
     description:
-      'Parcours guidé de bout en bout : création, invités, modèle & invitation, envoi PDF, RSVP, plan de table avec notifications, protocole jour J et statistiques.',
+      'Parcours guidé de bout en bout : création, invités, modèle & invitation, envoi RSVP, réponses, plan de table, protocole jour J (PDF/GPS à l\'entrée) et statistiques.',
     route: '/dashboard/events',
   },
   'nav-protocol': {

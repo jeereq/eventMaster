@@ -259,6 +259,15 @@ export default function ProtocolScreen() {
             </Text>
             <Text style={styles.guestEmail}>{selectedGuest.email}</Text>
             <Text style={styles.guestMeta}>RSVP : {rsvpLabel(selectedGuest.rsvp)}</Text>
+            {selectedGuest.rsvp !== 'ACCEPTED' && !selectedGuest.checkedInAt ? (
+              <Text style={styles.rsvpWarn}>
+                {selectedGuest.rsvp === 'PENDING'
+                  ? 'RSVP en attente : l’invité doit confirmer sur son lien avant le check-in.'
+                  : selectedGuest.rsvp === 'DECLINED'
+                    ? 'Invitation déclinée — check-in impossible.'
+                    : 'RSVP non accepté — check-in bloqué.'}
+              </Text>
+            ) : null}
             {selectedGuest.assignedSeat ? (
               <Text style={styles.guestSeat}>
                 Siège assigné : {selectedGuest.assignedSeat.tableName} — n°
@@ -268,9 +277,17 @@ export default function ProtocolScreen() {
 
             <View style={styles.actions}>
               <Button
-                title={selectedGuest.checkedInAt ? 'Déjà confirmé' : 'Confirmer la présence'}
+                title={
+                  selectedGuest.checkedInAt
+                    ? 'Déjà confirmé'
+                    : selectedGuest.rsvp !== 'ACCEPTED'
+                      ? 'Check-in bloqué (RSVP)'
+                      : 'Confirmer la présence'
+                }
                 onPress={() => handleCheckIn(selectedGuest.id)}
-                disabled={busy || !!selectedGuest.checkedInAt}
+                disabled={
+                  busy || !!selectedGuest.checkedInAt || selectedGuest.rsvp !== 'ACCEPTED'
+                }
                 style={styles.actionBtn}
               />
               <Button
@@ -479,6 +496,18 @@ const styles = StyleSheet.create({
   guestMeta: {
     fontSize: 12,
     color: colors.textMuted,
+  },
+  rsvpWarn: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#b45309',
+    backgroundColor: '#fffbeb',
+    borderWidth: 1,
+    borderColor: '#fde68a',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginTop: 4,
   },
   guestSeat: {
     fontSize: 14,
