@@ -29,8 +29,6 @@ import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
 import { getTemplateElementSummary } from '@/lib/landingTemplateAdapter';
 import {
-  UsersMobileList,
-  EventsMobileList,
   GuestsMobileList,
 } from '@/components/admin/AdminTabMobileLists';
 import AdminDetailsModal from '@/components/admin/AdminDetailsModal';
@@ -268,6 +266,20 @@ function DashboardPageContent() {
     setGridColumns: setTenantsColumns,
     gridClassName: tenantsGridClass,
   } = useViewMode('em-view-admin-tenants', 'grid', 3);
+  const {
+    mode: usersViewMode,
+    setViewMode: setUsersViewMode,
+    columns: usersColumns,
+    setGridColumns: setUsersColumns,
+    gridClassName: usersGridClass,
+  } = useViewMode('em-view-admin-users', 'grid', 3);
+  const {
+    mode: adminEventsViewMode,
+    setViewMode: setAdminEventsViewMode,
+    columns: adminEventsColumns,
+    setGridColumns: setAdminEventsColumns,
+    gridClassName: adminEventsGridClass,
+  } = useViewMode('em-view-admin-events', 'grid', 3);
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [adminData, setAdminData] = useState<AdminStats | null>(null);
@@ -1765,7 +1777,7 @@ function DashboardPageContent() {
             )}
 
             {activeTab === 'users' && (
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Filter className="w-4.5 h-4.5 text-slate-400 flex-shrink-0" />
                 <select
                   value={filterRole}
@@ -1777,6 +1789,29 @@ function DashboardPageContent() {
                   <option value="COMMERCIAL">COMMERCIAL</option>
                   <option value="SUPER_ADMIN">SUPER_ADMIN</option>
                 </select>
+                <ViewModeToggle
+                  storageKey="em-view-admin-users"
+                  value={usersViewMode}
+                  onChange={setUsersViewMode}
+                  columns={usersColumns}
+                  onColumnsChange={setUsersColumns}
+                  defaultMode="grid"
+                  defaultColumns={3}
+                />
+              </div>
+            )}
+
+            {activeTab === 'events' && (
+              <div className="flex flex-wrap items-center gap-2">
+                <ViewModeToggle
+                  storageKey="em-view-admin-events"
+                  value={adminEventsViewMode}
+                  onChange={setAdminEventsViewMode}
+                  columns={adminEventsColumns}
+                  onColumnsChange={setAdminEventsColumns}
+                  defaultMode="grid"
+                  defaultColumns={3}
+                />
               </div>
             )}
 
@@ -1961,105 +1996,116 @@ function DashboardPageContent() {
 
             {/* Users Tab */}
             {activeTab === 'users' && (
-              <div>
+              <div className="space-y-4">
                 {usersLoading ? (
-                  <SkeletonTabContent mode="grid" count={6} columns={3} />
+                  <SkeletonTabContent mode={usersViewMode === 'list' ? 'list' : 'grid'} count={6} columns={3} />
+                ) : filteredUsers.length === 0 ? (
+                  <p className="text-center text-muted text-sm py-10">Aucun utilisateur trouvé.</p>
                 ) : (
                   <>
-                    <div className="md:hidden space-y-3">
-                      <UsersMobileList
-                        users={paginatedUsers}
-                        currentUserId={user?.id}
-                        onView={(u) => handleOpenDetailsModal('user', u)}
-                        onEdit={handleOpenEditUserModal}
-                        onDelete={handleDeleteUser}
-                      />
-                    </div>
-                    <div className="hidden md:block em-data-table-wrap">
-                    <table className="em-data-table min-w-[720px]">
-                    <thead>
-                      <tr>
-                        <th>Utilisateur</th>
-                        <th>Rôle</th>
-                        <th>Vérification Email</th>
-                        <th>Organisation (Tenant)</th>
-                        <th className="text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-sm">
-                      {filteredUsers.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="py-8 text-center text-slate-500 font-medium">
-                            Aucun utilisateur trouvé.
-                          </td>
-                        </tr>
-                      ) : (
-                        paginatedUsers.map((u) => (
-                          <tr key={u.id} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="py-4">
-                              <div className="flex flex-col">
-                                <span className="font-bold text-slate-900">{u.name || 'Sans nom'}</span>
-                                <span className="text-xs text-slate-400">{u.email}</span>
-                              </div>
-                            </td>
-                            <td className="py-4">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-extrabold border ${
-                                u.role === 'SUPER_ADMIN' ? 'bg-rose-50 border-rose-100 text-rose-700' :
-                                u.role === 'COMMERCIAL' ? 'bg-amber-50 border-amber-100 text-amber-700' :
-                                'bg-slate-50 border-slate-200 text-slate-600'
-                              }`}>
-                                {u.role}
-                              </span>
-                            </td>
-                            <td className="py-4">
-                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                                u.isEmailVerified ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
-                              }`}>
-                                {u.isEmailVerified ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
-                                {u.isEmailVerified ? 'Vérifié' : 'Non vérifié'}
-                              </span>
-                            </td>
-                            <td className="py-4 font-semibold text-slate-700">{u.tenantName}</td>
-                            <td className="py-4 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <button
-                                  onClick={() => handleOpenDetailsModal('user', u)}
-                                  className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition"
-                                  title="Voir les détails"
-                                >
-                                  <Eye className="w-4.5 h-4.5" />
-                                </button>
-                                <button
-                                  onClick={() => handleOpenEditUserModal(u)}
-                                  className="p-2 text-primary hover:bg-primary/10 rounded-lg transition"
-                                  title="Modifier l'utilisateur"
-                                >
-                                  <Edit2 className="w-4.5 h-4.5" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteUser(u.id, u.email)}
-                                  className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                                  title="Supprimer l'utilisateur"
-                                  disabled={u.id === user.id} // Cannot delete self
-                                >
-                                  <Trash2 className={`w-4.5 h-4.5 ${u.id === user.id ? 'opacity-30 cursor-not-allowed' : ''}`} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                    <div
+                      className={
+                        usersViewMode === 'grid' ? usersGridClass : listStackClass
+                      }
+                    >
+                      {paginatedUsers.map((u) => {
+                        const roleTone =
+                          u.role === 'SUPER_ADMIN' ? 'rose' : u.role === 'COMMERCIAL' ? 'amber' : 'slate';
+                        const roleChip = (
+                          <StatusPill tone={roleTone as 'rose' | 'amber' | 'slate'}>{u.role}</StatusPill>
+                        );
+                        const verifiedChip = (
+                          <StatusPill tone={u.isEmailVerified ? 'emerald' : 'slate'}>
+                            {u.isEmailVerified ? 'Vérifié' : 'Non vérifié'}
+                          </StatusPill>
+                        );
+                        const actions = (
+                          <>
+                            {usersViewMode === 'list' ? (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenDetailsModal('user', u)}
+                                className="inline-flex items-center"
+                                title="Voir détails"
+                              >
+                                <ListRowAction />
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenDetailsModal('user', u)}
+                                className="p-1.5 text-muted hover:text-foreground hover:bg-surface-muted rounded-md transition"
+                                title="Détails"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditUserModal(u)}
+                              className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-md transition"
+                              title="Modifier"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteUser(u.id, u.email)}
+                              disabled={u.id === user?.id}
+                              className="p-1.5 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-md transition disabled:opacity-30 disabled:cursor-not-allowed"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        );
+
+                        return (
+                          <ProjectCard
+                            key={u.id}
+                            id={u.id}
+                            title={u.name || 'Sans nom'}
+                            layout={usersViewMode}
+                            icon={<Users className="w-4 h-4" />}
+                            onClick={() => handleOpenDetailsModal('user', u)}
+                            meta={
+                              usersViewMode === 'list' ? (
+                                <span className="truncate">
+                                  {u.email}
+                                  {' · '}
+                                  {u.tenantName || '—'}
+                                </span>
+                              ) : (
+                                <div className="space-y-1.5">
+                                  <p className="truncate text-xs">{u.email}</p>
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    {roleChip}
+                                    {verifiedChip}
+                                  </div>
+                                  <p className="truncate text-xs text-muted">{u.tenantName || 'Sans organisation'}</p>
+                                </div>
+                              )
+                            }
+                            status={usersViewMode === 'list' ? roleChip : undefined}
+                            aside={usersViewMode === 'list' ? verifiedChip : undefined}
+                            footer={
+                              usersViewMode === 'grid' ? (
+                                <span className="text-[11px] text-muted truncate">{u.tenantName || '—'}</span>
+                              ) : undefined
+                            }
+                            actions={actions}
+                          />
+                        );
+                      })}
                     </div>
 
-                  <Pagination
-                    page={usersPage}
-                    pageSize={ITEMS_PER_PAGE}
-                    total={filteredUsers.length}
-                    onPageChange={setUsersPage}
-                    itemLabel="utilisateurs"
-                  />
+                    <Pagination
+                      page={usersPage}
+                      pageSize={ITEMS_PER_PAGE}
+                      total={filteredUsers.length}
+                      onPageChange={setUsersPage}
+                      itemLabel="utilisateurs"
+                    />
                   </>
                 )}
               </div>
@@ -2145,99 +2191,125 @@ function DashboardPageContent() {
 
             {/* Events Tab */}
             {activeTab === 'events' && (
-              <div>
+              <div className="space-y-4">
                 {adminEventsLoading ? (
-                  <SkeletonTabContent mode="grid" count={6} columns={3} />
+                  <SkeletonTabContent mode={adminEventsViewMode === 'list' ? 'list' : 'grid'} count={6} columns={3} />
+                ) : filteredEvents.length === 0 ? (
+                  <p className="text-center text-muted text-sm py-10">Aucun événement trouvé.</p>
                 ) : (
                   <>
-                    <div className="md:hidden space-y-3">
-                      <EventsMobileList
-                        events={paginatedEvents}
-                        onView={(e) => handleOpenDetailsModal('event', e)}
-                        onEdit={handleOpenEditEventModal}
-                        onDelete={handleDeleteEvent}
-                      />
-                    </div>
-                    <div className="hidden md:block em-data-table-wrap">
-                    <table className="em-data-table min-w-[720px]">
-                    <thead>
-                      <tr>
-                        <th>Événement</th>
-                        <th>Organisation</th>
-                        <th>Lieu</th>
-                        <th>Statistiques</th>
-                        <th className="text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-sm">
-                      {filteredEvents.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="py-8 text-center text-slate-500 font-medium">
-                            Aucun événement trouvé.
-                          </td>
-                        </tr>
-                      ) : (
-                        paginatedEvents.map((e) => (
-                          <tr key={e.id} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="py-4">
-                              <div className="flex flex-col">
-                                <span className="font-bold text-slate-900">{e.title}</span>
-                                <span className="text-xs text-slate-400">
-                                  Prévu le {new Date(e.date).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    <div
+                      className={
+                        adminEventsViewMode === 'grid' ? adminEventsGridClass : listStackClass
+                      }
+                    >
+                      {paginatedEvents.map((e) => {
+                        const dateLabel = new Date(e.date).toLocaleDateString('fr-FR', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        });
+                        const guestsChip = (
+                          <StatusPill tone="primary">{e.guestCount} invités</StatusPill>
+                        );
+                        const invitesChip = (
+                          <StatusPill tone="emerald">{e.invitationCount} invitations</StatusPill>
+                        );
+                        const actions = (
+                          <>
+                            {adminEventsViewMode === 'list' ? (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenDetailsModal('event', e)}
+                                className="inline-flex items-center"
+                                title="Voir détails"
+                              >
+                                <ListRowAction />
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenDetailsModal('event', e)}
+                                className="p-1.5 text-muted hover:text-foreground hover:bg-surface-muted rounded-md transition"
+                                title="Détails"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditEventModal(e)}
+                              className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-md transition"
+                              title="Modifier"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteEvent(e.id, e.title)}
+                              className="p-1.5 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-md transition"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        );
+
+                        return (
+                          <ProjectCard
+                            key={e.id}
+                            id={e.id}
+                            title={e.title}
+                            layout={adminEventsViewMode}
+                            icon={<Calendar className="w-4 h-4" />}
+                            onClick={() => handleOpenDetailsModal('event', e)}
+                            meta={
+                              adminEventsViewMode === 'list' ? (
+                                <span className="truncate">
+                                  {e.tenantName}
+                                  {' · '}
+                                  {e.location || 'Sans lieu'}
+                                  {' · '}
+                                  {dateLabel}
                                 </span>
-                              </div>
-                            </td>
-                            <td className="py-4 font-semibold text-slate-700">{e.tenantName}</td>
-                            <td className="py-4 text-slate-600 font-medium">{e.location}</td>
-                            <td className="py-4">
-                              <div className="flex items-center gap-3 text-xs font-bold">
-                                <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
-                                  {e.guestCount} invités
-                                </span>
-                                <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100">
-                                  {e.invitationCount} invitations
-                                </span>
-                              </div>
-                            </td>
-                            <td className="py-4 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <button
-                                  onClick={() => handleOpenDetailsModal('event', e)}
-                                  className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition"
-                                  title="Voir les détails"
-                                >
-                                  <Eye className="w-4.5 h-4.5" />
-                                </button>
-                                <button
-                                  onClick={() => handleOpenEditEventModal(e)}
-                                  className="p-2 text-primary hover:bg-primary/10 rounded-lg transition"
-                                  title="Modifier l'événement"
-                                >
-                                  <Edit2 className="w-4.5 h-4.5" />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteEvent(e.id, e.title)}
-                                  className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                                  title="Supprimer l'événement"
-                                >
-                                  <Trash2 className="w-4.5 h-4.5" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                              ) : (
+                                <div className="space-y-1.5">
+                                  <p className="truncate text-xs font-medium">{e.tenantName}</p>
+                                  <p className="truncate text-xs text-muted">{e.location || 'Sans lieu'}</p>
+                                  <p className="text-[11px] text-muted">{dateLabel}</p>
+                                  <div className="flex flex-wrap items-center gap-1.5">
+                                    {guestsChip}
+                                    {invitesChip}
+                                  </div>
+                                </div>
+                              )
+                            }
+                            value={
+                              adminEventsViewMode === 'list'
+                                ? `${e.guestCount} inv.`
+                                : undefined
+                            }
+                            valueMeta={
+                              adminEventsViewMode === 'list'
+                                ? `${e.invitationCount} invitations`
+                                : undefined
+                            }
+                            status={adminEventsViewMode === 'list' ? guestsChip : undefined}
+                            actions={actions}
+                          />
+                        );
+                      })}
                     </div>
 
-                  <Pagination
-                    page={eventsPage}
-                    pageSize={ITEMS_PER_PAGE}
-                    total={filteredEvents.length}
-                    onPageChange={setEventsPage}
-                    itemLabel="événements"
-                  />
+                    <Pagination
+                      page={eventsPage}
+                      pageSize={ITEMS_PER_PAGE}
+                      total={filteredEvents.length}
+                      onPageChange={setEventsPage}
+                      itemLabel="événements"
+                    />
                   </>
                 )}
               </div>
