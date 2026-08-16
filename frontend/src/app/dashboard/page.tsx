@@ -189,9 +189,9 @@ const ADMIN_TAB_META: Record<AdminTabId, { title: string; description: string; t
     tip: 'Les Super Admins n’appartiennent à aucune organisation.',
   },
   templates: {
-    title: 'Modèles d’invitation',
-    description: 'Catalogue global + modèles privés des organisations. Activez « Vitrine landing » pour l’accueil public.',
-    tip: 'Seuls les modèles globaux (sans organisation) peuvent apparaître sur la landing.',
+    title: 'Catalogue modèles (Super Admin)',
+    description: 'Supervision globale : modèles publics EventMaster + modèles privés des organisations. Activez « Vitrine landing » ici.',
+    tip: 'Créer / Modifier ouvre le concepteur visuel, puis vous revient automatiquement sur ce catalogue.',
   },
   'message-templates': {
     title: 'Messages automatiques',
@@ -309,6 +309,18 @@ function DashboardPageContent() {
   }, [tabParam, user]);
 
   useEffect(() => {
+    if (searchParams.get('saved') !== '1' || tabParam !== 'templates') return;
+    setTemplateSavedFlash(true);
+    if (user?.role === 'SUPER_ADMIN') {
+      void loadTemplates();
+    }
+    const t = setTimeout(() => setTemplateSavedFlash(false), 4500);
+    router.replace('/dashboard?tab=templates');
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- flash one-shot après retour concepteur
+  }, [searchParams, tabParam, router, user?.role]);
+
+  useEffect(() => {
     if (user?.role !== 'COMMERCIAL') return;
     if (!COMMERCIAL_PLATFORM_TABS.includes(activeTab as (typeof COMMERCIAL_PLATFORM_TABS)[number])) {
       setActiveTab('tenants');
@@ -321,6 +333,7 @@ function DashboardPageContent() {
   const [adminEvents, setAdminEvents] = useState<any[]>([]);
   const [adminGuests, setAdminGuests] = useState<any[]>([]);
   const [adminSettings, setAdminSettings] = useState<any>(null);
+  const [templateSavedFlash, setTemplateSavedFlash] = useState(false);
 
   const planCatalogPrices = useMemo(() => {
     if (!adminSettings?.plans) return undefined;
@@ -1656,7 +1669,7 @@ function DashboardPageContent() {
               )}
 
               {activeTab === 'templates' && isSuperAdmin && (
-                <Link href="/dashboard/templates?new=1">
+                <Link href="/dashboard/templates?new=1&from=admin">
                   <Button type="button" size="sm" leftIcon={<Plus className="w-4 h-4" />}>
                     Nouveau modèle
                   </Button>
@@ -2055,6 +2068,11 @@ function DashboardPageContent() {
             {/* Templates Tab */}
             {activeTab === 'templates' && isSuperAdmin && (
               <div className="space-y-6">
+                {templateSavedFlash && (
+                  <Alert variant="success">
+                    Modèle enregistré. Vous êtes de retour sur le catalogue Super Admin (filtres & vitrine landing).
+                  </Alert>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
                     <p className="text-[10px] font-bold text-primary uppercase tracking-wider">Modèles globaux</p>
@@ -2094,14 +2112,14 @@ function DashboardPageContent() {
                       emptyMessage="Aucun modèle trouvé pour ce filtre."
                       emptyAction={
                         <Link
-                          href="/dashboard/templates?new=1"
+                          href="/dashboard/templates?new=1&from=admin"
                           className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-sm transition"
                         >
                           <Plus className="w-4 h-4" />
                           Créer un modèle dans le concepteur visuel
                         </Link>
                       }
-                      editHref={(t) => `/dashboard/templates?edit=${t.id}`}
+                      editHref={(t) => `/dashboard/templates?edit=${t.id}&from=admin`}
                       onViewDetails={(t) => handleOpenDetailsModal('template', paginatedTemplates.find((x) => x.id === t.id))}
                       onDuplicate={(t) => handleDuplicateAdminTemplate(paginatedTemplates.find((x) => x.id === t.id))}
                       onDelete={handleDeleteTemplate}

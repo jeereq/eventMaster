@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
@@ -113,6 +114,12 @@ const lightenColor = (hex: string, percent = 30) => {
 
 export default function TemplatesPage() {
   const { user, planFeatures, tenant } = useAuth();
+  const router = useRouter();
+  /** admin = ouvert depuis la console Super Admin (?tab=templates) ; studio = concepteur organisation */
+  type StudioOrigin = 'admin' | 'studio';
+  const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
+  const [studioOrigin, setStudioOrigin] = useState<StudioOrigin>('studio');
+  const fromAdminConsole = studioOrigin === 'admin' && user?.role === 'SUPER_ADMIN';
   const canUseCustomTemplates = user?.role === 'SUPER_ADMIN' || planFeatures?.customTemplates !== false;
   const canUseMockupImport = canUseCustomTemplates;
   const canUseMockupOcr = user?.role === 'SUPER_ADMIN' || planFeatures?.mockupOcr === true;
@@ -262,6 +269,16 @@ export default function TemplatesPage() {
     }
   }, [editorOpen, canUseCustomTemplates]);
 
+  const closeEditor = (opts?: { keepSuccess?: boolean }) => {
+    setEditorOpen(false);
+    if (!opts?.keepSuccess) {
+      /* leave success banner for studio list if any */
+    }
+    if (studioOrigin === 'admin' && user?.role === 'SUPER_ADMIN') {
+      router.push(ADMIN_TEMPLATES_HREF);
+    }
+  };
+
   useEffect(() => {
     if (selectedTenantId) {
       setShowOnLanding(false);
@@ -275,15 +292,17 @@ export default function TemplatesPage() {
       if (editId) {
         const t = templates.find(temp => temp.id === editId);
         if (t) {
-          handleEditTemplateClick(t);
+          const fromAdmin = params.get('from') === 'admin';
+          handleEditTemplateClick(t, fromAdmin ? 'admin' : 'studio');
           window.history.replaceState({}, document.title, window.location.pathname);
         }
       }
     }
   }, [templates]);
 
-  const handleCreateTemplateClick = () => {
+  const handleCreateTemplateClick = (origin: StudioOrigin = 'studio') => {
     if (!canUseCustomTemplates) return;
+    setStudioOrigin(origin);
     setEditingTemplateId(null);
     setTemplateName('Nouveau Modèle d\'Invitation');
     setSelectedTenantId('');
@@ -337,8 +356,9 @@ export default function TemplatesPage() {
     setEditorOpen(true);
   };
 
-  const handleEditTemplateClick = (t: TemplateItem) => {
+  const handleEditTemplateClick = (t: TemplateItem, origin: StudioOrigin = 'studio') => {
     if (!canUseCustomTemplates) return;
+    setStudioOrigin(origin);
     setEditingTemplateId(t.id);
     setTemplateName(t.name);
     setCanvasElements(t.content?.elements || []);
@@ -375,7 +395,8 @@ export default function TemplatesPage() {
     if (typeof window === 'undefined' || !canUseCustomTemplates) return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('new') !== '1') return;
-    handleCreateTemplateClick();
+    const fromAdmin = params.get('from') === 'admin';
+    handleCreateTemplateClick(fromAdmin ? 'admin' : 'studio');
     window.history.replaceState({}, document.title, window.location.pathname);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- ouverture unique via ?new=1
   }, [canUseCustomTemplates]);
@@ -1170,8 +1191,13 @@ export default function TemplatesPage() {
         /* ignore */
       }
       setDraftSavedAt(null);
-      setEditorOpen(false);
-      loadTemplates();
+      if (studioOrigin === 'admin' && user?.role === 'SUPER_ADMIN') {
+        setEditorOpen(false);
+        router.push(`${ADMIN_TEMPLATES_HREF}&saved=1`);
+      } else {
+        setEditorOpen(false);
+        loadTemplates();
+      }
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la sauvegarde du modèle.');
     } finally {
@@ -1331,8 +1357,9 @@ export default function TemplatesPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-4">
           <div className="flex items-center gap-3">
             <button 
-              onClick={() => setEditorOpen(false)}
+              onClick={() => closeEditor()}
               className="p-2 hover:bg-slate-100 rounded-xl transition text-slate-600"
+              title={fromAdminConsole ? 'Retour au catalogue Super Admin' : 'Retour à mes modèles'}
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -1345,20 +1372,34 @@ export default function TemplatesPage() {
                 placeholder="Nom du modèle"
               />
               <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Éditeur Visuel d'Invitation</p>
+                {fromAdminConsole ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md">
+                    <Globe className="w-3 h-3" />
+                    Console Super Admin
+                  </span>
+                ) : (
+                  <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
+                    {user?.role === 'SUPER_ADMIN' ? 'Concepteur plateforme' : 'Éditeur Visuel d\'Invitation'}
+                  </p>
+                )}
+                {fromAdminConsole && (
+                  <p className="text-xs text-muted">
+                    Après enregistrement → retour au catalogue (filtres, vitrine landing).
+                  </p>
+                )}
                 {user?.role === 'SUPER_ADMIN' && (
                   <>
                     <span className="text-slate-300 text-xs">•</span>
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Organisation :</span>
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Portée :</span>
                     <select
                       value={selectedTenantId}
                       onChange={(e) => setSelectedTenantId(e.target.value)}
                       className="text-[11px] font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-2 py-0.5 focus:outline-none focus:border-indigo-500"
                     >
-                      <option value="">Global (Tous / Public)</option>
+                      <option value="">Global (catalogue + landing)</option>
                       {tenants.map((t) => (
                         <option key={t.id} value={t.id}>
-                          {t.name}
+                          Privé · {t.name}
                         </option>
                       ))}
                     </select>
@@ -3528,25 +3569,41 @@ export default function TemplatesPage() {
       {renderMockupImportModal()}
     <div className="space-y-6">
       <PageHeader
-        title={user?.role === 'SUPER_ADMIN' ? "Modèles d'invitation (Super Admin)" : "Vos modèles d'invitation"}
+        title={
+          user?.role === 'SUPER_ADMIN'
+            ? 'Concepteur de modèles'
+            : "Vos modèles d'invitation"
+        }
         description={
           user?.role === 'SUPER_ADMIN'
-            ? "Gérez les modèles d'invitation globaux et privés via le concepteur visuel."
+            ? 'Atelier de création visuelle. Pour le catalogue plateforme, les filtres et la vitrine landing, utilisez la console Super Admin.'
             : "Concevez des invitations interactives uniques à l'aide de notre éditeur visuel."
         }
         breadcrumbs={
-          <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Modèles' }]} />
+          <Breadcrumbs
+            items={
+              user?.role === 'SUPER_ADMIN'
+                ? [
+                    { label: 'Console', href: '/dashboard?tab=templates' },
+                    { label: 'Concepteur' },
+                  ]
+                : [
+                    { label: 'Accueil', href: '/dashboard' },
+                    { label: 'Modèles' },
+                  ]
+            }
+          />
         }
         action={
           canUseCustomTemplates ? (
             <div className="flex flex-wrap gap-2">
               {user?.role === 'SUPER_ADMIN' && (
                 <Link
-                  href="/dashboard?tab=templates"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition hover:bg-slate-50 dark:hover:bg-slate-800"
+                  href={ADMIN_TEMPLATES_HREF}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 border border-border text-foreground font-semibold rounded-[var(--radius-button)] text-xs transition hover:bg-surface-muted"
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  Retour au tableau de bord
+                  Catalogue Super Admin
                 </Link>
               )}
               {canUseMockupImport && (
@@ -3568,13 +3625,26 @@ export default function TemplatesPage() {
               </Button>
                 </>
               )}
-              <Button onClick={handleCreateTemplateClick} leftIcon={<PlusCircle className="w-4 h-4" />}>
+              <Button onClick={() => handleCreateTemplateClick('studio')} leftIcon={<PlusCircle className="w-4 h-4" />}>
                 Nouveau modèle
               </Button>
             </div>
           ) : undefined
         }
       />
+
+      {user?.role === 'SUPER_ADMIN' && (
+        <div className="rounded-[var(--radius-card)] border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground space-y-1">
+          <p className="font-semibold text-primary text-xs uppercase tracking-wider">Nuance des vues</p>
+          <p className="text-xs text-muted leading-relaxed">
+            <strong className="text-foreground">Catalogue Super Admin</strong> (`/dashboard?tab=templates`) : supervision globale,
+            filtres Global / Organisation, activation « Vitrine landing ».
+            {' '}
+            <strong className="text-foreground">Ce concepteur</strong> : édition visuelle. Si vous ouvrez Créer / Modifier depuis le catalogue,
+            vous y revenez automatiquement après enregistrement.
+          </p>
+        </div>
+      )}
 
       {!canUseCustomTemplates && user?.role === 'USER' && (
         <div className="p-4 bg-sky-50 border border-sky-200 text-sky-900 rounded-xl text-sm space-y-2">
@@ -3672,7 +3742,7 @@ export default function TemplatesPage() {
                 )}
                 <button
                   type="button"
-                  onClick={handleCreateTemplateClick}
+                  onClick={() => handleCreateTemplateClick('studio')}
                   className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/20"
                 >
                   <PlusCircle className="w-4 h-4" />
