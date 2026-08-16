@@ -149,7 +149,7 @@ export default function SiteHeader({
               </Link>
               {site.allowRegistration ? (
                 <Link href="/register">
-                  <Button size="sm">Essai gratuit</Button>
+                  <Button size="sm">Créer mon entreprise</Button>
                 </Link>
               ) : (
                 <Button size="sm" disabled>
@@ -235,7 +235,7 @@ export default function SiteHeader({
               {site.allowRegistration ? (
                 <Link href="/register" onClick={() => setMobileMenuOpen(false)}>
                   <Button size="sm" fullWidth>
-                    Essai gratuit
+                    Créer mon entreprise
                   </Button>
                 </Link>
               ) : (

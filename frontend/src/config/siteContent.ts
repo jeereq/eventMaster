@@ -12,28 +12,29 @@ export const SITE_CONTACT = {
 } as const;
 
 export const FOOTER_FEATURES = [
-  'Application mobile iOS & Android (Expo)',
-  'Salles 2D & éditeur de layout',
-  'Protocole QR — web & scan caméra natif',
-  'Livraison différée : PDF, plan & GPS après check-in',
-  'Portail RSVP, badge QR & notifications push',
-  'Rôles manager / protocole / commercial',
-  'Modèles d\'invitation, OCR & rappels automatiques',
-  'Facturation, quotas & réseau commercial',
+  'Invitations & RSVP multi-canal',
+  'Plans de salle 2D & protocole QR',
+  'Application mobile iOS & Android',
+  'Espace isolé par entreprise',
+] as const;
+
+export const FOOTER_PRODUCT = [
+  { label: 'Modèles', href: '/#modeles' },
+  { label: 'Parcours', href: '/#parcours' },
+  { label: 'Tarifs', href: '/#tarifs' },
+  { label: 'FAQ', href: '/faq' },
 ] as const;
 
 export const FOOTER_RESOURCES = [
-  { label: 'FAQ', href: '/faq' },
-  { label: 'Tarifs', href: '/#tarifs' },
   { label: 'Contact & Support', href: '/contact' },
   { label: `Conditions d'utilisation (v${TERMS_VERSION})`, href: '/terms' },
   { label: `Politique de confidentialité (v${PRIVACY_VERSION})`, href: '/privacy' },
-  { label: 'Connexion Espace Organisateur', href: '/login' },
-  { label: 'Créer une organisation', href: '/register' },
+  { label: 'Connexion', href: '/login' },
+  { label: 'Créer mon entreprise', href: '/register' },
 ] as const;
 
 export const FOOTER_BRAND_DESCRIPTION =
-  'Plateforme SaaS multi-tenant pour événements privés et professionnels : web + mobile natif, salles 2D, protocole QR, RSVP, livraison intelligente du placement après validation invité, rôles granulaires, réseau commercial et forfaits par organisation (Essentials à Enterprise).';
+  'Créez votre entreprise sur EventMaster pour gérer invitations, RSVP, plans de salle et protocole QR — web et mobile, dans un espace dédié.';
 
 export interface FaqItem {
   id: string;
