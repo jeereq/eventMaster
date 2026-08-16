@@ -28,9 +28,6 @@ import { PLAN_IDS, type PlanId } from '@/config/landingPricing';
 import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
 import { getTemplateElementSummary } from '@/lib/landingTemplateAdapter';
-import {
-  GuestsMobileList,
-} from '@/components/admin/AdminTabMobileLists';
 import AdminDetailsModal from '@/components/admin/AdminDetailsModal';
 
 function isPlatformStaff(role?: string) {
@@ -280,6 +277,34 @@ function DashboardPageContent() {
     setGridColumns: setAdminEventsColumns,
     gridClassName: adminEventsGridClass,
   } = useViewMode('em-view-admin-events', 'grid', 3);
+  const {
+    mode: guestsViewMode,
+    setViewMode: setGuestsViewMode,
+    columns: guestsColumns,
+    setGridColumns: setGuestsColumns,
+    gridClassName: guestsGridClass,
+  } = useViewMode('em-view-admin-guests', 'grid', 3);
+  const {
+    mode: subRequestsViewMode,
+    setViewMode: setSubRequestsViewMode,
+    columns: subRequestsColumns,
+    setGridColumns: setSubRequestsColumns,
+    gridClassName: subRequestsGridClass,
+  } = useViewMode('em-view-admin-sub-requests', 'grid', 2);
+  const {
+    mode: plansViewMode,
+    setViewMode: setPlansViewMode,
+    columns: plansColumns,
+    setGridColumns: setPlansColumns,
+    gridClassName: plansGridClass,
+  } = useViewMode('em-view-admin-plans', 'grid', 4);
+  const {
+    mode: invoicesViewMode,
+    setViewMode: setInvoicesViewMode,
+    columns: invoicesColumns,
+    setGridColumns: setInvoicesColumns,
+    gridClassName: invoicesGridClass,
+  } = useViewMode('em-view-admin-invoices', 'list', 3);
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [adminData, setAdminData] = useState<AdminStats | null>(null);
@@ -1831,7 +1856,7 @@ function DashboardPageContent() {
             )}
 
             {activeTab === 'guests' && (
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Filter className="w-4.5 h-4.5 text-slate-400 flex-shrink-0" />
                 <select
                   value={filterRsvp}
@@ -1843,6 +1868,15 @@ function DashboardPageContent() {
                   <option value="ACCEPTED">Accepté (ACCEPTED)</option>
                   <option value="DECLINED">Décliné (DECLINED)</option>
                 </select>
+                <ViewModeToggle
+                  storageKey="em-view-admin-guests"
+                  value={guestsViewMode}
+                  onChange={setGuestsViewMode}
+                  columns={guestsColumns}
+                  onColumnsChange={setGuestsColumns}
+                  defaultMode="grid"
+                  defaultColumns={3}
+                />
               </div>
             )}
           </div>
@@ -2317,97 +2351,96 @@ function DashboardPageContent() {
 
             {/* Guests Tab */}
             {activeTab === 'guests' && (
-              <div>
+              <div className="space-y-4">
                 {adminGuestsLoading ? (
-                  <SkeletonTabContent mode="grid" count={6} columns={3} />
+                  <SkeletonTabContent mode={guestsViewMode === 'list' ? 'list' : 'grid'} count={6} columns={3} />
+                ) : filteredGuests.length === 0 ? (
+                  <p className="text-center text-muted text-sm py-10">Aucun invité trouvé.</p>
                 ) : (
                   <>
-                    <div className="md:hidden space-y-3">
-                      <GuestsMobileList
-                        guests={paginatedGuests}
-                        onView={(g) => handleOpenDetailsModal('guest', g)}
-                        onEdit={handleOpenEditGuestModal}
-                        onDelete={handleDeleteGuest}
-                      />
-                    </div>
-                    <div className="hidden md:block em-data-table-wrap">
-                    <table className="em-data-table min-w-[800px]">
-                      <thead>
-                        <tr>
-                          <th>Invité</th>
-                          <th>Email</th>
-                          <th>Catégorie</th>
-                          <th>Statut RSVP</th>
-                          <th>Événement / Organisation</th>
-                          <th className="text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 text-sm">
-                        {filteredGuests.length === 0 ? (
-                          <tr>
-                            <td colSpan={6} className="py-8 text-center text-slate-500 font-medium">
-                              Aucun invité trouvé.
-                            </td>
-                          </tr>
-                        ) : (
-                          paginatedGuests.map((g) => (
-                            <tr key={g.id} className="hover:bg-slate-50/50 transition-colors">
-                              <td className="py-4">
-                                <span className="font-bold text-slate-900">{g.lastName} {g.firstName}</span>
-                              </td>
-                              <td className="py-4 text-slate-600 font-medium">{g.email}</td>
-                              <td className="py-4">
-                                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                                  {g.category}
+                    <div className={guestsViewMode === 'grid' ? guestsGridClass : listStackClass}>
+                      {paginatedGuests.map((g) => {
+                        const rsvpTone =
+                          g.rsvp === 'ACCEPTED' ? 'emerald' : g.rsvp === 'DECLINED' ? 'rose' : 'amber';
+                        const rsvpLabel =
+                          g.rsvp === 'ACCEPTED' ? 'Accepté' : g.rsvp === 'DECLINED' ? 'Décliné' : 'En attente';
+                        const rsvpChip = <StatusPill tone={rsvpTone}>{rsvpLabel}</StatusPill>;
+                        const categoryChip = <StatusPill tone="slate">{g.category || 'Général'}</StatusPill>;
+                        const actions = (
+                          <>
+                            {guestsViewMode === 'list' ? (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenDetailsModal('guest', g)}
+                                className="inline-flex items-center"
+                                title="Voir détails"
+                              >
+                                <ListRowAction />
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenDetailsModal('guest', g)}
+                                className="p-1.5 text-muted hover:text-foreground hover:bg-surface-muted rounded-md transition"
+                                title="Détails"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditGuestModal(g)}
+                              className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-md transition"
+                              title="Modifier"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteGuest(g.id, `${g.firstName} ${g.lastName}`)}
+                              className="p-1.5 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-md transition"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        );
+
+                        return (
+                          <ProjectCard
+                            key={g.id}
+                            id={g.id}
+                            title={`${g.lastName} ${g.firstName}`}
+                            layout={guestsViewMode}
+                            icon={<Users className="w-4 h-4" />}
+                            onClick={() => handleOpenDetailsModal('guest', g)}
+                            meta={
+                              guestsViewMode === 'list' ? (
+                                <span className="truncate">
+                                  {g.email}
+                                  {' · '}
+                                  {g.eventTitle}
+                                  {' · '}
+                                  {g.tenantName}
                                 </span>
-                              </td>
-                              <td className="py-4">
-                                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold border ${
-                                  g.rsvp === 'ACCEPTED' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
-                                  g.rsvp === 'DECLINED' ? 'bg-rose-50 border-rose-100 text-rose-700' :
-                                  'bg-amber-50 border-amber-100 text-amber-700'
-                                }`}>
-                                  {g.rsvp === 'ACCEPTED' ? 'Accepté' :
-                                   g.rsvp === 'DECLINED' ? 'Décliné' :
-                                   'En attente'}
-                                </span>
-                              </td>
-                              <td className="py-4">
-                                <div className="flex flex-col">
-                                  <span className="font-semibold text-slate-800">{g.eventTitle}</span>
-                                  <span className="text-xs text-slate-400">{g.tenantName}</span>
+                              ) : (
+                                <div className="space-y-1.5">
+                                  <p className="truncate text-xs">{g.email}</p>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {rsvpChip}
+                                    {categoryChip}
+                                  </div>
+                                  <p className="truncate text-xs font-medium">{g.eventTitle}</p>
+                                  <p className="truncate text-[11px] text-muted">{g.tenantName}</p>
                                 </div>
-                              </td>
-                              <td className="py-4 text-right">
-                                <div className="flex items-center justify-end gap-2">
-                                  <button
-                                    onClick={() => handleOpenDetailsModal('guest', g)}
-                                    className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition"
-                                    title="Voir les détails"
-                                  >
-                                    <Eye className="w-4.5 h-4.5" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleOpenEditGuestModal(g)}
-                                    className="p-2 text-primary hover:bg-primary/10 rounded-lg transition"
-                                    title="Modifier l'invité"
-                                  >
-                                    <Edit2 className="w-4.5 h-4.5" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteGuest(g.id, `${g.firstName} ${g.lastName}`)}
-                                    className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                                    title="Supprimer l'invité"
-                                  >
-                                    <Trash2 className="w-4.5 h-4.5" />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
+                              )
+                            }
+                            status={guestsViewMode === 'list' ? rsvpChip : undefined}
+                            aside={guestsViewMode === 'list' ? categoryChip : undefined}
+                            actions={actions}
+                          />
+                        );
+                      })}
                     </div>
 
                     <Pagination
@@ -2710,210 +2743,143 @@ function DashboardPageContent() {
             {activeTab === 'subscription-requests' && (
               <div className="space-y-6 animate-in fade-in duration-200">
                 <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-4">
-                  <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-primary" />
-                    Demandes reçues ({subscriptionRequests.length})
-                  </h4>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-primary" />
+                      Demandes reçues ({subscriptionRequests.length})
+                    </h4>
+                    <ViewModeToggle
+                      storageKey="em-view-admin-sub-requests"
+                      value={subRequestsViewMode}
+                      onChange={setSubRequestsViewMode}
+                      columns={subRequestsColumns}
+                      onColumnsChange={setSubRequestsColumns}
+                      defaultMode="grid"
+                      defaultColumns={2}
+                    />
+                  </div>
 
                   {subRequestsLoading ? (
-                    <SkeletonTabContent mode="grid" count={6} columns={3} />
+                    <SkeletonTabContent mode={subRequestsViewMode === 'list' ? 'list' : 'grid'} count={6} columns={2} />
                   ) : subscriptionRequests.length === 0 ? (
                     <div className="text-center py-8 bg-slate-50 rounded-xl border border-slate-150 p-6">
-                      <p className="text-slate-500 text-xs font-medium">Aucune demande d'abonnement soumise pour le moment.</p>
+                      <p className="text-slate-500 text-xs font-medium">Aucune demande d&apos;abonnement soumise pour le moment.</p>
                     </div>
                   ) : (
                     <>
-                    <div className="md:hidden space-y-3">
-                      {paginatedSubRequests.map((req) => (
-                        <div key={req.id} className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 space-y-3 bg-white dark:bg-slate-950">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="font-bold text-slate-900 dark:text-white truncate">{req.tenant?.name || 'Inconnue'}</p>
-                              <p className="text-[10px] text-slate-400">ID: {req.tenantId}</p>
-                            </div>
-                            <span className={`text-[10px] font-extrabold px-2 py-1 rounded-full uppercase tracking-wider border shrink-0 ${
-                              req.status === 'APPROVED' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
-                              req.status === 'REJECTED' ? 'bg-rose-50 border-rose-100 text-rose-700' :
-                              'bg-amber-50 border-amber-100 text-amber-700'
-                            }`}>
-                              {req.status === 'APPROVED' ? 'Approuvée' :
-                               req.status === 'REJECTED' ? 'Rejetée' : 'En attente'}
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2 text-xs">
-                            <span className="text-slate-400">Actuel :</span>
-                            <span className={`px-2 py-0.5 rounded text-xs font-extrabold border ${planBadgeClass(req.tenant?.plan || 'FREE')}`}>
-                              {req.tenant?.plan || 'FREE'}
-                            </span>
-                            <span className="text-slate-400">→</span>
-                            <span className={`px-2 py-0.5 rounded text-xs font-extrabold border ${planBadgeClass(req.requestedPlan)}`}>
-                              {req.requestedPlan}
-                            </span>
-                            <span className="text-slate-500 font-semibold">{req.durationDays} j</span>
-                          </div>
-                          {req.proofOfPayment && (
-                            <p className="text-xs text-slate-600 italic break-words">&quot;{req.proofOfPayment}&quot;</p>
-                          )}
-                          <p className="text-[10px] text-slate-400">
-                            {new Date(req.createdAt).toLocaleDateString('fr-FR', {
-                              day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
-                            })}
-                          </p>
-                          {req.status === 'PENDING' ? (
-                            <div className="flex flex-col gap-2 pt-1">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setApprovalModalRequest({
-                                    id: req.id,
-                                    requestedPlan: req.requestedPlan,
-                                    durationDays: req.durationDays,
-                                    tenant: req.tenant,
-                                  });
-                                }}
-                                className="w-full px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition shadow-sm"
-                              >
-                                Approuver
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleRejectSubscription(req.id)}
-                                className="w-full px-3 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition shadow-sm"
-                              >
-                                Rejeter
-                              </button>
-                            </div>
-                          ) : (
-                            <p className="text-xs text-slate-400 italic">Demande traitée</p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="hidden md:block em-data-table-wrap">
-                      <table className="em-data-table min-w-[900px]">
-                        <thead>
-                          <tr>
-                            <th>Organisation</th>
-                            <th>Forfait actuel</th>
-                            <th>Plan Demandé</th>
-                            <th>Durée</th>
-                            <th>Preuve / Référence</th>
-                            <th>Date de Demande</th>
-                            <th>Commercial</th>
-                            <th>Statut</th>
-                            <th className="text-right">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 text-sm">
-                          {paginatedSubRequests.map((req) => (
-                            <tr key={req.id} className="hover:bg-slate-50/50 transition-colors">
-                              <td className="py-4">
-                                <div className="flex flex-col">
-                                  <span className="font-bold text-slate-900">{req.tenant?.name || 'Inconnue'}</span>
-                                  <span className="text-xs text-slate-400">ID: {req.tenantId}</span>
-                                </div>
-                              </td>
-                              <td className="py-4">
-                                <span className={`px-2 py-0.5 rounded text-xs font-extrabold border ${planBadgeClass(req.tenant?.plan || 'FREE')}`}>
-                                  {req.tenant?.plan || 'FREE'}
-                                </span>
-                                {req.tenant?.licenseExpiresAt && req.tenant?.licenseActive && (
-                                  <p className="text-[10px] text-slate-400 mt-1">
-                                    exp. {new Date(req.tenant.licenseExpiresAt).toLocaleDateString('fr-FR')}
-                                  </p>
-                                )}
-                              </td>
-                              <td className="py-4">
-                                <span className={`px-2 py-0.5 rounded text-xs font-extrabold border ${planBadgeClass(req.requestedPlan)}`}>
-                                  {req.requestedPlan}
-                                </span>
-                              </td>
-                              <td className="py-4 font-semibold text-slate-700">
-                                {req.durationDays} jours
-                              </td>
-                              <td className="py-4">
-                                <div className="max-w-xs truncate text-xs text-slate-600 font-medium italic" title={req.proofOfPayment}>
-                                  {req.proofOfPayment ? `"${req.proofOfPayment}"` : 'Aucune preuve fournie'}
-                                </div>
-                              </td>
-                              <td className="py-4 text-xs text-slate-500">
-                                {new Date(req.createdAt).toLocaleDateString('fr-FR', {
-                                  day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                                })}
-                              </td>
-                              <td className="py-4">
-                                {req.tenant?.referredByCommercial || req.tenant?.referredByOrgUser ? (
-                                  <div className="text-xs space-y-0.5">
-                                    {req.tenant.referredByCommercial && (
-                                      <span className="block text-primary font-semibold" title={req.tenant.referredByCommercial.email}>
-                                        {req.tenant.referredByCommercial.name || 'Commercial plateforme'}
-                                      </span>
-                                    )}
-                                    {req.tenant?.referredByOrgUser?.orgRole === 'COMMERCIAL' && (
-                                      <span className="block text-violet-600 font-semibold" title={req.tenant.referredByOrgUser.email}>
-                                        {req.tenant.referredByOrgUser.name || 'Commercial org.'}
-                                      </span>
-                                    )}
-                                  </div>
+                      <div className={subRequestsViewMode === 'grid' ? subRequestsGridClass : listStackClass}>
+                        {paginatedSubRequests.map((req) => {
+                          const statusTone =
+                            req.status === 'APPROVED' ? 'emerald' : req.status === 'REJECTED' ? 'rose' : 'amber';
+                          const statusLabel =
+                            req.status === 'APPROVED' ? 'Approuvée' : req.status === 'REJECTED' ? 'Rejetée' : 'En attente';
+                          const statusChip = <StatusPill tone={statusTone}>{statusLabel}</StatusPill>;
+                          const planChip = (
+                            <StatusPill tone="primary">
+                              {(req.tenant?.plan || 'FREE')} → {req.requestedPlan}
+                            </StatusPill>
+                          );
+                          const commercial =
+                            req.tenant?.referredByCommercial?.name ||
+                            (req.tenant?.referredByOrgUser?.orgRole === 'COMMERCIAL'
+                              ? req.tenant.referredByOrgUser.name
+                              : null);
+                          const actions =
+                            req.status === 'PENDING' ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setApprovalModalRequest({
+                                      id: req.id,
+                                      requestedPlan: req.requestedPlan,
+                                      durationDays: req.durationDays,
+                                      tenant: req.tenant,
+                                    });
+                                  }}
+                                  className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-lg transition"
+                                >
+                                  Approuver
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleRejectSubscription(req.id);
+                                  }}
+                                  className="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold rounded-lg transition"
+                                >
+                                  Rejeter
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-[11px] text-muted italic">Traitée</span>
+                            );
+
+                          return (
+                            <ProjectCard
+                              key={req.id}
+                              id={req.id}
+                              title={req.tenant?.name || 'Organisation inconnue'}
+                              layout={subRequestsViewMode}
+                              icon={<CreditCard className="w-4 h-4" />}
+                              meta={
+                                subRequestsViewMode === 'list' ? (
+                                  <span className="truncate">
+                                    {req.durationDays} j
+                                    {' · '}
+                                    {new Date(req.createdAt).toLocaleDateString('fr-FR', {
+                                      day: 'numeric',
+                                      month: 'short',
+                                      year: 'numeric',
+                                    })}
+                                    {commercial ? ` · ${commercial}` : ''}
+                                    {req.proofOfPayment ? ` · ${req.proofOfPayment}` : ''}
+                                  </span>
                                 ) : (
-                                  <span className="text-xs text-slate-400 italic">—</span>
-                                )}
-                              </td>
-                              <td className="py-4">
-                                <span className={`text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider border ${
-                                  req.status === 'APPROVED' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
-                                  req.status === 'REJECTED' ? 'bg-rose-50 border-rose-100 text-rose-700' :
-                                  'bg-amber-50 border-amber-100 text-amber-700'
-                                }`}>
-                                  {req.status === 'APPROVED' ? 'Approuvée' :
-                                   req.status === 'REJECTED' ? 'Rejetée' : 'En attente'}
-                                </span>
-                              </td>
-                              <td className="py-4 text-right">
-                                {req.status === 'PENDING' ? (
-                                  <div className="flex justify-end gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        setApprovalModalRequest({
-                                          id: req.id,
-                                          requestedPlan: req.requestedPlan,
-                                          durationDays: req.durationDays,
-                                          tenant: req.tenant,
-                                        });
-                                      }}
-                                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition shadow-sm cursor-pointer"
-                                    >
-                                      Approuver
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleRejectSubscription(req.id)}
-                                      className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition shadow-sm"
-                                    >
-                                      Rejeter
-                                    </button>
+                                  <div className="space-y-1.5">
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {statusChip}
+                                      {planChip}
+                                    </div>
+                                    <p className="text-xs font-semibold">{req.durationDays} jours</p>
+                                    {req.proofOfPayment && (
+                                      <p className="text-[11px] text-muted italic truncate" title={req.proofOfPayment}>
+                                        &quot;{req.proofOfPayment}&quot;
+                                      </p>
+                                    )}
+                                    {commercial && (
+                                      <p className="text-[11px] text-primary font-medium truncate">{commercial}</p>
+                                    )}
+                                    <p className="text-[11px] text-muted">
+                                      {new Date(req.createdAt).toLocaleDateString('fr-FR', {
+                                        day: 'numeric',
+                                        month: 'short',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                      })}
+                                    </p>
                                   </div>
-                                ) : (
-                                  <span className="text-xs text-slate-400 font-medium italic">Traitée</span>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    <Pagination
-                      page={subRequestsPage}
-                      pageSize={SUB_REQUESTS_PER_PAGE}
-                      total={subscriptionRequests.length}
-                      onPageChange={setSubRequestsPage}
-                      itemLabel="demandes"
-                    />
+                                )
+                              }
+                              status={subRequestsViewMode === 'list' ? statusChip : undefined}
+                              aside={subRequestsViewMode === 'list' ? planChip : undefined}
+                              actions={actions}
+                            />
+                          );
+                        })}
+                      </div>
+                      <Pagination
+                        page={subRequestsPage}
+                        pageSize={SUB_REQUESTS_PER_PAGE}
+                        total={subscriptionRequests.length}
+                        onPageChange={setSubRequestsPage}
+                        itemLabel="demandes"
+                      />
                     </>
                   )}
                 </div>
@@ -2927,28 +2893,44 @@ function DashboardPageContent() {
                   <SkeletonTabContent mode="grid" count={4} columns={2} />
                 ) : adminSettings && adminSettings.plans ? (
                   <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-6">
-                    <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4">
+                    <div className="flex flex-wrap justify-between items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
                       <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <CreditCard className="w-5 h-5 text-primary" />
                         Configuration des forfaits ({PLAN_IDS.length})
                       </h4>
+                      <ViewModeToggle
+                        storageKey="em-view-admin-plans"
+                        value={plansViewMode}
+                        onChange={setPlansViewMode}
+                        columns={plansColumns}
+                        onColumnsChange={setPlansColumns}
+                        defaultMode="grid"
+                        defaultColumns={4}
+                      />
                     </div>
 
-                    <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6">
+                    <div className={plansViewMode === 'grid' ? plansGridClass : listStackClass}>
                       {paginatedPlanIds.map((planKey) => {
                         const plan = adminSettings.plans[planKey];
                         if (!plan) return null;
 
                         return (
-                          <div key={planKey} className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4">
-                            <div className="flex items-center justify-between">
+                          <div
+                            key={planKey}
+                            className={
+                              plansViewMode === 'list'
+                                ? 'bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4 md:grid md:grid-cols-2 xl:grid-cols-3 md:gap-4 md:space-y-0'
+                                : 'bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4'
+                            }
+                          >
+                            <div className={`flex items-center justify-between ${plansViewMode === 'list' ? 'md:col-span-full' : ''}`}>
                               <span className="text-xs font-extrabold text-primary uppercase tracking-wider">{planKey}</span>
                               <span className="text-xs bg-primary/10 text-primary font-bold px-2.5 py-0.5 rounded-full">
                                 {planKey === 'FREE' ? 'Gratuit' : 'Mensuel'}
                               </span>
                             </div>
 
-                            <div className="space-y-3">
+                            <div className={plansViewMode === 'list' ? 'contents' : 'space-y-3'}>
                               <div className="space-y-1">
                                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Nom du Plan</label>
                                 <input
@@ -3175,18 +3157,31 @@ function DashboardPageContent() {
             {activeTab === 'invoices' && (
               <div className="space-y-6 animate-in fade-in duration-200">
                 <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
-                  <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
-                    <FileText className="w-5 h-5 text-primary" />
-                    Toutes les factures ({adminInvoices.length})
-                  </h4>
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-primary" />
+                      Toutes les factures ({adminInvoices.length})
+                    </h4>
+                    <ViewModeToggle
+                      storageKey="em-view-admin-invoices"
+                      value={invoicesViewMode}
+                      onChange={setInvoicesViewMode}
+                      columns={invoicesColumns}
+                      onColumnsChange={setInvoicesColumns}
+                      defaultMode="list"
+                      defaultColumns={3}
+                    />
+                  </div>
                   {loadingAdminInvoices ? (
-                    <SkeletonTabContent mode="list" count={5} />
+                    <SkeletonTabContent mode={invoicesViewMode === 'list' ? 'list' : 'grid'} count={5} columns={3} />
                   ) : (
                     <InvoiceListPanel
                       invoices={adminInvoices}
                       showOrganization
                       showCommissions
                       apiPrefix="admin"
+                      layout={invoicesViewMode}
+                      gridClassName={invoicesGridClass}
                       emptyMessage="Aucune facture générée. Les factures apparaissent ici dès qu'une demande d'abonnement est approuvée."
                     />
                   )}

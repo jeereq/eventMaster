@@ -2,10 +2,18 @@
 
 import React from 'react';
 
+type ThumbElement = {
+  type?: string;
+  text?: string;
+  color?: string;
+  fontSize?: string;
+  align?: string;
+};
+
 interface TemplatePreviewThumbProps {
   content?: {
-    global?: { bgColor?: string };
-    elements?: Array<{ type: string; text?: string; color?: string; fontSize?: string; align?: string }>;
+    global?: { bgColor?: string; [key: string]: unknown };
+    elements?: Array<Record<string, unknown>>;
   };
   name?: string;
   className?: string;
@@ -18,8 +26,8 @@ export default function TemplatePreviewThumb({
   className = '',
   variant = 'thumb',
 }: TemplatePreviewThumbProps) {
-  const bgColor = content?.global?.bgColor || '#faf8f5';
-  const elements = (content?.elements || [])
+  const bgColor = (content?.global?.bgColor as string | undefined) || '#faf8f5';
+  const elements = ((content?.elements || []) as ThumbElement[])
     .filter((el) => el.type === 'text' || el.type === 'button')
     .slice(0, variant === 'card' ? 4 : 3);
 
@@ -59,10 +67,10 @@ export default function TemplatePreviewThumb({
 
   return (
     <div
-      className={`w-16 h-20 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col justify-between p-1.5 shrink-0 ${className}`}
+      className={`w-16 h-20 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col justify-center p-1.5 shrink-0 ${className}`}
       style={{ backgroundColor: bgColor }}
     >
-      <div className="space-y-0.5 flex-1 overflow-hidden">
+      <div className="space-y-0.5 flex-1 overflow-hidden flex flex-col justify-center">
         {elements.length > 0 ? (
           elements.map((el, i) =>
             el.type === 'button' ? (

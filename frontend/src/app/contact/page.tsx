@@ -315,15 +315,15 @@ export default function ContactPage() {
         <section className="py-16 sm:py-20 bg-foreground text-background">
           <div className="page-container text-center space-y-5">
             <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight max-w-xl mx-auto">
-              Prêt à organiser votre prochain événement ?
+              Créez votre entreprise pour démarrer
             </h2>
             <p className="text-sm text-background/70 max-w-md mx-auto leading-relaxed">
-              Invitations, plan de table et protocole QR dans un seul espace, par organisation.
+              Un compte entreprise pour centraliser invitations, plan de table et protocole QR.
             </p>
             <div className="flex flex-col sm:flex-row gap-2.5 justify-center pt-2">
               <Link href="/register">
                 <Button size="lg" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                  Créer mon organisation
+                  Créer mon entreprise
                 </Button>
               </Link>
               <Link href="/#tarifs">

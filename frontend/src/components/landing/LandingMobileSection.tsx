@@ -79,7 +79,7 @@ export default function LandingMobileSection() {
 
             <Link href="/register">
               <Button size="lg" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                Créer mon organisation
+                Créer mon entreprise
               </Button>
             </Link>
           </div>

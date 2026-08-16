@@ -17,6 +17,7 @@ import FaqSection from '@/components/landing/FaqSection';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
+import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
 import { Modal, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -102,7 +103,7 @@ export default function Home() {
                 {site.platformTagline}
               </h1>
               <p className="text-sm text-muted leading-relaxed max-w-md">
-                Plans 2D, invitations, RSVP et protocole QR — isolés par organisation.
+                Plans 2D, invitations, RSVP et protocole QR — un espace dédié pour votre entreprise.
               </p>
               <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
                 {user ? (
@@ -115,7 +116,7 @@ export default function Home() {
                   <>
                     <Link href="/register">
                       <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                        Créer mon organisation
+                        Créer mon entreprise
                       </Button>
                     </Link>
                     <Link href="/login">
@@ -143,8 +144,11 @@ export default function Home() {
                   <Loader2 className="w-6 h-6 text-muted animate-spin" />
                 </div>
               ) : activePreview ? (
-                <div className="space-y-3">
-                  <div className="aspect-[3/4] max-h-[min(380px,52vh)] w-full mx-auto">
+                <div className="space-y-4">
+                  <div
+                    key={activePreview.id}
+                    className="aspect-[3/4] max-h-[min(380px,52vh)] w-full mx-auto animate-in fade-in duration-300"
+                  >
                     <LandingInvitationPreview
                       template={activePreview}
                       variant="hero"
@@ -167,32 +171,50 @@ export default function Home() {
                   </div>
                   {publicTemplates.length > 1 && (
                     <div
-                      className="grid grid-cols-4 gap-2"
+                      className="flex gap-2.5 overflow-x-auto pb-1 -mx-0.5 px-0.5 snap-x snap-mandatory [scrollbar-width:thin]"
                       role="tablist"
                       aria-label="Modèles vitrine"
                     >
-                      {publicTemplates.slice(0, 4).map((t) => (
-                        <button
-                          key={t.id}
-                          type="button"
-                          role="tab"
-                          aria-selected={previewTemplate === t.id}
-                          onClick={() => setPreviewTemplate(t.id)}
-                          title={t.name}
-                          className={cn(
-                            'relative overflow-hidden rounded-lg border transition text-left',
-                            'aspect-[3/4] max-h-20',
-                            previewTemplate === t.id
-                              ? 'border-primary ring-2 ring-primary/25'
-                              : 'border-border hover:border-primary/40 opacity-85 hover:opacity-100',
-                          )}
-                        >
-                          <div className="absolute inset-0 scale-[0.55] origin-top pointer-events-none">
-                            <LandingInvitationPreview template={t} variant="compact" className="!min-h-0 !max-h-none !shadow-none !rounded-none border-0" />
-                          </div>
-                          <span className="sr-only">{t.name}</span>
-                        </button>
-                      ))}
+                      {publicTemplates.slice(0, 6).map((t) => {
+                        const selected = previewTemplate === t.id;
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            role="tab"
+                            aria-selected={selected}
+                            onClick={() => setPreviewTemplate(t.id)}
+                            title={t.name}
+                            className={cn(
+                              'group shrink-0 w-[4.75rem] sm:w-[5.25rem] snap-start text-left transition',
+                              'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded-lg',
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                'aspect-[3/4] rounded-lg border overflow-hidden transition duration-200',
+                                selected
+                                  ? 'border-primary ring-2 ring-primary/20 shadow-[var(--shadow-soft)]'
+                                  : 'border-border opacity-80 group-hover:opacity-100 group-hover:border-primary/40',
+                              )}
+                            >
+                              <TemplatePreviewThumb
+                                content={t.previewContent}
+                                name={t.name}
+                                className="!w-full !h-full !rounded-none !border-0"
+                              />
+                            </div>
+                            <span
+                              className={cn(
+                                'mt-1.5 block text-[10px] leading-tight truncate px-0.5',
+                                selected ? 'font-semibold text-foreground' : 'text-muted',
+                              )}
+                            >
+                              {t.name}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -312,7 +334,7 @@ export default function Home() {
                         </div>
                         <div className="border-t border-border pt-3 mt-4">
                           <Link href="/register" className="text-xs font-medium text-foreground hover:underline">
-                            Utiliser ce modèle →
+                            Créer mon entreprise →
                           </Link>
                         </div>
                       </article>
@@ -331,10 +353,10 @@ export default function Home() {
       <section className="py-16 sm:py-20 bg-foreground text-background">
         <div className="page-container text-center space-y-5">
           <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight max-w-xl mx-auto">
-            Prêt à organiser votre prochain événement ?
+            Créez votre entreprise pour démarrer
           </h2>
           <p className="text-sm text-background/70 max-w-md mx-auto leading-relaxed">
-            Invitations, plan de table et protocole QR dans un seul espace, par organisation.
+            Un compte entreprise pour centraliser invitations, plan de table et protocole QR.
           </p>
           <div className="flex flex-col sm:flex-row gap-2.5 justify-center pt-2">
             {user ? (
@@ -348,7 +370,7 @@ export default function Home() {
                 {site.allowRegistration && (
                   <Link href="/register">
                     <Button size="lg" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                      Créer mon organisation
+                      Créer mon entreprise
                     </Button>
                   </Link>
                 )}
@@ -381,7 +403,7 @@ export default function Home() {
               Fermer
             </Button>
             <Link href="/register">
-              <Button size="sm">Utiliser ce modèle</Button>
+              <Button size="sm">Créer mon entreprise</Button>
             </Link>
           </div>
         }
