@@ -30,7 +30,7 @@ const sizeMap = {
 
 /** Classes partagées pour overlays ad-hoc (même look que Modal). */
 export const modalBackdropClass =
-  'absolute inset-0 bg-slate-950/60 backdrop-blur-sm animate-fade-in';
+  'absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in';
 
 export const modalPanelClass =
   'relative w-full bg-surface border border-border shadow-2xl rounded-t-2xl sm:rounded-2xl max-h-[92vh] flex flex-col animate-slide-up sm:animate-fade-in';
