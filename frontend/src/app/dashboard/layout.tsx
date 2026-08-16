@@ -75,11 +75,11 @@ function SidebarNav({
                     'flex items-center rounded-lg text-sm font-medium transition-colors duration-150',
                     collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2',
                     isActive
-                      ? 'bg-surface-muted text-primary'
-                      : 'text-muted hover:text-foreground hover:bg-surface-muted/70',
+                      ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
+                      : 'text-muted hover:text-foreground hover:bg-surface-muted/80',
                   )}
                 >
-                  <Icon className={cn('w-[18px] h-[18px] shrink-0', isActive && 'text-primary')} />
+                  <Icon className={cn('w-[18px] h-[18px] shrink-0', isActive ? 'text-primary' : '')} />
                   {!collapsed && <span className="truncate text-[13px] font-medium leading-snug">{item.name}</span>}
                 </Link>
               );
@@ -321,13 +321,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Logo desktop */}
           <div className={cn('hidden md:flex items-center', sidebarCollapsed ? 'flex-col gap-2' : 'justify-between')}>
             <div className={cn('flex items-center', sidebarCollapsed ? 'justify-center' : 'gap-2.5')}>
-              <div className="bg-primary p-2 rounded-lg text-white shrink-0">
-                <PartyPopper className="w-5 h-5" />
+              <div className="bg-primary p-1.5 rounded-[var(--radius-button)] text-white shrink-0">
+                <PartyPopper className="w-4 h-4" />
               </div>
               {!sidebarCollapsed && (
                 <div>
-                  <span className="font-semibold text-base text-foreground block leading-none">EventMaster</span>
-                  <span className="text-[10px] font-semibold text-muted uppercase tracking-wider mt-1 block">
+                  <span className="font-semibold text-[15px] text-foreground block leading-none tracking-tight">EventMaster</span>
+                  <span className="text-[10px] font-medium text-muted mt-1 block">
                     Workspace
                   </span>
                 </div>

@@ -32,7 +32,7 @@ export function Card({
         'bg-surface border border-border rounded-[var(--radius-card)]',
         elevated ? 'shadow-sm' : 'shadow-none',
         (hover || interactive) &&
-          'transition-[transform,background-color,border-color,box-shadow] duration-150 ease-out hover:bg-card-hover hover:border-border-subtle hover:-translate-y-px',
+          'em-soft-hover hover:bg-card-hover hover:border-border-subtle',
         paddingMap[padding],
         className,
       )}
