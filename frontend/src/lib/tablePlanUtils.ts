@@ -59,8 +59,8 @@ export function getTableShapeEmoji(shape: TableShape | string): string {
 
 export function getTableVisualClasses(shape: TableShape | string, active = false): string {
   const base = active
-    ? 'bg-indigo-600 text-white'
-    : 'bg-white border border-slate-200 text-slate-800';
+    ? 'bg-primary text-white'
+    : 'bg-surface border border-border text-foreground';
 
   const size =
     shape === 'round'
@@ -91,7 +91,7 @@ export function getTableVisualStyle(
 
   if (tableImageUrl && !active) {
     return {
-      className: `${size} border-2 text-slate-800 shadow-lg overflow-hidden`,
+      className: `${size} border-2 text-foreground shadow-lg overflow-hidden`,
       style: {
         backgroundImage: `url(${tableImageUrl})`,
         backgroundSize: 'cover',
@@ -103,7 +103,7 @@ export function getTableVisualStyle(
 
   if (tableColor && !active) {
     return {
-      className: `${size} border-2 text-slate-800 shadow-lg`,
+      className: `${size} border-2 text-foreground shadow-lg`,
       style: {
         backgroundColor: tableColor,
         borderColor: tableColor,
@@ -113,8 +113,8 @@ export function getTableVisualStyle(
   }
 
   const base = active
-    ? 'bg-indigo-600 text-white border-indigo-700'
-    : 'bg-white border border-slate-200 text-slate-800';
+    ? 'bg-primary text-white border-primary-hover'
+    : 'bg-surface border border-border text-foreground';
 
   return { className: `${size} ${base} shadow-lg border-2` };
 }

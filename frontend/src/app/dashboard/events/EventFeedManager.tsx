@@ -4,11 +4,11 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from '@/lib/api';
 import { downloadMedia, downloadMediaBatch, getMediaExtension, sanitizeFilenamePart } from '@/lib/downloadMedia';
 import { useAuth } from '@/context/AuthContext';
-import { 
-  Image, Send, Trash2, 
-  Loader2, Heart, Plus, Video, Eye, MessageCircle, 
+import {
+  Image, Send, Trash2,
+  Loader2, Heart, Plus, Video, Eye, MessageCircle,
   RefreshCw, X, ChevronLeft, ChevronRight, BookOpen,
-  Rss, Search, ThumbsUp, Sparkles, Download
+  Rss, Search, Download
 } from 'lucide-react';
 
 interface Comment {
@@ -357,22 +357,15 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-5 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-primary dark:text-primary" />
-              Interactions & Fil d'actualité
-            </h2>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-900/50 rounded-full text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-              Mise à jour en direct
-            </div>
-          </div>
-          <p className="text-slate-500 dark:text-slate-400 text-sm max-w-xl">
-            Publiez des photos et annonces pour vos invités, consultez le livre d'or et suivez les interactions en temps réel.
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold text-foreground">
+            Interactions & Fil d&apos;actualité
+          </h2>
+          <p className="text-sm text-muted max-w-xl">
+            Publiez des photos et annonces, consultez le livre d&apos;or et suivez les interactions.
           </p>
         </div>
 
@@ -382,121 +375,113 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
               type="button"
               onClick={handleDownloadAllVisibleMedia}
               disabled={isBulkDownloading || isRefreshing}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary hover:bg-primary-hover disabled:bg-primary/40 text-white font-semibold rounded-xl text-xs transition shadow-md shadow-primary/10 dark:shadow-none"
+              className="inline-flex items-center gap-2 px-3 py-2 bg-surface border border-border hover:bg-surface-muted disabled:opacity-50 text-foreground font-medium rounded-[var(--radius-button)] text-xs transition"
             >
               {isBulkDownloading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
-                <Download className="w-4 h-4" />
+                <Download className="w-3.5 h-3.5" />
               )}
               Télécharger tout ({visibleMediaCount})
             </button>
           )}
           <button
+            type="button"
             onClick={() => activeSubTab === 'feed' ? loadFeed() : loadShares()}
             disabled={isRefreshing || isBulkDownloading}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold rounded-xl text-xs transition shadow-xs"
+            className="inline-flex items-center gap-2 px-3 py-2 bg-surface border border-border hover:bg-surface-muted disabled:opacity-50 text-muted font-medium rounded-[var(--radius-button)] text-xs transition"
           >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-primary' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-primary' : ''}`} />
             Actualiser
           </button>
         </div>
       </div>
 
-      {/* Summary KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex items-center gap-3 shadow-xs">
-          <div className="bg-primary/10 dark:bg-primary/15 text-primary dark:text-primary p-2.5 rounded-xl">
-            <Rss className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Publications</div>
-            <div className="text-xl font-black text-slate-900 dark:text-white">{posts.length}</div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex items-center gap-3 shadow-xs">
-          <div className="bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 p-2.5 rounded-xl">
-            <BookOpen className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Livre d'or</div>
-            <div className="text-xl font-black text-slate-900 dark:text-white">{shares.length}</div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex items-center gap-3 shadow-xs">
-          <div className="bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400 p-2.5 rounded-xl">
-            <MessageCircle className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Commentaires</div>
-            <div className="text-xl font-black text-slate-900 dark:text-white">{totalComments}</div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex items-center gap-3 shadow-xs">
-          <div className="bg-pink-50 dark:bg-pink-950/40 text-pink-600 dark:text-pink-400 p-2.5 rounded-xl">
-            <ThumbsUp className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">J'aime</div>
-            <div className="text-xl font-black text-slate-900 dark:text-white">{totalLikes}</div>
-          </div>
-        </div>
+      {/* Stats strip */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-card)] text-xs text-muted">
+        <span>
+          <span className="font-semibold tabular-nums text-foreground">{posts.length}</span>
+          {' '}publication{posts.length !== 1 ? 's' : ''}
+        </span>
+        <span className="text-border hidden sm:inline" aria-hidden>·</span>
+        <span>
+          <span className="font-semibold tabular-nums text-foreground">{shares.length}</span>
+          {' '}livre d&apos;or
+        </span>
+        <span className="text-border hidden sm:inline" aria-hidden>·</span>
+        <span>
+          <span className="font-semibold tabular-nums text-foreground">{totalComments}</span>
+          {' '}commentaire{totalComments !== 1 ? 's' : ''}
+        </span>
+        <span className="text-border hidden sm:inline" aria-hidden>·</span>
+        <span>
+          <span className="font-semibold tabular-nums text-foreground">{totalLikes}</span>
+          {' '}j&apos;aime
+        </span>
       </div>
 
       {/* Sub-tabs */}
-      <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-fit">
+      <div
+        className="inline-flex items-center rounded-lg border border-border bg-surface-muted p-0.5"
+        role="group"
+        aria-label="Section"
+      >
         <button
+          type="button"
           onClick={() => setActiveSubTab('feed')}
-          className={`px-5 py-2.5 text-xs font-bold rounded-xl transition flex items-center gap-2 ${
+          aria-pressed={activeSubTab === 'feed'}
+          className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
             activeSubTab === 'feed'
-              ? 'bg-white dark:bg-slate-800 text-primary dark:text-primary shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              ? 'bg-surface text-primary shadow-sm ring-1 ring-border'
+              : 'text-muted hover:text-foreground'
           }`}
         >
-          <Rss className="w-4 h-4" />
-          Fil d'actualité ({posts.length})
+          <Rss className="w-3.5 h-3.5" />
+          Fil d&apos;actualité ({posts.length})
         </button>
         <button
+          type="button"
           onClick={() => setActiveSubTab('shares')}
-          className={`px-5 py-2.5 text-xs font-bold rounded-xl transition flex items-center gap-2 ${
+          aria-pressed={activeSubTab === 'shares'}
+          className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
             activeSubTab === 'shares'
-              ? 'bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 shadow-sm'
-              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              ? 'bg-surface text-primary shadow-sm ring-1 ring-border'
+              : 'text-muted hover:text-foreground'
           }`}
         >
-          <BookOpen className="w-4 h-4" />
-          Livre d'or ({shares.length})
+          <BookOpen className="w-3.5 h-3.5" />
+          Livre d&apos;or ({shares.length})
         </button>
       </div>
 
       {activeSubTab === 'feed' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
           {/* Create Post */}
-          <div className="lg:col-span-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-xs space-y-4 sticky top-6">
-            <h3 className="font-extrabold text-slate-900 dark:text-white text-sm flex items-center gap-2">
-              <Plus className="w-4 h-4 text-primary dark:text-primary" />
+          <div className="lg:col-span-1 bg-surface border border-border rounded-[var(--radius-card)] p-4 space-y-3 sticky top-6">
+            <h3 className="font-semibold text-foreground text-sm flex items-center gap-2">
+              <Plus className="w-4 h-4 text-primary" />
               Nouvelle publication
             </h3>
 
-            <form onSubmit={handleCreatePost} className="space-y-4">
+            <form onSubmit={handleCreatePost} className="space-y-3">
               <textarea
                 value={postContent}
                 onChange={(e) => setPostContent(e.target.value)}
                 placeholder="Partagez un message, une annonce ou des photos avec vos invités..."
                 rows={4}
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition resize-none text-slate-800 dark:text-slate-200 placeholder-slate-400"
+                className="w-full px-3 py-2.5 bg-background border border-border rounded-[var(--radius-button)] text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition resize-none text-foreground placeholder:text-muted"
               />
 
               {postMediaFiles.length > 0 && (
                 <div className="space-y-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  <span className="text-[10px] font-semibold text-muted uppercase tracking-wider">
                     Fichiers ({postMediaFiles.length})
                   </span>
                   <div className="grid grid-cols-3 gap-2">
                     {postMediaFiles.map((file, idx) => (
-                      <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
+                      <div key={idx} className="relative aspect-square rounded-[var(--radius-button)] overflow-hidden border border-border bg-surface-muted">
                         {file.type === 'VIDEO' ? (
-                          <div className="w-full h-full flex items-center justify-center bg-slate-900 text-white">
+                          <div className="w-full h-full flex items-center justify-center bg-background text-muted">
                             <Video className="w-6 h-6" />
                           </div>
                         ) : (
@@ -516,14 +501,14 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
               )}
 
               {isUploading && (
-                <div className="flex items-center justify-center gap-2 py-3 bg-slate-50 dark:bg-slate-950 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                <div className="flex items-center justify-center gap-2 py-3 bg-surface-muted border border-dashed border-border rounded-[var(--radius-button)]">
                   <Loader2 className="w-4 h-4 text-primary animate-spin" />
-                  <span className="text-xs font-semibold text-slate-500">Encodage des fichiers...</span>
+                  <span className="text-xs font-medium text-muted">Encodage des fichiers...</span>
                 </div>
               )}
 
-              <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <label className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl text-xs cursor-pointer transition">
+              <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
+                <label className="inline-flex items-center gap-1.5 px-3 py-2 bg-surface-muted hover:bg-background text-foreground font-medium rounded-[var(--radius-button)] text-xs cursor-pointer transition border border-border">
                   <Image className="w-4 h-4 text-primary" />
                   Médias
                   <input ref={fileInputRef} type="file" multiple accept="image/*,video/*" onChange={handleMultipleMediaUpload} className="hidden" />
@@ -531,7 +516,7 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
                 <button
                   type="submit"
                   disabled={submittingPost || isUploading || (!postContent.trim() && postMediaFiles.length === 0)}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-hover disabled:bg-primary/40 text-white font-semibold rounded-xl text-xs transition shadow-md shadow-primary/10 dark:shadow-none"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary hover:bg-primary-hover disabled:bg-primary/40 text-white font-medium rounded-[var(--radius-button)] text-xs transition"
                 >
                   {submittingPost ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                   Publier
@@ -541,20 +526,20 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
           </div>
 
           {/* Feed Posts */}
-          <div className="lg:col-span-2 space-y-5">
+          <div className="lg:col-span-2 space-y-3">
             {loadingPosts ? (
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-12 flex flex-col items-center justify-center gap-3">
-                <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                <p className="text-sm font-medium text-slate-500">Chargement du fil d'actualité...</p>
+              <div className="bg-surface border border-border rounded-[var(--radius-card)] p-10 flex flex-col items-center justify-center gap-3">
+                <Loader2 className="w-7 h-7 text-primary animate-spin" />
+                <p className="text-sm text-muted">Chargement du fil d&apos;actualité...</p>
               </div>
             ) : posts.length === 0 ? (
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-12 text-center space-y-3">
-                <div className="inline-flex items-center justify-center bg-primary/10 dark:bg-primary/15 p-4 rounded-full text-primary dark:text-primary">
-                  <Rss className="w-8 h-8" />
+              <div className="bg-surface border border-border rounded-[var(--radius-card)] p-10 text-center space-y-2">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary/15 text-primary">
+                  <Rss className="w-5 h-5" />
                 </div>
-                <h4 className="font-bold text-slate-800 dark:text-white">Aucune publication</h4>
-                <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm mx-auto">
-                  Publiez la première photo ou annonce pour lancer le fil d'actualité de votre événement.
+                <h4 className="font-semibold text-foreground text-sm">Aucune publication</h4>
+                <p className="text-muted text-sm max-w-sm mx-auto">
+                  Publiez la première photo ou annonce pour lancer le fil d&apos;actualité de votre événement.
                 </p>
               </div>
             ) : (
@@ -564,33 +549,34 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
                 const organizerInitials = user?.name ? user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'OR';
 
                 return (
-                  <article key={post.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-xs">
+                  <article key={post.id} className="bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden">
                     {/* Post header */}
-                    <div className="p-5 pb-0 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary to-primary flex items-center justify-center font-black text-white text-xs shadow-md">
+                    <div className="p-4 pb-0 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-primary/15 text-primary flex items-center justify-center font-semibold text-xs">
                           {organizerInitials}
                         </div>
                         <div>
-                          <span className="font-extrabold text-slate-900 dark:text-white text-sm block">Organisateur</span>
-                          <span className="text-[10px] text-slate-400 font-medium">{formatRelativeDate(post.createdAt)}</span>
+                          <span className="font-semibold text-foreground text-sm block">Organisateur</span>
+                          <span className="text-[10px] text-muted">{formatRelativeDate(post.createdAt)}</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-0.5">
                         {mediaList.length > 0 && (
                           <button
                             type="button"
                             onClick={(e) => handleDownloadFeedPostMedia(e, post)}
                             disabled={isBulkDownloading}
-                            className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 dark:hover:bg-primary/10 rounded-xl transition"
+                            className="p-2 text-muted hover:text-primary hover:bg-surface-muted rounded-[var(--radius-button)] transition"
                             title="Télécharger les médias"
                           >
                             <Download className="w-4 h-4" />
                           </button>
                         )}
                         <button
+                          type="button"
                           onClick={() => handleDeletePost(post.id)}
-                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition"
+                          className="p-2 text-muted hover:text-rose-600 hover:bg-surface-muted rounded-[var(--radius-button)] transition"
                           title="Supprimer"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -599,17 +585,17 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
                     </div>
 
                     {post.content && (
-                      <p className="px-5 pt-4 text-slate-800 dark:text-slate-200 text-sm leading-relaxed whitespace-pre-line">
+                      <p className="px-4 pt-3 text-foreground text-sm leading-relaxed whitespace-pre-line">
                         {post.content}
                       </p>
                     )}
 
                     {mediaList.length > 0 && (
-                      <div className={`mx-5 mt-4 grid gap-1 rounded-2xl overflow-hidden ${
+                      <div className={`mx-4 mt-3 grid gap-1 rounded-[var(--radius-button)] overflow-hidden ${
                         mediaList.length === 1 ? 'grid-cols-1' : mediaList.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
                       }`}>
                         {mediaList.map((media, idx) => (
-                          <div key={idx} className="relative aspect-video max-h-80 bg-black flex items-center justify-center overflow-hidden group">
+                          <div key={idx} className="relative aspect-video max-h-80 bg-background flex items-center justify-center overflow-hidden group">
                             {media.type === 'VIDEO' ? (
                               <video src={media.url} controls className="w-full h-full object-contain" />
                             ) : (
@@ -634,7 +620,7 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
                                 media.url,
                                 `feed-${sanitizeFilenamePart(post.id)}-${idx + 1}${getMediaExtension(media.url, media.type)}`
                               )}
-                              className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
                               title="Télécharger"
                             >
                               <Download className="w-3.5 h-3.5" />
@@ -645,32 +631,33 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
                     )}
 
                     {/* Engagement bar */}
-                    <div className="px-5 py-3 mt-2 flex items-center gap-4 border-b border-slate-100 dark:border-slate-800">
-                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-950/30 px-3 py-1.5 rounded-full">
-                        <Heart className="w-3.5 h-3.5 fill-pink-500 text-pink-500" />
-                        {likesCount} J'aime
+                    <div className="px-4 py-2.5 mt-2 flex items-center gap-4 border-b border-border text-xs text-muted">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Heart className="w-3.5 h-3.5 text-primary" />
+                        <span className="tabular-nums text-foreground font-medium">{likesCount}</span> J&apos;aime
                       </span>
-                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400">
+                      <span className="inline-flex items-center gap-1.5">
                         <MessageCircle className="w-3.5 h-3.5" />
-                        {post.comments.length} commentaire{post.comments.length !== 1 ? 's' : ''}
+                        <span className="tabular-nums text-foreground font-medium">{post.comments.length}</span>
+                        {' '}commentaire{post.comments.length !== 1 ? 's' : ''}
                       </span>
                     </div>
 
                     {/* Comments */}
-                    <div className="p-5 space-y-4">
+                    <div className="p-4 space-y-3">
                       {post.comments.length > 0 && (
-                        <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                        <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
                           {post.comments.map(comment => (
-                            <div key={comment.id} className="flex gap-3">
-                              <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-bold text-slate-500 dark:text-slate-400 text-[10px] flex-shrink-0">
+                            <div key={comment.id} className="flex gap-2.5">
+                              <div className="w-7 h-7 rounded-full bg-primary/15 text-primary flex items-center justify-center font-semibold text-[10px] flex-shrink-0">
                                 {comment.authorName[0]?.toUpperCase()}
                               </div>
-                              <div className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl rounded-tl-sm px-3.5 py-2.5">
+                              <div className="flex-1 min-w-0 py-0.5">
                                 <div className="flex items-center justify-between gap-2 mb-0.5">
-                                  <span className="font-extrabold text-slate-800 dark:text-slate-200 text-xs">{comment.authorName}</span>
-                                  <span className="text-[9px] text-slate-400">{formatRelativeDate(comment.createdAt)}</span>
+                                  <span className="font-semibold text-foreground text-xs">{comment.authorName}</span>
+                                  <span className="text-[10px] text-muted">{formatRelativeDate(comment.createdAt)}</span>
                                 </div>
-                                <p className="text-slate-600 dark:text-slate-400 text-xs leading-relaxed">{comment.content}</p>
+                                <p className="text-muted text-xs leading-relaxed">{comment.content}</p>
                               </div>
                             </div>
                           ))}
@@ -684,12 +671,13 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
                           value={commentContents[post.id] || ''}
                           onChange={(e) => setCommentContents({ ...commentContents, [post.id]: e.target.value })}
                           onKeyDown={(e) => { if (e.key === 'Enter') handleCreateComment(post.id); }}
-                          className="flex-1 px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-slate-800 dark:text-slate-200"
+                          className="flex-1 px-3 py-2 bg-background border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 text-foreground"
                         />
                         <button
+                          type="button"
                           onClick={() => handleCreateComment(post.id)}
                           disabled={commentSubmitting[post.id] || !commentContents[post.id]?.trim()}
-                          className="p-2.5 bg-primary hover:bg-primary-hover disabled:bg-primary/40 text-white rounded-xl transition"
+                          className="p-2 bg-primary hover:bg-primary-hover disabled:bg-primary/40 text-white rounded-[var(--radius-button)] transition"
                         >
                           {commentSubmitting[post.id] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                         </button>
@@ -703,44 +691,42 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
         </div>
       ) : (
         /* Livre d'or */
-        <div className="space-y-5">
+        <div className="space-y-4">
           {/* Search */}
           {shares.length > 0 && (
             <div className="relative max-w-md">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
               <input
                 type="text"
                 value={shareSearch}
                 onChange={(e) => setShareSearch(e.target.value)}
                 placeholder="Rechercher par invité ou message..."
-                className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 text-slate-800 dark:text-slate-200"
+                className="w-full pl-9 pr-3 py-2 bg-surface border border-border rounded-[var(--radius-button)] text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 text-foreground"
               />
             </div>
           )}
 
           {loadingShares ? (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-12 flex flex-col items-center justify-center gap-3">
-              <Loader2 className="w-8 h-8 text-rose-500 animate-spin" />
-              <p className="text-sm font-medium text-slate-500">Chargement du livre d'or...</p>
+            <div className="bg-surface border border-border rounded-[var(--radius-card)] p-10 flex flex-col items-center justify-center gap-3">
+              <Loader2 className="w-7 h-7 text-primary animate-spin" />
+              <p className="text-sm text-muted">Chargement du livre d&apos;or...</p>
             </div>
           ) : shares.length === 0 ? (
-            <div className="bg-gradient-to-br from-rose-50 to-primary/10 dark:from-rose-950/20 dark:to-primary/10 border border-rose-100 dark:border-rose-900/30 rounded-3xl p-12 text-center space-y-4">
-              <div className="inline-flex items-center justify-center bg-white dark:bg-slate-900 p-5 rounded-full text-rose-500 shadow-md">
-                <BookOpen className="w-10 h-10" />
+            <div className="bg-surface border border-border rounded-[var(--radius-card)] p-10 text-center space-y-2">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-primary/15 text-primary">
+                <BookOpen className="w-5 h-5" />
               </div>
-              <div>
-                <h4 className="font-black text-slate-800 dark:text-white text-lg">Le livre d'or est vide</h4>
-                <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm mx-auto mt-2">
-                  Les messages et photos partagés par vos invités depuis leur portail RSVP apparaîtront ici.
-                </p>
-              </div>
+              <h4 className="font-semibold text-foreground text-sm">Le livre d&apos;or est vide</h4>
+              <p className="text-muted text-sm max-w-sm mx-auto">
+                Les messages et photos partagés par vos invités depuis leur portail RSVP apparaîtront ici.
+              </p>
             </div>
           ) : filteredShares.length === 0 ? (
-            <div className="text-center py-12 text-slate-500 dark:text-slate-400 text-sm">
+            <div className="text-center py-10 text-muted text-sm">
               Aucun message ne correspond à votre recherche.
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
               {filteredShares.map(share => {
                 const photosList = getPhotosList(share);
                 const initials = getInitials(share.guest.firstName, share.guest.lastName);
@@ -749,28 +735,25 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
                 return (
                   <article
                     key={share.id}
-                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col"
+                    className="bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden flex flex-col"
                   >
-                    {/* Card header with gradient accent */}
-                    <div className="h-1.5 bg-gradient-to-r from-rose-400 via-pink-500 to-primary/100" />
-
-                    <div className="p-5 space-y-4 flex-1 flex flex-col">
-                      <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 to-primary flex items-center justify-center font-black text-white text-sm shadow-md">
+                    <div className="p-4 space-y-3 flex-1 flex flex-col">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-primary/15 text-primary flex items-center justify-center font-semibold text-xs flex-shrink-0">
                           {initials}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <span className="font-extrabold text-slate-900 dark:text-white text-sm block truncate">
+                          <span className="font-semibold text-foreground text-sm block truncate">
                             {share.guest.firstName} {share.guest.lastName}
                           </span>
-                          <span className="text-[10px] text-slate-400 font-medium">{formatRelativeDate(share.createdAt)}</span>
+                          <span className="text-[10px] text-muted">{formatRelativeDate(share.createdAt)}</span>
                         </div>
                         {photosList.length > 0 && (
                           <button
                             type="button"
                             onClick={(e) => handleDownloadSharePhotos(e, share)}
                             disabled={isBulkDownloading}
-                            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition flex-shrink-0"
+                            className="p-1.5 text-muted hover:text-primary hover:bg-surface-muted rounded-[var(--radius-button)] transition flex-shrink-0"
                             title="Télécharger les photos"
                           >
                             <Download className="w-4 h-4" />
@@ -779,38 +762,34 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
                         <button
                           type="button"
                           onClick={() => handleDeleteShare(share.id)}
-                          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition flex-shrink-0"
+                          className="p-1.5 text-muted hover:text-rose-600 hover:bg-surface-muted rounded-[var(--radius-button)] transition flex-shrink-0"
                           title="Supprimer ce message"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
-                        <Heart className="w-4 h-4 text-rose-300 dark:text-rose-700 flex-shrink-0" />
                       </div>
 
                       {share.message && (
-                        <blockquote className="relative pl-4 border-l-4 border-rose-200 dark:border-rose-800">
-                          <span className="absolute -top-2 -left-1 text-3xl text-rose-200 dark:text-rose-800 font-serif leading-none select-none">"</span>
-                          <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed italic pt-1">
-                            {share.message}
-                          </p>
-                        </blockquote>
+                        <p className="text-foreground text-sm leading-relaxed">
+                          {share.message}
+                        </p>
                       )}
 
                       {photosList.length > 0 && (
-                        <div className={`grid gap-1.5 rounded-2xl overflow-hidden ${
+                        <div className={`grid gap-1 rounded-[var(--radius-button)] overflow-hidden ${
                           photosList.length === 1 ? 'grid-cols-1' : photosList.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
                         }`}>
                           {photosList.map((photo, idx) => (
                             <div
                               key={idx}
-                              className={`relative overflow-hidden bg-slate-100 dark:bg-slate-800 group cursor-pointer ${
+                              className={`relative overflow-hidden bg-surface-muted group cursor-pointer ${
                                 photosList.length === 1 ? 'aspect-video' : 'aspect-square'
                               }`}
                               onClick={() => openImageModal(photosList, idx, `livre-dor-${guestSlug}`)}
                             >
-                              <img src={photo} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 flex items-center justify-center transition-all pointer-events-none">
-                                <Eye className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
+                              <img src={photo} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 flex items-center justify-center transition-all pointer-events-none">
+                                <Eye className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                               </div>
                               <button
                                 type="button"
@@ -819,7 +798,7 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
                                   photo,
                                   `livre-dor-${guestSlug}-${idx + 1}${getMediaExtension(photo, 'IMAGE')}`
                                 )}
-                                className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity z-10"
                                 title="Télécharger"
                               >
                                 <Download className="w-3.5 h-3.5" />
@@ -830,11 +809,11 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
                       )}
 
                       {!share.message && photosList.length === 0 && (
-                        <p className="text-xs text-slate-400 italic">Partage sans contenu texte ni photo.</p>
+                        <p className="text-xs text-muted italic">Partage sans contenu texte ni photo.</p>
                       )}
 
-                      <div className="mt-auto pt-3 border-t border-slate-100 dark:border-slate-800">
-                        <span className="text-[10px] text-slate-400 font-medium truncate block">{share.guest.email}</span>
+                      <div className="mt-auto pt-2 border-t border-border">
+                        <span className="text-[10px] text-muted truncate block">{share.guest.email}</span>
                       </div>
                     </div>
                   </article>
@@ -874,6 +853,7 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
               <Download className="w-5 h-5" />
             </button>
             <button
+              type="button"
               onClick={() => setExpandedImages([])}
               className="absolute top-4 right-4 p-2 bg-black/60 hover:bg-black text-white rounded-full transition"
             >
@@ -881,13 +861,13 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
             </button>
             {expandedImages.length > 1 && (
               <>
-                <button onClick={prevImage} className="absolute left-4 p-3 bg-black/50 hover:bg-black text-white rounded-full transition">
+                <button type="button" onClick={prevImage} className="absolute left-4 p-3 bg-black/50 hover:bg-black text-white rounded-full transition">
                   <ChevronLeft className="w-6 h-6" />
                 </button>
-                <button onClick={nextImage} className="absolute right-4 p-3 bg-black/50 hover:bg-black text-white rounded-full transition">
+                <button type="button" onClick={nextImage} className="absolute right-4 p-3 bg-black/50 hover:bg-black text-white rounded-full transition">
                   <ChevronRight className="w-6 h-6" />
                 </button>
-                <div className="absolute bottom-4 bg-black/60 px-3 py-1 rounded-full text-white text-xs font-bold">
+                <div className="absolute bottom-4 bg-black/60 px-3 py-1 rounded-full text-white text-xs font-medium">
                   {expandedImageIndex + 1} / {expandedImages.length}
                 </div>
               </>

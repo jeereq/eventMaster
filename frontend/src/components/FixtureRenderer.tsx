@@ -47,7 +47,7 @@ export default function FixtureRenderer({ fixture, className = '', showLabel = t
           size="lg"
         />
         {showLabel && fixture.label && (
-          <span className="absolute -bottom-4 text-[8px] font-bold text-slate-600 whitespace-nowrap">{fixture.label}</span>
+          <span className="absolute -bottom-4 text-[8px] font-bold text-muted whitespace-nowrap">{fixture.label}</span>
         )}
       </div>
     );

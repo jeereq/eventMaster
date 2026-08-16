@@ -28,7 +28,7 @@ export default function ChairRenderer({
   if (imageUrl) {
     return (
       <span
-        className={`inline-block rounded-full overflow-hidden border border-slate-300/80 shadow-sm bg-white ${sizeMap[size]} ${className}`}
+        className={`inline-block rounded-full overflow-hidden border border-border/80 shadow-sm bg-white ${sizeMap[size]} ${className}`}
         title={title || 'Chaise personnalisée'}
       >
         <img src={imageUrl} alt="" className="w-full h-full object-cover" />
