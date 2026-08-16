@@ -44,17 +44,17 @@ function TableDetailPopover({
 }) {
   return (
     <div className="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 max-w-[90vw] pointer-events-auto">
-      <div className="bg-surface border border-border rounded-xl p-3 shadow-2xl text-left space-y-2">
+      <div className="bg-surface border border-border rounded-[var(--radius-card)] p-3 shadow-[var(--shadow-soft)] text-left space-y-2">
         <div className="flex items-start justify-between gap-2">
-          <p className="font-bold text-foreground text-xs">{table.name}</p>
+          <p className="font-semibold text-foreground text-xs">{table.name}</p>
           <button type="button" onClick={onClose} className="text-muted hover:text-foreground text-xs shrink-0">✕</button>
         </div>
         <p className="text-[10px] text-muted">{getTableShapeLabel(table.shape)} · {table.occupiedCount}/{table.capacity} places</p>
         {table.isGuestTable && (
-          <span className="inline-block text-[9px] font-bold uppercase bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full">Votre table</span>
+          <span className="inline-block text-[9px] font-semibold uppercase bg-primary/10 text-primary px-2 py-0.5 rounded-md">Votre table</span>
         )}
         {guestNames && guestNames.length > 0 && (
-          <ul className="text-[10px] text-foreground/80 space-y-0.5 pt-1 border-t border-border">
+          <ul className="text-[10px] text-muted space-y-0.5 pt-1 border-t border-border">
             {guestNames.map((n) => (
               <li key={n} className="truncate">{n}</li>
             ))}
@@ -109,11 +109,11 @@ export default function GuestRoomPlanCanvas({
   return (
     <div className={`space-y-2 ${className}`}>
       <div className="flex items-center justify-end gap-1.5">
-        <button type="button" onClick={() => adjustZoom(-0.15)} className="p-1.5 rounded-lg border border-border text-foreground/80 hover:bg-surface-muted" aria-label="Zoom arrière">
+        <button type="button" onClick={() => adjustZoom(-0.15)} className="p-1.5 rounded-[var(--radius-button)] border border-border text-muted hover:text-foreground hover:bg-surface-muted transition" aria-label="Zoom arrière">
           <ZoomOut className="w-3.5 h-3.5" />
         </button>
         <span className="text-[10px] text-muted font-mono w-10 text-center">{Math.round(zoom * 100)}%</span>
-        <button type="button" onClick={() => adjustZoom(0.15)} className="p-1.5 rounded-lg border border-border text-foreground/80 hover:bg-surface-muted" aria-label="Zoom avant">
+        <button type="button" onClick={() => adjustZoom(0.15)} className="p-1.5 rounded-[var(--radius-button)] border border-border text-muted hover:text-foreground hover:bg-surface-muted transition" aria-label="Zoom avant">
           <ZoomIn className="w-3.5 h-3.5" />
         </button>
         <button
@@ -122,7 +122,7 @@ export default function GuestRoomPlanCanvas({
             const el = containerRef.current;
             if (el) setZoom(Math.max(0.45, computeFitZoom(el.clientWidth, height)));
           }}
-          className="p-1.5 rounded-lg border border-border text-foreground/80 hover:bg-surface-muted"
+          className="p-1.5 rounded-[var(--radius-button)] border border-border text-muted hover:text-foreground hover:bg-surface-muted transition"
           aria-label="Réinitialiser"
         >
           <RotateCcw className="w-3.5 h-3.5" />
@@ -131,7 +131,7 @@ export default function GuestRoomPlanCanvas({
 
       <div
         ref={containerRef}
-        className="relative w-full overflow-auto rounded-2xl border border-border touch-pan-x touch-pan-y"
+        className="relative w-full overflow-auto rounded-[var(--radius-card)] border border-border touch-pan-x touch-pan-y shadow-[var(--shadow-soft)]"
         style={{
           height: `${height}px`,
           background: theme.guestCanvasBg,
