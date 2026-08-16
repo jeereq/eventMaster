@@ -1,4 +1,5 @@
 import { prisma } from '../db';
+import { parseBranding } from './brandingUtils';
 
 export function formatTenantResponse(tenant: {
   id: string;
@@ -7,7 +8,9 @@ export function formatTenantResponse(tenant: {
   licenseActive: boolean;
   licenseExpiresAt: Date | null;
   managerId: string | null;
+  branding?: unknown;
 }) {
+  const branding = parseBranding(tenant.branding);
   return {
     id: tenant.id,
     name: tenant.name,
@@ -15,6 +18,7 @@ export function formatTenantResponse(tenant: {
     licenseActive: tenant.licenseActive,
     licenseExpiresAt: tenant.licenseExpiresAt,
     managerId: tenant.managerId,
+    branding: branding || undefined,
   };
 }
 

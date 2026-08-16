@@ -19,8 +19,8 @@ const variants = {
     Icon: AlertTriangle,
   },
   info: {
-    container: 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-900/50 text-indigo-800 dark:text-indigo-300',
-    icon: 'text-indigo-500',
+    container: 'bg-primary/10 border-primary/20 text-primary',
+    icon: 'text-primary',
     Icon: Info,
   },
 } as const;

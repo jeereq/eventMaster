@@ -141,10 +141,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4 animate-fade-in">
-          <div className="bg-indigo-600 p-3 rounded-xl text-white">
+          <div className="bg-primary p-3 rounded-xl text-white">
             <PartyPopper className="w-8 h-8" />
           </div>
-          <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+          <Loader2 className="w-6 h-6 text-primary animate-spin" />
           <p className="text-sm font-medium text-muted">
             Chargement de votre espace…
           </p>
@@ -261,7 +261,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center bg-background">
-          <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+          <Loader2 className="w-6 h-6 text-primary animate-spin" />
         </div>
       }
     >
@@ -280,7 +280,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Header mobile */}
       <header className="md:hidden bg-sidebar border-b border-border h-14 px-4 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-2.5">
-          <div className="bg-indigo-600 p-1.5 rounded-lg text-white">
+          <div className="bg-primary p-1.5 rounded-lg text-white">
             <PartyPopper className="w-4 h-4" />
           </div>
           <span className="font-semibold text-base text-foreground">EventMaster</span>
@@ -321,7 +321,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Logo desktop */}
           <div className={cn('hidden md:flex items-center', sidebarCollapsed ? 'flex-col gap-2' : 'justify-between')}>
             <div className={cn('flex items-center', sidebarCollapsed ? 'justify-center' : 'gap-2.5')}>
-              <div className="bg-indigo-600 p-2 rounded-lg text-white shrink-0">
+              <div className="bg-primary p-2 rounded-lg text-white shrink-0">
                 <PartyPopper className="w-5 h-5" />
               </div>
               {!sidebarCollapsed && (
@@ -363,7 +363,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <div className="p-3 bg-surface border border-border rounded-lg">
                   <div className="text-[10px] text-muted font-semibold uppercase tracking-wider">Rôle global</div>
                   <div className="font-semibold text-sm mt-0.5 text-foreground">Super Admin</div>
-                  <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-indigo-500/10 text-[10px] font-bold text-primary">
+                  <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/10 text-[10px] font-bold text-primary">
                     <ShieldCheck className="w-3 h-3" />
                     Plateforme SaaS
                   </div>
@@ -385,7 +385,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <div className="font-semibold text-foreground text-sm truncate mt-0.5">
                     {tenant.name}
                   </div>
-                  <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-indigo-500/10 text-[10px] font-bold text-primary">
+                  <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/10 text-[10px] font-bold text-primary">
                     <ShieldCheck className="w-3 h-3" />
                     Plan {tenant.plan}
                   </div>
@@ -397,7 +397,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Suspense
             fallback={
               <div className="h-20 flex items-center justify-center">
-                <Loader2 className="w-5 h-5 text-indigo-600 animate-spin" />
+                <Loader2 className="w-5 h-5 text-primary animate-spin" />
               </div>
             }
           >
@@ -422,7 +422,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               sidebarCollapsed ? 'justify-center p-2' : 'gap-3 p-2',
             )}
           >
-            <div className="w-8 h-8 rounded-full bg-indigo-500/15 flex items-center justify-center font-bold text-primary text-xs shrink-0">
+            <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center font-bold text-primary text-xs shrink-0">
               {user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}
             </div>
             {!sidebarCollapsed && (

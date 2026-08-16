@@ -40,6 +40,11 @@ type TemplateElement = {
   dividerStyle?: string;
   width?: 'full' | 'half' | 'third';
   rsvpPlacement?: string;
+  positionMode?: 'flow' | 'absolute';
+  xPct?: number;
+  yPct?: number;
+  wPct?: number;
+  zIndex?: number;
 };
 
 export type GuestPrintDocumentData = {
@@ -257,12 +262,35 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
 
           <div className="p-8 space-y-6 relative z-10 flex-1">
             {hasTemplate ? (
-              <div className="flex flex-wrap -mx-2">
-                {elements.map((el) => (
-                  <div key={el.id} className={widthClass(el.width)}>
-                    {renderElement(el)}
-                  </div>
-                ))}
+              <div
+                className={
+                  global.layoutMode === 'free'
+                    ? 'relative min-h-[240px] w-full'
+                    : 'flex flex-wrap -mx-2'
+                }
+              >
+                {elements.map((el, index) => {
+                  const isFree = global.layoutMode === 'free' || el.positionMode === 'absolute';
+                  return (
+                    <div
+                      key={el.id}
+                      className={isFree ? '' : widthClass(el.width)}
+                      style={
+                        isFree
+                          ? {
+                              position: 'absolute',
+                              left: `${el.xPct ?? 8}%`,
+                              top: `${el.yPct ?? 8}%`,
+                              width: `${el.wPct ?? 84}%`,
+                              zIndex: el.zIndex ?? index + 1,
+                            }
+                          : undefined
+                      }
+                    >
+                      {renderElement(el)}
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center space-y-4" style={{ fontFamily: '"Cormorant Garamond", serif' }}>
