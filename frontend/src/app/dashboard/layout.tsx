@@ -9,6 +9,7 @@ import {
   Calendar, Users, Mail, CreditCard, LayoutDashboard,
   LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper, User, Sun, Moon, BarChart3,
   Building2, FileText, Key, MessageSquare, ScanLine, Briefcase, Clock, BookOpen,
+  PanelLeftClose, PanelLeft,
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import UserLegalGate from '@/components/UserLegalGate';
@@ -34,22 +35,27 @@ function SidebarNav({
   sections,
   pathname,
   setMobileMenuOpen,
+  collapsed,
 }: {
   sections: NavSection[];
   pathname: string;
   setMobileMenuOpen: (open: boolean) => void;
+  collapsed: boolean;
 }) {
   const searchParams = useSearchParams();
   const currentTab = searchParams.get('tab') || 'tenants';
 
   return (
-    <nav className="space-y-5">
+    <nav className={cn('space-y-5', collapsed && 'space-y-3')}>
       {sections.map((section, sectionIdx) => (
         <div key={section.label ?? sectionIdx}>
-          {section.label && (
+          {section.label && !collapsed && (
             <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted">
               {section.label}
             </p>
+          )}
+          {section.label && collapsed && (
+            <div className="mx-auto mb-1 h-px w-6 bg-border" aria-hidden />
           )}
           <div className="space-y-0.5">
             {section.items.map((item) => {
@@ -63,16 +69,18 @@ function SidebarNav({
                   key={item.name}
                   href={item.href}
                   data-tour={item.tourId}
+                  title={collapsed ? item.name : undefined}
                   onClick={() => setMobileMenuOpen(false)}
                   className={cn(
-                    'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-150',
+                    'flex items-center rounded-lg text-sm font-medium transition-colors duration-150',
+                    collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2',
                     isActive
                       ? 'bg-surface-muted text-primary'
                       : 'text-muted hover:text-foreground hover:bg-surface-muted/70',
                   )}
                 >
                   <Icon className={cn('w-[18px] h-[18px] shrink-0', isActive && 'text-primary')} />
-                  <span className="truncate">{item.name}</span>
+                  {!collapsed && <span className="truncate">{item.name}</span>}
                 </Link>
               );
             })}
@@ -89,6 +97,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('em-sidebar-collapsed');
+      if (stored === '1') setSidebarCollapsed(true);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const toggleSidebarCollapsed = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('em-sidebar-collapsed', next ? '1' : '0');
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!loading && !token) {
@@ -278,71 +308,91 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed top-14 bottom-0 left-0 z-40 w-72 max-w-[85vw] bg-sidebar border-r border-border',
-          'flex flex-col transform transition-transform duration-300 ease-out',
-          'md:top-0 md:bottom-auto md:inset-y-0 md:translate-x-0 md:sticky md:h-screen md:w-64 md:max-w-none md:z-30',
+          'fixed top-14 bottom-0 left-0 z-40 max-w-[85vw] bg-sidebar border-r border-border',
+          'flex flex-col transform transition-[transform,width] duration-300 ease-out',
+          'md:top-0 md:bottom-auto md:inset-y-0 md:translate-x-0 md:sticky md:h-screen md:max-w-none md:z-30',
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+          /* Mobile always full width drawer; desktop follows collapse */
+          'w-72',
+          sidebarCollapsed ? 'md:w-[4.5rem]' : 'md:w-64',
         )}
       >
-        <div className="flex-1 overflow-y-auto p-4 space-y-5">
+        <div className={cn('flex-1 overflow-y-auto space-y-5', sidebarCollapsed ? 'p-2 md:p-2' : 'p-4')}>
           {/* Logo desktop */}
-          <div className="hidden md:flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="bg-indigo-600 p-2 rounded-lg text-white">
+          <div className={cn('hidden md:flex items-center', sidebarCollapsed ? 'flex-col gap-2' : 'justify-between')}>
+            <div className={cn('flex items-center', sidebarCollapsed ? 'justify-center' : 'gap-2.5')}>
+              <div className="bg-indigo-600 p-2 rounded-lg text-white shrink-0">
                 <PartyPopper className="w-5 h-5" />
               </div>
-              <div>
-                <span className="font-semibold text-base text-foreground block leading-none">EventMaster</span>
-                <span className="text-[10px] font-semibold text-muted uppercase tracking-wider mt-1 block">
-                  Workspace
-                </span>
-              </div>
+              {!sidebarCollapsed && (
+                <div>
+                  <span className="font-semibold text-base text-foreground block leading-none">EventMaster</span>
+                  <span className="text-[10px] font-semibold text-muted uppercase tracking-wider mt-1 block">
+                    Workspace
+                  </span>
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-1">
-              {showCommercialNotifications && <NotificationBell />}
+            <div className={cn('flex items-center gap-1', sidebarCollapsed && 'flex-col')}>
+              {showCommercialNotifications && !sidebarCollapsed && <NotificationBell />}
               <button
-                onClick={toggleTheme}
+                type="button"
+                onClick={toggleSidebarCollapsed}
                 className="p-2 rounded-lg border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
-                aria-label="Changer de thème"
+                aria-label={sidebarCollapsed ? 'Agrandir la barre latérale' : 'Réduire la barre latérale'}
+                title={sidebarCollapsed ? 'Agrandir' : 'Réduire'}
               >
-                {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                {sidebarCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
               </button>
+              {!sidebarCollapsed && (
+                <button
+                  onClick={toggleTheme}
+                  className="p-2 rounded-lg border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
+                  aria-label="Changer de thème"
+                >
+                  {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                </button>
+              )}
             </div>
           </div>
 
           {/* Contexte tenant / admin */}
-          {user?.role === 'SUPER_ADMIN' ? (
-            <div className="p-3 bg-surface border border-border rounded-lg">
-              <div className="text-[10px] text-muted font-semibold uppercase tracking-wider">Rôle global</div>
-              <div className="font-semibold text-sm mt-0.5 text-foreground">Super Admin</div>
-              <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-indigo-500/10 text-[10px] font-bold text-primary">
-                <ShieldCheck className="w-3 h-3" />
-                Plateforme SaaS
-              </div>
-            </div>
-          ) : user?.role === 'COMMERCIAL' ? (
-            <div className="p-3 bg-amber-950/40 text-white border border-amber-800/50 rounded-lg">
-              <div className="text-[10px] text-amber-300 font-bold uppercase tracking-wider">Rôle global</div>
-              <div className="font-semibold text-sm mt-0.5">Commercial plateforme</div>
-              <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/10 text-[10px] font-bold text-amber-300">
-                <Briefcase className="w-3 h-3" />
-                Sans organisation
-              </div>
-            </div>
-          ) : tenant ? (
-            <div className="p-3 bg-surface border border-border rounded-lg">
-              <div className="text-[10px] text-muted font-semibold uppercase tracking-wider">
-                Organisation
-              </div>
-              <div className="font-semibold text-foreground text-sm truncate mt-0.5">
-                {tenant.name}
-              </div>
-              <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-indigo-500/10 text-[10px] font-bold text-primary">
-                <ShieldCheck className="w-3 h-3" />
-                Plan {tenant.plan}
-              </div>
-            </div>
-          ) : null}
+          {!sidebarCollapsed && (
+            <>
+              {user?.role === 'SUPER_ADMIN' ? (
+                <div className="p-3 bg-surface border border-border rounded-lg">
+                  <div className="text-[10px] text-muted font-semibold uppercase tracking-wider">Rôle global</div>
+                  <div className="font-semibold text-sm mt-0.5 text-foreground">Super Admin</div>
+                  <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-indigo-500/10 text-[10px] font-bold text-primary">
+                    <ShieldCheck className="w-3 h-3" />
+                    Plateforme SaaS
+                  </div>
+                </div>
+              ) : user?.role === 'COMMERCIAL' ? (
+                <div className="p-3 bg-amber-950/40 text-white border border-amber-800/50 rounded-lg">
+                  <div className="text-[10px] text-amber-300 font-bold uppercase tracking-wider">Rôle global</div>
+                  <div className="font-semibold text-sm mt-0.5">Commercial plateforme</div>
+                  <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/10 text-[10px] font-bold text-amber-300">
+                    <Briefcase className="w-3 h-3" />
+                    Sans organisation
+                  </div>
+                </div>
+              ) : tenant ? (
+                <div className="p-3 bg-surface border border-border rounded-lg">
+                  <div className="text-[10px] text-muted font-semibold uppercase tracking-wider">
+                    Organisation
+                  </div>
+                  <div className="font-semibold text-foreground text-sm truncate mt-0.5">
+                    {tenant.name}
+                  </div>
+                  <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-indigo-500/10 text-[10px] font-bold text-primary">
+                    <ShieldCheck className="w-3 h-3" />
+                    Plan {tenant.plan}
+                  </div>
+                </div>
+              ) : null}
+            </>
+          )}
 
           <Suspense
             fallback={
@@ -351,41 +401,65 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
             }
           >
-            <SidebarNav sections={navSections} pathname={pathname} setMobileMenuOpen={setMobileMenuOpen} />
+            <SidebarNav
+              sections={navSections}
+              pathname={pathname}
+              setMobileMenuOpen={setMobileMenuOpen}
+              collapsed={sidebarCollapsed}
+            />
           </Suspense>
         </div>
 
         {/* Profil & déconnexion */}
-        <div className="border-t border-border p-4 space-y-2 shrink-0">
+        <div className={cn('border-t border-border shrink-0', sidebarCollapsed ? 'p-2' : 'p-4 space-y-2')}>
           <Link
             href="/dashboard/profile"
             data-tour="nav-profile"
+            title={sidebarCollapsed ? user.name : undefined}
             onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-muted transition group"
+            className={cn(
+              'flex items-center rounded-lg hover:bg-surface-muted transition group',
+              sidebarCollapsed ? 'justify-center p-2' : 'gap-3 p-2',
+            )}
           >
-            <div className="w-8 h-8 rounded-full bg-indigo-500/15 flex items-center justify-center font-bold text-primary text-xs">
+            <div className="w-8 h-8 rounded-full bg-indigo-500/15 flex items-center justify-center font-bold text-primary text-xs shrink-0">
               {user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}
             </div>
-            <div className="min-w-0 flex-1">
-              <span className="font-semibold text-foreground text-sm truncate block group-hover:text-primary transition-colors">
-                {user.name}
-              </span>
-              <span className="text-xs text-muted truncate block">{user.email}</span>
-            </div>
+            {!sidebarCollapsed && (
+              <div className="min-w-0 flex-1">
+                <span className="font-semibold text-foreground text-sm truncate block group-hover:text-primary transition-colors">
+                  {user.name}
+                </span>
+                <span className="text-xs text-muted truncate block">{user.email}</span>
+              </div>
+            )}
           </Link>
           <button
             onClick={logout}
-            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium text-rose-500 hover:bg-rose-500/10 transition"
+            title={sidebarCollapsed ? 'Déconnexion' : undefined}
+            className={cn(
+              'flex items-center w-full rounded-lg text-sm font-medium text-rose-500 hover:bg-rose-500/10 transition',
+              sidebarCollapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
+            )}
           >
             <LogOut className="w-4 h-4" />
-            Déconnexion
+            {!sidebarCollapsed && 'Déconnexion'}
           </button>
+          {sidebarCollapsed && (
+            <button
+              onClick={toggleTheme}
+              className="flex w-full items-center justify-center p-2 rounded-lg border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
+              aria-label="Changer de thème"
+            >
+              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+            </button>
+          )}
         </div>
       </aside>
 
       {/* Contenu principal */}
       <main className="flex-1 min-w-0 overflow-y-auto bg-background">
-        <div className="max-w-7xl mx-auto p-5 sm:p-6 lg:p-8">
+        <div className="page-container py-5 sm:py-6 lg:py-8">
           <UserLegalGate>{children}</UserLegalGate>
         </div>
       </main>

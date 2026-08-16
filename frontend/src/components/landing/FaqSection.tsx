@@ -24,7 +24,7 @@ export default function FaqSection({
 
   return (
     <section id={id} className={`py-20 bg-slate-50 dark:bg-slate-900/50 scroll-mt-24 ${className}`}>
-      <div className="w-10/12 max-w-3xl mx-auto">
+      <div className="page-container">
         <div className="text-center max-w-2xl mx-auto mb-12 space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-bold">
             <HelpCircle className="w-4 h-4" />

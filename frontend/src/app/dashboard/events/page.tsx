@@ -28,7 +28,7 @@ import {
   normalizeGuestGuidelines,
   applyInvitationGuidelineVariables,
 } from '@/lib/guestGuidelines';
-import { PageHeader, Button, ProjectCard, ViewModeToggle, useViewMode } from '@/components/ui';
+import { PageHeader, Button, ProjectCard, ViewModeToggle, useViewMode, SkeletonEventsView } from '@/components/ui';
 import {
   extractRsvpFieldsFromTemplateContent,
   supplementFieldsFromGuestPreferences,
@@ -229,7 +229,7 @@ A très vite !`
 
 export default function EventsPage() {
   const { user, access, planFeatures, tenant } = useAuth();
-  const { mode: eventsViewMode, setViewMode: setEventsViewMode } = useViewMode('em-view-events', 'grid');
+  const { mode: eventsViewMode, setViewMode: setEventsViewMode, columns: eventsColumns, setGridColumns: setEventsColumns, gridClassName: eventsGridClass } = useViewMode('em-view-events', 'grid', 3);
   const isProtocolOnly = access?.isProtocolOnly ?? false;
   const canManageEvents = access?.canManageAllEvents ?? false;
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -1370,12 +1370,7 @@ export default function EventsPage() {
   }
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="h-10 bg-slate-200 rounded-lg w-1/3 animate-pulse" />
-        <div className="h-64 bg-slate-200 rounded-2xl animate-pulse" />
-      </div>
-    );
+    return <SkeletonEventsView mode={eventsViewMode} />;
   }
 
   return (
@@ -1392,6 +1387,8 @@ export default function EventsPage() {
                   storageKey="em-view-events"
                   value={eventsViewMode}
                   onChange={setEventsViewMode}
+                  columns={eventsColumns}
+                  onColumnsChange={setEventsColumns}
                 />
               )}
               {access?.canCreateEvents ? (
@@ -1474,7 +1471,7 @@ export default function EventsPage() {
         <div
           className={
             eventsViewMode === 'grid'
-              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'
+              ? eventsGridClass
               : 'flex flex-col gap-2'
           }
         >

@@ -19,7 +19,7 @@ export default function SiteFooter({ faqHref = '/#faq' }: SiteFooterProps) {
 
   return (
     <footer className="bg-slate-950 text-slate-400 py-16 border-t border-slate-900 mt-auto">
-      <div className="w-10/12 max-w-7xl mx-auto space-y-12">
+      <div className="page-container space-y-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
             <div className="flex items-center gap-2.5">

@@ -8,7 +8,7 @@ import {
   Clock, XCircle, CheckCircle, Minus, ChevronDown, ChevronUp, ShieldCheck, FileText,
 } from 'lucide-react';
 import Link from 'next/link';
-import { Alert } from '@/components/ui';
+import { Alert, SkeletonBillingView } from '@/components/ui';
 import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/InvoiceListPanel';
 import QuotaUsagePanel, { PlanQuotaLimits } from '@/components/QuotaUsagePanel';
 import { formatQuotaRemaining } from '@/lib/quotaDisplay';
@@ -150,16 +150,11 @@ export default function BillingPage() {
   };
 
   if (loading) {
-    return (
-      <div className="space-y-6 max-w-7xl mx-auto">
-        <div className="h-10 bg-slate-200 dark:bg-slate-800 rounded-lg w-1/3 animate-pulse" />
-        <div className="h-40 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
-      </div>
-    );
+    return <SkeletonBillingView />;
   }
 
   return (
-    <div className="space-y-10 w-full max-w-7xl mx-auto">
+    <div className="space-y-10 w-full">
       <div className="text-center max-w-3xl mx-auto space-y-3">
         <p className="text-sm font-semibold text-indigo-600 uppercase tracking-widest">Facturation</p>
         <h1 className="text-3xl font-bold text-slate-900 dark:text-white">

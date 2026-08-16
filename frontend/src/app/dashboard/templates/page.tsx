@@ -15,7 +15,7 @@ import {
   Spline, Triangle, Plus, Trash, Layout, Palette, Square,
   ArrowUp, ArrowDown, Crop, Copy, Upload, Globe
 } from 'lucide-react';
-import { PageHeader, Alert, Button } from '@/components/ui';
+import { PageHeader, Alert, Button, SkeletonTemplatesView } from '@/components/ui';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
 import {
   type RsvpField,
@@ -1116,12 +1116,7 @@ export default function TemplatesPage() {
 
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="h-10 bg-slate-200 rounded-lg w-1/3 animate-pulse" />
-        <div className="h-64 bg-slate-200 rounded-2xl animate-pulse" />
-      </div>
-    );
+    return <SkeletonTemplatesView />;
   }
 
   if (editorOpen && canUseCustomTemplates) {

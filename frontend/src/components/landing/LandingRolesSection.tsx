@@ -20,7 +20,7 @@ export default function LandingRolesSection() {
     <>
       {/* Rôles & permissions */}
       <section className="py-20 bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800">
-        <div className="w-10/12 max-w-7xl mx-auto">
+        <div className="page-container">
           <div className="grid lg:grid-cols-2 gap-16 items-start">
             <div className="space-y-6">
               <span className="text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
@@ -76,7 +76,7 @@ export default function LandingRolesSection() {
 
       {/* Piliers plateforme — remplace partiellement l'ancienne grille */}
       <section className="py-20 bg-slate-50 dark:bg-slate-900/40 border-t border-b border-slate-200 dark:border-slate-800">
-        <div className="w-10/12 max-w-7xl mx-auto">
+        <div className="page-container">
           <div className="text-center max-w-2xl mx-auto mb-14 space-y-3">
             <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
               Une plateforme complète pour vos événements

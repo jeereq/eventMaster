@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import RoomLayoutEditor from '@/components/RoomLayoutEditor';
-import { ProjectCard, ViewModeToggle, useViewMode } from '@/components/ui';
+import { ProjectCard, ViewModeToggle, useViewMode, SkeletonGrid, SkeletonList } from '@/components/ui';
 import {
   ChairType,
   LayoutParams,
@@ -76,7 +76,7 @@ const defaultParams: Record<RoomType, LayoutParams> = {
 
 export default function RoomsManagement() {
   const { planFeatures, planQuota, tenant } = useAuth();
-  const { mode: roomsViewMode, setViewMode: setRoomsViewMode } = useViewMode('em-view-rooms', 'grid');
+  const { mode: roomsViewMode, setViewMode: setRoomsViewMode, columns: roomsColumns, setGridColumns: setRoomsColumns, gridClassName: roomsGridClass } = useViewMode('em-view-rooms', 'grid', 3);
   const [rooms, setRooms] = useState<RoomItem[]>([]);
   const [canManage, setCanManage] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMemberOption[]>([]);
@@ -385,6 +385,8 @@ export default function RoomsManagement() {
               storageKey="em-view-rooms"
               value={roomsViewMode}
               onChange={setRoomsViewMode}
+              columns={roomsColumns}
+              onColumnsChange={setRoomsColumns}
             />
           )}
           {canManage && (
@@ -515,14 +517,18 @@ export default function RoomsManagement() {
       )}
 
       {loading ? (
-        <div className="py-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-indigo-600" /></div>
+        roomsViewMode === 'list' ? (
+          <SkeletonList count={4} />
+        ) : (
+          <SkeletonGrid count={6} columns={roomsColumns} />
+        )
       ) : rooms.length === 0 ? (
         <p className="text-sm text-muted text-center py-6">Aucune salle configurée.</p>
       ) : (
         <div
           className={
             roomsViewMode === 'grid'
-              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'
+              ? roomsGridClass
               : 'flex flex-col gap-3'
           }
         >
