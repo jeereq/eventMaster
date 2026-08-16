@@ -11,7 +11,7 @@ import {
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import RoomLayoutEditor from '@/components/RoomLayoutEditor';
 import {
-  ProjectCard, ViewModeToggle, useViewMode, SkeletonRoomsView,
+  ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonRoomsView,
   Button, Modal, EmptyState, Alert, Input, Pagination, paginateItems,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -619,7 +619,7 @@ export default function RoomsManagement() {
           className={
             roomsViewMode === 'grid'
               ? roomsGridClass
-              : 'flex flex-col gap-3'
+              : listStackClass
           }
         >
           {paginateItems(rooms, roomsPage, ROOMS_PER_PAGE).map((room) => {
@@ -631,10 +631,14 @@ export default function RoomsManagement() {
                 <button
                   type="button"
                   onClick={() => openEditLayout(room)}
-                  className="p-2 text-muted hover:text-primary hover:bg-surface-muted rounded-[var(--radius-button)]"
+                  className={cn(
+                    roomsViewMode === 'list'
+                      ? 'inline-flex items-center'
+                      : 'p-2 text-muted hover:text-primary hover:bg-surface-muted rounded-[var(--radius-button)]',
+                  )}
                   title="Modifier le plan 2D"
                 >
-                  <Edit3 className="w-4 h-4" />
+                  {roomsViewMode === 'list' ? <ListRowAction>Plan 2D</ListRowAction> : <Edit3 className="w-4 h-4" />}
                 </button>
                 <button
                   type="button"
@@ -654,9 +658,7 @@ export default function RoomsManagement() {
                   layout={roomsViewMode}
                   meta={
                     roomsViewMode === 'list' ? (
-                      <span>
-                        {roomTypeLabels[room.roomType || 'SIMPLE']} · {metaLine}
-                      </span>
+                      <span>{metaLine}</span>
                     ) : (
                       <div className="space-y-0.5">
                         <span className="inline-flex text-[10px] font-semibold uppercase tracking-wide text-primary">
@@ -665,6 +667,18 @@ export default function RoomsManagement() {
                         <p>{metaLine}</p>
                       </div>
                     )
+                  }
+                  value={
+                    roomsViewMode === 'list'
+                      ? `${room.staff.length} staff`
+                      : undefined
+                  }
+                  status={
+                    roomsViewMode === 'list' ? (
+                      <StatusPill tone="primary">
+                        {roomTypeLabels[room.roomType || 'SIMPLE']}
+                      </StatusPill>
+                    ) : undefined
                   }
                   description={roomsViewMode === 'grid' ? room.description : undefined}
                   actions={actions}

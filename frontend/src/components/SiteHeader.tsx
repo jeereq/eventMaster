@@ -8,6 +8,7 @@ import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { PartyPopper, Sun, Moon, Menu, X } from 'lucide-react';
+import PublicAccentPicker from '@/components/PublicAccentPicker';
 
 export type SiteHeaderLink = {
   href: string;
@@ -108,6 +109,7 @@ export default function SiteHeader({
         </div>
 
         <nav className="hidden lg:flex items-center gap-5">
+          <PublicAccentPicker />
           <button
             type="button"
             onClick={toggleTheme}
@@ -159,6 +161,7 @@ export default function SiteHeader({
         </nav>
 
         <div className="flex items-center gap-2 lg:hidden">
+          <PublicAccentPicker />
           <button
             type="button"
             onClick={toggleTheme}
@@ -179,14 +182,15 @@ export default function SiteHeader({
       </div>
 
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-border bg-surface px-6 py-5 space-y-3">
+        <div className="lg:hidden border-t border-border bg-surface">
+          <div className="page-container py-4 space-y-1">
           {links.map((item) =>
             item.href.startsWith('/#') || item.href.startsWith('#') ? (
               <a
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className="block text-sm font-medium text-muted hover:text-foreground py-2 border-b border-border"
+                className="block text-sm font-medium text-muted hover:text-foreground py-2.5 border-b border-border"
               >
                 {item.label}
               </a>
@@ -195,14 +199,14 @@ export default function SiteHeader({
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className="block text-sm font-medium text-muted hover:text-foreground py-2 border-b border-border"
+                className="block text-sm font-medium text-muted hover:text-foreground py-2.5 border-b border-border"
               >
                 {item.label}
               </Link>
             ),
           )}
           {user ? (
-            <div className="flex flex-col gap-2 pt-2">
+            <div className="flex flex-col gap-2 pt-3">
               <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
                 <Button size="sm" fullWidth>
                   Tableau de bord
@@ -222,7 +226,7 @@ export default function SiteHeader({
               </Button>
             </div>
           ) : (
-            <div className="flex flex-col gap-2 pt-2">
+            <div className="flex flex-col gap-2 pt-3">
               <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
                 <Button size="sm" variant="secondary" fullWidth>
                   Connexion
@@ -241,6 +245,7 @@ export default function SiteHeader({
               )}
             </div>
           )}
+          </div>
         </div>
       )}
     </header>

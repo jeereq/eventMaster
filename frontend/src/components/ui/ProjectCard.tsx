@@ -86,7 +86,7 @@ export function ListRowAction({
 }
 
 /** Conteneur vertical pour les lignes liste. */
-export const LIST_STACK_CLASS = 'flex flex-col gap-2.5';
+export const LIST_STACK_CLASS = 'em-list-stack';
 
 export interface ProjectCardProps {
   id: string;
@@ -157,18 +157,26 @@ export function ProjectCard({
               : undefined
           }
           className={cn(
-            'group relative flex items-center gap-3 sm:gap-4',
+            'group relative flex items-center gap-3 sm:gap-4 overflow-hidden',
             'rounded-[var(--radius-card)] border border-border bg-surface',
-            'px-3.5 py-3 sm:px-4 sm:py-3.5',
-            'transition-colors duration-120',
+            'pl-3.5 pr-3.5 py-3 sm:pl-4 sm:pr-4 sm:py-3.5',
+            'shadow-[var(--shadow-soft)]',
+            'transition-[background-color,border-color,box-shadow] duration-150',
             'hover:bg-card-hover hover:border-border-subtle',
             interactive && 'cursor-pointer',
           )}
         >
+          {/* Bandeau accent gauche */}
+          <span
+            className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-[var(--radius-card)]"
+            style={{ backgroundColor: stripe }}
+            aria-hidden
+          />
+
           {/* Icône carrée */}
           <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold"
-            style={{ backgroundColor: `${stripe}22`, color: stripe }}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold ring-1 ring-black/5 dark:ring-white/10"
+            style={{ backgroundColor: `${stripe}18`, color: stripe }}
             aria-hidden
           >
             {icon ? (

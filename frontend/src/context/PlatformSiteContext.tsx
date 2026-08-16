@@ -70,6 +70,9 @@ export function PlatformSiteProvider({ children }: { children: React.ReactNode }
           primary: next.brandPrimary || undefined,
           accent: next.brandAccent || next.brandPrimary || undefined,
         });
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('em-brand-applied'));
+        }
       }
 
       if (typeof document !== 'undefined' && next.platformName) {
@@ -96,17 +99,6 @@ export function PlatformSiteProvider({ children }: { children: React.ReactNode }
   return (
     <PlatformSiteContext.Provider value={value}>
       {children}
-      {ready && site.maintenanceMode && (
-        <div
-          role="status"
-          className="fixed bottom-0 inset-x-0 z-[90] border-t border-amber-500/30 bg-amber-950 text-amber-50 px-4 py-3 text-center text-sm"
-        >
-          <p className="font-semibold">{site.platformName} — maintenance</p>
-          <p className="text-xs text-amber-100/80 mt-0.5 max-w-2xl mx-auto leading-relaxed">
-            {site.maintenanceMessage}
-          </p>
-        </div>
-      )}
     </PlatformSiteContext.Provider>
   );
 }

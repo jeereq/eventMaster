@@ -164,6 +164,70 @@ h1, h2, h3, h4 {
   border-color: var(--border-subtle);
 }
 
+/* Tableaux de données — style unifié */
+.em-data-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.em-data-table {
+  width: 100%;
+  text-align: left;
+  border-collapse: collapse;
+}
+
+.em-data-table thead tr {
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-muted) 85%, var(--surface));
+}
+
+.em-data-table th {
+  padding: 0.7rem 1rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.045em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.em-data-table tbody tr {
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background-color 0.12s ease;
+}
+
+.em-data-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.em-data-table tbody tr:hover {
+  background: var(--card-hover);
+}
+
+.em-data-table td {
+  padding: 0.85rem 1rem;
+  font-size: 0.8125rem;
+  vertical-align: middle;
+  color: var(--foreground);
+}
+
+.em-data-table td .text-muted,
+.em-data-table .em-cell-muted {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+/* Liste empilée (ProjectCard list) */
+.em-list-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 @keyframes shimmer {
   100% {
     transform: translateX(100%);

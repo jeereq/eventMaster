@@ -265,26 +265,26 @@ export default function CommercialDashboardPage() {
         ))}
       </div>
 
-      <div className="hidden md:block bg-white dark:bg-slate-900 border rounded-2xl overflow-x-auto">
-        <table className="w-full text-sm min-w-[640px]">
-          <thead className="bg-slate-50 dark:bg-slate-950 text-left text-xs uppercase text-slate-400">
+      <div className="hidden md:block em-data-table-wrap">
+        <table className="em-data-table min-w-[640px]">
+          <thead>
             <tr>
-              <th className="px-4 py-3">Organisation</th>
-              <th className="px-4 py-3">Manager</th>
-              <th className="px-4 py-3">Compte</th>
-              <th className="px-4 py-3">Plan</th>
-              <th className="px-4 py-3">Événements</th>
+              <th>Organisation</th>
+              <th>Manager</th>
+              <th>Compte</th>
+              <th>Plan</th>
+              <th>Événements</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+          <tbody>
             {paginatedOrgs.map((o) => (
               <tr key={o.id}>
-                <td className="px-4 py-3 font-semibold">{o.name}</td>
-                <td className="px-4 py-3 text-slate-500">
+                <td className="font-semibold">{o.name}</td>
+                <td>
                   <div>{o.managerName || '—'}</div>
-                  {o.managerEmail && <div className="text-xs text-slate-400">{o.managerEmail}</div>}
+                  {o.managerEmail && <div className="em-cell-muted">{o.managerEmail}</div>}
                 </td>
-                <td className="px-4 py-3">
+                <td>
                   {o.managerIsEmailVerified === false ? (
                     <div className="flex flex-col gap-1">
                       <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 w-fit">
@@ -308,8 +308,8 @@ export default function CommercialDashboardPage() {
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3">{o.plan}</td>
-                <td className="px-4 py-3">{o.eventsCount}</td>
+                <td>{o.plan}</td>
+                <td>{o.eventsCount}</td>
               </tr>
             ))}
           </tbody>
@@ -341,23 +341,23 @@ export default function CommercialDashboardPage() {
               </div>
             ))}
           </div>
-          <div className="hidden md:block bg-white dark:bg-slate-900 border rounded-2xl overflow-x-auto">
-            <table className="w-full text-sm min-w-[560px]">
-              <thead className="bg-slate-50 dark:bg-slate-950 text-left text-xs uppercase text-slate-400">
+          <div className="hidden md:block em-data-table-wrap">
+            <table className="em-data-table min-w-[560px]">
+              <thead>
                 <tr>
-                  <th className="px-4 py-3">Période</th>
-                  <th className="px-4 py-3">Organisation</th>
-                  <th className="px-4 py-3">Facture</th>
-                  <th className="px-4 py-3">Commission ({Math.round(data.commissionRate * 100)} %)</th>
+                  <th>Période</th>
+                  <th>Organisation</th>
+                  <th>Facture</th>
+                  <th>Commission ({Math.round(data.commissionRate * 100)} %)</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              <tbody>
                 {paginatedComms.map((c) => (
                   <tr key={c.id}>
-                    <td className="px-4 py-3">{c.billingPeriod}</td>
-                    <td className="px-4 py-3">{c.tenant.name}</td>
-                    <td className="px-4 py-3">{c.invoiceAmount.toLocaleString('fr-FR')} FC</td>
-                    <td className="px-4 py-3 font-bold text-emerald-600">{c.commissionAmount.toLocaleString('fr-FR')} FC</td>
+                    <td>{c.billingPeriod}</td>
+                    <td>{c.tenant.name}</td>
+                    <td>{c.invoiceAmount.toLocaleString('fr-FR')} FC</td>
+                    <td className="font-bold text-emerald-600">{c.commissionAmount.toLocaleString('fr-FR')} FC</td>
                   </tr>
                 ))}
               </tbody>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { applyBrandToDocument, type TenantBranding } from '@/lib/brandTheme';
+import { applyBrandToDocument, deriveAuthPanelFromPrimary, type TenantBranding } from '@/lib/brandTheme';
 
 export type AccentPresetId = 'indigo' | 'emerald' | 'sky' | 'amber' | 'rose' | 'violet';
 export type DensityId = 'comfortable' | 'compact';
@@ -141,10 +141,12 @@ function applyDensityAndFont(density: DensityId, fontScale: FontScaleId) {
 
 function applyAccent(accentId: AccentPresetId, tenantBranding?: TenantBranding | null) {
   const preset = ACCENT_PRESETS.find((p) => p.id === accentId) || ACCENT_PRESETS[0];
+  const authPanel = deriveAuthPanelFromPrimary(preset.primary);
   applyBrandToDocument({
     primary: preset.primary,
     accent: preset.accent,
     sidebar: tenantBranding?.sidebar,
+    ...authPanel,
   });
 }
 

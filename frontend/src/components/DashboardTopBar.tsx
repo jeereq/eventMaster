@@ -71,7 +71,8 @@ export default function DashboardTopBar({
         : tenant?.name || 'Organisation';
 
   return (
-    <header className="hidden md:flex sticky top-0 z-20 h-14 shrink-0 items-center justify-between gap-4 border-b border-border bg-surface/90 backdrop-blur-md px-5 lg:px-8">
+    <header className="hidden md:block sticky top-0 z-20 shrink-0 border-b border-border bg-surface/90 backdrop-blur-md">
+      <div className="page-container h-14 flex items-center justify-between gap-4">
       <div className="min-w-0">
         <h1 className="text-sm font-semibold text-foreground tracking-tight truncate">{title}</h1>
         {subtitle && <p className="text-[11px] text-muted truncate">{subtitle}</p>}
@@ -106,6 +107,7 @@ export default function DashboardTopBar({
           </span>
           <User className="w-3.5 h-3.5 text-muted lg:hidden" />
         </Link>
+      </div>
       </div>
     </header>
   );
