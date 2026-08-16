@@ -7,13 +7,14 @@ import {
   type AccentPresetId,
   type DensityId,
   type FontScaleId,
+  type MoodId,
   type DashboardWidgets,
 } from '@/context/ViewPreferencesContext';
 import { useTheme } from '@/context/ThemeContext';
 import { Tooltip } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
-  X, Settings2, Palette, Type, LayoutGrid, RotateCcw, Moon, Sun, SlidersHorizontal,
+  X, Settings2, Palette, Type, LayoutGrid, RotateCcw, Moon, Sun, SlidersHorizontal, Sparkles,
 } from 'lucide-react';
 
 const WIDGET_LABELS: Array<{ key: keyof DashboardWidgets; label: string; hint: string }> = [
@@ -94,6 +95,7 @@ export default function ViewCustomizerDrawer() {
     setAccent,
     setDensity,
     setFontScale,
+    setMood,
     setWidget,
     resetPreferences,
     accentPreset,
@@ -159,6 +161,41 @@ export default function ViewCustomizerDrawer() {
                   )}
                 >
                   {mode === 'light' ? 'Clair' : 'Sombre'}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* Ambiance Work / Celebrate */}
+          <section className="space-y-3">
+            <h3 className="text-xs font-semibold text-foreground flex items-center gap-2">
+              <Sparkles className="w-3.5 h-3.5" />
+              Ambiance
+            </h3>
+            <p className="text-[11px] text-muted leading-relaxed">
+              Work reste neutre pour le tableau de bord. Celebrate tiédit les surfaces
+              (landing et espace invité l&apos;activent automatiquement).
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  { id: 'work' as MoodId, label: 'Work', hint: 'Pro & clair' },
+                  { id: 'celebrate' as MoodId, label: 'Celebrate', hint: 'Festif' },
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setMood(opt.id)}
+                  className={cn(
+                    'flex flex-col items-start gap-0.5 px-3 py-2.5 rounded-[var(--radius-button)] border text-left transition',
+                    prefs.mood === opt.id
+                      ? 'border-primary/40 bg-primary/10 text-primary'
+                      : 'border-border bg-background text-muted hover:text-foreground',
+                  )}
+                >
+                  <span className="text-xs font-semibold">{opt.label}</span>
+                  <span className="text-[10px] opacity-80">{opt.hint}</span>
                 </button>
               ))}
             </div>

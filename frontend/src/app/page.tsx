@@ -24,6 +24,7 @@ import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
   ArrowRight, Loader2,
 } from 'lucide-react';
+import CelebrateMood from '@/components/CelebrateMood';
 
 function getCategoryLabel(category: string) {
   if (category === 'private') return 'Privé';
@@ -88,18 +89,19 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground font-sans antialiased transition-colors duration-200">
+      <CelebrateMood />
       <SiteHeader variant="landing" showServerStatus />
 
       {/* Hero — marque + message + CTA + aperçu modèle borné */}
-      <section className="relative overflow-hidden border-b border-border">
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,var(--surface-muted)_0%,var(--background)_55%)]" />
+      <section className="relative overflow-hidden border-b border-border em-celebrate-hero">
         <div className="page-container relative py-12 sm:py-14 lg:py-16">
           <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-10 lg:gap-12 items-center">
-            <div className="space-y-6">
-              <p className="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground">
+            <div className="space-y-6 animate-slide-up">
+              <span className="em-festive-chip">Invitations · RSVP · Jour J</span>
+              <p className="text-3xl sm:text-4xl lg:text-5xl font-display font-semibold tracking-tight text-foreground">
                 {site.platformName}
               </p>
-              <h1 className="text-2xl sm:text-3xl font-semibold text-foreground/90 tracking-tight leading-snug max-w-lg">
+              <h1 className="text-xl sm:text-2xl font-semibold text-foreground/90 tracking-tight leading-snug max-w-lg">
                 {site.platformTagline}
               </h1>
               <p className="text-sm text-muted leading-relaxed max-w-md">
