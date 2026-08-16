@@ -173,20 +173,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           ],
         },
         {
-          label: 'Contenu',
+          label: 'Contenu & vitrine',
           items: [
-            { name: 'Modèles globaux', href: '/dashboard?tab=templates', tab: 'templates', tourId: 'nav-templates', icon: FileText },
-            { name: 'Messages invités', href: '/dashboard?tab=message-templates', tab: 'message-templates', tourId: 'nav-message-templates', icon: MessageSquare },
+            { name: 'Modèles invitation', href: '/dashboard?tab=templates', tab: 'templates', tourId: 'nav-templates', icon: FileText },
+            { name: 'Messages automatiques', href: '/dashboard?tab=message-templates', tab: 'message-templates', tourId: 'nav-message-templates', icon: MessageSquare },
           ],
         },
         {
-          label: 'Administration',
+          label: 'Billing & système',
           items: [
-            { name: 'Analyses & stats', href: '/dashboard?tab=analytics&section=overview', tab: 'analytics', tourId: 'nav-analytics', icon: BarChart3 },
+            { name: 'Analyses', href: '/dashboard?tab=analytics&section=overview', tab: 'analytics', tourId: 'nav-analytics', icon: BarChart3 },
             { name: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests', tab: 'subscription-requests', tourId: 'nav-subscription-requests', icon: Clock },
-            { name: 'Forfaits', href: '/dashboard?tab=subscription-plans', tab: 'subscription-plans', tourId: 'nav-subscription-plans', icon: CreditCard },
+            { name: 'Forfaits & tarifs', href: '/dashboard?tab=subscription-plans', tab: 'subscription-plans', tourId: 'nav-subscription-plans', icon: CreditCard },
             { name: 'Factures', href: '/dashboard?tab=invoices', tab: 'invoices', tourId: 'nav-invoices', icon: FileText },
-            { name: 'Configurations', href: '/dashboard?tab=settings', tab: 'settings', tourId: 'nav-settings', icon: Key },
+            { name: 'Réglages plateforme', href: '/dashboard?tab=settings', tab: 'settings', tourId: 'nav-settings', icon: Key },
           ],
         },
         {
@@ -328,7 +328,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <div>
                   <span className="font-semibold text-[15px] text-foreground block leading-none tracking-tight">EventMaster</span>
                   <span className="text-[10px] font-medium text-muted mt-1 block">
-                    Workspace
+                    {user?.role === 'SUPER_ADMIN'
+                      ? 'Console plateforme'
+                      : user?.role === 'COMMERCIAL'
+                        ? 'Espace commercial'
+                        : 'Workspace'}
                   </span>
                 </div>
               )}
@@ -369,12 +373,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   </div>
                 </div>
               ) : user?.role === 'COMMERCIAL' ? (
-                <div className="p-3 bg-amber-950/40 text-white border border-amber-800/50 rounded-lg">
-                  <div className="text-[10px] text-amber-300 font-bold uppercase tracking-wider">Rôle global</div>
-                  <div className="font-semibold text-sm mt-0.5">Commercial plateforme</div>
-                  <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/10 text-[10px] font-bold text-amber-300">
+                <div className="p-3 bg-surface border border-border rounded-lg">
+                  <div className="text-[10px] text-muted font-semibold uppercase tracking-wider">Rôle global</div>
+                  <div className="font-semibold text-sm mt-0.5 text-foreground">Commercial plateforme</div>
+                  <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/10 text-[10px] font-bold text-amber-700 dark:text-amber-300">
                     <Briefcase className="w-3 h-3" />
-                    Sans organisation
+                    Parrainage
                   </div>
                 </div>
               ) : tenant ? (
