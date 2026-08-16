@@ -1,4 +1,5 @@
 import { LegalPageShell, Section } from '@/components/LegalPageShell';
+import LegalSupportEmail from '@/components/LegalSupportEmail';
 
 export const metadata = {
   title: 'Politique de confidentialité — EventMaster',
@@ -25,9 +26,7 @@ export default function PrivacyPage() {
         </p>
         <p>
           Contact :{' '}
-          <a href="mailto:mingandajeereq@gmail.com" className="text-indigo-600 dark:text-indigo-400 hover:underline">
-            mingandajeereq@gmail.com
-          </a>.
+          <LegalSupportEmail className="text-indigo-600 dark:text-indigo-400 hover:underline" />.
           Les invités et membres doivent en priorité s&apos;adresser à l&apos;organisateur de l&apos;événement pour
           exercer leurs droits sur leurs données événementielles.
         </p>

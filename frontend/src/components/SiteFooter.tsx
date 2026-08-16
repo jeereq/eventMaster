@@ -1,11 +1,13 @@
+'use client';
+
 import Link from 'next/link';
 import { PartyPopper, ShieldCheck } from 'lucide-react';
 import {
   FOOTER_BRAND_DESCRIPTION,
   FOOTER_FEATURES,
   FOOTER_RESOURCES,
-  SITE_CONTACT,
 } from '@/config/siteContent';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 
 interface SiteFooterProps {
   /** Lien FAQ : ancre sur l'accueil ou page contact */
@@ -13,6 +15,7 @@ interface SiteFooterProps {
 }
 
 export default function SiteFooter({ faqHref = '/#faq' }: SiteFooterProps) {
+  const { site } = usePlatformSite();
   const resources = FOOTER_RESOURCES.map((item) =>
     item.label === 'FAQ' ? { ...item, href: faqHref } : item,
   );
@@ -23,10 +26,10 @@ export default function SiteFooter({ faqHref = '/#faq' }: SiteFooterProps) {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
             <div className="flex items-center gap-2.5">
-              <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-md shadow-indigo-500/10">
+              <div className="bg-primary p-2 rounded-xl text-white">
                 <PartyPopper className="w-5 h-5" />
               </div>
-              <span className="text-white font-black text-lg">EventMaster</span>
+              <span className="text-white font-black text-lg">{site.platformName}</span>
             </div>
             <p className="text-xs text-slate-500 leading-relaxed">{FOOTER_BRAND_DESCRIPTION}</p>
           </div>
@@ -61,33 +64,33 @@ export default function SiteFooter({ faqHref = '/#faq' }: SiteFooterProps) {
               <li>
                 E-mail :{' '}
                 <a
-                  href={`mailto:${SITE_CONTACT.email}`}
+                  href={`mailto:${site.supportEmail}`}
                   className="text-slate-400 hover:text-white transition font-medium"
                 >
-                  {SITE_CONTACT.email}
+                  {site.supportEmail}
                 </a>
               </li>
               <li>
                 Téléphone / WhatsApp :{' '}
                 <a
-                  href={SITE_CONTACT.phoneHref}
+                  href={site.supportPhoneHref}
                   className="text-slate-400 hover:text-white transition font-medium"
                 >
-                  {SITE_CONTACT.phone}
+                  {site.supportPhone}
                 </a>
               </li>
               <li>
-                Adresse : <span className="text-slate-400">{SITE_CONTACT.addressShort}</span>
+                Adresse : <span className="text-slate-400">{site.addressShort}</span>
               </li>
               <li>
-                Horaires : <span className="text-slate-400">{SITE_CONTACT.supportHours}</span>
+                Horaires : <span className="text-slate-400">{site.supportHours}</span>
               </li>
             </ul>
           </div>
         </div>
 
         <div className="border-t border-slate-900 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-600">
-          <p>© 2026 EventMaster SaaS. Tous droits réservés.</p>
+          <p>© {new Date().getFullYear()} {site.platformName} SaaS. Tous droits réservés.</p>
           <div className="flex flex-wrap gap-4">
             <Link href="/terms" className="hover:text-slate-400 transition">
               Conditions d&apos;utilisation

@@ -19,6 +19,8 @@ import {
   maskPhone,
   VerificationMethod,
 } from '../services/otpService';
+import { loadPlatformSettings } from '../services/platformSettingsService';
+import { resolvePhoneFields } from '../utils/phone';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'eventmaster-secret-key-12345';
 
@@ -69,7 +71,20 @@ function buildAuthToken(user: { id: string; tenantId: string | null; role: strin
 
 export async function register(req: Request, res: Response) {
   try {
-    const { email, password, name, tenantName, phone, verificationMethod = 'EMAIL', acceptTerms, acceptPrivacy, referralCode } = req.body;
+    const platform = loadPlatformSettings();
+    if (platform.maintenanceMode) {
+      return res.status(503).json({
+        error: 'maintenance',
+        message: platform.maintenanceMessage || 'La plateforme est en maintenance.',
+      });
+    }
+    if (!platform.allowRegistration) {
+      return res.status(403).json({
+        error: 'Les inscriptions sont actuellement fermées. Contactez le support pour créer une organisation.',
+      });
+    }
+
+    const { email, password, name, tenantName, phone, phoneCountryCode, nationalNumber, verificationMethod = 'EMAIL', acceptTerms, acceptPrivacy, referralCode } = req.body;
 
     if (!email || !password || !name || !tenantName) {
       return res.status(400).json({ error: 'Tous les champs sont obligatoires (email, password, name, tenantName)' });
@@ -80,8 +95,9 @@ export async function register(req: Request, res: Response) {
     }
 
     const method = (verificationMethod === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL') as VerificationMethod;
+    const phoneFields = resolvePhoneFields({ phone, phoneCountryCode, nationalNumber });
 
-    if (method === 'WHATSAPP' && !phone) {
+    if (method === 'WHATSAPP' && !phoneFields.phone) {
       return res.status(400).json({ error: 'Le numéro de téléphone est obligatoire pour la validation par WhatsApp.' });
     }
 
@@ -121,7 +137,8 @@ export async function register(req: Request, res: Response) {
           email,
           passwordHash,
           name,
-          phone: phone || null,
+          phone: phoneFields.phone,
+          phoneCountryCode: phoneFields.phoneCountryCode,
           role: 'USER',
           tenantId: tenant.id,
           isEmailVerified: false,
@@ -149,12 +166,14 @@ export async function register(req: Request, res: Response) {
       userId: result.user.id,
       name,
       email,
-      phone,
+      phone: phoneFields.phone,
       method,
     });
 
     const destination =
-      sentVia === 'WHATSAPP' && phone ? maskPhone(phone) : maskEmail(email);
+      sentVia === 'WHATSAPP' && phoneFields.phone
+        ? maskPhone(phoneFields.phone)
+        : maskEmail(email);
 
     return res.status(201).json({
       message:

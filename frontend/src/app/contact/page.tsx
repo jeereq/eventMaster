@@ -3,21 +3,22 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { SITE_CONTACT } from '@/config/siteContent';
 import FaqSection from '@/components/landing/FaqSection';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
-import { 
-  Mail, Phone, MapPin, Send, MessageSquare, 
-  CheckCircle2, AlertCircle, Loader2, Sparkles,
+import { Alert, Button, Input } from '@/components/ui';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import {
+  Mail, Phone, MapPin, Send, MessageSquare, CheckCircle2, Clock, ArrowRight,
 } from 'lucide-react';
 
 export default function ContactPage() {
+  const { site } = usePlatformSite();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
-  
+
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -34,244 +35,310 @@ export default function ContactPage() {
         name,
         email,
         subject,
-        message
+        message,
       });
 
       setSuccess(true);
-      const channelNote = response.channels?.includes('whatsapp') && response.channels?.includes('email')
-        ? ' (e-mail et WhatsApp)'
-        : response.channels?.includes('whatsapp')
-          ? ' (WhatsApp)'
-          : '';
-      setSuccessMessage((response.message || 'Votre message a été envoyé avec succès !') + channelNote);
+      const channelNote =
+        response.channels?.includes('whatsapp') && response.channels?.includes('email')
+          ? ' (e-mail et WhatsApp)'
+          : response.channels?.includes('whatsapp')
+            ? ' (WhatsApp)'
+            : '';
+      setSuccessMessage(
+        (response.message || 'Votre message a été envoyé avec succès !') + channelNote,
+      );
       setName('');
       setEmail('');
       setSubject('');
       setMessage('');
-    } catch (err: any) {
-      console.error('Error sending contact message:', err);
-      setError(err.message || 'Une erreur est survenue lors de l\'envoi de votre message. Veuillez réessayer.');
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Une erreur est survenue lors de l'envoi de votre message. Veuillez réessayer.";
+      setError(msg);
     } finally {
       setSubmitting(false);
     }
   };
 
+  const fieldClass =
+    'w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition disabled:opacity-60';
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans antialiased transition-colors duration-200">
       <SiteHeader variant="contact" showServerStatus />
 
-      {/* Main Content */}
-      <main className="flex-1 py-16 sm:py-24 relative overflow-hidden">
-        {/* Background decorative elements */}
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[100px] pointer-events-none" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-primary/5 blur-[100px] pointer-events-none" />
-
-        <div className="page-container relative z-10">
-          <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold">
-              <Sparkles className="w-4 h-4" />
-              <span>Contactez-nous</span>
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-semibold text-foreground tracking-tight">
-              Une question ? Un projet ? Parlons-en !
+      {/* Hero — même langage que la landing */}
+      <section className="relative overflow-hidden border-b border-border">
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,var(--surface-muted)_0%,var(--background)_55%)]" />
+        <div className="page-container relative py-14 sm:py-16 lg:py-20">
+          <div className="max-w-xl space-y-4">
+            <p className="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground">
+              {site.platformName}
+            </p>
+            <h1 className="text-2xl sm:text-3xl font-semibold text-foreground/90 tracking-tight leading-snug">
+              Une question ? Un projet ? Écrivons-nous.
             </h1>
-            <p className="text-sm sm:text-base text-muted leading-relaxed">
-              Que vous soyez un particulier organisant un mariage ou une entreprise planifiant un gala, notre équipe est là pour vous accompagner.
+            <p className="text-sm text-muted leading-relaxed max-w-md">
+              Démonstration, forfaits sur-mesure ou support technique — réponse sous 24–48 h
+              ({site.supportHours}).
             </p>
           </div>
+        </div>
+      </section>
 
-          <div className="grid md:grid-cols-5 gap-8 items-start">
-            {/* Contact Info (2 columns) */}
-            <div className="md:col-span-2 space-y-6">
-              <div className="bg-slate-950 text-white rounded-3xl p-8 shadow-xl space-y-8 relative overflow-hidden border border-slate-900 dark:border-slate-800">
-                <div className="absolute top-[-20%] right-[-20%] w-48 h-48 rounded-full bg-primary/25 blur-[60px]" />
-                
-                <div className="space-y-2">
-                  <h3 className="text-xl font-extrabold tracking-tight">Nos coordonnées</h3>
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    N'hésitez pas à nous joindre directement. Notre équipe commerciale et notre support technique sont à votre écoute.
-                  </p>
-                </div>
-
-                <div className="space-y-6">
-                  <div className="flex items-start gap-4">
-                    <div className="bg-slate-900 p-3 rounded-xl text-primary border border-slate-800/50">
-                      <Mail className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Email</span>
-                      <a href={`mailto:${SITE_CONTACT.email}`} className="text-sm font-semibold hover:text-primary transition">
-                        {SITE_CONTACT.email}
-                      </a>
-                    </div>
+      <main className="flex-1">
+        <section className="py-12 sm:py-16">
+          <div className="page-container">
+            <div className="grid lg:grid-cols-[0.9fr_1.1fr] gap-8 lg:gap-12 items-start">
+              {/* Coordonnées */}
+              <aside className="space-y-4">
+                <div className="bg-surface border border-border rounded-[var(--radius-card)] p-6 space-y-6">
+                  <div className="space-y-1.5">
+                    <h2 className="text-lg font-semibold text-foreground tracking-tight">
+                      Nos coordonnées
+                    </h2>
+                    <p className="text-sm text-muted leading-relaxed">
+                      Commercial, facturation ou technique — joignez-nous directement ou via le
+                      formulaire.
+                    </p>
                   </div>
 
-                  <div className="flex items-start gap-4">
-                    <div className="bg-slate-900 p-3 rounded-xl text-primary border border-slate-800/50">
-                      <Phone className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Téléphone</span>
-                      <a href={SITE_CONTACT.phoneHref} className="text-sm font-semibold hover:text-primary transition">
-                        {SITE_CONTACT.phone}
-                      </a>
-                      <p className="text-[10px] text-slate-500 mt-0.5">{SITE_CONTACT.whatsappNote}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-4">
-                    <div className="bg-slate-900 p-3 rounded-xl text-primary border border-slate-800/50">
-                      <MapPin className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Adresse</span>
-                      <p className="text-sm font-semibold text-slate-200">
-                        {SITE_CONTACT.addressLine1}<br />
-                        {SITE_CONTACT.addressLine2}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border-t border-slate-900 pt-6 space-y-3">
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pourquoi nous contacter ?</h4>
-                  <ul className="space-y-2 text-xs text-slate-300">
-                    <li className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 bg-primary rounded-full" />
-                      Démonstration personnalisée du produit
+                  <ul className="space-y-4">
+                    <li className="flex items-start gap-3">
+                      <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-[var(--radius-button)] border border-border bg-surface-muted text-primary shrink-0">
+                        <Mail className="w-4 h-4" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                          E-mail
+                        </p>
+                        <a
+                          href={`mailto:${site.supportEmail}`}
+                          className="text-sm font-medium text-foreground hover:text-primary transition break-all"
+                        >
+                          {site.supportEmail}
+                        </a>
+                      </div>
                     </li>
-                    <li className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 bg-primary rounded-full" />
-                      Offres sur-mesure pour grands comptes
+                    <li className="flex items-start gap-3">
+                      <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-[var(--radius-button)] border border-border bg-surface-muted text-primary shrink-0">
+                        <Phone className="w-4 h-4" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                          Téléphone
+                        </p>
+                        <a
+                          href={site.supportPhoneHref}
+                          className="text-sm font-medium text-foreground hover:text-primary transition"
+                        >
+                          {site.supportPhone}
+                        </a>
+                        <p className="text-[11px] text-muted mt-0.5">{site.whatsappNote}</p>
+                      </div>
                     </li>
-                    <li className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 bg-primary rounded-full" />
-                      Support technique 24/7
+                    <li className="flex items-start gap-3">
+                      <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-[var(--radius-button)] border border-border bg-surface-muted text-primary shrink-0">
+                        <MapPin className="w-4 h-4" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                          Adresse
+                        </p>
+                        <p className="text-sm font-medium text-foreground">
+                          {site.addressLine1}
+                          <br />
+                          {site.addressLine2}
+                        </p>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-[var(--radius-button)] border border-border bg-surface-muted text-primary shrink-0">
+                        <Clock className="w-4 h-4" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                          Horaires
+                        </p>
+                        <p className="text-sm font-medium text-foreground">
+                          {site.supportHours}
+                        </p>
+                      </div>
                     </li>
                   </ul>
                 </div>
-              </div>
-            </div>
 
-            {/* Contact Form (3 columns) */}
-            <div className="md:col-span-3 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-8 shadow-lg dark:shadow-none shadow-slate-100">
-              {success ? (
-                <div className="py-12 text-center space-y-6 animate-fade-in">
-                  <div className="inline-flex items-center justify-center bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 p-4 rounded-full border border-emerald-100 dark:border-emerald-900/50">
-                    <CheckCircle2 className="w-12 h-12" />
-                  </div>
-                  <div className="space-y-2">
-                    <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white">Message envoyé !</h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
-                      {successMessage}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setSuccess(false)}
-                    className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl text-xs transition shadow-md dark:shadow-none cursor-pointer"
+                <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground">Pourquoi nous écrire ?</h3>
+                  <ul className="space-y-2 text-sm text-muted">
+                    {[
+                      'Démonstration personnalisée du produit',
+                      'Offres sur-mesure pour grands comptes',
+                      'Support technique et facturation',
+                    ].map((item) => (
+                      <li key={item} className="flex items-start gap-2">
+                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href="/#tarifs"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline pt-1"
                   >
-                    Envoyer un autre message
-                  </button>
+                    Voir les forfaits
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
                 </div>
-              ) : (
-                <form onSubmit={handleSubmit} className="space-y-5">
-                  <h3 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-                    <MessageSquare className="w-5 h-5 text-primary" />
-                    Écrivez-nous
-                  </h3>
+              </aside>
 
-                  {error && (
-                    <div className="bg-rose-50 border border-rose-100 text-rose-600 px-4 py-3 rounded-xl text-xs font-semibold flex items-center gap-2">
-                      <AlertCircle className="w-4.5 h-4.5 text-rose-500" />
-                      {error}
+              {/* Formulaire */}
+              <div className="bg-surface border border-border rounded-[var(--radius-card)] p-6 sm:p-8">
+                {success ? (
+                  <div className="py-10 text-center space-y-5 animate-fade-in">
+                    <div className="inline-flex items-center justify-center h-14 w-14 rounded-full border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="w-7 h-7" />
                     </div>
-                  )}
+                    <div className="space-y-2">
+                      <h2 className="text-xl font-semibold text-foreground tracking-tight">
+                        Message envoyé
+                      </h2>
+                      <p className="text-sm text-muted max-w-md mx-auto leading-relaxed">
+                        {successMessage}
+                      </p>
+                    </div>
+                    <Button type="button" variant="secondary" onClick={() => setSuccess(false)}>
+                      Envoyer un autre message
+                    </Button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmit} className="space-y-5">
+                    <div className="space-y-1">
+                      <h2 className="text-lg font-semibold text-foreground tracking-tight flex items-center gap-2">
+                        <MessageSquare className="w-4.5 h-4.5 text-primary" />
+                        Écrivez-nous
+                      </h2>
+                      <p className="text-sm text-muted">
+                        Décrivez votre besoin — nous vous répondons rapidement.
+                      </p>
+                    </div>
 
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Votre nom complet</label>
-                      <input
-                        type="text"
+                    {error && <Alert variant="error">{error}</Alert>}
+
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <Input
+                        label="Nom complet"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        placeholder="Ex: Jean Dupont"
-                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-950 transition text-slate-900 dark:text-white"
+                        placeholder="Ex. Jean Dupont"
                         required
                         disabled={submitting}
+                        className="rounded-[var(--radius-button)] bg-surface-muted border-border"
                       />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Votre adresse e-mail</label>
-                      <input
+                      <Input
+                        label="Adresse e-mail"
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="Ex: jean.dupont@gmail.com"
-                        className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-950 transition text-slate-900 dark:text-white"
+                        placeholder="Ex. jean@organisation.com"
+                        required
+                        disabled={submitting}
+                        className="rounded-[var(--radius-button)] bg-surface-muted border-border"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label
+                        htmlFor="contact-subject"
+                        className="block text-xs font-semibold text-muted"
+                      >
+                        Sujet
+                      </label>
+                      <input
+                        id="contact-subject"
+                        type="text"
+                        value={subject}
+                        onChange={(e) => setSubject(e.target.value)}
+                        placeholder="Ex. Demande de démo Premium"
+                        className={fieldClass}
                         required
                         disabled={submitting}
                       />
                     </div>
-                  </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Sujet du message</label>
-                    <input
-                      type="text"
-                      value={subject}
-                      onChange={(e) => setSubject(e.target.value)}
-                      placeholder="Ex: Demande de tarif Premium / Question technique"
-                      className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-950 transition text-slate-900 dark:text-white"
-                      required
-                      disabled={submitting}
-                    />
-                  </div>
+                    <div className="space-y-1.5">
+                      <label
+                        htmlFor="contact-message"
+                        className="block text-xs font-semibold text-muted"
+                      >
+                        Message
+                      </label>
+                      <textarea
+                        id="contact-message"
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        placeholder="Décrivez votre besoin en détail…"
+                        rows={5}
+                        className={`${fieldClass} resize-none`}
+                        required
+                        disabled={submitting}
+                      />
+                    </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Votre message</label>
-                    <textarea
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      placeholder="Décrivez votre besoin en détail..."
-                      rows={5}
-                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:border-primary focus:bg-white dark:focus:bg-slate-950 transition resize-none text-slate-900 dark:text-white"
-                      required
-                      disabled={submitting}
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="w-full py-3 bg-primary hover:bg-primary-hover disabled:opacity-60 text-white font-bold rounded-xl text-xs transition shadow-lg dark:shadow-none flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Envoi en cours...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4" />
-                        Envoyer mon message
-                      </>
-                    )}
-                  </button>
-                </form>
-              )}
+                    <Button
+                      type="submit"
+                      size="lg"
+                      fullWidth
+                      loading={submitting}
+                      leftIcon={!submitting ? <Send className="w-4 h-4" /> : undefined}
+                    >
+                      {submitting ? 'Envoi en cours…' : 'Envoyer mon message'}
+                    </Button>
+                  </form>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      </main>
+        </section>
 
-      <FaqSection
-        id="faq"
-        title="Questions fréquentes"
-        subtitle="Retrouvez les réponses aux questions les plus courantes avant de nous écrire."
-        showContactLink={false}
-        className="bg-white dark:bg-slate-950"
-      />
+        <FaqSection
+          id="faq"
+          title="Questions fréquentes"
+          subtitle="Réponses courantes avant de nous écrire — forfaits, sécurité, protocole QR."
+          showContactLink={false}
+        />
+
+        {/* CTA aligné landing */}
+        <section className="py-16 sm:py-20 bg-foreground text-background">
+          <div className="page-container text-center space-y-5">
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight max-w-xl mx-auto">
+              Prêt à organiser votre prochain événement ?
+            </h2>
+            <p className="text-sm text-background/70 max-w-md mx-auto leading-relaxed">
+              Invitations, plan de table et protocole QR dans un seul espace, par organisation.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2.5 justify-center pt-2">
+              <Link href="/register">
+                <Button size="lg" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                  Créer mon organisation
+                </Button>
+              </Link>
+              <Link href="/#tarifs">
+                <Button
+                  size="lg"
+                  variant="ghost"
+                  className="text-background/80 hover:text-background hover:bg-background/10 border border-background/20"
+                >
+                  Voir les tarifs
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </section>
+      </main>
 
       <SiteFooter faqHref="/contact#faq" />
     </div>

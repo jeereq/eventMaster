@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Eye } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 /** Palette de bandeaux type Asana (couleurs chaudes + indigo EventMaster). */
@@ -27,13 +28,84 @@ export function accentFromId(id: string): string {
 
 export type ProjectCardLayout = 'grid' | 'list';
 
+export type StatusPillTone = 'amber' | 'emerald' | 'rose' | 'sky' | 'violet' | 'slate' | 'primary';
+
+const STATUS_PILL_TONES: Record<StatusPillTone, string> = {
+  amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+  emerald: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+  rose: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
+  sky: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
+  violet: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
+  slate: 'bg-surface-muted text-muted border border-border',
+  primary: 'bg-primary/10 text-primary',
+};
+
+/** Pastille statut style KaziPay (texte coloré sur fond teinté). */
+export function StatusPill({
+  children,
+  tone = 'amber',
+  className,
+}: {
+  children: React.ReactNode;
+  tone?: StatusPillTone;
+  className?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap',
+        STATUS_PILL_TONES[tone],
+        className,
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+/** Lien d’action « Voir détails » (icône œil). */
+export function ListRowAction({
+  children = 'Voir détails',
+  className,
+}: {
+  children?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 text-xs font-semibold text-muted',
+        'group-hover:text-foreground transition-colors',
+        className,
+      )}
+    >
+      <Eye className="w-3.5 h-3.5 shrink-0" />
+      <span className="hidden sm:inline">{children}</span>
+    </span>
+  );
+}
+
+/** Conteneur vertical pour les lignes liste. */
+export const LIST_STACK_CLASS = 'flex flex-col gap-2.5';
+
 export interface ProjectCardProps {
   id: string;
   title: string;
   meta?: React.ReactNode;
   description?: React.ReactNode;
-  /** Contenu aligné à droite en vue liste (badges, statut…), style Asana */
+  /**
+   * Colonne métrique (ex. montant) — vue liste uniquement.
+   * Affichée à droite du titre, avant le statut.
+   */
+  value?: React.ReactNode;
+  /** Sous-ligne sous `value` (référence, id…) */
+  valueMeta?: React.ReactNode;
+  /** Pastille / statut (vue liste) */
+  status?: React.ReactNode;
+  /** Contenu aligné à droite (badges…) — alias / complément de status */
   aside?: React.ReactNode;
+  /** Icône dans le carré coloré (sinon initiale du titre) */
+  icon?: React.ReactNode;
   cover?: React.ReactNode;
   accentColor?: string;
   actions?: React.ReactNode;
@@ -49,7 +121,11 @@ export function ProjectCard({
   title,
   meta,
   description,
+  value,
+  valueMeta,
+  status,
   aside,
+  icon,
   cover,
   accentColor,
   actions,
@@ -61,6 +137,7 @@ export function ProjectCard({
 }: ProjectCardProps) {
   const stripe = accentColor ?? accentFromId(id);
   const interactive = Boolean(onClick);
+  const initial = (title?.trim()?.charAt(0) || '?').toUpperCase();
 
   if (layout === 'list') {
     return (
@@ -80,41 +157,71 @@ export function ProjectCard({
               : undefined
           }
           className={cn(
-            'group relative flex items-center gap-3 rounded-[var(--radius-button)] px-2.5 py-2',
-            'border border-transparent bg-transparent',
-            'transition-colors duration-120 em-soft-hover',
-            'hover:bg-surface hover:border-border',
+            'group relative flex items-center gap-3 sm:gap-4',
+            'rounded-[var(--radius-card)] border border-border bg-surface',
+            'px-3.5 py-3 sm:px-4 sm:py-3.5',
+            'transition-colors duration-120',
+            'hover:bg-card-hover hover:border-border-subtle',
             interactive && 'cursor-pointer',
           )}
         >
-          <span
-            className="h-8 w-1 shrink-0 rounded-full"
-            style={{ backgroundColor: stripe }}
+          {/* Icône carrée */}
+          <div
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold"
+            style={{ backgroundColor: `${stripe}22`, color: stripe }}
             aria-hidden
-          />
-          {cover && (
-            <div className="h-9 w-12 shrink-0 overflow-hidden rounded-md bg-surface-muted border border-border">
-              {cover}
-            </div>
-          )}
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-foreground tracking-tight">{title}</p>
-            {meta && <div className="mt-0.5 truncate text-xs text-muted">{meta}</div>}
-            {description && (
-              <div className="mt-0.5 text-xs text-muted line-clamp-1 leading-relaxed">{description}</div>
+          >
+            {icon ? (
+              icon
+            ) : cover ? (
+              <div className="h-full w-full overflow-hidden rounded-xl">{cover}</div>
+            ) : (
+              initial
             )}
           </div>
-          {aside && (
+
+          {/* Titre + sous-titre */}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-foreground tracking-tight">{title}</p>
+            {meta && (
+              <div className="mt-0.5 truncate text-xs text-muted leading-snug">{meta}</div>
+            )}
+            {description && (
+              <div className="mt-0.5 text-xs text-muted line-clamp-1 leading-relaxed sm:hidden">
+                {description}
+              </div>
+            )}
+          </div>
+
+          {/* Métrique (montant / compteur) */}
+          {(value != null && value !== '') || valueMeta ? (
+            <div className="hidden sm:flex flex-col items-end shrink-0 min-w-[4.5rem] text-right">
+              {value != null && value !== '' && (
+                <p className="text-sm font-semibold text-foreground tracking-tight tabular-nums">
+                  {value}
+                </p>
+              )}
+              {valueMeta && (
+                <p className="mt-0.5 text-[11px] text-muted truncate max-w-[9rem]">{valueMeta}</p>
+              )}
+            </div>
+          ) : null}
+
+          {/* Statut / badges */}
+          {(status || aside) && (
             <div
-              className="hidden sm:flex shrink-0 items-center gap-1.5"
+              className="hidden md:flex shrink-0 items-center gap-1.5"
               onClick={(e) => e.stopPropagation()}
             >
+              {status}
               {aside}
             </div>
           )}
+
+          {/* Actions — toujours visibles (style « Voir détails ») */}
           {actions && (
             <div
-              className="flex shrink-0 items-center gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
+              className="flex shrink-0 items-center gap-1"
               onClick={(e) => e.stopPropagation()}
             >
               {actions}
@@ -122,9 +229,7 @@ export function ProjectCard({
           )}
         </div>
         {children && (
-          <div className="ml-3.5 pl-3 border-l border-border mb-1 space-y-1.5 py-1">
-            {children}
-          </div>
+          <div className="mt-1.5 ml-1 sm:ml-14 space-y-1.5">{children}</div>
         )}
       </div>
     );
@@ -172,15 +277,20 @@ export function ProjectCard({
             {title}
           </h3>
           {meta && <div className="text-xs text-muted space-y-0.5">{meta}</div>}
-          {description && <div className="text-xs text-muted line-clamp-2 leading-relaxed">{description}</div>}
+          {description && (
+            <div className="text-xs text-muted line-clamp-2 leading-relaxed">{description}</div>
+          )}
         </div>
         {children}
-        {(actions || footer) && (
+        {(actions || footer || status) && (
           <div
             className="mt-auto flex items-center justify-between gap-2 pt-1"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="min-w-0 flex-1">{footer}</div>
+            <div className="min-w-0 flex-1 flex items-center gap-2">
+              {status}
+              {footer}
+            </div>
             {actions && <div className="flex shrink-0 items-center gap-1.5">{actions}</div>}
           </div>
         )}

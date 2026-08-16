@@ -2,16 +2,22 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { getPlanLimits } from '../config/plansConfig';
-import { normalizePhone } from '../utils/guestIdentity';
 import {
   canManageGuests,
   canProtocolGuests,
   canAccessEvent,
 } from '../services/permissionsService';
+import { resolvePhoneFields } from '../utils/phone';
 
-function resolveGuestPhone(body: any, preferences: any): string | null {
-  const rawPhone = body?.phone || preferences?.phone || preferences?.telephone;
-  return normalizePhone(typeof rawPhone === 'string' ? rawPhone : null);
+function resolveGuestPhoneFields(body: any, preferences: any): {
+  phone: string | null;
+  phoneCountryCode: string | null;
+} {
+  return resolvePhoneFields({
+    phone: body?.phone || preferences?.phone || preferences?.telephone,
+    phoneCountryCode: body?.phoneCountryCode,
+    nationalNumber: body?.nationalNumber,
+  });
 }
 
 async function assertGuestListAccess(userId: string, tenantId: string, eventId: string) {
@@ -85,8 +91,14 @@ export async function createGuest(req: AuthenticatedRequest, res: Response) {
       return res.status(400).json({ error: 'Un invité avec cet email existe déjà pour cet événement' });
     }
 
-    const guestPreferences = preferences || {};
-    const normalizedPhone = resolveGuestPhone(req.body, guestPreferences);
+    const guestPreferences = { ...(preferences || {}) };
+    const { phone: normalizedPhone, phoneCountryCode } = resolveGuestPhoneFields(
+      req.body,
+      guestPreferences,
+    );
+    if (normalizedPhone) {
+      guestPreferences.phone = normalizedPhone;
+    }
 
     const guest = await prisma.guest.create({
       data: {
@@ -95,6 +107,7 @@ export async function createGuest(req: AuthenticatedRequest, res: Response) {
         lastName,
         email,
         phone: normalizedPhone,
+        phoneCountryCode,
         category: category || 'Général',
         rsvp: rsvp || 'PENDING',
         preferences: guestPreferences,
@@ -130,11 +143,25 @@ export async function updateGuest(req: AuthenticatedRequest, res: Response) {
     }
 
     const mergedPreferences =
-      preferences !== undefined ? preferences : (existingGuest.preferences as any);
-    const normalizedPhone =
-      req.body.phone !== undefined || preferences !== undefined
-        ? resolveGuestPhone(req.body, mergedPreferences)
-        : existingGuest.phone;
+      preferences !== undefined
+        ? { ...(preferences as object) }
+        : { ...((existingGuest.preferences as object) || {}) };
+
+    let normalizedPhone = existingGuest.phone;
+    let phoneCountryCode = existingGuest.phoneCountryCode;
+    if (
+      req.body.phone !== undefined ||
+      req.body.phoneCountryCode !== undefined ||
+      req.body.nationalNumber !== undefined ||
+      preferences !== undefined
+    ) {
+      const resolved = resolveGuestPhoneFields(req.body, mergedPreferences);
+      normalizedPhone = resolved.phone;
+      phoneCountryCode = resolved.phoneCountryCode;
+      if (normalizedPhone) {
+        (mergedPreferences as Record<string, unknown>).phone = normalizedPhone;
+      }
+    }
 
     const updatedGuest = await prisma.guest.update({
       where: { id },
@@ -143,6 +170,7 @@ export async function updateGuest(req: AuthenticatedRequest, res: Response) {
         lastName: lastName !== undefined ? lastName : existingGuest.lastName,
         email: email !== undefined ? email : existingGuest.email,
         phone: normalizedPhone,
+        phoneCountryCode,
         category: category !== undefined ? category : existingGuest.category,
         rsvp: rsvp !== undefined ? rsvp : existingGuest.rsvp,
         preferences: mergedPreferences,
@@ -225,9 +253,9 @@ export async function importGuests(req: AuthenticatedRequest, res: Response) {
       }
 
       const guestPrefs: any = g.preferences || {};
-      if (g.phone) guestPrefs.phone = g.phone;
       if (g.notes) guestPrefs.notes = g.notes;
-      const normalizedPhone = resolveGuestPhone(g, guestPrefs);
+      const { phone: normalizedPhone, phoneCountryCode } = resolveGuestPhoneFields(g, guestPrefs);
+      if (normalizedPhone) guestPrefs.phone = normalizedPhone;
 
       try {
         await prisma.guest.upsert({
@@ -237,6 +265,7 @@ export async function importGuests(req: AuthenticatedRequest, res: Response) {
             lastName: g.lastName,
             category: g.category || 'Général',
             phone: normalizedPhone,
+            phoneCountryCode,
             preferences: guestPrefs,
           },
           create: {
@@ -245,6 +274,7 @@ export async function importGuests(req: AuthenticatedRequest, res: Response) {
             lastName: g.lastName,
             email: g.email,
             phone: normalizedPhone,
+            phoneCountryCode,
             category: g.category || 'Général',
             preferences: guestPrefs,
           },

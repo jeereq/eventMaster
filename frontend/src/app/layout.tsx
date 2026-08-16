@@ -3,6 +3,7 @@ import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
+import { PlatformSiteProvider } from "@/context/PlatformSiteContext";
 import PWARegister from "@/components/PWARegister";
 
 /** Inter ≈ substitut open-source de TWK Lausanne / Asana Sans (UI produit Asana). */
@@ -63,10 +64,12 @@ export default function RootLayout({
           Aller au contenu
         </a>
         <ThemeProvider>
-          <AuthProvider>
-            <PWARegister />
-            {children}
-          </AuthProvider>
+          <PlatformSiteProvider>
+            <AuthProvider>
+              <PWARegister />
+              {children}
+            </AuthProvider>
+          </PlatformSiteProvider>
         </ThemeProvider>
       </body>
     </html>

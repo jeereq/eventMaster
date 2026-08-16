@@ -10,6 +10,7 @@ import {
 import { AuthSplitLayout, MethodToggle } from '@/components/AuthSplitLayout';
 import { Button, Alert, Input, Card } from '@/components/ui';
 import { parseReferralFromSearchParams } from '@/lib/referralLink';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 
 const FEATURES = [
   { icon: Calendar, title: "Gestion d'événements & RSVP", desc: 'Invitations par e-mail ou WhatsApp, suivi des réponses en temps réel.' },
@@ -36,6 +37,7 @@ export default function RegisterPage() {
 
 function RegisterPageContent() {
   const { register } = useAuth();
+  const { site, ready } = usePlatformSite();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
@@ -95,13 +97,32 @@ function RegisterPageContent() {
     <AuthSplitLayout
       badge="Inscription SaaS"
       title="Créez votre espace d'organisation en quelques secondes."
-      description="Rejoignez EventMaster et profitez d'une interface d'invitation immersive et d'outils de placement de table interactifs."
+      description={`Rejoignez ${site.platformName} et profitez d'une interface d'invitation immersive et d'outils de placement de table interactifs.`}
       features={FEATURES}
       backHref="/"
       backLabel="Retour au site"
     >
       <Card padding="lg" className="border-border shadow-sm">
-        {successMessage ? (
+        {ready && !site.allowRegistration ? (
+          <div className="text-center space-y-4 py-6">
+            <h2 className="text-xl font-semibold text-foreground">Inscriptions fermées</h2>
+            <p className="text-sm text-muted leading-relaxed">
+              Les créations de compte sont temporairement désactivées. Contactez{' '}
+              <a href={`mailto:${site.supportEmail}`} className="font-semibold text-primary hover:underline">
+                {site.supportEmail}
+              </a>{' '}
+              pour ouvrir une organisation.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
+              <Link href="/contact">
+                <Button>Nous contacter</Button>
+              </Link>
+              <Link href="/login">
+                <Button variant="secondary">Se connecter</Button>
+              </Link>
+            </div>
+          </div>
+        ) : successMessage ? (
           <div className="text-center space-y-5 py-2">
             <div className="inline-flex items-center justify-center bg-emerald-100 dark:bg-emerald-950/30 p-4 rounded-full text-emerald-600 dark:text-emerald-400">
               {verificationMethod === 'WHATSAPP' ? <MessageSquare className="w-10 h-10" /> : <Mail className="w-10 h-10" />}

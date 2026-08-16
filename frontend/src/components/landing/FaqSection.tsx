@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ChevronDown } from 'lucide-react';
 import { FAQ_ITEMS } from '@/config/siteContent';
 import { cn } from '@/lib/cn';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 
 interface FaqSectionProps {
   id?: string;
@@ -21,7 +22,17 @@ export default function FaqSection({
   showContactLink = true,
   className = '',
 }: FaqSectionProps) {
+  const { site } = usePlatformSite();
   const [openId, setOpenId] = useState<string | null>(FAQ_ITEMS[0]?.id ?? null);
+
+  const items = FAQ_ITEMS.map((item) =>
+    item.id === 'support'
+      ? {
+          ...item,
+          answer: `Utilisez le formulaire de contact, écrivez à ${site.supportEmail} ou appelez le ${site.supportPhone} (${site.whatsappNote}). Notre équipe répond aux questions commerciales, techniques et de facturation.`,
+        }
+      : item,
+  );
 
   return (
     <section id={id} className={cn('py-16 sm:py-20 bg-surface border-t border-border scroll-mt-16', className)}>
@@ -32,7 +43,7 @@ export default function FaqSection({
         </div>
 
         <div className="space-y-2 max-w-3xl">
-          {FAQ_ITEMS.map((item) => {
+          {items.map((item) => {
             const isOpen = openId === item.id;
             return (
               <div

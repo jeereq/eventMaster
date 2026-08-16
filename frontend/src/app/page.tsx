@@ -19,6 +19,7 @@ import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import { Modal, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
   ArrowRight, Loader2,
 } from 'lucide-react';
@@ -31,6 +32,7 @@ function getCategoryLabel(category: string) {
 
 export default function Home() {
   const { user } = useAuth();
+  const { site } = usePlatformSite();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [previewTemplate, setPreviewTemplate] = useState<string>('');
   const [modalTemplate, setModalTemplate] = useState<LandingTemplate | null>(null);
@@ -94,10 +96,10 @@ export default function Home() {
           <div className="grid lg:grid-cols-[1.05fr_0.95fr] gap-12 lg:gap-16 items-center">
             <div className="space-y-6">
               <p className="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground">
-                EventMaster
+                {site.platformName}
               </p>
               <h1 className="text-2xl sm:text-3xl font-semibold text-foreground/90 tracking-tight leading-snug max-w-lg">
-                Organisez vos événements, de la salle au scan invité.
+                {site.platformTagline}
               </h1>
               <p className="text-sm text-muted leading-relaxed max-w-md">
                 Plans 2D, invitations, RSVP et protocole QR — isolés par organisation.
@@ -109,7 +111,7 @@ export default function Home() {
                       Accéder au tableau de bord
                     </Button>
                   </Link>
-                ) : (
+                ) : site.allowRegistration ? (
                   <>
                     <Link href="/register">
                       <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
@@ -118,6 +120,17 @@ export default function Home() {
                     </Link>
                     <Link href="/login">
                       <Button size="lg" variant="secondary">Se connecter</Button>
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/login">
+                      <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                        Se connecter
+                      </Button>
+                    </Link>
+                    <Link href="/contact">
+                      <Button size="lg" variant="secondary">Nous contacter</Button>
                     </Link>
                   </>
                 )}
@@ -319,11 +332,13 @@ export default function Home() {
               </Link>
             ) : (
               <>
-                <Link href="/register">
-                  <Button size="lg" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                    Créer mon organisation
-                  </Button>
-                </Link>
+                {site.allowRegistration && (
+                  <Link href="/register">
+                    <Button size="lg" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                      Créer mon organisation
+                    </Button>
+                  </Link>
+                )}
                 <Link href="/contact">
                   <Button
                     size="lg"
