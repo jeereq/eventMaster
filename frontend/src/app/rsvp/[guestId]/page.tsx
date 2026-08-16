@@ -463,10 +463,10 @@ export default function RsvpPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-surface-muted">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
-          <p className="text-sm font-medium text-slate-500">Ouverture de votre invitation personnalisée...</p>
+          <Loader2 className="w-10 h-10 text-primary animate-spin" />
+          <p className="text-sm font-medium text-muted">Ouverture de votre invitation personnalisée...</p>
         </div>
       </div>
     );
@@ -474,16 +474,16 @@ export default function RsvpPage() {
 
   if (error || !guest) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
-        <div className="max-w-md w-full bg-white p-8 rounded-2xl border border-slate-200 shadow-xl text-center space-y-4">
+      <div className="min-h-screen flex items-center justify-center bg-surface-muted px-4">
+        <div className="max-w-md w-full bg-surface p-8 rounded-2xl border border-border shadow-xl text-center space-y-4">
           <div className="bg-rose-50 text-rose-600 p-4 rounded-full w-16 h-16 flex items-center justify-center mx-auto border border-rose-100">
             <AlertCircle className="w-8 h-8" />
           </div>
-          <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Erreur d'Invitation</h2>
-          <p className="text-slate-600 leading-relaxed text-sm">
+          <h2 className="text-2xl font-extrabold text-foreground tracking-tight">Erreur d'Invitation</h2>
+          <p className="text-muted leading-relaxed text-sm">
             {error || 'Lien d\'invitation invalide.'}
           </p>
-          <p className="text-xs text-slate-400">Veuillez contacter l'organisateur de l'événement.</p>
+          <p className="text-xs text-muted">Veuillez contacter l'organisateur de l'événement.</p>
         </div>
       </div>
     );
@@ -492,28 +492,28 @@ export default function RsvpPage() {
     // Rich Interactive Portal for Accepted guests (Immersive Mobile App Experience)
     if (submitted && rsvpStatus === 'ACCEPTED') {
       return (
-        <div className="min-h-screen bg-slate-950 flex items-center justify-center p-0 md:p-6 relative overflow-hidden font-sans">
+        <div className="min-h-screen bg-background flex items-center justify-center p-0 md:p-6 relative overflow-hidden font-sans">
         {/* Ambient background glow */}
-        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-indigo-900/20 blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-violet-900/20 blur-[120px] pointer-events-none" />
+        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] rounded-full bg-primary/20 blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] rounded-full bg-primary/15 blur-[120px] pointer-events-none" />
 
         {/* Smartphone Container Frame */}
-        <div className="w-full max-w-md md:h-[840px] md:rounded-[48px] md:border-[10px] md:border-slate-800 bg-slate-900 text-slate-100 relative shadow-2xl overflow-hidden flex flex-col md:ring-4 md:ring-slate-950">
+        <div className="w-full max-w-md md:h-[840px] md:rounded-[48px] md:border-[10px] md:border-border bg-surface text-foreground relative shadow-2xl overflow-hidden flex flex-col md:ring-4 md:ring-background">
           
           {/* Smartphone Notch / Dynamic Island (visible on desktop) */}
-          <div className="hidden md:flex absolute top-0 inset-x-0 h-7 bg-slate-950 items-center justify-center z-40">
+          <div className="hidden md:flex absolute top-0 inset-x-0 h-7 bg-background items-center justify-center z-40">
             <div className="w-28 h-4 bg-black rounded-full" />
           </div>
 
           {/* App Header */}
-          <div className="bg-slate-900 border-b border-slate-800/80 px-6 pt-8 pb-4 md:pt-11 flex items-center justify-between z-30">
+          <div className="bg-surface border-b border-border px-6 pt-8 pb-4 md:pt-11 flex items-center justify-between z-30">
             <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-500 to-violet-500 flex items-center justify-center font-black text-white text-sm shadow-lg shadow-indigo-500/20">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-primary to-primary/80 flex items-center justify-center font-black text-white text-sm shadow-lg shadow-primary/20">
                 ✨
               </div>
               <div>
-                <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest block">Mon Invitation</span>
-                <span className="text-sm font-extrabold text-white leading-none block truncate max-w-[200px]">{guest.event.title}</span>
+                <span className="text-[10px] font-bold text-primary uppercase tracking-widest block">Mon Invitation</span>
+                <span className="text-sm font-extrabold text-foreground leading-none block truncate max-w-[200px]">{guest.event.title}</span>
               </div>
             </div>
 
@@ -528,62 +528,62 @@ export default function RsvpPage() {
             {activeGuestTab === 'badge' && (
               <div className="space-y-6 animate-fade-in">
                 {/* Welcome Card */}
-                <div className="bg-gradient-to-br from-indigo-600 to-violet-600 rounded-3xl p-6 text-white space-y-3 relative overflow-hidden shadow-xl shadow-indigo-950/30">
-                  <div className="absolute -right-10 -bottom-10 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-200">Bienvenue</span>
+                <div className="bg-gradient-to-br from-primary to-primary/80 rounded-3xl p-6 text-white space-y-3 relative overflow-hidden shadow-xl shadow-primary/20">
+                  <div className="absolute -right-10 -bottom-10 w-32 h-32 bg-surface/10 rounded-full blur-2xl" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/80">Bienvenue</span>
                   <h2 className="text-xl font-black leading-tight">
                     Ravi de vous compter parmi nous, {guest.firstName} !
                   </h2>
-                  <p className="text-indigo-100 text-xs leading-relaxed font-medium">
+                  <p className="text-white/90 text-xs leading-relaxed font-medium">
                     Votre présence est confirmée. Préparez-vous à vivre un moment inoubliable !
                   </p>
                 </div>
 
                 {/* QR Badge Card */}
-                <div className="bg-slate-800/50 border border-slate-700/50 rounded-3xl p-6 text-center space-y-4">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Votre badge QR de confirmation de présence</span>
+                <div className="bg-surface-muted border border-border rounded-3xl p-6 text-center space-y-4">
+                  <span className="text-xs font-bold text-muted uppercase tracking-wider block">Votre badge QR de confirmation de présence</span>
                   <div className="flex justify-center">
-                    <div className="relative p-3 bg-white rounded-3xl shadow-lg">
+                    <div className="relative p-3 bg-surface rounded-3xl shadow-lg">
                       <img 
                         src={getGuestQrImageUrl(guest.id, 180)} 
                         alt="QR Code de confirmation de présence"
                         className="w-40 h-40"
                       />
-                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-1.5 rounded-xl border border-slate-150 shadow-xs flex items-center justify-center w-9 h-9">
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-surface p-1.5 rounded-xl border border-border shadow-xs flex items-center justify-center w-9 h-9">
                         <span className="text-sm">✨</span>
                       </div>
                     </div>
                   </div>
-                  <p className="text-[11px] text-slate-400 font-medium leading-tight max-w-xs mx-auto">
+                  <p className="text-[11px] text-muted font-medium leading-tight max-w-xs mx-auto">
                     Présentez ce QR Code à l'entrée de l'événement pour valider votre présence.
                   </p>
                 </div>
 
                 {/* Event Details Card */}
-                <div className="bg-slate-800/40 border border-slate-700/40 rounded-3xl p-5 space-y-4">
+                <div className="bg-surface-muted/80 border border-border rounded-3xl p-5 space-y-4">
                   <div className="space-y-1.5">
-                    <h3 className="font-extrabold text-white text-sm">Détails de l'événement</h3>
-                    <p className="text-slate-400 text-xs leading-relaxed whitespace-pre-line">
+                    <h3 className="font-extrabold text-foreground text-sm">Détails de l'événement</h3>
+                    <p className="text-muted text-xs leading-relaxed whitespace-pre-line">
                       {guest.event.description || "Aucune description supplémentaire fournie pour cet événement."}
                     </p>
                   </div>
 
-                  <div className="space-y-3 text-xs text-slate-300 font-semibold pt-3 border-t border-slate-800">
+                  <div className="space-y-3 text-xs text-foreground/80 font-semibold pt-3 border-t border-border">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-indigo-500/10 rounded-xl text-indigo-400">
+                      <div className="p-2 bg-primary/10 rounded-xl text-primary">
                         <Calendar className="w-4 h-4" />
                       </div>
                       <div>
-                        <span className="font-bold block text-white">Date & Heure</span>
+                        <span className="font-bold block text-foreground">Date & Heure</span>
                         {new Date(guest.event.date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-indigo-500/10 rounded-xl text-indigo-400">
+                      <div className="p-2 bg-primary/10 rounded-xl text-primary">
                         <MapPin className="w-4 h-4" />
                       </div>
                       <div>
-                        <span className="font-bold block text-white">Lieu</span>
+                        <span className="font-bold block text-foreground">Lieu</span>
                         {guest.event.location}
                       </div>
                     </div>
@@ -600,7 +600,7 @@ export default function RsvpPage() {
                 {!rsvpLocked && (
                 <button 
                   onClick={() => setSubmitted(false)}
-                  className="w-full py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-2xl text-xs transition"
+                  className="w-full py-3.5 bg-surface-muted hover:bg-surface-muted text-foreground/80 font-bold rounded-2xl text-xs transition"
                 >
                   Modifier ma réponse de présence
                 </button>
@@ -639,8 +639,8 @@ export default function RsvpPage() {
             {activeGuestTab === 'guestbook' && (
               <div className="space-y-6 animate-fade-in">
                 <div className="space-y-1">
-                  <h3 className="font-extrabold text-white text-base">Livre d'or de l'événement</h3>
-                  <p className="text-slate-400 text-xs">
+                  <h3 className="font-extrabold text-foreground text-base">Livre d'or de l'événement</h3>
+                  <p className="text-muted text-xs">
                     Partagez un mot doux, des félicitations ou plusieurs photos souvenirs avec les organisateurs.
                   </p>
                 </div>
@@ -659,19 +659,19 @@ export default function RsvpPage() {
                       onChange={(e) => setGuestbookMessage(e.target.value)}
                       placeholder="Écrivez votre message de félicitations ou d'amitié ici..."
                       rows={4}
-                      className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-2xl text-xs focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors resize-none text-slate-100 placeholder-slate-500"
+                      className="w-full px-4 py-3 bg-surface-muted border border-border rounded-2xl text-xs focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors resize-none text-foreground placeholder:text-muted"
                     />
                   </div>
 
                   {/* Previews of uploaded guestbook photos */}
                   {guestbookPhotos.length > 0 && (
                     <div className="space-y-2">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                      <span className="text-[10px] font-bold text-muted uppercase tracking-wider block">
                         Photos sélectionnées ({guestbookPhotos.length})
                       </span>
                       <div className="grid grid-cols-3 gap-2">
                         {guestbookPhotos.map((photo, idx) => (
-                          <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-slate-700 bg-slate-800 flex items-center justify-center">
+                          <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-border bg-surface-muted flex items-center justify-center">
                             <img src={photo} alt="Preview" className="w-full h-full object-cover" />
                             <button
                               type="button"
@@ -687,15 +687,15 @@ export default function RsvpPage() {
                   )}
 
                   {isGuestbookUploading && (
-                    <div className="flex items-center justify-center gap-2 py-3 bg-slate-800/50 border border-dashed border-slate-700 rounded-2xl">
-                      <Loader2 className="w-4 h-4 text-indigo-400 animate-spin" />
-                      <span className="text-xs font-semibold text-slate-400">Encodage des photos...</span>
+                    <div className="flex items-center justify-center gap-2 py-3 bg-surface-muted border border-dashed border-border rounded-2xl">
+                      <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                      <span className="text-xs font-semibold text-muted">Encodage des photos...</span>
                     </div>
                   )}
 
                   <div className="flex items-center justify-between gap-3 pt-2">
-                    <label className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs cursor-pointer transition">
-                      <Image className="w-4 h-4 text-indigo-400" />
+                    <label className="inline-flex items-center gap-1.5 px-3 py-2 bg-surface-muted hover:bg-surface-muted text-foreground/80 font-semibold rounded-xl text-xs cursor-pointer transition">
+                      <Image className="w-4 h-4 text-primary" />
                       Ajouter des photos
                       <input
                         type="file"
@@ -709,7 +709,7 @@ export default function RsvpPage() {
                     <button
                       type="submit"
                       disabled={submittingGuestbook || isGuestbookUploading || (!guestbookMessage.trim() && guestbookPhotos.length === 0)}
-                      className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold rounded-xl text-xs transition shadow-md shadow-indigo-950/20"
+                      className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-white font-semibold rounded-xl text-xs transition shadow-md shadow-primary/20"
                     >
                       {submittingGuestbook ? (
                         <>
@@ -727,20 +727,20 @@ export default function RsvpPage() {
                 </form>
 
                 {/* Liste des messages du Livre d'or */}
-                <div className="border-t border-slate-800/80 pt-6 space-y-4">
-                  <h4 className="font-extrabold text-white text-xs uppercase tracking-wider flex items-center gap-1.5">
-                    <Heart className="w-4 h-4 text-indigo-400" />
+                <div className="border-t border-border pt-6 space-y-4">
+                  <h4 className="font-extrabold text-foreground text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <Heart className="w-4 h-4 text-primary" />
                     Messages des invités ({guestbookShares.length})
                   </h4>
 
                   {loadingGuestbook && guestbookShares.length === 0 ? (
                     <div className="py-8 flex flex-col items-center justify-center gap-2">
-                      <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
-                      <p className="text-[10px] text-slate-400">Chargement des messages...</p>
+                      <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                      <p className="text-[10px] text-muted">Chargement des messages...</p>
                     </div>
                   ) : guestbookShares.length === 0 ? (
-                    <div className="text-center py-8 bg-slate-800/20 rounded-2xl border border-slate-800/40 p-4">
-                      <p className="text-slate-400 text-xs">Soyez le premier à laisser un message !</p>
+                    <div className="text-center py-8 bg-surface-muted/40 rounded-2xl border border-border p-4">
+                      <p className="text-muted text-xs">Soyez le premier à laisser un message !</p>
                     </div>
                   ) : (
                     <div className="space-y-4 max-h-[350px] overflow-y-auto pr-1">
@@ -753,12 +753,12 @@ export default function RsvpPage() {
                         );
 
                         return (
-                          <div key={share.id} className="bg-slate-800/30 border border-slate-700/30 rounded-2xl p-3 space-y-2.5">
+                          <div key={share.id} className="bg-surface-muted/60 border border-border rounded-2xl p-3 space-y-2.5">
                             <div className="flex items-center justify-between">
-                              <span className="font-bold text-white text-[11px]">
+                              <span className="font-bold text-foreground text-[11px]">
                                 {share.guest ? `${share.guest.firstName} ${share.guest.lastName}` : 'Invité'}
                               </span>
-                              <span className="text-[9px] text-slate-500">
+                              <span className="text-[9px] text-muted">
                                 {new Date(share.createdAt).toLocaleDateString('fr-FR', {
                                   day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
                                 })}
@@ -766,17 +766,17 @@ export default function RsvpPage() {
                             </div>
 
                             {share.message && (
-                              <p className="text-slate-300 text-xs leading-relaxed whitespace-pre-line">
+                              <p className="text-foreground/80 text-xs leading-relaxed whitespace-pre-line">
                                 {share.message}
                               </p>
                             )}
 
                             {photosList.length > 0 && (
                               <div className={`grid gap-1 rounded-xl overflow-hidden ${
-                                photosList.length === 1 ? 'grid-cols-1' : photosList.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
-                              }`}>
+ photosList.length === 1 ? 'grid-cols-1' : photosList.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
+ }`}>
                                 {photosList.map((photo: string, pIdx: number) => (
-                                  <div key={pIdx} className="relative aspect-square overflow-hidden bg-slate-900 group">
+                                  <div key={pIdx} className="relative aspect-square overflow-hidden bg-surface group">
                                     <img 
                                       src={photo} 
                                       alt="Guestbook" 
@@ -813,24 +813,24 @@ export default function RsvpPage() {
             {activeGuestTab === 'feed' && (
               <div className="space-y-6 animate-fade-in">
                 <div className="space-y-1">
-                  <h3 className="font-extrabold text-white text-base">Fil d'actualité</h3>
-                  <p className="text-slate-400 text-xs">
+                  <h3 className="font-extrabold text-foreground text-base">Fil d'actualité</h3>
+                  <p className="text-muted text-xs">
                     Découvrez les publications en direct des organisateurs et commentez-les.
                   </p>
                 </div>
 
                 {loadingFeed ? (
                   <div className="py-16 flex flex-col items-center justify-center gap-3">
-                    <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-                    <p className="text-xs font-medium text-slate-400">Chargement du fil d'actualité...</p>
+                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                    <p className="text-xs font-medium text-muted">Chargement du fil d'actualité...</p>
                   </div>
                 ) : feedPosts.length === 0 ? (
                   <div className="text-center py-16 space-y-3 max-w-xs mx-auto">
-                    <div className="inline-flex items-center justify-center bg-indigo-500/10 p-5 rounded-full text-indigo-400">
+                    <div className="inline-flex items-center justify-center bg-primary/10 p-5 rounded-full text-primary">
                       <MessageCircle className="w-8 h-8" />
                     </div>
-                    <h4 className="font-bold text-white text-sm">Aucune publication</h4>
-                    <p className="text-slate-400 text-xs">
+                    <h4 className="font-bold text-foreground text-sm">Aucune publication</h4>
+                    <p className="text-muted text-xs">
                       Les publications en direct des organisateurs apparaîtront ici très bientôt !
                     </p>
                   </div>
@@ -842,15 +842,15 @@ export default function RsvpPage() {
                         : (post.mediaUrl ? [{ url: post.mediaUrl, type: post.mediaType || 'IMAGE' }] : []);
 
                       return (
-                        <div key={post.id} className="bg-slate-800/30 border border-slate-700/30 rounded-3xl p-4 space-y-4">
+                        <div key={post.id} className="bg-surface-muted/60 border border-border rounded-3xl p-4 space-y-4">
                           {/* Post Header */}
                           <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center font-bold text-indigo-400 text-xs">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-primary text-xs">
                               ✨
                             </div>
                             <div>
-                              <span className="font-bold text-white text-xs block leading-tight">Organisateur</span>
-                              <span className="text-[9px] text-slate-400 font-medium">
+                              <span className="font-bold text-foreground text-xs block leading-tight">Organisateur</span>
+                              <span className="text-[9px] text-muted font-medium">
                                 {new Date(post.createdAt).toLocaleDateString('fr-FR', {
                                   day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
                                 })}
@@ -860,16 +860,16 @@ export default function RsvpPage() {
 
                           {/* Post Content */}
                           {post.content && (
-                            <p className="text-slate-200 text-xs leading-relaxed whitespace-pre-line">
+                            <p className="text-foreground text-xs leading-relaxed whitespace-pre-line">
                               {post.content}
                             </p>
                           )}
 
                           {/* Post Media Grid */}
                           {mediaList.length > 0 && (
-                            <div className={`grid gap-1.5 rounded-2xl overflow-hidden border border-slate-800 bg-black ${
-                              mediaList.length === 1 ? 'grid-cols-1' : mediaList.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
-                            }`}>
+                            <div className={`grid gap-1.5 rounded-2xl overflow-hidden border border-border bg-black ${
+ mediaList.length === 1 ? 'grid-cols-1' : mediaList.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
+ }`}>
                               {mediaList.map((media: any, idx: number) => (
                                 <div key={idx} className="relative aspect-video max-h-64 flex items-center justify-center overflow-hidden group">
                                   {media.type === 'VIDEO' ? (
@@ -912,10 +912,10 @@ export default function RsvpPage() {
                             <button
                               onClick={() => handleToggleLike(post.id)}
                               className={`flex items-center gap-1.5 text-xs font-bold transition px-3 py-1.5 rounded-full ${
-                                post.likes && Array.isArray(post.likes) && post.likes.includes(`guest_${guest?.id}`)
-                                  ? 'text-pink-500 bg-pink-500/10'
-                                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                              }`}
+ post.likes && Array.isArray(post.likes) && post.likes.includes(`guest_${guest?.id}`)
+ ? 'text-pink-500 bg-pink-500/10'
+ : 'text-muted hover:text-foreground hover:bg-surface-muted'
+ }`}
                             >
                               <ThumbsUp className="w-4 h-4" />
                               <span>
@@ -925,25 +925,25 @@ export default function RsvpPage() {
                           </div>
 
                           {/* Comments Section */}
-                          <div className="border-t border-slate-800/80 pt-3.5 space-y-4">
-                            <h4 className="font-bold text-slate-400 text-[10px] uppercase tracking-wider flex items-center gap-1.5">
-                              <MessageCircle className="w-3.5 h-3.5 text-slate-500" />
+                          <div className="border-t border-border pt-3.5 space-y-4">
+                            <h4 className="font-bold text-muted text-[10px] uppercase tracking-wider flex items-center gap-1.5">
+                              <MessageCircle className="w-3.5 h-3.5 text-muted" />
                               Commentaires ({post.comments.length})
                             </h4>
 
                             {post.comments.length > 0 && (
                               <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
                                 {post.comments.map((comment: any) => (
-                                  <div key={comment.id} className="bg-slate-900/40 border border-slate-800/60 p-3 rounded-2xl text-[11px] space-y-1">
+                                  <div key={comment.id} className="bg-surface-muted/80 border border-border p-3 rounded-2xl text-[11px] space-y-1">
                                     <div className="flex items-center justify-between">
-                                      <span className="font-extrabold text-indigo-400">{comment.authorName}</span>
-                                      <span className="text-[8px] text-slate-500 font-medium">
+                                      <span className="font-extrabold text-primary">{comment.authorName}</span>
+                                      <span className="text-[8px] text-muted font-medium">
                                         {new Date(comment.createdAt).toLocaleDateString('fr-FR', {
                                           day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
                                         })}
                                       </span>
                                     </div>
-                                    <p className="text-slate-300 leading-relaxed whitespace-pre-line">{comment.content}</p>
+                                    <p className="text-foreground/80 leading-relaxed whitespace-pre-line">{comment.content}</p>
                                   </div>
                                 ))}
                               </div>
@@ -959,12 +959,12 @@ export default function RsvpPage() {
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter') handleCreateGuestComment(post.id);
                                 }}
-                                className="flex-1 px-3.5 py-2 bg-slate-800/60 border border-slate-700/80 rounded-xl text-[11px] focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors text-slate-100 placeholder-slate-500"
+                                className="flex-1 px-3.5 py-2 bg-surface-muted border border-border rounded-xl text-[11px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-foreground placeholder:text-muted"
                               />
                               <button
                                 onClick={() => handleCreateGuestComment(post.id)}
                                 disabled={guestCommentSubmitting[post.id] || !guestCommentContents[post.id]?.trim()}
-                                className="p-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl transition shadow-sm"
+                                className="p-2.5 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-white rounded-xl transition shadow-sm"
                               >
                                 {guestCommentSubmitting[post.id] ? (
                                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -985,31 +985,31 @@ export default function RsvpPage() {
           </div>
 
           {/* App Bottom Navigation Bar (iOS / Android Immersive Style) */}
-          <div className="absolute bottom-0 inset-x-0 bg-slate-950/90 backdrop-blur-md border-t border-slate-800/80 py-2.5 px-4 flex items-center justify-around z-30">
+          <div className="absolute bottom-0 inset-x-0 bg-background/90 backdrop-blur-md border-t border-border py-2.5 px-4 flex items-center justify-around z-30">
             <button
               onClick={() => setActiveGuestTab('badge')}
-              className={`flex flex-col items-center gap-1 transition ${activeGuestTab === 'badge' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}`}
+              className={`flex flex-col items-center gap-1 transition ${activeGuestTab === 'badge' ? 'text-primary' : 'text-muted hover:text-foreground/80'}`}
             >
               <Award className="w-5 h-5" />
               <span className="text-[9px] font-bold">Badge</span>
             </button>
             <button
               onClick={() => setActiveGuestTab('table')}
-              className={`flex flex-col items-center gap-1 transition ${activeGuestTab === 'table' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}`}
+              className={`flex flex-col items-center gap-1 transition ${activeGuestTab === 'table' ? 'text-primary' : 'text-muted hover:text-foreground/80'}`}
             >
               <LayoutGrid className="w-5 h-5" />
               <span className="text-[9px] font-bold">Ma Table</span>
             </button>
             <button
               onClick={() => setActiveGuestTab('guestbook')}
-              className={`flex flex-col items-center gap-1 transition ${activeGuestTab === 'guestbook' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}`}
+              className={`flex flex-col items-center gap-1 transition ${activeGuestTab === 'guestbook' ? 'text-primary' : 'text-muted hover:text-foreground/80'}`}
             >
               <Heart className="w-5 h-5" />
               <span className="text-[9px] font-bold">Livre d'or</span>
             </button>
             <button
               onClick={() => setActiveGuestTab('feed')}
-              className={`flex flex-col items-center gap-1 transition ${activeGuestTab === 'feed' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}`}
+              className={`flex flex-col items-center gap-1 transition ${activeGuestTab === 'feed' ? 'text-primary' : 'text-muted hover:text-foreground/80'}`}
             >
               <MessageCircle className="w-5 h-5" />
               <span className="text-[9px] font-bold">Live Feed</span>
@@ -1018,7 +1018,7 @@ export default function RsvpPage() {
 
           {/* iOS Home Indicator Bar (visible on desktop) */}
           <div className="hidden md:block absolute bottom-1 inset-x-0 h-1 flex justify-center z-40">
-            <div className="w-32 h-1 bg-slate-700 rounded-full" />
+            <div className="w-32 h-1 bg-surface-muted rounded-full" />
           </div>
 
         </div>
@@ -1137,7 +1137,7 @@ export default function RsvpPage() {
 
   const renderRsvpFieldInput = (field: RsvpField) => {
     const options = parseFieldOptions(field.options);
-    const inputClass = 'w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-indigo-500 bg-white';
+    const inputClass = 'w-full px-3.5 py-2 border border-border rounded-xl text-sm text-foreground focus:outline-primary bg-surface';
     const value = customFieldValues[field.id];
 
     if (field.type === 'textarea') {
@@ -1180,9 +1180,9 @@ export default function RsvpPage() {
                 checked={value === opt}
                 onChange={() => updateCustomField(field.id, opt)}
                 required={field.required}
-                className="text-indigo-600 focus:ring-indigo-500"
+                className="text-primary focus:ring-primary"
               />
-              <span className="text-xs text-slate-600 font-semibold">{opt}</span>
+              <span className="text-xs text-muted font-semibold">{opt}</span>
             </label>
           ))}
         </div>
@@ -1197,9 +1197,9 @@ export default function RsvpPage() {
             checked={Boolean(value)}
             onChange={(e) => updateCustomField(field.id, e.target.checked)}
             required={field.required}
-            className="rounded text-indigo-600 focus:ring-indigo-500"
+            className="rounded text-primary focus:ring-primary"
           />
-          <span className="text-xs text-slate-600 font-semibold">{field.label}</span>
+          <span className="text-xs text-muted font-semibold">{field.label}</span>
         </label>
       );
     }
@@ -1216,10 +1216,10 @@ export default function RsvpPage() {
               type="button"
               onClick={() => updateCustomField(field.id, val)}
               className={`py-2 px-3 rounded-xl text-xs font-bold border transition ${
-                value === val
-                  ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
-                  : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-              }`}
+ value === val
+ ? 'border-primary bg-primary/10 text-primary'
+ : 'border-border text-muted hover:bg-surface-muted'
+ }`}
             >
               {label}
             </button>
@@ -1237,10 +1237,10 @@ export default function RsvpPage() {
               type="button"
               onClick={() => updateCustomField(field.id, rating)}
               className={`w-9 h-9 rounded-lg text-sm font-bold border transition ${
-                Number(value) === rating
-                  ? 'border-amber-500 bg-amber-50 text-amber-700'
-                  : 'border-slate-200 text-slate-500 hover:bg-slate-50'
-              }`}
+ Number(value) === rating
+ ? 'border-amber-500 bg-amber-50 text-amber-700'
+ : 'border-border text-muted hover:bg-surface-muted'
+ }`}
             >
               {rating}
             </button>
@@ -1291,16 +1291,16 @@ export default function RsvpPage() {
       <div
         className={
           isOutside
-            ? 'bg-white border border-slate-200/80 rounded-[28px] p-6 sm:p-8 space-y-6 text-center shadow-2xl relative overflow-hidden w-full'
-            : 'bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl p-6 space-y-5 text-center shadow-sm'
+            ? 'bg-surface border border-border/80 rounded-[28px] p-6 sm:p-8 space-y-6 text-center shadow-2xl relative overflow-hidden w-full'
+            : 'bg-surface/80 backdrop-blur-sm border border-border rounded-2xl p-6 space-y-5 text-center shadow-sm'
         }
       >
         {isOutside && (
-          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-500 to-violet-500" />
+          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-primary to-primary/80" />
         )}
         <div className={isOutside ? 'relative z-10' : undefined}>
         {renderRsvpLockedBanner()}
-        <div className={`font-bold text-slate-800 ${isOutside ? 'text-base sm:text-lg' : 'text-sm'}`}>{formatText(el.text)}</div>
+        <div className={`font-bold text-foreground ${isOutside ? 'text-base sm:text-lg' : 'text-sm'}`}>{formatText(el.text)}</div>
         
         {/* Yes/No Buttons */}
         <div className="grid grid-cols-2 gap-4">
@@ -1308,9 +1308,9 @@ export default function RsvpPage() {
             type="button"
             disabled={rsvpLocked}
             onClick={() => !rsvpLocked && setRsvpStatus('ACCEPTED')}
-            className={`py-3.5 px-4 border-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 transition ${rsvpStatus === 'ACCEPTED' ? 'border-emerald-600 bg-emerald-50/20 text-emerald-800 shadow-md shadow-emerald-50' : 'border-slate-200 hover:bg-slate-50 text-slate-600'}`}
+            className={`py-3.5 px-4 border-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 transition ${rsvpStatus === 'ACCEPTED' ? 'border-emerald-600 bg-emerald-50/20 text-emerald-800 shadow-md shadow-emerald-50' : 'border-border hover:bg-surface-muted text-muted'}`}
           >
-            <CheckCircle2 className={`w-6 h-6 ${rsvpStatus === 'ACCEPTED' ? 'text-emerald-600' : 'text-slate-300'}`} />
+            <CheckCircle2 className={`w-6 h-6 ${rsvpStatus === 'ACCEPTED' ? 'text-emerald-600' : 'text-foreground/80'}`} />
             <span className="text-xs font-bold">Oui, avec joie !</span>
           </button>
 
@@ -1318,39 +1318,39 @@ export default function RsvpPage() {
             type="button"
             disabled={rsvpLocked}
             onClick={() => !rsvpLocked && setRsvpStatus('DECLINED')}
-            className={`py-3.5 px-4 border-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 transition ${rsvpStatus === 'DECLINED' ? 'border-rose-600 bg-rose-50/20 text-rose-800 shadow-md shadow-rose-50' : 'border-slate-200 hover:bg-slate-50 text-slate-600'}`}
+            className={`py-3.5 px-4 border-2 rounded-2xl flex flex-col items-center justify-center gap-1.5 transition ${rsvpStatus === 'DECLINED' ? 'border-rose-600 bg-rose-50/20 text-rose-800 shadow-md shadow-rose-50' : 'border-border hover:bg-surface-muted text-muted'}`}
           >
-            <XCircle className={`w-6 h-6 ${rsvpStatus === 'DECLINED' ? 'text-rose-600' : 'text-slate-300'}`} />
+            <XCircle className={`w-6 h-6 ${rsvpStatus === 'DECLINED' ? 'text-rose-600' : 'text-foreground/80'}`} />
             <span className="text-xs font-bold">Non, désolé(e)</span>
           </button>
         </div>
 
         {/* If attending, show custom and standard fields */}
         {rsvpStatus === 'ACCEPTED' && (
-          <div className="space-y-4 border-t border-slate-200/60 pt-4 text-left">
+          <div className="space-y-4 border-t border-border/60 pt-4 text-left">
             {/* Custom Fields */}
             {el.rsvpFields && el.rsvpFields.map((field: RsvpField) => (
               <div key={field.id} className="space-y-1.5">
                 {field.type !== 'checkbox' && (
-                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-muted uppercase tracking-wider">
                     {field.label} {field.required && <span className="text-rose-500">*</span>}
                   </label>
                 )}
                 {field.helpText && (
-                  <p className="text-[10px] text-slate-400">{field.helpText}</p>
+                  <p className="text-[10px] text-muted">{field.helpText}</p>
                 )}
                 {renderRsvpFieldInput(field)}
               </div>
             ))}
 
             {/* Standard Fields */}
-            <div className="space-y-4 border-t border-slate-100 pt-4">
+            <div className="space-y-4 border-t border-border pt-4">
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Type de Menu</label>
+                <label className="block text-xs font-bold text-muted uppercase mb-1">Type de Menu</label>
                 <select
                   value={specialMeal}
                   onChange={e => setSpecialMeal(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-indigo-500 bg-white"
+                  className="w-full px-3 py-2 border border-border rounded-xl text-sm text-foreground focus:outline-primary bg-surface"
                 >
                   <option value="none">Standard</option>
                   <option value="vegetarian">Végétarien</option>
@@ -1361,22 +1361,22 @@ export default function RsvpPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Allergies éventuelles</label>
+                <label className="block text-xs font-bold text-muted uppercase mb-1">Allergies éventuelles</label>
                 <input
                   type="text"
                   value={allergies}
                   onChange={e => setAllergies(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-indigo-500 bg-white"
+                  className="w-full px-3 py-2 border border-border rounded-xl text-sm text-foreground focus:outline-primary bg-surface"
                   placeholder="Ex: Arachides, fruits de mer..."
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Message à l'organisateur</label>
+                <label className="block text-xs font-bold text-muted uppercase mb-1">Message à l'organisateur</label>
                 <textarea
                   value={additionalNotes}
                   onChange={e => setAdditionalNotes(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm text-slate-900 focus:outline-indigo-500 bg-white"
+                  className="w-full px-3 py-2 border border-border rounded-xl text-sm text-foreground focus:outline-primary bg-surface"
                   placeholder="Ex: Je serai accompagné(e) de..."
                   rows={2}
                 />
@@ -1389,7 +1389,7 @@ export default function RsvpPage() {
         <button
           type="submit"
           disabled={submitting || rsvpLocked}
-          className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl transition shadow-lg shadow-indigo-100 disabled:opacity-50 flex items-center justify-center gap-2"
+          className="w-full py-3 bg-primary hover:bg-primary/90 text-white font-black rounded-2xl transition shadow-lg shadow-primary/10 disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {submitting ? (
             <>
@@ -1418,20 +1418,20 @@ export default function RsvpPage() {
       };
 
   return (
-    <div className="min-h-screen bg-slate-100 px-4 py-12 flex flex-col items-center justify-center gap-6 relative overflow-hidden">
+    <div className="min-h-screen bg-surface-muted px-4 py-12 flex flex-col items-center justify-center gap-6 relative overflow-hidden">
       {/* Load Google Fonts stylesheet */}
       <link 
         href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Dancing+Script:wght@500;700&family=Great+Vibes&family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Pinyon+Script&family=Monsieur+La+Doulaise&family=Italiana&family=Bodoni+Moda:ital,wght@0,400;0,700;1,400&family=Allura&family=Parisienne&family=Prata&family=Sacramento&family=Marcellus&display=swap" 
         rel="stylesheet" 
       />
 
-      <div className="absolute inset-0 bg-grid-slate-200 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.7))]" />
+      <div className="absolute inset-0 bg-grid-border [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.7))]" />
 
       <div className="w-full relative z-10 flex justify-between items-center px-1 gap-2" style={{ maxWidth: canvasStyle.maxWidth }}>
         <GuestPortalHomeLink guestId={guestId} variant="light" />
         <Link
           href="/guide/invite"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-600 transition"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-primary transition"
         >
           <HelpCircle className="w-3.5 h-3.5" />
           Aide invité
@@ -1445,12 +1445,12 @@ export default function RsvpPage() {
           maxWidth: canvasStyle.maxWidth,
           minHeight: canvasStyle.minHeight,
         }}
-        className={`w-full border border-slate-200 shadow-2xl relative z-10 overflow-hidden flex flex-col transition-all duration-300 ${
-          template && frameType === 'arch' ? 'rounded-t-[240px] border-t-2 border-x-2 border-amber-200/60' : 'rounded-3xl'
-        }`}
+        className={`w-full border border-border shadow-2xl relative z-10 overflow-hidden flex flex-col transition-all duration-300 ${
+ template && frameType === 'arch' ? 'rounded-t-[240px] border-t-2 border-x-2 border-amber-200/60' : 'rounded-3xl'
+ }`}
       >
         {/* Top visual envelope flap (only shown if not using custom template) */}
-        {!template && <div className="h-3 bg-gradient-to-r from-indigo-500 to-violet-500" />}
+        {!template && <div className="h-3 bg-gradient-to-r from-primary to-primary/80" />}
 
         {/* Double Border Frame */}
         {template && frameType === 'double-border' && (
@@ -1818,13 +1818,13 @@ export default function RsvpPage() {
                                 fontStyle: el.italic ? 'italic' : 'normal'
                               }}
                               className={`font-bold text-center inline-block transition-all cursor-pointer ${
-                                el.buttonStyle === 'outline' ? 'px-6 py-2.5 rounded-xl border-2 shadow-sm' :
-                                el.buttonStyle === 'pill' ? 'px-6 py-2.5 rounded-full shadow-md' :
-                                el.buttonStyle === 'gold-glow' ? 'px-6 py-2.5 rounded-xl shadow-[0_0_15px_rgba(197,160,89,0.4)]' :
-                                el.buttonStyle === 'double-border' ? 'px-6 py-2 rounded-xl border-4 border-double' :
-                                el.buttonStyle === 'minimalist' ? 'px-2 py-1 border-b-2 rounded-none shadow-none' :
-                                'px-5 py-2.5 rounded-xl shadow-md shadow-indigo-100'
-                              }`}
+ el.buttonStyle === 'outline' ? 'px-6 py-2.5 rounded-xl border-2 shadow-sm' :
+ el.buttonStyle === 'pill' ? 'px-6 py-2.5 rounded-full shadow-md' :
+ el.buttonStyle === 'gold-glow' ? 'px-6 py-2.5 rounded-xl shadow-[0_0_15px_rgba(197,160,89,0.4)]' :
+ el.buttonStyle === 'double-border' ? 'px-6 py-2 rounded-xl border-4 border-double' :
+ el.buttonStyle === 'minimalist' ? 'px-2 py-1 border-b-2 rounded-none shadow-none' :
+ 'px-5 py-2.5 rounded-xl shadow-md shadow-primary/10'
+ }`}
                             >
                               {formatText(el.text)}
                             </button>
@@ -1845,13 +1845,13 @@ export default function RsvpPage() {
                                 display: 'inline-block'
                               }}
                               className={`font-bold text-center transition-all cursor-pointer ${
-                                el.buttonStyle === 'outline' ? 'px-6 py-2.5 rounded-xl border-2 shadow-sm' :
-                                el.buttonStyle === 'pill' ? 'px-6 py-2.5 rounded-full shadow-md' :
-                                el.buttonStyle === 'gold-glow' ? 'px-6 py-2.5 rounded-xl shadow-[0_0_15px_rgba(197,160,89,0.4)]' :
-                                el.buttonStyle === 'double-border' ? 'px-6 py-2 rounded-xl border-4 border-double' :
-                                el.buttonStyle === 'minimalist' ? 'px-2 py-1 border-b-2 rounded-none shadow-none' :
-                                'px-5 py-2.5 rounded-xl shadow-md shadow-indigo-100'
-                              }`}
+ el.buttonStyle === 'outline' ? 'px-6 py-2.5 rounded-xl border-2 shadow-sm' :
+ el.buttonStyle === 'pill' ? 'px-6 py-2.5 rounded-full shadow-md' :
+ el.buttonStyle === 'gold-glow' ? 'px-6 py-2.5 rounded-xl shadow-[0_0_15px_rgba(197,160,89,0.4)]' :
+ el.buttonStyle === 'double-border' ? 'px-6 py-2 rounded-xl border-4 border-double' :
+ el.buttonStyle === 'minimalist' ? 'px-2 py-1 border-b-2 rounded-none shadow-none' :
+ 'px-5 py-2.5 rounded-xl shadow-md shadow-primary/10'
+ }`}
                             >
                               {formatText(el.text)}
                             </a>
@@ -1869,13 +1869,13 @@ export default function RsvpPage() {
                               fontStyle: el.italic ? 'italic' : 'normal'
                             }}
                             className={`font-bold text-center inline-block transition-all ${
-                              el.buttonStyle === 'outline' ? 'px-6 py-2.5 rounded-xl border-2 shadow-sm' :
-                              el.buttonStyle === 'pill' ? 'px-6 py-2.5 rounded-full shadow-md' :
-                              el.buttonStyle === 'gold-glow' ? 'px-6 py-2.5 rounded-xl shadow-[0_0_15px_rgba(197,160,89,0.4)]' :
-                              el.buttonStyle === 'double-border' ? 'px-6 py-2 rounded-xl border-4 border-double' :
-                              el.buttonStyle === 'minimalist' ? 'px-2 py-1 border-b-2 rounded-none shadow-none' :
-                              'px-5 py-2.5 rounded-xl shadow-md shadow-indigo-100'
-                            }`}
+ el.buttonStyle === 'outline' ? 'px-6 py-2.5 rounded-xl border-2 shadow-sm' :
+ el.buttonStyle === 'pill' ? 'px-6 py-2.5 rounded-full shadow-md' :
+ el.buttonStyle === 'gold-glow' ? 'px-6 py-2.5 rounded-xl shadow-[0_0_15px_rgba(197,160,89,0.4)]' :
+ el.buttonStyle === 'double-border' ? 'px-6 py-2 rounded-xl border-4 border-double' :
+ el.buttonStyle === 'minimalist' ? 'px-2 py-1 border-b-2 rounded-none shadow-none' :
+ 'px-5 py-2.5 rounded-xl shadow-md shadow-primary/10'
+ }`}
                           >
                             {formatText(el.text)}
                           </div>
@@ -1889,18 +1889,18 @@ export default function RsvpPage() {
                             src={el.imageUrl} 
                             alt="Invitation" 
                             style={{ width: el.imageWidth || '100%', height: el.imageHeight || 'auto', objectFit: el.imageObjectFit || 'cover' }}
-                            className={`border border-slate-200 shadow-sm ${
-                              el.imageStyle === 'circle' ? 'rounded-full border-2 border-amber-200 aspect-square' :
-                              el.imageStyle === 'arch' ? 'rounded-t-[120px] border-2 border-amber-100' :
-                              el.imageStyle === 'oval' ? 'rounded-[50%] border-2 border-amber-100 aspect-[3/4]' :
-                              el.imageStyle === 'gold-frame' ? 'rounded-2xl border-4 border-amber-400/80 p-1 bg-white shadow-lg' :
-                              el.imageStyle === 'vintage' ? 'rounded-none border-8 border-amber-950/10 shadow-xl sepia contrast-[1.1]' :
-                              el.imageStyle === 'shadow-luxury' ? 'rounded-3xl border border-slate-100 shadow-[0_15px_30px_rgba(197,160,89,0.12)]' :
-                              'rounded-2xl'
-                            }`}
+                            className={`border border-border shadow-sm ${
+ el.imageStyle === 'circle' ? 'rounded-full border-2 border-amber-200 aspect-square' :
+ el.imageStyle === 'arch' ? 'rounded-t-[120px] border-2 border-amber-100' :
+ el.imageStyle === 'oval' ? 'rounded-[50%] border-2 border-amber-100 aspect-[3/4]' :
+ el.imageStyle === 'gold-frame' ? 'rounded-2xl border-4 border-amber-400/80 p-1 bg-surface shadow-lg' :
+ el.imageStyle === 'vintage' ? 'rounded-none border-8 border-amber-950/10 shadow-xl sepia contrast-[1.1]' :
+ el.imageStyle === 'shadow-luxury' ? 'rounded-3xl border border-border shadow-[0_15px_30px_rgba(197,160,89,0.12)]' :
+ 'rounded-2xl'
+ }`}
                           />
                         ) : (
-                          <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 text-center text-xs text-slate-500 font-semibold w-full">
+                          <div className="bg-surface-muted border border-border rounded-xl p-6 text-center text-xs text-muted font-semibold w-full">
                             {el.text || "Image d'illustration"}
                           </div>
                         )}
@@ -1994,41 +1994,41 @@ export default function RsvpPage() {
           ) : (
             <div className="space-y-8">
               <div className="text-center space-y-2">
-                <div className="inline-flex items-center gap-1 bg-indigo-50 border border-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
+                <div className="inline-flex items-center gap-1 bg-primary/10 border border-primary/20 text-primary px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
                   <Sparkles className="w-3.5 h-3.5" />
                   Invitation Privée
                 </div>
-                <h1 className="text-3xl font-black text-slate-950 tracking-tight leading-tight">
+                <h1 className="text-3xl font-black text-foreground tracking-tight leading-tight">
                   {guest.event.title}
                 </h1>
-                <p className="text-sm font-semibold text-slate-500">
-                  Chaleureusement adressée à <span className="text-indigo-600 font-bold">{guest.firstName} {guest.lastName}</span>
+                <p className="text-sm font-semibold text-muted">
+                  Chaleureusement adressée à <span className="text-primary font-bold">{guest.firstName} {guest.lastName}</span>
                 </p>
               </div>
 
               {/* Event Details Box */}
-              <div className="bg-slate-50 border border-slate-150 rounded-2xl p-5 space-y-4 shadow-sm text-sm">
+              <div className="bg-surface-muted border border-border rounded-2xl p-5 space-y-4 shadow-sm text-sm">
                 {guest.event.description && (
-                  <p className="text-slate-600 italic leading-relaxed text-center border-b border-slate-100 pb-3.5">
+                  <p className="text-muted italic leading-relaxed text-center border-b border-border pb-3.5">
                     "{guest.event.description}"
                   </p>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="bg-indigo-50 text-indigo-600 p-2 rounded-xl"><Calendar className="w-5 h-5" /></div>
+                    <div className="bg-primary/10 text-primary p-2 rounded-xl"><Calendar className="w-5 h-5" /></div>
                     <div className="space-y-0.5">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date</div>
-                      <div className="font-extrabold text-slate-800 text-xs">
+                      <div className="text-[10px] font-bold text-muted uppercase tracking-widest">Date</div>
+                      <div className="font-extrabold text-foreground text-xs">
                         {new Date(guest.event.date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
                       </div>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <div className="bg-indigo-50 text-indigo-600 p-2 rounded-xl"><MapPin className="w-5 h-5" /></div>
+                    <div className="bg-primary/10 text-primary p-2 rounded-xl"><MapPin className="w-5 h-5" /></div>
                     <div className="space-y-0.5">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lieu</div>
-                      <div className="font-extrabold text-slate-800 text-xs truncate max-w-[150px]">{guest.event.location}</div>
+                      <div className="text-[10px] font-bold text-muted uppercase tracking-widest">Lieu</div>
+                      <div className="font-extrabold text-foreground text-xs truncate max-w-[150px]">{guest.event.location}</div>
                     </div>
                   </div>
                 </div>
@@ -2044,7 +2044,7 @@ export default function RsvpPage() {
               <form onSubmit={handleSubmitRsvp} className="space-y-6">
                 {renderRsvpLockedBanner()}
                 <div className="space-y-3">
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider text-center mb-1">
+                  <label className="block text-xs font-bold text-muted uppercase tracking-wider text-center mb-1">
                     Serez-vous parmi nous ?
                   </label>
                   
@@ -2053,9 +2053,9 @@ export default function RsvpPage() {
                       type="button"
                       disabled={rsvpLocked}
                       onClick={() => !rsvpLocked && setRsvpStatus('ACCEPTED')}
-                      className={`py-4 px-6 border-2 rounded-2xl flex flex-col items-center justify-center gap-2 transition ${rsvpStatus === 'ACCEPTED' ? 'border-emerald-600 bg-emerald-50/20 text-emerald-800 shadow-md shadow-emerald-50' : 'border-slate-200 hover:bg-slate-50 text-slate-600'}`}
+                      className={`py-4 px-6 border-2 rounded-2xl flex flex-col items-center justify-center gap-2 transition ${rsvpStatus === 'ACCEPTED' ? 'border-emerald-600 bg-emerald-50/20 text-emerald-800 shadow-md shadow-emerald-50' : 'border-border hover:bg-surface-muted text-muted'}`}
                     >
-                      <CheckCircle2 className={`w-7 h-7 ${rsvpStatus === 'ACCEPTED' ? 'text-emerald-600' : 'text-slate-300'}`} />
+                      <CheckCircle2 className={`w-7 h-7 ${rsvpStatus === 'ACCEPTED' ? 'text-emerald-600' : 'text-foreground/80'}`} />
                       <span className="text-sm font-bold">Oui, avec joie !</span>
                     </button>
 
@@ -2063,9 +2063,9 @@ export default function RsvpPage() {
                       type="button"
                       disabled={rsvpLocked}
                       onClick={() => !rsvpLocked && setRsvpStatus('DECLINED')}
-                      className={`py-4 px-6 border-2 rounded-2xl flex flex-col items-center justify-center gap-2 transition ${rsvpStatus === 'DECLINED' ? 'border-rose-600 bg-rose-50/20 text-rose-800 shadow-md shadow-rose-50' : 'border-slate-200 hover:bg-slate-50 text-slate-600'}`}
+                      className={`py-4 px-6 border-2 rounded-2xl flex flex-col items-center justify-center gap-2 transition ${rsvpStatus === 'DECLINED' ? 'border-rose-600 bg-rose-50/20 text-rose-800 shadow-md shadow-rose-50' : 'border-border hover:bg-surface-muted text-muted'}`}
                     >
-                      <XCircle className={`w-7 h-7 ${rsvpStatus === 'DECLINED' ? 'text-rose-600' : 'text-slate-300'}`} />
+                      <XCircle className={`w-7 h-7 ${rsvpStatus === 'DECLINED' ? 'text-rose-600' : 'text-foreground/80'}`} />
                       <span className="text-sm font-bold">Non, désolé(e)</span>
                     </button>
                   </div>
@@ -2073,19 +2073,19 @@ export default function RsvpPage() {
 
                 {/* Meal Preferences Panel - Only show if attending */}
                 {rsvpStatus === 'ACCEPTED' && (
-                  <div className="p-5 border border-slate-200 rounded-2xl bg-white space-y-4 shadow-sm animate-fade-in text-sm">
-                    <div className="flex items-center gap-2 font-bold text-slate-950 border-b border-slate-100 pb-3">
-                      <Utensils className="w-5 h-5 text-indigo-600" />
+                  <div className="p-5 border border-border rounded-2xl bg-surface space-y-4 shadow-sm animate-fade-in text-sm">
+                    <div className="flex items-center gap-2 font-bold text-foreground border-b border-border pb-3">
+                      <Utensils className="w-5 h-5 text-primary" />
                       <h4>Préférences de repas & Notes</h4>
                     </div>
 
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Type de Menu</label>
+                        <label className="block text-xs font-bold text-muted uppercase mb-1">Type de Menu</label>
                         <select
                           value={specialMeal}
                           onChange={e => setSpecialMeal(e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-indigo-500"
+                          className="w-full px-3 py-2 border border-border rounded-lg text-sm text-foreground focus:outline-primary"
                         >
                           <option value="none">Standard</option>
                           <option value="vegetarian">Végétarien</option>
@@ -2096,12 +2096,12 @@ export default function RsvpPage() {
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Allergies éventuelles</label>
+                        <label className="block text-xs font-bold text-muted uppercase mb-1">Allergies éventuelles</label>
                         <input
                           type="text"
                           value={allergies}
                           onChange={e => setAllergies(e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-indigo-500"
+                          className="w-full px-3 py-2 border border-border rounded-lg text-sm text-foreground focus:outline-primary"
                           placeholder="Ex: Arachides, fruits de mer, lactose..."
                         />
                       </div>
@@ -2111,13 +2111,13 @@ export default function RsvpPage() {
 
                 {/* Additional notes */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                  <label className="block text-xs font-bold text-muted uppercase mb-1">
                     Remarques / Message à l'organisateur
                   </label>
                   <textarea
                     value={additionalNotes}
                     onChange={e => setAdditionalNotes(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-indigo-500"
+                    className="w-full px-3 py-2 border border-border rounded-lg text-sm text-foreground focus:outline-primary"
                     placeholder="Ex: Je serai accompagné(e) de..."
                     rows={2}
                   />
@@ -2126,7 +2126,7 @@ export default function RsvpPage() {
                 <button
                   type="submit"
                   disabled={submitting || rsvpLocked}
-                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl transition shadow-lg shadow-indigo-100 disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-primary hover:bg-primary/90 text-white font-black rounded-2xl transition shadow-lg shadow-primary/10 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {submitting ? (
                     <>
@@ -2154,14 +2154,14 @@ export default function RsvpPage() {
 
       {/* Event Location & Directions Card */}
       {guest && guest.event?.location && (
-        <div className="w-full max-w-lg bg-white/90 backdrop-blur-md rounded-[24px] border border-slate-200/60 shadow-xl p-6 space-y-4 text-center relative overflow-hidden animate-fade-in">
+        <div className="w-full max-w-lg bg-surface/90 backdrop-blur-md rounded-[24px] border border-border/60 shadow-xl p-6 space-y-4 text-center relative overflow-hidden animate-fade-in">
           <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-amber-200 via-yellow-500 to-amber-200" />
           <div className="flex flex-col items-center gap-2">
             <div className="bg-amber-50 text-amber-700 p-2.5 rounded-full border border-amber-100/50">
               <MapPin className="w-5 h-5" />
             </div>
-            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-widest font-serif">Lieu de Réception</h3>
-            <p className="text-sm text-slate-700 font-semibold max-w-md mx-auto leading-relaxed">
+            <h3 className="text-xs font-bold text-foreground uppercase tracking-widest font-serif">Lieu de Réception</h3>
+            <p className="text-sm text-foreground font-semibold max-w-md mx-auto leading-relaxed">
               {guest.event.location}
             </p>
           </div>
@@ -2169,7 +2169,7 @@ export default function RsvpPage() {
           {guest.placementAccessible ? (
             <>
               {/* Interactive Map Embed */}
-              <div className="w-full overflow-hidden rounded-2xl border border-slate-100 shadow-inner h-[250px] relative bg-slate-50">
+              <div className="w-full overflow-hidden rounded-2xl border border-border shadow-inner h-[250px] relative bg-surface-muted">
                 <iframe
                   width="100%"
                   height="100%"
@@ -2195,7 +2195,7 @@ export default function RsvpPage() {
                   }
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition shadow-md shadow-slate-200 hover:shadow-lg"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-surface hover:bg-surface-muted text-foreground font-bold rounded-xl text-xs uppercase tracking-wider transition shadow-md shadow-border hover:shadow-lg"
                 >
                   <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                     <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
@@ -2215,7 +2215,7 @@ export default function RsvpPage() {
               </div>
             </>
           ) : (
-            <p className="text-xs text-slate-500 leading-relaxed max-w-sm mx-auto">
+            <p className="text-xs text-muted leading-relaxed max-w-sm mx-auto">
               L&apos;itinéraire GPS détaillé sera partagé après validation de votre présence à
               l&apos;entrée (scan QR). Le lieu texte ci-dessus reste disponible pour vous orienter.
             </p>

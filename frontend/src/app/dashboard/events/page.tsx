@@ -154,7 +154,7 @@ function getBroadcastStatusMeta(status: string) {
     case 'FAILED':
       return { label: 'Échec', classes: 'bg-rose-50 text-rose-700 border-rose-200' };
     default:
-      return { label: status, classes: 'bg-slate-50 text-slate-600 border-slate-200' };
+      return { label: status, classes: 'bg-surface-muted text-muted border-border' };
   }
 }
 
@@ -1461,7 +1461,7 @@ export default function EventsPage() {
   if (user?.role === 'SUPER_ADMIN') {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center bg-white border border-slate-200 rounded-3xl p-8 text-center max-w-2xl mx-auto">
-        <div className="bg-indigo-50 text-indigo-600 p-4 rounded-full mb-6">
+        <div className="bg-primary/10 text-primary p-4 rounded-full mb-6">
           <Calendar className="w-12 h-12" />
         </div>
         <h1 className="text-2xl font-black text-slate-900">Gestion des Événements (Super Admin)</h1>
@@ -1469,11 +1469,11 @@ export default function EventsPage() {
           En tant que Super Administrateur de la plateforme SaaS, vous n'êtes pas rattaché à une organisation spécifique et ne gérez pas d'événements en nom propre.
         </p>
         <p className="text-slate-500 mt-2 leading-relaxed">
-          Veuillez utiliser le <strong className="text-indigo-600">Tableau de bord Admin</strong> pour superviser l'ensemble des organisations, leurs membres et leurs statistiques d'utilisation.
+          Veuillez utiliser le <strong className="text-primary">Tableau de bord Admin</strong> pour superviser l'ensemble des organisations, leurs membres et leurs statistiques d'utilisation.
         </p>
         <Link 
           href="/dashboard" 
-          className="mt-8 inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-lg shadow-indigo-100"
+          className="mt-8 inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl transition shadow-lg shadow-primary/10"
         >
           Retour au Tableau de Bord Admin
         </Link>
@@ -1808,8 +1808,8 @@ export default function EventsPage() {
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">Liste des Invités</h2>
-                  <p className="text-slate-500 text-sm mt-0.5">Ajoutez des invités manuellement ou importez-les en bloc à partir d'un fichier CSV.</p>
+                  <h2 className="text-xl font-bold text-foreground">Liste des Invités</h2>
+                  <p className="text-muted text-sm mt-0.5">Ajoutez des invités manuellement ou importez-les en bloc à partir d'un fichier CSV.</p>
                 </div>
                 <div className="flex gap-2.5">
                   {selectedGuestIds.length > 0 && (
@@ -1835,7 +1835,7 @@ export default function EventsPage() {
                     }}
                     disabled={guestsAtLimit}
                     title={guestsQuotaMsg || undefined}
-                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold rounded-xl text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 border border-border text-muted hover:bg-surface-muted font-semibold rounded-xl text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
                     Importer Excel / CSV
@@ -1843,7 +1843,7 @@ export default function EventsPage() {
                   {guests.length > 0 && (
                     <button 
                       onClick={handleExportGuests}
-                      className="inline-flex items-center justify-center gap-1.5 px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold rounded-xl text-sm transition"
+                      className="inline-flex items-center justify-center gap-1.5 px-4 py-2 border border-border text-muted hover:bg-surface-muted font-semibold rounded-xl text-sm transition"
                       title="Exporter tous les invités en fichier CSV"
                     >
                       <Download className="w-4 h-4" />
@@ -1854,7 +1854,7 @@ export default function EventsPage() {
                     onClick={openAddGuestModal}
                     disabled={guestsAtLimit}
                     title={guestsQuotaMsg || undefined}
-                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/10 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <PlusCircle className="w-4 h-4" />
                     Ajouter un invité
@@ -1872,17 +1872,17 @@ export default function EventsPage() {
 
               {/* Search & Filtering Controls */}
               {guests.length > 0 && (
-                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+                <div className="bg-surface-muted border border-border rounded-2xl p-4 space-y-3">
                   <div className="flex flex-col md:flex-row gap-3 items-center">
                     {/* Search Input */}
                     <div className="relative w-full md:flex-1">
-                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted w-4 h-4" />
                       <input 
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Rechercher un invité par nom ou email..."
-                        className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition shadow-sm"
+                        className="w-full pl-10 pr-4 py-2 bg-surface border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition shadow-sm"
                       />
                     </div>
 
@@ -1891,7 +1891,7 @@ export default function EventsPage() {
                       <select 
                         value={rsvpFilter}
                         onChange={(e) => setRsvpFilter(e.target.value as any)}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition shadow-sm font-semibold text-slate-700"
+                        className="w-full px-3 py-2 bg-surface border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition shadow-sm font-semibold text-foreground"
                       >
                         <option value="ALL">Tous les statuts RSVP</option>
                         <option value="ACCEPTED">Présent uniquement</option>
@@ -1905,7 +1905,7 @@ export default function EventsPage() {
                       <select 
                         value={categoryFilter}
                         onChange={(e) => setCategoryFilter(e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition shadow-sm font-semibold text-slate-700"
+                        className="w-full px-3 py-2 bg-surface border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition shadow-sm font-semibold text-foreground"
                       >
                         <option value="ALL">Toutes les catégories</option>
                         {uniqueCategories.map(cat => (
@@ -1919,8 +1919,8 @@ export default function EventsPage() {
                       onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
                       className={`w-full md:w-auto px-4 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border ${
                         showAdvancedFilters 
-                          ? 'bg-indigo-50 border-indigo-200 text-indigo-700' 
-                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                          ? 'bg-primary/10 border-primary/30 text-primary' 
+                          : 'bg-surface border-border text-muted hover:bg-surface-muted'
                       }`}
                     >
                       <Filter className="w-3.5 h-3.5" />
@@ -1937,7 +1937,7 @@ export default function EventsPage() {
                           setDietFilter('ALL');
                           setCustomFilters({});
                         }}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-700 transition bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-xl"
+                        className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:text-primary transition bg-primary/10 hover:bg-primary/15 px-3 py-2 rounded-xl"
                       >
                         <RefreshCw className="w-3.5 h-3.5 animate-spin-once" />
                         Réinitialiser
@@ -1947,14 +1947,14 @@ export default function EventsPage() {
 
                   {/* Advanced Collapsible Filters */}
                   {showAdvancedFilters && (
-                    <div className="pt-3 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 animate-fade-in">
+                    <div className="pt-3 border-t border-border grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 animate-fade-in">
                       {/* Diet Filter */}
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Régime alimentaire</label>
+                        <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Régime alimentaire</label>
                         <select 
                           value={dietFilter}
                           onChange={(e) => setDietFilter(e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition shadow-sm font-semibold text-slate-700"
+                          className="w-full px-3 py-2 bg-surface border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition shadow-sm font-semibold text-foreground"
                         >
                           <option value="ALL">Tous les régimes</option>
                           <option value="none">Standard</option>
@@ -1970,14 +1970,14 @@ export default function EventsPage() {
                         const currentValue = customFilters[field.label] || 'ALL';
                         return (
                           <div key={field.id} className="space-y-1">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate block max-w-full" title={field.label}>
+                            <label className="text-[10px] font-bold text-muted uppercase tracking-wider truncate block max-w-full" title={field.label}>
                               {field.label}
                             </label>
                             {isBooleanFieldType(field.type) ? (
                               <select 
                                 value={currentValue}
                                 onChange={(e) => setCustomFilters({ ...customFilters, [field.label]: e.target.value })}
-                                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition shadow-sm font-semibold text-slate-700"
+                                className="w-full px-3 py-2 bg-surface border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition shadow-sm font-semibold text-foreground"
                               >
                                 <option value="ALL">Tous</option>
                                 <option value="Oui">Coché (Oui)</option>
@@ -1987,7 +1987,7 @@ export default function EventsPage() {
                               <select 
                                 value={currentValue}
                                 onChange={(e) => setCustomFilters({ ...customFilters, [field.label]: e.target.value })}
-                                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition shadow-sm font-semibold text-slate-700"
+                                className="w-full px-3 py-2 bg-surface border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition shadow-sm font-semibold text-foreground"
                               >
                                 <option value="ALL">Tous</option>
                                 {field.options.map(opt => (
@@ -2000,7 +2000,7 @@ export default function EventsPage() {
                                 value={currentValue === 'ALL' ? '' : currentValue}
                                 onChange={(e) => setCustomFilters({ ...customFilters, [field.label]: e.target.value || 'ALL' })}
                                 placeholder="Filtrer par réponse..."
-                                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-indigo-500 transition shadow-sm font-semibold text-slate-700"
+                                className="w-full px-3 py-2 bg-surface border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition shadow-sm font-semibold text-foreground"
                               />
                             )}
                           </div>
@@ -2012,7 +2012,7 @@ export default function EventsPage() {
               )}
 
               {/* Guests Table */}
-              <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+              <div className="bg-surface border border-border rounded-3xl overflow-hidden shadow-sm">
                 {guests.length === 0 ? (
                   <div className="text-center py-14 px-6">
                     <Users className="w-12 h-12 text-muted mx-auto mb-4 opacity-60" />
@@ -2048,16 +2048,16 @@ export default function EventsPage() {
                   </div>
                 ) : filteredGuests.length === 0 ? (
                   <div className="text-center py-16">
-                    <Search className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                    <h3 className="font-bold text-slate-700">Aucun résultat</h3>
-                    <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">Aucun invité ne correspond à vos critères de recherche ou de filtrage.</p>
+                    <Search className="w-12 h-12 text-muted mx-auto mb-4" />
+                    <h3 className="font-bold text-foreground">Aucun résultat</h3>
+                    <p className="text-sm text-muted mt-1 max-w-xs mx-auto">Aucun invité ne correspond à vos critères de recherche ou de filtrage.</p>
                     <button
                       onClick={() => {
                         setSearchQuery('');
                         setRsvpFilter('ALL');
                         setCategoryFilter('ALL');
                       }}
-                      className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-700 transition bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-xl"
+                      className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-primary hover:text-primary transition bg-primary/10 hover:bg-primary/15 px-3 py-2 rounded-xl"
                     >
                       Effacer les filtres
                     </button>
@@ -2106,10 +2106,10 @@ export default function EventsPage() {
                                 className="rounded border-border text-primary focus:ring-primary h-4 w-4"
                               />
                             </td>
-                            <td className="py-4 px-6 font-bold text-slate-900">{g.firstName} {g.lastName}</td>
-                            <td className="py-4 px-6 text-slate-500 font-medium">{g.email}</td>
+                            <td className="py-4 px-6 font-bold text-foreground">{g.firstName} {g.lastName}</td>
+                            <td className="py-4 px-6 text-muted font-medium">{g.email}</td>
                             <td className="py-4 px-6">
-                              <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 border border-slate-200 text-slate-600">
+                              <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface-muted border border-border text-muted">
                                 {g.category || 'Général'}
                               </span>
                             </td>
@@ -2141,7 +2141,7 @@ export default function EventsPage() {
                               )}
                               </div>
                             </td>
-                            <td className="py-4 px-6 text-slate-500 font-medium max-w-xs truncate">
+                            <td className="py-4 px-6 text-muted font-medium max-w-xs truncate">
                               {g.preferences ? (
                                 <span className="text-xs">
                                   {g.preferences.diet && `Régime: ${g.preferences.diet}`}
@@ -2150,34 +2150,34 @@ export default function EventsPage() {
                                   {g.preferences.notes && ` • Notes: ${g.preferences.notes}`}
                                 </span>
                               ) : (
-                                <span className="text-slate-300 italic text-xs">Aucune préférence</span>
+                                <span className="text-muted italic text-xs">Aucune préférence</span>
                               )}
                             </td>
                             <td className="py-4 px-6 text-right flex items-center justify-end gap-1.5">
                               <button 
                                 onClick={() => setSelectedGuestDetails(g)}
-                                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                                className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition"
                                 title="Voir les détails et choix de l'invité"
                               >
                                 <Eye className="w-4 h-4" />
                               </button>
                               <button 
                                 onClick={() => handleEditGuestClick(g)}
-                                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                                className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition"
                                 title="Modifier l'invité"
                               >
                                 <Edit3 className="w-4 h-4" />
                               </button>
                               <button 
                                 onClick={() => setSharingGuest(g)}
-                                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                                className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition"
                                 title="Partager l'invitation (WhatsApp, X, Instagram)"
                               >
                                 <Share2 className="w-4 h-4" />
                               </button>
                               <button 
                                 onClick={() => handleDeleteGuest(g.id)}
-                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                                className="p-1.5 text-muted hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
                                 title="Supprimer l'invité"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -2218,7 +2218,7 @@ export default function EventsPage() {
                     setInviteChannel('EMAIL');
                     setShowInviteModal(true);
                   }}
-                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100"
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/10"
                 >
                   <PlusCircle className="w-4 h-4" />
                   Configurer une invitation
@@ -2239,7 +2239,7 @@ export default function EventsPage() {
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold border ${
-                            invite.channel === 'EMAIL' ? 'bg-indigo-50 border-indigo-100 text-indigo-700' :
+                            invite.channel === 'EMAIL' ? 'bg-primary/10 border-primary/20 text-primary' :
                             invite.channel === 'WHATSAPP' || invite.channel === 'SMS' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
                             invite.channel === 'EMAIL_AND_WHATSAPP' || invite.channel === 'EMAIL_AND_SMS' || invite.channel === 'ALL_CHANNELS' ? 'bg-violet-50 border-violet-100 text-violet-700' :
                             'bg-slate-50 border-slate-100 text-slate-700'
@@ -2257,7 +2257,7 @@ export default function EventsPage() {
                         <button 
                           onClick={() => handleSimulateBroadcast(invite.id)}
                           disabled={broadcastingInviteId !== null}
-                          className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition shadow-md shadow-indigo-100 disabled:bg-indigo-400 disabled:cursor-not-allowed"
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl text-xs transition shadow-md shadow-primary/10 disabled:bg-primary/50 disabled:cursor-not-allowed"
                         >
                           {broadcastingInviteId === invite.id ? (
                             <>
@@ -2274,7 +2274,7 @@ export default function EventsPage() {
                         <button 
                           onClick={() => handleEditInvitationClick(invite)}
                           disabled={broadcastingInviteId !== null}
-                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition disabled:opacity-50"
+                          className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-xl transition disabled:opacity-50"
                           title="Modifier l'invitation"
                         >
                           <Edit3 className="w-4 h-4" />
@@ -2319,7 +2319,7 @@ export default function EventsPage() {
                     Vous pouvez placer les invités. L’envoi automatique du PDF, du plan et du GPS à l’accueil
                     nécessite Premium 1 ou supérieur (forfait actuel : {tenant?.plan || 'FREE'}).
                   </p>
-                  <Link href="/dashboard/billing" className="inline-block mt-2 text-xs font-bold text-indigo-600 hover:underline">
+                  <Link href="/dashboard/billing" className="inline-block mt-2 text-xs font-bold text-primary hover:underline">
                     Voir les forfaits →
                   </Link>
                 </div>
@@ -2563,50 +2563,50 @@ export default function EventsPage() {
 
       {/* Guest Modal */}
       {showGuestModal && (
-        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg p-6 space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <h3 className="text-lg font-bold text-slate-900">
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-foreground/60 backdrop-blur-sm">
+          <div className="bg-surface rounded-3xl border border-border shadow-2xl w-full max-w-lg p-6 space-y-6">
+            <div className="flex items-center justify-between border-b border-border pb-4">
+              <h3 className="text-lg font-bold text-foreground">
                 {editingGuestId ? "Modifier l'invité" : "Ajouter un invité"}
               </h3>
-              <button onClick={() => { setShowGuestModal(false); setEditingGuestId(null); }} className="text-slate-400 hover:text-slate-600 transition">
+              <button onClick={() => { setShowGuestModal(false); setEditingGuestId(null); }} className="text-muted hover:text-foreground transition">
                 <XCircle className="w-6 h-6" />
               </button>
             </div>
             <form onSubmit={handleAddGuest} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Prénom</label>
+                  <label className="text-xs font-bold text-muted uppercase tracking-wider">Prénom</label>
                   <input 
                     type="text" 
                     value={guestFirstName}
                     onChange={(e) => setGuestFirstName(e.target.value)}
                     placeholder="ex. Jean"
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
+                    className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
                     required
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nom de famille</label>
+                  <label className="text-xs font-bold text-muted uppercase tracking-wider">Nom de famille</label>
                   <input 
                     type="text" 
                     value={guestLastName}
                     onChange={(e) => setGuestLastName(e.target.value)}
                     placeholder="ex. Kabeya"
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
+                    className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
                     required
                   />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Email</label>
+                  <label className="text-xs font-bold text-muted uppercase tracking-wider">Email</label>
                   <input 
                     type="email" 
                     value={guestEmail}
                     onChange={(e) => setGuestEmail(e.target.value)}
                     placeholder="ex. jean.kabeya@gmail.com"
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
+                    className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
                     required
                   />
                 </div>
@@ -2621,11 +2621,11 @@ export default function EventsPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Catégorie</label>
+                  <label className="text-xs font-bold text-muted uppercase tracking-wider">Catégorie</label>
                   <select 
                     value={guestCategory}
                     onChange={(e) => setGuestCategory(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
+                    className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
                   >
                     <option value="Famille">Famille</option>
                     <option value="Ami">Ami</option>
@@ -2635,21 +2635,21 @@ export default function EventsPage() {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Notes (Optionnel)</label>
+                  <label className="text-xs font-bold text-muted uppercase tracking-wider">Notes (Optionnel)</label>
                   <input 
                     type="text" 
                     value={guestPrefs}
                     onChange={(e) => setGuestPreferences(e.target.value)}
                     placeholder="ex. Table d'honneur"
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
+                    className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
                   />
                 </div>
               </div>
-              <div className="pt-4 flex gap-3 border-t border-slate-100">
+              <div className="pt-4 flex gap-3 border-t border-border">
                 <button 
                   type="button"
                   onClick={() => { setShowGuestModal(false); setEditingGuestId(null); }}
-                  className="flex-1 py-2.5 border border-slate-200 text-slate-600 font-semibold rounded-xl text-sm hover:bg-slate-50 transition"
+                  className="flex-1 py-2.5 border border-border text-muted font-semibold rounded-xl text-sm hover:bg-surface-muted transition"
                   disabled={savingGuest}
                 >
                   Annuler
@@ -2658,7 +2658,7 @@ export default function EventsPage() {
                   type="submit"
                   disabled={savingGuest || (!editingGuestId && guestsAtLimit)}
                   title={!editingGuestId && guestsQuotaMsg ? guestsQuotaMsg : undefined}
-                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 py-2.5 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/10 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {savingGuest ? (
                     <>
@@ -2677,14 +2677,14 @@ export default function EventsPage() {
 
       {/* CSV & Excel Import Modal */}
       {showImportModal && (
-        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-2xl p-6 space-y-6 overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-foreground/60 backdrop-blur-sm">
+          <div className="bg-surface rounded-3xl border border-border shadow-2xl w-full max-w-2xl p-6 space-y-6 overflow-y-auto max-h-[90vh]">
+            <div className="flex items-center justify-between border-b border-border pb-4">
               <div className="flex items-center gap-2">
-                <div className="bg-indigo-50 text-indigo-600 p-1.5 rounded-lg">
+                <div className="bg-primary/10 text-primary p-1.5 rounded-lg">
                   <FileSpreadsheet className="w-5 h-5" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900">Importer des invités en bloc</h3>
+                <h3 className="text-lg font-bold text-foreground">Importer des invités en bloc</h3>
               </div>
               <button 
                 onClick={() => {
@@ -2692,14 +2692,14 @@ export default function EventsPage() {
                   setParsedPreview(null);
                   setImportText('');
                 }} 
-                className="text-slate-400 hover:text-slate-600 transition"
+                className="text-muted hover:text-foreground transition"
               >
                 <XCircle className="w-6 h-6" />
               </button>
             </div>
 
             {/* Import Methods Selector */}
-            <div className="flex bg-slate-100 p-1 rounded-xl">
+            <div className="flex bg-surface-muted p-1 rounded-xl">
               <button
                 type="button"
                 onClick={() => {
@@ -2707,7 +2707,7 @@ export default function EventsPage() {
                   setParsedPreview(null);
                 }}
                 className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${
-                  importMethod === 'excel' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  importMethod === 'excel' ? 'bg-surface text-primary shadow-sm' : 'text-muted hover:text-foreground'
                 }`}
               >
                 Fichier Excel (.xlsx, .xls)
@@ -2719,7 +2719,7 @@ export default function EventsPage() {
                   setParsedPreview(null);
                 }}
                 className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${
-                  importMethod === 'csv' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  importMethod === 'csv' ? 'bg-surface text-primary shadow-sm' : 'text-muted hover:text-foreground'
                 }`}
               >
                 Fichier CSV (.csv)
@@ -2731,7 +2731,7 @@ export default function EventsPage() {
                   setParsedPreview(null);
                 }}
                 className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${
-                  importMethod === 'text' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                  importMethod === 'text' ? 'bg-surface text-primary shadow-sm' : 'text-muted hover:text-foreground'
                 }`}
               >
                 Copier-Coller Texte CSV
@@ -2743,20 +2743,20 @@ export default function EventsPage() {
               {(importMethod === 'excel' || importMethod === 'csv') && (
                 <div className="space-y-4">
                   {/* Download Templates */}
-                  <div className="flex items-center justify-between bg-indigo-50/50 border border-indigo-100 rounded-2xl p-4">
+                  <div className="flex items-center justify-between bg-primary/10 border border-primary/20 rounded-2xl p-4">
                     <div className="space-y-1">
-                      <div className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
-                        <Sparkles className="w-4 h-4 text-indigo-600" />
+                      <div className="text-xs font-bold text-primary flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-primary" />
                         Modèle de document requis
                       </div>
-                      <p className="text-[11px] text-indigo-900/80">
+                      <p className="text-[11px] text-primary/80">
                         Pour garantir un import parfait, utilisez notre modèle contenant les en-têtes corrects.
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={() => downloadSampleTemplate(importMethod)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition shadow-sm"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary/90 text-white text-xs font-bold rounded-lg transition shadow-sm"
                     >
                       <Download className="w-3.5 h-3.5" />
                       Télécharger le modèle
@@ -2771,8 +2771,8 @@ export default function EventsPage() {
                     onDrop={handleDrop}
                     className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition flex flex-col items-center justify-center gap-3 ${
                       dragActive 
-                        ? 'border-indigo-500 bg-indigo-50/30' 
-                        : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'
+                        ? 'border-primary bg-primary/10' 
+                        : 'border-border bg-surface-muted/50 hover:bg-surface-muted'
                     }`}
                   >
                     <input 
@@ -2782,17 +2782,17 @@ export default function EventsPage() {
                       onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
                       className="hidden"
                     />
-                    <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-sm text-slate-400">
+                    <div className="bg-surface p-3 rounded-2xl border border-border shadow-sm text-muted">
                       <Upload className="w-6 h-6" />
                     </div>
                     <div className="space-y-1">
-                      <p className="text-xs font-bold text-slate-700">
+                      <p className="text-xs font-bold text-foreground">
                         Glissez et déposez votre fichier ici, ou{' '}
-                        <label htmlFor="file-upload" className="text-indigo-600 hover:text-indigo-700 cursor-pointer underline">
+                        <label htmlFor="file-upload" className="text-primary hover:text-primary cursor-pointer underline">
                           parcourez vos fichiers
                         </label>
                       </p>
-                      <p className="text-[10px] text-slate-400">
+                      <p className="text-[10px] text-muted">
                         Formats acceptés : {importMethod === 'excel' ? '.xlsx, .xls' : '.csv'} (Taille max 10 Mo)
                       </p>
                     </div>
@@ -2803,24 +2803,24 @@ export default function EventsPage() {
               {/* Text Area CSV Copy Paste */}
               {importMethod === 'text' && (
                 <div className="space-y-4">
-                  <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl text-xs text-indigo-950 space-y-2 leading-relaxed">
+                  <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl text-xs text-primary space-y-2 leading-relaxed">
                     <div className="font-bold flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4 text-indigo-600" /> Format CSV requis :
+                      <Sparkles className="w-4 h-4 text-primary" /> Format CSV requis :
                     </div>
                     <p>Copiez et collez vos lignes d'invités en respectant l'ordre des colonnes séparées par des virgules :</p>
-                    <pre className="bg-white p-2.5 rounded-xl border border-indigo-100 font-mono text-[11px] text-slate-700 overflow-x-auto">
+                    <pre className="bg-surface p-2.5 rounded-xl border border-primary/20 font-mono text-[11px] text-foreground overflow-x-auto">
                       Prénom, Nom, Email, Catégorie, Téléphone, Notes{'\n'}
                       Jean, Kabeya, jean.kabeya@gmail.com, VIP, +243812345678, Table d'honneur{'\n'}
                       Sarah, Mwamba, sarah.m@outlook.com, Ami, +243998765432, Allergie arachides
                     </pre>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Données CSV</label>
+                    <label className="text-xs font-bold text-muted uppercase tracking-wider">Données CSV</label>
                     <textarea 
                       value={importText}
                       onChange={(e) => setImportText(e.target.value)}
                       placeholder="Prénom, Nom, Email, Catégorie, Téléphone, Notes..."
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:border-indigo-500 transition h-40 resize-none"
+                      className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm font-mono focus:outline-none focus:border-primary transition h-40 resize-none"
                       required
                     />
                   </div>
@@ -2829,9 +2829,9 @@ export default function EventsPage() {
 
               {/* Preview Section */}
               {parsedPreview && parsedPreview.length > 0 && (
-                <div className="space-y-2 border-t border-slate-100 pt-4">
+                <div className="space-y-2 border-t border-border pt-4">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <label className="text-xs font-bold text-muted uppercase tracking-wider">
                       Aperçu des données ({parsedPreview.length} invités détectés)
                     </label>
                     <button
@@ -2854,14 +2854,14 @@ export default function EventsPage() {
                           <th>Notes</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                      <tbody className="divide-y divide-border text-xs text-foreground">
                         {parsedPreview.slice(0, 5).map((p, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50/50">
+                          <tr key={idx} className="hover:bg-surface-muted/50">
                             <td className="py-2 px-3 font-semibold">{p.firstName}</td>
                             <td className="py-2 px-3">{p.lastName}</td>
-                            <td className="py-2 px-3 font-mono text-[11px] text-slate-500">{p.email}</td>
+                            <td className="py-2 px-3 font-mono text-[11px] text-muted">{p.email}</td>
                             <td className="py-2 px-3">
-                              <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full text-[10px] font-bold">
+                              <span className="px-2 py-0.5 bg-surface-muted text-muted rounded-full text-[10px] font-bold">
                                 {p.category}
                               </span>
                             </td>
@@ -2872,7 +2872,7 @@ export default function EventsPage() {
                       </tbody>
                     </table>
                     {parsedPreview.length > 5 && (
-                      <div className="bg-slate-50 text-center py-2 text-[10px] font-bold text-slate-400 border-t border-slate-100">
+                      <div className="bg-surface-muted text-center py-2 text-[10px] font-bold text-muted border-t border-border">
                         Et {parsedPreview.length - 5} autres lignes...
                       </div>
                     )}
@@ -2881,7 +2881,7 @@ export default function EventsPage() {
               )}
 
               {/* Action Buttons */}
-              <div className="pt-4 flex gap-3 border-t border-slate-100">
+              <div className="pt-4 flex gap-3 border-t border-border">
                 <button 
                   type="button"
                   onClick={() => {
@@ -2889,7 +2889,7 @@ export default function EventsPage() {
                     setParsedPreview(null);
                     setImportText('');
                   }}
-                  className="flex-1 py-2.5 border border-slate-200 text-slate-600 font-semibold rounded-xl text-sm hover:bg-slate-50 transition"
+                  className="flex-1 py-2.5 border border-border text-muted font-semibold rounded-xl text-sm hover:bg-surface-muted transition"
                   disabled={importingFile}
                 >
                   Annuler
@@ -2897,7 +2897,7 @@ export default function EventsPage() {
                 <button 
                   type="submit"
                   disabled={importingFile || (importMethod !== 'text' && (!parsedPreview || parsedPreview.length === 0))}
-                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100 flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/10 flex items-center justify-center gap-2"
                 >
                   {importingFile ? (
                     <>
@@ -2919,32 +2919,32 @@ export default function EventsPage() {
 
       {/* Bulk Invitation Sending Modal */}
       {showBulkInviteModal && (
-        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg p-6 space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-foreground/60 backdrop-blur-sm">
+          <div className="bg-surface rounded-3xl border border-border shadow-2xl w-full max-w-lg p-6 space-y-6">
+            <div className="flex items-center justify-between border-b border-border pb-4">
               <div className="flex items-center gap-2">
-                <div className="bg-indigo-50 text-indigo-600 p-1.5 rounded-lg">
+                <div className="bg-primary/10 text-primary p-1.5 rounded-lg">
                   <Send className="w-5 h-5" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900">Envoyer une invitation groupée</h3>
+                <h3 className="text-lg font-bold text-foreground">Envoyer une invitation groupée</h3>
               </div>
-              <button onClick={() => setShowBulkInviteModal(false)} className="text-slate-400 hover:text-slate-600 transition">
+              <button onClick={() => setShowBulkInviteModal(false)} className="text-muted hover:text-foreground transition">
                 <XCircle className="w-6 h-6" />
               </button>
             </div>
             <form onSubmit={handleBulkSendInvitation} className="space-y-4">
-              <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl">
-                <p className="text-xs text-indigo-800 font-semibold leading-relaxed">
-                  Vous vous apprêtez à envoyer une invitation personnalisée à <strong className="text-indigo-900 font-extrabold">{selectedGuestIds.length} invités</strong> sélectionnés.
+              <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl">
+                <p className="text-xs text-primary font-semibold leading-relaxed">
+                  Vous vous apprêtez à envoyer une invitation personnalisée à <strong className="text-primary font-extrabold">{selectedGuestIds.length} invités</strong> sélectionnés.
                 </p>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Sélectionner l'invitation précise</label>
+                <label className="text-xs font-bold text-muted uppercase tracking-wider">Sélectionner l'invitation précise</label>
                 <select 
                   value={bulkSelectedInviteId}
                   onChange={(e) => setBulkSelectedInviteId(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
+                  className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
                   required
                 >
                   <option value="">-- Choisir une invitation --</option>
@@ -2955,11 +2955,11 @@ export default function EventsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Moyen de diffusion (Canal)</label>
+                <label className="text-xs font-bold text-muted uppercase tracking-wider">Moyen de diffusion (Canal)</label>
                 <select 
                   value={bulkSelectedChannel}
                   onChange={(e) => setBulkSelectedChannel(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
+                  className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
                 >
                   <option value="EMAIL">E-mail uniquement</option>
                   <option value="WHATSAPP">WhatsApp uniquement</option>
@@ -2970,19 +2970,19 @@ export default function EventsPage() {
                 </select>
               </div>
 
-              <div className="pt-4 flex gap-3 border-t border-slate-100">
+              <div className="pt-4 flex gap-3 border-t border-border">
                 <button 
                   type="button"
                   disabled={isBulkSending}
                   onClick={() => setShowBulkInviteModal(false)}
-                  className="flex-1 py-2.5 border border-slate-200 text-slate-600 font-semibold rounded-xl text-sm hover:bg-slate-50 transition disabled:opacity-50"
+                  className="flex-1 py-2.5 border border-border text-muted font-semibold rounded-xl text-sm hover:bg-surface-muted transition disabled:opacity-50"
                 >
                   Annuler
                 </button>
                 <button 
                   type="submit"
                   disabled={isBulkSending}
-                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100 flex items-center justify-center gap-1.5 disabled:bg-indigo-400 disabled:cursor-not-allowed"
+                  className="flex-1 py-2.5 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/10 flex items-center justify-center gap-1.5 disabled:bg-primary/50 disabled:cursor-not-allowed"
                 >
                   {isBulkSending ? (
                     <>
@@ -3021,7 +3021,7 @@ export default function EventsPage() {
                   <select 
                     value={selectedTemplateId}
                     onChange={(e) => setSelectedTemplateId(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-primary transition"
                   >
                     <option value="">-- Aucun modèle visuel --</option>
                     {templates.map(t => (
@@ -3034,7 +3034,7 @@ export default function EventsPage() {
                   <select 
                     value={inviteChannel}
                     onChange={(e) => setInviteChannel(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-primary transition"
                   >
                     <option value="EMAIL">E-mail</option>
                     <option value="WHATSAPP">WhatsApp</option>
@@ -3048,7 +3048,7 @@ export default function EventsPage() {
                 <select 
                   onChange={(e) => handleSelectMessageTemplate(e.target.value)}
                   defaultValue=""
-                  className="w-full px-4 py-2.5 bg-indigo-50/50 border border-indigo-100 text-indigo-950 rounded-xl text-sm font-semibold focus:outline-none focus:border-indigo-500 transition"
+                  className="w-full px-4 py-2.5 bg-primary/10 border border-primary/20 text-primary rounded-xl text-sm font-semibold focus:outline-none focus:border-primary transition"
                 >
                   <option value="">-- Choisir un modèle de message pour pré-remplir --</option>
                   {MESSAGE_TEMPLATES.map(mt => (
@@ -3063,14 +3063,14 @@ export default function EventsPage() {
                   value={inviteSubject}
                   onChange={(e) => setInviteSubject(e.target.value)}
                   placeholder="ex. Invitation officielle : Gala de Charité d'Élite"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-primary transition"
                   required
                 />
               </div>
               <div className="space-y-1.5">
                 <div className="flex justify-between items-center">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Corps du message</label>
-                  <span className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                  <span className="text-[10px] text-primary font-bold uppercase tracking-wider flex flex-wrap items-center gap-x-2 gap-y-0.5">
                     <HelpCircle className="w-3.5 h-3.5" /> 
                     <span>Variables: {'{{firstName}}'}, {'{{lastName}}'}, {'{{rsvpLink}}'}, {'{{title}}'}, {'{{date}}'}, {'{{location}}'}, {'{{description}}'}, {'{{dressCode}}'}, {'{{recommendations}}'}, {'{{guestGuidelines}}'}, {'{{tableName}}'}, {'{{seatNumber}}'}, {'{{tableMates}}'}, {'{{tableMatesInline}}'}</span>
                   </span>
@@ -3079,7 +3079,7 @@ export default function EventsPage() {
                   value={inviteBody}
                   onChange={(e) => setInviteBody(e.target.value)}
                   placeholder="Cher(e) {{firstName}},&#10;Nous avons l'honneur de vous inviter...&#10;&#10;Veuillez confirmer votre présence ici : {{rsvpLink}}"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 transition h-32 resize-none"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-primary transition h-32 resize-none"
                   required
                 />
               </div>
@@ -3095,7 +3095,7 @@ export default function EventsPage() {
                 <button 
                   type="submit"
                   disabled={savingInvite}
-                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100 flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/10 flex items-center justify-center gap-2"
                 >
                   {savingInvite ? (
                     <>
@@ -3278,7 +3278,7 @@ export default function EventsPage() {
                         href={res.rsvpLink} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-700 font-bold transition hover:underline text-xs mr-2"
+                        className="inline-flex items-center gap-1 text-primary hover:text-primary font-bold transition hover:underline text-xs mr-2"
                       >
                         Ouvrir
                         <ChevronRight className="w-3.5 h-3.5" />
@@ -3389,7 +3389,7 @@ export default function EventsPage() {
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg p-6 space-y-6">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2">
-                <div className="bg-indigo-50 text-indigo-600 p-1.5 rounded-lg">
+                <div className="bg-primary/10 text-primary p-1.5 rounded-lg">
                   <Share2 className="w-5 h-5" />
                 </div>
                 <h3 className="text-lg font-bold text-slate-900">Partager l'invitation</h3>
@@ -3500,7 +3500,7 @@ export default function EventsPage() {
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg p-6 space-y-6">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2">
-                <div className="bg-indigo-50 text-indigo-600 p-1.5 rounded-lg">
+                <div className="bg-primary/10 text-primary p-1.5 rounded-lg">
                   <Users className="w-5 h-5" />
                 </div>
                 <h3 className="text-lg font-bold text-slate-900">Détails de l'invité</h3>
@@ -3553,7 +3553,7 @@ export default function EventsPage() {
               {selectedGuestDetails.rsvp === 'ACCEPTED' && (
                 <div className="p-4 border border-slate-200 rounded-2xl space-y-3 bg-white">
                   <div className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 pb-2 flex items-center gap-1.5">
-                    <Utensils className="w-4 h-4 text-indigo-600" />
+                    <Utensils className="w-4 h-4 text-primary" />
                     <span>Préférences de repas & Notes</span>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
@@ -3590,7 +3590,7 @@ export default function EventsPage() {
               ) && (
                 <div className="p-4 border border-slate-200 rounded-2xl space-y-3 bg-white">
                   <div className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 pb-2 flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-indigo-600" />
+                    <Sparkles className="w-4 h-4 text-primary" />
                     <span>Réponses aux questions personnalisées</span>
                   </div>
                   <div className="space-y-3">

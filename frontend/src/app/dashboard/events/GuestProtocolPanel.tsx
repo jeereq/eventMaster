@@ -58,7 +58,7 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
           Le scan QR, la confirmation de présence et la vérification des sièges nécessitent le forfait{' '}
           <strong>Business</strong> ou supérieur. Forfait actuel : {tenant?.plan || 'FREE'}.
         </p>
-        <Link href="/dashboard/billing" className="inline-block text-sm font-bold text-indigo-600 hover:underline">
+        <Link href="/dashboard/billing" className="inline-block text-sm font-bold text-primary hover:underline">
           Voir les forfaits →
         </Link>
       </div>
@@ -161,16 +161,16 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
   if (loading) {
     return (
       <div className="flex justify-center py-16">
-        <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4">
-        <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          <ScanLine className="w-5 h-5 text-indigo-600" />
+      <div className="bg-surface border border-border rounded-2xl p-5 space-y-4">
+        <h3 className="font-bold text-foreground flex items-center gap-2">
+          <ScanLine className="w-5 h-5 text-primary" />
           Scanner QR / identifier un invité
         </h3>
 
@@ -189,10 +189,10 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
 
         <div className="relative">
           <div className="absolute inset-0 flex items-center" aria-hidden>
-            <div className="w-full border-t border-slate-200 dark:border-slate-700" />
+            <div className="w-full border-t border-border" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white dark:bg-slate-900 px-2 text-slate-400 font-semibold tracking-wider">
+            <span className="bg-surface px-2 text-muted font-semibold tracking-wider">
               ou saisie manuelle
             </span>
           </div>
@@ -204,7 +204,7 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
             onChange={(e) => setScanInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleScan()}
             placeholder="Coller l'URL RSVP ou l'ID invité du QR code"
-            className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-sm"
+            className="flex-1 px-4 py-2.5 rounded-xl border border-border bg-surface-muted text-sm"
           />
           <Button onClick={handleScan} disabled={busy || !scanInput.trim()}>
             <QrCode className="w-4 h-4" />
@@ -220,13 +220,13 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
       </div>
 
       {selectedGuest && (
-        <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 rounded-2xl p-5 space-y-4">
+        <div className="bg-primary/10 border border-primary/20 rounded-2xl p-5 space-y-4">
           <div>
-            <h4 className="font-bold text-lg text-slate-900 dark:text-white">
+            <h4 className="font-bold text-lg text-foreground">
               {selectedGuest.firstName} {selectedGuest.lastName}
             </h4>
-            <p className="text-sm text-slate-500">{selectedGuest.email}</p>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-sm text-muted">{selectedGuest.email}</p>
+            <p className="text-xs text-muted mt-1">
               RSVP :{' '}
               {selectedGuest.rsvp === 'ACCEPTED'
                 ? 'Confirmé'
@@ -246,7 +246,7 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
               </p>
             )}
             {selectedGuest.assignedSeat && (
-              <p className="text-sm text-indigo-700 dark:text-indigo-300 mt-1">
+              <p className="text-sm text-primary mt-1">
                 Siège assigné : {selectedGuest.assignedSeat.tableName} — n°{selectedGuest.assignedSeat.seatIndex + 1}
               </p>
             )}
@@ -286,7 +286,7 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
               onChange={(e) => setNote(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddNote(selectedGuest.id)}
               placeholder="Commentaire protocole…"
-              className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-sm"
+              className="flex-1 px-3 py-2 rounded-xl border border-border bg-surface text-sm"
             />
             <Button size="sm" variant="secondary" onClick={() => handleAddNote(selectedGuest.id)} disabled={busy}>
               <MessageSquare className="w-4 h-4" />
@@ -294,15 +294,15 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
             </Button>
           </div>
           {selectedGuest.protocolNotes && selectedGuest.protocolNotes.length > 0 && (
-            <div className="space-y-2 pt-2 border-t border-indigo-100 dark:border-indigo-900/40">
-              <p className="text-xs font-bold uppercase text-indigo-400">Commentaires récents</p>
+            <div className="space-y-2 pt-2 border-t border-primary/20">
+              <p className="text-xs font-bold uppercase text-primary">Commentaires récents</p>
               {selectedGuest.protocolNotes.map((n) => (
-                <div key={n.id} className="text-sm bg-white/60 dark:bg-slate-900/40 rounded-lg px-3 py-2">
-                  <span className="font-semibold text-slate-700 dark:text-slate-200">{n.user?.name || 'Protocole'}</span>
-                  <span className="text-slate-400 text-xs ml-2">
+                <div key={n.id} className="text-sm bg-surface/60 rounded-lg px-3 py-2">
+                  <span className="font-semibold text-foreground">{n.user?.name || 'Protocole'}</span>
+                  <span className="text-muted text-xs ml-2">
                     {new Date(n.createdAt).toLocaleString('fr-FR')}
                   </span>
-                  <p className="text-slate-600 dark:text-slate-300 mt-0.5">{n.content}</p>
+                  <p className="text-muted mt-0.5">{n.content}</p>
                 </div>
               ))}
             </div>
@@ -310,31 +310,31 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
         </div>
       )}
 
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-          <h3 className="font-bold text-slate-900 dark:text-white">Invités — suivi protocole</h3>
-          <span className="text-xs text-slate-400">
+      <div className="bg-surface border border-border rounded-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+          <h3 className="font-bold text-foreground">Invités — suivi protocole</h3>
+          <span className="text-xs text-muted">
             {guests.filter((g) => g.checkedInAt).length}/{guests.length} authentifiés
           </span>
         </div>
-        <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-[420px] overflow-y-auto">
+        <div className="divide-y divide-border max-h-[420px] overflow-y-auto">
           {guests.length === 0 ? (
-            <p className="px-5 py-8 text-center text-sm text-slate-400">Aucun invité pour cet événement.</p>
+            <p className="px-5 py-8 text-center text-sm text-muted">Aucun invité pour cet événement.</p>
           ) : (
             guests.map((g) => (
               <button
                 key={g.id}
                 type="button"
                 onClick={() => setSelectedGuest(g)}
-                className={`w-full text-left px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition flex items-center justify-between gap-3 ${
-                  selectedGuest?.id === g.id ? 'bg-indigo-50/50 dark:bg-indigo-950/20' : ''
-                }`}
+                className={`w-full text-left px-5 py-3 hover:bg-surface-muted transition flex items-center justify-between gap-3 ${
+ selectedGuest?.id === g.id ? 'bg-primary/5' : ''
+ }`}
               >
                 <div>
-                  <p className="font-semibold text-sm text-slate-800 dark:text-slate-100">{g.firstName} {g.lastName}</p>
-                  <p className="text-xs text-slate-500">{g.email}</p>
+                  <p className="font-semibold text-sm text-foreground">{g.firstName} {g.lastName}</p>
+                  <p className="text-xs text-muted">{g.email}</p>
                   {g.assignedSeat && (
-                    <p className="text-[10px] text-indigo-500 mt-0.5">
+                    <p className="text-[10px] text-primary mt-0.5">
                       {g.assignedSeat.tableName} · siège {g.assignedSeat.seatIndex + 1}
                     </p>
                   )}
@@ -343,9 +343,9 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
                   {g.checkedInAt ? (
                     <CheckCircle2 className="w-4 h-4 text-emerald-500" aria-label="Authentifié" />
                   ) : (
-                    <XCircle className="w-4 h-4 text-slate-300" aria-label="Non authentifié" />
+                    <XCircle className="w-4 h-4 text-foreground/80" aria-label="Non authentifié" />
                   )}
-                  {g.seatVerified && <Armchair className="w-4 h-4 text-indigo-500" aria-label="Siège vérifié" />}
+                  {g.seatVerified && <Armchair className="w-4 h-4 text-primary" aria-label="Siège vérifié" />}
                 </div>
               </button>
             ))
