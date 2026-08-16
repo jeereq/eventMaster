@@ -23,6 +23,7 @@ import {
   type TenantBillingAction,
 } from '../services/tenantBillingService';
 import { PAID_PLAN_KEYS } from '../config/plansConfig';
+import { resolvePhoneFields } from '../utils/phone';
 import {
   loadPlatformSettings,
   savePlatformSettings,
@@ -896,6 +897,8 @@ export async function getAllGuests(req: AuthenticatedRequest, res: Response) {
         firstName: g.firstName,
         lastName: g.lastName,
         email: g.email,
+        phone: g.phone,
+        phoneCountryCode: g.phoneCountryCode,
         category: g.category || 'Général',
         rsvp: g.rsvp,
         preferences: g.preferences,
@@ -915,7 +918,7 @@ export async function createAdminGuest(req: AuthenticatedRequest, res: Response)
       return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
     }
 
-    const { eventId, firstName, lastName, email, category, rsvp, preferences } = req.body;
+    const { eventId, firstName, lastName, email, category, rsvp, preferences, phone, phoneCountryCode, nationalNumber } = req.body;
 
     if (!eventId || !firstName || !lastName || !email) {
       return res.status(400).json({ error: 'Les champs eventId, firstName, lastName et email sont requis' });
@@ -930,12 +933,16 @@ export async function createAdminGuest(req: AuthenticatedRequest, res: Response)
       return res.status(400).json({ error: 'Un invité avec cet email existe déjà pour cet événement' });
     }
 
+    const phoneFields = resolvePhoneFields({ phone, phoneCountryCode, nationalNumber });
+
     const guest = await prisma.guest.create({
       data: {
         eventId,
         firstName,
         lastName,
         email,
+        phone: phoneFields.phone,
+        phoneCountryCode: phoneFields.phoneCountryCode,
         category: category || 'Général',
         rsvp: rsvp || 'PENDING',
         preferences: preferences || {},
@@ -964,6 +971,8 @@ export async function createAdminGuest(req: AuthenticatedRequest, res: Response)
         firstName: guest.firstName,
         lastName: guest.lastName,
         email: guest.email,
+        phone: guest.phone,
+        phoneCountryCode: guest.phoneCountryCode,
         category: guest.category,
         rsvp: guest.rsvp,
         preferences: guest.preferences,
@@ -984,7 +993,7 @@ export async function updateAdminGuest(req: AuthenticatedRequest, res: Response)
     }
 
     const id = req.params.id as string;
-    const { eventId, firstName, lastName, email, category, rsvp, preferences } = req.body;
+    const { eventId, firstName, lastName, email, category, rsvp, preferences, phone, phoneCountryCode, nationalNumber } = req.body;
 
     const existingGuest = await prisma.guest.findUnique({
       where: { id },
@@ -994,6 +1003,14 @@ export async function updateAdminGuest(req: AuthenticatedRequest, res: Response)
       return res.status(404).json({ error: 'Invité non trouvé' });
     }
 
+    let nextPhone = existingGuest.phone;
+    let nextPhoneCountryCode = existingGuest.phoneCountryCode;
+    if (phone !== undefined || phoneCountryCode !== undefined || nationalNumber !== undefined) {
+      const resolved = resolvePhoneFields({ phone, phoneCountryCode, nationalNumber });
+      nextPhone = resolved.phone;
+      nextPhoneCountryCode = resolved.phoneCountryCode;
+    }
+
     const updatedGuest = await prisma.guest.update({
       where: { id },
       data: {
@@ -1001,6 +1018,8 @@ export async function updateAdminGuest(req: AuthenticatedRequest, res: Response)
         firstName: firstName !== undefined ? firstName : existingGuest.firstName,
         lastName: lastName !== undefined ? lastName : existingGuest.lastName,
         email: email !== undefined ? email : existingGuest.email,
+        phone: nextPhone,
+        phoneCountryCode: nextPhoneCountryCode,
         category: category !== undefined ? category : existingGuest.category,
         rsvp: rsvp !== undefined ? rsvp : existingGuest.rsvp,
         preferences: preferences !== undefined ? preferences : (existingGuest.preferences as any),
@@ -1029,6 +1048,8 @@ export async function updateAdminGuest(req: AuthenticatedRequest, res: Response)
         firstName: updatedGuest.firstName,
         lastName: updatedGuest.lastName,
         email: updatedGuest.email,
+        phone: updatedGuest.phone,
+        phoneCountryCode: updatedGuest.phoneCountryCode,
         category: updatedGuest.category,
         rsvp: updatedGuest.rsvp,
         preferences: updatedGuest.preferences,
