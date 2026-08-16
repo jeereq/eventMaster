@@ -19,7 +19,7 @@ import QuotaUsagePanel from '@/components/QuotaUsagePanel';
 import SubscriptionApprovalModal, { type SubscriptionApprovalRequest } from '@/components/SubscriptionApprovalModal';
 import BillingDiscountFields, { getBillingPricingFromFields } from '@/components/BillingDiscountFields';
 import type { QuotaSnapshot } from '@/lib/quotaDisplay';
-import { PageHeader, Alert, Button, ProjectCard, SkeletonDashboardHome } from '@/components/ui';
+import { PageHeader, Alert, Button, ProjectCard, SkeletonDashboardHome, SkeletonTabContent, ViewModeToggle, useViewMode } from '@/components/ui';
 import { PLAN_IDS, type PlanId } from '@/config/landingPricing';
 import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
@@ -190,6 +190,13 @@ interface TenantSubscriptionHistoryEntry {
 
 function DashboardPageContent() {
   const { user, tenant, access, planQuota } = useAuth();
+  const {
+    mode: homeEventsMode,
+    setViewMode: setHomeEventsMode,
+    columns: homeEventsColumns,
+    setGridColumns: setHomeEventsColumns,
+    gridClassName: homeEventsGridClass,
+  } = useViewMode('em-view-home-events', 'grid', 2);
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [adminData, setAdminData] = useState<AdminStats | null>(null);
@@ -1865,10 +1872,7 @@ function DashboardPageContent() {
             {activeTab === 'users' && (
               <div>
                 {usersLoading ? (
-                  <div className="py-12 flex flex-col items-center justify-center gap-3">
-                    <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-                    <p className="text-sm font-medium text-slate-500">Chargement des utilisateurs...</p>
-                  </div>
+                  <SkeletonTabContent mode="grid" count={6} columns={3} />
                 ) : (
                   <>
                     <div className="md:hidden space-y-3">
@@ -2024,10 +2028,7 @@ function DashboardPageContent() {
 
                 <div>
                 {templatesLoading ? (
-                  <div className="py-12 flex flex-col items-center justify-center gap-3">
-                    <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-                    <p className="text-sm font-medium text-slate-500">Chargement des modèles...</p>
-                  </div>
+                  <SkeletonTabContent mode="grid" count={6} columns={3} />
                 ) : (
                   <>
                     <TemplateCardGrid
@@ -2109,10 +2110,7 @@ function DashboardPageContent() {
             {activeTab === 'events' && (
               <div>
                 {adminEventsLoading ? (
-                  <div className="py-12 flex flex-col items-center justify-center gap-3">
-                    <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-                    <p className="text-sm font-medium text-slate-500">Chargement des événements...</p>
-                  </div>
+                  <SkeletonTabContent mode="grid" count={6} columns={3} />
                 ) : (
                   <>
                     <div className="md:hidden space-y-3">
@@ -2242,10 +2240,7 @@ function DashboardPageContent() {
             {activeTab === 'guests' && (
               <div>
                 {adminGuestsLoading ? (
-                  <div className="py-12 flex flex-col items-center justify-center gap-3">
-                    <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-                    <p className="text-sm font-medium text-slate-500">Chargement des invités...</p>
-                  </div>
+                  <SkeletonTabContent mode="grid" count={6} columns={3} />
                 ) : (
                   <>
                     <div className="md:hidden space-y-3">
@@ -2382,10 +2377,7 @@ function DashboardPageContent() {
             {activeTab === 'settings' && (
               <div className="max-w-4xl mx-auto">
                 {adminSettingsLoading ? (
-                  <div className="py-12 flex flex-col items-center justify-center gap-3">
-                    <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-                    <p className="text-sm font-medium text-slate-500">Chargement des configurations...</p>
-                  </div>
+                  <SkeletonTabContent mode="grid" count={6} columns={3} />
                 ) : (
                   adminSettings && (
                     <form onSubmit={handleSaveSettings} className="space-y-8 animate-in fade-in duration-200">
@@ -2531,10 +2523,7 @@ function DashboardPageContent() {
                   </h4>
 
                   {subRequestsLoading ? (
-                    <div className="py-12 flex flex-col items-center justify-center gap-3">
-                      <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-                      <p className="text-sm font-medium text-slate-500">Chargement des demandes d'abonnement...</p>
-                    </div>
+                    <SkeletonTabContent mode="grid" count={6} columns={3} />
                   ) : subscriptionRequests.length === 0 ? (
                     <div className="text-center py-8 bg-slate-50 rounded-xl border border-slate-150 p-6">
                       <p className="text-slate-500 text-xs font-medium">Aucune demande d'abonnement soumise pour le moment.</p>
@@ -2735,9 +2724,7 @@ function DashboardPageContent() {
             {activeTab === 'subscription-plans' && isSuperAdmin && (
               <div className="space-y-6 animate-in fade-in duration-200">
                 {adminSettingsLoading ? (
-                  <div className="py-12 flex justify-center">
-                    <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-                  </div>
+                  <SkeletonTabContent mode="grid" count={4} columns={2} />
                 ) : adminSettings && adminSettings.plans ? (
                   <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-6">
                     <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4">
@@ -2985,9 +2972,7 @@ function DashboardPageContent() {
                     Toutes les factures ({adminInvoices.length})
                   </h4>
                   {loadingAdminInvoices ? (
-                    <div className="py-12 flex justify-center">
-                      <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-                    </div>
+                    <SkeletonTabContent mode="list" count={5} />
                   ) : (
                     <InvoiceListPanel
                       invoices={adminInvoices}
@@ -3480,8 +3465,8 @@ function DashboardPageContent() {
 
         {/* Modal: Create or Edit Guest (Super Admin) */}
         {isGuestModalOpen && (
-          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+          <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-sm">
+            <div className="bg-surface rounded-2xl border border-border shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
               <div className="px-6 py-5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
                 <h3 className="font-bold text-slate-900 flex items-center gap-2">
                   <Users className="w-5 h-5 text-indigo-600" />
@@ -3607,8 +3592,8 @@ function DashboardPageContent() {
 
         {/* Modal: Create or Edit Tenant */}
         {isCreateTenantModalOpen && (
-          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+          <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-sm">
+            <div className="bg-surface rounded-2xl border border-border shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
               <div className="px-6 py-5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
                 <h3 className="font-bold text-slate-900 flex items-center gap-2">
                   <Building2 className="w-5 h-5 text-indigo-600" />
@@ -3799,8 +3784,8 @@ function DashboardPageContent() {
 
         {/* Modal: Create or Edit User */}
         {isUserModalOpen && (
-          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+          <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-sm">
+            <div className="bg-surface rounded-2xl border border-border shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
               <div className="px-6 py-5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
                 <h3 className="font-bold text-slate-900 flex items-center gap-2">
                   <Users className="w-5 h-5 text-indigo-600" />
@@ -3926,8 +3911,8 @@ function DashboardPageContent() {
 
         {/* Modal: Create or Edit Event (Super Admin) */}
         {isEventModalOpen && (
-          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+          <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-sm">
+            <div className="bg-surface rounded-2xl border border-border shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
               <div className="px-6 py-5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
                 <h3 className="font-bold text-slate-900 flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-indigo-600" />
@@ -4111,8 +4096,8 @@ function DashboardPageContent() {
 
         {/* Modal: View Details (Super Admin) */}
         {isDetailsModalOpen && detailsData && (
-          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className={`bg-white rounded-2xl border border-slate-200 shadow-xl w-full overflow-hidden animate-in fade-in zoom-in duration-200 ${detailsType === 'tenant' ? 'max-w-2xl' : 'max-w-lg'}`}>
+          <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-sm">
+            <div className={`bg-surface rounded-2xl border border-border shadow-2xl w-full overflow-hidden animate-in fade-in zoom-in duration-200 ${detailsType === 'tenant' ? 'max-w-2xl' : 'max-w-lg'}`}>
               {/* Header */}
               <div className="px-6 py-5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
                 <h3 className="font-bold text-slate-900 flex items-center gap-2">
@@ -4604,12 +4589,23 @@ function DashboardPageContent() {
         {/* Events List */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 space-y-5">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-lg font-semibold text-foreground">Événements récents</h2>
-              <Link href="/dashboard/events" className="text-sm font-semibold text-primary hover:text-primary-hover transition flex items-center gap-1">
-                Voir tout
-                <ChevronRight className="w-4 h-4" />
-              </Link>
+              <div className="flex items-center gap-2">
+                <ViewModeToggle
+                  storageKey="em-view-home-events"
+                  value={homeEventsMode}
+                  onChange={setHomeEventsMode}
+                  columns={homeEventsColumns}
+                  onColumnsChange={setHomeEventsColumns}
+                  defaultMode="grid"
+                  defaultColumns={2}
+                />
+                <Link href="/dashboard/events" className="text-sm font-semibold text-primary hover:text-primary-hover transition flex items-center gap-1">
+                  Voir tout
+                  <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
             </div>
 
             {events.length === 0 ? (
@@ -4619,13 +4615,19 @@ function DashboardPageContent() {
                 <p className="text-sm text-muted mt-1 max-w-xs mx-auto">Vous n&apos;avez pas encore d&apos;événement. Créez-en un pour commencer à inviter des personnes.</p>
                 <Link
                   href="/dashboard/events"
-                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-sm transition"
+                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white font-semibold rounded-lg text-sm transition"
                 >
                   Créer mon premier événement
                 </Link>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div
+                className={
+                  homeEventsMode === 'list'
+                    ? 'flex flex-col gap-2'
+                    : homeEventsGridClass
+                }
+              >
                 {events.map((event) => {
                   const dateLabel = new Date(event.date).toLocaleDateString('fr-FR', {
                     weekday: 'short',
@@ -4638,7 +4640,7 @@ function DashboardPageContent() {
                       key={event.id}
                       id={event.id}
                       title={event.title}
-                      layout="grid"
+                      layout={homeEventsMode}
                       meta={
                         <div className="space-y-0.5">
                           <span className="font-medium text-primary">{dateLabel}</span>
@@ -4648,7 +4650,7 @@ function DashboardPageContent() {
                           </span>
                         </div>
                       }
-                      description={event.description}
+                      description={homeEventsMode === 'grid' ? event.description : undefined}
                       onClick={() => router.push(`/dashboard/events?id=${event.id}`)}
                       actions={
                         <Link
@@ -4668,10 +4670,10 @@ function DashboardPageContent() {
           </div>
 
           {/* Analytics Promo Card */}
-          <div className="bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-950 text-white rounded-2xl p-6 shadow-md border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-6 relative overflow-hidden">
-            <div className="absolute top-[-20%] left-[-20%] w-[50%] h-[50%] rounded-full bg-indigo-500/10 blur-[80px] pointer-events-none" />
+          <div className="bg-gradient-to-br from-[color-mix(in_srgb,var(--primary)_55%,#0f172a)] via-[color-mix(in_srgb,var(--primary)_25%,#020617)] to-slate-950 text-white rounded-2xl p-6 shadow-md border border-border flex flex-col sm:flex-row items-center justify-between gap-6 relative overflow-hidden">
+            <div className="absolute top-[-20%] left-[-20%] w-[50%] h-[50%] rounded-full bg-primary/20 blur-[80px] pointer-events-none" />
             <div className="space-y-2 relative z-10">
-              <span className="text-[10px] bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">Nouveau</span>
+              <span className="text-[10px] bg-primary/20 border border-primary/30 text-primary/80 font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">Nouveau</span>
               <h3 className="text-lg font-bold">Analyses & Statistiques Avancées</h3>
               <p className="text-xs text-slate-300 max-w-md leading-relaxed">
                 Visualisez les régimes alimentaires de vos invités, les réponses aux questions personnalisées et exportez vos données en un clic pour une organisation parfaite.
@@ -4679,7 +4681,7 @@ function DashboardPageContent() {
             </div>
             <Link 
               href="/dashboard/analytics" 
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-indigo-500/20 whitespace-nowrap relative z-10"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-xs transition shadow-lg shadow-primary/20 whitespace-nowrap relative z-10"
             >
               <BarChart3 className="w-4 h-4" />
               Consulter les statistiques

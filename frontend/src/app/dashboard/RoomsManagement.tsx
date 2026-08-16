@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import RoomLayoutEditor from '@/components/RoomLayoutEditor';
-import { ProjectCard, ViewModeToggle, useViewMode, SkeletonGrid, SkeletonList } from '@/components/ui';
+import { ProjectCard, ViewModeToggle, useViewMode, SkeletonRoomsView } from '@/components/ui';
 import {
   ChairType,
   LayoutParams,
@@ -517,11 +517,7 @@ export default function RoomsManagement() {
       )}
 
       {loading ? (
-        roomsViewMode === 'list' ? (
-          <SkeletonList count={4} />
-        ) : (
-          <SkeletonGrid count={6} columns={roomsColumns} />
-        )
+        <SkeletonRoomsView mode={roomsViewMode} />
       ) : rooms.length === 0 ? (
         <p className="text-sm text-muted text-center py-6">Aucune salle configurée.</p>
       ) : (
@@ -675,7 +671,7 @@ export default function RoomsManagement() {
       )}
 
       {editingRoom && editBlueprint && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-900 rounded-3xl border shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-y-auto p-6 space-y-4">
             <div className="flex items-center justify-between border-b pb-4">
               <div>

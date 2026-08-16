@@ -55,19 +55,19 @@ export default function LandingMobileSection() {
   return (
     <section id="mobile" className="py-20 bg-slate-950 text-white relative overflow-hidden scroll-mt-24">
       <div className="absolute inset-0 bg-[radial-gradient(#4f46e5_1px,transparent_1px)] [background-size:24px_24px] opacity-15" />
-      <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/20 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-80 h-80 bg-violet-600/15 blur-[100px] rounded-full pointer-events-none" />
+      <div className="absolute top-0 right-0 w-96 h-96 bg-primary/20 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-80 h-80 bg-[color-mix(in_srgb,var(--brand-accent,#6366f1)_15%,transparent)] blur-[100px] rounded-full pointer-events-none" />
 
       <div className="page-container relative">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-bold">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/100/10 border border-primary/30 text-primary/80 text-xs font-bold">
               <Smartphone className="w-4 h-4" />
               <span>Application mobile native · iOS & Android</span>
             </div>
             <h2 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight">
               Le protocole dans votre poche,{' '}
-              <span className="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-primary to-[var(--brand-accent,#818cf8)] bg-clip-text text-transparent">
                 le RSVP dans la main de vos invités
               </span>
             </h2>
@@ -79,8 +79,8 @@ export default function LandingMobileSection() {
 
             <div className="grid sm:grid-cols-2 gap-4">
               {MOBILE_FEATURES.map(({ icon: Icon, title, description }) => (
-                <div key={title} className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-indigo-500/40 transition">
-                  <Icon className="w-5 h-5 text-indigo-400 mb-2" />
+                <div key={title} className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-primary/40 transition">
+                  <Icon className="w-5 h-5 text-primary mb-2" />
                   <h3 className="font-bold text-sm text-white mb-1">{title}</h3>
                   <p className="text-xs text-slate-400 leading-relaxed">{description}</p>
                 </div>
@@ -89,7 +89,7 @@ export default function LandingMobileSection() {
 
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition text-sm"
+              className="inline-flex items-center gap-2 px-5 py-3 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl transition text-sm"
             >
               Créer mon organisation
               <ArrowRight className="w-4 h-4" />
@@ -98,7 +98,7 @@ export default function LandingMobileSection() {
 
           <div className="space-y-5">
             <div className="bg-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-sm">
-              <h3 className="text-xs font-extrabold uppercase tracking-widest text-indigo-300 mb-4">
+              <h3 className="text-xs font-extrabold uppercase tracking-widest text-primary/80 mb-4">
                 Parcours invité (mobile)
               </h3>
               <ul className="space-y-2.5">

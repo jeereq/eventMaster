@@ -26,7 +26,7 @@ export default function FaqSection({
     <section id={id} className={`py-20 bg-slate-50 dark:bg-slate-900/50 scroll-mt-24 ${className}`}>
       <div className="page-container">
         <div className="text-center max-w-2xl mx-auto mb-12 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-bold">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 dark:bg-primary/15 border border-primary/20 dark:border-primary/30 text-primary dark:text-primary/80 text-xs font-bold">
             <HelpCircle className="w-4 h-4" />
             <span>FAQ</span>
           </div>
@@ -66,7 +66,7 @@ export default function FaqSection({
         {showContactLink && (
           <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-8">
             Vous ne trouvez pas votre réponse ?{' '}
-            <Link href="/contact" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">
+            <Link href="/contact" className="text-primary dark:text-primary font-semibold hover:underline">
               Contactez notre équipe
             </Link>
           </p>

@@ -16,10 +16,16 @@ export {
   SkeletonRoomsView,
   SkeletonTemplatesView,
   SkeletonBillingView,
+  SkeletonStatsRow,
+  SkeletonTabContent,
+  SkeletonAnalyticsView,
+  SkeletonInvoicesView,
+  SkeletonCommercialView,
+  SkeletonProfileView,
 } from './Skeleton';
 export { default as Input } from './Input';
 export { default as Alert } from './Alert';
-export { default as Modal } from './Modal';
+export { default as Modal, modalBackdropClass, modalPanelClass } from './Modal';
 export { default as PageHeader } from './PageHeader';
 export { default as EmptyState } from './EmptyState';
 export { default as Badge } from './Badge';

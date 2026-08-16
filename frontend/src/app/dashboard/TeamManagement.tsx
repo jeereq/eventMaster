@@ -7,6 +7,8 @@ import {
   Users, UserPlus, Trash2, Loader2, Crown, Mail, Phone, AlertCircle, CheckCircle2,
   Shield, Briefcase, MessageSquare, TrendingUp, Copy, RefreshCw,
 } from 'lucide-react';
+import { SkeletonGrid, ViewModeToggle, useViewMode } from '@/components/ui';
+import { cn } from '@/lib/cn';
 
 interface TeamMember {
   id: string;
@@ -31,6 +33,13 @@ const orgRoleLabels: Record<string, string> = {
 
 export default function TeamManagement() {
   const { user, tenant, planQuota, planFeatures } = useAuth();
+  const {
+    mode: teamViewMode,
+    setViewMode: setTeamViewMode,
+    columns: teamColumns,
+    setGridColumns: setTeamColumns,
+    gridClassName: teamGridClass,
+  } = useViewMode('em-view-team', 'grid', 2);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [canManageTeam, setCanManageTeam] = useState(false);
   const [defaultCommissionRate, setDefaultCommissionRate] = useState(0.2);
@@ -316,15 +325,28 @@ export default function TeamManagement() {
       )}
 
       {loading ? (
-        <div className="py-8 flex justify-center">
-          <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
-        </div>
+        <SkeletonGrid count={4} columns={2} />
       ) : members.length === 0 ? (
         <p className="text-sm text-slate-500 text-center py-6">Aucun membre trouvé.</p>
       ) : (
         <div className="space-y-3">
+          <div className="flex justify-end">
+            <ViewModeToggle
+              storageKey="em-view-team"
+              value={teamViewMode}
+              onChange={setTeamViewMode}
+              columns={teamColumns}
+              onColumnsChange={setTeamColumns}
+              defaultMode="grid"
+              defaultColumns={2}
+            />
+          </div>
+          <div className={teamViewMode === 'list' ? 'flex flex-col gap-2' : teamGridClass}>
           {members.map((member) => (
-            <div key={member.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl">
+            <div key={member.id} className={cn(
+              'flex flex-col gap-3 p-4 bg-surface border border-border rounded-[var(--radius-card)]',
+              teamViewMode === 'list' && 'sm:flex-row sm:items-center sm:justify-between',
+            )}>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-bold text-sm text-slate-900 dark:text-white truncate">{member.name || 'Sans nom'}</span>
@@ -419,6 +441,7 @@ export default function TeamManagement() {
               )}
             </div>
           ))}
+          </div>
         </div>
       )}
     </div>

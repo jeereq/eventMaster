@@ -11,6 +11,7 @@
   --border-subtle: #eceef0;
   --primary: #4f46e5;
   --primary-hover: #4338ca;
+  --brand-accent: #6366f1;
   --muted: #6d6e6f;
   --sidebar: #f0f1f3;
   --card-hover: #fafbfc;
@@ -28,6 +29,7 @@
   --border-subtle: #48494b;
   --primary: #6366f1;
   --primary-hover: #818cf8;
+  --brand-accent: #a5b4fc;
   --muted: #a2a0a2;
   --sidebar: #191a1c;
   --card-hover: #323437;
@@ -42,6 +44,7 @@
   --color-border-subtle: var(--border-subtle);
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
+  --color-brand-accent: var(--brand-accent, #6366f1);
   --color-muted: var(--muted);
   --color-sidebar: var(--sidebar);
   --color-card-hover: var(--card-hover);

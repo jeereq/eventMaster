@@ -9,7 +9,8 @@ import {
   Clock, Download, FileSpreadsheet, RefreshCw, HelpCircle
 } from 'lucide-react';
 import Link from 'next/link';
-import { PageHeader, Alert, EmptyState, Button } from '@/components/ui';
+import { PageHeader, Alert, EmptyState, Button, SkeletonAnalyticsView, SkeletonStatsRow} from '@/components/ui';
+// skeletons imported below
 import {
   extractRsvpFieldsFromTemplateContent,
   supplementFieldsFromGuestPreferences,
@@ -215,12 +216,7 @@ export default function AnalyticsPage() {
   };
 
   if (loadingEvents) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
-        <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
-        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Chargement de vos statistiques...</p>
-      </div>
-    );
+    return <SkeletonAnalyticsView />;
   }
 
   return (
@@ -267,9 +263,11 @@ export default function AnalyticsPage() {
           }
         />
       ) : loadingStats ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Calcul des statistiques de l'événement...</p>
+        <div className="space-y-8">
+          <SkeletonStatsRow count={4} />
+          <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5">
+            <div className="h-48 rounded-xl bg-surface-muted animate-pulse" />
+          </div>
         </div>
       ) : (
         <div className="space-y-8">
