@@ -5,6 +5,7 @@ import { resolveOrgAccess, canManageRoom, canAccessRoom } from '../services/perm
 import {
   assertRoomQuota,
   assertRoomTypeForPlan,
+  assertPlanFeature,
   allowsRoomBlueprint,
   PlanFeatureError,
 } from '../services/planFeaturesService';
@@ -15,6 +16,29 @@ import {
   RoomType,
   LayoutParams,
 } from '../services/roomLayoutService';
+
+function blueprintUsesThemesOrFixtures(blueprint: unknown): boolean {
+  if (!blueprint || typeof blueprint !== 'object') return false;
+  const bp = blueprint as {
+    fixtures?: unknown[];
+    metadata?: {
+      roomThemeId?: string;
+      customThemes?: unknown[];
+      floorImageUrl?: string | null;
+    };
+  };
+  const themeId = bp.metadata?.roomThemeId;
+  if (themeId && themeId !== 'classic') return true;
+  if (Array.isArray(bp.metadata?.customThemes) && bp.metadata.customThemes.length > 0) return true;
+  if (bp.metadata?.floorImageUrl) return true;
+  if (Array.isArray(bp.fixtures) && bp.fixtures.length > 0) return true;
+  return false;
+}
+
+async function assertThemesFixturesForBlueprint(tenantId: string, blueprint: unknown) {
+  if (!blueprintUsesThemesOrFixtures(blueprint)) return;
+  await assertPlanFeature(tenantId, 'roomThemesFixtures');
+}
 
 function resolveRoomLayout(roomType: string | undefined, layoutParams: LayoutParams | undefined, layoutBlueprint: unknown) {
   const type = (roomType || 'SIMPLE') as RoomType;
@@ -107,6 +131,15 @@ export async function createRoom(req: AuthenticatedRequest, res: Response) {
     }
 
     const blueprint = resolveRoomLayout(resolvedType, layoutParams, layoutBlueprint);
+
+    try {
+      await assertThemesFixturesForBlueprint(tenantId, blueprint);
+    } catch (err) {
+      if (err instanceof PlanFeatureError) {
+        return res.status(403).json({ error: err.message });
+      }
+      throw err;
+    }
     const computedCapacity = blueprint
       ? calculateBlueprintCapacity(blueprint as any)
       : capacity
@@ -170,10 +203,26 @@ export async function updateRoom(req: AuthenticatedRequest, res: Response) {
     }
 
     let nextBlueprint = existing.layoutBlueprint;
+    const layoutChanging =
+      layoutBlueprint !== undefined ||
+      layoutParams !== undefined ||
+      (roomType !== undefined && roomType !== existing.roomType);
+
     if (layoutBlueprint !== undefined) {
       nextBlueprint = layoutBlueprint;
     } else if (layoutParams !== undefined || (roomType !== undefined && roomType !== existing.roomType)) {
       nextBlueprint = resolveRoomLayout(nextType, layoutParams, null) as typeof existing.layoutBlueprint;
+    }
+
+    if (layoutChanging) {
+      try {
+        await assertThemesFixturesForBlueprint(tenantId, nextBlueprint);
+      } catch (err) {
+        if (err instanceof PlanFeatureError) {
+          return res.status(403).json({ error: err.message });
+        }
+        throw err;
+      }
     }
 
     const computedCapacity =

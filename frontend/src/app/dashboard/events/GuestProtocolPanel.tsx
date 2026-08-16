@@ -99,7 +99,13 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
     setMessage(null);
     try {
       const data = await api.post(`/events/${eventId}/guests/${guestId}/check-in`, {});
-      setMessage({ type: 'success', text: data.message });
+      let text = data.message as string;
+      const placement = data.placementDelivery as { skippedReason?: string } | undefined;
+      if (placement?.skippedReason === 'forfait' && !text.includes('forfait')) {
+        text +=
+          ' Le PDF et le GPS de placement ne sont pas inclus dans votre forfait (Premium ou supérieur requis).';
+      }
+      setMessage({ type: 'success', text });
       await loadGuests();
       if (selectedGuest?.id === guestId) {
         setSelectedGuest({ ...selectedGuest, checkedInAt: new Date().toISOString() });
@@ -117,9 +123,13 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
     try {
       const data = await api.post(`/events/${eventId}/guests/${guestId}/verify-seat`, {});
       const notif = data.notification as { sent?: boolean; channels?: string[] } | undefined;
+      const placement = data.placementDelivery as { skippedReason?: string } | undefined;
       let text = data.message as string;
       if (data.seatMatch && notif?.sent && notif.channels?.length) {
         text += ` L'invité a été notifié par ${notif.channels.join(', ')}.`;
+      } else if (data.seatMatch && placement?.skippedReason === 'forfait' && !text.includes('forfait')) {
+        text +=
+          ' Le PDF et le GPS de placement ne sont pas inclus dans votre forfait (Premium ou supérieur requis).';
       }
       setMessage({ type: data.seatMatch ? 'success' : 'error', text });
       await loadGuests();

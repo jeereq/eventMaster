@@ -465,6 +465,7 @@ export default function RoomsManagement() {
                 blueprint={blueprintDraft}
                 onChange={setBlueprintDraft}
                 onRegenerate={roomType !== 'SIMPLE' ? regenerateBlueprint : undefined}
+                allowThemesFixtures={planFeatures?.roomThemesFixtures !== false}
               />
             </div>
           )}
@@ -602,6 +603,7 @@ export default function RoomsManagement() {
             <RoomLayoutEditor
               blueprint={editBlueprint}
               onChange={setEditBlueprint}
+              allowThemesFixtures={planFeatures?.roomThemesFixtures !== false}
               onRegenerate={() => {
                 setEditBlueprint(refreshBlueprintMetadata(generateRoomBlueprint(editBlueprint.roomType)));
               }}

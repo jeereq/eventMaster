@@ -442,3 +442,34 @@ model PushDeviceToken {
 
   @@index([userId])
 }
+
+/** Catalogue des forfaits / abonnements (source de vérité pour quotas, prix, features). */
+model SubscriptionPlan {
+  id                  PlanType @id
+  name                String
+  price               String
+  monthlyPriceFc      Int
+  promoActive         Boolean  @default(false)
+  promoPrice          String?
+  promoMonthlyPriceFc Int?
+  promoLabel          String?
+  description         String
+  maxEvents           Int
+  maxGuests           Int
+  maxTemplates        Int
+  maxRooms            Int
+  maxOrgManagers      Int
+  customTemplates     Boolean  @default(false)
+  mockupOcr           Boolean  @default(false)
+  protocolQr          Boolean  @default(false)
+  seatNotifications   Boolean  @default(false)
+  roomThemesFixtures  Boolean  @default(false)
+  adminReports        Boolean  @default(false)
+  roomEditorLevel     String   @default("basic")
+  commercialNetwork   Boolean  @default(false)
+  supportLevel        String   @default("community")
+  sortOrder           Int      @default(0)
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}

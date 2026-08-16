@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../db';
 import { sendRealEmail, sendRealWhatsApp } from '../services/notificationService';
 import { getPlansConfiguration } from '../config/plansConfig';
+import { loadSubscriptionPlansFromDb } from '../services/subscriptionPlanCatalogService';
 import {
   CONTACT_ADMIN_EMAIL,
   CONTACT_ADMIN_WHATSAPP,
@@ -10,9 +11,15 @@ import { renderGuestMessage, polishWhatsAppBody } from '../services/messageTempl
 
 const router = Router();
 
-// GET /api/public/plans
-router.get('/plans', async (req: Request, res: Response) => {
-  return res.json(getPlansConfiguration());
+// GET /api/public/plans — catalogue depuis la BD (cache hydraté)
+router.get('/plans', async (_req: Request, res: Response) => {
+  try {
+    const plans = await loadSubscriptionPlansFromDb();
+    return res.json(plans);
+  } catch (error: any) {
+    console.error('[Public] Erreur chargement forfaits:', error);
+    return res.json(getPlansConfiguration());
+  }
 });
 
 // GET /api/public/templates

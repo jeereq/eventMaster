@@ -11,6 +11,7 @@ import { normalizeGuestGuidelines, formatDressCodeText } from '../utils/guestGui
 export type TableAssignmentNotificationSummary = {
   notified: number;
   skipped: number;
+  skippedReason?: 'forfait';
   results: Array<{
     guestId: string;
     guestName: string;
@@ -37,7 +38,7 @@ export async function notifyTableAssignmentChanges(params: {
 
   const snapshot = await getTenantPlanSnapshot(tenantId);
   if (!snapshot || snapshot.plan === 'FREE') {
-    return null;
+    return { notified: 0, skipped: 0, results: [], skippedReason: 'forfait' };
   }
 
   const guestIdsToNotify = findAssignmentChanges(oldPlan, newPlan);
