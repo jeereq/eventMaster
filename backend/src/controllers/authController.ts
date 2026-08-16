@@ -19,6 +19,7 @@ import {
   maskPhone,
   VerificationMethod,
 } from '../services/otpService';
+import { loadPlatformSettings } from '../services/platformSettingsService';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'eventmaster-secret-key-12345';
 
@@ -69,6 +70,19 @@ function buildAuthToken(user: { id: string; tenantId: string | null; role: strin
 
 export async function register(req: Request, res: Response) {
   try {
+    const platform = loadPlatformSettings();
+    if (platform.maintenanceMode) {
+      return res.status(503).json({
+        error: 'maintenance',
+        message: platform.maintenanceMessage || 'La plateforme est en maintenance.',
+      });
+    }
+    if (!platform.allowRegistration) {
+      return res.status(403).json({
+        error: 'Les inscriptions sont actuellement fermées. Contactez le support pour créer une organisation.',
+      });
+    }
+
     const { email, password, name, tenantName, phone, verificationMethod = 'EMAIL', acceptTerms, acceptPrivacy, referralCode } = req.body;
 
     if (!email || !password || !name || !tenantName) {

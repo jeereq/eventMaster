@@ -20,7 +20,8 @@ import { prisma } from './db';
 import { startReminderWorker } from './services/reminderService';
 import { startSubscriptionExpiryWorker } from './services/subscriptionExpiryService';
 import { loadSubscriptionPlansFromDb } from './services/subscriptionPlanCatalogService';
-import { isSendGridConfigured } from './config/notificationConfig';
+import { isSendGridConfigured, logNotificationConfigStatus } from './config/notificationConfig';
+import { maintenanceGuard } from './middleware/maintenanceGuard';
 
 // Load environment variables
 dotenv.config();
@@ -46,6 +47,17 @@ app.get('/health', async (req: Request, res: Response) => {
     res.status(500).json({ status: 'ERROR', database: 'Disconnected', error: error.message });
   }
 });
+
+app.get('/api/health', async (req: Request, res: Response) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: 'OK', database: 'Connected', message: 'EventMaster API is running' });
+  } catch (error: any) {
+    res.status(500).json({ status: 'ERROR', database: 'Disconnected', error: error.message });
+  }
+});
+
+app.use(maintenanceGuard);
 
 // Mount Routes
 app.use('/api/auth', authRoutes);
@@ -79,8 +91,10 @@ app.listen(PORT, async () => {
 
   if (!isSendGridConfigured()) {
     console.error(
-      '[EventMaster Server] ATTENTION : SendGrid non configuré — aucun e-mail ne sera envoyé. Configurez SENDGRID_API_KEY et SENDGRID_FROM.',
+      '[EventMaster Server] ATTENTION : SendGrid non configuré — aucun e-mail ne sera envoyé. Configurez SENDGRID_API_KEY et SENDGRID_FROM (ou les réglages plateforme).',
     );
+  } else {
+    logNotificationConfigStatus();
   }
 
   if (!process.env.CLOUDINARY_CLOUD_NAME) {

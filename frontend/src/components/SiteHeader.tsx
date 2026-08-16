@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { PartyPopper, Sun, Moon, Menu, X } from 'lucide-react';
@@ -32,9 +33,11 @@ const LANDING_LINKS: SiteHeaderLink[] = [
 
 const CONTACT_LINKS: SiteHeaderLink[] = [
   { href: '/', label: 'Accueil' },
+  { href: '/#modeles', label: 'Modèles' },
+  { href: '/#parcours', label: 'Parcours' },
   { href: '/#tarifs', label: 'Tarifs' },
   { href: '/contact', label: 'Contact' },
-  { href: '/#faq', label: 'FAQ' },
+  { href: '/faq', label: 'FAQ' },
 ];
 
 export default function SiteHeader({
@@ -44,6 +47,7 @@ export default function SiteHeader({
 }: SiteHeaderProps) {
   const { user, tenant, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { site } = usePlatformSite();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [serverStatus, setServerStatus] = useState<'checking' | 'online' | 'offline'>('checking');
 
@@ -84,7 +88,7 @@ export default function SiteHeader({
             <div className="bg-foreground p-1.5 rounded-[var(--radius-button)] text-background">
               <PartyPopper className="w-3.5 h-3.5" />
             </div>
-            <span className="text-base font-semibold tracking-tight">EventMaster</span>
+            <span className="text-base font-semibold tracking-tight">{site.platformName}</span>
           </Link>
           {showServerStatus && (
             <div className="hidden sm:flex items-center gap-1.5 ml-1 px-2 py-0.5 rounded-md bg-surface-muted border border-border text-[10px] font-medium text-muted">
@@ -141,9 +145,15 @@ export default function SiteHeader({
               <Link href="/login" className={navLinkClass}>
                 Connexion
               </Link>
-              <Link href="/register">
-                <Button size="sm">Essai gratuit</Button>
-              </Link>
+              {site.allowRegistration ? (
+                <Link href="/register">
+                  <Button size="sm">Essai gratuit</Button>
+                </Link>
+              ) : (
+                <Button size="sm" disabled>
+                  Inscriptions fermées
+                </Button>
+              )}
             </>
           )}
         </nav>
@@ -218,11 +228,17 @@ export default function SiteHeader({
                   Connexion
                 </Button>
               </Link>
-              <Link href="/register" onClick={() => setMobileMenuOpen(false)}>
-                <Button size="sm" fullWidth>
-                  Essai gratuit
+              {site.allowRegistration ? (
+                <Link href="/register" onClick={() => setMobileMenuOpen(false)}>
+                  <Button size="sm" fullWidth>
+                    Essai gratuit
+                  </Button>
+                </Link>
+              ) : (
+                <Button size="sm" fullWidth disabled>
+                  Inscriptions fermées
                 </Button>
-              </Link>
+              )}
             </div>
           )}
         </div>

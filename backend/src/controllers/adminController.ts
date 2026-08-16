@@ -3,9 +3,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { PlanType, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import fs from 'fs';
-import path from 'path';
-import { getDefaultPlans, getPlansConfiguration } from '../config/plansConfig';
+import { getPlansConfiguration } from '../config/plansConfig';
 import {
   loadSubscriptionPlansFromDb,
   saveSubscriptionPlansToDb,
@@ -25,6 +23,12 @@ import {
   type TenantBillingAction,
 } from '../services/tenantBillingService';
 import { PAID_PLAN_KEYS } from '../config/plansConfig';
+import {
+  loadPlatformSettings,
+  savePlatformSettings,
+  mergeSettingsUpdate,
+  DEFAULT_PLATFORM_SETTINGS,
+} from '../services/platformSettingsService';
 
 // Get global system statistics and list of all tenants (Super Admin only)
 export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
@@ -1059,52 +1063,20 @@ export async function deleteAdminGuest(req: AuthenticatedRequest, res: Response)
 
 // === CONFIGURATION & SETTINGS (Super Admin only) ===
 
-const settingsFilePath = path.join(__dirname, '..', 'config', 'settings.json');
-
-// Ensure the directory exists
-function ensureSettingsDir() {
-  const dir = path.dirname(settingsFilePath);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-}
-
-const defaultSettings = {
-  platformName: "EventMaster",
-  supportEmail: "mingandajeereq@gmail.com",
-  maintenanceMode: false,
-  allowRegistration: true,
-  ultramsgInstanceId: process.env.ULTRAMSG_INSTANCE_ID || "",
-  ultramsgToken: process.env.ULTRAMSG_TOKEN || "",
-  sendgridApiKey: process.env.SENDGRID_API_KEY || "",
-  twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || "",
-  twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || "",
-  twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER || "",
-  plans: getDefaultPlans(),
-};
-
 export async function getAdminSettings(req: AuthenticatedRequest, res: Response) {
   try {
     if (req.user?.role !== 'SUPER_ADMIN') {
       return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
     }
 
-    // Toujours rafraîchir les forfaits depuis la BD
     const plans = await loadSubscriptionPlansFromDb();
+    const settings = loadPlatformSettings();
 
-    ensureSettingsDir();
-    if (fs.existsSync(settingsFilePath)) {
-      const data = fs.readFileSync(settingsFilePath, 'utf-8');
-      const settings = JSON.parse(data);
-      const { plans: _legacyPlans, ...rest } = settings;
-      return res.json({
-        ...defaultSettings,
-        ...rest,
-        plans,
-      });
-    }
-
-    return res.json({ ...defaultSettings, plans });
+    return res.json({
+      ...DEFAULT_PLATFORM_SETTINGS,
+      ...settings,
+      plans,
+    });
   } catch (error: any) {
     console.error('Erreur lors de la récupération des paramètres:', error);
     return res.status(500).json({ error: 'Erreur lors de la récupération des paramètres' });
@@ -1117,30 +1089,18 @@ export async function updateAdminSettings(req: AuthenticatedRequest, res: Respon
       return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
     }
 
-    const newSettings = req.body;
-    ensureSettingsDir();
-
-    let currentSettings: Record<string, unknown> = { ...defaultSettings };
-    if (fs.existsSync(settingsFilePath)) {
-      const data = fs.readFileSync(settingsFilePath, 'utf-8');
-      currentSettings = { ...currentSettings, ...JSON.parse(data) };
-    }
-
-    const { plans: incomingPlans, ...otherSettings } = newSettings;
-
-    const updatedSettings = {
-      ...currentSettings,
-      ...otherSettings,
-    };
-    // Les forfaits ne sont plus stockés dans settings.json
-    delete (updatedSettings as { plans?: unknown }).plans;
+    const { plans: incomingPlans, ...otherSettings } = req.body || {};
+    const current = loadPlatformSettings();
+    const merged = mergeSettingsUpdate(current, otherSettings as Record<string, unknown>);
+    const updatedSettings = savePlatformSettings(merged);
 
     let plans = getPlansConfiguration();
     if (incomingPlans) {
       plans = await saveSubscriptionPlansToDb(incomingPlans);
+    } else {
+      plans = await loadSubscriptionPlansFromDb();
     }
 
-    fs.writeFileSync(settingsFilePath, JSON.stringify(updatedSettings, null, 2), 'utf-8');
     return res.json({
       message: 'Paramètres mis à jour avec succès',
       settings: { ...updatedSettings, plans },

@@ -210,8 +210,8 @@ const ADMIN_TAB_META: Record<AdminTabId, { title: string; description: string; t
   },
   settings: {
     title: 'Réglages plateforme',
-    description: 'Nom, maintenance, inscriptions, WhatsApp (UltraMsg) et e-mail (SendGrid).',
-    tip: 'Les tarifs des forfaits se configurent dans l’onglet Forfaits, pas ici.',
+    description: 'Identité, contact public, maintenance, inscriptions, UltraMsg et SendGrid — appliqués au site et à l’API.',
+    tip: 'Après sauvegarde, landing, contact, footer et inscriptions se mettent à jour immédiatement. Les forfaits sont dans l’onglet dédié.',
   },
   'subscription-requests': {
     title: 'Demandes d’abonnement',
@@ -1307,7 +1307,10 @@ function DashboardPageContent() {
     setSavingSettings(true);
     try {
       await api.put('/admin/settings', adminSettings);
-      alert('Configurations enregistrées avec succès !');
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('em-platform-settings-updated'));
+      }
+      alert('Paramètres enregistrés. Le site public applique immédiatement les changements.');
     } catch (err: any) {
       alert(err.message || 'Erreur lors de l\'enregistrement des configurations');
     } finally {
@@ -2315,57 +2318,179 @@ function DashboardPageContent() {
                           Identité & accès
                         </h3>
                         <p className="text-xs text-muted -mt-2">
-                          Nom affiché, e-mail support, mode maintenance et ouverture des inscriptions.
+                          Ces valeurs alimentent la landing, le contact, le footer, les e-mails et les inscriptions.
                         </p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-1.5">
                             <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Nom de la plateforme</label>
                             <input
                               type="text"
-                              value={adminSettings.platformName}
+                              value={adminSettings.platformName || ''}
                               onChange={(e) => setAdminSettings({ ...adminSettings, platformName: e.target.value })}
-                              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-medium"
+                              className="w-full px-4 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-medium"
                               required
                             />
                           </div>
                           <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Email de support</label>
+                            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Accroche (hero)</label>
                             <input
-                              type="email"
-                              value={adminSettings.supportEmail}
-                              onChange={(e) => setAdminSettings({ ...adminSettings, supportEmail: e.target.value })}
-                              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-medium"
-                              required
+                              type="text"
+                              value={adminSettings.platformTagline || ''}
+                              onChange={(e) => setAdminSettings({ ...adminSettings, platformTagline: e.target.value })}
+                              className="w-full px-4 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-medium"
+                              placeholder="Organisez vos événements…"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Couleur primaire (hex)</label>
+                            <input
+                              type="text"
+                              value={adminSettings.brandPrimary || ''}
+                              onChange={(e) => setAdminSettings({ ...adminSettings, brandPrimary: e.target.value })}
+                              className="w-full px-4 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-mono"
+                              placeholder="#4f46e5"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Couleur accent (hex)</label>
+                            <input
+                              type="text"
+                              value={adminSettings.brandAccent || ''}
+                              onChange={(e) => setAdminSettings({ ...adminSettings, brandAccent: e.target.value })}
+                              className="w-full px-4 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-mono"
+                              placeholder="#6366f1"
                             />
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                          <label className="flex items-center gap-3 cursor-pointer bg-white p-4 border border-slate-200 rounded-xl hover:bg-slate-50/50 transition">
+                          <label className="flex items-center gap-3 cursor-pointer bg-white dark:bg-slate-950 p-4 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50/50 dark:hover:bg-slate-900 transition">
                             <input
                               type="checkbox"
-                              checked={adminSettings.maintenanceMode}
+                              checked={Boolean(adminSettings.maintenanceMode)}
                               onChange={(e) => setAdminSettings({ ...adminSettings, maintenanceMode: e.target.checked })}
                               className="w-4.5 h-4.5 text-primary border-slate-300 rounded focus:ring-primary"
                             />
                             <div>
-                              <span className="text-sm font-bold text-slate-800 block">Mode Maintenance</span>
-                              <span className="text-xs text-slate-500 font-medium">Bloquer temporairement l'accès à l'application pour les utilisateurs.</span>
+                              <span className="text-sm font-bold text-slate-800 dark:text-slate-100 block">Mode maintenance</span>
+                              <span className="text-xs text-slate-500 font-medium">Bloque l&apos;API (sauf Super Admin, login, RSVP, site public).</span>
                             </div>
                           </label>
 
-                          <label className="flex items-center gap-3 cursor-pointer bg-white p-4 border border-slate-200 rounded-xl hover:bg-slate-50/50 transition">
+                          <label className="flex items-center gap-3 cursor-pointer bg-white dark:bg-slate-950 p-4 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50/50 dark:hover:bg-slate-900 transition">
                             <input
                               type="checkbox"
-                              checked={adminSettings.allowRegistration}
+                              checked={adminSettings.allowRegistration !== false}
                               onChange={(e) => setAdminSettings({ ...adminSettings, allowRegistration: e.target.checked })}
                               className="w-4.5 h-4.5 text-primary border-slate-300 rounded focus:ring-primary"
                             />
                             <div>
-                              <span className="text-sm font-bold text-slate-800 block">Inscriptions Ouvertes</span>
-                              <span className="text-xs text-slate-500 font-medium">Permettre aux nouveaux utilisateurs de créer un compte.</span>
+                              <span className="text-sm font-bold text-slate-800 dark:text-slate-100 block">Inscriptions ouvertes</span>
+                              <span className="text-xs text-slate-500 font-medium">Autorise la création de nouvelles organisations.</span>
                             </div>
                           </label>
+                        </div>
+
+                        {adminSettings.maintenanceMode && (
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Message de maintenance</label>
+                            <textarea
+                              value={adminSettings.maintenanceMessage || ''}
+                              onChange={(e) => setAdminSettings({ ...adminSettings, maintenanceMessage: e.target.value })}
+                              rows={2}
+                              className="w-full px-4 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm resize-none"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Section Contact public */}
+                      <div className="bg-surface-muted border border-border rounded-[var(--radius-card)] p-5 space-y-4">
+                        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 border-b border-border pb-3">
+                          <Mail className="w-4 h-4 text-primary" />
+                          Contact & support (site public)
+                        </h3>
+                        <p className="text-xs text-muted -mt-2">
+                          Affiché sur Contact, Footer, FAQ et utilisés comme destinataires du formulaire.
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">E-mail support</label>
+                            <input
+                              type="email"
+                              value={adminSettings.supportEmail || ''}
+                              onChange={(e) => setAdminSettings({ ...adminSettings, supportEmail: e.target.value })}
+                              className="w-full px-4 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">WhatsApp (destinataire contact)</label>
+                            <input
+                              type="text"
+                              value={adminSettings.supportWhatsApp || ''}
+                              onChange={(e) => setAdminSettings({ ...adminSettings, supportWhatsApp: e.target.value })}
+                              className="w-full px-4 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-mono"
+                              placeholder="+243817125577"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Téléphone affiché</label>
+                            <input
+                              type="text"
+                              value={adminSettings.supportPhone || ''}
+                              onChange={(e) => setAdminSettings({ ...adminSettings, supportPhone: e.target.value })}
+                              className="w-full px-4 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Note WhatsApp</label>
+                            <input
+                              type="text"
+                              value={adminSettings.whatsappNote || ''}
+                              onChange={(e) => setAdminSettings({ ...adminSettings, whatsappNote: e.target.value })}
+                              className="w-full px-4 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Adresse ligne 1</label>
+                            <input
+                              type="text"
+                              value={adminSettings.addressLine1 || ''}
+                              onChange={(e) => setAdminSettings({ ...adminSettings, addressLine1: e.target.value })}
+                              className="w-full px-4 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Adresse ligne 2</label>
+                            <input
+                              type="text"
+                              value={adminSettings.addressLine2 || ''}
+                              onChange={(e) => setAdminSettings({ ...adminSettings, addressLine2: e.target.value })}
+                              className="w-full px-4 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1.5 md:col-span-2">
+                            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Adresse courte (footer)</label>
+                            <input
+                              type="text"
+                              value={adminSettings.addressShort || ''}
+                              onChange={(e) => setAdminSettings({ ...adminSettings, addressShort: e.target.value })}
+                              className="w-full px-4 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1.5 md:col-span-2">
+                            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Horaires support</label>
+                            <input
+                              type="text"
+                              value={adminSettings.supportHours || ''}
+                              onChange={(e) => setAdminSettings({ ...adminSettings, supportHours: e.target.value })}
+                              className="w-full px-4 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm"
+                            />
+                          </div>
                         </div>
                       </div>
 
@@ -2383,9 +2508,9 @@ function DashboardPageContent() {
                             <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">UltraMsg Instance ID</label>
                             <input
                               type="text"
-                              value={adminSettings.ultramsgInstanceId}
+                              value={adminSettings.ultramsgInstanceId || ''}
                               onChange={(e) => setAdminSettings({ ...adminSettings, ultramsgInstanceId: e.target.value })}
-                              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-mono"
+                              className="w-full px-4 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-mono"
                               placeholder="ex: instance12345"
                             />
                           </div>
@@ -2393,9 +2518,9 @@ function DashboardPageContent() {
                             <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">UltraMsg Token</label>
                             <input
                               type="password"
-                              value={adminSettings.ultramsgToken}
+                              value={adminSettings.ultramsgToken || ''}
                               onChange={(e) => setAdminSettings({ ...adminSettings, ultramsgToken: e.target.value })}
-                              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-mono"
+                              className="w-full px-4 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-mono"
                               placeholder="••••••••••••••••••••••••••••••••"
                             />
                           </div>
@@ -2411,15 +2536,28 @@ function DashboardPageContent() {
                         <p className="text-xs text-muted -mt-2">
                           Requis pour OTP e-mail, invitations et notifications transactionnelles.
                         </p>
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">SendGrid API Key</label>
-                          <input
-                            type="password"
-                            value={adminSettings.sendgridApiKey}
-                            onChange={(e) => setAdminSettings({ ...adminSettings, sendgridApiKey: e.target.value })}
-                            className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-mono"
-                            placeholder="ex: SG.••••••••••••••••••••••••••••••••"
-                          />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1.5 md:col-span-2">
+                            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">SendGrid API Key</label>
+                            <input
+                              type="password"
+                              value={adminSettings.sendgridApiKey || ''}
+                              onChange={(e) => setAdminSettings({ ...adminSettings, sendgridApiKey: e.target.value })}
+                              className="w-full px-4 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-mono"
+                              placeholder="ex: SG.••••••••••••••••••••••••••••••••"
+                            />
+                          </div>
+                          <div className="space-y-1.5 md:col-span-2">
+                            <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Expéditeur (From)</label>
+                            <input
+                              type="email"
+                              value={adminSettings.sendgridFrom || ''}
+                              onChange={(e) => setAdminSettings({ ...adminSettings, sendgridFrom: e.target.value })}
+                              className="w-full px-4 py-2.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm"
+                              placeholder="no-reply@votredomaine.com"
+                            />
+                            <p className="text-[11px] text-muted">Doit être un domaine vérifié dans SendGrid.</p>
+                          </div>
                         </div>
                       </div>
 

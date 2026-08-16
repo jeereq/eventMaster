@@ -3,13 +3,24 @@ import { prisma } from '../db';
 import { sendRealEmail, sendRealWhatsApp } from '../services/notificationService';
 import { getPlansConfiguration } from '../config/plansConfig';
 import { loadSubscriptionPlansFromDb } from '../services/subscriptionPlanCatalogService';
-import {
-  CONTACT_ADMIN_EMAIL,
-  CONTACT_ADMIN_WHATSAPP,
-} from '../config/defaultGuestMessageTemplates';
 import { renderGuestMessage, polishWhatsAppBody } from '../services/messageTemplateService';
+import {
+  getPublicSiteConfig,
+  getContactDestinations,
+  loadPlatformSettings,
+} from '../services/platformSettingsService';
 
 const router = Router();
+
+/** GET /api/public/site — identité & contact (sans secrets) */
+router.get('/site', (_req: Request, res: Response) => {
+  try {
+    return res.json(getPublicSiteConfig());
+  } catch (error: any) {
+    console.error('[Public] Erreur site config:', error);
+    return res.status(500).json({ error: 'Impossible de charger la configuration du site' });
+  }
+});
 
 // GET /api/public/plans — catalogue depuis la BD (cache hydraté)
 router.get('/plans', async (_req: Request, res: Response) => {
@@ -23,8 +34,7 @@ router.get('/plans', async (_req: Request, res: Response) => {
 });
 
 // GET /api/public/templates
-// Public endpoint to fetch templates that are configured to be shown on the landing page
-router.get('/templates', async (req: Request, res: Response) => {
+router.get('/templates', async (_req: Request, res: Response) => {
   try {
     const templates = await prisma.template.findMany({
       where: {
@@ -36,20 +46,24 @@ router.get('/templates', async (req: Request, res: Response) => {
       },
     });
 
-    return res.json(templates.map(t => {
-      const content = t.content as { global?: { landingCategory?: string; landingDescription?: string } } | null;
-      return {
-        id: t.id,
-        name: t.name,
-        content: t.content,
-        tenantId: null,
-        isGlobal: true,
-        showOnLanding: t.showOnLanding,
-        category: content?.global?.landingCategory || 'private',
-        description: content?.global?.landingDescription || null,
-        createdAt: t.createdAt,
-      };
-    }));
+    return res.json(
+      templates.map((t) => {
+        const content = t.content as {
+          global?: { landingCategory?: string; landingDescription?: string };
+        } | null;
+        return {
+          id: t.id,
+          name: t.name,
+          content: t.content,
+          tenantId: null,
+          isGlobal: true,
+          showOnLanding: t.showOnLanding,
+          category: content?.global?.landingCategory || 'private',
+          description: content?.global?.landingDescription || null,
+          createdAt: t.createdAt,
+        };
+      }),
+    );
   } catch (error: any) {
     console.error('Erreur lors de la récupération des modèles publics:', error);
     return res.status(500).json({ error: 'Erreur lors de la récupération des modèles publics' });
@@ -57,20 +71,32 @@ router.get('/templates', async (req: Request, res: Response) => {
 });
 
 // POST /api/public/contact
-// Public endpoint to submit contact form messages
 router.post('/contact', async (req: Request, res: Response) => {
   try {
+    const settings = loadPlatformSettings();
+    if (settings.maintenanceMode) {
+      return res.status(503).json({
+        error: 'maintenance',
+        message: settings.maintenanceMessage || 'La plateforme est en maintenance.',
+      });
+    }
+
     const { name, email, subject, message } = req.body;
 
     if (!name || !email || !subject || !message) {
-      return res.status(400).json({ error: 'Tous les champs sont requis (nom, email, sujet, message).' });
+      return res
+        .status(400)
+        .json({ error: 'Tous les champs sont requis (nom, email, sujet, message).' });
     }
 
-    const adminEmail = CONTACT_ADMIN_EMAIL;
-    const adminWhatsApp = CONTACT_ADMIN_WHATSAPP;
+    const {
+      email: adminEmail,
+      whatsapp: adminWhatsApp,
+      platformName,
+    } = getContactDestinations(settings);
 
-    const emailSubject = `[EventMaster Contact] ${subject}`;
-    const emailText = `Nouveau message de contact EventMaster\n\nNom : ${name}\nEmail : ${email}\nSujet : ${subject}\n\nMessage :\n${message}`;
+    const emailSubject = `[${platformName} Contact] ${subject}`;
+    const emailText = `Nouveau message de contact ${platformName}\n\nNom : ${name}\nEmail : ${email}\nSujet : ${subject}\n\nMessage :\n${message}`;
     const emailHtml = `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px;">
         <h2 style="color: #312e81; margin-top: 0;">Nouveau message de contact</h2>
@@ -80,7 +106,7 @@ router.post('/contact', async (req: Request, res: Response) => {
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-top: 16px;">
           <p style="margin: 0; white-space: pre-line; color: #334155;">${message}</p>
         </div>
-        <p style="font-size: 12px; color: #94a3b8; margin-top: 24px;">EventMaster — formulaire de contact public</p>
+        <p style="font-size: 12px; color: #94a3b8; margin-top: 24px;">${platformName} — formulaire de contact public</p>
       </div>
     `;
 
@@ -94,7 +120,7 @@ router.post('/contact', async (req: Request, res: Response) => {
     });
     const whatsappResult = await sendRealWhatsApp(
       adminWhatsApp,
-      polishWhatsAppBody(whatsappRendered.body)
+      polishWhatsAppBody(whatsappRendered.body),
     );
 
     const channels: string[] = [];
@@ -103,20 +129,24 @@ router.post('/contact', async (req: Request, res: Response) => {
 
     if (channels.length === 0) {
       return res.status(502).json({
-        error: 'Impossible d\'envoyer votre message pour le moment. Veuillez réessayer ou nous contacter directement.',
+        error:
+          "Impossible d'envoyer votre message pour le moment. Veuillez réessayer ou nous contacter directement.",
       });
     }
 
     return res.status(200).json({
       success: true,
-      message: 'Votre message a été transmis avec succès ! Notre équipe vous répondra dans les plus brefs délais.',
+      message:
+        'Votre message a été transmis avec succès ! Notre équipe vous répondra dans les plus brefs délais.',
       channels,
       emailSimulated: emailResult.simulated,
       whatsappSimulated: whatsappResult.simulated,
     });
   } catch (error: any) {
     console.error('Erreur lors de la soumission du formulaire de contact:', error);
-    return res.status(500).json({ error: 'Une erreur est survenue lors de l\'envoi de votre message.' });
+    return res
+      .status(500)
+      .json({ error: "Une erreur est survenue lors de l'envoi de votre message." });
   }
 });
 

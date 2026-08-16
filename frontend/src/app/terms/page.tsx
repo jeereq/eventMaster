@@ -1,4 +1,5 @@
 import { LegalPageShell, Section } from '@/components/LegalPageShell';
+import LegalSupportEmail from '@/components/LegalSupportEmail';
 
 export const metadata = {
   title: 'Conditions d\'utilisation — EventMaster',
@@ -179,9 +180,7 @@ export default function TermsPage() {
       <Section title="11. Contact">
         <p>
           Pour toute question relative à ces conditions :{' '}
-          <a href="mailto:mingandajeereq@gmail.com" className="text-indigo-600 dark:text-indigo-400 hover:underline">
-            mingandajeereq@gmail.com
-          </a>{' '}
+          <LegalSupportEmail className="text-indigo-600 dark:text-indigo-400 hover:underline" />{' '}
           ou via notre{' '}
           <a href="/contact" className="text-indigo-600 dark:text-indigo-400 hover:underline">
             formulaire de contact
