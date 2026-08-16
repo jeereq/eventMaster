@@ -2,7 +2,6 @@
 
 import React from 'react';
 import type { LandingTemplate } from '@/config/landingTemplates';
-import { getCanvasStyle } from '@/lib/rsvpFormFields';
 import { getTemplateBackgroundStyle } from '@/lib/templateBackgroundStyle';
 
 const LANDING_PREVIEW_FONTS =
@@ -33,6 +32,8 @@ interface PreviewElement {
 interface LandingInvitationPreviewProps {
   template: LandingTemplate;
   compact?: boolean;
+  /** hero = aperçu landing (hauteur bornée, ne stretch pas la section) */
+  variant?: 'default' | 'hero' | 'compact';
   className?: string;
 }
 
@@ -231,15 +232,19 @@ function renderLegacyElement(
 export default function LandingInvitationPreview({
   template,
   compact = false,
+  variant,
   className = '',
 }: LandingInvitationPreviewProps) {
+  const mode = variant || (compact ? 'compact' : 'default');
+  const isCompact = mode === 'compact' || mode === 'hero';
+  const isHero = mode === 'hero';
+
   const global = template.previewContent?.global;
   const rawElements = (template.previewContent?.elements || []) as PreviewElement[];
   const bgColor = global?.bgColor || template.style.bgColor || '#faf8f5';
   const bgType = (global?.bgType as string | undefined) || 'color';
   const bgImageUrl = (global?.bgImageUrl as string | undefined) || '';
   const bgPattern = (global?.bgPattern as string | undefined) || 'paper';
-  const canvasStyle = getCanvasStyle(global as Parameters<typeof getCanvasStyle>[0]);
   const backgroundStyle = getTemplateBackgroundStyle(bgType, bgColor, bgImageUrl, bgPattern);
   const hasBackgroundImage = bgType === 'image' && Boolean(bgImageUrl);
   const useLegacyOnly = rawElements.length === 0;
@@ -250,38 +255,51 @@ export default function LandingInvitationPreview({
         ['text', 'button', 'image', 'divider', 'rsvp-block'].includes(el.type || ''),
       );
 
-  /** Compact : même contenu que l’aperçu plein, simplement réduit (pas une autre « version » du modèle). */
-  const elementsToRender = compact
-    ? (visibleElements as PreviewElement[]).slice(0, hasBackgroundImage ? 5 : 6)
+  const elementsToRender = isCompact
+    ? (visibleElements as PreviewElement[]).slice(0, isHero ? 5 : hasBackgroundImage ? 5 : 6)
     : visibleElements;
 
   return (
     <>
       <link href={LANDING_PREVIEW_FONTS} rel="stylesheet" />
       <div
-        className={`rounded-[var(--radius-card)] border shadow-[var(--shadow-soft)] transition-all duration-300 flex flex-col relative overflow-hidden ${compact ? 'min-h-[200px] p-3' : 'p-6 sm:p-8 min-h-[340px]'} ${className}`}
+        className={[
+          'rounded-[var(--radius-card)] border shadow-[var(--shadow-soft)] transition-all duration-300 flex flex-col relative overflow-hidden',
+          isHero
+            ? 'h-full max-h-full p-4 sm:p-5 justify-center'
+            : isCompact
+              ? 'min-h-[180px] max-h-[240px] p-3'
+              : 'p-6 sm:p-8 min-h-[280px] max-h-[min(520px,70vh)]',
+          className,
+        ]
+          .filter(Boolean)
+          .join(' ')}
         style={{
           ...backgroundStyle,
           borderColor: template.style.borderColor || 'rgba(226,232,240,0.9)',
-          ...(compact
-            ? {}
-            : { maxWidth: canvasStyle.maxWidth, minHeight: canvasStyle.minHeight }),
         }}
       >
-        {hasBackgroundImage && compact && (
+        {hasBackgroundImage && isCompact && (
           <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent pointer-events-none z-[1]" />
         )}
 
-        <div className="relative z-10 flex flex-wrap gap-y-2 w-full">
+        <div
+          className={[
+            'relative z-10 flex flex-wrap gap-y-1.5 w-full',
+            isHero ? 'overflow-hidden max-h-full' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
           {useLegacyOnly
             ? template.elements.map((el, i) => (
                 <div key={i} className="w-full">
-                  {renderLegacyElement(el, compact)}
+                  {renderLegacyElement(el, isCompact)}
                 </div>
               ))
             : (elementsToRender as PreviewElement[]).map((el, i) => (
-                <div key={el.id || i} className={`${widthClass(el.width)} px-1`}>
-                  {renderElement(el, compact)}
+                <div key={el.id || i} className={`${widthClass(el.width)} px-0.5`}>
+                  {renderElement(el, isCompact)}
                 </div>
               ))}
         </div>

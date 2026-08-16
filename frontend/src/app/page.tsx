@@ -89,11 +89,11 @@ export default function Home() {
     <div className="flex flex-col min-h-screen bg-background text-foreground font-sans antialiased transition-colors duration-200">
       <SiteHeader variant="landing" showServerStatus />
 
-      {/* Hero — composition sobre : marque + message + CTA + aperçu modèle API */}
+      {/* Hero — marque + message + CTA + aperçu modèle borné */}
       <section className="relative overflow-hidden border-b border-border">
         <div className="absolute inset-0 bg-[linear-gradient(180deg,var(--surface-muted)_0%,var(--background)_55%)]" />
-        <div className="page-container relative py-16 lg:py-22">
-          <div className="grid lg:grid-cols-[1.05fr_0.95fr] gap-12 lg:gap-16 items-center">
+        <div className="page-container relative py-12 sm:py-14 lg:py-16">
+          <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-10 lg:gap-12 items-center">
             <div className="space-y-6">
               <p className="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground">
                 {site.platformName}
@@ -137,54 +137,67 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="min-h-[320px] flex flex-col justify-center">
+            <div className="w-full max-w-md mx-auto lg:mx-0 lg:ml-auto">
               {loadingPublicTemplates ? (
-                <div className="h-80 flex items-center justify-center">
+                <div className="aspect-[3/4] max-h-[380px] flex items-center justify-center rounded-[var(--radius-card)] border border-border bg-surface">
                   <Loader2 className="w-6 h-6 text-muted animate-spin" />
                 </div>
               ) : activePreview ? (
                 <div className="space-y-3">
-                  <LandingInvitationPreview template={activePreview} />
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-xs text-muted truncate">
+                  <div className="aspect-[3/4] max-h-[min(380px,52vh)] w-full mx-auto">
+                    <LandingInvitationPreview
+                      template={activePreview}
+                      variant="hero"
+                      className="w-full h-full"
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
+                    <p className="text-xs text-muted truncate min-w-0">
                       <span className="font-medium text-foreground">{activePreview.name}</span>
                       {' · '}
                       {getCategoryLabel(activePreview.category)}
-                      {publicTemplates.length > 1
-                        ? ` · 1 sur ${publicTemplates.length} modèles`
-                        : ''}
                     </p>
                     <a
                       href="#modeles"
                       className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 shrink-0"
                     >
-                      Voir tous les modèles
+                      Voir tous
                       <ArrowRight className="w-3.5 h-3.5" />
                     </a>
                   </div>
                   {publicTemplates.length > 1 && (
-                    <div className="flex gap-1.5 overflow-x-auto pb-0.5" role="tablist" aria-label="Modèles vitrine">
-                      {publicTemplates.map((t) => (
+                    <div
+                      className="grid grid-cols-4 gap-2"
+                      role="tablist"
+                      aria-label="Modèles vitrine"
+                    >
+                      {publicTemplates.slice(0, 4).map((t) => (
                         <button
                           key={t.id}
                           type="button"
                           role="tab"
                           aria-selected={previewTemplate === t.id}
                           onClick={() => setPreviewTemplate(t.id)}
-                          className={cn(
-                            'h-1.5 rounded-full transition shrink-0',
-                            previewTemplate === t.id
-                              ? 'w-6 bg-foreground'
-                              : 'w-1.5 bg-border hover:bg-muted',
-                          )}
                           title={t.name}
-                        />
+                          className={cn(
+                            'relative overflow-hidden rounded-lg border transition text-left',
+                            'aspect-[3/4] max-h-20',
+                            previewTemplate === t.id
+                              ? 'border-primary ring-2 ring-primary/25'
+                              : 'border-border hover:border-primary/40 opacity-85 hover:opacity-100',
+                          )}
+                        >
+                          <div className="absolute inset-0 scale-[0.55] origin-top pointer-events-none">
+                            <LandingInvitationPreview template={t} variant="compact" className="!min-h-0 !max-h-none !shadow-none !rounded-none border-0" />
+                          </div>
+                          <span className="sr-only">{t.name}</span>
+                        </button>
                       ))}
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="h-72 flex flex-col items-center justify-center text-center px-6 border border-dashed border-border rounded-[var(--radius-card)] bg-surface">
+                <div className="aspect-[3/4] max-h-[320px] flex flex-col items-center justify-center text-center px-6 border border-dashed border-border rounded-[var(--radius-card)] bg-surface">
                   <p className="text-sm font-medium text-foreground">Aucun modèle vitrine</p>
                   <p className="text-xs text-muted mt-1.5 max-w-xs leading-relaxed">
                     Le Super Admin active des modèles globaux via « Afficher sur la landing » dans le concepteur.
@@ -259,17 +272,17 @@ export default function Home() {
             <div className="space-y-12">
               {filteredTemplateGroups.map((group) => (
                 <div key={group.id} className="space-y-5">
-                  {selectedCategory === 'all' && group.title && (
+                  {selectedCategory === 'all' && group.title ? (
                     <div>
                       <h3 className="text-base font-semibold text-foreground">{group.title}</h3>
                       <p className="text-xs text-muted mt-0.5">{group.subtitle}</p>
                     </div>
-                  )}
-                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  ) : null}
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {group.templates.map((t) => (
                       <article
                         key={t.id}
-                        className="bg-background border border-border rounded-[var(--radius-card)] p-4 flex flex-col em-soft-hover"
+                        className="bg-background border border-border rounded-[var(--radius-card)] p-3.5 flex flex-col em-soft-hover"
                       >
                         <button
                           type="button"
@@ -277,9 +290,9 @@ export default function Home() {
                             setPreviewTemplate(t.id);
                             setModalTemplate(t);
                           }}
-                          className="w-full text-left rounded-[var(--radius-button)] focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
+                          className="w-full text-left rounded-[var(--radius-button)] focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20 overflow-hidden"
                         >
-                          <LandingInvitationPreview template={t} compact />
+                          <LandingInvitationPreview template={t} compact className="!max-h-[200px]" />
                         </button>
                         <div className="mt-3 space-y-2 flex-1">
                           <div className="flex items-center justify-between gap-2">
@@ -294,7 +307,7 @@ export default function Home() {
                               Aperçu <ArrowRight className="w-3 h-3" />
                             </button>
                           </div>
-                          <h3 className="font-semibold text-sm text-foreground leading-snug">{t.name}</h3>
+                          <h3 className="font-semibold text-sm text-foreground leading-snug line-clamp-1">{t.name}</h3>
                           <p className="text-xs text-muted leading-relaxed line-clamp-2">{t.description}</p>
                         </div>
                         <div className="border-t border-border pt-3 mt-4">
@@ -378,7 +391,7 @@ export default function Home() {
             <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">
               {getCategoryLabel(modalTemplate.category)}
             </span>
-            <LandingInvitationPreview template={modalTemplate} />
+            <LandingInvitationPreview template={modalTemplate} className="max-h-[min(420px,60vh)] overflow-hidden" />
           </div>
         )}
       </Modal>

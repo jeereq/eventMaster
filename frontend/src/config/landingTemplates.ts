@@ -72,22 +72,43 @@ export function getLandingTemplatesByCategory(_category: string): LandingTemplat
   return [];
 }
 
+export function normalizeLandingCategory(
+  raw?: string | null,
+): 'private' | 'corporate' | 'casual' {
+  const v = (raw || 'private').toLowerCase().trim();
+  if (v === 'corporate' || v === 'professionnel' || v === 'pro') return 'corporate';
+  if (v === 'casual' || v === 'cocktail' || v === 'party') return 'casual';
+  return 'private';
+}
+
 export function getLandingTemplatesByCategoryFrom(
   templates: LandingTemplate[],
   category: string,
 ): LandingTemplate[] {
   if (category === 'all') return templates;
-  return templates.filter((t) => t.category === category);
+  const target = normalizeLandingCategory(category);
+  return templates.filter((t) => normalizeLandingCategory(t.category || t.group) === target);
 }
 
 export function buildLandingTemplateGroups(templates: LandingTemplate[], category: string) {
+  const normalized = templates.map((t) => {
+    const cat = normalizeLandingCategory(t.category || t.group);
+    return { ...t, category: cat, group: cat };
+  });
+
   if (category === 'all') {
-    return LANDING_TEMPLATE_GROUPS.map((group) => ({
-      ...group,
-      templates: templates.filter((t) => t.group === group.id),
-    })).filter((g) => g.templates.length > 0);
+    // Une seule grille plate : tous les modèles publiés (évite d’en perdre hors groupes)
+    return [
+      {
+        id: 'all',
+        title: '',
+        subtitle: '',
+        templates: normalized,
+      },
+    ];
   }
-  const filtered = getLandingTemplatesByCategoryFrom(templates, category);
+
+  const filtered = getLandingTemplatesByCategoryFrom(normalized, category);
   return [{ id: category, title: '', subtitle: '', templates: filtered }];
 }
 

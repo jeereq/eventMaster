@@ -1,5 +1,5 @@
 import type { LandingTemplate } from '@/config/landingTemplates';
-import { LEGACY_STATIC_LANDING_IDS } from '@/config/landingTemplates';
+import { LEGACY_STATIC_LANDING_IDS, normalizeLandingCategory } from '@/config/landingTemplates';
 
 export interface PublicTemplateDto {
   id: string;
@@ -60,10 +60,9 @@ export function dbTemplateToLandingTemplate(t: PublicTemplateDto): LandingTempla
   const normalizedContent = normalizeTemplateContent(t.content);
   const global = normalizedContent?.global || {};
   const rawElements = normalizedContent?.elements || [];
-  const category =
-    t.category ||
-    global.landingCategory ||
-    'private';
+  const category = normalizeLandingCategory(
+    t.category || global.landingCategory || 'private',
+  );
   const bgColor = global.bgColor || '#faf8f5';
   const dark = isDarkHex(bgColor);
 
