@@ -5,7 +5,11 @@ import { PlanType, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';
-import { getDefaultPlans, getPlansConfiguration, mergePlansForSave } from '../config/plansConfig';
+import { getDefaultPlans, getPlansConfiguration } from '../config/plansConfig';
+import {
+  loadSubscriptionPlansFromDb,
+  saveSubscriptionPlansToDb,
+} from '../services/subscriptionPlanCatalogService';
 import { ensureCommercialReferralCode, normalizeCommissionRate } from '../services/commercialService';
 import { isPlatformStaff } from '../middleware/platformAccess';
 import {
@@ -1085,18 +1089,22 @@ export async function getAdminSettings(req: AuthenticatedRequest, res: Response)
       return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
     }
 
+    // Toujours rafraîchir les forfaits depuis la BD
+    const plans = await loadSubscriptionPlansFromDb();
+
     ensureSettingsDir();
     if (fs.existsSync(settingsFilePath)) {
       const data = fs.readFileSync(settingsFilePath, 'utf-8');
       const settings = JSON.parse(data);
+      const { plans: _legacyPlans, ...rest } = settings;
       return res.json({
         ...defaultSettings,
-        ...settings,
-        plans: getPlansConfiguration(),
+        ...rest,
+        plans,
       });
     }
 
-    return res.json({ ...defaultSettings, plans: getPlansConfiguration() });
+    return res.json({ ...defaultSettings, plans });
   } catch (error: any) {
     console.error('Erreur lors de la récupération des paramètres:', error);
     return res.status(500).json({ error: 'Erreur lors de la récupération des paramètres' });
@@ -1111,24 +1119,32 @@ export async function updateAdminSettings(req: AuthenticatedRequest, res: Respon
 
     const newSettings = req.body;
     ensureSettingsDir();
-    
-    let currentSettings = { ...defaultSettings };
+
+    let currentSettings: Record<string, unknown> = { ...defaultSettings };
     if (fs.existsSync(settingsFilePath)) {
       const data = fs.readFileSync(settingsFilePath, 'utf-8');
       currentSettings = { ...currentSettings, ...JSON.parse(data) };
     }
 
+    const { plans: incomingPlans, ...otherSettings } = newSettings;
+
     const updatedSettings = {
       ...currentSettings,
-      ...newSettings,
+      ...otherSettings,
     };
+    // Les forfaits ne sont plus stockés dans settings.json
+    delete (updatedSettings as { plans?: unknown }).plans;
 
-    if (newSettings.plans) {
-      updatedSettings.plans = mergePlansForSave(newSettings.plans);
+    let plans = getPlansConfiguration();
+    if (incomingPlans) {
+      plans = await saveSubscriptionPlansToDb(incomingPlans);
     }
 
     fs.writeFileSync(settingsFilePath, JSON.stringify(updatedSettings, null, 2), 'utf-8');
-    return res.json({ message: 'Paramètres mis à jour avec succès', settings: updatedSettings });
+    return res.json({
+      message: 'Paramètres mis à jour avec succès',
+      settings: { ...updatedSettings, plans },
+    });
   } catch (error: any) {
     console.error('Erreur lors de la mise à jour des paramètres:', error);
     return res.status(500).json({ error: 'Erreur lors de la mise à jour des paramètres' });

@@ -8,6 +8,7 @@
 📄 **Analyse des flux (PDF)** : [`EventMaster-Analyse-Flux.pdf`](./EventMaster-Analyse-Flux.pdf) · [markdown](./ANALYSE-FLUX-PLATEFORME.md)
 
 Pour régénérer les PDF :
+
 ```bash
 cd backend && npm run generate:platform-pdf
 cd backend && npm run generate:flows-pdf
@@ -64,7 +65,7 @@ eventmaster/
 | **Protocole** | Scan QR, check-in, verify-seat, notes protocole |
 | **Livraison placement** | PDF + plan + GPS **après validation invité** (`guestPlacementDeliveryService`) |
 | **Commercial** | Parrainage, commissions 20 %, espaces dédiés |
-| **Facturation** | Forfaits, demandes d'upgrade, factures PDF |
+| **Facturation** | Forfaits en BD (`SubscriptionPlan`), demandes d'upgrade, factures PDF |
 | **Push mobile** | Modèle `PushDeviceToken`, service Expo Push |
 
 ### 3.2 Frontend web (`frontend/`)

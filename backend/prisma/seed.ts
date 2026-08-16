@@ -1,9 +1,10 @@
 import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, PlanType } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
 import { DEFAULT_GUEST_MESSAGE_TEMPLATES } from '../src/config/defaultGuestMessageTemplates';
+import { getDefaultPlans, PLAN_KEYS, type PlanTypeKey } from '../src/config/plansConfig';
 import {
   SEED_PASSWORD,
   addDays,
@@ -13,6 +14,16 @@ import {
   licenseKey,
   PLAN_AMOUNTS,
 } from './seed/helpers';
+
+const PLAN_SORT_ORDER: Record<PlanTypeKey, number> = {
+  FREE: 0,
+  STANDARD: 1,
+  PREMIUM_1: 2,
+  PREMIUM_2: 3,
+  ENTERPRISE_1: 4,
+  ENTERPRISE_2: 5,
+  ENTERPRISE_3: 6,
+};
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
@@ -24,6 +35,7 @@ const prisma = new PrismaClient({ adapter });
 async function clearDatabase() {
   console.log('Nettoyage des données existantes...');
   await prisma.platformNotification.deleteMany({});
+  await prisma.pushDeviceToken.deleteMany({});
   await prisma.commercialCommission.deleteMany({});
   await prisma.platformInvoice.deleteMany({});
   await prisma.subscriptionRequest.deleteMany({});
@@ -43,11 +55,70 @@ async function clearDatabase() {
   await prisma.tenant.updateMany({ data: { managerId: null, referredByCommercialId: null, referredByOrgUserId: null } });
   await prisma.user.deleteMany({});
   await prisma.tenant.deleteMany({});
+  // Les forfaits (SubscriptionPlan) sont conservés / re-seedés séparément
 }
 
 async function main() {
   console.log('=== EventMaster — Seed complet ===\n');
   await clearDatabase();
+
+  // ─── Catalogue forfaits (BD) ────────────────────────────────────────
+  console.log('Catalogue SubscriptionPlan…');
+  const defaults = getDefaultPlans();
+  for (const key of PLAN_KEYS) {
+    const def = defaults[key];
+    await prisma.subscriptionPlan.upsert({
+      where: { id: key as PlanType },
+      create: {
+        id: key as PlanType,
+        name: def.name,
+        price: def.price,
+        monthlyPriceFc: def.monthlyPriceFc,
+        promoActive: Boolean(def.promoActive),
+        promoPrice: def.promoPrice ?? null,
+        promoMonthlyPriceFc: def.promoMonthlyPriceFc ?? null,
+        promoLabel: def.promoLabel ?? null,
+        description: def.description,
+        maxEvents: def.maxEvents,
+        maxGuests: def.maxGuests,
+        maxTemplates: def.maxTemplates,
+        maxRooms: def.maxRooms,
+        maxOrgManagers: def.maxOrgManagers,
+        customTemplates: def.customTemplates,
+        mockupOcr: def.mockupOcr,
+        protocolQr: def.protocolQr,
+        seatNotifications: def.seatNotifications,
+        roomThemesFixtures: def.roomThemesFixtures,
+        adminReports: def.adminReports,
+        roomEditorLevel: def.roomEditorLevel,
+        commercialNetwork: def.commercialNetwork,
+        supportLevel: def.supportLevel,
+        sortOrder: PLAN_SORT_ORDER[key],
+        isActive: true,
+      },
+      update: {
+        name: def.name,
+        price: def.price,
+        monthlyPriceFc: def.monthlyPriceFc,
+        description: def.description,
+        maxEvents: def.maxEvents,
+        maxGuests: def.maxGuests,
+        maxTemplates: def.maxTemplates,
+        maxRooms: def.maxRooms,
+        maxOrgManagers: def.maxOrgManagers,
+        customTemplates: def.customTemplates,
+        mockupOcr: def.mockupOcr,
+        protocolQr: def.protocolQr,
+        seatNotifications: def.seatNotifications,
+        roomThemesFixtures: def.roomThemesFixtures,
+        adminReports: def.adminReports,
+        roomEditorLevel: def.roomEditorLevel,
+        commercialNetwork: def.commercialNetwork,
+        supportLevel: def.supportLevel,
+        sortOrder: PLAN_SORT_ORDER[key],
+      },
+    });
+  }
 
   const passwordHash = await bcrypt.hash(SEED_PASSWORD, 10);
   const now = new Date();

@@ -1,6 +1,3 @@
-import fs from 'fs';
-import path from 'path';
-
 /** Réduction appliquée à la facturation annuelle (équivalent mensuel affiché). */
 export const ANNUAL_DISCOUNT_PERCENT = 10;
 
@@ -53,7 +50,16 @@ export const PLAN_KEYS: PlanTypeKey[] = [
 
 export const PAID_PLAN_KEYS: PlanTypeKey[] = PLAN_KEYS.filter((k) => k !== 'FREE');
 
-const settingsFilePath = path.join(__dirname, 'settings.json');
+/** Cache hydraté depuis la table SubscriptionPlan (démarrage serveur / save admin). */
+let plansCache: PlansConfiguration | null = null;
+
+export function setPlansCache(plans: PlansConfiguration): void {
+  plansCache = plans;
+}
+
+export function getCachedPlansConfiguration(): PlansConfiguration {
+  return plansCache ?? getDefaultPlans();
+}
 
 export function formatPlanPriceFc(amount: number): string {
   return `${amount.toLocaleString('fr-FR')} FC`;
@@ -209,7 +215,7 @@ export function getDefaultPlans(): PlansConfiguration {
   };
 }
 
-function mergePlan(base: PlanDefinition, override?: Partial<PlanDefinition>): PlanDefinition {
+export function mergePlan(base: PlanDefinition, override?: Partial<PlanDefinition>): PlanDefinition {
   if (!override) return { ...base };
   const merged = {
     name: override.name ?? base.name,
@@ -259,24 +265,8 @@ export function getEffectiveMonthlyPriceFc(planKey: string): number {
 }
 
 export function getPlansConfiguration(): PlansConfiguration {
-  const defaults = getDefaultPlans();
-
-  try {
-    if (fs.existsSync(settingsFilePath)) {
-      const settings = JSON.parse(fs.readFileSync(settingsFilePath, 'utf-8'));
-      if (settings.plans && typeof settings.plans === 'object') {
-        const merged = { ...defaults };
-        for (const key of PLAN_KEYS) {
-          merged[key] = mergePlan(defaults[key], settings.plans[key]);
-        }
-        return merged;
-      }
-    }
-  } catch (error) {
-    console.error('[Plans Config] Erreur de lecture settings.json:', error);
-  }
-
-  return defaults;
+  // Source de vérité runtime : cache BD. Fallback : défauts code.
+  return getCachedPlansConfiguration();
 }
 
 export function getPlanLimits(planKey: string): PlanDefinition {

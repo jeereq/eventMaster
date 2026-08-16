@@ -1,0 +1,32 @@
+-- CreateTable
+CREATE TABLE "SubscriptionPlan" (
+    "id" "PlanType" NOT NULL,
+    "name" TEXT NOT NULL,
+    "price" TEXT NOT NULL,
+    "monthlyPriceFc" INTEGER NOT NULL,
+    "promoActive" BOOLEAN NOT NULL DEFAULT false,
+    "promoPrice" TEXT,
+    "promoMonthlyPriceFc" INTEGER,
+    "promoLabel" TEXT,
+    "description" TEXT NOT NULL,
+    "maxEvents" INTEGER NOT NULL,
+    "maxGuests" INTEGER NOT NULL,
+    "maxTemplates" INTEGER NOT NULL,
+    "maxRooms" INTEGER NOT NULL,
+    "maxOrgManagers" INTEGER NOT NULL,
+    "customTemplates" BOOLEAN NOT NULL DEFAULT false,
+    "mockupOcr" BOOLEAN NOT NULL DEFAULT false,
+    "protocolQr" BOOLEAN NOT NULL DEFAULT false,
+    "seatNotifications" BOOLEAN NOT NULL DEFAULT false,
+    "roomThemesFixtures" BOOLEAN NOT NULL DEFAULT false,
+    "adminReports" BOOLEAN NOT NULL DEFAULT false,
+    "roomEditorLevel" TEXT NOT NULL DEFAULT 'basic',
+    "commercialNetwork" BOOLEAN NOT NULL DEFAULT false,
+    "supportLevel" TEXT NOT NULL DEFAULT 'community',
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "SubscriptionPlan_pkey" PRIMARY KEY ("id")
+);

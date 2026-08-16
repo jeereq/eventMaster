@@ -19,6 +19,7 @@ import { handleStripeWebhook } from './controllers/billingController';
 import { prisma } from './db';
 import { startReminderWorker } from './services/reminderService';
 import { startSubscriptionExpiryWorker } from './services/subscriptionExpiryService';
+import { loadSubscriptionPlansFromDb } from './services/subscriptionPlanCatalogService';
 import { isSendGridConfigured } from './config/notificationConfig';
 
 // Load environment variables
@@ -64,8 +65,17 @@ app.post('/api/billing/webhook', handleStripeWebhook);
 app.use('/api/billing', billingRoutes);
 
 // Start Server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`[EventMaster Server] running on http://localhost:${PORT}`);
+
+  try {
+    await loadSubscriptionPlansFromDb();
+  } catch (error) {
+    console.error(
+      '[EventMaster Server] Impossible de charger les forfaits depuis la BD — fallback défauts code.',
+      error,
+    );
+  }
 
   if (!isSendGridConfigured()) {
     console.error(
