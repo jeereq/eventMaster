@@ -63,7 +63,7 @@ const toneClasses: Record<(typeof STEPS)[number]['tone'], string> = {
 export default function LandingWorkflowSection() {
   return (
     <section id="parcours" className="py-20 bg-gradient-to-b from-white to-slate-50 dark:from-slate-950 dark:to-slate-900/40 border-t border-slate-200 dark:border-slate-800 scroll-mt-24">
-      <div className="w-full px-4 sm:px-6 max-w-7xl mx-auto">
+      <div className="page-container">
         <div className="text-center max-w-2xl mx-auto mb-14 space-y-4">
           <span className="text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
             Parcours invité intelligent

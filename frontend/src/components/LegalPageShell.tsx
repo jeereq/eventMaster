@@ -12,7 +12,7 @@ export function LegalPageShell({ title, subtitle, lastUpdated = '2 juillet 2026'
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
       <header className="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="w-10/12 max-w-4xl mx-auto h-16 flex items-center justify-between">
+        <div className="page-container h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition">
             <div className="bg-indigo-600 p-2 rounded-lg text-white">
               <PartyPopper className="w-4 h-4" />
@@ -26,7 +26,7 @@ export function LegalPageShell({ title, subtitle, lastUpdated = '2 juillet 2026'
         </div>
       </header>
 
-      <main className="w-10/12 max-w-4xl mx-auto py-12 space-y-8">
+      <main className="page-container py-12 space-y-8">
         <div className="space-y-2">
           <h1 className="text-3xl font-extrabold tracking-tight">{title}</h1>
           <p className="text-slate-600 dark:text-slate-400 text-sm">{subtitle}</p>

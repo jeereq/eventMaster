@@ -45,8 +45,8 @@
   --color-muted: var(--muted);
   --color-sidebar: var(--sidebar);
   --color-card-hover: var(--card-hover);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: Candara, Calibri, "Segoe UI", Optima, Arial, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --radius-card: var(--radius-card);
   --radius-button: var(--radius-button);
 }
@@ -58,7 +58,7 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  font-family: Candara, Calibri, "Segoe UI", Optima, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -88,27 +88,27 @@ body {
   animation: slide-up 0.25s ease-out;
 }
 
-/* Conteneur page standard */
-.app-container {
-  width: 100%;
-  max-width: 80rem;
+/* Conteneur page standard — dashboard + landing */
+.app-container,
+.page-container {
+  width: 91.666667%; /* w-11/12 */
+  max-width: none;
   margin-left: auto;
   margin-right: auto;
-  padding-left: 1rem;
-  padding-right: 1rem;
+  padding-left: 0;
+  padding-right: 0;
 }
 
-@media (min-width: 640px) {
-  .app-container {
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
+@media (max-width: 640px) {
+  .app-container,
+  .page-container {
+    width: 94%;
   }
 }
 
-@media (min-width: 1024px) {
-  .app-container {
-    padding-left: 2rem;
-    padding-right: 2rem;
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
   }
 }
 

@@ -81,7 +81,7 @@ export default function ContactPage() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col font-sans antialiased text-slate-900 dark:text-slate-100 transition-colors duration-200">
       {/* Header */}
       <header className="border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-50 transition-all">
-        <div className="w-10/12 max-w-7xl mx-auto h-16 flex items-center justify-between">
+        <div className="page-container h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition">
               <div className="bg-indigo-600 p-2 rounded-lg text-white">
@@ -232,7 +232,7 @@ export default function ContactPage() {
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-100/40 dark:bg-indigo-950/20 blur-[100px] pointer-events-none" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-violet-100/40 dark:bg-violet-950/20 blur-[100px] pointer-events-none" />
 
-        <div className="w-10/12 max-w-5xl mx-auto relative z-10">
+        <div className="page-container relative z-10">
           <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-bold">
               <Sparkles className="w-4 h-4" />

@@ -152,7 +152,7 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
       id="tarifs"
       className="py-24 bg-gradient-to-b from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900 border-t border-slate-200 dark:border-slate-800"
     >
-      <div className="w-10/12 max-w-7xl mx-auto">
+      <div className="page-container">
         <div className="text-center max-w-3xl mx-auto mb-10 space-y-4">
           <p className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
             Forfaits & abonnements

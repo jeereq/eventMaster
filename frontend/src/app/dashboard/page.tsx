@@ -19,7 +19,7 @@ import QuotaUsagePanel from '@/components/QuotaUsagePanel';
 import SubscriptionApprovalModal, { type SubscriptionApprovalRequest } from '@/components/SubscriptionApprovalModal';
 import BillingDiscountFields, { getBillingPricingFromFields } from '@/components/BillingDiscountFields';
 import type { QuotaSnapshot } from '@/lib/quotaDisplay';
-import { PageHeader, Alert, Button, ProjectCard } from '@/components/ui';
+import { PageHeader, Alert, Button, ProjectCard, SkeletonDashboardHome } from '@/components/ui';
 import { PLAN_IDS, type PlanId } from '@/config/landingPricing';
 import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
@@ -1273,17 +1273,7 @@ function DashboardPageContent() {
   }, [billing, planQuota, user?.role]);
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="h-10 bg-slate-200 rounded-lg w-1/3 animate-pulse" />
-        <div className="grid sm:grid-cols-3 gap-6">
-          <div className="h-32 bg-slate-200 rounded-2xl animate-pulse" />
-          <div className="h-32 bg-slate-200 rounded-2xl animate-pulse" />
-          <div className="h-32 bg-slate-200 rounded-2xl animate-pulse" />
-        </div>
-        <div className="h-64 bg-slate-200 rounded-2xl animate-pulse" />
-      </div>
-    );
+    return <SkeletonDashboardHome />;
   }
 
   const getPercentage = (value: number, max: number) => {

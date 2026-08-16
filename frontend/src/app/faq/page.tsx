@@ -12,7 +12,7 @@ export default function FaqPage() {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950">
       <header className="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="w-10/12 max-w-4xl mx-auto h-16 flex items-center justify-between">
+        <div className="page-container h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition">
             <div className="bg-indigo-600 p-2 rounded-lg text-white">
               <PartyPopper className="w-4 h-4" />

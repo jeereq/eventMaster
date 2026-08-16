@@ -58,7 +58,7 @@ export default function LandingMobileSection() {
       <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/20 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-80 h-80 bg-violet-600/15 blur-[100px] rounded-full pointer-events-none" />
 
-      <div className="w-full px-4 sm:px-6 max-w-7xl mx-auto relative">
+      <div className="page-container relative">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-bold">
