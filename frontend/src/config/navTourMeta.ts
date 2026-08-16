@@ -94,13 +94,13 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-events': {
     title: 'Événements',
     description:
-      'Parcours guidé de bout en bout : création, invités, modèle & invitation, envoi RSVP, réponses, plan de table, protocole jour J (PDF/GPS à l\'entrée) et statistiques.',
+      'Parcours guidé de bout en bout : création, invités, modèle & invitation, envoi RSVP, réponses (PDF/GPS dès acceptation), plan de table, protocole jour J et statistiques.',
     route: '/dashboard/events',
   },
   'nav-protocol': {
     title: 'Protocole',
     description:
-      'Mode accueil le jour J : scan caméra du QR invité, vérification d\'identité, confirmation de présence et envoi de la notification de placement (e-mail / WhatsApp).',
+      'Mode accueil le jour J : scan caméra du QR invité, vérification d\'identité et confirmation de présence à l\'entrée.',
     route: '/dashboard/events?mode=protocol',
   },
   'nav-analytics-org': {

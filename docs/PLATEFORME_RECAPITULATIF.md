@@ -63,7 +63,7 @@ eventmaster/
 | **Invitations** | Envoi multi-canal, variables dynamiques, templates |
 | **Salles & plans** | Éditeur 2D, fixtures, thèmes, placement drag-and-drop |
 | **Protocole** | Scan QR, check-in, verify-seat, notes protocole |
-| **Livraison placement** | PDF + plan + GPS **après validation invité** (`guestPlacementDeliveryService`) |
+| **Livraison placement** | PDF + plan + GPS **dès acceptation RSVP** (`guestPlacementDeliveryService`) |
 | **Commercial** | Parrainage, commissions 20 %, espaces dédiés |
 | **Facturation** | Forfaits en BD (`SubscriptionPlan`), demandes d'upgrade, factures PDF |
 | **Push mobile** | Modèle `PushDeviceToken`, service Expo Push |
@@ -75,7 +75,7 @@ eventmaster/
 | **Landing page** | Hero, parcours invité, mobile, rôles, modèles, tarifs, FAQ |
 | **Dashboard** | Événements, invités, modèles, salles, analytics, facturation |
 | **Concepteur visuel** | Éditeur drag-and-drop invitations + OCR maquette (Premium 2+) |
-| **Portail RSVP** | Invitation stylisée, formulaire, badge QR, plan de table (post check-in) |
+| **Portail RSVP** | Invitation stylisée, formulaire, badge QR, plan de table (dès acceptation) |
 | **Protocole web** | Scan caméra navigateur, confirmation présence |
 | **Pages légales** | CGU, confidentialité, contact, FAQ |
 

@@ -238,8 +238,8 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
                   
                   <p style="text-align: center; font-size: 12px; color: #94a3b8; margin-top: 25px; margin-bottom: 0;">
                     Merci de répondre avant la date de l'événement.<br />
-                    Après confirmation RSVP, présentez votre badge QR à l'accueil.<br />
-                    Votre plan de table, invitation PDF et localisation GPS vous seront envoyés après validation à l'entrée.
+                    Dès confirmation RSVP, votre plan de table, invitation PDF et localisation GPS vous sont envoyés (si votre place est déjà assignée).<br />
+                    Présentez ensuite votre badge QR à l'accueil le jour J.
                   </p>
                 </div>
 

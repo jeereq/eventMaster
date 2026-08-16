@@ -12,6 +12,7 @@ import {
 import { getTableMateGuestIds } from '../utils/tablePlanAssignment';
 import { normalizeGuestGuidelines, formatDressCodeText } from '../utils/guestGuidelines';
 import { canGuestAccessPlacement } from '../utils/guestPlacementAccess';
+import { deliverGuestPlacementIfEligible } from '../services/guestPlacementDeliveryService';
 import { buildGuestQrImageUrl, generateQrPngBuffer } from '../utils/qrCode';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -477,7 +478,7 @@ export async function submitRsvp(req: Request, res: Response) {
       const qrCodeUrl = buildGuestQrImageUrl(guest.id, 300);
 
       const subject = `Confirmation de votre présence - ${guest.event.title}`;
-      const textBody = `Bonjour ${guest.firstName},\n\nVotre présence à l'événement "${guest.event.title}" a été confirmée avec succès !\n\nVoici votre badge de confirmation de présence (QR Code) : ${qrCodeUrl}\n\nPrésentez ce QR Code à l'entrée pour valider votre présence.\n\nDate : ${formattedDate}\nLieu : ${guest.event.location || 'Non défini'}\n\nMerci et à très bientôt !`;
+      const textBody = `Bonjour ${guest.firstName},\n\nVotre présence à l'événement "${guest.event.title}" a été confirmée avec succès !\n\nVoici votre badge de confirmation de présence (QR Code) : ${qrCodeUrl}\n\nPrésentez ce QR Code à l'entrée le jour J.\n\nDate : ${formattedDate}\nLieu : ${guest.event.location || 'Non défini'}\n\nVotre plan de table, invitation PDF et localisation GPS vous sont envoyés dès maintenant (si votre place est déjà assignée et selon le forfait de l'organisateur).\n\nMerci et à très bientôt !`;
       const htmlBody = `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
           <h2 style="color: #1e1b4b; text-align: center; margin-bottom: 5px;">Présence Confirmée !</h2>
@@ -488,7 +489,7 @@ export async function submitRsvp(req: Request, res: Response) {
           <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
             <span style="font-size: 12px; font-weight: bold; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 10px;">Votre badge de confirmation de présence</span>
             <img src="${qrCodeUrl}" alt="QR Code de confirmation de présence" style="width: 180px; height: 180px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 5px; background-color: white;" />
-            <p style="font-size: 12px; color: #64748b; margin-top: 10px; margin-bottom: 0;">Présentez ce QR Code à l'entrée pour valider votre présence.</p>
+            <p style="font-size: 12px; color: #64748b; margin-top: 10px; margin-bottom: 0;">Présentez ce QR Code à l'entrée le jour J.</p>
           </div>
 
           <div style="margin-top: 20px; font-size: 14px; color: #334155; background-color: #f1f5f9; padding: 15px; border-radius: 8px;">
@@ -496,6 +497,11 @@ export async function submitRsvp(req: Request, res: Response) {
             📅 Date : ${formattedDate}<br />
             📍 Lieu : ${guest.event.location || 'Non défini'}
           </div>
+
+          <p style="font-size: 13px; color: #475569; margin-top: 16px;">
+            Votre plan de table, invitation PDF et localisation GPS sont débloqués dès cette confirmation
+            (dès que votre place est assignée, selon le forfait de l'organisateur).
+          </p>
           
           <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
           <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 0;">Cet e-mail automatique a été envoyé par EventMaster.</p>
@@ -525,6 +531,24 @@ export async function submitRsvp(req: Request, res: Response) {
           if (phone) {
             console.log(`[RSVP Controller] Sending confirmation WhatsApp Image with QR Code to ${phone}...`);
             await sendRealWhatsAppImage(phone, qrCodeUrl, whatsappCaption);
+          }
+
+          // 3. PDF / plan / GPS dès acceptation (si siège assigné + forfait)
+          const tenantId = guest.event.tenantId;
+          if (tenantId) {
+            const placement = await deliverGuestPlacementIfEligible({
+              guestId: guest.id,
+              eventId: guest.eventId,
+              tenantId,
+            });
+            if (placement.delivered) {
+              console.log(
+                '[RSVP Controller] Placement PDF/GPS envoyé:',
+                placement.notification?.channels?.join(', '),
+              );
+            } else {
+              console.log('[RSVP Controller] Placement non envoyé:', placement.skippedReason);
+            }
           }
         } catch (notifErr) {
           console.error('[RSVP Controller] Error sending QR Code confirmation notifications:', notifErr);
@@ -605,7 +629,7 @@ export async function downloadSeatingInvitationPdf(req: Request, res: Response) 
 
     if (!canGuestAccessPlacement(guest)) {
       return res.status(403).json({
-        error: 'Votre plan de table, invitation PDF et localisation GPS seront disponibles après validation de votre présence à l\'entrée.',
+        error: 'Votre plan de table, invitation PDF et localisation GPS seront disponibles dès que vous aurez accepté l\'invitation (RSVP).',
       });
     }
 

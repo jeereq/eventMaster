@@ -16,7 +16,7 @@ export type PlacementDeliveryResult = {
   notification?: Awaited<ReturnType<typeof notifyGuestTableAssignment>>;
 };
 
-/** Envoie la carte + PDF placement après confirmation de présence ou validation protocole. */
+/** Envoie la carte + PDF / plan / GPS dès RSVP accepté (ou check-in si pas encore envoyé). */
 export async function deliverGuestPlacementIfEligible(params: {
   guestId: string;
   eventId: string;
@@ -40,6 +40,7 @@ export async function deliverGuestPlacementIfEligible(params: {
       preferences: true,
       checkedInAt: true,
       seatVerified: true,
+      rsvp: true,
     },
   });
 

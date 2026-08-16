@@ -106,7 +106,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tier: 'premium',
     highlighted: true,
     badge: 'Le plus populaire',
-    highlights: ['20 événements · 1 000 invités', 'OCR texte · PDF après check-in', 'GPS WhatsApp · vérification siège'],
+    highlights: ['20 événements · 1 000 invités', 'OCR texte · PDF dès RSVP', 'GPS WhatsApp · vérification siège'],
   },
   {
     id: 'ENTERPRISE_1',
@@ -320,7 +320,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
   },
   {
     category: 'Protocole',
-    label: 'Livraison différée PDF + GPS après check-in',
+    label: 'Livraison PDF + GPS dès acceptation RSVP',
     values: {
       FREE: false,
       STANDARD: false,
@@ -481,7 +481,7 @@ export const PLATFORM_PILLARS = [
   },
   {
     title: 'Protocole intelligent',
-    description: 'Scan QR web ou application mobile, confirmation de présence, validation du siège et livraison automatique PDF + plan + GPS.',
+    description: 'Scan QR web ou application mobile, confirmation de présence et validation du siège. PDF, plan et GPS partent dès l’acceptation RSVP (Premium 1+).',
     icon: 'qr',
   },
   {

@@ -39,7 +39,7 @@ const MOBILE_FEATURES = [
 const GUEST_FEATURES = [
   'Portail RSVP sans compte',
   'Badge QR de confirmation',
-  'Plan de table (après check-in)',
+  'Plan de table (dès acceptation RSVP)',
   'PDF invitation',
 ];
 
