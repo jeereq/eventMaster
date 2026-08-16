@@ -40,9 +40,9 @@ export default function OrgInvoicesPage() {
 
       {error && <Alert variant="error">{error}</Alert>}
 
-      <div className="bg-white dark:bg-slate-900 border rounded-2xl p-6">
-        <h2 className="font-bold flex items-center gap-2 mb-4">
-          <FileText className="w-5 h-5 text-indigo-600" />
+      <div className="bg-surface border border-border rounded-[var(--radius-card)] p-6 shadow-[var(--shadow-soft)]">
+        <h2 className="font-bold flex items-center gap-2 mb-4 text-foreground">
+          <FileText className="w-5 h-5 text-primary" />
           Mes factures ({invoices.length})
         </h2>
         {loading ? (

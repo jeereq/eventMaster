@@ -43,7 +43,7 @@ export default function PublicAccentPicker({ className }: { className?: string }
 
   return (
     <div ref={rootRef} className={cn('relative', className)}>
-      <Tooltip content="Couleur d'accent" side="bottom">
+      <Tooltip content="Accent personnel (cet appareil)" side="bottom">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
@@ -52,7 +52,7 @@ export default function PublicAccentPicker({ className }: { className?: string }
             'hover:bg-surface-muted hover:text-foreground transition',
             open && 'bg-surface-muted text-foreground border-primary/30',
           )}
-          aria-label="Changer la couleur d'accent"
+          aria-label="Changer l'accent personnel"
           aria-expanded={open}
           aria-haspopup="listbox"
         >
@@ -77,11 +77,14 @@ export default function PublicAccentPicker({ className }: { className?: string }
           )}
         >
           <div className="flex items-center justify-between gap-2 mb-2.5 px-0.5">
-            <p className="text-[11px] font-semibold text-foreground">Couleur d&apos;accent</p>
+            <p className="text-[11px] font-semibold text-foreground">Accent personnel</p>
             <span className="text-[10px] text-muted truncate">
-              {accentCustomized ? accentPreset.label : 'Par défaut'}
+              {accentCustomized ? accentPreset.label : 'Thème par défaut'}
             </span>
           </div>
+          <p className="text-[10px] text-muted leading-relaxed mb-2.5 px-0.5">
+            Préférence sur cet appareil uniquement. Dans le tableau de bord connecté, la marque de l&apos;organisation reste la référence (Profil).
+          </p>
           <div className="grid grid-cols-3 gap-1.5">
             {ACCENT_PRESETS.map((preset) => {
               const selected = accentCustomized && viewPrefs.accent === preset.id;

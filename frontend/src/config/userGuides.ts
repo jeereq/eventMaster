@@ -200,6 +200,7 @@ export const USER_GUIDES: UserGuide[] = [
     ],
     tips: [
       'Les quotas (événements, invités, modèles) sont visibles sur le tableau de bord.',
+      'Les couleurs de l’organisation (Profil) s’appliquent à toute l’équipe ; l’accent personnel du header ne concerne que cet appareil.',
       'Assignez des protocoles org. pour le scan QR sur tous les événements.',
       'Configurez les salles avant de créer des événements avec plan de table.',
     ],

@@ -52,9 +52,9 @@ export default function InvoiceListPanel({
 
   if (invoices.length === 0) {
     return (
-      <div className="text-center py-10 text-slate-400">
+      <div className="text-center py-10 text-muted">
         <FileText className="w-10 h-10 mx-auto mb-3 opacity-40" />
-        <p className="text-sm">{emptyMessage}</p>
+        <p className="text-sm text-foreground/80">{emptyMessage}</p>
         <p className="text-xs mt-2 flex items-center justify-center gap-1">
           <Mail className="w-3.5 h-3.5" />
           Une copie est aussi envoyée par e-mail (SendGrid) après validation.

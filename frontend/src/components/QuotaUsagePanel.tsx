@@ -17,12 +17,13 @@ const ICONS = {
   orgManagers: UserCog,
 } as const;
 
+/** Tons sémantiques (pas la marque) — lisibles sur tous les thèmes. */
 const STYLES = {
-  events: { icon: 'bg-indigo-50 text-indigo-600', bar: 'bg-indigo-600' },
-  guests: { icon: 'bg-violet-50 text-violet-600', bar: 'bg-violet-600' },
-  templates: { icon: 'bg-amber-50 text-amber-600', bar: 'bg-amber-500' },
-  rooms: { icon: 'bg-emerald-50 text-emerald-600', bar: 'bg-emerald-600' },
-  orgManagers: { icon: 'bg-sky-50 text-sky-600', bar: 'bg-sky-600' },
+  events: { icon: 'bg-primary/10 text-primary', bar: 'bg-primary' },
+  guests: { icon: 'bg-violet-500/10 text-violet-600 dark:text-violet-400', bar: 'bg-violet-500' },
+  templates: { icon: 'bg-amber-500/10 text-amber-600 dark:text-amber-400', bar: 'bg-amber-500' },
+  rooms: { icon: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', bar: 'bg-emerald-500' },
+  orgManagers: { icon: 'bg-sky-500/10 text-sky-600 dark:text-sky-400', bar: 'bg-sky-500' },
 } as const;
 
 type QuotaKey = keyof typeof ICONS;
@@ -57,27 +58,27 @@ export default function QuotaUsagePanel({ quota, className = '' }: QuotaUsagePan
         return (
           <div
             key={key}
-            className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3"
+            className="bg-surface p-5 rounded-[var(--radius-card)] border border-border shadow-[var(--shadow-soft)] space-y-3"
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{label}</span>
-              <div className={`p-2 rounded-xl shrink-0 ${style.icon}`}>
+              <span className="text-xs font-semibold text-muted uppercase tracking-wider">{label}</span>
+              <div className={`p-2 rounded-[var(--radius-button)] shrink-0 ${style.icon}`}>
                 <Icon className="w-4 h-4" />
               </div>
             </div>
             <div>
-              <p className="text-lg font-black text-emerald-600 dark:text-emerald-400">
+              <p className="text-lg font-semibold text-foreground">
                 {formatQuotaRemaining(used, max, guests)}
               </p>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-muted mt-1">
                 {used.toLocaleString('fr-FR')} utilisé{used !== 1 ? 's' : ''} · max {formatQuotaMax(max, guests)}
               </p>
               {!guests && max < 9999 ? (
-                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden">
+                <div className="w-full bg-surface-muted rounded-full h-1.5 mt-2 overflow-hidden">
                   <div className={`h-full rounded-full transition-all duration-500 ${style.bar}`} style={{ width: `${pct}%` }} />
                 </div>
               ) : guests && max < 99999 ? (
-                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden">
+                <div className="w-full bg-surface-muted rounded-full h-1.5 mt-2 overflow-hidden">
                   <div className={`h-full rounded-full transition-all duration-500 ${style.bar}`} style={{ width: `${pct}%` }} />
                 </div>
               ) : null}
@@ -115,11 +116,13 @@ export function PlanQuotaLimits({
   ];
 
   return (
-    <ul className={`space-y-1 ${compact ? 'text-[11px]' : 'text-xs'} text-slate-600 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800 pt-3 mt-3`}>
+    <ul
+      className={`space-y-1 ${compact ? 'text-[11px]' : 'text-xs'} text-muted border-t border-border pt-3 mt-3`}
+    >
       {rows.map(({ label, max, guests }) => (
         <li key={label} className="flex justify-between gap-2">
           <span>{label}</span>
-          <span className="font-bold text-slate-800 dark:text-slate-200">{formatQuotaMax(max, guests)}</span>
+          <span className="font-semibold text-foreground">{formatQuotaMax(max, guests)}</span>
         </li>
       ))}
     </ul>

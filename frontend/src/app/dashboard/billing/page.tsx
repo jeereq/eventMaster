@@ -70,8 +70,8 @@ interface SubscriptionRequest {
 
 function FeatureCell({ value }: { value: string | boolean }) {
   if (value === true) return <Check className="w-4 h-4 text-emerald-600 mx-auto" />;
-  if (value === false) return <Minus className="w-4 h-4 text-slate-300 mx-auto" />;
-  return <span className="text-xs font-medium text-slate-700 dark:text-slate-300">{value}</span>;
+  if (value === false) return <Minus className="w-4 h-4 text-muted mx-auto" />;
+  return <span className="text-xs font-medium text-foreground">{value}</span>;
 }
 
 const BILLING_TIERS: Array<{ label: string; ids: PlanId[] }> = [
@@ -156,11 +156,11 @@ export default function BillingPage() {
   return (
     <div className="space-y-10 w-full">
       <div className="text-center space-y-3">
-        <p className="text-sm font-semibold text-indigo-600 uppercase tracking-widest">Facturation</p>
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+        <p className="text-sm font-semibold text-primary uppercase tracking-widest">Facturation</p>
+        <h1 className="text-3xl font-bold text-foreground">
           Forfait de {tenant?.name || 'votre organisation'}
         </h1>
-        <p className="text-slate-600 dark:text-slate-400 text-sm">
+        <p className="text-muted text-sm">
           Business Premium 1 & 2 · Business Enterprise 1 à 3 · réduction annuelle {ANNUAL_DISCOUNT_PERCENT} %
         </p>
       </div>
@@ -169,12 +169,12 @@ export default function BillingPage() {
       {successMsg && <Alert variant="success">{successMsg}</Alert>}
 
       {billing && (
-        <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 rounded-2xl border p-6 md:p-8 space-y-6">
+        <div className="bg-surface-muted rounded-[var(--radius-card)] border border-border p-6 md:p-8 space-y-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <div className="text-xs text-slate-500 font-bold uppercase">Plan actuel</div>
+              <div className="text-xs text-muted font-bold uppercase">Plan actuel</div>
               <div className="flex items-center gap-3 mt-1">
-                <span className="text-2xl font-black">
+                <span className="text-2xl font-black text-foreground">
                   {plans.find((p) => p.id === billing.plan)?.displayName || billing.plan}
                 </span>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-xs font-bold text-emerald-700">
@@ -190,7 +190,7 @@ export default function BillingPage() {
             }}
           />
           {billing.capabilities && (
-            <div className="mt-6 pt-6 border-t grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            <div className="mt-6 pt-6 border-t border-border grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {CAPABILITY_LABELS.map(({ key, label }) => {
                 const enabled = billing.capabilities![key];
                 if (typeof enabled !== 'boolean') return null;
@@ -199,14 +199,14 @@ export default function BillingPage() {
                     {enabled ? (
                       <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                     ) : (
-                      <Minus className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                      <Minus className="w-3.5 h-3.5 text-muted shrink-0" />
                     )}
-                    <span className={enabled ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400'}>{label}</span>
+                    <span className={enabled ? 'text-foreground' : 'text-muted'}>{label}</span>
                   </div>
                 );
               })}
-              <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 sm:col-span-2 lg:col-span-3">
-                <ShieldCheck className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+              <div className="flex items-center gap-2 text-xs text-muted sm:col-span-2 lg:col-span-3">
+                <ShieldCheck className="w-3.5 h-3.5 text-primary shrink-0" />
                 Éditeur salles : <strong className="ml-1 capitalize">{billing.capabilities.roomEditorLevel}</strong>
                 {' · '}
                 Support : <strong className="ml-1 capitalize">{billing.capabilities.supportLevel}</strong>
@@ -217,15 +217,15 @@ export default function BillingPage() {
       )}
 
       <div className="flex justify-center">
-        <div className="inline-flex p-1 bg-slate-100 dark:bg-slate-800 rounded-full">
+        <div className="inline-flex p-1 bg-surface-muted rounded-full">
           {(['monthly', 'annual'] as BillingCycle[]).map((cycle) => (
             <button
               key={cycle}
               type="button"
               onClick={() => setBillingCycle(cycle)}
               className={`px-5 py-2 rounded-full text-sm font-semibold transition ${
-                billingCycle === cycle ? 'bg-white dark:bg-slate-900 shadow-sm' : 'text-slate-500'
-              }`}
+ billingCycle === cycle ? 'bg-surface shadow-sm' : 'text-muted'
+ }`}
             >
               {cycle === 'monthly' ? 'Mensuel' : `Annuel (−${ANNUAL_DISCOUNT_PERCENT} %)`}
             </button>
@@ -235,11 +235,11 @@ export default function BillingPage() {
 
       {BILLING_TIERS.map(({ label, ids }) => (
         <div key={label}>
-          <h2 className="text-sm font-bold uppercase tracking-widest text-slate-500 mb-4 text-center">{label}</h2>
+          <h2 className="text-sm font-bold uppercase tracking-widest text-muted mb-4 text-center">{label}</h2>
           <div
             className={`grid gap-4 ${
-              ids.length === 2 ? 'md:grid-cols-2' : ids.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-            }`}
+ ids.length === 2 ? 'md:grid-cols-2' : ids.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+ }`}
           >
             {plans
               .filter((p) => ids.includes(p.id))
@@ -249,22 +249,22 @@ export default function BillingPage() {
                 return (
                   <div
                     key={plan.id}
-                    className={`relative flex flex-col rounded-2xl border bg-white dark:bg-slate-900 p-6 ${
-                      isCurrent ? 'ring-2 ring-indigo-600' : plan.highlighted ? 'border-indigo-500 shadow-lg' : 'border-slate-200 dark:border-slate-800'
+                    className={`relative flex flex-col rounded-[var(--radius-card)] border bg-surface p-6 ${
+                      isCurrent ? 'ring-2 ring-primary' : plan.highlighted ? 'border-primary shadow-lg' : 'border-border'
                     }`}
                   >
                     {plan.badge && (
-                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-3 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
+                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-white px-3 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
                         <Sparkles className="w-3 h-3" /> {plan.badge}
                       </span>
                     )}
                     <h3 className="text-lg font-bold">{plan.displayName}</h3>
-                    <p className="text-xs text-slate-500 mt-1">{plan.description}</p>
+                    <p className="text-xs text-muted mt-1">{plan.description}</p>
                     <div className="mt-4 mb-4">
                       <span className="text-3xl font-extrabold">{plan.price}</span>
-                      {plan.id !== 'FREE' && <span className="text-sm text-slate-500 ml-1">/ mois</span>}
+                      {plan.id !== 'FREE' && <span className="text-sm text-muted ml-1">/ mois</span>}
                     </div>
-                    <ul className="space-y-1.5 text-xs text-slate-600 flex-1 border-t pt-3">
+                    <ul className="space-y-1.5 text-xs text-muted flex-1 border-t border-border pt-3">
                       {plan.highlights.map((h) => (
                         <li key={h} className="flex gap-2">
                           <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> {h}
@@ -292,7 +292,7 @@ export default function BillingPage() {
                       disabled={isCurrent || plan.id === 'FREE' || actionLoading !== null}
                       onClick={() => handleUpgrade(plan.id)}
                       className={`w-full py-2.5 mt-5 font-semibold rounded-xl text-xs disabled:opacity-50 ${
-                        plan.highlighted ? 'bg-indigo-600 text-white' : 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950'
+                        plan.highlighted ? 'bg-primary text-white' : 'bg-foreground text-background'
                       }`}
                     >
                       {actionLoading === plan.id ? (
@@ -312,25 +312,25 @@ export default function BillingPage() {
         </div>
       ))}
 
-      <div className="border rounded-2xl overflow-hidden bg-white dark:bg-slate-900">
+      <div className="border border-border rounded-[var(--radius-card)] overflow-hidden bg-surface">
         <button
           type="button"
           onClick={() => setShowComparison(!showComparison)}
-          className="w-full flex items-center justify-between px-6 py-4 font-bold text-sm"
+          className="w-full flex items-center justify-between px-6 py-4 font-bold text-sm text-foreground"
         >
           <span className="flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-indigo-600" /> Comparer les fonctionnalités
+            <CreditCard className="w-5 h-5 text-primary" /> Comparer les fonctionnalités
           </span>
           {showComparison ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </button>
         {showComparison && (
-          <div className="overflow-x-auto border-t">
+          <div className="overflow-x-auto border-t border-border">
             <table className="w-full text-sm min-w-[960px]">
               <thead>
-                <tr className="bg-slate-50">
-                  <th className="text-left px-4 py-2 text-xs">Fonctionnalité</th>
+                <tr className="bg-surface-muted">
+                  <th className="text-left px-4 py-2 text-xs text-muted">Fonctionnalité</th>
                   {PLAN_IDS.map((id) => (
-                    <th key={id} className="px-2 py-2 text-[10px] text-center">
+                    <th key={id} className="px-2 py-2 text-[10px] text-center text-muted">
                       {LANDING_PLANS.find((p) => p.id === id)?.ms365Name}
                     </th>
                   ))}
@@ -338,8 +338,8 @@ export default function BillingPage() {
               </thead>
               <tbody>
                 {FEATURE_COMPARISON.map((row) => (
-                  <tr key={row.label} className="border-t">
-                    <td className="px-4 py-2 text-xs">{row.label}</td>
+                  <tr key={row.label} className="border-t border-border">
+                    <td className="px-4 py-2 text-xs text-foreground">{row.label}</td>
                     {PLAN_IDS.map((id) => (
                       <td key={id} className="py-2 text-center">
                         <FeatureCell value={row.values[id]} />
@@ -353,13 +353,13 @@ export default function BillingPage() {
         )}
       </div>
 
-      <div className="bg-white dark:bg-slate-900 border rounded-2xl p-6">
+      <div className="bg-surface border border-border rounded-[var(--radius-card)] p-6 shadow-[var(--shadow-soft)]">
         <div className="flex items-center justify-between gap-4 mb-4">
-          <h3 className="font-bold flex items-center gap-2">
-            <FileText className="w-5 h-5 text-indigo-600" />
+          <h3 className="font-bold flex items-center gap-2 text-foreground">
+            <FileText className="w-5 h-5 text-primary" />
             Factures récentes
           </h3>
-          <Link href="/dashboard/invoices" className="text-xs font-bold text-indigo-600 hover:underline">
+          <Link href="/dashboard/invoices" className="text-xs font-bold text-primary hover:underline">
             Voir tout →
           </Link>
         </div>
@@ -369,56 +369,66 @@ export default function BillingPage() {
         />
       </div>
 
-      <div className="bg-white dark:bg-slate-900 border rounded-2xl p-6">
-        <h3 className="font-bold">Historique des demandes</h3>
+      <div className="bg-surface border border-border rounded-[var(--radius-card)] p-6 shadow-[var(--shadow-soft)]">
+        <h3 className="font-bold text-foreground">Historique des demandes</h3>
         {requests.length === 0 ? (
-          <p className="text-xs text-slate-400 py-6 text-center italic">Aucune demande.</p>
+          <p className="text-xs text-muted py-6 text-center italic">Aucune demande.</p>
         ) : (
           <>
             <div className="md:hidden space-y-3 mt-4">
               {requests.map((req) => (
-                <div key={req.id} className="rounded-xl border border-slate-200 dark:border-slate-800 p-4 space-y-2">
+                <div key={req.id} className="rounded-xl border border-border p-4 space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-bold text-sm">{req.requestedPlan}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      req.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-700' :
-                      req.status === 'REJECTED' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'
-                    }`}>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        req.status === 'APPROVED'
+                          ? 'bg-emerald-50 text-emerald-700'
+                          : req.status === 'REJECTED'
+                            ? 'bg-rose-50 text-rose-700'
+                            : 'bg-amber-50 text-amber-700'
+                      }`}
+                    >
                       {req.status === 'APPROVED' ? 'Approuvée' : req.status === 'REJECTED' ? 'Refusée' : 'En attente'}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500">{req.durationDays} jours · {new Date(req.createdAt).toLocaleDateString('fr-FR')}</p>
+                  <p className="text-xs text-muted">{req.durationDays} jours · {new Date(req.createdAt).toLocaleDateString('fr-FR')}</p>
                 </div>
               ))}
             </div>
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-xs mt-4">
-            <thead>
-              <tr className="text-slate-400 uppercase">
-                <th className="py-2 text-left">Forfait</th>
-                <th className="py-2 text-left">Durée</th>
-                <th className="py-2 text-left">Date</th>
-                <th className="py-2 text-left">Statut</th>
-              </tr>
-            </thead>
-            <tbody>
-              {requests.map((req) => (
-                <tr key={req.id} className="border-t">
-                  <td className="py-2 font-bold">{req.requestedPlan}</td>
-                  <td className="py-2">{req.durationDays} j</td>
-                  <td className="py-2">{new Date(req.createdAt).toLocaleDateString('fr-FR')}</td>
-                  <td className="py-2">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      req.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-700' :
-                      req.status === 'REJECTED' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'
-                    }`}>
-                      {req.status === 'APPROVED' ? 'Approuvée' : req.status === 'REJECTED' ? 'Refusée' : 'En attente'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                <thead>
+                  <tr className="text-muted uppercase">
+                    <th className="py-2 text-left">Forfait</th>
+                    <th className="py-2 text-left">Durée</th>
+                    <th className="py-2 text-left">Date</th>
+                    <th className="py-2 text-left">Statut</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {requests.map((req) => (
+                    <tr key={req.id} className="border-t border-border">
+                      <td className="py-2 font-bold">{req.requestedPlan}</td>
+                      <td className="py-2">{req.durationDays} j</td>
+                      <td className="py-2">{new Date(req.createdAt).toLocaleDateString('fr-FR')}</td>
+                      <td className="py-2">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            req.status === 'APPROVED'
+                              ? 'bg-emerald-50 text-emerald-700'
+                              : req.status === 'REJECTED'
+                                ? 'bg-rose-50 text-rose-700'
+                                : 'bg-amber-50 text-amber-700'
+                          }`}
+                        >
+                          {req.status === 'APPROVED' ? 'Approuvée' : req.status === 'REJECTED' ? 'Refusée' : 'En attente'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </>
         )}
