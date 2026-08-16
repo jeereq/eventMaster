@@ -1,6 +1,7 @@
 import PDFDocument from 'pdfkit';
 import { normalizeInvoiceText } from '../utils/invoiceText';
 import type { TablePlanPdfRow } from '../utils/tablePlanPdfSummary';
+import { generateQrPngBuffer } from '../utils/qrCode';
 
 export type SeatingInvitationPdfInput = {
   guestFirstName: string;
@@ -29,15 +30,9 @@ function formatFrenchDate(date: Date | string): string {
   });
 }
 
-function buildQrCodeUrl(data: string, size = 200): string {
-  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(data)}&color=4f-46e5&bgcolor=ffffff&qzone=2`;
-}
-
-async function fetchQrPng(rsvpUrl: string): Promise<Buffer | null> {
+async function buildQrPng(rsvpUrl: string): Promise<Buffer | null> {
   try {
-    const res = await fetch(buildQrCodeUrl(rsvpUrl, 200));
-    if (!res.ok) return null;
-    return Buffer.from(await res.arrayBuffer());
+    return await generateQrPngBuffer(rsvpUrl, { size: 200 });
   } catch {
     return null;
   }
@@ -60,7 +55,7 @@ export async function buildSeatingInvitationPdf(input: SeatingInvitationPdfInput
     includeQrCode = true,
   } = input;
 
-  const qrBuffer = includeQrCode ? await fetchQrPng(rsvpUrl) : null;
+  const qrBuffer = includeQrCode ? await buildQrPng(rsvpUrl) : null;
 
   const guestName = normalizeInvoiceText(`${guestFirstName} ${guestLastName}`.trim());
   const title = normalizeInvoiceText(eventTitle);

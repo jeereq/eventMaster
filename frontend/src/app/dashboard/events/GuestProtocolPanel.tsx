@@ -227,8 +227,24 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
             </h4>
             <p className="text-sm text-slate-500">{selectedGuest.email}</p>
             <p className="text-xs text-slate-400 mt-1">
-              RSVP : {selectedGuest.rsvp === 'ACCEPTED' ? 'Confirmé' : selectedGuest.rsvp}
+              RSVP :{' '}
+              {selectedGuest.rsvp === 'ACCEPTED'
+                ? 'Confirmé'
+                : selectedGuest.rsvp === 'DECLINED'
+                  ? 'Décliné'
+                  : selectedGuest.rsvp === 'PENDING'
+                    ? 'En attente'
+                    : selectedGuest.rsvp}
             </p>
+            {selectedGuest.rsvp !== 'ACCEPTED' && !selectedGuest.checkedInAt && (
+              <p className="text-xs text-amber-700 dark:text-amber-300 mt-2 bg-amber-50 dark:bg-amber-950/40 border border-amber-100 dark:border-amber-900/50 rounded-lg px-3 py-2">
+                {selectedGuest.rsvp === 'PENDING'
+                  ? 'RSVP en attente : l’invité doit confirmer sur son lien avant le check-in. Vous pouvez le rechercher à nouveau après confirmation.'
+                  : selectedGuest.rsvp === 'DECLINED'
+                    ? 'Invitation déclinée — le check-in n’est pas possible.'
+                    : 'RSVP non accepté — check-in impossible tant que la présence n’est pas confirmée.'}
+              </p>
+            )}
             {selectedGuest.assignedSeat && (
               <p className="text-sm text-indigo-700 dark:text-indigo-300 mt-1">
                 Siège assigné : {selectedGuest.assignedSeat.tableName} — n°{selectedGuest.assignedSeat.seatIndex + 1}
@@ -236,9 +252,22 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" onClick={() => handleCheckIn(selectedGuest.id)} disabled={busy || !!selectedGuest.checkedInAt}>
+            <Button
+              size="sm"
+              onClick={() => handleCheckIn(selectedGuest.id)}
+              disabled={busy || !!selectedGuest.checkedInAt || selectedGuest.rsvp !== 'ACCEPTED'}
+              title={
+                selectedGuest.rsvp !== 'ACCEPTED' && !selectedGuest.checkedInAt
+                  ? 'Le RSVP doit être accepté avant le check-in'
+                  : undefined
+              }
+            >
               <UserCheck className="w-4 h-4" />
-              {selectedGuest.checkedInAt ? 'Déjà authentifié' : 'Confirmer la présence'}
+              {selectedGuest.checkedInAt
+                ? 'Déjà authentifié'
+                : selectedGuest.rsvp !== 'ACCEPTED'
+                  ? 'Check-in bloqué (RSVP)'
+                  : 'Confirmer la présence'}
             </Button>
             <Button size="sm" variant="secondary" onClick={() => handleVerifySeat(selectedGuest.id)} disabled={busy}>
               <Armchair className="w-4 h-4" />

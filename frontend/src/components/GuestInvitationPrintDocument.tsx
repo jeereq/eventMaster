@@ -13,8 +13,10 @@ import type {
   GuestTablePlanOverviewItem,
 } from '@/app/rsvp/GuestTablePlanView';
 
-function buildQrCodeUrl(rsvpUrl: string, size = 200): string {
-  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(rsvpUrl)}&color=4f-46e5&bgcolor=ffffff&qzone=2`;
+import { getGuestQrImageUrl } from '@/lib/guestQr';
+
+function buildQrCodeUrl(guestId: string, size = 200): string {
+  return getGuestQrImageUrl(guestId, size);
 }
 
 const PRINT_FONTS =
@@ -379,7 +381,7 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
             <div className="flex justify-center">
               <div className="p-3 bg-white rounded-2xl border border-slate-200 shadow-sm">
                 <img
-                  src={buildQrCodeUrl(rsvpLink, 180)}
+                  src={buildQrCodeUrl(data.guestId, 180)}
                   alt="QR Code de confirmation de présence"
                   width={180}
                   height={180}

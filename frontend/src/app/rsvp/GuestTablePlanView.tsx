@@ -129,14 +129,18 @@ export default function GuestTablePlanView({
 
   if (!placementAccessible) {
     return (
-      <div className="text-center py-16 space-y-4 max-w-xs mx-auto">
+      <div className="text-center py-16 space-y-4 max-w-sm mx-auto">
         <div className="inline-flex items-center justify-center bg-indigo-500/10 p-5 rounded-full text-indigo-400">
           <LayoutGrid className="w-8 h-8" />
         </div>
-        <h3 className="font-bold text-white text-base">Placement bientôt disponible</h3>
+        <h3 className="font-bold text-white text-base">Placement après l&apos;accueil</h3>
         <p className="text-slate-400 text-xs leading-relaxed">
-          Votre plan de table et invitation PDF vous seront envoyés après votre confirmation de
-          présence à l&apos;entrée.
+          Votre plan de table, invitation PDF et localisation GPS seront débloqués une fois votre
+          présence confirmée à l&apos;entrée (scan QR protocole).
+        </p>
+        <p className="text-slate-500 text-[11px] leading-relaxed">
+          Présentez votre badge QR à l&apos;accueil — vous recevrez ensuite le détail par e-mail ou
+          WhatsApp.
         </p>
       </div>
     );

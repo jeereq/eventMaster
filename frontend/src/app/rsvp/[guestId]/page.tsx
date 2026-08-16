@@ -23,6 +23,7 @@ import {
   parseFieldOptions,
   restoreFieldValuesFromPreferences,
 } from '@/lib/rsvpFormFields';
+import { getGuestQrImageUrl } from '@/lib/guestQr';
 
 interface GuestRsvpData {
   id: string;
@@ -544,7 +545,7 @@ export default function RsvpPage() {
                   <div className="flex justify-center">
                     <div className="relative p-3 bg-white rounded-3xl shadow-lg">
                       <img 
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(window.location.href)}&color=4f-46-e5&bgcolor=ffffff&qzone=1`} 
+                        src={getGuestQrImageUrl(guest.id, 180)} 
                         alt="QR Code de confirmation de présence"
                         className="w-40 h-40"
                       />
@@ -2215,8 +2216,8 @@ export default function RsvpPage() {
             </>
           ) : (
             <p className="text-xs text-slate-500 leading-relaxed max-w-sm mx-auto">
-              La localisation GPS et l&apos;itinéraire vous seront partagés après votre confirmation de
-              présence à l&apos;entrée de l&apos;événement.
+              L&apos;itinéraire GPS détaillé sera partagé après validation de votre présence à
+              l&apos;entrée (scan QR). Le lieu texte ci-dessus reste disponible pour vous orienter.
             </p>
           )}
         </div>

@@ -13,6 +13,7 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RsvpEventCard } from '../../src/components/rsvp/RsvpEventCard';
 import { GuestGuidelinesCard } from '../../src/components/rsvp/GuestGuidelinesCard';
+import { GuestLegalGate } from '../../src/components/rsvp/GuestLegalGate';
 import { RsvpResponseForm } from '../../src/components/rsvp/RsvpResponseForm';
 import { RsvpBadgePanel } from '../../src/components/rsvp/RsvpBadgePanel';
 import { RsvpTablePanel } from '../../src/components/rsvp/RsvpTablePanel';
@@ -66,6 +67,7 @@ export default function RsvpGuestScreen() {
     setRefreshing(true);
     try {
       await load();
+      setError('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de rafraîchissement.');
     } finally {
@@ -104,7 +106,11 @@ export default function RsvpGuestScreen() {
       <View style={styles.center}>
         <Text style={styles.errorTitle}>Invitation introuvable</Text>
         <Text style={styles.errorText}>{error || 'Ce lien RSVP est invalide ou expiré.'}</Text>
-        <Button title="Retour" onPress={() => router.replace('/(auth)/login')} variant="secondary" />
+        <Text style={styles.errorHint}>
+          Vérifiez le lien reçu par e-mail ou WhatsApp, ou contactez l&apos;organisateur. Aucun
+          compte EventMaster n&apos;est requis pour les invités.
+        </Text>
+        <Button title="Réessayer" onPress={onRefresh} variant="secondary" />
       </View>
     );
   }
@@ -113,7 +119,7 @@ export default function RsvpGuestScreen() {
   const qrUrl = getQrCodeUrl(guest.id, env.webUrl);
 
   return (
-    <>
+    <GuestLegalGate guestId={guest.id}>
       <Stack.Screen
         options={{
           title: guest.event.title,
@@ -131,9 +137,7 @@ export default function RsvpGuestScreen() {
 
           <RsvpResponseForm guest={guest} rsvpFields={rsvpFields} onSubmit={handleSubmit} />
 
-          {showBadge ? (
-            <RsvpBadgePanel qrUrl={qrUrl} guestName={guest.firstName} />
-          ) : null}
+          {showBadge ? <RsvpBadgePanel qrUrl={qrUrl} guestName={guest.firstName} /> : null}
 
           {guest.placementAccessible && guest.tableDetails ? (
             <RsvpTablePanel tableDetails={guest.tableDetails} />
@@ -143,7 +147,7 @@ export default function RsvpGuestScreen() {
             <View style={styles.pdfCard}>
               <Text style={styles.pdfTitle}>Invitation PDF</Text>
               <Text style={styles.pdfText}>
-                Votre invitation avec placement de table, disponible après votre confirmation de présence.
+                Votre invitation avec placement de table, débloquée après validation à l&apos;entrée.
               </Text>
               <Button title="Ouvrir le PDF" onPress={openPdf} variant="secondary" />
             </View>
@@ -151,8 +155,16 @@ export default function RsvpGuestScreen() {
             <View style={styles.pdfCard}>
               <Text style={styles.pdfTitle}>Plan de table & PDF</Text>
               <Text style={styles.pdfText}>
-                Votre carte de placement et invitation PDF vous seront envoyés après validation à
-                l&apos;entrée de l&apos;événement.
+                Présentez votre badge QR à l&apos;accueil. Votre plan de table, invitation PDF et
+                localisation GPS seront débloqués et envoyés après confirmation de présence.
+              </Text>
+            </View>
+          ) : guest.rsvp === 'PENDING' ? (
+            <View style={styles.pdfCard}>
+              <Text style={styles.pdfTitle}>Après votre réponse</Text>
+              <Text style={styles.pdfText}>
+                Une fois votre présence confirmée, vous recevrez un badge QR. Le placement détaillé
+                (PDF, plan, GPS) arrivera après l&apos;accueil le jour J.
               </Text>
             </View>
           ) : null}
@@ -177,7 +189,7 @@ export default function RsvpGuestScreen() {
           ) : null}
         </ScrollView>
       </SafeAreaView>
-    </>
+    </GuestLegalGate>
   );
 }
 
@@ -214,6 +226,13 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
     lineHeight: 22,
+  },
+  errorHint: {
+    fontSize: 12,
+    color: colors.textMuted,
+    textAlign: 'center',
+    lineHeight: 18,
+    maxWidth: 320,
   },
   pdfCard: {
     backgroundColor: colors.surface,

@@ -132,6 +132,11 @@ interface BroadcastSummary {
   simulated: number;
   failed: number;
   allSimulated: boolean;
+  failureReasons?: {
+    noPhone?: number;
+    noEmail?: number;
+    provider?: number;
+  };
 }
 
 function getBroadcastStatusMeta(status: string) {
@@ -323,6 +328,7 @@ export default function EventsPage() {
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [broadcastSummary, setBroadcastSummary] = useState<BroadcastSummary | null>(null);
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+  const [lastBroadcastInviteId, setLastBroadcastInviteId] = useState<string | null>(null);
   const [broadcastingInviteId, setBroadcastingInviteId] = useState<string | null>(null);
   const [copiedGuestId, setCopiedGuestId] = useState<string | null>(null);
   const [sharingGuest, setSharingGuest] = useState<GuestItem | null>(null);
@@ -1293,10 +1299,37 @@ export default function EventsPage() {
       setBroadcastResults(response.results || []);
       setBroadcastMessage(response.message || '');
       setBroadcastSummary(response.summary || null);
+      setLastBroadcastInviteId(inviteId);
       setShowBroadcastModal(true);
       await refreshGuests();
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la diffusion.');
+    } finally {
+      setBroadcastingInviteId(null);
+    }
+  };
+
+  const handleRetryFailedBroadcast = async () => {
+    if (!selectedEvent || !lastBroadcastInviteId || !broadcastResults) return;
+    const failedIds = broadcastResults
+      .filter((r) => r.status === 'FAILED')
+      .map((r) => r.guestId)
+      .filter(Boolean);
+    if (failedIds.length === 0) return;
+
+    setError('');
+    setBroadcastingInviteId(lastBroadcastInviteId);
+    try {
+      const response = await api.post(
+        `/events/${selectedEvent.id}/invitations/${lastBroadcastInviteId}/broadcast`,
+        { guestIds: failedIds },
+      );
+      setBroadcastResults(response.results || []);
+      setBroadcastMessage(response.message || '');
+      setBroadcastSummary(response.summary || null);
+      await refreshGuests();
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la relance des échecs.');
     } finally {
       setBroadcastingInviteId(null);
     }
@@ -1321,6 +1354,7 @@ export default function EventsPage() {
       setBroadcastResults(response.results || []);
       setBroadcastMessage(response.message || '');
       setBroadcastSummary(response.summary || null);
+      setLastBroadcastInviteId(bulkSelectedInviteId);
       setShowBulkInviteModal(false);
       setShowBroadcastModal(true);
       setSelectedGuestIds([]);
@@ -1997,7 +2031,8 @@ export default function EventsPage() {
                               </span>
                             </td>
                             <td className="py-4 px-6">
-                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold border ${
+                              <div className="flex flex-col gap-1">
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-extrabold border w-fit ${
                                 g.rsvp === 'ACCEPTED' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
                                 g.rsvp === 'DECLINED' ? 'bg-rose-50 border-rose-100 text-rose-700' :
                                 'bg-amber-50 border-amber-100 text-amber-700'
@@ -2008,6 +2043,20 @@ export default function EventsPage() {
                                 }`} />
                                 {g.rsvp === 'ACCEPTED' ? 'Présent' : g.rsvp === 'DECLINED' ? 'Absent' : 'En attente'}
                               </span>
+                              {g.preferences?.invitationLastStatus === 'FAILED' && (
+                                <span
+                                  className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-100 w-fit"
+                                  title={g.preferences?.invitationLastError || 'Échec d’envoi'}
+                                >
+                                  Envoi échoué
+                                </span>
+                              )}
+                              {g.preferences?.invitationLastStatus === 'SENT' && g.preferences?.invitationSentAt && (
+                                <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 w-fit">
+                                  Invitation envoyée
+                                </span>
+                              )}
+                              </div>
                             </td>
                             <td className="py-4 px-6 text-slate-500 font-medium max-w-xs truncate">
                               {g.preferences ? (
@@ -3015,23 +3064,55 @@ export default function EventsPage() {
             </div>
 
             {broadcastSummary && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
-                  <div className="text-xl font-black text-slate-900">{broadcastSummary.total}</div>
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total</div>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
+                    <div className="text-xl font-black text-slate-900">{broadcastSummary.total}</div>
+                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total</div>
+                  </div>
+                  <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-center">
+                    <div className="text-xl font-black text-emerald-700">{broadcastSummary.sent}</div>
+                    <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Envoyés</div>
+                  </div>
+                  <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-center">
+                    <div className="text-xl font-black text-amber-700">{broadcastSummary.simulated}</div>
+                    <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Simulés</div>
+                  </div>
+                  <div className="bg-rose-50 border border-rose-100 rounded-xl p-3 text-center">
+                    <div className="text-xl font-black text-rose-700">{broadcastSummary.failed}</div>
+                    <div className="text-[10px] font-bold text-rose-600 uppercase tracking-wider">Échecs</div>
+                  </div>
                 </div>
-                <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-center">
-                  <div className="text-xl font-black text-emerald-700">{broadcastSummary.sent}</div>
-                  <div className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Envoyés</div>
-                </div>
-                <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-center">
-                  <div className="text-xl font-black text-amber-700">{broadcastSummary.simulated}</div>
-                  <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Simulés</div>
-                </div>
-                <div className="bg-rose-50 border border-rose-100 rounded-xl p-3 text-center">
-                  <div className="text-xl font-black text-rose-700">{broadcastSummary.failed}</div>
-                  <div className="text-[10px] font-bold text-rose-600 uppercase tracking-wider">Échecs</div>
-                </div>
+                {broadcastSummary.failed > 0 && broadcastSummary.failureReasons && (
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    {(broadcastSummary.failureReasons.noPhone || 0) > 0 && (
+                      <span className="px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-100 text-rose-700 font-semibold">
+                        {broadcastSummary.failureReasons.noPhone} sans WhatsApp
+                      </span>
+                    )}
+                    {(broadcastSummary.failureReasons.noEmail || 0) > 0 && (
+                      <span className="px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-100 text-rose-700 font-semibold">
+                        {broadcastSummary.failureReasons.noEmail} e-mail invalide
+                      </span>
+                    )}
+                    {(broadcastSummary.failureReasons.provider || 0) > 0 && (
+                      <span className="px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-100 text-rose-700 font-semibold">
+                        {broadcastSummary.failureReasons.provider} erreur fournisseur
+                      </span>
+                    )}
+                    {lastBroadcastInviteId && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={handleRetryFailedBroadcast}
+                        disabled={broadcastingInviteId !== null}
+                        loading={broadcastingInviteId === lastBroadcastInviteId}
+                      >
+                        Relancer les échecs
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 

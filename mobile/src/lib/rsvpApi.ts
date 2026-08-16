@@ -3,6 +3,12 @@ import type { GuestInvitationsResponse, GuestRsvpData } from '../types/rsvp';
 import type { GuestRsvpPreferences } from './rsvpFormFields';
 import type { RsvpStatus } from '../types/rsvp';
 
+export type GuestLegalStatus = {
+  termsAccepted: boolean;
+  privacyAccepted: boolean;
+  requiresAcceptance: boolean;
+};
+
 export async function fetchGuestRsvp(guestId: string): Promise<GuestRsvpData> {
   return api.get<GuestRsvpData>(`/rsvp/${guestId}`);
 }
@@ -18,9 +24,20 @@ export async function fetchGuestInvitations(guestId: string): Promise<GuestInvit
   return api.get<GuestInvitationsResponse>(`/rsvp/${guestId}/invitations`);
 }
 
-export function getQrCodeUrl(guestId: string, webBaseUrl: string): string {
-  const target = `${webBaseUrl.replace(/\/$/, '')}/rsvp/${guestId}`;
-  return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(target)}&color=4f-46-e5&bgcolor=ffffff&qzone=2`;
+export async function fetchGuestLegalStatus(guestId: string): Promise<GuestLegalStatus> {
+  return api.get<GuestLegalStatus>(`/rsvp/${guestId}/legal-status`);
+}
+
+export async function acceptGuestLegal(
+  guestId: string,
+  payload: { acceptTerms: boolean; acceptPrivacy: boolean },
+): Promise<GuestLegalStatus> {
+  return api.post<GuestLegalStatus>(`/rsvp/${guestId}/legal-accept`, payload);
+}
+
+export function getQrCodeUrl(guestId: string, _webBaseUrl?: string): string {
+  const apiBase = env.apiUrl.replace(/\/$/, '');
+  return `${apiBase}/rsvp/${guestId}/qr.png?size=300`;
 }
 
 export function getPdfUrl(guestId: string, apiBaseUrl: string, storedUrl?: string | null): string {
