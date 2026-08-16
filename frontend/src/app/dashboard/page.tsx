@@ -41,7 +41,7 @@ const COMMERCIAL_PLATFORM_TABS = ['tenants', 'subscription-requests', 'invoices'
 function planBadgeClass(plan: string): string {
   if (plan === 'FREE') return 'bg-slate-50 border-slate-200 text-slate-600';
   if (plan === 'STANDARD') return 'bg-blue-50 border-blue-100 text-blue-700';
-  if (plan.startsWith('PREMIUM')) return 'bg-indigo-50 border-indigo-100 text-indigo-700';
+  if (plan.startsWith('PREMIUM')) return 'bg-primary/10 border-primary/20 text-primary';
   if (plan.startsWith('ENTERPRISE')) return 'bg-amber-50 border-amber-100 text-amber-700';
   return 'bg-slate-50 border-slate-200 text-slate-600';
 }
@@ -49,7 +49,7 @@ function planBadgeClass(plan: string): string {
 function planBarClass(plan: string): string {
   if (plan === 'FREE') return 'bg-slate-400';
   if (plan === 'STANDARD') return 'bg-blue-500';
-  if (plan.startsWith('PREMIUM')) return 'bg-indigo-600';
+  if (plan.startsWith('PREMIUM')) return 'bg-primary';
   if (plan.startsWith('ENTERPRISE')) return 'bg-amber-500';
   return 'bg-slate-400';
 }
@@ -168,6 +168,64 @@ const ANALYTICS_SECTIONS: Array<{ id: AnalyticsSection; label: string }> = [
   { id: 'utilisateurs', label: 'Utilisateurs' },
   { id: 'evenements', label: 'Événements' },
 ];
+
+type AdminTabId =
+  | 'tenants' | 'users' | 'templates' | 'message-templates' | 'events'
+  | 'analytics' | 'guests' | 'settings' | 'subscription-requests'
+  | 'subscription-plans' | 'invoices';
+
+const ADMIN_TAB_META: Record<AdminTabId, { title: string; description: string; tip?: string }> = {
+  tenants: {
+    title: 'Organisations',
+    description: 'Comptes clients SaaS : licence, forfait, gérant et quotas.',
+    tip: 'Créer une organisation génère aussi le compte manager associé.',
+  },
+  users: {
+    title: 'Utilisateurs plateforme',
+    description: 'Tous les comptes (Super Admin, Commercial, membres d’organisations).',
+    tip: 'Les Super Admins n’appartiennent à aucune organisation.',
+  },
+  templates: {
+    title: 'Modèles d’invitation',
+    description: 'Catalogue global + modèles privés des organisations. Activez « Vitrine landing » pour l’accueil public.',
+    tip: 'Seuls les modèles globaux (sans organisation) peuvent apparaître sur la landing.',
+  },
+  'message-templates': {
+    title: 'Messages automatiques',
+    description: 'Textes WhatsApp / e-mail envoyés aux invités (invitation, rappel, confirmation…).',
+    tip: 'Utilisez les variables {{firstName}}, {{rsvpLink}}, etc. dans le corps du message.',
+  },
+  events: {
+    title: 'Événements (supervision)',
+    description: 'Vue transversale de tous les événements créés par les organisations.',
+  },
+  guests: {
+    title: 'Invités (supervision)',
+    description: 'Liste globale des invités et export CSV pour audit ou support.',
+  },
+  analytics: {
+    title: 'Analyses & statistiques',
+    description: 'Adoption des forfaits, revenus, activité organisations et modèles.',
+  },
+  settings: {
+    title: 'Réglages plateforme',
+    description: 'Nom, maintenance, inscriptions, WhatsApp (UltraMsg) et e-mail (SendGrid).',
+    tip: 'Les tarifs des forfaits se configurent dans l’onglet Forfaits, pas ici.',
+  },
+  'subscription-requests': {
+    title: 'Demandes d’abonnement',
+    description: 'Validez ou refusez les demandes d’upgrade / renouvellement avec preuve de paiement.',
+  },
+  'subscription-plans': {
+    title: 'Forfaits & tarifs',
+    description: 'Prix, quotas et fonctionnalités affichés sur la landing et appliqués à la facturation.',
+    tip: 'Ces forfaits alimentent directement la section tarifs de la page d’accueil.',
+  },
+  invoices: {
+    title: 'Factures plateforme',
+    description: 'Factures générées après approbation, paiement ou renouvellement.',
+  },
+};
 
 interface TenantSubscriptionHistoryEntry {
   id: string;
@@ -1348,276 +1406,221 @@ function DashboardPageContent() {
     const paginatedEvents = filteredEvents.slice((eventsPage - 1) * ITEMS_PER_PAGE, eventsPage * ITEMS_PER_PAGE);
     const paginatedGuests = filteredGuests.slice((guestsPage - 1) * ITEMS_PER_PAGE, guestsPage * ITEMS_PER_PAGE);
 
+    const tabMeta = ADMIN_TAB_META[activeTab as AdminTabId] || ADMIN_TAB_META.tenants;
+    const commercialOverrides: Partial<Record<AdminTabId, { description: string }>> = {
+      tenants: { description: 'Organisations liées à votre code de parrainage (plan, licence, gérant).' },
+      'subscription-requests': { description: 'Approuvez ou refusez les demandes de vos organisations parrainées.' },
+      invoices: { description: 'Factures de vos organisations parrainées et commissions associées.' },
+    };
+    const panelDescription = isCommercialPlatform && commercialOverrides[activeTab as AdminTabId]
+      ? commercialOverrides[activeTab as AdminTabId]!.description
+      : tabMeta.description;
+
+    const statCardClass = 'bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3';
+
     return (
       <>
-      <div className="space-y-8">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2.5">
-              {isCommercialPlatform ? (
-                <Briefcase className="w-8 h-8 text-amber-600" />
-              ) : (
-                <Shield className="w-8 h-8 text-indigo-600" />
-              )}
-              {isCommercialPlatform ? 'Espace Commercial' : 'Espace Super Admin'}
-            </h1>
-            <p className="text-slate-500 mt-1">
-              {isCommercialPlatform
-                ? 'Organisations parrainées, validation des abonnements et suivi de vos commissions.'
-                : "Vue d'ensemble globale et gestion de la plateforme SaaS EventMaster."}
-            </p>
-          </div>
-        </div>
+      <div className="space-y-5">
+        <PageHeader
+          title={isCommercialPlatform ? 'Espace commercial' : 'Console Super Admin'}
+          description={
+            isCommercialPlatform
+              ? 'Parrainage, validation des abonnements et suivi des commissions.'
+              : 'Pilotage global de la plateforme EventMaster : organisations, contenu, facturation.'
+          }
+          breadcrumbs={
+            <Breadcrumbs
+              items={[
+                { label: isCommercialPlatform ? 'Commercial' : 'Super Admin' },
+                { label: tabMeta.title },
+              ]}
+            />
+          }
+        />
 
-        {error && (
-          <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-center gap-3 text-sm">
-            <AlertCircle className="w-5 h-5 text-rose-500 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
+        {error && <Alert variant="error">{error}</Alert>}
 
-        {/* Global Statistics Widgets */}
         {adminData && (
-          <div className={`grid gap-6 ${isCommercialPlatform ? 'sm:grid-cols-3' : 'sm:grid-cols-4'}`}>
-            {/* Tenants Widget */}
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+          <div className={`grid gap-3 ${isCommercialPlatform ? 'sm:grid-cols-3' : 'sm:grid-cols-4'}`}>
+            <div className={statCardClass}>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  {isCommercialPlatform ? 'Organisations parrainées' : 'Organisations'}
+                <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">
+                  {isCommercialPlatform ? 'Parrainées' : 'Organisations'}
                 </span>
-                <div className="bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 p-2 rounded-xl">
-                  <Building2 className="w-5 h-5" />
+                <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)]">
+                  <Building2 className="w-4 h-4" />
                 </div>
               </div>
               <div>
-                <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{adminData.stats.tenants}</span>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium">
-                  {isCommercialPlatform ? 'Liées à votre code parrainage' : 'Inscrites sur la plateforme'}
+                <span className="text-2xl font-semibold text-foreground tracking-tight">{adminData.stats.tenants}</span>
+                <p className="text-[11px] text-muted mt-1">
+                  {isCommercialPlatform ? 'Liées à votre code' : 'Comptes clients actifs'}
                 </p>
               </div>
             </div>
 
             {isCommercialPlatform ? (
               <>
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                <div className={statCardClass}>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Demandes en attente</span>
-                    <div className="bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 p-2 rounded-xl">
-                      <Clock className="w-5 h-5" />
+                    <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">En attente</span>
+                    <div className="bg-amber-50 dark:bg-amber-950/40 text-amber-600 p-1.5 rounded-[var(--radius-button)]">
+                      <Clock className="w-4 h-4" />
                     </div>
                   </div>
                   <div>
-                    <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{pendingSubscriptionCount}</span>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium">Abonnements à valider</p>
+                    <span className="text-2xl font-semibold text-foreground tracking-tight">{pendingSubscriptionCount}</span>
+                    <p className="text-[11px] text-muted mt-1">Demandes à traiter</p>
                   </div>
                 </div>
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+                <div className={statCardClass}>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Commission ce mois</span>
-                    <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 p-2 rounded-xl">
-                      <Wallet className="w-5 h-5" />
+                    <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">Commission</span>
+                    <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 p-1.5 rounded-[var(--radius-button)]">
+                      <Wallet className="w-4 h-4" />
                     </div>
                   </div>
                   <div>
-                    <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
+                    <span className="text-2xl font-semibold text-foreground tracking-tight">
                       {(commercialOverview?.stats?.monthlyCommission ?? 0).toLocaleString('fr-FR')} FC
                     </span>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium">
+                    <p className="text-[11px] text-muted mt-1">
                       {commercialOverview?.commissionRate != null
-                        ? `${Math.round(commercialOverview.commissionRate * 100)} % sur factures validées`
-                        : 'Commissions sur factures validées'}
+                        ? `${Math.round(commercialOverview.commissionRate * 100)} % ce mois`
+                        : 'Ce mois'}
                     </p>
                   </div>
                 </div>
               </>
             ) : (
               <>
-            {/* Users Widget */}
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Utilisateurs</span>
-                <div className="bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400 p-2 rounded-xl">
-                  <Users className="w-5 h-5" />
+                <div className={statCardClass}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">Utilisateurs</span>
+                    <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)]">
+                      <Users className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-2xl font-semibold text-foreground tracking-tight">{adminData.stats.users}</span>
+                    <p className="text-[11px] text-muted mt-1">Comptes plateforme</p>
+                  </div>
                 </div>
-              </div>
-              <div>
-                <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{adminData.stats.users}</span>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium">Comptes actifs créés</p>
-              </div>
-            </div>
-
-            {/* Events Widget */}
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Événements</span>
-                <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 p-2 rounded-xl">
-                  <Calendar className="w-5 h-5" />
+                <div className={statCardClass}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">Événements</span>
+                    <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 p-1.5 rounded-[var(--radius-button)]">
+                      <Calendar className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-2xl font-semibold text-foreground tracking-tight">{adminData.stats.events}</span>
+                    <p className="text-[11px] text-muted mt-1">Tous tenants confondus</p>
+                  </div>
                 </div>
-              </div>
-              <div>
-                <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{adminData.stats.events}</span>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium">Organisés au total</p>
-              </div>
-            </div>
-
-            {/* Guests Widget */}
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Invités</span>
-                <div className="bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 p-2 rounded-xl">
-                  <Mail className="w-5 h-5" />
+                <div className={statCardClass}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">Invités</span>
+                    <div className="bg-amber-50 dark:bg-amber-950/40 text-amber-600 p-1.5 rounded-[var(--radius-button)]">
+                      <Mail className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-2xl font-semibold text-foreground tracking-tight">{adminData.stats.guests}</span>
+                    <p className="text-[11px] text-muted mt-1">Enregistrés au total</p>
+                  </div>
                 </div>
-              </div>
-              <div>
-                <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{adminData.stats.guests}</span>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium">Enregistrés dans le système</p>
-              </div>
-            </div>
               </>
             )}
           </div>
         )}
 
-        {/* Global Management Panel */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-          {/* Section header */}
-          <div className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
-                {activeTab === 'tenants' && <Building2 className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
-                {activeTab === 'users' && <Users className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
-                {activeTab === 'templates' && <FileText className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
-                {activeTab === 'message-templates' && <MessageSquare className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
-                {activeTab === 'events' && <Calendar className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
-                {activeTab === 'guests' && <Users className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
-                {activeTab === 'analytics' && <BarChart3 className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
-                {activeTab === 'settings' && <Key className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
-                {activeTab === 'subscription-requests' && <Clock className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
-                {activeTab === 'subscription-plans' && <CreditCard className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
-                {activeTab === 'invoices' && <FileText className="w-5.5 h-5.5 text-indigo-600 dark:text-indigo-400" />}
-                
-                {activeTab === 'tenants' && "Gestion des Organisations"}
-                {activeTab === 'users' && "Gestion des Utilisateurs"}
-                {activeTab === 'templates' && "Modèles d'Invitation Globaux"}
-                {activeTab === 'message-templates' && "Modèles de Messages Invités"}
-                {activeTab === 'events' && "Supervision des Événements"}
-                {activeTab === 'guests' && "Supervision des Invités"}
-                {activeTab === 'analytics' && "Analyses & Statistiques Globales"}
-                {activeTab === 'settings' && "Configuration des Plans & Tarifs"}
-                {activeTab === 'subscription-requests' && "Demandes d'abonnement"}
-                {activeTab === 'subscription-plans' && 'Forfaits & abonnements'}
-                {activeTab === 'invoices' && 'Factures plateforme'}
+        <div className="bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden">
+          <div className="border-b border-border bg-surface-muted/50 px-5 py-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold text-foreground tracking-tight flex items-center gap-2">
+                {activeTab === 'tenants' && <Building2 className="w-4.5 h-4.5 text-primary shrink-0" />}
+                {activeTab === 'users' && <Users className="w-4.5 h-4.5 text-primary shrink-0" />}
+                {activeTab === 'templates' && <FileText className="w-4.5 h-4.5 text-primary shrink-0" />}
+                {activeTab === 'message-templates' && <MessageSquare className="w-4.5 h-4.5 text-primary shrink-0" />}
+                {activeTab === 'events' && <Calendar className="w-4.5 h-4.5 text-primary shrink-0" />}
+                {activeTab === 'guests' && <Users className="w-4.5 h-4.5 text-primary shrink-0" />}
+                {activeTab === 'analytics' && <BarChart3 className="w-4.5 h-4.5 text-primary shrink-0" />}
+                {activeTab === 'settings' && <Key className="w-4.5 h-4.5 text-primary shrink-0" />}
+                {activeTab === 'subscription-requests' && <Clock className="w-4.5 h-4.5 text-primary shrink-0" />}
+                {activeTab === 'subscription-plans' && <CreditCard className="w-4.5 h-4.5 text-primary shrink-0" />}
+                {activeTab === 'invoices' && <FileText className="w-4.5 h-4.5 text-primary shrink-0" />}
+                {tabMeta.title}
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
-                {activeTab === 'tenants' && (isCommercialPlatform
-                  ? "Consultez les organisations que vous avez parrainées (plan, licence, contact manager)."
-                  : "Gérez les organisations enregistrées, leurs abonnements et l'état de leurs licences.")}
-                {activeTab === 'users' && "Consultez et administrez l'ensemble des comptes d'utilisateurs de la plateforme."}
-                {activeTab === 'templates' && "Créez et configurez des modèles d'invitation globaux réutilisables par tous."}
-                {activeTab === 'message-templates' && "Personnalisez les messages WhatsApp et e-mails envoyés automatiquement aux invités."}
-                {activeTab === 'events' && "Supervisez tous les événements créés par les organisations sur la plateforme."}
-                {activeTab === 'guests' && "Consultez et gérez la liste globale de tous les invités enregistrés."}
-                {activeTab === 'analytics' && "Visualisez les performances, l'adoption des forfaits et l'activité globale."}
-                {activeTab === 'settings' && "Configurez les caractéristiques, limites et prix des différents forfaits."}
-                {activeTab === 'subscription-requests' && (isCommercialPlatform
-                  ? "Approuvez ou rejetez les demandes d'abonnement de vos organisations parrainées (réduction promo possible)."
-                  : "Validez ou rejetez les demandes d'activation ou de changement de forfait.")}
-                {activeTab === 'subscription-plans' && 'Configurez les tarifs, quotas et fonctionnalités de chaque forfait.'}
-                {activeTab === 'invoices' && (isCommercialPlatform
-                  ? "Factures de vos organisations parrainées et commissions associées."
-                  : "Consultez toutes les factures générées après approbation, paiement ou renouvellement.")}
-              </p>
+              <p className="text-xs text-muted mt-1 leading-relaxed max-w-2xl">{panelDescription}</p>
+              {!isCommercialPlatform && tabMeta.tip && (
+                <p className="text-[11px] text-primary mt-2 font-medium">{tabMeta.tip}</p>
+              )}
             </div>
 
-            {/* Action buttons on the right */}
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
               {activeTab === 'tenants' && (
                 isCommercialPlatform ? (
-                  <Link
-                    href="/dashboard/commercial"
-                    className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-md"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Nouvelle organisation parrainée
+                  <Link href="/dashboard/commercial">
+                    <Button type="button" size="sm" variant="secondary" leftIcon={<Plus className="w-4 h-4" />}>
+                      Nouvelle organisation
+                    </Button>
                   </Link>
                 ) : (
-                <button
-                  onClick={handleOpenCreateTenantModal}
-                  className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-md shadow-indigo-100 dark:shadow-none"
-                >
-                  <Plus className="w-4 h-4" />
-                  Créer une Organisation
-                </button>
+                  <Button type="button" size="sm" onClick={handleOpenCreateTenantModal} leftIcon={<Plus className="w-4 h-4" />}>
+                    Créer une organisation
+                  </Button>
                 )
               )}
 
               {activeTab === 'users' && isSuperAdmin && (
-                <button
-                  onClick={handleOpenCreateUserModal}
-                  className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-md shadow-indigo-100 dark:shadow-none"
-                >
-                  <Plus className="w-4 h-4" />
-                  Créer un Utilisateur
-                </button>
+                <Button type="button" size="sm" onClick={handleOpenCreateUserModal} leftIcon={<Plus className="w-4 h-4" />}>
+                  Créer un utilisateur
+                </Button>
               )}
 
               {activeTab === 'templates' && isSuperAdmin && (
-                <Link
-                  href="/dashboard/templates?new=1"
-                  className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-md shadow-indigo-100 dark:shadow-none"
-                >
-                  <Plus className="w-4 h-4" />
-                  Nouveau modèle (concepteur visuel)
+                <Link href="/dashboard/templates?new=1">
+                  <Button type="button" size="sm" leftIcon={<Plus className="w-4 h-4" />}>
+                    Nouveau modèle
+                  </Button>
                 </Link>
               )}
 
               {activeTab === 'events' && isSuperAdmin && (
-                <button
-                  onClick={handleOpenCreateEventModal}
-                  className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-md shadow-indigo-100 dark:shadow-none"
-                >
-                  <Plus className="w-4 h-4" />
-                  Créer un Événement
-                </button>
+                <Button type="button" size="sm" onClick={handleOpenCreateEventModal} leftIcon={<Plus className="w-4 h-4" />}>
+                  Créer un événement
+                </Button>
               )}
 
               {activeTab === 'guests' && isSuperAdmin && (
                 <div className="flex gap-2">
                   {adminGuests.length > 0 && (
-                    <button
-                      onClick={handleExportAdminGuests}
-                      className="px-4 py-2.5 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-bold rounded-xl text-xs transition flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-800"
-                    >
-                      <Download className="w-4 h-4" />
+                    <Button type="button" size="sm" variant="secondary" onClick={handleExportAdminGuests} leftIcon={<Download className="w-4 h-4" />}>
                       Exporter CSV
-                    </button>
+                    </Button>
                   )}
-                  <button
-                    onClick={handleOpenCreateGuestModal}
-                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-md shadow-indigo-100 dark:shadow-none"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Créer un Invité
-                  </button>
+                  <Button type="button" size="sm" onClick={handleOpenCreateGuestModal} leftIcon={<Plus className="w-4 h-4" />}>
+                    Créer un invité
+                  </Button>
                 </div>
               )}
             </div>
           </div>
 
           {activeTab === 'analytics' && user?.role === 'SUPER_ADMIN' && (
-            <div className="px-6 py-3 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
-              <div className="flex flex-wrap gap-2 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl">
+            <div className="px-5 py-3 border-b border-border bg-surface">
+              <div className="inline-flex flex-wrap gap-0.5 p-0.5 bg-surface-muted border border-border rounded-[var(--radius-button)]">
                 {ANALYTICS_SECTIONS.map(({ id, label }) => (
                   <button
                     key={id}
                     type="button"
                     onClick={() => setAnalyticsSection(id)}
                     className={cn(
-                      'inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all',
+                      'inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
                       activeAnalyticsSection === id
-                        ? 'bg-white dark:bg-slate-900 text-indigo-600 shadow-sm'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white',
+                        ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
+                        : 'text-muted hover:text-foreground',
                     )}
                   >
                     {label}
@@ -1643,7 +1646,7 @@ function DashboardPageContent() {
                 }
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
               />
             </div>
 
@@ -1653,7 +1656,7 @@ function DashboardPageContent() {
                 <select
                   value={filterPlan}
                   onChange={(e) => setFilterPlan(e.target.value)}
-                  className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                  className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
                 >
                   <option value="ALL">Tous les plans</option>
                   {PLAN_IDS.map((p) => (
@@ -1669,7 +1672,7 @@ function DashboardPageContent() {
                 <select
                   value={filterRole}
                   onChange={(e) => setFilterRole(e.target.value)}
-                  className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                  className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
                 >
                   <option value="ALL">Tous les rôles</option>
                   <option value="USER">USER</option>
@@ -1685,7 +1688,7 @@ function DashboardPageContent() {
                 <select
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value as any)}
-                  className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                  className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
                 >
                   <option value="ALL">Tous les modèles</option>
                   <option value="GLOBAL">Modèles Globaux (Publics)</option>
@@ -1700,7 +1703,7 @@ function DashboardPageContent() {
                 <select
                   value={filterRsvp}
                   onChange={(e) => setFilterRsvp(e.target.value)}
-                  className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                  className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
                 >
                   <option value="ALL">Tous les statuts RSVP</option>
                   <option value="PENDING">En attente (PENDING)</option>
@@ -1792,7 +1795,7 @@ function DashboardPageContent() {
                             </div>
                           </td>
                           <td className="py-4 text-center font-bold text-slate-700">{t.usersCount}</td>
-                          <td className="py-4 text-center font-bold text-indigo-600">{t.eventsCount}</td>
+                          <td className="py-4 text-center font-bold text-primary">{t.eventsCount}</td>
                           <td className="py-4 text-right">
                             <div className="flex items-center justify-end gap-2">
                               <button
@@ -1806,7 +1809,7 @@ function DashboardPageContent() {
                                 <>
                               <button
                                 onClick={() => handleOpenEditTenantModal(t)}
-                                className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                                className="p-2 text-primary hover:bg-primary/10 rounded-lg transition"
                                 title="Modifier l'organisation & licence"
                               >
                                 <Edit2 className="w-4.5 h-4.5" />
@@ -1849,7 +1852,7 @@ function DashboardPageContent() {
                           onClick={() => setTenantsPage(i + 1)}
                           className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
                             tenantsPage === i + 1 
-                              ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-100' 
+                              ? 'bg-primary text-white shadow-sm ' 
                               : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
                           }`}
                         >
@@ -1941,7 +1944,7 @@ function DashboardPageContent() {
                                 </button>
                                 <button
                                   onClick={() => handleOpenEditUserModal(u)}
-                                  className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                                  className="p-2 text-primary hover:bg-primary/10 rounded-lg transition"
                                   title="Modifier l'utilisateur"
                                 >
                                   <Edit2 className="w-4.5 h-4.5" />
@@ -1983,7 +1986,7 @@ function DashboardPageContent() {
                             onClick={() => setUsersPage(i + 1)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
                               usersPage === i + 1 
-                                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-100' 
+                                ? 'bg-primary text-white shadow-sm ' 
                                 : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
                             }`}
                           >
@@ -2009,9 +2012,9 @@ function DashboardPageContent() {
             {activeTab === 'templates' && isSuperAdmin && (
               <div className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/40 rounded-xl p-4">
-                    <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Modèles globaux</p>
-                    <p className="text-2xl font-extrabold text-indigo-700 dark:text-indigo-300 mt-1">{templates.filter((t) => t.isGlobal).length}</p>
+                  <div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
+                    <p className="text-[10px] font-bold text-primary uppercase tracking-wider">Modèles globaux</p>
+                    <p className="text-2xl font-extrabold text-primary mt-1">{templates.filter((t) => t.isGlobal).length}</p>
                   </div>
                   <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 rounded-xl p-4">
                     <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Sur la landing</p>
@@ -2048,7 +2051,7 @@ function DashboardPageContent() {
                       emptyAction={
                         <Link
                           href="/dashboard/templates?new=1"
-                          className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition"
+                          className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-sm transition"
                         >
                           <Plus className="w-4 h-4" />
                           Créer un modèle dans le concepteur visuel
@@ -2080,7 +2083,7 @@ function DashboardPageContent() {
                             onClick={() => setTemplatesPage(i + 1)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
                               templatesPage === i + 1
-                                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-100'
+                                ? 'bg-primary text-white shadow-sm '
                                 : 'border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
                             }`}
                           >
@@ -2155,7 +2158,7 @@ function DashboardPageContent() {
                             <td className="py-4 text-slate-600 font-medium">{e.location}</td>
                             <td className="py-4">
                               <div className="flex items-center gap-3 text-xs font-bold">
-                                <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
                                   {e.guestCount} invités
                                 </span>
                                 <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100">
@@ -2174,7 +2177,7 @@ function DashboardPageContent() {
                                 </button>
                                 <button
                                   onClick={() => handleOpenEditEventModal(e)}
-                                  className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                                  className="p-2 text-primary hover:bg-primary/10 rounded-lg transition"
                                   title="Modifier l'événement"
                                 >
                                   <Edit2 className="w-4.5 h-4.5" />
@@ -2215,7 +2218,7 @@ function DashboardPageContent() {
                             onClick={() => setEventsPage(i + 1)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
                               eventsPage === i + 1 
-                                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-100' 
+                                ? 'bg-primary text-white shadow-sm ' 
                                 : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
                             }`}
                           >
@@ -2311,7 +2314,7 @@ function DashboardPageContent() {
                                   </button>
                                   <button
                                     onClick={() => handleOpenEditGuestModal(g)}
-                                    className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                                    className="p-2 text-primary hover:bg-primary/10 rounded-lg transition"
                                     title="Modifier l'invité"
                                   >
                                     <Edit2 className="w-4.5 h-4.5" />
@@ -2352,7 +2355,7 @@ function DashboardPageContent() {
                               onClick={() => setGuestsPage(i + 1)}
                               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
                                 guestsPage === i + 1 
-                                  ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-100' 
+                                  ? 'bg-primary text-white shadow-sm ' 
                                   : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
                               }`}
                             >
@@ -2383,11 +2386,14 @@ function DashboardPageContent() {
                   adminSettings && (
                     <form onSubmit={handleSaveSettings} className="space-y-8 animate-in fade-in duration-200">
                       {/* Section 1: Plateforme */}
-                      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-4">
-                        <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-3">
-                          <Globe className="w-5 h-5 text-indigo-600" />
-                          Paramètres Généraux de la Plateforme
+                      <div className="bg-surface-muted border border-border rounded-[var(--radius-card)] p-5 space-y-4">
+                        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 border-b border-border pb-3">
+                          <Globe className="w-4 h-4 text-primary" />
+                          Identité & accès
                         </h3>
+                        <p className="text-xs text-muted -mt-2">
+                          Nom affiché, e-mail support, mode maintenance et ouverture des inscriptions.
+                        </p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-1.5">
                             <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Nom de la plateforme</label>
@@ -2395,7 +2401,7 @@ function DashboardPageContent() {
                               type="text"
                               value={adminSettings.platformName}
                               onChange={(e) => setAdminSettings({ ...adminSettings, platformName: e.target.value })}
-                              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-medium"
+                              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-medium"
                               required
                             />
                           </div>
@@ -2405,7 +2411,7 @@ function DashboardPageContent() {
                               type="email"
                               value={adminSettings.supportEmail}
                               onChange={(e) => setAdminSettings({ ...adminSettings, supportEmail: e.target.value })}
-                              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-medium"
+                              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-medium"
                               required
                             />
                           </div>
@@ -2417,7 +2423,7 @@ function DashboardPageContent() {
                               type="checkbox"
                               checked={adminSettings.maintenanceMode}
                               onChange={(e) => setAdminSettings({ ...adminSettings, maintenanceMode: e.target.checked })}
-                              className="w-4.5 h-4.5 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                              className="w-4.5 h-4.5 text-primary border-slate-300 rounded focus:ring-primary"
                             />
                             <div>
                               <span className="text-sm font-bold text-slate-800 block">Mode Maintenance</span>
@@ -2430,7 +2436,7 @@ function DashboardPageContent() {
                               type="checkbox"
                               checked={adminSettings.allowRegistration}
                               onChange={(e) => setAdminSettings({ ...adminSettings, allowRegistration: e.target.checked })}
-                              className="w-4.5 h-4.5 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                              className="w-4.5 h-4.5 text-primary border-slate-300 rounded focus:ring-primary"
                             />
                             <div>
                               <span className="text-sm font-bold text-slate-800 block">Inscriptions Ouvertes</span>
@@ -2441,11 +2447,14 @@ function DashboardPageContent() {
                       </div>
 
                       {/* Section 2: WhatsApp */}
-                      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-4">
-                        <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-3">
-                          <Mail className="w-5 h-5 text-indigo-600" />
-                          Configuration UltraMsg (WhatsApp)
+                      <div className="bg-surface-muted border border-border rounded-[var(--radius-card)] p-5 space-y-4">
+                        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 border-b border-border pb-3">
+                          <Mail className="w-4 h-4 text-primary" />
+                          WhatsApp (UltraMsg)
                         </h3>
+                        <p className="text-xs text-muted -mt-2">
+                          Requis pour OTP WhatsApp, invitations et rappels via WhatsApp.
+                        </p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-1.5">
                             <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">UltraMsg Instance ID</label>
@@ -2453,7 +2462,7 @@ function DashboardPageContent() {
                               type="text"
                               value={adminSettings.ultramsgInstanceId}
                               onChange={(e) => setAdminSettings({ ...adminSettings, ultramsgInstanceId: e.target.value })}
-                              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-mono"
+                              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-mono"
                               placeholder="ex: instance12345"
                             />
                           </div>
@@ -2463,7 +2472,7 @@ function DashboardPageContent() {
                               type="password"
                               value={adminSettings.ultramsgToken}
                               onChange={(e) => setAdminSettings({ ...adminSettings, ultramsgToken: e.target.value })}
-                              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-mono"
+                              className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-mono"
                               placeholder="••••••••••••••••••••••••••••••••"
                             />
                           </div>
@@ -2471,18 +2480,21 @@ function DashboardPageContent() {
                       </div>
 
                       {/* Section 3: Email */}
-                      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-4">
-                        <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-200 pb-3">
-                          <Mail className="w-5 h-5 text-indigo-600" />
-                          Configurations SendGrid (Email)
+                      <div className="bg-surface-muted border border-border rounded-[var(--radius-card)] p-5 space-y-4">
+                        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 border-b border-border pb-3">
+                          <Mail className="w-4 h-4 text-primary" />
+                          E-mail (SendGrid)
                         </h3>
+                        <p className="text-xs text-muted -mt-2">
+                          Requis pour OTP e-mail, invitations et notifications transactionnelles.
+                        </p>
                         <div className="space-y-1.5">
                           <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">SendGrid API Key</label>
                           <input
                             type="password"
                             value={adminSettings.sendgridApiKey}
                             onChange={(e) => setAdminSettings({ ...adminSettings, sendgridApiKey: e.target.value })}
-                            className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-mono"
+                            className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-mono"
                             placeholder="ex: SG.••••••••••••••••••••••••••••••••"
                           />
                         </div>
@@ -2493,7 +2505,7 @@ function DashboardPageContent() {
                         <button
                           type="submit"
                           disabled={savingSettings}
-                          className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition flex items-center gap-2 shadow-lg shadow-indigo-100 disabled:opacity-50"
+                          className="px-6 py-3 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-sm transition flex items-center gap-2 disabled:opacity-50"
                         >
                           {savingSettings ? (
                             <>
@@ -2519,7 +2531,7 @@ function DashboardPageContent() {
               <div className="space-y-6 animate-in fade-in duration-200">
                 <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-4">
                   <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-indigo-600" />
+                    <Clock className="w-5 h-5 text-primary" />
                     Demandes reçues ({subscriptionRequests.length})
                   </h4>
 
@@ -2655,7 +2667,7 @@ function DashboardPageContent() {
                                 {req.tenant?.referredByCommercial || req.tenant?.referredByOrgUser ? (
                                   <div className="text-xs space-y-0.5">
                                     {req.tenant.referredByCommercial && (
-                                      <span className="block text-indigo-600 font-semibold" title={req.tenant.referredByCommercial.email}>
+                                      <span className="block text-primary font-semibold" title={req.tenant.referredByCommercial.email}>
                                         {req.tenant.referredByCommercial.name || 'Commercial plateforme'}
                                       </span>
                                     )}
@@ -2730,7 +2742,7 @@ function DashboardPageContent() {
                   <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-6">
                     <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4">
                       <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <CreditCard className="w-5 h-5 text-indigo-600" />
+                        <CreditCard className="w-5 h-5 text-primary" />
                         Configuration des forfaits ({PLAN_IDS.length})
                       </h4>
                     </div>
@@ -2743,8 +2755,8 @@ function DashboardPageContent() {
                         return (
                           <div key={planKey} className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4">
                             <div className="flex items-center justify-between">
-                              <span className="text-xs font-extrabold text-indigo-600 uppercase tracking-wider">{planKey}</span>
-                              <span className="text-xs bg-indigo-50 text-indigo-700 font-bold px-2.5 py-0.5 rounded-full">
+                              <span className="text-xs font-extrabold text-primary uppercase tracking-wider">{planKey}</span>
+                              <span className="text-xs bg-primary/10 text-primary font-bold px-2.5 py-0.5 rounded-full">
                                 {planKey === 'FREE' ? 'Gratuit' : 'Mensuel'}
                               </span>
                             </div>
@@ -2760,7 +2772,7 @@ function DashboardPageContent() {
                                     updatedPlans[planKey] = { ...plan, name: e.target.value };
                                     setAdminSettings({ ...adminSettings, plans: updatedPlans });
                                   }}
-                                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-indigo-500 transition"
+                                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition"
                                   required
                                 />
                               </div>
@@ -2775,7 +2787,7 @@ function DashboardPageContent() {
                                     setAdminSettings({ ...adminSettings, plans: updatedPlans });
                                   }}
                                   rows={2}
-                                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-indigo-500 transition resize-none"
+                                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:border-primary transition resize-none"
                                 />
                               </div>
 
@@ -2794,7 +2806,7 @@ function DashboardPageContent() {
                                     };
                                     setAdminSettings({ ...adminSettings, plans: updatedPlans });
                                   }}
-                                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-indigo-500 transition"
+                                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition"
                                   required
                                 />
                               </div>
@@ -2867,7 +2879,7 @@ function DashboardPageContent() {
                                       updatedPlans[planKey] = { ...plan, maxEvents: parseInt(e.target.value) || 0 };
                                       setAdminSettings({ ...adminSettings, plans: updatedPlans });
                                     }}
-                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-indigo-500 transition"
+                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition"
                                     required
                                   />
                                 </div>
@@ -2882,7 +2894,7 @@ function DashboardPageContent() {
                                       updatedPlans[planKey] = { ...plan, maxGuests: parseInt(e.target.value) || 0 };
                                       setAdminSettings({ ...adminSettings, plans: updatedPlans });
                                     }}
-                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-indigo-500 transition"
+                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition"
                                     required
                                   />
                                 </div>
@@ -2899,7 +2911,7 @@ function DashboardPageContent() {
                                       updatedPlans[planKey] = { ...plan, maxTemplates: parseInt(e.target.value) || 0 };
                                       setAdminSettings({ ...adminSettings, plans: updatedPlans });
                                     }}
-                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-indigo-500 transition"
+                                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition"
                                     required
                                   />
                                 </div>
@@ -2914,7 +2926,7 @@ function DashboardPageContent() {
                                       updatedPlans[planKey] = { ...plan, customTemplates: e.target.checked };
                                       setAdminSettings({ ...adminSettings, plans: updatedPlans });
                                     }}
-                                    className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
+                                    className="w-4 h-4 text-primary border-slate-300 rounded focus:ring-primary"
                                   />
                                   <label htmlFor={`custom-templates-${planKey}`} className="text-[10px] font-bold text-slate-600 uppercase tracking-wider cursor-pointer">
                                     Modèles Perso.
@@ -2942,7 +2954,7 @@ function DashboardPageContent() {
                           }
                         }}
                         disabled={savingSettings}
-                        className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-md shadow-indigo-100 disabled:opacity-50 cursor-pointer"
+                        className="px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-md disabled:opacity-50 cursor-pointer"
                       >
                         {savingSettings ? (
                           <>
@@ -2969,7 +2981,7 @@ function DashboardPageContent() {
               <div className="space-y-6 animate-in fade-in duration-200">
                 <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
                   <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
-                    <FileText className="w-5 h-5 text-indigo-600" />
+                    <FileText className="w-5 h-5 text-primary" />
                     Toutes les factures ({adminInvoices.length})
                   </h4>
                   {loadingAdminInvoices ? (
@@ -2994,7 +3006,7 @@ function DashboardPageContent() {
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex items-center gap-4">
-                      <div className="p-3 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                      <div className="p-3 bg-primary/10 text-primary rounded-xl">
                         <Building2 className="w-6 h-6" />
                       </div>
                       <div>
@@ -3033,7 +3045,7 @@ function DashboardPageContent() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 flex items-center gap-4">
-                      <div className="p-3 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                      <div className="p-3 bg-primary/10 text-primary rounded-xl">
                         <Users className="w-6 h-6" />
                       </div>
                       <div>
@@ -3087,7 +3099,7 @@ function DashboardPageContent() {
                 {activeAnalyticsSection === 'plans' && (
                   <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-6 shadow-sm">
                     <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                      <PieChart className="w-5 h-5 text-indigo-600" />
+                      <PieChart className="w-5 h-5 text-primary" />
                       Répartition des Plans d'Abonnement
                     </h3>
                     
@@ -3118,7 +3130,7 @@ function DashboardPageContent() {
 
                     <div className="border-t border-slate-100 pt-6">
                       <h4 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-indigo-500" />
+                        <Sparkles className="w-4 h-4 text-primary" />
                         Statut des Licences Contractuelles
                       </h4>
                       <div className="grid grid-cols-2 gap-4">
@@ -3142,7 +3154,7 @@ function DashboardPageContent() {
                 {activeAnalyticsSection === 'organisations' && (
                   <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-6 shadow-sm">
                     <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                      <TrendingUp className="w-5 h-5 text-indigo-600" />
+                      <TrendingUp className="w-5 h-5 text-primary" />
                       Organisations les Plus Actives
                     </h3>
                     
@@ -3163,7 +3175,7 @@ function DashboardPageContent() {
                               </div>
                             </div>
                             <div className="text-right">
-                              <span className="font-extrabold text-indigo-600 block">{t.eventsCount} events</span>
+                              <span className="font-extrabold text-primary block">{t.eventsCount} events</span>
                               <span className="text-xs text-slate-500 font-medium">{t.usersCount} membres</span>
                             </div>
                           </div>
@@ -3179,7 +3191,7 @@ function DashboardPageContent() {
                 <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-6 shadow-sm">
                   <div className="flex flex-wrap items-center justify-between gap-4">
                     <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                      <CreditCard className="w-5 h-5 text-indigo-600" />
+                      <CreditCard className="w-5 h-5 text-primary" />
                       Revenus & Commissions Commerciales
                     </h3>
                     <div className="flex flex-wrap items-center gap-2">
@@ -3191,7 +3203,7 @@ function DashboardPageContent() {
                       />
                       <button
                         onClick={() => loadRevenueReport(revenuePeriod)}
-                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition"
+                        className="px-4 py-2 bg-primary hover:bg-primary-hover text-white text-xs font-bold rounded-xl transition"
                       >
                         Actualiser
                       </button>
@@ -3220,10 +3232,10 @@ function DashboardPageContent() {
                   ) : revenueReport ? (
                     <>
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
-                          <span className="text-xs font-bold text-indigo-600 uppercase">Revenus bruts</span>
-                          <p className="text-xl font-extrabold text-indigo-900 mt-1">{revenueReport.summary.totalRevenueFormatted}</p>
-                          <span className="text-xs text-indigo-500">{revenueReport.summary.invoiceCount} facture(s)</span>
+                        <div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
+                          <span className="text-xs font-bold text-primary uppercase">Revenus bruts</span>
+                          <p className="text-xl font-extrabold text-primary mt-1">{revenueReport.summary.totalRevenueFormatted}</p>
+                          <span className="text-xs text-primary">{revenueReport.summary.invoiceCount} facture(s)</span>
                         </div>
                         <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
                           <span className="text-xs font-bold text-amber-600 uppercase">Commissions (20 %)</span>
@@ -3246,7 +3258,7 @@ function DashboardPageContent() {
                             {revenueReport.monthlyTrend.map((m) => (
                               <div key={m.period} className="flex items-center justify-between text-sm py-2 border-b border-slate-50">
                                 <span className="font-medium text-slate-600">{m.period}</span>
-                                <span className="font-bold text-indigo-600">{m.revenueFormatted}</span>
+                                <span className="font-bold text-primary">{m.revenueFormatted}</span>
                                 <span className="text-xs text-slate-400">{m.invoiceCount} fact.</span>
                               </div>
                             ))}
@@ -3300,7 +3312,7 @@ function DashboardPageContent() {
                                     <td className="px-4 py-2 font-mono text-xs">{inv.invoiceNumber}</td>
                                     <td className="px-4 py-2">{inv.tenantName}</td>
                                     <td className="px-4 py-2">{inv.plan}</td>
-                                    <td className="px-4 py-2 font-bold text-indigo-600">{inv.amountFormatted}</td>
+                                    <td className="px-4 py-2 font-bold text-primary">{inv.amountFormatted}</td>
                                     <td className="px-4 py-2 text-xs text-slate-500">{inv.type}</td>
                                   </tr>
                                 ))}
@@ -3320,13 +3332,13 @@ function DashboardPageContent() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4 shadow-sm">
                       <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-                        <FileText className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                        <FileText className="w-5 h-5 text-primary" />
                         Répartition des modèles
                       </h3>
                       <div className="space-y-3">
                         {[
                           { label: 'Total des modèles', value: templates.length, color: 'text-slate-800 dark:text-slate-200' },
-                          { label: 'Modèles globaux (publics)', value: templates.filter(t => t.isGlobal).length, color: 'text-indigo-600 dark:text-indigo-400' },
+                          { label: 'Modèles globaux (publics)', value: templates.filter(t => t.isGlobal).length, color: 'text-primary' },
                           { label: 'Modèles d\'organisations', value: templates.filter(t => !t.isGlobal).length, color: 'text-slate-800 dark:text-slate-200' },
                           { label: 'Affichés sur la landing page', value: templates.filter(t => t.showOnLanding).length, color: 'text-emerald-600 dark:text-emerald-400' },
                         ].map((row) => (
@@ -3338,7 +3350,7 @@ function DashboardPageContent() {
                       </div>
                       <Link
                         href="/dashboard?tab=templates"
-                        className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline pt-2"
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline pt-2"
                       >
                         Gérer les modèles globaux
                         <ChevronRight className="w-3.5 h-3.5" />
@@ -3375,7 +3387,7 @@ function DashboardPageContent() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4 shadow-sm">
                       <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-                        <Users className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                        <Users className="w-5 h-5 text-primary" />
                         Rôles des utilisateurs
                       </h3>
                       <div className="space-y-3">
@@ -3395,7 +3407,7 @@ function DashboardPageContent() {
                     </div>
                     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4 shadow-sm">
                       <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-                        <TrendingUp className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                        <TrendingUp className="w-5 h-5 text-primary" />
                         Inscriptions récentes
                       </h3>
                       <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-64 overflow-y-auto">
@@ -3420,7 +3432,7 @@ function DashboardPageContent() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4 shadow-sm">
                       <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-                        <Calendar className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                        <Calendar className="w-5 h-5 text-primary" />
                         Statistiques des événements
                       </h3>
                       <div className="space-y-3">
@@ -3470,7 +3482,7 @@ function DashboardPageContent() {
             <div className="bg-surface rounded-2xl border border-border shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
               <div className="px-6 py-5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
                 <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                  <Users className="w-5 h-5 text-indigo-600" />
+                  <Users className="w-5 h-5 text-primary" />
                   {guestModalMode === 'create' ? 'Créer un Invité' : 'Modifier l\'Invité'}
                 </h3>
                 <button 
@@ -3488,7 +3500,7 @@ function DashboardPageContent() {
                   <select
                     value={modalGuestEventId}
                     onChange={(e) => setGuestEventId(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-medium"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-medium"
                     required
                   >
                     <option value="" disabled>Sélectionner un événement</option>
@@ -3508,7 +3520,7 @@ function DashboardPageContent() {
                       type="text"
                       value={modalGuestFirstName}
                       onChange={(e) => setGuestFirstName(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-medium"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-medium"
                       required
                     />
                   </div>
@@ -3518,7 +3530,7 @@ function DashboardPageContent() {
                       type="text"
                       value={modalGuestLastName}
                       onChange={(e) => setGuestLastName(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-medium"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-medium"
                       required
                     />
                   </div>
@@ -3531,7 +3543,7 @@ function DashboardPageContent() {
                     type="email"
                     value={modalGuestEmail}
                     onChange={(e) => setGuestEmail(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-medium"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-medium"
                     required
                   />
                 </div>
@@ -3543,7 +3555,7 @@ function DashboardPageContent() {
                     type="text"
                     value={modalGuestCategory}
                     onChange={(e) => setGuestCategory(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-medium"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-medium"
                     placeholder="ex: Famille, VIP, Collègue..."
                   />
                 </div>
@@ -3554,7 +3566,7 @@ function DashboardPageContent() {
                   <select
                     value={modalGuestRsvp}
                     onChange={(e) => setGuestRsvp(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-medium"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-medium"
                   >
                     <option value="PENDING">En attente (PENDING)</option>
                     <option value="ACCEPTED">Accepté (ACCEPTED)</option>
@@ -3574,7 +3586,7 @@ function DashboardPageContent() {
                   <button
                     type="submit"
                     disabled={updatingGuest}
-                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition flex items-center gap-2 shadow-md shadow-indigo-100 disabled:opacity-50"
+                    className="px-4 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-sm transition flex items-center gap-2 shadow-md disabled:opacity-50"
                   >
                     {updatingGuest ? (
                       <>
@@ -3597,7 +3609,7 @@ function DashboardPageContent() {
             <div className="bg-surface rounded-2xl border border-border shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
               <div className="px-6 py-5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
                 <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-indigo-600" />
+                  <Building2 className="w-5 h-5 text-primary" />
                   {tenantModalMode === 'create' ? 'Créer une Organisation' : `Modifier l'Organisation : ${selectedTenant?.name}`}
                 </h3>
                 <button 
@@ -3617,7 +3629,7 @@ function DashboardPageContent() {
                     placeholder="Ex: ITM Africa, Agence Événementielle..."
                     value={modalTenantName}
                     onChange={(e) => setTenantName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-semibold"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-semibold"
                     required
                   />
                 </div>
@@ -3628,7 +3640,7 @@ function DashboardPageContent() {
                   <select
                     value={modalPlan}
                     onChange={(e) => setModalPlan(e.target.value as any)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
                   >
                     {PLAN_IDS.map((p) => (
                       <option key={p} value={p}>{p}</option>
@@ -3645,7 +3657,7 @@ function DashboardPageContent() {
                   <button
                     type="button"
                     onClick={() => setModalLicenseActive(!modalLicenseActive)}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${modalLicenseActive ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${modalLicenseActive ? 'bg-primary' : 'bg-slate-200'}`}
                   >
                     <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${modalLicenseActive ? 'translate-x-5' : 'translate-x-0'}`} />
                   </button>
@@ -3661,7 +3673,7 @@ function DashboardPageContent() {
                     type="date"
                     value={modalLicenseExpiresAt}
                     onChange={(e) => setModalLicenseExpiresAt(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
                   />
                   <p className="text-[11px] text-slate-400">Laissez vide pour une licence à durée illimitée.</p>
                 </div>
@@ -3675,7 +3687,7 @@ function DashboardPageContent() {
                       placeholder="Générer ou saisir une clé..."
                       value={modalLicenseKey}
                       onChange={(e) => setModalLicenseKey(e.target.value)}
-                      className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                      className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
                     />
                     <button
                       type="button"
@@ -3688,7 +3700,7 @@ function DashboardPageContent() {
                 </div>
 
                 {tenantModalMode === 'edit' && modalPlan !== 'FREE' && (
-                  <div className="space-y-4 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
+                  <div className="space-y-4 p-4 bg-primary/10/50 rounded-xl border border-primary/20">
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="text-sm font-bold text-slate-800">Facturation</div>
@@ -3697,7 +3709,7 @@ function DashboardPageContent() {
                       <button
                         type="button"
                         onClick={() => setModalIssueInvoice(!modalIssueInvoice)}
-                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${modalIssueInvoice ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${modalIssueInvoice ? 'bg-primary' : 'bg-slate-200'}`}
                       >
                         <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${modalIssueInvoice ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
@@ -3772,7 +3784,7 @@ function DashboardPageContent() {
                   <button
                     type="submit"
                     disabled={updatingTenant}
-                    className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-md shadow-indigo-100"
+                    className="flex-1 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-md"
                   >
                     {updatingTenant ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                     Enregistrer
@@ -3789,7 +3801,7 @@ function DashboardPageContent() {
             <div className="bg-surface rounded-2xl border border-border shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
               <div className="px-6 py-5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
                 <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                  <Users className="w-5 h-5 text-indigo-600" />
+                  <Users className="w-5 h-5 text-primary" />
                   {userModalMode === 'create' ? 'Créer un Utilisateur' : `Modifier l'Utilisateur : ${selectedUser?.email}`}
                 </h3>
                 <button 
@@ -3809,7 +3821,7 @@ function DashboardPageContent() {
                     placeholder="Ex: Jean Dupont"
                     value={modalUserName}
                     onChange={(e) => setUserName(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
                   />
                 </div>
 
@@ -3821,7 +3833,7 @@ function DashboardPageContent() {
                     placeholder="Ex: jean.dupont@gmail.com"
                     value={modalUserEmail}
                     onChange={(e) => setUserEmail(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
                     required
                   />
                 </div>
@@ -3836,7 +3848,7 @@ function DashboardPageContent() {
                     placeholder={userModalMode === 'create' ? "Saisir le mot de passe..." : "Laisser vide pour ne pas modifier..."}
                     value={modalUserPassword}
                     onChange={(e) => setUserPassword(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
                     required={userModalMode === 'create'}
                   />
                 </div>
@@ -3847,7 +3859,7 @@ function DashboardPageContent() {
                   <select
                     value={modalRole}
                     onChange={(e) => setModalRole(e.target.value as any)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
                   >
                     <option value="USER">USER</option>
                     <option value="COMMERCIAL">COMMERCIAL</option>
@@ -3862,7 +3874,7 @@ function DashboardPageContent() {
                     <select
                       value={modalUserTenantId}
                       onChange={(e) => setUserTenantId(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
                     >
                       <option value="">Aucun rattachement</option>
                       {adminData?.tenants.map(t => (
@@ -3881,7 +3893,7 @@ function DashboardPageContent() {
                   <button
                     type="button"
                     onClick={() => setModalIsEmailVerified(!modalIsEmailVerified)}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${modalIsEmailVerified ? 'bg-indigo-600' : 'bg-slate-200'}`}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${modalIsEmailVerified ? 'bg-primary' : 'bg-slate-200'}`}
                   >
                     <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${modalIsEmailVerified ? 'translate-x-5' : 'translate-x-0'}`} />
                   </button>
@@ -3899,7 +3911,7 @@ function DashboardPageContent() {
                   <button
                     type="submit"
                     disabled={updatingUser}
-                    className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-md shadow-indigo-100"
+                    className="flex-1 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-md"
                   >
                     {updatingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                     Enregistrer
@@ -3916,7 +3928,7 @@ function DashboardPageContent() {
             <div className="bg-surface rounded-2xl border border-border shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
               <div className="px-6 py-5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
                 <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-indigo-600" />
+                  <Calendar className="w-5 h-5 text-primary" />
                   {eventModalMode === 'create' ? 'Créer un Événement' : `Modifier l'Événement : ${selectedEvent?.title}`}
                 </h3>
                 <button 
@@ -3934,7 +3946,7 @@ function DashboardPageContent() {
                   <select
                     value={modalEventTenantId}
                     onChange={(e) => setEventTenantId(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
                     required
                   >
                     <option value="">Sélectionner une organisation</option>
@@ -3952,7 +3964,7 @@ function DashboardPageContent() {
                     placeholder="Ex: Mariage de Marc & Sophie"
                     value={modalEventTitle}
                     onChange={(e) => setEventTitle(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-semibold"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-semibold"
                     required
                   />
                 </div>
@@ -3964,7 +3976,7 @@ function DashboardPageContent() {
                     placeholder="Détails de l'événement..."
                     value={modalEventDescription}
                     onChange={(e) => setEventDescription(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-semibold min-h-[80px]"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-semibold min-h-[80px]"
                   />
                 </div>
 
@@ -3975,7 +3987,7 @@ function DashboardPageContent() {
                     type="datetime-local"
                     value={modalEventDate}
                     onChange={(e) => setEventDate(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-semibold"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-semibold"
                     required
                   />
                 </div>
@@ -3988,7 +4000,7 @@ function DashboardPageContent() {
                     placeholder="Ex: Salle de fête Palace, Paris"
                     value={modalEventLocation}
                     onChange={(e) => setEventLocation(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-semibold"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-semibold"
                     required
                   />
                 </div>
@@ -3999,7 +4011,7 @@ function DashboardPageContent() {
                   <select
                     value={modalEventReminderFrequency}
                     onChange={(e) => setEventReminderFrequency(e.target.value as any)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
                   >
                     <option value="NONE">Aucun rappel automatique</option>
                     <option value="DAILY">Quotidien (Tous les jours)</option>
@@ -4043,7 +4055,7 @@ function DashboardPageContent() {
                           }
                         }
                       }}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-semibold"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-semibold"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -4067,7 +4079,7 @@ function DashboardPageContent() {
                           }
                         }
                       }}
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition font-semibold"
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-semibold"
                     />
                   </div>
                 </div>
@@ -4084,7 +4096,7 @@ function DashboardPageContent() {
                   <button
                     type="submit"
                     disabled={updatingEvent}
-                    className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-md shadow-indigo-100"
+                    className="flex-1 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-md"
                   >
                     {updatingEvent ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                     {eventModalMode === 'create' ? 'Créer' : 'Enregistrer'}
@@ -4102,7 +4114,7 @@ function DashboardPageContent() {
               {/* Header */}
               <div className="px-6 py-5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
                 <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                  <Eye className="w-5 h-5 text-indigo-600" />
+                  <Eye className="w-5 h-5 text-primary" />
                   {detailsType === 'tenant' && "Détails de l'Organisation"}
                   {detailsType === 'user' && "Détails de l'Utilisateur"}
                   {detailsType === 'template' && "Détails du Modèle d'Invitation"}
@@ -4123,7 +4135,7 @@ function DashboardPageContent() {
                 {detailsType === 'tenant' && (
                   <div className="space-y-4">
                     <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                      <div className="bg-indigo-100 text-indigo-700 p-2.5 rounded-xl">
+                      <div className="bg-primary/15 text-primary p-2.5 rounded-xl">
                         <Building2 className="w-6 h-6" />
                       </div>
                       <div>
@@ -4135,7 +4147,7 @@ function DashboardPageContent() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="bg-slate-50/50 p-3.5 rounded-xl border border-slate-100">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Forfait</span>
-                        <span className="text-sm font-extrabold text-indigo-600 mt-1 block">{detailsData.plan}</span>
+                        <span className="text-sm font-extrabold text-primary mt-1 block">{detailsData.plan}</span>
                       </div>
                       <div className="bg-slate-50/50 p-3.5 rounded-xl border border-slate-100">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Date d'inscription</span>
@@ -4188,9 +4200,9 @@ function DashboardPageContent() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-indigo-50/30 p-3.5 rounded-xl border border-indigo-100 text-center">
-                        <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider block">Utilisateurs</span>
-                        <span className="text-2xl font-black text-indigo-700 mt-1 block">{detailsData.usersCount}</span>
+                      <div className="bg-primary/10/30 p-3.5 rounded-xl border border-primary/20 text-center">
+                        <span className="text-[10px] font-bold text-primary uppercase tracking-wider block">Utilisateurs</span>
+                        <span className="text-2xl font-black text-primary mt-1 block">{detailsData.usersCount}</span>
                       </div>
                       <div className="bg-violet-50/30 p-3.5 rounded-xl border border-violet-100 text-center">
                         <span className="text-[10px] font-bold text-violet-500 uppercase tracking-wider block">Événements</span>
@@ -4205,7 +4217,7 @@ function DashboardPageContent() {
                       </h5>
                       {loadingTenantHistory ? (
                         <div className="py-6 flex justify-center">
-                          <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+                          <Loader2 className="w-6 h-6 text-primary animate-spin" />
                         </div>
                       ) : tenantSubscriptionHistory.length === 0 ? (
                         <p className="text-xs text-slate-500 text-center py-4">Aucune demande ni facture enregistrée pour cette organisation.</p>
@@ -4232,7 +4244,7 @@ function DashboardPageContent() {
                                   </td>
                                   <td className="py-2 pr-2">
                                     <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                                      entry.kind === 'REQUEST' ? 'bg-amber-50 text-amber-700' : 'bg-indigo-50 text-indigo-700'
+                                      entry.kind === 'REQUEST' ? 'bg-amber-50 text-amber-700' : 'bg-primary/10 text-primary'
                                     }`}>
                                       {entry.kind === 'REQUEST' ? 'Demande' : 'Facture'}
                                     </span>
@@ -4263,7 +4275,7 @@ function DashboardPageContent() {
                                     {entry.invoice ? (
                                       <div className="flex flex-col">
                                         <span className="font-mono text-[10px] text-slate-700">{entry.invoice.invoiceNumber}</span>
-                                        <span className="font-bold text-indigo-600">{entry.invoice.amountFormatted}</span>
+                                        <span className="font-bold text-primary">{entry.invoice.amountFormatted}</span>
                                       </div>
                                     ) : (
                                       <span className="text-slate-400">—</span>
@@ -4295,7 +4307,7 @@ function DashboardPageContent() {
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div className="bg-slate-50/50 p-3.5 rounded-xl border border-slate-100">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Rôle</span>
-                        <span className="font-extrabold text-indigo-600 mt-1 block">{detailsData.role}</span>
+                        <span className="font-extrabold text-primary mt-1 block">{detailsData.role}</span>
                       </div>
                       <div className="bg-slate-50/50 p-3.5 rounded-xl border border-slate-100">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Vérification Email</span>
@@ -4340,7 +4352,7 @@ function DashboardPageContent() {
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div className="bg-slate-50/50 p-3.5 rounded-xl border border-slate-100">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Type de modèle</span>
-                        <span className="font-extrabold text-indigo-600 mt-1 block">
+                        <span className="font-extrabold text-primary mt-1 block">
                           {detailsData.isGlobal ? 'Global (Public)' : 'Privé'}
                         </span>
                       </div>
@@ -4438,7 +4450,7 @@ function DashboardPageContent() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-500">Fréquence de rappel :</span>
-                        <span className="font-bold text-indigo-600">{detailsData.reminderFrequency}</span>
+                        <span className="font-bold text-primary">{detailsData.reminderFrequency}</span>
                       </div>
                       {(detailsData.latitude || detailsData.longitude) && (
                         <div className="flex justify-between">
@@ -4451,9 +4463,9 @@ function DashboardPageContent() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-indigo-50/30 p-3.5 rounded-xl border border-indigo-100 text-center">
-                        <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider block">Invités enregistrés</span>
-                        <span className="text-2xl font-black text-indigo-700 mt-1 block">{detailsData.guestCount}</span>
+                      <div className="bg-primary/10/30 p-3.5 rounded-xl border border-primary/20 text-center">
+                        <span className="text-[10px] font-bold text-primary uppercase tracking-wider block">Invités enregistrés</span>
+                        <span className="text-2xl font-black text-primary mt-1 block">{detailsData.guestCount}</span>
                       </div>
                       <div className="bg-emerald-50/30 p-3.5 rounded-xl border border-emerald-100 text-center">
                         <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider block">Invitations associées</span>
@@ -4467,7 +4479,7 @@ function DashboardPageContent() {
                 {detailsType === 'guest' && (
                   <div className="space-y-4">
                     <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                      <div className="bg-indigo-100 text-indigo-700 p-2.5 rounded-xl">
+                      <div className="bg-primary/15 text-primary p-2.5 rounded-xl">
                         <Users className="w-6 h-6" />
                       </div>
                       <div>
@@ -4538,7 +4550,7 @@ function DashboardPageContent() {
                 <button
                   type="button"
                   onClick={() => setIsDetailsModalOpen(false)}
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition shadow-md shadow-indigo-100"
+                  className="px-5 py-2 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-sm transition shadow-md"
                 >
                   Fermer
                 </button>
@@ -4705,13 +4717,13 @@ function DashboardPageContent() {
             
             {billing && (
               <div className="space-y-4">
-                <div className="p-4 bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-100 rounded-2xl flex items-center gap-4">
-                  <div className="bg-indigo-600 text-white p-2.5 rounded-xl shadow-md shadow-indigo-150">
+                <div className="p-4 bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-2xl flex items-center gap-4">
+                  <div className="bg-primary text-white p-2.5 rounded-xl shadow-md">
                     <Award className="w-6 h-6" />
                   </div>
                   <div>
                     <div className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Forfait Actuel</div>
-                    <div className="text-xl font-black text-indigo-950 mt-0.5">{billing.plan}</div>
+                    <div className="text-xl font-black text-foreground mt-0.5">{billing.plan}</div>
                   </div>
                 </div>
 
@@ -4757,7 +4769,7 @@ export default function DashboardPage() {
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
+          <Loader2 className="w-10 h-10 text-primary animate-spin" />
           <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Chargement de votre espace sécurisé...</p>
         </div>
       </div>
