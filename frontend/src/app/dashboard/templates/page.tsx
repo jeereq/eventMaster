@@ -113,16 +113,26 @@ const lightenColor = (hex: string, percent = 30) => {
 };
 
 export default function TemplatesPage() {
-  const { user, planFeatures, tenant } = useAuth();
+  const { user, planFeatures, planQuota, tenant } = useAuth();
   const router = useRouter();
   /** admin = ouvert depuis la console Super Admin (?tab=templates) ; studio = concepteur organisation */
   type StudioOrigin = 'admin' | 'studio';
   const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
   const [studioOrigin, setStudioOrigin] = useState<StudioOrigin>('studio');
   const fromAdminConsole = studioOrigin === 'admin' && user?.role === 'SUPER_ADMIN';
-  const canUseCustomTemplates = user?.role === 'SUPER_ADMIN' || planFeatures?.customTemplates !== false;
+  const canUseCustomTemplates = user?.role === 'SUPER_ADMIN' || planFeatures?.customTemplates === true;
   const canUseMockupImport = canUseCustomTemplates;
   const canUseMockupOcr = user?.role === 'SUPER_ADMIN' || planFeatures?.mockupOcr === true;
+  const templatesAtLimit =
+    user?.role !== 'SUPER_ADMIN' &&
+    Boolean(
+      planQuota &&
+        planQuota.limits.maxTemplates < 9999 &&
+        planQuota.usage.templates >= planQuota.limits.maxTemplates,
+    );
+  const templatesQuotaMsg = templatesAtLimit
+    ? `Quota modèles atteint (${planQuota!.usage.templates}/${planQuota!.limits.maxTemplates}). Passez à un forfait supérieur.`
+    : null;
   const {
     mode: templatesViewMode,
     setViewMode: setTemplatesViewMode,
@@ -302,6 +312,7 @@ export default function TemplatesPage() {
 
   const handleCreateTemplateClick = (origin: StudioOrigin = 'studio') => {
     if (!canUseCustomTemplates) return;
+    if (templatesAtLimit) return;
     setStudioOrigin(origin);
     setEditingTemplateId(null);
     setTemplateName('Nouveau Modèle d\'Invitation');
@@ -1218,6 +1229,10 @@ export default function TemplatesPage() {
   };
 
   const handleDuplicateTemplate = async (t: TemplateItem) => {
+    if (templatesAtLimit && user?.role !== 'SUPER_ADMIN') {
+      setError(templatesQuotaMsg || 'Quota modèles atteint.');
+      return;
+    }
     const isCatalog = t.isGlobal ?? !t.tenantId;
     try {
       setLoading(true);
@@ -3618,21 +3633,39 @@ export default function TemplatesPage() {
               <Button
                 variant="secondary"
                 onClick={() => mockupInputRef.current?.click()}
-                disabled={mockupImporting}
+                disabled={mockupImporting || templatesAtLimit}
+                title={templatesQuotaMsg || undefined}
                 leftIcon={mockupImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
               >
                 {mockupImporting ? (ocrProgress !== null ? `OCR ${ocrProgress}%` : 'Import…') : 'Importer ma maquette'}
               </Button>
                 </>
               )}
-              <Button onClick={() => handleCreateTemplateClick('studio')} leftIcon={<PlusCircle className="w-4 h-4" />}>
+              <Button
+                onClick={() => handleCreateTemplateClick('studio')}
+                disabled={templatesAtLimit}
+                title={templatesQuotaMsg || undefined}
+                leftIcon={<PlusCircle className="w-4 h-4" />}
+              >
                 Nouveau modèle
               </Button>
             </div>
-          ) : undefined
+          ) : (
+            <Link href="/dashboard/billing" className="text-xs font-semibold text-amber-700 hover:underline">
+              Débloquer l&apos;éditeur — voir les forfaits →
+            </Link>
+          )
         }
       />
 
+      {templatesAtLimit && user?.role === 'USER' && (
+        <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-xs">
+          {templatesQuotaMsg}{' '}
+          <Link href="/dashboard/billing" className="font-bold hover:underline">
+            Voir les forfaits →
+          </Link>
+        </div>
+      )}
       {user?.role === 'SUPER_ADMIN' && (
         <div className="rounded-[var(--radius-card)] border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground space-y-1">
           <p className="font-semibold text-primary text-xs uppercase tracking-wider">Nuance des vues</p>
@@ -3692,7 +3725,11 @@ export default function TemplatesPage() {
             isSuperAdmin={false}
             layout={templatesViewMode}
             columns={templatesColumns}
-            onDuplicate={canDuplicateAny ? (t) => handleDuplicateTemplate(t as TemplateItem) : undefined}
+            onDuplicate={
+              canDuplicateAny && !templatesAtLimit
+                ? (t) => handleDuplicateTemplate(t as TemplateItem)
+                : undefined
+            }
           />
           <Pagination
             page={catalogPage}
@@ -3743,7 +3780,9 @@ export default function TemplatesPage() {
                 <button
                   type="button"
                   onClick={() => handleCreateTemplateClick('studio')}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/20"
+                  disabled={templatesAtLimit}
+                  title={templatesQuotaMsg || undefined}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <PlusCircle className="w-4 h-4" />
                   Créer mon premier modèle
@@ -3755,7 +3794,7 @@ export default function TemplatesPage() {
           }
           onEdit={canUseCustomTemplates ? (t) => handleEditTemplateClick(t as TemplateItem) : undefined}
           onDuplicate={
-            canUseCustomTemplates || user?.role === 'SUPER_ADMIN'
+            (canUseCustomTemplates || user?.role === 'SUPER_ADMIN') && !templatesAtLimit
               ? (t) => handleDuplicateTemplate(t as TemplateItem)
               : undefined
           }

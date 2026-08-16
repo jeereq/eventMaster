@@ -34,6 +34,12 @@ import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { parseStoredPhone } from '@/components/ui/PhoneInput';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
 import {
+  getFeatureLockMessage,
+  getQuotaLockMessage,
+  isAtQuota,
+  isPlanFeatureLocked,
+} from '@/lib/planAccess';
+import {
   extractRsvpFieldsFromTemplateContent,
   supplementFieldsFromGuestPreferences,
   getCustomFieldValue,
@@ -240,7 +246,7 @@ A très vite !`
 ];
 
 export default function EventsPage() {
-  const { user, access, planFeatures, tenant } = useAuth();
+  const { user, access, planFeatures, planQuota, tenant } = useAuth();
   const { mode: eventsViewMode, setViewMode: setEventsViewMode, columns: eventsColumns, setGridColumns: setEventsColumns, gridClassName: eventsGridClass } = useViewMode('em-view-events', 'grid', 3);
   const [eventsListPage, setEventsListPage] = useState(1);
   const [guestsListPage, setGuestsListPage] = useState(1);
@@ -248,6 +254,13 @@ export default function EventsPage() {
   const GUESTS_PER_PAGE = 8;
   const isProtocolOnly = access?.isProtocolOnly ?? false;
   const canManageEvents = access?.canManageAllEvents ?? false;
+  const eventsAtLimit = isAtQuota(planQuota?.usage.events, planQuota?.limits.maxEvents);
+  const guestsAtLimit = isAtQuota(planQuota?.usage.guests, planQuota?.limits.maxGuests);
+  const protocolLocked = isPlanFeatureLocked(planFeatures, 'protocolQr');
+  const seatNotificationsLocked = isPlanFeatureLocked(planFeatures, 'seatNotifications');
+  const eventsQuotaMsg = getQuotaLockMessage('events', planQuota);
+  const guestsQuotaMsg = getQuotaLockMessage('guests', planQuota);
+  const protocolLockMsg = getFeatureLockMessage('protocolQr', tenant?.plan);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
@@ -669,8 +682,22 @@ export default function EventsPage() {
   };
 
   const openCreateEventModal = () => {
+    if (eventsAtLimit) return;
     resetEventForm();
     setShowEventModal(true);
+  };
+
+  const openAddGuestModal = () => {
+    if (guestsAtLimit && !editingGuestId) return;
+    setEditingGuestId(null);
+    setGuestFirstName('');
+    setGuestLastName('');
+    setGuestEmail('');
+    setGuestPhoneCountryCode(DEFAULT_PHONE_COUNTRY_CODE);
+    setGuestPhoneNational('');
+    setGuestPreferences('');
+    setGuestCategory('Famille');
+    setShowGuestModal(true);
   };
 
   useEffect(() => {
@@ -1481,9 +1508,21 @@ export default function EventsPage() {
                 />
               )}
               {access?.canCreateEvents ? (
-                <Button onClick={openCreateEventModal} leftIcon={<PlusCircle className="w-4 h-4" />}>
-                  Créer un événement
-                </Button>
+                <div className="flex flex-col items-end gap-1">
+                  <Button
+                    onClick={openCreateEventModal}
+                    disabled={eventsAtLimit}
+                    title={eventsQuotaMsg || undefined}
+                    leftIcon={<PlusCircle className="w-4 h-4" />}
+                  >
+                    Créer un événement
+                  </Button>
+                  {eventsAtLimit && (
+                    <Link href="/dashboard/billing" className="text-[11px] font-semibold text-amber-700 hover:underline">
+                      Quota atteint — voir les forfaits
+                    </Link>
+                  )}
+                </div>
               ) : null}
             </div>
           }
@@ -1594,9 +1633,21 @@ export default function EventsPage() {
                 <li className="px-3 py-2 rounded-lg bg-surface-muted border border-border">3. Invitation</li>
               </ol>
               {access?.canCreateEvents && (
-                <Button onClick={openCreateEventModal} className="mt-6" leftIcon={<PlusCircle className="w-4 h-4" />}>
-                  Créer mon premier événement
-                </Button>
+                <div className="mt-6 flex flex-col items-center gap-2">
+                  <Button
+                    onClick={openCreateEventModal}
+                    disabled={eventsAtLimit}
+                    title={eventsQuotaMsg || undefined}
+                    leftIcon={<PlusCircle className="w-4 h-4" />}
+                  >
+                    Créer mon premier événement
+                  </Button>
+                  {eventsAtLimit && (
+                    <Link href="/dashboard/billing" className="text-xs font-semibold text-amber-700 hover:underline">
+                      Quota atteint — voir les forfaits
+                    </Link>
+                  )}
+                </div>
               )}
             </div>
           ) : (
@@ -1720,22 +1771,32 @@ export default function EventsPage() {
               !isProtocolOnly && { id: 'guestInfo' as const, label: 'Infos invités', icon: Shirt },
               !isProtocolOnly && { id: 'staff' as const, label: 'Équipe', icon: Users },
               !isProtocolOnly && { id: 'feed' as const, label: 'Feed', icon: MessageSquare },
-            ].filter(Boolean) as Array<{ id: typeof activeTab; label: string; icon: React.ComponentType<{ className?: string }> }>).map(({ id, label, icon: Icon }) => (
+            ].filter(Boolean) as Array<{ id: typeof activeTab; label: string; icon: React.ComponentType<{ className?: string }> }>).map(({ id, label, icon: Icon }) => {
+              const locked = id === 'protocol' && protocolLocked;
+              return (
               <button
                 key={id}
                 type="button"
                 onClick={() => setActiveTab(id)}
+                title={locked ? protocolLockMsg : undefined}
                 className={cn(
                   'inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium whitespace-nowrap transition-colors',
                   activeTab === id
                     ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
                     : 'text-muted hover:text-foreground',
+                  locked && 'opacity-70',
                 )}
               >
-                <Icon className={cn('w-3.5 h-3.5', activeTab === id && 'text-primary')} />
+                <Icon className="w-3.5 h-3.5" />
                 {label}
+                {locked ? (
+                  <span className="text-[9px] font-bold uppercase tracking-wide text-amber-700 bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded">
+                    Forfait
+                  </span>
+                ) : null}
               </button>
-            ))}
+              );
+            })}
           </div>
 
           {activeTab === 'protocol' && selectedEvent && (
@@ -1768,8 +1829,13 @@ export default function EventsPage() {
                     </button>
                   )}
                   <button 
-                    onClick={() => setShowImportModal(true)}
-                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold rounded-xl text-sm transition"
+                    onClick={() => {
+                      if (guestsAtLimit) return;
+                      setShowImportModal(true);
+                    }}
+                    disabled={guestsAtLimit}
+                    title={guestsQuotaMsg || undefined}
+                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold rounded-xl text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <FileSpreadsheet className="w-4 h-4" />
                     Importer Excel / CSV
@@ -1785,24 +1851,24 @@ export default function EventsPage() {
                     </button>
                   )}
                   <button 
-                    onClick={() => {
-                      setEditingGuestId(null);
-                      setGuestFirstName('');
-                      setGuestLastName('');
-                      setGuestEmail('');
-                      setGuestPhoneCountryCode(DEFAULT_PHONE_COUNTRY_CODE);
-                      setGuestPhoneNational('');
-                      setGuestPreferences('');
-                      setGuestCategory('Famille');
-                      setShowGuestModal(true);
-                    }}
-                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100"
+                    onClick={openAddGuestModal}
+                    disabled={guestsAtLimit}
+                    title={guestsQuotaMsg || undefined}
+                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <PlusCircle className="w-4 h-4" />
                     Ajouter un invité
                   </button>
                 </div>
               </div>
+              {guestsAtLimit && (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+                  {guestsQuotaMsg}{' '}
+                  <Link href="/dashboard/billing" className="font-bold hover:underline">
+                    Voir les forfaits →
+                  </Link>
+                </p>
+              )}
 
               {/* Search & Filtering Controls */}
               {guests.length > 0 && (
@@ -1955,13 +2021,30 @@ export default function EventsPage() {
                       Importez un fichier CSV ou ajoutez-les un par un. Vous pourrez ensuite envoyer les invitations.
                     </p>
                     <div className="mt-5 flex flex-wrap justify-center gap-2">
-                      <Button onClick={() => setShowGuestModal(true)} leftIcon={<PlusCircle className="w-4 h-4" />}>
+                      <Button
+                        onClick={openAddGuestModal}
+                        disabled={guestsAtLimit}
+                        title={guestsQuotaMsg || undefined}
+                        leftIcon={<PlusCircle className="w-4 h-4" />}
+                      >
                         Ajouter un invité
                       </Button>
-                      <Button variant="secondary" onClick={() => setShowImportModal(true)}>
+                      <Button
+                        variant="secondary"
+                        onClick={() => setShowImportModal(true)}
+                        disabled={guestsAtLimit}
+                        title={guestsQuotaMsg || undefined}
+                      >
                         Importer CSV
                       </Button>
                     </div>
+                    {guestsAtLimit && (
+                      <p className="mt-3 text-xs text-amber-700">
+                        <Link href="/dashboard/billing" className="font-bold hover:underline">
+                          Quota atteint — voir les forfaits →
+                        </Link>
+                      </p>
+                    )}
                   </div>
                 ) : filteredGuests.length === 0 ? (
                   <div className="text-center py-16">
@@ -2228,16 +2311,30 @@ export default function EventsPage() {
           )}
 
           {activeTab === 'tablePlan' && (
-            <TablePlanner
-              key={`${selectedEvent.id}_${selectedEvent.tablePlan?.importedAt ?? 'empty'}`}
-              guests={guests}
-              initialTablePlan={selectedEvent.tablePlan}
-              onSave={handleSaveTablePlan}
-              roomName={selectedEvent.room?.name}
-              canImportRoomLayout={selectedRoomHasLayout || Boolean(selectedEvent.roomId && orgRooms.find((r) => r.id === selectedEvent.roomId)?.layoutBlueprint)}
-              onImportRoomLayout={handleImportRoomLayout}
-              importingLayout={importingLayout}
-            />
+            <div className="space-y-4">
+              {seatNotificationsLocked && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  <p className="font-semibold">Notifications PDF / GPS non incluses</p>
+                  <p className="text-xs mt-1 text-amber-800">
+                    Vous pouvez placer les invités. L’envoi automatique du PDF, du plan et du GPS à l’accueil
+                    nécessite Premium 1 ou supérieur (forfait actuel : {tenant?.plan || 'FREE'}).
+                  </p>
+                  <Link href="/dashboard/billing" className="inline-block mt-2 text-xs font-bold text-indigo-600 hover:underline">
+                    Voir les forfaits →
+                  </Link>
+                </div>
+              )}
+              <TablePlanner
+                key={`${selectedEvent.id}_${selectedEvent.tablePlan?.importedAt ?? 'empty'}`}
+                guests={guests}
+                initialTablePlan={selectedEvent.tablePlan}
+                onSave={handleSaveTablePlan}
+                roomName={selectedEvent.room?.name}
+                canImportRoomLayout={selectedRoomHasLayout || Boolean(selectedEvent.roomId && orgRooms.find((r) => r.id === selectedEvent.roomId)?.layoutBlueprint)}
+                onImportRoomLayout={handleImportRoomLayout}
+                importingLayout={importingLayout}
+              />
+            </div>
           )}
 
           {/* Tab Content: Feed & Shares */}
@@ -2273,6 +2370,8 @@ export default function EventsPage() {
               form="event-config-form"
               size="sm"
               loading={savingEvent}
+              disabled={!editingEventId && eventsAtLimit}
+              title={!editingEventId && eventsQuotaMsg ? eventsQuotaMsg : undefined}
             >
               Enregistrer
             </Button>
@@ -2557,8 +2656,9 @@ export default function EventsPage() {
                 </button>
                 <button 
                   type="submit"
-                  disabled={savingGuest}
-                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100 flex items-center justify-center gap-2"
+                  disabled={savingGuest || (!editingGuestId && guestsAtLimit)}
+                  title={!editingGuestId && guestsQuotaMsg ? guestsQuotaMsg : undefined}
+                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-indigo-100 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {savingGuest ? (
                     <>
