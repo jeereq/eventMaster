@@ -26,7 +26,6 @@ import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
 import { getTemplateElementSummary } from '@/lib/landingTemplateAdapter';
 import {
-  TenantsMobileList,
   UsersMobileList,
   EventsMobileList,
   GuestsMobileList,
@@ -257,6 +256,13 @@ function DashboardPageContent() {
     setGridColumns: setHomeEventsColumns,
     gridClassName: homeEventsGridClass,
   } = useViewMode('em-view-home-events', 'grid', 2);
+  const {
+    mode: tenantsViewMode,
+    setViewMode: setTenantsViewMode,
+    columns: tenantsColumns,
+    setGridColumns: setTenantsColumns,
+    gridClassName: tenantsGridClass,
+  } = useViewMode('em-view-admin-tenants', 'grid', 3);
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [adminData, setAdminData] = useState<AdminStats | null>(null);
@@ -367,6 +373,7 @@ function DashboardPageContent() {
   const [eventsPage, setEventsPage] = useState(1);
   const [guestsPage, setGuestsPage] = useState(1);
   const ITEMS_PER_PAGE = 5;
+  const TENANTS_PER_PAGE = 12;
   const TEMPLATE_CARDS_PER_PAGE = 6;
 
   // Guest CRUD Modals states (Super Admin)
@@ -1401,7 +1408,7 @@ function DashboardPageContent() {
     });
 
     // Paginated arrays
-    const paginatedTenants = filteredTenants.slice((tenantsPage - 1) * ITEMS_PER_PAGE, tenantsPage * ITEMS_PER_PAGE);
+    const paginatedTenants = filteredTenants.slice((tenantsPage - 1) * TENANTS_PER_PAGE, tenantsPage * TENANTS_PER_PAGE);
     const paginatedUsers = filteredUsers.slice((usersPage - 1) * ITEMS_PER_PAGE, usersPage * ITEMS_PER_PAGE);
     const paginatedTemplates = filteredTemplates.slice((templatesPage - 1) * TEMPLATE_CARDS_PER_PAGE, templatesPage * TEMPLATE_CARDS_PER_PAGE);
     const paginatedEvents = filteredEvents.slice((eventsPage - 1) * ITEMS_PER_PAGE, eventsPage * ITEMS_PER_PAGE);
@@ -1652,7 +1659,7 @@ function DashboardPageContent() {
             </div>
 
             {activeTab === 'tenants' && (
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Filter className="w-4.5 h-4.5 text-slate-400 flex-shrink-0" />
                 <select
                   value={filterPlan}
@@ -1664,6 +1671,15 @@ function DashboardPageContent() {
                     <option key={p} value={p}>{p}</option>
                   ))}
                 </select>
+                <ViewModeToggle
+                  storageKey="em-view-admin-tenants"
+                  value={tenantsViewMode}
+                  onChange={setTenantsViewMode}
+                  columns={tenantsColumns}
+                  onColumnsChange={setTenantsColumns}
+                  defaultMode="grid"
+                  defaultColumns={3}
+                />
               </div>
             )}
 
@@ -1720,150 +1736,162 @@ function DashboardPageContent() {
           <div className="p-6 bg-white dark:bg-slate-950">
             {/* Tenants Tab */}
             {activeTab === 'tenants' && (
-              <div>
-                <div className="md:hidden space-y-3">
-                  <TenantsMobileList
-                    tenants={paginatedTenants}
-                    isCommercialPlatform={isCommercialPlatform}
-                    onView={(t) => handleOpenDetailsModal('tenant', t)}
-                    onEdit={handleOpenEditTenantModal}
-                    onDelete={handleDeleteTenant}
-                  />
-                </div>
-                <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[800px]">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                      <th className="pb-3 font-semibold">Nom de l'organisation</th>
-                      <th className="pb-3 font-semibold">Plan</th>
-                      <th className="pb-3 font-semibold">Licence / Clé</th>
-                      <th className="pb-3 font-semibold">Administrateur</th>
-                      <th className="pb-3 font-semibold text-center">Membres</th>
-                      <th className="pb-3 font-semibold text-center">Événements</th>
-                      <th className="pb-3 font-semibold text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 text-sm">
-                    {filteredTenants.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="py-8 text-center text-slate-500 font-medium">
-                          Aucune organisation trouvée.
-                        </td>
-                      </tr>
-                    ) : (
-                      paginatedTenants.map((t) => (
-                        <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="py-4">
-                            <div className="flex flex-col">
-                              <span className="font-bold text-slate-900">{t.name}</span>
-                              <span className="text-xs text-slate-400">Inscrite le {new Date(t.createdAt).toLocaleDateString('fr-FR')}</span>
-                            </div>
-                          </td>
-                          <td className="py-4">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-extrabold border ${planBadgeClass(t.plan)}`}>
-                              {t.plan}
-                            </span>
-                          </td>
-                          <td className="py-4">
-                            <div className="flex flex-col gap-1">
-                              <span className={`inline-flex items-center gap-1 self-start px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
-                                t.licenseActive 
-                                  ? (t.licenseExpiresAt && new Date(t.licenseExpiresAt) < new Date() ? 'bg-rose-50 border-rose-100 text-rose-700' : 'bg-emerald-50 border-emerald-100 text-emerald-700')
-                                  : 'bg-slate-100 border-slate-200 text-slate-600'
-                              }`}>
-                                {t.licenseActive 
-                                  ? (t.licenseExpiresAt && new Date(t.licenseExpiresAt) < new Date() ? 'Expirée' : 'Active')
-                                  : 'Désactivée'
-                                }
-                              </span>
-                              {t.licenseExpiresAt && (
-                                <span className="text-xs text-slate-500 font-medium flex items-center gap-1">
-                                  <Clock className="w-3.5 h-3.5 text-slate-400" />
-                                  Exp : {new Date(t.licenseExpiresAt).toLocaleDateString('fr-FR')}
-                                </span>
-                              )}
-                              {t.licenseKey && (
-                                <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-150 font-mono select-all truncate max-w-[120px]" title={t.licenseKey}>
-                                  {t.licenseKey}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-4">
-                            <div className="flex flex-col">
-                              <span className="font-semibold text-slate-800">{t.managerName}</span>
-                              <span className="text-xs text-slate-400">{t.managerEmail}</span>
-                            </div>
-                          </td>
-                          <td className="py-4 text-center font-bold text-slate-700">{t.usersCount}</td>
-                          <td className="py-4 text-center font-bold text-primary">{t.eventsCount}</td>
-                          <td className="py-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <button
-                                onClick={() => handleOpenDetailsModal('tenant', t)}
-                                className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition"
-                                title="Voir les détails"
-                              >
-                                <Eye className="w-4.5 h-4.5" />
-                              </button>
-                              {!isCommercialPlatform && (
-                                <>
-                              <button
-                                onClick={() => handleOpenEditTenantModal(t)}
-                                className="p-2 text-primary hover:bg-primary/10 rounded-lg transition"
-                                title="Modifier l'organisation & licence"
-                              >
-                                <Edit2 className="w-4.5 h-4.5" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteTenant(t.id, t.name)}
-                                className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                                title="Supprimer l'organisation"
-                              >
-                                <Trash2 className="w-4.5 h-4.5" />
-                              </button>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-                </div>
+              <div className="space-y-4">
+                {filteredTenants.length === 0 ? (
+                  <p className="text-center text-muted text-sm py-10">Aucune organisation trouvée.</p>
+                ) : (
+                  <div
+                    className={
+                      tenantsViewMode === 'grid'
+                        ? tenantsGridClass
+                        : 'flex flex-col gap-0.5 rounded-[var(--radius-card)] border border-border bg-surface-muted/40 p-1.5'
+                    }
+                  >
+                    {paginatedTenants.map((t) => {
+                      const licenseExpired = Boolean(t.licenseExpiresAt && new Date(t.licenseExpiresAt) < new Date());
+                      const licenseLabel = t.licenseActive
+                        ? (licenseExpired ? 'Licence expirée' : 'Licence active')
+                        : 'Licence désactivée';
+                      const licenseShort = licenseLabel.replace('Licence ', '');
+                      const planChip = (
+                        <span className={cn('inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold border', planBadgeClass(t.plan))}>
+                          {t.plan}
+                        </span>
+                      );
+                      const licenseChip = (
+                        <span className={cn(
+                          'inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold border',
+                          t.licenseActive && !licenseExpired
+                            ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
+                            : 'bg-rose-50 border-rose-100 text-rose-700',
+                        )}>
+                          {licenseShort}
+                        </span>
+                      );
 
-                {/* Pagination pour les organisations */}
-                {filteredTenants.length > ITEMS_PER_PAGE && (
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 pt-4 mt-4 bg-white">
-                    <span className="text-xs text-slate-500 font-medium">
-                      Affichage de {(tenantsPage - 1) * ITEMS_PER_PAGE + 1} à {Math.min(tenantsPage * ITEMS_PER_PAGE, filteredTenants.length)} sur {filteredTenants.length} organisations
+                      const actions = (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenDetailsModal('tenant', t)}
+                            className="p-1.5 text-muted hover:text-foreground hover:bg-surface-muted rounded-md transition"
+                            title="Détails"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          {!isCommercialPlatform && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditTenantModal(t)}
+                                className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-md transition"
+                                title="Modifier"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteTenant(t.id, t.name)}
+                                className="p-1.5 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-md transition"
+                                title="Supprimer"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
+                        </>
+                      );
+
+                      return (
+                        <ProjectCard
+                          key={t.id}
+                          id={t.id}
+                          title={t.name}
+                          layout={tenantsViewMode}
+                          onClick={() => handleOpenDetailsModal('tenant', t)}
+                          meta={
+                            tenantsViewMode === 'list' ? (
+                              <span>
+                                {[
+                                  t.managerName || t.managerEmail || 'Sans gérant',
+                                  `${t.usersCount} membre${t.usersCount !== 1 ? 's' : ''}`,
+                                  `${t.eventsCount} événement${t.eventsCount !== 1 ? 's' : ''}`,
+                                ].join(' · ')}
+                              </span>
+                            ) : (
+                              <div className="space-y-1">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  {planChip}
+                                  {licenseChip}
+                                </div>
+                                <p className="truncate">
+                                  {t.managerName || 'Sans gérant'}
+                                  {t.managerEmail ? ` · ${t.managerEmail}` : ''}
+                                </p>
+                              </div>
+                            )
+                          }
+                          aside={
+                            tenantsViewMode === 'list' ? (
+                              <>
+                                {planChip}
+                                {licenseChip}
+                              </>
+                            ) : undefined
+                          }
+                          description={
+                            tenantsViewMode === 'grid'
+                              ? `Inscrite le ${new Date(t.createdAt).toLocaleDateString('fr-FR')}`
+                              : undefined
+                          }
+                          footer={
+                            tenantsViewMode === 'grid' ? (
+                              <span className="text-[11px] text-muted">
+                                {t.usersCount} membre{t.usersCount !== 1 ? 's' : ''} · {t.eventsCount} événement{t.eventsCount !== 1 ? 's' : ''}
+                              </span>
+                            ) : undefined
+                          }
+                          actions={actions}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+
+                {filteredTenants.length > TENANTS_PER_PAGE && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-border pt-4">
+                    <span className="text-xs text-muted">
+                      {(tenantsPage - 1) * TENANTS_PER_PAGE + 1}–{Math.min(tenantsPage * TENANTS_PER_PAGE, filteredTenants.length)} sur {filteredTenants.length}
                     </span>
-                    <div className="flex items-center gap-1 overflow-x-auto max-w-full pb-1">
+                    <div className="flex items-center gap-1">
                       <button
-                        onClick={() => setTenantsPage(prev => Math.max(prev - 1, 1))}
+                        type="button"
+                        onClick={() => setTenantsPage((prev) => Math.max(prev - 1, 1))}
                         disabled={tenantsPage === 1}
-                        className="p-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-transparent transition"
+                        className="p-2 border border-border rounded-[var(--radius-button)] text-muted hover:bg-surface-muted disabled:opacity-40 transition"
                       >
                         <ChevronLeft className="w-4 h-4" />
                       </button>
-                      {Array.from({ length: Math.ceil(filteredTenants.length / ITEMS_PER_PAGE) }).map((_, i) => (
+                      {Array.from({ length: Math.ceil(filteredTenants.length / TENANTS_PER_PAGE) }).map((_, i) => (
                         <button
                           key={i}
+                          type="button"
                           onClick={() => setTenantsPage(i + 1)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                            tenantsPage === i + 1 
-                              ? 'bg-primary text-white shadow-sm ' 
-                              : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
-                          }`}
+                          className={cn(
+                            'min-w-8 px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-medium transition',
+                            tenantsPage === i + 1
+                              ? 'bg-foreground text-background'
+                              : 'border border-border text-muted hover:bg-surface-muted',
+                          )}
                         >
                           {i + 1}
                         </button>
                       ))}
                       <button
-                        onClick={() => setTenantsPage(prev => Math.min(prev + 1, Math.ceil(filteredTenants.length / ITEMS_PER_PAGE)))}
-                        disabled={tenantsPage === Math.ceil(filteredTenants.length / ITEMS_PER_PAGE)}
-                        className="p-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-transparent transition"
+                        type="button"
+                        onClick={() => setTenantsPage((prev) => Math.min(prev + 1, Math.ceil(filteredTenants.length / TENANTS_PER_PAGE)))}
+                        disabled={tenantsPage === Math.ceil(filteredTenants.length / TENANTS_PER_PAGE)}
+                        className="p-2 border border-border rounded-[var(--radius-button)] text-muted hover:bg-surface-muted disabled:opacity-40 transition"
                       >
                         <ChevronRight className="w-4 h-4" />
                       </button>
