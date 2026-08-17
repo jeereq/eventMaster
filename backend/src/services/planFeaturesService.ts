@@ -40,7 +40,7 @@ export function isRoomTypeAllowed(plan: PlanDefinition, roomType: string): boole
 }
 
 export function allowsRoomBlueprint(plan: PlanDefinition, roomType: string): boolean {
-  if (roomType === 'SIMPLE') return false;
+  if (roomType === 'SIMPLE') return true;
   if (roomType === 'CUSTOM') return plan.roomEditorLevel === 'complete';
   return plan.roomEditorLevel !== 'basic';
 }

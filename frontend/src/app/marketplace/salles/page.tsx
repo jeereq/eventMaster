@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import PublicCtaBand from '@/components/PublicCtaBand';
-import { Button, Input } from '@/components/ui';
+import { Button, Input, Pagination, paginateItems } from '@/components/ui';
 import {
   venueToCatalogueItem,
   type PublicVenue,
@@ -37,6 +37,8 @@ export default function MarketplaceVenuesPage() {
   const [neighborhood, setNeighborhood] = useState('');
   const [roomType, setRoomType] = useState('');
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 9;
 
   const load = async () => {
     setLoading(true);
@@ -50,6 +52,7 @@ export default function MarketplaceVenuesPage() {
       if (roomType) search.set('roomType', roomType);
       const data = await api.get(`/public/venues${search.toString() ? `?${search}` : ''}`);
       setVenues(data.venues || []);
+      setPage(1);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossible de charger les salles.');
       setVenues([]);
@@ -123,12 +126,21 @@ export default function MarketplaceVenuesPage() {
         ) : mode === 'map' ? (
           <MarketplaceLocationsMap markers={markers} listingSearch height={480} />
         ) : (
-          <CatalogueResults
-            items={items}
-            mode={mode}
-            emptyTitle="Aucune salle pour ces filtres"
-            emptyDescription="Élargissez la recherche, ou publiez une salle depuis Mon compte → Salles."
-          />
+          <>
+            <CatalogueResults
+              items={paginateItems(items, page, PAGE_SIZE)}
+              mode={mode}
+              emptyTitle="Aucune salle pour ces filtres"
+              emptyDescription="Élargissez la recherche, ou publiez une salle depuis Mon compte → Salles."
+            />
+            <Pagination
+              page={page}
+              pageSize={PAGE_SIZE}
+              total={items.length}
+              onPageChange={setPage}
+              itemLabel="salles"
+            />
+          </>
         )}
       </main>
 

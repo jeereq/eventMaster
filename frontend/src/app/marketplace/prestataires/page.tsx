@@ -8,7 +8,7 @@ import MarketplacePublicNav from '@/components/MarketplacePublicNav';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
 import CatalogueViewToggle, { useCatalogueView } from '@/components/CatalogueViewToggle';
 import CatalogueResults from '@/components/CatalogueResults';
-import { Button, Input } from '@/components/ui';
+import { Button, Input, Pagination, paginateItems } from '@/components/ui';
 import {
   PRICE_UNIT_OPTIONS,
   SERVICE_CATEGORIES,
@@ -31,6 +31,8 @@ export default function MarketplaceServicesPage() {
   const [category, setCategory] = useState('');
   const [priceUnit, setPriceUnit] = useState('');
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 9;
 
   const load = async () => {
     setLoading(true);
@@ -45,6 +47,7 @@ export default function MarketplaceServicesPage() {
       if (priceUnit) search.set('priceUnit', priceUnit);
       const data = await api.get(`/public/services${search.toString() ? `?${search}` : ''}`);
       setServices(data.services || []);
+      setPage(1);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossible de charger les prestataires.');
       setServices([]);
@@ -124,12 +127,21 @@ export default function MarketplaceServicesPage() {
         ) : mode === 'map' ? (
           <MarketplaceLocationsMap markers={markers} listingSearch height={480} />
         ) : (
-          <CatalogueResults
-            items={items}
-            mode={mode}
-            emptyTitle="Aucun prestataire pour ces filtres"
-            emptyDescription="Élargissez la commune ou la catégorie, ou publiez une prestation depuis Marketplace."
-          />
+          <>
+            <CatalogueResults
+              items={paginateItems(items, page, PAGE_SIZE)}
+              mode={mode}
+              emptyTitle="Aucun prestataire pour ces filtres"
+              emptyDescription="Élargissez la commune ou la catégorie, ou publiez une prestation depuis Marketplace."
+            />
+            <Pagination
+              page={page}
+              pageSize={PAGE_SIZE}
+              total={items.length}
+              onPageChange={setPage}
+              itemLabel="prestataires"
+            />
+          </>
         )}
       </main>
 

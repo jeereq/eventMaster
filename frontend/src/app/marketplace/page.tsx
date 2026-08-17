@@ -8,7 +8,7 @@ import MarketplacePublicNav from '@/components/MarketplacePublicNav';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
 import CatalogueViewToggle, { useCatalogueView } from '@/components/CatalogueViewToggle';
 import CatalogueResults from '@/components/CatalogueResults';
-import { Input } from '@/components/ui';
+import { Input, Pagination, paginateItems } from '@/components/ui';
 import {
   filterCatalogueItems,
   serviceToCatalogueItem,
@@ -25,6 +25,8 @@ export default function MarketplaceHubPage() {
   const [services, setServices] = useState<PublicService[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 9;
 
   useEffect(() => {
     async function load() {
@@ -51,6 +53,10 @@ export default function MarketplaceHubPage() {
   );
 
   const visible = useMemo(() => filterCatalogueItems(items, query), [items, query]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query, mode]);
 
   const markers = useMemo(
     () =>
@@ -110,12 +116,21 @@ export default function MarketplaceHubPage() {
             <MarketplaceLocationsMap markers={markers} listingSearch height={480} />
           </div>
         ) : (
-          <CatalogueResults
-            items={visible}
-            mode={mode}
-            emptyTitle="Aucune fiche pour cette recherche"
-            emptyDescription="Élargissez les mots-clés, ou publiez une salle / prestation depuis votre organisation."
-          />
+          <>
+            <CatalogueResults
+              items={paginateItems(visible, page, PAGE_SIZE)}
+              mode={mode}
+              emptyTitle="Aucune fiche pour cette recherche"
+              emptyDescription="Élargissez les mots-clés, ou publiez une salle / prestation depuis votre organisation."
+            />
+            <Pagination
+              page={page}
+              pageSize={PAGE_SIZE}
+              total={visible.length}
+              onPageChange={setPage}
+              itemLabel="fiches"
+            />
+          </>
         )}
       </main>
 
