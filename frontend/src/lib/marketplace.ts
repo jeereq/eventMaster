@@ -90,6 +90,20 @@ export const SERVICE_CATEGORY_LABELS: Record<ServiceCategory, string> = {
 
 export const SERVICE_CATEGORIES = Object.keys(SERVICE_CATEGORY_LABELS) as ServiceCategory[];
 
+/** Communes fréquentes (sélection rapide dans les filtres catalogue). */
+export const CATALOGUE_COMMUNE_SUGGESTIONS = [
+  'Gombe',
+  'Ngaliema',
+  'Limete',
+  'Lemba',
+  'Kintambo',
+  'Masina',
+  'Ndjili',
+  'Mont-Ngafula',
+  'Kalamu',
+  'Bandalungwa',
+];
+
 export interface PublicService {
   slug: string;
   title: string;

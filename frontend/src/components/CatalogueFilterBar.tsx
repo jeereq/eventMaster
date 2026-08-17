@@ -1,26 +1,65 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Search, SlidersHorizontal } from 'lucide-react';
-import { Button, Input } from '@/components/ui';
+import { Search, SlidersHorizontal, X } from 'lucide-react';
+import { Button, Input, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import type { CatalogueViewMode } from '@/lib/marketplace';
 import CatalogueViewToggle from '@/components/CatalogueViewToggle';
 
-export const catalogueSelectClass =
-  'w-full px-3 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm text-foreground';
+export type CatalogueFilterChip = {
+  id: string;
+  label: string;
+  value: string;
+};
 
 export function CatalogueFilterField({
   label,
+  hint,
   children,
 }: {
   label: string;
+  hint?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="block space-y-1 min-w-0">
-      <span className="text-[11px] font-semibold text-muted">{label}</span>
+    <div className="block space-y-1.5 min-w-0">
+      <span className="text-xs font-semibold text-foreground">{label}</span>
+      {hint ? <p className="text-[11px] text-muted -mt-0.5">{hint}</p> : null}
       {children}
+    </div>
+  );
+}
+
+export function CatalogueChoicePills({
+  options,
+  value,
+  onChange,
+}: {
+  options: Array<{ id: string; label: string }>;
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((opt) => {
+        const active = value === opt.id;
+        return (
+          <button
+            key={opt.id || 'all'}
+            type="button"
+            onClick={() => onChange(active && opt.id ? '' : opt.id)}
+            className={cn(
+              'px-3 py-1.5 rounded-full text-xs font-medium border transition',
+              active
+                ? 'bg-primary text-white border-primary'
+                : 'bg-surface-muted text-muted border-border hover:text-foreground hover:border-primary/30',
+            )}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -31,26 +70,47 @@ export default function CatalogueFilterBar({
   searchPlaceholder,
   view,
   onViewChange,
-  onSubmit,
+  chips = [],
+  onRemoveChip,
+  onClearChips,
+  modalTitle = 'Filtres',
+  modalDescription = 'Les choix actifs restent visibles sous la recherche, sans rouvrir cette fenêtre.',
   filters,
-  filterCount = 0,
-  showSubmit = false,
+  onApply,
+  onOpen,
+  resultLabel,
 }: {
   search: string;
   onSearchChange: (value: string) => void;
   searchPlaceholder: string;
   view: CatalogueViewMode;
   onViewChange: (mode: CatalogueViewMode) => void;
-  onSubmit?: () => void;
+  chips?: CatalogueFilterChip[];
+  onRemoveChip?: (id: string) => void;
+  onClearChips?: () => void;
+  modalTitle?: string;
+  modalDescription?: string;
   filters?: React.ReactNode;
-  filterCount?: number;
-  showSubmit?: boolean;
+  onApply?: () => void;
+  onOpen?: () => void;
+  resultLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const hasFilters = Boolean(filters);
+  const count = chips.length;
 
-  const body = (
-    <>
+  const openModal = () => {
+    onOpen?.();
+    setOpen(true);
+  };
+
+  const apply = () => {
+    onApply?.();
+    setOpen(false);
+  };
+
+  return (
+    <div className="rounded-2xl border border-border bg-surface p-3 sm:p-4 space-y-3 shadow-[var(--shadow-soft)]">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <div className="flex-1 min-w-0">
           <Input
@@ -64,59 +124,90 @@ export default function CatalogueFilterBar({
           {hasFilters && (
             <Button
               type="button"
-              variant="secondary"
+              variant={count ? 'primary' : 'secondary'}
               size="sm"
-              className="sm:hidden"
-              onClick={() => setOpen((v) => !v)}
+              onClick={openModal}
               leftIcon={<SlidersHorizontal className="w-3.5 h-3.5" />}
             >
               Filtres
-              {filterCount > 0 ? (
-                <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-white">
-                  {filterCount}
+              {count > 0 ? (
+                <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-white/20 px-1 text-[10px] font-semibold">
+                  {count}
                 </span>
               ) : null}
             </Button>
           )}
-          <CatalogueViewToggle value={view} onChange={onViewChange} className="flex-1 sm:flex-none justify-between sm:justify-start" />
+          <CatalogueViewToggle
+            value={view}
+            onChange={onViewChange}
+            className="flex-1 sm:flex-none justify-between sm:justify-start"
+          />
         </div>
       </div>
-      {hasFilters && (
-        <div
-          className={cn(
-            'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-2.5',
-            open ? 'grid' : 'hidden sm:grid',
-          )}
-        >
-          {filters}
-          {showSubmit && (
-            <div className="flex items-end sm:col-span-2 lg:col-span-1">
-              <Button type="submit" className="w-full">
-                Filtrer
-              </Button>
-            </div>
-          )}
+
+      {(count > 0 || resultLabel) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {chips.map((chip) => (
+            <span
+              key={chip.id}
+              className="inline-flex items-center gap-1.5 max-w-full pl-2.5 pr-1 py-1 rounded-full border border-primary/20 bg-primary/10 text-xs"
+            >
+              <button
+                type="button"
+                onClick={openModal}
+                className="inline-flex items-center gap-1.5 min-w-0 text-left"
+              >
+                <span className="text-muted shrink-0">{chip.label}</span>
+                <span className="font-semibold text-foreground truncate">{chip.value}</span>
+              </button>
+              {onRemoveChip ? (
+                <button
+                  type="button"
+                  onClick={() => onRemoveChip(chip.id)}
+                  className="p-0.5 rounded-full text-muted hover:text-foreground hover:bg-primary/15 transition"
+                  aria-label={`Retirer ${chip.label} ${chip.value}`}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              ) : null}
+            </span>
+          ))}
+          {count > 0 && onClearChips ? (
+            <button
+              type="button"
+              onClick={onClearChips}
+              className="text-[11px] font-semibold text-muted hover:text-foreground px-1"
+            >
+              Tout effacer
+            </button>
+          ) : null}
+          {resultLabel ? (
+            <span className="ml-auto text-[11px] text-muted font-medium">{resultLabel}</span>
+          ) : null}
         </div>
       )}
-    </>
+
+      {hasFilters && (
+        <Modal
+          open={open}
+          onClose={() => setOpen(false)}
+          title={modalTitle}
+          description={modalDescription}
+          size="md"
+          footer={
+            <>
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+                Annuler
+              </Button>
+              <Button type="button" onClick={apply}>
+                Voir les résultats
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-5">{filters}</div>
+        </Modal>
+      )}
+    </div>
   );
-
-  const shell = 'rounded-[var(--radius-card)] border border-border bg-surface p-3 sm:p-4 space-y-3';
-
-  if (onSubmit) {
-    return (
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          onSubmit();
-          setOpen(false);
-        }}
-        className={shell}
-      >
-        {body}
-      </form>
-    );
-  }
-
-  return <div className={shell}>{body}</div>;
 }

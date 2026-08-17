@@ -8,7 +8,10 @@ import MarketplacePublicNav from '@/components/MarketplacePublicNav';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import CatalogueResults from '@/components/CatalogueResults';
-import CatalogueFilterBar from '@/components/CatalogueFilterBar';
+import CatalogueFilterBar, {
+  CatalogueChoicePills,
+  CatalogueFilterField,
+} from '@/components/CatalogueFilterBar';
 import { Pagination, paginateItems } from '@/components/ui';
 import {
   catalogueItemToMapMarker,
@@ -28,6 +31,8 @@ export default function MarketplaceHubPage() {
   const [services, setServices] = useState<PublicService[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
+  const [kind, setKind] = useState<'all' | 'venue' | 'service'>('all');
+  const [draftKind, setDraftKind] = useState<'all' | 'venue' | 'service'>('all');
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 9;
 
@@ -55,11 +60,15 @@ export default function MarketplaceHubPage() {
     [venues, services],
   );
 
-  const visible = useMemo(() => filterCatalogueItems(items, query), [items, query]);
+  const visible = useMemo(() => {
+    const searched = filterCatalogueItems(items, query);
+    if (kind === 'all') return searched;
+    return searched.filter((item) => item.kind === kind);
+  }, [items, query, kind]);
 
   useEffect(() => {
     setPage(1);
-  }, [query, mode]);
+  }, [query, mode, kind]);
 
   const markers = useMemo(
     () =>
@@ -75,9 +84,10 @@ export default function MarketplaceHubPage() {
     <PublicPageShell faqHref="/faq">
       {mode !== 'focus' && (
         <PublicPageHero
+          compact
           chip="Catalogue"
           title="Salles et prestataires pour vos événements"
-          description="Trouvez un lieu ou un professionnel enregistré sur EventMaster. Grille, liste, carte ou focus — la recherche sur la carte ne porte que sur ces fiches."
+          description="Trouvez un lieu ou un professionnel enregistré sur EventMaster. Grille, liste, carte ou focus — affinez avec les filtres, visibles sous la recherche."
         >
           <MarketplacePublicNav active="hub" />
         </PublicPageHero>
@@ -91,6 +101,30 @@ export default function MarketplaceHubPage() {
           searchPlaceholder="Nom, organisation, ville…"
           view={mode}
           onViewChange={setView}
+          resultLabel={!loading ? `${visible.length} fiche${visible.length > 1 ? 's' : ''}` : undefined}
+          chips={
+            kind === 'all'
+              ? []
+              : [{ id: 'kind', label: 'Type', value: kind === 'venue' ? 'Salles' : 'Prestataires' }]
+          }
+          onRemoveChip={() => setKind('all')}
+          onClearChips={() => setKind('all')}
+          onOpen={() => setDraftKind(kind)}
+          onApply={() => setKind(draftKind)}
+          modalTitle="Filtrer le catalogue"
+          filters={
+            <CatalogueFilterField label="Type de fiche">
+              <CatalogueChoicePills
+                options={[
+                  { id: 'all', label: 'Tous' },
+                  { id: 'venue', label: 'Salles' },
+                  { id: 'service', label: 'Prestataires' },
+                ]}
+                value={draftKind}
+                onChange={(id) => setDraftKind((id as 'all' | 'venue' | 'service') || 'all')}
+              />
+            </CatalogueFilterField>
+          }
         />
 
         {loading ? (

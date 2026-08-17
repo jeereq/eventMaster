@@ -66,8 +66,10 @@ export default function SiteHeader({
                   ? pathname === '/contact' || pathname === '/faq'
                   : item.href !== '/' && pathname === item.href;
             const className = cn(
-              'px-3 py-1.5 text-sm transition rounded-md',
-              active ? 'font-semibold text-foreground' : 'text-muted hover:text-foreground',
+              'px-3 py-1.5 text-sm transition rounded-full',
+              active
+                ? 'font-semibold text-foreground bg-surface-muted'
+                : 'text-muted hover:text-foreground hover:bg-surface-muted/60',
             );
             return item.href.startsWith('/#') ? (
               <a key={item.href} href={item.href} className={className}>
