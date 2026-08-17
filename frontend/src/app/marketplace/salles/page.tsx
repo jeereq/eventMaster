@@ -4,12 +4,17 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import PublicCtaBand from '@/components/PublicCtaBand';
-import { Input, Pagination, paginateItems } from '@/components/ui';
+import { Pagination, paginateItems } from '@/components/ui';
 import {
-  CATALOGUE_COMMUNE_SUGGESTIONS,
+  EMPTY_CATALOGUE_GEO,
+  appendCatalogueGeoParams,
+  catalogueGeoChips,
   catalogueItemToMapMarker,
+  clearCatalogueGeoChip,
   isCatalogueMapView,
+  resolveCatalogueGeo,
   venueToCatalogueItem,
+  type CatalogueGeoState,
   type PublicVenue,
 } from '@/lib/marketplace';
 import { roomTypeLabels } from '@/lib/roomLayoutUtils';
@@ -20,9 +25,10 @@ import CatalogueResults from '@/components/CatalogueResults';
 import CatalogueFilterBar, {
   CatalogueChoicePills,
   CatalogueFilterField,
+  CatalogueGeoFields,
   type CatalogueFilterChip,
 } from '@/components/CatalogueFilterBar';
-import { Loader2, MapPin } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 const ROOM_FILTERS: Array<{ id: string; label: string }> = [
   { id: 'BANQUET', label: roomTypeLabels.BANQUET },
@@ -32,14 +38,12 @@ const ROOM_FILTERS: Array<{ id: string; label: string }> = [
   { id: 'CUSTOM', label: roomTypeLabels.CUSTOM },
 ];
 
-const emptyFilters = {
-  city: '',
-  commune: '',
-  neighborhood: '',
+type VenueFilters = CatalogueGeoState & { roomType: string };
+
+const emptyFilters: VenueFilters = {
+  ...EMPTY_CATALOGUE_GEO,
   roomType: '',
 };
-
-type VenueFilters = typeof emptyFilters;
 
 export default function MarketplaceVenuesPage() {
   const { mode, setView } = useCatalogueView();
@@ -49,6 +53,7 @@ export default function MarketplaceVenuesPage() {
   const [applied, setApplied] = useState<VenueFilters>(emptyFilters);
   const [draft, setDraft] = useState<VenueFilters>(emptyFilters);
   const [error, setError] = useState('');
+  const [filterError, setFilterError] = useState('');
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 9;
 
@@ -58,9 +63,7 @@ export default function MarketplaceVenuesPage() {
     try {
       const params = new URLSearchParams();
       if (search.trim()) params.set('q', search.trim());
-      if (filters.city.trim()) params.set('city', filters.city.trim());
-      if (filters.commune.trim()) params.set('commune', filters.commune.trim());
-      if (filters.neighborhood.trim()) params.set('neighborhood', filters.neighborhood.trim());
+      appendCatalogueGeoParams(params, filters);
       if (filters.roomType) params.set('roomType', filters.roomType);
       const data = await api.get(`/public/venues${params.toString() ? `?${params}` : ''}`);
       setVenues(data.venues || []);
@@ -83,21 +86,19 @@ export default function MarketplaceVenuesPage() {
   );
 
   const chips: CatalogueFilterChip[] = useMemo(() => {
-    const next: CatalogueFilterChip[] = [];
-    if (applied.city.trim()) next.push({ id: 'city', label: 'Ville', value: applied.city.trim() });
-    if (applied.commune.trim()) next.push({ id: 'commune', label: 'Commune', value: applied.commune.trim() });
-    if (applied.neighborhood.trim()) next.push({ id: 'neighborhood', label: 'Quartier', value: applied.neighborhood.trim() });
+    const extra: CatalogueFilterChip[] = [];
     if (applied.roomType) {
-      next.push({
+      extra.push({
         id: 'roomType',
         label: 'Type',
         value: ROOM_FILTERS.find((opt) => opt.id === applied.roomType)?.label || applied.roomType,
       });
     }
-    return next;
+    return catalogueGeoChips(applied, extra);
   }, [applied]);
 
   const applyFilters = (next: VenueFilters) => {
+    setFilterError('');
     setApplied(next);
     setDraft(next);
   };
@@ -110,6 +111,9 @@ export default function MarketplaceVenuesPage() {
   }, [applied, q, load]);
 
   const mapMode = isCatalogueMapView(mode);
+  const searchCenter = applied.proximity && applied.lat != null && applied.lng != null
+    ? { lat: applied.lat, lng: applied.lng }
+    : null;
 
   return (
     <PublicPageShell faqHref="/faq">
@@ -118,7 +122,7 @@ export default function MarketplaceVenuesPage() {
           compact
           chip="Catalogue"
           title="Trouvez une salle pour votre événement"
-          description="Filtrez par ville, commune ou quartier. Les filtres choisis restent visibles sous la recherche."
+          description="Filtrez par ville, commune, quartier, prix ou autour de vous. Les choix restent visibles sous la recherche."
         >
           <MarketplacePublicNav active="venues" />
         </PublicPageHero>
@@ -134,41 +138,32 @@ export default function MarketplaceVenuesPage() {
           onViewChange={setView}
           chips={chips}
           resultLabel={!loading ? `${items.length} salle${items.length > 1 ? 's' : ''}` : undefined}
-          onRemoveChip={(id) => applyFilters({ ...applied, [id]: '' })}
+          onRemoveChip={(id) => {
+            if (id === 'roomType') applyFilters({ ...applied, roomType: '' });
+            else applyFilters({ ...clearCatalogueGeoChip(applied, id), roomType: applied.roomType });
+          }}
           onClearChips={() => applyFilters(emptyFilters)}
-          onOpen={() => setDraft(applied)}
-          onApply={() => applyFilters(draft)}
+          onOpen={() => {
+            setDraft(applied);
+            setFilterError('');
+          }}
+          onApply={async () => {
+            try {
+              const next = { ...await resolveCatalogueGeo(draft), roomType: draft.roomType };
+              applyFilters(next);
+            } catch (err: unknown) {
+              setFilterError(err instanceof Error ? err.message : 'Filtre de proximité impossible.');
+              throw err;
+            }
+          }}
           modalTitle="Filtrer les salles"
           filters={
             <>
-              <CatalogueFilterField label="Ville">
-                <Input
-                  value={draft.city}
-                  onChange={(e) => setDraft((d) => ({ ...d, city: e.target.value }))}
-                  placeholder="Ex. Kinshasa"
-                  leftIcon={<MapPin className="w-4 h-4" />}
-                />
-              </CatalogueFilterField>
-              <CatalogueFilterField label="Commune" hint="Choisissez une suggestion ou saisissez la vôtre.">
-                <CatalogueChoicePills
-                  options={CATALOGUE_COMMUNE_SUGGESTIONS.map((name) => ({ id: name, label: name }))}
-                  value={draft.commune}
-                  onChange={(id) => setDraft((d) => ({ ...d, commune: id }))}
-                />
-                <Input
-                  value={draft.commune}
-                  onChange={(e) => setDraft((d) => ({ ...d, commune: e.target.value }))}
-                  placeholder="Autre commune…"
-                  className="mt-2"
-                />
-              </CatalogueFilterField>
-              <CatalogueFilterField label="Quartier">
-                <Input
-                  value={draft.neighborhood}
-                  onChange={(e) => setDraft((d) => ({ ...d, neighborhood: e.target.value }))}
-                  placeholder="Quartier"
-                />
-              </CatalogueFilterField>
+              <CatalogueGeoFields
+                value={draft}
+                onChange={(next) => setDraft({ ...next, roomType: draft.roomType })}
+                error={filterError}
+              />
               <CatalogueFilterField label="Type de salle">
                 <CatalogueChoicePills
                   options={ROOM_FILTERS}
@@ -192,6 +187,8 @@ export default function MarketplaceVenuesPage() {
             listingSearch
             height={480}
             variant={mode === 'focus' ? 'focus' : 'default'}
+            searchCenter={searchCenter}
+            radiusKm={searchCenter ? applied.radiusKm : 0}
           />
         ) : (
           <>

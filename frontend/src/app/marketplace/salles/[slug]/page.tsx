@@ -16,17 +16,13 @@ import {
   formatLocationLine,
   formatQuotaLabel,
   isVideoUrl,
-  mapsDirectionsUrl,
   mediaPosterUrl,
   venueToCatalogueItem,
   type PublicVenue,
 } from '@/lib/marketplace';
 import { roomTypeLabels, type RoomLayoutBlueprint, type RoomType } from '@/lib/roomLayoutUtils';
 import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
-import { Button } from '@/components/ui';
-import {
-  ArrowLeft, Building2, Loader2, MapPin, Navigation, Play, Users,
-} from 'lucide-react';
+import { ArrowLeft, Building2, Loader2, MapPin, Navigation, Play, Users } from 'lucide-react';
 
 export default function MarketplaceVenueDetailPage() {
   const params = useParams();
@@ -37,6 +33,7 @@ export default function MarketplaceVenueDetailPage() {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [pickedDate, setPickedDate] = useState('');
   const [tab, setTab] = useState<MarketplaceFormTab>('details');
+  const [wantRoute, setWantRoute] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -143,15 +140,17 @@ export default function MarketplaceVenueDetailPage() {
                   </span>
                 )}
                 {venue.latitude != null && venue.longitude != null && (
-                  <a
-                    href={mapsDirectionsUrl(venue.latitude, venue.longitude)}
-                    target="_blank"
-                    rel="noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setWantRoute(true);
+                      setTab('map');
+                    }}
                     className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-muted border border-border text-primary font-semibold hover:bg-primary/5"
                   >
                     <Navigation className="w-3.5 h-3.5" />
                     Itinéraire
-                  </a>
+                  </button>
                 )}
                 {venue.capacity ? (
                   <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-muted border border-border">
@@ -188,17 +187,14 @@ export default function MarketplaceVenueDetailPage() {
               {tab === 'map' && (
                 venue.latitude != null && venue.longitude != null ? (
                   <div className="space-y-3">
-                    <div className="flex justify-end">
-                      <a href={mapsDirectionsUrl(venue.latitude, venue.longitude)} target="_blank" rel="noreferrer" className="inline-flex">
-                        <Button size="sm" variant="secondary" leftIcon={<Navigation className="w-3.5 h-3.5" />}>
-                          Itinéraire vers la salle
-                        </Button>
-                      </a>
-                    </div>
+                    <p className="text-xs text-muted">
+                      L’itinéraire se calcule sur EventMaster. Autorisez la localisation, ou cliquez votre départ sur la carte.
+                    </p>
                     <MarketplaceLocationsMap
                       markers={[catalogueItemToMapMarker(venueToCatalogueItem(venue))]}
-                      height={320}
+                      height={360}
                       navigateOnClick={false}
+                      autoDirections={wantRoute}
                     />
                   </div>
                 ) : (

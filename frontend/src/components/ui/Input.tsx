@@ -29,6 +29,7 @@ export default function Input({
  {label && (
  <label htmlFor={id} className="block text-xs font-semibold text-muted dark:text-muted">
  {label}
+ {props.required ? <span className="text-rose-500"> *</span> : null}
  </label>
  )}
  <div className="relative">

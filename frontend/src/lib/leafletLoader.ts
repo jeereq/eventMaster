@@ -13,6 +13,11 @@ export function leafletBasemap(theme: 'light' | 'dark') {
   };
 }
 
+export function documentMapTheme(): 'light' | 'dark' {
+  if (typeof document === 'undefined') return 'dark';
+  return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+}
+
 export function loadLeaflet(): Promise<any> {
   if (typeof window === 'undefined') {
     return Promise.reject(new Error('Leaflet is browser-only'));

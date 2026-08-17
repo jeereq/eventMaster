@@ -11,30 +11,34 @@ import CatalogueResults from '@/components/CatalogueResults';
 import CatalogueFilterBar, {
   CatalogueChoicePills,
   CatalogueFilterField,
+  CatalogueGeoFields,
   type CatalogueFilterChip,
 } from '@/components/CatalogueFilterBar';
-import { Input, Pagination, paginateItems } from '@/components/ui';
+import { Pagination, paginateItems } from '@/components/ui';
 import {
-  CATALOGUE_COMMUNE_SUGGESTIONS,
+  EMPTY_CATALOGUE_GEO,
   PRICE_UNIT_OPTIONS,
   SERVICE_CATEGORIES,
   SERVICE_CATEGORY_LABELS,
+  appendCatalogueGeoParams,
+  catalogueGeoChips,
   catalogueItemToMapMarker,
+  clearCatalogueGeoChip,
   isCatalogueMapView,
+  resolveCatalogueGeo,
   serviceToCatalogueItem,
+  type CatalogueGeoState,
   type PublicService,
 } from '@/lib/marketplace';
-import { Loader2, MapPin } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
-const emptyFilters = {
-  city: '',
-  commune: '',
-  neighborhood: '',
+type ServiceFilters = CatalogueGeoState & { category: string; priceUnit: string };
+
+const emptyFilters: ServiceFilters = {
+  ...EMPTY_CATALOGUE_GEO,
   category: '',
   priceUnit: '',
 };
-
-type ServiceFilters = typeof emptyFilters;
 
 export default function MarketplaceServicesPage() {
   const { mode, setView } = useCatalogueView();
@@ -44,6 +48,7 @@ export default function MarketplaceServicesPage() {
   const [applied, setApplied] = useState<ServiceFilters>(emptyFilters);
   const [draft, setDraft] = useState<ServiceFilters>(emptyFilters);
   const [error, setError] = useState('');
+  const [filterError, setFilterError] = useState('');
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 9;
 
@@ -53,9 +58,7 @@ export default function MarketplaceServicesPage() {
     try {
       const params = new URLSearchParams();
       if (search.trim()) params.set('q', search.trim());
-      if (filters.city.trim()) params.set('city', filters.city.trim());
-      if (filters.commune.trim()) params.set('commune', filters.commune.trim());
-      if (filters.neighborhood.trim()) params.set('neighborhood', filters.neighborhood.trim());
+      appendCatalogueGeoParams(params, filters);
       if (filters.category) params.set('category', filters.category);
       if (filters.priceUnit) params.set('priceUnit', filters.priceUnit);
       const data = await api.get(`/public/services${params.toString() ? `?${params}` : ''}`);
@@ -79,28 +82,26 @@ export default function MarketplaceServicesPage() {
   );
 
   const chips: CatalogueFilterChip[] = useMemo(() => {
-    const next: CatalogueFilterChip[] = [];
-    if (applied.city.trim()) next.push({ id: 'city', label: 'Ville', value: applied.city.trim() });
-    if (applied.commune.trim()) next.push({ id: 'commune', label: 'Commune', value: applied.commune.trim() });
-    if (applied.neighborhood.trim()) next.push({ id: 'neighborhood', label: 'Quartier', value: applied.neighborhood.trim() });
+    const extra: CatalogueFilterChip[] = [];
     if (applied.category) {
-      next.push({
+      extra.push({
         id: 'category',
         label: 'Catégorie',
         value: SERVICE_CATEGORY_LABELS[applied.category as keyof typeof SERVICE_CATEGORY_LABELS] || applied.category,
       });
     }
     if (applied.priceUnit) {
-      next.push({
+      extra.push({
         id: 'priceUnit',
         label: 'Tarif',
         value: PRICE_UNIT_OPTIONS.find((opt) => opt.id === applied.priceUnit)?.label || applied.priceUnit,
       });
     }
-    return next;
+    return catalogueGeoChips(applied, extra);
   }, [applied]);
 
   const applyFilters = (next: ServiceFilters) => {
+    setFilterError('');
     setApplied(next);
     setDraft(next);
   };
@@ -113,6 +114,9 @@ export default function MarketplaceServicesPage() {
   }, [applied, q, load]);
 
   const mapMode = isCatalogueMapView(mode);
+  const searchCenter = applied.proximity && applied.lat != null && applied.lng != null
+    ? { lat: applied.lat, lng: applied.lng }
+    : null;
 
   return (
     <PublicPageShell faqHref="/faq">
@@ -121,7 +125,7 @@ export default function MarketplaceServicesPage() {
           compact
           chip="Catalogue"
           title="Trouvez un prestataire"
-          description="Traiteur, photo, DJ… Choisissez vos filtres dans la fenêtre, puis voyez-les sous la recherche."
+          description="Traiteur, photo, DJ… Filtrez par zone, catégorie, prix ou autour de vous."
         >
           <MarketplacePublicNav active="services" />
         </PublicPageHero>
@@ -137,41 +141,32 @@ export default function MarketplaceServicesPage() {
           onViewChange={setView}
           chips={chips}
           resultLabel={!loading ? `${items.length} prestataire${items.length > 1 ? 's' : ''}` : undefined}
-          onRemoveChip={(id) => applyFilters({ ...applied, [id]: '' })}
+          onRemoveChip={(id) => {
+            if (id === 'category' || id === 'priceUnit') applyFilters({ ...applied, [id]: '' });
+            else applyFilters({ ...clearCatalogueGeoChip(applied, id), category: applied.category, priceUnit: applied.priceUnit });
+          }}
           onClearChips={() => applyFilters(emptyFilters)}
-          onOpen={() => setDraft(applied)}
-          onApply={() => applyFilters(draft)}
+          onOpen={() => {
+            setDraft(applied);
+            setFilterError('');
+          }}
+          onApply={async () => {
+            try {
+              const geo = await resolveCatalogueGeo(draft);
+              applyFilters({ ...geo, category: draft.category, priceUnit: draft.priceUnit });
+            } catch (err: unknown) {
+              setFilterError(err instanceof Error ? err.message : 'Filtre de proximité impossible.');
+              throw err;
+            }
+          }}
           modalTitle="Filtrer les prestataires"
           filters={
             <>
-              <CatalogueFilterField label="Ville">
-                <Input
-                  value={draft.city}
-                  onChange={(e) => setDraft((d) => ({ ...d, city: e.target.value }))}
-                  placeholder="Ex. Kinshasa"
-                  leftIcon={<MapPin className="w-4 h-4" />}
-                />
-              </CatalogueFilterField>
-              <CatalogueFilterField label="Commune" hint="Choisissez une suggestion ou saisissez la vôtre.">
-                <CatalogueChoicePills
-                  options={CATALOGUE_COMMUNE_SUGGESTIONS.map((name) => ({ id: name, label: name }))}
-                  value={draft.commune}
-                  onChange={(id) => setDraft((d) => ({ ...d, commune: id }))}
-                />
-                <Input
-                  value={draft.commune}
-                  onChange={(e) => setDraft((d) => ({ ...d, commune: e.target.value }))}
-                  placeholder="Autre commune…"
-                  className="mt-2"
-                />
-              </CatalogueFilterField>
-              <CatalogueFilterField label="Quartier">
-                <Input
-                  value={draft.neighborhood}
-                  onChange={(e) => setDraft((d) => ({ ...d, neighborhood: e.target.value }))}
-                  placeholder="Quartier"
-                />
-              </CatalogueFilterField>
+              <CatalogueGeoFields
+                value={draft}
+                onChange={(next) => setDraft({ ...next, category: draft.category, priceUnit: draft.priceUnit })}
+                error={filterError}
+              />
               <CatalogueFilterField label="Catégorie">
                 <CatalogueChoicePills
                   options={SERVICE_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] }))}
@@ -179,7 +174,7 @@ export default function MarketplaceServicesPage() {
                   onChange={(id) => setDraft((d) => ({ ...d, category: id }))}
                 />
               </CatalogueFilterField>
-              <CatalogueFilterField label="Tarif">
+              <CatalogueFilterField label="Unité tarifaire">
                 <CatalogueChoicePills
                   options={PRICE_UNIT_OPTIONS.map((opt) => ({ id: opt.id, label: opt.label }))}
                   value={draft.priceUnit}
@@ -202,6 +197,8 @@ export default function MarketplaceServicesPage() {
             listingSearch
             height={480}
             variant={mode === 'focus' ? 'focus' : 'default'}
+            searchCenter={searchCenter}
+            radiusKm={searchCenter ? applied.radiusKm : 0}
           />
         ) : (
           <>

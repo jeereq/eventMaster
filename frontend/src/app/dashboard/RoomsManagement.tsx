@@ -27,7 +27,7 @@ import {
   roomTypeDescriptions,
   roomTypeLabels,
 } from '@/lib/roomLayoutUtils';
-import { PRICE_UNIT_OPTIONS, parseBlockedDates, type VenuePriceUnit } from '@/lib/marketplace';
+import { PRICE_UNIT_OPTIONS, missingPublishLocation, parseBlockedDates, type VenuePriceUnit } from '@/lib/marketplace';
 import { formatFc } from '@/config/landingPricing';
 import BlockedDatesField from '@/components/BlockedDatesField';
 import MarketplaceMediaField from '@/components/MarketplaceMediaField';
@@ -342,6 +342,19 @@ export default function RoomsManagement() {
 
   const handleSaveListing = async (publish: boolean) => {
     if (!listingRoom) return;
+    if (publish) {
+      const missing = missingPublishLocation(listingDraft);
+      if (missing === 'map') {
+        setListingTab('map');
+        setError('Ville, commune, quartier et position GPS sont obligatoires pour publier.');
+        return;
+      }
+      if (missing) {
+        setListingTab('details');
+        setError('Ville, commune et quartier sont obligatoires pour publier.');
+        return;
+      }
+    }
     setSavingListing(true);
     setError('');
     try {
@@ -1096,6 +1109,7 @@ export default function RoomsManagement() {
       >
         {listingRoom && (
           <div className="space-y-4">
+            {error && <Alert variant="error">{error}</Alert>}
             <MarketplaceFormTabs value={listingTab} onChange={setListingTab} />
             {listingRoom.venueListing?.isPublic && listingRoom.venueListing.slug && listingTab === 'details' && (
               <p className="text-xs text-muted">
@@ -1118,17 +1132,20 @@ export default function RoomsManagement() {
                 value={listingDraft.city}
                 onChange={(e) => setListingDraft((d) => ({ ...d, city: e.target.value }))}
                 placeholder="Kinshasa"
+                required
               />
               <Input
                 label="Commune"
                 value={listingDraft.commune}
                 onChange={(e) => setListingDraft((d) => ({ ...d, commune: e.target.value }))}
                 placeholder="Gombe"
+                required
               />
               <Input
                 label="Quartier"
                 value={listingDraft.neighborhood}
                 onChange={(e) => setListingDraft((d) => ({ ...d, neighborhood: e.target.value }))}
+                required
               />
               <Input
                 label="Adresse"
@@ -1182,6 +1199,7 @@ export default function RoomsManagement() {
               <LocationPickerMap
                 latitude={listingDraft.latitude}
                 longitude={listingDraft.longitude}
+                required
                 onChange={({ latitude, longitude }) => setListingDraft((d) => ({ ...d, latitude, longitude }))}
               />
             )}

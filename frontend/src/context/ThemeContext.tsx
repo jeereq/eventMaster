@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 
 type Theme = 'light' | 'dark';
 
@@ -22,7 +23,11 @@ function applyThemeClass(next: Theme) {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('dark');
+  const pathname = usePathname();
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof document === 'undefined') return 'dark';
+    return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+  });
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as Theme | null;
@@ -35,6 +40,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       applyDefaultBrandToDocument();
     });
   }, []);
+
+  useEffect(() => {
+    applyThemeClass(theme);
+  }, [pathname, theme]);
 
   const setTheme = (nextTheme: Theme) => {
     setThemeState(nextTheme);

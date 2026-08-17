@@ -12,6 +12,7 @@ import {
   PRICE_UNIT_OPTIONS,
   SERVICE_CATEGORIES,
   SERVICE_CATEGORY_LABELS,
+  missingPublishLocation,
   parseBlockedDates,
   type MarketplaceBookingItem,
   type MarketplaceInquiryItem,
@@ -176,6 +177,19 @@ export default function MarketplaceDeskPage() {
   };
 
   const handleSave = async (publish: boolean) => {
+    if (publish) {
+      const missing = missingPublishLocation(draft);
+      if (missing === 'map') {
+        setEditorTab('map');
+        setError('Ville, commune, quartier et position GPS sont obligatoires pour publier.');
+        return;
+      }
+      if (missing) {
+        setEditorTab('details');
+        setError('Ville, commune et quartier sont obligatoires pour publier.');
+        return;
+      }
+    }
     setSaving(true);
     setError('');
     try {
@@ -435,6 +449,7 @@ export default function MarketplaceDeskPage() {
         }
       >
         <div className="space-y-3">
+          {error && <Alert variant="error">{error}</Alert>}
           <MarketplaceFormTabs value={editorTab} onChange={setEditorTab} />
           {editorTab === 'details' && (
             <>
@@ -461,9 +476,9 @@ export default function MarketplaceDeskPage() {
             />
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input label="Ville / zone" value={draft.city} onChange={(e) => setDraft((d) => ({ ...d, city: e.target.value }))} />
-            <Input label="Commune" value={draft.commune} onChange={(e) => setDraft((d) => ({ ...d, commune: e.target.value }))} />
-            <Input label="Quartier" value={draft.neighborhood} onChange={(e) => setDraft((d) => ({ ...d, neighborhood: e.target.value }))} />
+            <Input label="Ville / zone" value={draft.city} required onChange={(e) => setDraft((d) => ({ ...d, city: e.target.value }))} />
+            <Input label="Commune" value={draft.commune} required onChange={(e) => setDraft((d) => ({ ...d, commune: e.target.value }))} />
+            <Input label="Quartier" value={draft.neighborhood} required onChange={(e) => setDraft((d) => ({ ...d, neighborhood: e.target.value }))} />
             <Input
               label="Rayon d’intervention (km)"
               type="number"
@@ -516,6 +531,7 @@ export default function MarketplaceDeskPage() {
             <LocationPickerMap
               latitude={draft.latitude}
               longitude={draft.longitude}
+              required
               onChange={({ latitude, longitude }) => setDraft((d) => ({ ...d, latitude, longitude }))}
             />
           )}

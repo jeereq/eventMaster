@@ -94,6 +94,37 @@ function readGeoQuery(req: Request) {
   return { lat, lng, radiusKm };
 }
 
+function readStreetQuery(req: Request) {
+  return typeof req.query.street === 'string' ? req.query.street.trim() : '';
+}
+
+function readPriceRange(req: Request) {
+  const minPrice = Number.parseInt(String(req.query.minPrice || ''), 10);
+  const maxPrice = Number.parseInt(String(req.query.maxPrice || ''), 10);
+  const filter: { gte?: number; lte?: number } = {};
+  if (Number.isFinite(minPrice) && minPrice > 0) filter.gte = minPrice;
+  if (Number.isFinite(maxPrice) && maxPrice > 0) filter.lte = maxPrice;
+  return Object.keys(filter).length ? filter : null;
+}
+
+function publishLocationError(
+  city: unknown,
+  commune: unknown,
+  neighborhood: unknown,
+  latitude: unknown,
+  longitude: unknown,
+): string | null {
+  if (!String(city || '').trim()) return 'La ville est requise pour publier.';
+  if (!String(commune || '').trim()) return 'La commune est requise pour publier.';
+  if (!String(neighborhood || '').trim()) return 'Le quartier est requis pour publier.';
+  const lat = latitude != null && latitude !== '' ? Number(latitude) : NaN;
+  const lng = longitude != null && longitude !== '' ? Number(longitude) : NaN;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return 'Placez la position GPS sur la carte pour publier.';
+  }
+  return null;
+}
+
 function parseOptionalInt(value: unknown): number | null {
   if (value == null || value === '') return null;
   const n = Number.parseInt(String(value), 10);
@@ -123,9 +154,10 @@ export async function listPublicVenues(req: Request, res: Response) {
     const city = typeof req.query.city === 'string' ? req.query.city.trim() : '';
     const commune = typeof req.query.commune === 'string' ? req.query.commune.trim() : '';
     const neighborhood = typeof req.query.neighborhood === 'string' ? req.query.neighborhood.trim() : '';
+    const street = readStreetQuery(req);
     const roomType = typeof req.query.roomType === 'string' ? req.query.roomType.trim() : '';
     const minCapacity = Number.parseInt(String(req.query.minCapacity || ''), 10);
-    const maxPrice = Number.parseInt(String(req.query.maxPrice || ''), 10);
+    const priceRange = readPriceRange(req);
 
     const roomFilter: { roomType?: RoomType; capacity?: { gte: number } } = {};
     const allowedTypes: RoomType[] = ['SIMPLE', 'BANQUET', 'CONFERENCE', 'AMPHITHEATER', 'TENT', 'CUSTOM'];
@@ -142,20 +174,33 @@ export async function listPublicVenues(req: Request, res: Response) {
         ...(city ? { city: { contains: city, mode: 'insensitive' } } : {}),
         ...(commune ? { commune: { contains: commune, mode: 'insensitive' } } : {}),
         ...(neighborhood ? { neighborhood: { contains: neighborhood, mode: 'insensitive' } } : {}),
-        ...(Number.isFinite(maxPrice) && maxPrice > 0
-          ? { priceFromFc: { lte: maxPrice } }
-          : {}),
+        ...(priceRange ? { priceFromFc: priceRange } : {}),
         ...(Object.keys(roomFilter).length > 0 ? { room: roomFilter } : {}),
-        ...(q
+        ...((street || q)
           ? {
-              OR: [
-                { headline: { contains: q, mode: 'insensitive' } },
-                { city: { contains: q, mode: 'insensitive' } },
-                { commune: { contains: q, mode: 'insensitive' } },
-                { neighborhood: { contains: q, mode: 'insensitive' } },
-                { address: { contains: q, mode: 'insensitive' } },
-                { room: { name: { contains: q, mode: 'insensitive' } } },
-                { tenant: { name: { contains: q, mode: 'insensitive' } } },
+              AND: [
+                ...(street
+                  ? [{
+                      OR: [
+                        { address: { contains: street, mode: 'insensitive' as const } },
+                        { neighborhood: { contains: street, mode: 'insensitive' as const } },
+                        { commune: { contains: street, mode: 'insensitive' as const } },
+                      ],
+                    }]
+                  : []),
+                ...(q
+                  ? [{
+                      OR: [
+                        { headline: { contains: q, mode: 'insensitive' as const } },
+                        { city: { contains: q, mode: 'insensitive' as const } },
+                        { commune: { contains: q, mode: 'insensitive' as const } },
+                        { neighborhood: { contains: q, mode: 'insensitive' as const } },
+                        { address: { contains: q, mode: 'insensitive' as const } },
+                        { room: { name: { contains: q, mode: 'insensitive' as const } } },
+                        { tenant: { name: { contains: q, mode: 'insensitive' as const } } },
+                      ],
+                    }]
+                  : []),
               ],
             }
           : {}),
@@ -366,9 +411,8 @@ export async function upsertRoomListing(req: AuthenticatedRequest, res: Response
     const blockedSafe = parseBlockedDates(blockedDates);
 
     if (wantPublic) {
-      if (!city?.trim()) {
-        return res.status(400).json({ error: 'La ville est requise pour publier la salle.' });
-      }
+      const locationError = publishLocationError(city, commune, neighborhood, latitude, longitude);
+      if (locationError) return res.status(400).json({ error: locationError });
       if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
         return res.status(400).json({ error: 'Indiquez un tarif de départ en FC.' });
       }
@@ -506,11 +550,13 @@ export async function listPublicServices(req: Request, res: Response) {
     const city = typeof req.query.city === 'string' ? req.query.city.trim() : '';
     const commune = typeof req.query.commune === 'string' ? req.query.commune.trim() : '';
     const neighborhood = typeof req.query.neighborhood === 'string' ? req.query.neighborhood.trim() : '';
+    const street = readStreetQuery(req);
     const category = parseServiceCategory(req.query.category);
     const priceUnit = parsePriceUnit(req.query.priceUnit);
     const wantUnit = typeof req.query.priceUnit === 'string' && req.query.priceUnit.trim()
       ? priceUnit
       : null;
+    const priceRange = readPriceRange(req);
 
     const offerings = await prisma.serviceOffering.findMany({
       where: {
@@ -520,15 +566,33 @@ export async function listPublicServices(req: Request, res: Response) {
         ...(neighborhood ? { neighborhood: { contains: neighborhood, mode: 'insensitive' } } : {}),
         ...(category ? { category } : {}),
         ...(wantUnit ? { priceUnit: wantUnit } : {}),
-        ...(q
+        ...(priceRange ? { priceFromFc: priceRange } : {}),
+        ...((street || q)
           ? {
-              OR: [
-                { title: { contains: q, mode: 'insensitive' } },
-                { description: { contains: q, mode: 'insensitive' } },
-                { city: { contains: q, mode: 'insensitive' } },
-                { commune: { contains: q, mode: 'insensitive' } },
-                { neighborhood: { contains: q, mode: 'insensitive' } },
-                { vendorProfile: { displayName: { contains: q, mode: 'insensitive' } } },
+              AND: [
+                ...(street
+                  ? [{
+                      OR: [
+                        { neighborhood: { contains: street, mode: 'insensitive' as const } },
+                        { commune: { contains: street, mode: 'insensitive' as const } },
+                        { city: { contains: street, mode: 'insensitive' as const } },
+                        { title: { contains: street, mode: 'insensitive' as const } },
+                        { description: { contains: street, mode: 'insensitive' as const } },
+                      ],
+                    }]
+                  : []),
+                ...(q
+                  ? [{
+                      OR: [
+                        { title: { contains: q, mode: 'insensitive' as const } },
+                        { description: { contains: q, mode: 'insensitive' as const } },
+                        { city: { contains: q, mode: 'insensitive' as const } },
+                        { commune: { contains: q, mode: 'insensitive' as const } },
+                        { neighborhood: { contains: q, mode: 'insensitive' as const } },
+                        { vendorProfile: { displayName: { contains: q, mode: 'insensitive' as const } } },
+                      ],
+                    }]
+                  : []),
               ],
             }
           : {}),
@@ -761,7 +825,8 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
     const blockedSafe = parseBlockedDates(blockedDates);
 
     if (wantPublic) {
-      if (!city?.trim()) return res.status(400).json({ error: 'La ville / zone est requise pour publier.' });
+      const locationError = publishLocationError(city, commune, neighborhood, latitude, longitude);
+      if (locationError) return res.status(400).json({ error: locationError });
       if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
         return res.status(400).json({ error: 'Indiquez un tarif de départ en FC.' });
       }

@@ -4,7 +4,13 @@ import React, { useState } from 'react';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
 import { Button, Input, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import type { CatalogueViewMode } from '@/lib/marketplace';
+import {
+  CATALOGUE_COMMUNE_SUGGESTIONS,
+  RADIUS_KM_OPTIONS,
+  type CatalogueGeoState,
+  type CatalogueProximity,
+  type CatalogueViewMode,
+} from '@/lib/marketplace';
 import CatalogueViewToggle from '@/components/CatalogueViewToggle';
 
 export type CatalogueFilterChip = {
@@ -79,6 +85,7 @@ export default function CatalogueFilterBar({
   onApply,
   onOpen,
   resultLabel,
+  modalSize = 'lg',
 }: {
   search: string;
   onSearchChange: (value: string) => void;
@@ -91,11 +98,13 @@ export default function CatalogueFilterBar({
   modalTitle?: string;
   modalDescription?: string;
   filters?: React.ReactNode;
-  onApply?: () => void;
+  onApply?: () => void | Promise<void>;
   onOpen?: () => void;
   resultLabel?: string;
+  modalSize?: 'sm' | 'md' | 'lg' | 'xl';
 }) {
   const [open, setOpen] = useState(false);
+  const [applying, setApplying] = useState(false);
   const hasFilters = Boolean(filters);
   const count = chips.length;
 
@@ -104,9 +113,16 @@ export default function CatalogueFilterBar({
     setOpen(true);
   };
 
-  const apply = () => {
-    onApply?.();
-    setOpen(false);
+  const apply = async () => {
+    setApplying(true);
+    try {
+      await onApply?.();
+      setOpen(false);
+    } catch {
+      /* Le parent affiche l’erreur et garde la fenêtre ouverte. */
+    } finally {
+      setApplying(false);
+    }
   };
 
   return (
@@ -193,13 +209,13 @@ export default function CatalogueFilterBar({
           onClose={() => setOpen(false)}
           title={modalTitle}
           description={modalDescription}
-          size="md"
+          size={modalSize}
           footer={
             <>
               <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
                 Annuler
               </Button>
-              <Button type="button" onClick={apply}>
+              <Button type="button" onClick={() => void apply()} loading={applying}>
                 Voir les résultats
               </Button>
             </>
@@ -209,5 +225,107 @@ export default function CatalogueFilterBar({
         </Modal>
       )}
     </div>
+  );
+}
+
+export function CatalogueGeoFields({
+  value,
+  onChange,
+  error,
+}: {
+  value: CatalogueGeoState;
+  onChange: (next: CatalogueGeoState) => void;
+  error?: string;
+}) {
+  const set = (patch: Partial<CatalogueGeoState>) => onChange({ ...value, ...patch });
+
+  return (
+    <>
+      <CatalogueFilterField label="Ville">
+        <Input
+          value={value.city}
+          onChange={(e) => set({ city: e.target.value })}
+          placeholder="Ex. Kinshasa"
+        />
+      </CatalogueFilterField>
+      <CatalogueFilterField label="Commune" hint="Choisissez une suggestion ou saisissez la vôtre.">
+        <CatalogueChoicePills
+          options={CATALOGUE_COMMUNE_SUGGESTIONS.map((name) => ({ id: name, label: name }))}
+          value={value.commune}
+          onChange={(id) => set({ commune: id, nearPlace: value.proximity === 'near' && !value.nearPlace ? id : value.nearPlace })}
+        />
+        <Input
+          value={value.commune}
+          onChange={(e) => set({ commune: e.target.value })}
+          placeholder="Autre commune…"
+          className="mt-2"
+        />
+      </CatalogueFilterField>
+      <CatalogueFilterField label="Quartier">
+        <Input
+          value={value.neighborhood}
+          onChange={(e) => set({ neighborhood: e.target.value })}
+          placeholder="Quartier"
+        />
+      </CatalogueFilterField>
+      <CatalogueFilterField label="Avenue / rue" hint="Filtre le texte d’adresse (ex. avenue de la Libération).">
+        <Input
+          value={value.street}
+          onChange={(e) => set({ street: e.target.value })}
+          placeholder="Nom d’avenue"
+        />
+      </CatalogueFilterField>
+      <CatalogueFilterField label="Prix (FC)">
+        <div className="grid grid-cols-2 gap-2">
+          <Input
+            type="number"
+            min={0}
+            value={value.minPrice}
+            onChange={(e) => set({ minPrice: e.target.value })}
+            placeholder="Min"
+          />
+          <Input
+            type="number"
+            min={0}
+            value={value.maxPrice}
+            onChange={(e) => set({ maxPrice: e.target.value })}
+            placeholder="Max"
+          />
+        </div>
+      </CatalogueFilterField>
+      <CatalogueFilterField
+        label="Proximité"
+        hint="Autour de vous, près d’une commune, ou autour d’une avenue saisie ci-dessus."
+      >
+        <CatalogueChoicePills
+          options={[
+            { id: '', label: 'Peu importe' },
+            { id: 'around', label: 'Autour de moi' },
+            { id: 'near', label: 'Près d’un lieu' },
+          ]}
+          value={value.proximity}
+          onChange={(id) => set({ proximity: (id as CatalogueProximity) || '', lat: null, lng: null })}
+        />
+        {value.proximity === 'near' ? (
+          <Input
+            className="mt-2"
+            value={value.nearPlace}
+            onChange={(e) => set({ nearPlace: e.target.value })}
+            placeholder="Commune, quartier ou avenue…"
+          />
+        ) : null}
+        {value.proximity ? (
+          <div className="mt-3 space-y-1.5">
+            <span className="text-[11px] text-muted">Rayon</span>
+            <CatalogueChoicePills
+              options={RADIUS_KM_OPTIONS.map((km) => ({ id: String(km), label: `${km} km` }))}
+              value={String(value.radiusKm)}
+              onChange={(id) => set({ radiusKm: Number(id) || 10 })}
+            />
+          </div>
+        ) : null}
+        {error ? <p className="text-xs text-rose-600 font-medium">{error}</p> : null}
+      </CatalogueFilterField>
+    </>
   );
 }

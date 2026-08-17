@@ -15,13 +15,11 @@ import {
   formatLocationLine,
   formatQuotaLabel,
   isVideoUrl,
-  mapsDirectionsUrl,
   mediaPosterUrl,
   serviceToCatalogueItem,
   type PublicService,
 } from '@/lib/marketplace';
 import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
-import { Button } from '@/components/ui';
 import { ArrowLeft, Loader2, MapPin, Navigation, Play, Sparkles } from 'lucide-react';
 
 export default function MarketplaceServiceDetailPage() {
@@ -33,6 +31,7 @@ export default function MarketplaceServiceDetailPage() {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [pickedDate, setPickedDate] = useState('');
   const [tab, setTab] = useState<MarketplaceFormTab>('details');
+  const [wantRoute, setWantRoute] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -136,15 +135,17 @@ export default function MarketplaceServiceDetailPage() {
                   </span>
                 )}
                 {service.latitude != null && service.longitude != null && (
-                  <a
-                    href={mapsDirectionsUrl(service.latitude, service.longitude)}
-                    target="_blank"
-                    rel="noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setWantRoute(true);
+                      setTab('map');
+                    }}
                     className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-muted border border-border text-primary font-semibold hover:bg-primary/5"
                   >
                     <Navigation className="w-3.5 h-3.5" />
                     Itinéraire
-                  </a>
+                  </button>
                 )}
                 {formatQuotaLabel(service.quotaMin, service.quotaMax) && (
                   <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-muted border border-border">
@@ -167,17 +168,14 @@ export default function MarketplaceServiceDetailPage() {
               {tab === 'map' && (
                 service.latitude != null && service.longitude != null ? (
                   <div className="space-y-3">
-                    <div className="flex justify-end">
-                      <a href={mapsDirectionsUrl(service.latitude, service.longitude)} target="_blank" rel="noreferrer" className="inline-flex">
-                        <Button size="sm" variant="secondary" leftIcon={<Navigation className="w-3.5 h-3.5" />}>
-                          Itinéraire
-                        </Button>
-                      </a>
-                    </div>
+                    <p className="text-xs text-muted">
+                      L’itinéraire se calcule sur EventMaster. Autorisez la localisation, ou cliquez votre départ sur la carte.
+                    </p>
                     <MarketplaceLocationsMap
                       markers={[catalogueItemToMapMarker(serviceToCatalogueItem(service))]}
-                      height={320}
+                      height={360}
                       navigateOnClick={false}
+                      autoDirections={wantRoute}
                     />
                   </div>
                 ) : (
