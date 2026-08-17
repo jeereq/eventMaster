@@ -11,6 +11,8 @@ import {
   PRICE_UNIT_OPTIONS,
   SERVICE_CATEGORIES,
   SERVICE_CATEGORY_LABELS,
+  parseBlockedDates,
+  type MarketplaceBookingItem,
   type MarketplaceInquiryItem,
   type ServiceCategory,
   type VenuePriceUnit,
@@ -19,8 +21,10 @@ import { formatFc } from '@/config/landingPricing';
 import { uploadImageFile } from '@/lib/cloudinaryUpload';
 import { cn } from '@/lib/cn';
 import {
-  Globe, GlobeLock, Loader2, Plus, Sparkles, Trash2, Upload, Inbox, CheckCircle2,
+  Globe, GlobeLock, Loader2, Plus, Sparkles, Trash2, Upload, Inbox, CheckCircle2, CalendarCheck,
 } from 'lucide-react';
+import BlockedDatesField from '@/components/BlockedDatesField';
+import MarketplaceBookingsPanel from '@/components/MarketplaceBookingsPanel';
 
 interface ServiceItem {
   id: string;
@@ -33,10 +37,11 @@ interface ServiceItem {
   priceFromFc: number | null;
   priceUnit: VenuePriceUnit;
   photos: unknown;
+  blockedDates?: unknown;
   isPublic: boolean;
 }
 
-type DeskTab = 'services' | 'inquiries';
+type DeskTab = 'services' | 'inquiries' | 'bookings';
 
 const fieldClass =
   'w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm';
@@ -47,6 +52,8 @@ export default function MarketplaceDeskPage() {
   const [tab, setTab] = useState<DeskTab>('services');
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [inquiries, setInquiries] = useState<MarketplaceInquiryItem[]>([]);
+  const [bookings, setBookings] = useState<MarketplaceBookingItem[]>([]);
+  const [commissionDueFc, setCommissionDueFc] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -63,18 +70,22 @@ export default function MarketplaceDeskPage() {
     priceFromFc: '',
     priceUnit: 'EVENT' as VenuePriceUnit,
     photos: [] as string[],
+    blockedDates: [] as string[],
     isPublic: true,
   });
 
   const load = async () => {
     setLoading(true);
     try {
-      const [svc, leads] = await Promise.all([
+      const [svc, leads, books] = await Promise.all([
         api.get('/marketplace/services'),
         api.get('/marketplace/inquiries'),
+        api.get('/marketplace/bookings'),
       ]);
       setServices(svc.services || []);
       setInquiries(leads.inquiries || []);
+      setBookings(books.bookings || []);
+      setCommissionDueFc(books.commissionDueFc || 0);
     } catch (err: any) {
       setError(err.message || 'Impossible de charger le marketplace.');
     } finally {
@@ -101,6 +112,7 @@ export default function MarketplaceDeskPage() {
       priceFromFc: '',
       priceUnit: 'EVENT',
       photos: [],
+      blockedDates: [],
       isPublic: true,
     });
     setEditorOpen(true);
@@ -117,6 +129,7 @@ export default function MarketplaceDeskPage() {
       priceFromFc: item.priceFromFc != null ? String(item.priceFromFc) : '',
       priceUnit: item.priceUnit,
       photos: photosOf(item),
+      blockedDates: parseBlockedDates(item.blockedDates),
       isPublic: item.isPublic,
     });
     setEditorOpen(true);
@@ -135,6 +148,7 @@ export default function MarketplaceDeskPage() {
         priceFromFc: draft.priceFromFc ? Number(draft.priceFromFc) : null,
         priceUnit: draft.priceUnit,
         photos: draft.photos,
+        blockedDates: draft.blockedDates,
         isPublic: publish,
       };
       if (editing) await api.put(`/marketplace/services/${editing.id}`, payload);
@@ -174,6 +188,17 @@ export default function MarketplaceDeskPage() {
     }
   };
 
+  const convertInquiry = async (id: string) => {
+    try {
+      const data = await api.post(`/marketplace/inquiries/${id}/book`);
+      setSuccess(data.message || 'Demande convertie en réservation.');
+      setTab('bookings');
+      await load();
+    } catch (err: any) {
+      setError(err.message || 'Conversion impossible.');
+    }
+  };
+
   const markContacted = async (id: string) => {
     try {
       await api.patch(`/marketplace/inquiries/${id}`, { status: 'CONTACTED' });
@@ -197,7 +222,7 @@ export default function MarketplaceDeskPage() {
     <div className="space-y-6">
       <PageHeader
         title="Marketplace"
-        description="Publiez vos prestations et suivez les demandes de devis (salles et services)."
+        description="Prestations, devis, réservations de dates. Acompte hors plateforme · commission vendeur 8 % (≠ abo SaaS)."
         breadcrumbs={
           <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Marketplace' }]} />
         }
@@ -231,6 +256,16 @@ export default function MarketplaceDeskPage() {
         >
           Demandes{newCount > 0 ? ` (${newCount})` : ''}
         </button>
+        <button
+          type="button"
+          onClick={() => setTab('bookings')}
+          className={cn(
+            'px-3 py-1.5 rounded-full text-xs font-semibold border',
+            tab === 'bookings' ? 'bg-primary text-white border-primary' : 'border-border text-muted',
+          )}
+        >
+          Réservations{bookings.length > 0 ? ` (${bookings.length})` : ''}
+        </button>
       </div>
 
       {error && <Alert variant="error">{error}</Alert>}
@@ -240,6 +275,8 @@ export default function MarketplaceDeskPage() {
         <div className="flex justify-center py-16">
           <Loader2 className="w-7 h-7 animate-spin text-primary" />
         </div>
+      ) : tab === 'bookings' ? (
+        <MarketplaceBookingsPanel bookings={bookings} commissionDueFc={commissionDueFc} onChanged={load} />
       ) : tab === 'services' ? (
         services.length === 0 ? (
           <EmptyState
@@ -322,11 +359,21 @@ export default function MarketplaceDeskPage() {
                 {item.eventDate ? ` · date souhaitée ${new Date(item.eventDate).toLocaleDateString('fr-FR')}` : ''}
                 {item.guestCount ? ` · ${item.guestCount} invités` : ''}
               </p>
-              {item.status === 'NEW' && (
-                <Button size="sm" variant="secondary" onClick={() => markContacted(item.id)} leftIcon={<CheckCircle2 className="w-3.5 h-3.5" />}>
-                  Marquer comme contacté
-                </Button>
-              )}
+              <div className="flex flex-wrap gap-2">
+                {item.status === 'NEW' && (
+                  <Button size="sm" variant="secondary" onClick={() => markContacted(item.id)} leftIcon={<CheckCircle2 className="w-3.5 h-3.5" />}>
+                    Marquer comme contacté
+                  </Button>
+                )}
+                {item.eventDate && !item.hasBooking && (
+                  <Button size="sm" onClick={() => convertInquiry(item.id)} leftIcon={<CalendarCheck className="w-3.5 h-3.5" />}>
+                    Convertir en réservation
+                  </Button>
+                )}
+                {item.hasBooking && (
+                  <StatusPill tone="slate">Déjà réservée</StatusPill>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -406,6 +453,10 @@ export default function MarketplaceDeskPage() {
               </select>
             </label>
           </div>
+          <BlockedDatesField
+            value={draft.blockedDates}
+            onChange={(blockedDates) => setDraft((d) => ({ ...d, blockedDates }))}
+          />
           <div>
             <span className="block text-xs font-medium text-muted mb-1.5">Photos (max. 8)</span>
             <div className="flex flex-wrap gap-2 mb-2">

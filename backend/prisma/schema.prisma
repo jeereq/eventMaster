@@ -68,6 +68,14 @@ enum MarketplaceInquiryStatus {
   CONTACTED
 }
 
+enum MarketplaceBookingStatus {
+  REQUESTED
+  ACCEPTED
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
 enum ServiceCategory {
   CATERING
   PHOTOGRAPHY
@@ -113,6 +121,8 @@ model Tenant {
   venueListings VenueListing[]
   serviceOfferings ServiceOffering[]
   marketplaceInquiries MarketplaceInquiry[] @relation("InquiryFromTenant")
+  vendorBookings MarketplaceBooking[] @relation("BookingVendor")
+  organizerBookings MarketplaceBooking[] @relation("BookingOrganizer")
   
   managerId     String?
   manager       User?      @relation("TenantManager", fields: [managerId], references: [id])
@@ -183,6 +193,7 @@ model Event {
   posts       EventPost[]
   staff       EventStaff[]
   marketplaceInquiries MarketplaceInquiry[]
+  marketplaceBookings MarketplaceBooking[]
 }
 
 model Guest {
@@ -464,11 +475,13 @@ model VenueListing {
   priceFromFc  Int?
   priceUnit    VenuePriceUnit @default(EVENT)
   photos       Json?
+  blockedDates Json?
   publishedAt  DateTime?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
   inquiries MarketplaceInquiry[]
+  bookings  MarketplaceBooking[]
 
   @@index([isPublic, city])
   @@index([tenantId])
@@ -498,6 +511,37 @@ model MarketplaceInquiry {
   @@index([fromEmail])
 }
 
+model MarketplaceBooking {
+  id                 String                    @id @default(uuid())
+  listingId          String?
+  listing            VenueListing?             @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  offeringId         String?
+  offering           ServiceOffering?          @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  inquiryId          String?                   @unique
+  vendorTenantId     String
+  vendorTenant       Tenant                    @relation("BookingVendor", fields: [vendorTenantId], references: [id], onDelete: Cascade)
+  organizerTenantId  String?
+  organizerTenant    Tenant?                   @relation("BookingOrganizer", fields: [organizerTenantId], references: [id], onDelete: SetNull)
+  organizerUserId    String?
+  eventId            String?
+  event              Event?                    @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  eventDate          DateTime
+  guestCount         Int?
+  amountFc           Int
+  depositFc          Int
+  commissionRate     Float                     @default(0.08)
+  commissionFc       Int
+  status             MarketplaceBookingStatus  @default(REQUESTED)
+  depositMarkedAt    DateTime?
+  notes              String?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+
+  @@index([vendorTenantId, status])
+  @@index([organizerTenantId, status])
+  @@index([eventDate])
+}
+
 model ServiceOffering {
   id                String           @id @default(uuid())
   tenantId          String
@@ -513,12 +557,14 @@ model ServiceOffering {
   priceFromFc       Int?
   priceUnit         VenuePriceUnit   @default(EVENT)
   photos            Json?
+  blockedDates      Json?
   isPublic          Boolean          @default(false)
   publishedAt       DateTime?
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 
   inquiries MarketplaceInquiry[]
+  bookings  MarketplaceBooking[]
 
   @@index([isPublic, category])
   @@index([tenantId])

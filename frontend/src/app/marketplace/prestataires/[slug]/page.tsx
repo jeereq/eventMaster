@@ -8,6 +8,7 @@ import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
 import CelebrateMood from '@/components/CelebrateMood';
 import MarketplaceInquiryForm from '@/components/MarketplaceInquiryForm';
+import MarketplaceBookingForm from '@/components/MarketplaceBookingForm';
 import { formatFc } from '@/config/landingPricing';
 import type { PublicService } from '@/lib/marketplace';
 import { ArrowLeft, Loader2, MapPin, Sparkles } from 'lucide-react';
@@ -116,6 +117,11 @@ export default function MarketplaceServiceDetailPage() {
               <MarketplaceInquiryForm
                 endpoint={`/public/services/${encodeURIComponent(service.slug)}/inquire`}
                 successCopy="Demande transmise au prestataire."
+              />
+              <MarketplaceBookingForm
+                offeringSlug={service.slug}
+                unavailableDates={service.unavailableDates}
+                priceFromFc={service.priceFromFc}
               />
             </aside>
           </div>

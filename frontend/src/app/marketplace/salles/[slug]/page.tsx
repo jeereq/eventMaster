@@ -8,12 +8,13 @@ import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
 import CelebrateMood from '@/components/CelebrateMood';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
-import { Alert, Button, Input } from '@/components/ui';
+import MarketplaceInquiryForm from '@/components/MarketplaceInquiryForm';
+import MarketplaceBookingForm from '@/components/MarketplaceBookingForm';
 import { formatFc } from '@/config/landingPricing';
 import type { PublicVenue } from '@/lib/marketplace';
 import { roomTypeLabels, type RoomLayoutBlueprint, type RoomType } from '@/lib/roomLayoutUtils';
 import {
-  ArrowLeft, Building2, Calendar, Loader2, MapPin, Send, Users,
+  ArrowLeft, Building2, Loader2, MapPin, Users,
 } from 'lucide-react';
 
 export default function MarketplaceVenueDetailPage() {
@@ -22,15 +23,6 @@ export default function MarketplaceVenueDetailPage() {
   const [venue, setVenue] = useState<PublicVenue | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [eventDate, setEventDate] = useState('');
-  const [guestCount, setGuestCount] = useState('');
-  const [message, setMessage] = useState('');
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState('');
-  const [formError, setFormError] = useState('');
   const [photoIndex, setPhotoIndex] = useState(0);
 
   useEffect(() => {
@@ -47,30 +39,6 @@ export default function MarketplaceVenueDetailPage() {
     }
     load();
   }, [slug]);
-
-  const handleInquire = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!venue) return;
-    setFormError('');
-    setSent('');
-    setSending(true);
-    try {
-      const data = await api.post(`/public/venues/${encodeURIComponent(venue.slug)}/inquire`, {
-        name,
-        email,
-        phone: phone || undefined,
-        eventDate: eventDate || undefined,
-        guestCount: guestCount || undefined,
-        message,
-      });
-      setSent(data.message || 'Demande envoyée.');
-      setMessage('');
-    } catch (err: unknown) {
-      setFormError(err instanceof Error ? err.message : 'Envoi impossible.');
-    } finally {
-      setSending(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -171,48 +139,15 @@ export default function MarketplaceVenueDetailPage() {
                 <p className="text-xs text-muted">{venue.priceUnitLabel}</p>
               </div>
 
-              <form
-                onSubmit={handleInquire}
-                className="border border-border rounded-[var(--radius-card)] p-5 bg-surface space-y-3"
-              >
-                <h2 className="text-sm font-semibold text-foreground">Demander un devis</h2>
-                <p className="text-xs text-muted leading-relaxed">
-                  Le propriétaire reçoit votre message par e-mail. Aucun paiement sur la plateforme pour l’instant.
-                </p>
-                {formError && <Alert variant="error">{formError}</Alert>}
-                {sent && <Alert variant="success">{sent}</Alert>}
-                <Input label="Votre nom" required value={name} onChange={(e) => setName(e.target.value)} />
-                <Input label="E-mail" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-                <Input label="Téléphone" value={phone} onChange={(e) => setPhone(e.target.value)} />
-                <Input
-                  label="Date souhaitée"
-                  type="date"
-                  leftIcon={<Calendar className="w-4 h-4" />}
-                  value={eventDate}
-                  onChange={(e) => setEventDate(e.target.value)}
-                />
-                <Input
-                  label="Nombre d’invités (estimé)"
-                  type="number"
-                  min={1}
-                  value={guestCount}
-                  onChange={(e) => setGuestCount(e.target.value)}
-                />
-                <label className="block space-y-1.5">
-                  <span className="text-xs font-medium text-muted">Message</span>
-                  <textarea
-                    required
-                    rows={4}
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
-                    placeholder="Type d’événement, horaires, besoins…"
-                  />
-                </label>
-                <Button type="submit" loading={sending} leftIcon={<Send className="w-4 h-4" />} fullWidth>
-                  Envoyer la demande
-                </Button>
-              </form>
+              <MarketplaceInquiryForm
+                endpoint={`/public/venues/${encodeURIComponent(venue.slug)}/inquire`}
+                successCopy="Demande transmise au propriétaire."
+              />
+              <MarketplaceBookingForm
+                listingSlug={venue.slug}
+                unavailableDates={venue.unavailableDates}
+                priceFromFc={venue.priceFromFc}
+              />
             </aside>
           </div>
         )}

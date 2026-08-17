@@ -11,6 +11,7 @@ import { formatFc } from '@/config/landingPricing';
 import type { PublicVenue } from '@/lib/marketplace';
 import { roomTypeLabels, type RoomType } from '@/lib/roomLayoutUtils';
 import MarketplacePublicNav from '@/components/MarketplacePublicNav';
+import { ArrowRight, Building2, Loader2, MapPin, Search, Users } from 'lucide-react';
 
 const ROOM_FILTERS: Array<{ id: string; label: string }> = [
   { id: '', label: 'Tous les types' },

@@ -12,7 +12,8 @@ import {
   sanitizeLayoutBlueprint,
   serviceCategoryLabel,
 } from '../utils/publicVenue';
-import { RoomType, ServiceCategory, TenantAccountKind } from '@prisma/client';
+import { collectUnavailableDates, parseBlockedDates } from '../utils/marketplaceDates';
+import { RoomType, ServiceCategory, TenantAccountKind, MarketplaceBookingStatus } from '@prisma/client';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -26,6 +27,7 @@ function toPublicVenue(listing: {
   priceFromFc: number | null;
   priceUnit: 'EVENT' | 'DAY' | 'HOUR';
   photos: unknown;
+  blockedDates?: unknown;
   publishedAt: Date | null;
   room: {
     name: string;
@@ -41,6 +43,7 @@ function toPublicVenue(listing: {
     branding: unknown;
     vendorProfile: { displayName: string; city: string | null } | null;
   };
+  bookings?: Array<{ eventDate: Date }>;
 }) {
   const photos = parsePhotoUrls(listing.photos);
   return {
@@ -64,8 +67,11 @@ function toPublicVenue(listing: {
     orgName: listing.tenant.vendorProfile?.displayName || listing.tenant.name,
     orgCity: listing.tenant.vendorProfile?.city || listing.city,
     layoutPreview: sanitizeLayoutBlueprint(listing.room.layoutBlueprint),
+    unavailableDates: collectUnavailableDates(listing.blockedDates, listing.bookings),
   };
 }
+
+const HOLD_BOOKING_STATUSES: MarketplaceBookingStatus[] = ['REQUESTED', 'ACCEPTED', 'CONFIRMED'];
 
 const listingInclude = {
   room: true,
@@ -76,7 +82,11 @@ const listingInclude = {
       vendorProfile: { select: { displayName: true, city: true } },
     },
   },
-} as const;
+  bookings: {
+    where: { status: { in: HOLD_BOOKING_STATUSES } },
+    select: { eventDate: true },
+  },
+};
 
 export async function listPublicVenues(req: Request, res: Response) {
   try {
@@ -296,11 +306,13 @@ export async function upsertRoomListing(req: AuthenticatedRequest, res: Response
       priceFromFc,
       priceUnit,
       photos,
+      blockedDates,
     } = req.body || {};
 
     const wantPublic = Boolean(isPublic);
     const parsedPrice = Number.parseInt(String(priceFromFc ?? ''), 10);
     const photosSafe = parsePhotoUrls(photos);
+    const blockedSafe = parseBlockedDates(blockedDates);
 
     if (wantPublic) {
       if (!city?.trim()) {
@@ -333,6 +345,7 @@ export async function upsertRoomListing(req: AuthenticatedRequest, res: Response
         priceFromFc: Number.isFinite(parsedPrice) ? parsedPrice : null,
         priceUnit: parsePriceUnit(priceUnit),
         photos: photosSafe,
+        blockedDates: blockedSafe,
         publishedAt: wantPublic ? new Date() : null,
       },
       update: {
@@ -345,6 +358,7 @@ export async function upsertRoomListing(req: AuthenticatedRequest, res: Response
         priceFromFc: priceFromFc !== undefined ? (Number.isFinite(parsedPrice) ? parsedPrice : null) : undefined,
         priceUnit: priceUnit !== undefined ? parsePriceUnit(priceUnit) : undefined,
         photos: photos !== undefined ? photosSafe : undefined,
+        blockedDates: blockedDates !== undefined ? blockedSafe : undefined,
         publishedAt: wantPublic ? (existing?.publishedAt || new Date()) : null,
       },
     });
@@ -377,9 +391,11 @@ function toPublicService(offering: {
   priceFromFc: number | null;
   priceUnit: 'EVENT' | 'DAY' | 'HOUR';
   photos: unknown;
+  blockedDates?: unknown;
   publishedAt: Date | null;
   vendorProfile: { displayName: string; city: string | null; slug: string };
   tenant: { name: string };
+  bookings?: Array<{ eventDate: Date }>;
 }) {
   const photos = parsePhotoUrls(offering.photos);
   return {
@@ -398,13 +414,18 @@ function toPublicService(offering: {
     publishedAt: offering.publishedAt,
     orgName: offering.vendorProfile.displayName || offering.tenant.name,
     orgSlug: offering.vendorProfile.slug,
+    unavailableDates: collectUnavailableDates(offering.blockedDates, offering.bookings),
   };
 }
 
 const offeringInclude = {
   vendorProfile: { select: { displayName: true, city: true, slug: true } },
   tenant: { select: { name: true } },
-} as const;
+  bookings: {
+    where: { status: { in: HOLD_BOOKING_STATUSES } },
+    select: { eventDate: true },
+  },
+};
 
 export async function listPublicServices(req: Request, res: Response) {
   try {
@@ -619,7 +640,7 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
     }
 
     const {
-      title, description, city, coverageRadiusKm, priceFromFc, priceUnit, photos, isPublic, category,
+      title, description, city, coverageRadiusKm, priceFromFc, priceUnit, photos, isPublic, category, blockedDates,
     } = req.body || {};
     if (!title?.trim()) return res.status(400).json({ error: 'Le titre est requis.' });
     const parsedCategory = parseServiceCategory(category) || 'OTHER';
@@ -627,6 +648,7 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
     const parsedPrice = Number.parseInt(String(priceFromFc ?? ''), 10);
     const parsedRadius = Number.parseInt(String(coverageRadiusKm ?? ''), 10);
     const photosSafe = parsePhotoUrls(photos);
+    const blockedSafe = parseBlockedDates(blockedDates);
 
     if (wantPublic) {
       if (!city?.trim()) return res.status(400).json({ error: 'La ville / zone est requise pour publier.' });
@@ -658,6 +680,7 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
       priceFromFc: Number.isFinite(parsedPrice) ? parsedPrice : null,
       priceUnit: parsePriceUnit(priceUnit),
       photos: photosSafe,
+      blockedDates: blockedSafe,
       isPublic: wantPublic,
       category: parsedCategory,
       publishedAt: wantPublic ? (existing?.publishedAt || new Date()) : null,
@@ -726,21 +749,37 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
       take: 100,
     });
 
+    const linked = await prisma.marketplaceBooking.findMany({
+      where: { inquiryId: { in: inquiries.map((item) => item.id) } },
+      select: { inquiryId: true, id: true, status: true },
+    });
+    const bookingByInquiry = new Map(
+      linked
+        .filter((row): row is typeof row & { inquiryId: string } => Boolean(row.inquiryId))
+        .map((row) => [row.inquiryId, row]),
+    );
+
     return res.json({
-      inquiries: inquiries.map((item) => ({
-        id: item.id,
-        kind: item.offeringId ? 'service' : 'venue',
-        title: item.offering?.title || item.listing?.headline || item.listing?.room.name || 'Demande',
-        fromName: item.fromName,
-        fromEmail: item.fromEmail,
-        fromPhone: item.fromPhone,
-        eventDate: item.eventDate,
-        guestCount: item.guestCount,
-        message: item.message,
-        status: item.status,
-        createdAt: item.createdAt,
-        event: item.event,
-      })),
+      inquiries: inquiries.map((item) => {
+        const booking = bookingByInquiry.get(item.id);
+        return {
+          id: item.id,
+          kind: item.offeringId ? 'service' : 'venue',
+          title: item.offering?.title || item.listing?.headline || item.listing?.room.name || 'Demande',
+          fromName: item.fromName,
+          fromEmail: item.fromEmail,
+          fromPhone: item.fromPhone,
+          eventDate: item.eventDate,
+          guestCount: item.guestCount,
+          message: item.message,
+          status: item.status,
+          createdAt: item.createdAt,
+          event: item.event,
+          hasBooking: Boolean(booking),
+          bookingId: booking?.id || null,
+          bookingStatus: booking?.status || null,
+        };
+      }),
     });
   } catch (error) {
     console.error('listMyInquiries:', error);
