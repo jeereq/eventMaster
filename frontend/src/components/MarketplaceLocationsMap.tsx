@@ -79,18 +79,24 @@ function hexToRgba(hex: string, alpha: number) {
 function MarkerPreviewCard({
   marker,
   pinned,
+  navigatingHere,
+  navigationActive,
   onKeep,
   onHide,
   onClose,
   onDirections,
+  onCancelNavigation,
   searchCenter,
 }: {
   marker: MarketplaceMapMarker;
   pinned?: boolean;
+  navigatingHere?: boolean;
+  navigationActive?: boolean;
   onKeep: () => void;
   onHide: () => void;
   onClose: () => void;
   onDirections: (marker: MarketplaceMapMarker) => void;
+  onCancelNavigation?: () => void;
   searchCenter?: { lat: number; lng: number } | null;
 }) {
   const isService = marker.kind === 'service';
@@ -103,7 +109,7 @@ function MarkerPreviewCard({
 
   return (
     <div
-      className="absolute z-[500] left-3 right-3 bottom-3 sm:left-auto sm:right-3 sm:w-[22rem] rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-soft)] overflow-hidden max-h-[70%] overflow-y-auto pointer-events-auto"
+      className="absolute z-[500] left-3 right-3 bottom-3 sm:left-auto sm:right-3 sm:w-[22rem] rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-soft)] overflow-hidden max-h-[46%] overflow-y-auto pointer-events-auto"
       onMouseEnter={onKeep}
       onMouseLeave={onHide}
     >
@@ -171,9 +177,15 @@ function MarkerPreviewCard({
           </p>
         ) : null}
         <div className="flex flex-wrap gap-2 pt-1">
-          <Button size="sm" onClick={() => onDirections(marker)} leftIcon={<Navigation className="w-3.5 h-3.5" />}>
-            Lancer la navigation
-          </Button>
+          {navigatingHere ? (
+            <Button size="sm" variant="secondary" onClick={onCancelNavigation}>
+              Annuler la navigation
+            </Button>
+          ) : (
+            <Button size="sm" onClick={() => onDirections(marker)} leftIcon={<Navigation className="w-3.5 h-3.5" />}>
+              {navigationActive ? 'Itinéraire vers ici' : 'Lancer la navigation'}
+            </Button>
+          )}
           <Link href={marker.href} className="inline-flex">
             <Button size="sm" variant="secondary">Voir la fiche</Button>
           </Link>
@@ -253,6 +265,8 @@ export default function MarketplaceLocationsMap({
   const lastRecalcRef = useRef(0);
   const pinnedRef = useRef(false);
   const suppressMapClickRef = useRef(false);
+  const navGenRef = useRef(0);
+  const [navDestId, setNavDestId] = useState<string | null>(null);
 
   const clearHideTimer = () => {
     if (hideTimer.current) {
@@ -566,6 +580,7 @@ export default function MarketplaceLocationsMap({
   }, [variant, mapReady]);
 
   const clearRoute = () => {
+    navGenRef.current += 1;
     const map = mapRef.current;
     if (watchIdRef.current != null && navigator.geolocation) {
       navigator.geolocation.clearWatch(watchIdRef.current);
@@ -582,16 +597,22 @@ export default function MarketplaceLocationsMap({
     setRouteTitle('');
     setRouteHint('');
     setRouting(false);
+    setNavDestId(null);
+    if (map && overviewBoundsRef.current) {
+      map.fitBounds(overviewBoundsRef.current, { maxZoom: 14, animate: true });
+    }
   };
 
   const paintRoute = async (origin: { lat: number; lng: number }, dest: MarketplaceMapMarker) => {
     const map = mapRef.current;
     const L = leafletRef.current;
     if (!map || !L) return;
+    const gen = navGenRef.current;
     setRouting(true);
     setRouteHint('');
     try {
       const next = await fetchDrivingRoute(origin, { lat: dest.lat, lng: dest.lng });
+      if (gen !== navGenRef.current) return;
       if (routeLineRef.current) map.removeLayer(routeLineRef.current);
       if (originMarkerRef.current) map.removeLayer(originMarkerRef.current);
       const color = cssVar('--primary', '#4f46e5');
@@ -601,19 +622,22 @@ export default function MarketplaceLocationsMap({
         weight: 2,
         fillColor: '#fff',
         fillOpacity: 1,
+        interactive: false,
       }).bindPopup('Votre départ').addTo(map);
       routeLineRef.current = L.polyline(
         next.coords.map((p) => [p.lat, p.lng]),
-        { color, weight: 5, opacity: 0.9 },
+        { color, weight: 5, opacity: 0.9, interactive: false },
       ).addTo(map);
       map.fitBounds(routeLineRef.current.getBounds(), { padding: [36, 36], maxZoom: 15 });
       setRoute(next);
       setRouteTitle(dest.title);
+      setNavDestId(dest.id);
       lastRecalcRef.current = Date.now();
-      setRouteHint('Navigation EventMaster active. Votre position est suivie sur la carte.');
+      setRouteHint('Navigation active. Survolez les autres pins pour comparer. Annulez à tout moment.');
       if (watchIdRef.current == null && navigator.geolocation) {
         watchIdRef.current = navigator.geolocation.watchPosition(
           (pos) => {
+            if (gen !== navGenRef.current) return;
             const origin = { lat: pos.coords.latitude, lng: pos.coords.longitude };
             if (originMarkerRef.current) {
               originMarkerRef.current.setLatLng([origin.lat, origin.lng]);
@@ -630,17 +654,23 @@ export default function MarketplaceLocationsMap({
         );
       }
     } catch {
-      setRouteHint('Itinéraire introuvable pour cet aller. Cliquez un autre point de départ sur la carte.');
+      if (gen !== navGenRef.current) return;
+      setRouteHint('Itinéraire introuvable. Cliquez un autre point de départ, ou annulez.');
       awaitingOriginRef.current = true;
     } finally {
-      setRouting(false);
+      if (gen === navGenRef.current) setRouting(false);
     }
   };
   paintRouteRef.current = paintRoute;
 
   const startDirections = (dest: MarketplaceMapMarker) => {
-    setHovered(null);
+    navGenRef.current += 1;
+    if (watchIdRef.current != null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
     routeDestRef.current = dest;
+    setNavDestId(dest.id);
     setRoute(null);
     setRouteTitle(dest.title);
     setRouting(true);
@@ -648,17 +678,20 @@ export default function MarketplaceLocationsMap({
     if (!navigator.geolocation) {
       awaitingOriginRef.current = true;
       setRouting(false);
-      setRouteHint('Cliquez sur la carte pour indiquer votre point de départ.');
+      setRouteHint('Cliquez sur la carte pour indiquer votre point de départ, ou annulez.');
       return;
     }
+    const gen = navGenRef.current;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        if (gen !== navGenRef.current) return;
         void paintRoute({ lat: pos.coords.latitude, lng: pos.coords.longitude }, dest);
       },
       () => {
+        if (gen !== navGenRef.current) return;
         awaitingOriginRef.current = true;
         setRouting(false);
-        setRouteHint('Localisation refusée. Cliquez sur la carte pour indiquer votre départ — vous restez sur EventMaster.');
+        setRouteHint('Localisation refusée. Cliquez la carte pour le départ, ou annulez.');
       },
       { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
     );
@@ -843,19 +876,22 @@ export default function MarketplaceLocationsMap({
           )}
           style={{ height: mapHeight, minHeight: variant === 'focus' ? 420 : undefined }}
         />
-        {hovered && !route && !routing && (
+        {hovered ? (
           <MarkerPreviewCard
             marker={hovered}
             pinned={pinned}
+            navigatingHere={navDestId === hovered.id}
+            navigationActive={Boolean(navDestId || routing || route)}
             searchCenter={searchCenter}
             onKeep={() => showPreview(hovered, pinned)}
             onHide={() => undefined}
             onClose={() => hidePreview(true)}
             onDirections={startDirections}
+            onCancelNavigation={clearRoute}
           />
-        )}
+        ) : null}
         {(route || routeHint || routing) && (
-          <div className="absolute z-30 left-3 right-3 top-3 sm:left-auto sm:w-80 rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-soft)] p-3 space-y-2 max-h-[55%] overflow-auto">
+          <div className="absolute z-40 left-3 right-3 top-3 sm:right-auto sm:w-80 rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-soft)] p-3 space-y-2 max-h-[42%] overflow-auto">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">Itinéraire</p>
@@ -866,7 +902,7 @@ export default function MarketplaceLocationsMap({
                   </p>
                 ) : null}
               </div>
-              <button type="button" onClick={clearRoute} className="p-1 rounded-md text-muted hover:text-foreground" aria-label="Fermer l’itinéraire">
+              <button type="button" onClick={clearRoute} className="p-1 rounded-md text-muted hover:text-foreground" aria-label="Annuler la navigation">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -878,7 +914,7 @@ export default function MarketplaceLocationsMap({
             {routeHint ? <p className="text-xs text-muted">{routeHint}</p> : null}
             {route?.steps.length ? (
               <ol className="space-y-1.5 text-xs text-foreground">
-                {route.steps.slice(0, 12).map((step, i) => (
+                {route.steps.slice(0, 8).map((step, i) => (
                   <li key={`${step.instruction}-${i}`} className="leading-snug">
                     <span className="text-muted">{i + 1}.</span> {step.instruction}
                     {step.distance ? <span className="text-muted"> · {formatRouteDistance(step.distance)}</span> : null}
@@ -886,12 +922,15 @@ export default function MarketplaceLocationsMap({
                 ))}
               </ol>
             ) : null}
+            <Button size="sm" variant="secondary" onClick={clearRoute}>
+              Annuler la navigation
+            </Button>
           </div>
         )}
       </div>
       {listingSearch && variant !== 'focus' && (
         <p className="text-[11px] text-muted">
-          Survolez ou cliquez un pin : les détails restent affichés. Fermez avec × ou en cliquant ailleurs sur la carte.
+          Survolez les pins même pendant un itinéraire. Annulez la navigation depuis le panneau ou la fiche.
           {searchCenter && radiusKm > 0 ? ` Filtre : dans un rayon de ${radiusKm} km.` : ''}
           {markers.length ? ` · ${markers.length} fiche${markers.length > 1 ? 's' : ''} avec GPS` : ''}.
         </p>
