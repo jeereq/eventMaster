@@ -79,10 +79,24 @@ function readPlace(item: { lat?: string; lon?: string; display_name?: string }):
   return { lat, lng, label: item.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}` };
 }
 
-export async function searchPlaces(query: string, limit = 5): Promise<GeoPlace[]> {
+export async function searchPlaces(
+  query: string,
+  limit = 5,
+  options?: { viewbox?: string; bounded?: boolean },
+): Promise<GeoPlace[]> {
   const q = query.trim();
   if (q.length < 2) return [];
-  const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=${limit}&q=${encodeURIComponent(q)}`;
+  const params = new URLSearchParams({
+    format: 'json',
+    addressdetails: '1',
+    limit: String(limit),
+    q,
+  });
+  if (options?.viewbox) {
+    params.set('viewbox', options.viewbox);
+    if (options.bounded !== false) params.set('bounded', '1');
+  }
+  const url = `https://nominatim.openstreetmap.org/search?${params.toString()}`;
   const res = await fetch(url, { headers: { Accept: 'application/json' } });
   if (!res.ok) return [];
   const data = await res.json();

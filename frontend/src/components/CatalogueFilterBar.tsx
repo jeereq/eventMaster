@@ -5,12 +5,12 @@ import { Search, SlidersHorizontal, X } from 'lucide-react';
 import { Button, Input, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
-  CATALOGUE_COMMUNE_SUGGESTIONS,
   RADIUS_KM_OPTIONS,
   type CatalogueGeoState,
   type CatalogueProximity,
   type CatalogueViewMode,
 } from '@/lib/marketplace';
+import { communesForCity, neighborhoodsFor, normalizeRdcCity } from '@/lib/rdcCities';
 import CatalogueViewToggle from '@/components/CatalogueViewToggle';
 
 export type CatalogueFilterChip = {
@@ -241,32 +241,35 @@ export function CatalogueGeoFields({
 
   return (
     <>
-      <CatalogueFilterField label="Ville">
-        <Input
-          value={value.city}
-          onChange={(e) => set({ city: e.target.value })}
-          placeholder="Ex. Kinshasa"
+      <CatalogueFilterField label="Ville" hint="Catalogue limité à Kinshasa et Lubumbashi.">
+        <CatalogueChoicePills
+          options={[
+            { id: 'Kinshasa', label: 'Kinshasa' },
+            { id: 'Lubumbashi', label: 'Lubumbashi' },
+          ]}
+          value={normalizeRdcCity(value.city) || ''}
+          onChange={(id) => set({ city: id, commune: '', neighborhood: '', nearPlace: '' })}
         />
       </CatalogueFilterField>
-      <CatalogueFilterField label="Commune" hint="Choisissez une suggestion ou saisissez la vôtre.">
+      <CatalogueFilterField label="Commune">
         <CatalogueChoicePills
-          options={CATALOGUE_COMMUNE_SUGGESTIONS.map((name) => ({ id: name, label: name }))}
+          options={communesForCity(value.city).map((item) => ({ id: item.name, label: item.name }))}
           value={value.commune}
-          onChange={(id) => set({ commune: id, nearPlace: value.proximity === 'near' && !value.nearPlace ? id : value.nearPlace })}
+          onChange={(id) => set({ commune: id, neighborhood: '', nearPlace: value.proximity === 'near' ? id : value.nearPlace })}
         />
-        <Input
-          value={value.commune}
-          onChange={(e) => set({ commune: e.target.value })}
-          placeholder="Autre commune…"
-          className="mt-2"
-        />
+        {!normalizeRdcCity(value.city) ? (
+          <p className="text-[11px] text-muted mt-1">Choisissez d’abord Kinshasa ou Lubumbashi.</p>
+        ) : null}
       </CatalogueFilterField>
       <CatalogueFilterField label="Quartier">
-        <Input
+        <CatalogueChoicePills
+          options={neighborhoodsFor(value.city, value.commune).map((name) => ({ id: name, label: name }))}
           value={value.neighborhood}
-          onChange={(e) => set({ neighborhood: e.target.value })}
-          placeholder="Quartier"
+          onChange={(id) => set({ neighborhood: id })}
         />
+        {normalizeRdcCity(value.city) && !value.commune ? (
+          <p className="text-[11px] text-muted mt-1">Choisissez une commune pour voir les quartiers.</p>
+        ) : null}
       </CatalogueFilterField>
       <CatalogueFilterField label="Avenue / rue" hint="Filtre le texte d’adresse (ex. avenue de la Libération).">
         <Input

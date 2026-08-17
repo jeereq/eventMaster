@@ -1,5 +1,6 @@
 import type { RoomType } from '@/lib/roomLayoutUtils';
 import { formatFc } from '@/config/landingPricing';
+import { findRdcCommune, isAllowedRdcCity, neighborhoodsFor } from '@/lib/rdcCities';
 
 export type VenuePriceUnit = 'EVENT' | 'DAY' | 'HOUR' | 'MINUTE' | 'PERSON' | 'QUOTA';
 export type TenantAccountKind = 'ORGANIZER' | 'VENDOR' | 'BOTH' | 'CLIENT';
@@ -89,20 +90,6 @@ export const SERVICE_CATEGORY_LABELS: Record<ServiceCategory, string> = {
 };
 
 export const SERVICE_CATEGORIES = Object.keys(SERVICE_CATEGORY_LABELS) as ServiceCategory[];
-
-/** Communes fréquentes (sélection rapide dans les filtres catalogue). */
-export const CATALOGUE_COMMUNE_SUGGESTIONS = [
-  'Gombe',
-  'Ngaliema',
-  'Limete',
-  'Lemba',
-  'Kintambo',
-  'Masina',
-  'Ndjili',
-  'Mont-Ngafula',
-  'Kalamu',
-  'Bandalungwa',
-];
 
 export interface PublicService {
   slug: string;
@@ -300,9 +287,11 @@ export function missingPublishLocation(draft: {
   latitude?: string | number | null;
   longitude?: string | number | null;
 }): 'city' | 'commune' | 'neighborhood' | 'map' | null {
-  if (!String(draft.city || '').trim()) return 'city';
-  if (!String(draft.commune || '').trim()) return 'commune';
-  if (!String(draft.neighborhood || '').trim()) return 'neighborhood';
+  const city = String(draft.city || '').trim();
+  if (!city || !isAllowedRdcCity(city)) return 'city';
+  if (!findRdcCommune(city, draft.commune)) return 'commune';
+  const quartier = String(draft.neighborhood || '').trim();
+  if (!quartier || !neighborhoodsFor(city, draft.commune).includes(quartier)) return 'neighborhood';
   if (!hasValidGps(draft.latitude, draft.longitude)) return 'map';
   return null;
 }
@@ -377,10 +366,18 @@ export async function resolveCatalogueGeo(filters: CatalogueGeoState): Promise<C
     if (!q) {
       throw new Error('Indiquez une commune, un quartier ou une avenue pour chercher à proximité.');
     }
-    const { geocodeLocation } = await import('@/lib/leafletLoader');
-    const place = await geocodeLocation(`${q}, ${filters.city.trim() || 'Kinshasa'}, RD Congo`);
-    if (!place) {
-      throw new Error('Lieu introuvable. Précisez la commune ou l’avenue.');
+    const { searchPlaces } = await import('@/lib/leafletLoader');
+    const { findRdcCity, nominatimViewbox, pointInBounds } = await import('@/lib/rdcCities');
+    const cityMeta = findRdcCity(filters.city);
+    if (!cityMeta) {
+      throw new Error('Choisissez Kinshasa ou Lubumbashi pour chercher à proximité.');
+    }
+    const [place] = await searchPlaces(`${q}, ${cityMeta.name}, RD Congo`, 1, {
+      viewbox: nominatimViewbox(cityMeta.bounds),
+      bounded: true,
+    });
+    if (!place || !pointInBounds(place.lat, place.lng, cityMeta.bounds)) {
+      throw new Error('Lieu introuvable dans Kinshasa ou Lubumbashi. Précisez la commune ou l’avenue.');
     }
     return { ...filters, lat: place.lat, lng: place.lng };
   }

@@ -206,6 +206,7 @@ export default function MarketplaceHubPage() {
               variant={mode === 'focus' ? 'focus' : 'default'}
               searchCenter={searchCenter}
               radiusKm={searchCenter ? applied.radiusKm : 0}
+              city={applied.city}
             />
           </div>
         ) : (

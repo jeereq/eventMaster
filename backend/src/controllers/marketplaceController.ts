@@ -18,6 +18,12 @@ import {
 import { collectUnavailableDates, haversineKm, parseBlockedDates } from '../utils/marketplaceDates';
 import { RoomType, ServiceCategory, TenantAccountKind, MarketplaceBookingStatus, VenuePriceUnit } from '@prisma/client';
 import { PlanFeatureError, assertServiceQuota, assertVenueCatalogPublish } from '../services/planFeaturesService';
+import {
+  allowedCityPrismaFilter,
+  normalizeAllowedCity,
+  normalizeAllowedCommune,
+  pointInCityBounds,
+} from '../utils/rdcCities';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -115,15 +121,44 @@ function publishLocationError(
   latitude: unknown,
   longitude: unknown,
 ): string | null {
-  if (!String(city || '').trim()) return 'La ville est requise pour publier.';
-  if (!String(commune || '').trim()) return 'La commune est requise pour publier.';
+  const cityName = normalizeAllowedCity(city);
+  if (cityName === null) return 'La ville doit être Kinshasa ou Lubumbashi.';
+  if (!cityName) return 'Choisissez Kinshasa ou Lubumbashi pour publier.';
+  const communeName = normalizeAllowedCommune(cityName, commune);
+  if (communeName === null) return `La commune doit appartenir à ${cityName}.`;
+  if (!communeName) return 'La commune est requise pour publier.';
   if (!String(neighborhood || '').trim()) return 'Le quartier est requis pour publier.';
   const lat = latitude != null && latitude !== '' ? Number(latitude) : NaN;
   const lng = longitude != null && longitude !== '' ? Number(longitude) : NaN;
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     return 'Placez la position GPS sur la carte pour publier.';
   }
+  if (!pointInCityBounds(lat, lng, cityName)) {
+    return `Placez la position GPS dans le cadre de ${cityName}.`;
+  }
   return null;
+}
+
+function normalizeListingPlace(
+  city: unknown,
+  commune: unknown,
+  neighborhood: unknown,
+): { error: string } | { city: string | null; commune: string | null; neighborhood: string | null } {
+  const cityName = normalizeAllowedCity(city);
+  if (cityName === null) {
+    return { error: 'La ville doit être Kinshasa ou Lubumbashi.' };
+  }
+  const communeName = cityName
+    ? normalizeAllowedCommune(cityName, commune)
+    : (String(commune || '').trim() ? null : '');
+  if (communeName === null) {
+    return { error: cityName ? `La commune doit appartenir à ${cityName}.` : 'Choisissez d’abord Kinshasa ou Lubumbashi.' };
+  }
+  return {
+    city: cityName || null,
+    commune: communeName || null,
+    neighborhood: String(neighborhood || '').trim() || null,
+  };
 }
 
 function parseOptionalInt(value: unknown): number | null {
@@ -172,7 +207,7 @@ export async function listPublicVenues(req: Request, res: Response) {
     const listings = await prisma.venueListing.findMany({
       where: {
         isPublic: true,
-        ...(city ? { city: { contains: city, mode: 'insensitive' } } : {}),
+        ...allowedCityPrismaFilter(city),
         ...(commune ? { commune: { contains: commune, mode: 'insensitive' } } : {}),
         ...(neighborhood ? { neighborhood: { contains: neighborhood, mode: 'insensitive' } } : {}),
         ...(priceRange ? { priceFromFc: priceRange } : {}),
@@ -410,6 +445,8 @@ export async function upsertRoomListing(req: AuthenticatedRequest, res: Response
       return res.status(400).json({ error: `Maximum ${MARKETPLACE_MAX_VIDEOS} vidéos par salle.` });
     }
     const blockedSafe = parseBlockedDates(blockedDates);
+    const place = normalizeListingPlace(city, commune, neighborhood);
+    if ('error' in place) return res.status(400).json({ error: place.error });
 
     if (wantPublic) {
       try {
@@ -429,7 +466,7 @@ export async function upsertRoomListing(req: AuthenticatedRequest, res: Response
 
     const existing = await prisma.venueListing.findUnique({ where: { roomId } });
     const slug = existing?.slug
-      || await uniqueSlug(`${room.name}-${city || room.location || 'kinshasa'}`, async (s) => {
+      || await uniqueSlug(`${room.name}-${place.city || room.location || 'kinshasa'}`, async (s) => {
         const hit = await prisma.venueListing.findUnique({ where: { slug: s }, select: { id: true } });
         return Boolean(hit);
       });
@@ -442,9 +479,9 @@ export async function upsertRoomListing(req: AuthenticatedRequest, res: Response
         slug,
         isPublic: wantPublic,
         headline: headline?.trim() || room.name,
-        city: city?.trim() || null,
-        commune: commune?.trim() || null,
-        neighborhood: neighborhood?.trim() || null,
+        city: place.city,
+        commune: place.commune,
+        neighborhood: place.neighborhood,
         address: address?.trim() || room.location,
         latitude: latitude != null && latitude !== '' ? Number(latitude) : null,
         longitude: longitude != null && longitude !== '' ? Number(longitude) : null,
@@ -459,9 +496,9 @@ export async function upsertRoomListing(req: AuthenticatedRequest, res: Response
       update: {
         isPublic: wantPublic,
         headline: headline !== undefined ? (headline?.trim() || room.name) : undefined,
-        city: city !== undefined ? (city?.trim() || null) : undefined,
-        commune: commune !== undefined ? (commune?.trim() || null) : undefined,
-        neighborhood: neighborhood !== undefined ? (neighborhood?.trim() || null) : undefined,
+        city: city !== undefined ? place.city : undefined,
+        commune: commune !== undefined ? place.commune : undefined,
+        neighborhood: neighborhood !== undefined ? place.neighborhood : undefined,
         address: address !== undefined ? (address?.trim() || null) : undefined,
         latitude: latitude !== undefined ? (latitude != null && latitude !== '' ? Number(latitude) : null) : undefined,
         longitude: longitude !== undefined ? (longitude != null && longitude !== '' ? Number(longitude) : null) : undefined,
@@ -477,7 +514,7 @@ export async function upsertRoomListing(req: AuthenticatedRequest, res: Response
 
     if (wantPublic) {
       const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, accountKind: true } });
-      await ensureVendorProfile(tenantId, tenant?.name || room.name, city?.trim() || listing.city);
+      await ensureVendorProfile(tenantId, tenant?.name || room.name, place.city || listing.city);
       if (tenant && tenant.accountKind === TenantAccountKind.ORGANIZER) {
         await prisma.tenant.update({
           where: { id: tenantId },
@@ -570,7 +607,7 @@ export async function listPublicServices(req: Request, res: Response) {
     const offerings = await prisma.serviceOffering.findMany({
       where: {
         isPublic: true,
-        ...(city ? { city: { contains: city, mode: 'insensitive' } } : {}),
+        ...allowedCityPrismaFilter(city),
         ...(commune ? { commune: { contains: commune, mode: 'insensitive' } } : {}),
         ...(neighborhood ? { neighborhood: { contains: neighborhood, mode: 'insensitive' } } : {}),
         ...(category ? { category } : {}),
@@ -832,6 +869,8 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
       return res.status(400).json({ error: `Maximum ${MARKETPLACE_MAX_VIDEOS} vidéos par prestation.` });
     }
     const blockedSafe = parseBlockedDates(blockedDates);
+    const place = normalizeListingPlace(city, commune, neighborhood);
+    if ('error' in place) return res.status(400).json({ error: place.error });
 
     if (wantPublic) {
       const locationError = publishLocationError(city, commune, neighborhood, latitude, longitude);
@@ -842,7 +881,7 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
     }
 
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, accountKind: true } });
-    const profile = await ensureVendorProfile(tenantId, tenant?.name || title, city?.trim() || null);
+    const profile = await ensureVendorProfile(tenantId, tenant?.name || title, place.city);
     const serviceId = typeof req.params.id === 'string' ? req.params.id : '';
 
     const existing = serviceId
@@ -862,7 +901,7 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
     }
 
     const slug = existing?.slug
-      || await uniqueSlug(`${title}-${city || 'kinshasa'}`, async (s) => {
+      || await uniqueSlug(`${title}-${place.city || 'kinshasa'}`, async (s) => {
         const hit = await prisma.serviceOffering.findUnique({ where: { slug: s }, select: { id: true } });
         return Boolean(hit);
       });
@@ -870,9 +909,9 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
     const data = {
       title: String(title).trim(),
       description: description?.trim() || null,
-      city: city?.trim() || null,
-      commune: commune?.trim() || null,
-      neighborhood: neighborhood?.trim() || null,
+      city: place.city,
+      commune: place.commune,
+      neighborhood: place.neighborhood,
       coverageRadiusKm: Number.isFinite(parsedRadius) && parsedRadius > 0 ? parsedRadius : null,
       latitude: latitude != null && latitude !== '' && Number.isFinite(Number(latitude)) ? Number(latitude) : null,
       longitude: longitude != null && longitude !== '' && Number.isFinite(Number(longitude)) ? Number(longitude) : null,

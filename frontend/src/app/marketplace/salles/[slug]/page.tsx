@@ -195,6 +195,7 @@ export default function MarketplaceVenueDetailPage() {
                       height={360}
                       navigateOnClick={false}
                       autoDirections={wantRoute}
+                      city={venue.city}
                     />
                   </div>
                 ) : (

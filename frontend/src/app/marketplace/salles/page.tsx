@@ -187,6 +187,7 @@ export default function MarketplaceVenuesPage() {
             variant={mode === 'focus' ? 'focus' : 'default'}
             searchCenter={searchCenter}
             radiusKm={searchCenter ? applied.radiusKm : 0}
+            city={applied.city}
           />
         ) : (
           <>

@@ -11,6 +11,7 @@ import {
   formatRouteDuration,
   type DrivingRoute,
 } from '@/lib/osrm';
+import { findRdcCity, cityForPoint, leafletMaxBounds, nominatimViewbox, pointInAllowedRdcCities, pointInBounds } from '@/lib/rdcCities';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
@@ -131,6 +132,7 @@ export default function MarketplaceLocationsMap({
   navigateOnClick = false,
   variant = 'default',
   autoDirections = false,
+  city,
 }: {
   markers: MarketplaceMapMarker[];
   height?: number;
@@ -142,6 +144,7 @@ export default function MarketplaceLocationsMap({
   navigateOnClick?: boolean;
   variant?: 'default' | 'focus';
   autoDirections?: boolean;
+  city?: string | null;
 }) {
   const router = useRouter();
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -164,6 +167,9 @@ export default function MarketplaceLocationsMap({
   navigateOnClickRef.current = navigateOnClick;
   const routerRef = useRef(router);
   routerRef.current = router;
+
+  const cityMeta = findRdcCity(city);
+  const cityKey = cityMeta?.name || '';
 
   const [query, setQuery] = useState('');
   const [osmResults, setOsmResults] = useState<GeoPlace[]>([]);
@@ -247,7 +253,11 @@ export default function MarketplaceLocationsMap({
           map.getPane('coverage').style.pointerEvents = 'none';
         }
 
-        const points = markersRef.current.filter((m) => Number.isFinite(m.lat) && Number.isFinite(m.lng));
+        const points = markersRef.current.filter((m) =>
+          Number.isFinite(m.lat)
+          && Number.isFinite(m.lng)
+          && (cityMeta ? pointInBounds(m.lat, m.lng, cityMeta.bounds) : pointInAllowedRdcCities(m.lat, m.lng)),
+        );
         const layers: any[] = points.map((m) => {
           const color = markerColor(m.kind);
           const kindLabel = m.kind === 'service' ? 'Prestataire EventMaster' : m.kind === 'venue' ? 'Salle EventMaster' : '';
@@ -309,14 +319,35 @@ export default function MarketplaceLocationsMap({
           }
         }
 
+        if (cityMeta) {
+          map.setMaxBounds(leafletMaxBounds(cityMeta.bounds));
+        } else if (points.length > 0) {
+          const inferred = cityForPoint(points[0].lat, points[0].lng);
+          const sameCity = inferred && points.every((p) => pointInBounds(p.lat, p.lng, inferred.bounds));
+          if (sameCity) map.setMaxBounds(leafletMaxBounds(inferred.bounds));
+        }
+
         if (layers.length === 0) {
-          map.setView([KINSHASA.lat, KINSHASA.lng], 11);
-          overviewBoundsRef.current = null;
+          if (cityMeta) {
+            map.fitBounds(leafletMaxBounds(cityMeta.bounds), { maxZoom: 12, padding: [24, 24] });
+          } else {
+            map.setView([KINSHASA.lat, KINSHASA.lng], 11);
+          }
+          overviewBoundsRef.current = cityMeta ? L.latLngBounds(leafletMaxBounds(cityMeta.bounds)) : null;
         } else {
           const group = L.featureGroup(layers).addTo(map);
-          const bounds = group.getBounds().pad(0.28);
-          overviewBoundsRef.current = bounds;
-          map.fitBounds(bounds, { maxZoom: 14 });
+          const mixedCities = !cityMeta && points.length > 1 && (() => {
+            const first = cityForPoint(points[0].lat, points[0].lng);
+            return Boolean(first && points.some((p) => !pointInBounds(p.lat, p.lng, first.bounds)));
+          })();
+          if (mixedCities) {
+            map.setView([KINSHASA.lat, KINSHASA.lng], 11);
+            overviewBoundsRef.current = L.latLngBounds(leafletMaxBounds(findRdcCity('Kinshasa')!.bounds));
+          } else {
+            const bounds = group.getBounds().pad(0.28);
+            overviewBoundsRef.current = bounds;
+            map.fitBounds(bounds, { maxZoom: 14 });
+          }
         }
 
         map.on('click', (event: { latlng: { lat: number; lng: number } }) => {
@@ -327,6 +358,10 @@ export default function MarketplaceLocationsMap({
             return;
           }
           if (searchable && !listingSearch) {
+            const allowed = cityMeta
+              ? pointInBounds(point.lat, point.lng, cityMeta.bounds)
+              : pointInAllowedRdcCities(point.lat, point.lng);
+            if (!allowed) return;
             void reverseGeocode(point.lat, point.lng).then((label) => {
               onPlaceSelectRef.current?.({
                 lat: point.lat,
@@ -356,7 +391,7 @@ export default function MarketplaceLocationsMap({
       tileLayerRef.current = null;
       radiusLayerRef.current = null;
     };
-  }, [markersKey, centerKey, searchable, listingSearch, searchCenter, radiusKm]);
+  }, [markersKey, centerKey, searchable, listingSearch, searchCenter, radiusKm, cityKey]);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -556,13 +591,27 @@ export default function MarketplaceLocationsMap({
     }
     setSearching(true);
     try {
-      setOsmResults(await searchPlaces(`${q}, RD Congo`));
+      const places = await searchPlaces(
+        `${q}${cityMeta ? `, ${cityMeta.name}, RD Congo` : ', RD Congo'}`,
+        8,
+        cityMeta ? { viewbox: nominatimViewbox(cityMeta.bounds), bounded: true } : undefined,
+      );
+      setOsmResults(
+        places.filter((place) =>
+          cityMeta
+            ? pointInBounds(place.lat, place.lng, cityMeta.bounds)
+            : pointInAllowedRdcCities(place.lat, place.lng),
+        ),
+      );
     } finally {
       setSearching(false);
     }
   };
 
   const applyPlace = (place: GeoPlace) => {
+    if (cityMeta ? !pointInBounds(place.lat, place.lng, cityMeta.bounds) : !pointInAllowedRdcCities(place.lat, place.lng)) {
+      return;
+    }
     setQuery(place.label);
     setOsmResults([]);
     onPlaceSelect?.(place);

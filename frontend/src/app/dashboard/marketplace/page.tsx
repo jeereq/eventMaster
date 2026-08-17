@@ -29,6 +29,7 @@ import BlockedDatesField from '@/components/BlockedDatesField';
 import MarketplaceMediaField from '@/components/MarketplaceMediaField';
 import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import LocationPickerMap from '@/components/LocationPickerMap';
+import CityLocationFields from '@/components/CityLocationFields';
 import MarketplaceBookingsPanel from '@/components/MarketplaceBookingsPanel';
 
 interface ServiceItem {
@@ -187,6 +188,11 @@ export default function MarketplaceDeskPage() {
   const handleSave = async (publish: boolean) => {
     if (publish) {
       const missing = missingPublishLocation(draft);
+      if (missing === 'city') {
+        setEditorTab('details');
+        setError('Choisissez Kinshasa ou Lubumbashi, puis la commune et le quartier.');
+        return;
+      }
       if (missing === 'map') {
         setEditorTab('map');
         setError('Ville, commune, quartier et position GPS sont obligatoires pour publier.');
@@ -492,9 +498,16 @@ export default function MarketplaceDeskPage() {
             />
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input label="Ville / zone" value={draft.city} required onChange={(e) => setDraft((d) => ({ ...d, city: e.target.value }))} />
-            <Input label="Commune" value={draft.commune} required onChange={(e) => setDraft((d) => ({ ...d, commune: e.target.value }))} />
-            <Input label="Quartier" value={draft.neighborhood} required onChange={(e) => setDraft((d) => ({ ...d, neighborhood: e.target.value }))} />
+            <div className="sm:col-span-2">
+              <CityLocationFields
+                city={draft.city}
+                commune={draft.commune}
+                neighborhood={draft.neighborhood}
+                onChange={({ city, commune, neighborhood }) =>
+                  setDraft((d) => ({ ...d, city, commune, neighborhood }))
+                }
+              />
+            </div>
             <Input
               label="Rayon d’intervention (km)"
               type="number"
@@ -547,6 +560,8 @@ export default function MarketplaceDeskPage() {
             <LocationPickerMap
               latitude={draft.latitude}
               longitude={draft.longitude}
+              city={draft.city}
+              commune={draft.commune}
               required
               onChange={({ latitude, longitude }) => setDraft((d) => ({ ...d, latitude, longitude }))}
             />

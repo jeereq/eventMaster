@@ -33,6 +33,7 @@ import BlockedDatesField from '@/components/BlockedDatesField';
 import MarketplaceMediaField from '@/components/MarketplaceMediaField';
 import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import LocationPickerMap from '@/components/LocationPickerMap';
+import CityLocationFields from '@/components/CityLocationFields';
 import { getQuotaLockMessage, getRoomTypeLockMessage, ROOM_TYPE_MIN_LEVEL, canPublishVenueCatalog } from '@/lib/planAccess';
 
 interface RoomStaffItem {
@@ -345,6 +346,11 @@ export default function RoomsManagement() {
     if (!listingRoom) return;
     if (publish) {
       const missing = missingPublishLocation(listingDraft);
+      if (missing === 'city') {
+        setListingTab('details');
+        setError('Choisissez Kinshasa ou Lubumbashi, puis la commune et le quartier.');
+        return;
+      }
       if (missing === 'map') {
         setListingTab('map');
         setError('Ville, commune, quartier et position GPS sont obligatoires pour publier.');
@@ -1133,26 +1139,16 @@ export default function RoomsManagement() {
               onChange={(e) => setListingDraft((d) => ({ ...d, headline: e.target.value }))}
             />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Input
-                label="Ville"
-                value={listingDraft.city}
-                onChange={(e) => setListingDraft((d) => ({ ...d, city: e.target.value }))}
-                placeholder="Kinshasa"
-                required
-              />
-              <Input
-                label="Commune"
-                value={listingDraft.commune}
-                onChange={(e) => setListingDraft((d) => ({ ...d, commune: e.target.value }))}
-                placeholder="Gombe"
-                required
-              />
-              <Input
-                label="Quartier"
-                value={listingDraft.neighborhood}
-                onChange={(e) => setListingDraft((d) => ({ ...d, neighborhood: e.target.value }))}
-                required
-              />
+              <div className="sm:col-span-2">
+                <CityLocationFields
+                  city={listingDraft.city}
+                  commune={listingDraft.commune}
+                  neighborhood={listingDraft.neighborhood}
+                  onChange={({ city, commune, neighborhood }) =>
+                    setListingDraft((d) => ({ ...d, city, commune, neighborhood }))
+                  }
+                />
+              </div>
               <Input
                 label="Adresse"
                 value={listingDraft.address}
@@ -1205,6 +1201,8 @@ export default function RoomsManagement() {
               <LocationPickerMap
                 latitude={listingDraft.latitude}
                 longitude={listingDraft.longitude}
+                city={listingDraft.city}
+                commune={listingDraft.commune}
                 required
                 onChange={({ latitude, longitude }) => setListingDraft((d) => ({ ...d, latitude, longitude }))}
               />

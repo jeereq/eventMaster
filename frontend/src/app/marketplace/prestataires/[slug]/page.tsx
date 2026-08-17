@@ -176,6 +176,7 @@ export default function MarketplaceServiceDetailPage() {
                       height={360}
                       navigateOnClick={false}
                       autoDirections={wantRoute}
+                      city={service.city}
                     />
                   </div>
                 ) : (
