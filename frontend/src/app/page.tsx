@@ -4,26 +4,23 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
-import {
-  buildLandingTemplateGroups,
-  type LandingTemplate,
-} from '@/config/landingTemplates';
+import type { LandingTemplate } from '@/config/landingTemplates';
 import { fetchPublicLandingTemplates } from '@/lib/landingTemplateAdapter';
 import LandingPricingSection from '@/components/landing/LandingPricingSection';
 import LandingRolesSection from '@/components/landing/LandingRolesSection';
 import LandingWorkflowSection from '@/components/landing/LandingWorkflowSection';
 import LandingMobileSection from '@/components/landing/LandingMobileSection';
 import FaqSection from '@/components/landing/FaqSection';
+import LandingVitrineSection from '@/components/landing/LandingVitrineSection';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import PublicCtaBand from '@/components/PublicCtaBand';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
 import { Modal, Button } from '@/components/ui';
-import { cn } from '@/lib/cn';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
-  ArrowRight, Loader2, LayoutGrid, QrCode, Mail, Sparkles,
+  ArrowRight, LayoutGrid, QrCode, Mail, Sparkles,
   Building2, Users, CalendarCheck, Smartphone,
 } from 'lucide-react';
 import CelebrateMood from '@/components/CelebrateMood';
@@ -37,10 +34,8 @@ function getCategoryLabel(category: string) {
 export default function Home() {
   const { user } = useAuth();
   const { site } = usePlatformSite();
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [modalTemplate, setModalTemplate] = useState<LandingTemplate | null>(null);
   const [dbPlans, setDbPlans] = useState<any>(null);
-  const [loadingPlans, setLoadingPlans] = useState(true);
   const [publicTemplates, setPublicTemplates] = useState<LandingTemplate[]>([]);
   const [loadingPublicTemplates, setLoadingPublicTemplates] = useState(true);
 
@@ -56,8 +51,6 @@ export default function Home() {
         }
       } catch {
         /* offline — tarifs fallback */
-      } finally {
-        setLoadingPlans(false);
       }
     }
 
@@ -71,14 +64,6 @@ export default function Home() {
     loadPublicTemplates();
   }, []);
 
-  const categories = [
-    { id: 'all', name: 'Tous' },
-    { id: 'private', name: 'Privé' },
-    { id: 'corporate', name: 'Professionnel' },
-    { id: 'casual', name: 'Cocktail' },
-  ];
-
-  const filteredTemplateGroups = buildLandingTemplateGroups(publicTemplates, selectedCategory);
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
   return (
@@ -246,131 +231,12 @@ export default function Home() {
       <LandingWorkflowSection />
       <LandingMobileSection />
 
-      <section className="py-14 sm:py-16 border-t border-border bg-surface">
-        <div className="page-container flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
-          <div className="max-w-xl space-y-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--festive-accent)]">
-              Catalogue
-            </p>
-            <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-              Salles et prestataires, sans quitter EventMaster
-            </h2>
-            <p className="text-sm text-muted leading-relaxed">
-              Publiez une salle ou une prestation avec photos et vidéos, tarifs, carte et calendrier.
-              Un organisateur demande un devis ou réserve une date ; l’acompte se verse hors plateforme.
-            </p>
-          </div>
-          <Link href="/marketplace">
-            <Button rightIcon={<ArrowRight className="w-4 h-4" />}>
-              Voir le catalogue
-            </Button>
-          </Link>
-        </div>
-      </section>
-
-      {/* Vitrine modèles — 100 % API publique / Super Admin */}
-      <section id="modeles" className="py-16 sm:py-20 bg-surface border-t border-border scroll-mt-16">
-        <div className="page-container">
-          <div className="max-w-2xl mb-10 space-y-3">
-            <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-              Modèles d&apos;invitation
-            </h2>
-            <p className="text-sm text-muted leading-relaxed">
-              {loadingPublicTemplates
-                ? 'Chargement depuis la plateforme…'
-                : publicTemplates.length === 0
-                  ? 'Aucun modèle publié. Le Super Admin crée un modèle global et active « Afficher sur la landing ».'
-                  : `${publicTemplates.length} modèle${publicTemplates.length > 1 ? 's' : ''} publié${publicTemplates.length > 1 ? 's' : ''} par l’équipe plateforme — personnalisables après inscription.`}
-            </p>
-            {isSuperAdmin && (
-              <Link href="/dashboard?tab=templates" className="inline-flex text-xs font-medium text-foreground underline underline-offset-2 hover:no-underline">
-                Gérer la vitrine (Super Admin)
-              </Link>
-            )}
-            <div className="flex flex-wrap gap-1.5 pt-2">
-              {categories.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => setSelectedCategory(c.id)}
-                  className={cn(
-                    'px-3 py-1.5 rounded-md text-xs font-medium transition',
-                    selectedCategory === c.id
-                      ? 'bg-foreground text-background'
-                      : 'bg-surface-muted text-muted hover:text-foreground border border-border',
-                  )}
-                >
-                  {c.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {loadingPublicTemplates ? (
-            <div className="flex justify-center py-16">
-              <Loader2 className="w-6 h-6 text-muted animate-spin" />
-            </div>
-          ) : publicTemplates.length === 0 ? (
-            <div className="py-12 px-6 border border-dashed border-border rounded-[var(--radius-card)] bg-background text-center max-w-lg">
-              <p className="text-sm text-muted leading-relaxed">
-                Créez un modèle global dans le concepteur, puis activez « Afficher sur la landing page ».
-              </p>
-            </div>
-          ) : filteredTemplateGroups.every((g) => g.templates.length === 0) ? (
-            <p className="text-sm text-muted py-8">Aucun modèle dans cette catégorie.</p>
-          ) : (
-            <div className="space-y-12">
-              {filteredTemplateGroups.map((group) => (
-                <div key={group.id} className="space-y-5">
-                  {selectedCategory === 'all' && group.title ? (
-                    <div>
-                      <h3 className="text-base font-semibold text-foreground">{group.title}</h3>
-                      <p className="text-xs text-muted mt-0.5">{group.subtitle}</p>
-                    </div>
-                  ) : null}
-                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {group.templates.map((t) => (
-                      <article
-                        key={t.id}
-                        className="bg-background border border-border rounded-[var(--radius-card)] p-3.5 flex flex-col em-soft-hover"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => setModalTemplate(t)}
-                          className="w-full text-left rounded-[var(--radius-button)] focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20 overflow-hidden"
-                        >
-                          <LandingInvitationPreview template={t} compact className="!max-h-[200px]" />
-                        </button>
-                        <div className="mt-3 space-y-2 flex-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">
-                              {getCategoryLabel(t.category)}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setModalTemplate(t)}
-                              className="text-xs font-medium text-foreground hover:underline inline-flex items-center gap-1"
-                            >
-                              Aperçu <ArrowRight className="w-3 h-3" />
-                            </button>
-                          </div>
-                          <h3 className="font-semibold text-sm text-foreground leading-snug line-clamp-1">{t.name}</h3>
-                          <p className="text-xs text-muted leading-relaxed line-clamp-2">{t.description}</p>
-                        </div>
-                        <div className="border-t border-border pt-3 mt-4">
-                          <Link href="/register" className="text-xs font-medium text-foreground hover:underline">
-                            Créer mon entreprise →
-                          </Link>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+      <LandingVitrineSection
+        publicTemplates={publicTemplates}
+        loadingTemplates={loadingPublicTemplates}
+        isSuperAdmin={isSuperAdmin}
+        onPreviewTemplate={setModalTemplate}
+      />
 
       <LandingPricingSection dbPlans={dbPlans} />
       <FaqSection />

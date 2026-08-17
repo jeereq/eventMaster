@@ -73,3 +73,28 @@ export function getFeatureLockMessage(
   const base = labels[feature] || 'Fonctionnalité non incluse dans votre forfait';
   return planName ? `${base} (actuel : ${planName}).` : `${base}.`;
 }
+
+export type RoomEditorLevel = 'basic' | 'standard' | 'advanced' | 'complete';
+
+export const ROOM_TYPE_MIN_LEVEL: Record<string, RoomEditorLevel> = {
+  SIMPLE: 'basic',
+  BANQUET: 'standard',
+  CONFERENCE: 'standard',
+  AMPHITHEATER: 'advanced',
+  TENT: 'advanced',
+  CUSTOM: 'complete',
+};
+
+const ROOM_LEVEL_HINT: Record<RoomEditorLevel, string> = {
+  basic: 'Essentials',
+  standard: 'Business',
+  advanced: 'Premium',
+  complete: 'Enterprise 1',
+};
+
+export function getRoomTypeLockMessage(roomType: string, planName?: string | null): string {
+  const level = ROOM_TYPE_MIN_LEVEL[roomType] || 'standard';
+  const needed = ROOM_LEVEL_HINT[level];
+  const base = `Le type « ${roomType} » nécessite le forfait ${needed} ou supérieur`;
+  return planName ? `${base} (actuel : ${planName}).` : `${base}.`;
+}

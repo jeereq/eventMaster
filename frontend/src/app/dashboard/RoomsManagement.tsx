@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import {
   Building2, Plus, Trash2, Users, UserPlus, CheckCircle2,
   ChevronLeft, ChevronRight, LayoutGrid, Theater, Tent, Presentation, Edit3, Sparkles, Ruler,
-  Globe, GlobeLock,
+  Globe, GlobeLock, Lock,
 } from 'lucide-react';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import RoomLayoutEditor from '@/components/RoomLayoutEditor';
@@ -33,6 +33,7 @@ import BlockedDatesField from '@/components/BlockedDatesField';
 import MarketplaceMediaField from '@/components/MarketplaceMediaField';
 import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import LocationPickerMap from '@/components/LocationPickerMap';
+import { getQuotaLockMessage, getRoomTypeLockMessage, ROOM_TYPE_MIN_LEVEL } from '@/lib/planAccess';
 
 interface RoomStaffItem {
   id: string;
@@ -116,7 +117,7 @@ const fieldClass =
 const labelClass = 'block text-xs font-medium text-muted mb-1.5';
 
 export default function RoomsManagement() {
-  const { planFeatures, planQuota, tenant, refreshProfile } = useAuth();
+  const { planFeatures, planQuota, tenant, refreshProfile, refreshPlanFeatures } = useAuth();
   const { mode: roomsViewMode, setViewMode: setRoomsViewMode, columns: roomsColumns, setGridColumns: setRoomsColumns, gridClassName: roomsGridClass } = useViewMode('em-view-rooms', 'grid', 3);
   const [roomsPage, setRoomsPage] = useState(1);
   const ROOMS_PER_PAGE = 9;
@@ -167,10 +168,14 @@ export default function RoomsManagement() {
   const [listingTab, setListingTab] = useState<MarketplaceFormTab>('details');
 
   const allowedRoomTypes = useMemo(() => {
-    const allowed = planFeatures?.allowedRoomTypes;
-    if (!allowed?.length) return selectableRoomTypes;
+    if (!planFeatures) return selectableRoomTypes;
+    const allowed = planFeatures.allowedRoomTypes?.length
+      ? planFeatures.allowedRoomTypes
+      : ['SIMPLE'];
     return selectableRoomTypes.filter((t) => allowed.includes(t));
-  }, [planFeatures?.allowedRoomTypes]);
+  }, [planFeatures]);
+
+  const roomsQuotaMsg = getQuotaLockMessage('rooms', planQuota);
 
   const roomsAtLimit = Boolean(
     planQuota &&
@@ -203,6 +208,7 @@ export default function RoomsManagement() {
   };
 
   const openWizard = () => {
+    if (roomsAtLimit) return;
     resetWizard();
     setError('');
     setShowWizard(true);
@@ -244,6 +250,14 @@ export default function RoomsManagement() {
 
   const handleCreate = async () => {
     setError('');
+    if (roomsAtLimit) {
+      setError(roomsQuotaMsg || 'Quota de salles atteint.');
+      return;
+    }
+    if (!allowedRoomTypes.includes(roomType)) {
+      setError(getRoomTypeLockMessage(roomType, tenant?.plan));
+      return;
+    }
     setSaving(true);
     try {
       await api.post('/rooms', {
@@ -257,6 +271,7 @@ export default function RoomsManagement() {
       setSuccess('Salle créée avec son plan.');
       closeWizard();
       await load();
+      await refreshPlanFeatures();
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la création.');
     } finally {
@@ -270,6 +285,7 @@ export default function RoomsManagement() {
       await api.delete(`/rooms/${room.id}`);
       setSuccess('Salle supprimée.');
       await load();
+      await refreshPlanFeatures();
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la suppression.');
     }
@@ -584,7 +600,7 @@ export default function RoomsManagement() {
 
       {roomsAtLimit && (
         <Alert variant="warning">
-          Quota de salles atteint pour le forfait {tenant?.plan || 'actuel'}.{' '}
+          {roomsQuotaMsg || `Quota de salles atteint pour le forfait ${tenant?.plan || 'actuel'}.`}{' '}
           <Link href="/dashboard/billing" className="font-semibold underline">Voir les forfaits</Link>
         </Alert>
       )}
@@ -702,32 +718,59 @@ export default function RoomsManagement() {
 
         {wizardStep === 2 && (
           <div className="space-y-3">
-            <p className="text-xs text-muted">Choisissez une base — vous pourrez tout ajuster sur le plan (tables, chaises, scène, couleurs).</p>
+            <p className="text-xs text-muted">
+              Types disponibles selon votre forfait
+              {planFeatures?.roomEditorLevel ? ` (éditeur ${planFeatures.roomEditorLevel})` : ''}.
+              Les autres restent visibles mais verrouillés.
+            </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-              {allowedRoomTypes.map((type) => (
+              {selectableRoomTypes.map((type) => {
+                const locked = Boolean(planFeatures) && !allowedRoomTypes.includes(type);
+                const minLevel = ROOM_TYPE_MIN_LEVEL[type];
+                return (
                 <button
                   key={type}
                   type="button"
+                  disabled={locked}
                   onClick={() => {
+                    if (locked) return;
                     setRoomType(type);
                     setLayoutParams(defaultParams[type]);
                     setBlueprintDraft(null);
                   }}
                   className={cn(
                     'text-left p-3.5 rounded-[var(--radius-card)] border transition-colors',
-                    roomType === type
+                    locked && 'opacity-60 cursor-not-allowed bg-surface-muted',
+                    !locked && roomType === type
                       ? 'border-primary bg-primary/5'
-                      : 'border-border bg-surface hover:bg-surface-muted',
+                      : !locked
+                        ? 'border-border bg-surface hover:bg-surface-muted'
+                        : 'border-border',
                   )}
                 >
-                  <div className={cn('mb-2', roomType === type ? 'text-primary' : 'text-muted')}>
+                  <div className={cn('mb-2 flex items-center justify-between', roomType === type && !locked ? 'text-primary' : 'text-muted')}>
                     {roomTypeIcons[type]}
+                    {locked && <Lock className="w-3.5 h-3.5" />}
                   </div>
                   <p className="font-semibold text-sm text-foreground">{roomTypeLabels[type]}</p>
                   <p className="text-[11px] text-muted mt-1 leading-relaxed">{roomTypeDescriptions[type]}</p>
+                  {locked && (
+                    <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 mt-2">
+                      {minLevel === 'standard' ? 'Business+' : minLevel === 'advanced' ? 'Premium+' : 'Enterprise 1+'}
+                    </p>
+                  )}
                 </button>
-              ))}
+                );
+              })}
             </div>
+            {planFeatures && allowedRoomTypes.length < selectableRoomTypes.length && (
+              <p className="text-[11px] text-muted">
+                <Link href="/dashboard/billing" className="font-semibold text-primary hover:underline">
+                  Changer de forfait
+                </Link>
+                {' '}pour débloquer banquet, conférence, tente ou salle personnalisée.
+              </p>
+            )}
           </div>
         )}
 
