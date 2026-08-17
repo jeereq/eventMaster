@@ -37,17 +37,25 @@ export default function CatalogueViewToggle({
   value,
   onChange,
   className,
+  compact = false,
 }: {
   value: CatalogueViewMode;
   onChange: (mode: CatalogueViewMode) => void;
   className?: string;
+  compact?: boolean;
 }) {
-  const options: Array<{ id: CatalogueViewMode; label: string; icon: typeof LayoutGrid }> = [
-    { id: 'grid', label: 'Grille', icon: LayoutGrid },
-    { id: 'list', label: 'Liste', icon: List },
-    { id: 'map', label: 'Carte', icon: Map },
-    { id: 'focus', label: 'Focus', icon: Maximize2 },
-  ];
+  const options: Array<{ id: CatalogueViewMode; label: string; icon: typeof LayoutGrid }> = compact
+    ? [
+        { id: 'grid', label: 'Grille', icon: LayoutGrid },
+        { id: 'list', label: 'Liste', icon: List },
+        { id: 'map', label: 'Carte', icon: Map },
+      ]
+    : [
+        { id: 'grid', label: 'Grille', icon: LayoutGrid },
+        { id: 'list', label: 'Liste', icon: List },
+        { id: 'map', label: 'Carte', icon: Map },
+        { id: 'focus', label: 'Focus', icon: Maximize2 },
+      ];
 
   return (
     <div
@@ -67,13 +75,14 @@ export default function CatalogueViewToggle({
           title={`Vue ${label.toLowerCase()}`}
           className={cn(
             'inline-flex flex-1 sm:flex-none items-center justify-center rounded-full px-2.5 py-1.5 transition-colors',
+            id === 'focus' && 'hidden lg:inline-flex',
             value === id
               ? 'bg-surface text-primary shadow-sm ring-1 ring-border'
               : 'text-muted hover:text-foreground',
           )}
         >
           <Icon className="h-4 w-4" />
-          <span className="ml-1 hidden text-xs font-semibold lg:inline">{label}</span>
+          <span className={cn('ml-1 text-xs font-semibold', !compact && 'hidden lg:inline')}>{label}</span>
         </button>
       ))}
     </div>

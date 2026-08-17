@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import PublicCtaBand from '@/components/PublicCtaBand';
 import MarketplacePublicNav from '@/components/MarketplacePublicNav';
@@ -32,6 +32,7 @@ export default function CatalogueSearchLayout({
   onPageChange,
   itemLabel,
   mode,
+  onViewChange,
   searchCenter,
   radiusKm,
   city,
@@ -61,6 +62,7 @@ export default function CatalogueSearchLayout({
   onPageChange: (page: number) => void;
   itemLabel: string;
   mode: CatalogueViewMode;
+  onViewChange: (mode: CatalogueViewMode) => void;
   searchCenter?: { lat: number; lng: number } | null;
   radiusKm?: number;
   city?: string | null;
@@ -69,8 +71,15 @@ export default function CatalogueSearchLayout({
 }) {
   const isMobile = useIsMobile();
   const mapMode = isCatalogueMapView(mode);
+  const lastBrowseRef = useRef<Exclude<CatalogueViewMode, 'map' | 'focus'>>('grid');
 
-  if (isMobile) {
+  useEffect(() => {
+    if (mode === 'grid' || mode === 'list') lastBrowseRef.current = mode;
+  }, [mode]);
+
+  const exitMap = () => onViewChange(lastBrowseRef.current);
+
+  if (isMobile && mapMode) {
     return (
       <PublicPageShell faqHref="/faq" hideFooter>
         <CatalogueMobileExplore
@@ -84,6 +93,7 @@ export default function CatalogueSearchLayout({
           radiusKm={radiusKm}
           city={city}
           searchOriginLabel={searchOriginLabel}
+          onExit={exitMap}
           header={
             <>
               <MarketplacePublicNav

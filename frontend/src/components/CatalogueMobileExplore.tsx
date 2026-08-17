@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Building2, ChevronUp, Locate, Navigation, Sparkles } from 'lucide-react';
+import { Building2, ChevronUp, LayoutGrid, Locate, Navigation, Sparkles, X } from 'lucide-react';
 import MarketplaceLocationsMap, {
   type MarketplaceMapHandle,
   type MarketplaceMapMarker,
@@ -172,6 +172,7 @@ export default function CatalogueMobileExplore({
   radiusKm,
   city,
   searchOriginLabel,
+  onExit,
 }: {
   items: CatalogueItem[];
   markers: MarketplaceMapMarker[];
@@ -184,6 +185,7 @@ export default function CatalogueMobileExplore({
   radiusKm?: number;
   city?: string | null;
   searchOriginLabel?: string;
+  onExit?: () => void;
 }) {
   const mapApi = useRef<MarketplaceMapHandle>(null);
   const railRef = useRef<HTMLDivElement | null>(null);
@@ -301,6 +303,16 @@ export default function CatalogueMobileExplore({
 
       <div className="absolute z-30 top-0 left-0 right-0 p-3 space-y-2 pointer-events-none">
         <div className="pointer-events-auto space-y-2">
+          {onExit ? (
+            <button
+              type="button"
+              onClick={onExit}
+              className="h-11 px-3.5 rounded-full bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center gap-1.5 text-sm font-semibold text-foreground"
+            >
+              <X className="w-4 h-4" />
+              Quitter la carte
+            </button>
+          ) : null}
           {header}
         </div>
       </div>
@@ -343,14 +355,26 @@ export default function CatalogueMobileExplore({
                 <p className="text-[11px] text-muted truncate">{selected.title}</p>
               ) : null}
             </div>
-            <button
-              type="button"
-              onClick={() => setSnap(snap === 'full' ? 'peek' : 'full')}
-              className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] font-semibold text-foreground"
-            >
-              <ChevronUp className={cn('w-3.5 h-3.5 transition', snap === 'full' && 'rotate-180')} />
-              {snap === 'full' ? 'Carte' : 'Liste'}
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {onExit ? (
+                <button
+                  type="button"
+                  onClick={onExit}
+                  className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] font-semibold text-foreground"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  Grille
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => setSnap(snap === 'full' ? 'peek' : 'full')}
+                className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] font-semibold text-foreground"
+              >
+                <ChevronUp className={cn('w-3.5 h-3.5 transition', snap === 'full' && 'rotate-180')} />
+                {snap === 'full' ? 'Réduire' : 'Plus'}
+              </button>
+            </div>
           </div>
           {error ? <p className="text-xs text-rose-600 mt-1">{error}</p> : null}
         </div>

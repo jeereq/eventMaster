@@ -116,6 +116,7 @@ export default function MarketplaceHubPage() {
       heroTitle="Salles et prestataires pour vos événements"
       heroDescription="Trouvez un lieu ou un professionnel enregistré sur EventMaster. Affinez par ville, commune, prix ou autour de vous."
       mode={mode}
+      onViewChange={setView}
       items={visible}
       markers={markers}
       loading={loading}
@@ -142,6 +143,7 @@ export default function MarketplaceHubPage() {
         <CatalogueFilterBar
           variant={variant}
           hideViewToggle={variant === 'float'}
+          compactToggle={variant === 'float'}
           search={query}
           onSearchChange={setQuery}
           searchPlaceholder="Nom, organisation, ville…"

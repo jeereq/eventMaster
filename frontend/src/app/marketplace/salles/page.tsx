@@ -114,6 +114,7 @@ export default function MarketplaceVenuesPage() {
       heroTitle="Trouvez une salle pour votre événement"
       heroDescription="Filtrez par ville, commune, quartier, prix ou autour de vous. Les choix restent visibles sous la recherche."
       mode={mode}
+      onViewChange={setView}
       items={items}
       markers={markers}
       loading={loading}
@@ -140,6 +141,7 @@ export default function MarketplaceVenuesPage() {
         <CatalogueFilterBar
           variant={variant}
           hideViewToggle={variant === 'float'}
+          compactToggle={variant === 'float'}
           search={q}
           onSearchChange={setQ}
           searchPlaceholder="Nom, organisation…"

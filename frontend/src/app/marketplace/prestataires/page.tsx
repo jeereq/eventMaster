@@ -117,6 +117,7 @@ export default function MarketplaceServicesPage() {
       heroTitle="Trouvez un prestataire"
       heroDescription="Traiteur, photo, DJ… Filtrez par zone, catégorie, prix ou autour de vous."
       mode={mode}
+      onViewChange={setView}
       items={items}
       markers={markers}
       loading={loading}
@@ -143,6 +144,7 @@ export default function MarketplaceServicesPage() {
         <CatalogueFilterBar
           variant={variant}
           hideViewToggle={variant === 'float'}
+          compactToggle={variant === 'float'}
           search={q}
           onSearchChange={setQ}
           searchPlaceholder="Nom, prestataire…"

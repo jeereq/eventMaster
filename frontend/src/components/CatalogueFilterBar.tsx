@@ -89,6 +89,7 @@ export default function CatalogueFilterBar({
   modalSize = 'lg',
   variant = 'card',
   hideViewToggle = false,
+  compactToggle = false,
 }: {
   search: string;
   onSearchChange: (value: string) => void;
@@ -107,6 +108,7 @@ export default function CatalogueFilterBar({
   modalSize?: 'sm' | 'md' | 'lg' | 'xl';
   variant?: 'card' | 'float';
   hideViewToggle?: boolean;
+  compactToggle?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -231,6 +233,14 @@ export default function CatalogueFilterBar({
             </button>
           )}
         </div>
+        {!hideViewToggle ? (
+          <CatalogueViewToggle
+            value={view}
+            onChange={onViewChange}
+            compact={compactToggle}
+            className="w-full justify-between bg-surface/90 backdrop-blur-xl border-white/25 dark:border-white/10 shadow-lg"
+          />
+        ) : null}
         {chipsRow}
         {filterModal}
       </div>
@@ -269,6 +279,7 @@ export default function CatalogueFilterBar({
             <CatalogueViewToggle
               value={view}
               onChange={onViewChange}
+              compact={compactToggle}
               className="flex-1 sm:flex-none justify-between sm:justify-start"
             />
           ) : null}
