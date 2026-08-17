@@ -46,7 +46,7 @@ const HERE_ICON_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="non
 
 function listingIconHtml(kind?: 'venue' | 'service') {
   const isService = kind === 'service';
-  return `<span class="em-map-marker-inner"><span class="em-map-marker-head">${isService ? SERVICE_ICON_SVG : VENUE_ICON_SVG}</span><span class="em-map-marker-tail"></span></span>`;
+  return `<span class="em-map-marker-hit"><span class="em-map-marker-inner"><span class="em-map-marker-head">${isService ? SERVICE_ICON_SVG : VENUE_ICON_SVG}</span><span class="em-map-marker-tail"></span></span></span>`;
 }
 
 function hereIconHtml() {
@@ -103,7 +103,7 @@ function MarkerPreviewCard({
 
   return (
     <div
-      className="absolute z-30 left-3 right-3 bottom-3 sm:left-auto sm:right-3 sm:w-[22rem] rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-soft)] overflow-hidden max-h-[70%] overflow-y-auto pointer-events-auto"
+      className="absolute z-[500] left-3 right-3 bottom-3 sm:left-auto sm:right-3 sm:w-[22rem] rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-soft)] overflow-hidden max-h-[70%] overflow-y-auto pointer-events-auto"
       onMouseEnter={onKeep}
       onMouseLeave={onHide}
     >
@@ -252,6 +252,7 @@ export default function MarketplaceLocationsMap({
   const watchIdRef = useRef<number | null>(null);
   const lastRecalcRef = useRef(0);
   const pinnedRef = useRef(false);
+  const suppressMapClickRef = useRef(false);
 
   const clearHideTimer = () => {
     if (hideTimer.current) {
@@ -262,7 +263,6 @@ export default function MarketplaceLocationsMap({
 
   const showPreview = (marker: MarketplaceMapMarker, pin = false) => {
     clearHideTimer();
-    if (pinnedRef.current && !pin) return;
     if (pin) {
       pinnedRef.current = true;
       setPinned(true);
@@ -279,17 +279,8 @@ export default function MarketplaceLocationsMap({
     setHovered(null);
   };
 
-  const scheduleHide = () => {
-    if (pinnedRef.current) return;
-    if (markersRef.current.length === 1 && !navigateOnClickRef.current) return;
-    clearHideTimer();
-    hideTimer.current = setTimeout(() => hidePreview(false), 900);
-  };
-
   const showPreviewRef = useRef(showPreview);
   showPreviewRef.current = showPreview;
-  const scheduleHideRef = useRef(scheduleHide);
-  scheduleHideRef.current = scheduleHide;
   const hidePreviewRef = useRef(hidePreview);
   hidePreviewRef.current = hidePreview;
 
@@ -358,13 +349,16 @@ export default function MarketplaceLocationsMap({
           const isService = m.kind === 'service';
           const leafletMarker = L.marker([m.lat, m.lng], {
             icon: L.divIcon({
-              className: `em-map-marker ${isService ? 'em-map-marker-service' : 'em-map-marker-venue'}`,
+              className: `leaflet-interactive em-map-marker ${isService ? 'em-map-marker-service' : 'em-map-marker-venue'}`,
               html: listingIconHtml(m.kind),
-              iconSize: [34, 42],
-              iconAnchor: [17, 40],
-              popupAnchor: [0, -36],
+              iconSize: [40, 48],
+              iconAnchor: [20, 46],
             }),
+            interactive: true,
+            bubblingMouseEvents: false,
+            keyboard: true,
             zIndexOffset: isService ? 20 : 10,
+            riseOnHover: true,
           });
 
           leafletMarker.on('mouseover', () => {
@@ -373,10 +367,9 @@ export default function MarketplaceLocationsMap({
           });
           leafletMarker.on('mouseout', () => {
             leafletMarker.getElement()?.classList.remove('is-hovered');
-            scheduleHideRef.current();
           });
-          leafletMarker.on('click', (event: any) => {
-            L.DomEvent.stop(event);
+          leafletMarker.on('click', () => {
+            suppressMapClickRef.current = true;
             showPreviewRef.current(m, true);
             if (navigateOnClickRef.current) {
               routerRef.current.push(m.href);
@@ -403,12 +396,14 @@ export default function MarketplaceLocationsMap({
           if (radiusKm > 0) {
             layers.push(
               L.circle([searchCenter.lat, searchCenter.lng], {
+                pane: 'coverage',
                 radius: radiusKm * 1000,
                 color: cssVar('--primary', '#4f46e5'),
                 weight: 2,
                 dashArray: '6 5',
                 fillColor: cssVar('--primary', '#4f46e5'),
                 fillOpacity: 0.08,
+                interactive: false,
               }),
             );
           }
@@ -461,6 +456,10 @@ export default function MarketplaceLocationsMap({
           if (awaitingOriginRef.current && routeDestRef.current) {
             awaitingOriginRef.current = false;
             void paintRouteRef.current(point, routeDestRef.current);
+            return;
+          }
+          if (suppressMapClickRef.current) {
+            suppressMapClickRef.current = false;
             return;
           }
           hidePreviewRef.current(true);
@@ -555,6 +554,7 @@ export default function MarketplaceLocationsMap({
         dashArray: '7 5',
         fillColor: hexToRgba(color, 0.16),
         fillOpacity: 1,
+        interactive: false,
       }).addTo(map);
       radiusLayerRef.current = circle;
     }
@@ -848,8 +848,8 @@ export default function MarketplaceLocationsMap({
             marker={hovered}
             pinned={pinned}
             searchCenter={searchCenter}
-            onKeep={() => showPreview(hovered)}
-            onHide={scheduleHide}
+            onKeep={() => showPreview(hovered, pinned)}
+            onHide={() => undefined}
             onClose={() => hidePreview(true)}
             onDirections={startDirections}
           />
@@ -891,7 +891,7 @@ export default function MarketplaceLocationsMap({
       </div>
       {listingSearch && variant !== 'focus' && (
         <p className="text-[11px] text-muted">
-          Survolez un pin, ou cliquez-le pour garder les détails. Fermez avec × ou en cliquant la carte.
+          Survolez ou cliquez un pin : les détails restent affichés. Fermez avec × ou en cliquant ailleurs sur la carte.
           {searchCenter && radiusKm > 0 ? ` Filtre : dans un rayon de ${radiusKm} km.` : ''}
           {markers.length ? ` · ${markers.length} fiche${markers.length > 1 ? 's' : ''} avec GPS` : ''}.
         </p>
