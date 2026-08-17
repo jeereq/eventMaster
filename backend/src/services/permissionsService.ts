@@ -2,7 +2,7 @@ import { OrgRole, StaffRole } from '@prisma/client';
 import { prisma } from '../db';
 import { isTenantManager } from '../utils/tenantAccess';
 
-export type OrgAccessLevel = 'owner' | 'manager' | 'protocol' | 'commercial' | 'staff' | 'none';
+export type OrgAccessLevel = 'owner' | 'manager' | 'protocol' | 'commercial' | 'staff' | 'client' | 'none';
 
 export interface OrgAccess {
   level: OrgAccessLevel;
@@ -41,6 +41,28 @@ export async function resolveOrgAccess(userId: string, tenantId: string): Promis
   };
 
   if (!user) return none;
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { accountKind: true, managerId: true },
+  });
+
+  if (tenant?.accountKind === 'CLIENT') {
+    return {
+      level: 'client',
+      orgRole: null,
+      isOwner: tenant.managerId === userId,
+      canManageTeam: false,
+      canManageRooms: false,
+      canCreateEvents: false,
+      canCreateRooms: false,
+      canManageAllEvents: false,
+      canProtocolAllEvents: false,
+      canViewBilling: false,
+      canViewInvoices: false,
+      isProtocolOnly: false,
+    };
+  }
 
   const owner = await isTenantManager(userId, tenantId);
   if (owner) {

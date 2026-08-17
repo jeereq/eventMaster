@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -57,6 +58,7 @@ const fieldClass =
 
 export default function MarketplaceDeskPage() {
   const { access, refreshProfile } = useAuth();
+  const router = useRouter();
   const canManage = Boolean(access?.canManageRooms);
   const [tab, setTab] = useState<DeskTab>('services');
   const [services, setServices] = useState<ServiceItem[]>([]);
@@ -108,6 +110,12 @@ export default function MarketplaceDeskPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (access?.level === 'client') {
+      router.replace('/dashboard/bookings');
+    }
+  }, [access?.level, router]);
 
   useEffect(() => {
     if (canManage) load();

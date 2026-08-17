@@ -1,7 +1,7 @@
 import type { RoomType } from '@/lib/roomLayoutUtils';
 
 export type VenuePriceUnit = 'EVENT' | 'DAY' | 'HOUR' | 'MINUTE' | 'PERSON' | 'QUOTA';
-export type TenantAccountKind = 'ORGANIZER' | 'VENDOR' | 'BOTH';
+export type TenantAccountKind = 'ORGANIZER' | 'VENDOR' | 'BOTH' | 'CLIENT';
 export type ServiceCategory =
   | 'CATERING'
   | 'PHOTOGRAPHY'
@@ -60,7 +60,19 @@ export const ACCOUNT_KIND_LABELS: Record<TenantAccountKind, string> = {
   ORGANIZER: 'Organisateur d’événements',
   VENDOR: 'Prestataire / salles',
   BOTH: 'Les deux',
+  CLIENT: 'Je cherche une salle ou un prestataire',
 };
+
+export const ACCOUNT_KIND_DESCRIPTIONS: Record<TenantAccountKind, string> = {
+  ORGANIZER: 'Créez des événements, invitations et plans de table.',
+  VENDOR: 'Publiez vos salles ou prestations dans le catalogue.',
+  BOTH: 'Organisez et proposez aussi vos offres.',
+  CLIENT: 'Réservez sans espace événement. Vous pourrez upgrader plus tard.',
+};
+
+export function isClientAccount(kind?: TenantAccountKind | string | null) {
+  return kind === 'CLIENT';
+}
 
 export const SERVICE_CATEGORY_LABELS: Record<ServiceCategory, string> = {
   CATERING: 'Traiteur',

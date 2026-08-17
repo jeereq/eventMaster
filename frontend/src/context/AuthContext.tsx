@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import { api } from '../lib/api';
 import type { PlanId } from '@/config/landingPricing';
 import { applyBrandToDocument, clearBrandFromDocument, type TenantBranding } from '@/lib/brandTheme';
+import type { TenantAccountKind } from '@/lib/marketplace';
 
 export interface OrgAccess {
-  level: 'owner' | 'manager' | 'protocol' | 'commercial' | 'staff' | 'none';
+  level: 'owner' | 'manager' | 'protocol' | 'commercial' | 'staff' | 'client' | 'none';
   orgRole: 'MANAGER' | 'PROTOCOL' | 'COMMERCIAL' | null;
   isOwner: boolean;
   canManageTeam: boolean;
@@ -39,7 +40,7 @@ interface Tenant {
   licenseExpiresAt?: string | null;
   managerId?: string | null;
   branding?: TenantBranding;
-  accountKind?: 'ORGANIZER' | 'VENDOR' | 'BOTH';
+  accountKind?: TenantAccountKind;
 }
 
 interface RegisterResult {
@@ -100,7 +101,7 @@ interface AuthContextType {
     referralCode?: string,
     phoneCountryCode?: string,
     nationalNumber?: string,
-    accountKind?: 'ORGANIZER' | 'VENDOR' | 'BOTH',
+    accountKind?: TenantAccountKind,
   ) => Promise<RegisterResult>;
   verifyOtp: (email: string, otp: string) => Promise<void>;
   resendOtp: (email: string, verificationMethod?: 'EMAIL' | 'WHATSAPP') => Promise<string>;
@@ -120,6 +121,14 @@ function persistAccess(access: OrgAccess | null) {
   } else {
     localStorage.removeItem('access');
   }
+}
+
+function postAuthPath(userRole?: string, access?: OrgAccess | null) {
+  if (userRole === 'COMMERCIAL') return '/dashboard?tab=tenants';
+  if (access?.level === 'commercial') return '/dashboard/org-commercial';
+  if (access?.isProtocolOnly) return '/dashboard/events?mode=protocol';
+  if (access?.level === 'client') return '/dashboard/bookings';
+  return '/dashboard';
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -184,15 +193,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setAccess(data.access ?? null);
       setLoading(false);
 
-      if (data.user?.role === 'COMMERCIAL') {
-        router.push('/dashboard?tab=tenants');
-      } else if (data.access?.level === 'commercial') {
-        router.push('/dashboard/org-commercial');
-      } else if (data.access?.isProtocolOnly) {
-        router.push('/dashboard/events?mode=protocol');
-      } else {
-        router.push('/dashboard');
-      }
+      router.push(postAuthPath(data.user?.role, data.access ?? null));
     } catch (error: any) {
       setLoading(false);
       if (error?.data?.notVerified && error?.data?.email) {
@@ -215,7 +216,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     referralCode?: string,
     phoneCountryCode?: string,
     nationalNumber?: string,
-    accountKind?: 'ORGANIZER' | 'VENDOR' | 'BOTH',
+    accountKind?: TenantAccountKind,
   ) => {
     setLoading(true);
     try {
@@ -319,10 +320,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    if (token && tenant?.id && user?.role === 'USER') {
+    if (token && tenant?.id && user?.role === 'USER' && tenant.accountKind !== 'CLIENT') {
       refreshPlanFeatures();
     }
-  }, [token, tenant?.id, user?.role]);
+  }, [token, tenant?.id, tenant?.accountKind, user?.role]);
 
   useEffect(() => {
     if (tenant?.branding) {

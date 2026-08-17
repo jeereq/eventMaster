@@ -31,7 +31,7 @@ export default function MarketplaceBookingForm({
   onEventDateChange?: (value: string) => void;
   showCalendar?: boolean;
 }) {
-  const { token, loading, tenant } = useAuth();
+  const { token, loading, tenant, access } = useAuth();
   const [internalDate, setInternalDate] = useState('');
   const [guestCount, setGuestCount] = useState('');
   const [notes, setNotes] = useState('');
@@ -45,6 +45,8 @@ export default function MarketplaceBookingForm({
   const amounts = priceFromFc != null ? previewMarketplaceAmounts(priceFromFc) : null;
   const dateTaken = Boolean(selectedDate && blocked.has(selectedDate));
   const loggedIn = Boolean(token && tenant?.id);
+  const isClient = access?.level === 'client' || tenant?.accountKind === 'CLIENT';
+  const bookingsHref = isClient ? '/dashboard/bookings' : '/dashboard/marketplace';
 
   const handleBook = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,15 +111,15 @@ export default function MarketplaceBookingForm({
         <div className="border border-border rounded-[var(--radius-card)] p-5 bg-surface space-y-3">
           <h2 className="text-sm font-semibold text-foreground">Réserver</h2>
           <p className="text-xs text-muted leading-relaxed">
-            Connectez-vous avec une organisation pour demander une date. L’acompte (30 %) se verse hors plateforme
+            Créez un compte client (gratuit) pour demander une date. L’acompte (30 %) se verse hors plateforme
             au professionnel ; EventMaster n’encaisse pas ce paiement.
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Link href="/login" className="inline-flex">
               <Button size="sm">Se connecter</Button>
             </Link>
-            <Link href="/register" className="inline-flex">
-              <Button size="sm" variant="secondary">Créer une organisation</Button>
+            <Link href="/register?kind=CLIENT" className="inline-flex">
+              <Button size="sm" variant="secondary">Créer un compte client</Button>
             </Link>
           </div>
         </div>
@@ -176,8 +178,8 @@ export default function MarketplaceBookingForm({
         </Button>
         <p className="text-[11px] text-muted">
           Suivi dans{' '}
-          <Link href="/dashboard/marketplace" className="font-semibold text-primary hover:underline">
-            Marketplace → Réservations
+          <Link href={bookingsHref} className="font-semibold text-primary hover:underline">
+            {isClient ? 'Mes réservations' : 'Marketplace → Réservations'}
           </Link>
           .
         </p>

@@ -1,5 +1,13 @@
+import { TenantAccountKind } from '@prisma/client';
 import { prisma } from '../db';
 import { parseBranding } from './brandingUtils';
+
+export function parseAccountKind(raw: unknown, fallback: TenantAccountKind = 'ORGANIZER'): TenantAccountKind {
+  if (raw === 'VENDOR' || raw === 'BOTH' || raw === 'ORGANIZER' || raw === 'CLIENT') {
+    return raw;
+  }
+  return fallback;
+}
 
 export function formatTenantResponse(tenant: {
   id: string;

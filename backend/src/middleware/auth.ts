@@ -94,6 +94,10 @@ export async function requireActiveLicense(req: AuthenticatedRequest, res: Respo
       return res.status(404).json({ error: 'Organisation non trouvée.' });
     }
 
+    if (tenant.accountKind === 'CLIENT') {
+      return next();
+    }
+
     if (!tenant.licenseActive) {
       return res.status(403).json({ 
         error: 'Votre licence est inactive. Veuillez contacter l\'administrateur ou régulariser votre abonnement.',

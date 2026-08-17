@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../db';
 import { AuthenticatedRequest } from '../middleware/auth';
-import { formatTenantResponse } from '../utils/tenantAccess';
+import { formatTenantResponse, parseAccountKind } from '../utils/tenantAccess';
 import { recordUserLegalAcceptance } from '../services/legalService';
 import { resolveOrgAccess } from '../services/permissionsService';
 import { resolveCommercialByReferralCode } from '../services/commercialService';
@@ -86,8 +86,8 @@ export async function register(req: Request, res: Response) {
 
     const { email, password, name, tenantName, phone, phoneCountryCode, nationalNumber, verificationMethod = 'EMAIL', acceptTerms, acceptPrivacy, referralCode, accountKind: rawAccountKind } = req.body;
 
-    if (!email || !password || !name || !tenantName) {
-      return res.status(400).json({ error: 'Tous les champs sont obligatoires (email, password, name, tenantName)' });
+    if (!email || !password || !name) {
+      return res.status(400).json({ error: 'Tous les champs sont obligatoires (email, password, name)' });
     }
 
     if (!acceptTerms || !acceptPrivacy) {
@@ -122,15 +122,16 @@ export async function register(req: Request, res: Response) {
       }
     }
 
-    const accountKind =
-      rawAccountKind === 'VENDOR' || rawAccountKind === 'BOTH' || rawAccountKind === 'ORGANIZER'
-        ? rawAccountKind
-        : 'ORGANIZER';
+    const accountKind = parseAccountKind(rawAccountKind);
+    const resolvedTenantName = String(tenantName || '').trim() || (accountKind === 'CLIENT' ? String(name).trim() : '');
+    if (!resolvedTenantName) {
+      return res.status(400).json({ error: 'Le nom de l’organisation est obligatoire.' });
+    }
 
     const result = await prisma.$transaction(async (tx) => {
       const tenant = await tx.tenant.create({
         data: {
-          name: tenantName,
+          name: resolvedTenantName,
           plan: 'FREE',
           accountKind,
           referredByCommercialId,
@@ -501,10 +502,10 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
     }
 
     const wantsAccountKind =
-      accountKind === 'ORGANIZER' || accountKind === 'VENDOR' || accountKind === 'BOTH';
+      accountKind === 'ORGANIZER' || accountKind === 'VENDOR' || accountKind === 'BOTH' || accountKind === 'CLIENT';
     if (wantsAccountKind && req.user.tenantId) {
       const access = await resolveOrgAccess(req.user.id, req.user.tenantId);
-      if (!access.isOwner && access.level !== 'manager') {
+      if (!access.isOwner && access.level !== 'manager' && access.level !== 'client') {
         return res.status(403).json({ error: 'Seuls le propriétaire et les managers peuvent changer le type de compte.' });
       }
     }
@@ -517,9 +518,9 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
 
       let updatedTenant = null;
       if (req.user!.tenantId) {
-        const tenantData: { name?: string; accountKind?: 'ORGANIZER' | 'VENDOR' | 'BOTH' } = {};
+        const tenantData: { name?: string; accountKind?: 'ORGANIZER' | 'VENDOR' | 'BOTH' | 'CLIENT' } = {};
         if (tenantName) tenantData.name = tenantName;
-        if (wantsAccountKind) tenantData.accountKind = accountKind;
+        if (wantsAccountKind) tenantData.accountKind = parseAccountKind(accountKind);
         if (Object.keys(tenantData).length > 0) {
           updatedTenant = await tx.tenant.update({
             where: { id: req.user!.tenantId },

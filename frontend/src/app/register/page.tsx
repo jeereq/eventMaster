@@ -12,7 +12,7 @@ import { Button, Alert, Input, Card, PhoneInput } from '@/components/ui';
 import { parseReferralFromSearchParams } from '@/lib/referralLink';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
-import { ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
+import { ACCOUNT_KIND_DESCRIPTIONS, ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
 
 const FEATURES = [
  { icon: Calendar, title: "Gestion d'événements & RSVP", desc: 'Invitations par e-mail ou WhatsApp, suivi des réponses en temps réel.' },
@@ -25,7 +25,7 @@ export default function RegisterPage() {
  return (
  <Suspense
  fallback={
- <AuthSplitLayout badge="Inscription SaaS" title="Chargement…" description="" features={FEATURES} backHref="/" backLabel="Retour au site">
+ <AuthSplitLayout badge="Inscription" title="Chargement…" description="" features={FEATURES} backHref="/" backLabel="Retour au site">
  <Card padding="lg" className="shadow-xl animate-pulse h-96">
  <span className="sr-only">Chargement du formulaire d&apos;inscription</span>
  </Card>
@@ -64,6 +64,10 @@ function RegisterPageContent() {
  setReferralCode(fromUrl);
  setReferralFromLink(true);
  }
+ const kind = searchParams.get('kind');
+ if (kind === 'CLIENT' || kind === 'VENDOR' || kind === 'BOTH' || kind === 'ORGANIZER') {
+ setAccountKind(kind);
+ }
  }, [searchParams]);
 
  const handleSubmit = async (e: React.FormEvent) => {
@@ -85,11 +89,17 @@ function RegisterPageContent() {
 
  try {
  const e164 = composeE164(phoneCountryCode, phoneNational) || undefined;
+ const orgName = accountKind === 'CLIENT' ? name.trim() : tenantName.trim();
+ if (accountKind !== 'CLIENT' && !orgName) {
+ setError('Le nom de l’organisation est obligatoire.');
+ setLoading(false);
+ return;
+ }
  const res = await register(
  email,
  password,
  name,
- tenantName,
+ orgName,
  e164,
  verificationMethod,
  acceptTerms,
@@ -113,9 +123,9 @@ function RegisterPageContent() {
 
  return (
  <AuthSplitLayout
- badge="Inscription SaaS"
- title="Créez votre espace d'organisation en quelques secondes."
- description={`Rejoignez ${site.platformName} et profitez d'une interface d'invitation immersive et d'outils de placement de table interactifs.`}
+ badge="Inscription"
+ title="Créez votre compte en quelques secondes."
+ description={`Rejoignez ${site.platformName} : organisez un événement, publiez une offre, ou réservez une salle sans espace SaaS.`}
  features={FEATURES}
  backHref="/"
  backLabel="Retour au site"
@@ -187,16 +197,18 @@ function RegisterPageContent() {
  <form className="space-y-4" onSubmit={handleSubmit}>
  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
  <Input label="Votre nom" id="name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Jean Dupont" leftIcon={<User className="w-4 h-4" />} />
+ {accountKind !== 'CLIENT' && (
  <Input label="Organisation" id="tenantName" required value={tenantName} onChange={(e) => setTenantName(e.target.value)} placeholder="Dupont Événements" leftIcon={<Building className="w-4 h-4" />} />
+ )}
  </div>
 
  <fieldset className="space-y-2">
  <legend className="text-xs font-medium text-muted">Vous êtes plutôt…</legend>
- <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
- {(['ORGANIZER', 'VENDOR', 'BOTH'] as TenantAccountKind[]).map((kind) => (
+ <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+ {(['CLIENT', 'ORGANIZER', 'VENDOR', 'BOTH'] as TenantAccountKind[]).map((kind) => (
  <label
  key={kind}
- className={`flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-button)] border text-xs font-medium cursor-pointer ${
+ className={`flex flex-col gap-0.5 px-3 py-2.5 rounded-[var(--radius-button)] border text-xs font-medium cursor-pointer ${
  accountKind === kind ? 'border-primary bg-primary/5 text-foreground' : 'border-border text-muted'
  }`}
  >
@@ -207,7 +219,8 @@ function RegisterPageContent() {
  checked={accountKind === kind}
  onChange={() => setAccountKind(kind)}
  />
- {ACCOUNT_KIND_LABELS[kind]}
+ <span>{ACCOUNT_KIND_LABELS[kind]}</span>
+ <span className="font-normal opacity-80 leading-snug">{ACCOUNT_KIND_DESCRIPTIONS[kind]}</span>
  </label>
  ))}
  </div>
