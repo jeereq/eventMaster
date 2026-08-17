@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { PageHeader, Alert, SkeletonProfileView, Button, Breadcrumbs, Input } from '@/components/ui';
 import { ACCOUNT_KIND_DESCRIPTIONS, ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
+import { paidPlanIdsForAccountKind } from '@/config/landingPricing';
 
 function ProfilePageContent() {
   const { user, tenant, updateUserAndTenant, updateBranding, access, refreshProfile } = useAuth();
@@ -32,6 +33,12 @@ function ProfilePageContent() {
   const [success, setSuccess] = useState('');
 
   const isClient = access?.level === 'client' || tenant?.accountKind === 'CLIENT';
+  const currentPlan = tenant?.plan || 'FREE';
+  const kindChangeResetsPlan =
+    Boolean(tenant) &&
+    accountKind !== tenant?.accountKind &&
+    (accountKind === 'CLIENT' ||
+      (currentPlan !== 'FREE' && !paidPlanIdsForAccountKind(accountKind).includes(currentPlan)));
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -236,6 +243,11 @@ function ProfilePageContent() {
                             </>
                           )}
                       </p>
+                      {kindChangeResetsPlan && (
+                        <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-[var(--radius-button)] p-2">
+                          Le forfait actuel n’est pas destiné à ce type de compte. L’enregistrement passera l’espace à l’essai Essentials ; choisissez ensuite un forfait adapté dans Facturation.
+                        </p>
+                      )}
                       {ACCOUNT_KIND_DESCRIPTIONS[accountKind] && (
                         <p className="text-[11px] text-muted">{ACCOUNT_KIND_DESCRIPTIONS[accountKind]}</p>
                       )}

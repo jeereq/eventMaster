@@ -413,6 +413,43 @@ export function getPlanLimits(planKey: string): PlanDefinition {
   return plans[normalized] || plans.FREE;
 }
 
+/**
+ * Quotas effectifs : l’essai FREE d’un vendeur n’ouvre pas l’organisation d’événements.
+ * Un compte client n’a aucun quota SaaS.
+ */
+export function applyAccountKindToPlan(
+  plan: PlanDefinition,
+  kind?: string | null,
+  planKey?: string,
+): PlanDefinition {
+  if (kind === 'CLIENT') {
+    return {
+      ...plan,
+      maxEvents: 0,
+      maxGuests: 0,
+      maxTemplates: 0,
+      maxRooms: 0,
+      maxServices: 0,
+      maxOrgManagers: 0,
+    };
+  }
+  if (kind === 'VENDOR' && planKey && normalizePlanKey(planKey) === 'FREE') {
+    return {
+      ...plan,
+      maxEvents: 0,
+      maxGuests: 0,
+      maxTemplates: 0,
+      description: 'Essai catalogue : 1 salle et 1 prestation, sans organisation d’événements.',
+    };
+  }
+  return plan;
+}
+
+export function getPlanLimitsForTenant(planKey: string, accountKind?: string | null): PlanDefinition {
+  const normalized = normalizePlanKey(planKey);
+  return applyAccountKindToPlan(getPlanLimits(normalized), accountKind, normalized);
+}
+
 export function mergePlansForSave(
   incomingPlans: Partial<Record<PlanTypeKey, Partial<PlanDefinition>>>,
 ): PlansConfiguration {
@@ -444,7 +481,7 @@ export function paidPlanKeysForAccountKind(kind?: string | null): PlanTypeKey[] 
     case 'VENDOR':
       return [...VENDOR_PLAN_KEYS];
     case 'BOTH':
-      return [...VENDOR_PLAN_KEYS, ...B2B_PAID_KEYS];
+      return ['PERSONAL', ...VENDOR_PLAN_KEYS, ...B2B_PAID_KEYS];
     case 'ORGANIZER':
     default:
       return ['PERSONAL', ...B2B_PAID_KEYS];
@@ -455,6 +492,23 @@ export function isPlanAllowedForAccountKind(planKey: string, kind?: string | nul
   const normalized = normalizePlanKey(planKey);
   if (normalized === 'FREE') return true;
   return paidPlanKeysForAccountKind(kind).includes(normalized);
+}
+
+/** Type de compte à poser quand un admin assigne un forfait. */
+export function accountKindForPlanAssignment(
+  planKey: string,
+  currentKind?: string | null,
+): 'ORGANIZER' | 'VENDOR' | 'BOTH' | 'CLIENT' {
+  const normalized = normalizePlanKey(planKey);
+  if (currentKind === 'CLIENT' && normalized === 'FREE') return 'CLIENT';
+  if (currentKind && isPlanAllowedForAccountKind(normalized, currentKind)) {
+    return currentKind as 'ORGANIZER' | 'VENDOR' | 'BOTH' | 'CLIENT';
+  }
+  if (normalized === 'VENUE' || normalized === 'SERVICE') return 'VENDOR';
+  if (normalized === 'CATALOG') return 'BOTH';
+  if (normalized === 'PERSONAL') return 'ORGANIZER';
+  if (currentKind === 'VENDOR' || currentKind === 'BOTH') return 'BOTH';
+  return 'ORGANIZER';
 }
 
 export function planAudienceMismatchMessage(planKey: string, kind?: string | null): string {

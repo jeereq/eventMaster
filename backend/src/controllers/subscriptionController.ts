@@ -159,6 +159,7 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
             plan: true,
             licenseActive: true,
             licenseExpiresAt: true,
+            accountKind: true,
           },
         },
       },
@@ -170,6 +171,12 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
 
     if (request.status !== 'PENDING') {
       return res.status(400).json({ error: 'Cette demande a déjà été traitée.' });
+    }
+
+    if (!isPlanAllowedForAccountKind(request.requestedPlan, request.tenant.accountKind)) {
+      return res.status(403).json({
+        error: planAudienceMismatchMessage(request.requestedPlan, request.tenant.accountKind),
+      });
     }
 
     if (isPlatformCommercial(req.user?.role) && req.user?.id) {

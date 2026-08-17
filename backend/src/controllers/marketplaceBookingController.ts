@@ -4,7 +4,7 @@ import { prisma } from '../db';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { resolveOrgAccess } from '../services/permissionsService';
 import { sendRealEmail } from '../services/notificationService';
-import { getPlanLimits } from '../config/plansConfig';
+import { getPlanLimitsForTenant } from '../config/plansConfig';
 import { computeMarketplaceAmounts } from '../config/marketplaceBilling';
 import { mergeBlockedDate, parseBlockedDates, parseDateKey, toDateKey } from '../utils/marketplaceDates';
 
@@ -326,7 +326,7 @@ export async function updateBooking(req: AuthenticatedRequest, res: Response) {
               },
             });
           } else {
-            const limits = organizer ? getPlanLimits(organizer.plan) : null;
+            const limits = organizer ? getPlanLimitsForTenant(organizer.plan, organizer.accountKind) : null;
             if (organizer && limits && organizer._count.events < limits.maxEvents) {
               const created = await prisma.event.create({
                 data: {

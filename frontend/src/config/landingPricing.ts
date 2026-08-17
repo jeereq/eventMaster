@@ -50,7 +50,7 @@ export function paidPlanIdsForAccountKind(kind?: string | null): PlanId[] {
     case 'VENDOR':
       return [...VENDOR_PLAN_IDS];
     case 'BOTH':
-      return [...VENDOR_PLAN_IDS, ...B2B_PAID_IDS];
+      return ['PERSONAL', ...VENDOR_PLAN_IDS, ...B2B_PAID_IDS];
     case 'ORGANIZER':
     default:
       return ['PERSONAL', ...B2B_PAID_IDS];

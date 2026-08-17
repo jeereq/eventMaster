@@ -232,8 +232,10 @@ export default function BillingPage() {
           />
           {(tenant?.accountKind === 'VENDOR' || tenant?.accountKind === 'BOTH') && (
             <p className="text-xs text-muted leading-relaxed">
-              Compte catalogue : les forfaits <strong>Salle</strong>, <strong>Prestataire</strong> et{' '}
-              <strong>Salle &amp; presta</strong> limitent les fiches publiées (salles / prestations), pas un volume d’événements d’agence.
+              Un seul forfait à la fois : il n’y a pas de cumul Salle + Business.
+              {tenant?.accountKind === 'BOTH'
+                ? ' Compte mixte : Particulier, Business, Salle, Prestataire ou Salle & presta.'
+                : ' Compte catalogue : Salle, Prestataire ou Salle & presta (fiches publiées, pas un volume d’agence).'}
             </p>
           )}
           {billing.capabilities && (

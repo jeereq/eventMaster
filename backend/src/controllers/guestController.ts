@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
-import { getPlanLimits } from '../config/plansConfig';
+import { getPlanLimitsForTenant } from '../config/plansConfig';
 import {
   canManageGuests,
   canProtocolGuests,
@@ -76,7 +76,7 @@ export async function createGuest(req: AuthenticatedRequest, res: Response) {
     const guestCount = await prisma.guest.count({ where: { event: { tenantId } } });
 
     if (tenant) {
-      const limits = getPlanLimits(tenant.plan);
+      const limits = getPlanLimitsForTenant(tenant.plan, tenant.accountKind);
       if (guestCount >= limits.maxGuests) {
         return res.status(403).json({
           error: `Quota total d'invités atteint pour le plan ${tenant.plan} (Max ${limits.maxGuests >= 9999 ? 'illimité' : limits.maxGuests}). Veuillez passer à un forfait supérieur.`,
@@ -235,7 +235,7 @@ export async function importGuests(req: AuthenticatedRequest, res: Response) {
     const guestCount = await prisma.guest.count({ where: { event: { tenantId } } });
 
     if (tenant) {
-      const limits = getPlanLimits(tenant.plan);
+      const limits = getPlanLimitsForTenant(tenant.plan, tenant.accountKind);
       if (guestCount + guests.length > limits.maxGuests) {
         return res.status(403).json({
           error: `Quota total d'invités dépassé pour le plan ${tenant.plan} (Max ${limits.maxGuests >= 9999 ? 'illimité' : limits.maxGuests}). Veuillez passer à un forfait supérieur.`,

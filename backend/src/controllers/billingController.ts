@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import Stripe from 'stripe';
-import { getPlanLimits, getPlansConfiguration, PAID_PLAN_KEYS, PLAN_KEYS, isPlanAllowedForAccountKind, planAudienceMismatchMessage } from '../config/plansConfig';
+import { getPlanLimitsForTenant, getPlansConfiguration, PAID_PLAN_KEYS, PLAN_KEYS, isPlanAllowedForAccountKind, planAudienceMismatchMessage } from '../config/plansConfig';
 import { assertCanViewBilling, assertCanViewInvoices } from '../services/permissionsService';
 import { recordCommercialCommission } from '../services/commercialService';
 import { createAndSendInvoice, formatInvoiceForApi } from '../services/invoiceService';
@@ -62,7 +62,7 @@ export async function getBillingStatus(req: AuthenticatedRequest, res: Response)
     });
 
     const limits = getPlansFromSettings();
-    const currentLimits = getPlanLimits(tenant.plan);
+    const currentLimits = getPlanLimitsForTenant(tenant.plan, tenant.accountKind);
     const snapshot = await getTenantPlanSnapshot(tenantId);
     const planDetails = snapshot ? formatPlanFeaturesResponse(snapshot) : null;
 

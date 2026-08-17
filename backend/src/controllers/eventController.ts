@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
-import { getPlanLimits } from '../config/plansConfig';
+import { getPlanLimitsForTenant } from '../config/plansConfig';
 import {
   canAccessEvent,
   canManageEvent,
@@ -70,7 +70,7 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
     });
 
     if (tenant) {
-      const limits = getPlanLimits(tenant.plan);
+      const limits = getPlanLimitsForTenant(tenant.plan, tenant.accountKind);
       if (limits.maxEvents <= 0 || tenant._count.events >= limits.maxEvents) {
         return res.status(403).json({
           error:

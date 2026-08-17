@@ -1,5 +1,5 @@
 import { prisma } from '../db';
-import { getPlanLimits, PlanDefinition, formatPlanPriceFc } from '../config/plansConfig';
+import { getPlanLimitsForTenant, PlanDefinition, formatPlanPriceFc } from '../config/plansConfig';
 
 export type PlanFeatureKey =
   | 'protocolQr'
@@ -56,7 +56,7 @@ export async function getTenantPlanSnapshot(tenantId: string): Promise<TenantPla
 
   if (!tenant) return null;
 
-  const features = getPlanLimits(tenant.plan);
+  const features = getPlanLimitsForTenant(tenant.plan, tenant.accountKind);
 
   const guestCount = await prisma.guest.count({
     where: { event: { tenantId } },

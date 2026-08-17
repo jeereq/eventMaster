@@ -4,6 +4,8 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../db';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { formatTenantResponse, parseAccountKind } from '../utils/tenantAccess';
+import { isPlanAllowedForAccountKind } from '../config/plansConfig';
+import { PlanType } from '@prisma/client';
 import { recordUserLegalAcceptance } from '../services/legalService';
 import { resolveOrgAccess } from '../services/permissionsService';
 import { resolveCommercialByReferralCode } from '../services/commercialService';
@@ -517,10 +519,27 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
       });
 
       let updatedTenant = null;
+      let planResetToFree = false;
       if (req.user!.tenantId) {
-        const tenantData: { name?: string; accountKind?: 'ORGANIZER' | 'VENDOR' | 'BOTH' | 'CLIENT' } = {};
+        const currentTenant = await tx.tenant.findUnique({
+          where: { id: req.user!.tenantId },
+          select: { plan: true },
+        });
+        const tenantData: {
+          name?: string;
+          accountKind?: 'ORGANIZER' | 'VENDOR' | 'BOTH' | 'CLIENT';
+          plan?: PlanType;
+        } = {};
         if (tenantName) tenantData.name = tenantName;
-        if (wantsAccountKind) tenantData.accountKind = parseAccountKind(accountKind);
+        if (wantsAccountKind) {
+          const nextKind = parseAccountKind(accountKind);
+          tenantData.accountKind = nextKind;
+          const currentPlan = currentTenant?.plan || 'FREE';
+          if (nextKind === 'CLIENT' || !isPlanAllowedForAccountKind(currentPlan, nextKind)) {
+            if (currentPlan !== 'FREE') planResetToFree = true;
+            tenantData.plan = 'FREE';
+          }
+        }
         if (Object.keys(tenantData).length > 0) {
           updatedTenant = await tx.tenant.update({
             where: { id: req.user!.tenantId },
@@ -533,11 +552,14 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
         }
       }
 
-      return { user: updatedUser, tenant: updatedTenant };
+      return { user: updatedUser, tenant: updatedTenant, planResetToFree };
     });
 
     return res.json({
-      message: 'Profil mis à jour avec succès !',
+      message: result.planResetToFree
+        ? 'Profil mis à jour. L’ancien forfait n’était pas destiné à ce type de compte : l’espace est passé à l’essai Essentials. Choisissez un forfait adapté dans Facturation.'
+        : 'Profil mis à jour avec succès !',
+      planResetToFree: result.planResetToFree,
       user: {
         id: result.user.id,
         email: result.user.email,

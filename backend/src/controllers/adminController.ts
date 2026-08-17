@@ -3,7 +3,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { PlanType, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { getPlansConfiguration } from '../config/plansConfig';
+import { getPlansConfiguration, PAID_PLAN_KEYS, accountKindForPlanAssignment } from '../config/plansConfig';
 import {
   loadSubscriptionPlansFromDb,
   saveSubscriptionPlansToDb,
@@ -22,7 +22,6 @@ import {
   resolveBillingAction,
   type TenantBillingAction,
 } from '../services/tenantBillingService';
-import { PAID_PLAN_KEYS } from '../config/plansConfig';
 import { resolvePhoneFields } from '../utils/phone';
 import {
   loadPlatformSettings,
@@ -277,10 +276,14 @@ export async function createTenant(req: AuthenticatedRequest, res: Response) {
       return res.status(400).json({ error: 'Le nom de l\'organisation est requis.' });
     }
 
+    const nextPlan = (plan as PlanType) || 'FREE';
+    const accountKind = accountKindForPlanAssignment(nextPlan, 'ORGANIZER');
+
     const newTenant = await prisma.tenant.create({
       data: {
         name,
-        plan: (plan as PlanType) || 'FREE',
+        plan: nextPlan,
+        accountKind,
         licenseActive: licenseActive !== undefined ? Boolean(licenseActive) : true,
         licenseExpiresAt: licenseExpiresAt ? new Date(licenseExpiresAt) : null,
         licenseKey: licenseKey || null,
@@ -319,6 +322,7 @@ export async function updateTenantPlanOrLicense(req: AuthenticatedRequest, res: 
     }
 
     const newPlan = (plan as PlanType) ?? existing.plan;
+    const nextAccountKind = accountKindForPlanAssignment(newPlan, existing.accountKind);
     let nextExpiry = licenseExpiresAt !== undefined
       ? licenseExpiresAt
         ? new Date(licenseExpiresAt)
@@ -345,6 +349,7 @@ export async function updateTenantPlanOrLicense(req: AuthenticatedRequest, res: 
       data: {
         name: name !== undefined ? name : undefined,
         plan: newPlan,
+        accountKind: nextAccountKind,
         licenseActive: licenseActive !== undefined ? Boolean(licenseActive) : undefined,
         licenseExpiresAt: licenseExpiresAt !== undefined ? nextExpiry : undefined,
         licenseKey: licenseKey !== undefined ? licenseKey : undefined,

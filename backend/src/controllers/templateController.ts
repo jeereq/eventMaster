@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
-import { getPlanLimits } from '../config/plansConfig';
+import { getPlanLimitsForTenant } from '../config/plansConfig';
 import { assertPlanFeature } from '../services/planFeaturesService';
 
 function isCustomTemplateContent(content: unknown): boolean {
@@ -111,7 +111,7 @@ export async function createTemplate(req: AuthenticatedRequest, res: Response) {
       });
 
       if (tenant) {
-        const limits = getPlanLimits(tenant.plan);
+        const limits = getPlanLimitsForTenant(tenant.plan, tenant.accountKind);
         if (tenant._count.templates >= limits.maxTemplates) {
           return res.status(403).json({
             error: `Quota de modèles atteint pour le plan ${tenant.plan} (Max ${limits.maxTemplates >= 9999 ? 'illimité' : limits.maxTemplates}). Veuillez passer à un forfait supérieur.`,
@@ -296,7 +296,7 @@ export async function duplicateTemplate(req: AuthenticatedRequest, res: Response
       return res.status(404).json({ error: 'Organisation introuvable' });
     }
 
-    const limits = getPlanLimits(tenant.plan);
+    const limits = getPlanLimitsForTenant(tenant.plan, tenant.accountKind);
     if (tenant._count.templates >= limits.maxTemplates) {
       return res.status(403).json({
         error: `Quota de modèles atteint pour le plan ${tenant.plan} (max ${limits.maxTemplates >= 9999 ? 'illimité' : limits.maxTemplates}). Passez à un forfait supérieur.`,
