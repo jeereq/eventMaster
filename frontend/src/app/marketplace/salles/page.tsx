@@ -17,7 +17,7 @@ import {
 import { roomTypeLabels, type RoomType } from '@/lib/roomLayoutUtils';
 import MarketplacePublicNav from '@/components/MarketplacePublicNav';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
-import { geocodeLocation } from '@/lib/leafletLoader';
+import { geocodeLocation, type GeoPlace } from '@/lib/leafletLoader';
 import { ArrowRight, Building2, Loader2, MapPin, Search, Users } from 'lucide-react';
 
 const ROOM_FILTERS: Array<{ id: string; label: string }> = [
@@ -42,8 +42,9 @@ export default function MarketplaceVenuesPage() {
   const [radiusKm, setRadiusKm] = useState('');
   const [roomType, setRoomType] = useState('');
   const [error, setError] = useState('');
+  const [mapOrigin, setMapOrigin] = useState<GeoPlace | null>(null);
 
-  const load = async () => {
+  const load = async (origin: GeoPlace | null = mapOrigin) => {
     setLoading(true);
     setError('');
     try {
@@ -53,12 +54,17 @@ export default function MarketplaceVenuesPage() {
       if (commune.trim()) search.set('commune', commune.trim());
       if (neighborhood.trim()) search.set('neighborhood', neighborhood.trim());
       if (roomType) search.set('roomType', roomType);
-      if (around.trim() && radiusKm) {
+      const radius = radiusKm || (origin ? '15' : '');
+      if (origin) {
+        search.set('lat', String(origin.lat));
+        search.set('lng', String(origin.lng));
+        search.set('radiusKm', radius);
+      } else if (around.trim() && radius) {
         const geo = await geocodeLocation(`${around.trim()}, RD Congo`);
         if (geo) {
           search.set('lat', String(geo.lat));
           search.set('lng', String(geo.lng));
-          search.set('radiusKm', radiusKm);
+          search.set('radiusKm', radius);
         }
       }
       const data = await api.get(`/public/venues${search.toString() ? `?${search}` : ''}`);
@@ -115,7 +121,8 @@ export default function MarketplaceVenuesPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            load();
+            setMapOrigin(null);
+            load(null);
           }}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"
         >
@@ -140,12 +147,21 @@ export default function MarketplaceVenuesPage() {
 
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
-        {!loading && markers.length > 0 && (
-          <div className="space-y-2">
-            <h2 className="text-sm font-semibold">Carte des salles</h2>
-            <MarketplaceLocationsMap markers={markers} />
-          </div>
-        )}
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold">Carte des salles</h2>
+          <MarketplaceLocationsMap
+            markers={markers}
+            searchable
+            searchCenter={mapOrigin}
+            radiusKm={Number(radiusKm || (mapOrigin ? 15 : 0))}
+            onPlaceSelect={(place) => {
+              setAround(place.label);
+              if (!radiusKm) setRadiusKm('15');
+              setMapOrigin(place);
+              void load(place);
+            }}
+          />
+        </div>
 
         {loading ? (
           <div className="flex justify-center py-20">

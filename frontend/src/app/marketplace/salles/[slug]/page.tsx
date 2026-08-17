@@ -15,6 +15,7 @@ import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
 import { formatFc } from '@/config/landingPricing';
 import { formatLocationLine, formatQuotaLabel, isVideoUrl, mediaPosterUrl, type PublicVenue } from '@/lib/marketplace';
 import { roomTypeLabels, type RoomLayoutBlueprint, type RoomType } from '@/lib/roomLayoutUtils';
+import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import {
   ArrowLeft, Building2, Loader2, MapPin, Play, Users,
 } from 'lucide-react';
@@ -27,6 +28,7 @@ export default function MarketplaceVenueDetailPage() {
   const [error, setError] = useState('');
   const [photoIndex, setPhotoIndex] = useState(0);
   const [pickedDate, setPickedDate] = useState('');
+  const [tab, setTab] = useState<MarketplaceFormTab>('details');
 
   useEffect(() => {
     async function load() {
@@ -69,6 +71,18 @@ export default function MarketplaceVenueDetailPage() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
             <div className="lg:col-span-3 space-y-5">
+              <div className="space-y-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+                  {roomTypeLabels[venue.roomType as RoomType] || venue.roomType}
+                </p>
+                <h1 className="text-2xl sm:text-3xl font-display font-semibold tracking-tight">
+                  {venue.headline}
+                </h1>
+                <p className="text-sm text-muted">{venue.orgName}</p>
+              </div>
+              <MarketplaceFormTabs value={tab} onChange={setTab} />
+              {tab === 'medias' && (
+                <>
               <div className="aspect-[16/9] rounded-[var(--radius-card)] overflow-hidden bg-black/80 border border-border">
                 {venue.photos[photoIndex] ? (
                   isVideoUrl(venue.photos[photoIndex]) ? (
@@ -112,17 +126,10 @@ export default function MarketplaceVenueDetailPage() {
                   ))}
                 </div>
               )}
-
-              <div className="space-y-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">
-                  {roomTypeLabels[venue.roomType as RoomType] || venue.roomType}
-                </p>
-                <h1 className="text-2xl sm:text-3xl font-display font-semibold tracking-tight">
-                  {venue.headline}
-                </h1>
-                <p className="text-sm text-muted">{venue.orgName}</p>
-              </div>
-
+                </>
+              )}
+              {tab === 'details' && (
+                <>
               <div className="flex flex-wrap gap-2 text-xs text-muted">
                 {formatLocationLine(venue) && (
                   <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-muted border border-border">
@@ -153,20 +160,6 @@ export default function MarketplaceVenueDetailPage() {
                 </div>
               ) : null}
 
-              {venue.latitude != null && venue.longitude != null && (
-                <MarketplaceLocationsMap
-                  markers={[{
-                    id: venue.slug,
-                    lat: venue.latitude,
-                    lng: venue.longitude,
-                    title: venue.headline,
-                    href: `/marketplace/salles/${venue.slug}`,
-                    subtitle: formatLocationLine(venue) || undefined,
-                  }]}
-                  height={240}
-                />
-              )}
-
               <AvailabilityCalendar
                 title="Calendrier des disponibilités"
                 bookedDates={venue.bookedDates}
@@ -174,6 +167,25 @@ export default function MarketplaceVenueDetailPage() {
                 selectedDate={pickedDate}
                 onSelectDate={setPickedDate}
               />
+                </>
+              )}
+              {tab === 'map' && (
+                venue.latitude != null && venue.longitude != null ? (
+                  <MarketplaceLocationsMap
+                    markers={[{
+                      id: venue.slug,
+                      lat: venue.latitude,
+                      lng: venue.longitude,
+                      title: venue.headline,
+                      href: `/marketplace/salles/${venue.slug}`,
+                      subtitle: formatLocationLine(venue) || undefined,
+                    }]}
+                    height={320}
+                  />
+                ) : (
+                  <p className="text-sm text-muted">Aucune position n’a encore été indiquée pour cette salle.</p>
+                )
+              )}
             </div>
 
             <aside className="lg:col-span-2 space-y-4">

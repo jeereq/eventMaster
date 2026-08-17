@@ -51,16 +51,44 @@ export function loadLeaflet(): Promise<any> {
   return leafletPromise;
 }
 
-export async function geocodeLocation(query: string): Promise<{ lat: number; lng: number } | null> {
+export interface GeoPlace {
+  lat: number;
+  lng: number;
+  label: string;
+}
+
+function readPlace(item: { lat?: string; lon?: string; display_name?: string }): GeoPlace | null {
+  const lat = parseFloat(String(item.lat || ''));
+  const lng = parseFloat(String(item.lon || ''));
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { lat, lng, label: item.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}` };
+}
+
+export async function searchPlaces(query: string, limit = 5): Promise<GeoPlace[]> {
   const q = query.trim();
-  if (!q) return null;
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`;
+  if (q.length < 2) return [];
+  const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=${limit}&q=${encodeURIComponent(q)}`;
+  const res = await fetch(url, { headers: { Accept: 'application/json' } });
+  if (!res.ok) return [];
+  const data = await res.json();
+  if (!Array.isArray(data)) return [];
+  const places: GeoPlace[] = [];
+  for (const item of data) {
+    const place = readPlace(item);
+    if (place) places.push(place);
+  }
+  return places;
+}
+
+export async function geocodeLocation(query: string): Promise<{ lat: number; lng: number } | null> {
+  const [place] = await searchPlaces(query, 1);
+  return place ? { lat: place.lat, lng: place.lng } : null;
+}
+
+export async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
+  const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${encodeURIComponent(String(lat))}&lon=${encodeURIComponent(String(lng))}`;
   const res = await fetch(url, { headers: { Accept: 'application/json' } });
   if (!res.ok) return null;
   const data = await res.json();
-  if (!Array.isArray(data) || data.length === 0) return null;
-  const lat = parseFloat(data[0].lat);
-  const lng = parseFloat(data[0].lon);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-  return { lat, lng };
+  return typeof data?.display_name === 'string' ? data.display_name : null;
 }

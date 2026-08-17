@@ -31,6 +31,8 @@ import { PRICE_UNIT_OPTIONS, parseBlockedDates, type VenuePriceUnit } from '@/li
 import { formatFc } from '@/config/landingPricing';
 import BlockedDatesField from '@/components/BlockedDatesField';
 import MarketplaceMediaField from '@/components/MarketplaceMediaField';
+import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
+import LocationPickerMap from '@/components/LocationPickerMap';
 
 interface RoomStaffItem {
   id: string;
@@ -162,6 +164,7 @@ export default function RoomsManagement() {
     longitude: '',
   });
   const [savingListing, setSavingListing] = useState(false);
+  const [listingTab, setListingTab] = useState<MarketplaceFormTab>('details');
 
   const allowedRoomTypes = useMemo(() => {
     const allowed = planFeatures?.allowedRoomTypes;
@@ -317,6 +320,7 @@ export default function RoomsManagement() {
       latitude: listing?.latitude != null ? String(listing.latitude) : '',
       longitude: listing?.longitude != null ? String(listing.longitude) : '',
     });
+    setListingTab('details');
     setError('');
   };
 
@@ -1016,7 +1020,7 @@ export default function RoomsManagement() {
         onClose={() => setListingRoom(null)}
         title={listingRoom ? `Publier — ${listingRoom.name}` : 'Marketplace'}
         description="Visible dans le catalogue public. Les plans de table d’événements privés ne sont jamais exposés."
-        size="lg"
+        size="xl"
         footer={
           <div className="flex w-full justify-between gap-2">
             <Button type="button" variant="secondary" size="sm" onClick={() => setListingRoom(null)}>
@@ -1049,7 +1053,8 @@ export default function RoomsManagement() {
       >
         {listingRoom && (
           <div className="space-y-4">
-            {listingRoom.venueListing?.isPublic && listingRoom.venueListing.slug && (
+            <MarketplaceFormTabs value={listingTab} onChange={setListingTab} />
+            {listingRoom.venueListing?.isPublic && listingRoom.venueListing.slug && listingTab === 'details' && (
               <p className="text-xs text-muted">
                 Fiche actuelle :{' '}
                 <Link href={`/marketplace/salles/${listingRoom.venueListing.slug}`} className="font-semibold text-primary hover:underline" target="_blank">
@@ -1057,6 +1062,8 @@ export default function RoomsManagement() {
                 </Link>
               </p>
             )}
+            {listingTab === 'details' && (
+              <>
             <Input
               label="Titre public"
               value={listingDraft.headline}
@@ -1084,18 +1091,6 @@ export default function RoomsManagement() {
                 label="Adresse"
                 value={listingDraft.address}
                 onChange={(e) => setListingDraft((d) => ({ ...d, address: e.target.value }))}
-              />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Input
-                label="Latitude"
-                value={listingDraft.latitude}
-                onChange={(e) => setListingDraft((d) => ({ ...d, latitude: e.target.value }))}
-              />
-              <Input
-                label="Longitude"
-                value={listingDraft.longitude}
-                onChange={(e) => setListingDraft((d) => ({ ...d, longitude: e.target.value }))}
               />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1138,10 +1133,21 @@ export default function RoomsManagement() {
               bookedDates={listingDraft.bookedDates}
               onChange={(blockedDates) => setListingDraft((d) => ({ ...d, blockedDates }))}
             />
-            <MarketplaceMediaField
-              urls={listingDraft.photos}
-              onChange={(photos) => setListingDraft((d) => ({ ...d, photos }))}
-            />
+              </>
+            )}
+            {listingTab === 'map' && (
+              <LocationPickerMap
+                latitude={listingDraft.latitude}
+                longitude={listingDraft.longitude}
+                onChange={({ latitude, longitude }) => setListingDraft((d) => ({ ...d, latitude, longitude }))}
+              />
+            )}
+            {listingTab === 'medias' && (
+              <MarketplaceMediaField
+                urls={listingDraft.photos}
+                onChange={(photos) => setListingDraft((d) => ({ ...d, photos }))}
+              />
+            )}
           </div>
         )}
       </Modal>

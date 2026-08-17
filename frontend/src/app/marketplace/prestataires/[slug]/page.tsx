@@ -13,6 +13,7 @@ import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
 import { formatFc } from '@/config/landingPricing';
 import { formatLocationLine, formatQuotaLabel, isVideoUrl, mediaPosterUrl, type PublicService } from '@/lib/marketplace';
+import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import { ArrowLeft, Loader2, MapPin, Play, Sparkles } from 'lucide-react';
 
 export default function MarketplaceServiceDetailPage() {
@@ -23,6 +24,7 @@ export default function MarketplaceServiceDetailPage() {
   const [error, setError] = useState('');
   const [photoIndex, setPhotoIndex] = useState(0);
   const [pickedDate, setPickedDate] = useState('');
+  const [tab, setTab] = useState<MarketplaceFormTab>('details');
 
   useEffect(() => {
     async function load() {
@@ -64,6 +66,14 @@ export default function MarketplaceServiceDetailPage() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
             <div className="lg:col-span-3 space-y-5">
+              <div className="space-y-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">{service.categoryLabel}</p>
+                <h1 className="text-2xl sm:text-3xl font-display font-semibold tracking-tight">{service.title}</h1>
+                <p className="text-sm text-muted">{service.orgName}</p>
+              </div>
+              <MarketplaceFormTabs value={tab} onChange={setTab} />
+              {tab === 'medias' && (
+                <>
               <div className="aspect-[16/9] rounded-[var(--radius-card)] overflow-hidden bg-black/80 border border-border">
                 {service.photos[photoIndex] ? (
                   isVideoUrl(service.photos[photoIndex]) ? (
@@ -107,11 +117,10 @@ export default function MarketplaceServiceDetailPage() {
                   ))}
                 </div>
               )}
-              <div className="space-y-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">{service.categoryLabel}</p>
-                <h1 className="text-2xl sm:text-3xl font-display font-semibold tracking-tight">{service.title}</h1>
-                <p className="text-sm text-muted">{service.orgName}</p>
-              </div>
+                </>
+              )}
+              {tab === 'details' && (
+                <>
               <div className="flex flex-wrap gap-2 text-xs text-muted">
                 {formatLocationLine(service) && (
                   <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-muted border border-border">
@@ -129,19 +138,6 @@ export default function MarketplaceServiceDetailPage() {
               {service.description && (
                 <p className="text-sm text-muted leading-relaxed whitespace-pre-line">{service.description}</p>
               )}
-              {service.latitude != null && service.longitude != null && (
-                <MarketplaceLocationsMap
-                  markers={[{
-                    id: service.slug,
-                    lat: service.latitude,
-                    lng: service.longitude,
-                    title: service.title,
-                    href: `/marketplace/prestataires/${service.slug}`,
-                    subtitle: formatLocationLine(service) || undefined,
-                  }]}
-                  height={240}
-                />
-              )}
               <AvailabilityCalendar
                 title="Calendrier des disponibilités"
                 bookedDates={service.bookedDates}
@@ -149,6 +145,25 @@ export default function MarketplaceServiceDetailPage() {
                 selectedDate={pickedDate}
                 onSelectDate={setPickedDate}
               />
+                </>
+              )}
+              {tab === 'map' && (
+                service.latitude != null && service.longitude != null ? (
+                  <MarketplaceLocationsMap
+                    markers={[{
+                      id: service.slug,
+                      lat: service.latitude,
+                      lng: service.longitude,
+                      title: service.title,
+                      href: `/marketplace/prestataires/${service.slug}`,
+                      subtitle: formatLocationLine(service) || undefined,
+                    }]}
+                    height={320}
+                  />
+                ) : (
+                  <p className="text-sm text-muted">Aucune position n’a encore été indiquée pour cette prestation.</p>
+                )
+              )}
             </div>
             <aside className="lg:col-span-2 space-y-4">
               <div className="border border-border rounded-[var(--radius-card)] p-5 bg-surface space-y-1">
