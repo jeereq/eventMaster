@@ -9,6 +9,7 @@ import {
   removeRoomStaff,
   previewRoomLayout,
 } from '../controllers/roomController';
+import { upsertRoomListing } from '../controllers/marketplaceController';
 
 const router = Router();
 
@@ -22,5 +23,6 @@ router.put('/:roomId', updateRoom);
 router.delete('/:roomId', deleteRoom);
 router.post('/:roomId/staff', assignRoomStaff);
 router.delete('/:roomId/staff/:userId', removeRoomStaff);
+router.put('/:roomId/listing', upsertRoomListing);
 
 export default router;

@@ -27,6 +27,7 @@ interface SiteHeaderProps {
 
 const LANDING_LINKS: SiteHeaderLink[] = [
   { href: '/#modeles', label: 'Modèles' },
+  { href: '/marketplace/salles', label: 'Salles' },
   { href: '/#parcours', label: 'Parcours' },
   { href: '/#tarifs', label: 'Tarifs' },
   { href: '/contact', label: 'Contact' },
@@ -35,6 +36,7 @@ const LANDING_LINKS: SiteHeaderLink[] = [
 const CONTACT_LINKS: SiteHeaderLink[] = [
   { href: '/', label: 'Accueil' },
   { href: '/#modeles', label: 'Modèles' },
+  { href: '/marketplace/salles', label: 'Salles' },
   { href: '/#parcours', label: 'Parcours' },
   { href: '/#tarifs', label: 'Tarifs' },
   { href: '/contact', label: 'Contact' },

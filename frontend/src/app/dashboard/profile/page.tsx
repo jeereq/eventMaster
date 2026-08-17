@@ -2,6 +2,7 @@
 
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -12,6 +13,7 @@ import TeamManagement from '../TeamManagement';
 import RoomsManagement from '../RoomsManagement';
 import { PageHeader, Alert, SkeletonProfileView, Button, Breadcrumbs, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
 
 type ProfileTab = 'profil' | 'salles' | 'equipe';
 
@@ -24,6 +26,7 @@ function ProfilePageContent() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [tenantName, setTenantName] = useState('');
+  const [accountKind, setAccountKind] = useState<TenantAccountKind>('ORGANIZER');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [brandPrimary, setBrandPrimary] = useState('#4f46e5');
@@ -71,6 +74,7 @@ function ProfilePageContent() {
     }
     if (tenant) {
       setTenantName(tenant.name || '');
+      setAccountKind(tenant.accountKind || 'ORGANIZER');
       setBrandPrimary(tenant.branding?.primary || '#4f46e5');
       setBrandAccent(tenant.branding?.accent || '#6366f1');
     }
@@ -128,6 +132,7 @@ function ProfilePageContent() {
         phone,
         password: password || undefined,
         tenantName: user?.role !== 'SUPER_ADMIN' && user?.role !== 'COMMERCIAL' ? tenantName : undefined,
+        accountKind: user?.role !== 'SUPER_ADMIN' && user?.role !== 'COMMERCIAL' ? accountKind : undefined,
       });
 
       updateUserAndTenant(data.user, data.tenant);
@@ -153,7 +158,7 @@ function ProfilePageContent() {
 
   const tabDescriptions: Record<ProfileTab, string> = {
     profil: 'Informations personnelles, contact et sécurité du compte.',
-    salles: 'Créez des salles, générez un plan 2D et assignez le staff.',
+    salles: 'Créez des salles, générez un plan 2D, assignez le staff et publiez à la location.',
     equipe: 'Invitez managers, agents protocole et commerciaux.',
   };
 
@@ -255,6 +260,22 @@ function ProfilePageContent() {
                   <Input label="Téléphone (WhatsApp)" type="tel" leftIcon={<Phone className="w-4 h-4" />} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+243..." />
                   {user?.role === 'USER' && tenant && (
                     <Input label="Nom de l'organisation" leftIcon={<Building className="w-4 h-4" />} required value={tenantName} onChange={(e) => setTenantName(e.target.value)} />
+                    <label className="block space-y-1.5">
+                      <span className="text-xs font-medium text-muted">Type de compte</span>
+                      <select
+                        value={accountKind}
+                        onChange={(e) => setAccountKind(e.target.value as TenantAccountKind)}
+                        className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+                      >
+                        {(Object.keys(ACCOUNT_KIND_LABELS) as TenantAccountKind[]).map((kind) => (
+                          <option key={kind} value={kind}>{ACCOUNT_KIND_LABELS[kind]}</option>
+                        ))}
+                      </select>
+                      <p className="text-[11px] text-muted">
+                        Propriétaire de salles : publiez vos espaces dans le{' '}
+                        <Link href="/marketplace/salles" className="text-primary font-semibold hover:underline">catalogue public</Link>.
+                      </p>
+                    </label>
                   )}
                 </div>
               </div>

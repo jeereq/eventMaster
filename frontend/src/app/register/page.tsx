@@ -12,6 +12,7 @@ import { Button, Alert, Input, Card, PhoneInput } from '@/components/ui';
 import { parseReferralFromSearchParams } from '@/lib/referralLink';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
+import { ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
 
 const FEATURES = [
  { icon: Calendar, title: "Gestion d'événements & RSVP", desc: 'Invitations par e-mail ou WhatsApp, suivi des réponses en temps réel.' },
@@ -52,6 +53,7 @@ function RegisterPageContent() {
  const [acceptPrivacy, setAcceptPrivacy] = useState(false);
  const [referralCode, setReferralCode] = useState('');
  const [referralFromLink, setReferralFromLink] = useState(false);
+ const [accountKind, setAccountKind] = useState<TenantAccountKind>('ORGANIZER');
  const [error, setError] = useState('');
  const [successMessage, setSuccessMessage] = useState('');
  const [loading, setLoading] = useState(false);
@@ -95,6 +97,7 @@ function RegisterPageContent() {
  referralCode || undefined,
  phoneCountryCode,
  phoneNational,
+ accountKind,
  );
  if (res.requiresVerification && res.email) {
  router.push(`/verify-otp?email=${encodeURIComponent(res.email)}&method=${res.verificationMethod || verificationMethod}`);
@@ -186,6 +189,29 @@ function RegisterPageContent() {
  <Input label="Votre nom" id="name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Jean Dupont" leftIcon={<User className="w-4 h-4" />} />
  <Input label="Organisation" id="tenantName" required value={tenantName} onChange={(e) => setTenantName(e.target.value)} placeholder="Dupont Événements" leftIcon={<Building className="w-4 h-4" />} />
  </div>
+
+ <fieldset className="space-y-2">
+ <legend className="text-xs font-medium text-muted">Vous êtes plutôt…</legend>
+ <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+ {(['ORGANIZER', 'VENDOR', 'BOTH'] as TenantAccountKind[]).map((kind) => (
+ <label
+ key={kind}
+ className={`flex items-center gap-2 px-3 py-2.5 rounded-[var(--radius-button)] border text-xs font-medium cursor-pointer ${
+ accountKind === kind ? 'border-primary bg-primary/5 text-foreground' : 'border-border text-muted'
+ }`}
+ >
+ <input
+ type="radio"
+ name="accountKind"
+ className="sr-only"
+ checked={accountKind === kind}
+ onChange={() => setAccountKind(kind)}
+ />
+ {ACCOUNT_KIND_LABELS[kind]}
+ </label>
+ ))}
+ </div>
+ </fieldset>
 
  <Input label="Adresse email" id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="jean@exemple.com" leftIcon={<Mail className="w-4 h-4" />} />
 

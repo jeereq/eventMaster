@@ -10,6 +10,7 @@ const ALLOWED_PREFIXES = [
   '/api/public/site',
   '/api/public/plans',
   '/api/public/templates',
+  '/api/public/venues',
   '/api/auth/login',
   '/api/auth/forgot-password',
   '/api/auth/reset-password',

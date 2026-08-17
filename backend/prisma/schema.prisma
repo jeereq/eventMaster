@@ -51,6 +51,23 @@ enum PlanType {
   ENTERPRISE_3
 }
 
+enum TenantAccountKind {
+  ORGANIZER
+  VENDOR
+  BOTH
+}
+
+enum VenuePriceUnit {
+  EVENT
+  DAY
+  HOUR
+}
+
+enum MarketplaceInquiryStatus {
+  NEW
+  CONTACTED
+}
+
 model Tenant {
   id            String     @id @default(uuid())
   name          String
@@ -67,6 +84,8 @@ model Tenant {
   defaultOrgCommercialCommissionRate Float @default(0.20)
   /** Couleurs de marque org : { primary, accent, sidebar? } */
   branding      Json?
+  /** ORGANIZER = SaaS événement (défaut). VENDOR = offre salles/prestas. BOTH = les deux. */
+  accountKind   TenantAccountKind @default(ORGANIZER)
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
@@ -77,6 +96,9 @@ model Tenant {
   rooms         OrganizationRoom[]
   commercialCommissions CommercialCommission[]
   platformInvoices      PlatformInvoice[]
+  vendorProfile VendorProfile?
+  venueListings VenueListing[]
+  marketplaceInquiries MarketplaceInquiry[] @relation("InquiryFromTenant")
   
   managerId     String?
   manager       User?      @relation("TenantManager", fields: [managerId], references: [id])
@@ -392,8 +414,66 @@ model OrganizationRoom {
 
   events      Event[]
   staff       RoomStaff[]
+  venueListing VenueListing?
 
   @@index([tenantId])
+}
+
+model VendorProfile {
+  id          String   @id @default(uuid())
+  tenantId    String   @unique
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  slug        String   @unique
+  displayName String
+  city        String?
+  bio         String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model VenueListing {
+  id           String         @id @default(uuid())
+  tenantId     String
+  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  roomId       String         @unique
+  room         OrganizationRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  slug         String         @unique
+  isPublic     Boolean        @default(false)
+  headline     String?
+  city         String?
+  address      String?
+  latitude     Float?
+  longitude    Float?
+  priceFromFc  Int?
+  priceUnit    VenuePriceUnit @default(EVENT)
+  photos       Json?
+  publishedAt  DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  inquiries MarketplaceInquiry[]
+
+  @@index([isPublic, city])
+  @@index([tenantId])
+}
+
+model MarketplaceInquiry {
+  id          String                    @id @default(uuid())
+  listingId   String
+  listing     VenueListing              @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  fromName    String
+  fromEmail   String
+  fromPhone   String?
+  eventDate   DateTime?
+  guestCount  Int?
+  message     String
+  status      MarketplaceInquiryStatus  @default(NEW)
+  fromTenantId String?
+  fromTenant   Tenant?                  @relation("InquiryFromTenant", fields: [fromTenantId], references: [id], onDelete: SetNull)
+  createdAt   DateTime                  @default(now())
+
+  @@index([listingId, createdAt])
+  @@index([fromEmail])
 }
 
 model RoomStaff {

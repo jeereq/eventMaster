@@ -20,6 +20,7 @@ export const FOOTER_FEATURES = [
 
 export const FOOTER_PRODUCT = [
   { label: 'Modèles', href: '/#modeles' },
+  { label: 'Salles à louer', href: '/marketplace/salles' },
   { label: 'Parcours', href: '/#parcours' },
   { label: 'Tarifs', href: '/#tarifs' },
   { label: 'FAQ', href: '/faq' },
@@ -60,6 +61,12 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Quand l\'invité reçoit-il son plan de table, PDF et localisation GPS ?',
     answer:
       'L\'invitation initiale contient uniquement le lien RSVP (e-mail ou WhatsApp). Le PDF personnalisé, le plan de table interactif et la localisation GPS WhatsApp sont envoyés automatiquement dès l\'acceptation RSVP, dès qu\'une place est assignée (forfait Premium 1+) — jamais à l\'envoi de l\'invitation.',
+  },
+  {
+    id: 'marketplace-venues',
+    question: 'Puis-je trouver ou publier une salle sur EventMaster ?',
+    answer:
+      'Oui. Le catalogue public liste les salles que les organisations choisissent de publier (ville, capacité, plan 2D, tarif de départ). Vous envoyez une demande de devis au propriétaire. Pour proposer vos espaces : Mon compte → Salles → Publier. Les salles restent privées tant qu’elles ne sont pas publiées.',
   },
   {
     id: 'free-trial',

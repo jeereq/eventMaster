@@ -9,6 +9,7 @@ export function formatTenantResponse(tenant: {
   licenseExpiresAt: Date | null;
   managerId: string | null;
   branding?: unknown;
+  accountKind?: string | null;
 }) {
   const branding = parseBranding(tenant.branding);
   return {
@@ -19,6 +20,7 @@ export function formatTenantResponse(tenant: {
     licenseExpiresAt: tenant.licenseExpiresAt,
     managerId: tenant.managerId,
     branding: branding || undefined,
+    accountKind: tenant.accountKind || 'ORGANIZER',
   };
 }
 
