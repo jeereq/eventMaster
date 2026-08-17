@@ -6,18 +6,21 @@ import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import PublicCtaBand from '@/components/PublicCtaBand';
 import MarketplacePublicNav from '@/components/MarketplacePublicNav';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
-import CatalogueViewToggle, { useCatalogueView } from '@/components/CatalogueViewToggle';
+import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import CatalogueResults from '@/components/CatalogueResults';
-import { Input, Pagination, paginateItems } from '@/components/ui';
+import CatalogueFilterBar from '@/components/CatalogueFilterBar';
+import { Pagination, paginateItems } from '@/components/ui';
 import {
+  catalogueItemToMapMarker,
   filterCatalogueItems,
+  isCatalogueMapView,
   serviceToCatalogueItem,
   venueToCatalogueItem,
   type CatalogueItem,
   type PublicService,
   type PublicVenue,
 } from '@/lib/marketplace';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 export default function MarketplaceHubPage() {
   const { mode, setView } = useCatalogueView();
@@ -62,58 +65,59 @@ export default function MarketplaceHubPage() {
     () =>
       visible
         .filter((item) => item.latitude != null && item.longitude != null)
-        .map((item) => ({
-          id: item.id,
-          lat: item.latitude as number,
-          lng: item.longitude as number,
-          title: item.title,
-          href: item.href,
-          subtitle: [item.orgName, item.location].filter(Boolean).join(' · ') || undefined,
-          kind: item.kind,
-        })),
+        .map(catalogueItemToMapMarker),
     [visible],
   );
 
+  const mapMode = isCatalogueMapView(mode);
+
   return (
     <PublicPageShell faqHref="/faq">
-      <PublicPageHero
-        chip="Catalogue"
-        title="Salles et prestataires pour vos événements"
-        description="Trouvez un lieu ou un professionnel enregistré sur EventMaster. Grille, liste ou carte — la recherche sur la carte ne porte que sur ces fiches."
-      >
-        <MarketplacePublicNav active="hub" />
-      </PublicPageHero>
+      {mode !== 'focus' && (
+        <PublicPageHero
+          chip="Catalogue"
+          title="Salles et prestataires pour vos événements"
+          description="Trouvez un lieu ou un professionnel enregistré sur EventMaster. Grille, liste, carte ou focus — la recherche sur la carte ne porte que sur ces fiches."
+        >
+          <MarketplacePublicNav active="hub" />
+        </PublicPageHero>
+      )}
 
-      <main className="page-container py-10 flex-1 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex-1 min-w-0">
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Nom, organisation, ville…"
-              leftIcon={<Search className="w-4 h-4" />}
-            />
-          </div>
-          <CatalogueViewToggle value={mode} onChange={setView} />
-        </div>
+      <main className="page-container py-6 sm:py-10 flex-1 space-y-4 sm:space-y-6">
+        {mode === 'focus' && <MarketplacePublicNav active="hub" />}
+        <CatalogueFilterBar
+          search={query}
+          onSearchChange={setQuery}
+          searchPlaceholder="Nom, organisation, ville…"
+          view={mode}
+          onViewChange={setView}
+        />
 
         {loading ? (
           <div className="flex justify-center py-16">
             <Loader2 className="w-7 h-7 animate-spin text-primary" />
           </div>
-        ) : mode === 'map' ? (
+        ) : mapMode ? (
           <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-4 text-xs text-muted">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-primary" />
-                Salles
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[color:var(--festive-accent)]" />
-                Prestataires
-              </span>
-            </div>
-            <MarketplaceLocationsMap markers={markers} listingSearch height={480} />
+            {mode !== 'focus' && (
+              <div className="flex flex-wrap items-center gap-4 text-xs text-muted">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-primary" />
+                  Salles
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[color:var(--festive-accent)]" />
+                  Prestataires
+                </span>
+                <span>Survolez un prestataire pour voir son rayon d’action.</span>
+              </div>
+            )}
+            <MarketplaceLocationsMap
+              markers={markers}
+              listingSearch
+              height={480}
+              variant={mode === 'focus' ? 'focus' : 'default'}
+            />
           </div>
         ) : (
           <>
@@ -134,14 +138,16 @@ export default function MarketplaceHubPage() {
         )}
       </main>
 
-      <PublicCtaBand
-        title="Vous proposez une salle ou un service ?"
-        description="Publiez une fiche depuis votre organisation EventMaster, avec photos, vidéos, carte et calendrier."
-        primaryHref="/register"
-        primaryLabel="Créer un compte"
-        secondaryHref="/contact"
-        secondaryLabel="Nous contacter"
-      />
+      {mode !== 'focus' && (
+        <PublicCtaBand
+          title="Vous proposez une salle ou un service ?"
+          description="Publiez une fiche depuis votre organisation EventMaster, avec photos, vidéos, carte et calendrier."
+          primaryHref="/register"
+          primaryLabel="Créer un compte"
+          secondaryHref="/contact"
+          secondaryLabel="Nous contacter"
+        />
+      )}
     </PublicPageShell>
   );
 }

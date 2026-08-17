@@ -67,7 +67,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'marketplace-venues',
     question: 'Puis-je trouver une salle ou un prestataire sur EventMaster ?',
     answer:
-      'Oui. Le catalogue public liste les salles et prestations (traiteur, photo, DJ, déco…) que les organisations choisissent de publier, avec photos et vidéos. Vous pouvez demander un devis, ou — connecté avec une organisation — réserver une date. L’acompte (30 %) se verse directement au professionnel, hors EventMaster. À la confirmation, la date est bloquée et une salle peut être rattachée à l’événement. Pour proposer une offre : Mon compte → Salles, ou Marketplace → Prestations.',
+      'Oui. Le catalogue public liste les salles et prestations (traiteur, photo, DJ, déco…) que les organisations choisissent de publier, avec photos et vidéos. Vous pouvez demander un devis, ou — connecté avec une organisation — réserver une date. L’acompte (30 %) se verse directement au professionnel, hors EventMaster. À la confirmation, la date est bloquée et une salle peut être rattachée à l’événement. Pour proposer une offre : Salles ou Marketplace dans le tableau de bord.',
   },
   {
     id: 'marketplace-booking',

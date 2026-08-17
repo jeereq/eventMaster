@@ -6,19 +6,20 @@ import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import PublicCtaBand from '@/components/PublicCtaBand';
 import MarketplacePublicNav from '@/components/MarketplacePublicNav';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
-import CatalogueViewToggle, { useCatalogueView } from '@/components/CatalogueViewToggle';
+import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import CatalogueResults from '@/components/CatalogueResults';
-import { Button, Input, Pagination, paginateItems } from '@/components/ui';
+import CatalogueFilterBar, { CatalogueFilterField, catalogueSelectClass } from '@/components/CatalogueFilterBar';
+import { Input, Pagination, paginateItems } from '@/components/ui';
 import {
   PRICE_UNIT_OPTIONS,
   SERVICE_CATEGORIES,
   SERVICE_CATEGORY_LABELS,
+  catalogueItemToMapMarker,
+  isCatalogueMapView,
   serviceToCatalogueItem,
   type PublicService,
 } from '@/lib/marketplace';
-import { Loader2, MapPin, Search } from 'lucide-react';
-
-const fieldClass = 'w-full px-3 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm';
+import { Loader2, MapPin } from 'lucide-react';
 
 export default function MarketplaceServicesPage() {
   const { mode, setView } = useCatalogueView();
@@ -66,57 +67,66 @@ export default function MarketplaceServicesPage() {
     () =>
       items
         .filter((item) => item.latitude != null && item.longitude != null)
-        .map((item) => ({
-          id: item.id,
-          lat: item.latitude as number,
-          lng: item.longitude as number,
-          title: item.title,
-          href: item.href,
-          subtitle: item.location || undefined,
-          kind: item.kind,
-        })),
+        .map(catalogueItemToMapMarker),
     [items],
   );
 
+  const filterCount = [city, commune, neighborhood, category, priceUnit].filter((v) => v.trim()).length;
+  const mapMode = isCatalogueMapView(mode);
+
   return (
     <PublicPageShell faqHref="/faq">
-      <PublicPageHero
-        chip="Catalogue"
-        title="Trouvez un prestataire"
-        description="Traiteur, photo, DJ… Filtrez par commune et tarif. En vue carte, seuls les prestataires enregistrés sur EventMaster apparaissent."
-      >
-        <MarketplacePublicNav active="services" />
-      </PublicPageHero>
-
-      <main className="page-container py-10 flex-1 space-y-6">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            load();
-          }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"
+      {mode !== 'focus' && (
+        <PublicPageHero
+          chip="Catalogue"
+          title="Trouvez un prestataire"
+          description="Traiteur, photo, DJ… Filtrez par commune et tarif. En vue carte, seuls les prestataires enregistrés sur EventMaster apparaissent."
         >
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nom, prestataire…" leftIcon={<Search className="w-4 h-4" />} />
-          <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Ville" leftIcon={<MapPin className="w-4 h-4" />} />
-          <Input value={commune} onChange={(e) => setCommune(e.target.value)} placeholder="Commune" />
-          <Input value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} placeholder="Quartier" />
-          <select value={category} onChange={(e) => setCategory(e.target.value)} className={fieldClass}>
-            <option value="">Toutes les catégories</option>
-            {SERVICE_CATEGORIES.map((id) => (
-              <option key={id} value={id}>{SERVICE_CATEGORY_LABELS[id]}</option>
-            ))}
-          </select>
-          <select value={priceUnit} onChange={(e) => setPriceUnit(e.target.value)} className={fieldClass}>
-            <option value="">Tous les tarifs</option>
-            {PRICE_UNIT_OPTIONS.map((opt) => (
-              <option key={opt.id} value={opt.id}>{opt.label}</option>
-            ))}
-          </select>
-          <Button type="submit">Filtrer</Button>
-          <div className="flex justify-end sm:justify-start lg:justify-end">
-            <CatalogueViewToggle value={mode} onChange={setView} />
-          </div>
-        </form>
+          <MarketplacePublicNav active="services" />
+        </PublicPageHero>
+      )}
+
+      <main className="page-container py-6 sm:py-10 flex-1 space-y-4 sm:space-y-6">
+        {mode === 'focus' && <MarketplacePublicNav active="services" />}
+        <CatalogueFilterBar
+          search={q}
+          onSearchChange={setQ}
+          searchPlaceholder="Nom, prestataire…"
+          view={mode}
+          onViewChange={setView}
+          onSubmit={load}
+          filterCount={filterCount}
+          showSubmit
+          filters={
+            <>
+              <CatalogueFilterField label="Ville">
+                <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Ex. Kinshasa" leftIcon={<MapPin className="w-4 h-4" />} />
+              </CatalogueFilterField>
+              <CatalogueFilterField label="Commune">
+                <Input value={commune} onChange={(e) => setCommune(e.target.value)} placeholder="Ex. Gombe" />
+              </CatalogueFilterField>
+              <CatalogueFilterField label="Quartier">
+                <Input value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} placeholder="Quartier" />
+              </CatalogueFilterField>
+              <CatalogueFilterField label="Catégorie">
+                <select value={category} onChange={(e) => setCategory(e.target.value)} className={catalogueSelectClass}>
+                  <option value="">Toutes les catégories</option>
+                  {SERVICE_CATEGORIES.map((id) => (
+                    <option key={id} value={id}>{SERVICE_CATEGORY_LABELS[id]}</option>
+                  ))}
+                </select>
+              </CatalogueFilterField>
+              <CatalogueFilterField label="Tarif">
+                <select value={priceUnit} onChange={(e) => setPriceUnit(e.target.value)} className={catalogueSelectClass}>
+                  <option value="">Tous les tarifs</option>
+                  {PRICE_UNIT_OPTIONS.map((opt) => (
+                    <option key={opt.id} value={opt.id}>{opt.label}</option>
+                  ))}
+                </select>
+              </CatalogueFilterField>
+            </>
+          }
+        />
 
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
@@ -124,8 +134,13 @@ export default function MarketplaceServicesPage() {
           <div className="flex justify-center py-20">
             <Loader2 className="w-7 h-7 animate-spin text-primary" />
           </div>
-        ) : mode === 'map' ? (
-          <MarketplaceLocationsMap markers={markers} listingSearch height={480} />
+        ) : mapMode ? (
+          <MarketplaceLocationsMap
+            markers={markers}
+            listingSearch
+            height={480}
+            variant={mode === 'focus' ? 'focus' : 'default'}
+          />
         ) : (
           <>
             <CatalogueResults
@@ -145,14 +160,16 @@ export default function MarketplaceServicesPage() {
         )}
       </main>
 
-      <PublicCtaBand
-        title="Vous proposez un service ?"
-        description="Publiez votre prestation avec zone d’intervention, médias et calendrier."
-        primaryHref="/register"
-        primaryLabel="Proposer mes services"
-        secondaryHref="/contact"
-        secondaryLabel="Nous contacter"
-      />
+      {mode !== 'focus' && (
+        <PublicCtaBand
+          title="Vous proposez un service ?"
+          description="Publiez votre prestation avec zone d’intervention, médias et calendrier."
+          primaryHref="/register"
+          primaryLabel="Proposer mes services"
+          secondaryHref="/contact"
+          secondaryLabel="Nous contacter"
+        />
+      )}
     </PublicPageShell>
   );
 }

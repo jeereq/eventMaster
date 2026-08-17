@@ -97,7 +97,7 @@ export default function CatalogueResults({
   emptyDescription,
 }: {
   items: CatalogueItem[];
-  mode: Exclude<CatalogueViewMode, 'map'>;
+  mode: Exclude<CatalogueViewMode, 'map' | 'focus'>;
   emptyTitle: string;
   emptyDescription: string;
 }) {

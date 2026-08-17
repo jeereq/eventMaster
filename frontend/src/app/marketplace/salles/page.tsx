@@ -4,17 +4,20 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import PublicCtaBand from '@/components/PublicCtaBand';
-import { Button, Input, Pagination, paginateItems } from '@/components/ui';
+import { Input, Pagination, paginateItems } from '@/components/ui';
 import {
+  catalogueItemToMapMarker,
+  isCatalogueMapView,
   venueToCatalogueItem,
   type PublicVenue,
 } from '@/lib/marketplace';
 import { roomTypeLabels } from '@/lib/roomLayoutUtils';
 import MarketplacePublicNav from '@/components/MarketplacePublicNav';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
-import CatalogueViewToggle, { useCatalogueView } from '@/components/CatalogueViewToggle';
+import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import CatalogueResults from '@/components/CatalogueResults';
-import { Loader2, MapPin, Search } from 'lucide-react';
+import CatalogueFilterBar, { CatalogueFilterField, catalogueSelectClass } from '@/components/CatalogueFilterBar';
+import { Loader2, MapPin } from 'lucide-react';
 
 const ROOM_FILTERS: Array<{ id: string; label: string }> = [
   { id: '', label: 'Tous les types' },
@@ -24,8 +27,6 @@ const ROOM_FILTERS: Array<{ id: string; label: string }> = [
   { id: 'TENT', label: roomTypeLabels.TENT },
   { id: 'CUSTOM', label: roomTypeLabels.CUSTOM },
 ];
-
-const fieldClass = 'w-full px-3 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm';
 
 export default function MarketplaceVenuesPage() {
   const { mode, setView } = useCatalogueView();
@@ -71,51 +72,57 @@ export default function MarketplaceVenuesPage() {
     () =>
       items
         .filter((item) => item.latitude != null && item.longitude != null)
-        .map((item) => ({
-          id: item.id,
-          lat: item.latitude as number,
-          lng: item.longitude as number,
-          title: item.title,
-          href: item.href,
-          subtitle: item.location || undefined,
-          kind: item.kind,
-        })),
+        .map(catalogueItemToMapMarker),
     [items],
   );
 
+  const filterCount = [city, commune, neighborhood, roomType].filter((v) => v.trim()).length;
+  const mapMode = isCatalogueMapView(mode);
+
   return (
     <PublicPageShell faqHref="/faq">
-      <PublicPageHero
-        chip="Catalogue"
-        title="Trouvez une salle pour votre événement"
-        description="Filtrez par ville, commune ou quartier. En vue carte, la recherche ne porte que sur les salles enregistrées chez EventMaster."
-      >
-        <MarketplacePublicNav active="venues" />
-      </PublicPageHero>
-
-      <main className="page-container py-10 flex-1 space-y-6">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            load();
-          }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"
+      {mode !== 'focus' && (
+        <PublicPageHero
+          chip="Catalogue"
+          title="Trouvez une salle pour votre événement"
+          description="Filtrez par ville, commune ou quartier. En vue carte, la recherche ne porte que sur les salles enregistrées chez EventMaster."
         >
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nom, organisation…" leftIcon={<Search className="w-4 h-4" />} />
-          <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Ville" leftIcon={<MapPin className="w-4 h-4" />} />
-          <Input value={commune} onChange={(e) => setCommune(e.target.value)} placeholder="Commune (ex. Gombe)" />
-          <Input value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} placeholder="Quartier" />
-          <select value={roomType} onChange={(e) => setRoomType(e.target.value)} className={fieldClass}>
-            {ROOM_FILTERS.map((opt) => (
-              <option key={opt.id || 'all'} value={opt.id}>{opt.label}</option>
-            ))}
-          </select>
-          <div className="hidden lg:block" />
-          <Button type="submit">Filtrer</Button>
-          <div className="flex justify-end">
-            <CatalogueViewToggle value={mode} onChange={setView} />
-          </div>
-        </form>
+          <MarketplacePublicNav active="venues" />
+        </PublicPageHero>
+      )}
+
+      <main className="page-container py-6 sm:py-10 flex-1 space-y-4 sm:space-y-6">
+        {mode === 'focus' && <MarketplacePublicNav active="venues" />}
+        <CatalogueFilterBar
+          search={q}
+          onSearchChange={setQ}
+          searchPlaceholder="Nom, organisation…"
+          view={mode}
+          onViewChange={setView}
+          onSubmit={load}
+          filterCount={filterCount}
+          showSubmit
+          filters={
+            <>
+              <CatalogueFilterField label="Ville">
+                <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Ex. Kinshasa" leftIcon={<MapPin className="w-4 h-4" />} />
+              </CatalogueFilterField>
+              <CatalogueFilterField label="Commune">
+                <Input value={commune} onChange={(e) => setCommune(e.target.value)} placeholder="Ex. Gombe" />
+              </CatalogueFilterField>
+              <CatalogueFilterField label="Quartier">
+                <Input value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} placeholder="Quartier" />
+              </CatalogueFilterField>
+              <CatalogueFilterField label="Type de salle">
+                <select value={roomType} onChange={(e) => setRoomType(e.target.value)} className={catalogueSelectClass}>
+                  {ROOM_FILTERS.map((opt) => (
+                    <option key={opt.id || 'all'} value={opt.id}>{opt.label}</option>
+                  ))}
+                </select>
+              </CatalogueFilterField>
+            </>
+          }
+        />
 
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
@@ -123,15 +130,20 @@ export default function MarketplaceVenuesPage() {
           <div className="flex justify-center py-20">
             <Loader2 className="w-7 h-7 animate-spin text-primary" />
           </div>
-        ) : mode === 'map' ? (
-          <MarketplaceLocationsMap markers={markers} listingSearch height={480} />
+        ) : mapMode ? (
+          <MarketplaceLocationsMap
+            markers={markers}
+            listingSearch
+            height={480}
+            variant={mode === 'focus' ? 'focus' : 'default'}
+          />
         ) : (
           <>
             <CatalogueResults
               items={paginateItems(items, page, PAGE_SIZE)}
               mode={mode}
               emptyTitle="Aucune salle pour ces filtres"
-              emptyDescription="Élargissez la recherche, ou publiez une salle depuis Mon compte → Salles."
+              emptyDescription="Élargissez la recherche, ou publiez une salle depuis Salles dans le tableau de bord."
             />
             <Pagination
               page={page}
@@ -144,14 +156,16 @@ export default function MarketplaceVenuesPage() {
         )}
       </main>
 
-      <PublicCtaBand
-        title="Vous avez une salle à proposer ?"
-        description="Publiez votre fiche avec photos, vidéos, tarifs et calendrier."
-        primaryHref="/register"
-        primaryLabel="Publier une salle"
-        secondaryHref="/contact"
-        secondaryLabel="Nous contacter"
-      />
+      {mode !== 'focus' && (
+        <PublicCtaBand
+          title="Vous avez une salle à proposer ?"
+          description="Publiez votre fiche avec photos, vidéos, tarifs et calendrier."
+          primaryHref="/register"
+          primaryLabel="Publier une salle"
+          secondaryHref="/contact"
+          secondaryLabel="Nous contacter"
+        />
+      )}
     </PublicPageShell>
   );
 }

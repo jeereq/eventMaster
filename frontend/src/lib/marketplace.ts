@@ -1,4 +1,5 @@
 import type { RoomType } from '@/lib/roomLayoutUtils';
+import { formatFc } from '@/config/landingPricing';
 
 export type VenuePriceUnit = 'EVENT' | 'DAY' | 'HOUR' | 'MINUTE' | 'PERSON' | 'QUOTA';
 export type TenantAccountKind = 'ORGANIZER' | 'VENDOR' | 'BOTH' | 'CLIENT';
@@ -258,7 +259,11 @@ export function formatQuotaLabel(quotaMin?: number | null, quotaMax?: number | n
 }
 
 export type CatalogueKind = 'venue' | 'service';
-export type CatalogueViewMode = 'grid' | 'list' | 'map';
+export type CatalogueViewMode = 'grid' | 'list' | 'map' | 'focus';
+
+export function isCatalogueMapView(mode: CatalogueViewMode): mode is 'map' | 'focus' {
+  return mode === 'map' || mode === 'focus';
+}
 
 export interface CatalogueItem {
   kind: CatalogueKind;
@@ -274,6 +279,7 @@ export interface CatalogueItem {
   priceUnitLabel: string;
   latitude: number | null;
   longitude: number | null;
+  coverageRadiusKm?: number | null;
 }
 
 export function venueToCatalogueItem(venue: PublicVenue): CatalogueItem {
@@ -312,6 +318,7 @@ export function serviceToCatalogueItem(service: PublicService): CatalogueItem {
     priceUnitLabel: service.priceUnitLabel,
     latitude: service.latitude ?? null,
     longitude: service.longitude ?? null,
+    coverageRadiusKm: service.coverageRadiusKm,
   };
 }
 
@@ -321,4 +328,26 @@ export function filterCatalogueItems(items: CatalogueItem[], query: string): Cat
   return items.filter((item) =>
     [item.title, item.orgName, item.categoryLabel, item.location].join(' ').toLowerCase().includes(q),
   );
+}
+
+export function mapsDirectionsUrl(lat: number, lng: number) {
+  return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+}
+
+export function catalogueItemToMapMarker(item: CatalogueItem) {
+  return {
+    id: item.id,
+    lat: item.latitude as number,
+    lng: item.longitude as number,
+    title: item.title,
+    href: item.href,
+    subtitle: [item.orgName, item.location].filter(Boolean).join(' · ') || undefined,
+    kind: item.kind,
+    coverUrl: item.coverUrl,
+    priceLabel: item.priceFromFc != null ? `Dès ${formatFc(item.priceFromFc)}` : 'Sur devis',
+    categoryLabel: item.kind === 'venue' ? 'Salle' : item.categoryLabel,
+    orgName: item.orgName,
+    location: item.location || undefined,
+    coverageRadiusKm: item.coverageRadiusKm ?? null,
+  };
 }

@@ -53,7 +53,10 @@ const NAV_TOOLTIPS: Record<string, string> = {
  Factures: 'Historique et détail des factures',
  'Réglages plateforme': 'Intégrations e-mail, WhatsApp…',
  'Guide utilisateur': 'Documentation et visite guidée',
- 'Mon compte': 'Profil, salles et équipe',
+ 'Mon compte': 'Profil et sécurité du compte',
+ Salles: 'Plans 2D, publication et disponibilités',
+ Équipe: 'Managers, protocole et commerciaux',
+ Marketplace: 'Prestations publiées et réservations reçues',
  'Parrainage & commissions': 'Code parrainage et gains',
  'Réseau commercial': 'Organisations que vous parrainez',
  Protocole: 'Scan QR et accueil invités',
@@ -344,6 +347,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  items: [
  { name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard },
  { name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar },
+ ...(access?.canManageRooms
+ ? [{ name: 'Salles', href: '/dashboard/rooms', tourId: 'nav-rooms', icon: Building2 }]
+ : []),
+ ...(access?.canManageTeam
+ ? [{ name: 'Équipe', href: '/dashboard/team', tourId: 'nav-team', icon: Users }]
+ : []),
  ...(access?.canManageRooms
  ? [{ name: 'Marketplace', href: '/dashboard/marketplace', tourId: 'nav-marketplace', icon: Store }]
  : []),

@@ -1,21 +1,16 @@
 'use client';
 
-import React, { Suspense, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
   User, Mail, Phone, Lock, Building, Loader2,
-  Save, Award, Calendar, Users, LayoutGrid, Palette,
+  Save, Award, Calendar, Palette,
 } from 'lucide-react';
-import TeamManagement from '../TeamManagement';
-import RoomsManagement from '../RoomsManagement';
 import { PageHeader, Alert, SkeletonProfileView, Button, Breadcrumbs, Input } from '@/components/ui';
-import { cn } from '@/lib/cn';
 import { ACCOUNT_KIND_DESCRIPTIONS, ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
-
-type ProfileTab = 'profil' | 'salles' | 'equipe';
 
 function ProfilePageContent() {
   const { user, tenant, updateUserAndTenant, updateBranding, access, refreshProfile } = useAuth();
@@ -36,36 +31,18 @@ function ProfilePageContent() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const canManageRooms = Boolean(user?.role === 'USER' && tenant && access?.canManageRooms);
-  const canManageTeam = Boolean(user?.role === 'USER' && tenant && access?.canManageTeam);
   const isClient = access?.level === 'client' || tenant?.accountKind === 'CLIENT';
 
-  const tabs = useMemo(() => {
-    const items: Array<{ id: ProfileTab; label: string; icon: React.ComponentType<{ className?: string }> }> = [
-      { id: 'profil', label: 'Mon profil', icon: User },
-    ];
-    if (canManageRooms) {
-      items.push({ id: 'salles', label: 'Salles', icon: LayoutGrid });
-    }
-    if (canManageTeam) {
-      items.push({ id: 'equipe', label: 'Équipe', icon: Users });
-    }
-    return items;
-  }, [canManageRooms, canManageTeam]);
-
-  const tabParam = searchParams.get('tab') as ProfileTab | null;
-  const activeTab: ProfileTab =
-    tabParam && tabs.some((t) => t.id === tabParam) ? tabParam : 'profil';
-
-  const setActiveTab = (tab: ProfileTab) => {
-    router.replace(`/dashboard/profile?tab=${tab}`, { scroll: false });
-  };
-
   useEffect(() => {
-    if (tabParam && !tabs.some((t) => t.id === tabParam)) {
-      router.replace('/dashboard/profile?tab=profil', { scroll: false });
+    const tab = searchParams.get('tab');
+    if (tab === 'salles') {
+      router.replace('/dashboard/rooms');
+      return;
     }
-  }, [tabParam, tabs, router]);
+    if (tab === 'equipe') {
+      router.replace('/dashboard/team');
+    }
+  }, [searchParams, router]);
 
   useEffect(() => {
     if (user) {
@@ -158,25 +135,16 @@ function ProfilePageContent() {
       .toUpperCase();
   };
 
-  const tabDescriptions: Record<ProfileTab, string> = {
-    profil: 'Informations personnelles, contact et sécurité du compte.',
-    salles: 'Créez des salles, générez un plan 2D, assignez le staff et publiez à la location.',
-    equipe: 'Invitez managers, agents protocole et commerciaux.',
-  };
-
-  const tabLabel = tabs.find((t) => t.id === activeTab)?.label || 'Mon profil';
-
   return (
     <div className="space-y-5 w-full">
       <PageHeader
         title="Mon compte"
-        description={tabDescriptions[activeTab]}
+        description="Informations personnelles, contact et sécurité du compte."
         breadcrumbs={
           <Breadcrumbs
             items={[
               { label: 'Accueil', href: '/dashboard' },
-              { label: 'Mon compte', href: '/dashboard/profile' },
-              { label: tabLabel },
+              { label: 'Mon compte' },
             ]}
           />
         }
@@ -222,34 +190,10 @@ function ProfilePageContent() {
         )}
       </div>
 
-      {/* Onglets */}
-      {tabs.length > 1 && (
-        <div className="inline-flex flex-wrap gap-0.5 p-0.5 bg-surface-muted border border-border rounded-[var(--radius-button)]">
-          {tabs.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setActiveTab(id)}
-              className={cn(
-                'inline-flex items-center gap-2 px-3.5 py-2 rounded-md text-sm font-medium transition-colors',
-                activeTab === id
-                  ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
-                  : 'text-muted hover:text-foreground',
-              )}
-            >
-              <Icon className={cn('w-4 h-4', activeTab === id && 'text-primary')} />
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
+      {error && <Alert variant="error">{error}</Alert>}
+      {success && <Alert variant="success">{success}</Alert>}
 
-      {activeTab === 'profil' && (
-        <>
-          {error && <Alert variant="error">{error}</Alert>}
-          {success && <Alert variant="success">{success}</Alert>}
-
-          <form onSubmit={handleUpdateProfile} className="space-y-5">
+      <form onSubmit={handleUpdateProfile} className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 space-y-4">
                 <h2 className="text-sm font-semibold text-foreground flex items-center gap-2 pb-3 border-b border-border">
@@ -359,11 +303,6 @@ function ProfilePageContent() {
               </Button>
             </div>
           </form>
-        </>
-      )}
-
-      {activeTab === 'salles' && canManageRooms && <RoomsManagement />}
-      {activeTab === 'equipe' && canManageTeam && <TeamManagement />}
     </div>
   );
 }

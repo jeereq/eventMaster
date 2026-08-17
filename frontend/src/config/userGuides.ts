@@ -163,7 +163,9 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Modèles', href: '/dashboard/templates' },
       { label: 'Facturation & plan', href: '/dashboard/billing' },
       { label: 'Factures', href: '/dashboard/invoices' },
-      { label: 'Mon compte — Équipe & Salles', href: '/dashboard/profile' },
+      { label: 'Salles', href: '/dashboard/rooms' },
+      { label: 'Équipe', href: '/dashboard/team' },
+      { label: 'Mon compte', href: '/dashboard/profile' },
     ],
     workflows: [
       {
@@ -187,8 +189,8 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'manage-team',
         title: 'Inviter un membre d\'équipe',
         content:
-          '1. Mon compte → onglet Équipe.\n2. Choisissez le rôle : Manager, Protocole ou Commercial org.\n3. Renseignez e-mail et mot de passe temporaire.\n4. Le membre reçoit ses accès selon son rôle.',
-        links: [{ label: 'Équipe', href: '/dashboard/profile?tab=equipe' }],
+          '1. Ouvrez Équipe dans le menu.\n2. Choisissez le rôle : Manager, Protocole ou Commercial org.\n3. Renseignez e-mail et mot de passe temporaire.\n4. Le membre reçoit ses accès selon son rôle.',
+        links: [{ label: 'Équipe', href: '/dashboard/team' }],
       },
       {
         id: 'upgrade-plan',
@@ -228,7 +230,9 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Statistiques', href: '/dashboard/analytics' },
       { label: 'Modèles', href: '/dashboard/templates' },
       { label: 'Factures', href: '/dashboard/invoices' },
-      { label: 'Équipe & Salles', href: '/dashboard/profile' },
+      { label: 'Salles', href: '/dashboard/rooms' },
+      { label: 'Équipe', href: '/dashboard/team' },
+      { label: 'Mon compte', href: '/dashboard/profile' },
     ],
     workflows: [
       {
@@ -245,8 +249,8 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'setup-room',
         title: 'Configurer une salle 2D',
         content:
-          '1. Mon compte → Salles → Créer.\n2. Choisissez le type (banquet, conférence…).\n3. Placez tables, chaises et éléments décoratifs.\n4. Associez la salle à un événement pour le placement invités.',
-        links: [{ label: 'Salles', href: '/dashboard/profile?tab=salles' }],
+          '1. Ouvrez Salles dans le menu → Créer.\n2. Choisissez le type (banquet, conférence…).\n3. Placez tables, chaises et éléments décoratifs.\n4. Associez la salle à un événement pour le placement invités.',
+        links: [{ label: 'Salles', href: '/dashboard/rooms' }],
       },
       {
         id: 'invite-guests',

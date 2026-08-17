@@ -2,7 +2,8 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Loader2, MapPin, Search } from 'lucide-react';
-import { loadLeaflet, reverseGeocode, searchPlaces, type GeoPlace } from '@/lib/leafletLoader';
+import { loadLeaflet, leafletBasemap, reverseGeocode, searchPlaces, type GeoPlace } from '@/lib/leafletLoader';
+import { useTheme } from '@/context/ThemeContext';
 
 const KINSHASA = { lat: -4.325, lng: 15.322 };
 
@@ -20,8 +21,13 @@ export default function LocationPickerMap({
   const hostRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
+  const tileLayerRef = useRef<any>(null);
+  const leafletRef = useRef<any>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const { theme } = useTheme();
+  const themeRef = useRef(theme);
+  themeRef.current = theme;
 
   const lat = Number.parseFloat(latitude);
   const lng = Number.parseFloat(longitude);
@@ -47,8 +53,12 @@ export default function LocationPickerMap({
           markerRef.current = null;
         }
         const map = L.map(hostRef.current, { scrollWheelZoom: true });
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; OpenStreetMap',
+        leafletRef.current = L;
+        const spec = leafletBasemap(themeRef.current);
+        tileLayerRef.current = L.tileLayer(spec.url, {
+          attribution: spec.attribution,
+          subdomains: 'abcd',
+          maxZoom: 19,
         }).addTo(map);
 
         const start = hasPoint ? { lat, lng } : KINSHASA;
@@ -101,6 +111,19 @@ export default function LocationPickerMap({
     // Point initial only — later updates go through the marker API.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const L = leafletRef.current;
+    if (!map || !L) return;
+    const spec = leafletBasemap(theme);
+    if (tileLayerRef.current) map.removeLayer(tileLayerRef.current);
+    tileLayerRef.current = L.tileLayer(spec.url, {
+      attribution: spec.attribution,
+      subdomains: 'abcd',
+      maxZoom: 19,
+    }).addTo(map);
+  }, [theme]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -174,7 +197,7 @@ export default function LocationPickerMap({
       </div>
       <div
         ref={hostRef}
-        className="w-full rounded-[var(--radius-card)] border border-border overflow-hidden bg-surface-muted"
+        className="em-marketplace-map w-full rounded-[var(--radius-card)] border border-border overflow-hidden bg-background"
         style={{ height }}
       />
       <p className="text-[11px] text-muted flex items-start gap-1.5">
