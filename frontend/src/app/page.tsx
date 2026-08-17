@@ -15,6 +15,7 @@ import LandingWorkflowSection from '@/components/landing/LandingWorkflowSection'
 import LandingMobileSection from '@/components/landing/LandingMobileSection';
 import FaqSection from '@/components/landing/FaqSection';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
+import PublicCtaBand from '@/components/PublicCtaBand';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
@@ -374,44 +375,38 @@ export default function Home() {
       <LandingPricingSection dbPlans={dbPlans} />
       <FaqSection />
 
-      <section className="py-16 sm:py-20 bg-foreground text-background">
-        <div className="page-container text-center space-y-5">
-          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight max-w-xl mx-auto">
-            Créez votre entreprise pour démarrer
-          </h2>
-          <p className="text-sm text-background/70 max-w-md mx-auto leading-relaxed">
-            Un compte entreprise pour invitations, RSVP, plan de salle, catalogue et protocole QR — sur le web, dès maintenant.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-2.5 justify-center pt-2">
-            {user ? (
-              <Link href="/dashboard">
-                <Button size="lg" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                  Tableau de bord
-                </Button>
-              </Link>
-            ) : (
-              <>
-                {site.allowRegistration && (
-                  <Link href="/register">
-                    <Button size="lg" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                      Créer mon entreprise
-                    </Button>
-                  </Link>
-                )}
-                <Link href="/contact">
-                  <Button
-                    size="lg"
-                    variant="ghost"
-                    className="text-background/80 hover:text-background hover:bg-background/10 border border-background/20"
-                  >
-                    Nous contacter
+      <PublicCtaBand
+        title="Créez votre entreprise pour démarrer"
+        description="Un compte entreprise pour invitations, RSVP, plan de salle, catalogue et protocole QR — sur le web, dès maintenant."
+        actions={
+          user ? (
+            <Link href="/dashboard">
+              <Button size="lg" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                Tableau de bord
+              </Button>
+            </Link>
+          ) : (
+            <>
+              {site.allowRegistration && (
+                <Link href="/register">
+                  <Button size="lg" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                    Créer mon entreprise
                   </Button>
                 </Link>
-              </>
-            )}
-          </div>
-        </div>
-      </section>
+              )}
+              <Link href="/contact">
+                <Button
+                  size="lg"
+                  variant="ghost"
+                  className="text-background/80 hover:text-background hover:bg-background/10 border border-background/20"
+                >
+                  Nous contacter
+                </Button>
+              </Link>
+            </>
+          )
+        }
+      />
 
       <SiteFooter faqHref="/#faq" />
 

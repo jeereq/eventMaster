@@ -256,3 +256,69 @@ export function formatQuotaLabel(quotaMin?: number | null, quotaMax?: number | n
   if (quotaMax) return `Quota jusqu’à ${quotaMax} invités`;
   return null;
 }
+
+export type CatalogueKind = 'venue' | 'service';
+export type CatalogueViewMode = 'grid' | 'list' | 'map';
+
+export interface CatalogueItem {
+  kind: CatalogueKind;
+  id: string;
+  slug: string;
+  href: string;
+  title: string;
+  orgName: string;
+  categoryLabel: string;
+  location: string;
+  coverUrl: string | null;
+  priceFromFc: number | null;
+  priceUnitLabel: string;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+export function venueToCatalogueItem(venue: PublicVenue): CatalogueItem {
+  return {
+    kind: 'venue',
+    id: `venue:${venue.slug}`,
+    slug: venue.slug,
+    href: `/marketplace/salles/${venue.slug}`,
+    title: venue.headline,
+    orgName: venue.orgName,
+    categoryLabel: 'Salle',
+    location: formatLocationLine(venue),
+    coverUrl: venue.coverUrl,
+    priceFromFc: venue.priceFromFc,
+    priceUnitLabel: venue.priceUnitLabel,
+    latitude: venue.latitude,
+    longitude: venue.longitude,
+  };
+}
+
+export function serviceToCatalogueItem(service: PublicService): CatalogueItem {
+  return {
+    kind: 'service',
+    id: `service:${service.slug}`,
+    slug: service.slug,
+    href: `/marketplace/prestataires/${service.slug}`,
+    title: service.title,
+    orgName: service.orgName,
+    categoryLabel: service.categoryLabel,
+    location: [
+      formatLocationLine(service),
+      service.coverageRadiusKm ? `rayon ${service.coverageRadiusKm} km` : null,
+    ].filter(Boolean).join(' · '),
+    coverUrl: service.coverUrl,
+    priceFromFc: service.priceFromFc,
+    priceUnitLabel: service.priceUnitLabel,
+    latitude: service.latitude ?? null,
+    longitude: service.longitude ?? null,
+  };
+}
+
+export function filterCatalogueItems(items: CatalogueItem[], query: string): CatalogueItem[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return items;
+  return items.filter((item) =>
+    [item.title, item.orgName, item.categoryLabel, item.location].join(' ').toLowerCase().includes(q),
+  );
+}

@@ -4,9 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
-import SiteHeader from '@/components/SiteHeader';
-import SiteFooter from '@/components/SiteFooter';
-import CelebrateMood from '@/components/CelebrateMood';
+import PublicPageShell from '@/components/PublicPageShell';
 import MarketplaceInquiryForm from '@/components/MarketplaceInquiryForm';
 import MarketplaceBookingForm from '@/components/MarketplaceBookingForm';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
@@ -42,10 +40,8 @@ export default function MarketplaceServiceDetailPage() {
   }, [slug]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <CelebrateMood />
-      <SiteHeader variant="contact" />
-      <main className="page-container py-8 flex-1">
+    <PublicPageShell faqHref="/faq">
+      <main className="page-container py-8 sm:py-10 flex-1">
         <Link
           href="/marketplace/prestataires"
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-foreground mb-6"
@@ -196,7 +192,6 @@ export default function MarketplaceServiceDetailPage() {
           </div>
         )}
       </main>
-      <SiteFooter faqHref="/faq" />
-    </div>
+    </PublicPageShell>
   );
 }
