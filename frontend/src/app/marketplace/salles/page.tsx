@@ -179,9 +179,10 @@ export default function MarketplaceVenuesPage() {
         {loading ? (
           <CatalogueResultsSkeleton mode={mode} count={PAGE_SIZE} />
         ) : mapMode ? (
-          <MarketplaceLocationsMap
+            <MarketplaceLocationsMap
             markers={markers}
             listingSearch
+            navigateOnClick={false}
             height={480}
             variant={mode === 'focus' ? 'focus' : 'default'}
             searchCenter={searchCenter}

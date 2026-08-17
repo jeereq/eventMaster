@@ -169,7 +169,7 @@ export default function MarketplaceServiceDetailPage() {
                 service.latitude != null && service.longitude != null ? (
                   <div className="space-y-3">
                     <p className="text-xs text-muted">
-                      L’itinéraire se calcule sur EventMaster. Autorisez la localisation, ou cliquez votre départ sur la carte.
+                      Cliquez <strong>Lancer la navigation</strong> : l’itinéraire se calcule sur EventMaster, puis votre position est suivie. Vous pouvez aussi indiquer un départ en cliquant la carte.
                     </p>
                     <MarketplaceLocationsMap
                       markers={[catalogueItemToMapMarker(serviceToCatalogueItem(service))]}

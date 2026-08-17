@@ -19,6 +19,9 @@ export function readImageFile(file: File): Promise<string> {
 export function cropImageToDataUrl(sourceUrl: string, crop: ImageCropRect, maxSize = 800): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    if (/^https?:/i.test(sourceUrl)) {
+      img.crossOrigin = 'anonymous';
+    }
     img.onload = () => {
       const sx = Math.round(crop.x * img.width);
       const sy = Math.round(crop.y * img.height);

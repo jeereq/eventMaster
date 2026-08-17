@@ -192,6 +192,7 @@ export default function MarketplaceServicesPage() {
           <MarketplaceLocationsMap
             markers={markers}
             listingSearch
+            navigateOnClick={false}
             height={480}
             variant={mode === 'focus' ? 'focus' : 'default'}
             searchCenter={searchCenter}

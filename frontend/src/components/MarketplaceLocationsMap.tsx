@@ -108,12 +108,12 @@ function MarkerPreviewCard({
           <p className="text-sm font-semibold text-foreground">{marker.priceLabel}</p>
         ) : null}
         <div className="flex flex-wrap gap-2 pt-1">
-          <Link href={marker.href} className="inline-flex">
-            <Button size="sm">Voir la fiche</Button>
-          </Link>
-          <Button size="sm" variant="secondary" onClick={() => onDirections(marker)} leftIcon={<Navigation className="w-3.5 h-3.5" />}>
-            Itinéraire
+          <Button size="sm" onClick={() => onDirections(marker)} leftIcon={<Navigation className="w-3.5 h-3.5" />}>
+            Lancer la navigation
           </Button>
+          <Link href={marker.href} className="inline-flex">
+            <Button size="sm" variant="secondary">Voir la fiche</Button>
+          </Link>
         </div>
       </div>
     </div>
@@ -128,7 +128,7 @@ export default function MarketplaceLocationsMap({
   searchCenter = null,
   radiusKm = 0,
   onPlaceSelect,
-  navigateOnClick = true,
+  navigateOnClick = false,
   variant = 'default',
   autoDirections = false,
 }: {
@@ -178,12 +178,15 @@ export default function MarketplaceLocationsMap({
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didAutoRef = useRef(false);
+  const watchIdRef = useRef<number | null>(null);
+  const lastRecalcRef = useRef(0);
 
   const showPreview = (marker: MarketplaceMapMarker) => {
     if (hideTimer.current) clearTimeout(hideTimer.current);
     setHovered(marker);
   };
   const scheduleHide = () => {
+    if (markersRef.current.length === 1 && !navigateOnClickRef.current) return;
     if (hideTimer.current) clearTimeout(hideTimer.current);
     hideTimer.current = setTimeout(() => setHovered(null), 280);
   };
@@ -275,8 +278,6 @@ export default function MarketplaceLocationsMap({
             showPreviewRef.current(m);
             if (navigateOnClickRef.current) {
               routerRef.current.push(m.href);
-            } else {
-              leafletMarker.openPopup();
             }
           });
 
@@ -344,6 +345,10 @@ export default function MarketplaceLocationsMap({
 
     return () => {
       cancelled = true;
+      if (watchIdRef.current != null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
@@ -430,12 +435,17 @@ export default function MarketplaceLocationsMap({
 
   const clearRoute = () => {
     const map = mapRef.current;
+    if (watchIdRef.current != null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
     if (map && routeLineRef.current) map.removeLayer(routeLineRef.current);
     if (map && originMarkerRef.current) map.removeLayer(originMarkerRef.current);
     routeLineRef.current = null;
     originMarkerRef.current = null;
     awaitingOriginRef.current = false;
     routeDestRef.current = null;
+    lastRecalcRef.current = 0;
     setRoute(null);
     setRouteTitle('');
     setRouteHint('');
@@ -467,6 +477,26 @@ export default function MarketplaceLocationsMap({
       map.fitBounds(routeLineRef.current.getBounds(), { padding: [36, 36], maxZoom: 15 });
       setRoute(next);
       setRouteTitle(dest.title);
+      lastRecalcRef.current = Date.now();
+      setRouteHint('Navigation EventMaster active. Votre position est suivie sur la carte.');
+      if (watchIdRef.current == null && navigator.geolocation) {
+        watchIdRef.current = navigator.geolocation.watchPosition(
+          (pos) => {
+            const origin = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            if (originMarkerRef.current) {
+              originMarkerRef.current.setLatLng([origin.lat, origin.lng]);
+            }
+            const destNow = routeDestRef.current;
+            if (!destNow) return;
+            const now = Date.now();
+            if (now - lastRecalcRef.current < 14000) return;
+            lastRecalcRef.current = now;
+            void paintRouteRef.current(origin, destNow);
+          },
+          () => undefined,
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 4000 },
+        );
+      }
     } catch {
       setRouteHint('Itinéraire introuvable pour cet aller. Cliquez un autre point de départ sur la carte.');
       awaitingOriginRef.current = true;
@@ -689,7 +719,7 @@ export default function MarketplaceLocationsMap({
       </div>
       {listingSearch && variant !== 'focus' && (
         <p className="text-[11px] text-muted">
-          Survolez un point pour le détail, cliquez Itinéraire pour le guidage sur EventMaster.
+          Survolez un point, puis lancez la navigation sans quitter EventMaster.
           {markers.length ? ` · ${markers.length} fiche${markers.length > 1 ? 's' : ''} avec GPS` : ''}.
         </p>
       )}
