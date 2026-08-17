@@ -20,10 +20,9 @@ export async function uploadVideoFile(file: File): Promise<UploadedImage> {
 }
 
 export async function uploadMarketplaceMedia(file: File): Promise<UploadedImage> {
-  if (file.type.startsWith('video/') || /\.(mp4|webm|mov|m4v)$/i.test(file.name)) {
-    return uploadVideoFile(file);
-  }
-  return uploadImageFile(file);
+  const formData = new FormData();
+  formData.append('file', file);
+  return api.post('/uploads/media', formData);
 }
 
 export async function uploadDataUrlImage(dataUrl: string): Promise<UploadedImage> {

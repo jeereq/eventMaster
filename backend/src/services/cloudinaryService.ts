@@ -23,6 +23,18 @@ export interface CloudinaryUploadResult {
   bytes?: number;
 }
 
+function uniquePublicId(filename?: string): string | undefined {
+  if (!filename) return undefined;
+  const base = filename
+    .replace(/\.[^.]+$/, '')
+    .normalize('NFKD')
+    .replace(/[^\w]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48);
+  const stamp = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  return base ? `${base}-${stamp}` : stamp;
+}
+
 export async function uploadImageBuffer(
   buffer: Buffer,
   folder: string,
@@ -35,9 +47,8 @@ export async function uploadImageBuffer(
       {
         folder,
         resource_type: 'image',
-        public_id: filename ? filename.replace(/\.[^.]+$/, '') : undefined,
-        overwrite: true,
-        transformation: [{ quality: 'auto:good', fetch_format: 'auto' }],
+        public_id: uniquePublicId(filename),
+        overwrite: false,
       },
       (error, result) => {
         if (error || !result) {
@@ -101,8 +112,8 @@ export async function uploadVideoBuffer(
       {
         folder,
         resource_type: 'video',
-        public_id: filename ? filename.replace(/\.[^.]+$/, '').replace(/[^\w-]+/g, '-').slice(0, 80) : undefined,
-        overwrite: true,
+        public_id: uniquePublicId(filename),
+        overwrite: false,
       },
       (error, result) => {
         if (error || !result) {

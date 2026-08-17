@@ -23,6 +23,7 @@ import { cn } from '@/lib/cn';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
   ArrowRight, Loader2, LayoutGrid, QrCode, Mail, Sparkles,
+  Building2, Users, CalendarCheck, Smartphone,
 } from 'lucide-react';
 import CelebrateMood from '@/components/CelebrateMood';
 
@@ -36,7 +37,6 @@ export default function Home() {
   const { user } = useAuth();
   const { site } = usePlatformSite();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [previewTemplate, setPreviewTemplate] = useState<string>('');
   const [modalTemplate, setModalTemplate] = useState<LandingTemplate | null>(null);
   const [dbPlans, setDbPlans] = useState<any>(null);
   const [loadingPlans, setLoadingPlans] = useState(true);
@@ -70,12 +70,6 @@ export default function Home() {
     loadPublicTemplates();
   }, []);
 
-  useEffect(() => {
-    if (publicTemplates.length > 0 && !publicTemplates.some((t) => t.id === previewTemplate)) {
-      setPreviewTemplate(publicTemplates[0].id);
-    }
-  }, [publicTemplates, previewTemplate]);
-
   const categories = [
     { id: 'all', name: 'Tous' },
     { id: 'private', name: 'Privé' },
@@ -84,7 +78,6 @@ export default function Home() {
   ];
 
   const filteredTemplateGroups = buildLandingTemplateGroups(publicTemplates, selectedCategory);
-  const activePreview = publicTemplates.find((t) => t.id === previewTemplate) || publicTemplates[0];
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
   return (
@@ -93,191 +86,158 @@ export default function Home() {
       <SiteHeader variant="landing" showServerStatus />
 
       {/* Hero */}
-      <section className="relative border-b border-border em-landing-hero">
-        <div className="page-container relative z-10 py-14 sm:py-20 lg:py-24">
-          <div className="grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] gap-12 lg:gap-16 items-center">
-            <div className="space-y-7 animate-slide-up">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="em-festive-chip">
-                  <Sparkles className="w-3 h-3" />
-                  Invitations · RSVP · Jour J
-                </span>
-                <span className="text-[11px] font-medium text-muted tracking-wide">
-                  {site.platformName}
-                </span>
-              </div>
-
-              <h1 className="font-display text-[2.15rem] sm:text-5xl lg:text-[3.35rem] font-semibold tracking-tight text-foreground leading-[1.12] max-w-xl">
+      <section className="relative em-landing-hero">
+        <div className="page-container relative z-10 py-14 sm:py-18 lg:py-22">
+          <div className="max-w-3xl space-y-6 animate-slide-up">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="em-festive-chip">
+                <Sparkles className="w-3 h-3" />
+                {site.platformName}
+              </span>
+              <span className="text-[11px] font-medium text-muted tracking-wide">
                 {site.platformTagline}
-              </h1>
+              </span>
+            </div>
 
-              <p className="text-[15px] text-muted leading-relaxed max-w-md">
-                Un espace unique pour concevoir la salle, envoyer les invitations, suivre les réponses
-                et accueillir vos invités avec un badge QR.
-              </p>
+            <h1 className="font-display text-[2.15rem] sm:text-5xl lg:text-[3.2rem] font-semibold tracking-tight text-foreground leading-[1.12]">
+              Organiser, publier et accueillir — tout le cycle de l’événement
+            </h1>
 
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 pt-1">
-                {user ? (
-                  <Link href="/dashboard">
+            <p className="text-[15px] sm:text-base text-muted leading-relaxed max-w-2xl">
+              EventMaster est la plateforme web pour les organisateurs, les salles et les prestataires
+              en RDC : invitations et RSVP, plan de table 2D, protocole QR le jour J, catalogue public
+              avec photos et vidéos, puis réservation de dates. L’application mobile est en construction
+              et n’est pas encore déployée — aujourd’hui, tout se fait dans le navigateur.
+            </p>
+
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 pt-1">
+              {user ? (
+                <Link href="/dashboard">
+                  <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                    Accéder au tableau de bord
+                  </Button>
+                </Link>
+              ) : site.allowRegistration ? (
+                <>
+                  <Link href="/register">
                     <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                      Accéder au tableau de bord
+                      Créer mon entreprise
                     </Button>
                   </Link>
-                ) : site.allowRegistration ? (
-                  <>
-                    <Link href="/register">
-                      <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                        Créer mon entreprise
-                      </Button>
-                    </Link>
-                    <Link href="/login">
-                      <Button size="lg" variant="secondary">Se connecter</Button>
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <Link href="/login">
-                      <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                        Se connecter
-                      </Button>
-                    </Link>
-                    <Link href="/contact">
-                      <Button size="lg" variant="secondary">Nous contacter</Button>
-                    </Link>
-                  </>
-                )}
-                <a
-                  href="#modeles"
-                  className="inline-flex items-center justify-center gap-1.5 px-1 py-2 text-sm font-semibold text-foreground/80 hover:text-primary transition"
-                >
-                  Voir les modèles
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </a>
-              </div>
-
-              <ul className="flex flex-wrap gap-2 pt-1">
-                {[
-                  { icon: Mail, label: 'Invitations' },
-                  { icon: LayoutGrid, label: 'Plan 2D' },
-                  { icon: QrCode, label: 'Protocole QR' },
-                  { icon: Sparkles, label: 'Salles & prestas' },
-                ].map(({ icon: Icon, label }) => (
-                  <li
-                    key={label}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface/80 px-3 py-1.5 text-xs font-medium text-foreground shadow-[var(--shadow-soft)]"
-                  >
-                    <Icon className="w-3.5 h-3.5 text-[color:var(--festive-accent)]" />
-                    {label}
-                  </li>
-                ))}
-              </ul>
+                  <Link href="/login">
+                    <Button size="lg" variant="secondary">Se connecter</Button>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link href="/login">
+                    <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                      Se connecter
+                    </Button>
+                  </Link>
+                  <Link href="/contact">
+                    <Button size="lg" variant="secondary">Nous contacter</Button>
+                  </Link>
+                </>
+              )}
+              <a
+                href="#parcours"
+                className="inline-flex items-center justify-center gap-1.5 px-1 py-2 text-sm font-semibold text-foreground/80 hover:text-primary transition"
+              >
+                Voir le parcours
+                <ArrowRight className="w-3.5 h-3.5" />
+              </a>
             </div>
 
-            <div className="w-full max-w-[26rem] mx-auto lg:mx-0 lg:ml-auto">
-              {loadingPublicTemplates ? (
-                <div className="aspect-[3/4] max-h-[420px] flex items-center justify-center rounded-[1.25rem] border border-border bg-surface">
-                  <Loader2 className="w-6 h-6 text-muted animate-spin" />
-                </div>
-              ) : activePreview ? (
-                <div className="space-y-5">
-                  <div className="em-landing-stage px-6 py-8 sm:px-8 sm:py-10">
-                    <div
-                      key={activePreview.id}
-                      className="em-landing-card aspect-[3/4] max-h-[min(420px,56vh)] w-full mx-auto animate-in fade-in duration-300 rounded-[1.25rem] overflow-hidden bg-surface"
-                    >
-                      <LandingInvitationPreview
-                        template={activePreview}
-                        variant="hero"
-                        className="w-full h-full !rounded-[1.25rem] !border-0 !shadow-none"
-                      />
-                    </div>
-                    <div className="absolute left-2 top-6 z-[2] hidden sm:block">
-                      <span className="em-festive-chip bg-surface/95 shadow-[var(--shadow-soft)]">RSVP</span>
-                    </div>
-                    <div className="absolute right-1 bottom-10 z-[2] hidden sm:block">
-                      <span className="em-festive-chip bg-surface/95 shadow-[var(--shadow-soft)]">Jour J</span>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-                    <p className="text-xs text-muted truncate min-w-0">
-                      <span className="font-semibold text-foreground">{activePreview.name}</span>
-                      {' · '}
-                      {getCategoryLabel(activePreview.category)}
-                    </p>
-                    <a
-                      href="#modeles"
-                      className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 shrink-0"
-                    >
-                      Tous les modèles
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
-
-                  {publicTemplates.length > 1 && (
-                    <div
-                      className="flex gap-2.5 overflow-x-auto pb-1 -mx-0.5 px-0.5 snap-x snap-mandatory [scrollbar-width:thin]"
-                      role="tablist"
-                      aria-label="Modèles vitrine"
-                    >
-                      {publicTemplates.slice(0, 6).map((t) => {
-                        const selected = previewTemplate === t.id;
-                        return (
-                          <button
-                            key={t.id}
-                            type="button"
-                            role="tab"
-                            aria-selected={selected}
-                            onClick={() => setPreviewTemplate(t.id)}
-                            title={t.name}
-                            className={cn(
-                              'group shrink-0 w-[4.75rem] sm:w-[5.25rem] snap-start text-left transition',
-                              'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded-lg',
-                            )}
-                          >
-                            <div
-                              className={cn(
-                                'aspect-[3/4] rounded-lg border overflow-hidden transition duration-200',
-                                selected
-                                  ? 'border-[color:var(--festive-accent)] ring-2 ring-[color-mix(in_srgb,var(--festive-accent)_28%,transparent)] shadow-[var(--shadow-soft)]'
-                                  : 'border-border opacity-75 group-hover:opacity-100 group-hover:border-primary/40',
-                              )}
-                            >
-                              <TemplatePreviewThumb
-                                content={t.previewContent}
-                                name={t.name}
-                                className="!w-full !h-full !rounded-none !border-0"
-                              />
-                            </div>
-                            <span
-                              className={cn(
-                                'mt-1.5 block text-[10px] leading-tight truncate px-0.5',
-                                selected ? 'font-semibold text-foreground' : 'text-muted',
-                              )}
-                            >
-                              {t.name}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="aspect-[3/4] max-h-[320px] flex flex-col items-center justify-center text-center px-6 border border-dashed border-border rounded-[1.25rem] bg-surface">
-                  <p className="text-sm font-medium text-foreground">Aucun modèle vitrine</p>
-                  <p className="text-xs text-muted mt-1.5 max-w-xs leading-relaxed">
-                    Le Super Admin active des modèles globaux via « Afficher sur la landing » dans le concepteur.
-                  </p>
-                  {isSuperAdmin && (
-                    <Link href="/dashboard/templates" className="mt-4">
-                      <Button size="sm" variant="secondary">Configurer les modèles</Button>
-                    </Link>
-                  )}
-                </div>
-              )}
+            <div className="inline-flex items-start gap-2.5 rounded-[var(--radius-card)] border border-border bg-surface/90 px-3.5 py-2.5 text-xs text-muted max-w-xl">
+              <Smartphone className="w-4 h-4 shrink-0 mt-0.5 text-foreground" />
+              <p>
+                <span className="font-semibold text-foreground">App iOS &amp; Android : en construction.</span>
+                {' '}Elle n’est pas déployée pour l’instant. Le protocole QR, le RSVP et le tableau de bord
+                fonctionnent déjà sur le web, y compris depuis un téléphone.
+              </p>
             </div>
           </div>
+
+          <ul className="em-landing-hero-grid mt-12">
+            {[
+              {
+                icon: Mail,
+                title: 'Invitations & RSVP',
+                text: 'Modèles visuels, envoi e-mail ou WhatsApp, portail invité, badge QR et suivi des réponses.',
+              },
+              {
+                icon: LayoutGrid,
+                title: 'Salles & plan 2D',
+                text: 'Banquet, conférence, tente… Placement des invités, thèmes, et publication de la salle au catalogue.',
+              },
+              {
+                icon: QrCode,
+                title: 'Protocole jour J',
+                text: 'Scan du badge QR dans le navigateur, check-in, validation du siège. PDF, plan et GPS dès le RSVP accepté.',
+              },
+              {
+                icon: Building2,
+                title: 'Catalogue de salles',
+                text: 'Fiches publiques avec photos, vidéos, carte, tarifs et calendrier des dates déjà réservées.',
+              },
+              {
+                icon: Sparkles,
+                title: 'Prestataires',
+                text: 'Traiteur, photo, DJ, déco… Devis, médias, rayon d’intervention et réservation de date.',
+              },
+              {
+                icon: CalendarCheck,
+                title: 'Réservations',
+                text: 'Demande, acompte hors plateforme (30 %), confirmation qui bloque la date. Commission vendeur 8 %.',
+              },
+              {
+                icon: Users,
+                title: 'Équipes & rôles',
+                text: 'Propriétaire, managers, protocole, responsables de salle — chacun voit uniquement son périmètre.',
+              },
+              {
+                icon: Smartphone,
+                title: 'Mobile (bientôt)',
+                text: 'L’app native est en cours de construction. Elle n’est pas encore disponible sur les stores.',
+              },
+            ].map(({ icon: Icon, title, text }) => (
+              <li
+                key={title}
+                className="rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-[var(--shadow-soft)]"
+              >
+                <Icon className="w-5 h-5 text-[color:var(--festive-accent)] mb-3" />
+                <h2 className="text-sm font-semibold text-foreground mb-1">{title}</h2>
+                <p className="text-xs text-muted leading-relaxed">{text}</p>
+              </li>
+            ))}
+          </ul>
+
+          {!loadingPublicTemplates && publicTemplates.length > 0 && (
+            <div className="mt-10 flex flex-wrap items-center gap-3">
+              <p className="text-xs font-medium text-muted shrink-0">Modèles vitrine</p>
+              <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
+                {publicTemplates.slice(0, 6).map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setModalTemplate(t)}
+                    title={t.name}
+                    className="shrink-0 w-14 aspect-[3/4] rounded-md border border-border overflow-hidden hover:border-primary/40 transition"
+                  >
+                    <TemplatePreviewThumb
+                      content={t.previewContent}
+                      name={t.name}
+                      className="!w-full !h-full !rounded-none !border-0"
+                    />
+                  </button>
+                ))}
+              </div>
+              <a href="#modeles" className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1">
+                Tous les modèles <ArrowRight className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          )}
         </div>
       </section>
 
@@ -295,8 +255,8 @@ export default function Home() {
               Salles et prestataires, sans quitter EventMaster
             </h2>
             <p className="text-sm text-muted leading-relaxed">
-              Trouvez un lieu, un traiteur, un DJ ou un photographe. Demandez un devis,
-              puis créez votre événement dans le même outil.
+              Publiez une salle ou une prestation avec photos et vidéos, tarifs, carte et calendrier.
+              Un organisateur demande un devis ou réserve une date ; l’acompte se verse hors plateforme.
             </p>
           </div>
           <Link href="/marketplace">
@@ -375,10 +335,7 @@ export default function Home() {
                       >
                         <button
                           type="button"
-                          onClick={() => {
-                            setPreviewTemplate(t.id);
-                            setModalTemplate(t);
-                          }}
+                          onClick={() => setModalTemplate(t)}
                           className="w-full text-left rounded-[var(--radius-button)] focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20 overflow-hidden"
                         >
                           <LandingInvitationPreview template={t} compact className="!max-h-[200px]" />
@@ -423,7 +380,7 @@ export default function Home() {
             Créez votre entreprise pour démarrer
           </h2>
           <p className="text-sm text-background/70 max-w-md mx-auto leading-relaxed">
-            Un compte entreprise pour centraliser invitations, plan de table et protocole QR.
+            Un compte entreprise pour invitations, RSVP, plan de salle, catalogue et protocole QR — sur le web, dès maintenant.
           </p>
           <div className="flex flex-col sm:flex-row gap-2.5 justify-center pt-2">
             {user ? (

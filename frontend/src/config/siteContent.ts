@@ -13,9 +13,9 @@ export const SITE_CONTACT = {
 
 export const FOOTER_FEATURES = [
   'Invitations & RSVP multi-canal',
-  'Plans de salle 2D & protocole QR',
+  'Plans de salle 2D & protocole QR web',
   'Catalogue de salles et prestataires',
-  'Application mobile iOS & Android',
+  'Application mobile (en construction)',
   'Espace isolé par entreprise',
 ] as const;
 
@@ -36,7 +36,7 @@ export const FOOTER_RESOURCES = [
 ] as const;
 
 export const FOOTER_BRAND_DESCRIPTION =
-  'Créez votre entreprise sur EventMaster pour gérer invitations, RSVP, plans de salle et protocole QR — web et mobile, dans un espace dédié.';
+  'Créez votre entreprise sur EventMaster pour gérer invitations, RSVP, plans de salle, catalogue et protocole QR sur le web. L’application mobile est en construction et n’est pas encore déployée.';
 
 export interface FaqItem {
   id: string;
@@ -49,13 +49,13 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'what-is-eventmaster',
     question: 'Qu\'est-ce qu\'EventMaster ?',
     answer:
-      'EventMaster est une plateforme SaaS web et mobile qui centralise la gestion d\'événements : invitations et RSVP, plans de salle 2D, protocole avec scan QR (navigateur ou application native), fil d\'actualité, livre d\'or, modèles de messages, notifications push et gestion d\'équipe. Chaque organisation dispose de son propre espace isolé.',
+      'EventMaster est une plateforme SaaS web qui centralise la gestion d\'événements : invitations et RSVP, plans de salle 2D, protocole QR dans le navigateur, catalogue de salles et prestataires (photos, vidéos, réservation de dates), fil d\'actualité, livre d\'or, modèles de messages et gestion d\'équipe. Chaque organisation dispose de son propre espace isolé. L\'application mobile native est en construction et n\'est pas encore déployée.',
   },
   {
     id: 'mobile-app',
     question: 'Existe-t-il une application mobile ?',
     answer:
-      'Oui. EventMaster propose une application native iOS et Android (React Native + Expo) : portail RSVP invité, badge QR, protocole jour J avec scan caméra, consultation événements et invités, notifications push et deep links (eventmaster://). L\'édition avancée (modèles, plan de table) reste sur le web.',
+      'Pas encore. L\'application native iOS et Android est en construction : elle n\'est pas déployée sur les stores pour l\'instant. En attendant, le RSVP, le protocole QR, le tableau de bord, le catalogue et les réservations fonctionnent dans le navigateur — y compris depuis un téléphone. L\'édition avancée (modèles, plan de table) restera sur le web.',
   },
   {
     id: 'placement-delivery',
@@ -67,7 +67,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'marketplace-venues',
     question: 'Puis-je trouver une salle ou un prestataire sur EventMaster ?',
     answer:
-      'Oui. Le catalogue public liste les salles et prestations (traiteur, photo, DJ, déco…) que les organisations choisissent de publier. Vous pouvez demander un devis, ou — connecté avec une organisation — réserver une date. L’acompte (30 %) se verse directement au professionnel, hors EventMaster. À la confirmation, la date est bloquée et une salle peut être rattachée à l’événement. Pour proposer une offre : Mon compte → Salles, ou Marketplace → Prestations.',
+      'Oui. Le catalogue public liste les salles et prestations (traiteur, photo, DJ, déco…) que les organisations choisissent de publier, avec photos et vidéos. Vous pouvez demander un devis, ou — connecté avec une organisation — réserver une date. L’acompte (30 %) se verse directement au professionnel, hors EventMaster. À la confirmation, la date est bloquée et une salle peut être rattachée à l’événement. Pour proposer une offre : Mon compte → Salles, ou Marketplace → Prestations.',
   },
   {
     id: 'marketplace-booking',
@@ -103,7 +103,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'protocol-qr',
     question: 'Comment fonctionne le protocole QR ?',
     answer:
-      'Chaque invité qui accepte reçoit un badge QR unique sur son portail RSVP. Le personnel protocole scanne le code à l\'entrée via le navigateur web ou l\'application mobile (scan caméra natif). EventMaster enregistre la présence et peut valider le siège. Le PDF, le plan de table et la localisation GPS partent déjà à l\'acceptation RSVP (Premium 1+). Disponible à partir du forfait Business ; notifications placement à partir de Premium 1.',
+      'Chaque invité qui accepte reçoit un badge QR unique sur son portail RSVP. Le personnel protocole scanne le code à l\'entrée dans le navigateur web. EventMaster enregistre la présence et peut valider le siège. Le PDF, le plan de table et la localisation GPS partent déjà à l\'acceptation RSVP (Premium 1+). Disponible à partir du forfait Business ; notifications placement à partir de Premium 1. L\'app native avec caméra n\'est pas encore déployée.',
   },
   {
     id: 'roles',

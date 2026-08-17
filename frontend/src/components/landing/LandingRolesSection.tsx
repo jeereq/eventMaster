@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Shield, ScanLine, Building2, Briefcase, Users, Mail, Lock, TrendingUp, LayoutGrid, Smartphone } from 'lucide-react';
+import { Shield, ScanLine, Building2, Briefcase, Users, Mail, Lock, TrendingUp, LayoutGrid, Smartphone, CalendarCheck } from 'lucide-react';
 import { ROLE_HIGHLIGHTS, PLATFORM_PILLARS } from '@/config/landingPricing';
 
 const roleIcons = { shield: Shield, scan: ScanLine, building: Building2, briefcase: Briefcase };
@@ -13,6 +13,7 @@ const pillarIcons: Record<string, React.ComponentType<{ className?: string }>> =
   mail: Mail,
   lock: Lock,
   trending: TrendingUp,
+  calendar: CalendarCheck,
 };
 
 export default function LandingRolesSection() {
@@ -76,7 +77,8 @@ export default function LandingRolesSection() {
               Une plateforme complète
             </h2>
             <p className="text-sm text-muted">
-              De la conception de salle au scan QR, en passant par les notifications de placement.
+              De la conception de salle au scan QR, en passant par le catalogue et les réservations.
+              L’app mobile est en construction, pas encore déployée.
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">

@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import {
   Building2, Plus, Trash2, Users, UserPlus, CheckCircle2,
   ChevronLeft, ChevronRight, LayoutGrid, Theater, Tent, Presentation, Edit3, Sparkles, Ruler,
-  Globe, GlobeLock, Upload, Play,
+  Globe, GlobeLock,
 } from 'lucide-react';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import RoomLayoutEditor from '@/components/RoomLayoutEditor';
@@ -27,19 +27,10 @@ import {
   roomTypeDescriptions,
   roomTypeLabels,
 } from '@/lib/roomLayoutUtils';
-import {
-  PRICE_UNIT_OPTIONS,
-  MARKETPLACE_MAX_PHOTOS,
-  MARKETPLACE_MAX_VIDEOS,
-  MARKETPLACE_MAX_VIDEO_BYTES,
-  isVideoUrl,
-  mediaPosterUrl,
-  parseBlockedDates,
-  type VenuePriceUnit,
-} from '@/lib/marketplace';
-import { uploadMarketplaceMedia } from '@/lib/cloudinaryUpload';
+import { PRICE_UNIT_OPTIONS, parseBlockedDates, type VenuePriceUnit } from '@/lib/marketplace';
 import { formatFc } from '@/config/landingPricing';
 import BlockedDatesField from '@/components/BlockedDatesField';
+import MarketplaceMediaField from '@/components/MarketplaceMediaField';
 
 interface RoomStaffItem {
   id: string;
@@ -171,7 +162,6 @@ export default function RoomsManagement() {
     longitude: '',
   });
   const [savingListing, setSavingListing] = useState(false);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const allowedRoomTypes = useMemo(() => {
     const allowed = planFeatures?.allowedRoomTypes;
@@ -359,44 +349,6 @@ export default function RoomsManagement() {
       setError(err.message || 'Impossible d’enregistrer la fiche.');
     } finally {
       setSavingListing(false);
-    }
-  };
-
-  const handleListingPhoto = async (files: FileList | null | undefined) => {
-    if (!files?.length) return;
-    setUploadingPhoto(true);
-    setError('');
-    try {
-      const remaining = MARKETPLACE_MAX_PHOTOS - listingDraft.photos.length;
-      let remainingVideos = MARKETPLACE_MAX_VIDEOS - listingDraft.photos.filter(isVideoUrl).length;
-      const batch = Array.from(files).slice(0, remaining);
-      const urls: string[] = [];
-      let skippedVideos = 0;
-      for (const file of batch) {
-        const isVideo = file.type.startsWith('video/') || /\.(mp4|webm|mov|m4v)$/i.test(file.name);
-        if (isVideo) {
-          if (remainingVideos <= 0) {
-            skippedVideos += 1;
-            continue;
-          }
-          if (file.size > MARKETPLACE_MAX_VIDEO_BYTES) {
-            throw new Error(`« ${file.name} » dépasse 80 Mo.`);
-          }
-          remainingVideos -= 1;
-        } else if (file.size > 10 * 1024 * 1024) {
-          throw new Error(`« ${file.name} » dépasse 10 Mo.`);
-        }
-        const uploaded = await uploadMarketplaceMedia(file);
-        urls.push(uploaded.url);
-      }
-      setListingDraft((prev) => ({ ...prev, photos: [...prev.photos, ...urls].slice(0, MARKETPLACE_MAX_PHOTOS) }));
-      if (skippedVideos) {
-        setError(`Maximum ${MARKETPLACE_MAX_VIDEOS} vidéos par salle. ${skippedVideos} fichier(s) ignoré(s).`);
-      }
-    } catch (err: any) {
-      setError(err.message || 'Upload média impossible.');
-    } finally {
-      setUploadingPhoto(false);
     }
   };
 
@@ -1186,50 +1138,10 @@ export default function RoomsManagement() {
               bookedDates={listingDraft.bookedDates}
               onChange={(blockedDates) => setListingDraft((d) => ({ ...d, blockedDates }))}
             />
-            <div>
-              <span className={labelClass}>
-                Photos et vidéos (max. {MARKETPLACE_MAX_PHOTOS}, dont {MARKETPLACE_MAX_VIDEOS} vidéos)
-              </span>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {listingDraft.photos.map((url) => (
-                  <div key={url} className="relative w-16 h-16 rounded-md overflow-hidden border border-border bg-surface-muted">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={mediaPosterUrl(url)} alt="" className="w-full h-full object-cover" />
-                    {isVideoUrl(url) && (
-                      <span className="absolute inset-0 flex items-center justify-center bg-black/35 pointer-events-none">
-                        <Play className="w-4 h-4 text-white fill-white" />
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      className="absolute top-0 right-0 z-10 bg-surface/90 text-[10px] px-1"
-                      onClick={() => setListingDraft((d) => ({ ...d, photos: d.photos.filter((p) => p !== url) }))}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <label className="inline-flex items-center gap-2 text-xs font-semibold text-primary cursor-pointer">
-                <Upload className="w-3.5 h-3.5" />
-                {uploadingPhoto ? 'Upload…' : 'Ajouter des photos ou vidéos'}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
-                  multiple
-                  className="hidden"
-                  disabled={uploadingPhoto || listingDraft.photos.length >= MARKETPLACE_MAX_PHOTOS}
-                  onChange={(e) => {
-                    const files = e.target.files;
-                    e.target.value = '';
-                    void handleListingPhoto(files);
-                  }}
-                />
-              </label>
-              <p className="text-[11px] text-muted mt-1">
-                JPEG, PNG, WebP jusqu’à 10 Mo · MP4, WebM, MOV jusqu’à 80 Mo
-              </p>
-            </div>
+            <MarketplaceMediaField
+              urls={listingDraft.photos}
+              onChange={(photos) => setListingDraft((d) => ({ ...d, photos }))}
+            />
           </div>
         )}
       </Modal>

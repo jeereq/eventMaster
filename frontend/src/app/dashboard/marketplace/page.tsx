@@ -11,7 +11,6 @@ import {
   PRICE_UNIT_OPTIONS,
   SERVICE_CATEGORIES,
   SERVICE_CATEGORY_LABELS,
-  MARKETPLACE_MAX_PHOTOS,
   parseBlockedDates,
   type MarketplaceBookingItem,
   type MarketplaceInquiryItem,
@@ -19,12 +18,12 @@ import {
   type VenuePriceUnit,
 } from '@/lib/marketplace';
 import { formatFc } from '@/config/landingPricing';
-import { uploadImageFile } from '@/lib/cloudinaryUpload';
 import { cn } from '@/lib/cn';
 import {
-  Globe, GlobeLock, Loader2, Plus, Sparkles, Trash2, Upload, Inbox, CheckCircle2, CalendarCheck,
+  Globe, GlobeLock, Loader2, Plus, Sparkles, Trash2, Inbox, CheckCircle2, CalendarCheck,
 } from 'lucide-react';
 import BlockedDatesField from '@/components/BlockedDatesField';
+import MarketplaceMediaField from '@/components/MarketplaceMediaField';
 import MarketplaceBookingsPanel from '@/components/MarketplaceBookingsPanel';
 
 interface ServiceItem {
@@ -68,7 +67,6 @@ export default function MarketplaceDeskPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<ServiceItem | null>(null);
   const [saving, setSaving] = useState(false);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [draft, setDraft] = useState({
     title: '',
     description: '',
@@ -207,25 +205,6 @@ export default function MarketplaceDeskPage() {
       await load();
     } catch (err: any) {
       setError(err.message || 'Suppression impossible.');
-    }
-  };
-
-  const handlePhoto = async (files?: FileList | null) => {
-    if (!files?.length) return;
-    setUploadingPhoto(true);
-    try {
-      const remaining = MARKETPLACE_MAX_PHOTOS - draft.photos.length;
-      const batch = Array.from(files).slice(0, remaining);
-      const urls: string[] = [];
-      for (const file of batch) {
-        const uploaded = await uploadImageFile(file);
-        urls.push(uploaded.url);
-      }
-      setDraft((d) => ({ ...d, photos: [...d.photos, ...urls].slice(0, MARKETPLACE_MAX_PHOTOS) }));
-    } catch (err: any) {
-      setError(err.message || 'Upload impossible.');
-    } finally {
-      setUploadingPhoto(false);
     }
   };
 
@@ -517,42 +496,10 @@ export default function MarketplaceDeskPage() {
             bookedDates={draft.bookedDates}
             onChange={(blockedDates) => setDraft((d) => ({ ...d, blockedDates }))}
           />
-          <div>
-            <span className="block text-xs font-medium text-muted mb-1.5">
-              Photos (max. {MARKETPLACE_MAX_PHOTOS})
-            </span>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {draft.photos.map((url) => (
-                <div key={url} className="relative w-16 h-16 rounded-md overflow-hidden border border-border">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt="" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    className="absolute top-0 right-0 bg-surface/90 text-[10px] px-1"
-                    onClick={() => setDraft((d) => ({ ...d, photos: d.photos.filter((p) => p !== url) }))}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-            <label className="inline-flex items-center gap-2 text-xs font-semibold text-primary cursor-pointer">
-              <Upload className="w-3.5 h-3.5" />
-              {uploadingPhoto ? 'Upload…' : 'Ajouter des photos'}
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                multiple
-                className="hidden"
-                disabled={uploadingPhoto || draft.photos.length >= MARKETPLACE_MAX_PHOTOS}
-                onChange={(e) => {
-                  const files = e.target.files;
-                  e.target.value = '';
-                  void handlePhoto(files);
-                }}
-              />
-            </label>
-          </div>
+          <MarketplaceMediaField
+            urls={draft.photos}
+            onChange={(photos) => setDraft((d) => ({ ...d, photos }))}
+          />
         </div>
       </Modal>
     </div>
