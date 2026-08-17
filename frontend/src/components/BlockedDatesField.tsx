@@ -1,66 +1,77 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Calendar, X } from 'lucide-react';
-import { parseBlockedDates } from '@/lib/marketplace';
+import AvailabilityCalendar from '@/components/AvailabilityCalendar';
+import { eachDateKey, parseBlockedDates } from '@/lib/marketplace';
 
 export default function BlockedDatesField({
   value,
   onChange,
+  bookedDates = [],
 }: {
   value: string[];
   onChange: (next: string[]) => void;
+  bookedDates?: string[];
 }) {
-  const [draft, setDraft] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
   const dates = parseBlockedDates(value);
+  const booked = parseBlockedDates(bookedDates);
 
-  const add = () => {
-    const key = draft.match(/^(\d{4}-\d{2}-\d{2})/)?.[1];
-    if (!key) return;
-    onChange(parseBlockedDates([...dates, key]));
-    setDraft('');
+  const toggle = (key: string) => {
+    onChange(dates.includes(key) ? dates.filter((d) => d !== key) : parseBlockedDates([...dates, key]));
+  };
+
+  const addRange = () => {
+    if (!from) return;
+    const keys = eachDateKey(from, to || from).filter((key) => !booked.includes(key));
+    onChange(parseBlockedDates([...dates, ...keys]));
+    setFrom('');
+    setTo('');
   };
 
   return (
-    <div className="space-y-2">
-      <span className="block text-xs font-medium text-muted">Dates indisponibles</span>
-      <p className="text-[11px] text-muted leading-relaxed">
-        Bloquez manuellement les jours déjà pris (hors réservations EventMaster, qui se bloquent à la confirmation).
-      </p>
-      <div className="flex gap-2">
-        <label className="flex-1 relative">
-          <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+    <div className="space-y-3">
+      <AvailabilityCalendar
+        title="Dates déjà bookées"
+        bookedDates={booked}
+        blockedDates={dates}
+        editable
+        onToggleBlocked={toggle}
+      />
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-end">
+        <label className="space-y-1">
+          <span className="block text-xs font-medium text-muted">Du</span>
           <input
             type="date"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            className="w-full pl-8 pr-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+          />
+        </label>
+        <label className="space-y-1">
+          <span className="block text-xs font-medium text-muted">Au</span>
+          <input
+            type="date"
+            value={to}
+            min={from || undefined}
+            onChange={(e) => setTo(e.target.value)}
+            className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
           />
         </label>
         <button
           type="button"
-          onClick={add}
-          disabled={!draft}
+          onClick={addRange}
+          disabled={!from}
           className="px-3 py-2 text-xs font-semibold rounded-[var(--radius-button)] border border-border text-foreground disabled:opacity-40"
         >
-          Ajouter
+          Bloquer la période
         </button>
       </div>
-      {dates.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {dates.map((key) => (
-            <span
-              key={key}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-surface-muted border border-border text-[11px]"
-            >
-              {new Date(`${key}T12:00:00`).toLocaleDateString('fr-FR')}
-              <button type="button" onClick={() => onChange(dates.filter((d) => d !== key))} aria-label="Retirer">
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
+      <p className="text-[11px] text-muted leading-relaxed">
+        Les jours en rouge viennent des réservations EventMaster. Les jours ambre sont ceux que vous marquez déjà pris
+        (hors plateforme). Vous pouvez en sélectionner un ou plusieurs.
+      </p>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import SiteFooter from '@/components/SiteFooter';
 import CelebrateMood from '@/components/CelebrateMood';
 import MarketplaceInquiryForm from '@/components/MarketplaceInquiryForm';
 import MarketplaceBookingForm from '@/components/MarketplaceBookingForm';
+import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import { formatFc } from '@/config/landingPricing';
 import type { PublicService } from '@/lib/marketplace';
 import { ArrowLeft, Loader2, MapPin, Sparkles } from 'lucide-react';
@@ -20,6 +21,7 @@ export default function MarketplaceServiceDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [photoIndex, setPhotoIndex] = useState(0);
+  const [pickedDate, setPickedDate] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -72,13 +74,13 @@ export default function MarketplaceServiceDetailPage() {
                 )}
               </div>
               {service.photos.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto">
+                <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
                   {service.photos.map((url, i) => (
                     <button
                       key={url}
                       type="button"
                       onClick={() => setPhotoIndex(i)}
-                      className={`w-16 h-12 rounded-md overflow-hidden border shrink-0 ${
+                      className={`aspect-[4/3] rounded-md overflow-hidden border ${
                         i === photoIndex ? 'border-primary' : 'border-border'
                       }`}
                     >
@@ -105,6 +107,13 @@ export default function MarketplaceServiceDetailPage() {
               {service.description && (
                 <p className="text-sm text-muted leading-relaxed whitespace-pre-line">{service.description}</p>
               )}
+              <AvailabilityCalendar
+                title="Calendrier des disponibilités"
+                bookedDates={service.bookedDates}
+                blockedDates={service.blockedDates}
+                selectedDate={pickedDate}
+                onSelectDate={setPickedDate}
+              />
             </div>
             <aside className="lg:col-span-2 space-y-4">
               <div className="border border-border rounded-[var(--radius-card)] p-5 bg-surface space-y-1">
@@ -117,11 +126,18 @@ export default function MarketplaceServiceDetailPage() {
               <MarketplaceInquiryForm
                 endpoint={`/public/services/${encodeURIComponent(service.slug)}/inquire`}
                 successCopy="Demande transmise au prestataire."
+                eventDate={pickedDate}
+                onEventDateChange={setPickedDate}
               />
               <MarketplaceBookingForm
                 offeringSlug={service.slug}
                 unavailableDates={service.unavailableDates}
+                bookedDates={service.bookedDates}
+                blockedDates={service.blockedDates}
                 priceFromFc={service.priceFromFc}
+                eventDate={pickedDate}
+                onEventDateChange={setPickedDate}
+                showCalendar={false}
               />
             </aside>
           </div>

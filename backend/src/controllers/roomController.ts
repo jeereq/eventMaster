@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
+import { MarketplaceBookingStatus } from '@prisma/client';
 import { resolveOrgAccess, canManageRoom, canAccessRoom } from '../services/permissionsService';
 import {
   assertRoomQuota,
@@ -16,6 +17,8 @@ import {
   RoomType,
   LayoutParams,
 } from '../services/roomLayoutService';
+
+const HOLD_BOOKING_STATUSES: MarketplaceBookingStatus[] = ['REQUESTED', 'ACCEPTED', 'CONFIRMED'];
 
 function blueprintUsesThemesOrFixtures(blueprint: unknown): boolean {
   if (!blueprint || typeof blueprint !== 'object') return false;
@@ -72,7 +75,14 @@ export async function getRooms(req: AuthenticatedRequest, res: Response) {
             user: { select: { id: true, name: true, email: true, orgRole: true } },
           },
         },
-        venueListing: true,
+        venueListing: {
+          include: {
+            bookings: {
+              where: { status: { in: HOLD_BOOKING_STATUSES } },
+              select: { eventDate: true },
+            },
+          },
+        },
         _count: { select: { events: true } },
       },
       orderBy: { name: 'asc' },

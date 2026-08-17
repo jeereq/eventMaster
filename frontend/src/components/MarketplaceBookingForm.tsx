@@ -7,38 +7,51 @@ import { useAuth } from '@/context/AuthContext';
 import { Alert, Button, Input } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import { previewMarketplaceAmounts } from '@/lib/marketplace';
-import { Calendar, Lock } from 'lucide-react';
+import AvailabilityCalendar from '@/components/AvailabilityCalendar';
+import { Lock } from 'lucide-react';
 
 export default function MarketplaceBookingForm({
   listingSlug,
   offeringSlug,
   unavailableDates = [],
+  bookedDates = [],
+  blockedDates = [],
   priceFromFc,
+  eventDate,
+  onEventDateChange,
+  showCalendar = true,
 }: {
   listingSlug?: string;
   offeringSlug?: string;
   unavailableDates?: string[];
+  bookedDates?: string[];
+  blockedDates?: string[];
   priceFromFc: number | null;
+  eventDate?: string;
+  onEventDateChange?: (value: string) => void;
+  showCalendar?: boolean;
 }) {
   const { token, loading, tenant } = useAuth();
-  const [eventDate, setEventDate] = useState('');
+  const [internalDate, setInternalDate] = useState('');
   const [guestCount, setGuestCount] = useState('');
   const [notes, setNotes] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState('');
   const [formError, setFormError] = useState('');
 
+  const selectedDate = eventDate ?? internalDate;
+  const setSelectedDate = onEventDateChange ?? setInternalDate;
   const blocked = useMemo(() => new Set(unavailableDates), [unavailableDates]);
   const amounts = priceFromFc != null ? previewMarketplaceAmounts(priceFromFc) : null;
-  const dateTaken = Boolean(eventDate && blocked.has(eventDate));
+  const dateTaken = Boolean(selectedDate && blocked.has(selectedDate));
   const loggedIn = Boolean(token && tenant?.id);
 
   const handleBook = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
     setSent('');
-    if (!eventDate) {
-      setFormError('Indiquez une date.');
+    if (!selectedDate) {
+      setFormError('Choisissez une date sur le calendrier.');
       return;
     }
     if (dateTaken) {
@@ -50,7 +63,7 @@ export default function MarketplaceBookingForm({
       const data = await api.post('/marketplace/bookings', {
         listingSlug,
         offeringSlug,
-        eventDate,
+        eventDate: selectedDate,
         guestCount: guestCount || undefined,
         notes: notes || undefined,
       });
@@ -65,94 +78,110 @@ export default function MarketplaceBookingForm({
 
   if (loading) return null;
 
+  const calendar = showCalendar ? (
+    <AvailabilityCalendar
+      title="Disponibilités"
+      bookedDates={bookedDates}
+      blockedDates={blockedDates.length ? blockedDates : unavailableDates}
+      selectedDate={selectedDate}
+      onSelectDate={setSelectedDate}
+    />
+  ) : null;
+
   if (priceFromFc == null) {
     return (
-      <div className="border border-border rounded-[var(--radius-card)] p-5 bg-surface">
-        <p className="text-xs text-muted leading-relaxed">
-          Cette offre est sur devis. Envoyez une demande ci-dessus : la réservation avec acompte n’est disponible
-          que lorsqu’un tarif de départ est publié.
-        </p>
+      <div className="space-y-3">
+        {calendar}
+        <div className="border border-border rounded-[var(--radius-card)] p-5 bg-surface">
+          <p className="text-xs text-muted leading-relaxed">
+            Cette offre est sur devis. Envoyez une demande ci-dessus : la réservation avec acompte n’est disponible
+            que lorsqu’un tarif de départ est publié.
+          </p>
+        </div>
       </div>
     );
   }
 
   if (!loggedIn) {
     return (
-      <div className="border border-border rounded-[var(--radius-card)] p-5 bg-surface space-y-3">
-        <h2 className="text-sm font-semibold text-foreground">Réserver</h2>
-        <p className="text-xs text-muted leading-relaxed">
-          Connectez-vous avec une organisation pour demander une date. L’acompte (30 %) se verse hors plateforme
-          au professionnel ; EventMaster n’encaisse pas ce paiement.
-        </p>
-        <div className="flex gap-2">
-          <Link href="/login" className="inline-flex">
-            <Button size="sm">Se connecter</Button>
-          </Link>
-          <Link href="/register" className="inline-flex">
-            <Button size="sm" variant="secondary">Créer une organisation</Button>
-          </Link>
+      <div className="space-y-3">
+        {calendar}
+        <div className="border border-border rounded-[var(--radius-card)] p-5 bg-surface space-y-3">
+          <h2 className="text-sm font-semibold text-foreground">Réserver</h2>
+          <p className="text-xs text-muted leading-relaxed">
+            Connectez-vous avec une organisation pour demander une date. L’acompte (30 %) se verse hors plateforme
+            au professionnel ; EventMaster n’encaisse pas ce paiement.
+          </p>
+          <div className="flex gap-2">
+            <Link href="/login" className="inline-flex">
+              <Button size="sm">Se connecter</Button>
+            </Link>
+            <Link href="/register" className="inline-flex">
+              <Button size="sm" variant="secondary">Créer une organisation</Button>
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleBook} className="border border-border rounded-[var(--radius-card)] p-5 bg-surface space-y-3">
-      <h2 className="text-sm font-semibold text-foreground">Réserver cette date</h2>
-      <p className="text-xs text-muted leading-relaxed">
-        Demande → acceptation du professionnel → acompte 30 % hors plateforme → confirmation (date bloquée).
-        Commission vendeur 8 %, distincte de l’abonnement SaaS.
-      </p>
-      {formError && <Alert variant="error">{formError}</Alert>}
-      {sent && <Alert variant="success">{sent}</Alert>}
-      <Input
-        label="Date de l’événement"
-        type="date"
-        required
-        min={new Date().toISOString().slice(0, 10)}
-        leftIcon={<Calendar className="w-4 h-4" />}
-        value={eventDate}
-        onChange={(e) => setEventDate(e.target.value)}
-      />
-      {dateTaken && (
-        <p className="text-[11px] text-red-600">Cette date est déjà bloquée ou réservée.</p>
-      )}
-      <Input
-        label="Nombre d’invités (estimé)"
-        type="number"
-        min={1}
-        value={guestCount}
-        onChange={(e) => setGuestCount(e.target.value)}
-      />
-      <label className="block space-y-1.5">
-        <span className="text-xs font-medium text-muted">Note (optionnel)</span>
-        <textarea
-          rows={3}
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
-          placeholder="Horaires, type d’événement…"
-        />
-      </label>
-      {amounts && (
-        <div className="rounded-md border border-border bg-surface-muted px-3 py-2 text-xs space-y-1">
-          <p>Montant indicatif : <strong>{formatFc(amounts.amountFc)}</strong></p>
-          <p>Acompte 30 % à verser au professionnel : <strong>{formatFc(amounts.depositFc)}</strong></p>
-          <p className="text-muted inline-flex items-center gap-1">
-            <Lock className="w-3 h-3" /> Pas de paiement carte sur EventMaster.
+    <form onSubmit={handleBook} className="space-y-3">
+      {calendar}
+      <div className="border border-border rounded-[var(--radius-card)] p-5 bg-surface space-y-3">
+        <h2 className="text-sm font-semibold text-foreground">Réserver cette date</h2>
+        <p className="text-xs text-muted leading-relaxed">
+          Cliquez un jour libre sur le calendrier. Demande → acceptation → acompte 30 % hors plateforme → confirmation.
+        </p>
+        {formError && <Alert variant="error">{formError}</Alert>}
+        {sent && <Alert variant="success">{sent}</Alert>}
+        {selectedDate ? (
+          <p className="text-sm">
+            Date choisie : <strong>{new Date(`${selectedDate}T12:00:00`).toLocaleDateString('fr-FR')}</strong>
           </p>
-        </div>
-      )}
-      <Button type="submit" loading={sending} fullWidth disabled={dateTaken}>
-        Envoyer la demande de réservation
-      </Button>
-      <p className="text-[11px] text-muted">
-        Suivi dans{' '}
-        <Link href="/dashboard/marketplace" className="font-semibold text-primary hover:underline">
-          Marketplace → Réservations
-        </Link>
-        .
-      </p>
+        ) : (
+          <p className="text-xs text-muted">Aucune date sélectionnée.</p>
+        )}
+        {dateTaken && (
+          <p className="text-[11px] text-red-600">Cette date est déjà bloquée ou réservée.</p>
+        )}
+        <Input
+          label="Nombre d’invités (estimé)"
+          type="number"
+          min={1}
+          value={guestCount}
+          onChange={(e) => setGuestCount(e.target.value)}
+        />
+        <label className="block space-y-1.5">
+          <span className="text-xs font-medium text-muted">Note (optionnel)</span>
+          <textarea
+            rows={3}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+            placeholder="Horaires, type d’événement…"
+          />
+        </label>
+        {amounts && (
+          <div className="rounded-md border border-border bg-surface-muted px-3 py-2 text-xs space-y-1">
+            <p>Montant indicatif : <strong>{formatFc(amounts.amountFc)}</strong></p>
+            <p>Acompte 30 % à verser au professionnel : <strong>{formatFc(amounts.depositFc)}</strong></p>
+            <p className="text-muted inline-flex items-center gap-1">
+              <Lock className="w-3 h-3" /> Pas de paiement carte sur EventMaster.
+            </p>
+          </div>
+        )}
+        <Button type="submit" loading={sending} fullWidth disabled={dateTaken}>
+          Envoyer la demande de réservation
+        </Button>
+        <p className="text-[11px] text-muted">
+          Suivi dans{' '}
+          <Link href="/dashboard/marketplace" className="font-semibold text-primary hover:underline">
+            Marketplace → Réservations
+          </Link>
+          .
+        </p>
+      </div>
     </form>
   );
 }

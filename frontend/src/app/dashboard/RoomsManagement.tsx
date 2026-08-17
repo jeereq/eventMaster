@@ -27,7 +27,7 @@ import {
   roomTypeDescriptions,
   roomTypeLabels,
 } from '@/lib/roomLayoutUtils';
-import { PRICE_UNIT_OPTIONS, parseBlockedDates, type VenuePriceUnit } from '@/lib/marketplace';
+import { PRICE_UNIT_OPTIONS, MARKETPLACE_MAX_PHOTOS, parseBlockedDates, type VenuePriceUnit } from '@/lib/marketplace';
 import { uploadImageFile } from '@/lib/cloudinaryUpload';
 import { formatFc } from '@/config/landingPricing';
 import BlockedDatesField from '@/components/BlockedDatesField';
@@ -59,6 +59,7 @@ interface RoomItem {
     priceUnit: VenuePriceUnit;
     photos: string[] | null;
     blockedDates?: unknown;
+    bookings?: Array<{ eventDate: string }>;
     latitude: number | null;
     longitude: number | null;
   } | null;
@@ -148,6 +149,7 @@ export default function RoomsManagement() {
     priceUnit: 'EVENT' as VenuePriceUnit,
     photos: [] as string[],
     blockedDates: [] as string[],
+    bookedDates: [] as string[],
     latitude: '',
     longitude: '',
   });
@@ -300,6 +302,7 @@ export default function RoomsManagement() {
       priceUnit: listing?.priceUnit || 'EVENT',
       photos,
       blockedDates: parseBlockedDates(listing?.blockedDates),
+      bookedDates: parseBlockedDates((listing?.bookings || []).map((b) => b.eventDate)),
       latitude: listing?.latitude != null ? String(listing.latitude) : '',
       longitude: listing?.longitude != null ? String(listing.longitude) : '',
     });
@@ -334,13 +337,19 @@ export default function RoomsManagement() {
     }
   };
 
-  const handleListingPhoto = async (file: File | undefined) => {
-    if (!file) return;
+  const handleListingPhoto = async (files: FileList | null | undefined) => {
+    if (!files?.length) return;
     setUploadingPhoto(true);
     setError('');
     try {
-      const uploaded = await uploadImageFile(file);
-      setListingDraft((prev) => ({ ...prev, photos: [...prev.photos, uploaded.url].slice(0, 8) }));
+      const remaining = MARKETPLACE_MAX_PHOTOS - listingDraft.photos.length;
+      const batch = Array.from(files).slice(0, remaining);
+      const urls: string[] = [];
+      for (const file of batch) {
+        const uploaded = await uploadImageFile(file);
+        urls.push(uploaded.url);
+      }
+      setListingDraft((prev) => ({ ...prev, photos: [...prev.photos, ...urls].slice(0, MARKETPLACE_MAX_PHOTOS) }));
     } catch (err: any) {
       setError(err.message || 'Upload photo impossible.');
     } finally {
@@ -1094,10 +1103,11 @@ export default function RoomsManagement() {
             </div>
             <BlockedDatesField
               value={listingDraft.blockedDates}
+              bookedDates={listingDraft.bookedDates}
               onChange={(blockedDates) => setListingDraft((d) => ({ ...d, blockedDates }))}
             />
             <div>
-              <span className={labelClass}>Photos (max. 8)</span>
+              <span className={labelClass}>Photos (max. {MARKETPLACE_MAX_PHOTOS})</span>
               <div className="flex flex-wrap gap-2 mb-2">
                 {listingDraft.photos.map((url) => (
                   <div key={url} className="relative w-16 h-16 rounded-md overflow-hidden border border-border">
@@ -1115,16 +1125,17 @@ export default function RoomsManagement() {
               </div>
               <label className="inline-flex items-center gap-2 text-xs font-semibold text-primary cursor-pointer">
                 <Upload className="w-3.5 h-3.5" />
-                {uploadingPhoto ? 'Upload…' : 'Ajouter une photo'}
+                {uploadingPhoto ? 'Upload…' : 'Ajouter des photos'}
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
+                  multiple
                   className="hidden"
-                  disabled={uploadingPhoto || listingDraft.photos.length >= 8}
+                  disabled={uploadingPhoto || listingDraft.photos.length >= MARKETPLACE_MAX_PHOTOS}
                   onChange={(e) => {
-                    const file = e.target.files?.[0];
+                    const files = e.target.files;
                     e.target.value = '';
-                    void handleListingPhoto(file);
+                    void handleListingPhoto(files);
                   }}
                 />
               </label>

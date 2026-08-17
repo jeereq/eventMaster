@@ -88,7 +88,7 @@ export function parsePhotoUrls(input: unknown): string[] {
     if (!url || url.length > 600) continue;
     if (!/^https?:\/\//i.test(url)) continue;
     urls.push(url);
-    if (urls.length >= 8) break;
+    if (urls.length >= 24) break;
   }
   return urls;
 }

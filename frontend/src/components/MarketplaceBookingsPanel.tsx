@@ -7,9 +7,11 @@ import { Alert, Button, EmptyState, Input, StatusPill } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import {
   BOOKING_STATUS_LABELS,
+  parseBlockedDates,
   type MarketplaceBookingItem,
   type MarketplaceBookingStatus,
 } from '@/lib/marketplace';
+import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import { CalendarCheck, CheckCircle2, XCircle } from 'lucide-react';
 
 function toneFor(status: MarketplaceBookingStatus): 'amber' | 'emerald' | 'slate' | 'rose' {
@@ -38,6 +40,11 @@ export default function MarketplaceBookingsPanel({
     if (filter === 'sent') return b.viewerRole === 'organizer';
     return true;
   });
+  const calendarDates = parseBlockedDates(
+    visible
+      .filter((b) => b.status !== 'CANCELLED')
+      .map((b) => b.eventDate),
+  );
 
   const run = async (id: string, action: string, extra?: Record<string, unknown>) => {
     setBusyId(id);
@@ -62,6 +69,10 @@ export default function MarketplaceBookingsPanel({
           L’acompte (30 %) se verse hors plateforme.
         </p>
       </div>
+
+      {calendarDates.length > 0 && (
+        <AvailabilityCalendar title="Calendrier des réservations" bookedDates={calendarDates} />
+      )}
 
       <div className="flex gap-1.5">
         {([
