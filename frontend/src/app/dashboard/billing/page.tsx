@@ -18,6 +18,7 @@ import {
   PLAN_IDS,
   ANNUAL_DISCOUNT_PERCENT,
   getPlanDisplayPrice,
+  CURRENCY_NAME,
   type BillingCycle,
   type PlanId,
 } from '@/config/landingPricing';
@@ -161,12 +162,19 @@ export default function BillingPage() {
           Forfait de {tenant?.name || 'votre organisation'}
         </h1>
         <p className="text-muted text-sm">
-          Business Premium 1 & 2 · Business Enterprise 1 à 3 · réduction annuelle {ANNUAL_DISCOUNT_PERCENT} %
+          Tous les tarifs sont en {CURRENCY_NAME} (FC) · Business Premium 1 & 2 · Business Enterprise 1 à 3 · réduction annuelle {ANNUAL_DISCOUNT_PERCENT} %
         </p>
       </div>
 
       {error && <Alert variant="error">{error}</Alert>}
       {successMsg && <Alert variant="success">{successMsg}</Alert>}
+
+      {(!billing || billing.plan === 'FREE') && (
+        <Alert variant="info">
+          Aucun abonnement payant n&apos;est actif. Tous les forfaits disponibles sont proposés ci-dessous,
+          exclusivement en {CURRENCY_NAME} (FC). Choisissez celui qui correspond à votre organisation.
+        </Alert>
+      )}
 
       {billing && (
         <div className="bg-surface-muted rounded-[var(--radius-card)] border border-border p-6 md:p-8 space-y-6">
@@ -177,8 +185,13 @@ export default function BillingPage() {
                 <span className="text-2xl font-black text-foreground">
                   {plans.find((p) => p.id === billing.plan)?.displayName || billing.plan}
                 </span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-xs font-bold text-emerald-700">
-                  <ShieldCheck className="w-3.5 h-3.5" /> Actif
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ${
+                  billing.plan === 'FREE'
+                    ? 'bg-amber-50 text-amber-800'
+                    : 'bg-emerald-50 text-emerald-700'
+                }`}>
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  {billing.plan === 'FREE' ? 'Sans abonnement payant' : 'Actif'}
                 </span>
               </div>
             </div>
@@ -298,7 +311,7 @@ export default function BillingPage() {
                       {actionLoading === plan.id ? (
                         <Loader2 className="w-4 h-4 animate-spin mx-auto" />
                       ) : isCurrent ? (
-                        'Forfait actuel'
+                        billing?.plan === 'FREE' ? 'Forfait actuel (gratuit)' : 'Forfait actuel'
                       ) : plan.id === 'FREE' ? (
                         'Gratuit'
                       ) : (

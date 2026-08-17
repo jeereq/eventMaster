@@ -7,6 +7,7 @@ import { downloadMedia, getMediaExtension, sanitizeFilenamePart } from '@/lib/do
 import { GuestPortalHomeLink } from '@/components/GuestPortalNav';
 import GuestPortalShell, { GuestPortalTabBar, GuestPortalCard } from '@/components/GuestPortalShell';
 import FestiveConfetti from '@/components/FestiveConfetti';
+import CelebrateMood from '@/components/CelebrateMood';
 import Link from 'next/link';
 import GuestTablePlanView from '@/app/rsvp/GuestTablePlanView';
 import GuestGuidelinesView from '@/components/GuestGuidelinesView';
@@ -465,7 +466,7 @@ export default function RsvpPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-surface-muted">
+      <div className="min-h-screen em-guest-page flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-10 h-10 text-primary animate-spin" />
           <p className="text-sm font-medium text-muted">Ouverture de votre invitation personnalisée...</p>
@@ -490,6 +491,37 @@ export default function RsvpPage() {
       </div>
     );
   }
+
+    if (submitted && rsvpStatus === 'DECLINED') {
+      return (
+        <GuestPortalShell
+          title={guest.event.title}
+          eyebrow="Réponse enregistrée"
+          guestId={guestId}
+          contentClassName="space-y-5"
+        >
+          <GuestPortalCard festive className="text-center space-y-4 py-8">
+            <span className="em-festive-chip mx-auto">Merci pour votre réponse</span>
+            <h2 className="text-xl font-display font-semibold text-foreground">
+              {guest.firstName}, nous avons bien noté votre absence.
+            </h2>
+            <p className="text-sm text-muted leading-relaxed max-w-sm mx-auto">
+              Merci d&apos;avoir pris le temps de répondre. Vous pourrez modifier votre choix
+              tant que l&apos;organisateur n&apos;a pas verrouillé les RSVP.
+            </p>
+            {!rsvpLocked && (
+              <button
+                type="button"
+                onClick={() => setSubmitted(false)}
+                className="inline-flex items-center justify-center px-4 py-2.5 rounded-[var(--radius-button)] bg-primary text-white text-xs font-semibold hover:bg-primary-hover transition"
+              >
+                Modifier ma réponse
+              </button>
+            )}
+          </GuestPortalCard>
+        </GuestPortalShell>
+      );
+    }
 
     // Portail invité confirmé — layout plateforme (simple / moderne)
     if (submitted && rsvpStatus === 'ACCEPTED') {
@@ -519,12 +551,14 @@ export default function RsvpPage() {
             {/* 1. BADGE & INFOS TAB */}
             {activeGuestTab === 'badge' && (
               <div className="space-y-4 animate-fade-in">
-                <GuestPortalCard className="bg-primary text-white border-primary space-y-2">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-white/80">Bienvenue</span>
-                  <h2 className="text-lg font-display font-semibold leading-snug">
-                    Bonjour {guest.firstName}, votre présence est confirmée.
+                <GuestPortalCard className="em-guest-welcome border-0 space-y-2 relative">
+                  <span className="em-festive-chip !border-white/25 !bg-white/15 !text-white relative z-10">
+                    Présence confirmée
+                  </span>
+                  <h2 className="text-lg font-display font-semibold leading-snug relative z-10">
+                    Bonjour {guest.firstName}, on vous attend avec joie.
                   </h2>
-                  <p className="text-white/85 text-xs leading-relaxed">
+                  <p className="text-white/85 text-xs leading-relaxed relative z-10">
                     Présentez votre badge QR à l&apos;entrée le jour J.
                   </p>
                 </GuestPortalCard>
@@ -622,9 +656,10 @@ export default function RsvpPage() {
             {activeGuestTab === 'guestbook' && (
               <div className="space-y-4 animate-fade-in">
                 <div className="space-y-1">
-                  <h3 className="font-semibold text-foreground text-sm">Livre d&apos;or</h3>
+                  <span className="em-festive-chip">Souvenirs</span>
+                  <h3 className="font-display font-semibold text-foreground text-sm">Livre d&apos;or</h3>
                   <p className="text-muted text-xs leading-relaxed">
-                    Laissez un message ou des photos pour les organisateurs.
+                    Laissez un mot ou des photos pour les organisateurs.
                   </p>
                 </div>
 
@@ -1238,11 +1273,12 @@ export default function RsvpPage() {
         }
       >
         {isOutside && (
-          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-primary to-primary/80" />
+          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[var(--festive-accent)] to-[var(--primary)]" />
         )}
         <div className={isOutside ? 'relative z-10' : undefined}>
         {renderRsvpLockedBanner()}
-        <div className={`font-bold text-foreground ${isOutside ? 'text-base sm:text-lg' : 'text-sm'}`}>{formatText(el.text)}</div>
+        <span className="em-festive-chip mb-2">Répondez avec joie</span>
+        <div className={`font-display font-semibold text-foreground ${isOutside ? 'text-base sm:text-lg' : 'text-sm'}`}>{formatText(el.text)}</div>
         
         {/* Yes/No Buttons */}
         <div className="grid grid-cols-2 gap-4">
@@ -1360,7 +1396,8 @@ export default function RsvpPage() {
       };
 
   return (
-    <div className="min-h-screen bg-surface-muted px-4 py-12 flex flex-col items-center justify-center gap-6 relative overflow-hidden">
+    <div className="em-guest-page px-4 py-12 flex flex-col items-center justify-center gap-6 relative overflow-hidden">
+      <CelebrateMood />
       {/* Load Google Fonts stylesheet */}
       <link 
         href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Dancing+Script:wght@500;700&family=Great+Vibes&family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Pinyon+Script&family=Monsieur+La+Doulaise&family=Italiana&family=Bodoni+Moda:ital,wght@0,400;0,700;1,400&family=Allura&family=Parisienne&family=Prata&family=Sacramento&family=Marcellus&display=swap" 
@@ -1936,11 +1973,11 @@ export default function RsvpPage() {
           ) : (
             <div className="space-y-8">
               <div className="text-center space-y-2">
-                <div className="inline-flex items-center gap-1 bg-primary/10 border border-primary/20 text-primary px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2">
+                <div className="inline-flex items-center gap-1 em-festive-chip mb-2">
                   <Sparkles className="w-3.5 h-3.5" />
-                  Invitation Privée
+                  Invitation privée
                 </div>
-                <h1 className="text-3xl font-black text-foreground tracking-tight leading-tight">
+                <h1 className="text-3xl font-display font-semibold text-foreground tracking-tight leading-tight">
                   {guest.event.title}
                 </h1>
                 <p className="text-sm font-semibold text-muted">
@@ -2097,12 +2134,12 @@ export default function RsvpPage() {
       {/* Event Location & Directions Card */}
       {guest && guest.event?.location && (
         <div className="w-full max-w-lg bg-surface/90 backdrop-blur-md rounded-[24px] border border-border/60 shadow-xl p-6 space-y-4 text-center relative overflow-hidden animate-fade-in">
-          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-amber-200 via-yellow-500 to-amber-200" />
+          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[var(--festive-accent)] via-amber-400 to-[var(--primary)]" />
           <div className="flex flex-col items-center gap-2">
-            <div className="bg-amber-50 text-amber-700 p-2.5 rounded-full border border-amber-100/50">
+            <div className="bg-[var(--festive-accent-soft)] text-[color:var(--festive-accent)] p-2.5 rounded-full border border-[color-mix(in_srgb,var(--festive-accent)_30%,transparent)]">
               <MapPin className="w-5 h-5" />
             </div>
-            <h3 className="text-xs font-bold text-foreground uppercase tracking-widest font-serif">Lieu de Réception</h3>
+            <h3 className="em-festive-chip">Lieu de réception</h3>
             <p className="text-sm text-foreground font-semibold max-w-md mx-auto leading-relaxed">
               {guest.event.location}
             </p>

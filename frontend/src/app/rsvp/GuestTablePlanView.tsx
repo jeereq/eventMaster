@@ -129,10 +129,11 @@ export default function GuestTablePlanView({
   if (!placementAccessible) {
     return (
       <div className="text-center py-12 space-y-3 max-w-sm mx-auto">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-[var(--radius-card)] bg-primary/10 text-primary border border-primary/15">
+        <span className="em-festive-chip mx-auto">Bientôt</span>
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-[var(--radius-card)] bg-[var(--festive-accent-soft)] text-[color:var(--festive-accent)] border border-[color-mix(in_srgb,var(--festive-accent)_25%,transparent)]">
           <LayoutGrid className="w-5 h-5" />
         </div>
-        <h3 className="font-semibold text-foreground text-sm">Placement en cours</h3>
+        <h3 className="font-display font-semibold text-foreground text-sm">Votre place arrive</h3>
         <p className="text-muted text-xs leading-relaxed">
           Votre plan de table, invitation PDF et localisation GPS sont disponibles dès votre confirmation RSVP,
           dès que les organisateurs vous ont assigné une place.

@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useCallback } from 'react';
 import {
- Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers,
+ Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler,
 } from 'lucide-react';
 import ChairRenderer from '@/components/ChairRenderer';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
@@ -174,6 +174,22 @@ export default function RoomLayoutEditor({
  const table = createBlueprintTable(count, { chairType: defaultChair });
  updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, table] }, { message: `Table « ${table.name} » ajoutée`, kind: 'add' });
  setSelected({ kind: 'table', id: table.id });
+ };
+
+ const duplicateSelectedTable = () => {
+ const item = blueprint.furniture.find((f) => f.kind === 'table' && f.id === selected?.id);
+ if (!item || item.kind !== 'table') return;
+ const count = blueprint.furniture.filter((f) => f.kind === 'table').length + 1;
+ const copy = {
+ ...item,
+ id: createBlueprintTable(count).id,
+ name: `${item.name} (copie)`,
+ x: Math.min(90, item.x + 6),
+ y: Math.min(90, item.y + 6),
+ locked: false,
+ };
+ updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, copy] }, { message: `Table « ${copy.name} » dupliquée`, kind: 'add' });
+ setSelected({ kind: 'table', id: copy.id });
  };
 
  const addRow = () => {
@@ -623,6 +639,33 @@ export default function RoomLayoutEditor({
  </>
  )}
  <div className="p-4 bg-surface-muted rounded-xl border space-y-3">
+ <p className="text-xs font-bold uppercase text-muted flex items-center gap-1"><Ruler className="w-3.5 h-3.5" /> Dimensions réelles</p>
+ <div className="grid grid-cols-2 gap-2">
+ <label className="text-xs space-y-1">
+ <span className="font-semibold text-muted">Largeur (m)</span>
+ <input
+ type="number"
+ min={5}
+ max={80}
+ value={blueprint.canvas.widthM}
+ onChange={(e) => updateBlueprint({ ...blueprint, canvas: { ...blueprint.canvas, widthM: parseInt(e.target.value, 10) || 5 } }, { message: 'Largeur de salle modifiée', kind: 'settings' })}
+ className="w-full px-2 py-1.5 rounded-lg border text-sm"
+ />
+ </label>
+ <label className="text-xs space-y-1">
+ <span className="font-semibold text-muted">Longueur (m)</span>
+ <input
+ type="number"
+ min={5}
+ max={80}
+ value={blueprint.canvas.heightM}
+ onChange={(e) => updateBlueprint({ ...blueprint, canvas: { ...blueprint.canvas, heightM: parseInt(e.target.value, 10) || 5 } }, { message: 'Longueur de salle modifiée', kind: 'settings' })}
+ className="w-full px-2 py-1.5 rounded-lg border text-sm"
+ />
+ </label>
+ </div>
+ </div>
+ <div className="p-4 bg-surface-muted rounded-xl border space-y-3">
  <p className="text-xs font-bold uppercase text-muted flex items-center gap-1"><Palette className="w-3.5 h-3.5" /> Couleur des tables</p>
  <div className="flex gap-2 items-center">
  <input
@@ -807,6 +850,23 @@ export default function RoomLayoutEditor({
  </label>
  {renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl)}
  {renderTableImageUpload(selectedFurniture.id, selectedFurniture.tableImageUrl)}
+ <div className="flex gap-2">
+ <button
+ type="button"
+ onClick={() => updateFurniture(selectedFurniture.id, { locked: !selectedFurniture.locked }, selectedFurniture.locked ? 'Table déverrouillée' : 'Table verrouillée')}
+ className="flex-1 inline-flex items-center justify-center gap-1 py-2 rounded-lg border text-[10px] font-bold"
+ >
+ {selectedFurniture.locked ? <Unlock className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+ {selectedFurniture.locked ? 'Déverrouiller' : 'Verrouiller'}
+ </button>
+ <button
+ type="button"
+ onClick={duplicateSelectedTable}
+ className="flex-1 inline-flex items-center justify-center gap-1 py-2 rounded-lg border border-primary/30 bg-primary/10 text-primary text-[10px] font-bold"
+ >
+ <Copy className="w-3 h-3" /> Dupliquer
+ </button>
+ </div>
  </div>
  <LayoutActionPanel actions={actionLog} />
  </div>
@@ -884,6 +944,8 @@ export default function RoomLayoutEditor({
  <Flower2 className="w-3.5 h-3.5" /> Fleurs
  </button>
  <button type="button" onClick={() => addFixture('aisle')} className="px-3 py-1.5 bg-surface-muted border border-border text-muted rounded-lg text-xs font-bold">Allée</button>
+ <button type="button" onClick={() => addFixture('entrance')} className="px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs font-bold">Entrée</button>
+ <button type="button" onClick={() => addFixture('perimeter')} className="px-3 py-1.5 bg-sky-50 border border-sky-200 text-sky-800 rounded-lg text-xs font-bold">Périmètre</button>
  </>
  ) : null}
  {selected && (
