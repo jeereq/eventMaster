@@ -21,7 +21,11 @@ function useDashboardTitle(): { title: string; subtitle?: string } {
     if (pathname.startsWith('/dashboard/analytics')) return { title: 'Analyses', subtitle: 'Statistiques RSVP' };
     if (pathname.startsWith('/dashboard/billing')) return { title: 'Facturation', subtitle: 'Forfait & quotas' };
     if (pathname.startsWith('/dashboard/invoices')) return { title: 'Factures', subtitle: 'Historique' };
-    if (pathname.startsWith('/dashboard/profile')) return { title: 'Mon compte', subtitle: 'Profil, salles & équipe' };
+    if (pathname.startsWith('/dashboard/rooms')) return { title: 'Salles', subtitle: 'Plans 2D & publication' };
+    if (pathname.startsWith('/dashboard/team')) return { title: 'Équipe', subtitle: 'Membres de l’organisation' };
+    if (pathname.startsWith('/dashboard/marketplace')) return { title: 'Marketplace', subtitle: 'Prestations & réservations' };
+    if (pathname.startsWith('/dashboard/bookings')) return { title: 'Mes réservations', subtitle: 'Demandes de dates' };
+    if (pathname.startsWith('/dashboard/profile')) return { title: 'Mon compte', subtitle: 'Profil et sécurité' };
     if (pathname.startsWith('/dashboard/guide')) return { title: 'Guide', subtitle: 'Prise en main' };
     if (pathname.startsWith('/dashboard/commercial')) return { title: 'Parrainage', subtitle: 'Commissions plateforme' };
     if (pathname.startsWith('/dashboard/org-commercial')) return { title: 'Réseau commercial', subtitle: 'Parrainage organisation' };

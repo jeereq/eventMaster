@@ -97,6 +97,24 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
       'Parcours guidé de bout en bout : création, invités, modèle & invitation, envoi RSVP, réponses (PDF/GPS dès acceptation), plan de table, protocole jour J et statistiques.',
     route: '/dashboard/events',
   },
+  'nav-rooms': {
+    title: 'Salles',
+    description:
+      'Créez les salles de l’organisation, générez un plan 2D, assignez le staff et publiez une fiche au catalogue public.',
+    route: '/dashboard/rooms',
+  },
+  'nav-team': {
+    title: 'Équipe',
+    description:
+      'Invitez managers, agents protocole et commerciaux. Chaque rôle reçoit les accès correspondants.',
+    route: '/dashboard/team',
+  },
+  'nav-marketplace': {
+    title: 'Marketplace',
+    description:
+      'Publiez vos prestations (traiteur, photo, DJ…), suivez les demandes et confirmez les réservations de dates.',
+    route: '/dashboard/marketplace',
+  },
   'nav-protocol': {
     title: 'Protocole',
     description:
@@ -124,7 +142,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-profile': {
     title: 'Mon compte',
     description:
-      'Profil personnel (nom, e-mail, mot de passe). Si vous êtes manager ou propriétaire : onglets Équipe (inviter managers, protocoles, commerciaux) et Salles (plans 2D).',
+      'Profil personnel (nom, e-mail, mot de passe) et couleurs de marque de l’organisation.',
     route: '/dashboard/profile',
   },
 };

@@ -11,11 +11,21 @@ import MarketplaceBookingForm from '@/components/MarketplaceBookingForm';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
 import { formatFc } from '@/config/landingPricing';
-import { formatLocationLine, formatQuotaLabel, isVideoUrl, mediaPosterUrl, type PublicVenue } from '@/lib/marketplace';
+import {
+  catalogueItemToMapMarker,
+  formatLocationLine,
+  formatQuotaLabel,
+  isVideoUrl,
+  mapsDirectionsUrl,
+  mediaPosterUrl,
+  venueToCatalogueItem,
+  type PublicVenue,
+} from '@/lib/marketplace';
 import { roomTypeLabels, type RoomLayoutBlueprint, type RoomType } from '@/lib/roomLayoutUtils';
 import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
+import { Button } from '@/components/ui';
 import {
-  ArrowLeft, Building2, Loader2, MapPin, Play, Users,
+  ArrowLeft, Building2, Loader2, MapPin, Navigation, Play, Users,
 } from 'lucide-react';
 
 export default function MarketplaceVenueDetailPage() {
@@ -132,6 +142,17 @@ export default function MarketplaceVenueDetailPage() {
                     {venue.address ? ` · ${venue.address}` : ''}
                   </span>
                 )}
+                {venue.latitude != null && venue.longitude != null && (
+                  <a
+                    href={mapsDirectionsUrl(venue.latitude, venue.longitude)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-muted border border-border text-primary font-semibold hover:bg-primary/5"
+                  >
+                    <Navigation className="w-3.5 h-3.5" />
+                    Itinéraire
+                  </a>
+                )}
                 {venue.capacity ? (
                   <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-muted border border-border">
                     <Users className="w-3.5 h-3.5" /> {venue.capacity} places
@@ -166,17 +187,20 @@ export default function MarketplaceVenueDetailPage() {
               )}
               {tab === 'map' && (
                 venue.latitude != null && venue.longitude != null ? (
-                  <MarketplaceLocationsMap
-                    markers={[{
-                      id: venue.slug,
-                      lat: venue.latitude,
-                      lng: venue.longitude,
-                      title: venue.headline,
-                      href: `/marketplace/salles/${venue.slug}`,
-                      subtitle: formatLocationLine(venue) || undefined,
-                    }]}
-                    height={320}
-                  />
+                  <div className="space-y-3">
+                    <div className="flex justify-end">
+                      <a href={mapsDirectionsUrl(venue.latitude, venue.longitude)} target="_blank" rel="noreferrer" className="inline-flex">
+                        <Button size="sm" variant="secondary" leftIcon={<Navigation className="w-3.5 h-3.5" />}>
+                          Itinéraire vers la salle
+                        </Button>
+                      </a>
+                    </div>
+                    <MarketplaceLocationsMap
+                      markers={[catalogueItemToMapMarker(venueToCatalogueItem(venue))]}
+                      height={320}
+                      navigateOnClick={false}
+                    />
+                  </div>
                 ) : (
                   <p className="text-sm text-muted">Aucune position n’a encore été indiquée pour cette salle.</p>
                 )

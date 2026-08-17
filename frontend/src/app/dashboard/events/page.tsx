@@ -2574,7 +2574,15 @@ export default function EventsPage() {
  </select>
  <p className="text-[11px] text-muted">
  {orgRooms.length === 0
- ? 'Créez des salles dans Mon compte → Salles, ou parcourez le catalogue public.'
+ ? (
+ <>
+ Créez des salles dans{' '}
+ <Link href="/dashboard/rooms" className="font-semibold text-primary hover:underline">
+ Salles
+ </Link>
+ , ou parcourez le catalogue public.
+ </>
+ )
  : 'Préremplit le lieu et lie le staff de la salle. À la création, le plan 2D peut être importé.'}
  {' '}
  <Link href="/marketplace/salles" className="font-semibold text-primary hover:underline">

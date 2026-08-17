@@ -3,6 +3,16 @@ const LEAFLET_JS = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
 
 let leafletPromise: Promise<any> | null = null;
 
+export function leafletBasemap(theme: 'light' | 'dark') {
+  return {
+    url:
+      theme === 'dark'
+        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; OpenStreetMap &copy; CARTO',
+  };
+}
+
 export function loadLeaflet(): Promise<any> {
   if (typeof window === 'undefined') {
     return Promise.reject(new Error('Leaflet is browser-only'));
