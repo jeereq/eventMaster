@@ -54,9 +54,13 @@ interface RoomItem {
     isPublic: boolean;
     headline: string | null;
     city: string | null;
+    commune?: string | null;
+    neighborhood?: string | null;
     address: string | null;
     priceFromFc: number | null;
     priceUnit: VenuePriceUnit;
+    quotaMin?: number | null;
+    quotaMax?: number | null;
     photos: string[] | null;
     blockedDates?: unknown;
     bookings?: Array<{ eventDate: string }>;
@@ -144,9 +148,13 @@ export default function RoomsManagement() {
     isPublic: false,
     headline: '',
     city: '',
+    commune: '',
+    neighborhood: '',
     address: '',
     priceFromFc: '',
     priceUnit: 'EVENT' as VenuePriceUnit,
+    quotaMin: '',
+    quotaMax: '',
     photos: [] as string[],
     blockedDates: [] as string[],
     bookedDates: [] as string[],
@@ -297,9 +305,13 @@ export default function RoomsManagement() {
       isPublic: Boolean(listing?.isPublic),
       headline: listing?.headline || room.name,
       city: listing?.city || '',
+      commune: listing?.commune || '',
+      neighborhood: listing?.neighborhood || '',
       address: listing?.address || room.location || '',
       priceFromFc: listing?.priceFromFc != null ? String(listing.priceFromFc) : '',
       priceUnit: listing?.priceUnit || 'EVENT',
+      quotaMin: listing?.quotaMin != null ? String(listing.quotaMin) : '',
+      quotaMax: listing?.quotaMax != null ? String(listing.quotaMax) : '',
       photos,
       blockedDates: parseBlockedDates(listing?.blockedDates),
       bookedDates: parseBlockedDates((listing?.bookings || []).map((b) => b.eventDate)),
@@ -318,9 +330,13 @@ export default function RoomsManagement() {
         isPublic: publish,
         headline: listingDraft.headline,
         city: listingDraft.city,
+        commune: listingDraft.commune,
+        neighborhood: listingDraft.neighborhood,
         address: listingDraft.address,
         priceFromFc: listingDraft.priceFromFc ? Number(listingDraft.priceFromFc) : null,
         priceUnit: listingDraft.priceUnit,
+        quotaMin: listingDraft.quotaMin ? Number(listingDraft.quotaMin) : null,
+        quotaMax: listingDraft.quotaMax ? Number(listingDraft.quotaMax) : null,
         photos: listingDraft.photos,
         blockedDates: listingDraft.blockedDates,
         latitude: listingDraft.latitude || null,
@@ -1075,9 +1091,32 @@ export default function RoomsManagement() {
                 placeholder="Kinshasa"
               />
               <Input
+                label="Commune"
+                value={listingDraft.commune}
+                onChange={(e) => setListingDraft((d) => ({ ...d, commune: e.target.value }))}
+                placeholder="Gombe"
+              />
+              <Input
+                label="Quartier"
+                value={listingDraft.neighborhood}
+                onChange={(e) => setListingDraft((d) => ({ ...d, neighborhood: e.target.value }))}
+              />
+              <Input
                 label="Adresse"
                 value={listingDraft.address}
                 onChange={(e) => setListingDraft((d) => ({ ...d, address: e.target.value }))}
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label="Latitude"
+                value={listingDraft.latitude}
+                onChange={(e) => setListingDraft((d) => ({ ...d, latitude: e.target.value }))}
+              />
+              <Input
+                label="Longitude"
+                value={listingDraft.longitude}
+                onChange={(e) => setListingDraft((d) => ({ ...d, longitude: e.target.value }))}
               />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1100,6 +1139,20 @@ export default function RoomsManagement() {
                   ))}
                 </select>
               </label>
+              <Input
+                label="Quota min. invités"
+                type="number"
+                min={0}
+                value={listingDraft.quotaMin}
+                onChange={(e) => setListingDraft((d) => ({ ...d, quotaMin: e.target.value }))}
+              />
+              <Input
+                label="Quota max. invités"
+                type="number"
+                min={0}
+                value={listingDraft.quotaMax}
+                onChange={(e) => setListingDraft((d) => ({ ...d, quotaMax: e.target.value }))}
+              />
             </div>
             <BlockedDatesField
               value={listingDraft.blockedDates}

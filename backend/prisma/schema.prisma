@@ -61,6 +61,9 @@ enum VenuePriceUnit {
   EVENT
   DAY
   HOUR
+  MINUTE
+  PERSON
+  QUOTA
 }
 
 enum MarketplaceInquiryStatus {
@@ -469,11 +472,15 @@ model VenueListing {
   isPublic     Boolean        @default(false)
   headline     String?
   city         String?
+  commune      String?
+  neighborhood String?
   address      String?
   latitude     Float?
   longitude    Float?
   priceFromFc  Int?
   priceUnit    VenuePriceUnit @default(EVENT)
+  quotaMin     Int?
+  quotaMax     Int?
   photos       Json?
   blockedDates Json?
   publishedAt  DateTime?
@@ -484,6 +491,7 @@ model VenueListing {
   bookings  MarketplaceBooking[]
 
   @@index([isPublic, city])
+  @@index([isPublic, commune])
   @@index([tenantId])
 }
 
@@ -553,9 +561,15 @@ model ServiceOffering {
   title             String
   description       String?
   city              String?
+  commune           String?
+  neighborhood      String?
   coverageRadiusKm  Int?
+  latitude          Float?
+  longitude         Float?
   priceFromFc       Int?
   priceUnit         VenuePriceUnit   @default(EVENT)
+  quotaMin          Int?
+  quotaMax          Int?
   photos            Json?
   blockedDates      Json?
   isPublic          Boolean          @default(false)

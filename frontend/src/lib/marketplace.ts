@@ -1,6 +1,6 @@
 import type { RoomType } from '@/lib/roomLayoutUtils';
 
-export type VenuePriceUnit = 'EVENT' | 'DAY' | 'HOUR';
+export type VenuePriceUnit = 'EVENT' | 'DAY' | 'HOUR' | 'MINUTE' | 'PERSON' | 'QUOTA';
 export type TenantAccountKind = 'ORGANIZER' | 'VENDOR' | 'BOTH';
 export type ServiceCategory =
   | 'CATERING'
@@ -20,6 +20,8 @@ export interface PublicVenue {
   headline: string;
   description: string | null;
   city: string | null;
+  commune: string | null;
+  neighborhood: string | null;
   address: string | null;
   floor: string | null;
   capacity: number | null;
@@ -29,6 +31,8 @@ export interface PublicVenue {
   priceFromFc: number | null;
   priceUnit: VenuePriceUnit;
   priceUnitLabel: string;
+  quotaMin?: number | null;
+  quotaMax?: number | null;
   photos: string[];
   coverUrl: string | null;
   publishedAt: string | null;
@@ -80,10 +84,16 @@ export interface PublicService {
   category: ServiceCategory;
   categoryLabel: string;
   city: string | null;
+  commune?: string | null;
+  neighborhood?: string | null;
   coverageRadiusKm: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
   priceFromFc: number | null;
   priceUnit: VenuePriceUnit;
   priceUnitLabel: string;
+  quotaMin?: number | null;
+  quotaMax?: number | null;
   photos: string[];
   coverUrl: string | null;
   publishedAt: string | null;
@@ -194,4 +204,24 @@ export const PRICE_UNIT_OPTIONS: Array<{ id: VenuePriceUnit; label: string }> = 
   { id: 'EVENT', label: 'Par événement' },
   { id: 'DAY', label: 'Par jour' },
   { id: 'HOUR', label: 'Par heure' },
+  { id: 'MINUTE', label: 'Par minute' },
+  { id: 'PERSON', label: 'Par personne / par tête' },
+  { id: 'QUOTA', label: 'Par quota d’invités' },
 ];
+
+export const RADIUS_KM_OPTIONS = [5, 10, 15, 25, 50] as const;
+
+export function formatLocationLine(item: {
+  city?: string | null;
+  commune?: string | null;
+  neighborhood?: string | null;
+}): string {
+  return [item.neighborhood, item.commune, item.city].filter(Boolean).join(' · ');
+}
+
+export function formatQuotaLabel(quotaMin?: number | null, quotaMax?: number | null): string | null {
+  if (quotaMin && quotaMax) return `Quota ${quotaMin}–${quotaMax} invités`;
+  if (quotaMin) return `Quota dès ${quotaMin} invités`;
+  if (quotaMax) return `Quota jusqu’à ${quotaMax} invités`;
+  return null;
+}

@@ -10,8 +10,9 @@ import CelebrateMood from '@/components/CelebrateMood';
 import MarketplaceInquiryForm from '@/components/MarketplaceInquiryForm';
 import MarketplaceBookingForm from '@/components/MarketplaceBookingForm';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
+import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
 import { formatFc } from '@/config/landingPricing';
-import type { PublicService } from '@/lib/marketplace';
+import { formatLocationLine, formatQuotaLabel, type PublicService } from '@/lib/marketplace';
 import { ArrowLeft, Loader2, MapPin, Sparkles } from 'lucide-react';
 
 export default function MarketplaceServiceDetailPage() {
@@ -96,16 +97,34 @@ export default function MarketplaceServiceDetailPage() {
                 <p className="text-sm text-muted">{service.orgName}</p>
               </div>
               <div className="flex flex-wrap gap-2 text-xs text-muted">
-                {service.city && (
+                {formatLocationLine(service) && (
                   <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-muted border border-border">
                     <MapPin className="w-3.5 h-3.5" />
-                    {service.city}
-                    {service.coverageRadiusKm ? ` · ${service.coverageRadiusKm} km` : ''}
+                    {formatLocationLine(service)}
+                    {service.coverageRadiusKm ? ` · rayon ${service.coverageRadiusKm} km` : ''}
+                  </span>
+                )}
+                {formatQuotaLabel(service.quotaMin, service.quotaMax) && (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-muted border border-border">
+                    {formatQuotaLabel(service.quotaMin, service.quotaMax)}
                   </span>
                 )}
               </div>
               {service.description && (
                 <p className="text-sm text-muted leading-relaxed whitespace-pre-line">{service.description}</p>
+              )}
+              {service.latitude != null && service.longitude != null && (
+                <MarketplaceLocationsMap
+                  markers={[{
+                    id: service.slug,
+                    lat: service.latitude,
+                    lng: service.longitude,
+                    title: service.title,
+                    href: `/marketplace/prestataires/${service.slug}`,
+                    subtitle: formatLocationLine(service) || undefined,
+                  }]}
+                  height={240}
+                />
               )}
               <AvailabilityCalendar
                 title="Calendrier des disponibilités"
@@ -122,6 +141,9 @@ export default function MarketplaceServiceDetailPage() {
                   {service.priceFromFc != null ? formatFc(service.priceFromFc) : 'Sur devis'}
                 </p>
                 <p className="text-xs text-muted">{service.priceUnitLabel}</p>
+                {formatQuotaLabel(service.quotaMin, service.quotaMax) && (
+                  <p className="text-xs text-muted">{formatQuotaLabel(service.quotaMin, service.quotaMax)}</p>
+                )}
               </div>
               <MarketplaceInquiryForm
                 endpoint={`/public/services/${encodeURIComponent(service.slug)}/inquire`}
