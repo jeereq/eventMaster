@@ -12,7 +12,7 @@ function Cover({ item, className }: { item: CatalogueItem; className?: string })
   if (item.coverUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={item.coverUrl} alt="" className={cn('object-cover', className)} />
+      <img src={item.coverUrl} alt="" className={cn('object-cover transition duration-500 group-hover:scale-105', className)} />
     );
   }
   const Icon = item.kind === 'venue' ? Building2 : Sparkles;
@@ -32,20 +32,28 @@ function Price({ item }: { item: CatalogueItem }) {
   );
 }
 
+function KindBadge({ item }: { item: CatalogueItem }) {
+  return (
+    <span className="inline-flex items-center rounded-full bg-background/90 backdrop-blur-sm px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary border border-border">
+      {item.kind === 'venue' ? 'Salle' : item.categoryLabel}
+    </span>
+  );
+}
+
 function GridCard({ item }: { item: CatalogueItem }) {
   return (
     <Link
       href={item.href}
-      className="group bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden hover:border-primary/40 transition"
+      className="group bg-surface border border-border rounded-2xl overflow-hidden hover:border-primary/35 hover:shadow-[var(--shadow-soft)] transition duration-200"
     >
-      <div className="aspect-[16/10] bg-surface-muted overflow-hidden">
+      <div className="relative aspect-[16/10] bg-surface-muted overflow-hidden">
         <Cover item={item} className="w-full h-full" />
+        <div className="absolute top-2.5 left-2.5">
+          <KindBadge item={item} />
+        </div>
       </div>
       <div className="p-4 space-y-2">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">
-          {item.kind === 'venue' ? 'Salle' : item.categoryLabel}
-        </p>
-        <h2 className="font-display font-semibold text-foreground group-hover:text-primary transition">
+        <h2 className="font-display font-semibold text-foreground group-hover:text-primary transition leading-snug">
           {item.title}
         </h2>
         <p className="text-xs text-muted truncate">{item.orgName}</p>
@@ -67,15 +75,13 @@ function ListRow({ item }: { item: CatalogueItem }) {
   return (
     <Link
       href={item.href}
-      className="group flex items-center gap-3 sm:gap-4 bg-surface border border-border rounded-[var(--radius-card)] p-3 hover:border-primary/40 transition"
+      className="group flex items-center gap-3 sm:gap-4 bg-surface border border-border rounded-2xl p-3 hover:border-primary/35 hover:shadow-[var(--shadow-soft)] transition"
     >
-      <div className="w-20 h-16 sm:w-28 sm:h-20 rounded-md overflow-hidden bg-surface-muted shrink-0">
+      <div className="w-20 h-16 sm:w-28 sm:h-20 rounded-xl overflow-hidden bg-surface-muted shrink-0">
         <Cover item={item} className="w-full h-full" />
       </div>
       <div className="min-w-0 flex-1 space-y-1">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">
-          {item.kind === 'venue' ? 'Salle' : item.categoryLabel}
-        </p>
+        <KindBadge item={item} />
         <h2 className="font-semibold text-sm text-foreground group-hover:text-primary transition truncate">
           {item.title}
         </h2>
@@ -103,7 +109,7 @@ export default function CatalogueResults({
 }) {
   if (items.length === 0) {
     return (
-      <div className="text-center py-16 px-6 border border-border rounded-[var(--radius-card)] bg-surface">
+      <div className="text-center py-16 px-6 border border-dashed border-border rounded-2xl bg-surface">
         <Building2 className="w-10 h-10 text-muted mx-auto mb-3" />
         <h2 className="font-semibold text-foreground">{emptyTitle}</h2>
         <p className="text-sm text-muted mt-2 max-w-md mx-auto leading-relaxed">{emptyDescription}</p>
