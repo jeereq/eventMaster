@@ -272,8 +272,10 @@ function ProfilePageContent() {
                         ))}
                       </select>
                       <p className="text-[11px] text-muted">
-                        Propriétaire de salles : publiez vos espaces dans le{' '}
-                        <Link href="/marketplace/salles" className="text-primary font-semibold hover:underline">catalogue public</Link>.
+                        Propriétaire de salles ou prestataire : publiez vos offres dans le{' '}
+                        <Link href="/marketplace" className="text-primary font-semibold hover:underline">catalogue public</Link>
+                        {' '}et gérez les devis dans{' '}
+                        <Link href="/dashboard/marketplace" className="text-primary font-semibold hover:underline">Marketplace</Link>.
                       </p>
                     </label>
                   )}

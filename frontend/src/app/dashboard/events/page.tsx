@@ -2580,6 +2580,10 @@ export default function EventsPage() {
  <Link href="/marketplace/salles" className="font-semibold text-primary hover:underline">
  Trouver une salle
  </Link>
+ {' · '}
+ <Link href="/marketplace/prestataires" className="font-semibold text-primary hover:underline">
+ Trouver un prestataire
+ </Link>
  </p>
  </label>
  <label className="block space-y-1.5">

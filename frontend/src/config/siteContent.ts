@@ -14,13 +14,14 @@ export const SITE_CONTACT = {
 export const FOOTER_FEATURES = [
   'Invitations & RSVP multi-canal',
   'Plans de salle 2D & protocole QR',
+  'Catalogue de salles et prestataires',
   'Application mobile iOS & Android',
   'Espace isolé par entreprise',
 ] as const;
 
 export const FOOTER_PRODUCT = [
   { label: 'Modèles', href: '/#modeles' },
-  { label: 'Salles à louer', href: '/marketplace/salles' },
+  { label: 'Catalogue salles & prestas', href: '/marketplace' },
   { label: 'Parcours', href: '/#parcours' },
   { label: 'Tarifs', href: '/#tarifs' },
   { label: 'FAQ', href: '/faq' },
@@ -64,9 +65,9 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     id: 'marketplace-venues',
-    question: 'Puis-je trouver ou publier une salle sur EventMaster ?',
+    question: 'Puis-je trouver une salle ou un prestataire sur EventMaster ?',
     answer:
-      'Oui. Le catalogue public liste les salles que les organisations choisissent de publier (ville, capacité, plan 2D, tarif de départ). Vous envoyez une demande de devis au propriétaire. Pour proposer vos espaces : Mon compte → Salles → Publier. Les salles restent privées tant qu’elles ne sont pas publiées.',
+      'Oui. Le catalogue public liste les salles et prestations (traiteur, photo, DJ, déco…) que les organisations choisissent de publier. Vous envoyez une demande de devis. Pour proposer une offre : Mon compte → Salles, ou Marketplace → Prestations. Rien n’est visible tant que vous ne publiez pas.',
   },
   {
     id: 'free-trial',
