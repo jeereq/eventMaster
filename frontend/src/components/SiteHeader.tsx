@@ -58,7 +58,12 @@ export default function SiteHeader({
 
         <nav className="hidden md:flex items-center gap-1 min-w-0">
           {links.map((item) => {
-            const active = item.href !== '/' && pathname === item.href;
+            const active =
+              item.href === '/marketplace'
+                ? pathname.startsWith('/marketplace')
+                : item.href === '/contact'
+                  ? pathname === '/contact' || pathname === '/faq'
+                  : item.href !== '/' && pathname === item.href;
             const className = cn(
               'px-3 py-1.5 text-sm transition rounded-md',
               active ? 'font-semibold text-foreground' : 'text-muted hover:text-foreground',
