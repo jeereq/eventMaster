@@ -14,6 +14,7 @@ import {
   licenseKey,
   PLAN_AMOUNTS,
 } from './seed/helpers';
+import { seedMarketplaceCatalog } from './seed/marketplaceCatalog';
 
 const PLAN_SORT_ORDER: Record<PlanTypeKey, number> = {
   FREE: 0,
@@ -56,6 +57,12 @@ async function clearDatabase() {
   await prisma.invitation.deleteMany({});
   await prisma.guest.deleteMany({});
   await prisma.event.deleteMany({});
+  await prisma.adminAuditLog.deleteMany({});
+  await prisma.marketplaceBooking.deleteMany({});
+  await prisma.marketplaceInquiry.deleteMany({});
+  await prisma.serviceOffering.deleteMany({});
+  await prisma.vendorProfile.deleteMany({});
+  await prisma.venueListing.deleteMany({});
   await prisma.organizationRoom.deleteMany({});
   await prisma.template.deleteMany({});
   await prisma.guestMessageTemplate.deleteMany({});
@@ -699,6 +706,8 @@ async function main() {
     },
   });
 
+  await seedMarketplaceCatalog(prisma, passwordHash);
+
   // ─── Résumé ───────────────────────────────────────────────────────
   const counts = {
     users: await prisma.user.count(),
@@ -710,6 +719,8 @@ async function main() {
     subscriptionRequests: await prisma.subscriptionRequest.count(),
     invoices: await prisma.platformInvoice.count(),
     rooms: await prisma.organizationRoom.count(),
+    venueListings: await prisma.venueListing.count({ where: { isPublic: true } }),
+    serviceOfferings: await prisma.serviceOffering.count({ where: { isPublic: true } }),
   };
 
   console.log('\n=== Seed terminé ===');
@@ -722,6 +733,8 @@ async function main() {
   console.log('  Mariage      : claire@mariagereve.cd');
   console.log('  Global Corp  : event@globalcorp.cd');
   console.log('  Nouvelle org.: demo@novaevents.cd  (FREE — bibliothèque modèles)');
+  console.log('  Salles 1–10  : salles1@eventmaster.cd … salles10@eventmaster.cd  (100 salles publiées)');
+  console.log('  Prestas 1–10 : prestas1@eventmaster.cd … prestas10@eventmaster.cd (100 prestataires publiés)');
   console.log(`\nSuper Admin id: ${superAdmin.id}`);
 }
 

@@ -558,29 +558,25 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
     }
 
     const selected = selectedId ? markersRef.current.find((m) => m.id === selectedId) : null;
-    const loneService = markersRef.current.length === 1 ? markersRef.current[0] : null;
-    const focus = selected || hovered || (
-      loneService?.kind === 'service' && loneService.coverageRadiusKm
-        ? loneService
-        : null
-    );
+    const preview = selected || hovered;
+    const zoneTarget = selected || (pinned ? hovered : null);
 
     markersById.current.forEach((layer, id) => {
       const el = layer.getElement?.() as HTMLElement | undefined;
       if (!el) return;
-      el.classList.toggle('is-dimmed', Boolean(focus && id !== focus.id));
-      el.classList.toggle('is-hovered', Boolean(focus && id === focus.id));
+      el.classList.toggle('is-dimmed', Boolean(preview && id !== preview.id));
+      el.classList.toggle('is-hovered', Boolean(preview && id === preview.id));
     });
 
-    if (!focus) return;
+    if (!zoneTarget) return;
 
-    const radius = focus.kind === 'service' && focus.coverageRadiusKm && focus.coverageRadiusKm > 0
-      ? focus.coverageRadiusKm
+    const radius = zoneTarget.kind === 'service' && zoneTarget.coverageRadiusKm && zoneTarget.coverageRadiusKm > 0
+      ? zoneTarget.coverageRadiusKm
       : 0;
 
     if (radius > 0) {
       const color = markerColor('service');
-      const circle = L.circle([focus.lat, focus.lng], {
+      const circle = L.circle([zoneTarget.lat, zoneTarget.lng], {
         pane: 'coverage',
         radius: radius * 1000,
         color,
@@ -592,7 +588,7 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
       }).addTo(map);
       radiusLayerRef.current = circle;
     }
-  }, [hovered, mapReady, selectedId]);
+  }, [hovered, pinned, mapReady, selectedId]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => mapRef.current?.invalidateSize(), 80);
