@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import SiteHeader from '@/components/SiteHeader';
@@ -8,9 +8,16 @@ import SiteFooter from '@/components/SiteFooter';
 import CelebrateMood from '@/components/CelebrateMood';
 import { Button, Input } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
-import type { PublicVenue } from '@/lib/marketplace';
+import {
+  RADIUS_KM_OPTIONS,
+  formatLocationLine,
+  formatQuotaLabel,
+  type PublicVenue,
+} from '@/lib/marketplace';
 import { roomTypeLabels, type RoomType } from '@/lib/roomLayoutUtils';
 import MarketplacePublicNav from '@/components/MarketplacePublicNav';
+import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
+import { geocodeLocation } from '@/lib/leafletLoader';
 import { ArrowRight, Building2, Loader2, MapPin, Search, Users } from 'lucide-react';
 
 const ROOM_FILTERS: Array<{ id: string; label: string }> = [
@@ -22,25 +29,38 @@ const ROOM_FILTERS: Array<{ id: string; label: string }> = [
   { id: 'CUSTOM', label: roomTypeLabels.CUSTOM },
 ];
 
+const fieldClass = 'w-full px-3 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm';
+
 export default function MarketplaceVenuesPage() {
   const [venues, setVenues] = useState<PublicVenue[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
   const [city, setCity] = useState('');
+  const [commune, setCommune] = useState('');
+  const [neighborhood, setNeighborhood] = useState('');
+  const [around, setAround] = useState('');
+  const [radiusKm, setRadiusKm] = useState('');
   const [roomType, setRoomType] = useState('');
   const [error, setError] = useState('');
 
-  const load = async (params?: { q?: string; city?: string; roomType?: string }) => {
+  const load = async () => {
     setLoading(true);
     setError('');
     try {
       const search = new URLSearchParams();
-      const nextQ = params?.q ?? q;
-      const nextCity = params?.city ?? city;
-      const nextType = params?.roomType ?? roomType;
-      if (nextQ.trim()) search.set('q', nextQ.trim());
-      if (nextCity.trim()) search.set('city', nextCity.trim());
-      if (nextType) search.set('roomType', nextType);
+      if (q.trim()) search.set('q', q.trim());
+      if (city.trim()) search.set('city', city.trim());
+      if (commune.trim()) search.set('commune', commune.trim());
+      if (neighborhood.trim()) search.set('neighborhood', neighborhood.trim());
+      if (roomType) search.set('roomType', roomType);
+      if (around.trim() && radiusKm) {
+        const geo = await geocodeLocation(`${around.trim()}, RD Congo`);
+        if (geo) {
+          search.set('lat', String(geo.lat));
+          search.set('lng', String(geo.lng));
+          search.set('radiusKm', radiusKm);
+        }
+      }
       const data = await api.get(`/public/venues${search.toString() ? `?${search}` : ''}`);
       setVenues(data.venues || []);
     } catch (err: unknown) {
@@ -56,10 +76,20 @@ export default function MarketplaceVenuesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- chargement initial
   }, []);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    load();
-  };
+  const markers = useMemo(
+    () =>
+      venues
+        .filter((v) => v.latitude != null && v.longitude != null)
+        .map((v) => ({
+          id: v.slug,
+          lat: v.latitude as number,
+          lng: v.longitude as number,
+          title: v.headline,
+          href: `/marketplace/salles/${v.slug}`,
+          subtitle: formatLocationLine(v) || undefined,
+        })),
+    [venues],
+  );
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -75,36 +105,32 @@ export default function MarketplaceVenuesPage() {
             Trouvez une salle pour votre événement
           </h1>
           <p className="text-sm text-muted leading-relaxed">
-            Capacité, plan 2D et tarif de départ. Envoyez une demande de devis au propriétaire —
-            sans quitter EventMaster.
+            Filtrez par ville, commune ou quartier, voyez les salles sur la carte, puis réservez une date.
           </p>
           <MarketplacePublicNav active="venues" />
         </div>
       </section>
 
       <main className="page-container py-8 flex-1 space-y-6">
-        <form onSubmit={handleSearch} className="flex flex-col lg:flex-row gap-3">
-          <div className="flex-1">
-            <Input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Nom, organisation…"
-              leftIcon={<Search className="w-4 h-4" />}
-            />
-          </div>
-          <div className="lg:w-48">
-            <Input
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              placeholder="Ville"
-              leftIcon={<MapPin className="w-4 h-4" />}
-            />
-          </div>
-          <select
-            value={roomType}
-            onChange={(e) => setRoomType(e.target.value)}
-            className="lg:w-48 px-3 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
-          >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            load();
+          }}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"
+        >
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Nom, organisation…" leftIcon={<Search className="w-4 h-4" />} />
+          <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Ville" leftIcon={<MapPin className="w-4 h-4" />} />
+          <Input value={commune} onChange={(e) => setCommune(e.target.value)} placeholder="Commune (ex. Gombe)" />
+          <Input value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} placeholder="Quartier" />
+          <Input value={around} onChange={(e) => setAround(e.target.value)} placeholder="Autour de (lieu)" />
+          <select value={radiusKm} onChange={(e) => setRadiusKm(e.target.value)} className={fieldClass}>
+            <option value="">Rayon — tous</option>
+            {RADIUS_KM_OPTIONS.map((km) => (
+              <option key={km} value={km}>{km} km</option>
+            ))}
+          </select>
+          <select value={roomType} onChange={(e) => setRoomType(e.target.value)} className={fieldClass}>
             {ROOM_FILTERS.map((opt) => (
               <option key={opt.id || 'all'} value={opt.id}>{opt.label}</option>
             ))}
@@ -112,8 +138,13 @@ export default function MarketplaceVenuesPage() {
           <Button type="submit">Rechercher</Button>
         </form>
 
-        {error && (
-          <p className="text-sm text-rose-600">{error}</p>
+        {error && <p className="text-sm text-rose-600">{error}</p>}
+
+        {!loading && markers.length > 0 && (
+          <div className="space-y-2">
+            <h2 className="text-sm font-semibold">Carte des salles</h2>
+            <MarketplaceLocationsMap markers={markers} />
+          </div>
         )}
 
         {loading ? (
@@ -123,10 +154,9 @@ export default function MarketplaceVenuesPage() {
         ) : venues.length === 0 ? (
           <div className="text-center py-16 px-6 border border-border rounded-[var(--radius-card)] bg-surface">
             <Building2 className="w-10 h-10 text-muted mx-auto mb-3" />
-            <h2 className="font-semibold text-foreground">Aucune salle publiée pour l’instant</h2>
+            <h2 className="font-semibold text-foreground">Aucune salle pour ces filtres</h2>
             <p className="text-sm text-muted mt-2 max-w-md mx-auto leading-relaxed">
-              Les organisations peuvent publier leurs salles depuis Mon compte → Salles.
-              Revenez bientôt, ou créez votre espace pour proposer les vôtres.
+              Élargissez la recherche, ou publiez une salle depuis Mon compte → Salles.
             </p>
             <Link href="/register" className="inline-block mt-5">
               <Button size="sm">Publier une salle</Button>
@@ -159,9 +189,9 @@ export default function MarketplaceVenuesPage() {
                   </h2>
                   <p className="text-xs text-muted truncate">{venue.orgName}</p>
                   <div className="flex flex-wrap gap-2 text-xs text-muted">
-                    {venue.city && (
+                    {formatLocationLine(venue) && (
                       <span className="inline-flex items-center gap-1">
-                        <MapPin className="w-3 h-3" /> {venue.city}
+                        <MapPin className="w-3 h-3" /> {formatLocationLine(venue)}
                       </span>
                     )}
                     {venue.capacity ? (
@@ -169,10 +199,14 @@ export default function MarketplaceVenuesPage() {
                         <Users className="w-3 h-3" /> {venue.capacity} places
                       </span>
                     ) : null}
+                    {formatQuotaLabel(venue.quotaMin, venue.quotaMax) && (
+                      <span>{formatQuotaLabel(venue.quotaMin, venue.quotaMax)}</span>
+                    )}
                   </div>
                   <div className="flex items-center justify-between pt-2 border-t border-border">
                     <span className="text-sm font-semibold text-foreground">
                       {venue.priceFromFc != null ? `Dès ${formatFc(venue.priceFromFc)}` : 'Sur devis'}
+                      <span className="block text-[11px] font-normal text-muted">{venue.priceUnitLabel}</span>
                     </span>
                     <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">
                       Voir <ArrowRight className="w-3.5 h-3.5" />

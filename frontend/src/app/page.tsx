@@ -94,7 +94,7 @@ export default function Home() {
 
       {/* Hero */}
       <section className="relative border-b border-border em-landing-hero">
-        <div className="page-container relative py-14 sm:py-20 lg:py-24">
+        <div className="page-container relative z-10 py-14 sm:py-20 lg:py-24">
           <div className="grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] gap-12 lg:gap-16 items-center">
             <div className="space-y-7 animate-slide-up">
               <div className="flex flex-wrap items-center gap-2">
@@ -160,6 +160,7 @@ export default function Home() {
                   { icon: Mail, label: 'Invitations' },
                   { icon: LayoutGrid, label: 'Plan 2D' },
                   { icon: QrCode, label: 'Protocole QR' },
+                  { icon: Sparkles, label: 'Salles & prestas' },
                 ].map(({ icon: Icon, label }) => (
                   <li
                     key={label}

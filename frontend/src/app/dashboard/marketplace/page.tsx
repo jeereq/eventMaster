@@ -34,9 +34,15 @@ interface ServiceItem {
   description: string | null;
   category: ServiceCategory;
   city: string | null;
+  commune?: string | null;
+  neighborhood?: string | null;
   coverageRadiusKm: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
   priceFromFc: number | null;
   priceUnit: VenuePriceUnit;
+  quotaMin?: number | null;
+  quotaMax?: number | null;
   photos: unknown;
   blockedDates?: unknown;
   bookedDates?: string[];
@@ -68,9 +74,15 @@ export default function MarketplaceDeskPage() {
     description: '',
     category: 'CATERING' as ServiceCategory,
     city: '',
+    commune: '',
+    neighborhood: '',
     coverageRadiusKm: '',
+    latitude: '',
+    longitude: '',
     priceFromFc: '',
     priceUnit: 'EVENT' as VenuePriceUnit,
+    quotaMin: '',
+    quotaMax: '',
     photos: [] as string[],
     blockedDates: [] as string[],
     bookedDates: [] as string[],
@@ -111,9 +123,15 @@ export default function MarketplaceDeskPage() {
       description: '',
       category: 'CATERING',
       city: '',
+      commune: '',
+      neighborhood: '',
       coverageRadiusKm: '',
+      latitude: '',
+      longitude: '',
       priceFromFc: '',
       priceUnit: 'EVENT',
+      quotaMin: '',
+      quotaMax: '',
       photos: [],
       blockedDates: [],
       bookedDates: [],
@@ -129,9 +147,15 @@ export default function MarketplaceDeskPage() {
       description: item.description || '',
       category: item.category,
       city: item.city || '',
+      commune: item.commune || '',
+      neighborhood: item.neighborhood || '',
       coverageRadiusKm: item.coverageRadiusKm != null ? String(item.coverageRadiusKm) : '',
+      latitude: item.latitude != null ? String(item.latitude) : '',
+      longitude: item.longitude != null ? String(item.longitude) : '',
       priceFromFc: item.priceFromFc != null ? String(item.priceFromFc) : '',
       priceUnit: item.priceUnit,
+      quotaMin: item.quotaMin != null ? String(item.quotaMin) : '',
+      quotaMax: item.quotaMax != null ? String(item.quotaMax) : '',
       photos: photosOf(item),
       blockedDates: parseBlockedDates(item.blockedDates),
       bookedDates: parseBlockedDates(item.bookedDates),
@@ -149,9 +173,15 @@ export default function MarketplaceDeskPage() {
         description: draft.description,
         category: draft.category,
         city: draft.city,
+        commune: draft.commune,
+        neighborhood: draft.neighborhood,
         coverageRadiusKm: draft.coverageRadiusKm ? Number(draft.coverageRadiusKm) : null,
+        latitude: draft.latitude ? Number(draft.latitude) : null,
+        longitude: draft.longitude ? Number(draft.longitude) : null,
         priceFromFc: draft.priceFromFc ? Number(draft.priceFromFc) : null,
         priceUnit: draft.priceUnit,
+        quotaMin: draft.quotaMin ? Number(draft.quotaMin) : null,
+        quotaMax: draft.quotaMax ? Number(draft.quotaMax) : null,
         photos: draft.photos,
         blockedDates: draft.blockedDates,
         isPublic: publish,
@@ -437,13 +467,17 @@ export default function MarketplaceDeskPage() {
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="Ville / zone" value={draft.city} onChange={(e) => setDraft((d) => ({ ...d, city: e.target.value }))} />
+            <Input label="Commune" value={draft.commune} onChange={(e) => setDraft((d) => ({ ...d, commune: e.target.value }))} />
+            <Input label="Quartier" value={draft.neighborhood} onChange={(e) => setDraft((d) => ({ ...d, neighborhood: e.target.value }))} />
             <Input
-              label="Rayon (km)"
+              label="Rayon d’intervention (km)"
               type="number"
               min={0}
               value={draft.coverageRadiusKm}
               onChange={(e) => setDraft((d) => ({ ...d, coverageRadiusKm: e.target.value }))}
             />
+            <Input label="Latitude" value={draft.latitude} onChange={(e) => setDraft((d) => ({ ...d, latitude: e.target.value }))} />
+            <Input label="Longitude" value={draft.longitude} onChange={(e) => setDraft((d) => ({ ...d, longitude: e.target.value }))} />
             <Input
               label="Tarif de départ (FC)"
               type="number"
@@ -463,6 +497,20 @@ export default function MarketplaceDeskPage() {
                 ))}
               </select>
             </label>
+            <Input
+              label="Quota min. invités"
+              type="number"
+              min={0}
+              value={draft.quotaMin}
+              onChange={(e) => setDraft((d) => ({ ...d, quotaMin: e.target.value }))}
+            />
+            <Input
+              label="Quota max. invités"
+              type="number"
+              min={0}
+              value={draft.quotaMax}
+              onChange={(e) => setDraft((d) => ({ ...d, quotaMax: e.target.value }))}
+            />
           </div>
           <BlockedDatesField
             value={draft.blockedDates}

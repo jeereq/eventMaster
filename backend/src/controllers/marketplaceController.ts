@@ -12,8 +12,8 @@ import {
   sanitizeLayoutBlueprint,
   serviceCategoryLabel,
 } from '../utils/publicVenue';
-import { collectUnavailableDates, parseBlockedDates } from '../utils/marketplaceDates';
-import { RoomType, ServiceCategory, TenantAccountKind, MarketplaceBookingStatus } from '@prisma/client';
+import { collectUnavailableDates, haversineKm, parseBlockedDates } from '../utils/marketplaceDates';
+import { RoomType, ServiceCategory, TenantAccountKind, MarketplaceBookingStatus, VenuePriceUnit } from '@prisma/client';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -21,11 +21,15 @@ function toPublicVenue(listing: {
   slug: string;
   headline: string | null;
   city: string | null;
+  commune?: string | null;
+  neighborhood?: string | null;
   address: string | null;
   latitude: number | null;
   longitude: number | null;
   priceFromFc: number | null;
-  priceUnit: 'EVENT' | 'DAY' | 'HOUR';
+  priceUnit: VenuePriceUnit;
+  quotaMin?: number | null;
+  quotaMax?: number | null;
   photos: unknown;
   blockedDates?: unknown;
   publishedAt: Date | null;
@@ -52,6 +56,8 @@ function toPublicVenue(listing: {
     headline: listing.headline || listing.room.name,
     description: listing.room.description,
     city: listing.city,
+    commune: listing.commune || null,
+    neighborhood: listing.neighborhood || null,
     address: listing.address || listing.room.location,
     floor: listing.room.floor,
     capacity: listing.room.capacity,
@@ -61,6 +67,8 @@ function toPublicVenue(listing: {
     priceFromFc: listing.priceFromFc,
     priceUnit: listing.priceUnit,
     priceUnitLabel: priceUnitLabel(listing.priceUnit),
+    quotaMin: listing.quotaMin ?? null,
+    quotaMax: listing.quotaMax ?? null,
     photos,
     coverUrl: photos[0] || null,
     publishedAt: listing.publishedAt,
@@ -71,6 +79,22 @@ function toPublicVenue(listing: {
     bookedDates: collectUnavailableDates([], listing.bookings),
     unavailableDates: collectUnavailableDates(listing.blockedDates, listing.bookings),
   };
+}
+
+function readGeoQuery(req: Request) {
+  const lat = Number.parseFloat(String(req.query.lat || ''));
+  const lng = Number.parseFloat(String(req.query.lng || ''));
+  const radiusKm = Number.parseFloat(String(req.query.radiusKm || ''));
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(radiusKm) || radiusKm <= 0) {
+    return null;
+  }
+  return { lat, lng, radiusKm };
+}
+
+function parseOptionalInt(value: unknown): number | null {
+  if (value == null || value === '') return null;
+  const n = Number.parseInt(String(value), 10);
+  return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
 const HOLD_BOOKING_STATUSES: MarketplaceBookingStatus[] = ['REQUESTED', 'ACCEPTED', 'CONFIRMED'];
@@ -94,6 +118,8 @@ export async function listPublicVenues(req: Request, res: Response) {
   try {
     const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
     const city = typeof req.query.city === 'string' ? req.query.city.trim() : '';
+    const commune = typeof req.query.commune === 'string' ? req.query.commune.trim() : '';
+    const neighborhood = typeof req.query.neighborhood === 'string' ? req.query.neighborhood.trim() : '';
     const roomType = typeof req.query.roomType === 'string' ? req.query.roomType.trim() : '';
     const minCapacity = Number.parseInt(String(req.query.minCapacity || ''), 10);
     const maxPrice = Number.parseInt(String(req.query.maxPrice || ''), 10);
@@ -111,6 +137,8 @@ export async function listPublicVenues(req: Request, res: Response) {
       where: {
         isPublic: true,
         ...(city ? { city: { contains: city, mode: 'insensitive' } } : {}),
+        ...(commune ? { commune: { contains: commune, mode: 'insensitive' } } : {}),
+        ...(neighborhood ? { neighborhood: { contains: neighborhood, mode: 'insensitive' } } : {}),
         ...(Number.isFinite(maxPrice) && maxPrice > 0
           ? { priceFromFc: { lte: maxPrice } }
           : {}),
@@ -120,6 +148,8 @@ export async function listPublicVenues(req: Request, res: Response) {
               OR: [
                 { headline: { contains: q, mode: 'insensitive' } },
                 { city: { contains: q, mode: 'insensitive' } },
+                { commune: { contains: q, mode: 'insensitive' } },
+                { neighborhood: { contains: q, mode: 'insensitive' } },
                 { address: { contains: q, mode: 'insensitive' } },
                 { room: { name: { contains: q, mode: 'insensitive' } } },
                 { tenant: { name: { contains: q, mode: 'insensitive' } } },
@@ -129,12 +159,21 @@ export async function listPublicVenues(req: Request, res: Response) {
       },
       include: listingInclude,
       orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
-      take: 60,
+      take: 80,
     });
 
+    const geo = readGeoQuery(req);
+    const filtered = geo
+      ? listings.filter((row) => (
+        row.latitude != null
+        && row.longitude != null
+        && haversineKm(geo.lat, geo.lng, row.latitude, row.longitude) <= geo.radiusKm
+      ))
+      : listings;
+
     return res.json({
-      venues: listings.map(toPublicVenue),
-      total: listings.length,
+      venues: filtered.map(toPublicVenue),
+      total: filtered.length,
     });
   } catch (error) {
     console.error('listPublicVenues:', error);
@@ -302,11 +341,15 @@ export async function upsertRoomListing(req: AuthenticatedRequest, res: Response
       isPublic,
       headline,
       city,
+      commune,
+      neighborhood,
       address,
       latitude,
       longitude,
       priceFromFc,
       priceUnit,
+      quotaMin,
+      quotaMax,
       photos,
       blockedDates,
     } = req.body || {};
@@ -341,11 +384,15 @@ export async function upsertRoomListing(req: AuthenticatedRequest, res: Response
         isPublic: wantPublic,
         headline: headline?.trim() || room.name,
         city: city?.trim() || null,
+        commune: commune?.trim() || null,
+        neighborhood: neighborhood?.trim() || null,
         address: address?.trim() || room.location,
         latitude: latitude != null && latitude !== '' ? Number(latitude) : null,
         longitude: longitude != null && longitude !== '' ? Number(longitude) : null,
         priceFromFc: Number.isFinite(parsedPrice) ? parsedPrice : null,
         priceUnit: parsePriceUnit(priceUnit),
+        quotaMin: parseOptionalInt(quotaMin),
+        quotaMax: parseOptionalInt(quotaMax),
         photos: photosSafe,
         blockedDates: blockedSafe,
         publishedAt: wantPublic ? new Date() : null,
@@ -354,11 +401,15 @@ export async function upsertRoomListing(req: AuthenticatedRequest, res: Response
         isPublic: wantPublic,
         headline: headline !== undefined ? (headline?.trim() || room.name) : undefined,
         city: city !== undefined ? (city?.trim() || null) : undefined,
+        commune: commune !== undefined ? (commune?.trim() || null) : undefined,
+        neighborhood: neighborhood !== undefined ? (neighborhood?.trim() || null) : undefined,
         address: address !== undefined ? (address?.trim() || null) : undefined,
         latitude: latitude !== undefined ? (latitude != null && latitude !== '' ? Number(latitude) : null) : undefined,
         longitude: longitude !== undefined ? (longitude != null && longitude !== '' ? Number(longitude) : null) : undefined,
         priceFromFc: priceFromFc !== undefined ? (Number.isFinite(parsedPrice) ? parsedPrice : null) : undefined,
         priceUnit: priceUnit !== undefined ? parsePriceUnit(priceUnit) : undefined,
+        quotaMin: quotaMin !== undefined ? parseOptionalInt(quotaMin) : undefined,
+        quotaMax: quotaMax !== undefined ? parseOptionalInt(quotaMax) : undefined,
         photos: photos !== undefined ? photosSafe : undefined,
         blockedDates: blockedDates !== undefined ? blockedSafe : undefined,
         publishedAt: wantPublic ? (existing?.publishedAt || new Date()) : null,
@@ -389,9 +440,15 @@ function toPublicService(offering: {
   title: string;
   description: string | null;
   city: string | null;
+  commune?: string | null;
+  neighborhood?: string | null;
   coverageRadiusKm: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
   priceFromFc: number | null;
-  priceUnit: 'EVENT' | 'DAY' | 'HOUR';
+  priceUnit: VenuePriceUnit;
+  quotaMin?: number | null;
+  quotaMax?: number | null;
   photos: unknown;
   blockedDates?: unknown;
   publishedAt: Date | null;
@@ -407,10 +464,16 @@ function toPublicService(offering: {
     category: offering.category,
     categoryLabel: serviceCategoryLabel(offering.category),
     city: offering.city,
+    commune: offering.commune || null,
+    neighborhood: offering.neighborhood || null,
     coverageRadiusKm: offering.coverageRadiusKm,
+    latitude: offering.latitude ?? null,
+    longitude: offering.longitude ?? null,
     priceFromFc: offering.priceFromFc,
     priceUnit: offering.priceUnit,
     priceUnitLabel: priceUnitLabel(offering.priceUnit),
+    quotaMin: offering.quotaMin ?? null,
+    quotaMax: offering.quotaMax ?? null,
     photos,
     coverUrl: photos[0] || null,
     publishedAt: offering.publishedAt,
@@ -435,19 +498,30 @@ export async function listPublicServices(req: Request, res: Response) {
   try {
     const q = typeof req.query.q === 'string' ? req.query.q.trim() : '';
     const city = typeof req.query.city === 'string' ? req.query.city.trim() : '';
+    const commune = typeof req.query.commune === 'string' ? req.query.commune.trim() : '';
+    const neighborhood = typeof req.query.neighborhood === 'string' ? req.query.neighborhood.trim() : '';
     const category = parseServiceCategory(req.query.category);
+    const priceUnit = parsePriceUnit(req.query.priceUnit);
+    const wantUnit = typeof req.query.priceUnit === 'string' && req.query.priceUnit.trim()
+      ? priceUnit
+      : null;
 
     const offerings = await prisma.serviceOffering.findMany({
       where: {
         isPublic: true,
         ...(city ? { city: { contains: city, mode: 'insensitive' } } : {}),
+        ...(commune ? { commune: { contains: commune, mode: 'insensitive' } } : {}),
+        ...(neighborhood ? { neighborhood: { contains: neighborhood, mode: 'insensitive' } } : {}),
         ...(category ? { category } : {}),
+        ...(wantUnit ? { priceUnit: wantUnit } : {}),
         ...(q
           ? {
               OR: [
                 { title: { contains: q, mode: 'insensitive' } },
                 { description: { contains: q, mode: 'insensitive' } },
                 { city: { contains: q, mode: 'insensitive' } },
+                { commune: { contains: q, mode: 'insensitive' } },
+                { neighborhood: { contains: q, mode: 'insensitive' } },
                 { vendorProfile: { displayName: { contains: q, mode: 'insensitive' } } },
               ],
             }
@@ -455,10 +529,20 @@ export async function listPublicServices(req: Request, res: Response) {
       },
       include: offeringInclude,
       orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
-      take: 60,
+      take: 80,
     });
 
-    return res.json({ services: offerings.map(toPublicService), total: offerings.length });
+    const geo = readGeoQuery(req);
+    const filtered = geo
+      ? offerings.filter((row) => {
+        if (row.latitude == null || row.longitude == null) return false;
+        const distance = haversineKm(geo.lat, geo.lng, row.latitude, row.longitude);
+        const cover = row.coverageRadiusKm && row.coverageRadiusKm > 0 ? row.coverageRadiusKm : 0;
+        return distance <= geo.radiusKm || (cover > 0 && distance <= cover);
+      })
+      : offerings;
+
+    return res.json({ services: filtered.map(toPublicService), total: filtered.length });
   } catch (error) {
     console.error('listPublicServices:', error);
     return res.status(500).json({ error: 'Impossible de charger les prestataires.' });
@@ -656,7 +740,8 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
     }
 
     const {
-      title, description, city, coverageRadiusKm, priceFromFc, priceUnit, photos, isPublic, category, blockedDates,
+      title, description, city, commune, neighborhood, coverageRadiusKm, latitude, longitude,
+      priceFromFc, priceUnit, quotaMin, quotaMax, photos, isPublic, category, blockedDates,
     } = req.body || {};
     if (!title?.trim()) return res.status(400).json({ error: 'Le titre est requis.' });
     const parsedCategory = parseServiceCategory(category) || 'OTHER';
@@ -692,9 +777,15 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
       title: String(title).trim(),
       description: description?.trim() || null,
       city: city?.trim() || null,
+      commune: commune?.trim() || null,
+      neighborhood: neighborhood?.trim() || null,
       coverageRadiusKm: Number.isFinite(parsedRadius) && parsedRadius > 0 ? parsedRadius : null,
+      latitude: latitude != null && latitude !== '' && Number.isFinite(Number(latitude)) ? Number(latitude) : null,
+      longitude: longitude != null && longitude !== '' && Number.isFinite(Number(longitude)) ? Number(longitude) : null,
       priceFromFc: Number.isFinite(parsedPrice) ? parsedPrice : null,
       priceUnit: parsePriceUnit(priceUnit),
+      quotaMin: parseOptionalInt(quotaMin),
+      quotaMax: parseOptionalInt(quotaMax),
       photos: photosSafe,
       blockedDates: blockedSafe,
       isPublic: wantPublic,

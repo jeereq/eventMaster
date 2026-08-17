@@ -11,8 +11,9 @@ import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import MarketplaceInquiryForm from '@/components/MarketplaceInquiryForm';
 import MarketplaceBookingForm from '@/components/MarketplaceBookingForm';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
+import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
 import { formatFc } from '@/config/landingPricing';
-import type { PublicVenue } from '@/lib/marketplace';
+import { formatLocationLine, formatQuotaLabel, type PublicVenue } from '@/lib/marketplace';
 import { roomTypeLabels, type RoomLayoutBlueprint, type RoomType } from '@/lib/roomLayoutUtils';
 import {
   ArrowLeft, Building2, Loader2, MapPin, Users,
@@ -107,9 +108,9 @@ export default function MarketplaceVenueDetailPage() {
               </div>
 
               <div className="flex flex-wrap gap-2 text-xs text-muted">
-                {venue.city && (
+                {formatLocationLine(venue) && (
                   <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-muted border border-border">
-                    <MapPin className="w-3.5 h-3.5" /> {venue.city}
+                    <MapPin className="w-3.5 h-3.5" /> {formatLocationLine(venue)}
                     {venue.address ? ` · ${venue.address}` : ''}
                   </span>
                 )}
@@ -118,6 +119,11 @@ export default function MarketplaceVenueDetailPage() {
                     <Users className="w-3.5 h-3.5" /> {venue.capacity} places
                   </span>
                 ) : null}
+                {formatQuotaLabel(venue.quotaMin, venue.quotaMax) && (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-muted border border-border">
+                    {formatQuotaLabel(venue.quotaMin, venue.quotaMax)}
+                  </span>
+                )}
               </div>
 
               {venue.description && (
@@ -130,6 +136,20 @@ export default function MarketplaceVenueDetailPage() {
                   <RoomLayoutPreview blueprint={venue.layoutPreview as RoomLayoutBlueprint} />
                 </div>
               ) : null}
+
+              {venue.latitude != null && venue.longitude != null && (
+                <MarketplaceLocationsMap
+                  markers={[{
+                    id: venue.slug,
+                    lat: venue.latitude,
+                    lng: venue.longitude,
+                    title: venue.headline,
+                    href: `/marketplace/salles/${venue.slug}`,
+                    subtitle: formatLocationLine(venue) || undefined,
+                  }]}
+                  height={240}
+                />
+              )}
 
               <AvailabilityCalendar
                 title="Calendrier des disponibilités"
@@ -147,6 +167,9 @@ export default function MarketplaceVenueDetailPage() {
                   {venue.priceFromFc != null ? formatFc(venue.priceFromFc) : 'Sur devis'}
                 </p>
                 <p className="text-xs text-muted">{venue.priceUnitLabel}</p>
+                {formatQuotaLabel(venue.quotaMin, venue.quotaMax) && (
+                  <p className="text-xs text-muted">{formatQuotaLabel(venue.quotaMin, venue.quotaMax)}</p>
+                )}
               </div>
 
               <MarketplaceInquiryForm

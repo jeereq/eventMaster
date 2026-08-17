@@ -1,6 +1,6 @@
 import { ServiceCategory, VenuePriceUnit } from '@prisma/client';
 
-const PRICE_UNITS: VenuePriceUnit[] = ['EVENT', 'DAY', 'HOUR'];
+const PRICE_UNITS: VenuePriceUnit[] = ['EVENT', 'DAY', 'HOUR', 'MINUTE', 'PERSON', 'QUOTA'];
 
 export function parsePriceUnit(value: unknown): VenuePriceUnit {
   if (typeof value === 'string' && PRICE_UNITS.includes(value as VenuePriceUnit)) {
@@ -96,5 +96,8 @@ export function parsePhotoUrls(input: unknown): string[] {
 export function priceUnitLabel(unit: VenuePriceUnit): string {
   if (unit === 'DAY') return 'par jour';
   if (unit === 'HOUR') return 'par heure';
+  if (unit === 'MINUTE') return 'par minute';
+  if (unit === 'PERSON') return 'par personne';
+  if (unit === 'QUOTA') return 'par quota d’invités';
   return 'par événement';
 }
