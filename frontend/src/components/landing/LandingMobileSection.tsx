@@ -7,22 +7,22 @@ import {
   ScanLine,
   Bell,
   Link2,
-  Moon,
+  Construction,
   ArrowRight,
   CheckCircle2,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 
-const MOBILE_FEATURES = [
+const PLANNED_FEATURES = [
   {
     icon: ScanLine,
     title: 'Protocole jour J',
-    description: 'Scan QR via la caméra, check-in et vérification de siège.',
+    description: 'Scan QR via la caméra native, check-in et validation du siège.',
   },
   {
     icon: Bell,
-    title: 'Notifications',
-    description: 'Alertes en temps réel pour les organisateurs.',
+    title: 'Notifications push',
+    description: 'Alertes organisateur et invité, hors du navigateur.',
   },
   {
     icon: Link2,
@@ -30,24 +30,10 @@ const MOBILE_FEATURES = [
     description: 'Ouverture directe RSVP, événement ou protocole.',
   },
   {
-    icon: Moon,
-    title: 'Thème système',
-    description: 'Clair / sombre selon le réglage iOS et Android.',
+    icon: Smartphone,
+    title: 'iOS & Android',
+    description: 'Une app native, en complément du tableau de bord web.',
   },
-];
-
-const GUEST_FEATURES = [
-  'Portail RSVP sans compte',
-  'Badge QR de confirmation',
-  'Plan de table (dès acceptation RSVP)',
-  'PDF invitation',
-];
-
-const ORG_FEATURES = [
-  'Événements & invités',
-  'Statistiques RSVP',
-  'Accès protocole',
-  'Builds iOS & Android',
 ];
 
 export default function LandingMobileSection() {
@@ -56,19 +42,22 @@ export default function LandingMobileSection() {
       <div className="page-container">
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-14 items-start">
           <div className="space-y-6">
-            <p className="inline-flex items-center gap-2 text-xs font-medium text-background/60 uppercase tracking-wider">
-              <Smartphone className="w-3.5 h-3.5" />
-              Application mobile
+            <p className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-background/60">
+              <Construction className="w-3.5 h-3.5" />
+              Application mobile · en construction
             </p>
             <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight leading-snug">
-              Protocole dans la poche, RSVP pour vos invités
+              L’app iOS & Android n’est pas encore déployée
             </h2>
             <p className="text-sm text-background/65 leading-relaxed max-w-lg">
-              Complète le tableau de bord web : scan caméra, notifications et parcours invité — même logique métier.
+              Nous construisons une application native pour le protocole et le RSVP. Elle n’est
+              pas disponible sur l’App Store ni Google Play pour le moment. En attendant, tout
+              le produit actuel — invitations, plan de salle, catalogue, réservations et scan QR —
+              fonctionne dans le navigateur, y compris sur téléphone.
             </p>
 
             <div className="grid sm:grid-cols-2 gap-3">
-              {MOBILE_FEATURES.map(({ icon: Icon, title, description }) => (
+              {PLANNED_FEATURES.map(({ icon: Icon, title, description }) => (
                 <div key={title} className="p-3.5 rounded-[var(--radius-card)] border border-background/15 bg-background/5">
                   <Icon className="w-4 h-4 text-background/80 mb-2" />
                   <h3 className="font-semibold text-sm mb-1">{title}</h3>
@@ -79,7 +68,7 @@ export default function LandingMobileSection() {
 
             <Link href="/register">
               <Button size="lg" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                Créer mon entreprise
+                Continuer sur le web
               </Button>
             </Link>
           </div>
@@ -87,23 +76,16 @@ export default function LandingMobileSection() {
           <div className="space-y-3">
             <div className="border border-background/15 rounded-[var(--radius-card)] p-5 bg-background/5">
               <h3 className="text-[11px] font-semibold uppercase tracking-wider text-background/50 mb-3">
-                Invité
+                Disponible aujourd’hui (web)
               </h3>
               <ul className="space-y-2">
-                {GUEST_FEATURES.map((item) => (
-                  <li key={item} className="flex items-start gap-2 text-sm text-background/80">
-                    <CheckCircle2 className="w-4 h-4 text-background/40 shrink-0 mt-0.5" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="border border-background/15 rounded-[var(--radius-card)] p-5 bg-background/5">
-              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-background/50 mb-3">
-                Organisation
-              </h3>
-              <ul className="space-y-2">
-                {ORG_FEATURES.map((item) => (
+                {[
+                  'Portail RSVP et badge QR',
+                  'Plan de table 2D',
+                  'Protocole scan QR dans le navigateur',
+                  'Catalogue salles & prestataires (photos et vidéos)',
+                  'Réservation de dates',
+                ].map((item) => (
                   <li key={item} className="flex items-start gap-2 text-sm text-background/80">
                     <CheckCircle2 className="w-4 h-4 text-background/40 shrink-0 mt-0.5" />
                     {item}
@@ -112,7 +94,7 @@ export default function LandingMobileSection() {
               </ul>
             </div>
             <p className="text-[11px] text-background/40 text-center pt-1">
-              Édition avancée (modèles, plan de table) sur le web.
+              L’édition avancée (modèles, plan de table) restera sur le web même après le lancement de l’app.
             </p>
           </div>
         </div>

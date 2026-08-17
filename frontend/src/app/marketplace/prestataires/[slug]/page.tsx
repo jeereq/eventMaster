@@ -12,8 +12,8 @@ import MarketplaceBookingForm from '@/components/MarketplaceBookingForm';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
 import { formatFc } from '@/config/landingPricing';
-import { formatLocationLine, formatQuotaLabel, type PublicService } from '@/lib/marketplace';
-import { ArrowLeft, Loader2, MapPin, Sparkles } from 'lucide-react';
+import { formatLocationLine, formatQuotaLabel, isVideoUrl, mediaPosterUrl, type PublicService } from '@/lib/marketplace';
+import { ArrowLeft, Loader2, MapPin, Play, Sparkles } from 'lucide-react';
 
 export default function MarketplaceServiceDetailPage() {
   const params = useParams();
@@ -64,12 +64,23 @@ export default function MarketplaceServiceDetailPage() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
             <div className="lg:col-span-3 space-y-5">
-              <div className="aspect-[16/9] rounded-[var(--radius-card)] overflow-hidden bg-surface-muted border border-border">
+              <div className="aspect-[16/9] rounded-[var(--radius-card)] overflow-hidden bg-black/80 border border-border">
                 {service.photos[photoIndex] ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={service.photos[photoIndex]} alt="" className="w-full h-full object-cover" />
+                  isVideoUrl(service.photos[photoIndex]) ? (
+                    <video
+                      key={service.photos[photoIndex]}
+                      src={service.photos[photoIndex]}
+                      poster={mediaPosterUrl(service.photos[photoIndex])}
+                      controls
+                      playsInline
+                      className="w-full h-full object-contain"
+                    />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={service.photos[photoIndex]} alt="" className="w-full h-full object-cover" />
+                  )
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted">
+                  <div className="w-full h-full flex items-center justify-center text-muted bg-surface-muted">
                     <Sparkles className="w-12 h-12" />
                   </div>
                 )}
@@ -81,12 +92,17 @@ export default function MarketplaceServiceDetailPage() {
                       key={url}
                       type="button"
                       onClick={() => setPhotoIndex(i)}
-                      className={`aspect-[4/3] rounded-md overflow-hidden border ${
+                      className={`relative aspect-[4/3] rounded-md overflow-hidden border bg-surface-muted ${
                         i === photoIndex ? 'border-primary' : 'border-border'
                       }`}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={url} alt="" className="w-full h-full object-cover" />
+                      <img src={mediaPosterUrl(url)} alt="" className="w-full h-full object-cover" />
+                      {isVideoUrl(url) && (
+                        <span className="absolute inset-0 flex items-center justify-center bg-black/35">
+                          <Play className="w-3.5 h-3.5 text-white fill-white" />
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>

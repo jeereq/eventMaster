@@ -481,7 +481,7 @@ function toPublicService(offering: {
     quotaMin: offering.quotaMin ?? null,
     quotaMax: offering.quotaMax ?? null,
     photos,
-    coverUrl: photos[0] || null,
+    coverUrl: coverFromMedia(photos),
     publishedAt: offering.publishedAt,
     orgName: offering.vendorProfile.displayName || offering.tenant.name,
     orgSlug: offering.vendorProfile.slug,
@@ -755,6 +755,9 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
     const parsedPrice = Number.parseInt(String(priceFromFc ?? ''), 10);
     const parsedRadius = Number.parseInt(String(coverageRadiusKm ?? ''), 10);
     const photosSafe = parsePhotoUrls(photos);
+    if (photosSafe.filter(isVideoUrl).length > MARKETPLACE_MAX_VIDEOS) {
+      return res.status(400).json({ error: `Maximum ${MARKETPLACE_MAX_VIDEOS} vidéos par prestation.` });
+    }
     const blockedSafe = parseBlockedDates(blockedDates);
 
     if (wantPublic) {

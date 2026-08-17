@@ -5,8 +5,35 @@ import { uploadDataUrl, uploadImageBuffer, uploadVideoBuffer } from '../services
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 80 * 1024 * 1024;
-const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
-const ALLOWED_VIDEO_MIME = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
+const ALLOWED_IMAGE_MIME = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/pjpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/heic',
+  'image/heif',
+]);
+const ALLOWED_VIDEO_MIME = new Set([
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+  'video/x-m4v',
+  'video/3gpp',
+]);
+
+function isAllowedImageFile(file: Express.Multer.File): boolean {
+  if (ALLOWED_IMAGE_MIME.has(file.mimetype)) return true;
+  return /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(file.originalname || '');
+}
+
+function isAllowedVideoFile(file: Express.Multer.File): boolean {
+  if (ALLOWED_VIDEO_MIME.has(file.mimetype) || file.mimetype.startsWith('video/')) {
+    return /\.(mp4|webm|mov|m4v|3gp)$/i.test(file.originalname || '') || ALLOWED_VIDEO_MIME.has(file.mimetype);
+  }
+  return /\.(mp4|webm|mov|m4v)$/i.test(file.originalname || '');
+}
 
 export async function uploadTemplateImage(req: AuthenticatedRequest, res: Response) {
   try {
@@ -20,8 +47,8 @@ export async function uploadTemplateImage(req: AuthenticatedRequest, res: Respon
     const folder = getTemplateUploadFolder(tenantId);
 
     if (req.file) {
-      if (!ALLOWED_MIME.has(req.file.mimetype)) {
-        return res.status(400).json({ error: 'Format image non supporté (JPEG, PNG, WebP, GIF).' });
+      if (!isAllowedImageFile(req.file)) {
+        return res.status(400).json({ error: 'Format image non supporté (JPEG, PNG, WebP, HEIC).' });
       }
       if (req.file.size > MAX_IMAGE_BYTES) {
         return res.status(400).json({ error: 'Image trop volumineuse (max 10 Mo).' });
@@ -59,12 +86,7 @@ export async function uploadTemplateImage(req: AuthenticatedRequest, res: Respon
   }
 }
 
-function isAllowedVideoFile(file: Express.Multer.File): boolean {
-  if (ALLOWED_VIDEO_MIME.has(file.mimetype)) return true;
-  return /\.(mp4|webm|mov|m4v)$/i.test(file.originalname || '');
-}
-
-export async function uploadVenueVideo(req: AuthenticatedRequest, res: Response) {
+export async function uploadMarketplaceMedia(req: AuthenticatedRequest, res: Response) {
   try {
     if (!isCloudinaryConfigured()) {
       return res.status(503).json({
@@ -73,25 +95,42 @@ export async function uploadVenueVideo(req: AuthenticatedRequest, res: Response)
     }
 
     if (!req.file) {
-      return res.status(400).json({ error: 'Fichier vidéo requis.' });
-    }
-    if (!isAllowedVideoFile(req.file)) {
-      return res.status(400).json({ error: 'Format vidéo non supporté (MP4, WebM, MOV).' });
-    }
-    if (req.file.size > MAX_VIDEO_BYTES) {
-      return res.status(400).json({ error: 'Vidéo trop volumineuse (max 80 Mo).' });
+      return res.status(400).json({ error: 'Fichier photo ou vidéo requis.' });
     }
 
-    const folder = getVenueMediaFolder(req.user?.tenantId);
-    const result = await uploadVideoBuffer(req.file.buffer, folder, req.file.originalname);
+    const asVideo = isAllowedVideoFile(req.file);
+    const asImage = isAllowedImageFile(req.file);
+    if (!asVideo && !asImage) {
+      return res.status(400).json({ error: 'Format non supporté. Photos : JPEG, PNG, WebP, HEIC. Vidéos : MP4, WebM, MOV.' });
+    }
+
+    if (asVideo) {
+      if (req.file.size > MAX_VIDEO_BYTES) {
+        return res.status(400).json({ error: 'Vidéo trop volumineuse (max 80 Mo).' });
+      }
+      const result = await uploadVideoBuffer(req.file.buffer, getVenueMediaFolder(req.user?.tenantId), req.file.originalname);
+      return res.json({
+        url: result.url,
+        publicId: result.publicId,
+        width: result.width,
+        height: result.height,
+        kind: 'video',
+      });
+    }
+
+    if (req.file.size > MAX_IMAGE_BYTES) {
+      return res.status(400).json({ error: 'Image trop volumineuse (max 10 Mo).' });
+    }
+    const result = await uploadImageBuffer(req.file.buffer, getVenueMediaFolder(req.user?.tenantId), req.file.originalname);
     return res.json({
       url: result.url,
       publicId: result.publicId,
       width: result.width,
       height: result.height,
+      kind: 'image',
     });
   } catch (error: any) {
-    console.error('Erreur upload vidéo Cloudinary:', error);
-    return res.status(500).json({ error: error.message || 'Échec de l\'upload vidéo.' });
+    console.error('Erreur upload média Cloudinary:', error);
+    return res.status(500).json({ error: error.message || 'Échec de l\'upload.' });
   }
 }
