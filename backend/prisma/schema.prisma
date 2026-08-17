@@ -43,6 +43,7 @@ enum ChairType {
 
 enum PlanType {
   FREE
+  PERSONAL
   STANDARD
   PREMIUM_1
   PREMIUM_2
@@ -663,6 +664,8 @@ model SubscriptionPlan {
   roomEditorLevel     String   @default("basic")
   commercialNetwork   Boolean  @default(false)
   supportLevel        String   @default("community")
+  /** B2B = organisations. B2C = particuliers (3 événements, quota invités, toutes les fonctions). */
+  audience            String   @default("B2B")
   sortOrder           Int      @default(0)
   isActive            Boolean  @default(true)
   createdAt           DateTime @default(now())

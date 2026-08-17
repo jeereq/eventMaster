@@ -3,8 +3,11 @@ export type BillingCycle = 'monthly' | 'annual';
 /** Réduction facturation annuelle (équivalent mensuel affiché). */
 export const ANNUAL_DISCOUNT_PERCENT = 10;
 
+export type PlanAudience = 'B2B' | 'B2C';
+
 export type PlanId =
   | 'FREE'
+  | 'PERSONAL'
   | 'STANDARD'
   | 'PREMIUM_1'
   | 'PREMIUM_2'
@@ -14,6 +17,7 @@ export type PlanId =
 
 export const PLAN_IDS: PlanId[] = [
   'FREE',
+  'PERSONAL',
   'STANDARD',
   'PREMIUM_1',
   'PREMIUM_2',
@@ -23,6 +27,13 @@ export const PLAN_IDS: PlanId[] = [
 ];
 
 export const PAID_PLAN_IDS: PlanId[] = PLAN_IDS.filter((id) => id !== 'FREE');
+
+export const B2C_PLAN_IDS: PlanId[] = ['PERSONAL'];
+export const B2B_PLAN_IDS: PlanId[] = PLAN_IDS.filter((id) => id !== 'PERSONAL');
+
+export function planAudience(id: PlanId): PlanAudience {
+  return id === 'PERSONAL' ? 'B2C' : 'B2B';
+}
 
 export const PREMIUM_PLAN_IDS: PlanId[] = ['PREMIUM_1', 'PREMIUM_2'];
 export const ENTERPRISE_PLAN_IDS: PlanId[] = ['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3'];
@@ -65,7 +76,8 @@ export interface LandingPlan {
   cta: string;
   ctaHref: string;
   ctaVariant: 'outline' | 'primary' | 'contact';
-  tier: 'essentials' | 'business' | 'premium' | 'enterprise';
+  tier: 'essentials' | 'personal' | 'business' | 'premium' | 'enterprise';
+  audience: PlanAudience;
   highlighted?: boolean;
   badge?: string;
   highlights: string[];
@@ -75,49 +87,67 @@ export const LANDING_PLANS: LandingPlan[] = [
   {
     id: 'FREE',
     ms365Name: 'Essentials',
-    tagline: 'Découvrir EventMaster et organiser un premier événement.',
+    tagline: 'Découverte B2B : tester EventMaster pour une organisation.',
     monthlyPriceFc: 0,
     monthlyNote: 'Gratuit, sans carte bancaire',
     cta: 'Commencer gratuitement',
     ctaHref: '/register',
     ctaVariant: 'outline',
     tier: 'essentials',
+    audience: 'B2B',
     highlights: ['3 événements · 50 invités', 'RSVP & portail invité', 'Modèles standards inclus'],
+  },
+  {
+    id: 'PERSONAL',
+    ms365Name: 'Particulier',
+    tagline: 'Mariage, anniversaire, fête privée : toutes les fonctions, 3 événements.',
+    monthlyPriceFc: 20000,
+    monthlyNote: 'par particulier / mois',
+    cta: 'Choisir Particulier',
+    ctaHref: '/register',
+    ctaVariant: 'primary',
+    tier: 'personal',
+    audience: 'B2C',
+    badge: 'B2C',
+    highlights: ['3 événements · 200 invités', 'Toutes les fonctions incluses', 'QR, modèles custom, salles 2D'],
   },
   {
     id: 'STANDARD',
     ms365Name: 'Business',
-    tagline: 'Plusieurs réceptions par an avec protocole QR et salles standard.',
+    tagline: 'B2B — plusieurs réceptions par an avec protocole QR et salles standard.',
     monthlyPriceFc: 30000,
     monthlyNote: 'par organisation / mois',
     cta: 'Essayer Business',
     ctaHref: '/register',
     ctaVariant: 'primary',
     tier: 'business',
+    audience: 'B2B',
     highlights: ['8 événements · 150 invités', 'Protocole QR web', '3 salles · thèmes & fixtures'],
   },
   {
     id: 'PREMIUM_1',
     ms365Name: 'Business Premium 1',
-    tagline: 'Éditeur visuel, import maquette et formulaires RSVP analytiques.',
+    tagline: 'B2B — éditeur visuel, import maquette et formulaires RSVP analytiques.',
     monthlyPriceFc: 55000,
     monthlyNote: 'par organisation / mois',
     cta: 'Choisir Premium 1',
     ctaHref: '/register',
     ctaVariant: 'primary',
     tier: 'premium',
+    audience: 'B2B',
     highlights: ['12 événements · 500 invités', 'Modèles custom · import image', 'Taille canvas · champs RSVP stats'],
   },
   {
     id: 'PREMIUM_2',
     ms365Name: 'Business Premium 2',
-    tagline: 'OCR maquette, protocole complet et notifications siège.',
+    tagline: 'B2B — OCR maquette, protocole complet et notifications siège.',
     monthlyPriceFc: 85000,
     monthlyNote: 'par organisation / mois',
     cta: 'Choisir Premium 2',
     ctaHref: '/register',
     ctaVariant: 'primary',
     tier: 'premium',
+    audience: 'B2B',
     highlighted: true,
     badge: 'Le plus populaire',
     highlights: ['20 événements · 1 000 invités', 'OCR texte · PDF dès RSVP', 'GPS WhatsApp · vérification siège'],
@@ -125,37 +155,40 @@ export const LANDING_PLANS: LandingPlan[] = [
   {
     id: 'ENTERPRISE_1',
     ms365Name: 'Business Enterprise 1',
-    tagline: 'Volume élevé, rapports exportables et support prioritaire.',
+    tagline: 'B2B — volume élevé, rapports exportables et support prioritaire.',
     monthlyPriceFc: 350000,
     monthlyNote: 'par organisation / mois',
     cta: 'Choisir Enterprise 1',
     ctaHref: '/register',
     ctaVariant: 'primary',
     tier: 'enterprise',
+    audience: 'B2B',
     highlights: ['40 événements · 3 500 invités', 'Rapports & export commissions', '25 salles · support prioritaire'],
   },
   {
     id: 'ENTERPRISE_2',
     ms365Name: 'Business Enterprise 2',
-    tagline: 'Réseau commercial intégré avec commissions 20 % sur facturation.',
+    tagline: 'B2B — réseau commercial intégré avec commissions 20 % sur facturation.',
     monthlyPriceFc: 525000,
     monthlyNote: 'par organisation / mois',
     cta: 'Choisir Enterprise 2',
     ctaHref: '/register',
     ctaVariant: 'primary',
     tier: 'enterprise',
+    audience: 'B2B',
     highlights: ['70 événements · 5 000 invités', 'Espace commercial dédié', '50 salles · support dédié'],
   },
   {
     id: 'ENTERPRISE_3',
     ms365Name: 'Business Enterprise 3',
-    tagline: 'Illimité, multi-agences, SLA 24/7 et onboarding dédié.',
+    tagline: 'B2B — illimité, multi-agences, SLA 24/7 et onboarding dédié.',
     monthlyPriceFc: 700000,
     monthlyNote: 'par organisation / mois',
     cta: 'Contacter les ventes',
     ctaHref: '/contact',
     ctaVariant: 'contact',
     tier: 'enterprise',
+    audience: 'B2B',
     badge: 'Sur-mesure',
     highlights: ['Quotas illimités', 'Multi-agences & API', 'SLA 24/7 · account manager'],
   },
@@ -168,6 +201,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     label: 'Événements actifs',
     values: {
       FREE: '3',
+      PERSONAL: '3',
       STANDARD: '8',
       PREMIUM_1: '12',
       PREMIUM_2: '20',
@@ -181,6 +215,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     label: 'Invités (quota org.)',
     values: {
       FREE: '50',
+      PERSONAL: '200',
       STANDARD: '150',
       PREMIUM_1: '500',
       PREMIUM_2: '1 000',
@@ -194,6 +229,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     label: "Modèles d'invitation",
     values: {
       FREE: '2',
+      PERSONAL: 'Illimité',
       STANDARD: '5',
       PREMIUM_1: '8',
       PREMIUM_2: '10',
@@ -207,6 +243,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     label: 'Modèles personnalisés',
     values: {
       FREE: false,
+      PERSONAL: true,
       STANDARD: false,
       PREMIUM_1: true,
       PREMIUM_2: true,
@@ -220,6 +257,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     label: 'Import maquette (image + palette)',
     values: {
       FREE: false,
+      PERSONAL: true,
       STANDARD: false,
       PREMIUM_1: true,
       PREMIUM_2: true,
@@ -233,6 +271,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     label: 'OCR texte sur maquette',
     values: {
       FREE: false,
+      PERSONAL: true,
       STANDARD: false,
       PREMIUM_1: false,
       PREMIUM_2: true,
@@ -246,6 +285,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     label: 'Salles organisation',
     values: {
       FREE: '1',
+      PERSONAL: 'Illimité',
       STANDARD: '3',
       PREMIUM_1: '5',
       PREMIUM_2: '10',
@@ -259,6 +299,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     label: 'Éditeur de salle 2D',
     values: {
       FREE: 'Basique',
+      PERSONAL: 'Complet',
       STANDARD: 'Standard',
       PREMIUM_1: 'Avancé',
       PREMIUM_2: 'Avancé',
@@ -272,6 +313,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     label: 'Thèmes & fixtures (scène, fleurs…)',
     values: {
       FREE: false,
+      PERSONAL: true,
       STANDARD: true,
       PREMIUM_1: true,
       PREMIUM_2: true,
@@ -285,6 +327,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     label: 'Managers organisation',
     values: {
       FREE: '1',
+      PERSONAL: '1',
       STANDARD: '3',
       PREMIUM_1: '5',
       PREMIUM_2: '10',
@@ -298,6 +341,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     label: 'Protocole org. / salle / événement',
     values: {
       FREE: false,
+      PERSONAL: true,
       STANDARD: true,
       PREMIUM_1: true,
       PREMIUM_2: true,
@@ -311,6 +355,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     label: 'Scan QR caméra (confirmation de présence)',
     values: {
       FREE: false,
+      PERSONAL: true,
       STANDARD: true,
       PREMIUM_1: true,
       PREMIUM_2: true,
@@ -324,6 +369,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     label: 'Notification placement invité (WA / e-mail)',
     values: {
       FREE: false,
+      PERSONAL: true,
       STANDARD: false,
       PREMIUM_1: true,
       PREMIUM_2: true,
@@ -337,6 +383,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     label: 'Livraison PDF + GPS dès acceptation RSVP',
     values: {
       FREE: false,
+      PERSONAL: true,
       STANDARD: false,
       PREMIUM_1: true,
       PREMIUM_2: true,
@@ -350,6 +397,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     label: 'Application iOS & Android (en construction, non déployée)',
     values: {
       FREE: false,
+      PERSONAL: false,
       STANDARD: false,
       PREMIUM_1: false,
       PREMIUM_2: false,
@@ -363,6 +411,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     label: 'Scan QR protocole (app caméra native — bientôt)',
     values: {
       FREE: false,
+      PERSONAL: false,
       STANDARD: false,
       PREMIUM_1: false,
       PREMIUM_2: false,
@@ -376,6 +425,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     label: 'Notifications push (app — bientôt)',
     values: {
       FREE: false,
+      PERSONAL: false,
       STANDARD: false,
       PREMIUM_1: false,
       PREMIUM_2: false,
@@ -389,6 +439,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     label: 'Portail RSVP + badge QR',
     values: {
       FREE: true,
+      PERSONAL: true,
       STANDARD: true,
       PREMIUM_1: true,
       PREMIUM_2: true,
@@ -402,6 +453,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     label: 'Formulaires RSVP analytiques (export CSV)',
     values: {
       FREE: false,
+      PERSONAL: true,
       STANDARD: false,
       PREMIUM_1: true,
       PREMIUM_2: true,
@@ -415,6 +467,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     label: 'WhatsApp / E-mail',
     values: {
       FREE: true,
+      PERSONAL: true,
       STANDARD: true,
       PREMIUM_1: true,
       PREMIUM_2: true,
@@ -428,6 +481,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     label: 'Réseau commercial & commissions 20 %',
     values: {
       FREE: false,
+      PERSONAL: true,
       STANDARD: false,
       PREMIUM_1: false,
       PREMIUM_2: false,
@@ -441,6 +495,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     label: 'Export revenus & commissions (admin)',
     values: {
       FREE: false,
+      PERSONAL: true,
       STANDARD: false,
       PREMIUM_1: false,
       PREMIUM_2: false,
@@ -454,6 +509,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
     label: 'Support & SLA',
     values: {
       FREE: 'Communauté',
+      PERSONAL: 'E-mail',
       STANDARD: 'E-mail',
       PREMIUM_1: 'E-mail',
       PREMIUM_2: 'Prioritaire',
@@ -558,6 +614,7 @@ export function getPlanCapabilityBadges(planId: PlanId): PlanCapabilityBadge[] {
   if (rsvpAnalytics) badges.push({ id: 'rsvp', label: 'RSVP analytique', tone: 'emerald' });
   if (commercial) badges.push({ id: 'commercial', label: 'Réseau commercial', tone: 'amber' });
   if (planId === 'FREE') badges.push({ id: 'starter', label: 'Gratuit', tone: 'emerald' });
+  if (planId === 'PERSONAL') badges.push({ id: 'b2c', label: 'Particulier B2C', tone: 'amber' });
   if (planId.startsWith('ENTERPRISE_3')) badges.push({ id: 'unlimited', label: 'Illimité', tone: 'rose' });
 
   return badges;
@@ -578,6 +635,8 @@ export function planTierLabel(tier: LandingPlan['tier']): string {
   switch (tier) {
     case 'essentials':
       return 'Découverte';
+    case 'personal':
+      return 'Particulier';
     case 'business':
       return 'Business';
     case 'premium':

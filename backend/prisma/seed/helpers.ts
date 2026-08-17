@@ -100,6 +100,7 @@ export const GLOBAL_CATALOG_TEMPLATES: Array<{
 ];
 
 export const PLAN_AMOUNTS: Partial<Record<PlanType, number>> = {
+  PERSONAL: 20000,
   STANDARD: 30000,
   PREMIUM_1: 55000,
   PREMIUM_2: 85000,

@@ -1,8 +1,11 @@
 /** Réduction appliquée à la facturation annuelle (équivalent mensuel affiché). */
 export const ANNUAL_DISCOUNT_PERCENT = 10;
 
+export type PlanAudience = 'B2B' | 'B2C';
+
 export type PlanTypeKey =
   | 'FREE'
+  | 'PERSONAL'
   | 'STANDARD'
   | 'PREMIUM_1'
   | 'PREMIUM_2'
@@ -20,6 +23,8 @@ export interface PlanDefinition {
   promoMonthlyPriceFc?: number;
   promoLabel?: string;
   description: string;
+  /** B2B = organisations (quotas + fonctions par palier). B2C = particuliers (3 événements, quota invités, toutes les fonctions). */
+  audience: PlanAudience;
   maxEvents: number;
   maxGuests: number;
   maxTemplates: number;
@@ -40,6 +45,7 @@ export type PlansConfiguration = Record<PlanTypeKey, PlanDefinition>;
 
 export const PLAN_KEYS: PlanTypeKey[] = [
   'FREE',
+  'PERSONAL',
   'STANDARD',
   'PREMIUM_1',
   'PREMIUM_2',
@@ -47,6 +53,9 @@ export const PLAN_KEYS: PlanTypeKey[] = [
   'ENTERPRISE_2',
   'ENTERPRISE_3',
 ];
+
+export const B2C_PLAN_KEYS: PlanTypeKey[] = ['PERSONAL'];
+export const B2B_PLAN_KEYS: PlanTypeKey[] = PLAN_KEYS.filter((k) => k !== 'PERSONAL');
 
 export const PAID_PLAN_KEYS: PlanTypeKey[] = PLAN_KEYS.filter((k) => k !== 'FREE');
 
@@ -76,7 +85,8 @@ export function getDefaultPlans(): PlansConfiguration {
       name: 'Essentials',
       price: '0 FC',
       monthlyPriceFc: 0,
-      description: "Découvrir EventMaster et organiser un premier événement.",
+      description: 'Découverte B2B : tester EventMaster pour une organisation.',
+      audience: 'B2B',
       maxEvents: 3,
       maxGuests: 50,
       maxTemplates: 2,
@@ -92,11 +102,34 @@ export function getDefaultPlans(): PlansConfiguration {
       commercialNetwork: false,
       supportLevel: 'community',
     },
+    PERSONAL: {
+      name: 'Particulier',
+      price: '20.000 FC',
+      monthlyPriceFc: 20000,
+      description:
+        'Abonnement B2C : mariage, anniversaire ou fête privée. Toutes les fonctions d’organisation, limitées à 3 événements et 200 invités.',
+      audience: 'B2C',
+      maxEvents: 3,
+      maxGuests: 200,
+      maxTemplates: 9999,
+      maxRooms: 9999,
+      maxOrgManagers: 1,
+      customTemplates: true,
+      mockupOcr: true,
+      protocolQr: true,
+      seatNotifications: true,
+      roomThemesFixtures: true,
+      adminReports: true,
+      roomEditorLevel: 'complete',
+      commercialNetwork: true,
+      supportLevel: 'email',
+    },
     STANDARD: {
       name: 'Business',
       price: '30.000 FC',
       monthlyPriceFc: 30000,
-      description: 'Équipes qui gèrent plusieurs réceptions par an avec protocole QR.',
+      description: 'B2B — équipes qui gèrent plusieurs réceptions par an avec protocole QR.',
+      audience: 'B2B',
       maxEvents: 8,
       maxGuests: 150,
       maxTemplates: 5,
@@ -116,7 +149,8 @@ export function getDefaultPlans(): PlansConfiguration {
       name: 'Business Premium 1',
       price: '55.000 FC',
       monthlyPriceFc: 55000,
-      description: 'Salles 2D avancées, modèles personnalisés et équipe élargie.',
+      description: 'B2B — salles 2D avancées, modèles personnalisés et équipe élargie.',
+      audience: 'B2B',
       maxEvents: 12,
       maxGuests: 500,
       maxTemplates: 8,
@@ -136,7 +170,8 @@ export function getDefaultPlans(): PlansConfiguration {
       name: 'Business Premium 2',
       price: '85.000 FC',
       monthlyPriceFc: 85000,
-      description: 'Protocole complet, notifications siège et gestion multi-salles.',
+      description: 'B2B — protocole complet, notifications siège et gestion multi-salles.',
+      audience: 'B2B',
       maxEvents: 20,
       maxGuests: 1000,
       maxTemplates: 10,
@@ -156,7 +191,8 @@ export function getDefaultPlans(): PlansConfiguration {
       name: 'Business Enterprise 1',
       price: '350.000 FC',
       monthlyPriceFc: 350000,
-      description: 'Grandes organisations : volume élevé, rapports et support prioritaire.',
+      description: 'B2B — grandes organisations : volume élevé, rapports et support prioritaire.',
+      audience: 'B2B',
       maxEvents: 40,
       maxGuests: 3500,
       maxTemplates: 18,
@@ -176,7 +212,8 @@ export function getDefaultPlans(): PlansConfiguration {
       name: 'Business Enterprise 2',
       price: '525.000 FC',
       monthlyPriceFc: 525000,
-      description: 'Agences événementielles avec réseau commercial et commissions 20 %.',
+      description: 'B2B — agences événementielles avec réseau commercial et commissions 20 %.',
+      audience: 'B2B',
       maxEvents: 70,
       maxGuests: 5000,
       maxTemplates: 30,
@@ -196,7 +233,8 @@ export function getDefaultPlans(): PlansConfiguration {
       name: 'Business Enterprise 3',
       price: '700.000 FC',
       monthlyPriceFc: 700000,
-      description: 'Illimité, multi-agences, SLA 24/7 et onboarding dédié.',
+      description: 'B2B — illimité, multi-agences, SLA 24/7 et onboarding dédié.',
+      audience: 'B2B',
       maxEvents: 9999,
       maxGuests: 99999,
       maxTemplates: 9999,
@@ -226,6 +264,7 @@ export function mergePlan(base: PlanDefinition, override?: Partial<PlanDefinitio
     promoMonthlyPriceFc: override.promoMonthlyPriceFc ?? base.promoMonthlyPriceFc,
     promoLabel: override.promoLabel ?? base.promoLabel,
     description: override.description ?? base.description,
+    audience: override.audience ?? base.audience,
     maxEvents: override.maxEvents ?? base.maxEvents,
     maxGuests: override.maxGuests ?? base.maxGuests,
     maxTemplates: override.maxTemplates ?? base.maxTemplates,

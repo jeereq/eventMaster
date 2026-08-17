@@ -17,12 +17,13 @@ import {
 
 const PLAN_SORT_ORDER: Record<PlanTypeKey, number> = {
   FREE: 0,
-  STANDARD: 1,
-  PREMIUM_1: 2,
-  PREMIUM_2: 3,
-  ENTERPRISE_1: 4,
-  ENTERPRISE_2: 5,
-  ENTERPRISE_3: 6,
+  PERSONAL: 1,
+  STANDARD: 2,
+  PREMIUM_1: 3,
+  PREMIUM_2: 4,
+  ENTERPRISE_1: 5,
+  ENTERPRISE_2: 6,
+  ENTERPRISE_3: 7,
 };
 
 const pool = new pg.Pool({
@@ -79,6 +80,7 @@ async function main() {
         promoMonthlyPriceFc: def.promoMonthlyPriceFc ?? null,
         promoLabel: def.promoLabel ?? null,
         description: def.description,
+        audience: def.audience,
         maxEvents: def.maxEvents,
         maxGuests: def.maxGuests,
         maxTemplates: def.maxTemplates,
@@ -100,7 +102,9 @@ async function main() {
         name: def.name,
         price: def.price,
         monthlyPriceFc: def.monthlyPriceFc,
+        promoLabel: def.promoLabel ?? null,
         description: def.description,
+        audience: def.audience,
         maxEvents: def.maxEvents,
         maxGuests: def.maxGuests,
         maxTemplates: def.maxTemplates,

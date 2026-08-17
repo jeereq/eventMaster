@@ -76,9 +76,10 @@ function FeatureCell({ value }: { value: string | boolean }) {
 }
 
 const BILLING_TIERS: Array<{ label: string; ids: PlanId[] }> = [
-  { label: 'Essentials & Business', ids: ['FREE', 'STANDARD'] },
-  { label: 'Business Premium', ids: ['PREMIUM_1', 'PREMIUM_2'] },
-  { label: 'Business Enterprise', ids: ['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3'] },
+  { label: 'Particuliers (B2C)', ids: ['PERSONAL'] },
+  { label: 'Essentials & Business (B2B)', ids: ['FREE', 'STANDARD'] },
+  { label: 'Business Premium (B2B)', ids: ['PREMIUM_1', 'PREMIUM_2'] },
+  { label: 'Business Enterprise (B2B)', ids: ['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3'] },
 ];
 
 export default function BillingPage() {

@@ -6,7 +6,8 @@ import { Check, Minus, ChevronDown, ChevronUp, Sparkles, Tag } from 'lucide-reac
 import {
  LANDING_PLANS,
  FEATURE_COMPARISON,
- PLAN_IDS,
+ B2B_PLAN_IDS,
+ B2C_PLAN_IDS,
  ANNUAL_DISCOUNT_PERCENT,
  getPlanDisplayPrice,
  getPlanCapabilityBadges,
@@ -70,6 +71,7 @@ const BADGE_TONE: Record<PlanCapabilityBadge['tone'], string> = {
 
 const TIER_ACCENT: Record<string, string> = {
  essentials: 'bg-muted',
+ personal: 'bg-foreground/50',
  business: 'bg-foreground/40',
  premium: 'bg-foreground/70',
  enterprise: 'bg-foreground',
@@ -78,6 +80,7 @@ const TIER_ACCENT: Record<string, string> = {
 export default function LandingPricingSection({ dbPlans }: LandingPricingSectionProps) {
  const [billing, setBilling] = useState<BillingCycle>('monthly');
  const [showComparison, setShowComparison] = useState(false);
+ const [audience, setAudience] = useState<'B2B' | 'B2C'>('B2B');
 
  const plans = useMemo(() => {
  return LANDING_PLANS.map((plan) => {
@@ -129,23 +132,33 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
  [plans],
  );
 
- const tiers: Array<{ label: string; ids: PlanId[]; description?: string }> = [
- {
- label: 'Essentials & Business',
- ids: ['FREE', 'STANDARD'],
- description: 'Démarrer et professionnaliser vos premiers événements',
- },
- {
- label: 'Business Premium',
- ids: ['PREMIUM_1', 'PREMIUM_2'],
- description: 'Éditeur visuel, import maquette, RSVP analytique et salles 2D avancées',
- },
- {
- label: 'Business Enterprise',
- ids: ['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3'],
- description: 'Volume, rapports, réseau commercial et accompagnement dédié',
- },
- ];
+ const tiers: Array<{ label: string; ids: PlanId[]; description?: string }> = audience === 'B2C'
+  ? [
+      {
+        label: 'Particuliers (B2C)',
+        ids: [...B2C_PLAN_IDS],
+        description: 'Toutes les fonctions d’organisation, limitées à 3 événements et 200 invités',
+      },
+    ]
+  : [
+      {
+        label: 'Essentials & Business (B2B)',
+        ids: ['FREE', 'STANDARD'],
+        description: 'Démarrer et professionnaliser vos premiers événements d’organisation',
+      },
+      {
+        label: 'Business Premium (B2B)',
+        ids: ['PREMIUM_1', 'PREMIUM_2'],
+        description: 'Éditeur visuel, import maquette, RSVP analytique et salles 2D avancées',
+      },
+      {
+        label: 'Business Enterprise (B2B)',
+        ids: ['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3'],
+        description: 'Volume, rapports, réseau commercial et accompagnement dédié',
+      },
+    ];
+
+ const comparisonIds: PlanId[] = audience === 'B2C' ? ['FREE', 'PERSONAL'] : [...B2B_PLAN_IDS];
 
  return (
  <section
@@ -158,10 +171,11 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
  Forfaits
  </p>
  <h2 className="text-2xl font-semibold text-foreground tracking-tight">
- Une offre adaptée à votre volume
+ Organisations B2B ou particulier B2C
  </h2>
  <p className="text-sm text-muted leading-relaxed">
- D&apos;Essentials à Enterprise : invitations, protocole QR, salles 2D et RSVP.
+ Les abonnements Business / Premium / Enterprise sont destinés aux organisations (B2B).
+ Le forfait Particulier (B2C) débloque toutes les fonctions, avec 3 événements et 200 invités.
  Facturation annuelle avec {ANNUAL_DISCOUNT_PERCENT} % de réduction.
  </p>
  </div>
@@ -180,7 +194,31 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
  </div>
  )}
 
- <div className="flex flex-col items-start gap-2 mb-10">
+ <div className="flex flex-col items-start gap-3 mb-10">
+ <div className="inline-flex items-center p-0.5 rounded-[var(--radius-button)] bg-surface-muted border border-border">
+ <button
+ type="button"
+ onClick={() => setAudience('B2B')}
+ className={`px-4 py-2 rounded-md text-xs font-medium transition ${
+ audience === 'B2B'
+ ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
+ : 'text-muted hover:text-foreground'
+ }`}
+ >
+ Organisations (B2B)
+ </button>
+ <button
+ type="button"
+ onClick={() => setAudience('B2C')}
+ className={`px-4 py-2 rounded-md text-xs font-medium transition ${
+ audience === 'B2C'
+ ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
+ : 'text-muted hover:text-foreground'
+ }`}
+ >
+ Particuliers (B2C)
+ </button>
+ </div>
  <div className="inline-flex items-center p-0.5 rounded-[var(--radius-button)] bg-surface-muted border border-border">
  <button
  type="button"
@@ -225,7 +263,9 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
  </div>
  <div
  className={`grid gap-5 items-stretch ${
- ids.length === 2
+ ids.length === 1
+ ? 'max-w-md mx-auto'
+ : ids.length === 2
  ? 'md:grid-cols-2'
  : ids.length === 3
  ? 'md:grid-cols-2 lg:grid-cols-3'
@@ -387,7 +427,7 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
  <th className="py-3 px-4 text-xs font-bold text-muted uppercase sticky left-0 bg-surface-muted dark:bg-background z-10">
  Fonctionnalité
  </th>
- {PLAN_IDS.map((id) => {
+ {comparisonIds.map((id) => {
  const p = plans.find((x) => x.id === id);
  return (
  <th
@@ -414,7 +454,7 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
  {showCategory && (
  <tr className="bg-primary/10 dark:bg-primary/10">
  <td
- colSpan={PLAN_IDS.length + 1}
+ colSpan={comparisonIds.length + 1}
  className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-wider text-primary dark:text-primary"
  >
  {row.category}
@@ -425,7 +465,7 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
  <td className="py-2.5 px-4 text-xs text-foreground dark:text-foreground sticky left-0 bg-white dark:bg-background/30">
  {row.label}
  </td>
- {PLAN_IDS.map((id) => (
+ {comparisonIds.map((id) => (
  <td key={id} className="py-2.5 px-2 text-center">
  <FeatureCell value={row.values[id]} />
  </td>

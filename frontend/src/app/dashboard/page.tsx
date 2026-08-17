@@ -38,6 +38,7 @@ const COMMERCIAL_PLATFORM_TABS = ['tenants', 'subscription-requests', 'invoices'
 
 function planBadgeClass(plan: string): string {
  if (plan === 'FREE') return 'bg-surface-muted border-border text-muted';
+ if (plan === 'PERSONAL') return 'bg-emerald-50 border-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-300';
  if (plan === 'STANDARD') return 'bg-blue-50 border-blue-100 text-blue-700';
  if (plan.startsWith('PREMIUM')) return 'bg-primary/10 border-primary/20 text-primary';
  if (plan.startsWith('ENTERPRISE')) return 'bg-amber-50 border-amber-100 text-amber-700';
@@ -46,6 +47,7 @@ function planBadgeClass(plan: string): string {
 
 function planBarClass(plan: string): string {
  if (plan === 'FREE') return 'bg-surface-muted';
+ if (plan === 'PERSONAL') return 'bg-emerald-500';
  if (plan === 'STANDARD') return 'bg-blue-500';
  if (plan.startsWith('PREMIUM')) return 'bg-primary';
  if (plan.startsWith('ENTERPRISE')) return 'bg-amber-500';
@@ -2933,9 +2935,14 @@ function DashboardPageContent() {
  >
  <div className={`flex items-center justify-between ${plansViewMode === 'list' ? 'md:col-span-full' : ''}`}>
  <span className="text-xs font-extrabold text-primary uppercase tracking-wider">{planKey}</span>
+ <div className="flex items-center gap-1.5">
+ <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-border bg-surface">
+ {plan.audience === 'B2C' || planKey === 'PERSONAL' ? 'B2C' : 'B2B'}
+ </span>
  <span className="text-xs bg-primary/10 text-primary font-bold px-2.5 py-0.5 rounded-full">
  {planKey === 'FREE' ? 'Gratuit' : 'Mensuel'}
  </span>
+ </div>
  </div>
 
  <div className={plansViewMode === 'list' ? 'contents' : 'space-y-3'}>

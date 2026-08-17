@@ -139,6 +139,7 @@ export function formatPlanFeaturesResponse(snapshot: TenantPlanSnapshot) {
   return {
     plan: snapshot.plan,
     planName: snapshot.planName,
+    audience: f.audience,
     price: f.price,
     description: f.description,
     usage: snapshot.usage,

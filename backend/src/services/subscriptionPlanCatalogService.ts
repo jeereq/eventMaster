@@ -13,12 +13,13 @@ import {
 
 const PLAN_SORT_ORDER: Record<PlanTypeKey, number> = {
   FREE: 0,
-  STANDARD: 1,
-  PREMIUM_1: 2,
-  PREMIUM_2: 3,
-  ENTERPRISE_1: 4,
-  ENTERPRISE_2: 5,
-  ENTERPRISE_3: 6,
+  PERSONAL: 1,
+  STANDARD: 2,
+  PREMIUM_1: 3,
+  PREMIUM_2: 4,
+  ENTERPRISE_1: 5,
+  ENTERPRISE_2: 6,
+  ENTERPRISE_3: 7,
 };
 
 export function rowToPlanDefinition(row: SubscriptionPlan): PlanDefinition {
@@ -31,6 +32,7 @@ export function rowToPlanDefinition(row: SubscriptionPlan): PlanDefinition {
     promoMonthlyPriceFc: row.promoMonthlyPriceFc ?? undefined,
     promoLabel: row.promoLabel ?? undefined,
     description: row.description,
+    audience: row.audience === 'B2C' ? 'B2C' : 'B2B',
     maxEvents: row.maxEvents,
     maxGuests: row.maxGuests,
     maxTemplates: row.maxTemplates,
@@ -58,6 +60,7 @@ export function planDefinitionToDbData(key: PlanTypeKey, def: PlanDefinition) {
     promoMonthlyPriceFc: def.promoMonthlyPriceFc ?? null,
     promoLabel: def.promoLabel ?? null,
     description: def.description,
+    audience: def.audience,
     maxEvents: def.maxEvents,
     maxGuests: def.maxGuests,
     maxTemplates: def.maxTemplates,
@@ -90,13 +93,9 @@ function rowsToConfiguration(rows: SubscriptionPlan[]): PlansConfiguration {
   return result;
 }
 
-/** Charge le catalogue depuis la BD (ou seed des défauts si vide) et met à jour le cache. */
+/** Charge le catalogue depuis la BD (crée les forfaits manquants) et met à jour le cache. */
 export async function loadSubscriptionPlansFromDb(): Promise<PlansConfiguration> {
-  const count = await prisma.subscriptionPlan.count();
-  if (count === 0) {
-    console.log('[SubscriptionPlan] Catalogue vide — seed des forfaits par défaut…');
-    await seedDefaultSubscriptionPlans();
-  }
+  await seedDefaultSubscriptionPlans();
 
   const rows = await prisma.subscriptionPlan.findMany({
     orderBy: { sortOrder: 'asc' },
