@@ -1,4 +1,4 @@
-import type { PlanCapabilities, PlanQuotaInfo } from '@/context/AuthContext';
+import type { PlanCapabilities, PlanQuotaInfo, OrgAccess } from '@/context/AuthContext';
 
 /** Limite « illimitée » côté API (9999+). */
 export function isUnlimitedQuota(limit: number | null | undefined): boolean {
@@ -63,13 +63,13 @@ export function getFeatureLockMessage(
   planName?: string | null,
 ): string {
   const labels: Partial<Record<keyof PlanCapabilities, string>> = {
-    protocolQr: 'Le protocole QR nécessite le forfait Business ou supérieur',
-    seatNotifications: 'Les notifications PDF / GPS de placement nécessitent Premium 1 ou supérieur',
-    customTemplates: 'Les modèles personnalisés nécessitent Premium 1 ou supérieur',
-    mockupOcr: 'L’import OCR nécessite Premium 2 ou supérieur',
+    protocolQr: 'Le protocole QR n’est pas inclus dans votre forfait',
+    seatNotifications: 'Les notifications PDF / GPS de placement ne sont pas incluses dans votre forfait',
+    customTemplates: 'Les modèles personnalisés ne sont pas inclus dans votre forfait',
+    mockupOcr: 'L’import OCR n’est pas inclus dans votre forfait',
     roomThemesFixtures: 'Thèmes et fixtures de salle non inclus dans votre forfait',
-    commercialNetwork: 'Le réseau commercial nécessite Enterprise 2 ou supérieur',
-    adminReports: 'Les rapports avancés nécessitent Enterprise 1 ou supérieur',
+    commercialNetwork: 'Le réseau commercial n’est pas inclus dans votre forfait',
+    adminReports: 'Les rapports avancés ne sont pas inclus dans votre forfait',
   };
   const base = labels[feature] || 'Fonctionnalité non incluse dans votre forfait';
   return planName ? `${base} (actuel : ${planName}).` : `${base}.`;
@@ -90,12 +90,82 @@ const ROOM_LEVEL_HINT: Record<RoomEditorLevel, string> = {
   basic: 'Essentials',
   standard: 'Business',
   advanced: 'Premium',
-  complete: 'Salle, Particulier ou Enterprise 1',
+  complete: 'Salle, Particulier, Salle & presta ou Enterprise 1',
 };
+
+/** Publication d’une salle au catalogue public (interdit au forfait Particulier). */
+export function canPublishVenueCatalog(
+  planFeatures?: PlanCapabilities | null,
+  planQuota?: PlanQuotaInfo | null,
+  planId?: string | null,
+): boolean {
+  if (planId === 'PERSONAL' || planFeatures?.audience === 'B2C') return false;
+  const maxRooms = planQuota?.limits.maxRooms;
+  if (maxRooms != null && maxRooms <= 0) return false;
+  return true;
+}
 
 export function getRoomTypeLockMessage(roomType: string, planName?: string | null): string {
   const level = ROOM_TYPE_MIN_LEVEL[roomType] || 'standard';
   const needed = ROOM_LEVEL_HINT[level];
   const base = `Le type « ${roomType} » nécessite le forfait ${needed} ou supérieur`;
   return planName ? `${base} (actuel : ${planName}).` : `${base}.`;
+}
+
+export interface WorkspaceModules {
+  showEvents: boolean;
+  showRooms: boolean;
+  showMarketplace: boolean;
+  showTemplates: boolean;
+  showAnalytics: boolean;
+  showProtocol: boolean;
+  showTeam: boolean;
+}
+
+/** Menus workspace selon type de compte + quotas du forfait. */
+export function getWorkspaceModules(opts: {
+  accountKind?: string | null;
+  access?: OrgAccess | null;
+  planQuota?: PlanQuotaInfo | null;
+  planFeatures?: PlanCapabilities | null;
+}): WorkspaceModules {
+  const kind = opts.accountKind || 'ORGANIZER';
+  const vendorOnly = kind === 'VENDOR';
+  const canRooms = Boolean(opts.access?.canManageRooms);
+  const canTeam = Boolean(opts.access?.canManageTeam);
+  const protocolOnly = Boolean(opts.access?.isProtocolOnly);
+
+  if (vendorOnly && !opts.planQuota) {
+    return {
+      showEvents: false,
+      showRooms: canRooms,
+      showMarketplace: canRooms,
+      showTemplates: false,
+      showAnalytics: false,
+      showProtocol: false,
+      showTeam: canTeam,
+    };
+  }
+
+  const maxEvents = opts.planQuota?.limits.maxEvents ?? 3;
+  const maxRooms = opts.planQuota?.limits.maxRooms ?? 1;
+  const maxTemplates = opts.planQuota?.limits.maxTemplates ?? 2;
+  const maxServices = opts.planQuota?.limits.maxServices ?? 0;
+
+  const showEvents = !vendorOnly || maxEvents > 0;
+  const showRooms = canRooms && maxRooms > 0;
+  const showMarketplace = canRooms && maxServices > 0;
+
+  return {
+    showEvents,
+    showRooms,
+    showMarketplace,
+    showTemplates: showEvents && maxTemplates > 0 && !protocolOnly,
+    showAnalytics: showEvents && !protocolOnly,
+    showProtocol:
+      showEvents &&
+      Boolean(opts.access?.canProtocolAllEvents || opts.access?.level === 'staff') &&
+      opts.planFeatures?.protocolQr !== false,
+    showTeam: canTeam,
+  };
 }

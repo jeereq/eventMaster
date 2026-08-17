@@ -8,7 +8,7 @@ import {
   commercialReferredTenantFilter,
   isPlatformCommercial,
 } from '../services/platformCommercialScope';
-import { getPlansConfiguration, getPlanLimits, PAID_PLAN_KEYS } from '../config/plansConfig';
+import { getPlansConfiguration, getPlanLimits, PAID_PLAN_KEYS, isPlanAllowedForAccountKind, planAudienceMismatchMessage } from '../config/plansConfig';
 import { issueTenantPlanInvoice, computeExtendedExpiry } from '../services/tenantBillingService';
 import { computeApprovedAmount, getPlanAmount } from '../services/invoiceService';
 
@@ -24,6 +24,16 @@ export async function submitSubscriptionRequest(req: AuthenticatedRequest, res: 
 
     if (!requestedPlan || !PAID_PLAN_KEYS.includes(requestedPlan)) {
       return res.status(400).json({ error: 'Le forfait demandé est invalide.' });
+    }
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { accountKind: true },
+    });
+    if (!tenant || !isPlanAllowedForAccountKind(requestedPlan, tenant.accountKind)) {
+      return res.status(403).json({
+        error: planAudienceMismatchMessage(requestedPlan, tenant?.accountKind),
+      });
     }
 
     const days = durationDays ? parseInt(durationDays) : 30;

@@ -17,7 +17,7 @@ import {
 } from '../utils/publicVenue';
 import { collectUnavailableDates, haversineKm, parseBlockedDates } from '../utils/marketplaceDates';
 import { RoomType, ServiceCategory, TenantAccountKind, MarketplaceBookingStatus, VenuePriceUnit } from '@prisma/client';
-import { PlanFeatureError, assertServiceQuota } from '../services/planFeaturesService';
+import { PlanFeatureError, assertServiceQuota, assertVenueCatalogPublish } from '../services/planFeaturesService';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -412,6 +412,14 @@ export async function upsertRoomListing(req: AuthenticatedRequest, res: Response
     const blockedSafe = parseBlockedDates(blockedDates);
 
     if (wantPublic) {
+      try {
+        await assertVenueCatalogPublish(tenantId);
+      } catch (err) {
+        if (err instanceof PlanFeatureError) {
+          return res.status(403).json({ error: err.message });
+        }
+        throw err;
+      }
       const locationError = publishLocationError(city, commune, neighborhood, latitude, longitude);
       if (locationError) return res.status(400).json({ error: locationError });
       if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {

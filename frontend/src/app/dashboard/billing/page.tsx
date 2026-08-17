@@ -17,6 +17,7 @@ import {
   FEATURE_COMPARISON,
   PLAN_IDS,
   VENDOR_PLAN_IDS,
+  paidPlanIdsForAccountKind,
   ANNUAL_DISCOUNT_PERCENT,
   getPlanDisplayPrice,
   CURRENCY_NAME,
@@ -121,6 +122,24 @@ export default function BillingPage() {
     loadBillingStatus();
   }, []);
 
+  const allowedPaidIds = useMemo(
+    () => paidPlanIdsForAccountKind(tenant?.accountKind),
+    [tenant?.accountKind],
+  );
+
+  const visibleTiers = useMemo(() => {
+    const current = billing?.plan;
+    return BILLING_TIERS.map((tier) => ({
+      ...tier,
+      ids: tier.ids.filter((id) => id === current || allowedPaidIds.includes(id)),
+    })).filter((tier) => tier.ids.length > 0);
+  }, [allowedPaidIds, billing?.plan]);
+
+  const comparisonIds = useMemo(() => {
+    const current = billing?.plan;
+    return PLAN_IDS.filter((id) => id === current || allowedPaidIds.includes(id) || id === 'FREE');
+  }, [allowedPaidIds, billing?.plan]);
+
   const plans = useMemo(() => {
     return LANDING_PLANS.map((plan) => {
       const db = dynamicPlans?.[plan.id];
@@ -135,6 +154,10 @@ export default function BillingPage() {
 
   const handleUpgrade = async (plan: PlanId) => {
     if (plan === 'FREE') return;
+    if (!allowedPaidIds.includes(plan)) {
+      setError('Ce forfait ne correspond pas à votre type de compte.');
+      return;
+    }
     setError('');
     setSuccessMsg('');
     setActionLoading(plan);
@@ -166,7 +189,7 @@ export default function BillingPage() {
           Forfait de {tenant?.name || 'votre organisation'}
         </h1>
         <p className="text-muted text-sm">
-          Tous les tarifs sont en {CURRENCY_NAME} (FC) · Business Premium 1 & 2 · Business Enterprise 1 à 3 · réduction annuelle {ANNUAL_DISCOUNT_PERCENT} %
+          Forfaits adaptés à votre type de compte · tarifs en {CURRENCY_NAME} (FC) · réduction annuelle {ANNUAL_DISCOUNT_PERCENT} %
         </p>
       </div>
 
@@ -175,8 +198,9 @@ export default function BillingPage() {
 
       {(!billing || billing.plan === 'FREE') && (
         <Alert variant="info">
-          Aucun abonnement payant n&apos;est actif. Tous les forfaits disponibles sont proposés ci-dessous,
-          exclusivement en {CURRENCY_NAME} (FC). Choisissez celui qui correspond à votre organisation.
+          Aucun abonnement payant n&apos;est actif. Les forfaits ci-dessous correspondent à votre type de compte
+          ({tenant?.accountKind === 'VENDOR' ? 'catalogue' : tenant?.accountKind === 'BOTH' ? 'organisation + catalogue' : 'organisation'}),
+          exclusivement en {CURRENCY_NAME} (FC).
         </Alert>
       )}
 
@@ -256,7 +280,7 @@ export default function BillingPage() {
         </div>
       </div>
 
-      {BILLING_TIERS.map(({ label, ids }) => (
+      {visibleTiers.map(({ label, ids }) => (
         <div key={label}>
           <h2 className="text-sm font-bold uppercase tracking-widest text-muted mb-4 text-center">{label}</h2>
           <div
@@ -313,7 +337,12 @@ export default function BillingPage() {
                       </p>
                     )}
                     <button
-                      disabled={isCurrent || plan.id === 'FREE' || actionLoading !== null}
+                      disabled={
+                        isCurrent ||
+                        plan.id === 'FREE' ||
+                        actionLoading !== null ||
+                        !allowedPaidIds.includes(plan.id)
+                      }
                       onClick={() => handleUpgrade(plan.id)}
                       className={`w-full py-2.5 mt-5 font-semibold rounded-xl text-xs disabled:opacity-50 ${
                         plan.highlighted ? 'bg-primary text-white' : 'bg-foreground text-background'
@@ -353,7 +382,7 @@ export default function BillingPage() {
               <thead>
                 <tr className="bg-surface-muted">
                   <th className="text-left px-4 py-2 text-xs text-muted">Fonctionnalité</th>
-                  {PLAN_IDS.map((id) => (
+                  {comparisonIds.map((id) => (
                     <th key={id} className="px-2 py-2 text-[10px] text-center text-muted">
                       {LANDING_PLANS.find((p) => p.id === id)?.ms365Name}
                     </th>
@@ -364,7 +393,7 @@ export default function BillingPage() {
                 {FEATURE_COMPARISON.map((row) => (
                   <tr key={row.label} className="border-t border-border">
                     <td className="px-4 py-2 text-xs text-foreground">{row.label}</td>
-                    {PLAN_IDS.map((id) => (
+                    {comparisonIds.map((id) => (
                       <td key={id} className="py-2 text-center">
                         <FeatureCell value={row.values[id]} />
                       </td>

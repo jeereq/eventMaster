@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import Stripe from 'stripe';
-import { getPlanLimits, getPlansConfiguration, PAID_PLAN_KEYS, PLAN_KEYS } from '../config/plansConfig';
+import { getPlanLimits, getPlansConfiguration, PAID_PLAN_KEYS, PLAN_KEYS, isPlanAllowedForAccountKind, planAudienceMismatchMessage } from '../config/plansConfig';
 import { assertCanViewBilling, assertCanViewInvoices } from '../services/permissionsService';
 import { recordCommercialCommission } from '../services/commercialService';
 import { createAndSendInvoice, formatInvoiceForApi } from '../services/invoiceService';
@@ -95,6 +95,7 @@ export async function getBillingStatus(req: AuthenticatedRequest, res: Response)
         adminReports: currentLimits.adminReports,
         roomEditorLevel: currentLimits.roomEditorLevel,
         supportLevel: currentLimits.supportLevel,
+        audience: currentLimits.audience,
       },
       planDetails,
       plans: limits,
@@ -182,6 +183,10 @@ export async function createCheckoutSession(req: AuthenticatedRequest, res: Resp
 
     if (!tenant) {
       return res.status(404).json({ error: 'Tenant non trouvé' });
+    }
+
+    if (!isPlanAllowedForAccountKind(planType, tenant.accountKind)) {
+      return res.status(403).json({ error: planAudienceMismatchMessage(planType, tenant.accountKind) });
     }
 
     // If Stripe is mock mode or we want to support easy upgrades:
@@ -370,6 +375,14 @@ export async function mockUpgrade(req: AuthenticatedRequest, res: Response) {
 
     if (!plan || !PLAN_KEYS.includes(plan)) {
       return res.status(400).json({ error: 'Plan invalide' });
+    }
+
+    const currentTenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { accountKind: true },
+    });
+    if (plan !== 'FREE' && currentTenant && !isPlanAllowedForAccountKind(plan, currentTenant.accountKind)) {
+      return res.status(403).json({ error: planAudienceMismatchMessage(plan, currentTenant.accountKind) });
     }
 
     const expiryDate = new Date();

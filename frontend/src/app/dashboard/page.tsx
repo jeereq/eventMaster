@@ -4439,7 +4439,9 @@ function DashboardPageContent() {
  {greetingLabel}, {(user?.name || 'là').split(' ')[0]}
  </h2>
  <p className="text-sm text-muted">
- Voici l&apos;état de vos événements et quotas aujourd&apos;hui.
+ {tenant?.accountKind === 'VENDOR'
+ ? 'Voici l’état de vos offres catalogue et de votre forfait.'
+ : 'Voici l&apos;état de vos événements et quotas aujourd&apos;hui.'}
  </p>
  </div>
  ) : null}
@@ -4448,14 +4450,28 @@ function DashboardPageContent() {
  title="Tableau de bord"
  description={
  tenant?.name
- ? `Bienvenue — ${tenant.name}. Suivez vos événements, quotas et abonnement.`
+ ? tenant.accountKind === 'VENDOR'
+ ? `Bienvenue — ${tenant.name}. Suivez vos fiches catalogue, quotas et abonnement.`
+ : `Bienvenue — ${tenant.name}. Suivez vos événements, quotas et abonnement.`
  : "Bienvenue dans votre espace de gestion d'événements."
  }
  breadcrumbs={<Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Tableau de bord' }]} />}
  action={
+ tenant?.accountKind === 'VENDOR' ? (
+ (planQuota?.limits.maxRooms ?? 0) > 0 ? (
+ <Button onClick={() => router.push('/dashboard/rooms')} leftIcon={<PlusCircle className="w-4 h-4" />}>
+ Nouvelle salle
+ </Button>
+ ) : (
+ <Button onClick={() => router.push('/dashboard/marketplace')} leftIcon={<PlusCircle className="w-4 h-4" />}>
+ Nouvelle prestation
+ </Button>
+ )
+ ) : (
  <Button onClick={() => router.push('/dashboard/events')} leftIcon={<PlusCircle className="w-4 h-4" />}>
  Créer un événement
  </Button>
+ )
  }
  />
 
@@ -4465,6 +4481,10 @@ function DashboardPageContent() {
  <GettingStartedChecklist
  hasEvents={events.length > 0}
  firstEventId={events[0]?.id}
+ variant={tenant?.accountKind === 'VENDOR' ? 'vendor' : 'organizer'}
+ hasRooms={(planQuota?.usage.rooms ?? 0) > 0}
+ hasServices={(planQuota?.usage.services ?? 0) > 0}
+ preferServices={(planQuota?.limits.maxRooms ?? 1) <= 0}
  />
  )}
 

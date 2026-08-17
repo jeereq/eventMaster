@@ -129,13 +129,13 @@ export function getDefaultPlans(): PlansConfiguration {
       price: '20.000 FC',
       monthlyPriceFc: 20000,
       description:
-        'Abonnement B2C : mariage, anniversaire ou fête privée. Toutes les fonctions d’organisation, limitées à 3 événements et 200 invités.',
+        'Abonnement B2C : mariage, anniversaire ou fête privée. Organisation complète (QR, modèles, éditeur 2D), 3 événements, 200 invités, 2 salles de plan de table — sans publication catalogue.',
       audience: 'B2C',
       maxEvents: 3,
       maxGuests: 200,
       maxTemplates: 9999,
-      maxRooms: 9999,
-      maxServices: 2,
+      maxRooms: 2,
+      maxServices: 0,
       maxOrgManagers: 1,
       customTemplates: true,
       mockupOcr: true,
@@ -144,7 +144,7 @@ export function getDefaultPlans(): PlansConfiguration {
       roomThemesFixtures: true,
       adminReports: true,
       roomEditorLevel: 'complete',
-      commercialNetwork: true,
+      commercialNetwork: false,
       supportLevel: 'email',
     }),
     STANDARD: organizerPlan({
@@ -432,6 +432,40 @@ export function mergePlansForSave(
 
 export function isPaidPlan(planKey: string): boolean {
   return planKey !== 'FREE' && PLAN_KEYS.includes(planKey as PlanTypeKey);
+}
+
+const B2B_PAID_KEYS: PlanTypeKey[] = B2B_PLAN_KEYS.filter((k) => k !== 'FREE');
+
+/** Forfaits payants proposés selon le type de compte (essai FREE exclu). */
+export function paidPlanKeysForAccountKind(kind?: string | null): PlanTypeKey[] {
+  switch (kind) {
+    case 'CLIENT':
+      return [];
+    case 'VENDOR':
+      return [...VENDOR_PLAN_KEYS];
+    case 'BOTH':
+      return [...VENDOR_PLAN_KEYS, ...B2B_PAID_KEYS];
+    case 'ORGANIZER':
+    default:
+      return ['PERSONAL', ...B2B_PAID_KEYS];
+  }
+}
+
+export function isPlanAllowedForAccountKind(planKey: string, kind?: string | null): boolean {
+  const normalized = normalizePlanKey(planKey);
+  if (normalized === 'FREE') return true;
+  return paidPlanKeysForAccountKind(kind).includes(normalized);
+}
+
+export function planAudienceMismatchMessage(planKey: string, kind?: string | null): string {
+  if (kind === 'CLIENT') {
+    return 'Un compte client ne souscrit pas d’abonnement SaaS. Passez organisateur ou prestataire dans Mon compte, puis choisissez un forfait.';
+  }
+  const plan = getPlanLimits(planKey);
+  if (kind === 'VENDOR') {
+    return `Le forfait ${plan.name} n’est pas destiné aux comptes catalogue. Choisissez Salle, Prestataire ou Salle & presta.`;
+  }
+  return `Le forfait ${plan.name} n’est pas destiné à ce type de compte. Choisissez un forfait adapté (organisation ou catalogue).`;
 }
 
 /** Rétrocompatibilité : anciens identifiants Prisma */

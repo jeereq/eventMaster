@@ -128,6 +128,17 @@ export async function assertServiceQuota(tenantId: string): Promise<void> {
   }
 }
 
+export async function assertVenueCatalogPublish(tenantId: string): Promise<void> {
+  const snapshot = await getTenantPlanSnapshot(tenantId);
+  if (!snapshot) throw new PlanFeatureError('Organisation introuvable.');
+  const { audience, maxRooms, name } = snapshot.features;
+  if (audience === 'B2C' || maxRooms <= 0) {
+    throw new PlanFeatureError(
+      `La publication d’une salle au catalogue n’est pas incluse dans ${name}. Choisissez le forfait Salle ou Salle & presta.`,
+    );
+  }
+}
+
 export async function assertOrgManagerQuota(tenantId: string, addingManager = true): Promise<void> {
   if (!addingManager) return;
   const snapshot = await getTenantPlanSnapshot(tenantId);
@@ -180,6 +191,7 @@ export function formatPlanFeaturesResponse(snapshot: TenantPlanSnapshot) {
       roomEditorLevel: f.roomEditorLevel,
       allowedRoomTypes: ROOM_TYPES_BY_LEVEL[f.roomEditorLevel],
       supportLevel: f.supportLevel,
+      audience: f.audience,
     },
     formattedLimits: {
       maxEvents: f.maxEvents >= 9999 ? 'Illimité' : String(f.maxEvents),

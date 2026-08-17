@@ -33,7 +33,7 @@ import BlockedDatesField from '@/components/BlockedDatesField';
 import MarketplaceMediaField from '@/components/MarketplaceMediaField';
 import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import LocationPickerMap from '@/components/LocationPickerMap';
-import { getQuotaLockMessage, getRoomTypeLockMessage, ROOM_TYPE_MIN_LEVEL } from '@/lib/planAccess';
+import { getQuotaLockMessage, getRoomTypeLockMessage, ROOM_TYPE_MIN_LEVEL, canPublishVenueCatalog } from '@/lib/planAccess';
 
 interface RoomStaffItem {
   id: string;
@@ -118,6 +118,7 @@ const labelClass = 'block text-xs font-medium text-muted mb-1.5';
 
 export default function RoomsManagement() {
   const { planFeatures, planQuota, tenant, refreshProfile, refreshPlanFeatures } = useAuth();
+  const canCatalogPublish = canPublishVenueCatalog(planFeatures, planQuota, tenant?.plan);
   const { mode: roomsViewMode, setViewMode: setRoomsViewMode, columns: roomsColumns, setGridColumns: setRoomsColumns, gridClassName: roomsGridClass } = useViewMode('em-view-rooms', 'grid', 3);
   const [roomsPage, setRoomsPage] = useState(1);
   const ROOMS_PER_PAGE = 9;
@@ -573,7 +574,10 @@ export default function RoomsManagement() {
             Salles de l&apos;organisation
           </h2>
           <p className="text-xs text-muted mt-1">
-            Créez une salle en 3 étapes : infos, type, puis plan 2D. Vous pouvez ensuite la publier pour la location.
+            Créez une salle en 3 étapes : infos, type, puis plan 2D.
+            {canCatalogPublish
+              ? ' Vous pouvez ensuite la publier pour la location.'
+              : ' Ces salles servent au plan de table — elles ne sont pas publiées au catalogue.'}
             {planQuota && (
               <span className="block mt-1 font-medium text-primary">
                 Salles : {planQuota.usage.rooms} / {planQuota.limits.maxRooms >= 9999 ? '∞' : planQuota.limits.maxRooms}
@@ -840,6 +844,7 @@ export default function RoomsManagement() {
               .join(' · ') || 'Sans détails';
             const actions = canManage ? (
               <>
+                {canCatalogPublish && (
                 <button
                   type="button"
                   onClick={() => openListing(room)}
@@ -848,6 +853,7 @@ export default function RoomsManagement() {
                 >
                   {room.venueListing?.isPublic ? <Globe className="w-4 h-4" /> : <GlobeLock className="w-4 h-4" />}
                 </button>
+                )}
                 <button
                   type="button"
                   onClick={() => openEditLayout(room)}
@@ -895,14 +901,14 @@ export default function RoomsManagement() {
                   }
                   status={
                     roomsViewMode === 'list' ? (
-                      room.venueListing?.isPublic ? (
+                      canCatalogPublish && room.venueListing?.isPublic ? (
                         <StatusPill tone="emerald">Publiée</StatusPill>
                       ) : (
                       <StatusPill tone="primary">
                         {roomTypeLabels[room.roomType || 'SIMPLE']}
                       </StatusPill>
                       )
-                    ) : room.venueListing?.isPublic ? (
+                    ) : canCatalogPublish && room.venueListing?.isPublic ? (
                       <StatusPill tone="emerald">Publiée</StatusPill>
                     ) : undefined
                   }

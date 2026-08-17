@@ -144,7 +144,7 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
       {
         label: 'Particuliers (B2C)',
         ids: [...B2C_PLAN_IDS],
-        description: 'Toutes les fonctions d’organisation, limitées à 3 événements et 200 invités',
+        description: 'Organisation complète (QR, modèles, 2 salles de plan de table), sans publication catalogue',
       },
     ]
   : audience === 'VENDOR'
@@ -199,7 +199,7 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
  Organisations, particuliers, salles et prestataires
  </h2>
  <p className="text-sm text-muted leading-relaxed">
- Les forfaits Business sont destinés aux organisateurs. Le forfait Particulier (B2C) couvre un mariage ou une fête privée.
+ Les forfaits Business sont destinés aux organisateurs. Le forfait Particulier (B2C) couvre un mariage ou une fête privée, avec des salles de plan de table — pas un catalogue public.
  Les forfaits Salle, Prestataire et Salle & presta sont pensés pour publier dans le catalogue — pas pour remplacer un abonnement d’organisation.
  Facturation annuelle avec {ANNUAL_DISCOUNT_PERCENT} % de réduction.
  </p>

@@ -40,6 +40,23 @@ export const B2B_PLAN_IDS: PlanId[] = PLAN_IDS.filter(
   (id) => id !== 'PERSONAL' && !VENDOR_PLAN_IDS.includes(id),
 );
 
+const B2B_PAID_IDS: PlanId[] = B2B_PLAN_IDS.filter((id) => id !== 'FREE');
+
+/** Forfaits payants visibles en facturation selon le type de compte. */
+export function paidPlanIdsForAccountKind(kind?: string | null): PlanId[] {
+  switch (kind) {
+    case 'CLIENT':
+      return [];
+    case 'VENDOR':
+      return [...VENDOR_PLAN_IDS];
+    case 'BOTH':
+      return [...VENDOR_PLAN_IDS, ...B2B_PAID_IDS];
+    case 'ORGANIZER':
+    default:
+      return ['PERSONAL', ...B2B_PAID_IDS];
+  }
+}
+
 export function planAudience(id: PlanId): PlanAudience {
   if (id === 'PERSONAL') return 'B2C';
   if (id === 'VENUE' || id === 'SERVICE' || id === 'CATALOG') return id;
@@ -126,16 +143,16 @@ export const LANDING_PLANS: LandingPlan[] = [
   {
     id: 'PERSONAL',
     ms365Name: 'Particulier',
-    tagline: 'Mariage, anniversaire, fête privée : toutes les fonctions, 3 événements.',
+    tagline: 'Mariage, anniversaire, fête privée : organisation complète, 3 événements, sans catalogue.',
     monthlyPriceFc: 20000,
     monthlyNote: 'par particulier / mois',
     cta: 'Choisir Particulier',
-    ctaHref: '/register',
+    ctaHref: '/register?kind=ORGANIZER',
     ctaVariant: 'primary',
     tier: 'personal',
     audience: 'B2C',
     badge: 'B2C',
-    highlights: ['3 événements · 200 invités', 'Toutes les fonctions incluses', 'QR, modèles custom, salles 2D'],
+    highlights: ['3 événements · 200 invités', 'QR, modèles custom, éditeur 2D', '2 salles plan de table · pas de catalogue'],
   },
   {
     id: 'STANDARD',
@@ -383,7 +400,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Salles organisation',
     values: {
       FREE: '1',
-      PERSONAL: 'Illimité',
+      PERSONAL: '2',
       STANDARD: '3',
       PREMIUM_1: '5',
       PREMIUM_2: '10',
@@ -400,7 +417,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Prestations catalogue',
     values: {
       FREE: '1',
-      PERSONAL: '2',
+      PERSONAL: '—',
       STANDARD: '3',
       PREMIUM_1: '5',
       PREMIUM_2: '8',
@@ -623,7 +640,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Réseau commercial & commissions 20 %',
     values: {
       FREE: false,
-      PERSONAL: true,
+      PERSONAL: false,
       STANDARD: false,
       PREMIUM_1: false,
       PREMIUM_2: false,

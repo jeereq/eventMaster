@@ -61,6 +61,7 @@ export interface PlanCapabilities {
   roomEditorLevel: string;
   allowedRoomTypes?: string[];
   supportLevel: string;
+  audience?: 'B2B' | 'B2C' | 'VENUE' | 'SERVICE' | 'CATALOG';
 }
 
 export interface PlanQuotaInfo {
@@ -311,7 +312,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshPlanFeatures = async () => {
     try {
       const data = await api.get('/billing/plan-features');
-      setPlanFeatures(data.capabilities ?? null);
+      setPlanFeatures(
+        data.capabilities
+          ? { ...data.capabilities, audience: data.audience ?? data.capabilities.audience }
+          : null,
+      );
       if (data.usage && data.limits) {
         setPlanQuota({
           usage: {
@@ -381,7 +386,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('tenant', JSON.stringify(updatedTenant));
       }
       if (billingData.capabilities) {
-        setPlanFeatures(billingData.capabilities);
+        setPlanFeatures({
+          ...billingData.capabilities,
+          audience: billingData.planDetails?.audience ?? billingData.capabilities.audience,
+        });
       }
       if (billingData.usage && billingData.limits) {
         setPlanQuota({ usage: billingData.usage, limits: billingData.limits });

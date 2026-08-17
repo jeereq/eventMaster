@@ -53,7 +53,7 @@ export default function QuotaUsagePanel({ quota, className = '' }: QuotaUsagePan
 
  return (
  <div className={`grid sm:grid-cols-2 lg:grid-cols-5 gap-4 ${className}`}>
- {items.map(({ key, label, used, max, guests }) => {
+ {items.filter(({ max }) => max > 0).map(({ key, label, used, max, guests }) => {
  const Icon = ICONS[key];
  const style = STYLES[key];
  const pct = getQuotaPercentage(used, max, guests ? 99999 : 9999);
@@ -125,7 +125,9 @@ export function PlanQuotaLimits({
  <ul
  className={`space-y-1 ${compact ? 'text-[11px]' : 'text-xs'} text-muted border-t border-border pt-3 mt-3`}
  >
- {rows.map(({ label, max, guests }) => (
+ {rows
+ .filter(({ max }) => max > 0)
+ .map(({ label, max, guests }) => (
  <li key={label} className="flex justify-between gap-2">
  <span>{label}</span>
  <span className="font-semibold text-foreground">{formatQuotaMax(max, guests)}</span>
