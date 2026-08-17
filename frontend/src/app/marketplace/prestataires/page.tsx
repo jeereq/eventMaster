@@ -26,6 +26,7 @@ import {
   clearCatalogueGeoChip,
   isCatalogueMapView,
   resolveCatalogueGeo,
+  sortCatalogueByDistance,
   serviceToCatalogueItem,
   type CatalogueGeoState,
   type PublicService,
@@ -71,7 +72,7 @@ export default function MarketplaceServicesPage() {
     }
   }, []);
 
-  const items = useMemo(() => services.map(serviceToCatalogueItem), [services]);
+  const items = useMemo(() => sortCatalogueByDistance(services.map(serviceToCatalogueItem)), [services]);
   const markers = useMemo(
     () =>
       items
@@ -198,6 +199,7 @@ export default function MarketplaceServicesPage() {
             searchCenter={searchCenter}
             radiusKm={searchCenter ? applied.radiusKm : 0}
             city={applied.city}
+            searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
           />
         ) : (
           <>

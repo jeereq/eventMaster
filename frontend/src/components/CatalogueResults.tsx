@@ -2,12 +2,12 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Building2, MapPin, Sparkles } from 'lucide-react';
+import { Building2, MapPin, Sparkles, Users } from 'lucide-react';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import { listStackClass } from '@/components/ui';
 import { Skeleton } from '@/components/ui/Skeleton';
-import type { CatalogueItem, CatalogueViewMode } from '@/lib/marketplace';
+import { formatDistanceKm, formatQuotaLabel, type CatalogueItem, type CatalogueViewMode } from '@/lib/marketplace';
 
 function Cover({ item, className }: { item: CatalogueItem; className?: string }) {
   if (item.coverUrl) {
@@ -34,9 +34,14 @@ function Price({ item }: { item: CatalogueItem }) {
 }
 
 function KindBadge({ item }: { item: CatalogueItem }) {
+  const Icon = item.kind === 'venue' ? Building2 : Sparkles;
   return (
-    <span className="inline-flex items-center rounded-full bg-background/90 backdrop-blur-sm px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary border border-border">
-      {item.kind === 'venue' ? 'Salle' : item.categoryLabel}
+    <span className={cn(
+      'inline-flex items-center gap-1 rounded-full bg-background/90 backdrop-blur-sm px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider border border-border',
+      item.kind === 'service' ? 'text-[color:var(--festive-accent)]' : 'text-primary',
+    )}>
+      <Icon className="w-3 h-3" />
+      {item.kind === 'venue' ? 'Salle' : 'Prestataire'}
     </span>
   );
 }
@@ -57,13 +62,23 @@ function GridCard({ item }: { item: CatalogueItem }) {
         <h2 className="font-display font-semibold text-foreground group-hover:text-primary transition leading-snug">
           {item.title}
         </h2>
-        <p className="text-xs text-muted truncate">{item.orgName}</p>
+        <p className="text-xs text-muted truncate">{item.orgName}{item.categoryLabel ? ` · ${item.categoryLabel}` : ''}</p>
         {item.location ? (
           <p className="text-xs text-muted inline-flex items-center gap-1 min-w-0">
             <MapPin className="w-3 h-3 shrink-0" />
             <span className="truncate">{item.location}</span>
           </p>
         ) : null}
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted">
+          {formatDistanceKm(item.distanceKm) ? <span className="font-semibold text-primary">{formatDistanceKm(item.distanceKm)}</span> : null}
+          {item.capacity ? (
+            <span className="inline-flex items-center gap-1">
+              <Users className="w-3 h-3" /> {item.capacity} places
+            </span>
+          ) : null}
+          {formatQuotaLabel(item.quotaMin, item.quotaMax) ? <span>{formatQuotaLabel(item.quotaMin, item.quotaMax)}</span> : null}
+          {item.kind === 'service' && item.coverageRadiusKm ? <span>Rayon {item.coverageRadiusKm} km</span> : null}
+        </div>
         <div className="pt-2 border-t border-border">
           <Price item={item} />
         </div>
@@ -87,8 +102,11 @@ function ListRow({ item }: { item: CatalogueItem }) {
           {item.title}
         </h2>
         <p className="text-xs text-muted truncate">
-          {[item.orgName, item.location].filter(Boolean).join(' · ')}
+          {[item.orgName, item.categoryLabel, item.location].filter(Boolean).join(' · ')}
         </p>
+        {formatDistanceKm(item.distanceKm) ? (
+          <p className="text-[11px] font-semibold text-primary">{formatDistanceKm(item.distanceKm)}</p>
+        ) : null}
       </div>
       <div className="shrink-0 text-right">
         <Price item={item} />

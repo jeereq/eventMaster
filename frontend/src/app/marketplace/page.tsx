@@ -23,6 +23,7 @@ import {
   isCatalogueMapView,
   resolveCatalogueGeo,
   serviceToCatalogueItem,
+  sortCatalogueByDistance,
   venueToCatalogueItem,
   type CatalogueGeoState,
   type CatalogueItem,
@@ -75,10 +76,10 @@ export default function MarketplaceHubPage() {
   }, [applied, query, load]);
 
   const items: CatalogueItem[] = useMemo(
-    () => [
+    () => sortCatalogueByDistance([
       ...venues.map(venueToCatalogueItem),
       ...services.map(serviceToCatalogueItem),
-    ],
+    ]),
     [venues, services],
   );
 
@@ -195,7 +196,7 @@ export default function MarketplaceHubPage() {
                   <span className="w-2.5 h-2.5 rounded-full bg-[color:var(--festive-accent)]" />
                   Prestataires
                 </span>
-                <span>Survolez un prestataire pour voir son rayon d’action.</span>
+                <span>Bâtiment = salle, étoile = prestataire. Survolez pour le tarif, le lieu et la distance.</span>
               </div>
             )}
             <MarketplaceLocationsMap
@@ -207,6 +208,7 @@ export default function MarketplaceHubPage() {
               searchCenter={searchCenter}
               radiusKm={searchCenter ? applied.radiusKm : 0}
               city={applied.city}
+              searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
             />
           </div>
         ) : (

@@ -6,6 +6,7 @@ import { Button, Input, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
   RADIUS_KM_OPTIONS,
+  clampRadiusKm,
   type CatalogueGeoState,
   type CatalogueProximity,
   type CatalogueViewMode,
@@ -298,7 +299,7 @@ export function CatalogueGeoFields({
       </CatalogueFilterField>
       <CatalogueFilterField
         label="Proximité"
-        hint="Autour de vous, près d’une commune, ou autour d’une avenue saisie ci-dessus."
+        hint="Les résultats sont ceux dont le GPS est dans le rayon choisi, autour de vous ou d’un lieu."
       >
         <CatalogueChoicePills
           options={[
@@ -309,6 +310,11 @@ export function CatalogueGeoFields({
           value={value.proximity}
           onChange={(id) => set({ proximity: (id as CatalogueProximity) || '', lat: null, lng: null })}
         />
+        {value.proximity === 'around' ? (
+          <p className="text-[11px] text-muted mt-2">
+            Nous lirons votre GPS (Kinshasa ou Lubumbashi uniquement), puis filtrerons à la distance choisie.
+          </p>
+        ) : null}
         {value.proximity === 'near' ? (
           <Input
             className="mt-2"
@@ -318,12 +324,21 @@ export function CatalogueGeoFields({
           />
         ) : null}
         {value.proximity ? (
-          <div className="mt-3 space-y-1.5">
-            <span className="text-[11px] text-muted">Rayon</span>
+          <div className="mt-3 space-y-2">
+            <span className="text-[11px] text-muted">Rayon autour du point ({clampRadiusKm(value.radiusKm)} km)</span>
             <CatalogueChoicePills
               options={RADIUS_KM_OPTIONS.map((km) => ({ id: String(km), label: `${km} km` }))}
-              value={String(value.radiusKm)}
+              value={(RADIUS_KM_OPTIONS as readonly number[]).includes(value.radiusKm) ? String(value.radiusKm) : ''}
               onChange={(id) => set({ radiusKm: Number(id) || 10 })}
+            />
+            <Input
+              type="number"
+              min={1}
+              max={80}
+              step={1}
+              value={value.radiusKm}
+              onChange={(e) => set({ radiusKm: clampRadiusKm(e.target.value) })}
+              placeholder="Distance en km"
             />
           </div>
         ) : null}

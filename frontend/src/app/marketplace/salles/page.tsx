@@ -13,6 +13,7 @@ import {
   clearCatalogueGeoChip,
   isCatalogueMapView,
   resolveCatalogueGeo,
+  sortCatalogueByDistance,
   venueToCatalogueItem,
   type CatalogueGeoState,
   type PublicVenue,
@@ -75,7 +76,7 @@ export default function MarketplaceVenuesPage() {
     }
   }, []);
 
-  const items = useMemo(() => venues.map(venueToCatalogueItem), [venues]);
+  const items = useMemo(() => sortCatalogueByDistance(venues.map(venueToCatalogueItem)), [venues]);
   const markers = useMemo(
     () =>
       items
@@ -188,6 +189,7 @@ export default function MarketplaceVenuesPage() {
             searchCenter={searchCenter}
             radiusKm={searchCenter ? applied.radiusKm : 0}
             city={applied.city}
+            searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
           />
         ) : (
           <>

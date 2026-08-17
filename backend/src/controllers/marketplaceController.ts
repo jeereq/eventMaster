@@ -94,11 +94,36 @@ function toPublicVenue(listing: {
 function readGeoQuery(req: Request) {
   const lat = Number.parseFloat(String(req.query.lat || ''));
   const lng = Number.parseFloat(String(req.query.lng || ''));
-  const radiusKm = Number.parseFloat(String(req.query.radiusKm || ''));
-  if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(radiusKm) || radiusKm <= 0) {
+  const rawRadius = Number.parseFloat(String(req.query.radiusKm || ''));
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(rawRadius) || rawRadius <= 0) {
     return null;
   }
-  return { lat, lng, radiusKm };
+  return { lat, lng, radiusKm: Math.min(80, Math.max(0.5, rawRadius)) };
+}
+
+function publicWithDistance<T extends { latitude?: number | null; longitude?: number | null }>(
+  rows: T[],
+  geo: { lat: number; lng: number; radiusKm: number } | null,
+  toPublic: (row: T) => object,
+) {
+  const mapped = rows.map((row) => {
+    const lat = row.latitude ?? null;
+    const lng = row.longitude ?? null;
+    const distanceKm = geo && lat != null && lng != null
+      ? haversineKm(geo.lat, geo.lng, lat, lng)
+      : null;
+    return { row, distanceKm };
+  });
+  const filtered = geo
+    ? mapped.filter((entry) => entry.distanceKm != null && entry.distanceKm <= geo.radiusKm)
+    : mapped;
+  if (geo) {
+    filtered.sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0));
+  }
+  return filtered.map(({ row, distanceKm }) => ({
+    ...toPublic(row),
+    distanceKm: distanceKm != null ? Math.round(distanceKm * 10) / 10 : null,
+  }));
 }
 
 function readStreetQuery(req: Request) {
@@ -247,17 +272,11 @@ export async function listPublicVenues(req: Request, res: Response) {
     });
 
     const geo = readGeoQuery(req);
-    const filtered = geo
-      ? listings.filter((row) => (
-        row.latitude != null
-        && row.longitude != null
-        && haversineKm(geo.lat, geo.lng, row.latitude, row.longitude) <= geo.radiusKm
-      ))
-      : listings;
+    const venues = publicWithDistance(listings, geo, toPublicVenue);
 
     return res.json({
-      venues: filtered.map(toPublicVenue),
-      total: filtered.length,
+      venues,
+      total: venues.length,
     });
   } catch (error) {
     console.error('listPublicVenues:', error);
@@ -649,16 +668,9 @@ export async function listPublicServices(req: Request, res: Response) {
     });
 
     const geo = readGeoQuery(req);
-    const filtered = geo
-      ? offerings.filter((row) => {
-        if (row.latitude == null || row.longitude == null) return false;
-        const distance = haversineKm(geo.lat, geo.lng, row.latitude, row.longitude);
-        const cover = row.coverageRadiusKm && row.coverageRadiusKm > 0 ? row.coverageRadiusKm : 0;
-        return distance <= geo.radiusKm || (cover > 0 && distance <= cover);
-      })
-      : offerings;
+    const services = publicWithDistance(offerings, geo, toPublicService);
 
-    return res.json({ services: filtered.map(toPublicService), total: filtered.length });
+    return res.json({ services, total: services.length });
   } catch (error) {
     console.error('listPublicServices:', error);
     return res.status(500).json({ error: 'Impossible de charger les prestataires.' });

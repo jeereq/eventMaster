@@ -1,4 +1,4 @@
-import type { RoomType } from '@/lib/roomLayoutUtils';
+import { roomTypeLabels, type RoomType } from '@/lib/roomLayoutUtils';
 import { formatFc } from '@/config/landingPricing';
 import { findRdcCommune, isAllowedRdcCity, neighborhoodsFor } from '@/lib/rdcCities';
 
@@ -44,6 +44,7 @@ export interface PublicVenue {
   blockedDates?: string[];
   bookedDates?: string[];
   unavailableDates?: string[];
+  distanceKm?: number | null;
 }
 
 export interface VenueListingDraft {
@@ -116,6 +117,7 @@ export interface PublicService {
   blockedDates?: string[];
   bookedDates?: string[];
   unavailableDates?: string[];
+  distanceKm?: number | null;
 }
 
 export interface MarketplaceInquiryItem {
@@ -242,7 +244,32 @@ export const PRICE_UNIT_OPTIONS: Array<{ id: VenuePriceUnit; label: string }> = 
   { id: 'QUOTA', label: 'Par quota d’invités' },
 ];
 
-export const RADIUS_KM_OPTIONS = [5, 10, 15, 25, 50] as const;
+export const RADIUS_KM_OPTIONS = [2, 5, 10, 15, 25, 40] as const;
+
+export function clampRadiusKm(value: number | string | null | undefined, fallback = 10) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return fallback;
+  return Math.min(80, Math.max(0.5, n));
+}
+
+export function formatDistanceKm(km?: number | null): string | null {
+  if (km == null || !Number.isFinite(km)) return null;
+  if (km < 0.1) return 'À moins de 100 m';
+  if (km < 1) return `À ${Math.round(km * 1000)} m`;
+  if (km < 10) return `À ${km.toFixed(1).replace('.', ',')} km`;
+  return `À ${Math.round(km)} km`;
+}
+
+export function sortCatalogueByDistance<T extends { distanceKm?: number | null }>(items: T[]): T[] {
+  const hasDistance = items.some((item) => item.distanceKm != null);
+  if (!hasDistance) return items;
+  return [...items].sort((a, b) => {
+    if (a.distanceKm == null && b.distanceKm == null) return 0;
+    if (a.distanceKm == null) return 1;
+    if (b.distanceKm == null) return -1;
+    return a.distanceKm - b.distanceKm;
+  });
+}
 
 export type CatalogueProximity = '' | 'around' | 'near';
 
@@ -306,7 +333,7 @@ export function appendCatalogueGeoParams(params: URLSearchParams, filters: Catal
   if (filters.proximity && filters.lat != null && filters.lng != null) {
     params.set('lat', String(filters.lat));
     params.set('lng', String(filters.lng));
-    params.set('radiusKm', String(filters.radiusKm || 10));
+    params.set('radiusKm', String(clampRadiusKm(filters.radiusKm)));
   }
 }
 
@@ -347,6 +374,7 @@ export function clearCatalogueGeoChip(filters: CatalogueGeoState, id: string): C
 }
 
 export async function resolveCatalogueGeo(filters: CatalogueGeoState): Promise<CatalogueGeoState> {
+  const radiusKm = clampRadiusKm(filters.radiusKm);
   if (filters.proximity === 'around') {
     const pos = await new Promise<{ lat: number; lng: number }>((resolve, reject) => {
       if (typeof navigator === 'undefined' || !navigator.geolocation) {
@@ -355,14 +383,27 @@ export async function resolveCatalogueGeo(filters: CatalogueGeoState): Promise<C
       }
       navigator.geolocation.getCurrentPosition(
         (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
-        () => reject(new Error('Autorisez la localisation pour filtrer autour de vous.')),
+        (err) => {
+          if (err.code === 1) reject(new Error('Autorisez la localisation pour filtrer autour de vous.'));
+          else if (err.code === 3) reject(new Error('Localisation trop lente. Réessayez ou cherchez près d’un lieu.'));
+          else reject(new Error('Impossible de lire votre position GPS.'));
+        },
         { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
       );
     });
-    return { ...filters, lat: pos.lat, lng: pos.lng };
+    const { cityForPoint, normalizeRdcCity } = await import('@/lib/rdcCities');
+    const here = cityForPoint(pos.lat, pos.lng);
+    if (!here) {
+      throw new Error('Votre GPS est hors Kinshasa et Lubumbashi. Choisissez une ville, puis « Près d’un lieu ».');
+    }
+    const selected = normalizeRdcCity(filters.city);
+    if (selected && selected !== here.name) {
+      throw new Error(`Votre position est à ${here.name}. Changez la ville du filtre, ou cherchez près d’un lieu.`);
+    }
+    return { ...filters, city: selected || here.name, lat: pos.lat, lng: pos.lng, radiusKm };
   }
   if (filters.proximity === 'near') {
-    const q = filters.nearPlace.trim() || filters.commune.trim();
+    const q = filters.nearPlace.trim() || filters.neighborhood.trim() || filters.commune.trim();
     if (!q) {
       throw new Error('Indiquez une commune, un quartier ou une avenue pour chercher à proximité.');
     }
@@ -379,9 +420,9 @@ export async function resolveCatalogueGeo(filters: CatalogueGeoState): Promise<C
     if (!place || !pointInBounds(place.lat, place.lng, cityMeta.bounds)) {
       throw new Error('Lieu introuvable dans Kinshasa ou Lubumbashi. Précisez la commune ou l’avenue.');
     }
-    return { ...filters, lat: place.lat, lng: place.lng };
+    return { ...filters, lat: place.lat, lng: place.lng, radiusKm };
   }
-  return { ...filters, lat: null, lng: null };
+  return { ...filters, lat: null, lng: null, radiusKm };
 }
 
 export function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
@@ -431,6 +472,11 @@ export interface CatalogueItem {
   latitude: number | null;
   longitude: number | null;
   coverageRadiusKm?: number | null;
+  capacity?: number | null;
+  quotaMin?: number | null;
+  quotaMax?: number | null;
+  address?: string | null;
+  distanceKm?: number | null;
 }
 
 export function venueToCatalogueItem(venue: PublicVenue): CatalogueItem {
@@ -441,13 +487,18 @@ export function venueToCatalogueItem(venue: PublicVenue): CatalogueItem {
     href: `/marketplace/salles/${venue.slug}`,
     title: venue.headline,
     orgName: venue.orgName,
-    categoryLabel: 'Salle',
+    categoryLabel: roomTypeLabels[venue.roomType] || 'Salle',
     location: formatLocationLine(venue),
     coverUrl: venue.coverUrl,
     priceFromFc: venue.priceFromFc,
     priceUnitLabel: venue.priceUnitLabel,
     latitude: venue.latitude,
     longitude: venue.longitude,
+    capacity: venue.capacity,
+    quotaMin: venue.quotaMin ?? null,
+    quotaMax: venue.quotaMax ?? null,
+    address: venue.address,
+    distanceKm: venue.distanceKm ?? null,
   };
 }
 
@@ -460,16 +511,16 @@ export function serviceToCatalogueItem(service: PublicService): CatalogueItem {
     title: service.title,
     orgName: service.orgName,
     categoryLabel: service.categoryLabel,
-    location: [
-      formatLocationLine(service),
-      service.coverageRadiusKm ? `rayon ${service.coverageRadiusKm} km` : null,
-    ].filter(Boolean).join(' · '),
+    location: formatLocationLine(service),
     coverUrl: service.coverUrl,
     priceFromFc: service.priceFromFc,
     priceUnitLabel: service.priceUnitLabel,
     latitude: service.latitude ?? null,
     longitude: service.longitude ?? null,
     coverageRadiusKm: service.coverageRadiusKm,
+    quotaMin: service.quotaMin ?? null,
+    quotaMax: service.quotaMax ?? null,
+    distanceKm: service.distanceKm ?? null,
   };
 }
 
@@ -496,9 +547,15 @@ export function catalogueItemToMapMarker(item: CatalogueItem) {
     kind: item.kind,
     coverUrl: item.coverUrl,
     priceLabel: item.priceFromFc != null ? `Dès ${formatFc(item.priceFromFc)}` : 'Sur devis',
+    priceUnitLabel: item.priceUnitLabel,
     categoryLabel: item.kind === 'venue' ? 'Salle' : item.categoryLabel,
     orgName: item.orgName,
     location: item.location || undefined,
+    address: item.address || undefined,
     coverageRadiusKm: item.coverageRadiusKm ?? null,
+    capacity: item.capacity ?? null,
+    quotaLabel: formatQuotaLabel(item.quotaMin, item.quotaMax),
+    distanceKm: item.distanceKm ?? null,
+    roomTypeLabel: item.kind === 'venue' ? item.categoryLabel : null,
   };
 }
