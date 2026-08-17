@@ -29,6 +29,7 @@ import {
   mergeSettingsUpdate,
   DEFAULT_PLATFORM_SETTINGS,
 } from '../services/platformSettingsService';
+import { auditReq } from '../services/adminAuditService';
 
 // Get global system statistics and list of all tenants (Super Admin only)
 export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
@@ -93,6 +94,7 @@ export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
         managerEmail: t.manager?.email || 'Aucun',
         eventsCount: t._count.events,
         usersCount: t._count.users,
+        accountKind: t.accountKind,
       })),
     });
   } catch (error: any) {
@@ -293,6 +295,15 @@ export async function createTenant(req: AuthenticatedRequest, res: Response) {
       },
     });
 
+    await auditReq(req, {
+      action: 'TENANT_CREATE',
+      targetType: 'tenant',
+      targetId: newTenant.id,
+      tenantId: newTenant.id,
+      summary: `Organisation « ${newTenant.name} » créée (${newTenant.plan})`,
+      metadata: { plan: newTenant.plan, accountKind: newTenant.accountKind },
+    });
+
     return res.status(201).json({ message: 'Organisation créée avec succès', tenant: newTenant });
   } catch (error: any) {
     console.error('Erreur lors de la création de l\'organisation:', error);
@@ -419,6 +430,29 @@ export async function updateTenantPlanOrLicense(req: AuthenticatedRequest, res: 
         ? ` Commerciaux informés : ${billingResult.commercialNotified.join(', ')}.`
         : '';
 
+    await auditReq(req, {
+      action: 'TENANT_UPDATE',
+      targetType: 'tenant',
+      targetId: updatedTenant.id,
+      tenantId: updatedTenant.id,
+      summary: `Organisation « ${updatedTenant.name} » mise à jour`,
+      metadata: {
+        before: {
+          name: existing.name,
+          plan: existing.plan,
+          licenseActive: existing.licenseActive,
+          licenseExpiresAt: existing.licenseExpiresAt,
+        },
+        after: {
+          name: updatedTenant.name,
+          plan: updatedTenant.plan,
+          licenseActive: updatedTenant.licenseActive,
+          licenseExpiresAt: updatedTenant.licenseExpiresAt,
+        },
+        invoiceIssued: Boolean(billingResult?.invoice),
+      },
+    });
+
     return res.json({
       message: `Organisation mise à jour.${invoiceNote}${commercialNote}`,
       tenant: updatedTenant,
@@ -452,8 +486,25 @@ export async function deleteTenant(req: AuthenticatedRequest, res: Response) {
 
     const id = req.params.id as string;
 
+    const existing = await prisma.tenant.findUnique({
+      where: { id },
+      select: { id: true, name: true, plan: true },
+    });
+    if (!existing) {
+      return res.status(404).json({ error: 'Organisation introuvable.' });
+    }
+
     await prisma.tenant.delete({
       where: { id },
+    });
+
+    await auditReq(req, {
+      action: 'TENANT_DELETE',
+      targetType: 'tenant',
+      targetId: existing.id,
+      tenantId: existing.id,
+      summary: `Organisation « ${existing.name} » supprimée`,
+      metadata: { plan: existing.plan },
     });
 
     return res.json({ message: 'Tenant supprimé avec succès' });
@@ -551,6 +602,15 @@ export async function createUser(req: AuthenticatedRequest, res: Response) {
       }
     }
 
+    await auditReq(req, {
+      action: 'USER_CREATE',
+      targetType: 'user',
+      targetId: newUser.id,
+      tenantId: newUser.tenantId,
+      summary: `Utilisateur ${newUser.email} créé (${newUser.role})`,
+      metadata: { role: newUser.role, tenantId: newUser.tenantId },
+    });
+
     return res.status(201).json({ message: 'Utilisateur créé avec succès', user: newUser });
   } catch (error: any) {
     console.error('Erreur lors de la création de l\'utilisateur:', error);
@@ -597,6 +657,15 @@ export async function updateUserRoleOrStatus(req: AuthenticatedRequest, res: Res
       await ensureCommercialReferralCode(updatedUser.id);
     }
 
+    await auditReq(req, {
+      action: 'USER_UPDATE',
+      targetType: 'user',
+      targetId: updatedUser.id,
+      tenantId: updatedUser.tenantId,
+      summary: `Utilisateur ${updatedUser.email} mis à jour (${updatedUser.role})`,
+      metadata: { role: updatedUser.role, tenantId: updatedUser.tenantId },
+    });
+
     return res.json({ message: 'Utilisateur mis à jour avec succès', user: updatedUser });
   } catch (error: any) {
     console.error('Erreur lors de la mise à jour de l\'utilisateur:', error);
@@ -613,8 +682,25 @@ export async function deleteUser(req: AuthenticatedRequest, res: Response) {
 
     const id = req.params.id as string;
 
+    const existingUser = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, email: true, role: true, tenantId: true },
+    });
+    if (!existingUser) {
+      return res.status(404).json({ error: 'Utilisateur introuvable.' });
+    }
+
     await prisma.user.delete({
       where: { id },
+    });
+
+    await auditReq(req, {
+      action: 'USER_DELETE',
+      targetType: 'user',
+      targetId: existingUser.id,
+      tenantId: existingUser.tenantId,
+      summary: `Utilisateur ${existingUser.email} supprimé`,
+      metadata: { role: existingUser.role },
     });
 
     return res.json({ message: 'Utilisateur supprimé avec succès' });
@@ -860,8 +946,24 @@ export async function deleteAdminEvent(req: AuthenticatedRequest, res: Response)
 
     const id = req.params.id as string;
 
+    const existingEvent = await prisma.event.findUnique({
+      where: { id },
+      select: { id: true, title: true, tenantId: true },
+    });
+    if (!existingEvent) {
+      return res.status(404).json({ error: 'Événement introuvable.' });
+    }
+
     await prisma.event.delete({
       where: { id },
+    });
+
+    await auditReq(req, {
+      action: 'EVENT_DELETE',
+      targetType: 'event',
+      targetId: existingEvent.id,
+      tenantId: existingEvent.tenantId,
+      summary: `Événement « ${existingEvent.title} » supprimé`,
     });
 
     return res.json({ message: 'Événement supprimé avec succès' });
@@ -1081,8 +1183,24 @@ export async function deleteAdminGuest(req: AuthenticatedRequest, res: Response)
 
     const id = req.params.id as string;
 
+    const existingGuest = await prisma.guest.findUnique({
+      where: { id },
+      select: { id: true, firstName: true, lastName: true, event: { select: { tenantId: true, title: true } } },
+    });
+    if (!existingGuest) {
+      return res.status(404).json({ error: 'Invité introuvable.' });
+    }
+
     await prisma.guest.delete({
       where: { id },
+    });
+
+    await auditReq(req, {
+      action: 'GUEST_DELETE',
+      targetType: 'guest',
+      targetId: existingGuest.id,
+      tenantId: existingGuest.event.tenantId,
+      summary: `Invité ${existingGuest.firstName} ${existingGuest.lastName} supprimé (${existingGuest.event.title})`,
     });
 
     return res.json({ message: 'Invité supprimé avec succès' });
@@ -1131,6 +1249,17 @@ export async function updateAdminSettings(req: AuthenticatedRequest, res: Respon
     } else {
       plans = await loadSubscriptionPlansFromDb();
     }
+
+    await auditReq(req, {
+      action: 'SETTINGS_UPDATE',
+      targetType: 'settings',
+      targetId: 'platform',
+      summary: `Réglages plateforme mis à jour${incomingPlans ? ' (forfaits inclus)' : ''}`,
+      metadata: {
+        keys: Object.keys(otherSettings || {}),
+        plansUpdated: Boolean(incomingPlans),
+      },
+    });
 
     return res.json({
       message: 'Paramètres mis à jour avec succès',

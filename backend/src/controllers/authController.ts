@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../db';
-import { AuthenticatedRequest } from '../middleware/auth';
+import { AuthenticatedRequest, signUserToken } from '../middleware/auth';
 import { formatTenantResponse, parseAccountKind } from '../utils/tenantAccess';
 import { isPlanAllowedForAccountKind } from '../config/plansConfig';
 import { PlanType } from '@prisma/client';
@@ -63,11 +63,18 @@ async function issueAndSendOtp(params: {
   return sentVia;
 }
 
-function buildAuthToken(user: { id: string; tenantId: string | null; role: string }) {
-  return jwt.sign(
-    { userId: user.id, tenantId: user.tenantId, role: user.role },
-    JWT_SECRET,
-    { expiresIn: '24h' },
+function buildAuthToken(
+  user: { id: string; tenantId: string | null; role: string },
+  options?: { impersonatedBy?: string; expiresIn?: string },
+) {
+  return signUserToken(
+    {
+      userId: user.id,
+      tenantId: user.tenantId,
+      role: user.role as 'SUPER_ADMIN' | 'COMMERCIAL' | 'USER',
+      impersonatedBy: options?.impersonatedBy,
+    },
+    options?.expiresIn || '24h',
   );
 }
 
@@ -460,6 +467,7 @@ export async function getProfile(req: AuthenticatedRequest, res: Response) {
         phone: user.phone,
         role: user.role,
         orgRole: user.orgRole,
+        impersonatedBy: req.user.impersonatedBy || null,
       },
       tenant: user.tenant ? formatTenantResponse(user.tenant) : null,
       access,

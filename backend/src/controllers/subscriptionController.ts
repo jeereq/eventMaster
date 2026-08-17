@@ -11,6 +11,7 @@ import {
 import { getPlansConfiguration, getPlanLimits, PAID_PLAN_KEYS, isPlanAllowedForAccountKind, planAudienceMismatchMessage, resolveDurationDaysForPlan } from '../config/plansConfig';
 import { issueTenantPlanInvoice, computeExtendedExpiry } from '../services/tenantBillingService';
 import { computeApprovedAmount, getPlanAmount } from '../services/invoiceService';
+import { auditReq } from '../services/adminAuditService';
 
 // 1. Submit a subscription request (Tenant)
 export async function submitSubscriptionRequest(req: AuthenticatedRequest, res: Response) {
@@ -299,6 +300,19 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
       }
     })();
 
+    await auditReq(req, {
+      action: 'SUBSCRIPTION_APPROVE',
+      targetType: 'subscriptionRequest',
+      targetId: requestId,
+      tenantId: request.tenantId,
+      summary: `Demande d’abonnement approuvée pour « ${tenantBefore.name} » (${request.requestedPlan})`,
+      metadata: {
+        requestedPlan: request.requestedPlan,
+        billingAction,
+        approvedAmount: pricing.finalAmount,
+      },
+    });
+
     return res.json({
       message: successMessage,
       request: updatedRequest,
@@ -358,6 +372,15 @@ export async function rejectSubscriptionRequest(req: AuthenticatedRequest, res: 
     const updatedRequest = await prisma.subscriptionRequest.update({
       where: { id: requestId },
       data: { status: 'REJECTED' },
+    });
+
+    await auditReq(req, {
+      action: 'SUBSCRIPTION_REJECT',
+      targetType: 'subscriptionRequest',
+      targetId: requestId,
+      tenantId: request.tenantId,
+      summary: `Demande d’abonnement rejetée (${request.requestedPlan})`,
+      metadata: { requestedPlan: request.requestedPlan },
     });
 
     return res.json({

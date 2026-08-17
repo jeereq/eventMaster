@@ -75,6 +75,16 @@ export async function getUserLegalStatusHandler(req: AuthenticatedRequest, res: 
       return res.status(401).json({ error: 'Non authentifié.' });
     }
 
+    if (req.user?.impersonatedBy) {
+      return res.json({
+        termsAccepted: true,
+        privacyAccepted: true,
+        requiresAcceptance: false,
+        isFirstAcceptance: false,
+        supportSession: true,
+      });
+    }
+
     const status = await getUserLegalStatus(userId);
     if (!status) {
       return res.status(404).json({ error: 'Utilisateur non trouvé.' });
@@ -92,6 +102,12 @@ export async function acceptUserLegalHandler(req: AuthenticatedRequest, res: Res
     const userId = req.user?.id;
     if (!userId) {
       return res.status(401).json({ error: 'Non authentifié.' });
+    }
+
+    if (req.user?.impersonatedBy) {
+      return res.status(403).json({
+        error: 'Une session support ne peut pas accepter les conditions à la place du client.',
+      });
     }
 
     const { acceptTerms, acceptPrivacy } = req.body;

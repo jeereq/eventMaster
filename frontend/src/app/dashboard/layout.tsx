@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import UserLegalGate from '@/components/UserLegalGate';
+import SupportSessionBanner from '@/components/admin/SupportSessionBanner';
 import { NotificationBell } from '@/components/CommercialNotifications';
 import DashboardTopBar from '@/components/DashboardTopBar';
 import ViewCustomizerDrawer, {
@@ -42,6 +43,7 @@ interface NavSection {
 
 /** Infobulles par défaut (sidebar réduite). */
 const NAV_TOOLTIPS: Record<string, string> = {
+ Accueil: 'File du jour : demandes, licences, factures',
  Organisations: 'Gérer les organisations et licences',
  Utilisateurs: 'Comptes plateforme et rôles',
  Événements: 'Créer et suivre vos événements',
@@ -84,14 +86,16 @@ function SidebarNav({
  pathname,
  setMobileMenuOpen,
  collapsed,
+ fallbackTab = 'tenants',
 }: {
  sections: NavSection[];
  pathname: string;
  setMobileMenuOpen: (open: boolean) => void;
  collapsed: boolean;
+ fallbackTab?: string;
 }) {
  const searchParams = useSearchParams();
- const currentTab = searchParams.get('tab') || 'tenants';
+ const currentTab = searchParams.get('tab') || fallbackTab;
 
  return (
  <nav className={cn('space-y-4', collapsed && 'space-y-2.5')} aria-label="Navigation principale">
@@ -177,7 +181,7 @@ function SidebarNav({
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
- const { user, tenant, token, loading, logout, access, planFeatures, planQuota } = useAuth();
+ const { user, tenant, token, loading, logout, access, planFeatures, planQuota, supportSession } = useAuth();
  const { theme, toggleTheme } = useTheme();
  const router = useRouter();
  const pathname = usePathname();
@@ -294,10 +298,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
  const isLicenseExpired = tenant?.licenseExpiresAt && new Date(tenant.licenseExpiresAt) < new Date();
  const isLicenseInactive = tenant && !tenant.licenseActive;
- const isBlocked = !isClientAccount && user.role !== 'SUPER_ADMIN' && user.role !== 'COMMERCIAL' && (isLicenseInactive || isLicenseExpired);
+ const isBlocked = !supportSession && !isClientAccount && user.role !== 'SUPER_ADMIN' && user.role !== 'COMMERCIAL' && (isLicenseInactive || isLicenseExpired);
 
  if (isBlocked) {
- return <PWARestrictedScreen />;
+ return (
+ <>
+ <SupportSessionBanner />
+ <PWARestrictedScreen />
+ </>
+ );
  }
 
  const navSections: NavSection[] = user?.role === 'SUPER_ADMIN'
@@ -305,6 +314,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  {
  label: 'Plateforme',
  items: [
+ { name: 'Accueil', href: '/dashboard?tab=overview', tab: 'overview', tourId: 'nav-overview', icon: LayoutDashboard, description: 'File du jour : demandes, licences, factures' },
  { name: 'Organisations', href: '/dashboard?tab=tenants', tab: 'tenants', tourId: 'nav-tenants', icon: Building2 },
  { name: 'Utilisateurs', href: '/dashboard?tab=users', tab: 'users', tourId: 'nav-users', icon: Users },
  { name: 'Événements', href: '/dashboard?tab=events', tab: 'events', tourId: 'nav-events-admin', icon: Calendar },
@@ -429,6 +439,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  }
  >
  <TourProvider>
+ <SupportSessionBanner />
  <div className="min-h-screen flex flex-col md:flex-row bg-background text-foreground">
  {/* Overlay mobile */}
  {mobileMenuOpen && (
@@ -582,6 +593,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  pathname={pathname}
  setMobileMenuOpen={setMobileMenuOpen}
  collapsed={sidebarCollapsed}
+ fallbackTab={user.role === 'SUPER_ADMIN' ? 'overview' : 'tenants'}
  />
  </Suspense>
  </div>

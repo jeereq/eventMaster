@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { Loader2 } from 'lucide-react';
 import LegalAcceptanceModal from '@/components/LegalAcceptanceModal';
+import { useAuth } from '@/context/AuthContext';
 
 interface UserLegalStatus {
   termsAccepted: boolean;
@@ -13,12 +14,24 @@ interface UserLegalStatus {
 }
 
 export default function UserLegalGate({ children }: { children: React.ReactNode }) {
+  const { supportSession } = useAuth();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [legalStatus, setLegalStatus] = useState<UserLegalStatus | null>(null);
 
   useEffect(() => {
+    if (supportSession) {
+      setLoading(false);
+      setLegalStatus({
+        termsAccepted: true,
+        privacyAccepted: true,
+        requiresAcceptance: false,
+        isFirstAcceptance: false,
+      });
+      return;
+    }
+
     async function loadLegalStatus() {
       try {
         const data = await api.get('/auth/legal-status');
@@ -33,7 +46,7 @@ export default function UserLegalGate({ children }: { children: React.ReactNode 
     }
 
     loadLegalStatus();
-  }, []);
+  }, [supportSession]);
 
   const handleAccept = async (acceptTerms: boolean, acceptPrivacy: boolean) => {
     setSubmitting(true);
@@ -50,6 +63,10 @@ export default function UserLegalGate({ children }: { children: React.ReactNode 
       setSubmitting(false);
     }
   };
+
+  if (supportSession) {
+    return <>{children}</>;
+  }
 
   if (loading) {
     return (

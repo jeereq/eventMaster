@@ -649,6 +649,27 @@ model PushDeviceToken {
   @@index([userId])
 }
 
+/** Journal des actions Super Admin / Commercial plateforme (pas de FK : conserve les traces après suppression). */
+model AdminAuditLog {
+  id         String   @id @default(uuid())
+  actorId    String
+  actorEmail String
+  actorRole  String
+  action     String
+  targetType String
+  targetId   String?
+  tenantId   String?
+  summary    String
+  metadata   Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([tenantId])
+  @@index([actorId])
+  @@index([action])
+}
+
 /** Catalogue des forfaits / abonnements (source de vérité pour quotas, prix, features). */
 model SubscriptionPlan {
   id                  PlanType @id

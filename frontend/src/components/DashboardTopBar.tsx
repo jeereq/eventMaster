@@ -33,6 +33,7 @@ function useDashboardTitle(): { title: string; subtitle?: string } {
     if (pathname === '/dashboard' || pathname === '/dashboard/') {
       if (user?.role === 'SUPER_ADMIN' || user?.role === 'COMMERCIAL') {
         const titles: Record<string, string> = {
+          overview: 'Accueil opérationnel',
           tenants: 'Organisations',
           users: 'Utilisateurs',
           templates: 'Modèles globaux',
@@ -45,7 +46,7 @@ function useDashboardTitle(): { title: string; subtitle?: string } {
           'subscription-plans': 'Forfaits',
           invoices: 'Factures',
         };
-        const key = tab || 'tenants';
+        const key = tab || (user.role === 'SUPER_ADMIN' ? 'overview' : 'tenants');
         return {
           title: user.role === 'COMMERCIAL' ? 'Espace commercial' : 'Console Super Admin',
           subtitle: titles[key] || 'Pilotage',

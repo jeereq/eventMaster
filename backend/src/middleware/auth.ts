@@ -1,14 +1,35 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { prisma } from '../db';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'eventmaster-secret-key-12345';
+export const JWT_SECRET = process.env.JWT_SECRET || 'eventmaster-secret-key-12345';
+
+export interface AuthTokenPayload {
+  userId: string;
+  tenantId: string | null;
+  role: 'SUPER_ADMIN' | 'COMMERCIAL' | 'USER';
+  impersonatedBy?: string;
+}
 
 export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
     tenantId: string | null;
     role: 'SUPER_ADMIN' | 'COMMERCIAL' | 'USER';
+    impersonatedBy?: string;
+  };
+}
+
+export function signUserToken(payload: AuthTokenPayload, expiresIn: string = '24h') {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: expiresIn as SignOptions['expiresIn'] });
+}
+
+function userFromPayload(payload: AuthTokenPayload) {
+  return {
+    id: payload.userId,
+    tenantId: payload.tenantId,
+    role: payload.role,
+    impersonatedBy: payload.impersonatedBy || undefined,
   };
 }
 
@@ -19,16 +40,8 @@ export function optionalAuth(req: AuthenticatedRequest, _res: Response, next: Ne
   }
   const token = authHeader.split(' ')[1];
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as {
-      userId: string;
-      tenantId: string | null;
-      role: 'SUPER_ADMIN' | 'COMMERCIAL' | 'USER';
-    };
-    req.user = {
-      id: payload.userId,
-      tenantId: payload.tenantId,
-      role: payload.role,
-    };
+    const payload = jwt.verify(token, JWT_SECRET) as AuthTokenPayload;
+    req.user = userFromPayload(payload);
   } catch {
     /* ignore invalid token on public routes */
   }
@@ -44,12 +57,8 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
 
   const token = authHeader.split(' ')[1];
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as any;
-    req.user = {
-      id: payload.userId,
-      tenantId: payload.tenantId,
-      role: payload.role,
-    };
+    const payload = jwt.verify(token, JWT_SECRET) as AuthTokenPayload;
+    req.user = userFromPayload(payload);
     next();
   } catch (error) {
     return res.status(401).json({ error: 'Token invalide ou expiré.' });
@@ -75,8 +84,8 @@ export async function requireActiveLicense(req: AuthenticatedRequest, res: Respo
     return res.status(401).json({ error: 'Non authentifié.' });
   }
 
-  // SUPER_ADMIN et COMMERCIAL (sans organisation) contournent la vérification de licence
-  if (req.user.role === 'SUPER_ADMIN' || req.user.role === 'COMMERCIAL') {
+  // SUPER_ADMIN, COMMERCIAL (sans organisation) et session support contournent la licence
+  if (req.user.role === 'SUPER_ADMIN' || req.user.role === 'COMMERCIAL' || req.user.impersonatedBy) {
     return next();
   }
 

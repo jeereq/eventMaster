@@ -10,7 +10,7 @@ import {
  PlusCircle, AlertCircle, Award, CheckCircle, Shield,
  Building2, Activity, TrendingUp, Clock, Trash2, Edit2, Key,
  CalendarDays, Globe, Search, Filter, Check, X, FileText, Plus, Loader2, Copy, Eye,
- BarChart3, PieChart, ChevronLeft, ChevronRight, CheckSquare, Sparkles, MapPin, Download, MessageSquare, History, Briefcase, Wallet
+ BarChart3, PieChart, ChevronLeft, ChevronRight, CheckSquare, Sparkles, MapPin, Download, MessageSquare, History, Briefcase, Wallet, LogIn
 } from 'lucide-react';
 import GuestMessageTemplatesPanel from './GuestMessageTemplatesPanel';
 import { cn } from '@/lib/cn';
@@ -29,6 +29,7 @@ import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
 import { getTemplateElementSummary } from '@/lib/landingTemplateAdapter';
 import AdminDetailsModal from '@/components/admin/AdminDetailsModal';
+import AdminOpsHome from '@/components/admin/AdminOpsHome';
 
 function isPlatformStaff(role?: string) {
  return role === 'SUPER_ADMIN' || role === 'COMMERCIAL';
@@ -90,6 +91,7 @@ interface AdminStats {
  managerEmail: string;
  eventsCount: number;
  usersCount: number;
+ accountKind?: string;
  }>;
 }
 
@@ -172,11 +174,15 @@ const ANALYTICS_SECTIONS: Array<{ id: AnalyticsSection; label: string }> = [
 ];
 
 type AdminTabId =
- | 'tenants' | 'users' | 'templates' | 'message-templates' | 'events'
+ | 'overview' | 'tenants' | 'users' | 'templates' | 'message-templates' | 'events'
  | 'analytics' | 'guests' | 'settings' | 'subscription-requests'
  | 'subscription-plans' | 'invoices';
 
 const ADMIN_TAB_META: Record<AdminTabId, { title: string; description: string; tip?: string }> = {
+ overview: {
+ title: 'Accueil',
+ description: 'Ce qu’il faut traiter aujourd’hui : demandes, licences, factures et organisations récentes.',
+ },
  tenants: {
  title: 'Organisations',
  description: 'Comptes clients SaaS : licence, forfait, gérant et quotas.',
@@ -250,7 +256,7 @@ interface TenantSubscriptionHistoryEntry {
 }
 
 function DashboardPageContent() {
- const { user, tenant, access, planQuota } = useAuth();
+ const { user, tenant, access, planQuota, enterSupportSession } = useAuth();
  const viewPrefs = useViewPreferencesOptional();
  const widgets = viewPrefs?.prefs.widgets;
  const {
@@ -338,21 +344,23 @@ function DashboardPageContent() {
 
  // Super Admin specific states
  const [activeTab, setActiveTab] = useState<
- 'tenants' | 'users' | 'templates' | 'message-templates' | 'events' | 'analytics' | 'guests' | 'settings'
+ 'overview' | 'tenants' | 'users' | 'templates' | 'message-templates' | 'events' | 'analytics' | 'guests' | 'settings'
  | 'subscription-requests' | 'subscription-plans' | 'invoices'
  >('tenants');
 
  useEffect(() => {
- if (isPlatformStaff(user?.role) && tabParam) {
+ if (isPlatformStaff(user?.role) && (tabParam || user?.role === 'SUPER_ADMIN')) {
  const legacySubscriptions = tabParam === 'subscriptions' ? 'subscription-requests' : tabParam;
  const allowedTabs = user?.role === 'COMMERCIAL'
  ? ['tenants', 'subscription-requests', 'invoices']
  : [
- 'tenants', 'users', 'templates', 'message-templates', 'events', 'analytics', 'guests', 'settings',
+ 'overview', 'tenants', 'users', 'templates', 'message-templates', 'events', 'analytics', 'guests', 'settings',
  'subscription-requests', 'subscription-plans', 'invoices',
  ];
- if (allowedTabs.includes(legacySubscriptions)) {
+ if (legacySubscriptions && allowedTabs.includes(legacySubscriptions)) {
  setActiveTab(legacySubscriptions as typeof activeTab);
+ } else if (user?.role === 'SUPER_ADMIN' && !tabParam) {
+ setActiveTab('overview');
  }
  }
  }, [tabParam, user]);
@@ -492,6 +500,7 @@ function DashboardPageContent() {
  const [isCreateTenantModalOpen, setIsTenantModalOpen] = useState(false);
  const [tenantModalMode, setTenantModalMode] = useState<'create' | 'edit'>('create');
  const [selectedTenant, setSelectedTenant] = useState<AdminStats['tenants'][0] | null>(null);
+ const [openingWorkspaceId, setOpeningWorkspaceId] = useState<string | null>(null);
  const [modalTenantName, setTenantName] = useState('');
  const [modalPlan, setModalPlan] = useState<PlanId>('FREE');
  const [modalLicenseActive, setModalLicenseActive] = useState(true);
@@ -1425,6 +1434,17 @@ function DashboardPageContent() {
  }
  };
 
+ const handleOpenWorkspace = async (tenantId: string) => {
+ try {
+ setOpeningWorkspaceId(tenantId);
+ const payload = await api.post(`/admin/tenants/${tenantId}/impersonate`);
+ enterSupportSession(payload);
+ } catch (err: any) {
+ alert(err.message || 'Impossible d’ouvrir l’espace de cette organisation.');
+ setOpeningWorkspaceId(null);
+ }
+ };
+
  const orgQuota: QuotaSnapshot | null = React.useMemo(() => {
  if (isPlatformStaff(user?.role)) return null;
  if (billing) {
@@ -1548,7 +1568,7 @@ function DashboardPageContent() {
 
  {error && <Alert variant="error">{error}</Alert>}
 
- {adminData && (
+ {adminData && activeTab !== 'overview' && (
  <div className={`grid gap-3 ${isCommercialPlatform ? 'sm:grid-cols-2 xl:grid-cols-4' : 'sm:grid-cols-2 xl:grid-cols-4'}`}>
  <div className={statCardClass}>
  <div className="flex items-center justify-between">
@@ -1675,6 +1695,9 @@ function DashboardPageContent() {
  </div>
  )}
 
+ {isSuperAdmin && activeTab === 'overview' && <AdminOpsHome />}
+
+ {activeTab !== 'overview' && (
  <div className="bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden">
  <div className="border-b border-border bg-surface-muted/50 px-5 py-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
  <div className="min-w-0">
@@ -1953,6 +1976,18 @@ function DashboardPageContent() {
  )}
  {!isCommercialPlatform && (
  <>
+ <button
+ type="button"
+ onClick={(e) => {
+ e.stopPropagation();
+ void handleOpenWorkspace(t.id);
+ }}
+ disabled={openingWorkspaceId === t.id}
+ className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-md transition disabled:opacity-50"
+ title="Ouvrir l’espace"
+ >
+ {openingWorkspaceId === t.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
+ </button>
  <button
  type="button"
  onClick={() => handleOpenEditTenantModal(t)}
@@ -3717,6 +3752,7 @@ function DashboardPageContent() {
  )}
  </div>
  </div>
+ )}
 
  {/* Modal: Create or Edit Guest (Super Admin) */}
  {isGuestModalOpen && (
@@ -4366,6 +4402,12 @@ function DashboardPageContent() {
  planBadgeClass={planBadgeClass}
  tenantSubscriptionHistory={tenantSubscriptionHistory}
  loadingTenantHistory={loadingTenantHistory}
+ onOpenWorkspace={
+ detailsType === 'tenant' && !isCommercialPlatform && detailsData?.id
+ ? () => void handleOpenWorkspace(detailsData.id)
+ : undefined
+ }
+ openingWorkspace={Boolean(detailsData?.id && openingWorkspaceId === detailsData.id)}
  onEdit={
  detailsType === 'tenant'
  ? () => {

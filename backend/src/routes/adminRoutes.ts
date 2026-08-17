@@ -40,6 +40,12 @@ import {
 } from '../controllers/subscriptionController';
 import { getRevenueReport, exportRevenueReport } from '../controllers/revenueReportController';
 import { getInvoiceDetail, downloadInvoicePdf, sendInvoiceByEmail } from '../controllers/invoiceController';
+import {
+  getOpsOverview,
+  getAuditLogs,
+  getTenantOps,
+  impersonateTenant,
+} from '../controllers/adminOpsController';
 
 const router = Router();
 
@@ -62,6 +68,11 @@ router.use(requireRole(['SUPER_ADMIN']));
 
 router.get('/reports/revenue', getRevenueReport);
 router.get('/reports/revenue/export', exportRevenueReport);
+
+router.get('/ops-overview', getOpsOverview);
+router.get('/audit-logs', getAuditLogs);
+router.get('/tenants/:id/ops', getTenantOps);
+router.post('/tenants/:id/impersonate', impersonateTenant);
 
 router.put('/tenants/:id', updateTenantPlanOrLicense);
 router.delete('/tenants/:id', deleteTenant);

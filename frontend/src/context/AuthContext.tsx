@@ -30,6 +30,7 @@ interface User {
   phoneCountryCode?: string | null;
   role: 'SUPER_ADMIN' | 'COMMERCIAL' | 'USER';
   orgRole?: 'MANAGER' | 'PROTOCOL' | 'COMMERCIAL' | null;
+  impersonatedBy?: string | null;
 }
 
 interface Tenant {
@@ -91,6 +92,7 @@ interface AuthContextType {
   planQuota: PlanQuotaInfo | null;
   token: string | null;
   loading: boolean;
+  supportSession: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (
     email: string,
@@ -114,9 +116,31 @@ interface AuthContextType {
   refreshProfile: () => Promise<void>;
   updateUserAndTenant: (user: User, tenant: Tenant | null) => void;
   updateBranding: (payload: TenantBranding & { reset?: boolean }) => Promise<any>;
+  enterSupportSession: (payload: SupportSessionPayload) => void;
+  exitSupportSession: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const SUPPORT_BACKUP_KEY = 'em-support-backup';
+
+interface SupportBackup {
+  token: string;
+  user: User;
+  tenant: Tenant | null;
+  access: OrgAccess | null;
+}
+
+export interface SupportSessionPayload {
+  token: string;
+  user: User;
+  tenant: Tenant | null;
+  access?: OrgAccess | null;
+  support?: {
+    impersonatedBy?: string;
+    tenantName?: string;
+  };
+}
 
 function persistAccess(access: OrgAccess | null) {
   if (access) {
@@ -126,7 +150,34 @@ function persistAccess(access: OrgAccess | null) {
   }
 }
 
+function persistSession(payload: {
+  token: string;
+  user: User;
+  tenant: Tenant | null;
+  access: OrgAccess | null;
+}) {
+  localStorage.setItem('token', payload.token);
+  localStorage.setItem('user', JSON.stringify(payload.user));
+  if (payload.tenant) {
+    localStorage.setItem('tenant', JSON.stringify(payload.tenant));
+  } else {
+    localStorage.removeItem('tenant');
+  }
+  persistAccess(payload.access);
+}
+
+function readSupportBackup(): SupportBackup | null {
+  try {
+    const raw = localStorage.getItem(SUPPORT_BACKUP_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as SupportBackup;
+  } catch {
+    return null;
+  }
+}
+
 function postAuthPath(userRole?: string, access?: OrgAccess | null) {
+  if (userRole === 'SUPER_ADMIN') return '/dashboard?tab=overview';
   if (userRole === 'COMMERCIAL') return '/dashboard?tab=tenants';
   if (access?.level === 'commercial') return '/dashboard/org-commercial';
   if (access?.isProtocolOnly) return '/dashboard/events?mode=protocol';
@@ -142,6 +193,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [planQuota, setPlanQuota] = useState<PlanQuotaInfo | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [supportSession, setSupportSession] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -155,12 +207,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(JSON.parse(savedUser));
       if (savedTenant) setTenant(JSON.parse(savedTenant));
       if (savedAccess) setAccess(JSON.parse(savedAccess));
+      setSupportSession(Boolean(readSupportBackup()) || Boolean(JSON.parse(savedUser)?.impersonatedBy));
 
       api.get('/auth/profile')
         .then((data) => {
           if (data.user) {
             setUser(data.user);
             localStorage.setItem('user', JSON.stringify(data.user));
+            if (data.user.impersonatedBy) setSupportSession(true);
           }
           if (data.tenant) {
             setTenant(data.tenant);
@@ -194,6 +248,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(data.user);
       setTenant(data.tenant ?? null);
       setAccess(data.access ?? null);
+      setSupportSession(false);
+      localStorage.removeItem(SUPPORT_BACKUP_KEY);
       setLoading(false);
 
       router.push(postAuthPath(data.user?.role, data.access ?? null));
@@ -266,6 +322,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(data.user);
       setTenant(data.tenant ?? null);
       setAccess(data.access ?? null);
+      setSupportSession(false);
+      localStorage.removeItem(SUPPORT_BACKUP_KEY);
       setLoading(false);
       if (data.user?.role === 'COMMERCIAL') {
         router.push('/dashboard?tab=tenants');
@@ -300,12 +358,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('user');
     localStorage.removeItem('tenant');
     localStorage.removeItem('access');
+    localStorage.removeItem(SUPPORT_BACKUP_KEY);
     setToken(null);
     setUser(null);
     setTenant(null);
     setAccess(null);
     setPlanFeatures(null);
     setPlanQuota(null);
+    setSupportSession(false);
     router.push('/login');
   };
 
@@ -422,10 +482,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const enterSupportSession = (payload: SupportSessionPayload) => {
+    if (typeof window === 'undefined') return;
+    if (!readSupportBackup()) {
+      const currentToken = localStorage.getItem('token');
+      const currentUser = localStorage.getItem('user');
+      if (currentToken && currentUser) {
+        const backup: SupportBackup = {
+          token: currentToken,
+          user: JSON.parse(currentUser),
+          tenant: localStorage.getItem('tenant') ? JSON.parse(localStorage.getItem('tenant') as string) : null,
+          access: localStorage.getItem('access') ? JSON.parse(localStorage.getItem('access') as string) : null,
+        };
+        localStorage.setItem(SUPPORT_BACKUP_KEY, JSON.stringify(backup));
+      }
+    }
+    const nextUser: User = {
+      ...payload.user,
+      impersonatedBy: payload.user.impersonatedBy || payload.support?.impersonatedBy || user?.id || null,
+    };
+    persistSession({
+      token: payload.token,
+      user: nextUser,
+      tenant: payload.tenant,
+      access: payload.access ?? null,
+    });
+    window.location.assign('/dashboard');
+  };
+
+  const exitSupportSession = () => {
+    if (typeof window === 'undefined') return;
+    const backup = readSupportBackup();
+    localStorage.removeItem(SUPPORT_BACKUP_KEY);
+    if (!backup?.token) {
+      logout();
+      return;
+    }
+    persistSession(backup);
+    window.location.assign('/dashboard?tab=overview');
+  };
+
   return (
     <AuthContext.Provider value={{
-      user, tenant, access, planFeatures, planQuota, token, loading, login, register, verifyOtp, resendOtp,
+      user, tenant, access, planFeatures, planQuota, token, loading, supportSession, login, register, verifyOtp, resendOtp,
       logout, refreshBilling, refreshPlanFeatures, refreshProfile, updateUserAndTenant, updateBranding,
+      enterSupportSession, exitSupportSession,
     }}>
       {children}
     </AuthContext.Provider>

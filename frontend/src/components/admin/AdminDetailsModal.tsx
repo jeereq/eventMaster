@@ -36,6 +36,8 @@ interface AdminDetailsModalProps {
   data: any;
   onClose: () => void;
   onEdit?: () => void;
+  onOpenWorkspace?: () => void;
+  openingWorkspace?: boolean;
   planBadgeClass: (plan: string) => string;
   tenantSubscriptionHistory?: TenantSubscriptionHistoryEntry[];
   loadingTenantHistory?: boolean;
@@ -184,6 +186,8 @@ export default function AdminDetailsModal({
   data,
   onClose,
   onEdit,
+  onOpenWorkspace,
+  openingWorkspace = false,
   planBadgeClass,
   tenantSubscriptionHistory = [],
   loadingTenantHistory = false,
@@ -212,6 +216,11 @@ export default function AdminDetailsModal({
           {canEdit && (
             <Button type="button" size="sm" onClick={onEdit}>
               Modifier
+            </Button>
+          )}
+          {type === 'tenant' && onOpenWorkspace && (
+            <Button type="button" size="sm" loading={openingWorkspace} onClick={onOpenWorkspace}>
+              Ouvrir l’espace
             </Button>
           )}
         </div>
