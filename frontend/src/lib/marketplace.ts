@@ -132,6 +132,25 @@ export type MarketplaceBookingStatus =
 export const MARKETPLACE_COMMISSION_RATE = 0.08;
 export const MARKETPLACE_DEPOSIT_RATE = 0.3;
 export const MARKETPLACE_MAX_PHOTOS = 24;
+export const MARKETPLACE_MAX_VIDEOS = 8;
+export const MARKETPLACE_MAX_VIDEO_BYTES = 80 * 1024 * 1024;
+
+export function isVideoUrl(url: string): boolean {
+  if (!url) return false;
+  if (/\/video\/upload\//i.test(url)) return true;
+  return /\.(mp4|webm|mov|m4v|qt)(\?|#|$)/i.test(url);
+}
+
+export function mediaPosterUrl(url: string): string {
+  if (!isVideoUrl(url)) return url;
+  if (/\/video\/upload\//i.test(url)) {
+    const withTransform = /\/video\/upload\/[^/]*so_/i.test(url)
+      ? url
+      : url.replace('/video/upload/', '/video/upload/so_1,f_jpg/');
+    return withTransform.replace(/\.(mp4|webm|mov|m4v|qt)(\?.*)?$/i, '.jpg$2');
+  }
+  return url;
+}
 
 export const BOOKING_STATUS_LABELS: Record<MarketplaceBookingStatus, string> = {
   REQUESTED: 'Demande',

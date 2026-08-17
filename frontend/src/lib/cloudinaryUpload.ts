@@ -13,6 +13,19 @@ export async function uploadImageFile(file: File): Promise<UploadedImage> {
   return api.post('/uploads/image', formData);
 }
 
+export async function uploadVideoFile(file: File): Promise<UploadedImage> {
+  const formData = new FormData();
+  formData.append('file', file);
+  return api.post('/uploads/video', formData);
+}
+
+export async function uploadMarketplaceMedia(file: File): Promise<UploadedImage> {
+  if (file.type.startsWith('video/') || /\.(mp4|webm|mov|m4v)$/i.test(file.name)) {
+    return uploadVideoFile(file);
+  }
+  return uploadImageFile(file);
+}
+
 export async function uploadDataUrlImage(dataUrl: string): Promise<UploadedImage> {
   return api.post('/uploads/image', { dataUrl });
 }
