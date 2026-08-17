@@ -252,26 +252,30 @@ export function CatalogueGeoFields({
           onChange={(id) => set({ city: id, commune: '', neighborhood: '', nearPlace: '' })}
         />
       </CatalogueFilterField>
-      <CatalogueFilterField label="Commune">
-        <CatalogueChoicePills
-          options={communesForCity(value.city).map((item) => ({ id: item.name, label: item.name }))}
-          value={value.commune}
-          onChange={(id) => set({ commune: id, neighborhood: '', nearPlace: value.proximity === 'near' ? id : value.nearPlace })}
-        />
-        {!normalizeRdcCity(value.city) ? (
-          <p className="text-[11px] text-muted mt-1">Choisissez d’abord Kinshasa ou Lubumbashi.</p>
-        ) : null}
-      </CatalogueFilterField>
-      <CatalogueFilterField label="Quartier">
-        <CatalogueChoicePills
-          options={neighborhoodsFor(value.city, value.commune).map((name) => ({ id: name, label: name }))}
-          value={value.neighborhood}
-          onChange={(id) => set({ neighborhood: id })}
-        />
-        {normalizeRdcCity(value.city) && !value.commune ? (
-          <p className="text-[11px] text-muted mt-1">Choisissez une commune pour voir les quartiers.</p>
-        ) : null}
-      </CatalogueFilterField>
+      {value.proximity !== 'near' ? (
+        <>
+          <CatalogueFilterField label="Commune">
+            <CatalogueChoicePills
+              options={communesForCity(value.city).map((item) => ({ id: item.name, label: item.name }))}
+              value={value.commune}
+              onChange={(id) => set({ commune: id, neighborhood: '', nearPlace: '' })}
+            />
+            {!normalizeRdcCity(value.city) ? (
+              <p className="text-[11px] text-muted mt-1">Choisissez d’abord Kinshasa ou Lubumbashi.</p>
+            ) : null}
+          </CatalogueFilterField>
+          <CatalogueFilterField label="Quartier">
+            <CatalogueChoicePills
+              options={neighborhoodsFor(value.city, value.commune).map((name) => ({ id: name, label: name }))}
+              value={value.neighborhood}
+              onChange={(id) => set({ neighborhood: id, nearPlace: '' })}
+            />
+            {normalizeRdcCity(value.city) && !value.commune ? (
+              <p className="text-[11px] text-muted mt-1">Choisissez une commune pour voir les quartiers.</p>
+            ) : null}
+          </CatalogueFilterField>
+        </>
+      ) : null}
       <CatalogueFilterField label="Avenue / rue" hint="Filtre le texte d’adresse (ex. avenue de la Libération).">
         <Input
           value={value.street}
@@ -299,7 +303,7 @@ export function CatalogueGeoFields({
       </CatalogueFilterField>
       <CatalogueFilterField
         label="Proximité"
-        hint="Les résultats sont ceux dont le GPS est dans le rayon choisi, autour de vous ou d’un lieu."
+        hint="Autour de vous, ou autour d’une commune / un quartier de Kinshasa ou Lubumbashi."
       >
         <CatalogueChoicePills
           options={[
@@ -308,7 +312,12 @@ export function CatalogueGeoFields({
             { id: 'near', label: 'Près d’un lieu' },
           ]}
           value={value.proximity}
-          onChange={(id) => set({ proximity: (id as CatalogueProximity) || '', lat: null, lng: null })}
+          onChange={(id) => set({
+            proximity: (id as CatalogueProximity) || '',
+            lat: null,
+            lng: null,
+            nearPlace: '',
+          })}
         />
         {value.proximity === 'around' ? (
           <p className="text-[11px] text-muted mt-2">
@@ -316,12 +325,36 @@ export function CatalogueGeoFields({
           </p>
         ) : null}
         {value.proximity === 'near' ? (
-          <Input
-            className="mt-2"
-            value={value.nearPlace}
-            onChange={(e) => set({ nearPlace: e.target.value })}
-            placeholder="Commune, quartier ou avenue…"
-          />
+          <div className="mt-3 space-y-3">
+            <p className="text-[11px] text-muted">
+              Choisissez uniquement une commune, puis un quartier, dans la liste. Le rayon part du centre de la commune.
+            </p>
+            {!normalizeRdcCity(value.city) ? (
+              <p className="text-xs text-rose-600 font-medium">Choisissez d’abord Kinshasa ou Lubumbashi en haut.</p>
+            ) : (
+              <>
+                <div>
+                  <span className="block text-[11px] text-muted mb-1.5">Commune</span>
+                  <CatalogueChoicePills
+                    options={communesForCity(value.city).map((item) => ({ id: item.name, label: item.name }))}
+                    value={value.commune}
+                    onChange={(id) => set({ commune: id, neighborhood: '', nearPlace: '', lat: null, lng: null })}
+                  />
+                </div>
+                <div>
+                  <span className="block text-[11px] text-muted mb-1.5">Quartier</span>
+                  <CatalogueChoicePills
+                    options={neighborhoodsFor(value.city, value.commune).map((name) => ({ id: name, label: name }))}
+                    value={value.neighborhood}
+                    onChange={(id) => set({ neighborhood: id, nearPlace: '', lat: null, lng: null })}
+                  />
+                  {!value.commune ? (
+                    <p className="text-[11px] text-muted mt-1">Choisissez une commune pour voir les quartiers.</p>
+                  ) : null}
+                </div>
+              </>
+            )}
+          </div>
         ) : null}
         {value.proximity ? (
           <div className="mt-3 space-y-2">

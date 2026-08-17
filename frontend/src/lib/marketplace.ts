@@ -325,8 +325,10 @@ export function missingPublishLocation(draft: {
 
 export function appendCatalogueGeoParams(params: URLSearchParams, filters: CatalogueGeoState) {
   if (filters.city.trim()) params.set('city', filters.city.trim());
-  if (filters.commune.trim()) params.set('commune', filters.commune.trim());
-  if (filters.neighborhood.trim()) params.set('neighborhood', filters.neighborhood.trim());
+  if (filters.proximity !== 'near') {
+    if (filters.commune.trim()) params.set('commune', filters.commune.trim());
+    if (filters.neighborhood.trim()) params.set('neighborhood', filters.neighborhood.trim());
+  }
   if (filters.street.trim()) params.set('street', filters.street.trim());
   if (filters.minPrice.trim()) params.set('minPrice', filters.minPrice.trim());
   if (filters.maxPrice.trim()) params.set('maxPrice', filters.maxPrice.trim());
@@ -343,8 +345,10 @@ export function catalogueGeoChips(
 ): Array<{ id: string; label: string; value: string }> {
   const next: Array<{ id: string; label: string; value: string }> = [];
   if (filters.city.trim()) next.push({ id: 'city', label: 'Ville', value: filters.city.trim() });
-  if (filters.commune.trim()) next.push({ id: 'commune', label: 'Commune', value: filters.commune.trim() });
-  if (filters.neighborhood.trim()) next.push({ id: 'neighborhood', label: 'Quartier', value: filters.neighborhood.trim() });
+  if (filters.proximity !== 'near') {
+    if (filters.commune.trim()) next.push({ id: 'commune', label: 'Commune', value: filters.commune.trim() });
+    if (filters.neighborhood.trim()) next.push({ id: 'neighborhood', label: 'Quartier', value: filters.neighborhood.trim() });
+  }
   if (filters.street.trim()) next.push({ id: 'street', label: 'Avenue', value: filters.street.trim() });
   if (filters.minPrice.trim()) next.push({ id: 'minPrice', label: 'Prix min', value: `${filters.minPrice.trim()} FC` });
   if (filters.maxPrice.trim()) next.push({ id: 'maxPrice', label: 'Prix max', value: `${filters.maxPrice.trim()} FC` });
@@ -354,7 +358,7 @@ export function catalogueGeoChips(
     next.push({
       id: 'proximity',
       label: 'Près de',
-      value: `${filters.nearPlace.trim() || filters.commune.trim() || 'un lieu'} · ${filters.radiusKm} km`,
+      value: [filters.neighborhood.trim(), filters.commune.trim(), `${filters.radiusKm} km`].filter(Boolean).join(' · '),
     });
   }
   return [...next, ...extra];
@@ -403,24 +407,26 @@ export async function resolveCatalogueGeo(filters: CatalogueGeoState): Promise<C
     return { ...filters, city: selected || here.name, lat: pos.lat, lng: pos.lng, radiusKm };
   }
   if (filters.proximity === 'near') {
-    const q = filters.nearPlace.trim() || filters.neighborhood.trim() || filters.commune.trim();
-    if (!q) {
-      throw new Error('Indiquez une commune, un quartier ou une avenue pour chercher à proximité.');
-    }
-    const { searchPlaces } = await import('@/lib/leafletLoader');
-    const { findRdcCity, nominatimViewbox, pointInBounds } = await import('@/lib/rdcCities');
+    const { findRdcCity, findRdcCommune, neighborhoodsFor } = await import('@/lib/rdcCities');
     const cityMeta = findRdcCity(filters.city);
     if (!cityMeta) {
-      throw new Error('Choisissez Kinshasa ou Lubumbashi pour chercher à proximité.');
+      throw new Error('Choisissez Kinshasa ou Lubumbashi pour chercher près d’un lieu.');
     }
-    const [place] = await searchPlaces(`${q}, ${cityMeta.name}, RD Congo`, 1, {
-      viewbox: nominatimViewbox(cityMeta.bounds),
-      bounded: true,
-    });
-    if (!place || !pointInBounds(place.lat, place.lng, cityMeta.bounds)) {
-      throw new Error('Lieu introuvable dans Kinshasa ou Lubumbashi. Précisez la commune ou l’avenue.');
+    const commune = findRdcCommune(cityMeta.name, filters.commune);
+    if (!commune) {
+      throw new Error('Choisissez une commune dans la liste.');
     }
-    return { ...filters, lat: place.lat, lng: place.lng, radiusKm };
+    const quartier = String(filters.neighborhood || '').trim();
+    if (quartier && !neighborhoodsFor(cityMeta.name, commune.name).includes(quartier)) {
+      throw new Error('Choisissez un quartier dans la liste de cette commune.');
+    }
+    return {
+      ...filters,
+      nearPlace: '',
+      lat: commune.center.lat,
+      lng: commune.center.lng,
+      radiusKm,
+    };
   }
   return { ...filters, lat: null, lng: null, radiusKm };
 }
