@@ -3,7 +3,7 @@ export type BillingCycle = 'monthly' | 'annual';
 /** Réduction facturation annuelle (équivalent mensuel affiché). */
 export const ANNUAL_DISCOUNT_PERCENT = 10;
 
-export type PlanAudience = 'B2B' | 'B2C';
+export type PlanAudience = 'B2B' | 'B2C' | 'VENUE' | 'SERVICE' | 'CATALOG';
 
 export type PlanId =
   | 'FREE'
@@ -13,7 +13,10 @@ export type PlanId =
   | 'PREMIUM_2'
   | 'ENTERPRISE_1'
   | 'ENTERPRISE_2'
-  | 'ENTERPRISE_3';
+  | 'ENTERPRISE_3'
+  | 'VENUE'
+  | 'SERVICE'
+  | 'CATALOG';
 
 export const PLAN_IDS: PlanId[] = [
   'FREE',
@@ -24,15 +27,38 @@ export const PLAN_IDS: PlanId[] = [
   'ENTERPRISE_1',
   'ENTERPRISE_2',
   'ENTERPRISE_3',
+  'VENUE',
+  'SERVICE',
+  'CATALOG',
 ];
 
 export const PAID_PLAN_IDS: PlanId[] = PLAN_IDS.filter((id) => id !== 'FREE');
 
 export const B2C_PLAN_IDS: PlanId[] = ['PERSONAL'];
-export const B2B_PLAN_IDS: PlanId[] = PLAN_IDS.filter((id) => id !== 'PERSONAL');
+export const VENDOR_PLAN_IDS: PlanId[] = ['VENUE', 'SERVICE', 'CATALOG'];
+export const B2B_PLAN_IDS: PlanId[] = PLAN_IDS.filter(
+  (id) => id !== 'PERSONAL' && !VENDOR_PLAN_IDS.includes(id),
+);
 
 export function planAudience(id: PlanId): PlanAudience {
-  return id === 'PERSONAL' ? 'B2C' : 'B2B';
+  if (id === 'PERSONAL') return 'B2C';
+  if (id === 'VENUE' || id === 'SERVICE' || id === 'CATALOG') return id;
+  return 'B2B';
+}
+
+export function planAudienceLabel(audience: PlanAudience | string): string {
+  switch (audience) {
+    case 'B2C':
+      return 'B2C';
+    case 'VENUE':
+      return 'Salle';
+    case 'SERVICE':
+      return 'Presta';
+    case 'CATALOG':
+      return 'Catalogue';
+    default:
+      return 'B2B';
+  }
 }
 
 export const PREMIUM_PLAN_IDS: PlanId[] = ['PREMIUM_1', 'PREMIUM_2'];
@@ -76,7 +102,7 @@ export interface LandingPlan {
   cta: string;
   ctaHref: string;
   ctaVariant: 'outline' | 'primary' | 'contact';
-  tier: 'essentials' | 'personal' | 'business' | 'premium' | 'enterprise';
+  tier: 'essentials' | 'personal' | 'business' | 'premium' | 'enterprise' | 'venue' | 'service' | 'catalog';
   audience: PlanAudience;
   highlighted?: boolean;
   badge?: string;
@@ -87,7 +113,7 @@ export const LANDING_PLANS: LandingPlan[] = [
   {
     id: 'FREE',
     ms365Name: 'Essentials',
-    tagline: 'Découverte B2B : tester EventMaster pour une organisation.',
+    tagline: 'Découverte : tester EventMaster (organisation ou 1 salle / 1 prestation).',
     monthlyPriceFc: 0,
     monthlyNote: 'Gratuit, sans carte bancaire',
     cta: 'Commencer gratuitement',
@@ -95,7 +121,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     ctaVariant: 'outline',
     tier: 'essentials',
     audience: 'B2B',
-    highlights: ['3 événements · 50 invités', 'RSVP & portail invité', 'Modèles standards inclus'],
+    highlights: ['3 événements · 50 invités', 'RSVP & portail invité', '1 salle simple · 1 prestation'],
   },
   {
     id: 'PERSONAL',
@@ -192,10 +218,73 @@ export const LANDING_PLANS: LandingPlan[] = [
     badge: 'Sur-mesure',
     highlights: ['Quotas illimités', 'Multi-agences & API', 'SLA 24/7 · account manager'],
   },
+  {
+    id: 'VENUE',
+    ms365Name: 'Salle',
+    tagline: 'Gestionnaire de salles : jusqu’à 5 lieux, éditeur 2D complet et protocole QR.',
+    monthlyPriceFc: 25000,
+    monthlyNote: 'par gestionnaire de salles / mois',
+    cta: 'Choisir Salle',
+    ctaHref: '/register?kind=VENDOR',
+    ctaVariant: 'primary',
+    tier: 'venue',
+    audience: 'VENUE',
+    highlighted: true,
+    badge: 'Salles',
+    highlights: ['5 salles · éditeur 2D complet', 'Banquet, tente, custom', 'Protocole QR sur place'],
+  },
+  {
+    id: 'SERVICE',
+    ms365Name: 'Prestataire',
+    tagline: 'Jusqu’à 5 fiches services, photos / vidéos, rayon et calendrier de disponibilité.',
+    monthlyPriceFc: 18000,
+    monthlyNote: 'par prestataire / mois',
+    cta: 'Choisir Prestataire',
+    ctaHref: '/register?kind=VENDOR',
+    ctaVariant: 'primary',
+    tier: 'service',
+    audience: 'SERVICE',
+    badge: 'Prestas',
+    highlights: ['5 prestations publiées', 'Rayon d’intervention & carte', 'Demandes et réservations'],
+  },
+  {
+    id: 'CATALOG',
+    ms365Name: 'Salle & presta',
+    tagline: 'Les deux : 5 salles (éditeur complet) et 5 prestations sur le même compte.',
+    monthlyPriceFc: 35000,
+    monthlyNote: 'par offre mixte / mois',
+    cta: 'Choisir Salle & presta',
+    ctaHref: '/register?kind=BOTH',
+    ctaVariant: 'primary',
+    tier: 'catalog',
+    audience: 'CATALOG',
+    badge: 'Les deux',
+    highlights: ['5 salles + 5 prestations', 'Éditeur 2D complet · QR', 'Idéal lieux + service sur place'],
+  },
 ];
 
+type VendorPlanId = 'VENUE' | 'SERVICE' | 'CATALOG';
+
+function fillVendorPlans(
+  rows: Array<{
+    category: string;
+    label: string;
+    values: Partial<Record<PlanId, string | boolean>>;
+  }>,
+): PlanFeatureRow[] {
+  const vendorFallback: Record<VendorPlanId, string | boolean> = {
+    VENUE: false,
+    SERVICE: false,
+    CATALOG: false,
+  };
+  return rows.map((row) => ({
+    ...row,
+    values: { ...vendorFallback, ...row.values } as Record<PlanId, string | boolean>,
+  }));
+}
+
 /** Tableau comparatif — proposition fonctionnalités calibrée sur les prix. */
-export const FEATURE_COMPARISON: PlanFeatureRow[] = [
+export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
   {
     category: 'Événements',
     label: 'Événements actifs',
@@ -208,6 +297,9 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
       ENTERPRISE_1: '40',
       ENTERPRISE_2: '70',
       ENTERPRISE_3: 'Illimité',
+      VENUE: '3',
+      SERVICE: '—',
+      CATALOG: '3',
     },
   },
   {
@@ -222,6 +314,9 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
       ENTERPRISE_1: '3 500',
       ENTERPRISE_2: '5 000',
       ENTERPRISE_3: 'Illimité',
+      VENUE: '100',
+      SERVICE: '—',
+      CATALOG: '100',
     },
   },
   {
@@ -236,6 +331,9 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
       ENTERPRISE_1: '18',
       ENTERPRISE_2: '30',
       ENTERPRISE_3: 'Illimité',
+      VENUE: '2',
+      SERVICE: '—',
+      CATALOG: '2',
     },
   },
   {
@@ -292,6 +390,26 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
       ENTERPRISE_1: '25',
       ENTERPRISE_2: '50',
       ENTERPRISE_3: 'Illimité',
+      VENUE: '5',
+      SERVICE: '—',
+      CATALOG: '5',
+    },
+  },
+  {
+    category: 'Salles & plans',
+    label: 'Prestations catalogue',
+    values: {
+      FREE: '1',
+      PERSONAL: '2',
+      STANDARD: '3',
+      PREMIUM_1: '5',
+      PREMIUM_2: '8',
+      ENTERPRISE_1: '15',
+      ENTERPRISE_2: '30',
+      ENTERPRISE_3: 'Illimité',
+      VENUE: '1',
+      SERVICE: '5',
+      CATALOG: '5',
     },
   },
   {
@@ -306,6 +424,9 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
       ENTERPRISE_1: 'Complet',
       ENTERPRISE_2: 'Complet',
       ENTERPRISE_3: 'Complet',
+      VENUE: 'Complet',
+      SERVICE: '—',
+      CATALOG: 'Complet',
     },
   },
   {
@@ -320,6 +441,9 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
       ENTERPRISE_1: true,
       ENTERPRISE_2: true,
       ENTERPRISE_3: true,
+      VENUE: true,
+      SERVICE: false,
+      CATALOG: true,
     },
   },
   {
@@ -334,6 +458,9 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
       ENTERPRISE_1: '18',
       ENTERPRISE_2: '30',
       ENTERPRISE_3: 'Illimité',
+      VENUE: '3',
+      SERVICE: '2',
+      CATALOG: '3',
     },
   },
   {
@@ -348,6 +475,9 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
       ENTERPRISE_1: true,
       ENTERPRISE_2: true,
       ENTERPRISE_3: true,
+      VENUE: true,
+      SERVICE: false,
+      CATALOG: true,
     },
   },
   {
@@ -362,6 +492,9 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
       ENTERPRISE_1: true,
       ENTERPRISE_2: true,
       ENTERPRISE_3: true,
+      VENUE: true,
+      SERVICE: false,
+      CATALOG: true,
     },
   },
   {
@@ -376,6 +509,9 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
       ENTERPRISE_1: true,
       ENTERPRISE_2: true,
       ENTERPRISE_3: true,
+      VENUE: true,
+      SERVICE: false,
+      CATALOG: true,
     },
   },
   {
@@ -446,6 +582,9 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
       ENTERPRISE_1: true,
       ENTERPRISE_2: true,
       ENTERPRISE_3: true,
+      VENUE: true,
+      SERVICE: false,
+      CATALOG: true,
     },
   },
   {
@@ -474,6 +613,9 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
       ENTERPRISE_1: true,
       ENTERPRISE_2: true,
       ENTERPRISE_3: true,
+      VENUE: true,
+      SERVICE: true,
+      CATALOG: true,
     },
   },
   {
@@ -516,9 +658,12 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = [
       ENTERPRISE_1: 'Prioritaire',
       ENTERPRISE_2: 'Dédié',
       ENTERPRISE_3: 'SLA 24/7',
+      VENUE: 'E-mail',
+      SERVICE: 'E-mail',
+      CATALOG: 'E-mail',
     },
   },
-];
+]);
 
 export const ROLE_HIGHLIGHTS = [
   {
@@ -532,9 +677,14 @@ export const ROLE_HIGHLIGHTS = [
     icon: 'scan',
   },
   {
-    title: 'Manager salle / événement',
-    description: 'Périmètre restreint à une salle ou un événement précis.',
+    title: 'Gestionnaire de salle',
+    description: 'Publie ses lieux dans le catalogue, gère les réservations et le plan 2D. Forfait Salle ou Salle & presta — distinct du manager salle employé d’une organisation.',
     icon: 'building',
+  },
+  {
+    title: 'Prestataire',
+    description: 'Publie ses prestations (traiteur, photo, DJ…) avec rayon d’intervention. Forfait Prestataire ou Salle & presta.',
+    icon: 'briefcase',
   },
   {
     title: 'Commercial',
@@ -615,6 +765,9 @@ export function getPlanCapabilityBadges(planId: PlanId): PlanCapabilityBadge[] {
   if (commercial) badges.push({ id: 'commercial', label: 'Réseau commercial', tone: 'amber' });
   if (planId === 'FREE') badges.push({ id: 'starter', label: 'Gratuit', tone: 'emerald' });
   if (planId === 'PERSONAL') badges.push({ id: 'b2c', label: 'Particulier B2C', tone: 'amber' });
+  if (planId === 'VENUE') badges.push({ id: 'venue', label: 'Gestionnaire de salles', tone: 'emerald' });
+  if (planId === 'SERVICE') badges.push({ id: 'service', label: 'Prestataire', tone: 'indigo' });
+  if (planId === 'CATALOG') badges.push({ id: 'catalog', label: 'Salles & prestas', tone: 'violet' });
   if (planId.startsWith('ENTERPRISE_3')) badges.push({ id: 'unlimited', label: 'Illimité', tone: 'rose' });
 
   return badges;
@@ -643,5 +796,11 @@ export function planTierLabel(tier: LandingPlan['tier']): string {
       return 'Business Premium';
     case 'enterprise':
       return 'Business Enterprise';
+    case 'venue':
+      return 'Salles';
+    case 'service':
+      return 'Prestataire';
+    case 'catalog':
+      return 'Catalogue';
   }
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Calendar, Users, Mail, LayoutGrid, UserCog } from 'lucide-react';
+import { Calendar, Users, Mail, LayoutGrid, UserCog, Store } from 'lucide-react';
 import {
  formatQuotaMax,
  formatQuotaRemaining,
@@ -14,6 +14,7 @@ const ICONS = {
  guests: Users,
  templates: Mail,
  rooms: LayoutGrid,
+ services: Store,
  orgManagers: UserCog,
 } as const;
 
@@ -23,6 +24,7 @@ const STYLES = {
  guests: { icon: 'bg-primary/10 text-primary dark:text-primary', bar: 'bg-primary/100' },
  templates: { icon: 'bg-amber-500/10 text-amber-600 dark:text-amber-400', bar: 'bg-amber-500' },
  rooms: { icon: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400', bar: 'bg-emerald-500' },
+ services: { icon: 'bg-violet-500/10 text-violet-600 dark:text-violet-400', bar: 'bg-violet-500' },
  orgManagers: { icon: 'bg-sky-500/10 text-sky-600 dark:text-sky-400', bar: 'bg-sky-500' },
 } as const;
 
@@ -45,6 +47,7 @@ export default function QuotaUsagePanel({ quota, className = '' }: QuotaUsagePan
  { key: 'guests', label: 'Invités', used: quota.usage.guests, max: quota.limits.maxGuests, guests: true },
  { key: 'templates', label: 'Modèles', used: quota.usage.templates, max: quota.limits.maxTemplates },
  { key: 'rooms', label: 'Salles', used: quota.usage.rooms ?? 0, max: quota.limits.maxRooms ?? 0 },
+ { key: 'services', label: 'Prestations', used: quota.usage.services ?? 0, max: quota.limits.maxServices ?? 0 },
  { key: 'orgManagers', label: 'Managers', used: quota.usage.orgManagers ?? 0, max: quota.limits.maxOrgManagers ?? 0 },
  ];
 
@@ -95,6 +98,7 @@ interface PlanQuotaLimitsProps {
  maxGuests?: number;
  maxTemplates?: number;
  maxRooms?: number;
+ maxServices?: number;
  maxOrgManagers?: number;
  compact?: boolean;
 }
@@ -104,6 +108,7 @@ export function PlanQuotaLimits({
  maxGuests = 0,
  maxTemplates = 0,
  maxRooms = 0,
+ maxServices = 0,
  maxOrgManagers = 0,
  compact = false,
 }: PlanQuotaLimitsProps) {
@@ -112,6 +117,7 @@ export function PlanQuotaLimits({
  { label: 'Modèles', max: maxTemplates },
  { label: 'Invités', max: maxGuests, guests: true },
  { label: 'Salles', max: maxRooms },
+ { label: 'Prestations', max: maxServices },
  { label: 'Managers', max: maxOrgManagers },
  ];
 

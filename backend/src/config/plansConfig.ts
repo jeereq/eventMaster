@@ -1,7 +1,7 @@
 /** Réduction appliquée à la facturation annuelle (équivalent mensuel affiché). */
 export const ANNUAL_DISCOUNT_PERCENT = 10;
 
-export type PlanAudience = 'B2B' | 'B2C';
+export type PlanAudience = 'B2B' | 'B2C' | 'VENUE' | 'SERVICE' | 'CATALOG';
 
 export type PlanTypeKey =
   | 'FREE'
@@ -11,7 +11,10 @@ export type PlanTypeKey =
   | 'PREMIUM_2'
   | 'ENTERPRISE_1'
   | 'ENTERPRISE_2'
-  | 'ENTERPRISE_3';
+  | 'ENTERPRISE_3'
+  | 'VENUE'
+  | 'SERVICE'
+  | 'CATALOG';
 
 export interface PlanDefinition {
   name: string;
@@ -23,12 +26,13 @@ export interface PlanDefinition {
   promoMonthlyPriceFc?: number;
   promoLabel?: string;
   description: string;
-  /** B2B = organisations (quotas + fonctions par palier). B2C = particuliers (3 événements, quota invités, toutes les fonctions). */
+  /** B2B = organisations. B2C = particuliers. VENUE / SERVICE / CATALOG = catalogue salles & prestas. */
   audience: PlanAudience;
   maxEvents: number;
   maxGuests: number;
   maxTemplates: number;
   maxRooms: number;
+  maxServices: number;
   maxOrgManagers: number;
   customTemplates: boolean;
   mockupOcr: boolean;
@@ -52,10 +56,16 @@ export const PLAN_KEYS: PlanTypeKey[] = [
   'ENTERPRISE_1',
   'ENTERPRISE_2',
   'ENTERPRISE_3',
+  'VENUE',
+  'SERVICE',
+  'CATALOG',
 ];
 
 export const B2C_PLAN_KEYS: PlanTypeKey[] = ['PERSONAL'];
-export const B2B_PLAN_KEYS: PlanTypeKey[] = PLAN_KEYS.filter((k) => k !== 'PERSONAL');
+export const VENDOR_PLAN_KEYS: PlanTypeKey[] = ['VENUE', 'SERVICE', 'CATALOG'];
+export const B2B_PLAN_KEYS: PlanTypeKey[] = PLAN_KEYS.filter(
+  (k) => k !== 'PERSONAL' && !VENDOR_PLAN_KEYS.includes(k),
+);
 
 export const PAID_PLAN_KEYS: PlanTypeKey[] = PLAN_KEYS.filter((k) => k !== 'FREE');
 
@@ -70,6 +80,11 @@ export function getCachedPlansConfiguration(): PlansConfiguration {
   return plansCache ?? getDefaultPlans();
 }
 
+export function parsePlanAudience(raw?: string | null): PlanAudience {
+  if (raw === 'B2C' || raw === 'VENUE' || raw === 'SERVICE' || raw === 'CATALOG') return raw;
+  return 'B2B';
+}
+
 export function formatPlanPriceFc(amount: number): string {
   return `${amount.toLocaleString('fr-FR')} FC`;
 }
@@ -79,18 +94,25 @@ export function annualMonthlyEquivalent(monthlyFc: number): string {
   return formatPlanPriceFc(discounted);
 }
 
+function organizerPlan(
+  rest: Omit<PlanDefinition, 'maxServices'> & { maxServices?: number },
+): PlanDefinition {
+  return { ...rest, maxServices: rest.maxServices ?? 9999 };
+}
+
 export function getDefaultPlans(): PlansConfiguration {
   return {
-    FREE: {
+    FREE: organizerPlan({
       name: 'Essentials',
       price: '0 FC',
       monthlyPriceFc: 0,
-      description: 'Découverte B2B : tester EventMaster pour une organisation.',
+      description: 'Découverte : tester EventMaster (organisation ou 1 salle / 1 prestation).',
       audience: 'B2B',
       maxEvents: 3,
       maxGuests: 50,
       maxTemplates: 2,
       maxRooms: 1,
+      maxServices: 1,
       maxOrgManagers: 1,
       customTemplates: false,
       mockupOcr: false,
@@ -101,8 +123,8 @@ export function getDefaultPlans(): PlansConfiguration {
       roomEditorLevel: 'basic',
       commercialNetwork: false,
       supportLevel: 'community',
-    },
-    PERSONAL: {
+    }),
+    PERSONAL: organizerPlan({
       name: 'Particulier',
       price: '20.000 FC',
       monthlyPriceFc: 20000,
@@ -113,6 +135,7 @@ export function getDefaultPlans(): PlansConfiguration {
       maxGuests: 200,
       maxTemplates: 9999,
       maxRooms: 9999,
+      maxServices: 2,
       maxOrgManagers: 1,
       customTemplates: true,
       mockupOcr: true,
@@ -123,8 +146,8 @@ export function getDefaultPlans(): PlansConfiguration {
       roomEditorLevel: 'complete',
       commercialNetwork: true,
       supportLevel: 'email',
-    },
-    STANDARD: {
+    }),
+    STANDARD: organizerPlan({
       name: 'Business',
       price: '30.000 FC',
       monthlyPriceFc: 30000,
@@ -134,6 +157,7 @@ export function getDefaultPlans(): PlansConfiguration {
       maxGuests: 150,
       maxTemplates: 5,
       maxRooms: 3,
+      maxServices: 3,
       maxOrgManagers: 3,
       customTemplates: false,
       mockupOcr: false,
@@ -144,8 +168,8 @@ export function getDefaultPlans(): PlansConfiguration {
       roomEditorLevel: 'standard',
       commercialNetwork: false,
       supportLevel: 'email',
-    },
-    PREMIUM_1: {
+    }),
+    PREMIUM_1: organizerPlan({
       name: 'Business Premium 1',
       price: '55.000 FC',
       monthlyPriceFc: 55000,
@@ -155,6 +179,7 @@ export function getDefaultPlans(): PlansConfiguration {
       maxGuests: 500,
       maxTemplates: 8,
       maxRooms: 5,
+      maxServices: 5,
       maxOrgManagers: 5,
       customTemplates: true,
       mockupOcr: false,
@@ -165,8 +190,8 @@ export function getDefaultPlans(): PlansConfiguration {
       roomEditorLevel: 'advanced',
       commercialNetwork: false,
       supportLevel: 'email',
-    },
-    PREMIUM_2: {
+    }),
+    PREMIUM_2: organizerPlan({
       name: 'Business Premium 2',
       price: '85.000 FC',
       monthlyPriceFc: 85000,
@@ -176,6 +201,7 @@ export function getDefaultPlans(): PlansConfiguration {
       maxGuests: 1000,
       maxTemplates: 10,
       maxRooms: 10,
+      maxServices: 8,
       maxOrgManagers: 10,
       customTemplates: true,
       mockupOcr: true,
@@ -186,8 +212,8 @@ export function getDefaultPlans(): PlansConfiguration {
       roomEditorLevel: 'advanced',
       commercialNetwork: false,
       supportLevel: 'priority',
-    },
-    ENTERPRISE_1: {
+    }),
+    ENTERPRISE_1: organizerPlan({
       name: 'Business Enterprise 1',
       price: '350.000 FC',
       monthlyPriceFc: 350000,
@@ -197,6 +223,7 @@ export function getDefaultPlans(): PlansConfiguration {
       maxGuests: 3500,
       maxTemplates: 18,
       maxRooms: 25,
+      maxServices: 15,
       maxOrgManagers: 18,
       customTemplates: true,
       mockupOcr: true,
@@ -207,8 +234,8 @@ export function getDefaultPlans(): PlansConfiguration {
       roomEditorLevel: 'complete',
       commercialNetwork: false,
       supportLevel: 'priority',
-    },
-    ENTERPRISE_2: {
+    }),
+    ENTERPRISE_2: organizerPlan({
       name: 'Business Enterprise 2',
       price: '525.000 FC',
       monthlyPriceFc: 525000,
@@ -218,6 +245,7 @@ export function getDefaultPlans(): PlansConfiguration {
       maxGuests: 5000,
       maxTemplates: 30,
       maxRooms: 50,
+      maxServices: 30,
       maxOrgManagers: 30,
       customTemplates: true,
       mockupOcr: true,
@@ -228,8 +256,8 @@ export function getDefaultPlans(): PlansConfiguration {
       roomEditorLevel: 'complete',
       commercialNetwork: true,
       supportLevel: 'dedicated',
-    },
-    ENTERPRISE_3: {
+    }),
+    ENTERPRISE_3: organizerPlan({
       name: 'Business Enterprise 3',
       price: '700.000 FC',
       monthlyPriceFc: 700000,
@@ -239,6 +267,7 @@ export function getDefaultPlans(): PlansConfiguration {
       maxGuests: 99999,
       maxTemplates: 9999,
       maxRooms: 9999,
+      maxServices: 9999,
       maxOrgManagers: 9999,
       customTemplates: true,
       mockupOcr: true,
@@ -249,6 +278,75 @@ export function getDefaultPlans(): PlansConfiguration {
       roomEditorLevel: 'complete',
       commercialNetwork: true,
       supportLevel: 'sla247',
+    }),
+    VENUE: {
+      name: 'Salle',
+      price: '25.000 FC',
+      monthlyPriceFc: 25000,
+      description:
+        'Gestionnaire de salles : publiez jusqu’à 5 lieux, éditeur 2D complet (banquet, tente, custom) et protocole QR sur place.',
+      audience: 'VENUE',
+      maxEvents: 3,
+      maxGuests: 100,
+      maxTemplates: 2,
+      maxRooms: 5,
+      maxServices: 1,
+      maxOrgManagers: 3,
+      customTemplates: false,
+      mockupOcr: false,
+      protocolQr: true,
+      seatNotifications: true,
+      roomThemesFixtures: true,
+      adminReports: false,
+      roomEditorLevel: 'complete',
+      commercialNetwork: false,
+      supportLevel: 'email',
+    },
+    SERVICE: {
+      name: 'Prestataire',
+      price: '18.000 FC',
+      monthlyPriceFc: 18000,
+      description:
+        'Prestataire : jusqu’à 5 fiches (traiteur, photo, DJ…) avec photos, vidéos, rayon d’intervention et calendrier.',
+      audience: 'SERVICE',
+      maxEvents: 0,
+      maxGuests: 0,
+      maxTemplates: 0,
+      maxRooms: 0,
+      maxServices: 5,
+      maxOrgManagers: 2,
+      customTemplates: false,
+      mockupOcr: false,
+      protocolQr: false,
+      seatNotifications: false,
+      roomThemesFixtures: false,
+      adminReports: false,
+      roomEditorLevel: 'basic',
+      commercialNetwork: false,
+      supportLevel: 'email',
+    },
+    CATALOG: {
+      name: 'Salle & presta',
+      price: '35.000 FC',
+      monthlyPriceFc: 35000,
+      description:
+        'Les deux : 5 salles (éditeur complet) et 5 prestations, pour les lieux qui proposent aussi un service.',
+      audience: 'CATALOG',
+      maxEvents: 3,
+      maxGuests: 100,
+      maxTemplates: 2,
+      maxRooms: 5,
+      maxServices: 5,
+      maxOrgManagers: 3,
+      customTemplates: false,
+      mockupOcr: false,
+      protocolQr: true,
+      seatNotifications: true,
+      roomThemesFixtures: true,
+      adminReports: false,
+      roomEditorLevel: 'complete',
+      commercialNetwork: false,
+      supportLevel: 'email',
     },
   };
 }
@@ -269,6 +367,7 @@ export function mergePlan(base: PlanDefinition, override?: Partial<PlanDefinitio
     maxGuests: override.maxGuests ?? base.maxGuests,
     maxTemplates: override.maxTemplates ?? base.maxTemplates,
     maxRooms: override.maxRooms ?? base.maxRooms,
+    maxServices: override.maxServices ?? base.maxServices,
     maxOrgManagers: override.maxOrgManagers ?? base.maxOrgManagers,
     customTemplates: override.customTemplates ?? base.customTemplates,
     mockupOcr: override.mockupOcr ?? base.mockupOcr,

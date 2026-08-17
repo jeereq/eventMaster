@@ -31,6 +31,7 @@ export interface QuotaSnapshot {
     guests: number;
     templates: number;
     rooms?: number;
+    services?: number;
     orgManagers?: number;
   };
   limits: {
@@ -38,6 +39,7 @@ export interface QuotaSnapshot {
     maxGuests: number;
     maxTemplates: number;
     maxRooms?: number;
+    maxServices?: number;
     maxOrgManagers?: number;
   };
 }
@@ -52,5 +54,6 @@ export const QUOTA_ITEMS: Array<{
   { key: 'guests', limitKey: 'maxGuests', label: 'Invités', guests: true },
   { key: 'templates', limitKey: 'maxTemplates', label: 'Modèles' },
   { key: 'rooms', limitKey: 'maxRooms', label: 'Salles' },
+  { key: 'services', limitKey: 'maxServices', label: 'Prestations' },
   { key: 'orgManagers', limitKey: 'maxOrgManagers', label: 'Managers' },
 ];

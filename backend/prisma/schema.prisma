@@ -50,6 +50,12 @@ enum PlanType {
   ENTERPRISE_1
   ENTERPRISE_2
   ENTERPRISE_3
+  /** Gestionnaire de salles (catalogue lieux). */
+  VENUE
+  /** Prestataire de services (catalogue prestations). */
+  SERVICE
+  /** Salles + prestations (compte BOTH). */
+  CATALOG
 }
 
 enum TenantAccountKind {
@@ -654,6 +660,7 @@ model SubscriptionPlan {
   maxGuests           Int
   maxTemplates        Int
   maxRooms            Int
+  maxServices         Int      @default(9999)
   maxOrgManagers      Int
   customTemplates     Boolean  @default(false)
   mockupOcr           Boolean  @default(false)
@@ -664,7 +671,7 @@ model SubscriptionPlan {
   roomEditorLevel     String   @default("basic")
   commercialNetwork   Boolean  @default(false)
   supportLevel        String   @default("community")
-  /** B2B = organisations. B2C = particuliers (3 événements, quota invités, toutes les fonctions). */
+  /** B2B | B2C | VENUE | SERVICE | CATALOG */
   audience            String   @default("B2B")
   sortOrder           Int      @default(0)
   isActive            Boolean  @default(true)

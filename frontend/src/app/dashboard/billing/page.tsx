@@ -16,6 +16,7 @@ import {
   LANDING_PLANS,
   FEATURE_COMPARISON,
   PLAN_IDS,
+  VENDOR_PLAN_IDS,
   ANNUAL_DISCOUNT_PERCENT,
   getPlanDisplayPrice,
   CURRENCY_NAME,
@@ -25,12 +26,13 @@ import {
 
 interface BillingStatus {
   plan: PlanId;
-  usage: { events: number; guests: number; templates: number; rooms: number; orgManagers: number };
+  usage: { events: number; guests: number; templates: number; rooms: number; services: number; orgManagers: number };
   limits: {
     maxEvents: number;
     maxGuests: number;
     maxTemplates: number;
     maxRooms: number;
+    maxServices: number;
     maxOrgManagers: number;
     customTemplates: boolean;
   };
@@ -76,6 +78,7 @@ function FeatureCell({ value }: { value: string | boolean }) {
 }
 
 const BILLING_TIERS: Array<{ label: string; ids: PlanId[] }> = [
+  { label: 'Salles & prestataires', ids: [...VENDOR_PLAN_IDS] },
   { label: 'Particuliers (B2C)', ids: ['PERSONAL'] },
   { label: 'Essentials & Business (B2B)', ids: ['FREE', 'STANDARD'] },
   { label: 'Business Premium (B2B)', ids: ['PREMIUM_1', 'PREMIUM_2'] },
@@ -203,6 +206,12 @@ export default function BillingPage() {
               limits: billing.limits,
             }}
           />
+          {(tenant?.accountKind === 'VENDOR' || tenant?.accountKind === 'BOTH') && (
+            <p className="text-xs text-muted leading-relaxed">
+              Compte catalogue : les forfaits <strong>Salle</strong>, <strong>Prestataire</strong> et{' '}
+              <strong>Salle &amp; presta</strong> limitent les fiches publiées (salles / prestations), pas un volume d’événements d’agence.
+            </p>
+          )}
           {billing.capabilities && (
             <div className="mt-6 pt-6 border-t border-border grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {CAPABILITY_LABELS.map(({ key, label }) => {
@@ -292,6 +301,7 @@ export default function BillingPage() {
                         maxGuests={db.maxGuests}
                         maxTemplates={db.maxTemplates}
                         maxRooms={db.maxRooms}
+                        maxServices={db.maxServices}
                         maxOrgManagers={db.maxOrgManagers}
                       />
                     )}

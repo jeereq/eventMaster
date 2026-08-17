@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
+import { getQuotaLockMessage } from '@/lib/planAccess';
 import {
   PageHeader, Button, Breadcrumbs, Alert, Input, Modal, EmptyState, StatusPill,
 } from '@/components/ui';
@@ -58,7 +59,7 @@ const fieldClass =
   'w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm';
 
 export default function MarketplaceDeskPage() {
-  const { access, refreshProfile } = useAuth();
+  const { access, refreshProfile, planQuota } = useAuth();
   const router = useRouter();
   const canManage = Boolean(access?.canManageRooms);
   const [tab, setTab] = useState<DeskTab>('services');
@@ -126,7 +127,14 @@ export default function MarketplaceDeskPage() {
   const photosOf = (item: ServiceItem) =>
     Array.isArray(item.photos) ? item.photos.filter((p): p is string => typeof p === 'string') : [];
 
+  const servicesAtLimit = Boolean(getQuotaLockMessage('services', planQuota));
+
   const openCreate = () => {
+    const lock = getQuotaLockMessage('services', planQuota);
+    if (lock) {
+      setError(lock);
+      return;
+    }
     setEditing(null);
     setDraft({
       title: '',
@@ -275,12 +283,20 @@ export default function MarketplaceDeskPage() {
         }
         action={
           tab === 'services' ? (
-            <Button size="sm" onClick={openCreate} leftIcon={<Plus className="w-4 h-4" />}>
+            <Button size="sm" onClick={openCreate} disabled={servicesAtLimit} leftIcon={<Plus className="w-4 h-4" />}>
               Nouvelle prestation
             </Button>
           ) : undefined
         }
       />
+
+      {planQuota && tab === 'services' && (
+        <p className="text-xs text-muted">
+          Prestations : {planQuota.usage.services ?? 0} /{' '}
+          {(planQuota.limits.maxServices ?? 0) >= 9999 ? '∞' : planQuota.limits.maxServices}
+          {servicesAtLimit ? ' — quota atteint, passez au forfait Prestataire ou Salle & presta.' : ''}
+        </p>
+      )}
 
       <div className="flex gap-1.5">
         <button
@@ -331,7 +347,7 @@ export default function MarketplaceDeskPage() {
             title="Aucune prestation"
             description="Ajoutez un traiteur, un DJ, un photographe… puis publiez la fiche."
             action={
-              <Button size="sm" onClick={openCreate} leftIcon={<Plus className="w-4 h-4" />}>
+              <Button size="sm" onClick={openCreate} disabled={servicesAtLimit} leftIcon={<Plus className="w-4 h-4" />}>
                 Créer une prestation
               </Button>
             }

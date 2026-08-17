@@ -3,6 +3,7 @@ import { prisma } from '../db';
 import {
   getDefaultPlans,
   PLAN_KEYS,
+  parsePlanAudience,
   type PlanDefinition,
   type PlanTypeKey,
   type PlansConfiguration,
@@ -20,6 +21,9 @@ const PLAN_SORT_ORDER: Record<PlanTypeKey, number> = {
   ENTERPRISE_1: 5,
   ENTERPRISE_2: 6,
   ENTERPRISE_3: 7,
+  VENUE: 8,
+  SERVICE: 9,
+  CATALOG: 10,
 };
 
 export function rowToPlanDefinition(row: SubscriptionPlan): PlanDefinition {
@@ -32,11 +36,12 @@ export function rowToPlanDefinition(row: SubscriptionPlan): PlanDefinition {
     promoMonthlyPriceFc: row.promoMonthlyPriceFc ?? undefined,
     promoLabel: row.promoLabel ?? undefined,
     description: row.description,
-    audience: row.audience === 'B2C' ? 'B2C' : 'B2B',
+    audience: parsePlanAudience(row.audience),
     maxEvents: row.maxEvents,
     maxGuests: row.maxGuests,
     maxTemplates: row.maxTemplates,
     maxRooms: row.maxRooms,
+    maxServices: row.maxServices,
     maxOrgManagers: row.maxOrgManagers,
     customTemplates: row.customTemplates,
     mockupOcr: row.mockupOcr,
@@ -65,6 +70,7 @@ export function planDefinitionToDbData(key: PlanTypeKey, def: PlanDefinition) {
     maxGuests: def.maxGuests,
     maxTemplates: def.maxTemplates,
     maxRooms: def.maxRooms,
+    maxServices: def.maxServices,
     maxOrgManagers: def.maxOrgManagers,
     customTemplates: def.customTemplates,
     mockupOcr: def.mockupOcr,

@@ -110,5 +110,5 @@ app.listen(PORT, async () => {
   startSubscriptionExpiryWorker();
 });
 
-// Trigger ts-node-dev reload to pick up generated Prisma client after schema change (latitude and longitude fields added)
+// Reload ts-node-dev after Prisma generate (maxServices + forfaits VENUE / SERVICE / CATALOG).
 

@@ -8,6 +8,7 @@ import {
  FEATURE_COMPARISON,
  B2B_PLAN_IDS,
  B2C_PLAN_IDS,
+ VENDOR_PLAN_IDS,
  ANNUAL_DISCOUNT_PERCENT,
  getPlanDisplayPrice,
  getPlanCapabilityBadges,
@@ -33,6 +34,7 @@ interface DbPlan {
  maxGuests?: number;
  maxTemplates?: number;
  maxRooms?: number;
+ maxServices?: number;
  maxOrgManagers?: number;
  customTemplates?: boolean;
  mockupOcr?: boolean;
@@ -75,12 +77,15 @@ const TIER_ACCENT: Record<string, string> = {
  business: 'bg-foreground/40',
  premium: 'bg-foreground/70',
  enterprise: 'bg-foreground',
+ venue: 'bg-emerald-600',
+ service: 'bg-sky-600',
+ catalog: 'bg-violet-600',
 };
 
 export default function LandingPricingSection({ dbPlans }: LandingPricingSectionProps) {
  const [billing, setBilling] = useState<BillingCycle>('monthly');
  const [showComparison, setShowComparison] = useState(false);
- const [audience, setAudience] = useState<'B2B' | 'B2C'>('B2B');
+ const [audience, setAudience] = useState<'B2B' | 'B2C' | 'VENDOR'>('B2B');
 
  const plans = useMemo(() => {
  return LANDING_PLANS.map((plan) => {
@@ -120,6 +125,7 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
  guests: db?.maxGuests ?? parseComparisonQuota(plan.id, 'Invités (quota org.)'),
  templates: db?.maxTemplates ?? parseComparisonQuota(plan.id, "Modèles d'invitation"),
  rooms: db?.maxRooms ?? parseComparisonQuota(plan.id, 'Salles organisation'),
+ services: db?.maxServices ?? parseComparisonQuota(plan.id, 'Prestations catalogue'),
  orgManagers: db?.maxOrgManagers ?? parseComparisonQuota(plan.id, 'Managers organisation'),
  customTemplates: db?.customTemplates,
  },
@@ -132,12 +138,26 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
  [plans],
  );
 
- const tiers: Array<{ label: string; ids: PlanId[]; description?: string }> = audience === 'B2C'
+ const tiers: Array<{ label: string; ids: PlanId[]; description?: string }> =
+ audience === 'B2C'
   ? [
       {
         label: 'Particuliers (B2C)',
         ids: [...B2C_PLAN_IDS],
         description: 'Toutes les fonctions d’organisation, limitées à 3 événements et 200 invités',
+      },
+    ]
+  : audience === 'VENDOR'
+  ? [
+      {
+        label: 'Essai catalogue',
+        ids: ['FREE'],
+        description: '1 salle simple et 1 prestation pour tester la publication',
+      },
+      {
+        label: 'Salles & prestataires',
+        ids: [...VENDOR_PLAN_IDS],
+        description: 'Forfaits adaptés aux gestionnaires de salles et aux prestataires — pas un abonnement organisateur',
       },
     ]
   : [
@@ -158,7 +178,12 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
       },
     ];
 
- const comparisonIds: PlanId[] = audience === 'B2C' ? ['FREE', 'PERSONAL'] : [...B2B_PLAN_IDS];
+ const comparisonIds: PlanId[] =
+ audience === 'B2C'
+  ? ['FREE', 'PERSONAL']
+  : audience === 'VENDOR'
+    ? ['FREE', ...VENDOR_PLAN_IDS]
+    : [...B2B_PLAN_IDS];
 
  return (
  <section
@@ -171,11 +196,11 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
  Forfaits
  </p>
  <h2 className="text-2xl font-semibold text-foreground tracking-tight">
- Organisations B2B ou particulier B2C
+ Organisations, particuliers, salles et prestataires
  </h2>
  <p className="text-sm text-muted leading-relaxed">
- Les abonnements Business / Premium / Enterprise sont destinés aux organisations (B2B).
- Le forfait Particulier (B2C) débloque toutes les fonctions, avec 3 événements et 200 invités.
+ Les forfaits Business sont destinés aux organisateurs. Le forfait Particulier (B2C) couvre un mariage ou une fête privée.
+ Les forfaits Salle, Prestataire et Salle & presta sont pensés pour publier dans le catalogue — pas pour remplacer un abonnement d’organisation.
  Facturation annuelle avec {ANNUAL_DISCOUNT_PERCENT} % de réduction.
  </p>
  </div>
@@ -217,6 +242,17 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
  }`}
  >
  Particuliers (B2C)
+ </button>
+ <button
+ type="button"
+ onClick={() => setAudience('VENDOR')}
+ className={`px-4 py-2 rounded-md text-xs font-medium transition ${
+ audience === 'VENDOR'
+ ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
+ : 'text-muted hover:text-foreground'
+ }`}
+ >
+ Salles & prestataires
  </button>
  </div>
  <div className="inline-flex items-center p-0.5 rounded-[var(--radius-button)] bg-surface-muted border border-border">
@@ -366,13 +402,14 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
  ))}
  </ul>
 
- {(plan.limits.events > 0 || plan.limits.templates > 0) && (
+ {(plan.limits.events > 0 || plan.limits.templates > 0 || plan.limits.rooms > 0 || plan.limits.services > 0) && (
  <PlanQuotaLimits
  compact
  maxEvents={plan.limits.events}
  maxGuests={plan.limits.guests}
  maxTemplates={plan.limits.templates}
  maxRooms={plan.limits.rooms}
+ maxServices={plan.limits.services}
  maxOrgManagers={plan.limits.orgManagers}
  />
  )}

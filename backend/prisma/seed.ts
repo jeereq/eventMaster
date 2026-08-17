@@ -24,6 +24,9 @@ const PLAN_SORT_ORDER: Record<PlanTypeKey, number> = {
   ENTERPRISE_1: 5,
   ENTERPRISE_2: 6,
   ENTERPRISE_3: 7,
+  VENUE: 8,
+  SERVICE: 9,
+  CATALOG: 10,
 };
 
 const pool = new pg.Pool({
@@ -85,6 +88,7 @@ async function main() {
         maxGuests: def.maxGuests,
         maxTemplates: def.maxTemplates,
         maxRooms: def.maxRooms,
+        maxServices: def.maxServices,
         maxOrgManagers: def.maxOrgManagers,
         customTemplates: def.customTemplates,
         mockupOcr: def.mockupOcr,
@@ -109,6 +113,7 @@ async function main() {
         maxGuests: def.maxGuests,
         maxTemplates: def.maxTemplates,
         maxRooms: def.maxRooms,
+        maxServices: def.maxServices,
         maxOrgManagers: def.maxOrgManagers,
         customTemplates: def.customTemplates,
         mockupOcr: def.mockupOcr,

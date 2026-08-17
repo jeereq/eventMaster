@@ -66,8 +66,8 @@ export const ACCOUNT_KIND_LABELS: Record<TenantAccountKind, string> = {
 
 export const ACCOUNT_KIND_DESCRIPTIONS: Record<TenantAccountKind, string> = {
   ORGANIZER: 'Créez des événements, invitations et plans de table.',
-  VENDOR: 'Publiez vos salles ou prestations dans le catalogue.',
-  BOTH: 'Organisez et proposez aussi vos offres.',
+  VENDOR: 'Publiez vos salles ou prestations. Forfaits Salle, Prestataire ou Salle & presta.',
+  BOTH: 'Organisez et publiez aussi vos offres (forfait Salle & presta recommandé).',
   CLIENT: 'Réservez sans espace événement. Vous pourrez upgrader plus tard.',
 };
 

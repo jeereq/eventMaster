@@ -69,6 +69,7 @@ export interface PlanQuotaInfo {
     guests: number;
     templates: number;
     rooms: number;
+    services: number;
     orgManagers: number;
   };
   limits: {
@@ -76,6 +77,7 @@ export interface PlanQuotaInfo {
     maxGuests: number;
     maxTemplates: number;
     maxRooms: number;
+    maxServices: number;
     maxOrgManagers: number;
   };
 }
@@ -311,7 +313,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await api.get('/billing/plan-features');
       setPlanFeatures(data.capabilities ?? null);
       if (data.usage && data.limits) {
-        setPlanQuota({ usage: data.usage, limits: data.limits });
+        setPlanQuota({
+          usage: {
+            events: data.usage.events ?? 0,
+            guests: data.usage.guests ?? 0,
+            templates: data.usage.templates ?? 0,
+            rooms: data.usage.rooms ?? 0,
+            services: data.usage.services ?? 0,
+            orgManagers: data.usage.orgManagers ?? 0,
+          },
+          limits: {
+            maxEvents: data.limits.maxEvents ?? 0,
+            maxGuests: data.limits.maxGuests ?? 0,
+            maxTemplates: data.limits.maxTemplates ?? 0,
+            maxRooms: data.limits.maxRooms ?? 0,
+            maxServices: data.limits.maxServices ?? 0,
+            maxOrgManagers: data.limits.maxOrgManagers ?? 0,
+          },
+        });
       }
     } catch {
       setPlanFeatures(null);

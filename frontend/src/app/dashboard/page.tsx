@@ -24,7 +24,7 @@ import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { parseStoredPhone } from '@/components/ui/PhoneInput';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
 import { useViewPreferencesOptional } from '@/context/ViewPreferencesContext';
-import { PLAN_IDS, type PlanId } from '@/config/landingPricing';
+import { PLAN_IDS, planAudienceLabel, type PlanId } from '@/config/landingPricing';
 import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
 import { getTemplateElementSummary } from '@/lib/landingTemplateAdapter';
@@ -39,6 +39,7 @@ const COMMERCIAL_PLATFORM_TABS = ['tenants', 'subscription-requests', 'invoices'
 function planBadgeClass(plan: string): string {
  if (plan === 'FREE') return 'bg-surface-muted border-border text-muted';
  if (plan === 'PERSONAL') return 'bg-emerald-50 border-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-300';
+ if (plan === 'VENUE' || plan === 'SERVICE' || plan === 'CATALOG') return 'bg-violet-50 border-violet-100 text-violet-800 dark:bg-violet-500/10 dark:border-violet-500/20 dark:text-violet-300';
  if (plan === 'STANDARD') return 'bg-blue-50 border-blue-100 text-blue-700';
  if (plan.startsWith('PREMIUM')) return 'bg-primary/10 border-primary/20 text-primary';
  if (plan.startsWith('ENTERPRISE')) return 'bg-amber-50 border-amber-100 text-amber-700';
@@ -48,6 +49,7 @@ function planBadgeClass(plan: string): string {
 function planBarClass(plan: string): string {
  if (plan === 'FREE') return 'bg-surface-muted';
  if (plan === 'PERSONAL') return 'bg-emerald-500';
+ if (plan === 'VENUE' || plan === 'SERVICE' || plan === 'CATALOG') return 'bg-violet-500';
  if (plan === 'STANDARD') return 'bg-blue-500';
  if (plan.startsWith('PREMIUM')) return 'bg-primary';
  if (plan.startsWith('ENTERPRISE')) return 'bg-amber-500';
@@ -558,12 +560,14 @@ function DashboardPageContent() {
  templates: planData.usage.templates,
  rooms: planData.usage.rooms,
  orgManagers: planData.usage.orgManagers,
+ services: planData.usage.services ?? 0,
  },
  limits: {
  maxEvents: planData.limits.maxEvents,
  maxGuests: planData.limits.maxGuests,
  maxTemplates: planData.limits.maxTemplates,
  maxRooms: planData.limits.maxRooms,
+ maxServices: planData.limits.maxServices ?? 0,
  maxOrgManagers: planData.limits.maxOrgManagers,
  customTemplates: planData.capabilities?.customTemplates ?? false,
  },
@@ -2937,7 +2941,7 @@ function DashboardPageContent() {
  <span className="text-xs font-extrabold text-primary uppercase tracking-wider">{planKey}</span>
  <div className="flex items-center gap-1.5">
  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-border bg-surface">
- {plan.audience === 'B2C' || planKey === 'PERSONAL' ? 'B2C' : 'B2B'}
+ {planAudienceLabel(plan.audience || planKey)}
  </span>
  <span className="text-xs bg-primary/10 text-primary font-bold px-2.5 py-0.5 rounded-full">
  {planKey === 'FREE' ? 'Gratuit' : 'Mensuel'}
@@ -3099,6 +3103,38 @@ function DashboardPageContent() {
  required
  />
  </div>
+ </div>
+
+ <div className="grid grid-cols-2 gap-2">
+ <div className="space-y-1">
+ <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Max Salles</label>
+ <input
+ type="number"
+ value={plan.maxRooms ?? 0}
+ onChange={(e) => {
+ const updatedPlans = { ...adminSettings.plans };
+ updatedPlans[planKey] = { ...plan, maxRooms: parseInt(e.target.value) || 0 };
+ setAdminSettings({ ...adminSettings, plans: updatedPlans });
+ }}
+ className="w-full px-3 py-2 bg-white border border-border rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition"
+ required
+ />
+ </div>
+ <div className="space-y-1">
+ <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Max Prestations</label>
+ <input
+ type="number"
+ value={plan.maxServices ?? 0}
+ onChange={(e) => {
+ const updatedPlans = { ...adminSettings.plans };
+ updatedPlans[planKey] = { ...plan, maxServices: parseInt(e.target.value) || 0 };
+ setAdminSettings({ ...adminSettings, plans: updatedPlans });
+ }}
+ className="w-full px-3 py-2 bg-white border border-border rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition"
+ required
+ />
+ </div>
+ </div>
 
  <div className="flex items-center gap-2 pt-5">
  <input
@@ -3115,7 +3151,6 @@ function DashboardPageContent() {
  <label htmlFor={`custom-templates-${planKey}`} className="text-[10px] font-bold text-muted uppercase tracking-wider cursor-pointer">
  Modèles Perso.
  </label>
- </div>
  </div>
  </div>
  </div>

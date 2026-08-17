@@ -73,6 +73,7 @@ export async function getBillingStatus(req: AuthenticatedRequest, res: Response)
         guests: guestCount,
         templates: tenant._count.templates,
         rooms: roomCount,
+        services: snapshot?.usage.services ?? 0,
         orgManagers: orgManagerCount + (tenant.managerId ? 1 : 0),
       },
       limits: {
@@ -80,6 +81,7 @@ export async function getBillingStatus(req: AuthenticatedRequest, res: Response)
         maxGuests: currentLimits.maxGuests,
         maxTemplates: currentLimits.maxTemplates,
         maxRooms: currentLimits.maxRooms,
+        maxServices: currentLimits.maxServices,
         maxOrgManagers: currentLimits.maxOrgManagers,
         customTemplates: currentLimits.customTemplates,
       },

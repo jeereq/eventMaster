@@ -17,6 +17,7 @@ import {
 } from '../utils/publicVenue';
 import { collectUnavailableDates, haversineKm, parseBlockedDates } from '../utils/marketplaceDates';
 import { RoomType, ServiceCategory, TenantAccountKind, MarketplaceBookingStatus, VenuePriceUnit } from '@prisma/client';
+import { PlanFeatureError, assertServiceQuota } from '../services/planFeaturesService';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -840,6 +841,17 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
       ? await prisma.serviceOffering.findFirst({ where: { id: serviceId, tenantId } })
       : null;
     if (serviceId && !existing) return res.status(404).json({ error: 'Prestation introuvable.' });
+
+    if (!existing) {
+      try {
+        await assertServiceQuota(tenantId);
+      } catch (err) {
+        if (err instanceof PlanFeatureError) {
+          return res.status(403).json({ error: err.message });
+        }
+        throw err;
+      }
+    }
 
     const slug = existing?.slug
       || await uniqueSlug(`${title}-${city || 'kinshasa'}`, async (s) => {

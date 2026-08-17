@@ -37,7 +37,7 @@ export function hasPlanFeature(
 }
 
 export function getQuotaLockMessage(
-  kind: 'events' | 'guests' | 'templates' | 'rooms' | 'orgManagers',
+  kind: 'events' | 'guests' | 'templates' | 'rooms' | 'services' | 'orgManagers',
   planQuota: PlanQuotaInfo | null | undefined,
 ): string | null {
   if (!planQuota) return null;
@@ -46,6 +46,7 @@ export function getQuotaLockMessage(
     guests: { usage: planQuota.usage.guests, limit: planQuota.limits.maxGuests, label: 'invités' },
     templates: { usage: planQuota.usage.templates, limit: planQuota.limits.maxTemplates, label: 'modèles' },
     rooms: { usage: planQuota.usage.rooms, limit: planQuota.limits.maxRooms, label: 'salles' },
+    services: { usage: planQuota.usage.services ?? 0, limit: planQuota.limits.maxServices ?? 0, label: 'prestations' },
     orgManagers: {
       usage: planQuota.usage.orgManagers,
       limit: planQuota.limits.maxOrgManagers,
@@ -89,7 +90,7 @@ const ROOM_LEVEL_HINT: Record<RoomEditorLevel, string> = {
   basic: 'Essentials',
   standard: 'Business',
   advanced: 'Premium',
-  complete: 'Enterprise 1',
+  complete: 'Salle, Particulier ou Enterprise 1',
 };
 
 export function getRoomTypeLockMessage(roomType: string, planName?: string | null): string {
