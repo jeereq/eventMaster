@@ -99,7 +99,7 @@ export function canPublishVenueCatalog(
   planQuota?: PlanQuotaInfo | null,
   planId?: string | null,
 ): boolean {
-  if (planId === 'PERSONAL' || planFeatures?.audience === 'B2C') return false;
+  if (planId?.startsWith('PERSONAL') || planFeatures?.audience === 'B2C') return false;
   const maxRooms = planQuota?.limits.maxRooms;
   if (maxRooms != null && maxRooms <= 0) return false;
   return true;

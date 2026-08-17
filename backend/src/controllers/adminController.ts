@@ -3,7 +3,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { PlanType, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { getPlansConfiguration, PAID_PLAN_KEYS, accountKindForPlanAssignment } from '../config/plansConfig';
+import { getPlansConfiguration, PAID_PLAN_KEYS, accountKindForPlanAssignment, normalizePlanKey } from '../config/plansConfig';
 import {
   loadSubscriptionPlansFromDb,
   saveSubscriptionPlansToDb,
@@ -276,8 +276,9 @@ export async function createTenant(req: AuthenticatedRequest, res: Response) {
       return res.status(400).json({ error: 'Le nom de l\'organisation est requis.' });
     }
 
-    const nextPlan = (plan as PlanType) || 'FREE';
-    const accountKind = accountKindForPlanAssignment(nextPlan, 'ORGANIZER');
+    const nextPlanKey = normalizePlanKey((plan as string) || 'FREE');
+    const nextPlan = nextPlanKey as PlanType;
+    const accountKind = accountKindForPlanAssignment(nextPlanKey, 'ORGANIZER');
 
     const newTenant = await prisma.tenant.create({
       data: {
@@ -321,8 +322,9 @@ export async function updateTenantPlanOrLicense(req: AuthenticatedRequest, res: 
       return res.status(404).json({ error: 'Organisation introuvable.' });
     }
 
-    const newPlan = (plan as PlanType) ?? existing.plan;
-    const nextAccountKind = accountKindForPlanAssignment(newPlan, existing.accountKind);
+    const newPlanKey = normalizePlanKey(String(plan ?? existing.plan));
+    const newPlan = newPlanKey as PlanType;
+    const nextAccountKind = accountKindForPlanAssignment(newPlanKey, existing.accountKind);
     let nextExpiry = licenseExpiresAt !== undefined
       ? licenseExpiresAt
         ? new Date(licenseExpiresAt)
@@ -340,7 +342,7 @@ export async function updateTenantPlanOrLicense(req: AuthenticatedRequest, res: 
 
     const durationDays = billingPayload?.durationDays ? parseInt(String(billingPayload.durationDays), 10) : 30;
 
-    if (billingPayload?.extendLicense && newPlan !== 'FREE' && PAID_PLAN_KEYS.includes(newPlan)) {
+    if (billingPayload?.extendLicense && newPlanKey !== 'FREE' && PAID_PLAN_KEYS.includes(newPlanKey)) {
       nextExpiry = computeExtendedExpiry(existing.licenseExpiresAt, durationDays);
     }
 
@@ -361,8 +363,8 @@ export async function updateTenantPlanOrLicense(req: AuthenticatedRequest, res: 
     let billingResult = null;
     if (
       billingPayload?.issueInvoice &&
-      newPlan !== 'FREE' &&
-      PAID_PLAN_KEYS.includes(newPlan)
+      newPlanKey !== 'FREE' &&
+      PAID_PLAN_KEYS.includes(newPlanKey)
     ) {
       const parsedDiscount =
         billingPayload.discountPercent !== undefined && billingPayload.discountPercent !== null

@@ -1,5 +1,6 @@
 import { LegalPageShell, Section } from '@/components/LegalPageShell';
 import LegalSupportEmail from '@/components/LegalSupportEmail';
+import { PRIVACY_VERSION } from '@/config/legalConfig';
 
 export const metadata = {
  title: 'Politique de confidentialité — EventMaster',
@@ -11,18 +12,19 @@ export default function PrivacyPage() {
  <LegalPageShell
  title="Politique de confidentialité"
  subtitle="Comment EventMaster collecte, utilise et protège les données personnelles."
- lastUpdated="3 juillet 2026"
+ lastUpdated="17 août 2026"
+ version={PRIVACY_VERSION}
  >
  <Section title="1. Responsables de traitement">
  <p>
- <strong>Données de compte plateforme</strong> (inscription organisateur, Super Admin, personnel EventMaster,
- commerciaux plateforme) : EventMaster agit en qualité de responsable de traitement pour la gestion du compte,
- de la facturation plateforme, du support et de la sécurité.
+ <strong>Données de compte plateforme</strong> (inscription organisateur, prestataire, client, Super Admin,
+ personnels EventMaster, commerciaux plateforme) : EventMaster agit en qualité de responsable de traitement pour
+ la gestion du compte, de la facturation plateforme, du support et de la sécurité.
  </p>
  <p>
  <strong>Données des événements, invités et membres d&apos;organisation</strong> : l&apos;organisation
- utilisatrice (organisateur) est responsable de traitement. EventMaster traite ces données en qualité de
- <strong> sous-traitant</strong>, uniquement pour fournir le service demandé par l&apos;organisation.
+ utilisatrice (organisateur ou professionnel catalogue) est responsable de traitement. EventMaster traite ces
+ données en qualité de <strong>sous-traitant</strong>, uniquement pour fournir le service demandé.
  </p>
  <p>
  Contact :{' '}
@@ -35,10 +37,13 @@ export default function PrivacyPage() {
  <Section title="2. Données collectées">
  <p>Selon votre rôle et l&apos;usage du service, nous pouvons traiter :</p>
  <ul className="list-disc pl-5 space-y-1">
- <li><strong>Comptes utilisateurs</strong> : nom, e-mail, téléphone (WhatsApp), mot de passe (hashé), rôle, organisation ;</li>
+ <li><strong>Comptes utilisateurs</strong> : nom, e-mail, téléphone (WhatsApp), mot de passe (hashé), rôle, type de compte, organisation ;</li>
  <li><strong>Invités</strong> : identité, e-mail, téléphone, catégorie, RSVP, préférences alimentaires ou personnalisées, photos, messages livre d&apos;or ;</li>
  <li><strong>Événements</strong> : titre, date, lieu, coordonnées GPS le cas échéant, plans de table, contenus du fil d&apos;actualité ;</li>
- <li><strong>Facturation</strong> : forfait, historique d&apos;abonnement, factures, demandes d&apos;activation ;</li>
+ <li><strong>Catalogue</strong> : fiches salles et prestations (descriptions, tarifs indicatifs, photos, vidéos, rayon d&apos;intervention, calendrier de disponibilité, géolocalisation du lieu ou de la zone de service) ;</li>
+ <li><strong>Réservations marketplace</strong> : demandes de dates, messages, statuts, montants indicatifs, marquage d&apos;acompte (EventMaster n&apos;encaisse pas l&apos;acompte et ne stocke pas de données de carte bancaire pour ces acomptes hors plateforme) ;</li>
+ <li><strong>Médias</strong> : images et vidéos téléversées (modèles, catalogue, fil d&apos;actualité), hébergées via un prestataire de médias (Cloudinary) ;</li>
+ <li><strong>Facturation</strong> : forfait, historique d&apos;abonnement, factures, demandes d&apos;activation, commissions marketplace et réseau commercial le cas échéant ;</li>
  <li><strong>Technique &amp; sécurité</strong> : journaux de connexion, adresse IP, user-agent, horodatage des acceptations légales ;</li>
  <li><strong>Parrainage commercial</strong> (le cas échéant) : code parrain, commissions, organisations référencées.</li>
  </ul>
@@ -49,7 +54,9 @@ export default function PrivacyPage() {
  <li>Création et gestion des comptes et des organisations ;</li>
  <li>Envoi d&apos;invitations, rappels RSVP et notifications (e-mail et WhatsApp) sur instruction de l&apos;organisateur ;</li>
  <li>Protocole : scan QR, confirmation de présence, vérification de placement ;</li>
- <li>Gestion des abonnements, quotas, factures et demandes de support ;</li>
+ <li>Publication et consultation du catalogue ; mise en relation et suivi des réservations de dates ;</li>
+ <li>Affichage de proximité ou d&apos;itinéraires lorsque la géolocalisation est utilisée (avec votre permission côté appareil) ;</li>
+ <li>Gestion des abonnements, quotas, factures, commissions et demandes de support ;</li>
  <li>Sécurité, prévention des abus, sauvegardes et continuité du service ;</li>
  <li>Respect des obligations légales et comptables.</li>
  </ul>
@@ -58,12 +65,12 @@ export default function PrivacyPage() {
  <Section title="4. Base légale">
  <p>
  Les traitements reposent sur l&apos;exécution du contrat (utilisation de la plateforme), le consentement
- (acceptation des présentes politiques, communications invitées lorsque requis), et l&apos;intérêt légitime
- (sécurité, amélioration du service, lutte contre la fraude).
+ (acceptation des présentes politiques, communications invitées lorsque requis, géolocalisation appareil),
+ et l&apos;intérêt légitime (sécurité, amélioration du service, lutte contre la fraude).
  </p>
  <p>
- L&apos;organisation garantit disposer d&apos;une base légale pour toute donnée invitée qu&apos;elle importe ou
- pour laquelle elle déclenche une communication via EventMaster.
+ L&apos;organisation garantit disposer d&apos;une base légale pour toute donnée invitée ou catalogue qu&apos;elle
+ importe ou pour laquelle elle déclenche une communication via EventMaster.
  </p>
  </Section>
 
@@ -71,7 +78,8 @@ export default function PrivacyPage() {
  <p>
  Chaque organisation dispose d&apos;un espace de données logiquement isolé. Les utilisateurs organisation
  n&apos;accèdent qu&apos;aux ressources autorisées par leur rôle (propriétaire, manager, protocole, staff
- événement/salle, commercial organisation selon forfait).
+ événement/salle, commercial organisation selon forfait). Les fiches volontairement publiées au catalogue
+ sont visibles publiquement selon les paramètres choisis.
  </p>
  <p>
  L&apos;accès administration plateforme (Super Admin, commerciaux EventMaster) est limité aux missions
@@ -101,10 +109,10 @@ export default function PrivacyPage() {
 
  <Section title="7. Sous-traitants">
  <p>
- Des prestataires tiers interviennent pour l&apos;hébergement (base de données, serveurs), l&apos;envoi
- d&apos;e-mails (SendGrid), de WhatsApp (UltraMsg) ou le paiement le cas échéant. Ils ne
- traitent les données que sur instruction d&apos;EventMaster ou de l&apos;organisateur, dans le cadre
- contractuel du service, et sont sélectionnés pour leur fiabilité et leurs garanties de confidentialité.
+ Des prestataires tiers interviennent pour l&apos;hébergement (base de données, serveurs), le stockage de
+ médias (Cloudinary), l&apos;envoi d&apos;e-mails (SendGrid), de WhatsApp (UltraMsg) ou le paiement le cas
+ échéant. Ils ne traitent les données que sur instruction d&apos;EventMaster ou de l&apos;organisateur, dans
+ le cadre contractuel du service, et sont sélectionnés pour leur fiabilité et leurs garanties de confidentialité.
  </p>
  </Section>
 
@@ -126,9 +134,9 @@ export default function PrivacyPage() {
  d&apos;effacement, de limitation, d&apos;opposition et de portabilité.
  </p>
  <p>
- Pour les données liées à un événement, adressez-vous en priorité à l&apos;organisateur. EventMaster
- assistera l&apos;organisateur dans la mesure de ses obligations de sous-traitant. Pour les données
- de compte plateforme, contactez-nous à l&apos;adresse indiquée ci-dessus.
+ Pour les données liées à un événement ou à une fiche catalogue, adressez-vous en priorité à l&apos;organisation
+ concernée. EventMaster assistera l&apos;organisation dans la mesure de ses obligations de sous-traitant. Pour
+ les données de compte plateforme, contactez-nous à l&apos;adresse indiquée ci-dessus.
  </p>
  </Section>
 

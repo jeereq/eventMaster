@@ -17,16 +17,19 @@ import {
 
 const PLAN_SORT_ORDER: Record<PlanTypeKey, number> = {
   FREE: 0,
-  PERSONAL: 1,
-  STANDARD: 2,
-  PREMIUM_1: 3,
-  PREMIUM_2: 4,
-  ENTERPRISE_1: 5,
-  ENTERPRISE_2: 6,
-  ENTERPRISE_3: 7,
-  VENUE: 8,
-  SERVICE: 9,
-  CATALOG: 10,
+  PERSONAL_50: 1,
+  PERSONAL_100: 2,
+  PERSONAL_200: 3,
+  PERSONAL_PLUS: 4,
+  STANDARD: 5,
+  PREMIUM_1: 6,
+  PREMIUM_2: 7,
+  ENTERPRISE_1: 8,
+  ENTERPRISE_2: 9,
+  ENTERPRISE_3: 10,
+  VENUE: 11,
+  SERVICE: 12,
+  CATALOG: 13,
 };
 
 const pool = new pg.Pool({

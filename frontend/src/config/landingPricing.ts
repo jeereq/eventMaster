@@ -7,7 +7,10 @@ export type PlanAudience = 'B2B' | 'B2C' | 'VENUE' | 'SERVICE' | 'CATALOG';
 
 export type PlanId =
   | 'FREE'
-  | 'PERSONAL'
+  | 'PERSONAL_50'
+  | 'PERSONAL_100'
+  | 'PERSONAL_200'
+  | 'PERSONAL_PLUS'
   | 'STANDARD'
   | 'PREMIUM_1'
   | 'PREMIUM_2'
@@ -20,7 +23,10 @@ export type PlanId =
 
 export const PLAN_IDS: PlanId[] = [
   'FREE',
-  'PERSONAL',
+  'PERSONAL_50',
+  'PERSONAL_100',
+  'PERSONAL_200',
+  'PERSONAL_PLUS',
   'STANDARD',
   'PREMIUM_1',
   'PREMIUM_2',
@@ -34,10 +40,15 @@ export const PLAN_IDS: PlanId[] = [
 
 export const PAID_PLAN_IDS: PlanId[] = PLAN_IDS.filter((id) => id !== 'FREE');
 
-export const B2C_PLAN_IDS: PlanId[] = ['PERSONAL'];
+export const B2C_PLAN_IDS: PlanId[] = [
+  'PERSONAL_50',
+  'PERSONAL_100',
+  'PERSONAL_200',
+  'PERSONAL_PLUS',
+];
 export const VENDOR_PLAN_IDS: PlanId[] = ['VENUE', 'SERVICE', 'CATALOG'];
 export const B2B_PLAN_IDS: PlanId[] = PLAN_IDS.filter(
-  (id) => id !== 'PERSONAL' && !VENDOR_PLAN_IDS.includes(id),
+  (id) => !B2C_PLAN_IDS.includes(id) && !VENDOR_PLAN_IDS.includes(id),
 );
 
 const B2B_PAID_IDS: PlanId[] = B2B_PLAN_IDS.filter((id) => id !== 'FREE');
@@ -50,15 +61,15 @@ export function paidPlanIdsForAccountKind(kind?: string | null): PlanId[] {
     case 'VENDOR':
       return [...VENDOR_PLAN_IDS];
     case 'BOTH':
-      return ['PERSONAL', ...VENDOR_PLAN_IDS, ...B2B_PAID_IDS];
+      return [...B2C_PLAN_IDS, ...VENDOR_PLAN_IDS, ...B2B_PAID_IDS];
     case 'ORGANIZER':
     default:
-      return ['PERSONAL', ...B2B_PAID_IDS];
+      return [...B2C_PLAN_IDS, ...B2B_PAID_IDS];
   }
 }
 
 export function planAudience(id: PlanId): PlanAudience {
-  if (id === 'PERSONAL') return 'B2C';
+  if (B2C_PLAN_IDS.includes(id)) return 'B2C';
   if (id === 'VENUE' || id === 'SERVICE' || id === 'CATALOG') return id;
   return 'B2B';
 }
@@ -141,18 +152,61 @@ export const LANDING_PLANS: LandingPlan[] = [
     highlights: ['3 événements · 50 invités', 'RSVP & portail invité', '1 salle simple · 1 prestation'],
   },
   {
-    id: 'PERSONAL',
-    ms365Name: 'Particulier',
-    tagline: 'Mariage, anniversaire, fête privée : organisation complète, 3 événements, sans catalogue.',
-    monthlyPriceFc: 20000,
+    id: 'PERSONAL_50',
+    ms365Name: 'Particulier 50',
+    tagline: 'Mariage, anniversaire, fête privée jusqu’à 50 invités — sans catalogue.',
+    monthlyPriceFc: 10000,
     monthlyNote: 'par particulier / mois',
-    cta: 'Choisir Particulier',
+    cta: 'Choisir 50 invités',
     ctaHref: '/register?kind=ORGANIZER',
     ctaVariant: 'primary',
     tier: 'personal',
     audience: 'B2C',
-    badge: 'B2C',
+    badge: '50 invités',
+    highlights: ['3 événements · 50 invités', 'QR, modèles custom, éditeur 2D', '2 salles plan de table · pas de catalogue'],
+  },
+  {
+    id: 'PERSONAL_100',
+    ms365Name: 'Particulier 100',
+    tagline: 'Fête privée jusqu’à 100 invités : organisation complète, sans catalogue.',
+    monthlyPriceFc: 15000,
+    monthlyNote: 'par particulier / mois',
+    cta: 'Choisir 100 invités',
+    ctaHref: '/register?kind=ORGANIZER',
+    ctaVariant: 'primary',
+    tier: 'personal',
+    audience: 'B2C',
+    badge: '100 invités',
+    highlights: ['3 événements · 100 invités', 'QR, modèles custom, éditeur 2D', '2 salles plan de table · pas de catalogue'],
+  },
+  {
+    id: 'PERSONAL_200',
+    ms365Name: 'Particulier 200',
+    tagline: 'Fête privée jusqu’à 200 invités : organisation complète, sans catalogue.',
+    monthlyPriceFc: 20000,
+    monthlyNote: 'par particulier / mois',
+    cta: 'Choisir 200 invités',
+    ctaHref: '/register?kind=ORGANIZER',
+    ctaVariant: 'primary',
+    tier: 'personal',
+    audience: 'B2C',
+    highlighted: true,
+    badge: '200 invités',
     highlights: ['3 événements · 200 invités', 'QR, modèles custom, éditeur 2D', '2 salles plan de table · pas de catalogue'],
+  },
+  {
+    id: 'PERSONAL_PLUS',
+    ms365Name: 'Particulier +200',
+    tagline: 'Grande fête privée : plus de 200 invités, quota invités illimité, sans catalogue.',
+    monthlyPriceFc: 30000,
+    monthlyNote: 'par particulier / mois',
+    cta: 'Choisir +200 invités',
+    ctaHref: '/register?kind=ORGANIZER',
+    ctaVariant: 'primary',
+    tier: 'personal',
+    audience: 'B2C',
+    badge: '+200 invités',
+    highlights: ['3 événements · invités illimités', 'QR, modèles custom, éditeur 2D', '2 salles plan de table · pas de catalogue'],
   },
   {
     id: 'STANDARD',
@@ -253,7 +307,7 @@ export const LANDING_PLANS: LandingPlan[] = [
   {
     id: 'SERVICE',
     ms365Name: 'Prestataire',
-    tagline: 'Jusqu’à 5 fiches services, photos / vidéos, rayon et calendrier de disponibilité.',
+    tagline: 'Fiches services illimitées, photos / vidéos, rayon et calendrier de disponibilité.',
     monthlyPriceFc: 18000,
     monthlyNote: 'par prestataire / mois',
     cta: 'Choisir Prestataire',
@@ -262,7 +316,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tier: 'service',
     audience: 'SERVICE',
     badge: 'Prestas',
-    highlights: ['5 prestations publiées', 'Rayon d’intervention & carte', 'Demandes et réservations'],
+    highlights: ['Prestations illimitées', 'Rayon d’intervention & carte', 'Demandes et réservations'],
   },
   {
     id: 'CATALOG',
@@ -300,6 +354,17 @@ function fillVendorPlans(
   }));
 }
 
+function b2cSame<T extends string | boolean>(
+  v: T,
+): Record<'PERSONAL_50' | 'PERSONAL_100' | 'PERSONAL_200' | 'PERSONAL_PLUS', T> {
+  return {
+    PERSONAL_50: v,
+    PERSONAL_100: v,
+    PERSONAL_200: v,
+    PERSONAL_PLUS: v,
+  };
+}
+
 /** Tableau comparatif — proposition fonctionnalités calibrée sur les prix. */
 export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
   {
@@ -307,7 +372,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Événements actifs',
     values: {
       FREE: '3',
-      PERSONAL: '3',
+      ...b2cSame('3'),
       STANDARD: '8',
       PREMIUM_1: '12',
       PREMIUM_2: '20',
@@ -324,7 +389,10 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Invités (quota org.)',
     values: {
       FREE: '50',
-      PERSONAL: '200',
+      PERSONAL_50: '50',
+      PERSONAL_100: '100',
+      PERSONAL_200: '200',
+      PERSONAL_PLUS: 'Illimité',
       STANDARD: '150',
       PREMIUM_1: '500',
       PREMIUM_2: '1 000',
@@ -341,7 +409,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: "Modèles d'invitation",
     values: {
       FREE: '2',
-      PERSONAL: 'Illimité',
+      ...b2cSame('Illimité'),
       STANDARD: '5',
       PREMIUM_1: '8',
       PREMIUM_2: '10',
@@ -358,7 +426,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Modèles personnalisés',
     values: {
       FREE: false,
-      PERSONAL: true,
+      ...b2cSame(true),
       STANDARD: false,
       PREMIUM_1: true,
       PREMIUM_2: true,
@@ -372,7 +440,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Import maquette (image + palette)',
     values: {
       FREE: false,
-      PERSONAL: true,
+      ...b2cSame(true),
       STANDARD: false,
       PREMIUM_1: true,
       PREMIUM_2: true,
@@ -386,7 +454,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'OCR texte sur maquette',
     values: {
       FREE: false,
-      PERSONAL: true,
+      ...b2cSame(true),
       STANDARD: false,
       PREMIUM_1: false,
       PREMIUM_2: true,
@@ -400,7 +468,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Salles organisation',
     values: {
       FREE: '1',
-      PERSONAL: '2',
+      ...b2cSame('2'),
       STANDARD: '3',
       PREMIUM_1: '5',
       PREMIUM_2: '10',
@@ -417,7 +485,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Prestations catalogue',
     values: {
       FREE: '1',
-      PERSONAL: '—',
+      ...b2cSame('—'),
       STANDARD: '3',
       PREMIUM_1: '5',
       PREMIUM_2: '8',
@@ -425,7 +493,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
       ENTERPRISE_2: '30',
       ENTERPRISE_3: 'Illimité',
       VENUE: '1',
-      SERVICE: '5',
+      SERVICE: 'Illimité',
       CATALOG: '5',
     },
   },
@@ -434,7 +502,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Éditeur de salle 2D',
     values: {
       FREE: 'Basique',
-      PERSONAL: 'Complet',
+      ...b2cSame('Complet'),
       STANDARD: 'Standard',
       PREMIUM_1: 'Avancé',
       PREMIUM_2: 'Avancé',
@@ -451,7 +519,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Thèmes & fixtures (scène, fleurs…)',
     values: {
       FREE: false,
-      PERSONAL: true,
+      ...b2cSame(true),
       STANDARD: true,
       PREMIUM_1: true,
       PREMIUM_2: true,
@@ -468,7 +536,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Managers organisation',
     values: {
       FREE: '1',
-      PERSONAL: '1',
+      ...b2cSame('1'),
       STANDARD: '3',
       PREMIUM_1: '5',
       PREMIUM_2: '10',
@@ -485,7 +553,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Protocole org. / salle / événement',
     values: {
       FREE: false,
-      PERSONAL: true,
+      ...b2cSame(true),
       STANDARD: true,
       PREMIUM_1: true,
       PREMIUM_2: true,
@@ -502,7 +570,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Scan QR caméra (confirmation de présence)',
     values: {
       FREE: false,
-      PERSONAL: true,
+      ...b2cSame(true),
       STANDARD: true,
       PREMIUM_1: true,
       PREMIUM_2: true,
@@ -519,7 +587,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Notification placement invité (WA / e-mail)',
     values: {
       FREE: false,
-      PERSONAL: true,
+      ...b2cSame(true),
       STANDARD: false,
       PREMIUM_1: true,
       PREMIUM_2: true,
@@ -536,7 +604,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Livraison PDF + GPS dès acceptation RSVP',
     values: {
       FREE: false,
-      PERSONAL: true,
+      ...b2cSame(true),
       STANDARD: false,
       PREMIUM_1: true,
       PREMIUM_2: true,
@@ -550,7 +618,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Application iOS & Android (en construction, non déployée)',
     values: {
       FREE: false,
-      PERSONAL: false,
+      ...b2cSame(false),
       STANDARD: false,
       PREMIUM_1: false,
       PREMIUM_2: false,
@@ -564,7 +632,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Scan QR protocole (app caméra native — bientôt)',
     values: {
       FREE: false,
-      PERSONAL: false,
+      ...b2cSame(false),
       STANDARD: false,
       PREMIUM_1: false,
       PREMIUM_2: false,
@@ -578,7 +646,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Notifications push (app — bientôt)',
     values: {
       FREE: false,
-      PERSONAL: false,
+      ...b2cSame(false),
       STANDARD: false,
       PREMIUM_1: false,
       PREMIUM_2: false,
@@ -592,7 +660,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Portail RSVP + badge QR',
     values: {
       FREE: true,
-      PERSONAL: true,
+      ...b2cSame(true),
       STANDARD: true,
       PREMIUM_1: true,
       PREMIUM_2: true,
@@ -609,7 +677,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Formulaires RSVP analytiques (export CSV)',
     values: {
       FREE: false,
-      PERSONAL: true,
+      ...b2cSame(true),
       STANDARD: false,
       PREMIUM_1: true,
       PREMIUM_2: true,
@@ -623,7 +691,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'WhatsApp / E-mail',
     values: {
       FREE: true,
-      PERSONAL: true,
+      ...b2cSame(true),
       STANDARD: true,
       PREMIUM_1: true,
       PREMIUM_2: true,
@@ -640,7 +708,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Réseau commercial & commissions 30 %',
     values: {
       FREE: false,
-      PERSONAL: false,
+      ...b2cSame(false),
       STANDARD: false,
       PREMIUM_1: false,
       PREMIUM_2: false,
@@ -654,7 +722,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Export revenus & commissions (admin)',
     values: {
       FREE: false,
-      PERSONAL: true,
+      ...b2cSame(true),
       STANDARD: false,
       PREMIUM_1: false,
       PREMIUM_2: false,
@@ -668,7 +736,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     label: 'Support & SLA',
     values: {
       FREE: 'Communauté',
-      PERSONAL: 'E-mail',
+      ...b2cSame('E-mail'),
       STANDARD: 'E-mail',
       PREMIUM_1: 'E-mail',
       PREMIUM_2: 'Prioritaire',
@@ -700,7 +768,7 @@ export const ROLE_HIGHLIGHTS = [
   },
   {
     title: 'Prestataire',
-    description: 'Publie ses prestations (traiteur, photo, DJ…) avec rayon d’intervention. Forfait Prestataire ou Salle & presta.',
+    description: 'Publie ses prestations (traiteur, photo, DJ…) sans limite de fiches dès l’abonnement Prestataire payé. Forfait Prestataire ou Salle & presta.',
     icon: 'briefcase',
   },
   {
@@ -781,7 +849,7 @@ export function getPlanCapabilityBadges(planId: PlanId): PlanCapabilityBadge[] {
   if (rsvpAnalytics) badges.push({ id: 'rsvp', label: 'RSVP analytique', tone: 'emerald' });
   if (commercial) badges.push({ id: 'commercial', label: 'Réseau commercial', tone: 'amber' });
   if (planId === 'FREE') badges.push({ id: 'starter', label: 'Gratuit', tone: 'emerald' });
-  if (planId === 'PERSONAL') badges.push({ id: 'b2c', label: 'Particulier B2C', tone: 'amber' });
+  if (B2C_PLAN_IDS.includes(planId)) badges.push({ id: 'b2c', label: 'Particulier B2C', tone: 'amber' });
   if (planId === 'VENUE') badges.push({ id: 'venue', label: 'Gestionnaire de salles', tone: 'emerald' });
   if (planId === 'SERVICE') badges.push({ id: 'service', label: 'Prestataire', tone: 'indigo' });
   if (planId === 'CATALOG') badges.push({ id: 'catalog', label: 'Salles & prestas', tone: 'violet' });

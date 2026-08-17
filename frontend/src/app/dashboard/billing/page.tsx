@@ -16,6 +16,7 @@ import {
   LANDING_PLANS,
   FEATURE_COMPARISON,
   PLAN_IDS,
+  B2C_PLAN_IDS,
   VENDOR_PLAN_IDS,
   paidPlanIdsForAccountKind,
   ANNUAL_DISCOUNT_PERCENT,
@@ -80,7 +81,7 @@ function FeatureCell({ value }: { value: string | boolean }) {
 
 const BILLING_TIERS: Array<{ label: string; ids: PlanId[] }> = [
   { label: 'Salles & prestataires', ids: [...VENDOR_PLAN_IDS] },
-  { label: 'Particuliers (B2C)', ids: ['PERSONAL'] },
+  { label: 'Particuliers (B2C)', ids: [...B2C_PLAN_IDS] },
   { label: 'Essentials & Business (B2B)', ids: ['FREE', 'STANDARD'] },
   { label: 'Business Premium (B2B)', ids: ['PREMIUM_1', 'PREMIUM_2'] },
   { label: 'Business Enterprise (B2B)', ids: ['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3'] },

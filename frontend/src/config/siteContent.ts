@@ -85,7 +85,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'plans-quotas',
     question: 'Comment fonctionnent les forfaits et les quotas ?',
     answer:
-      'Les forfaits Essentials, Business, Business Premium 1 & 2 et Business Enterprise 1 à 3 définissent des limites d\'événements, d\'invités (jusqu\'à illimité en Enterprise 3), de modèles, de salles et de managers. Le tableau de bord affiche en permanence vos quotas restants. La facturation annuelle bénéficie d\'une réduction de 10 %.',
+      'Chaque organisation souscrit un seul forfait. Les particuliers choisissent un palier d’invités (50, 100, 200 ou plus de 200). Les organisateurs B2B ont Essentials (gratuit), Business, Premium et Enterprise. Les gestionnaires de salles et prestataires ont Salle, Prestataire (prestations illimitées dès l’abonnement payé) ou Salle & presta. Le tableau de bord affiche vos quotas. La facturation annuelle bénéficie d’une réduction de 10 %.',
   },
   {
     id: 'data-responsibility',

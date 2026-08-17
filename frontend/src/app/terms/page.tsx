@@ -1,5 +1,6 @@
 import { LegalPageShell, Section } from '@/components/LegalPageShell';
 import LegalSupportEmail from '@/components/LegalSupportEmail';
+import { TERMS_VERSION } from '@/config/legalConfig';
 
 export const metadata = {
  title: 'Conditions d\'utilisation — EventMaster',
@@ -11,13 +12,15 @@ export default function TermsPage() {
  <LegalPageShell
  title="Conditions d'utilisation"
  subtitle="Les présentes conditions régissent l'accès et l'utilisation de la plateforme EventMaster."
- lastUpdated="3 juillet 2026"
+ lastUpdated="17 août 2026"
+ version={TERMS_VERSION}
  >
  <Section title="1. Objet">
  <p>
  EventMaster est une solution SaaS multi-tenant destinée à la gestion d&apos;événements privés et professionnels :
  invitations et RSVP, plans de table 2D, protocole (scan QR, confirmation de présence), fil d&apos;actualité, livre d&apos;or,
- modèles de messages, gestion d&apos;équipe et facturation par abonnement.
+ modèles de messages, gestion d&apos;équipe, catalogue public de salles et de prestations, réservations de dates,
+ et facturation par abonnement.
  </p>
  <p>
  En créant un compte, en vous connectant ou en utilisant nos services, vous acceptez sans réserve les présentes
@@ -30,6 +33,12 @@ export default function TermsPage() {
  Chaque organisation dispose d&apos;un espace logique isolé (multi-tenant). Le <strong>propriétaire</strong> de
  l&apos;organisation (gérant du compte) est le principal responsable vis-à-vis d&apos;EventMaster et des tiers
  pour l&apos;activité réalisée sous son espace.
+ </p>
+ <p>
+ Un compte peut être de type <strong>organisateur</strong> (événements), <strong>prestataire / salle</strong>
+ (catalogue), <strong>mixte</strong> (les deux) ou <strong>client</strong> (réservation et demandes sans
+ abonnement SaaS d&apos;organisation). Le type de compte détermine les forfaits proposés ; une organisation
+ ne souscrit qu&apos;un seul forfait à la fois.
  </p>
  <p>
  L&apos;organisation peut désigner des <strong>managers</strong>, des membres <strong>protocole</strong>, des
@@ -52,7 +61,7 @@ export default function TermsPage() {
  <ul className="list-disc pl-5 space-y-1">
  <li>les données de ses membres (utilisateurs organisation : managers, protocole, etc.) ;</li>
  <li>les données de ses invités (identité, contact, RSVP, préférences, photos, messages, localisation d&apos;événement) ;</li>
- <li>les contenus diffusés (invitations, modèles, publications, médias).</li>
+ <li>les contenus diffusés (invitations, modèles, publications, médias, fiches catalogue).</li>
  </ul>
  <p>
  L&apos;organisation est seule responsable de :
@@ -96,7 +105,7 @@ export default function TermsPage() {
  <li><strong>Chiffrement en transit</strong> : communications via HTTPS/TLS ;</li>
  <li><strong>Journalisation</strong> : traces techniques limitées pour la sécurité, le support et la prévention des abus ;</li>
  <li><strong>Acceptation légale</strong> : enregistrement horodaté des acceptations des conditions et de la politique de confidentialité ;</li>
- <li><strong>Prestataires</strong> : sélection de sous-traitants (hébergement, e-mail, messagerie) soumis à des obligations contractuelles de confidentialité ;</li>
+ <li><strong>Prestataires</strong> : sélection de sous-traitants (hébergement, e-mail, messagerie, médias) soumis à des obligations contractuelles de confidentialité ;</li>
  <li><strong>Accès administration plateforme</strong> : réservé au personnel autorisé (Super Admin, commerciaux plateforme dans le périmètre de leurs missions) et tracé.</li>
  </ul>
  <p>
@@ -119,28 +128,56 @@ export default function TermsPage() {
 
  <Section title="6. Abonnements, forfaits et facturation">
  <p>
- Les formules (Essentials / Gratuit, Business, Business Premium 1 &amp; 2, Business Enterprise 1 à 3) définissent
- des quotas (événements, invités, modèles, salles, managers) et des fonctionnalités (protocole QR, modèles
- personnalisés, réseau commercial, etc.). Les limites applicables sont celles du forfait actif au moment de l&apos;usage.
+ Les formules disponibles définissent des quotas et des fonctionnalités. Elles comprennent notamment :
+ </p>
+ <ul className="list-disc pl-5 space-y-1">
+ <li><strong>Essentials</strong> (gratuit) : découverte pour organisateurs ou essai catalogue (1 salle / 1 prestation) ;</li>
+ <li><strong>Particulier</strong> (B2C) : quatre paliers selon le nombre d&apos;invités — 50, 100, 200 ou plus de 200
+ (invités illimités) — avec organisation complète (QR, modèles, éditeur 2D, jusqu&apos;à 3 événements et 2 salles
+ de plan de table), sans publication au catalogue public ;</li>
+ <li><strong>Business, Business Premium et Business Enterprise</strong> : forfaits organisateurs B2B ;</li>
+ <li><strong>Salle</strong>, <strong>Prestataire</strong> et <strong>Salle &amp; presta</strong> : forfaits catalogue.
+ Dès que l&apos;abonnement Prestataire est payé et actif, le nombre de prestations publiées n&apos;est pas limité.</li>
+ </ul>
+ <p>
+ Les limites applicables sont celles du forfait actif au moment de l&apos;usage. Une organisation ne peut avoir
+ qu&apos;un seul forfait actif à la fois. Les forfaits proposés dépendent du type de compte.
  </p>
  <p>
  Les demandes d&apos;activation, de changement ou de renouvellement d&apos;abonnement peuvent être soumises à
  validation par EventMaster. Des factures peuvent être émises et transmises aux contacts de facturation de
- l&apos;organisation (propriétaire et managers autorisés).
+ l&apos;organisation (propriétaire et managers autorisés). Les tarifs sont exprimés en francs congolais (FC).
  </p>
  <p>
  EventMaster se réserve le droit de modifier les tarifs et caractéristiques des plans avec un préavis raisonnable
  pour les abonnements actifs. La facturation annuelle peut bénéficier d&apos;une réduction selon les conditions
  affichées sur la plateforme.
  </p>
+ <p>
+ <strong>6.1 Catalogue et réservations.</strong> Les organisations éligibles peuvent publier des salles ou
+ prestations au catalogue public. Les réservations de dates suivent le parcours : demande, acceptation,
+ acompte de 30 % versé directement au professionnel <strong>hors plateforme</strong>, puis confirmation
+ (blocage de la date). EventMaster n&apos;encaisse pas cet acompte et n&apos;est pas partie au contrat de
+ prestation entre organisateur et professionnel.
+ </p>
+ <p>
+ Une commission marketplace de <strong>8 %</strong> (due par le vendeur) s&apos;applique aux réservations
+ confirmées. Elle est distincte de l&apos;abonnement SaaS et du réseau commercial.
+ </p>
+ <p>
+ <strong>6.2 Réseau commercial.</strong> Selon le forfait (notamment Business Enterprise 2 et 3), un réseau
+ commercial peut être activé avec des commissions de <strong>30 %</strong> sur la facturation d&apos;abonnement
+ des organisations parrainées, selon les règles affichées dans l&apos;espace commercial.
+ </p>
  </Section>
 
  <Section title="7. Propriété intellectuelle">
  <p>
  La plateforme, son code, sa marque, ses interfaces et sa documentation restent la propriété d&apos;EventMaster.
- Les contenus créés par les utilisateurs (événements, modèles, messages, médias) restent la propriété de
+ Les contenus créés par les utilisateurs (événements, modèles, messages, médias, fiches catalogue) restent la propriété de
  l&apos;organisation ou de leurs auteurs ; vous accordez à EventMaster une licence non exclusive, mondiale et
- limitée à la durée du contrat, strictement nécessaire à l&apos;hébergement, à la transmission et à l&apos;exécution du service.
+ limitée à la durée du contrat, strictement nécessaire à l&apos;hébergement, à la transmission, à la diffusion
+ catalogue (lorsque vous publiez) et à l&apos;exécution du service.
  </p>
  </Section>
 
@@ -154,7 +191,7 @@ export default function TermsPage() {
  <p>
  EventMaster ne saurait être tenu responsable des contenus, listes d&apos;invités, communications ou décisions
  prises par les organisations ou leurs invités, ni des conséquences d&apos;un usage non conforme du service par
- l&apos;organisation ou ses utilisateurs.
+ l&apos;organisation ou ses utilisateurs, ni des litiges liés aux acomptes ou prestations hors plateforme.
  </p>
  </Section>
 

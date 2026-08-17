@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import {
   LANDING_PLANS,
-  PAID_PLAN_IDS,
+  paidPlanIdsForAccountKind,
   CURRENCY_NAME,
   ensureFcPrice,
   getPlanDisplayPrice,
@@ -49,8 +49,13 @@ export default function PWARestrictedScreen() {
     loadMyRequests();
   }, []);
 
+  const allowedPlanIds = useMemo(
+    () => paidPlanIdsForAccountKind(tenant?.accountKind),
+    [tenant?.accountKind],
+  );
+
   const plans = useMemo(() => {
-    return LANDING_PLANS.filter((plan) => PAID_PLAN_IDS.includes(plan.id)).map((plan) => {
+    return LANDING_PLANS.filter((plan) => allowedPlanIds.includes(plan.id)).map((plan) => {
       const db = dynamicPlans?.[plan.id];
       return {
         id: plan.id,
@@ -61,7 +66,13 @@ export default function PWARestrictedScreen() {
         badge: plan.badge,
       };
     });
-  }, [dynamicPlans]);
+  }, [dynamicPlans, allowedPlanIds]);
+
+  useEffect(() => {
+    if (plans.length && !plans.some((p) => p.id === requestedPlan)) {
+      setRequestedPlan(plans[0].id);
+    }
+  }, [plans, requestedPlan]);
 
   const selectedPlan = plans.find((p) => p.id === requestedPlan) || plans[0];
 
@@ -152,8 +163,8 @@ export default function PWARestrictedScreen() {
               Votre espace {tenant?.name ? `"${tenant.name}"` : ''} requiert une activation.
             </h1>
             <p className="text-sm text-muted leading-relaxed">
-              Tous les forfaits payants sont proposés ci-dessous. Les tarifs sont exclusivement en {CURRENCY_NAME} ({'FC'}).
-              Choisissez l&apos;offre adaptée à votre organisation, puis soumettez votre demande d&apos;activation.
+              Les forfaits payants adaptés à votre type de compte sont proposés ci-dessous. Les tarifs sont exclusivement en {CURRENCY_NAME} ({'FC'}).
+              Choisissez l&apos;offre adaptée, puis soumettez votre demande d&apos;activation.
             </p>
           </div>
 

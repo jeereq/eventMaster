@@ -5,7 +5,10 @@ export type PlanAudience = 'B2B' | 'B2C' | 'VENUE' | 'SERVICE' | 'CATALOG';
 
 export type PlanTypeKey =
   | 'FREE'
-  | 'PERSONAL'
+  | 'PERSONAL_50'
+  | 'PERSONAL_100'
+  | 'PERSONAL_200'
+  | 'PERSONAL_PLUS'
   | 'STANDARD'
   | 'PREMIUM_1'
   | 'PREMIUM_2'
@@ -49,7 +52,10 @@ export type PlansConfiguration = Record<PlanTypeKey, PlanDefinition>;
 
 export const PLAN_KEYS: PlanTypeKey[] = [
   'FREE',
-  'PERSONAL',
+  'PERSONAL_50',
+  'PERSONAL_100',
+  'PERSONAL_200',
+  'PERSONAL_PLUS',
   'STANDARD',
   'PREMIUM_1',
   'PREMIUM_2',
@@ -61,10 +67,15 @@ export const PLAN_KEYS: PlanTypeKey[] = [
   'CATALOG',
 ];
 
-export const B2C_PLAN_KEYS: PlanTypeKey[] = ['PERSONAL'];
+export const B2C_PLAN_KEYS: PlanTypeKey[] = [
+  'PERSONAL_50',
+  'PERSONAL_100',
+  'PERSONAL_200',
+  'PERSONAL_PLUS',
+];
 export const VENDOR_PLAN_KEYS: PlanTypeKey[] = ['VENUE', 'SERVICE', 'CATALOG'];
 export const B2B_PLAN_KEYS: PlanTypeKey[] = PLAN_KEYS.filter(
-  (k) => k !== 'PERSONAL' && !VENDOR_PLAN_KEYS.includes(k),
+  (k) => !B2C_PLAN_KEYS.includes(k) && !VENDOR_PLAN_KEYS.includes(k),
 );
 
 export const PAID_PLAN_KEYS: PlanTypeKey[] = PLAN_KEYS.filter((k) => k !== 'FREE');
@@ -100,6 +111,29 @@ function organizerPlan(
   return { ...rest, maxServices: rest.maxServices ?? 9999 };
 }
 
+function personalPlan(
+  rest: Pick<PlanDefinition, 'name' | 'price' | 'monthlyPriceFc' | 'description' | 'maxGuests'>,
+): PlanDefinition {
+  return organizerPlan({
+    ...rest,
+    audience: 'B2C',
+    maxEvents: 3,
+    maxTemplates: 9999,
+    maxRooms: 2,
+    maxServices: 0,
+    maxOrgManagers: 1,
+    customTemplates: true,
+    mockupOcr: true,
+    protocolQr: true,
+    seatNotifications: true,
+    roomThemesFixtures: true,
+    adminReports: true,
+    roomEditorLevel: 'complete',
+    commercialNetwork: false,
+    supportLevel: 'email',
+  });
+}
+
 export function getDefaultPlans(): PlansConfiguration {
   return {
     FREE: organizerPlan({
@@ -124,28 +158,37 @@ export function getDefaultPlans(): PlansConfiguration {
       commercialNetwork: false,
       supportLevel: 'community',
     }),
-    PERSONAL: organizerPlan({
-      name: 'Particulier',
+    PERSONAL_50: personalPlan({
+      name: 'Particulier 50',
+      price: '10.000 FC',
+      monthlyPriceFc: 10000,
+      description:
+        'Fête privée jusqu’à 50 invités : organisation complète (QR, modèles, éditeur 2D), 3 événements, 2 salles de plan de table — sans catalogue.',
+      maxGuests: 50,
+    }),
+    PERSONAL_100: personalPlan({
+      name: 'Particulier 100',
+      price: '15.000 FC',
+      monthlyPriceFc: 15000,
+      description:
+        'Fête privée jusqu’à 100 invités : organisation complète (QR, modèles, éditeur 2D), 3 événements, 2 salles de plan de table — sans catalogue.',
+      maxGuests: 100,
+    }),
+    PERSONAL_200: personalPlan({
+      name: 'Particulier 200',
       price: '20.000 FC',
       monthlyPriceFc: 20000,
       description:
-        'Abonnement B2C : mariage, anniversaire ou fête privée. Organisation complète (QR, modèles, éditeur 2D), 3 événements, 200 invités, 2 salles de plan de table — sans publication catalogue.',
-      audience: 'B2C',
-      maxEvents: 3,
+        'Fête privée jusqu’à 200 invités : organisation complète (QR, modèles, éditeur 2D), 3 événements, 2 salles de plan de table — sans catalogue.',
       maxGuests: 200,
-      maxTemplates: 9999,
-      maxRooms: 2,
-      maxServices: 0,
-      maxOrgManagers: 1,
-      customTemplates: true,
-      mockupOcr: true,
-      protocolQr: true,
-      seatNotifications: true,
-      roomThemesFixtures: true,
-      adminReports: true,
-      roomEditorLevel: 'complete',
-      commercialNetwork: false,
-      supportLevel: 'email',
+    }),
+    PERSONAL_PLUS: personalPlan({
+      name: 'Particulier +200',
+      price: '30.000 FC',
+      monthlyPriceFc: 30000,
+      description:
+        'Grande fête privée (plus de 200 invités) : organisation complète, invités illimités, 3 événements, 2 salles de plan de table — sans catalogue.',
+      maxGuests: 99999,
     }),
     STANDARD: organizerPlan({
       name: 'Business',
@@ -307,13 +350,13 @@ export function getDefaultPlans(): PlansConfiguration {
       price: '18.000 FC',
       monthlyPriceFc: 18000,
       description:
-        'Prestataire : jusqu’à 5 fiches (traiteur, photo, DJ…) avec photos, vidéos, rayon d’intervention et calendrier.',
+        'Prestataire : fiches illimitées (traiteur, photo, DJ…) avec photos, vidéos, rayon d’intervention et calendrier, dès l’abonnement payé.',
       audience: 'SERVICE',
       maxEvents: 0,
       maxGuests: 0,
       maxTemplates: 0,
       maxRooms: 0,
-      maxServices: 5,
+      maxServices: 9999,
       maxOrgManagers: 2,
       customTemplates: false,
       mockupOcr: false,
@@ -481,10 +524,10 @@ export function paidPlanKeysForAccountKind(kind?: string | null): PlanTypeKey[] 
     case 'VENDOR':
       return [...VENDOR_PLAN_KEYS];
     case 'BOTH':
-      return ['PERSONAL', ...VENDOR_PLAN_KEYS, ...B2B_PAID_KEYS];
+      return [...B2C_PLAN_KEYS, ...VENDOR_PLAN_KEYS, ...B2B_PAID_KEYS];
     case 'ORGANIZER':
     default:
-      return ['PERSONAL', ...B2B_PAID_KEYS];
+      return [...B2C_PLAN_KEYS, ...B2B_PAID_KEYS];
   }
 }
 
@@ -506,7 +549,7 @@ export function accountKindForPlanAssignment(
   }
   if (normalized === 'VENUE' || normalized === 'SERVICE') return 'VENDOR';
   if (normalized === 'CATALOG') return 'BOTH';
-  if (normalized === 'PERSONAL') return 'ORGANIZER';
+  if (B2C_PLAN_KEYS.includes(normalized)) return 'ORGANIZER';
   if (currentKind === 'VENDOR' || currentKind === 'BOTH') return 'BOTH';
   return 'ORGANIZER';
 }
@@ -527,6 +570,7 @@ export function normalizePlanKey(planKey: string): PlanTypeKey {
   const legacy: Record<string, PlanTypeKey> = {
     PREMIUM: 'PREMIUM_2',
     ENTERPRISE: 'ENTERPRISE_2',
+    PERSONAL: 'PERSONAL_200',
   };
   if (legacy[planKey]) return legacy[planKey];
   if (PLAN_KEYS.includes(planKey as PlanTypeKey)) return planKey as PlanTypeKey;

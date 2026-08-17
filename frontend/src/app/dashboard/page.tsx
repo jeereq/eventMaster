@@ -38,7 +38,7 @@ const COMMERCIAL_PLATFORM_TABS = ['tenants', 'subscription-requests', 'invoices'
 
 function planBadgeClass(plan: string): string {
  if (plan === 'FREE') return 'bg-surface-muted border-border text-muted';
- if (plan === 'PERSONAL') return 'bg-emerald-50 border-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-300';
+ if (plan.startsWith('PERSONAL')) return 'bg-emerald-50 border-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-300';
  if (plan === 'VENUE' || plan === 'SERVICE' || plan === 'CATALOG') return 'bg-violet-50 border-violet-100 text-violet-800 dark:bg-violet-500/10 dark:border-violet-500/20 dark:text-violet-300';
  if (plan === 'STANDARD') return 'bg-blue-50 border-blue-100 text-blue-700';
  if (plan.startsWith('PREMIUM')) return 'bg-primary/10 border-primary/20 text-primary';
@@ -48,7 +48,7 @@ function planBadgeClass(plan: string): string {
 
 function planBarClass(plan: string): string {
  if (plan === 'FREE') return 'bg-surface-muted';
- if (plan === 'PERSONAL') return 'bg-emerald-500';
+ if (plan.startsWith('PERSONAL')) return 'bg-emerald-500';
  if (plan === 'VENUE' || plan === 'SERVICE' || plan === 'CATALOG') return 'bg-violet-500';
  if (plan === 'STANDARD') return 'bg-blue-500';
  if (plan.startsWith('PREMIUM')) return 'bg-primary';

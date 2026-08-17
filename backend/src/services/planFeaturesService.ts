@@ -122,7 +122,7 @@ export async function assertServiceQuota(tenantId: string): Promise<void> {
   if (snapshot.usage.services >= max) {
     throw new PlanFeatureError(
       max <= 0
-        ? `La publication de prestations n’est pas incluse dans ${snapshot.planName}. Choisissez le forfait Prestataire ou Salle & presta.`
+        ? `La publication de prestations n’est pas incluse dans ${snapshot.planName}. Choisissez le forfait Prestataire (prestations illimitées) ou Salle & presta.`
         : `Quota de prestations atteint (${max} max pour ${snapshot.planName}). Passez à un forfait supérieur.`,
     );
   }

@@ -5,10 +5,17 @@ interface LegalPageShellProps {
   title: string;
   subtitle: string;
   lastUpdated?: string;
+  version?: string;
   children: React.ReactNode;
 }
 
-export function LegalPageShell({ title, subtitle, lastUpdated = '2 juillet 2026', children }: LegalPageShellProps) {
+export function LegalPageShell({
+  title,
+  subtitle,
+  lastUpdated = '17 août 2026',
+  version,
+  children,
+}: LegalPageShellProps) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-surface/90 backdrop-blur-md sticky top-0 z-50">
@@ -30,7 +37,10 @@ export function LegalPageShell({ title, subtitle, lastUpdated = '2 juillet 2026'
         <div className="space-y-2">
           <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
           <p className="text-muted text-sm">{subtitle}</p>
-          <p className="text-xs text-muted">Dernière mise à jour : {lastUpdated}</p>
+          <p className="text-xs text-muted">
+            Dernière mise à jour : {lastUpdated}
+            {version ? ` · version ${version}` : ''}
+          </p>
         </div>
 
         <article className="bg-surface border border-border rounded-[var(--radius-card)] p-8 sm:p-10 space-y-6 text-sm leading-relaxed text-foreground/90">
