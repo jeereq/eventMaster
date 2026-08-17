@@ -253,6 +253,37 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
   color: color-mix(in srgb, var(--festive-accent) 80%, var(--foreground));
 }
 
+.em-guide-dest-marker,
+.em-guide-user-marker {
+  background: transparent;
+  border: 0;
+}
+
+.em-guide-dest-pin {
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin: 0 auto;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: var(--festive-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--festive-accent) 28%, transparent);
+}
+
+.em-guide-user-dot {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #4f46e5;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 6px rgba(79, 70, 229, 0.22);
+}
+
+.em-venue-guide-map .leaflet-control-attribution {
+  font-size: 9px;
+}
+
 @keyframes em-confetti-fall {
   0% {
     transform: translate3d(0, -12px, 0) rotate(0deg);
