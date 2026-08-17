@@ -3,17 +3,17 @@
 import React, { useState, useRef } from 'react';
 import { 
  Plus, Trash2, Users, Check, Move, X, RefreshCw, 
- HelpCircle, Edit2, LayoutGrid, Maximize2, Minimize2
+ HelpCircle, Edit2, LayoutGrid, Maximize2, Minimize2, Copy, Lock, Unlock, Palette
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import {
  getOccupiedSeatCount,
  getSeatCoordinates,
  getTableShapeLabel,
- getTableVisualClasses,
+ getTableVisualStyle,
  TableShape,
 } from '@/lib/tablePlanUtils';
-import { getFixtureClass } from '@/lib/roomLayoutUtils';
+import { chairTypeLabels, getFixtureClass, type ChairType } from '@/lib/roomLayoutUtils';
 
 interface GuestItem {
  id: string;
@@ -35,6 +35,7 @@ interface Table {
  seats: Record<number, string | null>;
  locked?: boolean;
  chairType?: string;
+ tableColor?: string;
 }
 
 interface TablePlannerProps {
@@ -73,6 +74,8 @@ export default function TablePlanner({
  const [newTableName, setNewTableName] = useState('');
  const [newTableShape, setNewTableShape] = useState<TableShape>('round');
  const [newTableCapacity, setNewTableCapacity] = useState<number>(8);
+ const [newTableColor, setNewTableColor] = useState('#ffffff');
+ const [newChairType, setNewChairType] = useState<ChairType>('BANQUET');
  const [isExpanded, setIsExpanded] = useState(false);
  const [hoveredTableId, setHoveredTableId] = useState<string | null>(null);
 
@@ -109,9 +112,12 @@ export default function TablePlanner({
  name: newTableName,
  shape: newTableShape,
  capacity: newTableCapacity,
- x: 30 + Math.random() * 40, // center-ish
+ x: 30 + Math.random() * 40,
  y: 30 + Math.random() * 40,
- seats: seatsObj
+ seats: seatsObj,
+ tableColor: newTableColor,
+ chairType: newChairType,
+ locked: false,
  };
 
  const updatedTables = [...tables, newTable];
@@ -119,6 +125,8 @@ export default function TablePlanner({
  setShowAddModal(false);
  setNewTableName('');
  setNewTableCapacity(8);
+ setNewTableColor('#ffffff');
+ setNewChairType('BANQUET');
  };
 
  // Delete a table and free its guests
@@ -155,12 +163,35 @@ export default function TablePlanner({
  name: editingTable.name,
  shape: editingTable.shape,
  capacity: editingTable.capacity,
+ tableColor: editingTable.tableColor,
+ chairType: editingTable.chairType,
+ locked: editingTable.locked,
  seats: updatedSeats
  };
  }
  return t;
  }));
  setEditingTable(null);
+ };
+
+ const handleDuplicateTable = (table: Table) => {
+ const seatsObj: Record<number, string | null> = {};
+ for (let i = 0; i < table.capacity; i++) seatsObj[i] = null;
+ const copy: Table = {
+ ...table,
+ id: 'table_' + Math.random().toString(36).substr(2, 9),
+ name: `${table.name} (copie)`,
+ x: Math.min(88, table.x + 8),
+ y: Math.min(88, table.y + 8),
+ seats: seatsObj,
+ locked: false,
+ };
+ setTables([...tables, copy]);
+ setActiveTableId(copy.id);
+ };
+
+ const handleToggleLock = (tableId: string) => {
+ setTables(tables.map((t) => (t.id === tableId ? { ...t, locked: !t.locked } : t)));
  };
 
  // Assign guest to seat
@@ -307,6 +338,7 @@ export default function TablePlanner({
  const isDragging = draggingTableId === table.id;
  const assignedGuests = getTableAssignedGuests(table);
  const occupiedCount = getOccupiedSeatCount(table);
+ const visual = getTableVisualStyle(table.shape, isActive, table.tableColor);
 
  return (
  <div
@@ -321,7 +353,8 @@ export default function TablePlanner({
  transform: isDragging ? undefined : 'translate(-50%, -50%)',
  }}
  className={cn(
- 'absolute cursor-grab select-none p-3 em-floor-item',
+ 'absolute select-none p-3 em-floor-item',
+ table.locked ? 'cursor-not-allowed' : 'cursor-grab',
  isActive && 'em-floor-item--active',
  isDragging && 'em-floor-item--dragging',
  isHovered && !isDragging && 'z-10',
@@ -355,8 +388,9 @@ export default function TablePlanner({
  <div
  className={cn(
  'relative flex items-center justify-center text-xs text-center',
- getTableVisualClasses(table.shape, isActive),
+ visual.className,
  )}
+ style={visual.style}
  >
  <div className="px-2">
  <div className="truncate max-w-[90px] font-semibold text-[11px] tracking-tight">{table.name}</div>
@@ -367,6 +401,28 @@ export default function TablePlanner({
 
  {isActive && (
  <div className="absolute -top-2.5 -right-2.5 flex gap-1">
+ <button
+ type="button"
+ onClick={(e) => {
+ e.stopPropagation();
+ handleToggleLock(table.id);
+ }}
+ className="p-1.5 bg-surface border border-border text-muted hover:text-primary rounded-full shadow-[var(--shadow-soft)] transition"
+ title={table.locked ? 'Déverrouiller' : 'Verrouiller'}
+ >
+ {table.locked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
+ </button>
+ <button
+ type="button"
+ onClick={(e) => {
+ e.stopPropagation();
+ handleDuplicateTable(table);
+ }}
+ className="p-1.5 bg-surface border border-border text-muted hover:text-primary rounded-full shadow-[var(--shadow-soft)] transition"
+ title="Dupliquer"
+ >
+ <Copy className="w-3 h-3" />
+ </button>
  <button
  type="button"
  onClick={(e) => {
@@ -538,7 +594,17 @@ export default function TablePlanner({
  <div className="xl:col-span-3 flex flex-col space-y-4">
  <div className="bg-surface border border-border rounded-[var(--radius-card)] px-3 py-2 text-xs text-muted font-medium flex flex-wrap items-center gap-2">
  <Move className="w-3.5 h-3.5 text-muted shrink-0" />
- <span className="flex-1 min-w-[12rem]">Glissez les tables · cliquez un siège pour placer un invité</span>
+ <span className="flex-1 min-w-[12rem]">Glissez les tables · déverrouillez pour déplacer un import · cliquez un siège pour placer un invité</span>
+ {tables.some((t) => t.locked) && (
+ <button
+ type="button"
+ onClick={() => setTables(tables.map((t) => ({ ...t, locked: false })))}
+ className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-[10px] font-semibold text-foreground hover:bg-primary/10 transition"
+ >
+ <Unlock className="w-3.5 h-3.5" />
+ Tout déverrouiller
+ </button>
+ )}
  <button
  type="button"
  onClick={() => setIsExpanded(true)}
@@ -698,10 +764,36 @@ export default function TablePlanner({
  <input
  type="number"
  min={2}
- max={16}
+ max={24}
  value={newTableCapacity}
  onChange={(e) => setNewTableCapacity(parseInt(e.target.value) || 8)}
  className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+ />
+ </div>
+ </div>
+
+ <div className="grid grid-cols-2 gap-4">
+ <div>
+ <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Type de chaise</label>
+ <select
+ value={newChairType}
+ onChange={(e) => setNewChairType(e.target.value as ChairType)}
+ className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+ >
+ {Object.entries(chairTypeLabels).map(([k, v]) => (
+ <option key={k} value={k}>{v}</option>
+ ))}
+ </select>
+ </div>
+ <div>
+ <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5 flex items-center gap-1">
+ <Palette className="w-3 h-3" /> Couleur
+ </label>
+ <input
+ type="color"
+ value={newTableColor}
+ onChange={(e) => setNewTableColor(e.target.value)}
+ className="w-full h-10 rounded-[var(--radius-button)] border border-border cursor-pointer bg-surface-muted"
  />
  </div>
  </div>
@@ -773,13 +865,48 @@ export default function TablePlanner({
  <input
  type="number"
  min={2}
- max={16}
+ max={24}
  value={editingTable.capacity}
  onChange={(e) => setEditingTable({ ...editingTable, capacity: parseInt(e.target.value) || 8 })}
  className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
  />
  </div>
  </div>
+
+ <div className="grid grid-cols-2 gap-4">
+ <div>
+ <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Type de chaise</label>
+ <select
+ value={editingTable.chairType || 'BANQUET'}
+ onChange={(e) => setEditingTable({ ...editingTable, chairType: e.target.value })}
+ className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+ >
+ {Object.entries(chairTypeLabels).map(([k, v]) => (
+ <option key={k} value={k}>{v}</option>
+ ))}
+ </select>
+ </div>
+ <div>
+ <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5 flex items-center gap-1">
+ <Palette className="w-3 h-3" /> Couleur
+ </label>
+ <input
+ type="color"
+ value={editingTable.tableColor || '#ffffff'}
+ onChange={(e) => setEditingTable({ ...editingTable, tableColor: e.target.value })}
+ className="w-full h-10 rounded-[var(--radius-button)] border border-border cursor-pointer bg-surface-muted"
+ />
+ </div>
+ </div>
+ <label className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted cursor-pointer">
+ <span className="text-xs font-medium text-foreground">Verrouiller la position</span>
+ <input
+ type="checkbox"
+ checked={Boolean(editingTable.locked)}
+ onChange={(e) => setEditingTable({ ...editingTable, locked: e.target.checked })}
+ className="rounded border-border text-primary focus:ring-primary/30 h-4 w-4"
+ />
+ </label>
  </div>
 
  <div className="flex gap-3 pt-3 border-t border-border">

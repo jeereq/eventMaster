@@ -1,5 +1,11 @@
 import GuestPortalGate from '@/components/GuestPortalGate';
+import CelebrateMood from '@/components/CelebrateMood';
 
 export default function GuestRsvpLayout({ children }: { children: React.ReactNode }) {
-  return <GuestPortalGate>{children}</GuestPortalGate>;
+  return (
+    <>
+      <CelebrateMood />
+      <GuestPortalGate>{children}</GuestPortalGate>
+    </>
+  );
 }

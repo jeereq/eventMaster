@@ -218,6 +218,41 @@ html[data-mood="celebrate"] .font-display {
   text-transform: uppercase;
 }
 
+.em-guest-page {
+  position: relative;
+  min-height: 100vh;
+  background:
+    radial-gradient(80% 50% at 8% -8%, color-mix(in srgb, var(--festive-accent) 18%, transparent), transparent 58%),
+    radial-gradient(70% 45% at 110% 0%, color-mix(in srgb, var(--primary) 14%, transparent), transparent 52%),
+    var(--background);
+}
+
+.em-guest-welcome {
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--festive-accent) 55%, transparent), transparent 58%),
+    linear-gradient(145deg, var(--primary) 0%, color-mix(in srgb, var(--festive-accent) 42%, var(--primary)) 100%);
+}
+
+.em-guest-welcome::after {
+  content: '';
+  position: absolute;
+  right: -18%;
+  bottom: -55%;
+  width: 210px;
+  height: 210px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  pointer-events: none;
+}
+
+html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--festive-accent) 16%, var(--surface));
+  color: color-mix(in srgb, var(--festive-accent) 80%, var(--foreground));
+}
+
 @keyframes em-confetti-fall {
   0% {
     transform: translate3d(0, -12px, 0) rotate(0deg);

@@ -24,6 +24,8 @@ export interface LayoutParams {
   chairType?: ChairType;
   tentWidthM?: number;
   tentLengthM?: number;
+  canvasWidthM?: number;
+  canvasHeightM?: number;
 }
 
 export interface RoomLayoutBlueprint {
@@ -336,19 +338,30 @@ export function calculateBlueprintCapacity(blueprint: RoomLayoutBlueprint): numb
 export function generateRoomBlueprint(roomType: RoomType, params: LayoutParams = {}): RoomLayoutBlueprint {
   const chairType: ChairType = params.chairType || (roomType === 'CONFERENCE' || roomType === 'AMPHITHEATER' ? 'THEATER' : 'BANQUET');
 
+  let blueprint: RoomLayoutBlueprint;
   switch (roomType) {
     case 'BANQUET':
-      return generateBanquetBlueprint(params, chairType);
+      blueprint = generateBanquetBlueprint(params, chairType);
+      break;
     case 'CONFERENCE':
-      return generateConferenceBlueprint(params, chairType);
+      blueprint = generateConferenceBlueprint(params, chairType);
+      break;
     case 'AMPHITHEATER':
-      return generateAmphitheaterBlueprint(params, chairType);
+      blueprint = generateAmphitheaterBlueprint(params, chairType);
+      break;
     case 'TENT':
-      return generateTentBlueprint(params, chairType);
+      blueprint = generateTentBlueprint(params, chairType);
+      break;
+    case 'CUSTOM':
     case 'SIMPLE':
     default:
-      return generateSimpleBlueprint(roomType);
+      blueprint = generateSimpleBlueprint(roomType);
+      break;
   }
+
+  const widthM = params.canvasWidthM ?? params.tentWidthM ?? blueprint.canvas.widthM;
+  const heightM = params.canvasHeightM ?? params.tentLengthM ?? blueprint.canvas.heightM;
+  return { ...blueprint, canvas: { widthM, heightM } };
 }
 
 function generateSimpleBlueprint(roomType: RoomType): RoomLayoutBlueprint {
@@ -376,7 +389,7 @@ function generateBanquetBlueprint(params: LayoutParams, chairType: ChairType): R
     chairType,
     x: pos.x,
     y: pos.y,
-    locked: true,
+    locked: false,
   }));
 
   return {
@@ -534,7 +547,7 @@ function generateTentBlueprint(params: LayoutParams, chairType: ChairType): Room
         chairType,
         x: pos.x,
         y: pos.y,
-        locked: true,
+        locked: false,
       });
     });
   } else {

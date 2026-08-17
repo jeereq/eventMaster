@@ -27,12 +27,26 @@ export const PAID_PLAN_IDS: PlanId[] = PLAN_IDS.filter((id) => id !== 'FREE');
 export const PREMIUM_PLAN_IDS: PlanId[] = ['PREMIUM_1', 'PREMIUM_2'];
 export const ENTERPRISE_PLAN_IDS: PlanId[] = ['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3'];
 
+/** Devise unique de la plateforme : franc congolais. */
+export const CURRENCY_CODE = 'FC';
+export const CURRENCY_NAME = 'franc congolais';
+
 export function formatFc(amount: number): string {
-  return `${amount.toLocaleString('fr-FR')} FC`;
+  return `${Number(amount || 0).toLocaleString('fr-FR')} ${CURRENCY_CODE}`;
+}
+
+/** Normalise un libellé de prix (jamais USD/EUR). */
+export function ensureFcPrice(price?: string | null, fallbackFc?: number): string {
+  const raw = (price || '').trim();
+  if (raw && !/[\$€£]|USD|EUR/i.test(raw) && /\d/.test(raw)) {
+    if (/FC|CDF/i.test(raw)) return raw.replace(/CDF/gi, CURRENCY_CODE);
+    return `${raw} ${CURRENCY_CODE}`;
+  }
+  return formatFc(fallbackFc ?? 0);
 }
 
 export function annualMonthlyEquivalent(monthlyFc: number): string {
-  if (monthlyFc <= 0) return '0 FC';
+  if (monthlyFc <= 0) return formatFc(0);
   return formatFc(Math.round(monthlyFc * (1 - ANNUAL_DISCOUNT_PERCENT / 100)));
 }
 
@@ -546,9 +560,9 @@ export function getPlanCapabilityBadges(planId: PlanId): PlanCapabilityBadge[] {
 }
 
 export function getPlanDisplayPrice(plan: LandingPlan, cycle: BillingCycle, dbPrice?: string): string {
-  if (plan.id === 'FREE') return '0 FC';
+  if (plan.id === 'FREE') return formatFc(0);
   if (cycle === 'monthly') {
-    return dbPrice ? dbPrice : formatFc(plan.monthlyPriceFc);
+    return ensureFcPrice(dbPrice, plan.monthlyPriceFc);
   }
   const monthlyFc = dbPrice
     ? parseInt(dbPrice.replace(/[^\d]/g, ''), 10) || plan.monthlyPriceFc

@@ -38,20 +38,20 @@ interface GuestInvitationsResponse {
 function RsvpBadge({ status }: { status: string }) {
   if (status === 'ACCEPTED') {
     return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-100">
+      <span className="em-festive-chip !normal-case tracking-normal">
         <CheckCircle2 className="w-3 h-3" /> Confirmé
       </span>
     );
   }
   if (status === 'DECLINED') {
     return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-100">
+      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-100">
         <XCircle className="w-3 h-3" /> Décliné
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-100">
+    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-100">
       <Clock className="w-3 h-3" /> En attente
     </span>
   );
@@ -73,7 +73,9 @@ function InvitationCard({ item }: { item: GuestInvitationItem }) {
       className={cn(
         'block bg-surface border rounded-[var(--radius-card)] p-4 sm:p-5 shadow-[var(--shadow-soft)]',
         'hover:bg-card-hover hover:border-border-subtle transition group',
-        item.isCurrent ? 'border-primary/40 ring-1 ring-primary/20' : 'border-border',
+        item.isCurrent
+          ? 'em-celebrate-stripe border-[color-mix(in_srgb,var(--festive-accent)_40%,var(--border))] ring-1 ring-[color-mix(in_srgb,var(--festive-accent)_22%,transparent)]'
+          : 'border-border',
       )}
     >
       <div className="flex items-start justify-between gap-3 mb-3">
@@ -81,7 +83,7 @@ function InvitationCard({ item }: { item: GuestInvitationItem }) {
           <span className="text-[10px] font-semibold text-muted uppercase tracking-wider">
             {item.organizationName}
           </span>
-          <h3 className="font-semibold text-foreground text-base leading-snug group-hover:text-primary transition">
+          <h3 className="font-display font-semibold text-foreground text-base leading-snug group-hover:text-primary transition">
             {item.event.title}
           </h3>
         </div>

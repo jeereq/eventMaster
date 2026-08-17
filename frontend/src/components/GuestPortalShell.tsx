@@ -34,9 +34,9 @@ export default function GuestPortalShell({
   contentClassName,
 }: GuestPortalShellProps) {
   return (
-    <div className={cn('min-h-screen bg-background flex flex-col', className)}>
+    <div className={cn('em-guest-page flex flex-col', className)}>
       <CelebrateMood />
-      <header className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur-sm em-celebrate-stripe">
+      <header className="sticky top-0 z-40 border-b border-border bg-surface/90 backdrop-blur-md em-celebrate-stripe">
         <div className="page-container max-w-xl mx-auto h-14 flex items-center justify-between gap-3 pl-1">
           {showBrand ? (
             <Link href="/" className="flex items-center gap-2.5 min-w-0 hover:opacity-90 transition">
@@ -55,7 +55,7 @@ export default function GuestPortalShell({
           )}
           <div className="flex items-center gap-2 shrink-0">
             {showBrand && (
-              <span className="hidden sm:inline text-[10px] font-semibold uppercase tracking-wider text-muted">
+              <span className="em-festive-chip hidden sm:inline-flex">
                 {eyebrow}
               </span>
             )}
@@ -94,7 +94,7 @@ export function GuestPortalTabBar({
   onChange: (id: string) => void;
 }) {
   return (
-    <div className="border-t border-border bg-surface">
+    <div className="border-t border-border bg-surface/80">
       <div className="page-container max-w-xl mx-auto p-2 flex gap-1 overflow-x-auto scrollbar-none">
         {tabs.map((tab) => {
           const active = tab.id === activeId;
@@ -103,8 +103,9 @@ export function GuestPortalTabBar({
               key={tab.id}
               type="button"
               onClick={() => onChange(tab.id)}
+              aria-pressed={active}
               className={cn(
-                'inline-flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-button)] text-xs font-semibold whitespace-nowrap transition',
+                'em-guest-tab inline-flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-button)] text-xs font-semibold whitespace-nowrap transition',
                 active
                   ? 'bg-primary/10 text-primary'
                   : 'text-muted hover:text-foreground hover:bg-surface-muted',
@@ -124,16 +125,19 @@ export function GuestPortalCard({
   children,
   className,
   padding = 'md',
+  festive = false,
 }: {
   children: React.ReactNode;
   className?: string;
   padding?: 'sm' | 'md' | 'lg';
+  festive?: boolean;
 }) {
   const pad = padding === 'sm' ? 'p-4' : padding === 'lg' ? 'p-6' : 'p-5';
   return (
     <div
       className={cn(
         'bg-surface border border-border rounded-[var(--radius-card)] shadow-[var(--shadow-soft)]',
+        festive && 'em-celebrate-stripe overflow-hidden',
         pad,
         className,
       )}
