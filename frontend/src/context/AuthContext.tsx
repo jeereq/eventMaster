@@ -39,6 +39,7 @@ interface Tenant {
   licenseExpiresAt?: string | null;
   managerId?: string | null;
   branding?: TenantBranding;
+  accountKind?: 'ORGANIZER' | 'VENDOR' | 'BOTH';
 }
 
 interface RegisterResult {
@@ -99,6 +100,7 @@ interface AuthContextType {
     referralCode?: string,
     phoneCountryCode?: string,
     nationalNumber?: string,
+    accountKind?: 'ORGANIZER' | 'VENDOR' | 'BOTH',
   ) => Promise<RegisterResult>;
   verifyOtp: (email: string, otp: string) => Promise<void>;
   resendOtp: (email: string, verificationMethod?: 'EMAIL' | 'WHATSAPP') => Promise<string>;
@@ -213,6 +215,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     referralCode?: string,
     phoneCountryCode?: string,
     nationalNumber?: string,
+    accountKind?: 'ORGANIZER' | 'VENDOR' | 'BOTH',
   ) => {
     setLoading(true);
     try {
@@ -228,6 +231,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         acceptTerms,
         acceptPrivacy,
         referralCode,
+        accountKind,
       });
       setLoading(false);
       return {

@@ -84,7 +84,7 @@ export async function register(req: Request, res: Response) {
       });
     }
 
-    const { email, password, name, tenantName, phone, phoneCountryCode, nationalNumber, verificationMethod = 'EMAIL', acceptTerms, acceptPrivacy, referralCode } = req.body;
+    const { email, password, name, tenantName, phone, phoneCountryCode, nationalNumber, verificationMethod = 'EMAIL', acceptTerms, acceptPrivacy, referralCode, accountKind: rawAccountKind } = req.body;
 
     if (!email || !password || !name || !tenantName) {
       return res.status(400).json({ error: 'Tous les champs sont obligatoires (email, password, name, tenantName)' });
@@ -122,11 +122,17 @@ export async function register(req: Request, res: Response) {
       }
     }
 
+    const accountKind =
+      rawAccountKind === 'VENDOR' || rawAccountKind === 'BOTH' || rawAccountKind === 'ORGANIZER'
+        ? rawAccountKind
+        : 'ORGANIZER';
+
     const result = await prisma.$transaction(async (tx) => {
       const tenant = await tx.tenant.create({
         data: {
           name: tenantName,
           plan: 'FREE',
+          accountKind,
           referredByCommercialId,
           referredByOrgUserId,
         },
@@ -467,7 +473,7 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
       return res.status(401).json({ error: 'Non authentifié.' });
     }
 
-    const { name, email, phone, password, tenantName } = req.body;
+    const { name, email, phone, password, tenantName, accountKind } = req.body;
 
     if (!name || !email) {
       return res.status(400).json({ error: 'Le nom et l\'adresse e-mail sont obligatoires.' });
@@ -494,6 +500,15 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
       updateData.passwordHash = await bcrypt.hash(password, 10);
     }
 
+    const wantsAccountKind =
+      accountKind === 'ORGANIZER' || accountKind === 'VENDOR' || accountKind === 'BOTH';
+    if (wantsAccountKind && req.user.tenantId) {
+      const access = await resolveOrgAccess(req.user.id, req.user.tenantId);
+      if (!access.isOwner && access.level !== 'manager') {
+        return res.status(403).json({ error: 'Seuls le propriétaire et les managers peuvent changer le type de compte.' });
+      }
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       const updatedUser = await tx.user.update({
         where: { id: req.user!.id },
@@ -501,15 +516,20 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
       });
 
       let updatedTenant = null;
-      if (tenantName && req.user!.tenantId) {
-        updatedTenant = await tx.tenant.update({
-          where: { id: req.user!.tenantId },
-          data: { name: tenantName },
-        });
-      } else if (req.user!.tenantId) {
-        updatedTenant = await tx.tenant.findUnique({
-          where: { id: req.user!.tenantId },
-        });
+      if (req.user!.tenantId) {
+        const tenantData: { name?: string; accountKind?: 'ORGANIZER' | 'VENDOR' | 'BOTH' } = {};
+        if (tenantName) tenantData.name = tenantName;
+        if (wantsAccountKind) tenantData.accountKind = accountKind;
+        if (Object.keys(tenantData).length > 0) {
+          updatedTenant = await tx.tenant.update({
+            where: { id: req.user!.tenantId },
+            data: tenantData,
+          });
+        } else {
+          updatedTenant = await tx.tenant.findUnique({
+            where: { id: req.user!.tenantId },
+          });
+        }
       }
 
       return { user: updatedUser, tenant: updatedTenant };

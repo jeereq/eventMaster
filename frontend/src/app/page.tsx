@@ -284,6 +284,28 @@ export default function Home() {
       <LandingWorkflowSection />
       <LandingMobileSection />
 
+      <section className="py-14 sm:py-16 border-t border-border bg-surface">
+        <div className="page-container flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
+          <div className="max-w-xl space-y-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--festive-accent)]">
+              Salles
+            </p>
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+              Louer une salle, sans quitter EventMaster
+            </h2>
+            <p className="text-sm text-muted leading-relaxed">
+              Parcourez les espaces publiés par les organisations : capacité, plan 2D, tarif de départ.
+              Demandez un devis, puis créez votre événement dans le même outil.
+            </p>
+          </div>
+          <Link href="/marketplace/salles">
+            <Button rightIcon={<ArrowRight className="w-4 h-4" />}>
+              Voir les salles
+            </Button>
+          </Link>
+        </div>
+      </section>
+
       {/* Vitrine modèles — 100 % API publique / Super Admin */}
       <section id="modeles" className="py-16 sm:py-20 bg-surface border-t border-border scroll-mt-16">
         <div className="page-container">

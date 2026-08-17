@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import {
   Building2, Plus, Trash2, Users, UserPlus, CheckCircle2,
   ChevronLeft, ChevronRight, LayoutGrid, Theater, Tent, Presentation, Edit3, Sparkles, Ruler,
+  Globe, GlobeLock, Upload,
 } from 'lucide-react';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import RoomLayoutEditor from '@/components/RoomLayoutEditor';
@@ -26,6 +27,9 @@ import {
   roomTypeDescriptions,
   roomTypeLabels,
 } from '@/lib/roomLayoutUtils';
+import { PRICE_UNIT_OPTIONS, type VenuePriceUnit } from '@/lib/marketplace';
+import { uploadImageFile } from '@/lib/cloudinaryUpload';
+import { formatFc } from '@/config/landingPricing';
 
 interface RoomStaffItem {
   id: string;
@@ -43,6 +47,19 @@ interface RoomItem {
   roomType: RoomType;
   layoutBlueprint: RoomLayoutBlueprint | null;
   staff: RoomStaffItem[];
+  venueListing?: {
+    id: string;
+    slug: string;
+    isPublic: boolean;
+    headline: string | null;
+    city: string | null;
+    address: string | null;
+    priceFromFc: number | null;
+    priceUnit: VenuePriceUnit;
+    photos: string[] | null;
+    latitude: number | null;
+    longitude: number | null;
+  } | null;
   _count?: { events: number };
 }
 
@@ -90,7 +107,7 @@ const fieldClass =
 const labelClass = 'block text-xs font-medium text-muted mb-1.5';
 
 export default function RoomsManagement() {
-  const { planFeatures, planQuota, tenant } = useAuth();
+  const { planFeatures, planQuota, tenant, refreshProfile } = useAuth();
   const { mode: roomsViewMode, setViewMode: setRoomsViewMode, columns: roomsColumns, setGridColumns: setRoomsColumns, gridClassName: roomsGridClass } = useViewMode('em-view-rooms', 'grid', 3);
   const [roomsPage, setRoomsPage] = useState(1);
   const ROOMS_PER_PAGE = 9;
@@ -119,6 +136,20 @@ export default function RoomsManagement() {
   const [assignRoomId, setAssignRoomId] = useState<string | null>(null);
   const [assignUserId, setAssignUserId] = useState('');
   const [assignRole, setAssignRole] = useState<'MANAGER' | 'PROTOCOL'>('PROTOCOL');
+  const [listingRoom, setListingRoom] = useState<RoomItem | null>(null);
+  const [listingDraft, setListingDraft] = useState({
+    isPublic: false,
+    headline: '',
+    city: '',
+    address: '',
+    priceFromFc: '',
+    priceUnit: 'EVENT' as VenuePriceUnit,
+    photos: [] as string[],
+    latitude: '',
+    longitude: '',
+  });
+  const [savingListing, setSavingListing] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const allowedRoomTypes = useMemo(() => {
     const allowed = planFeatures?.allowedRoomTypes;
@@ -250,6 +281,65 @@ export default function RoomsManagement() {
       setError(err.message || 'Erreur lors de la sauvegarde du plan.');
     } finally {
       setSavingLayout(false);
+    }
+  };
+
+  const openListing = (room: RoomItem) => {
+    const listing = room.venueListing;
+    const photos = Array.isArray(listing?.photos) ? listing.photos.filter(Boolean) : [];
+    setListingRoom(room);
+    setListingDraft({
+      isPublic: Boolean(listing?.isPublic),
+      headline: listing?.headline || room.name,
+      city: listing?.city || '',
+      address: listing?.address || room.location || '',
+      priceFromFc: listing?.priceFromFc != null ? String(listing.priceFromFc) : '',
+      priceUnit: listing?.priceUnit || 'EVENT',
+      photos,
+      latitude: listing?.latitude != null ? String(listing.latitude) : '',
+      longitude: listing?.longitude != null ? String(listing.longitude) : '',
+    });
+    setError('');
+  };
+
+  const handleSaveListing = async (publish: boolean) => {
+    if (!listingRoom) return;
+    setSavingListing(true);
+    setError('');
+    try {
+      await api.put(`/rooms/${listingRoom.id}/listing`, {
+        isPublic: publish,
+        headline: listingDraft.headline,
+        city: listingDraft.city,
+        address: listingDraft.address,
+        priceFromFc: listingDraft.priceFromFc ? Number(listingDraft.priceFromFc) : null,
+        priceUnit: listingDraft.priceUnit,
+        photos: listingDraft.photos,
+        latitude: listingDraft.latitude || null,
+        longitude: listingDraft.longitude || null,
+      });
+      setSuccess(publish ? 'Salle publiée sur le marketplace.' : 'Publication enregistrée (non visible).');
+      setListingRoom(null);
+      await load();
+      await refreshProfile?.();
+    } catch (err: any) {
+      setError(err.message || 'Impossible d’enregistrer la fiche.');
+    } finally {
+      setSavingListing(false);
+    }
+  };
+
+  const handleListingPhoto = async (file: File | undefined) => {
+    if (!file) return;
+    setUploadingPhoto(true);
+    setError('');
+    try {
+      const uploaded = await uploadImageFile(file);
+      setListingDraft((prev) => ({ ...prev, photos: [...prev.photos, uploaded.url].slice(0, 8) }));
+    } catch (err: any) {
+      setError(err.message || 'Upload photo impossible.');
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
@@ -441,7 +531,7 @@ export default function RoomsManagement() {
             Salles de l&apos;organisation
           </h2>
           <p className="text-xs text-muted mt-1">
-            Créez une salle en 3 étapes : infos, type, puis plan 2D.
+            Créez une salle en 3 étapes : infos, type, puis plan 2D. Vous pouvez ensuite la publier pour la location.
             {planQuota && (
               <span className="block mt-1 font-medium text-primary">
                 Salles : {planQuota.usage.rooms} / {planQuota.limits.maxRooms >= 9999 ? '∞' : planQuota.limits.maxRooms}
@@ -683,6 +773,14 @@ export default function RoomsManagement() {
               <>
                 <button
                   type="button"
+                  onClick={() => openListing(room)}
+                  className="p-2 text-muted hover:text-primary hover:bg-surface-muted rounded-[var(--radius-button)]"
+                  title={room.venueListing?.isPublic ? 'Fiche marketplace' : 'Publier cette salle'}
+                >
+                  {room.venueListing?.isPublic ? <Globe className="w-4 h-4" /> : <GlobeLock className="w-4 h-4" />}
+                </button>
+                <button
+                  type="button"
                   onClick={() => openEditLayout(room)}
                   className={cn(
                     roomsViewMode === 'list'
@@ -728,9 +826,15 @@ export default function RoomsManagement() {
                   }
                   status={
                     roomsViewMode === 'list' ? (
+                      room.venueListing?.isPublic ? (
+                        <StatusPill tone="emerald">Publiée</StatusPill>
+                      ) : (
                       <StatusPill tone="primary">
                         {roomTypeLabels[room.roomType || 'SIMPLE']}
                       </StatusPill>
+                      )
+                    ) : room.venueListing?.isPublic ? (
+                      <StatusPill tone="emerald">Publiée</StatusPill>
                     ) : undefined
                   }
                   description={roomsViewMode === 'grid' ? room.description : undefined}
@@ -894,6 +998,128 @@ export default function RoomsManagement() {
                 setEditBlueprint(refreshBlueprintMetadata(generateRoomBlueprint(editBlueprint.roomType)));
               }}
             />
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        open={Boolean(listingRoom)}
+        onClose={() => setListingRoom(null)}
+        title={listingRoom ? `Publier — ${listingRoom.name}` : 'Marketplace'}
+        description="Visible dans le catalogue public. Les plans de table d’événements privés ne sont jamais exposés."
+        size="lg"
+        footer={
+          <div className="flex w-full justify-between gap-2">
+            <Button type="button" variant="secondary" size="sm" onClick={() => setListingRoom(null)}>
+              Annuler
+            </Button>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                loading={savingListing}
+                onClick={() => handleSaveListing(false)}
+                leftIcon={<GlobeLock className="w-4 h-4" />}
+              >
+                Enregistrer sans publier
+              </Button>
+              <Button
+                type="button"
+                variant="success"
+                size="sm"
+                loading={savingListing}
+                onClick={() => handleSaveListing(true)}
+                leftIcon={<Globe className="w-4 h-4" />}
+              >
+                Publier
+              </Button>
+            </div>
+          </div>
+        }
+      >
+        {listingRoom && (
+          <div className="space-y-4">
+            {listingRoom.venueListing?.isPublic && listingRoom.venueListing.slug && (
+              <p className="text-xs text-muted">
+                Fiche actuelle :{' '}
+                <Link href={`/marketplace/salles/${listingRoom.venueListing.slug}`} className="font-semibold text-primary hover:underline" target="_blank">
+                  /marketplace/salles/{listingRoom.venueListing.slug}
+                </Link>
+              </p>
+            )}
+            <Input
+              label="Titre public"
+              value={listingDraft.headline}
+              onChange={(e) => setListingDraft((d) => ({ ...d, headline: e.target.value }))}
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label="Ville"
+                value={listingDraft.city}
+                onChange={(e) => setListingDraft((d) => ({ ...d, city: e.target.value }))}
+                placeholder="Kinshasa"
+              />
+              <Input
+                label="Adresse"
+                value={listingDraft.address}
+                onChange={(e) => setListingDraft((d) => ({ ...d, address: e.target.value }))}
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label={`Tarif de départ (${formatFc(Number(listingDraft.priceFromFc) || 0)})`}
+                type="number"
+                min={0}
+                value={listingDraft.priceFromFc}
+                onChange={(e) => setListingDraft((d) => ({ ...d, priceFromFc: e.target.value }))}
+              />
+              <label>
+                <span className={labelClass}>Unité</span>
+                <select
+                  value={listingDraft.priceUnit}
+                  onChange={(e) => setListingDraft((d) => ({ ...d, priceUnit: e.target.value as VenuePriceUnit }))}
+                  className={fieldClass}
+                >
+                  {PRICE_UNIT_OPTIONS.map((opt) => (
+                    <option key={opt.id} value={opt.id}>{opt.label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div>
+              <span className={labelClass}>Photos (max. 8)</span>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {listingDraft.photos.map((url) => (
+                  <div key={url} className="relative w-16 h-16 rounded-md overflow-hidden border border-border">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt="" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      className="absolute top-0 right-0 bg-surface/90 text-[10px] px-1"
+                      onClick={() => setListingDraft((d) => ({ ...d, photos: d.photos.filter((p) => p !== url) }))}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <label className="inline-flex items-center gap-2 text-xs font-semibold text-primary cursor-pointer">
+                <Upload className="w-3.5 h-3.5" />
+                {uploadingPhoto ? 'Upload…' : 'Ajouter une photo'}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  disabled={uploadingPhoto || listingDraft.photos.length >= 8}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = '';
+                    void handleListingPhoto(file);
+                  }}
+                />
+              </label>
+            </div>
           </div>
         )}
       </Modal>

@@ -12,6 +12,29 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
+export function optionalAuth(req: AuthenticatedRequest, _res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return next();
+  }
+  const token = authHeader.split(' ')[1];
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as {
+      userId: string;
+      tenantId: string | null;
+      role: 'SUPER_ADMIN' | 'COMMERCIAL' | 'USER';
+    };
+    req.user = {
+      id: payload.userId,
+      tenantId: payload.tenantId,
+      role: payload.role,
+    };
+  } catch {
+    /* ignore invalid token on public routes */
+  }
+  next();
+}
+
 export function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   

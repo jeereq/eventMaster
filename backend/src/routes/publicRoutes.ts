@@ -9,6 +9,12 @@ import {
   getContactDestinations,
   loadPlatformSettings,
 } from '../services/platformSettingsService';
+import { optionalAuth } from '../middleware/auth';
+import {
+  listPublicVenues,
+  getPublicVenue,
+  createVenueInquiry,
+} from '../controllers/marketplaceController';
 
 const router = Router();
 
@@ -69,6 +75,10 @@ router.get('/templates', async (_req: Request, res: Response) => {
     return res.status(500).json({ error: 'Erreur lors de la récupération des modèles publics' });
   }
 });
+
+router.get('/venues', listPublicVenues);
+router.get('/venues/:slug', getPublicVenue);
+router.post('/venues/:slug/inquire', optionalAuth, createVenueInquiry);
 
 // POST /api/public/contact
 router.post('/contact', async (req: Request, res: Response) => {

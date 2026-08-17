@@ -72,6 +72,7 @@ export async function getRooms(req: AuthenticatedRequest, res: Response) {
             user: { select: { id: true, name: true, email: true, orgRole: true } },
           },
         },
+        venueListing: true,
         _count: { select: { events: true } },
       },
       orderBy: { name: 'asc' },
