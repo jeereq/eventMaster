@@ -8,7 +8,7 @@ import {
   loadSubscriptionPlansFromDb,
   saveSubscriptionPlansToDb,
 } from '../services/subscriptionPlanCatalogService';
-import { ensureCommercialReferralCode, normalizeCommissionRate } from '../services/commercialService';
+import { ensureCommercialReferralCode, normalizeCommissionRate, DEFAULT_COMMISSION_RATE } from '../services/commercialService';
 import { isPlatformStaff } from '../middleware/platformAccess';
 import {
   assertCommercialOwnsTenant,
@@ -527,7 +527,7 @@ export async function createUser(req: AuthenticatedRequest, res: Response) {
         role: resolvedRole,
         isEmailVerified: isEmailVerified !== undefined ? Boolean(isEmailVerified) : false,
         tenantId: resolvedTenantId,
-        commissionRate: resolvedRole === 'COMMERCIAL' ? normalizeCommissionRate(0.2) : null,
+        commissionRate: resolvedRole === 'COMMERCIAL' ? normalizeCommissionRate(DEFAULT_COMMISSION_RATE) : null,
       },
     });
 
@@ -573,7 +573,7 @@ export async function updateUserRoleOrStatus(req: AuthenticatedRequest, res: Res
     if (role === 'COMMERCIAL') {
       updateData.tenantId = null;
       if (updateData.commissionRate === undefined) {
-        updateData.commissionRate = normalizeCommissionRate(0.2);
+        updateData.commissionRate = normalizeCommissionRate(DEFAULT_COMMISSION_RATE);
       }
     } else if (tenantId !== undefined) {
       updateData.tenantId = tenantId || null;

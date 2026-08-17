@@ -297,10 +297,10 @@ export default function ContactPage() {
         />
 
         <PublicCtaBand
-          title="Créez votre entreprise pour démarrer"
-          description="Un compte entreprise pour centraliser invitations, plan de table et protocole QR."
+          title="Créez votre organisation pour démarrer"
+          description="Un compte organisation pour centraliser invitations, plan de table et protocole QR."
           primaryHref="/register"
-          primaryLabel="Créer mon entreprise"
+          primaryLabel="Créer mon organisation"
           secondaryHref="/#tarifs"
           secondaryLabel="Voir les tarifs"
         />

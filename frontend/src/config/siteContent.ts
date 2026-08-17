@@ -16,7 +16,7 @@ export const FOOTER_FEATURES = [
   'Plans de salle 2D & protocole QR web',
   'Catalogue de salles et prestataires',
   'Application mobile (en construction)',
-  'Espace isolé par entreprise',
+  'Espace isolé par organisation',
 ] as const;
 
 export const FOOTER_PRODUCT = [
@@ -32,11 +32,11 @@ export const FOOTER_RESOURCES = [
   { label: `Conditions d'utilisation (v${TERMS_VERSION})`, href: '/terms' },
   { label: `Politique de confidentialité (v${PRIVACY_VERSION})`, href: '/privacy' },
   { label: 'Connexion', href: '/login' },
-  { label: 'Créer mon entreprise', href: '/register' },
+  { label: 'Créer mon organisation', href: '/register' },
 ] as const;
 
 export const FOOTER_BRAND_DESCRIPTION =
-  'Créez votre entreprise sur EventMaster pour gérer invitations, RSVP, plans de salle, catalogue et protocole QR sur le web. L’application mobile est en construction et n’est pas encore déployée.';
+  'Créez votre organisation sur EventMaster pour gérer invitations, RSVP, plans de salle, catalogue et protocole QR sur le web. L’application mobile est en construction et n’est pas encore déployée.';
 
 export interface FaqItem {
   id: string;

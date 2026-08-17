@@ -3478,7 +3478,7 @@ function DashboardPageContent() {
  <span className="text-xs text-primary">{revenueReport.summary.invoiceCount} facture(s)</span>
  </div>
  <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
- <span className="text-xs font-bold text-amber-600 uppercase">Commissions (20 %)</span>
+ <span className="text-xs font-bold text-amber-600 uppercase">Commissions (30 %)</span>
  <p className="text-xl font-extrabold text-amber-900 mt-1">{revenueReport.summary.totalCommissionsFormatted}</p>
  </div>
  <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4">

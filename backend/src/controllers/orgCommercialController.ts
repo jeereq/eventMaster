@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import {
   ensureOrgCommercialReferralCode,
+  DEFAULT_COMMISSION_RATE,
   normalizeCommissionRate,
 } from '../services/commercialService';
 
@@ -33,7 +34,7 @@ export async function getOrgCommercialDashboard(req: AuthenticatedRequest, res: 
     const referralCode = await ensureOrgCommercialReferralCode(userId, tenantId);
     const commissionRate = normalizeCommissionRate(
       user.commissionRate,
-      user.tenant?.defaultOrgCommercialCommissionRate ?? 0.2,
+      user.tenant?.defaultOrgCommercialCommissionRate ?? DEFAULT_COMMISSION_RATE,
     );
 
     const [organizations, commissions] = await Promise.all([

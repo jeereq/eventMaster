@@ -6,6 +6,7 @@ import { isValidOrgRole, resolveOrgAccess } from '../services/permissionsService
 import { assertOrgManagerQuota, assertPlanFeature, PlanFeatureError } from '../services/planFeaturesService';
 import {
   ensureOrgCommercialReferralCode,
+  DEFAULT_COMMISSION_RATE,
   normalizeCommissionRate,
 } from '../services/commercialService';
 import { setupUserOtpVerification } from './authController';
@@ -54,7 +55,7 @@ export async function getTeamMembers(req: AuthenticatedRequest, res: Response) {
     return res.json({
       members: members.map((m) => ({
         ...m,
-        commissionRate: m.commissionRate ?? tenant?.defaultOrgCommercialCommissionRate ?? 0.2,
+        commissionRate: m.commissionRate ?? tenant?.defaultOrgCommercialCommissionRate ?? DEFAULT_COMMISSION_RATE,
         isOwner: tenant?.managerId === m.id,
         orgRoleLabel:
           tenant?.managerId === m.id
@@ -64,7 +65,7 @@ export async function getTeamMembers(req: AuthenticatedRequest, res: Response) {
       access,
       isManager: access.canManageTeam,
       orgCommercialSettings: {
-        defaultCommissionRate: tenant?.defaultOrgCommercialCommissionRate ?? 0.2,
+        defaultCommissionRate: tenant?.defaultOrgCommercialCommissionRate ?? DEFAULT_COMMISSION_RATE,
       },
     });
   } catch (error: any) {
@@ -144,7 +145,7 @@ export async function createTeamMember(req: AuthenticatedRequest, res: Response)
       orgRole === 'COMMERCIAL'
         ? normalizeCommissionRate(
             commissionRate,
-            tenant?.defaultOrgCommercialCommissionRate ?? 0.2,
+            tenant?.defaultOrgCommercialCommissionRate ?? DEFAULT_COMMISSION_RATE,
           )
         : null;
 
@@ -259,7 +260,7 @@ export async function updateTeamMember(req: AuthenticatedRequest, res: Response)
     const updateData: { orgRole: typeof orgRole; commissionRate?: number | null } = { orgRole };
 
     if (orgRole === 'COMMERCIAL' && member.commissionRate == null) {
-      updateData.commissionRate = tenant?.defaultOrgCommercialCommissionRate ?? 0.2;
+      updateData.commissionRate = tenant?.defaultOrgCommercialCommissionRate ?? DEFAULT_COMMISSION_RATE;
     }
     if (orgRole !== 'COMMERCIAL') {
       updateData.commissionRate = null;
@@ -283,7 +284,7 @@ export async function updateTeamMember(req: AuthenticatedRequest, res: Response)
         ...finalUser,
         isOwner: false,
         orgRoleLabel: orgRole,
-        commissionRate: finalUser?.commissionRate ?? tenant?.defaultOrgCommercialCommissionRate ?? 0.2,
+        commissionRate: finalUser?.commissionRate ?? tenant?.defaultOrgCommercialCommissionRate ?? DEFAULT_COMMISSION_RATE,
       },
     });
   } catch (error: any) {
@@ -327,7 +328,7 @@ export async function updateMemberCommissionRate(req: AuthenticatedRequest, res:
 
     const rate = normalizeCommissionRate(
       commissionRate,
-      tenant?.defaultOrgCommercialCommissionRate ?? 0.2,
+      tenant?.defaultOrgCommercialCommissionRate ?? DEFAULT_COMMISSION_RATE,
     );
 
     const updated = await prisma.user.update({

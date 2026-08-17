@@ -239,7 +239,7 @@ export function getDefaultPlans(): PlansConfiguration {
       name: 'Business Enterprise 2',
       price: '525.000 FC',
       monthlyPriceFc: 525000,
-      description: 'B2B — agences événementielles avec réseau commercial et commissions 20 %.',
+      description: 'B2B — agences événementielles avec réseau commercial et commissions 30 %.',
       audience: 'B2B',
       maxEvents: 70,
       maxGuests: 5000,

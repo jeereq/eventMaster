@@ -133,7 +133,7 @@ export default function SiteFooter({ faqHref = '/#faq' }: SiteFooterProps) {
           </div>
           <p className="inline-flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            Données isolées par entreprise · HTTPS
+            Données isolées par organisation · HTTPS
           </p>
         </div>
       </div>

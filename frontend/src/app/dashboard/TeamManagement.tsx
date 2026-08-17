@@ -72,7 +72,7 @@ export default function TeamManagement() {
   const MEMBERS_PER_PAGE = 10;
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [canManageTeam, setCanManageTeam] = useState(false);
-  const [defaultCommissionRate, setDefaultCommissionRate] = useState(0.2);
+  const [defaultCommissionRate, setDefaultCommissionRate] = useState(0.3);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -84,7 +84,7 @@ export default function TeamManagement() {
   const [phoneNational, setPhoneNational] = useState('');
   const [password, setPassword] = useState('');
   const [orgRole, setOrgRole] = useState<'MANAGER' | 'PROTOCOL' | 'COMMERCIAL'>('MANAGER');
-  const [commissionRate, setCommissionRate] = useState('20');
+  const [commissionRate, setCommissionRate] = useState('30');
   const [verificationMethod, setVerificationMethod] = useState<'EMAIL' | 'WHATSAPP'>('EMAIL');
   const [editingCommissionId, setEditingCommissionId] = useState<string | null>(null);
   const [editCommissionValue, setEditCommissionValue] = useState('');

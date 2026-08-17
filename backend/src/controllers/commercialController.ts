@@ -233,7 +233,7 @@ export async function getCommercialReferralInfo(req: AuthenticatedRequest, res: 
     return res.json({
       referralCode,
       commissionRate: normalizeCommissionRate(commercialUser?.commissionRate),
-      description: '20% de la facture mensuelle générée par chaque organisation parrainée.',
+      description: '30 % de la facture mensuelle générée par chaque organisation parrainée.',
     });
   } catch (error) {
     console.error('getCommercialReferralInfo:', error);

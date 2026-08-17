@@ -113,7 +113,7 @@ model Tenant {
   referredByCommercial   User? @relation("CommercialReferral", fields: [referredByCommercialId], references: [id], onDelete: SetNull)
   referredByOrgUserId    String?
   referredByOrgUser      User? @relation("OrgCommercialReferral", fields: [referredByOrgUserId], references: [id], onDelete: SetNull)
-  defaultOrgCommercialCommissionRate Float @default(0.20)
+  defaultOrgCommercialCommissionRate Float @default(0.30)
   /** Couleurs de marque org : { primary, accent, sidebar? } */
   branding      Json?
   /** ORGANIZER = SaaS événement (défaut). VENDOR = offre salles/prestas. BOTH = les deux. CLIENT = réserve sans SaaS. */
@@ -261,7 +261,7 @@ model CommercialCommission {
   tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   plan             PlanType
   invoiceAmount    Float
-  commissionRate   Float    @default(0.20)
+  commissionRate   Float    @default(0.30)
   commissionAmount Float
   billingPeriod    String
   source           String

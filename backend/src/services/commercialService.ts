@@ -13,7 +13,7 @@ function formatAmountFc(amount: number): string {
 
 export { formatAmountFc };
 
-const DEFAULT_COMMISSION_RATE = 0.2;
+export const DEFAULT_COMMISSION_RATE = 0.3;
 
 export function generateReferralCode(name?: string | null, prefix = 'EM'): string {
   const rolePrefix = prefix === 'ORG' ? 'ORG' : 'EM';

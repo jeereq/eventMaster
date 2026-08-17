@@ -107,7 +107,7 @@ export default function Home() {
                 <>
                   <Link href="/register">
                     <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                      Créer mon entreprise
+                      Créer mon organisation
                     </Button>
                   </Link>
                   <Link href="/login">
@@ -251,8 +251,8 @@ export default function Home() {
       <FaqSection />
 
       <PublicCtaBand
-        title="Créez votre entreprise pour démarrer"
-        description="Un compte entreprise pour invitations, RSVP, plan de salle, catalogue et protocole QR — sur le web, dès maintenant."
+        title="Créez votre organisation pour démarrer"
+        description="Un compte organisation pour invitations, RSVP, plan de salle, catalogue et protocole QR — sur le web, dès maintenant."
         actions={
           user ? (
             <Link href="/dashboard">
@@ -265,7 +265,7 @@ export default function Home() {
               {site.allowRegistration && (
                 <Link href="/register">
                   <Button size="lg" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                    Créer mon entreprise
+                    Créer mon organisation
                   </Button>
                 </Link>
               )}
@@ -297,7 +297,7 @@ export default function Home() {
               Fermer
             </Button>
             <Link href="/register">
-              <Button size="sm">Créer mon entreprise</Button>
+              <Button size="sm">Créer mon organisation</Button>
             </Link>
           </div>
         }

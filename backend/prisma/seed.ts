@@ -155,7 +155,7 @@ async function main() {
       role: 'COMMERCIAL',
       isEmailVerified: true,
       referralCode: 'EM-COMM01',
-      commissionRate: 0.2,
+      commissionRate: 0.3,
     },
   });
 
@@ -665,14 +665,14 @@ async function main() {
 
   // ─── Commissions commercial ─────────────────────────────────────────
   console.log('Commissions commercial...');
-  const commissionAmount = Math.round((PLAN_AMOUNTS.STANDARD ?? 30000) * 0.2);
+  const commissionAmount = Math.round((PLAN_AMOUNTS.STANDARD ?? 30000) * 0.3);
   await prisma.commercialCommission.create({
     data: {
       commercialId: commercial.id,
       tenantId: tenantEntrepreneurs.id,
       plan: 'STANDARD',
       invoiceAmount: PLAN_AMOUNTS.STANDARD ?? 30000,
-      commissionRate: 0.2,
+      commissionRate: 0.3,
       commissionAmount,
       billingPeriod: period,
       source: 'SUBSCRIPTION_APPROVAL',

@@ -220,7 +220,7 @@ export function buildRevenueReportPdf(report: Awaited<ReturnType<typeof buildRev
     doc.moveDown(0.5);
     doc.fontSize(11).font('Helvetica');
     doc.text(`Revenus bruts : ${report.summary.totalRevenueFormatted}`);
-    doc.text(`Commissions (20 %) : ${report.summary.totalCommissionsFormatted}`);
+    doc.text(`Commissions (30 %) : ${report.summary.totalCommissionsFormatted}`);
     doc.text(`Revenu net plateforme : ${report.summary.netRevenueFormatted}`);
     doc.text(`Nombre de factures : ${report.summary.invoiceCount}`);
     doc.moveDown(1);

@@ -56,7 +56,7 @@ const CAPABILITY_LABELS: Array<{ key: keyof NonNullable<BillingStatus['capabilit
   { key: 'customTemplates', label: 'Modèles personnalisés' },
   { key: 'mockupOcr', label: 'OCR import maquette' },
   { key: 'roomThemesFixtures', label: 'Thèmes & fixtures salles' },
-  { key: 'commercialNetwork', label: 'Réseau commercial (20 %)' },
+  { key: 'commercialNetwork', label: 'Réseau commercial (30 %)' },
   { key: 'adminReports', label: 'Rapports avancés' },
 ];
 

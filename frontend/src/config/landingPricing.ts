@@ -211,7 +211,7 @@ export const LANDING_PLANS: LandingPlan[] = [
   {
     id: 'ENTERPRISE_2',
     ms365Name: 'Business Enterprise 2',
-    tagline: 'B2B — réseau commercial intégré avec commissions 20 % sur facturation.',
+    tagline: 'B2B — réseau commercial intégré avec commissions 30 % sur facturation.',
     monthlyPriceFc: 525000,
     monthlyNote: 'par organisation / mois',
     cta: 'Choisir Enterprise 2',
@@ -637,7 +637,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
   },
   {
     category: 'Commercial',
-    label: 'Réseau commercial & commissions 20 %',
+    label: 'Réseau commercial & commissions 30 %',
     values: {
       FREE: false,
       PERSONAL: false,
@@ -705,7 +705,7 @@ export const ROLE_HIGHLIGHTS = [
   },
   {
     title: 'Commercial',
-    description: 'Crée des organisations parrainées et suit ses commissions (20 % mensuel).',
+    description: 'Crée des organisations parrainées et suit ses commissions (30 % mensuel).',
     icon: 'briefcase',
   },
 ];
@@ -772,7 +772,7 @@ export function getPlanCapabilityBadges(planId: PlanId): PlanCapabilityBadge[] {
   const custom = FEATURE_COMPARISON.find((r) => r.label === 'Modèles personnalisés')?.values[planId];
   const mockup = FEATURE_COMPARISON.find((r) => r.label === 'Import maquette (image + palette)')?.values[planId];
   const ocr = FEATURE_COMPARISON.find((r) => r.label === 'OCR texte sur maquette')?.values[planId];
-  const commercial = FEATURE_COMPARISON.find((r) => r.label === 'Réseau commercial & commissions 20 %')?.values[planId];
+  const commercial = FEATURE_COMPARISON.find((r) => r.label === 'Réseau commercial & commissions 30 %')?.values[planId];
   const rsvpAnalytics = FEATURE_COMPARISON.find((r) => r.label === 'Formulaires RSVP analytiques (export CSV)')?.values[planId];
 
   if (custom) badges.push({ id: 'custom', label: 'Éditeur visuel', tone: 'indigo' });
