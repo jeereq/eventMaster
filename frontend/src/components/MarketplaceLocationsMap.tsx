@@ -3,10 +3,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Loader2, MapPin, Navigation, Search } from 'lucide-react';
-import { loadLeaflet, leafletBasemap, reverseGeocode, searchPlaces, type GeoPlace } from '@/lib/leafletLoader';
-import { mapsDirectionsUrl } from '@/lib/marketplace';
-import { useTheme } from '@/context/ThemeContext';
+import { Loader2, MapPin, Navigation, Search, X } from 'lucide-react';
+import { loadLeaflet, leafletBasemap, documentMapTheme, reverseGeocode, searchPlaces, type GeoPlace } from '@/lib/leafletLoader';
+import {
+  fetchDrivingRoute,
+  formatRouteDistance,
+  formatRouteDuration,
+  type DrivingRoute,
+} from '@/lib/osrm';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
@@ -63,10 +67,12 @@ function MarkerPreviewCard({
   marker,
   onKeep,
   onHide,
+  onDirections,
 }: {
   marker: MarketplaceMapMarker;
   onKeep: () => void;
   onHide: () => void;
+  onDirections: (marker: MarketplaceMapMarker) => void;
 }) {
   const kindLabel = marker.categoryLabel
     || (marker.kind === 'service' ? 'Prestataire' : marker.kind === 'venue' ? 'Salle' : '');
@@ -105,16 +111,9 @@ function MarkerPreviewCard({
           <Link href={marker.href} className="inline-flex">
             <Button size="sm">Voir la fiche</Button>
           </Link>
-          <a
-            href={mapsDirectionsUrl(marker.lat, marker.lng)}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex"
-          >
-            <Button size="sm" variant="secondary" leftIcon={<Navigation className="w-3.5 h-3.5" />}>
-              Itinéraire
-            </Button>
-          </a>
+          <Button size="sm" variant="secondary" onClick={() => onDirections(marker)} leftIcon={<Navigation className="w-3.5 h-3.5" />}>
+            Itinéraire
+          </Button>
         </div>
       </div>
     </div>
@@ -131,6 +130,7 @@ export default function MarketplaceLocationsMap({
   onPlaceSelect,
   navigateOnClick = true,
   variant = 'default',
+  autoDirections = false,
 }: {
   markers: MarketplaceMapMarker[];
   height?: number;
@@ -141,15 +141,20 @@ export default function MarketplaceLocationsMap({
   onPlaceSelect?: (place: GeoPlace) => void;
   navigateOnClick?: boolean;
   variant?: 'default' | 'focus';
+  autoDirections?: boolean;
 }) {
   const router = useRouter();
-  const { theme } = useTheme();
   const hostRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const leafletRef = useRef<any>(null);
   const tileLayerRef = useRef<any>(null);
   const radiusLayerRef = useRef<any>(null);
   const overviewBoundsRef = useRef<any>(null);
+  const routeLineRef = useRef<any>(null);
+  const originMarkerRef = useRef<any>(null);
+  const awaitingOriginRef = useRef(false);
+  const routeDestRef = useRef<MarketplaceMapMarker | null>(null);
+  const paintRouteRef = useRef<(origin: { lat: number; lng: number }, dest: MarketplaceMapMarker) => Promise<void>>(async () => {});
   const markersById = useRef<Map<string, any>>(new Map());
   const onPlaceSelectRef = useRef(onPlaceSelect);
   onPlaceSelectRef.current = onPlaceSelect;
@@ -159,16 +164,20 @@ export default function MarketplaceLocationsMap({
   navigateOnClickRef.current = navigateOnClick;
   const routerRef = useRef(router);
   routerRef.current = router;
-  const themeRef = useRef(theme);
-  themeRef.current = theme;
 
   const [query, setQuery] = useState('');
   const [osmResults, setOsmResults] = useState<GeoPlace[]>([]);
   const [searching, setSearching] = useState(false);
   const [hovered, setHovered] = useState<MarketplaceMapMarker | null>(null);
   const [mapReady, setMapReady] = useState(0);
+  const [mapTheme, setMapTheme] = useState<'light' | 'dark'>(documentMapTheme);
+  const [route, setRoute] = useState<DrivingRoute | null>(null);
+  const [routeTitle, setRouteTitle] = useState('');
+  const [routeHint, setRouteHint] = useState('');
+  const [routing, setRouting] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didAutoRef = useRef(false);
 
   const showPreview = (marker: MarketplaceMapMarker) => {
     if (hideTimer.current) clearTimeout(hideTimer.current);
@@ -227,7 +236,7 @@ export default function MarketplaceLocationsMap({
         radiusLayerRef.current = null;
         leafletRef.current = L;
         const map = L.map(hostRef.current, { scrollWheelZoom: true });
-        applyBasemap(L, map, themeRef.current);
+        applyBasemap(L, map, documentMapTheme());
 
         if (!map.getPane('coverage')) {
           map.createPane('coverage');
@@ -252,9 +261,7 @@ export default function MarketplaceLocationsMap({
               m.kind === 'service' && m.coverageRadiusKm
                 ? `<br/><span>Rayon d’action : ${m.coverageRadiusKm} km</span>`
                 : ''
-            }<br/>
-            <a href="${escapeHtml(m.href)}">Voir la fiche</a>
-            · <a href="${escapeHtml(mapsDirectionsUrl(m.lat, m.lng))}" target="_blank" rel="noreferrer">Itinéraire</a>`,
+            }<br/><a href="${escapeHtml(m.href)}">Voir la fiche</a> · Itinéraire depuis la carte`,
           );
 
           leafletMarker.on('mouseover', () => {
@@ -278,7 +285,16 @@ export default function MarketplaceLocationsMap({
         });
 
         if (searchCenter && Number.isFinite(searchCenter.lat) && Number.isFinite(searchCenter.lng)) {
-          layers.push(L.marker([searchCenter.lat, searchCenter.lng]).bindPopup('Centre de recherche'));
+          const centerColor = cssVar('--festive-accent', '#b45309');
+          layers.push(
+            L.circleMarker([searchCenter.lat, searchCenter.lng], {
+              radius: 7,
+              color: centerColor,
+              weight: 2,
+              fillColor: centerColor,
+              fillOpacity: 0.4,
+            }).bindPopup('Centre de recherche'),
+          );
           if (radiusKm > 0) {
             layers.push(
               L.circle([searchCenter.lat, searchCenter.lng], {
@@ -302,9 +318,14 @@ export default function MarketplaceLocationsMap({
           map.fitBounds(bounds, { maxZoom: 14 });
         }
 
-        if (searchable && !listingSearch) {
-          map.on('click', (event: { latlng: { lat: number; lng: number } }) => {
-            const point = { lat: event.latlng.lat, lng: event.latlng.lng };
+        map.on('click', (event: { latlng: { lat: number; lng: number } }) => {
+          const point = { lat: event.latlng.lat, lng: event.latlng.lng };
+          if (awaitingOriginRef.current && routeDestRef.current) {
+            awaitingOriginRef.current = false;
+            void paintRouteRef.current(point, routeDestRef.current);
+            return;
+          }
+          if (searchable && !listingSearch) {
             void reverseGeocode(point.lat, point.lng).then((label) => {
               onPlaceSelectRef.current?.({
                 lat: point.lat,
@@ -312,8 +333,8 @@ export default function MarketplaceLocationsMap({
                 label: label || 'Point sur la carte',
               });
             });
-          });
-        }
+          }
+        });
 
         mapRef.current = map;
         setMapReady((n) => n + 1);
@@ -333,11 +354,19 @@ export default function MarketplaceLocationsMap({
   }, [markersKey, centerKey, searchable, listingSearch, searchCenter, radiusKm]);
 
   useEffect(() => {
-    const map = mapRef.current;
-    const L = leafletRef.current;
-    if (!map || !L) return;
-    applyBasemap(L, map, theme);
-  }, [theme]);
+    const html = document.documentElement;
+    const sync = () => {
+      const next = documentMapTheme();
+      setMapTheme(next);
+      const map = mapRef.current;
+      const L = leafletRef.current;
+      if (map && L) applyBasemap(L, map, next);
+    };
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(html, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, [mapReady]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -398,6 +427,96 @@ export default function MarketplaceLocationsMap({
     const timer = window.setTimeout(() => mapRef.current?.invalidateSize(), 80);
     return () => window.clearTimeout(timer);
   }, [variant, mapReady]);
+
+  const clearRoute = () => {
+    const map = mapRef.current;
+    if (map && routeLineRef.current) map.removeLayer(routeLineRef.current);
+    if (map && originMarkerRef.current) map.removeLayer(originMarkerRef.current);
+    routeLineRef.current = null;
+    originMarkerRef.current = null;
+    awaitingOriginRef.current = false;
+    routeDestRef.current = null;
+    setRoute(null);
+    setRouteTitle('');
+    setRouteHint('');
+    setRouting(false);
+  };
+
+  const paintRoute = async (origin: { lat: number; lng: number }, dest: MarketplaceMapMarker) => {
+    const map = mapRef.current;
+    const L = leafletRef.current;
+    if (!map || !L) return;
+    setRouting(true);
+    setRouteHint('');
+    try {
+      const next = await fetchDrivingRoute(origin, { lat: dest.lat, lng: dest.lng });
+      if (routeLineRef.current) map.removeLayer(routeLineRef.current);
+      if (originMarkerRef.current) map.removeLayer(originMarkerRef.current);
+      const color = cssVar('--primary', '#4f46e5');
+      originMarkerRef.current = L.circleMarker([origin.lat, origin.lng], {
+        radius: 8,
+        color,
+        weight: 2,
+        fillColor: '#fff',
+        fillOpacity: 1,
+      }).bindPopup('Votre départ').addTo(map);
+      routeLineRef.current = L.polyline(
+        next.coords.map((p) => [p.lat, p.lng]),
+        { color, weight: 5, opacity: 0.9 },
+      ).addTo(map);
+      map.fitBounds(routeLineRef.current.getBounds(), { padding: [36, 36], maxZoom: 15 });
+      setRoute(next);
+      setRouteTitle(dest.title);
+    } catch {
+      setRouteHint('Itinéraire introuvable pour cet aller. Cliquez un autre point de départ sur la carte.');
+      awaitingOriginRef.current = true;
+    } finally {
+      setRouting(false);
+    }
+  };
+  paintRouteRef.current = paintRoute;
+
+  const startDirections = (dest: MarketplaceMapMarker) => {
+    setHovered(null);
+    routeDestRef.current = dest;
+    setRoute(null);
+    setRouteTitle(dest.title);
+    setRouting(true);
+    setRouteHint('Calcul de l’itinéraire depuis votre position…');
+    if (!navigator.geolocation) {
+      awaitingOriginRef.current = true;
+      setRouting(false);
+      setRouteHint('Cliquez sur la carte pour indiquer votre point de départ.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        void paintRoute({ lat: pos.coords.latitude, lng: pos.coords.longitude }, dest);
+      },
+      () => {
+        awaitingOriginRef.current = true;
+        setRouting(false);
+        setRouteHint('Localisation refusée. Cliquez sur la carte pour indiquer votre départ — vous restez sur EventMaster.');
+      },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
+    );
+  };
+
+  useEffect(() => {
+    if (!navigateOnClick && markersRef.current.length === 1) {
+      setHovered(markersRef.current[0]);
+    }
+  }, [markersKey, navigateOnClick]);
+
+  useEffect(() => {
+    if (!autoDirections || mapReady === 0 || didAutoRef.current) return;
+    const dest = markersRef.current[0];
+    if (!dest) return;
+    didAutoRef.current = true;
+    startDirections(dest);
+    // startDirections is recreated each render; auto-run once after the map is ready.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoDirections, mapReady]);
 
   const runOsmSearch = async (text: string) => {
     const q = text.trim();
@@ -519,20 +638,58 @@ export default function MarketplaceLocationsMap({
         )}
         <div
           ref={hostRef}
-          className="em-marketplace-map w-full rounded-[var(--radius-card)] border border-border overflow-hidden bg-background"
+          className={cn(
+            'em-marketplace-map w-full rounded-[var(--radius-card)] border border-border overflow-hidden bg-background',
+            mapTheme === 'dark' && 'em-map-dark',
+          )}
           style={{ height: mapHeight, minHeight: variant === 'focus' ? 420 : undefined }}
         />
-        {hovered && (
+        {hovered && !route && !routing && (
           <MarkerPreviewCard
             marker={hovered}
             onKeep={() => showPreview(hovered)}
             onHide={scheduleHide}
+            onDirections={startDirections}
           />
+        )}
+        {(route || routeHint || routing) && (
+          <div className="absolute z-30 left-3 right-3 top-3 sm:left-auto sm:w-80 rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-soft)] p-3 space-y-2 max-h-[55%] overflow-auto">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">Itinéraire</p>
+                <p className="text-sm font-semibold text-foreground leading-snug">{routeTitle}</p>
+                {route ? (
+                  <p className="text-xs text-muted">
+                    {formatRouteDistance(route.distance)} · {formatRouteDuration(route.duration)}
+                  </p>
+                ) : null}
+              </div>
+              <button type="button" onClick={clearRoute} className="p-1 rounded-md text-muted hover:text-foreground" aria-label="Fermer l’itinéraire">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            {routing && (
+              <p className="text-xs text-muted inline-flex items-center gap-1.5">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Calcul du trajet…
+              </p>
+            )}
+            {routeHint ? <p className="text-xs text-muted">{routeHint}</p> : null}
+            {route?.steps.length ? (
+              <ol className="space-y-1.5 text-xs text-foreground">
+                {route.steps.slice(0, 12).map((step, i) => (
+                  <li key={`${step.instruction}-${i}`} className="leading-snug">
+                    <span className="text-muted">{i + 1}.</span> {step.instruction}
+                    {step.distance ? <span className="text-muted"> · {formatRouteDistance(step.distance)}</span> : null}
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+          </div>
         )}
       </div>
       {listingSearch && variant !== 'focus' && (
         <p className="text-[11px] text-muted">
-          Survolez un prestataire pour voir son rayon d’action. Cliquez pour ouvrir la fiche.
+          Survolez un point pour le détail, cliquez Itinéraire pour le guidage sur EventMaster.
           {markers.length ? ` · ${markers.length} fiche${markers.length > 1 ? 's' : ''} avec GPS` : ''}.
         </p>
       )}

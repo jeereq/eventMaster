@@ -2,8 +2,8 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Loader2, MapPin, Search } from 'lucide-react';
-import { loadLeaflet, leafletBasemap, reverseGeocode, searchPlaces, type GeoPlace } from '@/lib/leafletLoader';
-import { useTheme } from '@/context/ThemeContext';
+import { loadLeaflet, leafletBasemap, documentMapTheme, reverseGeocode, searchPlaces, type GeoPlace } from '@/lib/leafletLoader';
+import { cn } from '@/lib/cn';
 
 const KINSHASA = { lat: -4.325, lng: 15.322 };
 
@@ -12,11 +12,13 @@ export default function LocationPickerMap({
   longitude,
   onChange,
   height = 320,
+  required = false,
 }: {
   latitude: string;
   longitude: string;
   onChange: (next: { latitude: string; longitude: string }) => void;
   height?: number;
+  required?: boolean;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
@@ -25,9 +27,6 @@ export default function LocationPickerMap({
   const leafletRef = useRef<any>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
-  const { theme } = useTheme();
-  const themeRef = useRef(theme);
-  themeRef.current = theme;
 
   const lat = Number.parseFloat(latitude);
   const lng = Number.parseFloat(longitude);
@@ -37,7 +36,26 @@ export default function LocationPickerMap({
   const [results, setResults] = useState<GeoPlace[]>([]);
   const [searching, setSearching] = useState(false);
   const [hint, setHint] = useState('');
+  const [mapTheme, setMapTheme] = useState<'light' | 'dark'>(documentMapTheme);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const applyBasemap = (L: any, map: any, nextTheme: 'light' | 'dark') => {
+    const spec = leafletBasemap(nextTheme);
+    if (tileLayerRef.current) map.removeLayer(tileLayerRef.current);
+    tileLayerRef.current = L.tileLayer(spec.url, {
+      attribution: spec.attribution,
+      subdomains: 'abcd',
+      maxZoom: 19,
+    }).addTo(map);
+  };
+
+  const pinIcon = (L: any) =>
+    L.divIcon({
+      className: 'em-map-pin',
+      html: '<span class="em-map-pin-dot"></span>',
+      iconSize: [18, 18],
+      iconAnchor: [9, 9],
+    });
 
   useEffect(() => {
     let cancelled = false;
@@ -54,12 +72,7 @@ export default function LocationPickerMap({
         }
         const map = L.map(hostRef.current, { scrollWheelZoom: true });
         leafletRef.current = L;
-        const spec = leafletBasemap(themeRef.current);
-        tileLayerRef.current = L.tileLayer(spec.url, {
-          attribution: spec.attribution,
-          subdomains: 'abcd',
-          maxZoom: 19,
-        }).addTo(map);
+        applyBasemap(L, map, documentMapTheme());
 
         const start = hasPoint ? { lat, lng } : KINSHASA;
         map.setView([start.lat, start.lng], hasPoint ? 15 : 11);
@@ -68,7 +81,10 @@ export default function LocationPickerMap({
           if (markerRef.current) {
             markerRef.current.setLatLng([point.lat, point.lng]);
           } else {
-            markerRef.current = L.marker([point.lat, point.lng], { draggable: true }).addTo(map);
+            markerRef.current = L.marker([point.lat, point.lng], {
+              draggable: true,
+              icon: pinIcon(L),
+            }).addTo(map);
             markerRef.current.on('dragend', () => {
               const pos = markerRef.current.getLatLng();
               onChangeRef.current({
@@ -113,17 +129,19 @@ export default function LocationPickerMap({
   }, []);
 
   useEffect(() => {
-    const map = mapRef.current;
-    const L = leafletRef.current;
-    if (!map || !L) return;
-    const spec = leafletBasemap(theme);
-    if (tileLayerRef.current) map.removeLayer(tileLayerRef.current);
-    tileLayerRef.current = L.tileLayer(spec.url, {
-      attribution: spec.attribution,
-      subdomains: 'abcd',
-      maxZoom: 19,
-    }).addTo(map);
-  }, [theme]);
+    const html = document.documentElement;
+    const sync = () => {
+      const next = documentMapTheme();
+      setMapTheme(next);
+      const map = mapRef.current;
+      const L = leafletRef.current;
+      if (map && L) applyBasemap(L, map, next);
+    };
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(html, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -197,14 +215,19 @@ export default function LocationPickerMap({
       </div>
       <div
         ref={hostRef}
-        className="em-marketplace-map w-full rounded-[var(--radius-card)] border border-border overflow-hidden bg-background"
+        className={cn(
+          'em-marketplace-map w-full rounded-[var(--radius-card)] border border-border overflow-hidden bg-background',
+          mapTheme === 'dark' && 'em-map-dark',
+        )}
         style={{ height }}
       />
-      <p className="text-[11px] text-muted flex items-start gap-1.5">
+      <p className={cn('text-[11px] flex items-start gap-1.5', required && !hasPoint ? 'text-rose-600' : 'text-muted')}>
         <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" />
         {hasPoint
           ? `${hint || 'Position choisie'} · ${lat.toFixed(5)}, ${lng.toFixed(5)}`
-          : 'Cliquez sur la carte ou cherchez un lieu pour enregistrer la position.'}
+          : required
+            ? 'Position GPS obligatoire : cliquez sur la carte ou cherchez un lieu.'
+            : 'Cliquez sur la carte ou cherchez un lieu pour enregistrer la position.'}
       </p>
     </div>
   );

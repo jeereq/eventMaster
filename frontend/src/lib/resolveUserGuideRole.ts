@@ -19,6 +19,7 @@ const GUIDE_LABELS: Record<UserGuideId, string> = {
   org_protocol: 'Protocole organisation',
   org_commercial: 'Commercial organisation',
   staff_scope: 'Staff salle / événement',
+  client: 'Client catalogue',
   guest: 'Invité',
 };
 
@@ -29,6 +30,10 @@ export function resolveUserGuideRole({ role, access }: ResolveUserGuideInput): R
 
   if (role === 'COMMERCIAL') {
     return { guideId: 'commercial_platform', label: GUIDE_LABELS.commercial_platform };
+  }
+
+  if (access?.level === 'client') {
+    return { guideId: 'client', label: GUIDE_LABELS.client };
   }
 
   if (access?.isOwner) {

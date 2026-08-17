@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
+import { getQuotaLockMessage } from '@/lib/planAccess';
 import {
   PageHeader, Button, Breadcrumbs, Alert, Input, Modal, EmptyState, StatusPill,
 } from '@/components/ui';
@@ -12,6 +13,7 @@ import {
   PRICE_UNIT_OPTIONS,
   SERVICE_CATEGORIES,
   SERVICE_CATEGORY_LABELS,
+  missingPublishLocation,
   parseBlockedDates,
   type MarketplaceBookingItem,
   type MarketplaceInquiryItem,
@@ -57,7 +59,7 @@ const fieldClass =
   'w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm';
 
 export default function MarketplaceDeskPage() {
-  const { access, refreshProfile } = useAuth();
+  const { access, refreshProfile, planQuota } = useAuth();
   const router = useRouter();
   const canManage = Boolean(access?.canManageRooms);
   const [tab, setTab] = useState<DeskTab>('services');
@@ -125,7 +127,14 @@ export default function MarketplaceDeskPage() {
   const photosOf = (item: ServiceItem) =>
     Array.isArray(item.photos) ? item.photos.filter((p): p is string => typeof p === 'string') : [];
 
+  const servicesAtLimit = Boolean(getQuotaLockMessage('services', planQuota));
+
   const openCreate = () => {
+    const lock = getQuotaLockMessage('services', planQuota);
+    if (lock) {
+      setError(lock);
+      return;
+    }
     setEditing(null);
     setDraft({
       title: '',
@@ -176,6 +185,19 @@ export default function MarketplaceDeskPage() {
   };
 
   const handleSave = async (publish: boolean) => {
+    if (publish) {
+      const missing = missingPublishLocation(draft);
+      if (missing === 'map') {
+        setEditorTab('map');
+        setError('Ville, commune, quartier et position GPS sont obligatoires pour publier.');
+        return;
+      }
+      if (missing) {
+        setEditorTab('details');
+        setError('Ville, commune et quartier sont obligatoires pour publier.');
+        return;
+      }
+    }
     setSaving(true);
     setError('');
     try {
@@ -261,12 +283,20 @@ export default function MarketplaceDeskPage() {
         }
         action={
           tab === 'services' ? (
-            <Button size="sm" onClick={openCreate} leftIcon={<Plus className="w-4 h-4" />}>
+            <Button size="sm" onClick={openCreate} disabled={servicesAtLimit} leftIcon={<Plus className="w-4 h-4" />}>
               Nouvelle prestation
             </Button>
           ) : undefined
         }
       />
+
+      {planQuota && tab === 'services' && (
+        <p className="text-xs text-muted">
+          Prestations : {planQuota.usage.services ?? 0} /{' '}
+          {(planQuota.limits.maxServices ?? 0) >= 9999 ? '∞' : planQuota.limits.maxServices}
+          {servicesAtLimit ? ' — quota atteint, passez au forfait Prestataire ou Salle & presta.' : ''}
+        </p>
+      )}
 
       <div className="flex gap-1.5">
         <button
@@ -317,7 +347,7 @@ export default function MarketplaceDeskPage() {
             title="Aucune prestation"
             description="Ajoutez un traiteur, un DJ, un photographe… puis publiez la fiche."
             action={
-              <Button size="sm" onClick={openCreate} leftIcon={<Plus className="w-4 h-4" />}>
+              <Button size="sm" onClick={openCreate} disabled={servicesAtLimit} leftIcon={<Plus className="w-4 h-4" />}>
                 Créer une prestation
               </Button>
             }
@@ -435,6 +465,7 @@ export default function MarketplaceDeskPage() {
         }
       >
         <div className="space-y-3">
+          {error && <Alert variant="error">{error}</Alert>}
           <MarketplaceFormTabs value={editorTab} onChange={setEditorTab} />
           {editorTab === 'details' && (
             <>
@@ -461,9 +492,9 @@ export default function MarketplaceDeskPage() {
             />
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input label="Ville / zone" value={draft.city} onChange={(e) => setDraft((d) => ({ ...d, city: e.target.value }))} />
-            <Input label="Commune" value={draft.commune} onChange={(e) => setDraft((d) => ({ ...d, commune: e.target.value }))} />
-            <Input label="Quartier" value={draft.neighborhood} onChange={(e) => setDraft((d) => ({ ...d, neighborhood: e.target.value }))} />
+            <Input label="Ville / zone" value={draft.city} required onChange={(e) => setDraft((d) => ({ ...d, city: e.target.value }))} />
+            <Input label="Commune" value={draft.commune} required onChange={(e) => setDraft((d) => ({ ...d, commune: e.target.value }))} />
+            <Input label="Quartier" value={draft.neighborhood} required onChange={(e) => setDraft((d) => ({ ...d, neighborhood: e.target.value }))} />
             <Input
               label="Rayon d’intervention (km)"
               type="number"
@@ -516,6 +547,7 @@ export default function MarketplaceDeskPage() {
             <LocationPickerMap
               latitude={draft.latitude}
               longitude={draft.longitude}
+              required
               onChange={({ latitude, longitude }) => setDraft((d) => ({ ...d, latitude, longitude }))}
             />
           )}

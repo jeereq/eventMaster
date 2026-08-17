@@ -27,13 +27,13 @@ import {
   roomTypeDescriptions,
   roomTypeLabels,
 } from '@/lib/roomLayoutUtils';
-import { PRICE_UNIT_OPTIONS, parseBlockedDates, type VenuePriceUnit } from '@/lib/marketplace';
+import { PRICE_UNIT_OPTIONS, missingPublishLocation, parseBlockedDates, type VenuePriceUnit } from '@/lib/marketplace';
 import { formatFc } from '@/config/landingPricing';
 import BlockedDatesField from '@/components/BlockedDatesField';
 import MarketplaceMediaField from '@/components/MarketplaceMediaField';
 import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import LocationPickerMap from '@/components/LocationPickerMap';
-import { getQuotaLockMessage, getRoomTypeLockMessage, ROOM_TYPE_MIN_LEVEL } from '@/lib/planAccess';
+import { getQuotaLockMessage, getRoomTypeLockMessage, ROOM_TYPE_MIN_LEVEL, canPublishVenueCatalog } from '@/lib/planAccess';
 
 interface RoomStaffItem {
   id: string;
@@ -118,6 +118,7 @@ const labelClass = 'block text-xs font-medium text-muted mb-1.5';
 
 export default function RoomsManagement() {
   const { planFeatures, planQuota, tenant, refreshProfile, refreshPlanFeatures } = useAuth();
+  const canCatalogPublish = canPublishVenueCatalog(planFeatures, planQuota, tenant?.plan);
   const { mode: roomsViewMode, setViewMode: setRoomsViewMode, columns: roomsColumns, setGridColumns: setRoomsColumns, gridClassName: roomsGridClass } = useViewMode('em-view-rooms', 'grid', 3);
   const [roomsPage, setRoomsPage] = useState(1);
   const ROOMS_PER_PAGE = 9;
@@ -342,6 +343,19 @@ export default function RoomsManagement() {
 
   const handleSaveListing = async (publish: boolean) => {
     if (!listingRoom) return;
+    if (publish) {
+      const missing = missingPublishLocation(listingDraft);
+      if (missing === 'map') {
+        setListingTab('map');
+        setError('Ville, commune, quartier et position GPS sont obligatoires pour publier.');
+        return;
+      }
+      if (missing) {
+        setListingTab('details');
+        setError('Ville, commune et quartier sont obligatoires pour publier.');
+        return;
+      }
+    }
     setSavingListing(true);
     setError('');
     try {
@@ -560,7 +574,10 @@ export default function RoomsManagement() {
             Salles de l&apos;organisation
           </h2>
           <p className="text-xs text-muted mt-1">
-            Créez une salle en 3 étapes : infos, type, puis plan 2D. Vous pouvez ensuite la publier pour la location.
+            Créez une salle en 3 étapes : infos, type, puis plan 2D.
+            {canCatalogPublish
+              ? ' Vous pouvez ensuite la publier pour la location.'
+              : ' Ces salles servent au plan de table — elles ne sont pas publiées au catalogue.'}
             {planQuota && (
               <span className="block mt-1 font-medium text-primary">
                 Salles : {planQuota.usage.rooms} / {planQuota.limits.maxRooms >= 9999 ? '∞' : planQuota.limits.maxRooms}
@@ -827,6 +844,7 @@ export default function RoomsManagement() {
               .join(' · ') || 'Sans détails';
             const actions = canManage ? (
               <>
+                {canCatalogPublish && (
                 <button
                   type="button"
                   onClick={() => openListing(room)}
@@ -835,6 +853,7 @@ export default function RoomsManagement() {
                 >
                   {room.venueListing?.isPublic ? <Globe className="w-4 h-4" /> : <GlobeLock className="w-4 h-4" />}
                 </button>
+                )}
                 <button
                   type="button"
                   onClick={() => openEditLayout(room)}
@@ -882,14 +901,14 @@ export default function RoomsManagement() {
                   }
                   status={
                     roomsViewMode === 'list' ? (
-                      room.venueListing?.isPublic ? (
+                      canCatalogPublish && room.venueListing?.isPublic ? (
                         <StatusPill tone="emerald">Publiée</StatusPill>
                       ) : (
                       <StatusPill tone="primary">
                         {roomTypeLabels[room.roomType || 'SIMPLE']}
                       </StatusPill>
                       )
-                    ) : room.venueListing?.isPublic ? (
+                    ) : canCatalogPublish && room.venueListing?.isPublic ? (
                       <StatusPill tone="emerald">Publiée</StatusPill>
                     ) : undefined
                   }
@@ -1096,6 +1115,7 @@ export default function RoomsManagement() {
       >
         {listingRoom && (
           <div className="space-y-4">
+            {error && <Alert variant="error">{error}</Alert>}
             <MarketplaceFormTabs value={listingTab} onChange={setListingTab} />
             {listingRoom.venueListing?.isPublic && listingRoom.venueListing.slug && listingTab === 'details' && (
               <p className="text-xs text-muted">
@@ -1118,17 +1138,20 @@ export default function RoomsManagement() {
                 value={listingDraft.city}
                 onChange={(e) => setListingDraft((d) => ({ ...d, city: e.target.value }))}
                 placeholder="Kinshasa"
+                required
               />
               <Input
                 label="Commune"
                 value={listingDraft.commune}
                 onChange={(e) => setListingDraft((d) => ({ ...d, commune: e.target.value }))}
                 placeholder="Gombe"
+                required
               />
               <Input
                 label="Quartier"
                 value={listingDraft.neighborhood}
                 onChange={(e) => setListingDraft((d) => ({ ...d, neighborhood: e.target.value }))}
+                required
               />
               <Input
                 label="Adresse"
@@ -1182,6 +1205,7 @@ export default function RoomsManagement() {
               <LocationPickerMap
                 latitude={listingDraft.latitude}
                 longitude={listingDraft.longitude}
+                required
                 onChange={({ latitude, longitude }) => setListingDraft((d) => ({ ...d, latitude, longitude }))}
               />
             )}

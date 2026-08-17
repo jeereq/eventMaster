@@ -6,6 +6,7 @@ import { Building2, MapPin, Sparkles } from 'lucide-react';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import { listStackClass } from '@/components/ui';
+import { Skeleton } from '@/components/ui/Skeleton';
 import type { CatalogueItem, CatalogueViewMode } from '@/lib/marketplace';
 
 function Cover({ item, className }: { item: CatalogueItem; className?: string }) {
@@ -132,6 +133,92 @@ export default function CatalogueResults({
       {items.map((item) => (
         <GridCard key={item.id} item={item} />
       ))}
+    </div>
+  );
+}
+
+function CatalogueGridCardSkeleton() {
+  return (
+    <div className="bg-surface border border-border rounded-2xl overflow-hidden" aria-hidden>
+      <Skeleton className="aspect-[16/10] w-full rounded-none" />
+      <div className="p-4 space-y-2">
+        <Skeleton className="h-4 w-3/4" />
+        <Skeleton className="h-3 w-1/2" />
+        <Skeleton className="h-3 w-2/3" />
+        <div className="pt-2 border-t border-border">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-3 w-16 mt-1.5" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CatalogueListRowSkeleton() {
+  return (
+    <div className="flex items-center gap-3 sm:gap-4 bg-surface border border-border rounded-2xl p-3" aria-hidden>
+      <Skeleton className="w-20 h-16 sm:w-28 sm:h-20 rounded-xl shrink-0" />
+      <div className="min-w-0 flex-1 space-y-2">
+        <Skeleton className="h-4 w-16 rounded-full" />
+        <Skeleton className="h-4 w-2/3" />
+        <Skeleton className="h-3 w-1/2" />
+      </div>
+      <div className="shrink-0 space-y-1.5">
+        <Skeleton className="h-4 w-20 ml-auto" />
+        <Skeleton className="h-3 w-14 ml-auto" />
+      </div>
+    </div>
+  );
+}
+
+export function CatalogueResultsSkeleton({
+  mode = 'grid',
+  count = 9,
+}: {
+  mode?: CatalogueViewMode;
+  count?: number;
+}) {
+  if (mode === 'map' || mode === 'focus') {
+    return (
+      <div
+        className="space-y-2"
+        role="status"
+        aria-live="polite"
+        aria-label="Chargement de la carte"
+      >
+        <Skeleton
+          className={cn(
+            'w-full rounded-[var(--radius-card)] border border-border',
+            mode === 'focus' ? 'min-h-[420px] h-[calc(100dvh-10.5rem)]' : 'h-[480px]',
+          )}
+        />
+        <span className="sr-only">Chargement du catalogue…</span>
+      </div>
+    );
+  }
+
+  if (mode === 'list') {
+    return (
+      <div className={listStackClass} role="status" aria-live="polite" aria-label="Chargement du catalogue">
+        {Array.from({ length: count }).map((_, i) => (
+          <CatalogueListRowSkeleton key={i} />
+        ))}
+        <span className="sr-only">Chargement du catalogue…</span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+      role="status"
+      aria-live="polite"
+      aria-label="Chargement du catalogue"
+    >
+      {Array.from({ length: count }).map((_, i) => (
+        <CatalogueGridCardSkeleton key={i} />
+      ))}
+      <span className="sr-only">Chargement du catalogue…</span>
     </div>
   );
 }

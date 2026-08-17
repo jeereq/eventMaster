@@ -3,9 +3,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { Button, Input, Pagination, paginateItems } from '@/components/ui';
+import { Button, Input, Pagination, paginateItems, Skeleton, SkeletonLandingTemplateGrid } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import CatalogueResults from '@/components/CatalogueResults';
+import CatalogueResults, { CatalogueResultsSkeleton } from '@/components/CatalogueResults';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import {
   SERVICE_CATEGORIES,
@@ -20,7 +20,7 @@ import {
   buildLandingTemplateGroups,
   type LandingTemplate,
 } from '@/config/landingTemplates';
-import { ArrowRight, Building2, Loader2, Search, Sparkles, FileText } from 'lucide-react';
+import { ArrowRight, Building2, Search, Sparkles, FileText } from 'lucide-react';
 
 type VitrineTab = 'venues' | 'services' | 'templates';
 
@@ -167,9 +167,7 @@ export default function LandingVitrineSection({
               leftIcon={<Search className="w-4 h-4" />}
             />
             {loadingCatalog ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="w-6 h-6 animate-spin text-muted" />
-              </div>
+              <CatalogueResultsSkeleton mode="grid" count={PAGE_SIZE} />
             ) : (
               <>
                 <CatalogueResults
@@ -213,9 +211,7 @@ export default function LandingVitrineSection({
               </select>
             </div>
             {loadingCatalog ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="w-6 h-6 animate-spin text-muted" />
-              </div>
+              <CatalogueResultsSkeleton mode="grid" count={PAGE_SIZE} />
             ) : (
               <>
                 <CatalogueResults
@@ -238,13 +234,13 @@ export default function LandingVitrineSection({
 
         {tab === 'templates' && (
           <div id="modeles" className="space-y-4 scroll-mt-20">
-            <p className="text-sm text-muted leading-relaxed">
-              {loadingTemplates
-                ? 'Chargement depuis la plateforme…'
-                : publicTemplates.length === 0
-                  ? 'Aucun modèle publié. Le Super Admin crée un modèle global et active « Afficher sur la landing ».'
-                  : `${publicTemplates.length} modèle${publicTemplates.length > 1 ? 's' : ''} publié${publicTemplates.length > 1 ? 's' : ''} — personnalisables après inscription.`}
-            </p>
+            <div className="text-sm text-muted leading-relaxed">
+              {loadingTemplates ? (
+                <Skeleton className="h-4 w-72 max-w-full" />
+              ) : publicTemplates.length === 0
+                ? 'Aucun modèle publié. Le Super Admin crée un modèle global et active « Afficher sur la landing ».'
+                : `${publicTemplates.length} modèle${publicTemplates.length > 1 ? 's' : ''} publié${publicTemplates.length > 1 ? 's' : ''} — personnalisables après inscription.`}
+            </div>
             {isSuperAdmin && (
               <Link href="/dashboard?tab=templates" className="inline-flex text-xs font-medium text-foreground underline underline-offset-2 hover:no-underline">
                 Gérer la vitrine (Super Admin)
@@ -274,9 +270,7 @@ export default function LandingVitrineSection({
             </div>
 
             {loadingTemplates ? (
-              <div className="flex justify-center py-12">
-                <Loader2 className="w-6 h-6 text-muted animate-spin" />
-              </div>
+              <SkeletonLandingTemplateGrid count={PAGE_SIZE} />
             ) : publicTemplates.length === 0 ? (
               <div className="py-12 px-6 border border-dashed border-border rounded-[var(--radius-card)] bg-background text-center max-w-lg">
                 <p className="text-sm text-muted leading-relaxed">

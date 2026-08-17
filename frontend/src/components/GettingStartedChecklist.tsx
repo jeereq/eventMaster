@@ -19,6 +19,10 @@ export type GettingStartedProps = {
   hasTemplates?: boolean;
   firstEventId?: string | null;
   className?: string;
+  variant?: 'organizer' | 'vendor';
+  hasRooms?: boolean;
+  hasServices?: boolean;
+  preferServices?: boolean;
 };
 
 function readFlow(): PersistedFlow {
@@ -46,6 +50,10 @@ export default function GettingStartedChecklist({
   hasTemplates = false,
   firstEventId,
   className,
+  variant = 'organizer',
+  hasRooms = false,
+  hasServices = false,
+  preferServices = false,
 }: GettingStartedProps) {
   const [flow, setFlow] = useState<PersistedFlow>({});
   const [ready, setReady] = useState(false);
@@ -56,6 +64,34 @@ export default function GettingStartedChecklist({
   }, []);
 
   const steps = useMemo(() => {
+    if (variant === 'vendor') {
+      const startWithService = preferServices || (hasServices && !hasRooms);
+      return [
+        {
+          id: 'offer',
+          title: startWithService ? 'Publier une prestation' : 'Publier une salle',
+          description: 'Fiche catalogue avec localisation et tarif.',
+          href: startWithService ? '/dashboard/marketplace' : '/dashboard/rooms',
+          done: hasRooms || hasServices,
+        },
+        {
+          id: 'billing',
+          title: 'Choisir un forfait catalogue',
+          description: 'Salle, Prestataire ou Salle & presta.',
+          href: '/dashboard/billing',
+          done: Boolean(flow.templateDone),
+          markOnClick: 'templateDone' as const,
+        },
+        {
+          id: 'guide',
+          title: 'Faire la visite guidée',
+          description: '2 minutes pour découvrir l’espace.',
+          href: '/dashboard/guide?view=tour&start=1',
+          done: Boolean(flow.guideDone),
+          markOnClick: 'guideDone' as const,
+        },
+      ];
+    }
     const guestsHref = firstEventId
       ? `/dashboard/events?id=${firstEventId}`
       : '/dashboard/events';
@@ -93,7 +129,7 @@ export default function GettingStartedChecklist({
         markOnClick: 'guideDone' as const,
       },
     ];
-  }, [hasEvents, hasTemplates, firstEventId, flow.guestsDone, flow.templateDone, flow.guideDone]);
+  }, [variant, hasRooms, hasServices, preferServices, hasEvents, hasTemplates, firstEventId, flow.guestsDone, flow.templateDone, flow.guideDone]);
 
   const doneCount = steps.filter((s) => s.done).length;
   const allDone = doneCount === steps.length;

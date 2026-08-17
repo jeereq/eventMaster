@@ -26,6 +26,7 @@ export interface TenantPlanSnapshot {
     guests: number;
     templates: number;
     rooms: number;
+    services: number;
     orgManagers: number;
   };
 }
@@ -49,7 +50,7 @@ export async function getTenantPlanSnapshot(tenantId: string): Promise<TenantPla
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
     include: {
-      _count: { select: { events: true, templates: true, rooms: true } },
+      _count: { select: { events: true, templates: true, rooms: true, serviceOfferings: true } },
     },
   });
 
@@ -74,6 +75,7 @@ export async function getTenantPlanSnapshot(tenantId: string): Promise<TenantPla
       guests: guestCount,
       templates: tenant._count.templates,
       rooms: tenant._count.rooms,
+      services: tenant._count.serviceOfferings,
       orgManagers: orgManagers + (tenant.managerId ? 1 : 0),
     },
   };
@@ -105,7 +107,34 @@ export async function assertRoomQuota(tenantId: string): Promise<void> {
   if (max >= 9999) return;
   if (snapshot.usage.rooms >= max) {
     throw new PlanFeatureError(
-      `Quota de salles atteint (${max} max pour ${snapshot.planName}). Passez à un forfait supérieur.`,
+      max <= 0
+        ? `La création de salles n’est pas incluse dans ${snapshot.planName}. Choisissez le forfait Salle ou Salle & presta.`
+        : `Quota de salles atteint (${max} max pour ${snapshot.planName}). Passez à un forfait supérieur.`,
+    );
+  }
+}
+
+export async function assertServiceQuota(tenantId: string): Promise<void> {
+  const snapshot = await getTenantPlanSnapshot(tenantId);
+  if (!snapshot) throw new PlanFeatureError('Organisation introuvable.');
+  const max = snapshot.features.maxServices;
+  if (max >= 9999) return;
+  if (snapshot.usage.services >= max) {
+    throw new PlanFeatureError(
+      max <= 0
+        ? `La publication de prestations n’est pas incluse dans ${snapshot.planName}. Choisissez le forfait Prestataire ou Salle & presta.`
+        : `Quota de prestations atteint (${max} max pour ${snapshot.planName}). Passez à un forfait supérieur.`,
+    );
+  }
+}
+
+export async function assertVenueCatalogPublish(tenantId: string): Promise<void> {
+  const snapshot = await getTenantPlanSnapshot(tenantId);
+  if (!snapshot) throw new PlanFeatureError('Organisation introuvable.');
+  const { audience, maxRooms, name } = snapshot.features;
+  if (audience === 'B2C' || maxRooms <= 0) {
+    throw new PlanFeatureError(
+      `La publication d’une salle au catalogue n’est pas incluse dans ${name}. Choisissez le forfait Salle ou Salle & presta.`,
     );
   }
 }
@@ -139,6 +168,7 @@ export function formatPlanFeaturesResponse(snapshot: TenantPlanSnapshot) {
   return {
     plan: snapshot.plan,
     planName: snapshot.planName,
+    audience: f.audience,
     price: f.price,
     description: f.description,
     usage: snapshot.usage,
@@ -147,6 +177,7 @@ export function formatPlanFeaturesResponse(snapshot: TenantPlanSnapshot) {
       maxGuests: f.maxGuests,
       maxTemplates: f.maxTemplates,
       maxRooms: f.maxRooms,
+      maxServices: f.maxServices,
       maxOrgManagers: f.maxOrgManagers,
     },
     capabilities: {
@@ -160,12 +191,14 @@ export function formatPlanFeaturesResponse(snapshot: TenantPlanSnapshot) {
       roomEditorLevel: f.roomEditorLevel,
       allowedRoomTypes: ROOM_TYPES_BY_LEVEL[f.roomEditorLevel],
       supportLevel: f.supportLevel,
+      audience: f.audience,
     },
     formattedLimits: {
       maxEvents: f.maxEvents >= 9999 ? 'Illimité' : String(f.maxEvents),
       maxGuests: f.maxGuests >= 99999 ? 'Illimité' : String(f.maxGuests),
       maxTemplates: f.maxTemplates >= 9999 ? 'Illimité' : String(f.maxTemplates),
       maxRooms: f.maxRooms >= 9999 ? 'Illimité' : String(f.maxRooms),
+      maxServices: f.maxServices >= 9999 ? 'Illimité' : String(f.maxServices),
       maxOrgManagers: f.maxOrgManagers >= 9999 ? 'Illimité' : String(f.maxOrgManagers),
       price: formatPlanPriceFc(f.monthlyPriceFc),
     },

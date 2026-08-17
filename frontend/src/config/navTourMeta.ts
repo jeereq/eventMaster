@@ -145,6 +145,18 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
       'Profil personnel (nom, e-mail, mot de passe) et couleurs de marque de l’organisation.',
     route: '/dashboard/profile',
   },
+  'nav-catalogue': {
+    title: 'Catalogue',
+    description:
+      'Parcourez les salles et prestataires publics, filtrez par lieu et envoyez une demande de date.',
+    route: '/marketplace',
+  },
+  'nav-bookings': {
+    title: 'Mes réservations',
+    description:
+      'Suivez les demandes de dates envoyées aux gestionnaires de salles et aux prestataires.',
+    route: '/dashboard/bookings',
+  },
 };
 
 export const WELCOME_STEP = {

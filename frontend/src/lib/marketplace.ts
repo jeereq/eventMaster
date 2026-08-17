@@ -66,8 +66,8 @@ export const ACCOUNT_KIND_LABELS: Record<TenantAccountKind, string> = {
 
 export const ACCOUNT_KIND_DESCRIPTIONS: Record<TenantAccountKind, string> = {
   ORGANIZER: 'Créez des événements, invitations et plans de table.',
-  VENDOR: 'Publiez vos salles ou prestations dans le catalogue.',
-  BOTH: 'Organisez et proposez aussi vos offres.',
+  VENDOR: 'Publiez vos salles ou prestations. Forfaits Salle, Prestataire ou Salle & presta.',
+  BOTH: 'Organisez et publiez aussi vos offres (forfait Salle & presta recommandé).',
   CLIENT: 'Réservez sans espace événement. Vous pourrez upgrader plus tard.',
 };
 
@@ -256,6 +256,146 @@ export const PRICE_UNIT_OPTIONS: Array<{ id: VenuePriceUnit; label: string }> = 
 ];
 
 export const RADIUS_KM_OPTIONS = [5, 10, 15, 25, 50] as const;
+
+export type CatalogueProximity = '' | 'around' | 'near';
+
+export type CatalogueGeoState = {
+  city: string;
+  commune: string;
+  neighborhood: string;
+  street: string;
+  minPrice: string;
+  maxPrice: string;
+  proximity: CatalogueProximity;
+  nearPlace: string;
+  radiusKm: number;
+  lat: number | null;
+  lng: number | null;
+};
+
+export const EMPTY_CATALOGUE_GEO: CatalogueGeoState = {
+  city: '',
+  commune: '',
+  neighborhood: '',
+  street: '',
+  minPrice: '',
+  maxPrice: '',
+  proximity: '',
+  nearPlace: '',
+  radiusKm: 10,
+  lat: null,
+  lng: null,
+};
+
+export function hasValidGps(latitude?: string | number | null, longitude?: string | number | null) {
+  const lat = Number.parseFloat(String(latitude ?? ''));
+  const lng = Number.parseFloat(String(longitude ?? ''));
+  return Number.isFinite(lat) && Number.isFinite(lng);
+}
+
+export function missingPublishLocation(draft: {
+  city?: string;
+  commune?: string;
+  neighborhood?: string;
+  latitude?: string | number | null;
+  longitude?: string | number | null;
+}): 'city' | 'commune' | 'neighborhood' | 'map' | null {
+  if (!String(draft.city || '').trim()) return 'city';
+  if (!String(draft.commune || '').trim()) return 'commune';
+  if (!String(draft.neighborhood || '').trim()) return 'neighborhood';
+  if (!hasValidGps(draft.latitude, draft.longitude)) return 'map';
+  return null;
+}
+
+export function appendCatalogueGeoParams(params: URLSearchParams, filters: CatalogueGeoState) {
+  if (filters.city.trim()) params.set('city', filters.city.trim());
+  if (filters.commune.trim()) params.set('commune', filters.commune.trim());
+  if (filters.neighborhood.trim()) params.set('neighborhood', filters.neighborhood.trim());
+  if (filters.street.trim()) params.set('street', filters.street.trim());
+  if (filters.minPrice.trim()) params.set('minPrice', filters.minPrice.trim());
+  if (filters.maxPrice.trim()) params.set('maxPrice', filters.maxPrice.trim());
+  if (filters.proximity && filters.lat != null && filters.lng != null) {
+    params.set('lat', String(filters.lat));
+    params.set('lng', String(filters.lng));
+    params.set('radiusKm', String(filters.radiusKm || 10));
+  }
+}
+
+export function catalogueGeoChips(
+  filters: CatalogueGeoState,
+  extra: Array<{ id: string; label: string; value: string }> = [],
+): Array<{ id: string; label: string; value: string }> {
+  const next: Array<{ id: string; label: string; value: string }> = [];
+  if (filters.city.trim()) next.push({ id: 'city', label: 'Ville', value: filters.city.trim() });
+  if (filters.commune.trim()) next.push({ id: 'commune', label: 'Commune', value: filters.commune.trim() });
+  if (filters.neighborhood.trim()) next.push({ id: 'neighborhood', label: 'Quartier', value: filters.neighborhood.trim() });
+  if (filters.street.trim()) next.push({ id: 'street', label: 'Avenue', value: filters.street.trim() });
+  if (filters.minPrice.trim()) next.push({ id: 'minPrice', label: 'Prix min', value: `${filters.minPrice.trim()} FC` });
+  if (filters.maxPrice.trim()) next.push({ id: 'maxPrice', label: 'Prix max', value: `${filters.maxPrice.trim()} FC` });
+  if (filters.proximity === 'around') {
+    next.push({ id: 'proximity', label: 'Autour de moi', value: `${filters.radiusKm} km` });
+  } else if (filters.proximity === 'near') {
+    next.push({
+      id: 'proximity',
+      label: 'Près de',
+      value: `${filters.nearPlace.trim() || filters.commune.trim() || 'un lieu'} · ${filters.radiusKm} km`,
+    });
+  }
+  return [...next, ...extra];
+}
+
+export function clearCatalogueGeoChip(filters: CatalogueGeoState, id: string): CatalogueGeoState {
+  if (id === 'proximity') {
+    return { ...filters, proximity: '', nearPlace: '', lat: null, lng: null };
+  }
+  if (id === 'radiusKm') {
+    return { ...filters, radiusKm: 10 };
+  }
+  if (id in filters) {
+    return { ...filters, [id]: id === 'radiusKm' ? 10 : '' };
+  }
+  return filters;
+}
+
+export async function resolveCatalogueGeo(filters: CatalogueGeoState): Promise<CatalogueGeoState> {
+  if (filters.proximity === 'around') {
+    const pos = await new Promise<{ lat: number; lng: number }>((resolve, reject) => {
+      if (typeof navigator === 'undefined' || !navigator.geolocation) {
+        reject(new Error('La géolocalisation n’est pas disponible sur cet appareil.'));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
+        () => reject(new Error('Autorisez la localisation pour filtrer autour de vous.')),
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
+      );
+    });
+    return { ...filters, lat: pos.lat, lng: pos.lng };
+  }
+  if (filters.proximity === 'near') {
+    const q = filters.nearPlace.trim() || filters.commune.trim();
+    if (!q) {
+      throw new Error('Indiquez une commune, un quartier ou une avenue pour chercher à proximité.');
+    }
+    const { geocodeLocation } = await import('@/lib/leafletLoader');
+    const place = await geocodeLocation(`${q}, ${filters.city.trim() || 'Kinshasa'}, RD Congo`);
+    if (!place) {
+      throw new Error('Lieu introuvable. Précisez la commune ou l’avenue.');
+    }
+    return { ...filters, lat: place.lat, lng: place.lng };
+  }
+  return { ...filters, lat: null, lng: null };
+}
+
+export function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const toRad = (n: number) => (n * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2
+    + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 export function formatLocationLine(item: {
   city?: string | null;

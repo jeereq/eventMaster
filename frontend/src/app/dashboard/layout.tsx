@@ -4,6 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { getWorkspaceModules } from '@/lib/planAccess';
 import { useTheme } from '@/context/ThemeContext';
 import {
  Calendar, Users, Mail, CreditCard, LayoutDashboard,
@@ -176,7 +177,7 @@ function SidebarNav({
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
- const { user, tenant, token, loading, logout, access, planFeatures } = useAuth();
+ const { user, tenant, token, loading, logout, access, planFeatures, planQuota } = useAuth();
  const { theme, toggleTheme } = useTheme();
  const router = useRouter();
  const pathname = usePathname();
@@ -222,6 +223,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  }, [mobileMenuOpen]);
 
  const isClientAccount = tenant?.accountKind === 'CLIENT' || access?.level === 'client';
+ const workspace = getWorkspaceModules({
+  accountKind: tenant?.accountKind,
+  access,
+  planQuota,
+  planFeatures,
+ });
 
  useEffect(() => {
  if (loading || !token || !user || !isClientAccount) return;
@@ -232,6 +239,42 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  router.replace('/dashboard/bookings');
  }
  }, [loading, token, user, isClientAccount, pathname, router]);
+
+ useEffect(() => {
+  if (loading || !token || !user || isClientAccount) return;
+  if (user.role !== 'USER') return;
+  if (!planQuota) return;
+  const fallback = workspace.showMarketplace
+    ? '/dashboard/marketplace'
+    : workspace.showRooms
+      ? '/dashboard/rooms'
+      : '/dashboard';
+  if (
+   !workspace.showEvents &&
+   (pathname.startsWith('/dashboard/events') ||
+    pathname.startsWith('/dashboard/analytics') ||
+    pathname.startsWith('/dashboard/templates'))
+  ) {
+   router.replace(fallback);
+  }
+  if (!workspace.showRooms && pathname.startsWith('/dashboard/rooms')) {
+   router.replace(fallback);
+  }
+  if (!workspace.showMarketplace && pathname.startsWith('/dashboard/marketplace')) {
+   router.replace('/dashboard');
+  }
+ }, [
+  loading,
+  token,
+  user,
+  isClientAccount,
+  planQuota,
+  workspace.showEvents,
+  workspace.showRooms,
+  workspace.showMarketplace,
+  pathname,
+  router,
+ ]);
 
  if (loading || !token || !user) {
  return (
@@ -346,25 +389,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  {
  items: [
  { name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard },
- { name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar },
- ...(access?.canManageRooms
+ ...(workspace.showEvents
+ ? [{ name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar }]
+ : []),
+ ...(workspace.showRooms
  ? [{ name: 'Salles', href: '/dashboard/rooms', tourId: 'nav-rooms', icon: Building2 }]
  : []),
- ...(access?.canManageTeam
+ ...(workspace.showTeam
  ? [{ name: 'Équipe', href: '/dashboard/team', tourId: 'nav-team', icon: Users }]
  : []),
- ...(access?.canManageRooms
+ ...(workspace.showMarketplace
  ? [{ name: 'Marketplace', href: '/dashboard/marketplace', tourId: 'nav-marketplace', icon: Store }]
  : []),
- ...(access?.canProtocolAllEvents || access?.level === 'staff'
- ? planFeatures?.protocolQr === false
- ? []
- : [{ name: 'Protocole', href: '/dashboard/events?mode=protocol', tourId: 'nav-protocol', icon: ScanLine }]
+ ...(workspace.showProtocol
+ ? [{ name: 'Protocole', href: '/dashboard/events?mode=protocol', tourId: 'nav-protocol', icon: ScanLine }]
  : []),
- ...(!access?.isProtocolOnly ? [
- { name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3 },
- { name: 'Modèles', href: '/dashboard/templates', tourId: 'nav-templates', icon: Mail },
- ] : []),
+ ...(workspace.showAnalytics
+ ? [{ name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3 }]
+ : []),
+ ...(workspace.showTemplates
+ ? [{ name: 'Modèles', href: '/dashboard/templates', tourId: 'nav-templates', icon: Mail }]
+ : []),
  ...(access?.canViewBilling ? [{ name: 'Facturation & plan', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }] : []),
  ...(access?.canViewInvoices ? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: FileText }] : []),
  { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
@@ -453,6 +498,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  ? 'Espace commercial'
  : isClientAccount
  ? 'Espace client'
+ : tenant?.accountKind === 'VENDOR'
+ ? 'Espace catalogue'
  : 'Workspace'}
  </span>
  </div>

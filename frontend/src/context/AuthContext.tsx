@@ -61,6 +61,7 @@ export interface PlanCapabilities {
   roomEditorLevel: string;
   allowedRoomTypes?: string[];
   supportLevel: string;
+  audience?: 'B2B' | 'B2C' | 'VENUE' | 'SERVICE' | 'CATALOG';
 }
 
 export interface PlanQuotaInfo {
@@ -69,6 +70,7 @@ export interface PlanQuotaInfo {
     guests: number;
     templates: number;
     rooms: number;
+    services: number;
     orgManagers: number;
   };
   limits: {
@@ -76,6 +78,7 @@ export interface PlanQuotaInfo {
     maxGuests: number;
     maxTemplates: number;
     maxRooms: number;
+    maxServices: number;
     maxOrgManagers: number;
   };
 }
@@ -309,9 +312,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshPlanFeatures = async () => {
     try {
       const data = await api.get('/billing/plan-features');
-      setPlanFeatures(data.capabilities ?? null);
+      setPlanFeatures(
+        data.capabilities
+          ? { ...data.capabilities, audience: data.audience ?? data.capabilities.audience }
+          : null,
+      );
       if (data.usage && data.limits) {
-        setPlanQuota({ usage: data.usage, limits: data.limits });
+        setPlanQuota({
+          usage: {
+            events: data.usage.events ?? 0,
+            guests: data.usage.guests ?? 0,
+            templates: data.usage.templates ?? 0,
+            rooms: data.usage.rooms ?? 0,
+            services: data.usage.services ?? 0,
+            orgManagers: data.usage.orgManagers ?? 0,
+          },
+          limits: {
+            maxEvents: data.limits.maxEvents ?? 0,
+            maxGuests: data.limits.maxGuests ?? 0,
+            maxTemplates: data.limits.maxTemplates ?? 0,
+            maxRooms: data.limits.maxRooms ?? 0,
+            maxServices: data.limits.maxServices ?? 0,
+            maxOrgManagers: data.limits.maxOrgManagers ?? 0,
+          },
+        });
       }
     } catch {
       setPlanFeatures(null);
@@ -362,7 +386,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('tenant', JSON.stringify(updatedTenant));
       }
       if (billingData.capabilities) {
-        setPlanFeatures(billingData.capabilities);
+        setPlanFeatures({
+          ...billingData.capabilities,
+          audience: billingData.planDetails?.audience ?? billingData.capabilities.audience,
+        });
       }
       if (billingData.usage && billingData.limits) {
         setPlanQuota({ usage: billingData.usage, limits: billingData.limits });

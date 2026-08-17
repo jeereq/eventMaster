@@ -71,9 +71,12 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
 
     if (tenant) {
       const limits = getPlanLimits(tenant.plan);
-      if (tenant._count.events >= limits.maxEvents) {
+      if (limits.maxEvents <= 0 || tenant._count.events >= limits.maxEvents) {
         return res.status(403).json({
-          error: `Quota d'événements atteint pour le plan ${tenant.plan} (Max ${limits.maxEvents === 9999 ? 'illimité' : limits.maxEvents}). Veuillez passer à un forfait supérieur.`,
+          error:
+            limits.maxEvents <= 0
+              ? `La création d’événements n’est pas incluse dans ${limits.name}. Choisissez un forfait organisateur, Salle ou Salle & presta.`
+              : `Quota d'événements atteint pour le plan ${tenant.plan} (Max ${limits.maxEvents === 9999 ? 'illimité' : limits.maxEvents}). Veuillez passer à un forfait supérieur.`,
         });
       }
     }
@@ -105,6 +108,13 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
       },
       include: { room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } } },
     });
+
+    if (tenant?.accountKind === 'VENDOR') {
+      await prisma.tenant.update({
+        where: { id: tenantId },
+        data: { accountKind: 'BOTH' },
+      });
+    }
 
     return res.status(201).json(event);
   } catch (error: any) {

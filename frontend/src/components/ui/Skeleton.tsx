@@ -253,6 +253,42 @@ export function SkeletonCommercialView() {
   );
 }
 
+export function SkeletonLandingTemplateCard() {
+  return (
+    <div className="bg-background border border-border rounded-[var(--radius-card)] p-3.5 flex flex-col" aria-hidden>
+      <Skeleton className="w-full h-[200px] rounded-[var(--radius-button)]" />
+      <div className="mt-3 space-y-2 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <Skeleton className="h-3 w-16" />
+          <Skeleton className="h-3 w-14" />
+        </div>
+        <Skeleton className="h-4 w-3/4" />
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-3 w-4/5" />
+      </div>
+      <div className="border-t border-border pt-3 mt-4">
+        <Skeleton className="h-3 w-36" />
+      </div>
+    </div>
+  );
+}
+
+export function SkeletonLandingTemplateGrid({ count = 8 }: { count?: number }) {
+  return (
+    <div
+      className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+      role="status"
+      aria-live="polite"
+      aria-label="Chargement des modèles"
+    >
+      {Array.from({ length: count }).map((_, i) => (
+        <SkeletonLandingTemplateCard key={i} />
+      ))}
+      <span className="sr-only">Chargement des modèles…</span>
+    </div>
+  );
+}
+
 export function SkeletonProfileView() {
   return (
     <div className="space-y-6 animate-fade-in w-full">

@@ -104,6 +104,14 @@ export function buildNavProductTour(
       return buildSteps(tabs);
     }
 
+    case 'client':
+      return buildSteps([
+        { tourId: 'nav-catalogue' },
+        { tourId: 'nav-bookings' },
+        { tourId: 'nav-guide' },
+        { tourId: 'nav-profile' },
+      ]);
+
     case 'owner': {
       const tabs: Array<{ tourId: string; route?: string }> = [
         { tourId: 'nav-dashboard' },
