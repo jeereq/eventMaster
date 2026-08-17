@@ -14,7 +14,7 @@ export default function PublicPageShell({
   faqHref?: string;
 }) {
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground font-sans antialiased transition-colors duration-200">
+    <div className="flex flex-col min-h-screen bg-background text-foreground font-sans antialiased">
       <CelebrateMood />
       <SiteHeader />
       {children}

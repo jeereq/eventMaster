@@ -429,7 +429,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  }
  >
  <TourProvider>
- <div className="min-h-screen flex flex-col md:flex-row bg-background text-foreground transition-colors duration-200">
+ <div className="min-h-screen flex flex-col md:flex-row bg-background text-foreground">
  {/* Overlay mobile */}
  {mobileMenuOpen && (
  <button

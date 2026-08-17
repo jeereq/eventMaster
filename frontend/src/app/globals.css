@@ -95,6 +95,7 @@ html[data-mood="celebrate"].dark,
 html {
   scroll-behavior: smooth;
   font-size: 15px;
+  background-color: var(--background);
 }
 
 html[data-density="compact"] .em-dashboard-content {
@@ -125,6 +126,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  /* WebKit interpolait transparent → fond via un flash vert si background-color est transitionné. */
+  transition: none;
 }
 
 h1, h2, h3, h4 {

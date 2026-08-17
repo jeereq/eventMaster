@@ -1,7 +1,6 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
 
 type Theme = 'light' | 'dark';
 
@@ -23,7 +22,6 @@ function applyThemeClass(next: Theme) {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof document === 'undefined') return 'dark';
     return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
@@ -43,7 +41,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     applyThemeClass(theme);
-  }, [pathname, theme]);
+  }, [theme]);
 
   const setTheme = (nextTheme: Theme) => {
     setThemeState(nextTheme);

@@ -71,7 +71,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr" className={`${inter.variable} ${fraunces.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
-      <body className={`${inter.className} min-h-full flex flex-col font-sans bg-background text-foreground transition-colors duration-200`}>
+      <body className={`${inter.className} min-h-full flex flex-col font-sans bg-background text-foreground`}>
         <Script
           id="theme-boot"
           strategy="beforeInteractive"

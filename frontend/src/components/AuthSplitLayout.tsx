@@ -36,7 +36,7 @@ export function AuthSplitLayout({
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className="min-h-screen flex bg-background text-foreground transition-colors duration-200">
+    <div className="min-h-screen flex bg-background text-foreground">
       <CelebrateMood />
       {/* Panneau marketing — couleurs via --auth-* / --primary */}
       <div
