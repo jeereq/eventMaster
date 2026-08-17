@@ -44,14 +44,14 @@ html[data-mood="celebrate"] {
 
 html[data-mood="celebrate"].dark,
 .dark[data-mood="celebrate"] {
-  --background: #1a1e1c;
-  --surface: #242a27;
-  --surface-muted: #2c3330;
-  --border: #3a433e;
-  --border-subtle: #454e48;
-  --sidebar: #151916;
-  --card-hover: #2a312d;
-  --brand-accent: #fbbf24;
+  --background: #1e1f21;
+  --surface: #2a2b2d;
+  --surface-muted: #323437;
+  --border: #3e3f42;
+  --border-subtle: #48494b;
+  --sidebar: #191a1c;
+  --card-hover: #303133;
+  --brand-accent: #a5b4fc;
   --festive-accent: #fbbf24;
 }
 
