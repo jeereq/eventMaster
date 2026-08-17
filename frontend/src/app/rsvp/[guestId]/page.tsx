@@ -166,6 +166,13 @@ export default function RsvpPage() {
   const [rsvpLocked, setRsvpLocked] = useState(false);
 
   useEffect(() => {
+    const raw = window.location.hash.replace('#', '');
+    if (raw === 'badge' || raw === 'table' || raw === 'route' || raw === 'guestbook' || raw === 'feed') {
+      setActiveGuestTab(raw);
+    }
+  }, []);
+
+  useEffect(() => {
     async function loadRsvpDetails() {
       if (!guestId) return;
       try {
@@ -543,12 +550,20 @@ export default function RsvpPage() {
             <GuestPortalTabBar
               tabs={guestTabs}
               activeId={activeGuestTab}
-              onChange={(id) => setActiveGuestTab(id as typeof activeGuestTab)}
+              onChange={(id) => {
+                const next = id as typeof activeGuestTab;
+                setActiveGuestTab(next);
+                window.history.replaceState(
+                  null,
+                  '',
+                  `${window.location.pathname}${window.location.search}#${next}`,
+                );
+              }}
             />
           }
           contentClassName="space-y-5"
         >
-            <FestiveConfetti />
+            <FestiveConfetti onceKey={`em-confetti-${guestId}`} />
             
             {/* 1. BADGE & INFOS TAB */}
             {activeGuestTab === 'badge' && (
@@ -582,12 +597,16 @@ export default function RsvpPage() {
                 </GuestPortalCard>
 
                 <GuestPortalCard className="space-y-4">
-                  <div className="space-y-1.5">
+                  {guest.event.description?.trim() ? (
+                    <div className="space-y-1.5">
+                      <h3 className="font-semibold text-foreground text-sm">Détails de l&apos;événement</h3>
+                      <p className="text-muted text-xs leading-relaxed whitespace-pre-line">
+                        {guest.event.description}
+                      </p>
+                    </div>
+                  ) : (
                     <h3 className="font-semibold text-foreground text-sm">Détails de l&apos;événement</h3>
-                    <p className="text-muted text-xs leading-relaxed whitespace-pre-line">
-                      {guest.event.description || 'Aucune description supplémentaire.'}
-                    </p>
-                  </div>
+                  )}
 
                   <div className="space-y-3 text-xs text-muted pt-3 border-t border-border">
                     <div className="flex items-center gap-3">
@@ -1448,15 +1467,30 @@ export default function RsvpPage() {
 
       <div className="absolute inset-0 bg-grid-border [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.7))]" />
 
-      <div className="w-full relative z-10 flex justify-between items-center px-1 gap-2" style={{ maxWidth: canvasStyle.maxWidth }}>
-        <GuestPortalHomeLink guestId={guestId} variant="light" />
-        <Link
-          href="/guide/invite"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-primary transition"
-        >
-          <HelpCircle className="w-3.5 h-3.5" />
-          Aide invité
-        </Link>
+      <div
+        className="w-full relative z-10 border border-border bg-surface/90 backdrop-blur-md em-celebrate-stripe rounded-[var(--radius-card)]"
+        style={{ maxWidth: canvasStyle.maxWidth }}
+      >
+        <div className="flex justify-between items-center px-3 py-2.5 gap-2">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--festive-accent)]">
+              Votre invitation
+            </p>
+            <p className="text-xs font-display font-semibold text-foreground truncate">
+              {guest.event.title}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <GuestPortalHomeLink guestId={guestId} variant="light" />
+            <Link
+              href="/guide/invite"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted hover:text-primary transition"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              Aide
+            </Link>
+          </div>
+        </div>
       </div>
 
       <InvitationWrapper {...invitationWrapperProps}>

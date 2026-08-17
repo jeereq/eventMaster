@@ -17,11 +17,20 @@ const COLORS = [
 export default function FestiveConfetti({
   active = true,
   count = 28,
+  onceKey,
 }: {
   active?: boolean;
   count?: number;
+  /** Si fourni, n’affiche le confetti qu’une fois par onglet (sessionStorage). */
+  onceKey?: string;
 }) {
-  const [show, setShow] = useState(active);
+  const [show, setShow] = useState(() => {
+    if (!active) return false;
+    if (onceKey && typeof window !== 'undefined') {
+      return sessionStorage.getItem(onceKey) !== '1';
+    }
+    return active;
+  });
 
   const pieces = useMemo(() => {
     return Array.from({ length: count }, (_, i) => {
@@ -40,10 +49,17 @@ export default function FestiveConfetti({
       setShow(false);
       return;
     }
+    if (onceKey && typeof window !== 'undefined' && sessionStorage.getItem(onceKey) === '1') {
+      setShow(false);
+      return;
+    }
     setShow(true);
-    const t = window.setTimeout(() => setShow(false), 1600);
+    const t = window.setTimeout(() => {
+      setShow(false);
+      if (onceKey) sessionStorage.setItem(onceKey, '1');
+    }, 1600);
     return () => window.clearTimeout(t);
-  }, [active]);
+  }, [active, onceKey]);
 
   if (!show) return null;
 

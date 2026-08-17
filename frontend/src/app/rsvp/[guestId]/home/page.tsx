@@ -108,7 +108,7 @@ function InvitationCard({ item }: { item: GuestInvitationItem }) {
           <span className="text-[10px] font-semibold text-emerald-600">À venir</span>
         )}
         <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">
-          Ouvrir
+          {item.rsvp === 'PENDING' ? 'Répondre' : item.rsvp === 'ACCEPTED' ? 'Mon espace' : 'Voir'}
           <ArrowRight className="w-3.5 h-3.5" />
         </span>
       </div>
@@ -141,7 +141,7 @@ export default function GuestHomePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="em-guest-page flex items-center justify-center">
         <Loader2 className="w-7 h-7 text-primary animate-spin" />
       </div>
     );
@@ -149,7 +149,7 @@ export default function GuestHomePage() {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="em-guest-page flex items-center justify-center px-4">
         <GuestPortalCard className="max-w-md w-full text-center space-y-3">
           <AlertCircle className="w-8 h-8 text-rose-500 mx-auto" />
           <p className="text-sm text-muted">{error || 'Erreur de chargement.'}</p>
