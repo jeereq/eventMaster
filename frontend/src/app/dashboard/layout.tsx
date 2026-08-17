@@ -64,7 +64,6 @@ const NAV_TOOLTIPS: Record<string, string> = {
  'Réseau commercial': 'Organisations que vous parrainez',
  Protocole: 'Scan QR et accueil invités',
  'Tableau de bord': 'Vue d’ensemble et quotas',
- Catalogue: 'Salles et prestataires publics',
  'Mes réservations': 'Demandes de dates envoyées',
  Statistiques: 'RSVP et analyses d’événements',
  Modèles: 'Concepteur d’invitations',
@@ -388,7 +387,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  ? [
  {
  items: [
- { name: 'Catalogue', href: '/marketplace', tourId: 'nav-catalogue', icon: Store },
+ { name: 'Marketplace', href: '/marketplace', tourId: 'nav-catalogue', icon: Store, description: 'Salles et prestataires publics' },
  { name: 'Mes réservations', href: '/dashboard/bookings', tourId: 'nav-bookings', icon: CalendarCheck },
  { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
  { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
@@ -510,7 +509,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  : isClientAccount
  ? 'Espace client'
  : tenant?.accountKind === 'VENDOR'
- ? 'Espace catalogue'
+ ? 'Espace marketplace'
  : 'Workspace'}
  </span>
  </div>

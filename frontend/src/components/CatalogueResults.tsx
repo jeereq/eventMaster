@@ -210,18 +210,18 @@ export function CatalogueResultsSkeleton({
             mode === 'focus' ? 'min-h-[420px] h-[calc(100dvh-10.5rem)]' : 'h-[480px]',
           )}
         />
-        <span className="sr-only">Chargement du catalogue…</span>
+        <span className="sr-only">Chargement du marketplace…</span>
       </div>
     );
   }
 
   if (mode === 'list') {
     return (
-      <div className={listStackClass} role="status" aria-live="polite" aria-label="Chargement du catalogue">
+      <div className={listStackClass} role="status" aria-live="polite" aria-label="Chargement du marketplace">
         {Array.from({ length: count }).map((_, i) => (
           <CatalogueListRowSkeleton key={i} />
         ))}
-        <span className="sr-only">Chargement du catalogue…</span>
+        <span className="sr-only">Chargement du marketplace…</span>
       </div>
     );
   }
@@ -231,12 +231,12 @@ export function CatalogueResultsSkeleton({
       className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4"
       role="status"
       aria-live="polite"
-      aria-label="Chargement du catalogue"
+      aria-label="Chargement du marketplace"
     >
       {Array.from({ length: count }).map((_, i) => (
         <CatalogueGridCardSkeleton key={i} />
       ))}
-      <span className="sr-only">Chargement du catalogue…</span>
+      <span className="sr-only">Chargement du marketplace…</span>
     </div>
   );
 }

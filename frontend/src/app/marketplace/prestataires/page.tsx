@@ -114,8 +114,8 @@ export default function MarketplaceServicesPage() {
   return (
     <CatalogueSearchLayout
       activeNav="services"
-      heroTitle="Trouvez un prestataire"
-      heroDescription="Traiteur, photo, DJ… Filtrez par zone, catégorie, prix ou autour de vous."
+      heroTitle="Trouvez un prestataire pour votre événement"
+      heroDescription="Traiteur, photo, DJ, déco… Filtrez par zone, catégorie, prix ou autour de vous."
       mode={mode}
       onViewChange={setView}
       items={items}

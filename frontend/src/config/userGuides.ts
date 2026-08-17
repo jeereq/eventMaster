@@ -386,12 +386,12 @@ export const USER_GUIDES: UserGuide[] = [
   },
   {
     id: 'client',
-    title: 'Guide Client catalogue',
+    title: 'Guide Client marketplace',
     badge: 'Client',
     summary:
       'Vous réservez des salles et prestataires sans créer d’événements ni d’offres. Pour organiser une fête ou publier vos salles, changez le type de compte dans Mon compte.',
     canDo: [
-      'Parcourir le catalogue public (salles et prestataires)',
+      'Parcourir le marketplace (salles et prestataires)',
       'Envoyer une demande de réservation de date',
       'Suivre vos réservations dans l’espace client',
       'Mettre à jour votre profil et passer organisateur ou prestataire',
@@ -402,7 +402,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Souscrire un abonnement SaaS tant que le compte reste client',
     ],
     navLinks: [
-      { label: 'Catalogue', href: '/marketplace' },
+      { label: 'Marketplace', href: '/marketplace' },
       { label: 'Mes réservations', href: '/dashboard/bookings' },
       { label: 'Mon compte', href: '/dashboard/profile' },
     ],
@@ -411,9 +411,9 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'book-venue',
         title: 'Réserver une salle ou un prestataire',
         content:
-          '1. Ouvrez le Catalogue.\n2. Filtrez par ville, date ou catégorie.\n3. Envoyez une demande de date — le vendeur confirme hors plateforme pour l’acompte.\n4. Suivez le statut dans Mes réservations.',
+          '1. Ouvrez le Marketplace.\n2. Filtrez par ville, date ou catégorie.\n3. Envoyez une demande de date — le vendeur confirme hors plateforme pour l’acompte.\n4. Suivez le statut dans Mes réservations.',
         links: [
-          { label: 'Catalogue', href: '/marketplace' },
+          { label: 'Marketplace', href: '/marketplace' },
           { label: 'Mes réservations', href: '/dashboard/bookings' },
         ],
       },
@@ -421,13 +421,13 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'upgrade-account',
         title: 'Passer organisateur ou prestataire',
         content:
-          '1. Ouvrez Mon compte.\n2. Changez le type de compte (organisateur, prestataire / salles, ou les deux).\n3. L’espace SaaS s’ouvre : événements ou publication catalogue.\n4. Choisissez ensuite un forfait adapté dans Facturation.',
+          '1. Ouvrez Mon compte.\n2. Changez le type de compte (organisateur, prestataire / salles, ou les deux).\n3. L’espace SaaS s’ouvre : événements ou publication marketplace.\n4. Choisissez ensuite un forfait adapté dans Facturation.',
         links: [{ label: 'Mon compte', href: '/dashboard/profile' }],
       },
     ],
     tips: [
       'Le compte client n’exige pas de licence SaaS.',
-      'La commission vendeur du catalogue est distincte de l’abonnement EventMaster.',
+      'La commission vendeur du marketplace est distincte de l’abonnement EventMaster.',
     ],
   },
   {

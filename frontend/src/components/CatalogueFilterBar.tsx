@@ -306,7 +306,7 @@ export function CatalogueGeoFields({
 
   return (
     <>
-      <CatalogueFilterField label="Ville" hint="Catalogue limité à Kinshasa et Lubumbashi.">
+      <CatalogueFilterField label="Ville" hint="Marketplace limité à Kinshasa et Lubumbashi.">
         <CatalogueChoicePills
           options={[
             { id: 'Kinshasa', label: 'Kinshasa' },

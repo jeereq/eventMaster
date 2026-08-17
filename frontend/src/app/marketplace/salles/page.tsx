@@ -112,7 +112,7 @@ export default function MarketplaceVenuesPage() {
     <CatalogueSearchLayout
       activeNav="venues"
       heroTitle="Trouvez une salle pour votre événement"
-      heroDescription="Filtrez par ville, commune, quartier, prix ou autour de vous. Les choix restent visibles sous la recherche."
+      heroDescription="Parcourez les lieux publiés. Filtrez par ville, commune, quartier, prix ou autour de vous."
       mode={mode}
       onViewChange={setView}
       items={items}

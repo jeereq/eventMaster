@@ -52,7 +52,7 @@ export default function LandingMobileSection() {
             <p className="text-sm text-background/65 leading-relaxed max-w-lg">
               Nous construisons une application native pour le protocole et le RSVP. Elle n’est
               pas disponible sur l’App Store ni Google Play pour le moment. En attendant, tout
-              le produit actuel — invitations, plan de salle, catalogue, réservations et scan QR —
+              le produit actuel — invitations, plan de salle, marketplace, réservations et scan QR —
               fonctionne dans le navigateur, y compris sur téléphone.
             </p>
 
@@ -83,7 +83,7 @@ export default function LandingMobileSection() {
                   'Portail RSVP et badge QR',
                   'Plan de table 2D',
                   'Protocole scan QR dans le navigateur',
-                  'Catalogue salles & prestataires (photos et vidéos)',
+                  'Marketplace salles & prestataires (photos et vidéos)',
                   'Réservation de dates',
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2 text-sm text-background/80">

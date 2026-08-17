@@ -93,7 +93,7 @@ const ROOM_LEVEL_HINT: Record<RoomEditorLevel, string> = {
   complete: 'Salle, Particulier, Salle & presta ou Enterprise 1',
 };
 
-/** Publication d’une salle au catalogue public (interdit au forfait Particulier). */
+/** Publication d’une salle sur le marketplace (interdit au forfait Particulier). */
 export function canPublishVenueCatalog(
   planFeatures?: PlanCapabilities | null,
   planQuota?: PlanQuotaInfo | null,

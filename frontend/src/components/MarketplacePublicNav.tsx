@@ -12,7 +12,7 @@ export default function MarketplacePublicNav({
   className?: string;
 }) {
   const items = [
-    { id: 'hub' as const, href: '/marketplace', label: 'Tous', icon: Store },
+    { id: 'hub' as const, href: '/marketplace', label: 'Marketplace', icon: Store },
     { id: 'venues' as const, href: '/marketplace/salles', label: 'Salles', icon: Building2 },
     { id: 'services' as const, href: '/marketplace/prestataires', label: 'Prestataires', icon: Sparkles },
   ];

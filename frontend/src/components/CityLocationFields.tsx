@@ -88,7 +88,7 @@ export default function CityLocationFields({
         </select>
       </label>
       <p className="sm:col-span-2 text-[11px] text-muted -mt-1">
-        Catalogue limité à {findRdcCity(cityName)?.name || 'Kinshasa et Lubumbashi'}. La carte se cadre sur la ville et la commune choisies.
+        Marketplace limité à {findRdcCity(cityName)?.name || 'Kinshasa et Lubumbashi'}. La carte se cadre sur la ville et la commune choisies.
       </p>
     </div>
   );

@@ -113,8 +113,8 @@ export default function MarketplaceHubPage() {
   return (
     <CatalogueSearchLayout
       activeNav="hub"
-      heroTitle="Salles et prestataires pour vos événements"
-      heroDescription="Trouvez un lieu ou un professionnel enregistré sur EventMaster. Affinez par ville, commune, prix ou autour de vous."
+      heroTitle="Salles et prestataires près de chez vous"
+      heroDescription="Explorez le marketplace EventMaster. Affinez par ville, commune, prix ou autour de vous."
       mode={mode}
       onViewChange={setView}
       items={visible}
@@ -169,10 +169,10 @@ export default function MarketplaceHubPage() {
               throw err;
             }
           }}
-          modalTitle="Filtrer le catalogue"
+          modalTitle="Filtrer le marketplace"
           filters={
             <>
-              <CatalogueFilterField label="Type de fiche">
+              <CatalogueFilterField label="Salles ou prestataires">
                 <CatalogueChoicePills
                   options={[
                     { id: 'all', label: 'Tous' },

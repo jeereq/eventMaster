@@ -237,7 +237,7 @@ function ProfilePageContent() {
                           : (
                             <>
                               Propriétaire de salles ou prestataire : publiez vos offres dans le{' '}
-                              <Link href="/marketplace" className="text-primary font-semibold hover:underline">catalogue public</Link>
+                              <Link href="/marketplace" className="text-primary font-semibold hover:underline">marketplace</Link>
                               {' '}et gérez devis et réservations dans{' '}
                               <Link href="/dashboard/marketplace" className="text-primary font-semibold hover:underline">Marketplace</Link>.
                             </>

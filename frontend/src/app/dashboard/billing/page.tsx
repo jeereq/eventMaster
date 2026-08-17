@@ -208,7 +208,7 @@ export default function BillingPage() {
       {(!billing || billing.plan === 'FREE') && (
         <Alert variant="info">
           Aucun abonnement payant n&apos;est actif. Les forfaits ci-dessous correspondent à votre type de compte
-          ({tenant?.accountKind === 'VENDOR' ? 'catalogue' : tenant?.accountKind === 'BOTH' ? 'organisation + catalogue' : 'organisation'}),
+          ({tenant?.accountKind === 'VENDOR' ? 'marketplace' : tenant?.accountKind === 'BOTH' ? 'organisation + marketplace' : 'organisation'}),
           exclusivement en {CURRENCY_NAME} (FC).
         </Alert>
       )}
@@ -244,7 +244,7 @@ export default function BillingPage() {
               Un seul forfait à la fois : il n’y a pas de cumul Salle + Business.
               {tenant?.accountKind === 'BOTH'
                 ? ' Compte mixte : Particulier, Business, Salle, Prestataire ou Salle & presta.'
-                : ' Compte catalogue : Salle, Prestataire ou Salle & presta (fiches publiées, pas un volume d’agence).'}
+                : ' Compte marketplace : Salle, Prestataire ou Salle & presta (fiches publiées, pas un volume d’agence).'}
             </p>
           )}
           {billing.capabilities && (

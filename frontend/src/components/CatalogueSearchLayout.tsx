@@ -111,7 +111,7 @@ export default function CatalogueSearchLayout({
   return (
     <PublicPageShell faqHref="/faq">
       {mode !== 'focus' && (
-        <PublicPageHero compact chip="Catalogue" title={heroTitle} description={heroDescription}>
+        <PublicPageHero compact chip="Marketplace" title={heroTitle} description={heroDescription}>
           <MarketplacePublicNav active={activeNav} />
         </PublicPageHero>
       )}

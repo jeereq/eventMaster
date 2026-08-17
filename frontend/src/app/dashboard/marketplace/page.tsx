@@ -452,7 +452,7 @@ export default function MarketplaceDeskPage() {
         open={editorOpen}
         onClose={() => setEditorOpen(false)}
         title={editing ? `Prestation — ${editing.title}` : 'Nouvelle prestation'}
-        description="Visible dans le catalogue public uniquement après publication."
+        description="Visible sur le marketplace uniquement après publication."
         size="xl"
         footer={
           <div className="flex w-full justify-between gap-2">

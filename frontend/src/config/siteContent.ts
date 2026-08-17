@@ -14,14 +14,14 @@ export const SITE_CONTACT = {
 export const FOOTER_FEATURES = [
   'Invitations & RSVP multi-canal',
   'Plans de salle 2D & protocole QR web',
-  'Catalogue de salles et prestataires',
+  'Marketplace salles et prestataires',
   'Application mobile (en construction)',
   'Espace isolé par organisation',
 ] as const;
 
 export const FOOTER_PRODUCT = [
   { label: 'Modèles', href: '/#modeles' },
-  { label: 'Catalogue salles & prestas', href: '/marketplace' },
+  { label: 'Marketplace salles & prestas', href: '/marketplace' },
   { label: 'Parcours', href: '/#parcours' },
   { label: 'Tarifs', href: '/#tarifs' },
   { label: 'FAQ', href: '/faq' },
@@ -36,7 +36,7 @@ export const FOOTER_RESOURCES = [
 ] as const;
 
 export const FOOTER_BRAND_DESCRIPTION =
-  'Créez votre organisation sur EventMaster pour gérer invitations, RSVP, plans de salle, catalogue et protocole QR sur le web. L’application mobile est en construction et n’est pas encore déployée.';
+  'Créez votre organisation sur EventMaster pour gérer invitations, RSVP, plans de salle, marketplace et protocole QR sur le web. L’application mobile est en construction et n’est pas encore déployée.';
 
 export interface FaqItem {
   id: string;
@@ -49,13 +49,13 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'what-is-eventmaster',
     question: 'Qu\'est-ce qu\'EventMaster ?',
     answer:
-      'EventMaster est une plateforme SaaS web qui centralise la gestion d\'événements : invitations et RSVP, plans de salle 2D, protocole QR dans le navigateur, catalogue de salles et prestataires (photos, vidéos, réservation de dates), fil d\'actualité, livre d\'or, modèles de messages et gestion d\'équipe. Chaque organisation dispose de son propre espace isolé. L\'application mobile native est en construction et n\'est pas encore déployée.',
+      'EventMaster est une plateforme SaaS web qui centralise la gestion d\'événements : invitations et RSVP, plans de salle 2D, protocole QR dans le navigateur, marketplace de salles et prestataires (photos, vidéos, réservation de dates), fil d\'actualité, livre d\'or, modèles de messages et gestion d\'équipe. Chaque organisation dispose de son propre espace isolé. L\'application mobile native est en construction et n\'est pas encore déployée.',
   },
   {
     id: 'mobile-app',
     question: 'Existe-t-il une application mobile ?',
     answer:
-      'Pas encore. L\'application native iOS et Android est en construction : elle n\'est pas déployée sur les stores pour l\'instant. En attendant, le RSVP, le protocole QR, le tableau de bord, le catalogue et les réservations fonctionnent dans le navigateur — y compris depuis un téléphone. L\'édition avancée (modèles, plan de table) restera sur le web.',
+      'Pas encore. L\'application native iOS et Android est en construction : elle n\'est pas déployée sur les stores pour l\'instant. En attendant, le RSVP, le protocole QR, le tableau de bord, le marketplace et les réservations fonctionnent dans le navigateur — y compris depuis un téléphone. L\'édition avancée (modèles, plan de table) restera sur le web.',
   },
   {
     id: 'placement-delivery',
@@ -67,7 +67,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'marketplace-venues',
     question: 'Puis-je trouver une salle ou un prestataire sur EventMaster ?',
     answer:
-      'Oui. Le catalogue public liste les salles et prestations (traiteur, photo, DJ, déco…) que les organisations choisissent de publier, avec photos et vidéos. Vous pouvez demander un devis, ou — connecté avec une organisation — réserver une date. L’acompte (30 %) se verse directement au professionnel, hors EventMaster. À la confirmation, la date est bloquée et une salle peut être rattachée à l’événement. Pour proposer une offre : Salles ou Marketplace dans le tableau de bord.',
+      'Oui. Le marketplace liste les salles et prestations (traiteur, photo, DJ, déco…) que les organisations choisissent de publier, avec photos et vidéos. Vous pouvez demander un devis, ou — connecté avec une organisation — réserver une date. L’acompte (30 %) se verse directement au professionnel, hors EventMaster. À la confirmation, la date est bloquée et une salle peut être rattachée à l’événement. Pour proposer une offre : Salles ou Marketplace dans le tableau de bord.',
   },
   {
     id: 'marketplace-booking',

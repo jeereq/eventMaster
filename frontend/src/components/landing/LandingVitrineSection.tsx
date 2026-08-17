@@ -73,7 +73,7 @@ export default function LandingVitrineSection({
     const applyHash = () => {
       const hash = window.location.hash.replace('#', '');
       if (hash === 'modeles') setTab('templates');
-      if (hash === 'salles' || hash === 'catalogue') setTab('venues');
+      if (hash === 'salles' || hash === 'catalogue' || hash === 'marketplace') setTab('venues');
       if (hash === 'prestataires') setTab('services');
     };
     applyHash();
@@ -128,13 +128,13 @@ export default function LandingVitrineSection({
               Salles, prestataires et modèles
             </h2>
             <p className="text-sm text-muted leading-relaxed">
-              Parcourez les fiches enregistrées sur EventMaster et les modèles d’invitation publiés
+              Parcourez le marketplace EventMaster et les modèles d’invitation publiés
               par la plateforme.
             </p>
           </div>
           <Link href="/marketplace">
             <Button rightIcon={<ArrowRight className="w-4 h-4" />}>
-              Catalogue complet
+              Tout le marketplace
             </Button>
           </Link>
         </div>

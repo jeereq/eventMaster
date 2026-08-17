@@ -4484,7 +4484,7 @@ function DashboardPageContent() {
  </h2>
  <p className="text-sm text-muted">
  {tenant?.accountKind === 'VENDOR'
- ? 'Voici l’état de vos offres catalogue et de votre forfait.'
+ ? 'Voici l’état de vos offres marketplace et de votre forfait.'
  : 'Voici l&apos;état de vos événements et quotas aujourd&apos;hui.'}
  </p>
  </div>
@@ -4495,7 +4495,7 @@ function DashboardPageContent() {
  description={
  tenant?.name
  ? tenant.accountKind === 'VENDOR'
- ? `Bienvenue — ${tenant.name}. Suivez vos fiches catalogue, quotas et abonnement.`
+ ? `Bienvenue — ${tenant.name}. Suivez vos fiches marketplace, quotas et abonnement.`
  : `Bienvenue — ${tenant.name}. Suivez vos événements, quotas et abonnement.`
  : "Bienvenue dans votre espace de gestion d'événements."
  }

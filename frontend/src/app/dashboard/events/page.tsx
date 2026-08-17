@@ -2580,7 +2580,7 @@ export default function EventsPage() {
  <Link href="/dashboard/rooms" className="font-semibold text-primary hover:underline">
  Salles
  </Link>
- , ou parcourez le catalogue public.
+ , ou parcourez le marketplace.
  </>
  )
  : 'Préremplit le lieu et lie le staff de la salle. À la création, le plan 2D peut être importé.'}

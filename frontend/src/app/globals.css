@@ -478,11 +478,35 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
   color: #fff;
 }
 
-.em-map-marker-head.has-photo {
+.em-map-marker-hit-photo {
+  width: 52px;
+  height: 62px;
+}
+
+.em-map-marker-photo-pin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  filter: drop-shadow(0 3px 7px rgba(15, 23, 42, 0.42));
+  pointer-events: none;
+  transform-origin: 50% 100%;
+}
+
+.em-map-marker.is-hovered .em-map-marker-photo-pin,
+.em-map-marker:hover .em-map-marker-photo-pin {
+  filter: drop-shadow(0 5px 10px rgba(15, 23, 42, 0.5)) brightness(1.06);
+  transform: translateY(-1px);
+}
+
+.em-map-marker-photo-wrap {
+  position: relative;
+}
+
+.em-map-marker-photo-frame {
+  position: relative;
   overflow: hidden;
-  padding: 0;
-  width: 36px;
-  height: 36px;
+  box-sizing: border-box;
+  border: 3px solid #fff;
 }
 
 .em-map-marker-photo {
@@ -492,12 +516,70 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
   display: block;
 }
 
-.em-map-marker-venue .em-map-marker-photo {
-  transform: rotate(45deg) scale(1.42);
+.em-map-marker-photo-pin.is-venue .em-map-marker-photo-frame {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  box-shadow: 0 0 0 2px var(--primary, #4f46e5);
 }
 
-.em-map-marker-service .em-map-marker-photo {
-  border-radius: 50%;
+.em-map-marker-photo-pin.is-venue .em-map-marker-photo {
+  border-radius: 8px;
+}
+
+.em-map-marker-photo-pin.is-service .em-map-marker-photo-frame {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px var(--festive-accent, #b45309);
+}
+
+.em-map-marker-photo-pin.is-service .em-map-marker-photo {
+  border-radius: 999px;
+}
+
+.em-map-marker-photo-badge {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #fff;
+  color: #fff;
+  z-index: 1;
+}
+
+.em-map-marker-photo-badge svg {
+  width: 10px;
+  height: 10px;
+}
+
+.em-map-marker-photo-pin.is-venue .em-map-marker-photo-badge {
+  background: var(--primary, #4f46e5);
+  border-radius: 6px;
+}
+
+.em-map-marker-photo-pin.is-service .em-map-marker-photo-badge {
+  background: var(--festive-accent, #b45309);
+  border-radius: 999px;
+}
+
+.em-map-marker-photo-pointer {
+  width: 11px;
+  height: 11px;
+  margin-top: -5px;
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+
+.em-map-marker-photo-pin.is-venue .em-map-marker-photo-pointer {
+  background: var(--primary, #4f46e5);
+}
+
+.em-map-marker-photo-pin.is-service .em-map-marker-photo-pointer {
+  background: var(--festive-accent, #b45309);
 }
 
 .em-map-marker-venue .em-map-marker-head {

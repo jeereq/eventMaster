@@ -70,10 +70,12 @@ function markerImageUrls(marker: { coverUrl?: string | null; photos?: string[] }
 
 function listingIconHtml(kind?: 'venue' | 'service', coverUrl?: string | null) {
   const isService = kind === 'service';
-  const photo = coverUrl
-    ? `<img class="em-map-marker-photo" src="${escapeAttr(coverUrl)}" alt="" />`
-    : (isService ? SERVICE_ICON_SVG : VENUE_ICON_SVG);
-  return `<span class="em-map-marker-hit"><span class="em-map-marker-inner"><span class="em-map-marker-head${coverUrl ? ' has-photo' : ''}">${photo}</span><span class="em-map-marker-tail"></span></span></span>`;
+  if (coverUrl) {
+    const badge = isService ? SERVICE_ICON_SVG : VENUE_ICON_SVG;
+    return `<span class="em-map-marker-hit em-map-marker-hit-photo"><span class="em-map-marker-photo-pin ${isService ? 'is-service' : 'is-venue'}"><span class="em-map-marker-photo-wrap"><span class="em-map-marker-photo-frame"><img class="em-map-marker-photo" src="${escapeAttr(coverUrl)}" alt="" /></span><span class="em-map-marker-photo-badge">${badge}</span></span><span class="em-map-marker-photo-pointer"></span></span></span>`;
+  }
+  const icon = isService ? SERVICE_ICON_SVG : VENUE_ICON_SVG;
+  return `<span class="em-map-marker-hit"><span class="em-map-marker-inner"><span class="em-map-marker-head">${icon}</span><span class="em-map-marker-tail"></span></span></span>`;
 }
 
 function hereIconHtml() {
@@ -464,12 +466,14 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
         );
         const layers: any[] = points.map((m) => {
           const isService = m.kind === 'service';
+          const photoUrl = markerPhotoUrl(m);
+          const hasPhoto = Boolean(photoUrl);
           const leafletMarker = L.marker([m.lat, m.lng], {
             icon: L.divIcon({
-              className: `leaflet-interactive em-map-marker ${isService ? 'em-map-marker-service' : 'em-map-marker-venue'}`,
-              html: listingIconHtml(m.kind, markerPhotoUrl(m)),
-              iconSize: [44, 52],
-              iconAnchor: [22, 50],
+              className: `leaflet-interactive em-map-marker ${isService ? 'em-map-marker-service' : 'em-map-marker-venue'}${hasPhoto ? ' has-photo-pin' : ''}`,
+              html: listingIconHtml(m.kind, photoUrl),
+              iconSize: hasPhoto ? [52, 62] : [44, 52],
+              iconAnchor: hasPhoto ? [26, 60] : [22, 50],
             }),
             interactive: true,
             bubblingMouseEvents: false,

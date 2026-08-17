@@ -50,18 +50,18 @@ export default function LandingMapSection() {
           <div className="max-w-2xl space-y-1.5">
             <p className="text-xs font-medium uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5" />
-              Carte du catalogue
+              Sur la carte
             </p>
             <h2 className="text-2xl font-semibold text-foreground tracking-tight">
               Salles et prestataires à Kinshasa et Lubumbashi
             </h2>
             <p className="text-sm text-muted leading-relaxed">
-              Cliquez un pin pour voir les photos, le tarif et lancer un itinéraire. Survolez pour un aperçu rapide.
+              Touchez un pin pour voir les photos, le tarif et lancer un itinéraire. Survolez pour un aperçu rapide.
             </p>
           </div>
           <Link href="/marketplace">
             <Button variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
-              Ouvrir le catalogue
+              Explorer le marketplace
             </Button>
           </Link>
         </div>

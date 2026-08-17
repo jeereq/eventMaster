@@ -133,7 +133,7 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
  guests: db?.maxGuests ?? parseComparisonQuota(plan.id, 'Invités (quota org.)'),
  templates: db?.maxTemplates ?? parseComparisonQuota(plan.id, "Modèles d'invitation"),
  rooms: db?.maxRooms ?? parseComparisonQuota(plan.id, 'Salles organisation'),
- services: db?.maxServices ?? parseComparisonQuota(plan.id, 'Prestations catalogue'),
+ services: db?.maxServices ?? parseComparisonQuota(plan.id, 'Prestations marketplace'),
  orgManagers: db?.maxOrgManagers ?? parseComparisonQuota(plan.id, 'Managers organisation'),
  customTemplates: db?.customTemplates,
  },
@@ -152,13 +152,13 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
       {
         label: 'Particuliers (B2C)',
         ids: [...B2C_PLAN_IDS],
-        description: 'Organisation complète, facturation trimestrielle (90 jours), sans publication catalogue',
+        description: 'Organisation complète, facturation trimestrielle (90 jours), sans publication marketplace',
       },
     ]
   : audience === 'VENDOR'
   ? [
       {
-        label: 'Essai catalogue',
+        label: 'Essai marketplace',
         ids: ['FREE'],
         description: '1 salle simple et 1 prestation pour tester la publication',
       },
@@ -207,9 +207,9 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
  Organisations, particuliers, salles et prestataires
  </h2>
  <p className="text-sm text-muted leading-relaxed">
- Les forfaits Business sont destinés aux organisateurs. Les forfaits Particulier (B2C) se règlent par trimestre (90 jours), selon le palier d’invités (50, 100, 200 ou plus de 200), avec des salles de plan de table — pas un catalogue public.
- Les forfaits Salle, Prestataire (prestations illimitées dès l’abonnement payé) et Salle & presta sont pensés pour publier dans le catalogue — pas pour remplacer un abonnement d’organisation.
- Facturation annuelle (B2B et catalogue) avec {ANNUAL_DISCOUNT_PERCENT} % de réduction.
+ Les forfaits Business sont destinés aux organisateurs. Les forfaits Particulier (B2C) se règlent par trimestre (90 jours), selon le palier d’invités (50, 100, 200 ou plus de 200), avec des salles de plan de table — pas un marketplace public.
+ Les forfaits Salle, Prestataire (prestations illimitées dès l’abonnement payé) et Salle & presta sont pensés pour publier sur le marketplace — pas pour remplacer un abonnement d’organisation.
+ Facturation annuelle (B2B et marketplace) avec {ANNUAL_DISCOUNT_PERCENT} % de réduction.
  </p>
  </div>
 

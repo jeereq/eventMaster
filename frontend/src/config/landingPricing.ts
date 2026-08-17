@@ -102,7 +102,7 @@ export function planAudienceLabel(audience: PlanAudience | string): string {
     case 'SERVICE':
       return 'Presta';
     case 'CATALOG':
-      return 'Catalogue';
+      return 'Marketplace';
     default:
       return 'B2B';
   }
@@ -173,7 +173,7 @@ export const LANDING_PLANS: LandingPlan[] = [
   {
     id: 'PERSONAL_50',
     ms365Name: 'Particulier 50',
-    tagline: 'Mariage, anniversaire, fête privée jusqu’à 50 invités — sans catalogue.',
+    tagline: 'Mariage, anniversaire, fête privée jusqu’à 50 invités — sans marketplace.',
     monthlyPriceFc: 10000,
     monthlyNote: 'par particulier / trimestre',
     cta: 'Choisir 50 invités',
@@ -182,12 +182,12 @@ export const LANDING_PLANS: LandingPlan[] = [
     tier: 'personal',
     audience: 'B2C',
     badge: '50 invités',
-    highlights: ['3 événements · 50 invités', 'QR, modèles custom, éditeur 2D', '2 salles plan de table · pas de catalogue'],
+    highlights: ['3 événements · 50 invités', 'QR, modèles custom, éditeur 2D', '2 salles plan de table · hors marketplace'],
   },
   {
     id: 'PERSONAL_100',
     ms365Name: 'Particulier 100',
-    tagline: 'Fête privée jusqu’à 100 invités : organisation complète, sans catalogue.',
+    tagline: 'Fête privée jusqu’à 100 invités : organisation complète, sans marketplace.',
     monthlyPriceFc: 15000,
     monthlyNote: 'par particulier / trimestre',
     cta: 'Choisir 100 invités',
@@ -196,12 +196,12 @@ export const LANDING_PLANS: LandingPlan[] = [
     tier: 'personal',
     audience: 'B2C',
     badge: '100 invités',
-    highlights: ['3 événements · 100 invités', 'QR, modèles custom, éditeur 2D', '2 salles plan de table · pas de catalogue'],
+    highlights: ['3 événements · 100 invités', 'QR, modèles custom, éditeur 2D', '2 salles plan de table · hors marketplace'],
   },
   {
     id: 'PERSONAL_200',
     ms365Name: 'Particulier 200',
-    tagline: 'Fête privée jusqu’à 200 invités : organisation complète, sans catalogue.',
+    tagline: 'Fête privée jusqu’à 200 invités : organisation complète, sans marketplace.',
     monthlyPriceFc: 20000,
     monthlyNote: 'par particulier / trimestre',
     cta: 'Choisir 200 invités',
@@ -211,12 +211,12 @@ export const LANDING_PLANS: LandingPlan[] = [
     audience: 'B2C',
     highlighted: true,
     badge: '200 invités',
-    highlights: ['3 événements · 200 invités', 'QR, modèles custom, éditeur 2D', '2 salles plan de table · pas de catalogue'],
+    highlights: ['3 événements · 200 invités', 'QR, modèles custom, éditeur 2D', '2 salles plan de table · hors marketplace'],
   },
   {
     id: 'PERSONAL_PLUS',
     ms365Name: 'Particulier +200',
-    tagline: 'Grande fête privée : plus de 200 invités, quota invités illimité, sans catalogue.',
+    tagline: 'Grande fête privée : plus de 200 invités, quota invités illimité, sans marketplace.',
     monthlyPriceFc: 30000,
     monthlyNote: 'par particulier / trimestre',
     cta: 'Choisir +200 invités',
@@ -225,7 +225,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tier: 'personal',
     audience: 'B2C',
     badge: '+200 invités',
-    highlights: ['3 événements · invités illimités', 'QR, modèles custom, éditeur 2D', '2 salles plan de table · pas de catalogue'],
+    highlights: ['3 événements · invités illimités', 'QR, modèles custom, éditeur 2D', '2 salles plan de table · hors marketplace'],
   },
   {
     id: 'STANDARD',
@@ -501,7 +501,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
   },
   {
     category: 'Salles & plans',
-    label: 'Prestations catalogue',
+    label: 'Prestations marketplace',
     values: {
       FREE: '1',
       ...b2cSame('—'),
@@ -782,7 +782,7 @@ export const ROLE_HIGHLIGHTS = [
   },
   {
     title: 'Gestionnaire de salle',
-    description: 'Publie ses lieux dans le catalogue, gère les réservations et le plan 2D. Forfait Salle ou Salle & presta — distinct du manager salle employé d’une organisation.',
+    description: 'Publie ses lieux sur le marketplace, gère les réservations et le plan 2D. Forfait Salle ou Salle & presta — distinct du manager salle employé d’une organisation.',
     icon: 'building',
   },
   {
@@ -819,7 +819,7 @@ export const PLATFORM_PILLARS = [
     icon: 'mail',
   },
   {
-    title: 'Catalogue salles & prestas',
+    title: 'Marketplace salles & prestas',
     icon: 'calendar',
   },
   {
@@ -924,6 +924,6 @@ export function planTierLabel(tier: LandingPlan['tier']): string {
     case 'service':
       return 'Prestataire';
     case 'catalog':
-      return 'Catalogue';
+      return 'Marketplace';
   }
 }

@@ -64,7 +64,7 @@ export default function CatalogueViewToggle({
         className,
       )}
       role="group"
-      aria-label="Mode d’affichage du catalogue"
+      aria-label="Mode d’affichage du marketplace"
     >
       {options.map(({ id, label, icon: Icon }) => (
         <button

@@ -583,7 +583,7 @@ export default function RoomsManagement() {
             Créez une salle en 3 étapes : infos, type, puis plan 2D.
             {canCatalogPublish
               ? ' Vous pouvez ensuite la publier pour la location.'
-              : ' Ces salles servent au plan de table — elles ne sont pas publiées au catalogue.'}
+              : ' Ces salles servent au plan de table — elles ne sont pas publiées sur le marketplace.'}
             {planQuota && (
               <span className="block mt-1 font-medium text-primary">
                 Salles : {planQuota.usage.rooms} / {planQuota.limits.maxRooms >= 9999 ? '∞' : planQuota.limits.maxRooms}
@@ -1087,7 +1087,7 @@ export default function RoomsManagement() {
         open={Boolean(listingRoom)}
         onClose={() => setListingRoom(null)}
         title={listingRoom ? `Publier — ${listingRoom.name}` : 'Marketplace'}
-        description="Visible dans le catalogue public. Les plans de table d’événements privés ne sont jamais exposés."
+        description="Visible sur le marketplace. Les plans de table d’événements privés ne sont jamais exposés."
         size="xl"
         footer={
           <div className="flex w-full justify-between gap-2">

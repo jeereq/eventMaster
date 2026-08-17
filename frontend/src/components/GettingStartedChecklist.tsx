@@ -70,13 +70,13 @@ export default function GettingStartedChecklist({
         {
           id: 'offer',
           title: startWithService ? 'Publier une prestation' : 'Publier une salle',
-          description: 'Fiche catalogue avec localisation et tarif.',
+          description: 'Fiche marketplace avec localisation et tarif.',
           href: startWithService ? '/dashboard/marketplace' : '/dashboard/rooms',
           done: hasRooms || hasServices,
         },
         {
           id: 'billing',
-          title: 'Choisir un forfait catalogue',
+          title: 'Choisir un forfait marketplace',
           description: 'Salle, Prestataire ou Salle & presta.',
           href: '/dashboard/billing',
           done: Boolean(flow.templateDone),

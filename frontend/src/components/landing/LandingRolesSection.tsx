@@ -77,7 +77,7 @@ export default function LandingRolesSection() {
               Une plateforme complète
             </h2>
             <p className="text-sm text-muted">
-              De la conception de salle au scan QR, en passant par le catalogue et les réservations.
+              De la conception de salle au scan QR, en passant par le marketplace et les réservations.
               L’app mobile est en construction, pas encore déployée.
             </p>
           </div>

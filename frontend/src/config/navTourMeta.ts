@@ -100,7 +100,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-rooms': {
     title: 'Salles',
     description:
-      'Créez les salles de l’organisation, générez un plan 2D, assignez le staff et publiez une fiche au catalogue public.',
+      'Créez les salles de l’organisation, générez un plan 2D, assignez le staff et publiez une fiche sur le marketplace.',
     route: '/dashboard/rooms',
   },
   'nav-team': {
@@ -146,7 +146,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
     route: '/dashboard/profile',
   },
   'nav-catalogue': {
-    title: 'Catalogue',
+    title: 'Marketplace',
     description:
       'Parcourez les salles et prestataires publics, filtrez par lieu et envoyez une demande de date.',
     route: '/marketplace',

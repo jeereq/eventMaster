@@ -87,7 +87,7 @@ export default function Home() {
 
             <p className="text-[15px] sm:text-base text-muted leading-relaxed max-w-2xl">
               EventMaster est la plateforme web pour les organisateurs, les salles et les prestataires
-              en RDC : invitations et RSVP, plan de table 2D, protocole QR le jour J, catalogue public
+              en RDC : invitations et RSVP, plan de table 2D, protocole QR le jour J, marketplace
               avec photos et vidéos, puis réservation de dates. L’application mobile est en construction
               et n’est pas encore déployée — aujourd’hui, tout se fait dans le navigateur.
             </p>
@@ -151,7 +151,7 @@ export default function Home() {
               {
                 icon: LayoutGrid,
                 title: 'Salles & plan 2D',
-                text: 'Banquet, conférence, tente… Placement des invités, thèmes, et publication de la salle au catalogue.',
+                text: 'Banquet, conférence, tente… Placement des invités, thèmes, et publication de la salle sur le marketplace.',
               },
               {
                 icon: QrCode,
@@ -160,7 +160,7 @@ export default function Home() {
               },
               {
                 icon: Building2,
-                title: 'Catalogue de salles',
+                title: 'Salles du marketplace',
                 text: 'Fiches publiques avec photos, vidéos, carte, tarifs et calendrier des dates déjà réservées.',
               },
               {
@@ -250,7 +250,7 @@ export default function Home() {
 
       <PublicCtaBand
         title="Créez votre organisation pour démarrer"
-        description="Un compte organisation pour invitations, RSVP, plan de salle, catalogue et protocole QR — sur le web, dès maintenant."
+        description="Un compte organisation pour invitations, RSVP, plan de salle, marketplace et protocole QR — sur le web, dès maintenant."
         actions={
           user ? (
             <Link href="/dashboard">

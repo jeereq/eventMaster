@@ -19,7 +19,7 @@ export default function TermsPage() {
  <p>
  EventMaster est une solution SaaS multi-tenant destinée à la gestion d&apos;événements privés et professionnels :
  invitations et RSVP, plans de table 2D, protocole (scan QR, confirmation de présence), fil d&apos;actualité, livre d&apos;or,
- modèles de messages, gestion d&apos;équipe, catalogue public de salles et de prestations, réservations de dates,
+ modèles de messages, gestion d&apos;équipe, marketplace de salles et de prestations, réservations de dates,
  et facturation par abonnement.
  </p>
  <p>
@@ -36,7 +36,7 @@ export default function TermsPage() {
  </p>
  <p>
  Un compte peut être de type <strong>organisateur</strong> (événements), <strong>prestataire / salle</strong>
- (catalogue), <strong>mixte</strong> (les deux) ou <strong>client</strong> (réservation et demandes sans
+ (marketplace), <strong>mixte</strong> (les deux) ou <strong>client</strong> (réservation et demandes sans
  abonnement SaaS d&apos;organisation). Le type de compte détermine les forfaits proposés ; une organisation
  ne souscrit qu&apos;un seul forfait à la fois.
  </p>
@@ -61,7 +61,7 @@ export default function TermsPage() {
  <ul className="list-disc pl-5 space-y-1">
  <li>les données de ses membres (utilisateurs organisation : managers, protocole, etc.) ;</li>
  <li>les données de ses invités (identité, contact, RSVP, préférences, photos, messages, localisation d&apos;événement) ;</li>
- <li>les contenus diffusés (invitations, modèles, publications, médias, fiches catalogue).</li>
+ <li>les contenus diffusés (invitations, modèles, publications, médias, fiches marketplace).</li>
  </ul>
  <p>
  L&apos;organisation est seule responsable de :
@@ -131,13 +131,13 @@ export default function TermsPage() {
  Les formules disponibles définissent des quotas et des fonctionnalités. Elles comprennent notamment :
  </p>
  <ul className="list-disc pl-5 space-y-1">
- <li><strong>Essentials</strong> (gratuit) : découverte pour organisateurs ou essai catalogue (1 salle / 1 prestation) ;</li>
+ <li><strong>Essentials</strong> (gratuit) : découverte pour organisateurs ou essai marketplace (1 salle / 1 prestation) ;</li>
  <li><strong>Particulier</strong> (B2C) : quatre paliers selon le nombre d&apos;invités — 50, 100, 200 ou plus de 200
  (invités illimités) — avec organisation complète (QR, modèles, éditeur 2D, jusqu&apos;à 3 événements et 2 salles
- de plan de table), sans publication au catalogue public. Ces forfaits sont <strong>facturés par trimestre</strong>
+ de plan de table), sans publication sur le marketplace. Ces forfaits sont <strong>facturés par trimestre</strong>
  (90 jours) : le tarif affiché est le montant dû pour la période.</li>
  <li><strong>Business, Business Premium et Business Enterprise</strong> : forfaits organisateurs B2B ;</li>
- <li><strong>Salle</strong>, <strong>Prestataire</strong> et <strong>Salle &amp; presta</strong> : forfaits catalogue.
+ <li><strong>Salle</strong>, <strong>Prestataire</strong> et <strong>Salle &amp; presta</strong> : forfaits marketplace.
  Dès que l&apos;abonnement Prestataire est payé et actif, le nombre de prestations publiées n&apos;est pas limité.</li>
  </ul>
  <p>
@@ -151,12 +151,12 @@ export default function TermsPage() {
  </p>
  <p>
  EventMaster se réserve le droit de modifier les tarifs et caractéristiques des plans avec un préavis raisonnable
- pour les abonnements actifs. La facturation annuelle (organisations et catalogue) peut bénéficier d&apos;une
+ pour les abonnements actifs. La facturation annuelle (organisations et marketplace) peut bénéficier d&apos;une
  réduction selon les conditions affichées sur la plateforme. Les forfaits Particulier ne proposent pas d&apos;option annuelle.
  </p>
  <p>
- <strong>6.1 Catalogue et réservations.</strong> Les organisations éligibles peuvent publier des salles ou
- prestations au catalogue public. Les réservations de dates suivent le parcours : demande, acceptation,
+ <strong>6.1 Marketplace et réservations.</strong> Les organisations éligibles peuvent publier des salles ou
+ prestations sur le marketplace. Les réservations de dates suivent le parcours : demande, acceptation,
  acompte de 30 % versé directement au professionnel <strong>hors plateforme</strong>, puis confirmation
  (blocage de la date). EventMaster n&apos;encaisse pas cet acompte et n&apos;est pas partie au contrat de
  prestation entre organisateur et professionnel.
@@ -175,10 +175,10 @@ export default function TermsPage() {
  <Section title="7. Propriété intellectuelle">
  <p>
  La plateforme, son code, sa marque, ses interfaces et sa documentation restent la propriété d&apos;EventMaster.
- Les contenus créés par les utilisateurs (événements, modèles, messages, médias, fiches catalogue) restent la propriété de
+ Les contenus créés par les utilisateurs (événements, modèles, messages, médias, fiches marketplace) restent la propriété de
  l&apos;organisation ou de leurs auteurs ; vous accordez à EventMaster une licence non exclusive, mondiale et
  limitée à la durée du contrat, strictement nécessaire à l&apos;hébergement, à la transmission, à la diffusion
- catalogue (lorsque vous publiez) et à l&apos;exécution du service.
+ marketplace (lorsque vous publiez) et à l&apos;exécution du service.
  </p>
  </Section>
 

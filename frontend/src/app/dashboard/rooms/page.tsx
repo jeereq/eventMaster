@@ -35,8 +35,8 @@ export default function DashboardRoomsPage() {
         title="Salles"
         description={
           catalogPublish
-            ? 'Plans 2D, staff, publication catalogue et disponibilités.'
-            : 'Plans 2D et staff pour vos événements — sans publication au catalogue.'
+            ? 'Plans 2D, staff, publication marketplace et disponibilités.'
+            : 'Plans 2D et staff pour vos événements — sans publication sur le marketplace.'
         }
         breadcrumbs={
           <Breadcrumbs
