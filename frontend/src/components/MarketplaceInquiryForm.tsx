@@ -49,7 +49,8 @@ export default function MarketplaceInquiryForm({
     <form onSubmit={handleInquire} className="border border-border rounded-[var(--radius-card)] p-5 bg-surface space-y-3">
       <h2 className="text-sm font-semibold text-foreground">Demander un devis</h2>
       <p className="text-xs text-muted leading-relaxed">
-        Le professionnel reçoit votre message par e-mail. Aucun paiement sur la plateforme pour l’instant.
+        Le professionnel reçoit votre message par e-mail. Pour bloquer une date avec acompte, connectez-vous et
+        utilisez Réserver (paiement hors plateforme).
       </p>
       {formError && <Alert variant="error">{formError}</Alert>}
       {sent && <Alert variant="success">{sent}</Alert>}

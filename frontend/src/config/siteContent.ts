@@ -67,7 +67,13 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'marketplace-venues',
     question: 'Puis-je trouver une salle ou un prestataire sur EventMaster ?',
     answer:
-      'Oui. Le catalogue public liste les salles et prestations (traiteur, photo, DJ, déco…) que les organisations choisissent de publier. Vous envoyez une demande de devis. Pour proposer une offre : Mon compte → Salles, ou Marketplace → Prestations. Rien n’est visible tant que vous ne publiez pas.',
+      'Oui. Le catalogue public liste les salles et prestations (traiteur, photo, DJ, déco…) que les organisations choisissent de publier. Vous pouvez demander un devis, ou — connecté avec une organisation — réserver une date. L’acompte (30 %) se verse directement au professionnel, hors EventMaster. À la confirmation, la date est bloquée et une salle peut être rattachée à l’événement. Pour proposer une offre : Mon compte → Salles, ou Marketplace → Prestations.',
+  },
+  {
+    id: 'marketplace-booking',
+    question: 'Comment fonctionne la réservation et la commission marketplace ?',
+    answer:
+      'Le professionnel accepte la demande, l’organisateur verse l’acompte hors plateforme, puis le professionnel marque l’acompte reçu et confirme. EventMaster n’encaisse pas l’acompte. Une commission de 8 % (due par le vendeur) s’applique aux réservations confirmées : elle est indépendante de l’abonnement SaaS et du réseau commercial.',
   },
   {
     id: 'free-trial',

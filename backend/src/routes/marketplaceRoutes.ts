@@ -7,6 +7,12 @@ import {
   listMyInquiries,
   updateInquiryStatus,
 } from '../controllers/marketplaceController';
+import {
+  createBooking,
+  listBookings,
+  updateBooking,
+  convertInquiryToBooking,
+} from '../controllers/marketplaceBookingController';
 
 const router = Router();
 
@@ -19,5 +25,9 @@ router.put('/services/:id', upsertService);
 router.delete('/services/:id', deleteService);
 router.get('/inquiries', listMyInquiries);
 router.patch('/inquiries/:id', updateInquiryStatus);
+router.post('/inquiries/:id/book', convertInquiryToBooking);
+router.get('/bookings', listBookings);
+router.post('/bookings', createBooking);
+router.patch('/bookings/:id', updateBooking);
 
 export default router;

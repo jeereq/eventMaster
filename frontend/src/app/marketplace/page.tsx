@@ -46,8 +46,8 @@ export default function MarketplaceHubPage() {
             Salles et prestataires pour vos événements
           </h1>
           <p className="text-sm text-muted leading-relaxed">
-            Trouvez un lieu, un traiteur, un DJ ou un photographe, puis demandez un devis —
-            sans quitter EventMaster.
+            Trouvez un lieu, un traiteur, un DJ ou un photographe. Devis libre, ou réservation de date
+            (acompte hors plateforme, commission vendeur 8 % distincte de l’abonnement SaaS).
           </p>
           <MarketplacePublicNav active="hub" />
         </div>

@@ -259,6 +259,7 @@ function ProfilePageContent() {
                   <Input label="E-mail" type="email" leftIcon={<Mail className="w-4 h-4" />} required value={email} onChange={(e) => setEmail(e.target.value)} />
                   <Input label="Téléphone (WhatsApp)" type="tel" leftIcon={<Phone className="w-4 h-4" />} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+243..." />
                   {user?.role === 'USER' && tenant && (
+                    <>
                     <Input label="Nom de l'organisation" leftIcon={<Building className="w-4 h-4" />} required value={tenantName} onChange={(e) => setTenantName(e.target.value)} />
                     <label className="block space-y-1.5">
                       <span className="text-xs font-medium text-muted">Type de compte</span>
@@ -274,10 +275,11 @@ function ProfilePageContent() {
                       <p className="text-[11px] text-muted">
                         Propriétaire de salles ou prestataire : publiez vos offres dans le{' '}
                         <Link href="/marketplace" className="text-primary font-semibold hover:underline">catalogue public</Link>
-                        {' '}et gérez les devis dans{' '}
+                        {' '}et gérez devis et réservations dans{' '}
                         <Link href="/dashboard/marketplace" className="text-primary font-semibold hover:underline">Marketplace</Link>.
                       </p>
                     </label>
+                    </>
                   )}
                 </div>
               </div>

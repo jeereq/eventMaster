@@ -27,9 +27,10 @@ import {
   roomTypeDescriptions,
   roomTypeLabels,
 } from '@/lib/roomLayoutUtils';
-import { PRICE_UNIT_OPTIONS, type VenuePriceUnit } from '@/lib/marketplace';
+import { PRICE_UNIT_OPTIONS, parseBlockedDates, type VenuePriceUnit } from '@/lib/marketplace';
 import { uploadImageFile } from '@/lib/cloudinaryUpload';
 import { formatFc } from '@/config/landingPricing';
+import BlockedDatesField from '@/components/BlockedDatesField';
 
 interface RoomStaffItem {
   id: string;
@@ -57,6 +58,7 @@ interface RoomItem {
     priceFromFc: number | null;
     priceUnit: VenuePriceUnit;
     photos: string[] | null;
+    blockedDates?: unknown;
     latitude: number | null;
     longitude: number | null;
   } | null;
@@ -145,6 +147,7 @@ export default function RoomsManagement() {
     priceFromFc: '',
     priceUnit: 'EVENT' as VenuePriceUnit,
     photos: [] as string[],
+    blockedDates: [] as string[],
     latitude: '',
     longitude: '',
   });
@@ -296,6 +299,7 @@ export default function RoomsManagement() {
       priceFromFc: listing?.priceFromFc != null ? String(listing.priceFromFc) : '',
       priceUnit: listing?.priceUnit || 'EVENT',
       photos,
+      blockedDates: parseBlockedDates(listing?.blockedDates),
       latitude: listing?.latitude != null ? String(listing.latitude) : '',
       longitude: listing?.longitude != null ? String(listing.longitude) : '',
     });
@@ -315,6 +319,7 @@ export default function RoomsManagement() {
         priceFromFc: listingDraft.priceFromFc ? Number(listingDraft.priceFromFc) : null,
         priceUnit: listingDraft.priceUnit,
         photos: listingDraft.photos,
+        blockedDates: listingDraft.blockedDates,
         latitude: listingDraft.latitude || null,
         longitude: listingDraft.longitude || null,
       });
@@ -1087,6 +1092,10 @@ export default function RoomsManagement() {
                 </select>
               </label>
             </div>
+            <BlockedDatesField
+              value={listingDraft.blockedDates}
+              onChange={(blockedDates) => setListingDraft((d) => ({ ...d, blockedDates }))}
+            />
             <div>
               <span className={labelClass}>Photos (max. 8)</span>
               <div className="flex flex-wrap gap-2 mb-2">
