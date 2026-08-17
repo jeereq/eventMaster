@@ -9,16 +9,21 @@ import { cn } from '@/lib/cn';
 export default function PublicPageShell({
   children,
   faqHref = '/#faq',
+  hideFooter = false,
 }: {
   children: React.ReactNode;
   faqHref?: string;
+  hideFooter?: boolean;
 }) {
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground font-sans antialiased">
+    <div className={cn(
+      'flex flex-col min-h-screen bg-background text-foreground font-sans antialiased',
+      hideFooter && 'h-dvh overflow-hidden',
+    )}>
       <CelebrateMood />
       <SiteHeader />
       {children}
-      <SiteFooter faqHref={faqHref} />
+      {hideFooter ? null : <SiteFooter faqHref={faqHref} />}
     </div>
   );
 }

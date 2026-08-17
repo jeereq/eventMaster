@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Building2, Loader2, MapPin, Navigation, Search, Sparkles, Users, X } from 'lucide-react';
@@ -195,20 +195,13 @@ function MarkerPreviewCard({
   );
 }
 
-export default function MarketplaceLocationsMap({
-  markers,
-  height = 420,
-  searchable = false,
-  listingSearch = false,
-  searchCenter = null,
-  radiusKm = 0,
-  onPlaceSelect,
-  navigateOnClick = false,
-  variant = 'default',
-  autoDirections = false,
-  city,
-  searchOriginLabel,
-}: {
+export type MarketplaceMapHandle = {
+  startDirectionsFor: (id: string) => void;
+  clearRoute: () => void;
+  recenter: () => void;
+};
+
+const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
   markers: MarketplaceMapMarker[];
   height?: number;
   searchable?: boolean;
@@ -221,7 +214,28 @@ export default function MarketplaceLocationsMap({
   autoDirections?: boolean;
   city?: string | null;
   searchOriginLabel?: string;
-}) {
+  immersive?: boolean;
+  selectedId?: string | null;
+  onMarkerSelect?: (marker: MarketplaceMapMarker) => void;
+  className?: string;
+}>(function MarketplaceLocationsMap({
+  markers,
+  height = 420,
+  searchable = false,
+  listingSearch = false,
+  searchCenter = null,
+  radiusKm = 0,
+  onPlaceSelect,
+  navigateOnClick = false,
+  variant = 'default',
+  autoDirections = false,
+  city,
+  searchOriginLabel,
+  immersive = false,
+  selectedId = null,
+  onMarkerSelect,
+  className,
+}, ref) {
   const router = useRouter();
   const hostRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
@@ -243,6 +257,10 @@ export default function MarketplaceLocationsMap({
   navigateOnClickRef.current = navigateOnClick;
   const routerRef = useRef(router);
   routerRef.current = router;
+  const onMarkerSelectRef = useRef(onMarkerSelect);
+  onMarkerSelectRef.current = onMarkerSelect;
+  const immersiveRef = useRef(immersive);
+  immersiveRef.current = immersive;
 
   const cityMeta = findRdcCity(city);
   const cityKey = cityMeta?.name || '';
@@ -377,14 +395,15 @@ export default function MarketplaceLocationsMap({
 
           leafletMarker.on('mouseover', () => {
             leafletMarker.getElement()?.classList.add('is-hovered');
-            showPreviewRef.current(m, false);
+            if (!immersiveRef.current) showPreviewRef.current(m, false);
           });
           leafletMarker.on('mouseout', () => {
             leafletMarker.getElement()?.classList.remove('is-hovered');
           });
           leafletMarker.on('click', () => {
             suppressMapClickRef.current = true;
-            showPreviewRef.current(m, true);
+            onMarkerSelectRef.current?.(m);
+            if (!immersiveRef.current) showPreviewRef.current(m, true);
             if (navigateOnClickRef.current) {
               routerRef.current.push(m.href);
             }
@@ -538,8 +557,9 @@ export default function MarketplaceLocationsMap({
       radiusLayerRef.current = null;
     }
 
+    const selected = selectedId ? markersRef.current.find((m) => m.id === selectedId) : null;
     const loneService = markersRef.current.length === 1 ? markersRef.current[0] : null;
-    const focus = hovered || (
+    const focus = selected || hovered || (
       loneService?.kind === 'service' && loneService.coverageRadiusKm
         ? loneService
         : null
@@ -572,12 +592,12 @@ export default function MarketplaceLocationsMap({
       }).addTo(map);
       radiusLayerRef.current = circle;
     }
-  }, [hovered, mapReady]);
+  }, [hovered, mapReady, selectedId]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => mapRef.current?.invalidateSize(), 80);
     return () => window.clearTimeout(timer);
-  }, [variant, mapReady]);
+  }, [variant, mapReady, immersive]);
 
   const clearRoute = () => {
     navGenRef.current += 1;
@@ -698,11 +718,12 @@ export default function MarketplaceLocationsMap({
   };
 
   useEffect(() => {
+    if (immersive) return;
     if (!navigateOnClick && markersRef.current.length === 1) {
       showPreview(markersRef.current[0], true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [markersKey, navigateOnClick]);
+  }, [markersKey, navigateOnClick, immersive]);
 
   useEffect(() => {
     if (!autoDirections || mapReady === 0 || didAutoRef.current) return;
@@ -713,6 +734,43 @@ export default function MarketplaceLocationsMap({
     // startDirections is recreated each render; auto-run once after the map is ready.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoDirections, mapReady]);
+
+  useEffect(() => {
+    if (!selectedId || !mapRef.current || mapReady === 0) return;
+    const data = markersRef.current.find((m) => m.id === selectedId);
+    if (!data) return;
+    const zoom = Math.max(mapRef.current.getZoom?.() || 13, 14);
+    mapRef.current.flyTo([data.lat, data.lng], zoom, { duration: 0.4 });
+  }, [selectedId, mapReady]);
+
+  const recenter = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (searchCenter) {
+      map.flyTo([searchCenter.lat, searchCenter.lng], 14, { duration: 0.4 });
+      return;
+    }
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => map.flyTo([pos.coords.latitude, pos.coords.longitude], 15, { duration: 0.4 }),
+        () => {
+          if (overviewBoundsRef.current) map.fitBounds(overviewBoundsRef.current, { maxZoom: 14, animate: true });
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 4000 },
+      );
+      return;
+    }
+    if (overviewBoundsRef.current) map.fitBounds(overviewBoundsRef.current, { maxZoom: 14, animate: true });
+  };
+
+  useImperativeHandle(ref, () => ({
+    startDirectionsFor: (id: string) => {
+      const dest = markersRef.current.find((m) => m.id === id);
+      if (dest) startDirections(dest);
+    },
+    clearRoute,
+    recenter,
+  }));
 
   const runOsmSearch = async (text: string) => {
     const q = text.trim();
@@ -760,9 +818,9 @@ export default function MarketplaceLocationsMap({
     }
   };
 
-  const showSearch = searchable || listingSearch;
+  const showSearch = !immersive && (searchable || listingSearch);
   const searchOverlay = variant === 'focus';
-  const mapHeight = variant === 'focus' ? 'calc(100dvh - 10.5rem)' : height;
+  const mapHeight = immersive ? '100%' : variant === 'focus' ? 'calc(100dvh - 10.5rem)' : height;
 
   const searchField = showSearch ? (
     <div className={cn('relative', searchOverlay && 'pointer-events-auto')}>
@@ -841,42 +899,45 @@ export default function MarketplaceLocationsMap({
   ) : null;
 
   return (
-    <div className="space-y-2">
+    <div className={cn(immersive ? 'h-full' : 'space-y-2', className)}>
       {showSearch && !searchOverlay && searchField}
-      <div className="relative">
+      <div className={cn('relative', immersive && 'h-full')}>
         {searchOverlay && searchField && (
           <div className="absolute z-20 top-3 left-3 right-3 sm:right-auto sm:w-80">
             {searchField}
           </div>
         )}
-        <div className="absolute z-20 top-3 right-3 pointer-events-none">
-          <div className="rounded-xl border border-border bg-surface/95 shadow-[var(--shadow-soft)] px-2.5 py-2 space-y-1.5 text-[11px] text-foreground">
-            <p className="inline-flex items-center gap-1.5">
-              <span className="em-map-legend-venue" aria-hidden />
-              Salle
-            </p>
-            <p className="inline-flex items-center gap-1.5">
-              <span className="em-map-legend-service" aria-hidden />
-              Prestataire
-            </p>
-            {searchCenter ? (
+        {!immersive ? (
+          <div className="absolute z-20 top-3 right-3 pointer-events-none">
+            <div className="rounded-xl border border-border bg-surface/95 shadow-[var(--shadow-soft)] px-2.5 py-2 space-y-1.5 text-[11px] text-foreground">
               <p className="inline-flex items-center gap-1.5">
-                <span className="em-map-legend-here" aria-hidden />
-                {searchOriginLabel || 'Point de recherche'}
-                {radiusKm > 0 ? ` · ${radiusKm} km` : ''}
+                <span className="em-map-legend-venue" aria-hidden />
+                Salle
               </p>
-            ) : null}
+              <p className="inline-flex items-center gap-1.5">
+                <span className="em-map-legend-service" aria-hidden />
+                Prestataire
+              </p>
+              {searchCenter ? (
+                <p className="inline-flex items-center gap-1.5">
+                  <span className="em-map-legend-here" aria-hidden />
+                  {searchOriginLabel || 'Point de recherche'}
+                  {radiusKm > 0 ? ` · ${radiusKm} km` : ''}
+                </p>
+              ) : null}
+            </div>
           </div>
-        </div>
+        ) : null}
         <div
           ref={hostRef}
           className={cn(
-            'em-marketplace-map w-full rounded-[var(--radius-card)] border border-border overflow-hidden bg-background',
+            'em-marketplace-map w-full overflow-hidden bg-background',
+            immersive ? 'h-full rounded-none border-0 em-explore-map' : 'rounded-[var(--radius-card)] border border-border',
             mapTheme === 'dark' && 'em-map-dark',
           )}
-          style={{ height: mapHeight, minHeight: variant === 'focus' ? 420 : undefined }}
+          style={{ height: mapHeight, minHeight: immersive ? undefined : variant === 'focus' ? 420 : undefined }}
         />
-        {hovered ? (
+        {!immersive && hovered ? (
           <MarkerPreviewCard
             marker={hovered}
             pinned={pinned}
@@ -891,7 +952,10 @@ export default function MarketplaceLocationsMap({
           />
         ) : null}
         {(route || routeHint || routing) && (
-          <div className="absolute z-40 left-3 right-3 top-3 sm:right-auto sm:w-80 rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-soft)] p-3 space-y-2 max-h-[42%] overflow-auto">
+          <div className={cn(
+            'absolute z-40 left-3 right-3 sm:right-auto sm:w-80 rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-soft)] p-3 space-y-2 max-h-[42%] overflow-auto',
+            immersive ? 'top-[8.75rem] max-h-[28%]' : 'top-3',
+          )}>
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">Itinéraire</p>
@@ -928,18 +992,22 @@ export default function MarketplaceLocationsMap({
           </div>
         )}
       </div>
-      {listingSearch && variant !== 'focus' && (
+      {listingSearch && variant !== 'focus' && !immersive && (
         <p className="text-[11px] text-muted">
           Survolez les pins même pendant un itinéraire. Annulez la navigation depuis le panneau ou la fiche.
           {searchCenter && radiusKm > 0 ? ` Filtre : dans un rayon de ${radiusKm} km.` : ''}
           {markers.length ? ` · ${markers.length} fiche${markers.length > 1 ? 's' : ''} avec GPS` : ''}.
         </p>
       )}
-      {searchable && !listingSearch && (
+      {searchable && !listingSearch && !immersive && (
         <p className="text-[11px] text-muted">
           Tapez un lieu ou cliquez sur la carte pour filtrer autour de ce point.
         </p>
       )}
     </div>
   );
-}
+});
+
+MarketplaceLocationsMap.displayName = 'MarketplaceLocationsMap';
+
+export default MarketplaceLocationsMap;

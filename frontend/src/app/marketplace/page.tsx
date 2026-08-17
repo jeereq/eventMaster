@@ -2,31 +2,24 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
-import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
-import PublicCtaBand from '@/components/PublicCtaBand';
-import MarketplacePublicNav from '@/components/MarketplacePublicNav';
-import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
+import CatalogueSearchLayout from '@/components/CatalogueSearchLayout';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
-import CatalogueResults, { CatalogueResultsSkeleton } from '@/components/CatalogueResults';
 import CatalogueFilterBar, {
   CatalogueChoicePills,
   CatalogueFilterField,
   CatalogueGeoFields,
 } from '@/components/CatalogueFilterBar';
-import { Pagination, paginateItems } from '@/components/ui';
 import {
   EMPTY_CATALOGUE_GEO,
   appendCatalogueGeoParams,
   catalogueGeoChips,
   catalogueItemToMapMarker,
   clearCatalogueGeoChip,
-  isCatalogueMapView,
   resolveCatalogueGeo,
   serviceToCatalogueItem,
   sortCatalogueByDistance,
   venueToCatalogueItem,
   type CatalogueGeoState,
-  type CatalogueItem,
   type PublicService,
   type PublicVenue,
 } from '@/lib/marketplace';
@@ -75,7 +68,7 @@ export default function MarketplaceHubPage() {
     return () => window.clearTimeout(timer);
   }, [applied, query, load]);
 
-  const items: CatalogueItem[] = useMemo(
+  const items = useMemo(
     () => sortCatalogueByDistance([
       ...venues.map(venueToCatalogueItem),
       ...services.map(serviceToCatalogueItem),
@@ -100,7 +93,6 @@ export default function MarketplaceHubPage() {
     [visible],
   );
 
-  const mapMode = isCatalogueMapView(mode);
   const searchCenter = applied.proximity && applied.lat != null && applied.lng != null
     ? { lat: applied.lat, lng: applied.lng }
     : null;
@@ -119,21 +111,37 @@ export default function MarketplaceHubPage() {
   );
 
   return (
-    <PublicPageShell faqHref="/faq">
-      {mode !== 'focus' && (
-        <PublicPageHero
-          compact
-          chip="Catalogue"
-          title="Salles et prestataires pour vos événements"
-          description="Trouvez un lieu ou un professionnel enregistré sur EventMaster. Affinez par ville, commune, prix ou autour de vous."
-        >
-          <MarketplacePublicNav active="hub" />
-        </PublicPageHero>
-      )}
-
-      <main className="page-container py-6 sm:py-10 flex-1 space-y-4 sm:space-y-6">
-        {mode === 'focus' && <MarketplacePublicNav active="hub" />}
+    <CatalogueSearchLayout
+      activeNav="hub"
+      heroTitle="Salles et prestataires pour vos événements"
+      heroDescription="Trouvez un lieu ou un professionnel enregistré sur EventMaster. Affinez par ville, commune, prix ou autour de vous."
+      mode={mode}
+      items={visible}
+      markers={markers}
+      loading={loading}
+      emptyTitle="Aucune fiche pour cette recherche"
+      emptyDescription="Élargissez les mots-clés, ou publiez une salle / prestation depuis votre organisation."
+      page={page}
+      pageSize={PAGE_SIZE}
+      onPageChange={setPage}
+      itemLabel="fiches"
+      searchCenter={searchCenter}
+      radiusKm={searchCenter ? applied.radiusKm : 0}
+      city={applied.city}
+      searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
+      showKindLegend
+      cta={{
+        title: 'Vous proposez une salle ou un service ?',
+        description: 'Publiez une fiche depuis votre organisation EventMaster, avec photos, vidéos, carte et calendrier.',
+        primaryHref: '/register',
+        primaryLabel: 'Créer un compte',
+        secondaryHref: '/contact',
+        secondaryLabel: 'Nous contacter',
+      }}
+      renderFilters={(variant) => (
         <CatalogueFilterBar
+          variant={variant}
+          hideViewToggle={variant === 'float'}
           search={query}
           onSearchChange={setQuery}
           searchPlaceholder="Nom, organisation, ville…"
@@ -181,65 +189,7 @@ export default function MarketplaceHubPage() {
             </>
           }
         />
-
-        {loading ? (
-          <CatalogueResultsSkeleton mode={mode} count={PAGE_SIZE} />
-        ) : mapMode ? (
-          <div className="space-y-3">
-            {mode !== 'focus' && (
-              <div className="flex flex-wrap items-center gap-4 text-xs text-muted">
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-primary" />
-                  Salles
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[color:var(--festive-accent)]" />
-                  Prestataires
-                </span>
-                <span>Bâtiment = salle, étoile = prestataire. Survolez pour le tarif, le lieu et la distance.</span>
-              </div>
-            )}
-            <MarketplaceLocationsMap
-              markers={markers}
-              listingSearch
-              navigateOnClick={false}
-              height={480}
-              variant={mode === 'focus' ? 'focus' : 'default'}
-              searchCenter={searchCenter}
-              radiusKm={searchCenter ? applied.radiusKm : 0}
-              city={applied.city}
-              searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
-            />
-          </div>
-        ) : (
-          <>
-            <CatalogueResults
-              items={paginateItems(visible, page, PAGE_SIZE)}
-              mode={mode}
-              emptyTitle="Aucune fiche pour cette recherche"
-              emptyDescription="Élargissez les mots-clés, ou publiez une salle / prestation depuis votre organisation."
-            />
-            <Pagination
-              page={page}
-              pageSize={PAGE_SIZE}
-              total={visible.length}
-              onPageChange={setPage}
-              itemLabel="fiches"
-            />
-          </>
-        )}
-      </main>
-
-      {mode !== 'focus' && (
-        <PublicCtaBand
-          title="Vous proposez une salle ou un service ?"
-          description="Publiez une fiche depuis votre organisation EventMaster, avec photos, vidéos, carte et calendrier."
-          primaryHref="/register"
-          primaryLabel="Créer un compte"
-          secondaryHref="/contact"
-          secondaryLabel="Nous contacter"
-        />
       )}
-    </PublicPageShell>
+    />
   );
 }

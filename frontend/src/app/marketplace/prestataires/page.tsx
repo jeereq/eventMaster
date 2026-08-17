@@ -2,19 +2,14 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
-import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
-import PublicCtaBand from '@/components/PublicCtaBand';
-import MarketplacePublicNav from '@/components/MarketplacePublicNav';
-import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
-import CatalogueResults, { CatalogueResultsSkeleton } from '@/components/CatalogueResults';
+import CatalogueSearchLayout from '@/components/CatalogueSearchLayout';
 import CatalogueFilterBar, {
   CatalogueChoicePills,
   CatalogueFilterField,
   CatalogueGeoFields,
   type CatalogueFilterChip,
 } from '@/components/CatalogueFilterBar';
-import { Pagination, paginateItems } from '@/components/ui';
 import {
   EMPTY_CATALOGUE_GEO,
   PRICE_UNIT_OPTIONS,
@@ -24,7 +19,6 @@ import {
   catalogueGeoChips,
   catalogueItemToMapMarker,
   clearCatalogueGeoChip,
-  isCatalogueMapView,
   resolveCatalogueGeo,
   sortCatalogueByDistance,
   serviceToCatalogueItem,
@@ -113,27 +107,42 @@ export default function MarketplaceServicesPage() {
     return () => window.clearTimeout(timer);
   }, [applied, q, load]);
 
-  const mapMode = isCatalogueMapView(mode);
   const searchCenter = applied.proximity && applied.lat != null && applied.lng != null
     ? { lat: applied.lat, lng: applied.lng }
     : null;
 
   return (
-    <PublicPageShell faqHref="/faq">
-      {mode !== 'focus' && (
-        <PublicPageHero
-          compact
-          chip="Catalogue"
-          title="Trouvez un prestataire"
-          description="Traiteur, photo, DJ… Filtrez par zone, catégorie, prix ou autour de vous."
-        >
-          <MarketplacePublicNav active="services" />
-        </PublicPageHero>
-      )}
-
-      <main className="page-container py-6 sm:py-10 flex-1 space-y-4 sm:space-y-6">
-        {mode === 'focus' && <MarketplacePublicNav active="services" />}
+    <CatalogueSearchLayout
+      activeNav="services"
+      heroTitle="Trouvez un prestataire"
+      heroDescription="Traiteur, photo, DJ… Filtrez par zone, catégorie, prix ou autour de vous."
+      mode={mode}
+      items={items}
+      markers={markers}
+      loading={loading}
+      error={error}
+      emptyTitle="Aucun prestataire pour ces filtres"
+      emptyDescription="Élargissez la commune ou la catégorie, ou publiez une prestation depuis Marketplace."
+      page={page}
+      pageSize={PAGE_SIZE}
+      onPageChange={setPage}
+      itemLabel="prestataires"
+      searchCenter={searchCenter}
+      radiusKm={searchCenter ? applied.radiusKm : 0}
+      city={applied.city}
+      searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
+      cta={{
+        title: 'Vous proposez un service ?',
+        description: 'Publiez votre prestation avec zone d’intervention, médias et calendrier.',
+        primaryHref: '/register',
+        primaryLabel: 'Proposer mes services',
+        secondaryHref: '/contact',
+        secondaryLabel: 'Nous contacter',
+      }}
+      renderFilters={(variant) => (
         <CatalogueFilterBar
+          variant={variant}
+          hideViewToggle={variant === 'float'}
           search={q}
           onSearchChange={setQ}
           searchPlaceholder="Nom, prestataire…"
@@ -184,52 +193,7 @@ export default function MarketplaceServicesPage() {
             </>
           }
         />
-
-        {error && <p className="text-sm text-rose-600">{error}</p>}
-
-        {loading ? (
-          <CatalogueResultsSkeleton mode={mode} count={PAGE_SIZE} />
-        ) : mapMode ? (
-          <MarketplaceLocationsMap
-            markers={markers}
-            listingSearch
-            navigateOnClick={false}
-            height={480}
-            variant={mode === 'focus' ? 'focus' : 'default'}
-            searchCenter={searchCenter}
-            radiusKm={searchCenter ? applied.radiusKm : 0}
-            city={applied.city}
-            searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
-          />
-        ) : (
-          <>
-            <CatalogueResults
-              items={paginateItems(items, page, PAGE_SIZE)}
-              mode={mode}
-              emptyTitle="Aucun prestataire pour ces filtres"
-              emptyDescription="Élargissez la commune ou la catégorie, ou publiez une prestation depuis Marketplace."
-            />
-            <Pagination
-              page={page}
-              pageSize={PAGE_SIZE}
-              total={items.length}
-              onPageChange={setPage}
-              itemLabel="prestataires"
-            />
-          </>
-        )}
-      </main>
-
-      {mode !== 'focus' && (
-        <PublicCtaBand
-          title="Vous proposez un service ?"
-          description="Publiez votre prestation avec zone d’intervention, médias et calendrier."
-          primaryHref="/register"
-          primaryLabel="Proposer mes services"
-          secondaryHref="/contact"
-          secondaryLabel="Nous contacter"
-        />
       )}
-    </PublicPageShell>
+    />
   );
 }

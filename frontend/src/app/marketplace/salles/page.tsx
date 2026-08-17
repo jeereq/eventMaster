@@ -2,16 +2,12 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
-import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
-import PublicCtaBand from '@/components/PublicCtaBand';
-import { Pagination, paginateItems } from '@/components/ui';
 import {
   EMPTY_CATALOGUE_GEO,
   appendCatalogueGeoParams,
   catalogueGeoChips,
   catalogueItemToMapMarker,
   clearCatalogueGeoChip,
-  isCatalogueMapView,
   resolveCatalogueGeo,
   sortCatalogueByDistance,
   venueToCatalogueItem,
@@ -19,10 +15,8 @@ import {
   type PublicVenue,
 } from '@/lib/marketplace';
 import { roomTypeLabels } from '@/lib/roomLayoutUtils';
-import MarketplacePublicNav from '@/components/MarketplacePublicNav';
-import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
-import CatalogueResults, { CatalogueResultsSkeleton } from '@/components/CatalogueResults';
+import CatalogueSearchLayout from '@/components/CatalogueSearchLayout';
 import CatalogueFilterBar, {
   CatalogueChoicePills,
   CatalogueFilterField,
@@ -110,27 +104,42 @@ export default function MarketplaceVenuesPage() {
     return () => window.clearTimeout(timer);
   }, [applied, q, load]);
 
-  const mapMode = isCatalogueMapView(mode);
   const searchCenter = applied.proximity && applied.lat != null && applied.lng != null
     ? { lat: applied.lat, lng: applied.lng }
     : null;
 
   return (
-    <PublicPageShell faqHref="/faq">
-      {mode !== 'focus' && (
-        <PublicPageHero
-          compact
-          chip="Catalogue"
-          title="Trouvez une salle pour votre événement"
-          description="Filtrez par ville, commune, quartier, prix ou autour de vous. Les choix restent visibles sous la recherche."
-        >
-          <MarketplacePublicNav active="venues" />
-        </PublicPageHero>
-      )}
-
-      <main className="page-container py-6 sm:py-10 flex-1 space-y-4 sm:space-y-6">
-        {mode === 'focus' && <MarketplacePublicNav active="venues" />}
+    <CatalogueSearchLayout
+      activeNav="venues"
+      heroTitle="Trouvez une salle pour votre événement"
+      heroDescription="Filtrez par ville, commune, quartier, prix ou autour de vous. Les choix restent visibles sous la recherche."
+      mode={mode}
+      items={items}
+      markers={markers}
+      loading={loading}
+      error={error}
+      emptyTitle="Aucune salle pour ces filtres"
+      emptyDescription="Élargissez la recherche, ou publiez une salle depuis Salles dans le tableau de bord."
+      page={page}
+      pageSize={PAGE_SIZE}
+      onPageChange={setPage}
+      itemLabel="salles"
+      searchCenter={searchCenter}
+      radiusKm={searchCenter ? applied.radiusKm : 0}
+      city={applied.city}
+      searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
+      cta={{
+        title: 'Vous avez une salle à proposer ?',
+        description: 'Publiez votre fiche avec photos, vidéos, tarifs et calendrier.',
+        primaryHref: '/register',
+        primaryLabel: 'Publier une salle',
+        secondaryHref: '/contact',
+        secondaryLabel: 'Nous contacter',
+      }}
+      renderFilters={(variant) => (
         <CatalogueFilterBar
+          variant={variant}
+          hideViewToggle={variant === 'float'}
           search={q}
           onSearchChange={setQ}
           searchPlaceholder="Nom, organisation…"
@@ -174,52 +183,7 @@ export default function MarketplaceVenuesPage() {
             </>
           }
         />
-
-        {error && <p className="text-sm text-rose-600">{error}</p>}
-
-        {loading ? (
-          <CatalogueResultsSkeleton mode={mode} count={PAGE_SIZE} />
-        ) : mapMode ? (
-            <MarketplaceLocationsMap
-            markers={markers}
-            listingSearch
-            navigateOnClick={false}
-            height={480}
-            variant={mode === 'focus' ? 'focus' : 'default'}
-            searchCenter={searchCenter}
-            radiusKm={searchCenter ? applied.radiusKm : 0}
-            city={applied.city}
-            searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
-          />
-        ) : (
-          <>
-            <CatalogueResults
-              items={paginateItems(items, page, PAGE_SIZE)}
-              mode={mode}
-              emptyTitle="Aucune salle pour ces filtres"
-              emptyDescription="Élargissez la recherche, ou publiez une salle depuis Salles dans le tableau de bord."
-            />
-            <Pagination
-              page={page}
-              pageSize={PAGE_SIZE}
-              total={items.length}
-              onPageChange={setPage}
-              itemLabel="salles"
-            />
-          </>
-        )}
-      </main>
-
-      {mode !== 'focus' && (
-        <PublicCtaBand
-          title="Vous avez une salle à proposer ?"
-          description="Publiez votre fiche avec photos, vidéos, tarifs et calendrier."
-          primaryHref="/register"
-          primaryLabel="Publier une salle"
-          secondaryHref="/contact"
-          secondaryLabel="Nous contacter"
-        />
       )}
-    </PublicPageShell>
+    />
   );
 }

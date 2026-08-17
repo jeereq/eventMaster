@@ -4,14 +4,20 @@ import Link from 'next/link';
 import { Building2, Sparkles, Store } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
-export default function MarketplacePublicNav({ active }: { active: 'hub' | 'venues' | 'services' }) {
+export default function MarketplacePublicNav({
+  active,
+  className,
+}: {
+  active: 'hub' | 'venues' | 'services';
+  className?: string;
+}) {
   const items = [
     { id: 'hub' as const, href: '/marketplace', label: 'Tous', icon: Store },
     { id: 'venues' as const, href: '/marketplace/salles', label: 'Salles', icon: Building2 },
     { id: 'services' as const, href: '/marketplace/prestataires', label: 'Prestataires', icon: Sparkles },
   ];
   return (
-    <div className="inline-flex flex-wrap gap-0.5 p-0.5 rounded-full border border-border bg-surface-muted">
+    <div className={cn('inline-flex flex-wrap gap-0.5 p-0.5 rounded-full border border-border bg-surface-muted', className)}>
       {items.map((item) => {
         const Icon = item.icon;
         return (

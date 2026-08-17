@@ -87,6 +87,8 @@ export default function CatalogueFilterBar({
   onOpen,
   resultLabel,
   modalSize = 'lg',
+  variant = 'card',
+  hideViewToggle = false,
 }: {
   search: string;
   onSearchChange: (value: string) => void;
@@ -103,6 +105,8 @@ export default function CatalogueFilterBar({
   onOpen?: () => void;
   resultLabel?: string;
   modalSize?: 'sm' | 'md' | 'lg' | 'xl';
+  variant?: 'card' | 'float';
+  hideViewToggle?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -125,6 +129,113 @@ export default function CatalogueFilterBar({
       setApplying(false);
     }
   };
+
+  const chipsRow = (count > 0 || resultLabel) ? (
+    <div className={cn(
+      'flex items-center gap-2',
+      variant === 'float' ? 'overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none]' : 'flex-wrap',
+    )}>
+      {chips.map((chip) => (
+        <span
+          key={chip.id}
+          className="inline-flex items-center gap-1.5 max-w-full pl-2.5 pr-1 py-1 rounded-full border border-primary/20 bg-primary/10 text-xs shrink-0"
+        >
+          <button
+            type="button"
+            onClick={openModal}
+            className="inline-flex items-center gap-1.5 min-w-0 text-left"
+          >
+            <span className="text-muted shrink-0">{chip.label}</span>
+            <span className="font-semibold text-foreground truncate">{chip.value}</span>
+          </button>
+          {onRemoveChip ? (
+            <button
+              type="button"
+              onClick={() => onRemoveChip(chip.id)}
+              className="p-0.5 rounded-full text-muted hover:text-foreground hover:bg-primary/15 transition"
+              aria-label={`Retirer ${chip.label} ${chip.value}`}
+            >
+              <X className="w-3 h-3" />
+            </button>
+          ) : null}
+        </span>
+      ))}
+      {count > 0 && onClearChips ? (
+        <button
+          type="button"
+          onClick={onClearChips}
+          className="text-[11px] font-semibold text-muted hover:text-foreground px-1 shrink-0"
+        >
+          Tout effacer
+        </button>
+      ) : null}
+      {resultLabel ? (
+        <span className="ml-auto text-[11px] text-muted font-medium shrink-0">{resultLabel}</span>
+      ) : null}
+    </div>
+  ) : null;
+
+  const filterModal = hasFilters ? (
+    <Modal
+      open={open}
+      onClose={() => setOpen(false)}
+      title={modalTitle}
+      description={modalDescription}
+      size={modalSize}
+      footer={
+        <>
+          <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+            Annuler
+          </Button>
+          <Button type="button" onClick={() => void apply()} loading={applying}>
+            Voir les résultats
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-5">{filters}</div>
+    </Modal>
+  ) : null;
+
+  if (variant === 'float') {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0 relative">
+            <Search className="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder={searchPlaceholder}
+              className="w-full h-11 pl-10 pr-4 rounded-full bg-surface/90 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/25"
+            />
+          </div>
+          {hasFilters && (
+            <button
+              type="button"
+              onClick={openModal}
+              className={cn(
+                'relative h-11 w-11 shrink-0 rounded-full border shadow-lg backdrop-blur-xl inline-flex items-center justify-center transition',
+                count
+                  ? 'bg-primary text-white border-primary'
+                  : 'bg-surface/90 text-foreground border-white/25 dark:border-white/10',
+              )}
+              aria-label="Filtres"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              {count > 0 ? (
+                <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-white text-primary text-[10px] font-bold leading-4">
+                  {count}
+                </span>
+              ) : null}
+            </button>
+          )}
+        </div>
+        {chipsRow}
+        {filterModal}
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-2xl border border-border bg-surface p-3 sm:p-4 space-y-3 shadow-[var(--shadow-soft)]">
@@ -154,77 +265,19 @@ export default function CatalogueFilterBar({
               ) : null}
             </Button>
           )}
-          <CatalogueViewToggle
-            value={view}
-            onChange={onViewChange}
-            className="flex-1 sm:flex-none justify-between sm:justify-start"
-          />
+          {!hideViewToggle ? (
+            <CatalogueViewToggle
+              value={view}
+              onChange={onViewChange}
+              className="flex-1 sm:flex-none justify-between sm:justify-start"
+            />
+          ) : null}
         </div>
       </div>
 
-      {(count > 0 || resultLabel) && (
-        <div className="flex flex-wrap items-center gap-2">
-          {chips.map((chip) => (
-            <span
-              key={chip.id}
-              className="inline-flex items-center gap-1.5 max-w-full pl-2.5 pr-1 py-1 rounded-full border border-primary/20 bg-primary/10 text-xs"
-            >
-              <button
-                type="button"
-                onClick={openModal}
-                className="inline-flex items-center gap-1.5 min-w-0 text-left"
-              >
-                <span className="text-muted shrink-0">{chip.label}</span>
-                <span className="font-semibold text-foreground truncate">{chip.value}</span>
-              </button>
-              {onRemoveChip ? (
-                <button
-                  type="button"
-                  onClick={() => onRemoveChip(chip.id)}
-                  className="p-0.5 rounded-full text-muted hover:text-foreground hover:bg-primary/15 transition"
-                  aria-label={`Retirer ${chip.label} ${chip.value}`}
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              ) : null}
-            </span>
-          ))}
-          {count > 0 && onClearChips ? (
-            <button
-              type="button"
-              onClick={onClearChips}
-              className="text-[11px] font-semibold text-muted hover:text-foreground px-1"
-            >
-              Tout effacer
-            </button>
-          ) : null}
-          {resultLabel ? (
-            <span className="ml-auto text-[11px] text-muted font-medium">{resultLabel}</span>
-          ) : null}
-        </div>
-      )}
+      {chipsRow}
 
-      {hasFilters && (
-        <Modal
-          open={open}
-          onClose={() => setOpen(false)}
-          title={modalTitle}
-          description={modalDescription}
-          size={modalSize}
-          footer={
-            <>
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-                Annuler
-              </Button>
-              <Button type="button" onClick={() => void apply()} loading={applying}>
-                Voir les résultats
-              </Button>
-            </>
-          }
-        >
-          <div className="space-y-5">{filters}</div>
-        </Modal>
-      )}
+      {filterModal}
     </div>
   );
 }

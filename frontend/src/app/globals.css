@@ -947,3 +947,35 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
   position: relative;
   z-index: 10001 !important;
 }
+
+/* Catalogue mobile — exploration type Snap Map */
+.em-explore-map .leaflet-top.leaflet-left {
+  top: auto;
+  bottom: 12px;
+  left: 10px;
+  margin-top: 0;
+}
+
+.em-explore-map .leaflet-control-attribution {
+  display: none;
+}
+
+.em-snap-rail {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 16px;
+  padding: 0 16px 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.em-snap-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.em-snap-card {
+  scroll-snap-align: center;
+  flex: 0 0 min(78vw, 300px);
+}
