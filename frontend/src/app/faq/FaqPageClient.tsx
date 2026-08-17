@@ -6,26 +6,20 @@ import SiteHeader from '@/components/SiteHeader';
 import Link from 'next/link';
 import { Button } from '@/components/ui';
 import { ArrowRight } from 'lucide-react';
-import { usePlatformSite } from '@/context/PlatformSiteContext';
 
 export default function FaqPageClient() {
-  const { site } = usePlatformSite();
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground font-sans antialiased transition-colors duration-200">
-      <SiteHeader variant="contact" showServerStatus />
+      <SiteHeader variant="contact" />
 
-      <section className="relative overflow-hidden border-b border-border">
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,var(--surface-muted)_0%,var(--background)_55%)]" />
-        <div className="page-container relative py-14 sm:py-16 lg:py-20">
-          <div className="max-w-xl space-y-4">
-            <p className="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground">
-              {site.platformName}
-            </p>
-            <h1 className="text-2xl sm:text-3xl font-semibold text-foreground/90 tracking-tight leading-snug">
+      <section className="border-b border-border bg-background">
+        <div className="page-container py-12 sm:py-16">
+          <div className="max-w-xl space-y-3">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">
               Questions fréquentes
             </h1>
             <p className="text-sm text-muted leading-relaxed max-w-md">
-              Forfaits, sécurité des données, protocole QR et facturation — les réponses essentielles.
+              Forfaits, sécurité, protocole QR et facturation.
             </p>
           </div>
         </div>

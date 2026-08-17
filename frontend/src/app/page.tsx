@@ -83,7 +83,7 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground font-sans antialiased transition-colors duration-200">
       <CelebrateMood />
-      <SiteHeader variant="landing" showServerStatus />
+      <SiteHeader variant="landing" />
 
       {/* Hero */}
       <section className="relative em-landing-hero">

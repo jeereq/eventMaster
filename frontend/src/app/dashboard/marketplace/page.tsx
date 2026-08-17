@@ -24,6 +24,8 @@ import {
 } from 'lucide-react';
 import BlockedDatesField from '@/components/BlockedDatesField';
 import MarketplaceMediaField from '@/components/MarketplaceMediaField';
+import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
+import LocationPickerMap from '@/components/LocationPickerMap';
 import MarketplaceBookingsPanel from '@/components/MarketplaceBookingsPanel';
 
 interface ServiceItem {
@@ -67,6 +69,7 @@ export default function MarketplaceDeskPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<ServiceItem | null>(null);
   const [saving, setSaving] = useState(false);
+  const [editorTab, setEditorTab] = useState<MarketplaceFormTab>('details');
   const [draft, setDraft] = useState({
     title: '',
     description: '',
@@ -135,6 +138,7 @@ export default function MarketplaceDeskPage() {
       bookedDates: [],
       isPublic: true,
     });
+    setEditorTab('details');
     setEditorOpen(true);
   };
 
@@ -159,6 +163,7 @@ export default function MarketplaceDeskPage() {
       bookedDates: parseBlockedDates(item.bookedDates),
       isPublic: item.isPublic,
     });
+    setEditorTab('details');
     setEditorOpen(true);
   };
 
@@ -404,7 +409,7 @@ export default function MarketplaceDeskPage() {
         onClose={() => setEditorOpen(false)}
         title={editing ? `Prestation — ${editing.title}` : 'Nouvelle prestation'}
         description="Visible dans le catalogue public uniquement après publication."
-        size="lg"
+        size="xl"
         footer={
           <div className="flex w-full justify-between gap-2">
             <Button type="button" variant="secondary" size="sm" onClick={() => setEditorOpen(false)}>
@@ -422,6 +427,9 @@ export default function MarketplaceDeskPage() {
         }
       >
         <div className="space-y-3">
+          <MarketplaceFormTabs value={editorTab} onChange={setEditorTab} />
+          {editorTab === 'details' && (
+            <>
           <Input label="Titre" value={draft.title} onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))} />
           <label>
             <span className="block text-xs font-medium text-muted mb-1.5">Catégorie</span>
@@ -455,8 +463,6 @@ export default function MarketplaceDeskPage() {
               value={draft.coverageRadiusKm}
               onChange={(e) => setDraft((d) => ({ ...d, coverageRadiusKm: e.target.value }))}
             />
-            <Input label="Latitude" value={draft.latitude} onChange={(e) => setDraft((d) => ({ ...d, latitude: e.target.value }))} />
-            <Input label="Longitude" value={draft.longitude} onChange={(e) => setDraft((d) => ({ ...d, longitude: e.target.value }))} />
             <Input
               label="Tarif de départ (FC)"
               type="number"
@@ -496,10 +502,21 @@ export default function MarketplaceDeskPage() {
             bookedDates={draft.bookedDates}
             onChange={(blockedDates) => setDraft((d) => ({ ...d, blockedDates }))}
           />
-          <MarketplaceMediaField
-            urls={draft.photos}
-            onChange={(photos) => setDraft((d) => ({ ...d, photos }))}
-          />
+            </>
+          )}
+          {editorTab === 'map' && (
+            <LocationPickerMap
+              latitude={draft.latitude}
+              longitude={draft.longitude}
+              onChange={({ latitude, longitude }) => setDraft((d) => ({ ...d, latitude, longitude }))}
+            />
+          )}
+          {editorTab === 'medias' && (
+            <MarketplaceMediaField
+              urls={draft.photos}
+              onChange={(photos) => setDraft((d) => ({ ...d, photos }))}
+            />
+          )}
         </div>
       </Modal>
     </div>
