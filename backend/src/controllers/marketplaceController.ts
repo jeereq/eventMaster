@@ -6,6 +6,9 @@ import { sendRealEmail } from '../services/notificationService';
 import { uniqueSlug } from '../utils/slug';
 import {
   parsePhotoUrls,
+  isVideoUrl,
+  coverFromMedia,
+  MARKETPLACE_MAX_VIDEOS,
   parsePriceUnit,
   parseServiceCategory,
   priceUnitLabel,
@@ -70,7 +73,7 @@ function toPublicVenue(listing: {
     quotaMin: listing.quotaMin ?? null,
     quotaMax: listing.quotaMax ?? null,
     photos,
-    coverUrl: photos[0] || null,
+    coverUrl: coverFromMedia(photos),
     publishedAt: listing.publishedAt,
     orgName: listing.tenant.vendorProfile?.displayName || listing.tenant.name,
     orgCity: listing.tenant.vendorProfile?.city || listing.city,
@@ -357,6 +360,9 @@ export async function upsertRoomListing(req: AuthenticatedRequest, res: Response
     const wantPublic = Boolean(isPublic);
     const parsedPrice = Number.parseInt(String(priceFromFc ?? ''), 10);
     const photosSafe = parsePhotoUrls(photos);
+    if (photosSafe.filter(isVideoUrl).length > MARKETPLACE_MAX_VIDEOS) {
+      return res.status(400).json({ error: `Maximum ${MARKETPLACE_MAX_VIDEOS} vidéos par salle.` });
+    }
     const blockedSafe = parseBlockedDates(blockedDates);
 
     if (wantPublic) {

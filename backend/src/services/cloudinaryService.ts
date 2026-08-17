@@ -89,6 +89,39 @@ export async function uploadPdfBuffer(
   });
 }
 
+export async function uploadVideoBuffer(
+  buffer: Buffer,
+  folder: string,
+  filename?: string,
+): Promise<CloudinaryUploadResult> {
+  ensureConfigured();
+
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        resource_type: 'video',
+        public_id: filename ? filename.replace(/\.[^.]+$/, '').replace(/[^\w-]+/g, '-').slice(0, 80) : undefined,
+        overwrite: true,
+      },
+      (error, result) => {
+        if (error || !result) {
+          reject(error || new Error('Échec upload vidéo Cloudinary'));
+          return;
+        }
+        resolve({
+          url: result.secure_url,
+          publicId: result.public_id,
+          width: result.width,
+          height: result.height,
+          bytes: result.bytes,
+        });
+      },
+    );
+    stream.end(buffer);
+  });
+}
+
 export async function uploadDataUrl(dataUrl: string, folder: string): Promise<CloudinaryUploadResult> {
   ensureConfigured();
 

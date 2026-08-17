@@ -19,6 +19,11 @@ export function getTemplateUploadFolder(tenantId: string | null | undefined): st
   return `eventmaster/templates/${scope}`;
 }
 
+export function getVenueMediaFolder(tenantId: string | null | undefined): string {
+  const scope = tenantId || 'global';
+  return `eventmaster/venues/${scope}`;
+}
+
 export function getSeatingInvitationUploadFolder(eventId: string, guestId: string): string {
   return `eventmaster/seating-invitations/${eventId}/${guestId}`;
 }
