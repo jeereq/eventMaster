@@ -22,6 +22,8 @@ export {
   SkeletonInvoicesView,
   SkeletonCommercialView,
   SkeletonProfileView,
+  SkeletonLandingTemplateCard,
+  SkeletonLandingTemplateGrid,
 } from './Skeleton';
 export { default as Input } from './Input';
 export { default as Alert } from './Alert';

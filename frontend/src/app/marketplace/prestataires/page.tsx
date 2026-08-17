@@ -7,7 +7,7 @@ import PublicCtaBand from '@/components/PublicCtaBand';
 import MarketplacePublicNav from '@/components/MarketplacePublicNav';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
-import CatalogueResults from '@/components/CatalogueResults';
+import CatalogueResults, { CatalogueResultsSkeleton } from '@/components/CatalogueResults';
 import CatalogueFilterBar, {
   CatalogueChoicePills,
   CatalogueFilterField,
@@ -30,7 +30,6 @@ import {
   type CatalogueGeoState,
   type PublicService,
 } from '@/lib/marketplace';
-import { Loader2 } from 'lucide-react';
 
 type ServiceFilters = CatalogueGeoState & { category: string; priceUnit: string };
 
@@ -188,9 +187,7 @@ export default function MarketplaceServicesPage() {
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
         {loading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="w-7 h-7 animate-spin text-primary" />
-          </div>
+          <CatalogueResultsSkeleton mode={mode} count={PAGE_SIZE} />
         ) : mapMode ? (
           <MarketplaceLocationsMap
             markers={markers}

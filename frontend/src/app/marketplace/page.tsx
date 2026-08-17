@@ -7,7 +7,7 @@ import PublicCtaBand from '@/components/PublicCtaBand';
 import MarketplacePublicNav from '@/components/MarketplacePublicNav';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
-import CatalogueResults from '@/components/CatalogueResults';
+import CatalogueResults, { CatalogueResultsSkeleton } from '@/components/CatalogueResults';
 import CatalogueFilterBar, {
   CatalogueChoicePills,
   CatalogueFilterField,
@@ -29,7 +29,6 @@ import {
   type PublicService,
   type PublicVenue,
 } from '@/lib/marketplace';
-import { Loader2 } from 'lucide-react';
 
 type HubFilters = CatalogueGeoState & { kind: 'all' | 'venue' | 'service' };
 
@@ -183,9 +182,7 @@ export default function MarketplaceHubPage() {
         />
 
         {loading ? (
-          <div className="flex justify-center py-16">
-            <Loader2 className="w-7 h-7 animate-spin text-primary" />
-          </div>
+          <CatalogueResultsSkeleton mode={mode} count={PAGE_SIZE} />
         ) : mapMode ? (
           <div className="space-y-3">
             {mode !== 'focus' && (

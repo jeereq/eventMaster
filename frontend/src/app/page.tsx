@@ -17,7 +17,7 @@ import PublicCtaBand from '@/components/PublicCtaBand';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
 import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
-import { Modal, Button } from '@/components/ui';
+import { Modal, Button, Skeleton } from '@/components/ui';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
   ArrowRight, LayoutGrid, QrCode, Mail, Sparkles,
@@ -199,7 +199,16 @@ export default function Home() {
             ))}
           </ul>
 
-          {!loadingPublicTemplates && publicTemplates.length > 0 && (
+          {loadingPublicTemplates ? (
+            <div className="mt-10 flex flex-wrap items-center gap-3" role="status" aria-label="Chargement des modèles">
+              <Skeleton className="h-3 w-24" />
+              <div className="flex gap-2">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} className="w-14 aspect-[3/4] rounded-md shrink-0" />
+                ))}
+              </div>
+            </div>
+          ) : publicTemplates.length > 0 ? (
             <div className="mt-10 flex flex-wrap items-center gap-3">
               <p className="text-xs font-medium text-muted shrink-0">Modèles vitrine</p>
               <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
@@ -223,7 +232,7 @@ export default function Home() {
                 Tous les modèles <ArrowRight className="w-3.5 h-3.5" />
               </a>
             </div>
-          )}
+          ) : null}
         </div>
       </section>
 

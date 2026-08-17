@@ -21,14 +21,13 @@ import { roomTypeLabels } from '@/lib/roomLayoutUtils';
 import MarketplacePublicNav from '@/components/MarketplacePublicNav';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
-import CatalogueResults from '@/components/CatalogueResults';
+import CatalogueResults, { CatalogueResultsSkeleton } from '@/components/CatalogueResults';
 import CatalogueFilterBar, {
   CatalogueChoicePills,
   CatalogueFilterField,
   CatalogueGeoFields,
   type CatalogueFilterChip,
 } from '@/components/CatalogueFilterBar';
-import { Loader2 } from 'lucide-react';
 
 const ROOM_FILTERS: Array<{ id: string; label: string }> = [
   { id: 'BANQUET', label: roomTypeLabels.BANQUET },
@@ -178,9 +177,7 @@ export default function MarketplaceVenuesPage() {
         {error && <p className="text-sm text-rose-600">{error}</p>}
 
         {loading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="w-7 h-7 animate-spin text-primary" />
-          </div>
+          <CatalogueResultsSkeleton mode={mode} count={PAGE_SIZE} />
         ) : mapMode ? (
           <MarketplaceLocationsMap
             markers={markers}
