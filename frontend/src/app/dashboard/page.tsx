@@ -24,7 +24,7 @@ import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { parseStoredPhone } from '@/components/ui/PhoneInput';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
 import { useViewPreferencesOptional } from '@/context/ViewPreferencesContext';
-import { PLAN_IDS, planAudienceLabel, type PlanId } from '@/config/landingPricing';
+import { PLAN_IDS, planAudienceLabel, isB2cPlanId, type PlanId } from '@/config/landingPricing';
 import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
 import { getTemplateElementSummary } from '@/lib/landingTemplateAdapter';
@@ -2944,7 +2944,7 @@ function DashboardPageContent() {
  {planAudienceLabel(plan.audience || planKey)}
  </span>
  <span className="text-xs bg-primary/10 text-primary font-bold px-2.5 py-0.5 rounded-full">
- {planKey === 'FREE' ? 'Gratuit' : 'Mensuel'}
+ {planKey === 'FREE' ? 'Gratuit' : isB2cPlanId(planKey) ? 'Trimestriel' : 'Mensuel'}
  </span>
  </div>
  </div>
@@ -2980,7 +2980,9 @@ function DashboardPageContent() {
  </div>
 
  <div className="space-y-1">
- <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Prix mensuel</label>
+ <label className="text-[10px] font-bold text-muted uppercase tracking-wider">
+ {isB2cPlanId(planKey) ? 'Prix trimestriel (90 jours)' : 'Prix mensuel'}
+ </label>
  <input
  type="text"
  value={plan.price}

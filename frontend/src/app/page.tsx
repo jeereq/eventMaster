@@ -40,17 +40,12 @@ export default function Home() {
   const [loadingPublicTemplates, setLoadingPublicTemplates] = useState(true);
 
   useEffect(() => {
-    async function checkServerAndFetchPlans() {
+    async function fetchPlans() {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api'}/health`, {
-          cache: 'no-store',
-        });
-        if (response.ok) {
-          const plansData = await api.get('/public/plans').catch(() => null);
-          if (plansData) setDbPlans(plansData);
-        }
+        const plansData = await api.get('/public/plans');
+        if (plansData) setDbPlans(plansData);
       } catch {
-        /* offline — tarifs fallback */
+        /* offline — tarifs fallback du fichier landing */
       }
     }
 
@@ -60,7 +55,7 @@ export default function Home() {
       setLoadingPublicTemplates(false);
     }
 
-    checkServerAndFetchPlans();
+    fetchPlans();
     loadPublicTemplates();
   }, []);
 

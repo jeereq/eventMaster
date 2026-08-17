@@ -118,12 +118,13 @@ export async function loadSubscriptionPlansFromDb(): Promise<PlansConfiguration>
 
 export async function seedDefaultSubscriptionPlans(): Promise<void> {
   const defaults = getDefaultPlans();
+  const existing = await prisma.subscriptionPlan.findMany({ select: { id: true } });
+  const have = new Set(existing.map((row) => String(row.id)));
   for (const key of PLAN_KEYS) {
+    if (have.has(key)) continue;
     const data = planDefinitionToDbData(key, defaults[key]);
-    await prisma.subscriptionPlan.upsert({
-      where: { id: key as PlanType },
-      create: { id: key as PlanType, ...data },
-      update: {},
+    await prisma.subscriptionPlan.create({
+      data: { id: key as PlanType, ...data },
     });
   }
 }

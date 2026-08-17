@@ -4,7 +4,7 @@ import {
   createAndSendInvoice,
   getPlanAmount,
 } from './invoiceService';
-import { getPlanLimits } from '../config/plansConfig';
+import { getPlanLimits, resolveDurationDaysForPlan } from '../config/plansConfig';
 import { notifyCommercialsOnSubscriptionApproval, recordCommercialCommission } from './commercialService';
 import type { CommercialBillingEvent } from './platformNotificationService';
 
@@ -65,7 +65,7 @@ export async function issueTenantPlanInvoice(params: {
   billing: TenantBillingOptions;
   subscriptionRequestId?: string;
 }): Promise<TenantBillingResult> {
-  const durationDays = params.billing.durationDays ?? 30;
+  const durationDays = resolveDurationDaysForPlan(params.plan, params.billing.durationDays);
   const periodStart = params.billing.periodStart ?? new Date();
   const periodEnd =
     params.billing.periodEnd ??

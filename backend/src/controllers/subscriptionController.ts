@@ -8,7 +8,7 @@ import {
   commercialReferredTenantFilter,
   isPlatformCommercial,
 } from '../services/platformCommercialScope';
-import { getPlansConfiguration, getPlanLimits, PAID_PLAN_KEYS, isPlanAllowedForAccountKind, planAudienceMismatchMessage } from '../config/plansConfig';
+import { getPlansConfiguration, getPlanLimits, PAID_PLAN_KEYS, isPlanAllowedForAccountKind, planAudienceMismatchMessage, resolveDurationDaysForPlan } from '../config/plansConfig';
 import { issueTenantPlanInvoice, computeExtendedExpiry } from '../services/tenantBillingService';
 import { computeApprovedAmount, getPlanAmount } from '../services/invoiceService';
 
@@ -36,7 +36,10 @@ export async function submitSubscriptionRequest(req: AuthenticatedRequest, res: 
       });
     }
 
-    const days = durationDays ? parseInt(durationDays) : 30;
+    const days = resolveDurationDaysForPlan(
+      requestedPlan,
+      durationDays != null ? parseInt(String(durationDays), 10) : null,
+    );
     if (isNaN(days) || days <= 0) {
       return res.status(400).json({ error: 'La durée demandée est invalide.' });
     }
@@ -211,11 +214,13 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
       tenantBefore.licenseExpiresAt &&
       tenantBefore.plan === request.requestedPlan;
 
+    const durationDays = resolveDurationDaysForPlan(request.requestedPlan, request.durationDays);
+
     const expiryDate = isSamePlanRenewal
-      ? computeExtendedExpiry(tenantBefore.licenseExpiresAt, request.durationDays)
+      ? computeExtendedExpiry(tenantBefore.licenseExpiresAt, durationDays)
       : (() => {
           const d = new Date();
-          d.setDate(d.getDate() + request.durationDays);
+          d.setDate(d.getDate() + durationDays);
           return d;
         })();
 
@@ -276,7 +281,7 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
           plan: request.requestedPlan,
           billing: {
             action: billingAction,
-            durationDays: request.durationDays,
+            durationDays,
             discountPercent: resolvedDiscount,
             approvedAmount: resolvedApproved,
             periodStart,

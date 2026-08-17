@@ -3,7 +3,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { PlanType, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { getPlansConfiguration, PAID_PLAN_KEYS, accountKindForPlanAssignment, normalizePlanKey } from '../config/plansConfig';
+import { getPlansConfiguration, PAID_PLAN_KEYS, accountKindForPlanAssignment, normalizePlanKey, resolveDurationDaysForPlan } from '../config/plansConfig';
 import {
   loadSubscriptionPlansFromDb,
   saveSubscriptionPlansToDb,
@@ -340,7 +340,10 @@ export async function updateTenantPlanOrLicense(req: AuthenticatedRequest, res: 
       approvedAmount?: number;
     } | undefined;
 
-    const durationDays = billingPayload?.durationDays ? parseInt(String(billingPayload.durationDays), 10) : 30;
+    const durationDays = resolveDurationDaysForPlan(
+      newPlanKey,
+      billingPayload?.durationDays ? parseInt(String(billingPayload.durationDays), 10) : null,
+    );
 
     if (billingPayload?.extendLicense && newPlanKey !== 'FREE' && PAID_PLAN_KEYS.includes(newPlanKey)) {
       nextExpiry = computeExtendedExpiry(existing.licenseExpiresAt, durationDays);

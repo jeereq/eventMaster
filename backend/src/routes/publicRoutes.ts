@@ -31,14 +31,17 @@ router.get('/site', (_req: Request, res: Response) => {
   }
 });
 
-// GET /api/public/plans — catalogue depuis la BD (cache hydraté)
+// GET /api/public/plans — cache (hydraté au démarrage, mis à jour à la sauvegarde admin)
 router.get('/plans', async (_req: Request, res: Response) => {
   try {
-    const plans = await loadSubscriptionPlansFromDb();
-    return res.json(plans);
+    return res.json(getPlansConfiguration());
   } catch (error: any) {
     console.error('[Public] Erreur chargement forfaits:', error);
-    return res.json(getPlansConfiguration());
+    try {
+      return res.json(await loadSubscriptionPlansFromDb());
+    } catch {
+      return res.json(getPlansConfiguration());
+    }
   }
 });
 

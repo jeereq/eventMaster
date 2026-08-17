@@ -11,8 +11,9 @@ import {
   LANDING_PLANS,
   paidPlanIdsForAccountKind,
   CURRENCY_NAME,
-  ensureFcPrice,
   getPlanDisplayPrice,
+  durationDaysForPlan,
+  planPricePeriodSuffix,
   type PlanId,
 } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
@@ -60,7 +61,7 @@ export default function PWARestrictedScreen() {
       return {
         id: plan.id,
         name: db?.name?.replace('Plan ', '') || plan.ms365Name,
-        price: ensureFcPrice(db?.price, plan.monthlyPriceFc),
+        price: getPlanDisplayPrice(plan, 'monthly', db?.price, db?.monthlyPriceFc),
         highlights: plan.highlights,
         highlighted: plan.highlighted,
         badge: plan.badge,
@@ -100,7 +101,7 @@ export default function PWARestrictedScreen() {
     try {
       const response = await api.post('/subscriptions/request', {
         requestedPlan,
-        durationDays: 30,
+        durationDays: durationDaysForPlan(requestedPlan),
         proofOfPayment: proofOfPayment.trim() || null,
       });
 
@@ -191,7 +192,7 @@ export default function PWARestrictedScreen() {
                     <h3 className="font-bold text-sm text-foreground">{plan.name}</h3>
                     <div className="flex items-baseline gap-1 mt-1">
                       <span className="text-xl font-black text-foreground">{plan.price}</span>
-                      <span className="text-[10px] text-muted">/ mois</span>
+                      <span className="text-[10px] text-muted">{planPricePeriodSuffix(plan.id) || '/ mois'}</span>
                     </div>
                   </div>
                   <ul className="space-y-1.5 border-t border-border pt-3">
@@ -246,7 +247,7 @@ export default function PWARestrictedScreen() {
                 <span className="text-[10px] text-muted font-bold uppercase tracking-wider block">Forfait sélectionné</span>
                 <span className="text-sm font-extrabold text-primary">
                   {selectedPlan
-                    ? `${selectedPlan.name} — ${selectedPlan.price} / mois`
+                    ? `${selectedPlan.name} — ${selectedPlan.price} ${planPricePeriodSuffix(selectedPlan.id)}`
                     : getPlanDisplayPrice(LANDING_PLANS[1], 'monthly')}
                 </span>
               </div>

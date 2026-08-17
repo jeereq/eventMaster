@@ -85,7 +85,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'plans-quotas',
     question: 'Comment fonctionnent les forfaits et les quotas ?',
     answer:
-      'Chaque organisation souscrit un seul forfait. Les particuliers choisissent un palier d’invités (50, 100, 200 ou plus de 200). Les organisateurs B2B ont Essentials (gratuit), Business, Premium et Enterprise. Les gestionnaires de salles et prestataires ont Salle, Prestataire (prestations illimitées dès l’abonnement payé) ou Salle & presta. Le tableau de bord affiche vos quotas. La facturation annuelle bénéficie d’une réduction de 10 %.',
+      'Chaque organisation souscrit un seul forfait. Les particuliers choisissent un palier d’invités (50, 100, 200 ou plus de 200) et paient par trimestre (90 jours). Les organisateurs B2B ont Essentials (gratuit), Business, Premium et Enterprise. Les gestionnaires de salles et prestataires ont Salle, Prestataire (prestations illimitées dès l’abonnement payé) ou Salle & presta. Le tableau de bord affiche vos quotas. La facturation annuelle (hors Particulier) bénéficie d’une réduction de 10 %.',
   },
   {
     id: 'data-responsibility',

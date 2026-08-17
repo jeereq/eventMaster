@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import Stripe from 'stripe';
-import { getPlanLimitsForTenant, getPlansConfiguration, PAID_PLAN_KEYS, PLAN_KEYS, isPlanAllowedForAccountKind, planAudienceMismatchMessage } from '../config/plansConfig';
+import { getPlanLimitsForTenant, getPlansConfiguration, PAID_PLAN_KEYS, PLAN_KEYS, isPlanAllowedForAccountKind, planAudienceMismatchMessage, resolveDurationDaysForPlan } from '../config/plansConfig';
 import { assertCanViewBilling, assertCanViewInvoices } from '../services/permissionsService';
 import { recordCommercialCommission } from '../services/commercialService';
 import { createAndSendInvoice, formatInvoiceForApi } from '../services/invoiceService';
@@ -192,8 +192,9 @@ export async function createCheckoutSession(req: AuthenticatedRequest, res: Resp
     // If Stripe is mock mode or we want to support easy upgrades:
     if (STRIPE_SECRET_KEY === 'sk_test_mock' || req.body.mock === true) {
       // Direct mock upgrade for local dev convenience - also activate and extend license
+      const durationDays = resolveDurationDaysForPlan(planType);
       const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() + 30); // Extend by 30 days
+      expiryDate.setDate(expiryDate.getDate() + durationDays);
 
       const updatedTenant = await prisma.tenant.update({
         where: { id: tenantId },
@@ -212,7 +213,7 @@ export async function createCheckoutSession(req: AuthenticatedRequest, res: Resp
         type: 'PAYMENT',
         periodStart,
         periodEnd: expiryDate,
-        durationDays: 30,
+        durationDays,
         includeManagers: true,
         status: 'PAID',
       });
@@ -385,8 +386,9 @@ export async function mockUpgrade(req: AuthenticatedRequest, res: Response) {
       return res.status(403).json({ error: planAudienceMismatchMessage(plan, currentTenant.accountKind) });
     }
 
+    const durationDays = resolveDurationDaysForPlan(plan);
     const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + 30); // 30 days extension
+    expiryDate.setDate(expiryDate.getDate() + durationDays);
 
     const updatedTenant = await prisma.tenant.update({
       where: { id: tenantId },
@@ -406,7 +408,7 @@ export async function mockUpgrade(req: AuthenticatedRequest, res: Response) {
         type: 'PAYMENT',
         periodStart,
         periodEnd: expiryDate,
-        durationDays: 30,
+        durationDays,
         includeManagers: true,
         status: 'PAID',
       });

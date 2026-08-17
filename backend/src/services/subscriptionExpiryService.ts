@@ -1,6 +1,7 @@
 import { prisma } from '../db';
 import { createAndSendInvoice, getTenantOwner, sendLicenseExpiryWarning } from './invoiceService';
 import { recordCommercialCommission } from './commercialService';
+import { resolveDurationDaysForPlan } from '../config/plansConfig';
 
 function startOfDay(date: Date): Date {
   const d = new Date(date);
@@ -75,8 +76,9 @@ export async function processSubscriptionExpiryTasks() {
         });
 
         if (!existing) {
+          const durationDays = resolveDurationDaysForPlan(tenant.plan);
           const periodStart = new Date(expiresAt);
-          periodStart.setDate(periodStart.getDate() - 30);
+          periodStart.setDate(periodStart.getDate() - durationDays);
 
           const invoice = await createAndSendInvoice({
             tenantId: tenant.id,
@@ -84,7 +86,7 @@ export async function processSubscriptionExpiryTasks() {
             type: 'RENEWAL',
             periodStart,
             periodEnd: expiresAt,
-            durationDays: 30,
+            durationDays,
             includeManagers: true,
           });
 

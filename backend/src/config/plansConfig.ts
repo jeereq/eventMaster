@@ -163,7 +163,7 @@ export function getDefaultPlans(): PlansConfiguration {
       price: '10.000 FC',
       monthlyPriceFc: 10000,
       description:
-        'Fête privée jusqu’à 50 invités : organisation complète (QR, modèles, éditeur 2D), 3 événements, 2 salles de plan de table — sans catalogue.',
+        'Fête privée jusqu’à 50 invités : organisation complète (QR, modèles, éditeur 2D), 3 événements, 2 salles de plan de table — sans catalogue. Facturation trimestrielle.',
       maxGuests: 50,
     }),
     PERSONAL_100: personalPlan({
@@ -171,7 +171,7 @@ export function getDefaultPlans(): PlansConfiguration {
       price: '15.000 FC',
       monthlyPriceFc: 15000,
       description:
-        'Fête privée jusqu’à 100 invités : organisation complète (QR, modèles, éditeur 2D), 3 événements, 2 salles de plan de table — sans catalogue.',
+        'Fête privée jusqu’à 100 invités : organisation complète (QR, modèles, éditeur 2D), 3 événements, 2 salles de plan de table — sans catalogue. Facturation trimestrielle.',
       maxGuests: 100,
     }),
     PERSONAL_200: personalPlan({
@@ -179,7 +179,7 @@ export function getDefaultPlans(): PlansConfiguration {
       price: '20.000 FC',
       monthlyPriceFc: 20000,
       description:
-        'Fête privée jusqu’à 200 invités : organisation complète (QR, modèles, éditeur 2D), 3 événements, 2 salles de plan de table — sans catalogue.',
+        'Fête privée jusqu’à 200 invités : organisation complète (QR, modèles, éditeur 2D), 3 événements, 2 salles de plan de table — sans catalogue. Facturation trimestrielle.',
       maxGuests: 200,
     }),
     PERSONAL_PLUS: personalPlan({
@@ -422,10 +422,11 @@ export function mergePlan(base: PlanDefinition, override?: Partial<PlanDefinitio
     commercialNetwork: override.commercialNetwork ?? base.commercialNetwork,
     supportLevel: override.supportLevel ?? base.supportLevel,
   };
-  if (override.price && !override.monthlyPriceFc) {
+  if (override.price && override.monthlyPriceFc == null) {
     const digits = override.price.replace(/[^\d]/g, '');
     merged.monthlyPriceFc = digits ? parseInt(digits, 10) : base.monthlyPriceFc;
   }
+  merged.price = formatPlanPriceFc(merged.monthlyPriceFc);
   if (override.promoPrice && override.promoMonthlyPriceFc === undefined) {
     const digits = override.promoPrice.replace(/[^\d]/g, '');
     merged.promoMonthlyPriceFc = digits ? parseInt(digits, 10) : base.promoMonthlyPriceFc;
@@ -575,4 +576,20 @@ export function normalizePlanKey(planKey: string): PlanTypeKey {
   if (legacy[planKey]) return legacy[planKey];
   if (PLAN_KEYS.includes(planKey as PlanTypeKey)) return planKey as PlanTypeKey;
   return 'FREE';
+}
+
+export const MONTH_DURATION_DAYS = 30;
+export const QUARTER_DURATION_DAYS = 90;
+export const YEAR_DURATION_DAYS = 365;
+
+export function isB2cPlanKey(planKey: string): boolean {
+  const normalized = normalizePlanKey(planKey);
+  return B2C_PLAN_KEYS.includes(normalized);
+}
+
+/** Durée de licence / facture : trimestre pour le B2C, mois (ou valeur demandée) sinon. */
+export function resolveDurationDaysForPlan(planKey: string, requested?: number | null): number {
+  if (isB2cPlanKey(planKey)) return QUARTER_DURATION_DAYS;
+  if (requested != null && Number.isFinite(requested) && requested > 0) return requested;
+  return MONTH_DURATION_DAYS;
 }

@@ -21,6 +21,9 @@ import {
   paidPlanIdsForAccountKind,
   ANNUAL_DISCOUNT_PERCENT,
   getPlanDisplayPrice,
+  durationDaysForPlan,
+  isB2cPlanId,
+  planPricePeriodSuffix,
   CURRENCY_NAME,
   type BillingCycle,
   type PlanId,
@@ -147,7 +150,12 @@ export default function BillingPage() {
       return {
         ...plan,
         displayName: db?.name?.replace('Plan ', '') || plan.ms365Name,
-        price: getPlanDisplayPrice(plan, billingCycle, db?.price),
+        price: getPlanDisplayPrice(
+          plan,
+          isB2cPlanId(plan.id) ? 'monthly' : billingCycle,
+          db?.price,
+          db?.monthlyPriceFc,
+        ),
         description: db?.description || plan.tagline,
       };
     });
@@ -165,10 +173,10 @@ export default function BillingPage() {
     try {
       await api.post('/subscriptions/request', {
         requestedPlan: plan,
-        durationDays: billingCycle === 'annual' ? 365 : 30,
+        durationDays: durationDaysForPlan(plan, billingCycle),
       });
       setSuccessMsg(
-        `Demande ${plan} soumise (${billingCycle === 'annual' ? '12 mois' : '30 jours'}, −${ANNUAL_DISCOUNT_PERCENT} % si annuel). Facture SendGrid après validation.`,
+        `Demande ${plan} soumise (${durationDaysForPlan(plan, billingCycle) === 90 ? '90 jours / trimestre' : billingCycle === 'annual' ? '12 mois' : '30 jours'}${isB2cPlanId(plan) ? '' : billingCycle === 'annual' ? `, −${ANNUAL_DISCOUNT_PERCENT} %` : ''}). Facture SendGrid après validation.`,
       );
       await loadBillingStatus();
     } catch (err: any) {
@@ -312,7 +320,7 @@ export default function BillingPage() {
                     <p className="text-xs text-muted mt-1">{plan.description}</p>
                     <div className="mt-4 mb-4">
                       <span className="text-3xl font-extrabold">{plan.price}</span>
-                      {plan.id !== 'FREE' && <span className="text-sm text-muted ml-1">/ mois</span>}
+                      {plan.id !== 'FREE' && <span className="text-sm text-muted ml-1">{planPricePeriodSuffix(plan.id)}</span>}
                     </div>
                     <ul className="space-y-1.5 text-xs text-muted flex-1 border-t border-border pt-3">
                       {plan.highlights.map((h) => (

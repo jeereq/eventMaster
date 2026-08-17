@@ -46,6 +46,25 @@ export const B2C_PLAN_IDS: PlanId[] = [
   'PERSONAL_200',
   'PERSONAL_PLUS',
 ];
+
+export const MONTH_BILLING_DAYS = 30;
+export const B2C_BILLING_DAYS = 90;
+export const YEAR_BILLING_DAYS = 365;
+
+export function isB2cPlanId(id: string): boolean {
+  return B2C_PLAN_IDS.includes(id as PlanId) || id.startsWith('PERSONAL');
+}
+
+export function durationDaysForPlan(id: string, cycle: BillingCycle = 'monthly'): number {
+  if (isB2cPlanId(id)) return B2C_BILLING_DAYS;
+  return cycle === 'annual' ? YEAR_BILLING_DAYS : MONTH_BILLING_DAYS;
+}
+
+export function planPricePeriodSuffix(id: string): string {
+  if (id === 'FREE') return '';
+  return isB2cPlanId(id) ? '/ trimestre' : '/ mois';
+}
+
 export const VENDOR_PLAN_IDS: PlanId[] = ['VENUE', 'SERVICE', 'CATALOG'];
 export const B2B_PLAN_IDS: PlanId[] = PLAN_IDS.filter(
   (id) => !B2C_PLAN_IDS.includes(id) && !VENDOR_PLAN_IDS.includes(id),
@@ -156,7 +175,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     ms365Name: 'Particulier 50',
     tagline: 'Mariage, anniversaire, fête privée jusqu’à 50 invités — sans catalogue.',
     monthlyPriceFc: 10000,
-    monthlyNote: 'par particulier / mois',
+    monthlyNote: 'par particulier / trimestre',
     cta: 'Choisir 50 invités',
     ctaHref: '/register?kind=ORGANIZER',
     ctaVariant: 'primary',
@@ -170,7 +189,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     ms365Name: 'Particulier 100',
     tagline: 'Fête privée jusqu’à 100 invités : organisation complète, sans catalogue.',
     monthlyPriceFc: 15000,
-    monthlyNote: 'par particulier / mois',
+    monthlyNote: 'par particulier / trimestre',
     cta: 'Choisir 100 invités',
     ctaHref: '/register?kind=ORGANIZER',
     ctaVariant: 'primary',
@@ -184,7 +203,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     ms365Name: 'Particulier 200',
     tagline: 'Fête privée jusqu’à 200 invités : organisation complète, sans catalogue.',
     monthlyPriceFc: 20000,
-    monthlyNote: 'par particulier / mois',
+    monthlyNote: 'par particulier / trimestre',
     cta: 'Choisir 200 invités',
     ctaHref: '/register?kind=ORGANIZER',
     ctaVariant: 'primary',
@@ -199,7 +218,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     ms365Name: 'Particulier +200',
     tagline: 'Grande fête privée : plus de 200 invités, quota invités illimité, sans catalogue.',
     monthlyPriceFc: 30000,
-    monthlyNote: 'par particulier / mois',
+    monthlyNote: 'par particulier / trimestre',
     cta: 'Choisir +200 invités',
     ctaHref: '/register?kind=ORGANIZER',
     ctaVariant: 'primary',
@@ -858,14 +877,33 @@ export function getPlanCapabilityBadges(planId: PlanId): PlanCapabilityBadge[] {
   return badges;
 }
 
-export function getPlanDisplayPrice(plan: LandingPlan, cycle: BillingCycle, dbPrice?: string): string {
-  if (plan.id === 'FREE') return formatFc(0);
-  if (cycle === 'monthly') {
-    return ensureFcPrice(dbPrice, plan.monthlyPriceFc);
+/** Prix affiché : `monthlyPriceFc` de la BD en priorité, puis libellé `price`, puis fallback landing. */
+export function resolvePlanMonthlyFc(
+  plan: Pick<LandingPlan, 'monthlyPriceFc'>,
+  db?: { price?: string | null; monthlyPriceFc?: number | null } | null,
+): number {
+  if (db?.monthlyPriceFc != null && Number.isFinite(db.monthlyPriceFc)) {
+    return db.monthlyPriceFc;
   }
-  const monthlyFc = dbPrice
-    ? parseInt(dbPrice.replace(/[^\d]/g, ''), 10) || plan.monthlyPriceFc
-    : plan.monthlyPriceFc;
+  if (db?.price) {
+    const parsed = parsePriceFc(db.price);
+    if (parsed > 0) return parsed;
+  }
+  return plan.monthlyPriceFc;
+}
+
+export function getPlanDisplayPrice(
+  plan: LandingPlan,
+  cycle: BillingCycle,
+  dbPrice?: string | null,
+  dbMonthlyFc?: number | null,
+): string {
+  if (plan.id === 'FREE') return formatFc(0);
+  const monthlyFc = resolvePlanMonthlyFc(plan, {
+    price: dbPrice,
+    monthlyPriceFc: dbMonthlyFc,
+  });
+  if (cycle === 'monthly' || isB2cPlanId(plan.id)) return formatFc(monthlyFc);
   return annualMonthlyEquivalent(monthlyFc);
 }
 

@@ -134,7 +134,8 @@ export default function TermsPage() {
  <li><strong>Essentials</strong> (gratuit) : découverte pour organisateurs ou essai catalogue (1 salle / 1 prestation) ;</li>
  <li><strong>Particulier</strong> (B2C) : quatre paliers selon le nombre d&apos;invités — 50, 100, 200 ou plus de 200
  (invités illimités) — avec organisation complète (QR, modèles, éditeur 2D, jusqu&apos;à 3 événements et 2 salles
- de plan de table), sans publication au catalogue public ;</li>
+ de plan de table), sans publication au catalogue public. Ces forfaits sont <strong>facturés par trimestre</strong>
+ (90 jours) : le tarif affiché est le montant dû pour la période.</li>
  <li><strong>Business, Business Premium et Business Enterprise</strong> : forfaits organisateurs B2B ;</li>
  <li><strong>Salle</strong>, <strong>Prestataire</strong> et <strong>Salle &amp; presta</strong> : forfaits catalogue.
  Dès que l&apos;abonnement Prestataire est payé et actif, le nombre de prestations publiées n&apos;est pas limité.</li>
@@ -150,8 +151,8 @@ export default function TermsPage() {
  </p>
  <p>
  EventMaster se réserve le droit de modifier les tarifs et caractéristiques des plans avec un préavis raisonnable
- pour les abonnements actifs. La facturation annuelle peut bénéficier d&apos;une réduction selon les conditions
- affichées sur la plateforme.
+ pour les abonnements actifs. La facturation annuelle (organisations et catalogue) peut bénéficier d&apos;une
+ réduction selon les conditions affichées sur la plateforme. Les forfaits Particulier ne proposent pas d&apos;option annuelle.
  </p>
  <p>
  <strong>6.1 Catalogue et réservations.</strong> Les organisations éligibles peuvent publier des salles ou
