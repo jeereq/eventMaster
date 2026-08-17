@@ -41,7 +41,7 @@ export default function MarketplaceHubPage() {
   const [draft, setDraft] = useState<HubFilters>(emptyFilters);
   const [filterError, setFilterError] = useState('');
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 9;
+  const PAGE_SIZE = 12;
 
   const load = useCallback(async (filters: HubFilters, search: string) => {
     setLoading(true);

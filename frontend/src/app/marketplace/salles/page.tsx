@@ -49,7 +49,7 @@ export default function MarketplaceVenuesPage() {
   const [error, setError] = useState('');
   const [filterError, setFilterError] = useState('');
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 9;
+  const PAGE_SIZE = 12;
 
   const load = useCallback(async (filters: VenueFilters, search: string) => {
     setLoading(true);

@@ -44,7 +44,7 @@ export default function MarketplaceServicesPage() {
   const [error, setError] = useState('');
   const [filterError, setFilterError] = useState('');
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 9;
+  const PAGE_SIZE = 12;
 
   const load = useCallback(async (filters: ServiceFilters, search: string) => {
     setLoading(true);

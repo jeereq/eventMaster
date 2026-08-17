@@ -58,8 +58,8 @@ function GridCard({ item }: { item: CatalogueItem }) {
           <KindBadge item={item} />
         </div>
       </div>
-      <div className="p-4 space-y-2">
-        <h2 className="font-display font-semibold text-foreground group-hover:text-primary transition leading-snug">
+      <div className="p-3 space-y-1.5">
+        <h2 className="font-display font-semibold text-sm text-foreground group-hover:text-primary transition leading-snug line-clamp-2">
           {item.title}
         </h2>
         <p className="text-xs text-muted truncate">{item.orgName}{item.categoryLabel ? ` · ${item.categoryLabel}` : ''}</p>
@@ -147,7 +147,7 @@ export default function CatalogueResults({
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
       {items.map((item) => (
         <GridCard key={item.id} item={item} />
       ))}
@@ -159,7 +159,7 @@ function CatalogueGridCardSkeleton() {
   return (
     <div className="bg-surface border border-border rounded-2xl overflow-hidden" aria-hidden>
       <Skeleton className="aspect-[16/10] w-full rounded-none" />
-      <div className="p-4 space-y-2">
+      <div className="p-3 space-y-2">
         <Skeleton className="h-4 w-3/4" />
         <Skeleton className="h-3 w-1/2" />
         <Skeleton className="h-3 w-2/3" />
@@ -228,7 +228,7 @@ export function CatalogueResultsSkeleton({
 
   return (
     <div
-      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+      className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4"
       role="status"
       aria-live="polite"
       aria-label="Chargement du catalogue"
