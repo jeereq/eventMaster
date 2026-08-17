@@ -187,7 +187,7 @@ export function getDefaultPlans(): PlansConfiguration {
       price: '30.000 FC',
       monthlyPriceFc: 30000,
       description:
-        'Grande fête privée (plus de 200 invités) : organisation complète, invités illimités, 3 événements, 2 salles de plan de table — sans catalogue.',
+        'Grande fête privée (plus de 200 invités) : organisation complète, invités illimités, 3 événements, 2 salles de plan de table — sans catalogue. Facturation trimestrielle.',
       maxGuests: 99999,
     }),
     STANDARD: organizerPlan({
