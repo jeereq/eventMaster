@@ -22,7 +22,7 @@ import { Modal, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
-  ArrowRight, Loader2,
+  ArrowRight, Loader2, LayoutGrid, QrCode, Mail, Sparkles,
 } from 'lucide-react';
 import CelebrateMood from '@/components/CelebrateMood';
 
@@ -92,22 +92,31 @@ export default function Home() {
       <CelebrateMood />
       <SiteHeader variant="landing" showServerStatus />
 
-      {/* Hero — marque + message + CTA + aperçu modèle borné */}
-      <section className="relative overflow-hidden border-b border-border em-celebrate-hero">
-        <div className="page-container relative py-12 sm:py-14 lg:py-16">
-          <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-10 lg:gap-12 items-center">
-            <div className="space-y-6 animate-slide-up">
-              <span className="em-festive-chip">Invitations · RSVP · Jour J</span>
-              <p className="text-3xl sm:text-4xl lg:text-5xl font-display font-semibold tracking-tight text-foreground">
-                {site.platformName}
-              </p>
-              <h1 className="text-xl sm:text-2xl font-semibold text-foreground/90 tracking-tight leading-snug max-w-lg">
+      {/* Hero */}
+      <section className="relative border-b border-border em-landing-hero">
+        <div className="page-container relative py-14 sm:py-20 lg:py-24">
+          <div className="grid lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] gap-12 lg:gap-16 items-center">
+            <div className="space-y-7 animate-slide-up">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="em-festive-chip">
+                  <Sparkles className="w-3 h-3" />
+                  Invitations · RSVP · Jour J
+                </span>
+                <span className="text-[11px] font-medium text-muted tracking-wide">
+                  {site.platformName}
+                </span>
+              </div>
+
+              <h1 className="font-display text-[2.15rem] sm:text-5xl lg:text-[3.35rem] font-semibold tracking-tight text-foreground leading-[1.12] max-w-xl">
                 {site.platformTagline}
               </h1>
-              <p className="text-sm text-muted leading-relaxed max-w-md">
-                Plans 2D, invitations, RSVP et protocole QR — un espace dédié pour votre entreprise.
+
+              <p className="text-[15px] text-muted leading-relaxed max-w-md">
+                Un espace unique pour concevoir la salle, envoyer les invitations, suivre les réponses
+                et accueillir vos invités avec un badge QR.
               </p>
-              <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 pt-1">
                 {user ? (
                   <Link href="/dashboard">
                     <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
@@ -137,29 +146,61 @@ export default function Home() {
                     </Link>
                   </>
                 )}
+                <a
+                  href="#modeles"
+                  className="inline-flex items-center justify-center gap-1.5 px-1 py-2 text-sm font-semibold text-foreground/80 hover:text-primary transition"
+                >
+                  Voir les modèles
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </a>
               </div>
+
+              <ul className="flex flex-wrap gap-2 pt-1">
+                {[
+                  { icon: Mail, label: 'Invitations' },
+                  { icon: LayoutGrid, label: 'Plan 2D' },
+                  { icon: QrCode, label: 'Protocole QR' },
+                ].map(({ icon: Icon, label }) => (
+                  <li
+                    key={label}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface/80 px-3 py-1.5 text-xs font-medium text-foreground shadow-[var(--shadow-soft)]"
+                  >
+                    <Icon className="w-3.5 h-3.5 text-[color:var(--festive-accent)]" />
+                    {label}
+                  </li>
+                ))}
+              </ul>
             </div>
 
-            <div className="w-full max-w-md mx-auto lg:mx-0 lg:ml-auto">
+            <div className="w-full max-w-[26rem] mx-auto lg:mx-0 lg:ml-auto">
               {loadingPublicTemplates ? (
-                <div className="aspect-[3/4] max-h-[380px] flex items-center justify-center rounded-[var(--radius-card)] border border-border bg-surface">
+                <div className="aspect-[3/4] max-h-[420px] flex items-center justify-center rounded-[1.25rem] border border-border bg-surface">
                   <Loader2 className="w-6 h-6 text-muted animate-spin" />
                 </div>
               ) : activePreview ? (
-                <div className="space-y-4">
-                  <div
-                    key={activePreview.id}
-                    className="aspect-[3/4] max-h-[min(380px,52vh)] w-full mx-auto animate-in fade-in duration-300"
-                  >
-                    <LandingInvitationPreview
-                      template={activePreview}
-                      variant="hero"
-                      className="w-full h-full"
-                    />
+                <div className="space-y-5">
+                  <div className="em-landing-stage px-6 py-8 sm:px-8 sm:py-10">
+                    <div
+                      key={activePreview.id}
+                      className="em-landing-card aspect-[3/4] max-h-[min(420px,56vh)] w-full mx-auto animate-in fade-in duration-300 rounded-[1.25rem] overflow-hidden bg-surface"
+                    >
+                      <LandingInvitationPreview
+                        template={activePreview}
+                        variant="hero"
+                        className="w-full h-full !rounded-[1.25rem] !border-0 !shadow-none"
+                      />
+                    </div>
+                    <div className="absolute left-2 top-6 z-[2] hidden sm:block">
+                      <span className="em-festive-chip bg-surface/95 shadow-[var(--shadow-soft)]">RSVP</span>
+                    </div>
+                    <div className="absolute right-1 bottom-10 z-[2] hidden sm:block">
+                      <span className="em-festive-chip bg-surface/95 shadow-[var(--shadow-soft)]">Jour J</span>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 px-1">
                     <p className="text-xs text-muted truncate min-w-0">
-                      <span className="font-medium text-foreground">{activePreview.name}</span>
+                      <span className="font-semibold text-foreground">{activePreview.name}</span>
                       {' · '}
                       {getCategoryLabel(activePreview.category)}
                     </p>
@@ -167,10 +208,11 @@ export default function Home() {
                       href="#modeles"
                       className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 shrink-0"
                     >
-                      Voir tous
+                      Tous les modèles
                       <ArrowRight className="w-3.5 h-3.5" />
                     </a>
                   </div>
+
                   {publicTemplates.length > 1 && (
                     <div
                       className="flex gap-2.5 overflow-x-auto pb-1 -mx-0.5 px-0.5 snap-x snap-mandatory [scrollbar-width:thin]"
@@ -196,8 +238,8 @@ export default function Home() {
                               className={cn(
                                 'aspect-[3/4] rounded-lg border overflow-hidden transition duration-200',
                                 selected
-                                  ? 'border-primary ring-2 ring-primary/20 shadow-[var(--shadow-soft)]'
-                                  : 'border-border opacity-80 group-hover:opacity-100 group-hover:border-primary/40',
+                                  ? 'border-[color:var(--festive-accent)] ring-2 ring-[color-mix(in_srgb,var(--festive-accent)_28%,transparent)] shadow-[var(--shadow-soft)]'
+                                  : 'border-border opacity-75 group-hover:opacity-100 group-hover:border-primary/40',
                               )}
                             >
                               <TemplatePreviewThumb
@@ -221,7 +263,7 @@ export default function Home() {
                   )}
                 </div>
               ) : (
-                <div className="aspect-[3/4] max-h-[320px] flex flex-col items-center justify-center text-center px-6 border border-dashed border-border rounded-[var(--radius-card)] bg-surface">
+                <div className="aspect-[3/4] max-h-[320px] flex flex-col items-center justify-center text-center px-6 border border-dashed border-border rounded-[1.25rem] bg-surface">
                   <p className="text-sm font-medium text-foreground">Aucun modèle vitrine</p>
                   <p className="text-xs text-muted mt-1.5 max-w-xs leading-relaxed">
                     Le Super Admin active des modèles globaux via « Afficher sur la landing » dans le concepteur.
