@@ -190,22 +190,11 @@ html[data-mood="celebrate"] .font-display {
 
 .em-landing-hero {
   position: relative;
-  overflow: hidden;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--surface-warm) 88%, white) 0%, var(--background) 100%);
+  background: var(--background);
   border-bottom: 1px solid var(--border);
 }
 
-.em-landing-hero::before {
-  content: '';
-  position: absolute;
-  inset: 0 auto auto 0;
-  width: min(52vw, 640px);
-  height: min(52vw, 520px);
-  pointer-events: none;
-  background: radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--festive-accent) 22%, transparent), transparent 68%);
-}
-
+.em-landing-hero::before,
 .em-landing-hero::after {
   content: none;
 }

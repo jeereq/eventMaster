@@ -68,22 +68,16 @@ export default function ContactPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans antialiased transition-colors duration-200">
-      <SiteHeader variant="contact" showServerStatus />
+      <SiteHeader variant="contact" />
 
-      {/* Hero — même langage que la landing */}
-      <section className="relative overflow-hidden border-b border-border">
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,var(--surface-muted)_0%,var(--background)_55%)]" />
-        <div className="page-container relative py-14 sm:py-16 lg:py-20">
-          <div className="max-w-xl space-y-4">
-            <p className="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground">
-              {site.platformName}
-            </p>
-            <h1 className="text-2xl sm:text-3xl font-semibold text-foreground/90 tracking-tight leading-snug">
-              Une question ? Un projet ? Écrivons-nous.
+      <section className="border-b border-border bg-background">
+        <div className="page-container py-12 sm:py-16">
+          <div className="max-w-xl space-y-3">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">
+              Contact
             </h1>
             <p className="text-sm text-muted leading-relaxed max-w-md">
-              Démonstration, forfaits sur-mesure ou support technique — réponse sous 24–48 h
-              ({site.supportHours}).
+              Démonstration, forfaits ou support — réponse sous 24–48 h ({site.supportHours}).
             </p>
           </div>
         </div>
