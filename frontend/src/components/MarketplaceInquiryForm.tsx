@@ -8,19 +8,25 @@ import { Calendar, Send } from 'lucide-react';
 export default function MarketplaceInquiryForm({
   endpoint,
   successCopy = 'Demande envoyée.',
+  eventDate,
+  onEventDateChange,
 }: {
   endpoint: string;
   successCopy?: string;
+  eventDate?: string;
+  onEventDateChange?: (value: string) => void;
 }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [eventDate, setEventDate] = useState('');
+  const [internalDate, setInternalDate] = useState('');
   const [guestCount, setGuestCount] = useState('');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState('');
   const [formError, setFormError] = useState('');
+  const selectedDate = eventDate ?? internalDate;
+  const setSelectedDate = onEventDateChange ?? setInternalDate;
 
   const handleInquire = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +38,7 @@ export default function MarketplaceInquiryForm({
         name,
         email,
         phone: phone || undefined,
-        eventDate: eventDate || undefined,
+        eventDate: selectedDate || undefined,
         guestCount: guestCount || undefined,
         message,
       });
@@ -61,9 +67,14 @@ export default function MarketplaceInquiryForm({
         label="Date souhaitée"
         type="date"
         leftIcon={<Calendar className="w-4 h-4" />}
-        value={eventDate}
-        onChange={(e) => setEventDate(e.target.value)}
+        value={selectedDate}
+        onChange={(e) => setSelectedDate(e.target.value)}
       />
+      {selectedDate && (
+        <p className="text-[11px] text-muted">
+          Alignée sur le calendrier : {new Date(`${selectedDate}T12:00:00`).toLocaleDateString('fr-FR')}
+        </p>
+      )}
       <Input
         label="Nombre d’invités (estimé)"
         type="number"

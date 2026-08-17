@@ -67,6 +67,8 @@ function toPublicVenue(listing: {
     orgName: listing.tenant.vendorProfile?.displayName || listing.tenant.name,
     orgCity: listing.tenant.vendorProfile?.city || listing.city,
     layoutPreview: sanitizeLayoutBlueprint(listing.room.layoutBlueprint),
+    blockedDates: parseBlockedDates(listing.blockedDates),
+    bookedDates: collectUnavailableDates([], listing.bookings),
     unavailableDates: collectUnavailableDates(listing.blockedDates, listing.bookings),
   };
 }
@@ -414,6 +416,8 @@ function toPublicService(offering: {
     publishedAt: offering.publishedAt,
     orgName: offering.vendorProfile.displayName || offering.tenant.name,
     orgSlug: offering.vendorProfile.slug,
+    blockedDates: parseBlockedDates(offering.blockedDates),
+    bookedDates: collectUnavailableDates([], offering.bookings),
     unavailableDates: collectUnavailableDates(offering.blockedDates, offering.bookings),
   };
 }
@@ -620,9 +624,21 @@ export async function listMyServices(req: AuthenticatedRequest, res: Response) {
 
     const services = await prisma.serviceOffering.findMany({
       where: { tenantId },
+      include: {
+        bookings: {
+          where: { status: { in: HOLD_BOOKING_STATUSES } },
+          select: { eventDate: true },
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
-    return res.json({ services });
+    return res.json({
+      services: services.map(({ bookings, ...rest }) => ({
+        ...rest,
+        blockedDates: parseBlockedDates(rest.blockedDates),
+        bookedDates: collectUnavailableDates([], bookings),
+      })),
+    });
   } catch (error) {
     console.error('listMyServices:', error);
     return res.status(500).json({ error: 'Impossible de charger les prestations.' });

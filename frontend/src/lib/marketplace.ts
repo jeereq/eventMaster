@@ -35,6 +35,8 @@ export interface PublicVenue {
   orgName: string;
   orgCity: string | null;
   layoutPreview?: unknown | null;
+  blockedDates?: string[];
+  bookedDates?: string[];
   unavailableDates?: string[];
 }
 
@@ -87,6 +89,8 @@ export interface PublicService {
   publishedAt: string | null;
   orgName: string;
   orgSlug: string;
+  blockedDates?: string[];
+  bookedDates?: string[];
   unavailableDates?: string[];
 }
 
@@ -117,6 +121,7 @@ export type MarketplaceBookingStatus =
 
 export const MARKETPLACE_COMMISSION_RATE = 0.08;
 export const MARKETPLACE_DEPOSIT_RATE = 0.3;
+export const MARKETPLACE_MAX_PHOTOS = 24;
 
 export const BOOKING_STATUS_LABELS: Record<MarketplaceBookingStatus, string> = {
   REQUESTED: 'Demande',
@@ -158,6 +163,22 @@ export function parseBlockedDates(input: unknown): string[] {
     if (match) keys.add(match[1]);
   }
   return [...keys].sort();
+}
+
+export function eachDateKey(from: string, to: string): string[] {
+  const start = from <= to ? from : to;
+  const end = from <= to ? to : from;
+  const match = start.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const endMatch = end.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match || !endMatch) return [];
+  const keys: string[] = [];
+  const cursor = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  const last = new Date(Date.UTC(Number(endMatch[1]), Number(endMatch[2]) - 1, Number(endMatch[3])));
+  while (cursor.getTime() <= last.getTime() && keys.length < 366) {
+    keys.push(cursor.toISOString().slice(0, 10));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return keys;
 }
 
 export function previewMarketplaceAmounts(amountFc: number) {

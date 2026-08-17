@@ -11,6 +11,7 @@ import {
   PRICE_UNIT_OPTIONS,
   SERVICE_CATEGORIES,
   SERVICE_CATEGORY_LABELS,
+  MARKETPLACE_MAX_PHOTOS,
   parseBlockedDates,
   type MarketplaceBookingItem,
   type MarketplaceInquiryItem,
@@ -38,6 +39,7 @@ interface ServiceItem {
   priceUnit: VenuePriceUnit;
   photos: unknown;
   blockedDates?: unknown;
+  bookedDates?: string[];
   isPublic: boolean;
 }
 
@@ -71,6 +73,7 @@ export default function MarketplaceDeskPage() {
     priceUnit: 'EVENT' as VenuePriceUnit,
     photos: [] as string[],
     blockedDates: [] as string[],
+    bookedDates: [] as string[],
     isPublic: true,
   });
 
@@ -113,6 +116,7 @@ export default function MarketplaceDeskPage() {
       priceUnit: 'EVENT',
       photos: [],
       blockedDates: [],
+      bookedDates: [],
       isPublic: true,
     });
     setEditorOpen(true);
@@ -130,6 +134,7 @@ export default function MarketplaceDeskPage() {
       priceUnit: item.priceUnit,
       photos: photosOf(item),
       blockedDates: parseBlockedDates(item.blockedDates),
+      bookedDates: parseBlockedDates(item.bookedDates),
       isPublic: item.isPublic,
     });
     setEditorOpen(true);
@@ -175,12 +180,18 @@ export default function MarketplaceDeskPage() {
     }
   };
 
-  const handlePhoto = async (file?: File) => {
-    if (!file) return;
+  const handlePhoto = async (files?: FileList | null) => {
+    if (!files?.length) return;
     setUploadingPhoto(true);
     try {
-      const uploaded = await uploadImageFile(file);
-      setDraft((d) => ({ ...d, photos: [...d.photos, uploaded.url].slice(0, 8) }));
+      const remaining = MARKETPLACE_MAX_PHOTOS - draft.photos.length;
+      const batch = Array.from(files).slice(0, remaining);
+      const urls: string[] = [];
+      for (const file of batch) {
+        const uploaded = await uploadImageFile(file);
+        urls.push(uploaded.url);
+      }
+      setDraft((d) => ({ ...d, photos: [...d.photos, ...urls].slice(0, MARKETPLACE_MAX_PHOTOS) }));
     } catch (err: any) {
       setError(err.message || 'Upload impossible.');
     } finally {
@@ -455,10 +466,13 @@ export default function MarketplaceDeskPage() {
           </div>
           <BlockedDatesField
             value={draft.blockedDates}
+            bookedDates={draft.bookedDates}
             onChange={(blockedDates) => setDraft((d) => ({ ...d, blockedDates }))}
           />
           <div>
-            <span className="block text-xs font-medium text-muted mb-1.5">Photos (max. 8)</span>
+            <span className="block text-xs font-medium text-muted mb-1.5">
+              Photos (max. {MARKETPLACE_MAX_PHOTOS})
+            </span>
             <div className="flex flex-wrap gap-2 mb-2">
               {draft.photos.map((url) => (
                 <div key={url} className="relative w-16 h-16 rounded-md overflow-hidden border border-border">
@@ -476,16 +490,17 @@ export default function MarketplaceDeskPage() {
             </div>
             <label className="inline-flex items-center gap-2 text-xs font-semibold text-primary cursor-pointer">
               <Upload className="w-3.5 h-3.5" />
-              {uploadingPhoto ? 'Upload…' : 'Ajouter une photo'}
+              {uploadingPhoto ? 'Upload…' : 'Ajouter des photos'}
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
+                multiple
                 className="hidden"
-                disabled={uploadingPhoto || draft.photos.length >= 8}
+                disabled={uploadingPhoto || draft.photos.length >= MARKETPLACE_MAX_PHOTOS}
                 onChange={(e) => {
-                  const file = e.target.files?.[0];
+                  const files = e.target.files;
                   e.target.value = '';
-                  void handlePhoto(file);
+                  void handlePhoto(files);
                 }}
               />
             </label>

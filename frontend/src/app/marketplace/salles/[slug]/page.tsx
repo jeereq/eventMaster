@@ -10,6 +10,7 @@ import CelebrateMood from '@/components/CelebrateMood';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import MarketplaceInquiryForm from '@/components/MarketplaceInquiryForm';
 import MarketplaceBookingForm from '@/components/MarketplaceBookingForm';
+import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import { formatFc } from '@/config/landingPricing';
 import type { PublicVenue } from '@/lib/marketplace';
 import { roomTypeLabels, type RoomLayoutBlueprint, type RoomType } from '@/lib/roomLayoutUtils';
@@ -24,6 +25,7 @@ export default function MarketplaceVenueDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [photoIndex, setPhotoIndex] = useState(0);
+  const [pickedDate, setPickedDate] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -77,13 +79,13 @@ export default function MarketplaceVenueDetailPage() {
                 )}
               </div>
               {venue.photos.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto">
+                <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
                   {venue.photos.map((url, i) => (
                     <button
                       key={url}
                       type="button"
                       onClick={() => setPhotoIndex(i)}
-                      className={`w-16 h-12 rounded-md overflow-hidden border shrink-0 ${
+                      className={`aspect-[4/3] rounded-md overflow-hidden border ${
                         i === photoIndex ? 'border-primary' : 'border-border'
                       }`}
                     >
@@ -128,6 +130,14 @@ export default function MarketplaceVenueDetailPage() {
                   <RoomLayoutPreview blueprint={venue.layoutPreview as RoomLayoutBlueprint} />
                 </div>
               ) : null}
+
+              <AvailabilityCalendar
+                title="Calendrier des disponibilités"
+                bookedDates={venue.bookedDates}
+                blockedDates={venue.blockedDates}
+                selectedDate={pickedDate}
+                onSelectDate={setPickedDate}
+              />
             </div>
 
             <aside className="lg:col-span-2 space-y-4">
@@ -142,11 +152,18 @@ export default function MarketplaceVenueDetailPage() {
               <MarketplaceInquiryForm
                 endpoint={`/public/venues/${encodeURIComponent(venue.slug)}/inquire`}
                 successCopy="Demande transmise au propriétaire."
+                eventDate={pickedDate}
+                onEventDateChange={setPickedDate}
               />
               <MarketplaceBookingForm
                 listingSlug={venue.slug}
                 unavailableDates={venue.unavailableDates}
+                bookedDates={venue.bookedDates}
+                blockedDates={venue.blockedDates}
                 priceFromFc={venue.priceFromFc}
+                eventDate={pickedDate}
+                onEventDateChange={setPickedDate}
+                showCalendar={false}
               />
             </aside>
           </div>
