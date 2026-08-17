@@ -13,12 +13,12 @@ import TeamManagement from '../TeamManagement';
 import RoomsManagement from '../RoomsManagement';
 import { PageHeader, Alert, SkeletonProfileView, Button, Breadcrumbs, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
+import { ACCOUNT_KIND_DESCRIPTIONS, ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
 
 type ProfileTab = 'profil' | 'salles' | 'equipe';
 
 function ProfilePageContent() {
-  const { user, tenant, updateUserAndTenant, updateBranding, access } = useAuth();
+  const { user, tenant, updateUserAndTenant, updateBranding, access, refreshProfile } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -38,6 +38,7 @@ function ProfilePageContent() {
 
   const canManageRooms = Boolean(user?.role === 'USER' && tenant && access?.canManageRooms);
   const canManageTeam = Boolean(user?.role === 'USER' && tenant && access?.canManageTeam);
+  const isClient = access?.level === 'client' || tenant?.accountKind === 'CLIENT';
 
   const tabs = useMemo(() => {
     const items: Array<{ id: ProfileTab; label: string; icon: React.ComponentType<{ className?: string }> }> = [
@@ -81,7 +82,7 @@ function ProfilePageContent() {
   }, [user, tenant]);
 
   const canEditBranding = Boolean(
-    user?.role === 'USER' && tenant && (access?.isOwner || access?.level === 'manager'),
+    !isClient && user?.role === 'USER' && tenant && (access?.isOwner || access?.level === 'manager'),
   );
 
   const handleSaveBranding = async () => {
@@ -136,6 +137,7 @@ function ProfilePageContent() {
       });
 
       updateUserAndTenant(data.user, data.tenant);
+      await refreshProfile();
       setSuccess(data.message || 'Profil mis à jour avec succès !');
       setPassword('');
       setConfirmPassword('');
@@ -260,7 +262,13 @@ function ProfilePageContent() {
                   <Input label="Téléphone (WhatsApp)" type="tel" leftIcon={<Phone className="w-4 h-4" />} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+243..." />
                   {user?.role === 'USER' && tenant && (
                     <>
-                    <Input label="Nom de l'organisation" leftIcon={<Building className="w-4 h-4" />} required value={tenantName} onChange={(e) => setTenantName(e.target.value)} />
+                    <Input
+                      label={isClient ? 'Nom affiché' : 'Nom de l\'organisation'}
+                      leftIcon={<Building className="w-4 h-4" />}
+                      required
+                      value={tenantName}
+                      onChange={(e) => setTenantName(e.target.value)}
+                    />
                     <label className="block space-y-1.5">
                       <span className="text-xs font-medium text-muted">Type de compte</span>
                       <select
@@ -273,11 +281,20 @@ function ProfilePageContent() {
                         ))}
                       </select>
                       <p className="text-[11px] text-muted">
-                        Propriétaire de salles ou prestataire : publiez vos offres dans le{' '}
-                        <Link href="/marketplace" className="text-primary font-semibold hover:underline">catalogue public</Link>
-                        {' '}et gérez devis et réservations dans{' '}
-                        <Link href="/dashboard/marketplace" className="text-primary font-semibold hover:underline">Marketplace</Link>.
+                        {isClient
+                          ? 'Passez organisateur pour créer des événements, ou prestataire pour publier des offres.'
+                          : (
+                            <>
+                              Propriétaire de salles ou prestataire : publiez vos offres dans le{' '}
+                              <Link href="/marketplace" className="text-primary font-semibold hover:underline">catalogue public</Link>
+                              {' '}et gérez devis et réservations dans{' '}
+                              <Link href="/dashboard/marketplace" className="text-primary font-semibold hover:underline">Marketplace</Link>.
+                            </>
+                          )}
                       </p>
+                      {ACCOUNT_KIND_DESCRIPTIONS[accountKind] && (
+                        <p className="text-[11px] text-muted">{ACCOUNT_KIND_DESCRIPTIONS[accountKind]}</p>
+                      )}
                     </label>
                     </>
                   )}

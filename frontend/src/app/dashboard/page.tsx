@@ -317,8 +317,10 @@ function DashboardPageContent() {
  useEffect(() => {
  if (access?.isProtocolOnly) {
  router.replace('/dashboard/events?mode=protocol');
+ } else if (access?.level === 'client') {
+ router.replace('/dashboard/bookings');
  }
- }, [access?.isProtocolOnly, router]);
+ }, [access?.isProtocolOnly, access?.level, router]);
  const tabParam = searchParams.get('tab');
  const sectionParam = searchParams.get('section');
  const activeAnalyticsSection: AnalyticsSection =

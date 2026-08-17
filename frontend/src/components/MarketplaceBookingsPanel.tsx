@@ -25,12 +25,14 @@ export default function MarketplaceBookingsPanel({
   bookings,
   commissionDueFc,
   onChanged,
+  organizerView = false,
 }: {
   bookings: MarketplaceBookingItem[];
   commissionDueFc: number;
   onChanged: () => Promise<void> | void;
+  organizerView?: boolean;
 }) {
-  const [filter, setFilter] = useState<'all' | 'received' | 'sent'>('all');
+  const [filter, setFilter] = useState<'all' | 'received' | 'sent'>(organizerView ? 'sent' : 'all');
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState('');
   const [acceptAmount, setAcceptAmount] = useState<Record<string, string>>({});
@@ -61,6 +63,7 @@ export default function MarketplaceBookingsPanel({
 
   return (
     <div className="space-y-4">
+      {!organizerView && (
       <div className="border border-border rounded-[var(--radius-card)] bg-surface p-4 text-sm">
         <p className="font-semibold text-foreground">Commission marketplace due</p>
         <p className="text-lg font-semibold mt-1">{formatFc(commissionDueFc)}</p>
@@ -69,11 +72,13 @@ export default function MarketplaceBookingsPanel({
           L’acompte (30 %) se verse hors plateforme.
         </p>
       </div>
+      )}
 
       {calendarDates.length > 0 && (
         <AvailabilityCalendar title="Calendrier des réservations" bookedDates={calendarDates} />
       )}
 
+      {!organizerView && (
       <div className="flex gap-1.5">
         {([
           ['all', 'Toutes'],
@@ -92,6 +97,7 @@ export default function MarketplaceBookingsPanel({
           </button>
         ))}
       </div>
+      )}
 
       {error && <Alert variant="error">{error}</Alert>}
 

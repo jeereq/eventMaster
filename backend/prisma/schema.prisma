@@ -55,6 +55,7 @@ enum TenantAccountKind {
   ORGANIZER
   VENDOR
   BOTH
+  CLIENT
 }
 
 enum VenuePriceUnit {
@@ -108,7 +109,7 @@ model Tenant {
   defaultOrgCommercialCommissionRate Float @default(0.20)
   /** Couleurs de marque org : { primary, accent, sidebar? } */
   branding      Json?
-  /** ORGANIZER = SaaS événement (défaut). VENDOR = offre salles/prestas. BOTH = les deux. */
+  /** ORGANIZER = SaaS événement (défaut). VENDOR = offre salles/prestas. BOTH = les deux. CLIENT = réserve sans SaaS. */
   accountKind   TenantAccountKind @default(ORGANIZER)
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt

@@ -99,7 +99,7 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
     const tenantId = req.user?.tenantId;
     const userId = req.user?.id;
     if (!tenantId || !userId) {
-      return res.status(401).json({ error: 'Connectez-vous avec une organisation pour réserver.' });
+      return res.status(401).json({ error: 'Connectez-vous pour réserver.' });
     }
 
     const { listingSlug, offeringSlug, eventDate, guestCount, eventId, notes } = req.body || {};
@@ -143,11 +143,17 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
 
     let linkedEventId: string | null = null;
     if (eventId) {
-      const event = await prisma.event.findFirst({
-        where: { id: String(eventId), tenantId },
-        select: { id: true },
+      const organizer = await prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: { accountKind: true },
       });
-      linkedEventId = event?.id || null;
+      if (organizer?.accountKind !== 'CLIENT') {
+        const event = await prisma.event.findFirst({
+          where: { id: String(eventId), tenantId },
+          select: { id: true },
+        });
+        linkedEventId = event?.id || null;
+      }
     }
 
     const amounts = computeMarketplaceAmounts(price);
@@ -303,36 +309,38 @@ export async function updateBooking(req: AuthenticatedRequest, res: Response) {
       const attachEvent = req.body?.attachEvent !== false;
 
       if (booking.listing && booking.organizerTenantId && attachEvent) {
-        if (eventId) {
-          await prisma.event.update({
-            where: { id: eventId },
-            data: {
-              roomId: booking.listing.roomId,
-              location: booking.listing.address || booking.listing.room.location || undefined,
-              latitude: booking.listing.latitude ?? undefined,
-              longitude: booking.listing.longitude ?? undefined,
-              date: booking.eventDate,
-            },
-          });
-        } else {
-          const organizer = await prisma.tenant.findUnique({
-            where: { id: booking.organizerTenantId },
-            include: { _count: { select: { events: true } } },
-          });
-          const limits = organizer ? getPlanLimits(organizer.plan) : null;
-          if (organizer && limits && organizer._count.events < limits.maxEvents) {
-            const created = await prisma.event.create({
+        const organizer = await prisma.tenant.findUnique({
+          where: { id: booking.organizerTenantId },
+          include: { _count: { select: { events: true } } },
+        });
+        if (organizer?.accountKind !== 'CLIENT') {
+          if (eventId) {
+            await prisma.event.update({
+              where: { id: eventId },
               data: {
-                tenantId: booking.organizerTenantId,
-                title: `Réservation — ${booking.listing.headline || booking.listing.room.name}`,
-                date: booking.eventDate,
-                location: booking.listing.address || booking.listing.room.location || booking.listing.room.name,
-                latitude: booking.listing.latitude,
-                longitude: booking.listing.longitude,
                 roomId: booking.listing.roomId,
+                location: booking.listing.address || booking.listing.room.location || undefined,
+                latitude: booking.listing.latitude ?? undefined,
+                longitude: booking.listing.longitude ?? undefined,
+                date: booking.eventDate,
               },
             });
-            eventId = created.id;
+          } else {
+            const limits = organizer ? getPlanLimits(organizer.plan) : null;
+            if (organizer && limits && organizer._count.events < limits.maxEvents) {
+              const created = await prisma.event.create({
+                data: {
+                  tenantId: booking.organizerTenantId,
+                  title: `Réservation — ${booking.listing.headline || booking.listing.room.name}`,
+                  date: booking.eventDate,
+                  location: booking.listing.address || booking.listing.room.location || booking.listing.room.name,
+                  latitude: booking.listing.latitude,
+                  longitude: booking.listing.longitude,
+                  roomId: booking.listing.roomId,
+                },
+              });
+              eventId = created.id;
+            }
           }
         }
       }

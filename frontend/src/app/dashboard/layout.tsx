@@ -9,7 +9,7 @@ import {
  Calendar, Users, Mail, CreditCard, LayoutDashboard,
  LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper, User, Sun, Moon, BarChart3,
  Building2, FileText, Key, MessageSquare, ScanLine, Briefcase, Clock, BookOpen,
- PanelLeftClose, PanelLeft, Store,
+ PanelLeftClose, PanelLeft, Store, CalendarCheck,
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import UserLegalGate from '@/components/UserLegalGate';
@@ -58,6 +58,8 @@ const NAV_TOOLTIPS: Record<string, string> = {
  'Réseau commercial': 'Organisations que vous parrainez',
  Protocole: 'Scan QR et accueil invités',
  'Tableau de bord': 'Vue d’ensemble et quotas',
+ Catalogue: 'Salles et prestataires publics',
+ 'Mes réservations': 'Demandes de dates envoyées',
  Statistiques: 'RSVP et analyses d’événements',
  Modèles: 'Concepteur d’invitations',
  'Facturation & plan': 'Forfait, quotas et upgrade',
@@ -216,6 +218,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  };
  }, [mobileMenuOpen]);
 
+ const isClientAccount = tenant?.accountKind === 'CLIENT' || access?.level === 'client';
+
+ useEffect(() => {
+ if (loading || !token || !user || !isClientAccount) return;
+ const allowed = ['/dashboard/bookings', '/dashboard/profile', '/dashboard/guide'].some(
+ (p) => pathname === p || pathname.startsWith(`${p}/`),
+ );
+ if (pathname.startsWith('/dashboard') && !allowed) {
+ router.replace('/dashboard/bookings');
+ }
+ }, [loading, token, user, isClientAccount, pathname, router]);
+
  if (loading || !token || !user) {
  return (
  <div className="min-h-screen flex items-center justify-center bg-background">
@@ -234,7 +248,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
  const isLicenseExpired = tenant?.licenseExpiresAt && new Date(tenant.licenseExpiresAt) < new Date();
  const isLicenseInactive = tenant && !tenant.licenseActive;
- const isBlocked = user.role !== 'SUPER_ADMIN' && user.role !== 'COMMERCIAL' && (isLicenseInactive || isLicenseExpired);
+ const isBlocked = !isClientAccount && user.role !== 'SUPER_ADMIN' && user.role !== 'COMMERCIAL' && (isLicenseInactive || isLicenseExpired);
 
  if (isBlocked) {
  return <PWARestrictedScreen />;
@@ -309,6 +323,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  items: [
  { name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar },
  { name: 'Protocole', href: '/dashboard/events?mode=protocol', tourId: 'nav-protocol', icon: ScanLine },
+ { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
+ { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
+ ],
+ },
+ ]
+ : isClientAccount
+ ? [
+ {
+ items: [
+ { name: 'Catalogue', href: '/marketplace', tourId: 'nav-catalogue', icon: Store },
+ { name: 'Mes réservations', href: '/dashboard/bookings', tourId: 'nav-bookings', icon: CalendarCheck },
  { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
  { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
  ],
@@ -417,6 +442,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  ? 'Console plateforme'
  : user?.role === 'COMMERCIAL'
  ? 'Espace commercial'
+ : isClientAccount
+ ? 'Espace client'
  : 'Workspace'}
  </span>
  </div>
@@ -473,14 +500,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  ) : tenant ? (
  <div className="p-3 bg-surface border border-border rounded-lg">
  <div className="text-[10px] text-muted font-semibold uppercase tracking-wider">
- Organisation
+ {isClientAccount ? 'Compte' : 'Organisation'}
  </div>
  <div className="font-semibold text-foreground text-sm truncate mt-0.5">
  {tenant.name}
  </div>
  <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/10 text-[10px] font-bold text-primary">
  <ShieldCheck className="w-3 h-3" />
- Plan {tenant.plan}
+ {isClientAccount ? 'Client' : `Plan ${tenant.plan}`}
  </div>
  </div>
  ) : null}
