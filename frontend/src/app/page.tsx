@@ -11,6 +11,7 @@ import LandingRolesSection from '@/components/landing/LandingRolesSection';
 import LandingWorkflowSection from '@/components/landing/LandingWorkflowSection';
 import LandingMobileSection from '@/components/landing/LandingMobileSection';
 import FaqSection from '@/components/landing/FaqSection';
+import LandingMapSection from '@/components/landing/LandingMapSection';
 import LandingVitrineSection from '@/components/landing/LandingVitrineSection';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import PublicCtaBand from '@/components/PublicCtaBand';
@@ -230,6 +231,8 @@ export default function Home() {
           ) : null}
         </div>
       </section>
+
+      <LandingMapSection />
 
       <LandingRolesSection />
       <LandingWorkflowSection />

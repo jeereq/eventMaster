@@ -473,6 +473,7 @@ export interface CatalogueItem {
   categoryLabel: string;
   location: string;
   coverUrl: string | null;
+  photos?: string[];
   priceFromFc: number | null;
   priceUnitLabel: string;
   latitude: number | null;
@@ -496,6 +497,7 @@ export function venueToCatalogueItem(venue: PublicVenue): CatalogueItem {
     categoryLabel: roomTypeLabels[venue.roomType] || 'Salle',
     location: formatLocationLine(venue),
     coverUrl: venue.coverUrl,
+    photos: venue.photos || [],
     priceFromFc: venue.priceFromFc,
     priceUnitLabel: venue.priceUnitLabel,
     latitude: venue.latitude,
@@ -519,6 +521,7 @@ export function serviceToCatalogueItem(service: PublicService): CatalogueItem {
     categoryLabel: service.categoryLabel,
     location: formatLocationLine(service),
     coverUrl: service.coverUrl,
+    photos: service.photos || [],
     priceFromFc: service.priceFromFc,
     priceUnitLabel: service.priceUnitLabel,
     latitude: service.latitude ?? null,
@@ -552,6 +555,7 @@ export function catalogueItemToMapMarker(item: CatalogueItem) {
     subtitle: [item.orgName, item.location].filter(Boolean).join(' · ') || undefined,
     kind: item.kind,
     coverUrl: item.coverUrl,
+    photos: (item.photos || []).filter(Boolean),
     priceLabel: item.priceFromFc != null ? `Dès ${formatFc(item.priceFromFc)}` : 'Sur devis',
     priceUnitLabel: item.priceUnitLabel,
     categoryLabel: item.kind === 'venue' ? 'Salle' : item.categoryLabel,

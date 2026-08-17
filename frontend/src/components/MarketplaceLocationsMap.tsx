@@ -3,7 +3,7 @@
 import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Building2, Loader2, MapPin, Navigation, Search, Sparkles, Users, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Building2, Loader2, MapPin, Navigation, Search, Sparkles, Users, X } from 'lucide-react';
 import { loadLeaflet, leafletBasemap, documentMapTheme, reverseGeocode, searchPlaces, type GeoPlace } from '@/lib/leafletLoader';
 import {
   fetchDrivingRoute,
@@ -12,7 +12,7 @@ import {
   type DrivingRoute,
 } from '@/lib/osrm';
 import { findRdcCity, cityForPoint, leafletMaxBounds, nominatimViewbox, pointInAllowedRdcCities, pointInBounds } from '@/lib/rdcCities';
-import { formatDistanceKm, haversineKm } from '@/lib/marketplace';
+import { formatDistanceKm, haversineKm, isVideoUrl } from '@/lib/marketplace';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
@@ -25,6 +25,7 @@ export interface MarketplaceMapMarker {
   subtitle?: string;
   kind?: 'venue' | 'service';
   coverUrl?: string | null;
+  photos?: string[];
   priceLabel?: string;
   priceUnitLabel?: string;
   categoryLabel?: string;
@@ -44,9 +45,35 @@ const VENUE_ICON_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="no
 const SERVICE_ICON_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>';
 const HERE_ICON_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>';
 
-function listingIconHtml(kind?: 'venue' | 'service') {
+function escapeAttr(value: string) {
+  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+function markerPhotoUrl(marker: { coverUrl?: string | null; photos?: string[] }) {
+  const list = [
+    marker.coverUrl,
+    ...(marker.photos || []),
+  ].filter((url): url is string => typeof url === 'string' && url.length > 0 && !isVideoUrl(url));
+  return list[0] || null;
+}
+
+function markerImageUrls(marker: { coverUrl?: string | null; photos?: string[] }) {
+  const seen = new Set<string>();
+  const list: string[] = [];
+  for (const url of [marker.coverUrl, ...(marker.photos || [])]) {
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    list.push(url);
+  }
+  return list;
+}
+
+function listingIconHtml(kind?: 'venue' | 'service', coverUrl?: string | null) {
   const isService = kind === 'service';
-  return `<span class="em-map-marker-hit"><span class="em-map-marker-inner"><span class="em-map-marker-head">${isService ? SERVICE_ICON_SVG : VENUE_ICON_SVG}</span><span class="em-map-marker-tail"></span></span></span>`;
+  const photo = coverUrl
+    ? `<img class="em-map-marker-photo" src="${escapeAttr(coverUrl)}" alt="" />`
+    : (isService ? SERVICE_ICON_SVG : VENUE_ICON_SVG);
+  return `<span class="em-map-marker-hit"><span class="em-map-marker-inner"><span class="em-map-marker-head${coverUrl ? ' has-photo' : ''}">${photo}</span><span class="em-map-marker-tail"></span></span></span>`;
 }
 
 function hereIconHtml() {
@@ -74,6 +101,63 @@ function hexToRgba(hex: string, alpha: number) {
   const g = (n >> 8) & 255;
   const b = n & 255;
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function MarkerPhotoGallery({
+  urls,
+  fallbackIcon,
+}: {
+  urls: string[];
+  fallbackIcon: React.ReactNode;
+}) {
+  const [index, setIndex] = useState(0);
+  const current = urls[index];
+
+  if (!current) {
+    return <div className="h-16 flex items-center justify-center">{fallbackIcon}</div>;
+  }
+
+  return (
+    <div className="relative h-40 bg-surface-muted">
+      {isVideoUrl(current) ? (
+        <video src={current} className="w-full h-full object-cover" muted playsInline preload="metadata" />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={current} alt="" className="w-full h-full object-cover" />
+      )}
+      {urls.length > 1 ? (
+        <>
+          <button
+            type="button"
+            className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-black/55 text-white inline-flex items-center justify-center"
+            onClick={() => setIndex((i) => (i - 1 + urls.length) % urls.length)}
+            aria-label="Image précédente"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-black/55 text-white inline-flex items-center justify-center"
+            onClick={() => setIndex((i) => (i + 1) % urls.length)}
+            aria-label="Image suivante"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
+            {urls.map((url, i) => (
+              <button
+                key={url}
+                type="button"
+                onClick={() => setIndex(i)}
+                className={cn('h-1.5 rounded-full transition', i === index ? 'w-4 bg-white' : 'w-1.5 bg-white/50')}
+                aria-label={`Image ${i + 1}`}
+              />
+            ))}
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
 }
 
 function MarkerPreviewCard({
@@ -121,17 +205,18 @@ function MarkerPreviewCard({
       >
         <X className="w-4 h-4" />
       </button>
-      {marker.coverUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={marker.coverUrl} alt="" className="w-full h-32 object-cover" />
-      ) : (
-        <div className={cn(
-          'h-16 flex items-center justify-center',
-          isService ? 'bg-[color:var(--festive-accent)]/12 text-[color:var(--festive-accent)]' : 'bg-primary/10 text-primary',
-        )}>
-          <KindIcon className="w-7 h-7" />
-        </div>
-      )}
+      <MarkerPhotoGallery
+        key={marker.id}
+        urls={markerImageUrls(marker)}
+        fallbackIcon={
+          <div className={cn(
+            'h-16 w-full flex items-center justify-center',
+            isService ? 'bg-[color:var(--festive-accent)]/12 text-[color:var(--festive-accent)]' : 'bg-primary/10 text-primary',
+          )}>
+            <KindIcon className="w-7 h-7" />
+          </div>
+        }
+      />
       <div className="p-3 space-y-2">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className={cn(
@@ -316,7 +401,7 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
   const hidePreviewRef = useRef(hidePreview);
   hidePreviewRef.current = hidePreview;
 
-  const markersKey = markers.map((m) => `${m.id}:${m.lat}:${m.lng}:${m.kind || ''}:${m.coverageRadiusKm || ''}`).join('|');
+  const markersKey = markers.map((m) => `${m.id}:${m.lat}:${m.lng}:${m.kind || ''}:${m.coverageRadiusKm || ''}:${m.coverUrl || ''}`).join('|');
   const centerKey = searchCenter ? `${searchCenter.lat}:${searchCenter.lng}:${radiusKm}` : '';
 
   useEffect(() => {
@@ -382,9 +467,9 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
           const leafletMarker = L.marker([m.lat, m.lng], {
             icon: L.divIcon({
               className: `leaflet-interactive em-map-marker ${isService ? 'em-map-marker-service' : 'em-map-marker-venue'}`,
-              html: listingIconHtml(m.kind),
-              iconSize: [40, 48],
-              iconAnchor: [20, 46],
+              html: listingIconHtml(m.kind, markerPhotoUrl(m)),
+              iconSize: [44, 52],
+              iconAnchor: [22, 50],
             }),
             interactive: true,
             bubblingMouseEvents: false,
