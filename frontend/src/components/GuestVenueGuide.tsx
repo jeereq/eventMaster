@@ -384,7 +384,7 @@ export default function GuestVenueGuide({
               ) : (
                 <>
                   <Play className="w-4 h-4 fill-current" />
-                  Start
+                  Démarrer le guide
                 </>
               )}
             </button>
@@ -400,7 +400,7 @@ export default function GuestVenueGuide({
           )}
 
           <p className="text-[10px] text-muted text-center">
-            Appuyez sur Start pour utiliser votre position et lancer l’itinéraire.
+            Appuyez sur « Démarrer le guide » pour utiliser votre position et lancer l’itinéraire.
           </p>
         </div>
       </div>

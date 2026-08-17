@@ -186,6 +186,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         router.push('/dashboard?tab=tenants');
       } else if (data.access?.level === 'commercial') {
         router.push('/dashboard/org-commercial');
+      } else if (data.access?.isProtocolOnly) {
+        router.push('/dashboard/events?mode=protocol');
       } else {
         router.push('/dashboard');
       }

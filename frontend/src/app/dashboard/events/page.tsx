@@ -261,6 +261,7 @@ export default function EventsPage() {
  const EVENTS_PER_PAGE = 8;
  const GUESTS_PER_PAGE = 8;
  const isProtocolOnly = access?.isProtocolOnly ?? false;
+ const [protocolDesk, setProtocolDesk] = useState(isProtocolOnly);
  const canManageEvents = access?.canManageAllEvents ?? false;
  const eventsAtLimit = isAtQuota(planQuota?.usage.events, planQuota?.limits.maxEvents);
  const guestsAtLimit = isAtQuota(planQuota?.usage.guests, planQuota?.limits.maxGuests);
@@ -435,6 +436,17 @@ export default function EventsPage() {
  useEffect(() => {
  setEventsListPage(1);
  }, [events.length]);
+
+ useEffect(() => {
+ const params = new URLSearchParams(window.location.search);
+ setProtocolDesk(isProtocolOnly || params.get('mode') === 'protocol');
+ }, [isProtocolOnly]);
+
+ useEffect(() => {
+ if (protocolDesk && selectedEvent) {
+ setActiveTab('protocol');
+ }
+ }, [protocolDesk, selectedEvent?.id]);
 
  const paginatedEventsList = paginateItems(events, eventsListPage, EVENTS_PER_PAGE);
  const paginatedGuestsList = paginateItems(filteredGuests, guestsListPage, GUESTS_PER_PAGE);
@@ -1541,10 +1553,14 @@ export default function EventsPage() {
  {!selectedEvent ? (
  <>
  <PageHeader
- title="Vos événements"
- description="Créez et gérez vos réceptions privées, vos listes d'invités et vos invitations."
+ title={protocolDesk ? 'Accueil jour J' : 'Vos événements'}
+ description={
+ protocolDesk
+ ? 'Choisissez l’événement, puis scannez les badges pour confirmer les présences.'
+ : "Créez et gérez vos réceptions privées, vos listes d'invités et vos invitations."
+ }
  breadcrumbs={
- <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Événements' }]} />
+ <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: protocolDesk ? 'Protocole' : 'Événements' }]} />
  }
  action={
  <div className="flex flex-wrap items-center gap-2">
@@ -1557,7 +1573,7 @@ export default function EventsPage() {
  onColumnsChange={setEventsColumns}
  />
  )}
- {access?.canCreateEvents ? (
+ {access?.canCreateEvents && !protocolDesk ? (
  <div className="flex flex-col items-end gap-1">
  <Button
  onClick={openCreateEventModal}
@@ -1577,7 +1593,7 @@ export default function EventsPage() {
  </div>
  }
  />
- {events.length === 0 && (
+ {events.length === 0 && !protocolDesk && (
  <GettingStartedChecklist hasEvents={false} />
  )}
  </>
@@ -1635,6 +1651,7 @@ export default function EventsPage() {
  >
  Actualiser
  </Button>
+ {!protocolDesk && (
  <Button
  type="button"
  size="sm"
@@ -1643,6 +1660,7 @@ export default function EventsPage() {
  >
  Configurer
  </Button>
+ )}
  </div>
  </div>
  )}
@@ -1672,6 +1690,16 @@ export default function EventsPage() {
  >
  {events.length === 0 ? (
  <div className="col-span-full text-center py-14 px-6 bg-surface border border-border rounded-[var(--radius-card)]">
+ {protocolDesk ? (
+ <>
+ <ScanLine className="w-12 h-12 text-muted mx-auto mb-4 opacity-50" />
+ <h3 className="text-lg font-semibold text-foreground">Aucun événement à accueillir</h3>
+ <p className="text-sm text-muted mt-2 max-w-md mx-auto leading-relaxed">
+ L’organisateur doit d’abord créer un événement et vous y affecter. Revenez ensuite pour scanner les badges.
+ </p>
+ </>
+ ) : (
+ <>
  <Calendar className="w-12 h-12 text-muted mx-auto mb-4 opacity-50" />
  <h3 className="text-lg font-semibold text-foreground">Créer votre premier événement</h3>
  <p className="text-sm text-muted mt-2 max-w-md mx-auto leading-relaxed">
@@ -1698,6 +1726,8 @@ export default function EventsPage() {
  </Link>
  )}
  </div>
+ )}
+ </>
  )}
  </div>
  ) : (
@@ -1730,7 +1760,7 @@ export default function EventsPage() {
  onClick={() => handleManageEvent(event)}
  className="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary/15 transition"
  >
- Gérer
+ {protocolDesk ? 'Accueillir' : 'Gérer'}
  <ChevronRight className="w-3.5 h-3.5" />
  </button>
  ) : (
@@ -1738,11 +1768,12 @@ export default function EventsPage() {
  type="button"
  onClick={() => handleManageEvent(event)}
  className="inline-flex items-center"
- title="Voir détails"
+ title={protocolDesk ? 'Ouvrir le protocole' : 'Voir détails'}
  >
  <ListRowAction />
  </button>
  )}
+ {!protocolDesk && canManageEvents && (
  <button
  type="button"
  onClick={() => handleDeleteEvent(event.id)}
@@ -1751,6 +1782,7 @@ export default function EventsPage() {
  >
  <Trash2 className="w-4 h-4" />
  </button>
+ )}
  </>
  );
 

@@ -313,6 +313,12 @@ function DashboardPageContent() {
 
  const searchParams = useSearchParams();
  const router = useRouter();
+
+ useEffect(() => {
+ if (access?.isProtocolOnly) {
+ router.replace('/dashboard/events?mode=protocol');
+ }
+ }, [access?.isProtocolOnly, router]);
  const tabParam = searchParams.get('tab');
  const sectionParam = searchParams.get('section');
  const activeAnalyticsSection: AnalyticsSection =

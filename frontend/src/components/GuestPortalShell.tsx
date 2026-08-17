@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { PartyPopper } from 'lucide-react';
+import { PartyPopper, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { GuestPortalHomeLink } from '@/components/GuestPortalNav';
 import CelebrateMood from '@/components/CelebrateMood';
@@ -60,6 +60,14 @@ export default function GuestPortalShell({
               </span>
             )}
             {guestId && <GuestPortalHomeLink guestId={guestId} />}
+            <Link
+              href="/guide/invite"
+              className="inline-flex items-center gap-1 px-2 py-1.5 rounded-[var(--radius-button)] border border-border bg-surface text-[11px] font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition"
+              title="Aide invité"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Aide</span>
+            </Link>
           </div>
         </div>
         {tabs}
