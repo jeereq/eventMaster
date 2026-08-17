@@ -9,7 +9,7 @@ import {
  Calendar, Users, Mail, CreditCard, LayoutDashboard,
  LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper, User, Sun, Moon, BarChart3,
  Building2, FileText, Key, MessageSquare, ScanLine, Briefcase, Clock, BookOpen,
- PanelLeftClose, PanelLeft,
+ PanelLeftClose, PanelLeft, Store,
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import UserLegalGate from '@/components/UserLegalGate';
@@ -319,6 +319,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  items: [
  { name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard },
  { name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar },
+ ...(access?.canManageRooms
+ ? [{ name: 'Marketplace', href: '/dashboard/marketplace', tourId: 'nav-marketplace', icon: Store }]
+ : []),
  ...(access?.canProtocolAllEvents || access?.level === 'staff'
  ? planFeatures?.protocolQr === false
  ? []

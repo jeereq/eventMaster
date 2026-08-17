@@ -288,19 +288,19 @@ export default function Home() {
         <div className="page-container flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
           <div className="max-w-xl space-y-2">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--festive-accent)]">
-              Salles
+              Catalogue
             </p>
             <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-              Louer une salle, sans quitter EventMaster
+              Salles et prestataires, sans quitter EventMaster
             </h2>
             <p className="text-sm text-muted leading-relaxed">
-              Parcourez les espaces publiés par les organisations : capacité, plan 2D, tarif de départ.
-              Demandez un devis, puis créez votre événement dans le même outil.
+              Trouvez un lieu, un traiteur, un DJ ou un photographe. Demandez un devis,
+              puis créez votre événement dans le même outil.
             </p>
           </div>
-          <Link href="/marketplace/salles">
+          <Link href="/marketplace">
             <Button rightIcon={<ArrowRight className="w-4 h-4" />}>
-              Voir les salles
+              Voir le catalogue
             </Button>
           </Link>
         </div>

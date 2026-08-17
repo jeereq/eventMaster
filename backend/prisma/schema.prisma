@@ -68,6 +68,19 @@ enum MarketplaceInquiryStatus {
   CONTACTED
 }
 
+enum ServiceCategory {
+  CATERING
+  PHOTOGRAPHY
+  VIDEO
+  DJ
+  DECORATION
+  SECURITY
+  FLORIST
+  TRANSPORT
+  MC
+  OTHER
+}
+
 model Tenant {
   id            String     @id @default(uuid())
   name          String
@@ -98,6 +111,7 @@ model Tenant {
   platformInvoices      PlatformInvoice[]
   vendorProfile VendorProfile?
   venueListings VenueListing[]
+  serviceOfferings ServiceOffering[]
   marketplaceInquiries MarketplaceInquiry[] @relation("InquiryFromTenant")
   
   managerId     String?
@@ -168,6 +182,7 @@ model Event {
   shares      GuestShare[]
   posts       EventPost[]
   staff       EventStaff[]
+  marketplaceInquiries MarketplaceInquiry[]
 }
 
 model Guest {
@@ -429,6 +444,8 @@ model VendorProfile {
   bio         String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  offerings ServiceOffering[]
 }
 
 model VenueListing {
@@ -459,8 +476,12 @@ model VenueListing {
 
 model MarketplaceInquiry {
   id          String                    @id @default(uuid())
-  listingId   String
-  listing     VenueListing              @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  listingId   String?
+  listing     VenueListing?             @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  offeringId  String?
+  offering    ServiceOffering?          @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  eventId     String?
+  event       Event?                    @relation(fields: [eventId], references: [id], onDelete: SetNull)
   fromName    String
   fromEmail   String
   fromPhone   String?
@@ -473,7 +494,34 @@ model MarketplaceInquiry {
   createdAt   DateTime                  @default(now())
 
   @@index([listingId, createdAt])
+  @@index([offeringId, createdAt])
   @@index([fromEmail])
+}
+
+model ServiceOffering {
+  id                String           @id @default(uuid())
+  tenantId          String
+  tenant            Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vendorProfileId   String
+  vendorProfile     VendorProfile    @relation(fields: [vendorProfileId], references: [id], onDelete: Cascade)
+  slug              String           @unique
+  category          ServiceCategory
+  title             String
+  description       String?
+  city              String?
+  coverageRadiusKm  Int?
+  priceFromFc       Int?
+  priceUnit         VenuePriceUnit   @default(EVENT)
+  photos            Json?
+  isPublic          Boolean          @default(false)
+  publishedAt       DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  inquiries MarketplaceInquiry[]
+
+  @@index([isPublic, category])
+  @@index([tenantId])
 }
 
 model RoomStaff {

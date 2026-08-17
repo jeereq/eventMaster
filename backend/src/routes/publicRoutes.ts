@@ -14,6 +14,9 @@ import {
   listPublicVenues,
   getPublicVenue,
   createVenueInquiry,
+  listPublicServices,
+  getPublicService,
+  createServiceInquiry,
 } from '../controllers/marketplaceController';
 
 const router = Router();
@@ -79,6 +82,9 @@ router.get('/templates', async (_req: Request, res: Response) => {
 router.get('/venues', listPublicVenues);
 router.get('/venues/:slug', getPublicVenue);
 router.post('/venues/:slug/inquire', optionalAuth, createVenueInquiry);
+router.get('/services', listPublicServices);
+router.get('/services/:slug', getPublicService);
+router.post('/services/:slug/inquire', optionalAuth, createServiceInquiry);
 
 // POST /api/public/contact
 router.post('/contact', async (req: Request, res: Response) => {

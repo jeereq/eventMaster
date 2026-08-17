@@ -1,4 +1,4 @@
-import { VenuePriceUnit } from '@prisma/client';
+import { ServiceCategory, VenuePriceUnit } from '@prisma/client';
 
 const PRICE_UNITS: VenuePriceUnit[] = ['EVENT', 'DAY', 'HOUR'];
 
@@ -7,6 +7,34 @@ export function parsePriceUnit(value: unknown): VenuePriceUnit {
     return value as VenuePriceUnit;
   }
   return 'EVENT';
+}
+
+const SERVICE_CATEGORIES: ServiceCategory[] = [
+  'CATERING', 'PHOTOGRAPHY', 'VIDEO', 'DJ', 'DECORATION',
+  'SECURITY', 'FLORIST', 'TRANSPORT', 'MC', 'OTHER',
+];
+
+export function parseServiceCategory(value: unknown): ServiceCategory | null {
+  if (typeof value === 'string' && SERVICE_CATEGORIES.includes(value as ServiceCategory)) {
+    return value as ServiceCategory;
+  }
+  return null;
+}
+
+export function serviceCategoryLabel(category: ServiceCategory): string {
+  const labels: Record<ServiceCategory, string> = {
+    CATERING: 'Traiteur',
+    PHOTOGRAPHY: 'Photographie',
+    VIDEO: 'Vidéo',
+    DJ: 'DJ / sonorisation',
+    DECORATION: 'Décoration',
+    SECURITY: 'Sécurité',
+    FLORIST: 'Fleuriste',
+    TRANSPORT: 'Transport',
+    MC: 'Maître de cérémonie',
+    OTHER: 'Autre',
+  };
+  return labels[category];
 }
 
 export function sanitizeLayoutBlueprint(blueprint: unknown): unknown | null {

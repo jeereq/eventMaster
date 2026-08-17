@@ -10,7 +10,7 @@ import { Button, Input } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import type { PublicVenue } from '@/lib/marketplace';
 import { roomTypeLabels, type RoomType } from '@/lib/roomLayoutUtils';
-import { Building2, MapPin, Search, Users, ArrowRight, Loader2 } from 'lucide-react';
+import MarketplacePublicNav from '@/components/MarketplacePublicNav';
 
 const ROOM_FILTERS: Array<{ id: string; label: string }> = [
   { id: '', label: 'Tous les types' },
@@ -77,6 +77,7 @@ export default function MarketplaceVenuesPage() {
             Capacité, plan 2D et tarif de départ. Envoyez une demande de devis au propriétaire —
             sans quitter EventMaster.
           </p>
+          <MarketplacePublicNav active="venues" />
         </div>
       </section>
 
