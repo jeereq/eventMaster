@@ -78,14 +78,18 @@ function hexToRgba(hex: string, alpha: number) {
 
 function MarkerPreviewCard({
   marker,
+  pinned,
   onKeep,
   onHide,
+  onClose,
   onDirections,
   searchCenter,
 }: {
   marker: MarketplaceMapMarker;
+  pinned?: boolean;
   onKeep: () => void;
   onHide: () => void;
+  onClose: () => void;
   onDirections: (marker: MarketplaceMapMarker) => void;
   searchCenter?: { lat: number; lng: number } | null;
 }) {
@@ -99,10 +103,18 @@ function MarkerPreviewCard({
 
   return (
     <div
-      className="absolute z-30 left-3 right-3 bottom-3 sm:left-auto sm:right-3 sm:w-[22rem] rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-soft)] overflow-hidden max-h-[70%] overflow-y-auto"
+      className="absolute z-30 left-3 right-3 bottom-3 sm:left-auto sm:right-3 sm:w-[22rem] rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-soft)] overflow-hidden max-h-[70%] overflow-y-auto pointer-events-auto"
       onMouseEnter={onKeep}
       onMouseLeave={onHide}
     >
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute z-10 top-2 right-2 p-1.5 rounded-lg bg-surface/95 text-muted hover:text-foreground border border-border shadow-sm"
+        aria-label="Fermer les détails"
+      >
+        <X className="w-4 h-4" />
+      </button>
       {marker.coverUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={marker.coverUrl} alt="" className="w-full h-32 object-cover" />
@@ -128,6 +140,9 @@ function MarkerPreviewCard({
           ) : null}
           {distance ? (
             <span className="text-[10px] font-semibold text-primary">{distance}</span>
+          ) : null}
+          {pinned ? (
+            <span className="text-[10px] text-muted">Reste affichée</span>
           ) : null}
         </div>
         <h3 className="font-semibold text-sm text-foreground leading-snug">{marker.title}</h3>
@@ -224,6 +239,7 @@ export default function MarketplaceLocationsMap({
   const [osmResults, setOsmResults] = useState<GeoPlace[]>([]);
   const [searching, setSearching] = useState(false);
   const [hovered, setHovered] = useState<MarketplaceMapMarker | null>(null);
+  const [pinned, setPinned] = useState(false);
   const [mapReady, setMapReady] = useState(0);
   const [mapTheme, setMapTheme] = useState<'light' | 'dark'>(documentMapTheme);
   const [route, setRoute] = useState<DrivingRoute | null>(null);
@@ -235,23 +251,54 @@ export default function MarketplaceLocationsMap({
   const didAutoRef = useRef(false);
   const watchIdRef = useRef<number | null>(null);
   const lastRecalcRef = useRef(0);
+  const pinnedRef = useRef(false);
 
-  const showPreview = (marker: MarketplaceMapMarker) => {
-    if (hideTimer.current) clearTimeout(hideTimer.current);
+  const clearHideTimer = () => {
+    if (hideTimer.current) {
+      clearTimeout(hideTimer.current);
+      hideTimer.current = null;
+    }
+  };
+
+  const showPreview = (marker: MarketplaceMapMarker, pin = false) => {
+    clearHideTimer();
+    if (pinnedRef.current && !pin) return;
+    if (pin) {
+      pinnedRef.current = true;
+      setPinned(true);
+    }
     setHovered(marker);
   };
-  const scheduleHide = () => {
-    if (markersRef.current.length === 1 && !navigateOnClickRef.current) return;
-    if (hideTimer.current) clearTimeout(hideTimer.current);
-    hideTimer.current = setTimeout(() => setHovered(null), 280);
+
+  const hidePreview = (force = false) => {
+    if (!force && pinnedRef.current) return;
+    if (!force && markersRef.current.length === 1 && !navigateOnClickRef.current) return;
+    clearHideTimer();
+    pinnedRef.current = false;
+    setPinned(false);
+    setHovered(null);
   };
+
+  const scheduleHide = () => {
+    if (pinnedRef.current) return;
+    if (markersRef.current.length === 1 && !navigateOnClickRef.current) return;
+    clearHideTimer();
+    hideTimer.current = setTimeout(() => hidePreview(false), 900);
+  };
+
   const showPreviewRef = useRef(showPreview);
   showPreviewRef.current = showPreview;
+  const scheduleHideRef = useRef(scheduleHide);
+  scheduleHideRef.current = scheduleHide;
+  const hidePreviewRef = useRef(hidePreview);
+  hidePreviewRef.current = hidePreview;
 
   const markersKey = markers.map((m) => `${m.id}:${m.lat}:${m.lng}:${m.kind || ''}:${m.coverageRadiusKm || ''}`).join('|');
   const centerKey = searchCenter ? `${searchCenter.lat}:${searchCenter.lng}:${radiusKm}` : '';
 
   useEffect(() => {
+    pinnedRef.current = false;
+    setPinned(false);
     setHovered(null);
   }, [markersKey]);
 
@@ -322,13 +369,15 @@ export default function MarketplaceLocationsMap({
 
           leafletMarker.on('mouseover', () => {
             leafletMarker.getElement()?.classList.add('is-hovered');
-            showPreviewRef.current(m);
+            showPreviewRef.current(m, false);
           });
           leafletMarker.on('mouseout', () => {
             leafletMarker.getElement()?.classList.remove('is-hovered');
+            scheduleHideRef.current();
           });
-          leafletMarker.on('click', () => {
-            showPreviewRef.current(m);
+          leafletMarker.on('click', (event: any) => {
+            L.DomEvent.stop(event);
+            showPreviewRef.current(m, true);
             if (navigateOnClickRef.current) {
               routerRef.current.push(m.href);
             }
@@ -414,6 +463,7 @@ export default function MarketplaceLocationsMap({
             void paintRouteRef.current(point, routeDestRef.current);
             return;
           }
+          hidePreviewRef.current(true);
           if (searchable && !listingSearch) {
             const allowed = cityMeta
               ? pointInBounds(point.lat, point.lng, cityMeta.bounds)
@@ -489,12 +539,7 @@ export default function MarketplaceLocationsMap({
       el.classList.toggle('is-hovered', Boolean(focus && id === focus.id));
     });
 
-    if (!focus) {
-      if (overviewBoundsRef.current) {
-        map.fitBounds(overviewBoundsRef.current, { maxZoom: 14, animate: true });
-      }
-      return;
-    }
+    if (!focus) return;
 
     const radius = focus.kind === 'service' && focus.coverageRadiusKm && focus.coverageRadiusKm > 0
       ? focus.coverageRadiusKm
@@ -512,9 +557,6 @@ export default function MarketplaceLocationsMap({
         fillOpacity: 1,
       }).addTo(map);
       radiusLayerRef.current = circle;
-      map.fitBounds(circle.getBounds().pad(0.12), { maxZoom: 13, animate: true });
-    } else if (hovered) {
-      map.flyTo([focus.lat, focus.lng], Math.max(map.getZoom(), 14), { duration: 0.4 });
     }
   }, [hovered, mapReady]);
 
@@ -624,8 +666,9 @@ export default function MarketplaceLocationsMap({
 
   useEffect(() => {
     if (!navigateOnClick && markersRef.current.length === 1) {
-      setHovered(markersRef.current[0]);
+      showPreview(markersRef.current[0], true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [markersKey, navigateOnClick]);
 
   useEffect(() => {
@@ -767,13 +810,7 @@ export default function MarketplaceLocationsMap({
   return (
     <div className="space-y-2">
       {showSearch && !searchOverlay && searchField}
-      <div
-        className="relative"
-        onMouseEnter={() => {
-          if (hideTimer.current) clearTimeout(hideTimer.current);
-        }}
-        onMouseLeave={scheduleHide}
-      >
+      <div className="relative">
         {searchOverlay && searchField && (
           <div className="absolute z-20 top-3 left-3 right-3 sm:right-auto sm:w-80">
             {searchField}
@@ -809,9 +846,11 @@ export default function MarketplaceLocationsMap({
         {hovered && !route && !routing && (
           <MarkerPreviewCard
             marker={hovered}
+            pinned={pinned}
             searchCenter={searchCenter}
             onKeep={() => showPreview(hovered)}
             onHide={scheduleHide}
+            onClose={() => hidePreview(true)}
             onDirections={startDirections}
           />
         )}
@@ -852,7 +891,7 @@ export default function MarketplaceLocationsMap({
       </div>
       {listingSearch && variant !== 'focus' && (
         <p className="text-[11px] text-muted">
-          Bâtiment = salle, étoile = prestataire. Survolez pour le tarif, le lieu et la distance.
+          Survolez un pin, ou cliquez-le pour garder les détails. Fermez avec × ou en cliquant la carte.
           {searchCenter && radiusKm > 0 ? ` Filtre : dans un rayon de ${radiusKm} km.` : ''}
           {markers.length ? ` · ${markers.length} fiche${markers.length > 1 ? 's' : ''} avec GPS` : ''}.
         </p>
