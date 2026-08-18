@@ -404,7 +404,7 @@ export default function TablePlanner({
  'w-full',
  draggingTableId && 'em-floor-canvas--dragging',
  )}
- style={resolveFloorStyle('parquet')}
+ style={resolveFloorStyle('parquet', undefined)}
  >
  {fixtures.map((fixture) => (
  <div

@@ -73,7 +73,7 @@ export function getFloorPatternStyle(floorType: FloorType, _accentColor = '#94a3
 
 export function resolveFloorStyle(
   floorType: FloorType | undefined,
-  floorImageUrl: string | undefined,
+  floorImageUrl?: string | undefined,
   accentColor?: string,
 ): React.CSSProperties {
   if (floorImageUrl) {
