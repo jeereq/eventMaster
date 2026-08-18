@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Heart, Store, Wallet, Bookmark } from 'lucide-react';
+import { Heart, Minimize2, Store, Wallet, Bookmark } from 'lucide-react';
 import { api } from '@/lib/api';
 import {
   Alert,
@@ -22,6 +22,7 @@ import CatalogueFilterBar, {
 import CatalogueResults, { CatalogueResultsSkeleton } from '@/components/CatalogueResults';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
+import { CatalogueFocusStage } from '@/components/CatalogueSearchLayout';
 import {
   EMPTY_CATALOGUE_GEO,
   appendCatalogueGeoParams,
@@ -30,7 +31,6 @@ import {
   catalogueItemToMapMarker,
   clearCatalogueGeoChip,
   eventToCatalogueItem,
-  isCatalogueMapView,
   resolveCatalogueGeo,
   serviceToCatalogueItem,
   sortCatalogueByDistance,
@@ -108,6 +108,7 @@ function ClientMarketplaceInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { mode, setView, gridCols, setGridCols } = useCatalogueView();
+  const lastBrowseRef = useRef<Exclude<import('@/lib/marketplace').CatalogueViewMode, 'map' | 'focus'>>('grid');
   const { q: query, setQ: setQuery, searchQ, applied, draft, setDraft, page, applyFilters, setPage } = useCatalogueQueryState(QUERY_OPTS);
   const { isFavorite, toggleFavorite, items: favoriteRows, loading: favoritesLoading, reload: reloadFavorites } = useListingFavorites();
   const [venues, setVenues] = useState<PublicVenue[]>([]);
@@ -395,10 +396,96 @@ function ClientMarketplaceInner() {
     }
   };
 
-  const mapMode = tab === 'explore' && isCatalogueMapView(mode);
+  const mapMode = tab === 'explore' && mode === 'map';
+  const focusMode = tab === 'explore' && mode === 'focus';
+
+  useEffect(() => {
+    if (mode === 'grid' || mode === 'list') lastBrowseRef.current = mode;
+  }, [mode]);
+
+  useEffect(() => {
+    if (!focusMode) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [focusMode]);
+
+  const exploreFilterBar = (variant: 'card' | 'float') => (
+    <CatalogueFilterBar
+      variant={variant}
+      hideViewToggle={false}
+      compactToggle={variant === 'float'}
+      search={query}
+      onSearchChange={setQuery}
+      searchPlaceholder="Nom, organisation, ville…"
+      view={mode}
+      onViewChange={setView}
+      gridCols={gridCols}
+      onGridColsChange={setGridCols}
+      resultLabel={!loading ? `${visible.length} fiche${visible.length > 1 ? 's' : ''}` : undefined}
+      chips={chips}
+      onRemoveChip={(id) => {
+        applyFilters(clearCatalogueExtraChip(clearCatalogueGeoChip(applied, id), id));
+      }}
+      onClearChips={() => applyFilters(emptyFilters)}
+      onOpen={() => {
+        setDraft(applied);
+        setFilterError('');
+      }}
+      onApply={async () => {
+        try {
+          const geo = await resolveCatalogueGeo(draft);
+          applyFilters({ ...draft, ...geo });
+        } catch (err: unknown) {
+          setFilterError(err instanceof Error ? err.message : 'Filtre de proximité impossible.');
+          throw err;
+        }
+      }}
+      modalTitle="Filtrer le marketplace"
+      filters={
+        <CatalogueEntityFilterFields
+          showKind
+          value={draft}
+          extras={draft}
+          error={filterError}
+          onChange={(geo, extras) => setDraft({ ...geo, ...extras })}
+        />
+      }
+    />
+  );
 
   return (
     <div className="space-y-6 w-full">
+      {focusMode ? (
+        <CatalogueFocusStage
+          className="fixed inset-0 z-50 min-h-dvh bg-background"
+          markers={markers}
+          loading={loading}
+          error={filterError}
+          searchCenter={searchCenter}
+          radiusKm={applied.radiusKm}
+          city={applied.city}
+          searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
+          header={
+            <div className="flex items-start gap-2">
+              <p className="flex-1 min-w-0 h-9 inline-flex items-center px-3 rounded-full bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-xs font-semibold text-foreground">
+                Vue focus — salles, prestataires et événements
+              </p>
+              <button
+                type="button"
+                onClick={() => setView(lastBrowseRef.current)}
+                className="h-9 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-full bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-xs font-semibold text-foreground hover:bg-surface transition hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <Minimize2 className="w-3.5 h-3.5" />
+                Quitter
+              </button>
+            </div>
+          }
+          filters={exploreFilterBar('float')}
+        />
+      ) : null}
       <PageHeader
         title="Marketplace"
         description="Explorez les salles et prestataires, enregistrez vos favoris, puis préparez un événement selon votre budget."
@@ -446,45 +533,7 @@ function ClientMarketplaceInner() {
 
       {tab === 'explore' ? (
         <>
-          <CatalogueFilterBar
-            search={query}
-            onSearchChange={setQuery}
-            searchPlaceholder="Nom, organisation, ville…"
-            view={mode}
-            onViewChange={setView}
-            gridCols={gridCols}
-            onGridColsChange={setGridCols}
-            compactToggle
-            resultLabel={!loading ? `${visible.length} fiche${visible.length > 1 ? 's' : ''}` : undefined}
-            chips={chips}
-            onRemoveChip={(id) => {
-              applyFilters(clearCatalogueExtraChip(clearCatalogueGeoChip(applied, id), id));
-            }}
-            onClearChips={() => applyFilters(emptyFilters)}
-            onOpen={() => {
-              setDraft(applied);
-              setFilterError('');
-            }}
-            onApply={async () => {
-              try {
-                const geo = await resolveCatalogueGeo(draft);
-                applyFilters({ ...draft, ...geo });
-              } catch (err: unknown) {
-                setFilterError(err instanceof Error ? err.message : 'Filtre de proximité impossible.');
-                throw err;
-              }
-            }}
-            modalTitle="Filtrer le marketplace"
-            filters={
-              <CatalogueEntityFilterFields
-                showKind
-                value={draft}
-                extras={draft}
-                error={filterError}
-                onChange={(geo, extras) => setDraft({ ...geo, ...extras })}
-              />
-            }
-          />
+          {exploreFilterBar('card')}
 
           {loading ? (
             <CatalogueResultsSkeleton mode={mapMode ? 'map' : mode === 'list' ? 'list' : 'grid'} count={pageSize} gridCols={gridCols} />

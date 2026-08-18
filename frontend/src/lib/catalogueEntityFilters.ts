@@ -77,13 +77,14 @@ export function splitCatalogueExtras(extras: CatalogueEntityExtras): Record<stri
   };
 }
 
-export function catalogueEntityExtraChips(extras: CatalogueEntityExtras): Array<{ id: string; label: string; value: string }> {
-  const chips: Array<{ id: string; label: string; value: string }> = [];
+export function catalogueEntityExtraChips(extras: CatalogueEntityExtras): Array<{ id: string; label: string; value: string; tone?: 'venue' | 'service' | 'event' | 'neutral' }> {
+  const chips: Array<{ id: string; label: string; value: string; tone?: 'venue' | 'service' | 'event' | 'neutral' }> = [];
   if (extras.kind !== 'all') {
     chips.push({
       id: 'kind',
       label: 'Type',
       value: extras.kind === 'venue' ? 'Salles' : extras.kind === 'service' ? 'Prestataires' : 'Événements',
+      tone: extras.kind,
     });
   }
   if (extras.roomType) {
@@ -91,6 +92,7 @@ export function catalogueEntityExtraChips(extras: CatalogueEntityExtras): Array<
       id: 'roomType',
       label: 'Salle',
       value: ROOM_TYPE_FILTER_OPTIONS.find((opt) => opt.id === extras.roomType)?.label || extras.roomType,
+      tone: 'venue',
     });
   }
   if (extras.category) {
@@ -98,6 +100,7 @@ export function catalogueEntityExtraChips(extras: CatalogueEntityExtras): Array<
       id: 'category',
       label: 'Métier',
       value: SERVICE_CATEGORY_LABELS[extras.category as keyof typeof SERVICE_CATEGORY_LABELS] || extras.category,
+      tone: 'service',
     });
   }
   if (extras.mobility) {
@@ -105,6 +108,7 @@ export function catalogueEntityExtraChips(extras: CatalogueEntityExtras): Array<
       id: 'mobility',
       label: 'Intervention',
       value: extras.mobility === 'on_site' ? 'Sur place' : 'Se déplace',
+      tone: 'service',
     });
   }
   if (extras.priceUnit) {
@@ -112,10 +116,11 @@ export function catalogueEntityExtraChips(extras: CatalogueEntityExtras): Array<
       id: 'priceUnit',
       label: 'Tarif',
       value: PRICE_UNIT_OPTIONS.find((opt) => opt.id === extras.priceUnit)?.label || extras.priceUnit,
+      tone: 'service',
     });
   }
-  if (extras.entry === 'paid') chips.push({ id: 'entry', label: 'Entrée', value: 'Payant' });
-  if (extras.entry === 'free') chips.push({ id: 'entry', label: 'Entrée', value: 'Libre' });
+  if (extras.entry === 'paid') chips.push({ id: 'entry', label: 'Entrée', value: 'Payant', tone: 'event' });
+  if (extras.entry === 'free') chips.push({ id: 'entry', label: 'Entrée', value: 'Libre', tone: 'event' });
   return chips;
 }
 

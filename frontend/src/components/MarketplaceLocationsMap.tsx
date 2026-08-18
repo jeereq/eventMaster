@@ -50,10 +50,10 @@ export interface MarketplaceMapMarker {
 
 const KINSHASA = { lat: -4.325, lng: 15.322 };
 
-const VENUE_ICON_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18"/><path d="M6 12H4a2 2 0 0 0-2 2v8h20v-8a2 2 0 0 0-2-2h-2"/><path d="M10 6h4M10 10h4M10 14h4M10 18h4"/></svg>';
-const SERVICE_ICON_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>';
-const EVENT_ICON_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>';
-const HERE_ICON_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>';
+const VENUE_ICON_SVG = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18"/><path d="M6 12H4a2 2 0 0 0-2 2v8h20v-8a2 2 0 0 0-2-2h-2"/><path d="M10 6h4M10 10h4M10 14h4M10 18h4"/></svg>';
+const SERVICE_ICON_SVG = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>';
+const EVENT_ICON_SVG = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>';
+const HERE_ICON_SVG = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>';
 
 function escapeAttr(value: string) {
   return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
@@ -81,13 +81,15 @@ function markerImageUrls(marker: { coverUrl?: string | null; photos?: string[] }
 function listingIconHtml(kind?: 'venue' | 'service' | 'event', coverUrl?: string | null, title?: string) {
   const pinClass = kind === 'service' ? 'is-service' : kind === 'event' ? 'is-event' : 'is-venue';
   const icon = kind === 'service' ? SERVICE_ICON_SVG : kind === 'event' ? EVENT_ICON_SVG : VENUE_ICON_SVG;
+  const kindLabel = kind === 'service' ? 'Presta' : kind === 'event' ? 'Évén.' : 'Salle';
+  const chip = `<span class="em-map-marker-chip">${kindLabel}</span>`;
   const caption = title
     ? `<span class="em-map-marker-caption">${escapeAttr(title)}</span>`
     : '';
   if (coverUrl) {
-    return `<span class="em-map-marker-hit em-map-marker-hit-photo">${caption}<span class="em-map-marker-photo-pin ${pinClass}"><span class="em-map-marker-photo-wrap"><span class="em-map-marker-photo-frame"><img class="em-map-marker-photo" src="${escapeAttr(coverUrl)}" alt="" /></span><span class="em-map-marker-photo-badge">${icon}</span></span><span class="em-map-marker-photo-pointer"></span></span></span>`;
+    return `<span class="em-map-marker-hit em-map-marker-hit-photo">${chip}${caption}<span class="em-map-marker-photo-pin ${pinClass}"><span class="em-map-marker-photo-wrap"><span class="em-map-marker-photo-frame"><img class="em-map-marker-photo" src="${escapeAttr(coverUrl)}" alt="" /></span><span class="em-map-marker-photo-badge">${icon}</span></span><span class="em-map-marker-photo-pointer"></span></span></span>`;
   }
-  return `<span class="em-map-marker-hit">${caption}<span class="em-map-marker-inner"><span class="em-map-marker-head">${icon}</span><span class="em-map-marker-tail"></span></span></span>`;
+  return `<span class="em-map-marker-hit">${chip}${caption}<span class="em-map-marker-inner"><span class="em-map-marker-head">${icon}</span><span class="em-map-marker-tail"></span></span></span>`;
 }
 
 function hereIconHtml() {
@@ -511,8 +513,8 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
             icon: L.divIcon({
               className: `leaflet-interactive em-map-marker ${markerKindClass(m.kind)}${hasPhoto ? ' has-photo-pin' : ''}`,
               html: listingIconHtml(m.kind, photoUrl, m.title),
-              iconSize: hasPhoto ? [48, 58] : [52, 62],
-              iconAnchor: hasPhoto ? [24, 56] : [26, 60],
+              iconSize: [56, 64],
+              iconAnchor: [28, 62],
             }),
             interactive: true,
             bubblingMouseEvents: false,

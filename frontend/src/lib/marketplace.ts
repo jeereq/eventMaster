@@ -455,8 +455,8 @@ export function appendCatalogueGeoParams(params: URLSearchParams, filters: Catal
 
 export function catalogueGeoChips(
   filters: CatalogueGeoState,
-  extra: Array<{ id: string; label: string; value: string }> = [],
-): Array<{ id: string; label: string; value: string }> {
+  extra: Array<{ id: string; label: string; value: string; tone?: 'venue' | 'service' | 'event' | 'neutral' }> = [],
+): Array<{ id: string; label: string; value: string; tone?: 'venue' | 'service' | 'event' | 'neutral' }> {
   const next: Array<{ id: string; label: string; value: string }> = [];
   if (filters.city.trim()) next.push({ id: 'city', label: 'Ville', value: filters.city.trim() });
   if (filters.proximity !== 'near') {

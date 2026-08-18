@@ -27,6 +27,7 @@ export type CatalogueFilterChip = {
   id: string;
   label: string;
   value: string;
+  tone?: 'venue' | 'service' | 'event' | 'neutral';
 };
 
 export function CatalogueFilterField({
@@ -147,18 +148,26 @@ export default function CatalogueFilterBar({
 
   const chipsRow = (count > 0 || resultLabel) ? (
     <div className={cn(
-      'flex items-center gap-2',
+      'flex items-center gap-1.5',
       variant === 'float' ? 'overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none]' : 'flex-wrap',
     )}>
-      {chips.map((chip) => (
+      {chips.map((chip, index) => (
         <span
           key={chip.id}
-          className="inline-flex items-center gap-1.5 max-w-full pl-2.5 pr-1 py-1 rounded-full border border-primary/20 bg-primary/10 text-xs shrink-0"
+          style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
+          className={cn(
+            'em-filter-chip inline-flex items-center gap-1 max-w-[11rem] shrink-0',
+            variant === 'float' ? 'em-filter-chip-sm' : 'em-filter-chip-md',
+            chip.tone === 'venue' && 'em-filter-chip-venue',
+            chip.tone === 'service' && 'em-filter-chip-service',
+            chip.tone === 'event' && 'em-filter-chip-event',
+            (!chip.tone || chip.tone === 'neutral') && 'em-filter-chip-neutral',
+          )}
         >
           <button
             type="button"
             onClick={openModal}
-            className="inline-flex items-center gap-1.5 min-w-0 text-left"
+            className="inline-flex items-center gap-1 min-w-0 text-left"
           >
             <span className="text-muted shrink-0">{chip.label}</span>
             <span className="font-semibold text-foreground truncate">{chip.value}</span>
@@ -167,10 +176,10 @@ export default function CatalogueFilterBar({
             <button
               type="button"
               onClick={() => onRemoveChip(chip.id)}
-              className="p-0.5 rounded-full text-muted hover:text-foreground hover:bg-primary/15 transition"
+              className="p-0.5 rounded-full text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition"
               aria-label={`Retirer ${chip.label} ${chip.value}`}
             >
-              <X className="w-3 h-3" />
+              <X className="w-2.5 h-2.5" />
             </button>
           ) : null}
         </span>
@@ -179,13 +188,13 @@ export default function CatalogueFilterBar({
         <button
           type="button"
           onClick={onClearChips}
-          className="text-[11px] font-semibold text-muted hover:text-foreground px-1 shrink-0"
+          className="text-[10px] font-semibold text-muted hover:text-foreground px-1 shrink-0"
         >
           Tout effacer
         </button>
       ) : null}
       {resultLabel ? (
-        <span className="ml-auto text-[11px] text-muted font-medium shrink-0">{resultLabel}</span>
+        <span className="ml-auto text-[10px] text-muted font-medium shrink-0">{resultLabel}</span>
       ) : null}
     </div>
   ) : null;
