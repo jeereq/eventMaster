@@ -288,20 +288,22 @@ export default function CatalogueMobileExplore({
   const selected = items.find((item) => item.id === selectedId) || null;
 
   return (
-    <div className="relative h-[calc(100dvh-3.5rem)] overflow-hidden bg-background overscroll-none">
-      <MarketplaceLocationsMap
-        ref={mapApi}
-        markers={markers}
-        immersive
-        selectedId={selectedId}
-        onMarkerSelect={(marker) => select(marker.id)}
-        searchCenter={searchCenter}
-        radiusKm={radiusKm}
-        city={city}
-        searchOriginLabel={searchOriginLabel}
-      />
+    <div className="relative isolate h-[calc(100dvh-3.5rem)] overflow-hidden bg-background overscroll-none">
+      <div className="absolute inset-0 z-0">
+        <MarketplaceLocationsMap
+          ref={mapApi}
+          markers={markers}
+          immersive
+          selectedId={selectedId}
+          onMarkerSelect={(marker) => select(marker.id)}
+          searchCenter={searchCenter}
+          radiusKm={radiusKm}
+          city={city}
+          searchOriginLabel={searchOriginLabel}
+        />
+      </div>
 
-      <div className="absolute z-30 top-0 left-0 right-0 p-3 space-y-2 pointer-events-none">
+      <div className="absolute z-10 top-0 left-0 right-0 p-3 space-y-2 bg-gradient-to-b from-background/90 via-background/50 to-transparent pointer-events-none">
         <div className="pointer-events-auto space-y-2">
           {onExit ? (
             <button
@@ -321,7 +323,7 @@ export default function CatalogueMobileExplore({
         <button
           type="button"
           onClick={() => mapApi.current?.recenter()}
-          className="absolute z-30 right-3 h-11 w-11 rounded-full bg-surface/90 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center justify-center text-foreground"
+          className="absolute z-10 right-3 h-11 w-11 rounded-full bg-surface/90 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center justify-center text-foreground"
           style={{ bottom: sheetH + 16, transition: dragging ? 'none' : 'bottom 0.32s cubic-bezier(0.22, 1, 0.36, 1)' }}
           aria-label="Recentrer la carte"
         >
@@ -331,7 +333,7 @@ export default function CatalogueMobileExplore({
 
       <section
         ref={sheetRef}
-        className="absolute z-40 left-0 right-0 bottom-0 rounded-t-[1.75rem] border border-border bg-surface/95 backdrop-blur-xl shadow-[0_-12px_40px_rgba(15,23,42,0.18)] flex flex-col overflow-hidden"
+        className="absolute z-20 left-0 right-0 bottom-0 rounded-t-[1.75rem] border border-border bg-surface/95 backdrop-blur-xl shadow-[0_-12px_40px_rgba(15,23,42,0.18)] flex flex-col overflow-hidden"
         style={{
           height: sheetH,
           paddingBottom: 'env(safe-area-inset-bottom)',

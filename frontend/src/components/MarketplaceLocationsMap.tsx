@@ -911,9 +911,9 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
     }
   };
 
-  const showSearch = !immersive && variant !== 'focus' && (searchable || listingSearch);
-  const searchOverlay = false;
+  const showSearch = !immersive && (searchable || listingSearch);
   const fillViewport = immersive || variant === 'focus';
+  const searchOverlay = fillViewport || listingSearch || searchable;
   const mapHeight = fillViewport ? '100%' : height;
 
   const searchField = showSearch ? (
@@ -996,16 +996,16 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
   return (
     <div className={cn(fillViewport ? 'h-full' : 'space-y-2', className)}>
       {showSearch && !searchOverlay && searchField}
-      <div className={cn('relative', fillViewport && 'h-full')}>
+      <div className={cn('relative isolate', fillViewport && 'h-full')}>
         {searchOverlay && searchField && (
-          <div className="absolute z-20 top-3 left-3 right-3 sm:right-auto sm:w-80">
+          <div className="absolute z-[1100] top-3 left-3 right-3 sm:right-auto sm:w-80 pointer-events-auto">
             {searchField}
           </div>
         )}
         {!immersive ? (
           <div className={cn(
-            'absolute z-20 pointer-events-none',
-            variant === 'focus' ? 'bottom-3 left-3' : 'top-3 right-3',
+            'absolute z-[1100] pointer-events-none',
+            fillViewport ? 'bottom-3 left-3' : 'top-3 right-3',
           )}>
             <div className="rounded-xl border border-border bg-surface/95 shadow-[var(--shadow-soft)] px-2.5 py-2 space-y-1.5 text-[11px] text-foreground">
               <p className="inline-flex items-center gap-1.5">
@@ -1051,7 +1051,7 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
         ) : null}
         {(route || routeHint || routing) && (
           <div className={cn(
-            'absolute z-40 left-3 right-3 sm:right-auto sm:w-80 rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-soft)] p-3 space-y-2 max-h-[42%] overflow-auto',
+            'absolute z-[1100] left-3 right-3 sm:right-auto sm:w-80 rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-soft)] p-3 space-y-2 max-h-[42%] overflow-auto',
             immersive || variant === 'focus' ? 'top-[11.5rem] max-h-[28%]' : 'top-3',
           )}>
             <div className="flex items-start justify-between gap-2">
