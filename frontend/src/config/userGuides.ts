@@ -413,8 +413,8 @@ export const USER_GUIDES: UserGuide[] = [
     canDo: [
       'Explorer salles, prestataires et événements publics dans le Marketplace du tableau de bord',
       'Mettre des fiches en favoris (filtre salles / prestataires, vue grille ou liste)',
-      'Préparer un événement selon le budget et obtenir trois packs distincts',
-      'Sauvegarder un pack de recherche ou composer un pack parfait depuis les favoris',
+      'Préparer un événement selon un brief budget (enveloppe min/max, date, métiers, répartition) et obtenir trois packs',
+      'Sauvegarder un brief, un pack de recherche, ou composer un pack parfait depuis les favoris',
       'Demander un devis ou une date, puis suivre les réservations (filtres statut / dates)',
       'Retrouver vos billets d’événements publics et le badge QR',
       'Passer organisateur ou prestataire depuis Mon compte',
@@ -443,7 +443,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'prepare-event',
         title: 'Préparer un événement et sauvegarder un pack',
         content:
-          '1. Onglet Préparer un événement.\n2. Choisissez le type, le budget (min. 50 000 FC), la ville et le nombre d’invités.\n3. Cochez les métiers voulus, lancez la recherche.\n4. Comparez les packs économique, équilibré et confort ; remplacez une ligne si besoin.\n5. Sauvegarder ce pack, ou créez un pack parfait depuis Mes packs + vos favoris.',
+          '1. Onglet Préparer un événement.\n2. Indiquez le type, le budget min/max (max ≥ 50 000 FC), la marge, la ville/commune, les invités et la date.\n3. Choisissez si la salle est obligatoire, optionnelle ou absente. Cliquez les métiers : obligatoire → souhaité → exclu.\n4. Affiner : curseurs de répartition, favoris forcés, équipements salle, élargissement auto.\n5. Lancez la recherche, comparez les 3 packs, élargissez un poste manquant ou figez une ligne puis relancez.\n6. Sauvegardez le brief (pour le réutiliser) et/ou le pack dans Mes packs.',
         links: [{ label: 'Marketplace', href: '/dashboard/catalogue?hub=plan' }],
       },
       {
@@ -477,6 +477,7 @@ export const USER_GUIDES: UserGuide[] = [
     tips: [
       'Le compte client n’exige pas de licence SaaS.',
       'Les trois packs d’une recherche évitent de proposer la même salle si le catalogue le permet.',
+      'Enregistrez un brief pour relancer la même recherche plus tard ; figez une salle puis relancez pour recalculer uniquement les prestataires.',
       'La commission vendeur (8 %) est distincte de l’abonnement EventMaster ; vous ne la payez pas en tant que client.',
     ],
   },

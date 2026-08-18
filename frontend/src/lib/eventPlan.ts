@@ -1,5 +1,5 @@
-import type { ListingEventTypeId } from '@/lib/listingDetails';
-import type { ServiceCategory } from '@/lib/marketplace';
+import type { ListingAmenityId, ListingEventTypeId } from '@/lib/listingDetails';
+import { SERVICE_CATEGORIES, SERVICE_CATEGORY_LABELS, type ServiceCategory } from '@/lib/marketplace';
 
 export const EVENT_PLAN_SLOTS: Record<ListingEventTypeId, { required: ServiceCategory[]; optional: ServiceCategory[] }> = {
   wedding: {
@@ -32,6 +32,174 @@ export const EVENT_PLAN_SLOTS: Record<ListingEventTypeId, { required: ServiceCat
   },
 };
 
+/** Parts par défaut (pourcentages). Les options peuvent dépasser 100 — elles sont renormalisées. */
+export const EVENT_PACK_SHARES: Record<ListingEventTypeId, Record<string, number>> = {
+  wedding: { venue: 38, CATERING: 28, PHOTOGRAPHY: 10, DJ: 8, DECORATION: 10, VIDEO: 6, FLORIST: 5, MC: 4 },
+  birthday: { venue: 40, CATERING: 28, DJ: 14, DECORATION: 10, PHOTOGRAPHY: 8 },
+  corporate: { venue: 42, CATERING: 28, MC: 8, PHOTOGRAPHY: 8, VIDEO: 7, TRANSPORT: 6 },
+  gala: { venue: 40, CATERING: 26, DJ: 8, DECORATION: 10, MC: 6, PHOTOGRAPHY: 8, VIDEO: 6 },
+  religious: { venue: 40, CATERING: 26, DECORATION: 12, TRANSPORT: 8, PHOTOGRAPHY: 8, MC: 5 },
+  private: { venue: 40, CATERING: 28, DJ: 12, DECORATION: 10, PHOTOGRAPHY: 8 },
+  shooting: { venue: 35, PHOTOGRAPHY: 28, VIDEO: 18, DECORATION: 10, OTHER: 8 },
+};
+
+export type SlotPriority = 'required' | 'optional' | 'excluded';
+export type IncludeVenue = 'yes' | 'no' | 'if_fits';
+export type FavoriteMode = 'bonus' | 'force' | 'ignore';
+export type MatchMode = 'exact' | 'widen';
+export type MissingStrategy = 'gap' | 'reallocate' | 'widen_city';
+export type AmenityMode = 'preferred' | 'blocking';
+export type MarginPct = 0 | 5 | 10;
+
+export type EventPlanLock = {
+  kind: 'venue' | 'service';
+  slug: string;
+  category?: ServiceCategory;
+};
+
+export type EventPlanBrief = {
+  eventType: ListingEventTypeId;
+  budgetMinFc: number;
+  budgetMaxFc: number;
+  marginPct: MarginPct;
+  city: string;
+  commune: string;
+  guestCount: number;
+  eventDate: string;
+  includeVenue: IncludeVenue;
+  slots: Record<ServiceCategory, SlotPriority>;
+  shares: Record<string, number>;
+  favoriteMode: FavoriteMode;
+  matchMode: MatchMode;
+  missingStrategy: MissingStrategy;
+  distinctVenues: boolean;
+  venueAmenities: ListingAmenityId[];
+  amenityMode: AmenityMode;
+};
+
+export type EventPlanRequest = EventPlanBrief & {
+  lock?: EventPlanLock;
+  flexSlots?: ServiceCategory[];
+};
+
+export const EVENT_PLAN_BRIEF_STORAGE_KEY = 'em-event-plan-brief';
+
+export function defaultSlotPriorities(eventType: ListingEventTypeId): Record<ServiceCategory, SlotPriority> {
+  const spec = EVENT_PLAN_SLOTS[eventType];
+  return Object.fromEntries(
+    SERVICE_CATEGORIES.map((category) => [
+      category,
+      spec.required.includes(category) ? 'required' : spec.optional.includes(category) ? 'optional' : 'excluded',
+    ]),
+  ) as Record<ServiceCategory, SlotPriority>;
+}
+
+export function defaultShares(eventType: ListingEventTypeId, includeVenue: IncludeVenue, slots: Record<ServiceCategory, SlotPriority>): Record<string, number> {
+  const preset = EVENT_PACK_SHARES[eventType] || {};
+  const keys = [
+    ...(includeVenue === 'no' ? [] : ['venue']),
+    ...SERVICE_CATEGORIES.filter((category) => slots[category] !== 'excluded'),
+  ];
+  const raw: Record<string, number> = {};
+  for (const key of keys) raw[key] = preset[key] || 8;
+  const total = Object.values(raw).reduce((sum, value) => sum + value, 0) || 1;
+  const next: Record<string, number> = {};
+  for (const key of keys) next[key] = Math.max(1, Math.round((raw[key] / total) * 100));
+  return next;
+}
+
+export function createDefaultBrief(eventType: ListingEventTypeId = 'wedding'): EventPlanBrief {
+  const slots = defaultSlotPriorities(eventType);
+  return {
+    eventType,
+    budgetMinFc: 0,
+    budgetMaxFc: 1500000,
+    marginPct: 5,
+    city: '',
+    commune: '',
+    guestCount: 100,
+    eventDate: '',
+    includeVenue: 'yes',
+    slots,
+    shares: defaultShares(eventType, 'yes', slots),
+    favoriteMode: 'bonus',
+    matchMode: 'widen',
+    missingStrategy: 'reallocate',
+    distinctVenues: true,
+    venueAmenities: [],
+    amenityMode: 'preferred',
+  };
+}
+
+export function hydrateBrief(raw: unknown): EventPlanBrief {
+  const base = createDefaultBrief();
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return base;
+  const value = raw as Partial<EventPlanBrief>;
+  const eventType = value.eventType && EVENT_PLAN_SLOTS[value.eventType] ? value.eventType : base.eventType;
+  const slots = { ...defaultSlotPriorities(eventType), ...(value.slots || {}) };
+  const includeVenue = value.includeVenue === 'no' || value.includeVenue === 'if_fits' || value.includeVenue === 'yes'
+    ? value.includeVenue
+    : 'yes';
+  return {
+    ...base,
+    ...value,
+    eventType,
+    includeVenue,
+    slots,
+    shares: value.shares && Object.keys(value.shares).length ? value.shares : defaultShares(eventType, includeVenue, slots),
+    budgetMinFc: Number(value.budgetMinFc) || 0,
+    budgetMaxFc: Number(value.budgetMaxFc) || Number((value as { budgetFc?: number }).budgetFc) || base.budgetMaxFc,
+    marginPct: value.marginPct === 0 || value.marginPct === 5 || value.marginPct === 10 ? value.marginPct : 5,
+    guestCount: Number(value.guestCount) || 0,
+    venueAmenities: Array.isArray(value.venueAmenities) ? value.venueAmenities : [],
+  };
+}
+
+export function readStoredBrief(): EventPlanBrief {
+  try {
+    const raw = localStorage.getItem(EVENT_PLAN_BRIEF_STORAGE_KEY);
+    return raw ? hydrateBrief(JSON.parse(raw)) : createDefaultBrief();
+  } catch {
+    return createDefaultBrief();
+  }
+}
+
+export function writeStoredBrief(brief: EventPlanBrief) {
+  try {
+    localStorage.setItem(EVENT_PLAN_BRIEF_STORAGE_KEY, JSON.stringify(brief));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function briefWithEventType(brief: EventPlanBrief, eventType: ListingEventTypeId): EventPlanBrief {
+  const slots = defaultSlotPriorities(eventType);
+  return {
+    ...brief,
+    eventType,
+    slots,
+    shares: defaultShares(eventType, brief.includeVenue, slots),
+  };
+}
+
+export function shareRows(brief: EventPlanBrief): Array<{ key: string; label: string; pct: number }> {
+  const keys = [
+    ...(brief.includeVenue === 'no' ? [] : ['venue']),
+    ...SERVICE_CATEGORIES.filter((category) => brief.slots[category] !== 'excluded'),
+  ];
+  return keys.map((key) => ({
+    key,
+    label: key === 'venue' ? 'Salle' : SERVICE_CATEGORY_LABELS[key as ServiceCategory],
+    pct: brief.shares[key] || 0,
+  }));
+}
+
+export function cycleSlotPriority(current: SlotPriority): SlotPriority {
+  if (current === 'required') return 'optional';
+  if (current === 'optional') return 'excluded';
+  return 'required';
+}
+
 export type PlanItem = {
   kind: 'venue' | 'service';
   slug: string;
@@ -56,6 +224,12 @@ export type PlanMissingSlot = {
   reason: string;
 };
 
+export type PlanAllocation = {
+  key: string;
+  label: string;
+  amountFc: number;
+};
+
 export type SavedPackItem = Omit<PlanItem, 'alternatives' | 'match' | 'reused' | 'favorite' | 'category'>;
 
 export type SavedEventPack = {
@@ -74,6 +248,14 @@ export type SavedEventPack = {
   venue: SavedPackItem | null;
   services: SavedPackItem[];
   createdAt: string;
+};
+
+export type SavedEventBrief = {
+  id: string;
+  name: string;
+  payload: EventPlanBrief;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export function snapshotPlanItems(items: PlanItem[]): SavedPackItem[] {
@@ -106,5 +288,27 @@ export type PlanPackage = {
   notes?: string[];
   filledCount?: number;
   requiredCount?: number;
+  allocation?: PlanAllocation[];
 };
 
+export type EventPlanRelaxed = {
+  commune?: boolean;
+  city?: boolean;
+  eventType?: boolean;
+  availability?: boolean;
+};
+
+export type EventPlanResult = {
+  eventType: ListingEventTypeId;
+  budgetFc: number;
+  budgetMinFc: number;
+  budgetMaxFc: number;
+  spendableFc: number;
+  city: string | null;
+  commune: string | null;
+  guestCount: number | null;
+  eventDate: string | null;
+  relaxed: EventPlanRelaxed;
+  packages: PlanPackage[];
+  catalog: { venues: number; services: number };
+};

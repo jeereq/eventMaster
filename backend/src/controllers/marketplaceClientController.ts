@@ -3,6 +3,7 @@ import { prisma } from '../db';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { parsePhotoUrls, coverFromMedia, priceUnitLabel, serviceCategoryLabel } from '../utils/publicVenue';
 import { buildEventPlanProposals } from '../services/eventPlannerService';
+import { parseEventPlanInput, serializeBriefPayload } from '../services/eventPlanBrief';
 
 function parseKind(value: unknown): 'venue' | 'service' | null {
   return value === 'venue' || value === 'service' ? value : null;
@@ -160,12 +161,8 @@ export async function planEvent(req: AuthenticatedRequest, res: Response) {
       select: { kind: true, slug: true },
     });
     const result = await buildEventPlanProposals({
-      eventType: req.body?.eventType,
-      budgetFc: req.body?.budgetFc,
-      city: req.body?.city,
-      guestCount: req.body?.guestCount,
+      ...(req.body && typeof req.body === 'object' ? req.body : {}),
       favoriteSlugs: favorites,
-      categories: req.body?.categories,
     });
     return res.json(result);
   } catch (error: any) {
@@ -332,6 +329,76 @@ export async function deleteSavedPack(req: AuthenticatedRequest, res: Response) 
   } catch (error) {
     console.error('deleteSavedPack:', error);
     return res.status(500).json({ error: 'Impossible de supprimer le pack.' });
+  }
+}
+
+function serializeSavedBrief(row: { id: string; name: string; payload: unknown; createdAt: Date; updatedAt: Date }) {
+  return {
+    id: row.id,
+    name: row.name,
+    payload: row.payload,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+export async function listSavedBriefs(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ error: 'Non authentifié.' });
+    const rows = await prisma.savedEventBrief.findMany({
+      where: { userId: req.user.id },
+      orderBy: { updatedAt: 'desc' },
+      take: 30,
+    });
+    return res.json({ briefs: rows.map(serializeSavedBrief) });
+  } catch (error) {
+    console.error('listSavedBriefs:', error);
+    return res.status(500).json({ error: 'Impossible de charger les briefs.' });
+  }
+}
+
+export async function createSavedBrief(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ error: 'Non authentifié.' });
+    const name = typeof req.body?.name === 'string' ? req.body.name.trim().slice(0, 80) : '';
+    if (!name) return res.status(400).json({ error: 'Donnez un nom à ce brief.' });
+    const parsed = parseEventPlanInput(req.body?.payload && typeof req.body.payload === 'object'
+      ? req.body.payload
+      : req.body || {});
+    const count = await prisma.savedEventBrief.count({ where: { userId: req.user.id } });
+    if (count >= 20) {
+      return res.status(400).json({ error: 'Maximum 20 briefs enregistrés. Supprimez-en un pour en ajouter.' });
+    }
+    const brief = await prisma.savedEventBrief.create({
+      data: {
+        userId: req.user.id,
+        name,
+        payload: serializeBriefPayload(parsed),
+      },
+    });
+    return res.status(201).json({ brief: serializeSavedBrief(brief) });
+  } catch (error: any) {
+    if (error?.status === 400) {
+      return res.status(400).json({ error: error.message });
+    }
+    console.error('createSavedBrief:', error);
+    return res.status(500).json({ error: 'Impossible d’enregistrer le brief.' });
+  }
+}
+
+export async function deleteSavedBrief(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ error: 'Non authentifié.' });
+    const id = typeof req.params.id === 'string' ? req.params.id : '';
+    if (!id) return res.status(400).json({ error: 'Brief introuvable.' });
+    const result = await prisma.savedEventBrief.deleteMany({
+      where: { id, userId: req.user.id },
+    });
+    if (!result.count) return res.status(404).json({ error: 'Brief introuvable.' });
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error('deleteSavedBrief:', error);
+    return res.status(500).json({ error: 'Impossible de supprimer le brief.' });
   }
 }
 

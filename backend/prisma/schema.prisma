@@ -191,6 +191,7 @@ model User {
   pushDeviceTokens      PushDeviceToken[]
   listingFavorites      ListingFavorite[]
   savedEventPacks       SavedEventPack[]
+  savedEventBriefs      SavedEventBrief[]
   ticketOrders          TicketOrder[]
 }
 
@@ -683,6 +684,18 @@ model SavedEventPack {
   items      Json
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model SavedEventBrief {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  payload   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }

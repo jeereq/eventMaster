@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Heart, Loader2, Sparkles, Store, Wallet, Bookmark } from 'lucide-react';
+import { Heart, Store, Wallet, Bookmark } from 'lucide-react';
 import { api } from '@/lib/api';
 import {
   Alert,
@@ -27,7 +27,6 @@ import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
 import {
   EMPTY_CATALOGUE_GEO,
   SERVICE_MOBILITY_OPTIONS,
-  SERVICE_CATEGORY_LABELS,
   appendCatalogueGeoParams,
   catalogueGeoChips,
   catalogueItemMatchesGeo,
@@ -47,14 +46,27 @@ import {
   type PublicEventCard,
   type PublicService,
   type PublicVenue,
-  type ServiceCategory,
   type ServiceMobility,
 } from '@/lib/marketplace';
 import { useCatalogueQueryState, useRememberListReturn } from '@/lib/catalogueQuery';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { favoriteToCatalogueItem, useListingFavorites } from '@/lib/listingFavorites';
-import { LISTING_EVENT_TYPES, eventTypeLabel, type ListingEventTypeId } from '@/lib/listingDetails';
-import { EVENT_PLAN_SLOTS, snapshotPlanItems, type PlanItem, type PlanPackage, type SavedEventPack } from '@/lib/eventPlan';
+import { eventTypeLabel } from '@/lib/listingDetails';
+import {
+  createDefaultBrief,
+  hydrateBrief,
+  readStoredBrief,
+  snapshotPlanItems,
+  writeStoredBrief,
+  type EventPlanBrief,
+  type EventPlanLock,
+  type PlanItem,
+  type PlanMissingSlot,
+  type PlanPackage,
+  type SavedEventBrief,
+  type SavedEventPack,
+} from '@/lib/eventPlan';
+import EventPlanBriefForm from '@/components/EventPlanBriefForm';
 import EventPlanPacks from '@/components/EventPlanPacks';
 import EventSavedPacks from '@/components/EventSavedPacks';
 import CatalogueViewToggle from '@/components/CatalogueViewToggle';
@@ -104,15 +116,16 @@ function ClientMarketplaceInner() {
   const [filterError, setFilterError] = useState('');
   const [pageSize, setPageSize] = usePageSize('dashboard-catalogue', 12);
 
-  const [eventType, setEventType] = useState<ListingEventTypeId>('wedding');
-  const [budgetFc, setBudgetFc] = useState('1500000');
-  const [planCity, setPlanCity] = useState('');
-  const [guestCount, setGuestCount] = useState('100');
+  const [brief, setBrief] = useState<EventPlanBrief>(createDefaultBrief);
+  const [briefReady, setBriefReady] = useState(false);
   const [planning, setPlanning] = useState(false);
   const [planError, setPlanError] = useState('');
   const [packages, setPackages] = useState<PlanPackage[]>([]);
-  const [planCategories, setPlanCategories] = useState<ServiceCategory[]>(EVENT_PLAN_SLOTS.wedding.required);
+  const [spendableFc, setSpendableFc] = useState(0);
+  const [planLock, setPlanLock] = useState<EventPlanLock | null>(null);
+  const [flexSlots, setFlexSlots] = useState<string[]>([]);
   const [savedPacks, setSavedPacks] = useState<SavedEventPack[]>([]);
+  const [savedBriefs, setSavedBriefs] = useState<SavedEventBrief[]>([]);
   const [favKind, setFavKind] = useState<'all' | 'venue' | 'service'>('all');
   const [favQ, setFavQ] = useState('');
   const [favMode, setFavMode] = useState<'grid' | 'list'>('grid');
@@ -194,9 +207,34 @@ function ClientMarketplaceInner() {
     }
   }, []);
 
+  const loadSavedBriefs = useCallback(async () => {
+    try {
+      const data = await api.get('/marketplace/event-briefs');
+      setSavedBriefs((data.briefs || []).map((row: SavedEventBrief) => ({
+        ...row,
+        payload: hydrateBrief(row.payload),
+      })));
+    } catch {
+      setSavedBriefs([]);
+    }
+  }, []);
+
   useEffect(() => {
-    if (tab === 'packs' || tab === 'plan') void loadSavedPacks();
-  }, [tab, loadSavedPacks]);
+    setBrief(readStoredBrief());
+    setBriefReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!briefReady) return;
+    writeStoredBrief(brief);
+  }, [brief, briefReady]);
+
+  useEffect(() => {
+    if (tab === 'packs' || tab === 'plan') {
+      void loadSavedPacks();
+      void loadSavedBriefs();
+    }
+  }, [tab, loadSavedPacks, loadSavedBriefs]);
 
   const items = useMemo(
     () => sortCatalogueByDistance([
@@ -257,20 +295,27 @@ function ClientMarketplaceInner() {
     void toggleFavorite(item.kind, item.slug);
   };
 
-  const runPlan = async () => {
+  const runPlan = async (overrides?: { lock?: EventPlanLock | null; flexSlots?: string[]; brief?: EventPlanBrief }) => {
+    const current = overrides?.brief || brief;
+    const lock = overrides?.lock === undefined ? planLock : overrides.lock;
+    const nextFlex = overrides?.flexSlots === undefined ? flexSlots : overrides.flexSlots;
     setPlanning(true);
     setPlanError('');
     try {
       const data = await api.post('/marketplace/event-plan', {
-        eventType,
-        budgetFc: Number(budgetFc.replace(/\s/g, '')),
-        city: planCity || undefined,
-        guestCount: Number(guestCount) || undefined,
-        categories: planCategories,
+        ...current,
+        budgetFc: current.budgetMaxFc,
+        city: current.city || undefined,
+        commune: current.commune || undefined,
+        guestCount: current.guestCount || undefined,
+        eventDate: current.eventDate || undefined,
+        lock: lock || undefined,
+        flexSlots: nextFlex.length ? nextFlex : undefined,
       });
       setPackages(data.packages || []);
+      setSpendableFc(Number(data.spendableFc) || brief.budgetMaxFc);
       if (!(data.packages || []).length) {
-        setPlanError('Aucune proposition pour ce budget. Élargissez la ville, le type ou le montant.');
+        setPlanError('Aucune proposition pour ce budget. Élargissez la ville, le type, la date ou le montant.');
       }
     } catch (err: unknown) {
       setPackages([]);
@@ -281,7 +326,7 @@ function ClientMarketplaceInner() {
   };
 
   const replacePackItem = (packId: string, currentSlug: string, next: PlanItem) => {
-    const budget = Number(budgetFc.replace(/\s/g, '')) || 0;
+    const budget = brief.budgetMaxFc || 0;
     setPackages((current) => current.map((pack) => {
       if (pack.id !== packId) return pack;
       const rows = pack.venue ? [pack.venue, ...pack.services] : pack.services;
@@ -312,21 +357,13 @@ function ClientMarketplaceInner() {
     }));
   };
 
-  const slotOptions = EVENT_PLAN_SLOTS[eventType];
-  const togglePlanCategory = (category: ServiceCategory) => {
-    setPlanCategories((current) => (
-      current.includes(category)
-        ? current.filter((item) => item !== category)
-        : [...current, category]
-    ));
-  };
-
   const persistPack = async (payload: {
     name: string;
     eventType: string;
     budgetFc: number;
     city?: string;
     guestCount?: number;
+    eventDate?: string;
     source: 'search' | 'custom';
     styleLabel?: string;
     items: ReturnType<typeof snapshotPlanItems>;
@@ -342,11 +379,12 @@ function ClientMarketplaceInner() {
     try {
       const items = snapshotPlanItems(saveTarget.venue ? [saveTarget.venue, ...saveTarget.services] : saveTarget.services);
       await persistPack({
-        name: saveName.trim() || `${eventTypeLabel(eventType)} · ${saveTarget.label}`,
-        eventType,
-        budgetFc: Number(budgetFc.replace(/\s/g, '')) || saveTarget.totalFc,
-        city: planCity || undefined,
-        guestCount: Number(guestCount) || undefined,
+        name: saveName.trim() || `${eventTypeLabel(brief.eventType)} · ${saveTarget.label}`,
+        eventType: brief.eventType,
+        budgetFc: brief.budgetMaxFc || saveTarget.totalFc,
+        city: brief.city || undefined,
+        guestCount: brief.guestCount || undefined,
+        eventDate: brief.eventDate || undefined,
         source: 'search',
         styleLabel: saveTarget.label,
         items,
@@ -572,109 +610,80 @@ function ClientMarketplaceInner() {
 
       {tab === 'plan' ? (
         <div className="space-y-5">
-          <div className="bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-4">
-            <div>
-              <h2 className="text-sm font-semibold text-foreground">Budget et type d’événement</h2>
-              <p className="text-xs text-muted mt-1 leading-relaxed">
-                Trois packs distincts dans votre enveloppe. Décochez les métiers inutiles, puis remplacez une ligne si besoin.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <label className="space-y-1.5">
-                <span className="block text-xs font-semibold text-muted">Type d’événement</span>
-                <select
-                  value={eventType}
-                  onChange={(e) => {
-                    const next = e.target.value as ListingEventTypeId;
-                    setEventType(next);
-                    setPlanCategories(EVENT_PLAN_SLOTS[next].required);
-                    setPackages([]);
-                  }}
-                  className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
-                >
-                  {LISTING_EVENT_TYPES.map((item) => (
-                    <option key={item.id} value={item.id}>{item.label}</option>
-                  ))}
-                </select>
-              </label>
-              <Input
-                label="Budget (FC)"
-                type="number"
-                min={50000}
-                step={10000}
-                value={budgetFc}
-                onChange={(e) => setBudgetFc(e.target.value)}
-                required
-              />
-              <label className="space-y-1.5">
-                <span className="block text-xs font-semibold text-muted">Ville</span>
-                <select
-                  value={planCity}
-                  onChange={(e) => setPlanCity(e.target.value)}
-                  className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
-                >
-                  <option value="">Toutes</option>
-                  <option value="Kinshasa">Kinshasa</option>
-                  <option value="Lubumbashi">Lubumbashi</option>
-                </select>
-              </label>
-              <Input
-                label="Invités"
-                type="number"
-                min={1}
-                value={guestCount}
-                onChange={(e) => setGuestCount(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted">Prestations à inclure · {eventTypeLabel(eventType)}</p>
-              <div className="flex flex-wrap gap-1.5">
-                {[...slotOptions.required, ...slotOptions.optional].map((category) => {
-                  const checked = planCategories.includes(category);
-                  const optional = slotOptions.optional.includes(category);
-                  return (
-                    <button
-                      key={category}
-                      type="button"
-                      onClick={() => togglePlanCategory(category)}
-                      className={cn(
-                        'px-2.5 py-1 rounded-full text-[11px] font-semibold border transition',
-                        checked
-                          ? 'bg-primary text-white border-primary'
-                          : 'bg-surface text-muted border-border hover:text-foreground',
-                      )}
-                    >
-                      {SERVICE_CATEGORY_LABELS[category]}
-                      {optional && !checked ? ' · option' : ''}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            {planError ? <Alert variant="error">{planError}</Alert> : null}
-            <Button onClick={() => void runPlan()} disabled={planning} leftIcon={planning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}>
-              {planning ? 'Recherche…' : 'Lancer la recherche'}
-            </Button>
-          </div>
+          <EventPlanBriefForm
+            brief={brief}
+            onChange={(next) => {
+              setBrief(next);
+              setPlanLock(null);
+              setFlexSlots([]);
+            }}
+            planning={planning}
+            error={planError}
+            onSubmit={() => {
+              setPlanLock(null);
+              setFlexSlots([]);
+              void runPlan({ lock: null, flexSlots: [] });
+            }}
+            briefs={savedBriefs}
+            onSaveBrief={async (name) => {
+              await api.post('/marketplace/event-briefs', { name, payload: brief });
+              await loadSavedBriefs();
+            }}
+            onLoadBrief={(item) => {
+              setBrief(hydrateBrief(item.payload));
+              setPlanLock(null);
+              setFlexSlots([]);
+              setPackages([]);
+            }}
+            onDeleteBrief={async (id) => {
+              await api.delete(`/marketplace/event-briefs/${id}`);
+              await loadSavedBriefs();
+            }}
+          />
 
           {packages.length > 0 ? (
             <EventPlanPacks
               packages={packages}
-              budgetFc={Number(budgetFc.replace(/\s/g, '')) || 0}
+              budgetFc={brief.budgetMaxFc}
+              spendableFc={spendableFc || brief.budgetMaxFc}
               isFavorite={isFavorite}
               onToggleFavorite={(kind, slug) => void toggleFavorite(kind, slug)}
               onReplace={replacePackItem}
               onSave={(pack) => {
-                setSaveName(`${eventTypeLabel(eventType)} · ${pack.label}`);
+                setSaveName(`${eventTypeLabel(brief.eventType)} · ${pack.label}`);
                 setSaveError('');
                 setSaveTarget(pack);
+              }}
+              onKeep={(item) => {
+                const lock: EventPlanLock = {
+                  kind: item.kind,
+                  slug: item.slug,
+                  category: item.kind === 'service' ? item.category : undefined,
+                };
+                setPlanLock(lock);
+                void runPlan({ lock });
+              }}
+              onWidenSlot={(slot: PlanMissingSlot) => {
+                const nextBrief: EventPlanBrief = { ...brief, matchMode: 'widen', missingStrategy: 'widen_city' };
+                if (slot.slot === 'venue') {
+                  nextBrief.includeVenue = 'yes';
+                } else {
+                  nextBrief.slots = { ...brief.slots, [slot.slot]: 'required' };
+                  const nextFlex = flexSlots.includes(slot.slot) ? flexSlots : [...flexSlots, slot.slot];
+                  setFlexSlots(nextFlex);
+                  setBrief(nextBrief);
+                  void runPlan({ flexSlots: nextFlex, brief: nextBrief });
+                  return;
+                }
+                setBrief(nextBrief);
+                void runPlan({ lock: planLock, brief: nextBrief });
               }}
             />
           ) : !planning && !planError ? (
             <EmptyState
               icon={<Wallet className="w-5 h-5" />}
               title="Préparez votre événement"
-              description="Indiquez le type, le budget et les métiers voulus, puis lancez la recherche pour obtenir trois propositions distinctes."
+              description="Indiquez le budget (min / max), la date, les métiers obligatoires et la répartition, puis lancez la recherche."
             />
           ) : null}
         </div>
@@ -684,10 +693,10 @@ function ClientMarketplaceInner() {
         <EventSavedPacks
           packs={savedPacks}
           favorites={favoriteRows}
-          eventType={eventType}
-          budgetFc={Number(budgetFc.replace(/\s/g, '')) || 0}
-          city={planCity}
-          guestCount={Number(guestCount) || 0}
+          eventType={brief.eventType}
+          budgetFc={brief.budgetMaxFc}
+          city={brief.city}
+          guestCount={brief.guestCount}
           onCreate={async (payload) => {
             await persistPack(payload);
           }}

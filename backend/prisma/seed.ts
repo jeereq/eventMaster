@@ -49,6 +49,7 @@ async function clearDatabase() {
   await prisma.pushDeviceToken.deleteMany({});
   await prisma.listingFavorite.deleteMany({});
   await prisma.savedEventPack.deleteMany({});
+  await prisma.savedEventBrief.deleteMany({});
   await prisma.commercialCommission.deleteMany({});
   await prisma.platformInvoice.deleteMany({});
   await prisma.subscriptionRequest.deleteMany({});

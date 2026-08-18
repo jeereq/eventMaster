@@ -1,25 +1,24 @@
-import { ServiceCategory, VenuePriceUnit } from '@prisma/client';
+import { MarketplaceBookingStatus, ServiceCategory, VenuePriceUnit } from '@prisma/client';
 import { prisma } from '../db';
 import { parseListingDetails } from '../utils/listingDetails';
 import { parsePhotoUrls, coverFromMedia, priceUnitLabel, serviceCategoryLabel } from '../utils/publicVenue';
-import { normalizeAllowedCity } from '../utils/rdcCities';
+import { normalizeAllowedCity, normalizeAllowedCommune } from '../utils/rdcCities';
+import { collectUnavailableDates, isRangeAvailable } from '../utils/marketplaceDates';
+import {
+  EVENT_PLAN_TYPES,
+  parseEventPlanInput,
+  type EventPlanType,
+  type FavoriteMode,
+  type ParsedEventPlanInput,
+  type SlotPriority,
+} from './eventPlanBrief';
 
-export const EVENT_PLAN_TYPES = [
-  'wedding',
-  'birthday',
-  'corporate',
-  'gala',
-  'religious',
-  'private',
-  'shooting',
-] as const;
+export { EVENT_PLAN_TYPES, type EventPlanType };
 
-export type EventPlanType = (typeof EVENT_PLAN_TYPES)[number];
-
-type PackSlot = { category: ServiceCategory; share: number };
+type PackSlot = { category: ServiceCategory; share: number; required: boolean; flex: boolean };
 type PackStyle = 'cheap' | 'balanced' | 'comfort';
 
-const EVENT_PACKS: Record<EventPlanType, { venueShare: number; required: PackSlot[]; optional: PackSlot[] }> = {
+const EVENT_PACKS: Record<EventPlanType, { venueShare: number; required: Array<{ category: ServiceCategory; share: number }>; optional: Array<{ category: ServiceCategory; share: number }> }> = {
   wedding: {
     venueShare: 0.38,
     required: [
@@ -110,31 +109,20 @@ const STYLE_VENUE_FACTOR: Record<PackStyle, number> = {
   comfort: 1.22,
 };
 
-type Scored<T> = T & { cost: number; match: 'exact' | 'unknown'; favorite: boolean };
+const HOLD_BOOKING_STATUSES: MarketplaceBookingStatus[] = ['REQUESTED', 'ACCEPTED', 'CONFIRMED'];
+
+type Scored<T> = T & {
+  cost: number;
+  match: 'exact' | 'unknown';
+  favorite: boolean;
+  amenityScore: number;
+};
 
 type MissingSlot = {
   slot: 'venue' | ServiceCategory;
   label: string;
   reason: string;
 };
-
-function parseEventType(value: unknown): EventPlanType | null {
-  return typeof value === 'string' && EVENT_PLAN_TYPES.includes(value as EventPlanType)
-    ? value as EventPlanType
-    : null;
-}
-
-function parseCategories(value: unknown): ServiceCategory[] | null {
-  if (!Array.isArray(value)) return null;
-  const allowed = new Set<string>(Object.values(ServiceCategory));
-  const unique: ServiceCategory[] = [];
-  for (const item of value) {
-    if (typeof item === 'string' && allowed.has(item) && !unique.includes(item as ServiceCategory)) {
-      unique.push(item as ServiceCategory);
-    }
-  }
-  return unique;
-}
 
 function formatFc(amount: number): string {
   return `${Math.round(amount).toLocaleString('fr-FR')} FC`;
@@ -154,12 +142,31 @@ function eventMatch(details: unknown, eventType: string): 'exact' | 'unknown' | 
   return types.includes(eventType) ? 'exact' : 'no';
 }
 
-function sortCandidates<T extends { cost: number; favorite: boolean; match: 'exact' | 'unknown' }>(
+function amenityScore(details: unknown, wanted: string[]): number {
+  if (!wanted.length) return 0;
+  const have = new Set(parseListingDetails(details).amenities);
+  return wanted.reduce((sum, id) => sum + (have.has(id) ? 1 : 0), 0);
+}
+
+function hasAllAmenities(details: unknown, wanted: string[]): boolean {
+  if (!wanted.length) return true;
+  const have = new Set(parseListingDetails(details).amenities);
+  return wanted.every((id) => have.has(id));
+}
+
+function sortCandidates<T extends { cost: number; favorite: boolean; match: 'exact' | 'unknown'; amenityScore: number }>(
   items: T[],
   budget: number,
   style: PackStyle,
+  favoriteMode: FavoriteMode,
 ): T[] {
   return items.slice().sort((a, b) => {
+    if (favoriteMode === 'force') {
+      const fav = Number(b.favorite) - Number(a.favorite);
+      if (fav) return fav;
+    }
+    const amenities = b.amenityScore - a.amenityScore;
+    if (amenities) return amenities;
     if (style === 'cheap') {
       const cost = a.cost - b.cost;
       if (cost) return cost;
@@ -173,21 +180,28 @@ function sortCandidates<T extends { cost: number; favorite: boolean; match: 'exa
     }
     const match = Number(b.match === 'exact') - Number(a.match === 'exact');
     if (match) return match;
+    if (favoriteMode === 'ignore') return 0;
     return Number(b.favorite) - Number(a.favorite);
   });
 }
 
-function pickForBudget<T extends { slug: string; cost: number; favorite: boolean; match: 'exact' | 'unknown' }>(
+function pickForBudget<T extends { slug: string; cost: number; favorite: boolean; match: 'exact' | 'unknown'; amenityScore: number }>(
   items: T[],
   budget: number,
   style: PackStyle,
   excludeSlugs: Set<string>,
+  favoriteMode: FavoriteMode,
 ): { item: T; reused: boolean } | null {
   const affordable = items.filter((item) => item.cost <= budget);
   if (!affordable.length) return null;
   const fresh = affordable.filter((item) => !excludeSlugs.has(item.slug));
-  const pool = fresh.length ? fresh : affordable;
-  const picked = sortCandidates(pool, budget, style)[0];
+  const pool = fresh.length ? affordable.filter((item) => !excludeSlugs.has(item.slug)) : affordable;
+  if (favoriteMode === 'force') {
+    const favorites = pool.filter((item) => item.favorite);
+    const forced = sortCandidates(favorites, budget, style, favoriteMode)[0];
+    if (forced) return { item: forced, reused: excludeSlugs.has(forced.slug) };
+  }
+  const picked = sortCandidates(pool, budget, style, favoriteMode)[0];
   if (!picked) return null;
   return { item: picked, reused: excludeSlugs.has(picked.slug) };
 }
@@ -313,152 +327,321 @@ function serializeService(offering: Scored<{
   };
 }
 
-function attachAlternatives<T extends { slug: string; cost: number; favorite: boolean; match: 'exact' | 'unknown' }>(
+function attachAlternatives<T extends { slug: string; cost: number; favorite: boolean; match: 'exact' | 'unknown'; amenityScore: number }>(
   serialized: PlanItem,
   pool: T[],
   budget: number,
   style: PackStyle,
   serialize: (item: T, cost: number) => PlanItem,
   exclude: Set<string>,
+  favoriteMode: FavoriteMode,
   limit = 3,
 ): PlanItem {
   const alternatives = sortCandidates(
     pool.filter((item) => item.cost <= budget && item.slug !== serialized.slug && !exclude.has(item.slug)),
     budget,
     style,
+    favoriteMode,
   )
     .slice(0, limit)
     .map((item) => ({ ...serialize(item, item.cost), alternatives: [] }));
   return { ...serialized, alternatives };
 }
 
-export async function buildEventPlanProposals(input: {
-  eventType: unknown;
-  budgetFc: unknown;
-  city?: unknown;
-  guestCount?: unknown;
-  favoriteSlugs?: Array<{ kind: string; slug: string }>;
-  categories?: unknown;
-}) {
-  const eventType = parseEventType(input.eventType);
-  const budgetFc = Number(input.budgetFc);
-  const guestCount = Number(input.guestCount);
-  const city = normalizeAllowedCity(typeof input.city === 'string' ? input.city : '') || '';
-
-  if (!eventType) {
-    throw Object.assign(new Error('Choisissez un type d’événement.'), { status: 400 });
-  }
-  if (!Number.isFinite(budgetFc) || budgetFc < 50000) {
-    throw Object.assign(new Error('Indiquez un budget d’au moins 50 000 FC.'), { status: 400 });
-  }
-
+function templateShare(eventType: EventPlanType, key: string): number {
   const template = EVENT_PACKS[eventType];
-  const requested = parseCategories(input.categories);
-  const required: PackSlot[] = requested
-    ? requested.map((category) => (
-      template.required.find((slot) => slot.category === category)
-      || template.optional.find((slot) => slot.category === category)
-      || { category, share: 0.08 }
-    ))
-    : template.required;
-  const optional: PackSlot[] = requested
-    ? template.optional.filter((slot) => !requested.includes(slot.category))
-    : template.optional;
+  if (key === 'venue') return template.venueShare * 100;
+  const slot = [...template.required, ...template.optional].find((item) => item.category === key);
+  return (slot?.share || 0.08) * 100;
+}
 
-  const guests = Number.isFinite(guestCount) && guestCount > 0 ? Math.floor(guestCount) : 0;
+function resolveSlots(input: ParsedEventPlanInput): PackSlot[] {
+  const template = EVENT_PACKS[input.eventType];
+  const hasCustomSlots = Object.keys(input.slots).length > 0;
+  if (!hasCustomSlots && input.legacyCategories) {
+    return input.legacyCategories.map((category) => ({
+      category,
+      share: (template.required.find((slot) => slot.category === category)?.share
+        || template.optional.find((slot) => slot.category === category)?.share
+        || 0.08),
+      required: true,
+      flex: input.flexSlots.includes(category),
+    }));
+  }
+  if (!hasCustomSlots) {
+    return template.required.map((slot) => ({
+      category: slot.category,
+      share: slot.share,
+      required: true,
+      flex: input.flexSlots.includes(slot.category),
+    }));
+  }
+  return (Object.entries(input.slots) as Array<[ServiceCategory, SlotPriority]>)
+    .filter(([, priority]) => priority !== 'excluded')
+    .map(([category, priority]) => ({
+      category,
+      share: (input.shares[category] || templateShare(input.eventType, category)) / 100,
+      required: priority === 'required',
+      flex: input.flexSlots.includes(category),
+    }));
+}
+
+function resolveVenueShare(input: ParsedEventPlanInput, serviceSlots: PackSlot[]): number {
+  if (input.includeVenue === 'no') return 0;
+  if (input.shares.venue != null) return input.shares.venue / 100;
+  const template = EVENT_PACKS[input.eventType].venueShare;
+  const raw = [template, ...serviceSlots.map((slot) => slot.share)];
+  const total = raw.reduce((sum, value) => sum + value, 0) || 1;
+  return template / total;
+}
+
+function renormalizeShares(venueShare: number, slots: PackSlot[]): { venueShare: number; slots: PackSlot[] } {
+  const total = venueShare + slots.reduce((sum, slot) => sum + slot.share, 0) || 1;
+  return {
+    venueShare: venueShare / total,
+    slots: slots.map((slot) => ({ ...slot, share: slot.share / total })),
+  };
+}
+
+const listingInclude = {
+  room: { select: { name: true, capacity: true } },
+  tenant: { select: { name: true, vendorProfile: { select: { displayName: true } } } },
+  bookings: {
+    where: { status: { in: HOLD_BOOKING_STATUSES } },
+    select: { eventDate: true, eventEndDate: true },
+  },
+} as const;
+
+const offeringInclude = {
+  vendorProfile: { select: { displayName: true } },
+  tenant: { select: { name: true } },
+  bookings: {
+    where: { status: { in: HOLD_BOOKING_STATUSES } },
+    select: { eventDate: true, eventEndDate: true },
+  },
+} as const;
+
+export async function buildEventPlanProposals(body: Record<string, unknown> & {
+  favoriteSlugs?: Array<{ kind: string; slug: string }>;
+}) {
+  const input = parseEventPlanInput(body);
+  const city = normalizeAllowedCity(input.city) || '';
+  const commune = city ? (normalizeAllowedCommune(city, input.commune) || '') : '';
+  const guests = input.guestCount;
   const favoriteVenues = new Set(
-    (input.favoriteSlugs || []).filter((item) => item.kind === 'venue').map((item) => item.slug),
+    (body.favoriteSlugs || []).filter((item) => item.kind === 'venue').map((item) => item.slug),
   );
   const favoriteServices = new Set(
-    (input.favoriteSlugs || []).filter((item) => item.kind === 'service').map((item) => item.slug),
+    (body.favoriteSlugs || []).filter((item) => item.kind === 'service').map((item) => item.slug),
   );
 
-  const [listings, offerings] = await Promise.all([
-    prisma.venueListing.findMany({
-      where: {
-        isPublic: true,
-        ...(city ? { city } : {}),
-        ...(guests ? { room: { capacity: { gte: guests } } } : {}),
-      },
-      include: {
-        room: { select: { name: true, capacity: true } },
-        tenant: { select: { name: true, vendorProfile: { select: { displayName: true } } } },
-      },
-      take: 200,
-    }),
-    prisma.serviceOffering.findMany({
-      where: {
-        isPublic: true,
-        ...(city ? { city } : {}),
-      },
-      include: {
-        vendorProfile: { select: { displayName: true } },
-        tenant: { select: { name: true } },
-      },
-      take: 300,
-    }),
-  ]);
+  const relaxed: { commune?: boolean; city?: boolean; eventType?: boolean; availability?: boolean } = {};
+  const serviceSlotsRaw = resolveSlots(input);
+  const { venueShare, slots: serviceSlots } = renormalizeShares(
+    resolveVenueShare(input, serviceSlotsRaw),
+    serviceSlotsRaw,
+  );
 
-  const rankedVenues: Array<Scored<(typeof listings)[number]>> = listings.flatMap((listing) => {
-    const match = eventMatch(listing.details, eventType);
-    if (match === 'no') return [];
-    const cost = estimateCost(listing.priceFromFc, listing.priceUnit, guests);
-    if (cost == null) return [];
-    return [{ ...listing, cost, match, favorite: favoriteVenues.has(listing.slug) }];
+  const loadCatalog = async (cityFilter: string) => {
+    const [listings, offerings] = await Promise.all([
+      prisma.venueListing.findMany({
+        where: {
+          isPublic: true,
+          ...(cityFilter ? { city: cityFilter } : {}),
+          ...(guests ? { room: { capacity: { gte: guests } } } : {}),
+        },
+        include: listingInclude,
+        take: 400,
+      }),
+      prisma.serviceOffering.findMany({
+        where: {
+          isPublic: true,
+          ...(cityFilter ? { city: cityFilter } : {}),
+        },
+        include: offeringInclude,
+        take: 400,
+      }),
+    ]);
+    return { listings, offerings };
+  };
+
+  let { listings, offerings } = await loadCatalog(city);
+  if (!listings.length && !offerings.length && city && (input.matchMode === 'widen' || input.missingStrategy === 'widen_city')) {
+    const broader = await loadCatalog('');
+    listings = broader.listings;
+    offerings = broader.offerings;
+    relaxed.city = true;
+  }
+
+  const dateKey = input.eventDate || '';
+  const rankVenues = (rows: typeof listings, opts: { commune: string; date: boolean; type: 'strict' | 'unknown' | 'any'; amenities: boolean }) => (
+    rows.flatMap((listing) => {
+      if (opts.commune && String(listing.commune || '').toLowerCase() !== opts.commune.toLowerCase()) return [];
+      if (opts.date && dateKey) {
+        const unavailable = collectUnavailableDates(listing.blockedDates, listing.bookings);
+        if (!isRangeAvailable(unavailable, dateKey, dateKey)) return [];
+      }
+      const match = eventMatch(listing.details, input.eventType);
+      if (opts.type === 'strict' && match !== 'exact') return [];
+      if (opts.type === 'unknown' && match === 'no') return [];
+      if (opts.amenities && input.amenityMode === 'blocking' && !hasAllAmenities(listing.details, input.venueAmenities)) return [];
+      const cost = estimateCost(listing.priceFromFc, listing.priceUnit, guests);
+      if (cost == null) return [];
+      return [{
+        ...listing,
+        cost,
+        match: match === 'no' ? 'unknown' as const : match,
+        favorite: input.favoriteMode === 'ignore' ? false : favoriteVenues.has(listing.slug),
+        amenityScore: input.venueAmenities.length ? amenityScore(listing.details, input.venueAmenities) : 0,
+      }];
+    })
+  );
+
+  const rankServices = (rows: typeof offerings, opts: { commune: string; date: boolean; type: 'strict' | 'unknown' | 'any' }) => (
+    rows.flatMap((offering) => {
+      if (opts.commune && String(offering.commune || '').toLowerCase() !== opts.commune.toLowerCase()) return [];
+      if (opts.date && dateKey) {
+        const unavailable = collectUnavailableDates(offering.blockedDates, offering.bookings);
+        if (!isRangeAvailable(unavailable, dateKey, dateKey)) return [];
+      }
+      const match = eventMatch(offering.details, input.eventType);
+      if (opts.type === 'strict' && match !== 'exact') return [];
+      if (opts.type === 'unknown' && match === 'no') return [];
+      const cost = estimateCost(offering.priceFromFc, offering.priceUnit, guests);
+      if (cost == null) return [];
+      return [{
+        ...offering,
+        cost,
+        match: match === 'no' ? 'unknown' as const : match,
+        favorite: input.favoriteMode === 'ignore' ? false : favoriteServices.has(offering.slug),
+        amenityScore: 0,
+      }];
+    })
+  );
+
+  const widen = input.matchMode === 'widen' || input.missingStrategy === 'widen_city';
+  let rankedVenues = rankVenues(listings, {
+    commune,
+    date: Boolean(dateKey),
+    type: input.matchMode === 'exact' ? 'strict' : 'unknown',
+    amenities: true,
+  });
+  let rankedServices = rankServices(offerings, {
+    commune,
+    date: Boolean(dateKey),
+    type: input.matchMode === 'exact' ? 'strict' : 'unknown',
   });
 
-  const rankedServices: Array<Scored<(typeof offerings)[number]>> = offerings.flatMap((offering) => {
-    const match = eventMatch(offering.details, eventType);
-    if (match === 'no') return [];
-    const cost = estimateCost(offering.priceFromFc, offering.priceUnit, guests);
-    if (cost == null) return [];
-    return [{ ...offering, cost, match, favorite: favoriteServices.has(offering.slug) }];
-  });
+  if (commune && widen && (!rankedVenues.length || !rankedServices.length)) {
+    rankedVenues = rankVenues(listings, { commune: '', date: Boolean(dateKey), type: 'unknown', amenities: true });
+    rankedServices = rankServices(offerings, { commune: '', date: Boolean(dateKey), type: 'unknown' });
+    relaxed.commune = true;
+  }
+  if (dateKey && widen && (!rankedVenues.length || !rankedServices.length)) {
+    rankedVenues = rankVenues(listings, { commune: relaxed.commune ? '' : commune, date: false, type: 'unknown', amenities: true });
+    rankedServices = rankServices(offerings, { commune: relaxed.commune ? '' : commune, date: false, type: 'unknown' });
+    relaxed.availability = true;
+  }
+  if (widen && (!rankedVenues.length || !rankedServices.length)) {
+    rankedVenues = rankVenues(listings, { commune: '', date: false, type: 'any', amenities: false });
+    rankedServices = rankServices(offerings, { commune: '', date: false, type: 'any' });
+    relaxed.eventType = true;
+  }
 
   const styles: Array<{ id: string; label: string; style: PackStyle; blurb: string }> = [
-    { id: 'eco', label: 'Économique', style: 'cheap', blurb: 'Le moins cher qui tient dans le budget, sans options.' },
-    { id: 'balanced', label: 'Équilibré', style: 'balanced', blurb: 'Répartition proche de l’enveloppe, options si le budget le permet.' },
-    { id: 'comfort', label: 'Confort', style: 'comfort', blurb: 'Le plus complet dans le budget, options incluses.' },
+    { id: 'eco', label: 'Économique', style: 'cheap', blurb: 'Le moins cher qui tient dans l’enveloppe, sans options.' },
+    { id: 'balanced', label: 'Équilibré', style: 'balanced', blurb: 'Répartition proche de votre brief, options si le budget le permet.' },
+    { id: 'comfort', label: 'Confort', style: 'comfort', blurb: 'Le plus complet dans l’enveloppe, options incluses.' },
   ];
 
   const usedVenueSlugs = new Set<string>();
   const usedServiceSlugs = new Set<string>();
+  const envelope = input.spendableFc;
+  const favoriteMode = input.favoriteMode;
 
   const packages = styles.map((style) => {
     const missing: MissingSlot[] = [];
     const notes: string[] = [];
     const items: PlanItem[] = [];
     let total = 0;
+    const skippedRequired: PackSlot[] = [];
 
-    const venueBudget = Math.min(
-      budgetFc,
-      Math.round(budgetFc * template.venueShare * STYLE_VENUE_FACTOR[style.style]),
-    );
-    const venuePick = pickForBudget(rankedVenues, venueBudget, style.style, usedVenueSlugs);
-    if (venuePick) {
-      usedVenueSlugs.add(venuePick.item.slug);
-      const serialized = attachAlternatives(
-        serializeVenue(venuePick.item, venuePick.item.cost, { reused: venuePick.reused }),
+    const addVenue = (requiredVenue: boolean) => {
+      if (input.lock?.kind === 'venue') {
+        const locked = rankedVenues.find((item) => item.slug === input.lock?.slug);
+        if (locked && locked.cost <= envelope) {
+          if (input.distinctVenues) usedVenueSlugs.add(locked.slug);
+          const serialized = attachAlternatives(
+            serializeVenue(locked, locked.cost),
+            rankedVenues,
+            envelope,
+            style.style,
+            (item, cost) => serializeVenue(item, cost),
+            new Set(),
+            favoriteMode,
+          );
+          items.push(serialized);
+          total += locked.cost;
+          notes.push('Salle figée depuis votre relance.');
+          return;
+        }
+        notes.push('La salle figée n’est plus disponible dans l’enveloppe.');
+      }
+      const venueBudget = Math.min(envelope, Math.round(envelope * venueShare * STYLE_VENUE_FACTOR[style.style]));
+      const venuePick = pickForBudget(
         rankedVenues,
         venueBudget,
         style.style,
-        (item, cost) => serializeVenue(item, cost),
-        new Set(),
+        input.distinctVenues ? usedVenueSlugs : new Set(),
+        favoriteMode,
       );
-      items.push(serialized);
-      total += venuePick.item.cost;
-      if (venuePick.reused) notes.push('Même salle qu’un autre pack : pas d’alternative dans le budget.');
-      if (venuePick.item.favorite) notes.push('Salle prise parmi vos favoris.');
-    } else {
-      missing.push({
-        slot: 'venue',
-        label: 'Salle',
-        reason: missingReason(rankedVenues, venueBudget, 'Salle'),
-      });
-    }
+      if (venuePick) {
+        if (input.distinctVenues) usedVenueSlugs.add(venuePick.item.slug);
+        const serialized = attachAlternatives(
+          serializeVenue(venuePick.item, venuePick.item.cost, { reused: venuePick.reused }),
+          rankedVenues,
+          venueBudget,
+          style.style,
+          (item, cost) => serializeVenue(item, cost),
+          new Set(),
+          favoriteMode,
+        );
+        items.push(serialized);
+        total += venuePick.item.cost;
+        if (venuePick.reused) notes.push('Même salle qu’un autre pack : pas d’alternative dans le budget.');
+        if (venuePick.item.favorite) notes.push('Salle prise parmi vos favoris.');
+      } else if (requiredVenue) {
+        missing.push({
+          slot: 'venue',
+          label: 'Salle',
+          reason: missingReason(rankedVenues, venueBudget, 'Salle'),
+        });
+      }
+    };
+
+    if (input.includeVenue === 'yes') addVenue(true);
+    else if (input.includeVenue === 'if_fits') addVenue(false);
 
     const addSlot = (slot: PackSlot, requiredSlot: boolean) => {
-      const remaining = Math.max(0, budgetFc - total);
+      if (input.lock?.kind === 'service' && (input.lock.category === slot.category || (!input.lock.category && items.every((item) => item.kind !== 'service' || item.category !== slot.category)))) {
+        const locked = rankedServices.find((item) => item.slug === input.lock?.slug && item.category === slot.category);
+        if (locked && locked.cost <= envelope - total) {
+          usedServiceSlugs.add(locked.slug);
+          items.push(attachAlternatives(
+            serializeService(locked, locked.cost),
+            rankedServices.filter((service) => service.category === slot.category),
+            envelope - total,
+            style.style,
+            (item, cost) => serializeService(item, cost),
+            new Set(items.filter((item) => item.kind === 'service').map((item) => item.slug)),
+            favoriteMode,
+          ));
+          total += locked.cost;
+          notes.push(`${serviceCategoryLabel(slot.category)} : ligne figée.`);
+          return;
+        }
+      }
+      const remaining = Math.max(0, envelope - total);
       if (remaining <= 0) {
         if (requiredSlot) {
           missing.push({
@@ -466,12 +649,15 @@ export async function buildEventPlanProposals(input: {
             label: serviceCategoryLabel(slot.category),
             reason: 'Budget déjà consommé par les autres lignes.',
           });
+          skippedRequired.push(slot);
         }
         return;
       }
-      const cap = Math.min(Math.round(budgetFc * slot.share * STYLE_VENUE_FACTOR[style.style]), remaining);
+      const cap = slot.flex
+        ? remaining
+        : Math.min(Math.round(envelope * slot.share * STYLE_VENUE_FACTOR[style.style]), remaining);
       const pool = rankedServices.filter((service) => service.category === slot.category);
-      const picked = pickForBudget(pool, cap > 0 ? cap : remaining, style.style, usedServiceSlugs);
+      const picked = pickForBudget(pool, cap > 0 ? cap : remaining, style.style, usedServiceSlugs, favoriteMode);
       if (!picked) {
         if (requiredSlot) {
           missing.push({
@@ -479,6 +665,7 @@ export async function buildEventPlanProposals(input: {
             label: serviceCategoryLabel(slot.category),
             reason: missingReason(pool, cap > 0 ? cap : remaining, serviceCategoryLabel(slot.category)),
           });
+          skippedRequired.push(slot);
         }
         return;
       }
@@ -491,6 +678,7 @@ export async function buildEventPlanProposals(input: {
         style.style,
         (item, cost) => serializeService(item, cost),
         packExclude,
+        favoriteMode,
       ));
       total += picked.item.cost;
       if (picked.reused) {
@@ -498,18 +686,25 @@ export async function buildEventPlanProposals(input: {
       }
     };
 
-    required.forEach((slot) => addSlot(slot, true));
+    const requiredSlots = serviceSlots.filter((slot) => slot.required);
+    const optionalSlots = serviceSlots.filter((slot) => !slot.required);
+
+    requiredSlots.forEach((slot) => addSlot(slot, true));
+
+    if (input.missingStrategy === 'reallocate' && skippedRequired.length) {
+      notes.push('Part des métiers introuvables réallouée au reste du pack.');
+    }
 
     if (style.style !== 'cheap') {
-      optional.forEach((slot) => {
-        const remaining = budgetFc - total;
-        const minKeep = style.style === 'comfort' ? 0 : Math.round(budgetFc * 0.04);
+      optionalSlots.forEach((slot) => {
+        const remaining = envelope - total;
+        const minKeep = style.style === 'comfort' ? 0 : Math.round(envelope * 0.04);
         if (remaining <= minKeep) return;
         addSlot(slot, false);
       });
     }
 
-    const leftoverFc = Math.max(0, budgetFc - total);
+    const leftoverFc = Math.max(0, envelope - total);
     const favoriteCount = items.filter((item) => item.favorite).length;
     if (favoriteCount > 0) {
       notes.push(`${favoriteCount} favori${favoriteCount > 1 ? 's' : ''} inclus.`);
@@ -517,10 +712,32 @@ export async function buildEventPlanProposals(input: {
     if (guests && items.some((item) => item.kind === 'venue' && item.capacity && item.capacity >= guests)) {
       notes.push(`Salle prévue pour au moins ${guests} invités.`);
     }
+    if (input.budgetMinFc > 0 && total < input.budgetMinFc) {
+      notes.push(`Sous le budget minimum (${formatFc(input.budgetMinFc)}).`);
+    }
+    if (input.marginPct > 0) {
+      notes.push(`Marge de sécurité ${input.marginPct} % · enveloppe utile ${formatFc(envelope)}.`);
+    }
     if (!missing.length && leftoverFc > 0) {
       notes.push(`Reste ${formatFc(leftoverFc)} à réallouer ou à garder en marge.`);
     }
+    if (relaxed.city) notes.push('Ville élargie faute de catalogue local.');
+    if (relaxed.commune) notes.push('Commune élargie pour trouver des offres.');
+    if (relaxed.availability) notes.push('Date ignorée : trop peu d’offres disponibles ce jour-là.');
+    if (relaxed.eventType) notes.push('Type d’événement élargi pour remplir le pack.');
 
+    const venueItem = (items.find((item) => item.kind === 'venue') as VenueItem | undefined) || null;
+    const serviceItems = items.filter((item) => item.kind === 'service') as ServiceItem[];
+    const allocation = [
+      ...(venueItem ? [{ key: 'venue', label: 'Salle', amountFc: venueItem.estimatedFc }] : []),
+      ...serviceItems.map((item) => ({
+        key: item.category,
+        label: item.categoryLabel,
+        amountFc: item.estimatedFc,
+      })),
+    ];
+
+    const venueRequired = input.includeVenue === 'yes';
     return {
       id: style.id,
       label: style.label,
@@ -528,26 +745,33 @@ export async function buildEventPlanProposals(input: {
       style: style.style,
       totalFc: total,
       leftoverFc,
-      overBudget: false,
-      complete: missing.length === 0 && Boolean(items.find((item) => item.kind === 'venue')),
-      venue: (items.find((item) => item.kind === 'venue') as VenueItem | undefined) || null,
-      services: items.filter((item) => item.kind === 'service') as ServiceItem[],
+      overBudget: total > input.budgetMaxFc,
+      complete: missing.length === 0 && (!venueRequired || Boolean(venueItem)),
+      venue: venueItem,
+      services: serviceItems,
       items,
       missing,
-      notes,
-      requiredCount: required.length + 1,
+      notes: [...new Set(notes)],
+      requiredCount: requiredSlots.length + (venueRequired ? 1 : 0),
       filledCount: items.length,
+      allocation,
     };
   }).filter((packResult) => packResult.items.length > 0 || packResult.missing.length > 0);
 
   return {
-    eventType,
-    budgetFc,
+    eventType: input.eventType,
+    budgetFc: input.budgetMaxFc,
+    budgetMinFc: input.budgetMinFc,
+    budgetMaxFc: input.budgetMaxFc,
+    spendableFc: envelope,
     city: city || null,
+    commune: commune || null,
     guestCount: guests || null,
+    eventDate: dateKey || null,
+    relaxed,
     slots: {
-      required: required.map((slot) => ({ category: slot.category, label: serviceCategoryLabel(slot.category) })),
-      optional: optional.map((slot) => ({ category: slot.category, label: serviceCategoryLabel(slot.category) })),
+      required: serviceSlots.filter((slot) => slot.required).map((slot) => ({ category: slot.category, label: serviceCategoryLabel(slot.category) })),
+      optional: serviceSlots.filter((slot) => !slot.required).map((slot) => ({ category: slot.category, label: serviceCategoryLabel(slot.category) })),
     },
     packages,
     catalog: {
