@@ -11,7 +11,7 @@ import { AuthSplitLayout } from '@/components/AuthSplitLayout';
 import { Button, Alert, Input, Card, IdentifierInput, identifierValue } from '@/components/ui';
 import type { IdentifierMode } from '@/components/ui';
 import { DEFAULT_PHONE_COUNTRY_CODE } from '@/lib/phone';
-import { safeAppPath } from '@/lib/safeAppPath';
+import { safeAppPath, isClientReturnPath } from '@/lib/safeAppPath';
 
 const FEATURES = [
   { icon: Calendar, title: "Gestion d'événements & RSVP", desc: 'Invitations par e-mail ou WhatsApp, suivi des réponses en temps réel.' },
@@ -22,9 +22,9 @@ const FEATURES = [
 
 const CLIENT_FEATURES = [
   { icon: Ticket, title: 'Billets et inscriptions', desc: 'Retrouvez vos places et votre badge QR dans Mes billets.' },
-  { icon: Calendar, title: 'Agenda public', desc: 'Inscrivez-vous aux événements ouverts ou achetez un billet en ligne.' },
-  { icon: Table, title: 'Salles et prestataires', desc: 'Favoris, packs budget et demandes de dates dans le marketplace.' },
-  { icon: Sparkles, title: 'Compte client', desc: 'Sans abonnement SaaS — réservez et suivez vos inscriptions.' },
+  { icon: Calendar, title: 'Devis et réservations', desc: 'Envoyez un devis salle ou presta, puis suivez vos demandes.' },
+  { icon: Table, title: 'Marketplace', desc: 'Salles, prestataires et événements publics — grille, liste ou carte.' },
+  { icon: Sparkles, title: 'Compte client', desc: 'Sans abonnement SaaS — devis, billets et favoris.' },
 ];
 
 export default function LoginPage() {
@@ -47,7 +47,7 @@ function LoginPageContent() {
   const { login } = useAuth();
   const searchParams = useSearchParams();
   const nextPath = safeAppPath(searchParams.get('next'));
-  const isClientFlow = Boolean(nextPath?.startsWith('/evenements') || nextPath?.startsWith('/dashboard/tickets'));
+  const isClientFlow = isClientReturnPath(nextPath);
   const registerHref = nextPath
     ? `/register?kind=CLIENT&next=${encodeURIComponent(nextPath)}`
     : '/register';
@@ -79,10 +79,10 @@ function LoginPageContent() {
   return (
     <AuthSplitLayout
       badge={isClientFlow ? 'Compte client' : 'Plateforme tout-en-un'}
-      title={isClientFlow ? 'Connectez-vous pour retrouver vos billets.' : 'Organisez des événements privés inoubliables.'}
+      title={isClientFlow ? 'Connectez-vous pour retrouver vos demandes et billets.' : 'Organisez des événements privés inoubliables.'}
       description={
         isClientFlow
-          ? 'Après connexion, vous revenez à l’événement. Le paiement invité reste possible sans compte.'
+          ? 'Après connexion, vous revenez à la fiche. Le devis et l’inscription invité restent possibles sans compte.'
           : 'EventMaster simplifie chaque étape de l’organisation de vos mariages, anniversaires, conférences et soirées privées.'
       }
       features={isClientFlow ? CLIENT_FEATURES : FEATURES}

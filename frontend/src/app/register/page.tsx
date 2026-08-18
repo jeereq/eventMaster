@@ -13,7 +13,7 @@ import { parseReferralFromSearchParams } from '@/lib/referralLink';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { ACCOUNT_KIND_DESCRIPTIONS, ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
-import { safeAppPath } from '@/lib/safeAppPath';
+import { safeAppPath, isClientReturnPath } from '@/lib/safeAppPath';
 
 const FEATURES = [
  { icon: Calendar, title: "Gestion d'événements & RSVP", desc: 'Invitations par e-mail ou WhatsApp, suivi des réponses en temps réel.' },
@@ -59,7 +59,7 @@ function RegisterPageContent() {
  const [successMessage, setSuccessMessage] = useState('');
  const [loading, setLoading] = useState(false);
  const nextPath = safeAppPath(searchParams.get('next'));
- const isClientFlow = accountKind === 'CLIENT' || Boolean(nextPath?.startsWith('/evenements'));
+ const isClientFlow = accountKind === 'CLIENT' || isClientReturnPath(nextPath);
 
  useEffect(() => {
  const fromUrl = parseReferralFromSearchParams(searchParams);
@@ -128,10 +128,10 @@ function RegisterPageContent() {
  return (
  <AuthSplitLayout
  badge="Inscription"
- title={isClientFlow ? 'Créez un compte pour retrouver vos billets.' : 'Créez votre compte en quelques secondes.'}
+ title={isClientFlow ? 'Créez un compte pour vos devis et billets.' : 'Créez votre compte en quelques secondes.'}
  description={
  isClientFlow
- ? `Rejoignez ${site.platformName} : vos inscriptions et badges QR seront dans Mes billets. Vous pouvez aussi continuer en invité sans compte.`
+ ? `Rejoignez ${site.platformName} : devis, réservations et badges QR dans votre tableau de bord. Vous pouvez aussi continuer en invité sans compte.`
  : `Rejoignez ${site.platformName} : organisez un événement, publiez une offre, ou réservez une salle sans espace SaaS.`
  }
  features={FEATURES}

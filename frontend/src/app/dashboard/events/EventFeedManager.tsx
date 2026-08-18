@@ -538,7 +538,7 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false 
                     className="mt-0.5 rounded border-border"
                   />
                   <span>
-                    Publier aussi sur la fiche publique <span className="font-semibold text-foreground">/evenements</span>
+                    Publier aussi sur la fiche publique <span className="font-semibold text-foreground">marketplace</span>
                   </span>
                 </label>
               )}

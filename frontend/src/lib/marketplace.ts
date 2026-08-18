@@ -1,6 +1,7 @@
 import { roomTypeLabels, type RoomType } from '@/lib/roomLayoutUtils';
 import { formatFc } from '@/config/landingPricing';
 import { findRdcCommune, isAllowedRdcCity, neighborhoodsFor, pointInRdcCity } from '@/lib/rdcCities';
+import { eventPublicHref } from '@/lib/safeAppPath';
 
 export type VenuePriceUnit = 'EVENT' | 'DAY' | 'HOUR' | 'MINUTE' | 'PERSON' | 'QUOTA';
 export type TenantAccountKind = 'ORGANIZER' | 'VENDOR' | 'BOTH' | 'CLIENT';
@@ -716,7 +717,7 @@ export function eventToCatalogueItem(event: PublicEventCard): CatalogueItem | nu
     kind: 'event',
     id: `event:${event.slug}`,
     slug: event.slug,
-    href: `/evenements/${event.slug}`,
+    href: eventPublicHref(event.slug),
     title: event.title,
     orgName: event.orgName,
     categoryLabel: dateLabel,

@@ -261,8 +261,8 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
           },
         },
       ],
-      success_url: `${FRONTEND_URL}/evenements/${event.slug}/succes?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${FRONTEND_URL}/evenements/${event.slug}?canceled=1`,
+      success_url: `${FRONTEND_URL}/marketplace/evenements/${event.slug}/succes?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${FRONTEND_URL}/marketplace/evenements/${event.slug}?canceled=1`,
       client_reference_id: order.id,
       metadata: {
         purpose: 'event_ticket',

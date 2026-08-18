@@ -99,6 +99,10 @@ export default function ListingDetailLayout({
   preview,
   embedded,
   heroAction,
+  inquireLabel = 'Demander un devis',
+  bookLabel = 'Réserver',
+  hideBooking = false,
+  priceCaption,
 }: {
   backHref: string;
   backLabel: string;
@@ -127,11 +131,16 @@ export default function ListingDetailLayout({
   /** Dans le dashboard : pas de second `main.page-container`. */
   embedded?: boolean;
   heroAction?: React.ReactNode;
+  inquireLabel?: string;
+  bookLabel?: string;
+  hideBooking?: boolean;
+  priceCaption?: string;
 }) {
   const router = useRouter();
   const [mobileAction, setMobileAction] = useState<'inquire' | 'book'>('inquire');
-  const priceLabel = priceFromFc != null ? formatFc(priceFromFc) : 'Sur devis';
+  const priceLabel = priceCaption ?? (priceFromFc != null ? formatFc(priceFromFc) : 'Sur devis');
   const showCommerce = !preview && Boolean(inquiry || booking);
+  const showBooking = Boolean(booking) && !hideBooking;
   const returnScope = backHref.startsWith('/dashboard') ? '/dashboard' : '/marketplace';
 
   const goBack = (e: React.MouseEvent) => {
@@ -230,7 +239,7 @@ export default function ListingDetailLayout({
                 </div>
                 {showCommerce ? (
                   <Button size="sm" className="shrink-0 min-h-10" onClick={() => scrollToContact('inquire')}>
-                    Devis
+                    {hideBooking ? inquireLabel : 'Devis'}
                   </Button>
                 ) : null}
               </div>
@@ -259,6 +268,7 @@ export default function ListingDetailLayout({
 
               {showCommerce ? (
                 <>
+              {showBooking ? (
               <div className="lg:hidden flex gap-1 p-1 rounded-lg bg-surface-muted border border-border">
                 <button
                   type="button"
@@ -270,7 +280,7 @@ export default function ListingDetailLayout({
                       : 'text-muted',
                   )}
                 >
-                  Demander un devis
+                  {inquireLabel}
                 </button>
                 <button
                   type="button"
@@ -282,16 +292,19 @@ export default function ListingDetailLayout({
                       : 'text-muted',
                   )}
                 >
-                  Réserver
+                  {bookLabel}
                 </button>
               </div>
+              ) : null}
 
-              <div className={cn(mobileAction === 'inquire' ? 'block' : 'hidden', 'lg:block')}>
+              <div className={cn(!showBooking || mobileAction === 'inquire' ? 'block' : 'hidden', 'lg:block')}>
                 {inquiry}
               </div>
+              {showBooking ? (
               <div className={cn(mobileAction === 'book' ? 'block' : 'hidden', 'lg:block')}>
                 {booking}
               </div>
+              ) : null}
                 </>
               ) : preview ? (
                 <p className="text-xs text-muted leading-relaxed">
@@ -325,12 +338,14 @@ export default function ListingDetailLayout({
                   <p className="text-[10px] text-muted leading-none">À partir de</p>
                   <p className="text-sm font-semibold truncate">{priceLabel}</p>
                 </div>
-                <Button size="sm" variant="secondary" className="shrink-0 min-h-11" onClick={() => scrollToContact('book')}>
-                  Réserver
-                </Button>
                 <Button size="sm" className="shrink-0 min-h-11" onClick={() => scrollToContact('inquire')}>
-                  Devis
+                  {hideBooking ? inquireLabel : 'Devis'}
                 </Button>
+                {showBooking ? (
+                <Button size="sm" variant="secondary" className="shrink-0 min-h-11" onClick={() => scrollToContact('book')}>
+                  {bookLabel}
+                </Button>
+                ) : null}
               </>
             )}
           </div>

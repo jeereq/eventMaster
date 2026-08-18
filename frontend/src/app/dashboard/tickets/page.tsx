@@ -63,7 +63,7 @@ export default function ClientTicketsPage() {
           />
         }
         action={
-          <Link href="/evenements" className="inline-flex">
+          <Link href="/marketplace/evenements" className="inline-flex">
             <Button size="sm" leftIcon={<Calendar className="w-4 h-4" />}>
               Agenda public
             </Button>
@@ -83,7 +83,7 @@ export default function ClientTicketsPage() {
           title="Aucun billet pour le moment"
           description="Inscrivez-vous à un événement public ou achetez un billet — il apparaîtra ici si vous êtes connecté, ou si l’e-mail du compte correspond."
           action={
-            <Link href="/evenements">
+            <Link href="/marketplace/evenements">
               <Button size="sm">Voir l’agenda</Button>
             </Link>
           }

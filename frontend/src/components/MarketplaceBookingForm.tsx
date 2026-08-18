@@ -14,6 +14,8 @@ import {
 } from '@/lib/marketplace';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import { Lock } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { clientLoginHref, clientRegisterHref } from '@/lib/safeAppPath';
 
 export default function MarketplaceBookingForm({
   listingSlug,
@@ -43,6 +45,8 @@ export default function MarketplaceBookingForm({
   showCalendar?: boolean;
 }) {
   const { token, loading, tenant, access } = useAuth();
+  const pathname = usePathname();
+  const nextPath = pathname || '/marketplace';
   const [internalDate, setInternalDate] = useState('');
   const [internalEndDate, setInternalEndDate] = useState('');
   const [guestCount, setGuestCount] = useState('');
@@ -143,10 +147,10 @@ export default function MarketplaceBookingForm({
             plateforme au professionnel ; EventMaster n’encaisse pas ce paiement.
           </p>
           <div className="flex flex-wrap gap-2">
-            <Link href="/login" className="inline-flex">
+            <Link href={clientLoginHref(nextPath)} className="inline-flex">
               <Button size="sm">Se connecter</Button>
             </Link>
-            <Link href="/register?kind=CLIENT" className="inline-flex">
+            <Link href={clientRegisterHref(nextPath)} className="inline-flex">
               <Button size="sm" variant="secondary">Créer un compte client</Button>
             </Link>
           </div>

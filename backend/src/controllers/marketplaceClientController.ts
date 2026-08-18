@@ -385,7 +385,7 @@ export async function listMyTickets(req: AuthenticatedRequest, res: Response) {
           event: order.event,
           guestId: primary?.id || null,
           rsvpUrl: primary ? `${FRONTEND_URL}/rsvp/${primary.id}` : null,
-          publicHref: order.event.slug && order.event.isPublic ? `/evenements/${order.event.slug}` : null,
+          publicHref: order.event.slug && order.event.isPublic ? `/marketplace/evenements/${order.event.slug}` : null,
         };
       }),
     });

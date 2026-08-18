@@ -15,7 +15,7 @@ export default function MarketplacePublicNav({
     { id: 'hub' as const, href: '/marketplace', label: 'Marketplace', icon: Store },
     { id: 'venues' as const, href: '/marketplace/salles', label: 'Salles', icon: Building2 },
     { id: 'services' as const, href: '/marketplace/prestataires', label: 'Prestataires', icon: Sparkles },
-    { id: 'events' as const, href: '/marketplace?kind=event', label: 'Événements', icon: Calendar },
+    { id: 'events' as const, href: '/marketplace/evenements', label: 'Événements', icon: Calendar },
   ];
   return (
     <div className={cn('inline-flex flex-wrap gap-0.5 p-0.5 rounded-full border border-border bg-surface-muted', className)}>

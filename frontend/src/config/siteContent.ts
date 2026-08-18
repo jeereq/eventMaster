@@ -22,8 +22,7 @@ export const FOOTER_FEATURES = [
 
 export const FOOTER_PRODUCT = [
   { label: 'Modèles', href: '/#modeles' },
-  { label: 'Événements publics', href: '/evenements' },
-  { label: 'Marketplace salles & prestas', href: '/marketplace' },
+  { label: 'Marketplace', href: '/marketplace' },
   { label: 'Parcours', href: '/#parcours' },
   { label: 'Tarifs', href: '/#tarifs' },
   { label: 'FAQ', href: '/faq' },
@@ -34,7 +33,7 @@ export const FOOTER_RESOURCES = [
   { label: `Conditions d'utilisation (v${TERMS_VERSION})`, href: '/terms' },
   { label: `Politique de confidentialité (v${PRIVACY_VERSION})`, href: '/privacy' },
   { label: 'Connexion', href: '/login' },
-  { label: 'Compte client (favoris & packs)', href: '/register' },
+  { label: 'Compte client (devis, favoris & packs)', href: '/register' },
 ] as const;
 
 export const FOOTER_BRAND_DESCRIPTION =
@@ -69,13 +68,13 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'public-events',
     question: 'Puis-je organiser un événement public avec billets payants ?',
     answer:
-      'Oui. Dans Événements, choisissez Public : la fiche apparaît sur le marketplace, la carte et /evenements. Inscription gratuite, ou billets payants en ligne (carte via Stripe). Les acheteurs deviennent des invités avec badge QR. Placez le pin GPS pour que l’événement soit visible sur la carte. Un événement Privé reste sur liste d’invités uniquement (mariage, soirée fermée).',
+      'Oui. Dans Événements (tableau de bord organisateur), choisissez Public : la fiche apparaît sur le marketplace (grille, liste et carte), avec galerie et GPS. Inscription gratuite, ou billets payants en ligne (carte via Stripe). Les acheteurs deviennent des invités avec badge QR. Un événement Privé reste sur liste d’invités uniquement (mariage, soirée fermée).',
   },
   {
     id: 'marketplace-venues',
     question: 'Puis-je trouver une salle ou un prestataire sur EventMaster ?',
     answer:
-      'Oui. Le marketplace liste les salles, les prestations (traiteur, photo, DJ, déco…) et les événements publics, avec photos, vidéos, carte et calendrier. Sans compte, vous parcourez le catalogue public. Avec un compte client, vous mettez des fiches en favoris, préparez un événement selon votre budget (trois packs) et suivez vos réservations dans le tableau de bord. Vous pouvez aussi demander un devis ou une date : l’acompte (30 %) se verse au professionnel, hors EventMaster.',
+      'Oui. Le marketplace liste les salles, les prestations (traiteur, photo, DJ, déco…) et les événements publics, avec photos, vidéos, carte (grille ou liste). Sans compte, vous parcourez le catalogue. Pour un devis, un billet ou une réservation, vous pouvez créer un compte client (gratuit) — les champs sont préremplis — ou continuer en invité. L’acompte (30 %) se verse au professionnel, hors EventMaster.',
   },
   {
     id: 'marketplace-booking',

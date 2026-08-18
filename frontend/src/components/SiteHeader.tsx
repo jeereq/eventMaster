@@ -22,7 +22,6 @@ interface SiteHeaderProps {
 }
 
 const PUBLIC_LINKS: SiteHeaderLink[] = [
-  { href: '/evenements', label: 'Événements' },
   { href: '/marketplace', label: 'Marketplace' },
   { href: '/#modeles', label: 'Modèles' },
   { href: '/#tarifs', label: 'Tarifs' },
@@ -62,10 +61,8 @@ export default function SiteHeader({
           {links.map((item) => {
             const active =
               item.href === '/marketplace'
-                ? pathname.startsWith('/marketplace')
-                : item.href === '/evenements'
-                  ? pathname.startsWith('/evenements')
-                  : item.href === '/contact'
+                ? pathname.startsWith('/marketplace') || pathname.startsWith('/evenements')
+                : item.href === '/contact'
                   ? pathname === '/contact' || pathname === '/faq'
                   : item.href !== '/' && pathname === item.href;
             const className = cn(

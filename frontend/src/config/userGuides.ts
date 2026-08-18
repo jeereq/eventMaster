@@ -185,7 +185,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'create-event',
         title: 'Créer un événement complet',
         content:
-          '1. Allez dans Événements → Créer.\n2. Choisissez Privé (liste d’invités) ou Public (fiche sur le marketplace, la carte et /evenements).\n3. Ajoutez une galerie (photos / vidéos) : elle sert de couverture marketplace et de fiche publique.\n4. Pour un public payant, activez les billets en ligne et le prix en FC.\n5. Renseignez titre, date, lieu et GPS ; associez une salle (importe le plan 2D) et un modèle de formulaire RSVP si besoin.\n6. Sur le fil d’actualité, publiez une annonce sur la fiche publique si l’événement est ouvert.\n7. Suivez le parcours : invités (ou acheteurs de billets) → invitation RSVP → plan de table → protocole.',
+          '1. Allez dans Événements → Créer.\n2. Choisissez Privé (liste d’invités) ou Public (fiche sur le marketplace : grille, liste et carte).\n3. Ajoutez une galerie (photos / vidéos) : elle sert de couverture marketplace et de fiche publique.\n4. Pour un public payant, activez les billets en ligne et le prix en FC.\n5. Renseignez titre, date, lieu et GPS ; associez une salle (importe le plan 2D) et un modèle de formulaire RSVP si besoin.\n6. Sur le fil d’actualité, publiez une annonce sur la fiche publique si l’événement est ouvert.\n7. Suivez le parcours : invités (ou acheteurs de billets) → invitation RSVP → plan de table → protocole.',
         links: [{ label: 'Événements', href: '/dashboard/events' }],
       },
       {
@@ -460,10 +460,10 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'my-tickets',
         title: 'Retrouver un billet ou une inscription',
         content:
-          '1. Sur une fiche /evenements, connectez-vous (ou créez un compte client) — le checkout reprend vos nom, e-mail et téléphone.\n2. Vous pouvez aussi continuer en invité sans compte.\n3. Les commandes payées liées à votre compte ou à votre e-mail apparaissent dans Mes billets.\n4. Ouvrez Badge QR pour le portail RSVP.',
+          '1. Sur une fiche marketplace (salle, presta ou événement), connectez-vous (ou créez un compte client) — le formulaire reprend vos nom, e-mail et téléphone.\n2. Vous pouvez aussi continuer en invité sans compte.\n3. Les commandes de billets liées à votre compte ou à votre e-mail apparaissent dans Mes billets.\n4. Ouvrez Badge QR pour le portail RSVP.',
         links: [
           { label: 'Mes billets', href: '/dashboard/tickets' },
-          { label: 'Agenda public', href: '/evenements' },
+          { label: 'Marketplace — événements', href: '/marketplace/evenements' },
         ],
       },
       {

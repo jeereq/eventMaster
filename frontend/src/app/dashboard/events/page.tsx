@@ -1809,7 +1809,7 @@ Merci de confirmer votre présence :
  )}
  {selectedEvent.isPublic && selectedEvent.slug && (
  <a
- href={`/evenements/${selectedEvent.slug}`}
+ href={`/marketplace/evenements/${selectedEvent.slug}`}
  target="_blank"
  rel="noreferrer"
  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-border text-primary font-semibold hover:bg-surface-muted"
@@ -2785,7 +2785,7 @@ Merci de confirmer votre présence :
  </div>
  <p className="text-[11px] text-muted leading-relaxed">
  {eventIsPublic
- ? 'La fiche sera listée sur le marketplace, la carte et /evenements. Les visiteurs s’inscrivent ou achètent un billet ; ils apparaissent ensuite dans Invités. Placez le pin GPS pour qu’il apparaisse sur la carte.'
+ ? 'La fiche sera listée sur le marketplace (grille, liste et carte). Les visiteurs s’inscrivent ou achètent un billet ; ils apparaissent ensuite dans Invités. Placez le pin GPS pour qu’il apparaisse sur la carte.'
  : 'Seules les personnes que vous ajoutez (ou invitez) ont accès via leur lien RSVP.'}
  </p>
  {eventIsPublic && (
