@@ -165,6 +165,7 @@ export async function planEvent(req: AuthenticatedRequest, res: Response) {
       city: req.body?.city,
       guestCount: req.body?.guestCount,
       favoriteSlugs: favorites,
+      categories: req.body?.categories,
     });
     return res.json(result);
   } catch (error: any) {

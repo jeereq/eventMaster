@@ -1,10 +1,8 @@
 'use client';
 
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { Heart, Loader2, Sparkles, Store, Wallet } from 'lucide-react';
 import { api } from '@/lib/api';
-import { formatFc } from '@/config/landingPricing';
 import {
   Alert,
   Breadcrumbs,
@@ -25,10 +23,10 @@ import CatalogueFilterBar, {
 import CatalogueResults, { CatalogueResultsSkeleton } from '@/components/CatalogueResults';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
-import FavoriteHeart from '@/components/FavoriteHeart';
 import {
   EMPTY_CATALOGUE_GEO,
   SERVICE_MOBILITY_OPTIONS,
+  SERVICE_CATEGORY_LABELS,
   appendCatalogueGeoParams,
   catalogueGeoChips,
   catalogueItemToMapMarker,
@@ -43,11 +41,14 @@ import {
   type CatalogueItem,
   type PublicService,
   type PublicVenue,
+  type ServiceCategory,
   type ServiceMobility,
 } from '@/lib/marketplace';
 import { useCatalogueQueryState, useRememberListReturn } from '@/lib/catalogueQuery';
 import { favoriteToCatalogueItem, useListingFavorites } from '@/lib/listingFavorites';
 import { LISTING_EVENT_TYPES, eventTypeLabel, type ListingEventTypeId } from '@/lib/listingDetails';
+import { EVENT_PLAN_SLOTS, type PlanItem, type PlanPackage } from '@/lib/eventPlan';
+import EventPlanPacks from '@/components/EventPlanPacks';
 
 type HubTab = 'explore' | 'favorites' | 'plan';
 type HubFilters = CatalogueGeoState & { kind: 'all' | 'venue' | 'service'; mobility: ServiceMobility; tab: HubTab };
@@ -75,29 +76,6 @@ const QUERY_OPTS = {
   }),
 };
 
-type PlanItem = {
-  kind: 'venue' | 'service';
-  slug: string;
-  title: string;
-  orgName: string;
-  location: string;
-  coverUrl: string | null;
-  estimatedFc: number;
-  categoryLabel?: string;
-  href: string;
-  favorite?: boolean;
-};
-
-type PlanPackage = {
-  id: string;
-  label: string;
-  totalFc: number;
-  leftoverFc: number;
-  overBudget: boolean;
-  venue: PlanItem | null;
-  services: PlanItem[];
-};
-
 function ClientMarketplaceInner() {
   useRememberListReturn();
   const { mode, setView, gridCols, setGridCols } = useCatalogueView();
@@ -116,6 +94,7 @@ function ClientMarketplaceInner() {
   const [planning, setPlanning] = useState(false);
   const [planError, setPlanError] = useState('');
   const [packages, setPackages] = useState<PlanPackage[]>([]);
+  const [planCategories, setPlanCategories] = useState<ServiceCategory[]>(EVENT_PLAN_SLOTS.wedding.required);
 
   const tab = applied.tab;
 
@@ -204,6 +183,7 @@ function ClientMarketplaceInner() {
         budgetFc: Number(budgetFc.replace(/\s/g, '')),
         city: planCity || undefined,
         guestCount: Number(guestCount) || undefined,
+        categories: planCategories,
       });
       setPackages(data.packages || []);
       if (!(data.packages || []).length) {
@@ -215,6 +195,47 @@ function ClientMarketplaceInner() {
     } finally {
       setPlanning(false);
     }
+  };
+
+  const replacePackItem = (packId: string, currentSlug: string, next: PlanItem) => {
+    const budget = Number(budgetFc.replace(/\s/g, '')) || 0;
+    setPackages((current) => current.map((pack) => {
+      if (pack.id !== packId) return pack;
+      const rows = pack.venue ? [pack.venue, ...pack.services] : pack.services;
+      const currentItem = rows.find((item) => item.slug === currentSlug);
+      if (!currentItem) return pack;
+      const room = pack.leftoverFc + currentItem.estimatedFc;
+      if (next.estimatedFc > room) return pack;
+      const swapped: PlanItem = {
+        ...next,
+        alternatives: [
+          { ...currentItem, alternatives: [] },
+          ...(currentItem.alternatives || []).filter((item) => item.slug !== next.slug),
+        ],
+      };
+      const nextRows = rows.map((item) => (item.slug === currentSlug ? swapped : item));
+      const venue = nextRows.find((item) => item.kind === 'venue') || null;
+      const services = nextRows.filter((item) => item.kind === 'service');
+      const totalFc = nextRows.reduce((sum, item) => sum + item.estimatedFc, 0);
+      return {
+        ...pack,
+        venue,
+        services,
+        items: nextRows,
+        totalFc,
+        leftoverFc: Math.max(0, budget - totalFc),
+        overBudget: totalFc > budget,
+      };
+    }));
+  };
+
+  const slotOptions = EVENT_PLAN_SLOTS[eventType];
+  const togglePlanCategory = (category: ServiceCategory) => {
+    setPlanCategories((current) => (
+      current.includes(category)
+        ? current.filter((item) => item !== category)
+        : [...current, category]
+    ));
   };
 
   const mapMode = tab === 'explore' && isCatalogueMapView(mode);
@@ -384,7 +405,7 @@ function ClientMarketplaceInner() {
             <div>
               <h2 className="text-sm font-semibold text-foreground">Budget et type d’événement</h2>
               <p className="text-xs text-muted mt-1 leading-relaxed">
-                Nous proposons trois packs (économique, équilibré, confort) à partir du catalogue public, en privilégiant vos favoris.
+                Trois packs distincts dans votre enveloppe. Décochez les métiers inutiles, puis remplacez une ligne si besoin.
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -392,7 +413,12 @@ function ClientMarketplaceInner() {
                 <span className="block text-xs font-semibold text-muted">Type d’événement</span>
                 <select
                   value={eventType}
-                  onChange={(e) => setEventType(e.target.value as ListingEventTypeId)}
+                  onChange={(e) => {
+                    const next = e.target.value as ListingEventTypeId;
+                    setEventType(next);
+                    setPlanCategories(EVENT_PLAN_SLOTS[next].required);
+                    setPackages([]);
+                  }}
                   className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
                 >
                   {LISTING_EVENT_TYPES.map((item) => (
@@ -422,12 +448,37 @@ function ClientMarketplaceInner() {
                 </select>
               </label>
               <Input
-                label="Invités (optionnel)"
+                label="Invités"
                 type="number"
                 min={1}
                 value={guestCount}
                 onChange={(e) => setGuestCount(e.target.value)}
               />
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted">Prestations à inclure · {eventTypeLabel(eventType)}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {[...slotOptions.required, ...slotOptions.optional].map((category) => {
+                  const checked = planCategories.includes(category);
+                  const optional = slotOptions.optional.includes(category);
+                  return (
+                    <button
+                      key={category}
+                      type="button"
+                      onClick={() => togglePlanCategory(category)}
+                      className={cn(
+                        'px-2.5 py-1 rounded-full text-[11px] font-semibold border transition',
+                        checked
+                          ? 'bg-primary text-white border-primary'
+                          : 'bg-surface text-muted border-border hover:text-foreground',
+                      )}
+                    >
+                      {SERVICE_CATEGORY_LABELS[category]}
+                      {optional && !checked ? ' · option' : ''}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             {planError ? <Alert variant="error">{planError}</Alert> : null}
             <Button onClick={() => void runPlan()} disabled={planning} leftIcon={planning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}>
@@ -436,60 +487,18 @@ function ClientMarketplaceInner() {
           </div>
 
           {packages.length > 0 ? (
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-              {packages.map((pack) => (
-                <article key={pack.id} className="bg-surface border border-border rounded-[var(--radius-card)] p-4 space-y-4">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">{eventTypeLabel(eventType)}</p>
-                    <h3 className="text-base font-semibold text-foreground">{pack.label}</h3>
-                    <p className="text-sm font-semibold text-foreground mt-1">{formatFc(pack.totalFc)}</p>
-                    <p className={cn('text-xs mt-0.5', pack.overBudget ? 'text-rose-600' : 'text-muted')}>
-                      {pack.overBudget
-                        ? `Au-dessus du budget de ${formatFc(Number(budgetFc.replace(/\s/g, '')) || 0)}`
-                        : `Reste ${formatFc(pack.leftoverFc)}`}
-                    </p>
-                  </div>
-                  <ul className="space-y-2">
-                    {(pack.venue ? [pack.venue, ...pack.services] : pack.services).map((item) => (
-                      <li key={`${item.kind}:${item.slug}`} className="flex items-center gap-3 rounded-xl border border-border p-2">
-                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-surface-muted shrink-0">
-                          {item.coverUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={item.coverUrl} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-muted">
-                              <Store className="w-4 h-4" />
-                            </div>
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[10px] uppercase tracking-wider text-muted">
-                            {item.kind === 'venue' ? 'Salle' : item.categoryLabel || 'Prestataire'}
-                            {item.favorite ? ' · favori' : ''}
-                          </p>
-                          <Link href={item.href} className="text-sm font-semibold text-foreground hover:text-primary truncate block">
-                            {item.title}
-                          </Link>
-                          <p className="text-[11px] text-muted truncate">{item.orgName}{item.location ? ` · ${item.location}` : ''}</p>
-                        </div>
-                        <div className="shrink-0 flex flex-col items-end gap-1">
-                          <FavoriteHeart
-                            active={isFavorite(item.kind, item.slug)}
-                            onToggle={() => void toggleFavorite(item.kind, item.slug)}
-                          />
-                          <span className="text-[11px] font-semibold">{formatFc(item.estimatedFc)}</span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </article>
-              ))}
-            </div>
+            <EventPlanPacks
+              packages={packages}
+              budgetFc={Number(budgetFc.replace(/\s/g, '')) || 0}
+              isFavorite={isFavorite}
+              onToggleFavorite={(kind, slug) => void toggleFavorite(kind, slug)}
+              onReplace={replacePackItem}
+            />
           ) : !planning && !planError ? (
             <EmptyState
               icon={<Wallet className="w-5 h-5" />}
               title="Préparez votre événement"
-              description="Indiquez le type, le budget et éventuellement la ville, puis lancez la recherche pour obtenir trois propositions."
+              description="Indiquez le type, le budget et les métiers voulus, puis lancez la recherche pour obtenir trois propositions distinctes."
             />
           ) : null}
         </div>

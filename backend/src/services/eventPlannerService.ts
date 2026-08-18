@@ -17,6 +17,7 @@ export const EVENT_PLAN_TYPES = [
 export type EventPlanType = (typeof EVENT_PLAN_TYPES)[number];
 
 type PackSlot = { category: ServiceCategory; share: number };
+type PackStyle = 'cheap' | 'balanced' | 'comfort';
 
 const EVENT_PACKS: Record<EventPlanType, { venueShare: number; required: PackSlot[]; optional: PackSlot[] }> = {
   wedding: {
@@ -103,7 +104,19 @@ const EVENT_PACKS: Record<EventPlanType, { venueShare: number; required: PackSlo
   },
 };
 
+const STYLE_VENUE_FACTOR: Record<PackStyle, number> = {
+  cheap: 0.78,
+  balanced: 1,
+  comfort: 1.22,
+};
+
 type Scored<T> = T & { cost: number; match: 'exact' | 'unknown'; favorite: boolean };
+
+type MissingSlot = {
+  slot: 'venue' | ServiceCategory;
+  label: string;
+  reason: string;
+};
 
 function parseEventType(value: unknown): EventPlanType | null {
   return typeof value === 'string' && EVENT_PLAN_TYPES.includes(value as EventPlanType)
@@ -111,10 +124,26 @@ function parseEventType(value: unknown): EventPlanType | null {
     : null;
 }
 
+function parseCategories(value: unknown): ServiceCategory[] | null {
+  if (!Array.isArray(value)) return null;
+  const allowed = new Set<string>(Object.values(ServiceCategory));
+  const unique: ServiceCategory[] = [];
+  for (const item of value) {
+    if (typeof item === 'string' && allowed.has(item) && !unique.includes(item as ServiceCategory)) {
+      unique.push(item as ServiceCategory);
+    }
+  }
+  return unique;
+}
+
+function formatFc(amount: number): string {
+  return `${Math.round(amount).toLocaleString('fr-FR')} FC`;
+}
+
 function estimateCost(priceFromFc: number | null, priceUnit: string, guestCount: number): number | null {
   if (priceFromFc == null || priceFromFc <= 0) return null;
-  if (priceUnit === 'PERSON' || priceUnit === 'QUOTA') {
-    return priceFromFc * Math.max(1, guestCount || 1);
+  if ((priceUnit === 'PERSON' || priceUnit === 'QUOTA') && guestCount > 0) {
+    return priceFromFc * guestCount;
   }
   return priceFromFc;
 }
@@ -125,26 +154,98 @@ function eventMatch(details: unknown, eventType: string): 'exact' | 'unknown' | 
   return types.includes(eventType) ? 'exact' : 'no';
 }
 
-function pickForBudget<T extends { cost: number; favorite: boolean; match: 'exact' | 'unknown' }>(
+function sortCandidates<T extends { cost: number; favorite: boolean; match: 'exact' | 'unknown' }>(
   items: T[],
   budget: number,
-  style: 'cheap' | 'balanced' | 'comfort',
-): T | null {
-  const affordable = items.filter((item) => item.cost <= budget);
-  const pool = affordable.length ? affordable : items.slice();
-  if (!pool.length) return null;
-  return pool.slice().sort((a, b) => {
-    const fav = Number(b.favorite) - Number(a.favorite);
-    if (fav) return fav;
+  style: PackStyle,
+): T[] {
+  return items.slice().sort((a, b) => {
+    if (style === 'cheap') {
+      const cost = a.cost - b.cost;
+      if (cost) return cost;
+    } else if (style === 'comfort') {
+      const cost = b.cost - a.cost;
+      if (cost) return cost;
+    } else {
+      const target = budget * 0.85;
+      const diff = Math.abs(a.cost - target) - Math.abs(b.cost - target);
+      if (diff) return diff;
+    }
     const match = Number(b.match === 'exact') - Number(a.match === 'exact');
     if (match) return match;
-    if (style === 'cheap') return a.cost - b.cost;
-    if (style === 'comfort') return b.cost - a.cost;
-    return Math.abs(a.cost - budget * 0.85) - Math.abs(b.cost - budget * 0.85);
-  })[0] || null;
+    return Number(b.favorite) - Number(a.favorite);
+  });
 }
 
-function serializeVenue(listing: {
+function pickForBudget<T extends { slug: string; cost: number; favorite: boolean; match: 'exact' | 'unknown' }>(
+  items: T[],
+  budget: number,
+  style: PackStyle,
+  excludeSlugs: Set<string>,
+): { item: T; reused: boolean } | null {
+  const affordable = items.filter((item) => item.cost <= budget);
+  if (!affordable.length) return null;
+  const fresh = affordable.filter((item) => !excludeSlugs.has(item.slug));
+  const pool = fresh.length ? fresh : affordable;
+  const picked = sortCandidates(pool, budget, style)[0];
+  if (!picked) return null;
+  return { item: picked, reused: excludeSlugs.has(picked.slug) };
+}
+
+function missingReason<T extends { cost: number }>(
+  pool: T[],
+  budget: number,
+  label: string,
+): string {
+  if (!pool.length) return `Aucune offre « ${label} » pour ce type d’événement.`;
+  if (!pool.some((item) => item.cost <= budget)) {
+    return `Aucune offre « ${label} » sous ${formatFc(budget)}.`;
+  }
+  return `Aucune autre offre « ${label} » pour ce pack.`;
+}
+
+type VenueItem = {
+  kind: 'venue';
+  slug: string;
+  title: string;
+  orgName: string;
+  city: string | null;
+  location: string;
+  coverUrl: string | null;
+  priceFromFc: number | null;
+  priceUnitLabel: string;
+  estimatedFc: number;
+  capacity: number | null;
+  href: string;
+  favorite: boolean;
+  match: 'exact' | 'unknown';
+  reused: boolean;
+  alternatives: PlanItem[];
+};
+
+type ServiceItem = {
+  kind: 'service';
+  slug: string;
+  title: string;
+  category: ServiceCategory;
+  categoryLabel: string;
+  orgName: string;
+  city: string | null;
+  location: string;
+  coverUrl: string | null;
+  priceFromFc: number | null;
+  priceUnitLabel: string;
+  estimatedFc: number;
+  href: string;
+  favorite: boolean;
+  match: 'exact' | 'unknown';
+  reused: boolean;
+  alternatives: PlanItem[];
+};
+
+type PlanItem = VenueItem | ServiceItem;
+
+function serializeVenue(listing: Scored<{
   slug: string;
   headline: string | null;
   city: string | null;
@@ -155,10 +256,10 @@ function serializeVenue(listing: {
   photos: unknown;
   room: { name: string; capacity: number | null };
   tenant: { name: string; vendorProfile: { displayName: string } | null };
-}, cost: number) {
+}>, cost: number, extras?: { reused?: boolean }): VenueItem {
   const photos = parsePhotoUrls(listing.photos);
   return {
-    kind: 'venue' as const,
+    kind: 'venue',
     slug: listing.slug,
     title: listing.headline || listing.room.name,
     orgName: listing.tenant.vendorProfile?.displayName || listing.tenant.name,
@@ -170,11 +271,14 @@ function serializeVenue(listing: {
     estimatedFc: cost,
     capacity: listing.room.capacity,
     href: `/dashboard/catalogue/salles/${listing.slug}`,
-    favorite: Boolean((listing as { favorite?: boolean }).favorite),
+    favorite: listing.favorite,
+    match: listing.match,
+    reused: Boolean(extras?.reused),
+    alternatives: [],
   };
 }
 
-function serializeService(offering: {
+function serializeService(offering: Scored<{
   slug: string;
   title: string;
   category: ServiceCategory;
@@ -186,10 +290,10 @@ function serializeService(offering: {
   photos: unknown;
   vendorProfile: { displayName: string };
   tenant: { name: string };
-}, cost: number) {
+}>, cost: number, extras?: { reused?: boolean }): ServiceItem {
   const photos = parsePhotoUrls(offering.photos);
   return {
-    kind: 'service' as const,
+    kind: 'service',
     slug: offering.slug,
     title: offering.title,
     category: offering.category,
@@ -202,8 +306,30 @@ function serializeService(offering: {
     priceUnitLabel: priceUnitLabel(offering.priceUnit),
     estimatedFc: cost,
     href: `/dashboard/catalogue/prestataires/${offering.slug}`,
-    favorite: Boolean((offering as { favorite?: boolean }).favorite),
+    favorite: offering.favorite,
+    match: offering.match,
+    reused: Boolean(extras?.reused),
+    alternatives: [],
   };
+}
+
+function attachAlternatives<T extends { slug: string; cost: number; favorite: boolean; match: 'exact' | 'unknown' }>(
+  serialized: PlanItem,
+  pool: T[],
+  budget: number,
+  style: PackStyle,
+  serialize: (item: T, cost: number) => PlanItem,
+  exclude: Set<string>,
+  limit = 3,
+): PlanItem {
+  const alternatives = sortCandidates(
+    pool.filter((item) => item.cost <= budget && item.slug !== serialized.slug && !exclude.has(item.slug)),
+    budget,
+    style,
+  )
+    .slice(0, limit)
+    .map((item) => ({ ...serialize(item, item.cost), alternatives: [] }));
+  return { ...serialized, alternatives };
 }
 
 export async function buildEventPlanProposals(input: {
@@ -212,6 +338,7 @@ export async function buildEventPlanProposals(input: {
   city?: unknown;
   guestCount?: unknown;
   favoriteSlugs?: Array<{ kind: string; slug: string }>;
+  categories?: unknown;
 }) {
   const eventType = parseEventType(input.eventType);
   const budgetFc = Number(input.budgetFc);
@@ -225,7 +352,19 @@ export async function buildEventPlanProposals(input: {
     throw Object.assign(new Error('Indiquez un budget d’au moins 50 000 FC.'), { status: 400 });
   }
 
-  const pack = EVENT_PACKS[eventType];
+  const template = EVENT_PACKS[eventType];
+  const requested = parseCategories(input.categories);
+  const required: PackSlot[] = requested
+    ? requested.map((category) => (
+      template.required.find((slot) => slot.category === category)
+      || template.optional.find((slot) => slot.category === category)
+      || { category, share: 0.08 }
+    ))
+    : template.required;
+  const optional: PackSlot[] = requested
+    ? template.optional.filter((slot) => !requested.includes(slot.category))
+    : template.optional;
+
   const guests = Number.isFinite(guestCount) && guestCount > 0 ? Math.floor(guestCount) : 0;
   const favoriteVenues = new Set(
     (input.favoriteSlugs || []).filter((item) => item.kind === 'venue').map((item) => item.slug),
@@ -263,7 +402,7 @@ export async function buildEventPlanProposals(input: {
   const rankedVenues: Array<Scored<(typeof listings)[number]>> = listings.flatMap((listing) => {
     const match = eventMatch(listing.details, eventType);
     if (match === 'no') return [];
-    const cost = estimateCost(listing.priceFromFc, listing.priceUnit, guests || 50);
+    const cost = estimateCost(listing.priceFromFc, listing.priceUnit, guests);
     if (cost == null) return [];
     return [{ ...listing, cost, match, favorite: favoriteVenues.has(listing.slug) }];
   });
@@ -271,64 +410,145 @@ export async function buildEventPlanProposals(input: {
   const rankedServices: Array<Scored<(typeof offerings)[number]>> = offerings.flatMap((offering) => {
     const match = eventMatch(offering.details, eventType);
     if (match === 'no') return [];
-    const cost = estimateCost(offering.priceFromFc, offering.priceUnit, guests || 50);
+    const cost = estimateCost(offering.priceFromFc, offering.priceUnit, guests);
     if (cost == null) return [];
     return [{ ...offering, cost, match, favorite: favoriteServices.has(offering.slug) }];
   });
 
-  const styles: Array<{ id: string; label: string; style: 'cheap' | 'balanced' | 'comfort' }> = [
-    { id: 'eco', label: 'Économique', style: 'cheap' },
-    { id: 'balanced', label: 'Équilibré', style: 'balanced' },
-    { id: 'comfort', label: 'Confort', style: 'comfort' },
+  const styles: Array<{ id: string; label: string; style: PackStyle; blurb: string }> = [
+    { id: 'eco', label: 'Économique', style: 'cheap', blurb: 'Le moins cher qui tient dans le budget, sans options.' },
+    { id: 'balanced', label: 'Équilibré', style: 'balanced', blurb: 'Répartition proche de l’enveloppe, options si le budget le permet.' },
+    { id: 'comfort', label: 'Confort', style: 'comfort', blurb: 'Le plus complet dans le budget, options incluses.' },
   ];
 
+  const usedVenueSlugs = new Set<string>();
+  const usedServiceSlugs = new Set<string>();
+
   const packages = styles.map((style) => {
-    const usedServiceSlugs = new Set<string>();
-    const venueBudget = Math.round(budgetFc * pack.venueShare);
-    const venue = pickForBudget(rankedVenues, venueBudget, style.style);
-    const items: Array<ReturnType<typeof serializeVenue> | ReturnType<typeof serializeService>> = [];
+    const missing: MissingSlot[] = [];
+    const notes: string[] = [];
+    const items: PlanItem[] = [];
     let total = 0;
-    if (venue) {
-      items.push(serializeVenue(venue, venue.cost));
-      total += venue.cost;
+
+    const venueBudget = Math.min(
+      budgetFc,
+      Math.round(budgetFc * template.venueShare * STYLE_VENUE_FACTOR[style.style]),
+    );
+    const venuePick = pickForBudget(rankedVenues, venueBudget, style.style, usedVenueSlugs);
+    if (venuePick) {
+      usedVenueSlugs.add(venuePick.item.slug);
+      const serialized = attachAlternatives(
+        serializeVenue(venuePick.item, venuePick.item.cost, { reused: venuePick.reused }),
+        rankedVenues,
+        venueBudget,
+        style.style,
+        (item, cost) => serializeVenue(item, cost),
+        new Set(),
+      );
+      items.push(serialized);
+      total += venuePick.item.cost;
+      if (venuePick.reused) notes.push('Même salle qu’un autre pack : pas d’alternative dans le budget.');
+      if (venuePick.item.favorite) notes.push('Salle prise parmi vos favoris.');
+    } else {
+      missing.push({
+        slot: 'venue',
+        label: 'Salle',
+        reason: missingReason(rankedVenues, venueBudget, 'Salle'),
+      });
     }
 
-    const addSlot = (slot: PackSlot) => {
-      const pool = rankedServices.filter(
-        (service) => service.category === slot.category && !usedServiceSlugs.has(service.slug),
-      );
+    const addSlot = (slot: PackSlot, requiredSlot: boolean) => {
       const remaining = Math.max(0, budgetFc - total);
-      const cap = Math.min(Math.round(budgetFc * slot.share), remaining || Math.round(budgetFc * slot.share));
-      const picked = pickForBudget(pool, cap > 0 ? cap : remaining || budgetFc, style.style);
-      if (!picked) return;
-      usedServiceSlugs.add(picked.slug);
-      items.push(serializeService(picked, picked.cost));
-      total += picked.cost;
+      if (remaining <= 0) {
+        if (requiredSlot) {
+          missing.push({
+            slot: slot.category,
+            label: serviceCategoryLabel(slot.category),
+            reason: 'Budget déjà consommé par les autres lignes.',
+          });
+        }
+        return;
+      }
+      const cap = Math.min(Math.round(budgetFc * slot.share * STYLE_VENUE_FACTOR[style.style]), remaining);
+      const pool = rankedServices.filter((service) => service.category === slot.category);
+      const picked = pickForBudget(pool, cap > 0 ? cap : remaining, style.style, usedServiceSlugs);
+      if (!picked) {
+        if (requiredSlot) {
+          missing.push({
+            slot: slot.category,
+            label: serviceCategoryLabel(slot.category),
+            reason: missingReason(pool, cap > 0 ? cap : remaining, serviceCategoryLabel(slot.category)),
+          });
+        }
+        return;
+      }
+      usedServiceSlugs.add(picked.item.slug);
+      const packExclude = new Set(items.filter((item) => item.kind === 'service').map((item) => item.slug));
+      items.push(attachAlternatives(
+        serializeService(picked.item, picked.item.cost, { reused: picked.reused }),
+        pool,
+        remaining,
+        style.style,
+        (item, cost) => serializeService(item, cost),
+        packExclude,
+      ));
+      total += picked.item.cost;
+      if (picked.reused) {
+        notes.push(`${serviceCategoryLabel(slot.category)} : même prestataire qu’un autre pack.`);
+      }
     };
 
-    pack.required.forEach(addSlot);
-    pack.optional.forEach((slot) => {
-      if (total >= budgetFc) return;
-      addSlot(slot);
-    });
+    required.forEach((slot) => addSlot(slot, true));
+
+    if (style.style !== 'cheap') {
+      optional.forEach((slot) => {
+        const remaining = budgetFc - total;
+        const minKeep = style.style === 'comfort' ? 0 : Math.round(budgetFc * 0.04);
+        if (remaining <= minKeep) return;
+        addSlot(slot, false);
+      });
+    }
+
+    const leftoverFc = Math.max(0, budgetFc - total);
+    const favoriteCount = items.filter((item) => item.favorite).length;
+    if (favoriteCount > 0) {
+      notes.push(`${favoriteCount} favori${favoriteCount > 1 ? 's' : ''} inclus.`);
+    }
+    if (guests && items.some((item) => item.kind === 'venue' && item.capacity && item.capacity >= guests)) {
+      notes.push(`Salle prévue pour au moins ${guests} invités.`);
+    }
+    if (!missing.length && leftoverFc > 0) {
+      notes.push(`Reste ${formatFc(leftoverFc)} à réallouer ou à garder en marge.`);
+    }
 
     return {
       id: style.id,
       label: style.label,
+      blurb: style.blurb,
+      style: style.style,
       totalFc: total,
-      leftoverFc: Math.max(0, budgetFc - total),
-      overBudget: total > budgetFc,
-      venue: items.find((item) => item.kind === 'venue') || null,
-      services: items.filter((item) => item.kind === 'service'),
+      leftoverFc,
+      overBudget: false,
+      complete: missing.length === 0 && Boolean(items.find((item) => item.kind === 'venue')),
+      venue: (items.find((item) => item.kind === 'venue') as VenueItem | undefined) || null,
+      services: items.filter((item) => item.kind === 'service') as ServiceItem[],
       items,
+      missing,
+      notes,
+      requiredCount: required.length + 1,
+      filledCount: items.length,
     };
-  }).filter((packResult) => packResult.items.length > 0);
+  }).filter((packResult) => packResult.items.length > 0 || packResult.missing.length > 0);
 
   return {
     eventType,
     budgetFc,
     city: city || null,
     guestCount: guests || null,
+    slots: {
+      required: required.map((slot) => ({ category: slot.category, label: serviceCategoryLabel(slot.category) })),
+      optional: optional.map((slot) => ({ category: slot.category, label: serviceCategoryLabel(slot.category) })),
+    },
     packages,
     catalog: {
       venues: rankedVenues.length,
