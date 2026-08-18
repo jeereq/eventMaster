@@ -104,7 +104,7 @@ const selectableRoomTypes: RoomType[] = ['SIMPLE', 'BANQUET', 'CONFERENCE', 'AMP
 
 const defaultParams: Record<RoomType, LayoutParams> = {
   SIMPLE: {},
-  BANQUET: { tableCount: 8, tableShape: 'round', seatsPerTable: 8, chairType: 'BANQUET' },
+  BANQUET: { tableCount: 8, tableShape: 'round', seatsPerTable: 8, chairType: 'BANQUET', totalSeats: 64 },
   CONFERENCE: { rowCount: 6, seatsPerRow: 10, chairType: 'THEATER' },
   AMPHITHEATER: { tierCount: 3, rowsPerTier: 2, seatsPerRow: 12, chairType: 'THEATER' },
   TENT: { tentWidthM: 15, tentLengthM: 20, tableCount: 6, seatsPerTable: 8, chairType: 'BANQUET' },
@@ -534,6 +534,25 @@ export default function RoomsManagement() {
             {renderCanvasDims()}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label>
+                <span className={labelClass}>Places au total</span>
+                <input
+                  type="number"
+                  min={2}
+                  max={400}
+                  value={layoutParams.totalSeats ?? (layoutParams.tableCount ?? 8) * (layoutParams.seatsPerTable ?? 8)}
+                  onChange={(e) => {
+                    const totalSeats = parseInt(e.target.value, 10) || 8;
+                    const per = layoutParams.seatsPerTable ?? 8;
+                    setLayoutParams((prev) => ({
+                      ...prev,
+                      totalSeats,
+                      tableCount: Math.max(1, Math.ceil(totalSeats / per)),
+                    }));
+                  }}
+                  className={fieldClass}
+                />
+              </label>
+              <label>
                 <span className={labelClass}>Nombre de tables</span>
                 <input type="number" min={1} max={80} value={layoutParams.tableCount ?? 8} onChange={(e) => updateParam('tableCount', parseInt(e.target.value, 10))} className={fieldClass} />
               </label>
@@ -551,6 +570,25 @@ export default function RoomsManagement() {
             {renderCanvasDims()}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label>
+                <span className={labelClass}>Places au total</span>
+                <input
+                  type="number"
+                  min={2}
+                  max={400}
+                  value={layoutParams.totalSeats ?? (layoutParams.rowCount ?? 6) * (layoutParams.seatsPerRow ?? 10)}
+                  onChange={(e) => {
+                    const totalSeats = parseInt(e.target.value, 10) || 10;
+                    const per = layoutParams.seatsPerRow ?? 10;
+                    setLayoutParams((prev) => ({
+                      ...prev,
+                      totalSeats,
+                      rowCount: Math.max(1, Math.ceil(totalSeats / per)),
+                    }));
+                  }}
+                  className={fieldClass}
+                />
+              </label>
+              <label>
                 <span className={labelClass}>Nombre de rangées</span>
                 <input type="number" min={1} max={30} value={layoutParams.rowCount ?? 6} onChange={(e) => updateParam('rowCount', parseInt(e.target.value, 10))} className={fieldClass} />
               </label>
@@ -567,6 +605,28 @@ export default function RoomsManagement() {
           <div className="space-y-3">
             {renderCanvasDims()}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label>
+                <span className={labelClass}>Places au total</span>
+                <input
+                  type="number"
+                  min={2}
+                  max={400}
+                  value={layoutParams.totalSeats ?? (layoutParams.tierCount ?? 3) * (layoutParams.rowsPerTier ?? 2) * (layoutParams.seatsPerRow ?? 12)}
+                  onChange={(e) => {
+                    const totalSeats = parseInt(e.target.value, 10) || 12;
+                    const seatsPerRow = layoutParams.seatsPerRow ?? 12;
+                    const rows = Math.max(1, Math.ceil(totalSeats / seatsPerRow));
+                    const tierCount = Math.min(6, Math.max(2, Math.ceil(Math.sqrt(rows))));
+                    setLayoutParams((prev) => ({
+                      ...prev,
+                      totalSeats,
+                      tierCount,
+                      rowsPerTier: Math.max(1, Math.ceil(rows / tierCount)),
+                    }));
+                  }}
+                  className={fieldClass}
+                />
+              </label>
               <label>
                 <span className={labelClass}>Gradins</span>
                 <input type="number" min={1} max={10} value={layoutParams.tierCount ?? 3} onChange={(e) => updateParam('tierCount', parseInt(e.target.value, 10))} className={fieldClass} />
@@ -588,6 +648,25 @@ export default function RoomsManagement() {
           <div className="space-y-3">
             {renderCanvasDims('tentWidthM', 'tentLengthM')}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label>
+                <span className={labelClass}>Places au total</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={400}
+                  value={layoutParams.totalSeats ?? (layoutParams.tableCount ?? 0) * (layoutParams.seatsPerTable ?? 8)}
+                  onChange={(e) => {
+                    const totalSeats = parseInt(e.target.value, 10) || 0;
+                    const per = layoutParams.seatsPerTable ?? 8;
+                    setLayoutParams((prev) => ({
+                      ...prev,
+                      totalSeats: totalSeats || undefined,
+                      tableCount: totalSeats > 0 ? Math.max(1, Math.ceil(totalSeats / per)) : 0,
+                    }));
+                  }}
+                  className={fieldClass}
+                />
+              </label>
               <label>
                 <span className={labelClass}>Tables intérieures</span>
                 <input type="number" min={0} max={40} value={layoutParams.tableCount ?? 0} onChange={(e) => updateParam('tableCount', parseInt(e.target.value, 10))} className={fieldClass} />

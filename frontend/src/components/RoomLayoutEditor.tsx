@@ -95,6 +95,7 @@ export default function RoomLayoutEditor({
   seatsPerTable: 8,
   tableShape: 'round',
   chairType: 'BANQUET',
+  totalSeats: 64,
  });
 
  const log = useCallback((message: string, kind: LayoutActionEntry['kind'] = 'info') => {
@@ -281,10 +282,15 @@ export default function RoomLayoutEditor({
  };
 
  const applyTemplate = (templateId: string) => {
+ const tpl = ROOM_LAYOUT_TEMPLATES.find((t) => t.id === templateId);
  const next = applyRoomTemplate(templateId, tplParams, blueprint, { keepStyle: keepTemplateStyle });
  if (!next) return;
  onChange(next);
- log(`Modèle « ${ROOM_LAYOUT_TEMPLATES.find((t) => t.id === templateId)?.name} » appliqué`, 'template');
+ const seats = next.metadata.totalSeats;
+ log(
+  `Modèle « ${tpl?.name} » généré${seats ? ` — ${seats} places` : ''}`,
+  'template',
+ );
  setSelected(null);
  };
 
@@ -857,14 +863,22 @@ export default function RoomLayoutEditor({
  {caps.canChangeOutline ? (
  <div className="p-4 bg-surface-muted rounded-xl border space-y-3">
  <p className="text-xs font-bold uppercase text-muted flex items-center gap-1"><Shapes className="w-3.5 h-3.5" /> Forme de la salle</p>
- <div className="grid grid-cols-2 gap-2">
+ <div className="grid grid-cols-3 gap-2">
  {(Object.keys(roomOutlineLabels) as RoomOutlineShape[]).map((shape) => (
  <button
  key={shape}
  type="button"
  onClick={() => setRoomOutlineShape(shape)}
- className={`py-2 px-2 rounded-lg border text-[10px] font-bold transition ${outline.shape === shape ? 'bg-primary/10 border-primary/50 text-primary' : 'border-border text-muted hover:bg-white'}`}
+ className={`py-2 px-1.5 rounded-lg border text-[10px] font-bold transition ${outline.shape === shape ? 'bg-primary/10 border-primary/50 text-primary' : 'border-border text-muted hover:bg-white'}`}
  >
+ <span
+ className="block h-7 mx-auto mb-1 bg-primary/25 border border-primary/20"
+ style={{
+  width: '70%',
+  clipPath: getRoomOutlineClipPath(shape) ?? 'none',
+  background: outline.shape === shape ? 'var(--color-primary, #6366f1)' : undefined,
+ }}
+ />
  {roomOutlineLabels[shape]}
  </button>
  ))}
@@ -1169,28 +1183,49 @@ export default function RoomLayoutEditor({
  Conserver thème et sol
  </label>
  <label className="text-[10px] space-y-0.5">
- <span className="font-semibold text-muted">Nombre</span>
+ <span className="font-semibold text-muted">Places au total</span>
  <input
  type="number"
- min={1}
- max={80}
- value={tplParams.tableCount ?? 8}
- onChange={(e) => setTplParams((p) => ({ ...p, tableCount: parseInt(e.target.value, 10) || 1, rowCount: parseInt(e.target.value, 10) || 1 }))}
- className="w-[72px] px-2 py-1 rounded-lg border text-xs"
- title="Tables ou rangées selon le modèle"
+ min={2}
+ max={400}
+ value={tplParams.totalSeats ?? 64}
+ onChange={(e) => {
+ const totalSeats = Math.max(2, parseInt(e.target.value, 10) || 2);
+ const per = tplParams.seatsPerTable ?? 8;
+ setTplParams((p) => ({
+  ...p,
+  totalSeats,
+  tableCount: Math.max(1, Math.ceil(totalSeats / per)),
+  rowCount: Math.max(1, Math.ceil(totalSeats / (p.seatsPerRow ?? per))),
+ }));
+ }}
+ className="w-[88px] px-2 py-1 rounded-lg border border-primary/40 text-xs font-bold"
+ title="Cliquez ensuite un modèle pour générer ce nombre de places"
  />
  </label>
  <label className="text-[10px] space-y-0.5">
- <span className="font-semibold text-muted">Places</span>
+ <span className="font-semibold text-muted">Places / table</span>
  <input
  type="number"
  min={2}
  max={24}
  value={tplParams.seatsPerTable ?? 8}
- onChange={(e) => setTplParams((p) => ({ ...p, seatsPerTable: parseInt(e.target.value, 10) || 2, seatsPerRow: parseInt(e.target.value, 10) || 2 }))}
+ onChange={(e) => {
+ const seatsPerTable = Math.max(2, parseInt(e.target.value, 10) || 2);
+ const total = tplParams.totalSeats ?? 64;
+ setTplParams((p) => ({
+  ...p,
+  seatsPerTable,
+  seatsPerRow: seatsPerTable,
+  tableCount: Math.max(1, Math.ceil(total / seatsPerTable)),
+ }));
+ }}
  className="w-[72px] px-2 py-1 rounded-lg border text-xs"
  />
  </label>
+ <p className="text-[10px] text-muted pb-1.5">
+ → {Math.max(1, Math.ceil((tplParams.totalSeats ?? 64) / (tplParams.seatsPerTable ?? 8)))} tables · cliquez un modèle
+ </p>
  <label className="text-[10px] space-y-0.5">
  <span className="font-semibold text-muted">Forme</span>
  <select

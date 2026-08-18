@@ -5,7 +5,23 @@ export type TableArrangePreset = 'grid' | 'banquet' | 'ushape' | 'circle';
 export type ArrangeDensity = 'compact' | 'comfortable' | 'ample';
 export type TableStyleField = 'shape' | 'chairType' | 'tableColor' | 'capacity';
 
-export type RoomOutlineShape = 'rectangle' | 'square' | 'circle' | 'lShape' | 'hexagon' | 'octagon';
+export type RoomOutlineShape =
+  | 'rectangle'
+  | 'square'
+  | 'circle'
+  | 'ellipse'
+  | 'lShape'
+  | 'rShape'
+  | 'tShape'
+  | 'uShape'
+  | 'hexagon'
+  | 'octagon'
+  | 'pentagon'
+  | 'triangle'
+  | 'diamond'
+  | 'trapezoid'
+  | 'stadium'
+  | 'cross';
 export type ColumnShape = 'round' | 'square';
 export type FlowerType = 'rose' | 'tulipe' | 'orchidee' | 'tournesol' | 'lavande' | 'boquet' | 'personnalise';
 
@@ -30,6 +46,7 @@ export interface LayoutParams {
   canvasWidthM?: number;
   canvasHeightM?: number;
   arrangePreset?: TableArrangePreset;
+  totalSeats?: number;
 }
 
 export interface SavedRoomTemplate {
@@ -272,6 +289,18 @@ function emptyRoomTemplate(
   outline: RoomOutlineShape,
   params?: LayoutParams,
 ): RoomLayoutBlueprint {
+  const seatsPer = Math.max(2, params?.seatsPerTable ?? 8);
+  const fromTotal = params?.totalSeats ? Math.ceil(params.totalSeats / seatsPer) : 0;
+  const tableCount = params?.tableCount ?? fromTotal;
+  if (tableCount && tableCount > 0) {
+    return composeTemplate(
+      templateId,
+      'BANQUET',
+      outline,
+      { tableShape: 'round', seatsPerTable: seatsPer, ...params, tableCount },
+      params?.arrangePreset ?? 'grid',
+    );
+  }
   return ensureBlueprintDefaults({
     version: 1,
     roomType: 'SIMPLE',
@@ -515,6 +544,38 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     outlineShape: 'lShape',
     build: (p) => emptyRoomTemplate('empty-lshape', 'lShape', p),
   },
+  {
+    id: 'empty-ushape',
+    name: 'Salle en U',
+    description: 'Contour en U, idéal cérémonie',
+    roomType: 'SIMPLE',
+    outlineShape: 'uShape',
+    build: (p) => emptyRoomTemplate('empty-ushape', 'uShape', p),
+  },
+  {
+    id: 'empty-tshape',
+    name: 'Salle en T',
+    description: 'Contour en T avec avancée',
+    roomType: 'SIMPLE',
+    outlineShape: 'tShape',
+    build: (p) => emptyRoomTemplate('empty-tshape', 'tShape', p),
+  },
+  {
+    id: 'empty-stadium',
+    name: 'Salle capsule',
+    description: 'Contour arrondi type stade',
+    roomType: 'SIMPLE',
+    outlineShape: 'stadium',
+    build: (p) => emptyRoomTemplate('empty-stadium', 'stadium', p),
+  },
+  {
+    id: 'empty-trapezoid',
+    name: 'Salle trapèze',
+    description: 'Contour trapèze, vue scène élargie',
+    roomType: 'SIMPLE',
+    outlineShape: 'trapezoid',
+    build: (p) => emptyRoomTemplate('empty-trapezoid', 'trapezoid', p),
+  },
 ];
 
 export interface ApplyTemplateOptions {
@@ -567,7 +628,11 @@ export function applyRoomTemplate(
 ): RoomLayoutBlueprint | null {
   const tpl = ROOM_LAYOUT_TEMPLATES.find((t) => t.id === templateId);
   if (!tpl) return null;
-  const built = refreshBlueprintMetadata(tpl.build(params));
+  const resolved = layoutParamsFromCapacity(tpl, params ?? {});
+  let built = refreshBlueprintMetadata(tpl.build(resolved));
+  if (resolved.totalSeats) {
+    built = fitBlueprintToSeatCount(built, resolved.totalSeats);
+  }
   if (!previous) return built;
   return mergeTemplateStyle(built, previous, options?.keepStyle !== false);
 }
@@ -653,27 +718,133 @@ export function applyTableStyleToAll(
 export const roomOutlineLabels: Record<RoomOutlineShape, string> = {
   rectangle: 'Rectangle',
   square: 'Carré',
-  circle: 'Circulaire / Ovale',
+  circle: 'Circulaire',
+  ellipse: 'Ovale allongé',
   lShape: 'Forme en L',
+  rShape: 'L inversé',
+  tShape: 'Forme en T',
+  uShape: 'Forme en U',
   hexagon: 'Hexagone',
   octagon: 'Octogone',
+  pentagon: 'Pentagone',
+  triangle: 'Triangle',
+  diamond: 'Losange',
+  trapezoid: 'Trapèze',
+  stadium: 'Capsule / stade',
+  cross: 'Croix',
 };
 
 export function getRoomOutlineClipPath(shape: RoomOutlineShape): string | undefined {
   switch (shape) {
     case 'circle':
       return 'ellipse(45% 42% at 50% 50%)';
+    case 'ellipse':
+      return 'ellipse(48% 30% at 50% 50%)';
     case 'hexagon':
       return 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)';
     case 'octagon':
       return 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)';
+    case 'pentagon':
+      return 'polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)';
+    case 'triangle':
+      return 'polygon(50% 0%, 100% 100%, 0% 100%)';
+    case 'diamond':
+      return 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)';
+    case 'trapezoid':
+      return 'polygon(18% 0%, 82% 0%, 100% 100%, 0% 100%)';
+    case 'stadium':
+      return 'inset(6% 4% round 50%)';
     case 'lShape':
       return 'polygon(0% 0%, 65% 0%, 65% 35%, 100% 35%, 100% 100%, 0% 100%)';
+    case 'rShape':
+      return 'polygon(35% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 35%, 35% 35%)';
+    case 'tShape':
+      return 'polygon(0% 0%, 100% 0%, 100% 38%, 68% 38%, 68% 100%, 32% 100%, 32% 38%, 0% 38%)';
+    case 'uShape':
+      return 'polygon(0% 0%, 32% 0%, 32% 62%, 68% 62%, 68% 0%, 100% 0%, 100% 100%, 0% 100%)';
+    case 'cross':
+      return 'polygon(35% 0%, 65% 0%, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0% 65%, 0% 35%, 35% 35%)';
     case 'square':
       return 'inset(8% 20% 8% 20%)';
     default:
       return undefined;
   }
+}
+
+export function layoutParamsFromCapacity(
+  template: Pick<RoomLayoutTemplate, 'id' | 'roomType'>,
+  params: LayoutParams,
+): LayoutParams {
+  const total = params.totalSeats;
+  if (!total || total < 2) return params;
+
+  const seatsPerTable = Math.max(2, Math.min(24, params.seatsPerTable ?? 8));
+
+  if (template.id === 'boardroom') {
+    return { ...params, tableCount: 1, seatsPerTable: Math.max(8, Math.min(48, total)) };
+  }
+  if (template.id === 'conference-standard') {
+    const seatsPerRow = Math.max(2, Math.min(40, params.seatsPerRow ?? params.seatsPerTable ?? 10));
+    return { ...params, seatsPerRow, rowCount: Math.max(1, Math.ceil(total / seatsPerRow)) };
+  }
+  if (template.id === 'amphitheater-small') {
+    const seatsPerRow = Math.max(2, Math.min(40, params.seatsPerRow ?? params.seatsPerTable ?? 12));
+    const rows = Math.max(1, Math.ceil(total / seatsPerRow));
+    const tierCount = Math.min(6, Math.max(2, params.tierCount ?? Math.ceil(Math.sqrt(rows))));
+    const rowsPerTier = Math.max(1, params.rowsPerTier ?? Math.ceil(rows / tierCount));
+    return { ...params, seatsPerRow, tierCount, rowsPerTier };
+  }
+
+  return {
+    ...params,
+    tableCount: Math.max(1, Math.ceil(total / seatsPerTable)),
+    seatsPerTable,
+  };
+}
+
+export function fitBlueprintToSeatCount(
+  blueprint: RoomLayoutBlueprint,
+  target: number,
+): RoomLayoutBlueprint {
+  const goal = Math.max(2, Math.round(target));
+  const seating = blueprint.furniture.filter((item) => item.kind === 'table' || item.kind === 'row');
+  if (seating.length === 0) return blueprint;
+
+  let remaining = goal;
+  const furniture = blueprint.furniture.map((item) => {
+    if (item.kind === 'table') {
+      if (remaining <= 0) return { ...item, capacity: 0 };
+      const capacity = Math.min(item.capacity, remaining);
+      remaining -= capacity;
+      return { ...item, capacity };
+    }
+    if (item.kind === 'row') {
+      if (remaining <= 0) return { ...item, seatCount: 0 };
+      const seatCount = Math.min(item.seatCount, remaining);
+      remaining -= seatCount;
+      return { ...item, seatCount };
+    }
+    return item;
+  }).filter((item) => {
+    if (item.kind === 'table') return item.capacity >= 2;
+    if (item.kind === 'row') return item.seatCount >= 2;
+    return true;
+  });
+
+  if (remaining > 0) {
+    for (let i = furniture.length - 1; i >= 0 && remaining > 0; i -= 1) {
+      const item = furniture[i];
+      if (item.kind === 'table') {
+        furniture[i] = { ...item, capacity: item.capacity + remaining };
+        remaining = 0;
+      } else if (item.kind === 'row') {
+        furniture[i] = { ...item, seatCount: item.seatCount + remaining };
+        remaining = 0;
+      }
+    }
+  }
+
+  return refreshBlueprintMetadata({ ...blueprint, furniture });
 }
 
 function gridPositions(count: number, margin = 12, maxCol?: number) {
@@ -699,21 +870,40 @@ export function calculateBlueprintCapacity(blueprint: RoomLayoutBlueprint): numb
 }
 
 export function generateRoomBlueprint(roomType: RoomType, params: LayoutParams = {}): RoomLayoutBlueprint {
-  const chairType: ChairType = params.chairType || (roomType === 'CONFERENCE' || roomType === 'AMPHITHEATER' ? 'THEATER' : 'BANQUET');
+  const resolved: LayoutParams = { ...params };
+  if (resolved.totalSeats && resolved.totalSeats >= 2) {
+    const seatsPerTable = Math.max(2, resolved.seatsPerTable ?? 8);
+    if (roomType === 'BANQUET' || roomType === 'TENT') {
+      resolved.tableCount = Math.max(1, resolved.tableCount ?? Math.ceil(resolved.totalSeats / seatsPerTable));
+      resolved.seatsPerTable = seatsPerTable;
+    } else if (roomType === 'CONFERENCE') {
+      const seatsPerRow = Math.max(2, resolved.seatsPerRow ?? seatsPerTable);
+      resolved.seatsPerRow = seatsPerRow;
+      resolved.rowCount = Math.max(1, resolved.rowCount ?? Math.ceil(resolved.totalSeats / seatsPerRow));
+    } else if (roomType === 'AMPHITHEATER') {
+      const seatsPerRow = Math.max(2, resolved.seatsPerRow ?? 12);
+      const rows = Math.max(1, Math.ceil(resolved.totalSeats / seatsPerRow));
+      resolved.seatsPerRow = seatsPerRow;
+      resolved.tierCount = Math.min(6, Math.max(2, resolved.tierCount ?? Math.ceil(Math.sqrt(rows))));
+      resolved.rowsPerTier = Math.max(1, resolved.rowsPerTier ?? Math.ceil(rows / resolved.tierCount));
+    }
+  }
+
+  const chairType: ChairType = resolved.chairType || (roomType === 'CONFERENCE' || roomType === 'AMPHITHEATER' ? 'THEATER' : 'BANQUET');
 
   let blueprint: RoomLayoutBlueprint;
   switch (roomType) {
     case 'BANQUET':
-      blueprint = generateBanquetBlueprint(params, chairType);
+      blueprint = generateBanquetBlueprint(resolved, chairType);
       break;
     case 'CONFERENCE':
-      blueprint = generateConferenceBlueprint(params, chairType);
+      blueprint = generateConferenceBlueprint(resolved, chairType);
       break;
     case 'AMPHITHEATER':
-      blueprint = generateAmphitheaterBlueprint(params, chairType);
+      blueprint = generateAmphitheaterBlueprint(resolved, chairType);
       break;
     case 'TENT':
-      blueprint = generateTentBlueprint(params, chairType);
+      blueprint = generateTentBlueprint(resolved, chairType);
       break;
     case 'CUSTOM':
     case 'SIMPLE':
@@ -722,11 +912,14 @@ export function generateRoomBlueprint(roomType: RoomType, params: LayoutParams =
       break;
   }
 
-  const widthM = params.canvasWidthM ?? params.tentWidthM ?? blueprint.canvas.widthM;
-  const heightM = params.canvasHeightM ?? params.tentLengthM ?? blueprint.canvas.heightM;
+  const widthM = resolved.canvasWidthM ?? resolved.tentWidthM ?? blueprint.canvas.widthM;
+  const heightM = resolved.canvasHeightM ?? resolved.tentLengthM ?? blueprint.canvas.heightM;
   let next = { ...blueprint, canvas: { widthM, heightM } };
-  if (params.arrangePreset) {
-    next = autoArrangeTables(ensureBlueprintDefaults(next), params.arrangePreset);
+  if (resolved.arrangePreset) {
+    next = autoArrangeTables(ensureBlueprintDefaults(next), resolved.arrangePreset);
+  }
+  if (resolved.totalSeats) {
+    next = fitBlueprintToSeatCount(ensureBlueprintDefaults(next), resolved.totalSeats);
   }
   return next;
 }

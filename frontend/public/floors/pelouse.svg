@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="pelouseBase" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#86efac"/>
+      <stop offset="1" stop-color="#22c55e"/>
+    </linearGradient>
+    <filter id="pelouseTurf">
+      <feTurbulence type="fractalNoise" baseFrequency="1.4" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix values="0 0 0 0 0.18  0 0 0 0 0.62  0 0 0 0 0.28  0 0 0 0.55 0"/>
+    </filter>
+  </defs>
+  <rect width="120" height="120" fill="url(#pelouseBase)"/>
+  <rect width="120" height="120" filter="url(#pelouseTurf)" opacity="0.5"/>
+</svg>

@@ -11,7 +11,10 @@ export const floorTypeLabels: Record<FloorType, string> = {
   terrazzo: 'Terrazzo',
   pierre: 'Dalles de pierre',
   moquette: 'Moquette velours',
-  herbe: 'Gazon',
+  herbe: 'Gazon naturel',
+  pelouse: 'Pelouse fine',
+  gazonSynth: 'Gazon synthétique',
+  prairie: 'Prairie / jardin',
   sable: 'Sable',
   beton: 'Béton poli',
   epoxy: 'Résine brillante',
@@ -25,20 +28,25 @@ type FloorAsset = {
   fallback: string;
 };
 
+const DAMIER_TILE = '36px 36px';
+
 const FLOOR_ASSETS: Record<Exclude<FloorType, 'custom'>, FloorAsset> = {
   parquet: { url: '/floors/parquet-herringbone.svg', size: '88px 88px', fallback: '#c4a06a' },
   chevron: { url: '/floors/chevron.svg', size: '72px 44px', fallback: '#c9a06a' },
   bois: { url: '/floors/parquet-oak.svg', size: '96px 96px', fallback: '#d2b07a' },
   carrelage: { url: '/floors/tile.svg', size: '56px 56px', fallback: '#e2dcd0' },
-  marbre: { url: '/floors/marble.svg', size: '110px 110px', fallback: '#ebe6dc' },
-  damier: { url: '/floors/damier.svg', size: '36px 36px', fallback: '#1c1917' },
+  marbre: { url: '/floors/marble.svg', size: DAMIER_TILE, fallback: '#ebe6dc' },
+  damier: { url: '/floors/damier.svg', size: DAMIER_TILE, fallback: '#1c1917' },
   terrazzo: { url: '/floors/terrazzo.svg', size: '64px 64px', fallback: '#e8e0d4' },
-  pierre: { url: '/floors/pierre.svg', size: '80px 60px', fallback: '#c8c0b4' },
+  pierre: { url: '/floors/pierre.svg', size: DAMIER_TILE, fallback: '#c8c0b4' },
   moquette: { url: '/floors/carpet.svg', size: '56px 56px', fallback: '#1a1528' },
-  herbe: { url: '/floors/grass.svg', size: '64px 64px', fallback: '#166534' },
+  herbe: { url: '/floors/grass.svg', size: DAMIER_TILE, fallback: '#166534' },
+  pelouse: { url: '/floors/pelouse.svg', size: DAMIER_TILE, fallback: '#22c55e' },
+  gazonSynth: { url: '/floors/gazon-synth.svg', size: DAMIER_TILE, fallback: '#15803d' },
+  prairie: { url: '/floors/prairie.svg', size: DAMIER_TILE, fallback: '#65a30d' },
   sable: { url: '/floors/sable.svg', size: '48px 48px', fallback: '#e8d5a3' },
-  beton: { url: '/floors/concrete.svg', size: '80px 80px', fallback: '#8b95a3' },
-  epoxy: { url: '/floors/epoxy.svg', size: '72px 72px', fallback: '#cbd5e1' },
+  beton: { url: '/floors/concrete.svg', size: DAMIER_TILE, fallback: '#8b95a3' },
+  epoxy: { url: '/floors/epoxy.svg', size: DAMIER_TILE, fallback: '#cbd5e1' },
   brique: { url: '/floors/brique.svg', size: '64px 32px', fallback: '#b45309' },
 };
 
@@ -54,7 +62,7 @@ function lightingOverlays(floorType: FloorType): { image: string; size: string; 
       blend: 'soft-light, multiply',
     };
   }
-  if (floorType === 'herbe' || floorType === 'sable') {
+  if (floorType === 'herbe' || floorType === 'pelouse' || floorType === 'gazonSynth' || floorType === 'prairie' || floorType === 'sable') {
     return {
       image: [
         'radial-gradient(ellipse at 50% 40%, rgba(255,255,255,0.1) 0%, transparent 50%)',
