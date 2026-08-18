@@ -126,7 +126,7 @@ export default function Modal({
             {dismissible && (
               <button
                 type="button"
-                onClick={requestClose}
+                onClick={onClose}
                 className="p-2 rounded-xl text-muted hover:text-foreground hover:bg-surface-muted transition shrink-0"
                 aria-label="Fermer la fenêtre"
               >

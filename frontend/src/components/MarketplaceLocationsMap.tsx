@@ -513,8 +513,8 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
             icon: L.divIcon({
               className: `leaflet-interactive em-map-marker ${markerKindClass(m.kind)}${hasPhoto ? ' has-photo-pin' : ''}`,
               html: listingIconHtml(m.kind, photoUrl, m.title),
-              iconSize: [42, 62],
-              iconAnchor: [21, 60],
+              iconSize: [48, 72],
+              iconAnchor: [24, 70],
             }),
             interactive: true,
             bubblingMouseEvents: false,
@@ -530,7 +530,11 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
           leafletMarker.on('mouseout', () => {
             leafletMarker.getElement()?.classList.remove('is-hovered');
           });
-          leafletMarker.on('click', () => {
+          leafletMarker.on('click', (event: { originalEvent?: Event }) => {
+            if (event.originalEvent) {
+              L.DomEvent.stopPropagation(event.originalEvent);
+              L.DomEvent.preventDefault(event.originalEvent);
+            }
             suppressMapClickRef.current = true;
             onMarkerSelectRef.current?.(m);
             if (!immersiveRef.current) showPreviewRef.current(m, true);

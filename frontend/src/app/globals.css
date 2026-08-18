@@ -449,15 +449,19 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
   overflow: visible !important;
 }
 
+.leaflet-container .leaflet-marker-icon.em-map-marker {
+  pointer-events: auto !important;
+}
+
 .em-map-marker-hit {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
   position: relative;
-  width: 42px;
-  min-height: 58px;
-  gap: 3px;
+  width: 48px;
+  min-height: 70px;
+  gap: 4px;
   pointer-events: auto;
   animation: em-map-pin-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -467,9 +471,10 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 32px;
+  justify-content: flex-start;
+  width: 36px;
   filter: drop-shadow(0 3px 6px rgba(15, 23, 42, 0.34));
-  pointer-events: none;
+  pointer-events: auto;
   transform-origin: 50% 100%;
   transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), filter 0.22s ease;
 }
@@ -488,8 +493,8 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
 }
 
 .em-map-marker-head {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   display: grid;
   place-items: center;
   color: #fff;
@@ -498,13 +503,13 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
 }
 
 .em-map-marker-hit-photo {
-  width: 42px;
+  width: 48px;
 }
 
 .em-map-marker-photo-wrap {
   position: relative;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
 }
 
@@ -512,17 +517,17 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
   position: relative;
   overflow: hidden;
   box-sizing: border-box;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border: 2px solid #fff;
 }
 
 .em-map-marker-photo,
 .leaflet-container .em-map-marker img.em-map-marker-photo {
-  width: 28px !important;
-  height: 28px !important;
-  max-width: 28px !important;
-  max-height: 28px !important;
+  width: 32px !important;
+  height: 32px !important;
+  max-width: 32px !important;
+  max-height: 32px !important;
   object-fit: cover !important;
   display: block;
 }
@@ -573,12 +578,15 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
 
 .em-map-marker-photo-pointer,
 .em-map-marker-tail {
+  display: block;
   width: 0;
   height: 0;
-  margin: -1px 0 0;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-top-width: 8px;
+  flex-shrink: 0;
+  align-self: center;
+  margin: 2px 0 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top-width: 9px;
   border-top-style: solid;
   background: none !important;
   transform: none !important;
@@ -593,6 +601,7 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
 .em-map-marker-photo-pin.is-service .em-map-marker-photo-pointer,
 .em-map-marker-service .em-map-marker-tail {
   border-top-color: var(--festive-accent, #b45309);
+  margin-top: 3px;
 }
 
 .em-map-marker-photo-pin.is-event .em-map-marker-photo-frame {
@@ -615,7 +624,7 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
 
 .em-map-marker-chip {
   flex-shrink: 0;
-  max-width: 42px;
+  max-width: 48px;
   padding: 2px 6px;
   border-radius: 999px;
   font-size: 8px;
@@ -627,7 +636,7 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  pointer-events: none;
+  pointer-events: auto;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
 }
 

@@ -490,6 +490,21 @@ export function catalogueGeoChips(
   return [...next, ...extra];
 }
 
+const GEO_CHIP_IDS = new Set([
+  'city',
+  'commune',
+  'neighborhood',
+  'street',
+  'minPrice',
+  'maxPrice',
+  'minCapacity',
+  'maxCapacity',
+  'availability',
+  'proximity',
+  'radiusKm',
+  'nearPlace',
+]);
+
 export function clearCatalogueGeoChip<T extends CatalogueGeoState>(filters: T, id: string): T {
   if (id === 'proximity') {
     return { ...filters, proximity: '', nearPlace: '', lat: null, lng: null };
@@ -500,7 +515,7 @@ export function clearCatalogueGeoChip<T extends CatalogueGeoState>(filters: T, i
   if (id === 'availability') {
     return { ...filters, availableFrom: '', availableTo: '' };
   }
-  if (id in filters) {
+  if (GEO_CHIP_IDS.has(id) && id in filters) {
     return { ...filters, [id]: id === 'radiusKm' ? 10 : '' };
   }
   return filters;

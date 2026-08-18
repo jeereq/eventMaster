@@ -60,12 +60,22 @@ export function CatalogueChoicePills({
   return (
     <div className="flex flex-wrap gap-1.5">
       {options.map((opt) => {
-        const active = value === opt.id;
+        const isSentinel = !opt.id || opt.id === 'all';
+        const active = value === opt.id || (isSentinel && (!value || value === 'all'));
         return (
           <button
             key={opt.id || 'all'}
             type="button"
-            onClick={() => onChange(active && opt.id ? '' : opt.id)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (active) {
+                if (isSentinel) return;
+                onChange('');
+                return;
+              }
+              onChange(opt.id);
+            }}
             className={cn(
               'px-3 py-1.5 rounded-full text-xs font-medium border transition touch-manipulation',
               active
@@ -91,7 +101,7 @@ export default function CatalogueFilterBar({
   onRemoveChip,
   onClearChips,
   modalTitle = 'Filtres',
-  modalDescription = 'Les choix actifs restent visibles sous la recherche, sans rouvrir cette fenêtre.',
+  modalDescription = 'Cliquez une seconde fois sur un choix pour le retirer, puis « Voir les résultats ». Les pastilles sous la recherche se retirent aussi avec ×.',
   filters,
   onApply,
   onOpen,
@@ -180,11 +190,15 @@ export default function CatalogueFilterBar({
           {onRemoveChip ? (
             <button
               type="button"
-              onClick={() => onRemoveChip(chip.id)}
-              className="p-0.5 rounded-full text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onRemoveChip(chip.id);
+              }}
+              className="inline-flex items-center justify-center w-7 h-7 rounded-full text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition shrink-0"
               aria-label={`Retirer ${chip.label} ${chip.value}`}
             >
-              <X className="w-2.5 h-2.5" />
+              <X className="w-3.5 h-3.5" />
             </button>
           ) : null}
         </span>
@@ -214,7 +228,7 @@ export default function CatalogueFilterBar({
       footer={
         <>
           <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-            Annuler
+            Fermer sans changer
           </Button>
           <Button type="button" onClick={() => void apply()} loading={applying}>
             Voir les résultats
