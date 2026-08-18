@@ -42,14 +42,8 @@ export default function RoomLayoutPreview({ blueprint: rawBlueprint, className =
  <span>{blueprint.metadata.totalSeats} places · {blueprint.canvas.widthM}×{blueprint.canvas.heightM} m</span>
  </div>
  <div
- className="relative aspect-[4/3] border border-border rounded-2xl overflow-hidden"
- style={{
- background: theme.canvasBackground,
- backgroundImage: theme.canvasPattern
- ? `${theme.canvasPattern}, linear-gradient(${theme.gridColor} 1px, transparent 1px), linear-gradient(90deg, ${theme.gridColor} 1px, transparent 1px)`
- : `linear-gradient(${theme.gridColor} 1px, transparent 1px), linear-gradient(90deg, ${theme.gridColor} 1px, transparent 1px)`,
- backgroundSize: theme.canvasPattern ? '100% 100%, 20px 20px, 20px 20px' : '20px 20px',
- }}
+ className="relative aspect-[4/3] border border-border rounded-2xl overflow-hidden em-floor-canvas em-floor-canvas--photo"
+ style={floorStyle}
  >
  {outline && (
  <div

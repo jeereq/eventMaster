@@ -147,17 +147,14 @@ export default function GuestRoomPlanCanvas({
           }}
         >
           <div
+            className="em-floor-canvas--photo"
             style={{
               width: GUEST_PLAN_LOGICAL_W,
               height: GUEST_PLAN_LOGICAL_H,
               transform: `scale(${zoom})`,
               transformOrigin: 'top left',
               position: 'relative',
-              backgroundImage: theme.canvasPattern
-                ? `${theme.canvasPattern}, linear-gradient(${theme.gridColor} 1px, transparent 1px), linear-gradient(90deg, ${theme.gridColor} 1px, transparent 1px)`
-                : `linear-gradient(${theme.gridColor} 1px, transparent 1px), linear-gradient(90deg, ${theme.gridColor} 1px, transparent 1px)`,
-              backgroundSize: theme.canvasPattern ? '100% 100%, 40px 40px, 40px 40px' : '40px 40px',
-              background: theme.canvasBackground,
+              ...floorStyle,
             }}
           >
             {outline && (

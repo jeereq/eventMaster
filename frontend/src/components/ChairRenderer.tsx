@@ -38,8 +38,9 @@ export default function ChairRenderer({
 
   return (
     <span
-      className={`inline-block ${getChairVisualClass(chairType)} ${className}`}
+      className={`${getChairVisualClass(chairType)} ${className}`}
       title={title}
+      style={size === 'lg' ? { transform: 'scale(1.35)' } : size === 'xs' ? { transform: 'scale(0.78)' } : size === 'md' ? { transform: 'scale(1.12)' } : undefined}
     />
   );
 }

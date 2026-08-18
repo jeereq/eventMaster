@@ -696,19 +696,20 @@ export function resolveTableColor(tableColor?: string, defaultColor?: string): s
 }
 
 export function getChairVisualClass(chairType: ChairType): string {
+  const base = 'em-chair-top';
   switch (chairType) {
     case 'THEATER':
-      return 'w-2.5 h-3 rounded-sm bg-slate-600';
+      return `${base} em-chair-top--theater`;
     case 'FOLDING':
-      return 'w-2.5 h-2.5 rounded-full border-2 border-slate-500 bg-transparent';
+      return `${base} em-chair-top--folding`;
     case 'STOOL':
-      return 'w-2 h-2 rounded-full bg-amber-600';
+      return `${base} em-chair-top--stool`;
     case 'ARMCHAIR':
-      return 'w-3 h-3 rounded-md bg-violet-600';
+      return `${base} em-chair-top--armchair`;
     case 'WHEELCHAIR':
-      return 'w-3.5 h-3 rounded bg-emerald-600';
+      return `${base} em-chair-top--pmr`;
     default:
-      return 'w-2.5 h-2.5 rounded-full bg-indigo-500';
+      return `${base} em-chair-top--banquet`;
   }
 }
 

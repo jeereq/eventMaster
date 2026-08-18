@@ -339,13 +339,13 @@ export default function RoomLayoutEditor({
 
  const outline = blueprint.roomOutline!;
  const clipPath = getRoomOutlineClipPath(outline.shape);
-
- const renderRoomOutline = () => {
  const floorStyle = resolveFloorStyle(
  effectiveFloorType,
  blueprint.metadata.floorImageUrl,
  activeTheme.accentColor,
  );
+
+ const renderRoomOutline = () => {
  return (
  <div
  className="absolute pointer-events-none z-0 overflow-hidden"
@@ -362,11 +362,11 @@ export default function RoomLayoutEditor({
  >
  <div className="absolute inset-0" style={floorStyle} />
  {activeTheme.ambientOverlay && (
- <div className="absolute inset-0 pointer-events-none" style={{ background: activeTheme.ambientOverlay }} />
+ <div className="absolute inset-0 pointer-events-none" style={{ background: activeTheme.ambientOverlay, opacity: 0.35 }} />
  )}
  <div
  className="absolute inset-0 pointer-events-none"
- style={{ background: outline.fill, mixBlendMode: 'multiply', opacity: 0.35 }}
+ style={{ boxShadow: 'inset 0 0 0 8px rgba(70,42,16,0.35), inset 0 0 28px rgba(40,20,6,0.18)' }}
  />
  </div>
  );
@@ -380,17 +380,11 @@ export default function RoomLayoutEditor({
  onMouseLeave={handleMouseUp}
  onClick={() => setSelected(null)}
  className={cn(
- 'em-floor-canvas relative w-full',
+ 'em-floor-canvas em-floor-canvas--photo relative w-full',
  className,
  dragging && 'em-floor-canvas--dragging',
  )}
- style={{
- // Soft theme tint over the shared floor canvas
- backgroundImage: activeTheme.canvasPattern
- ? `${activeTheme.canvasPattern}, radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, ${activeTheme.accentColor} 12%, transparent), transparent 55%)`
- : undefined,
- backgroundColor: activeTheme.canvasBackground || undefined,
- }}
+ style={floorStyle}
  >
  {renderRoomOutline()}
 
@@ -496,13 +490,10 @@ export default function RoomLayoutEditor({
  }}
  >
  <div
- className={cn('relative flex items-center justify-center border', tableClass)}
- style={{
- ...tableStyle,
- borderColor: tableStyle?.borderColor ?? activeTheme.tableBorderColor ?? 'var(--border)',
- }}
+ className={cn('relative flex items-center justify-center', tableClass)}
+ style={tableStyle}
  >
- <div className="px-2 text-center z-10">
+ <div className="px-2 text-center z-10 drop-shadow-[0_1px_1px_rgba(255,255,255,0.85)]">
  <div className="text-[10px] font-semibold truncate max-w-[80px] tracking-tight">{item.name}</div>
  <div className="text-[8px] opacity-80 tabular-nums">{item.capacity} pl.</div>
  </div>
@@ -656,7 +647,7 @@ export default function RoomLayoutEditor({
  }`}
  >
  <span
- className="block h-6 rounded mb-1 border border-black/5"
+ className="block h-10 rounded mb-1 border border-black/10 shadow-inner"
  style={resolveFloorStyle(type, undefined, activeTheme.accentColor)}
  />
  {floorTypeLabels[type]}

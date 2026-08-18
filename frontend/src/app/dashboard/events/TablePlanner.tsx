@@ -14,6 +14,7 @@ import {
  TableShape,
 } from '@/lib/tablePlanUtils';
 import { chairTypeLabels, getFixtureClass, type ChairType } from '@/lib/roomLayoutUtils';
+import { resolveFloorStyle } from '@/lib/roomFloorUtils';
 import { roomEditorCapabilities, snapLayoutPct } from '@/lib/roomEditorAccess';
 import Link from 'next/link';
 
@@ -80,7 +81,7 @@ export default function TablePlanner({
  const [newTableName, setNewTableName] = useState('');
  const [newTableShape, setNewTableShape] = useState<TableShape>('round');
  const [newTableCapacity, setNewTableCapacity] = useState<number>(8);
- const [newTableColor, setNewTableColor] = useState('#ffffff');
+ const [newTableColor, setNewTableColor] = useState('#f3e6c8');
  const [newChairType, setNewChairType] = useState<ChairType>('BANQUET');
  const [isExpanded, setIsExpanded] = useState(false);
  const [hoveredTableId, setHoveredTableId] = useState<string | null>(null);
@@ -140,7 +141,7 @@ export default function TablePlanner({
  setShowAddModal(false);
  setNewTableName('');
  setNewTableCapacity(8);
- setNewTableColor('#ffffff');
+ setNewTableColor('#f3e6c8');
  setNewChairType('BANQUET');
  };
 
@@ -398,11 +399,12 @@ export default function TablePlanner({
  onMouseUp={handleMouseUp}
  onMouseLeave={handleMouseUp}
  className={cn(
- 'em-floor-canvas',
+ 'em-floor-canvas em-floor-canvas--photo',
  heightClass,
  'w-full',
  draggingTableId && 'em-floor-canvas--dragging',
  )}
+ style={resolveFloorStyle('parquet')}
  >
  {fixtures.map((fixture) => (
  <div
@@ -493,7 +495,7 @@ export default function TablePlanner({
  )}
  style={visual.style}
  >
- <div className="px-2">
+ <div className="px-2 relative z-10 drop-shadow-[0_1px_1px_rgba(255,255,255,0.85)]">
  <div className="truncate max-w-[90px] font-semibold text-[11px] tracking-tight">{table.name}</div>
  <div className="text-[9px] opacity-80 mt-0.5 tabular-nums">
  {occupiedCount}/{table.capacity}

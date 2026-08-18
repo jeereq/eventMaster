@@ -57,21 +57,26 @@ export function getTableShapeEmoji(shape: TableShape | string): string {
   }
 }
 
+function tableSizeClass(shape: TableShape | string): string {
+  if (shape === 'round') return 'w-24 h-24 rounded-full';
+  if (shape === 'oval') return 'w-28 h-20 rounded-[999px]';
+  if (shape === 'square') return 'w-20 h-20 rounded-[1.15rem]';
+  return 'w-32 h-16 rounded-[0.85rem]';
+}
+
+function isDarkTableColor(color?: string): boolean {
+  if (!color) return false;
+  const hex = color.replace('#', '');
+  if (hex.length !== 3 && hex.length !== 6) return false;
+  const n = hex.length === 3
+    ? hex.split('').map((c) => parseInt(c + c, 16))
+    : [hex.slice(0, 2), hex.slice(2, 4), hex.slice(4, 6)].map((c) => parseInt(c, 16));
+  const [r, g, b] = n;
+  return (r * 299 + g * 587 + b * 114) / 1000 < 90;
+}
+
 export function getTableVisualClasses(shape: TableShape | string, active = false): string {
-  const base = active
-    ? 'bg-primary text-white shadow-[0_0_0_3px_color-mix(in_srgb,var(--primary)_22%,transparent)]'
-    : 'bg-surface text-foreground border border-border shadow-[var(--shadow-soft)]';
-
-  const size =
-    shape === 'round'
-      ? 'w-24 h-24 rounded-full'
-      : shape === 'oval'
-        ? 'w-28 h-20 rounded-[999px]'
-        : shape === 'square'
-          ? 'w-20 h-20 rounded-[var(--radius-card)]'
-          : 'w-32 h-16 rounded-[var(--radius-card)]';
-
-  return `${size} ${base}`;
+  return `${tableSizeClass(shape)} em-table-realistic em-table-realistic--${shape}${active ? ' em-table-realistic--active' : ''}`;
 }
 
 export function getTableVisualStyle(
@@ -80,42 +85,38 @@ export function getTableVisualStyle(
   tableColor?: string,
   tableImageUrl?: string,
 ): { className: string; style?: React.CSSProperties } {
-  const size =
-    shape === 'round'
-      ? 'w-24 h-24 rounded-full'
-      : shape === 'oval'
-        ? 'w-28 h-20 rounded-[999px]'
-        : shape === 'square'
-          ? 'w-20 h-20 rounded-[var(--radius-card)]'
-          : 'w-32 h-16 rounded-[var(--radius-card)]';
+  const size = tableSizeClass(shape);
+  const shapeKey = ['round', 'oval', 'square', 'rectangular'].includes(String(shape)) ? shape : 'rectangular';
+  const className = `${size} em-table-realistic em-table-realistic--${shapeKey}${active ? ' em-table-realistic--active' : ''}`;
+  const linen = 'url(/floors/table-linen.svg)';
+  const wood = 'url(/floors/table-wood.svg)';
+  const dark = isDarkTableColor(tableColor);
+  const tint = tableColor || (dark ? '#1e293b' : '#f3e6c8');
 
-  if (tableImageUrl && !active) {
+  if (tableImageUrl) {
     return {
-      className: `${size} border border-border text-foreground overflow-hidden shadow-[var(--shadow-soft)]`,
+      className,
       style: {
-        backgroundImage: `url(${tableImageUrl})`,
-        backgroundSize: 'cover',
+        backgroundColor: tint,
+        backgroundImage: `radial-gradient(ellipse at 34% 28%, rgba(255,255,255,0.28) 0%, transparent 42%), url(${tableImageUrl})`,
+        backgroundSize: '100% 100%, cover',
         backgroundPosition: 'center',
-        borderColor: tableColor ?? 'var(--border)',
       },
     };
   }
 
-  if (tableColor && !active) {
-    return {
-      className: `${size} border text-foreground shadow-[var(--shadow-soft)]`,
-      style: {
-        backgroundColor: tableColor,
-        borderColor: 'color-mix(in srgb, black 12%, transparent)',
-      },
-    };
-  }
-
-  const base = active
-    ? 'bg-primary text-white border-primary shadow-[0_0_0_3px_color-mix(in_srgb,var(--primary)_22%,transparent)]'
-    : 'bg-surface border border-border text-foreground shadow-[var(--shadow-soft)]';
-
-  return { className: `${size} ${base}` };
+  return {
+    className,
+    style: {
+      backgroundColor: tint,
+      backgroundImage: dark
+        ? `radial-gradient(ellipse at 36% 30%, rgba(255,255,255,0.16) 0%, transparent 46%), ${linen}`
+        : `radial-gradient(ellipse at 34% 28%, rgba(255,255,255,0.55) 0%, transparent 44%), ${linen}, ${wood}`,
+      backgroundSize: dark ? '100% 100%, 72px 72px' : '100% 100%, 72px 72px, cover',
+      backgroundBlendMode: dark ? 'soft-light, multiply' : 'soft-light, multiply, overlay',
+      color: dark ? '#f8fafc' : '#3f2a12',
+    },
+  };
 }
 
 export function getOccupiedSeatCount(table: Pick<TablePlanTable, 'seats' | 'capacity'>): number {

@@ -2,90 +2,73 @@ import type React from 'react';
 import type { FloorType } from '@/lib/roomThemeUtils';
 
 export const floorTypeLabels: Record<FloorType, string> = {
-  parquet: 'Parquet',
-  carrelage: 'Carrelage',
-  marbre: 'Marbre',
-  moquette: 'Moquette / Tissu',
-  herbe: 'Herbe / Gazon',
-  beton: 'Béton / Ardoise',
-  bois: 'Planches bois',
+  parquet: 'Parquet point de Hongrie',
+  carrelage: 'Carrelage pierre',
+  marbre: 'Marbre veiné',
+  moquette: 'Moquette velours',
+  herbe: 'Gazon',
+  beton: 'Béton poli',
+  bois: 'Parquet à lames',
   custom: 'Image importée',
 };
 
-export function getFloorPatternStyle(floorType: FloorType, accentColor = '#94a3b8'): React.CSSProperties {
-  switch (floorType) {
-    case 'parquet':
-      return {
-        backgroundColor: '#c4a574',
-        backgroundImage: `
-          repeating-linear-gradient(90deg, transparent, transparent 36px, rgba(0,0,0,0.07) 36px, rgba(0,0,0,0.07) 38px),
-          repeating-linear-gradient(0deg, transparent, transparent 16px, rgba(255,255,255,0.1) 16px, rgba(255,255,255,0.1) 18px),
-          linear-gradient(160deg, #dcc9a3 0%, #a8895c 55%, #8b7048 100%)
-        `,
-      };
-    case 'carrelage':
-      return {
-        backgroundColor: '#e2e8f0',
-        backgroundImage: `
-          linear-gradient(rgba(0,0,0,0.09) 1.5px, transparent 1.5px),
-          linear-gradient(90deg, rgba(0,0,0,0.09) 1.5px, transparent 1.5px),
-          radial-gradient(circle at 50% 50%, rgba(255,255,255,0.35) 0%, transparent 70%),
-          linear-gradient(145deg, #f8fafc 0%, #cbd5e1 100%)
-        `,
-        backgroundSize: '28px 28px, 28px 28px, 28px 28px, 100% 100%',
-      };
-    case 'marbre':
-      return {
-        backgroundColor: '#f1f5f9',
-        backgroundImage: `
-          radial-gradient(ellipse 80% 50% at 20% 40%, rgba(255,255,255,0.9) 0%, transparent 50%),
-          radial-gradient(ellipse 60% 40% at 75% 65%, rgba(148,163,184,0.25) 0%, transparent 45%),
-          radial-gradient(ellipse 50% 30% at 50% 20%, rgba(255,255,255,0.6) 0%, transparent 40%),
-          linear-gradient(135deg, #f8fafc 0%, #e2e8f0 40%, #f1f5f9 100%)
-        `,
-      };
-    case 'moquette':
-      return {
-        backgroundColor: '#334155',
-        backgroundImage: `
-          repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,0.03) 3px, rgba(255,255,255,0.03) 6px),
-          repeating-linear-gradient(-45deg, transparent, transparent 3px, rgba(0,0,0,0.04) 3px, rgba(0,0,0,0.04) 6px),
-          linear-gradient(180deg, color-mix(in srgb, ${accentColor} 25%, #1e293b) 0%, #0f172a 100%)
-        `,
-      };
-    case 'herbe':
-      return {
-        backgroundColor: '#15803d',
-        backgroundImage: `
-          radial-gradient(circle at 15% 25%, rgba(255,255,255,0.12) 0%, transparent 8%),
-          radial-gradient(circle at 85% 70%, rgba(255,255,255,0.08) 0%, transparent 10%),
-          radial-gradient(circle at 45% 55%, rgba(0,0,0,0.06) 0%, transparent 12%),
-          repeating-linear-gradient(90deg, transparent, transparent 4px, rgba(0,0,0,0.03) 4px, rgba(0,0,0,0.03) 5px),
-          linear-gradient(180deg, #4ade80 0%, #16a34a 45%, #14532d 100%)
-        `,
-      };
-    case 'beton':
-      return {
-        backgroundColor: '#64748b',
-        backgroundImage: `
-          radial-gradient(circle at 30% 20%, rgba(255,255,255,0.15) 0%, transparent 25%),
-          radial-gradient(circle at 70% 80%, rgba(0,0,0,0.08) 0%, transparent 20%),
-          linear-gradient(135deg, #94a3b8 0%, #64748b 50%, #475569 100%)
-        `,
-      };
-    case 'bois':
-      return {
-        backgroundColor: '#92400e',
-        backgroundImage: `
-          repeating-linear-gradient(90deg, transparent, transparent 48px, rgba(0,0,0,0.12) 48px, rgba(0,0,0,0.12) 50px),
-          linear-gradient(180deg, rgba(255,255,255,0.08) 0%, transparent 40%, rgba(0,0,0,0.06) 100%),
-          linear-gradient(90deg, #b45309 0%, #92400e 30%, #78350f 60%, #92400e 100%)
-        `,
-      };
-    case 'custom':
-    default:
-      return { backgroundColor: '#f1f5f9' };
+type FloorAsset = {
+  url: string;
+  size: string;
+  fallback: string;
+};
+
+const FLOOR_ASSETS: Record<Exclude<FloorType, 'custom'>, FloorAsset> = {
+  parquet: { url: '/floors/parquet-herringbone.svg', size: '360px 360px', fallback: '#c4a06a' },
+  bois: { url: '/floors/parquet-oak.svg', size: '380px 380px', fallback: '#d2b07a' },
+  carrelage: { url: '/floors/tile.svg', size: '220px 220px', fallback: '#e2dcd0' },
+  marbre: { url: '/floors/marble.svg', size: '420px 420px', fallback: '#ebe6dc' },
+  moquette: { url: '/floors/carpet.svg', size: '180px 180px', fallback: '#1a1528' },
+  herbe: { url: '/floors/grass.svg', size: '260px 260px', fallback: '#166534' },
+  beton: { url: '/floors/concrete.svg', size: '320px 320px', fallback: '#8b95a3' },
+};
+
+function lightingOverlays(floorType: FloorType): { image: string; size: string; repeat: string; blend: string } {
+  if (floorType === 'moquette') {
+    return {
+      image: 'radial-gradient(ellipse at 50% 38%, rgba(80,60,120,0.18) 0%, transparent 55%), radial-gradient(ellipse at 50% 100%, rgba(0,0,0,0.45) 0%, transparent 70%)',
+      size: '100% 100%, 100% 100%',
+      repeat: 'no-repeat, no-repeat',
+      blend: 'soft-light, multiply',
+    };
   }
+  if (floorType === 'herbe') {
+    return {
+      image: 'radial-gradient(ellipse at 50% 40%, rgba(255,255,255,0.08) 0%, transparent 50%), radial-gradient(ellipse at 50% 100%, rgba(10,40,10,0.35) 0%, transparent 65%)',
+      size: '100% 100%, 100% 100%',
+      repeat: 'no-repeat, no-repeat',
+      blend: 'overlay, multiply',
+    };
+  }
+  return {
+    image: [
+      'radial-gradient(ellipse at 50% 42%, transparent 42%, rgba(28,14,4,0.28) 100%)',
+      'linear-gradient(118deg, rgba(255,255,255,0.16) 0%, transparent 34%, rgba(40,20,6,0.14) 100%)',
+    ].join(', '),
+    size: '100% 100%, 100% 100%',
+    repeat: 'no-repeat, no-repeat',
+    blend: 'multiply, overlay',
+  };
+}
+
+export function getFloorPatternStyle(floorType: FloorType, _accentColor = '#94a3b8'): React.CSSProperties {
+  if (floorType === 'custom') {
+    return { backgroundColor: '#c4a06a' };
+  }
+  const asset = FLOOR_ASSETS[floorType] ?? FLOOR_ASSETS.parquet;
+  const light = lightingOverlays(floorType);
+  return {
+    backgroundColor: asset.fallback,
+    backgroundImage: `${light.image}, url(${asset.url})`,
+    backgroundSize: `${light.size}, ${asset.size}`,
+    backgroundRepeat: `${light.repeat}, repeat`,
+    backgroundBlendMode: `${light.blend}, normal` as React.CSSProperties['backgroundBlendMode'],
+  };
 }
 
 export function resolveFloorStyle(
@@ -95,9 +78,14 @@ export function resolveFloorStyle(
 ): React.CSSProperties {
   if (floorImageUrl) {
     return {
-      backgroundImage: `url(${floorImageUrl})`,
-      backgroundSize: 'cover',
+      backgroundColor: '#8b6840',
+      backgroundImage: [
+        'radial-gradient(ellipse at 50% 42%, transparent 48%, rgba(28,14,4,0.26) 100%)',
+        `url(${floorImageUrl})`,
+      ].join(', '),
+      backgroundSize: '100% 100%, cover',
       backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
     };
   }
   return getFloorPatternStyle(floorType ?? 'parquet', accentColor);

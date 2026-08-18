@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320">
+  <defs>
+    <filter id="wg"><feTurbulence type="fractalNoise" baseFrequency="0.04 0.9" numOctaves="4" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 0.35  0 0 0 0 0.16  0 0 0 0 0.05  0 0 0 0.55 0"/></filter>
+    <pattern id="wg" width="320" height="320"><rect width="320" height="320" filter="url(#wg)"/></pattern>
+  </defs>
+  <rect width="320" height="320" fill="#6d3516"/>
+  <rect x="0.7" y="0" width="50.6" height="320" fill="#8a4b24"/>
+    <rect x="0.7" y="0" width="50.6" height="320" fill="url(#wg)" opacity="0.4"/>
+    <line x1="6" y1="0" x2="6" y2="320" stroke="rgba(255,220,160,0.08)" stroke-width="1"/><rect x="52.7" y="0" width="50.6" height="320" fill="#7a3f1c"/>
+    <rect x="52.7" y="0" width="50.6" height="320" fill="url(#wg)" opacity="0.4"/>
+    <line x1="58" y1="0" x2="58" y2="320" stroke="rgba(255,220,160,0.08)" stroke-width="1"/><rect x="104.7" y="0" width="50.6" height="320" fill="#9a5a2e"/>
+    <rect x="104.7" y="0" width="50.6" height="320" fill="url(#wg)" opacity="0.4"/>
+    <line x1="110" y1="0" x2="110" y2="320" stroke="rgba(255,220,160,0.08)" stroke-width="1"/><rect x="156.7" y="0" width="50.6" height="320" fill="#6d3516"/>
+    <rect x="156.7" y="0" width="50.6" height="320" fill="url(#wg)" opacity="0.4"/>
+    <line x1="162" y1="0" x2="162" y2="320" stroke="rgba(255,220,160,0.08)" stroke-width="1"/><rect x="208.7" y="0" width="50.6" height="320" fill="#854420"/>
+    <rect x="208.7" y="0" width="50.6" height="320" fill="url(#wg)" opacity="0.4"/>
+    <line x1="214" y1="0" x2="214" y2="320" stroke="rgba(255,220,160,0.08)" stroke-width="1"/><rect x="260.7" y="0" width="50.6" height="320" fill="#a06234"/>
+    <rect x="260.7" y="0" width="50.6" height="320" fill="url(#wg)" opacity="0.4"/>
+    <line x1="266" y1="0" x2="266" y2="320" stroke="rgba(255,220,160,0.08)" stroke-width="1"/><rect x="312.7" y="0" width="50.6" height="320" fill="#8a4b24"/>
+    <rect x="312.7" y="0" width="50.6" height="320" fill="url(#wg)" opacity="0.4"/>
+    <line x1="318" y1="0" x2="318" y2="320" stroke="rgba(255,220,160,0.08)" stroke-width="1"/>
+</svg>

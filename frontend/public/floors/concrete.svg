@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320">
+  <defs>
+    <linearGradient id="cbase" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#b8c0cc"/>
+      <stop offset="1" stop-color="#7b8796"/>
+    </linearGradient>
+    <filter id="speck">
+      <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="4" stitchTiles="stitch"/>
+      <feColorMatrix values="1 0 0 0 0.45  1 0 0 0 0.48  1 0 0 0 0.52  0 0 0 0.45 0"/>
+    </filter>
+  </defs>
+  <rect width="320" height="320" fill="url(#cbase)"/>
+  <rect width="320" height="320" filter="url(#speck)" opacity="0.5"/>
+</svg>

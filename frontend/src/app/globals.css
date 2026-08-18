@@ -967,16 +967,22 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
   gap: 0.5rem;
 }
 
-/* Canvas plan de table / salle — sol moderne + grille légère */
+/* Canvas plan de table / salle — parquet réaliste + lumière rasante */
 .em-floor-canvas {
   position: relative;
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, #6b4420 35%, var(--border));
   border-radius: var(--radius-card);
-  background:
-    radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--primary) 8%, transparent), transparent 55%),
-    var(--surface-muted);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  background-color: #c4a06a;
+  background-image:
+    radial-gradient(ellipse at 50% 42%, transparent 42%, rgba(28, 14, 4, 0.28) 100%),
+    linear-gradient(118deg, rgba(255, 255, 255, 0.14) 0%, transparent 34%, rgba(40, 20, 6, 0.12) 100%),
+    url('/floors/parquet-herringbone.svg');
+  background-size: 100% 100%, 100% 100%, 360px 360px;
+  background-repeat: no-repeat, no-repeat, repeat;
+  box-shadow:
+    inset 0 0 0 10px color-mix(in srgb, #5c3a18 55%, transparent),
+    inset 0 0 40px rgba(40, 20, 6, 0.18);
   touch-action: none;
   user-select: none;
 }
@@ -987,11 +993,15 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(color-mix(in srgb, var(--border) 85%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--border) 85%, transparent) 1px, transparent 1px);
-  background-size: 28px 28px;
-  opacity: 0.55;
-  mask-image: radial-gradient(ellipse 85% 75% at 50% 45%, #000 35%, transparent 100%);
+    linear-gradient(color-mix(in srgb, #5c3a18 18%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, #5c3a18 18%, transparent) 1px, transparent 1px);
+  background-size: 36px 36px;
+  opacity: 0.18;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 45%, #000 20%, transparent 100%);
+}
+
+.em-floor-canvas--photo::before {
+  opacity: 0.08;
 }
 
 .em-floor-canvas--dragging {
@@ -999,7 +1009,133 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
 }
 
 .em-floor-canvas--dragging::before {
-  opacity: 0.35;
+  opacity: 0.08;
+}
+
+.em-table-realistic {
+  position: relative;
+  isolation: isolate;
+  border: 0;
+  box-shadow:
+    0 16px 22px -10px rgba(40, 18, 4, 0.5),
+    0 3px 5px rgba(0, 0, 0, 0.22),
+    inset 0 0 0 6px #8a5a28,
+    inset 0 0 0 7.5px #5c3a14,
+    inset 0 10px 18px rgba(255, 255, 255, 0.38),
+    inset 0 -8px 14px rgba(70, 40, 12, 0.16);
+}
+
+.em-table-realistic::after {
+  content: '';
+  position: absolute;
+  inset: 18%;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 40% 32%, rgba(255, 255, 255, 0.28), transparent 62%);
+  mix-blend-mode: soft-light;
+}
+
+.em-table-realistic--round {
+  box-shadow:
+    0 16px 24px -8px rgba(40, 18, 4, 0.52),
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 0 0 7px #8a5a28,
+    inset 0 0 0 8.5px #4e3010,
+    inset 0 12px 20px rgba(255, 255, 255, 0.42),
+    inset 0 -10px 16px rgba(70, 40, 12, 0.18);
+}
+
+.em-table-realistic--oval {
+  box-shadow:
+    0 14px 20px -8px rgba(40, 18, 4, 0.48),
+    0 2px 4px rgba(0, 0, 0, 0.18),
+    inset 0 0 0 6px #8a5a28,
+    inset 0 0 0 7.5px #4e3010,
+    inset 0 10px 16px rgba(255, 255, 255, 0.4);
+}
+
+.em-table-realistic--active {
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--primary) 55%, transparent),
+    0 18px 26px -8px rgba(40, 18, 4, 0.45),
+    inset 0 0 0 6px #8a5a28,
+    inset 0 0 0 7.5px #4e3010,
+    inset 0 10px 18px rgba(255, 255, 255, 0.38);
+}
+
+.em-chair-top {
+  display: inline-block;
+  position: relative;
+  flex-shrink: 0;
+  box-shadow:
+    0 2px 3px rgba(40, 18, 4, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.em-chair-top--banquet {
+  width: 0.7rem;
+  height: 0.82rem;
+  border-radius: 42% 42% 32% 32%;
+  background:
+    radial-gradient(ellipse at 50% 38%, #f6efe0 0%, #d9c7a4 58%, #b89560 100%);
+}
+
+.em-chair-top--banquet::before {
+  content: '';
+  position: absolute;
+  top: -0.18rem;
+  left: 18%;
+  width: 64%;
+  height: 0.22rem;
+  border-radius: 2px 2px 1px 1px;
+  background: linear-gradient(180deg, #c4a062, #7a4e1c);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+}
+
+.em-chair-top--theater {
+  width: 0.68rem;
+  height: 0.78rem;
+  border-radius: 0.2rem 0.2rem 0.12rem 0.12rem;
+  background: linear-gradient(180deg, #4b5563, #1f2937);
+}
+
+.em-chair-top--folding {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 999px;
+  background: radial-gradient(circle at 40% 35%, #e5e7eb, #9ca3af);
+  box-shadow: inset 0 0 0 1.5px #6b7280, 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.em-chair-top--stool {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 30%, #e8b86a, #92400e);
+}
+
+.em-chair-top--armchair {
+  width: 0.82rem;
+  height: 0.82rem;
+  border-radius: 0.28rem;
+  background: linear-gradient(180deg, #6d28d9, #4c1d95);
+}
+
+.em-chair-top--armchair::before {
+  content: '';
+  position: absolute;
+  inset: 0.12rem 0.08rem auto;
+  height: 0.18rem;
+  border-radius: 2px;
+  background: #ddd6fe;
+  opacity: 0.7;
+}
+
+.em-chair-top--pmr {
+  width: 0.85rem;
+  height: 0.75rem;
+  border-radius: 0.2rem;
+  background: linear-gradient(180deg, #34d399, #047857);
 }
 
 .em-floor-item {
@@ -1011,7 +1147,7 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
 }
 
 .em-floor-item:hover {
-  filter: brightness(1.02);
+  filter: brightness(1.03);
 }
 
 .em-floor-item--active {
@@ -1022,8 +1158,7 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
 .em-floor-item--dragging {
   z-index: 40;
   cursor: grabbing !important;
-  transform: translate(-50%, -50%) scale(1.04);
-  filter: drop-shadow(0 12px 24px color-mix(in srgb, var(--primary) 25%, transparent));
+  filter: drop-shadow(0 14px 22px rgba(40, 18, 4, 0.35));
 }
 
 .em-floor-seat {
@@ -1040,22 +1175,27 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
 }
 
 .em-floor-seat--filled {
-  background: color-mix(in srgb, var(--primary) 88%, #059669);
-  border-color: color-mix(in srgb, var(--primary) 70%, #047857);
+  background:
+    radial-gradient(ellipse at 40% 30%, #6ee7b7, color-mix(in srgb, var(--primary) 80%, #047857));
+  border-color: color-mix(in srgb, var(--primary) 55%, #064e3b);
   color: #fff;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 20%, transparent);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.28),
+    0 0 0 2px color-mix(in srgb, var(--primary) 22%, transparent);
 }
 
 .em-floor-seat--empty {
-  background: var(--surface);
-  border-color: var(--border);
-  color: var(--muted);
+  background:
+    radial-gradient(ellipse at 40% 32%, #fffaf0, #e8d7b4);
+  border-color: #a67c42;
+  color: #6b4420;
+  box-shadow: 0 1px 2px rgba(40, 18, 4, 0.25);
 }
 
 .em-floor-seat--empty:hover {
   border-color: var(--primary);
   color: var(--primary);
-  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+  background: color-mix(in srgb, var(--primary) 10%, #fffaf0);
 }
 
 .em-floor-toolbar {
