@@ -20,6 +20,8 @@ export type PublicEventCard = {
   ticketPriceFc: number;
   ticketsRemaining: number | null;
   soldOut: boolean;
+  coverUrl?: string | null;
+  photos?: string[];
 };
 
 export default function PublicEventsPage() {
@@ -71,8 +73,13 @@ export default function PublicEventsPage() {
               <li key={event.id}>
                 <Link
                   href={`/evenements/${event.slug}`}
-                  className="block h-full rounded-[var(--radius-card)] border border-border bg-surface p-4 hover:border-primary/40 transition"
+                  className="block h-full rounded-[var(--radius-card)] border border-border bg-surface overflow-hidden hover:border-primary/40 transition"
                 >
+                  {event.coverUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={event.coverUrl} alt="" className="w-full aspect-[16/9] object-cover bg-surface-muted" />
+                  ) : null}
+                  <div className="p-4">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">{event.orgName}</p>
                   <h2 className="font-semibold text-foreground mt-1">{event.title}</h2>
                   <p className="text-xs text-muted mt-2 flex items-center gap-1">
@@ -91,6 +98,7 @@ export default function PublicEventsPage() {
                         ? `Dès ${formatFc(event.ticketPriceFc)}`
                         : 'Entrée libre'}
                   </p>
+                  </div>
                 </Link>
               </li>
             ))}

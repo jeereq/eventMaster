@@ -11,7 +11,7 @@ import {
   listProtocolGuests,
 } from '../controllers/protocolController';
 import { getInvitations, createInvitation, updateInvitation, deleteInvitation, sendInvitation } from '../controllers/invitationController';
-import { getEventShares, getEventFeed, createEventPost, deleteEventPost, deleteGuestShare, toggleLikeEventPost } from '../controllers/feedController';
+import { getEventShares, getEventFeed, createEventPost, updateEventPost, deleteEventPost, deleteGuestShare, toggleLikeEventPost } from '../controllers/feedController';
 import { requireAuth, requireActiveLicense } from '../middleware/auth';
 
 const router = Router();
@@ -62,6 +62,7 @@ router.get('/:eventId/shares', getEventShares);
 router.delete('/:eventId/shares/:shareId', deleteGuestShare);
 router.get('/:eventId/feed', getEventFeed);
 router.post('/:eventId/feed', createEventPost);
+router.patch('/:eventId/feed/:postId', updateEventPost);
 router.delete('/:eventId/feed/:postId', deleteEventPost);
 router.post('/:eventId/feed/:postId/like', toggleLikeEventPost);
 

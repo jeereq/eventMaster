@@ -191,6 +191,7 @@ model User {
   pushDeviceTokens      PushDeviceToken[]
   listingFavorites      ListingFavorite[]
   savedEventPacks       SavedEventPack[]
+  ticketOrders          TicketOrder[]
 }
 
 model Event {
@@ -216,6 +217,8 @@ model Event {
   ticketPriceFc     Int          @default(0)
   ticketsTotal      Int?
   ticketsSold       Int          @default(0)
+  /** Galerie publique (URLs Cloudinary), comme une fiche salle. */
+  photos            Json?
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
@@ -280,11 +283,14 @@ model TicketOrder {
   stripeCheckoutSessionId String?   @unique
   stripePaymentIntentId   String?
   paidAt                  DateTime?
+  userId                  String?
+  user                    User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt               DateTime  @default(now())
   guests                  Guest[]
 
   @@index([eventId, status])
   @@index([buyerEmail])
+  @@index([userId])
 }
 
 model GuestProtocolNote {
@@ -409,6 +415,8 @@ model EventPost {
   mediaUrls Json?          // Array of objects { url: string, type: 'IMAGE' | 'VIDEO' }
   mediaType String?        // IMAGE, VIDEO, TEXT (legacy)
   likes     Json?          // Array of guest/user IDs who liked the post
+  /** Visible sur la fiche publique /evenements/[slug] si l’événement est public. */
+  publishedOnListing Boolean @default(false)
   createdAt DateTime       @default(now())
   comments  EventComment[]
 }

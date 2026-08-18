@@ -12,6 +12,7 @@ import { blueprintToTablePlan } from '../services/roomLayoutService';
 import { notifyTableAssignmentChanges } from '../services/tableAssignmentNotificationService';
 import { toPrismaJson } from '../utils/prismaJson';
 import { uniqueSlug } from '../utils/slug';
+import { parsePhotoUrls } from '../utils/publicVenue';
 
 async function eventVisibilityData(
   title: string,
@@ -143,6 +144,7 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
         longitude: longitude !== undefined && longitude !== null ? parseFloat(longitude) : null,
         tablePlan: tablePlanData ? toPrismaJson(tablePlanData) : undefined,
         guestGuidelines: guestGuidelines !== undefined ? toPrismaJson(guestGuidelines) : undefined,
+        photos: toPrismaJson(parsePhotoUrls(req.body.photos)),
         ...visibility,
       },
       include: { room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } } },
@@ -235,6 +237,7 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
         tablePlan: tablePlan !== undefined ? tablePlan : existingEvent.tablePlan,
         roomId: roomId !== undefined ? roomId : existingEvent.roomId,
         guestGuidelines: guestGuidelines !== undefined ? toPrismaJson(guestGuidelines) : existingEvent.guestGuidelines ?? undefined,
+        ...(req.body.photos !== undefined ? { photos: toPrismaJson(parsePhotoUrls(req.body.photos)) } : {}),
         ...visibility,
       },
       include: { room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } } },

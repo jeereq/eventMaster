@@ -6,6 +6,8 @@ import {
   ticketsRemaining,
 } from '../services/ticketOrderService';
 import { getPlanLimitsForTenant } from '../config/plansConfig';
+import { AuthenticatedRequest } from '../middleware/auth';
+import { parsePhotoUrls, coverFromMedia } from '../utils/publicVenue';
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_mock';
 const stripe = new Stripe(STRIPE_SECRET_KEY, {
@@ -27,6 +29,33 @@ function fcToStripeUnitAmount(amountFc: number): number {
   return Math.max(50, Math.round(usd * 100));
 }
 
+function serializePublicPost(post: {
+  id: string;
+  content: string | null;
+  mediaUrl: string | null;
+  mediaUrls: unknown;
+  mediaType: string | null;
+  createdAt: Date;
+}) {
+  let media: Array<{ url: string; type: 'IMAGE' | 'VIDEO' }> = [];
+  if (Array.isArray(post.mediaUrls)) {
+    media = post.mediaUrls.flatMap((item) => {
+      const url = item && typeof item === 'object' && 'url' in item ? String((item as { url?: unknown }).url || '') : '';
+      if (!url || !/^https?:\/\//i.test(url)) return [];
+      const type = item && typeof item === 'object' && (item as { type?: unknown }).type === 'VIDEO' ? 'VIDEO' : 'IMAGE';
+      return [{ url, type: type as 'IMAGE' | 'VIDEO' }];
+    });
+  } else if (post.mediaUrl && /^https?:\/\//i.test(post.mediaUrl)) {
+    media = [{ url: post.mediaUrl, type: post.mediaType === 'VIDEO' ? 'VIDEO' : 'IMAGE' }];
+  }
+  return {
+    id: post.id,
+    content: post.content,
+    media,
+    createdAt: post.createdAt,
+  };
+}
+
 function serializePublicEvent(event: {
   id: string;
   slug: string | null;
@@ -41,10 +70,20 @@ function serializePublicEvent(event: {
   ticketPriceFc: number;
   ticketsTotal: number | null;
   ticketsSold: number;
+  photos?: unknown;
   tenant: { name: string };
+  posts?: Array<{
+    id: string;
+    content: string | null;
+    mediaUrl: string | null;
+    mediaUrls: unknown;
+    mediaType: string | null;
+    createdAt: Date;
+  }>;
 }) {
   const remaining = ticketsRemaining(event);
   const paid = event.ticketingEnabled && event.ticketPriceFc > 0;
+  const photos = parsePhotoUrls(event.photos);
   return {
     id: event.id,
     slug: event.slug,
@@ -62,6 +101,9 @@ function serializePublicEvent(event: {
     ticketsSold: event.ticketsSold,
     ticketsRemaining: remaining,
     soldOut: remaining === 0,
+    photos,
+    coverUrl: coverFromMedia(photos),
+    posts: (event.posts || []).map(serializePublicPost),
   };
 }
 
@@ -99,7 +141,15 @@ export async function getPublicEvent(req: Request, res: Response) {
     const slug = String(req.params.slug || '');
     const event = await prisma.event.findFirst({
       where: { slug, isPublic: true },
-      include: { tenant: { select: { name: true } } },
+      include: {
+        tenant: { select: { name: true } },
+        posts: {
+          where: { publishedOnListing: true },
+          orderBy: { createdAt: 'desc' },
+          take: 12,
+          select: { id: true, content: true, mediaUrl: true, mediaUrls: true, mediaType: true, createdAt: true },
+        },
+      },
     });
     if (!event) return res.status(404).json({ error: 'Événement introuvable ou privé.' });
     return res.json({ event: serializePublicEvent(event) });
@@ -109,13 +159,14 @@ export async function getPublicEvent(req: Request, res: Response) {
   }
 }
 
-export async function checkoutPublicEvent(req: Request, res: Response) {
+export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Response) {
   try {
     const slug = String(req.params.slug || '');
     const buyerName = String(req.body?.buyerName || '').trim();
     const buyerEmail = String(req.body?.buyerEmail || '').trim().toLowerCase();
     const buyerPhone = String(req.body?.buyerPhone || '').trim() || null;
     const quantity = Math.min(8, Math.max(1, Number(req.body?.quantity) || 1));
+    const userId = req.user?.id || null;
 
     if (!buyerName || !buyerEmail || !buyerEmail.includes('@')) {
       return res.status(400).json({ error: 'Nom et e-mail valides requis.' });
@@ -163,6 +214,7 @@ export async function checkoutPublicEvent(req: Request, res: Response) {
         amountFc,
         status: paid ? 'PENDING' : 'PAID',
         paidAt: paid ? null : new Date(),
+        userId,
       },
     });
 

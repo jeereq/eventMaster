@@ -186,6 +186,12 @@ export function mediaPosterUrl(url: string): string {
   return url;
 }
 
+export function coverFromMedia(urls: string[]): string | null {
+  const image = urls.find((item) => !isVideoUrl(item));
+  if (image) return image;
+  return urls[0] ? mediaPosterUrl(urls[0]) : null;
+}
+
 export const BOOKING_STATUS_LABELS: Record<MarketplaceBookingStatus, string> = {
   REQUESTED: 'Demande',
   ACCEPTED: 'Acceptée',
@@ -606,6 +612,13 @@ export function isCatalogueMapView(mode: CatalogueViewMode): mode is 'map' | 'fo
   return mode === 'map' || mode === 'focus';
 }
 
+export interface PublicEventPost {
+  id: string;
+  content: string | null;
+  media: Array<{ url: string; type: 'IMAGE' | 'VIDEO' }>;
+  createdAt: string;
+}
+
 export interface PublicEventCard {
   id: string;
   slug: string | null;
@@ -623,6 +636,9 @@ export interface PublicEventCard {
   ticketsSold: number;
   ticketsRemaining: number | null;
   soldOut: boolean;
+  photos?: string[];
+  coverUrl?: string | null;
+  posts?: PublicEventPost[];
 }
 
 export interface CatalogueItem {
@@ -705,7 +721,8 @@ export function eventToCatalogueItem(event: PublicEventCard): CatalogueItem | nu
     orgName: event.orgName,
     categoryLabel: dateLabel,
     location: event.location,
-    coverUrl: null,
+    coverUrl: event.coverUrl || coverFromMedia(event.photos || []),
+    photos: event.photos || [],
     priceFromFc: paid ? event.ticketPriceFc : null,
     priceUnitLabel: paid ? '/ personne' : 'Entrée libre',
     latitude: event.latitude ?? null,

@@ -131,6 +131,12 @@ export async function seedEventsVolume(
         ticketPriceFc,
         ticketsTotal,
         ticketsSold: 0,
+        photos: isPublic
+          ? [
+              `https://picsum.photos/seed/em-evt-${i}-a/1200/800`,
+              `https://picsum.photos/seed/em-evt-${i}-b/1200/800`,
+            ]
+          : undefined,
         tablePlan: tablePlan ? (tablePlan as object) : undefined,
       },
     });
@@ -142,6 +148,17 @@ export async function seedEventsVolume(
       ticketsTotal,
       title: event.title,
     });
+
+    if (isPublic && i % 4 === 0) {
+      await prisma.eventPost.create({
+        data: {
+          eventId: event.id,
+          content: `Bienvenue à ${title}. Ouverture des portes 30 minutes avant. Conservez votre badge QR.`,
+          mediaType: 'TEXT',
+          publishedOnListing: true,
+        },
+      });
+    }
 
     if (globalTemplate && (isPublic || i % 7 === 0)) {
       await prisma.invitation.create({

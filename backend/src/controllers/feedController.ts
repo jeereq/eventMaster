@@ -156,6 +156,7 @@ export async function createEventPost(req: AuthenticatedRequest, res: Response) 
         mediaUrl: legacyMediaUrl,
         mediaType: legacyMediaType,
         mediaUrls: finalMediaUrls.length > 0 ? (finalMediaUrls as any) : undefined,
+        publishedOnListing: req.body.publishedOnListing === true || req.body.publishedOnListing === 'true',
       },
     });
 
@@ -163,6 +164,41 @@ export async function createEventPost(req: AuthenticatedRequest, res: Response) 
   } catch (error: any) {
     console.error('Erreur lors de la création du post:', error);
     return res.status(500).json({ error: 'Erreur lors de la création du post.' });
+  }
+}
+
+export async function updateEventPost(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    const eventId = req.params.eventId as string;
+    const postId = req.params.postId as string;
+    const userId = req.user?.id;
+    if (!tenantId || !userId) {
+      return res.status(403).json({ error: 'Tenant non identifié.' });
+    }
+
+    if (!(await canManageEvent(userId, tenantId, eventId))) {
+      return res.status(403).json({ error: 'Accès refusé à cet événement.' });
+    }
+
+    const existing = await prisma.eventPost.findFirst({
+      where: { id: postId, eventId },
+    });
+    if (!existing) {
+      return res.status(404).json({ error: 'Publication introuvable.' });
+    }
+
+    const post = await prisma.eventPost.update({
+      where: { id: postId },
+      data: {
+        publishedOnListing: req.body.publishedOnListing === true || req.body.publishedOnListing === 'true',
+      },
+    });
+
+    return res.json(post);
+  } catch (error: any) {
+    console.error('Erreur lors de la mise à jour du post:', error);
+    return res.status(500).json({ error: 'Erreur lors de la mise à jour du post.' });
   }
 }
 

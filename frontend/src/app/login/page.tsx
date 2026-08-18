@@ -1,15 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import {
-  Calendar, Lock, PartyPopper, Sparkles, Table, MessageSquare,
+  Calendar, Lock, PartyPopper, Sparkles, Table, MessageSquare, Ticket,
 } from 'lucide-react';
 import { AuthSplitLayout } from '@/components/AuthSplitLayout';
 import { Button, Alert, Input, Card, IdentifierInput, identifierValue } from '@/components/ui';
 import type { IdentifierMode } from '@/components/ui';
 import { DEFAULT_PHONE_COUNTRY_CODE } from '@/lib/phone';
+import { safeAppPath } from '@/lib/safeAppPath';
 
 const FEATURES = [
   { icon: Calendar, title: "Gestion d'événements & RSVP", desc: 'Invitations par e-mail ou WhatsApp, suivi des réponses en temps réel.' },
@@ -18,8 +20,37 @@ const FEATURES = [
   { icon: Sparkles, title: 'Statistiques & analyses', desc: 'Régimes alimentaires, réponses et exports en un clic.' },
 ];
 
+const CLIENT_FEATURES = [
+  { icon: Ticket, title: 'Billets et inscriptions', desc: 'Retrouvez vos places et votre badge QR dans Mes billets.' },
+  { icon: Calendar, title: 'Agenda public', desc: 'Inscrivez-vous aux événements ouverts ou achetez un billet en ligne.' },
+  { icon: Table, title: 'Salles et prestataires', desc: 'Favoris, packs budget et demandes de dates dans le marketplace.' },
+  { icon: Sparkles, title: 'Compte client', desc: 'Sans abonnement SaaS — réservez et suivez vos inscriptions.' },
+];
+
 export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <AuthSplitLayout badge="Connexion" title="Chargement…" description="" features={FEATURES} backHref="/" backLabel="Retour au site">
+          <Card padding="lg" className="shadow-xl animate-pulse h-96">
+            <span className="sr-only">Chargement du formulaire de connexion</span>
+          </Card>
+        </AuthSplitLayout>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+function LoginPageContent() {
   const { login } = useAuth();
+  const searchParams = useSearchParams();
+  const nextPath = safeAppPath(searchParams.get('next'));
+  const isClientFlow = Boolean(nextPath?.startsWith('/evenements') || nextPath?.startsWith('/dashboard/tickets'));
+  const registerHref = nextPath
+    ? `/register?kind=CLIENT&next=${encodeURIComponent(nextPath)}`
+    : '/register';
   const [mode, setMode] = useState<IdentifierMode>('email');
   const [email, setEmail] = useState('');
   const [phoneCountryCode, setPhoneCountryCode] = useState(DEFAULT_PHONE_COUNTRY_CODE);
@@ -38,7 +69,7 @@ export default function LoginPage() {
     }
     setLoading(true);
     try {
-      await login(identifier, password);
+      await login(identifier, password, { next: nextPath });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Identifiants incorrects ou problème de connexion.');
       setLoading(false);
@@ -47,10 +78,14 @@ export default function LoginPage() {
 
   return (
     <AuthSplitLayout
-      badge="Plateforme tout-en-un"
-      title="Organisez des événements privés inoubliables."
-      description="EventMaster simplifie chaque étape de l'organisation de vos mariages, anniversaires, conférences et soirées privées."
-      features={FEATURES}
+      badge={isClientFlow ? 'Compte client' : 'Plateforme tout-en-un'}
+      title={isClientFlow ? 'Connectez-vous pour retrouver vos billets.' : 'Organisez des événements privés inoubliables.'}
+      description={
+        isClientFlow
+          ? 'Après connexion, vous revenez à l’événement. Le paiement invité reste possible sans compte.'
+          : 'EventMaster simplifie chaque étape de l’organisation de vos mariages, anniversaires, conférences et soirées privées.'
+      }
+      features={isClientFlow ? CLIENT_FEATURES : FEATURES}
       backHref="/"
       backLabel="Retour au site"
     >
@@ -62,7 +97,7 @@ export default function LoginPage() {
           <h2 className="text-2xl font-semibold text-foreground tracking-tight">Connexion</h2>
           <p className="mt-2 text-sm text-muted">
             Ravi de vous revoir !{' '}
-            <Link href="/register" className="font-semibold text-primary hover:underline">
+            <Link href={registerHref} className="font-semibold text-primary hover:underline">
               Créez votre compte
             </Link>
           </p>

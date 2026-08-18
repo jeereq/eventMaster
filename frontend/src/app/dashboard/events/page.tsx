@@ -18,6 +18,7 @@ import EventFeedManager from './EventFeedManager';
 import GuestProtocolPanel from './GuestProtocolPanel';
 import EventGuestGuidelinesEditor from '@/components/EventGuestGuidelinesEditor';
 import EventWorkflowPanel from '@/components/EventWorkflowPanel';
+import MarketplaceMediaField from '@/components/MarketplaceMediaField';
 import {
  computeEventWorkflowState,
  type EventWorkflowTab,
@@ -66,6 +67,7 @@ interface EventItem {
  ticketPriceFc?: number;
  ticketsTotal?: number | null;
  ticketsSold?: number;
+ photos?: string[] | null;
  room?: {
  id: string;
  name: string;
@@ -301,6 +303,7 @@ export default function EventsPage() {
  const [eventTicketing, setEventTicketing] = useState(false);
  const [eventTicketPrice, setEventTicketPrice] = useState('');
  const [eventTicketsTotal, setEventTicketsTotal] = useState('');
+ const [eventPhotos, setEventPhotos] = useState<string[]>([]);
  const [eventRoomId, setEventRoomId] = useState('');
  const [eventFormTemplateId, setEventFormTemplateId] = useState('');
  const [openTablePlanAfterSave, setOpenTablePlanAfterSave] = useState(false);
@@ -733,6 +736,7 @@ export default function EventsPage() {
  setEventTicketing(false);
  setEventTicketPrice('');
  setEventTicketsTotal('');
+ setEventPhotos([]);
  setEventRoomId('');
  setEventFormTemplateId('');
  setOpenTablePlanAfterSave(false);
@@ -871,6 +875,7 @@ Merci de confirmer votre présence :
  ticketingEnabled: eventIsPublic && eventTicketing,
  ticketPriceFc: eventIsPublic && eventTicketing ? Number(eventTicketPrice) || 0 : 0,
  ticketsTotal: eventIsPublic && eventTicketsTotal ? Number(eventTicketsTotal) : null,
+ photos: eventPhotos,
  };
 
  if (editingEventId) {
@@ -936,6 +941,7 @@ Merci de confirmer votre présence :
  setEventTicketing(Boolean(event.ticketingEnabled));
  setEventTicketPrice(event.ticketPriceFc != null && event.ticketPriceFc > 0 ? String(event.ticketPriceFc) : '');
  setEventTicketsTotal(event.ticketsTotal != null ? String(event.ticketsTotal) : '');
+ setEventPhotos(Array.isArray(event.photos) ? event.photos.filter((u): u is string => typeof u === 'string') : []);
  setEventRoomId(event.roomId || event.room?.id || '');
  setEditingEventId(event.id);
  setEventMapOpen(
@@ -2679,6 +2685,7 @@ Merci de confirmer votre présence :
  <EventFeedManager
  key={`feed_${selectedEvent.id}`}
  eventId={selectedEvent.id}
+ canPublishOnListing={Boolean(selectedEvent.isPublic)}
  />
  )}
  </div>
@@ -2833,6 +2840,14 @@ Merci de confirmer votre présence :
  </p>
  </div>
  )}
+ </section>
+
+ <section className="space-y-3 pt-1 border-t border-border">
+ <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted pt-3">Galerie</h4>
+ <MarketplaceMediaField urls={eventPhotos} onChange={setEventPhotos} />
+ <p className="text-[11px] text-muted leading-relaxed">
+ Photos et vidéos affichées sur la fiche publique, le marketplace et la carte si l’événement est public.
+ </p>
  </section>
 
  <section className="space-y-3 pt-1 border-t border-border">

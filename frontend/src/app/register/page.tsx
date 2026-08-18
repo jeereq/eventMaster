@@ -13,6 +13,7 @@ import { parseReferralFromSearchParams } from '@/lib/referralLink';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { ACCOUNT_KIND_DESCRIPTIONS, ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
+import { safeAppPath } from '@/lib/safeAppPath';
 
 const FEATURES = [
  { icon: Calendar, title: "Gestion d'événements & RSVP", desc: 'Invitations par e-mail ou WhatsApp, suivi des réponses en temps réel.' },
@@ -57,6 +58,8 @@ function RegisterPageContent() {
  const [error, setError] = useState('');
  const [successMessage, setSuccessMessage] = useState('');
  const [loading, setLoading] = useState(false);
+ const nextPath = safeAppPath(searchParams.get('next'));
+ const isClientFlow = accountKind === 'CLIENT' || Boolean(nextPath?.startsWith('/evenements'));
 
  useEffect(() => {
  const fromUrl = parseReferralFromSearchParams(searchParams);
@@ -110,7 +113,8 @@ function RegisterPageContent() {
  accountKind,
  );
  if (res.requiresVerification && res.email) {
- router.push(`/verify-otp?email=${encodeURIComponent(res.email)}&method=${res.verificationMethod || verificationMethod}`);
+ const nextQ = nextPath ? `&next=${encodeURIComponent(nextPath)}` : '';
+ router.push(`/verify-otp?email=${encodeURIComponent(res.email)}&method=${res.verificationMethod || verificationMethod}${nextQ}`);
  return;
  }
  setSuccessMessage(res.message);
@@ -124,8 +128,12 @@ function RegisterPageContent() {
  return (
  <AuthSplitLayout
  badge="Inscription"
- title="Créez votre compte en quelques secondes."
- description={`Rejoignez ${site.platformName} : organisez un événement, publiez une offre, ou réservez une salle sans espace SaaS.`}
+ title={isClientFlow ? 'Créez un compte pour retrouver vos billets.' : 'Créez votre compte en quelques secondes.'}
+ description={
+ isClientFlow
+ ? `Rejoignez ${site.platformName} : vos inscriptions et badges QR seront dans Mes billets. Vous pouvez aussi continuer en invité sans compte.`
+ : `Rejoignez ${site.platformName} : organisez un événement, publiez une offre, ou réservez une salle sans espace SaaS.`
+ }
  features={FEATURES}
  backHref="/"
  backLabel="Retour au site"
@@ -145,7 +153,7 @@ function RegisterPageContent() {
  <Link href="/contact">
  <Button>Nous contacter</Button>
  </Link>
- <Link href="/login">
+ <Link href={nextPath ? `/login?next=${encodeURIComponent(nextPath)}` : '/login'}>
  <Button variant="secondary">Se connecter</Button>
  </Link>
  </div>
@@ -161,7 +169,7 @@ function RegisterPageContent() {
  </h2>
  <p className="text-sm text-muted mt-2">{successMessage}</p>
  </div>
- <Link href="/login">
+ <Link href={nextPath ? `/login?next=${encodeURIComponent(nextPath)}` : '/login'}>
  <Button fullWidth>Aller à la connexion</Button>
  </Link>
  </div>
@@ -174,7 +182,7 @@ function RegisterPageContent() {
  <h2 className="text-2xl font-semibold text-foreground tracking-tight">Créer un compte</h2>
  <p className="mt-2 text-sm text-muted">
  Déjà inscrit ?{' '}
- <Link href="/login" className="font-semibold text-primary hover:underline">
+ <Link href={nextPath ? `/login?next=${encodeURIComponent(nextPath)}` : '/login'} className="font-semibold text-primary hover:underline">
  Connectez-vous
  </Link>
  </p>

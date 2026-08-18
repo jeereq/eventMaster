@@ -334,3 +334,63 @@ export async function deleteSavedPack(req: AuthenticatedRequest, res: Response) 
     return res.status(500).json({ error: 'Impossible de supprimer le pack.' });
   }
 }
+
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+export async function listMyTickets(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ error: 'Non authentifié.' });
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { id: true, email: true },
+    });
+    if (!user?.email) return res.status(401).json({ error: 'Utilisateur introuvable.' });
+    const email = user.email.toLowerCase();
+
+    await prisma.ticketOrder.updateMany({
+      where: {
+        userId: null,
+        status: 'PAID',
+        buyerEmail: { equals: email, mode: 'insensitive' },
+      },
+      data: { userId: user.id },
+    });
+
+    const orders = await prisma.ticketOrder.findMany({
+      where: {
+        status: 'PAID',
+        OR: [
+          { userId: user.id },
+          { buyerEmail: { equals: email, mode: 'insensitive' } },
+        ],
+      },
+      include: {
+        event: { select: { title: true, slug: true, date: true, location: true, isPublic: true } },
+        guests: { select: { id: true, email: true }, orderBy: { createdAt: 'asc' } },
+      },
+      orderBy: { paidAt: 'desc' },
+      take: 100,
+    });
+
+    return res.json({
+      tickets: orders.map((order) => {
+        const primary =
+          order.guests.find((g) => g.email.toLowerCase() === email) || order.guests[0];
+        return {
+          orderId: order.id,
+          quantity: order.quantity,
+          amountFc: order.amountFc,
+          paidAt: order.paidAt,
+          buyerName: order.buyerName,
+          event: order.event,
+          guestId: primary?.id || null,
+          rsvpUrl: primary ? `${FRONTEND_URL}/rsvp/${primary.id}` : null,
+          publicHref: order.event.slug && order.event.isPublic ? `/evenements/${order.event.slug}` : null,
+        };
+      }),
+    });
+  } catch (error) {
+    console.error('listMyTickets:', error);
+    return res.status(500).json({ error: 'Impossible de charger vos billets.' });
+  }
+}

@@ -10,7 +10,7 @@ import {
  Calendar, Users, Mail, CreditCard, LayoutDashboard,
  LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper, User, Sun, Moon, BarChart3,
  Building2, FileText, Key, MessageSquare, ScanLine, Briefcase, Clock, BookOpen,
- PanelLeftClose, PanelLeft, Store, CalendarCheck, ScrollText,
+ PanelLeftClose, PanelLeft, Store, CalendarCheck, ScrollText, Ticket,
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import UserLegalGate from '@/components/UserLegalGate';
@@ -238,7 +238,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
  useEffect(() => {
  if (loading || !token || !user || !isClientAccount) return;
- const allowed = ['/dashboard/bookings', '/dashboard/profile', '/dashboard/guide', '/dashboard/notifications', '/dashboard/catalogue'].some(
+ const allowed = ['/dashboard/bookings', '/dashboard/profile', '/dashboard/guide', '/dashboard/notifications', '/dashboard/catalogue', '/dashboard/tickets'].some(
  (p) => pathname === p || pathname.startsWith(`${p}/`),
  );
  if (pathname.startsWith('/dashboard') && !allowed) {
@@ -393,6 +393,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  {
  items: [
  { name: 'Marketplace', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires, favoris et préparation d’événement' },
+ { name: 'Mes billets', href: '/dashboard/tickets', tourId: 'nav-tickets', icon: Ticket, description: 'Inscriptions et badges QR des événements publics' },
  { name: 'Mes réservations', href: '/dashboard/bookings', tourId: 'nav-bookings', icon: CalendarCheck },
  { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
  { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },

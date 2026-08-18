@@ -181,6 +181,12 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
       'Suivez vos demandes de dates : filtrez par statut, type et période. L’acompte (30 %) se verse hors plateforme.',
     route: '/dashboard/bookings',
   },
+  'nav-tickets': {
+    title: 'Mes billets',
+    description:
+      'Retrouvez vos inscriptions et achats d’événements publics, avec le lien RSVP et le badge QR.',
+    route: '/dashboard/tickets',
+  },
 };
 
 export const WELCOME_STEP = {

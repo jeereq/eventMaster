@@ -21,6 +21,7 @@ import {
   listSavedPacks,
   createSavedPack,
   deleteSavedPack,
+  listMyTickets,
 } from '../controllers/marketplaceClientController';
 
 const router = Router();
@@ -45,5 +46,6 @@ router.post('/event-plan', planEvent);
 router.get('/event-packs', listSavedPacks);
 router.post('/event-packs', createSavedPack);
 router.delete('/event-packs/:id', deleteSavedPack);
+router.get('/my-tickets', listMyTickets);
 
 export default router;

@@ -6,6 +6,7 @@ import { api } from '../lib/api';
 import type { PlanId } from '@/config/landingPricing';
 import { applyBrandToDocument, clearBrandFromDocument, type TenantBranding } from '@/lib/brandTheme';
 import type { TenantAccountKind } from '@/lib/marketplace';
+import { safeAppPath } from '@/lib/safeAppPath';
 
 export interface OrgAccess {
   level: 'owner' | 'manager' | 'protocol' | 'commercial' | 'staff' | 'client' | 'none';
@@ -94,7 +95,7 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   supportSession: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, options?: { next?: string | null }) => Promise<void>;
   register: (
     email: string,
     password: string,
@@ -109,7 +110,7 @@ interface AuthContextType {
     nationalNumber?: string,
     accountKind?: TenantAccountKind,
   ) => Promise<RegisterResult>;
-  verifyOtp: (email: string, otp: string) => Promise<void>;
+  verifyOtp: (email: string, otp: string, options?: { next?: string | null }) => Promise<void>;
   resendOtp: (email: string, verificationMethod?: 'EMAIL' | 'WHATSAPP') => Promise<string>;
   logout: () => void;
   refreshBilling: () => Promise<void>;
@@ -231,7 +232,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(false);
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, options?: { next?: string | null }) => {
     setLoading(true);
     try {
       const data = await api.post('/auth/login', { email, password });
@@ -253,11 +254,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem(SUPPORT_BACKUP_KEY);
       setLoading(false);
 
-      router.push(postAuthPath(data.user?.role, data.access ?? null));
+      router.push(safeAppPath(options?.next) || postAuthPath(data.user?.role, data.access ?? null));
     } catch (error: any) {
       setLoading(false);
       if (error?.data?.notVerified && error?.data?.email) {
-        router.push(`/verify-otp?email=${encodeURIComponent(error.data.email as string)}&method=${error.data.verificationMethod || 'EMAIL'}&from=login`);
+        const nextQ = safeAppPath(options?.next) ? `&next=${encodeURIComponent(safeAppPath(options?.next)!)}` : '';
+        router.push(`/verify-otp?email=${encodeURIComponent(error.data.email as string)}&method=${error.data.verificationMethod || 'EMAIL'}&from=login${nextQ}`);
         return;
       }
       throw error;
@@ -307,7 +309,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const verifyOtp = async (email: string, otp: string) => {
+  const verifyOtp = async (email: string, otp: string, options?: { next?: string | null }) => {
     setLoading(true);
     try {
       const data = await api.post('/auth/verify-otp', { email, otp });
@@ -326,11 +328,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSupportSession(false);
       localStorage.removeItem(SUPPORT_BACKUP_KEY);
       setLoading(false);
-      if (data.user?.role === 'COMMERCIAL') {
-        router.push('/dashboard?tab=tenants');
-      } else if (data.access?.level === 'commercial') {
-        router.push('/dashboard/org-commercial');
-      }
+      router.push(safeAppPath(options?.next) || postAuthPath(data.user?.role, data.access ?? null));
     } catch (error) {
       setLoading(false);
       throw error;

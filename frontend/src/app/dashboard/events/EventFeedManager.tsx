@@ -8,7 +8,7 @@ import {
   Image, Send, Trash2,
   Loader2, Heart, Plus, Video, Eye, MessageCircle,
   RefreshCw, X, ChevronLeft, ChevronRight, BookOpen,
-  Rss, Search, Download
+  Rss, Search, Download, Globe
 } from 'lucide-react';
 
 interface Comment {
@@ -32,6 +32,7 @@ interface Post {
   mediaType: string | null;
   mediaUrls: PostMedia[] | null;
   likes?: string[] | null;
+  publishedOnListing?: boolean;
   createdAt: string;
   comments: Comment[];
 }
@@ -53,6 +54,7 @@ interface GuestShare {
 
 interface EventFeedManagerProps {
   eventId: string;
+  canPublishOnListing?: boolean;
 }
 
 function formatRelativeDate(dateStr: string) {
@@ -78,7 +80,7 @@ function getInitials(firstName: string, lastName: string) {
   return `${firstName[0] || ''}${lastName[0] || ''}`.toUpperCase();
 }
 
-export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
+export default function EventFeedManager({ eventId, canPublishOnListing = false }: EventFeedManagerProps) {
   const { user } = useAuth();
   const [activeSubTab, setActiveSubTab] = useState<'feed' | 'shares'>('feed');
   const [posts, setPosts] = useState<Post[]>([]);
@@ -92,6 +94,8 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
 
   const [postContent, setPostContent] = useState('');
   const [postMediaFiles, setPostMediaFiles] = useState<PostMedia[]>([]);
+  const [publishOnListing, setPublishOnListing] = useState(false);
+  const [togglingPostId, setTogglingPostId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [commentContents, setCommentContents] = useState<Record<string, string>>({});
 
@@ -266,10 +270,12 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
       const newPost = await api.post(`/events/${eventId}/feed`, {
         content: postContent,
         mediaUrls: postMediaFiles,
+        publishedOnListing: canPublishOnListing && publishOnListing,
       });
       setPosts([{ ...newPost, comments: [], likes: [] }, ...posts]);
       setPostContent('');
       setPostMediaFiles([]);
+      setPublishOnListing(false);
     } catch (err) {
       console.error('Error creating post:', err);
       alert('Erreur lors de la publication.');
@@ -286,6 +292,22 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
     } catch (err) {
       console.error('Error deleting post:', err);
       alert('Erreur lors de la suppression.');
+    }
+  };
+
+  const handleTogglePublishOnListing = async (post: Post) => {
+    if (!canPublishOnListing) return;
+    setTogglingPostId(post.id);
+    try {
+      const updated = await api.patch(`/events/${eventId}/feed/${post.id}`, {
+        publishedOnListing: !post.publishedOnListing,
+      });
+      setPosts(posts.map((p) => (p.id === post.id ? { ...p, publishedOnListing: updated.publishedOnListing } : p)));
+    } catch (err) {
+      console.error('Error toggling listing publish:', err);
+      alert('Impossible de modifier la visibilité publique.');
+    } finally {
+      setTogglingPostId(null);
     }
   };
 
@@ -507,6 +529,20 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
                 </div>
               )}
 
+              {canPublishOnListing && (
+                <label className="flex items-start gap-2 text-xs text-muted leading-relaxed">
+                  <input
+                    type="checkbox"
+                    checked={publishOnListing}
+                    onChange={(e) => setPublishOnListing(e.target.checked)}
+                    className="mt-0.5 rounded border-border"
+                  />
+                  <span>
+                    Publier aussi sur la fiche publique <span className="font-semibold text-foreground">/evenements</span>
+                  </span>
+                </label>
+              )}
+
               <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
                 <label className="inline-flex items-center gap-1.5 px-3 py-2 bg-surface-muted hover:bg-background text-foreground font-medium rounded-[var(--radius-button)] text-xs cursor-pointer transition border border-border">
                   <Image className="w-4 h-4 text-primary" />
@@ -562,6 +598,25 @@ export default function EventFeedManager({ eventId }: EventFeedManagerProps) {
                         </div>
                       </div>
                       <div className="flex items-center gap-0.5">
+                        {canPublishOnListing && (
+                          <button
+                            type="button"
+                            onClick={() => handleTogglePublishOnListing(post)}
+                            disabled={togglingPostId === post.id}
+                            className={`p-2 rounded-[var(--radius-button)] transition ${
+                              post.publishedOnListing
+                                ? 'text-primary bg-primary/10'
+                                : 'text-muted hover:text-primary hover:bg-surface-muted'
+                            }`}
+                            title={post.publishedOnListing ? 'Retirer de la fiche publique' : 'Publier sur la fiche publique'}
+                          >
+                            {togglingPostId === post.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Globe className="w-4 h-4" />
+                            )}
+                          </button>
+                        )}
                         {mediaList.length > 0 && (
                           <button
                             type="button"

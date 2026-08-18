@@ -96,7 +96,7 @@ router.get('/services/:slug', optionalAuth, getPublicService);
 router.post('/services/:slug/inquire', optionalAuth, createServiceInquiry);
 router.get('/events', listPublicEvents);
 router.get('/events/:slug', getPublicEvent);
-router.post('/events/:slug/checkout', checkoutPublicEvent);
+router.post('/events/:slug/checkout', optionalAuth, checkoutPublicEvent);
 router.get('/ticket-orders/session/:sessionId', getTicketOrderBySession);
 
 // POST /api/public/contact

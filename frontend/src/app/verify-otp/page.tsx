@@ -2,14 +2,13 @@
 
 import React, { useState, useRef, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Loader2, Mail, MessageSquare, RefreshCw } from 'lucide-react';
 import { AuthSplitLayout, MethodToggle } from '@/components/AuthSplitLayout';
 import { Button, Alert, Card } from '@/components/ui';
 
 function VerifyOtpForm() {
- const router = useRouter();
  const searchParams = useSearchParams();
  const { verifyOtp, resendOtp } = useAuth();
 
@@ -69,8 +68,7 @@ function VerifyOtpForm() {
  setError('');
  setLoading(true);
  try {
- await verifyOtp(email, otpValue);
- router.push('/dashboard');
+ await verifyOtp(email, otpValue, { next: searchParams.get('next') });
  } catch (err: unknown) {
  setError(err instanceof Error ? err.message : 'Code invalide.');
  } finally {
