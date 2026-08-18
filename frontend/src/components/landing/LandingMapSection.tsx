@@ -32,6 +32,7 @@ import {
   catalogueEntityExtraChips,
   catalogueItemMatchesExtras,
   clearCatalogueExtraChip,
+  mergeGeoAndExtras,
   type CatalogueEntityExtras,
 } from '@/lib/catalogueEntityFilters';
 
@@ -174,7 +175,7 @@ export default function LandingMapSection() {
               value={draft}
               extras={draft}
               error={filterError}
-              onChange={(geo, extras) => setDraft({ ...geo, ...extras })}
+              onChange={(geo, extras) => setDraft(mergeGeoAndExtras(geo, extras))}
             />
           }
         />

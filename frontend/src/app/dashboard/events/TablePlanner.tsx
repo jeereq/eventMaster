@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { 
  Plus, Trash2, Users, Check, Move, X, RefreshCw, 
- HelpCircle, Edit2, LayoutGrid, Maximize2, Minimize2, Copy, Lock, Unlock, Palette
+ HelpCircle, Edit2, LayoutGrid, Maximize2, Minimize2, Copy, Lock, Unlock, Palette, RotateCw, Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import {
@@ -14,6 +14,8 @@ import {
  TableShape,
 } from '@/lib/tablePlanUtils';
 import { chairTypeLabels, getFixtureClass, type ChairType } from '@/lib/roomLayoutUtils';
+import { roomEditorCapabilities, snapLayoutPct } from '@/lib/roomEditorAccess';
+import Link from 'next/link';
 
 interface GuestItem {
  id: string;
@@ -36,6 +38,7 @@ interface Table {
  locked?: boolean;
  chairType?: string;
  tableColor?: string;
+ rotation?: number;
 }
 
 interface TablePlannerProps {
@@ -46,6 +49,7 @@ interface TablePlannerProps {
  canImportRoomLayout?: boolean;
  onImportRoomLayout?: (replaceExisting: boolean) => Promise<void>;
  importingLayout?: boolean;
+ editorLevel?: string | null;
 }
 
 export default function TablePlanner({
@@ -56,7 +60,9 @@ export default function TablePlanner({
  canImportRoomLayout,
  onImportRoomLayout,
  importingLayout,
+ editorLevel = 'complete',
 }: TablePlannerProps) {
+ const caps = roomEditorCapabilities(editorLevel, true);
  const [tables, setTables] = useState<Table[]>(() => {
  if (initialTablePlan && Array.isArray(initialTablePlan.tables)) {
  return initialTablePlan.tables;
@@ -101,6 +107,14 @@ export default function TablePlanner({
  // Add a new table
  const handleAddTable = () => {
  if (!newTableName.trim()) return;
+ if (tables.length >= caps.maxTables) {
+ alert(`Limite de ${caps.maxTables} tables atteinte (${caps.label}). Passez à un forfait supérieur.`);
+ return;
+ }
+ if (!caps.tableShapes.includes(newTableShape)) {
+ alert('Cette forme de table n’est pas incluse dans votre forfait.');
+ return;
+ }
 
  const seatsObj: Record<number, string | null> = {};
  for (let i = 0; i < newTableCapacity; i++) {
@@ -118,6 +132,7 @@ export default function TablePlanner({
  tableColor: newTableColor,
  chairType: newChairType,
  locked: false,
+ rotation: 0,
  };
 
  const updatedTables = [...tables, newTable];
@@ -166,6 +181,7 @@ export default function TablePlanner({
  tableColor: editingTable.tableColor,
  chairType: editingTable.chairType,
  locked: editingTable.locked,
+ rotation: editingTable.rotation || 0,
  seats: updatedSeats
  };
  }
@@ -175,6 +191,14 @@ export default function TablePlanner({
  };
 
  const handleDuplicateTable = (table: Table) => {
+ if (!caps.canDuplicate) {
+ alert('La duplication n’est pas incluse dans votre forfait.');
+ return;
+ }
+ if (tables.length >= caps.maxTables) {
+ alert(`Limite de ${caps.maxTables} tables atteinte (${caps.label}).`);
+ return;
+ }
  const seatsObj: Record<number, string | null> = {};
  for (let i = 0; i < table.capacity; i++) seatsObj[i] = null;
  const copy: Table = {
@@ -191,6 +215,7 @@ export default function TablePlanner({
  };
 
  const handleToggleLock = (tableId: string) => {
+ if (!caps.canLock) return;
  setTables(tables.map((t) => (t.id === tableId ? { ...t, locked: !t.locked } : t)));
  };
 
@@ -209,6 +234,82 @@ export default function TablePlanner({
  return t;
  }));
  setSelectedGuestSeat(null);
+ };
+
+ const handleAutoAssign = () => {
+ if (!caps.canAutoAssign) {
+ alert('Le placement automatique n’est pas inclus dans votre forfait.');
+ return;
+ }
+ const queue = [...unassignedGuests];
+ if (queue.length === 0) return;
+ setTables(tables.map((table) => {
+ const seats = { ...table.seats };
+ for (let i = 0; i < table.capacity && queue.length > 0; i++) {
+ if (!seats[i]) seats[i] = queue.shift()!.id;
+ }
+ return { ...table, seats };
+ }));
+ };
+
+ const handleClearAssignments = () => {
+ if (!confirm('Libérer tous les sièges ? Les tables restent en place.')) return;
+ setTables(tables.map((table) => {
+ const seats: Record<number, string | null> = {};
+ for (let i = 0; i < table.capacity; i++) seats[i] = null;
+ return { ...table, seats };
+ }));
+ };
+
+ const handleLayoutGrid = () => {
+ if (!caps.canAlign && !caps.canSnapGrid) {
+ alert('L’alignement automatique n’est pas inclus dans votre forfait.');
+ return;
+ }
+ const movable = tables.filter((t) => !t.locked);
+ if (movable.length === 0) return;
+ const cols = Math.max(1, Math.ceil(Math.sqrt(movable.length)));
+ const rows = Math.max(1, Math.ceil(movable.length / cols));
+ let i = 0;
+ setTables(tables.map((table) => {
+ if (table.locked) return table;
+ const col = i % cols;
+ const row = Math.floor(i / cols);
+ i += 1;
+ const x = cols === 1 ? 50 : 18 + (col / (cols - 1)) * 64;
+ const y = rows === 1 ? 50 : 22 + (row / (rows - 1)) * 56;
+ return { ...table, x, y };
+ }));
+ };
+
+ const handleLayoutCircle = () => {
+ if (!caps.canAlign) {
+ alert('La disposition en cercle n’est pas incluse dans votre forfait (Premium).');
+ return;
+ }
+ const movable = tables.filter((t) => !t.locked);
+ if (movable.length === 0) return;
+ const radius = Math.min(32, 10 + movable.length * 1.6);
+ let i = 0;
+ setTables(tables.map((table) => {
+ if (table.locked) return table;
+ const angle = (2 * Math.PI * i) / movable.length - Math.PI / 2;
+ i += 1;
+ return {
+ ...table,
+ x: 50 + radius * Math.cos(angle),
+ y: 50 + radius * Math.sin(angle),
+ };
+ }));
+ };
+
+ const handleRotateTable = (tableId: string, delta: number) => {
+ if (!caps.canRotate) return;
+ setTables(tables.map((t) => {
+ if (t.id !== tableId) return t;
+ const next = ((t.rotation || 0) + delta + 360) % 360;
+ return { ...t, rotation: next };
+ }));
  };
 
  // Dragging logic
@@ -248,8 +349,8 @@ export default function TablePlanner({
  newXPixels = Math.max(40, Math.min(rect.width - 40, newXPixels));
  newYPixels = Math.max(40, Math.min(rect.height - 40, newYPixels));
 
- const newXPercent = (newXPixels / rect.width) * 100;
- const newYPercent = (newYPixels / rect.height) * 100;
+ const newXPercent = snapLayoutPct((newXPixels / rect.width) * 100, caps.canSnapGrid);
+ const newYPercent = snapLayoutPct((newYPixels / rect.height) * 100, caps.canSnapGrid);
 
  setTables(tables.map(t => {
  if (t.id === draggingTableId) {
@@ -350,7 +451,7 @@ export default function TablePlanner({
  style={{
  left: `${table.x}%`,
  top: `${table.y}%`,
- transform: isDragging ? undefined : 'translate(-50%, -50%)',
+ transform: `translate(-50%, -50%) rotate(${table.rotation || 0}deg)`,
  }}
  className={cn(
  'absolute select-none p-3 em-floor-item',
@@ -401,6 +502,7 @@ export default function TablePlanner({
 
  {isActive && (
  <div className="absolute -top-2.5 -right-2.5 flex gap-1">
+ {caps.canLock ? (
  <button
  type="button"
  onClick={(e) => {
@@ -412,6 +514,21 @@ export default function TablePlanner({
  >
  {table.locked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
  </button>
+ ) : null}
+ {caps.canRotate ? (
+ <button
+ type="button"
+ onClick={(e) => {
+ e.stopPropagation();
+ handleRotateTable(table.id, 15);
+ }}
+ className="p-1.5 bg-surface border border-border text-muted hover:text-primary rounded-full shadow-[var(--shadow-soft)] transition"
+ title="Pivoter de 15°"
+ >
+ <RotateCw className="w-3 h-3" />
+ </button>
+ ) : null}
+ {caps.canDuplicate ? (
  <button
  type="button"
  onClick={(e) => {
@@ -423,6 +540,7 @@ export default function TablePlanner({
  >
  <Copy className="w-3 h-3" />
  </button>
+ ) : null}
  <button
  type="button"
  onClick={(e) => {
@@ -513,6 +631,20 @@ export default function TablePlanner({
  </div>
  )}
 
+ {caps.level !== 'complete' ? (
+ <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border border-amber-200 bg-amber-50 rounded-[var(--radius-card)]">
+ <div className="text-sm">
+ <p className="font-semibold text-amber-950 flex items-center gap-2">
+ <Sparkles className="w-4 h-4" /> Éditeur {caps.label} · {tables.length}/{caps.maxTables} tables
+ </p>
+ <p className="text-xs text-amber-800 mt-0.5">{caps.description}</p>
+ </div>
+ <Link href="/dashboard/billing" className="text-xs font-bold text-primary hover:underline shrink-0">
+ Voir les forfaits →
+ </Link>
+ </div>
+ ) : null}
+
  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
  <div>
  <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
@@ -520,12 +652,21 @@ export default function TablePlanner({
  Plan de Table Interactif
  </h2>
  <p className="text-muted text-sm mt-0.5">
- Créez des tables, positionnez-les visuellement et placez vos invités confirmés.
+ {tables.length}/{caps.maxTables} tables · {caps.label}
+ {caps.canSnapGrid ? ' · grille' : ''}
+ {caps.canRotate ? ' · rotation' : ''}.
+ Placez les invités confirmés sur les sièges.
  </p>
  </div>
  <div className="flex gap-2.5">
  <button
- onClick={() => setShowAddModal(true)}
+ onClick={() => {
+ if (tables.length >= caps.maxTables) {
+ alert(`Limite de ${caps.maxTables} tables atteinte (${caps.label}). Passez à un forfait supérieur.`);
+ return;
+ }
+ setShowAddModal(true);
+ }}
  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-surface border border-border text-foreground hover:bg-surface-muted font-medium rounded-[var(--radius-button)] text-sm transition"
  >
  <Plus className="w-4 h-4" />
@@ -595,7 +736,48 @@ export default function TablePlanner({
  <div className="bg-surface border border-border rounded-[var(--radius-card)] px-3 py-2 text-xs text-muted font-medium flex flex-wrap items-center gap-2">
  <Move className="w-3.5 h-3.5 text-muted shrink-0" />
  <span className="flex-1 min-w-[12rem]">Glissez les tables · déverrouillez pour déplacer un import · cliquez un siège pour placer un invité</span>
- {tables.some((t) => t.locked) && (
+ {caps.canAutoAssign ? (
+ <button
+ type="button"
+ onClick={handleAutoAssign}
+ disabled={unassignedGuests.length === 0 || tables.length === 0}
+ className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-[10px] font-semibold text-foreground hover:bg-primary/10 transition disabled:opacity-50"
+ >
+ <Users className="w-3.5 h-3.5" />
+ Placer auto
+ </button>
+ ) : null}
+ {tables.some((t) => Object.values(t.seats).some(Boolean)) ? (
+ <button
+ type="button"
+ onClick={handleClearAssignments}
+ className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-[10px] font-semibold text-foreground hover:bg-rose-50 transition"
+ >
+ Libérer les sièges
+ </button>
+ ) : null}
+ {caps.canSnapGrid || caps.canAlign ? (
+ <button
+ type="button"
+ onClick={handleLayoutGrid}
+ disabled={tables.filter((t) => !t.locked).length === 0}
+ className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-[10px] font-semibold text-foreground hover:bg-primary/10 transition disabled:opacity-50"
+ >
+ <LayoutGrid className="w-3.5 h-3.5" />
+ Grille
+ </button>
+ ) : null}
+ {caps.canAlign ? (
+ <button
+ type="button"
+ onClick={handleLayoutCircle}
+ disabled={tables.filter((t) => !t.locked).length === 0}
+ className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-[10px] font-semibold text-foreground hover:bg-primary/10 transition disabled:opacity-50"
+ >
+ Cercle
+ </button>
+ ) : null}
+ {tables.some((t) => t.locked) && caps.canLock && (
  <button
  type="button"
  onClick={() => setTables(tables.map((t) => ({ ...t, locked: false })))}
@@ -749,13 +931,13 @@ export default function TablePlanner({
  <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Forme</label>
  <select
  value={newTableShape}
- onChange={(e) => setNewTableShape(e.target.value as any)}
+ onChange={(e) => setNewTableShape(e.target.value as TableShape)}
  className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
  >
- <option value="round">Ronde 🟡</option>
- <option value="rectangular">Rectangulaire ⬜</option>
- <option value="square">Carrée 🔲</option>
- <option value="oval">Ovale 🥚</option>
+ {caps.tableShapes.includes('round') ? <option value="round">Ronde</option> : null}
+ {caps.tableShapes.includes('rectangular') ? <option value="rectangular">Rectangulaire</option> : null}
+ {caps.tableShapes.includes('square') ? <option value="square">Carrée</option> : null}
+ {caps.tableShapes.includes('oval') ? <option value="oval">Ovale</option> : null}
  </select>
  </div>
 
@@ -850,13 +1032,13 @@ export default function TablePlanner({
  <label className="block text-xs font-medium text-muted uppercase tracking-wider mb-1.5">Forme</label>
  <select
  value={editingTable.shape}
- onChange={(e) => setEditingTable({ ...editingTable, shape: e.target.value as any })}
+ onChange={(e) => setEditingTable({ ...editingTable, shape: e.target.value as TableShape })}
  className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
  >
- <option value="round">Ronde 🟡</option>
- <option value="rectangular">Rectangulaire ⬜</option>
- <option value="square">Carrée 🔲</option>
- <option value="oval">Ovale 🥚</option>
+ {caps.tableShapes.includes('round') ? <option value="round">Ronde</option> : null}
+ {caps.tableShapes.includes('rectangular') ? <option value="rectangular">Rectangulaire</option> : null}
+ {caps.tableShapes.includes('square') ? <option value="square">Carrée</option> : null}
+ {caps.tableShapes.includes('oval') ? <option value="oval">Ovale</option> : null}
  </select>
  </div>
 
@@ -898,6 +1080,21 @@ export default function TablePlanner({
  />
  </div>
  </div>
+ {caps.canRotate ? (
+ <label className="block text-xs font-medium text-muted uppercase tracking-wider space-y-1.5">
+ Rotation ({editingTable.rotation || 0}°)
+ <input
+ type="range"
+ min={0}
+ max={345}
+ step={15}
+ value={editingTable.rotation || 0}
+ onChange={(e) => setEditingTable({ ...editingTable, rotation: Number(e.target.value) })}
+ className="w-full"
+ />
+ </label>
+ ) : null}
+ {caps.canLock ? (
  <label className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted cursor-pointer">
  <span className="text-xs font-medium text-foreground">Verrouiller la position</span>
  <input
@@ -907,6 +1104,7 @@ export default function TablePlanner({
  className="rounded border-border text-primary focus:ring-primary/30 h-4 w-4"
  />
  </label>
+ ) : null}
  </div>
 
  <div className="flex gap-3 pt-3 border-t border-border">

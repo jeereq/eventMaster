@@ -117,6 +117,126 @@ export const SERVICE_RENTAL_CATEGORIES: ServiceCategory[] = [
 
 export const SERVICE_CATEGORIES = [...SERVICE_TRADE_CATEGORIES, ...SERVICE_RENTAL_CATEGORIES];
 
+export type ServiceCategoryMeta = {
+  group: 'trade' | 'rental';
+  hint: string;
+  defaultUnit: VenuePriceUnit;
+  units: VenuePriceUnit[];
+};
+
+export const SERVICE_CATEGORY_META: Record<ServiceCategory, ServiceCategoryMeta> = {
+  CATERING: {
+    group: 'trade',
+    hint: 'Buffet, menu assis ou grillade. Le tarif se calcule souvent par personne.',
+    defaultUnit: 'PERSON',
+    units: ['PERSON', 'EVENT', 'QUOTA'],
+  },
+  PHOTOGRAPHY: {
+    group: 'trade',
+    hint: 'Reportage mariage, portraits ou couverture de gala.',
+    defaultUnit: 'EVENT',
+    units: ['EVENT', 'HOUR', 'DAY'],
+  },
+  VIDEO: {
+    group: 'trade',
+    hint: 'Film de cérémonie, aftermovie ou captation live.',
+    defaultUnit: 'EVENT',
+    units: ['EVENT', 'HOUR', 'DAY'],
+  },
+  DJ: {
+    group: 'trade',
+    hint: 'Animation, sono et éclairage. Possible à l’heure ou à la soirée.',
+    defaultUnit: 'EVENT',
+    units: ['EVENT', 'HOUR', 'DAY'],
+  },
+  DECORATION: {
+    group: 'trade',
+    hint: 'Scénographie, arche, backdrop — généralement au forfait événement.',
+    defaultUnit: 'EVENT',
+    units: ['EVENT', 'DAY'],
+  },
+  SECURITY: {
+    group: 'trade',
+    hint: 'Agents d’accueil, VIP ou parking. Souvent à la journée ou à l’événement.',
+    defaultUnit: 'DAY',
+    units: ['DAY', 'EVENT', 'HOUR'],
+  },
+  FLORIST: {
+    group: 'trade',
+    hint: 'Bouquets, centres de table et décor église.',
+    defaultUnit: 'EVENT',
+    units: ['EVENT', 'PERSON'],
+  },
+  TRANSPORT: {
+    group: 'trade',
+    hint: 'Navette invités, cortège ou transfert aéroport.',
+    defaultUnit: 'DAY',
+    units: ['DAY', 'EVENT', 'HOUR'],
+  },
+  MC: {
+    group: 'trade',
+    hint: 'Maître de cérémonie ou animation protocole.',
+    defaultUnit: 'EVENT',
+    units: ['EVENT', 'HOUR'],
+  },
+  OTHER: {
+    group: 'trade',
+    hint: 'Coordination jour J, photobooth, générateur…',
+    defaultUnit: 'EVENT',
+    units: ['EVENT', 'DAY', 'HOUR', 'PERSON', 'QUOTA'],
+  },
+  RENTAL_CLOTHING_MEN: {
+    group: 'rental',
+    hint: 'Costume, smoking ou tenue traditionnelle — souvent pour l’événement.',
+    defaultUnit: 'EVENT',
+    units: ['EVENT', 'DAY'],
+  },
+  RENTAL_CLOTHING_WOMEN: {
+    group: 'rental',
+    hint: 'Robe de soirée, mariée ou cocktail.',
+    defaultUnit: 'EVENT',
+    units: ['EVENT', 'DAY'],
+  },
+  RENTAL_CLOTHING_CHILD: {
+    group: 'rental',
+    hint: 'Cortège, baptême ou cérémonie enfant.',
+    defaultUnit: 'EVENT',
+    units: ['EVENT', 'DAY'],
+  },
+  RENTAL_CAR: {
+    group: 'rental',
+    hint: 'Berline, 4x4 ou limousine, avec ou sans chauffeur.',
+    defaultUnit: 'DAY',
+    units: ['DAY', 'HOUR', 'EVENT'],
+  },
+  RENTAL_MOTO: {
+    group: 'rental',
+    hint: 'Moto ou scooter pour cortège ou staff.',
+    defaultUnit: 'DAY',
+    units: ['DAY', 'HOUR', 'EVENT'],
+  },
+  RENTAL_EQUIPMENT: {
+    group: 'rental',
+    hint: 'Chapiteau, chaises, sono, groupe électrogène.',
+    defaultUnit: 'DAY',
+    units: ['DAY', 'EVENT', 'HOUR'],
+  },
+};
+
+export function unitsForServiceCategory(category?: string | null): VenuePriceUnit[] {
+  if (category && category in SERVICE_CATEGORY_META) {
+    return SERVICE_CATEGORY_META[category as ServiceCategory].units;
+  }
+  return ['EVENT', 'DAY', 'HOUR', 'MINUTE', 'PERSON', 'QUOTA'];
+}
+
+export function defaultUnitForServiceCategory(category?: string | null): VenuePriceUnit {
+  if (category && category in SERVICE_CATEGORY_META) {
+    return SERVICE_CATEGORY_META[category as ServiceCategory].defaultUnit;
+  }
+  return 'EVENT';
+}
+
 export function isServiceRentalCategory(category?: string | null): boolean {
   return Boolean(category && (SERVICE_RENTAL_CATEGORIES as string[]).includes(category));
 }
@@ -363,13 +483,13 @@ export function previewMarketplaceAmounts(amountFc: number, dayCount = 1, priceU
   };
 }
 
-export const PRICE_UNIT_OPTIONS: Array<{ id: VenuePriceUnit; label: string }> = [
-  { id: 'EVENT', label: 'Par événement' },
-  { id: 'DAY', label: 'Par jour' },
-  { id: 'HOUR', label: 'Par heure' },
-  { id: 'MINUTE', label: 'Par minute' },
-  { id: 'PERSON', label: 'Par personne / par tête' },
-  { id: 'QUOTA', label: 'Par quota d’invités' },
+export const PRICE_UNIT_OPTIONS: Array<{ id: VenuePriceUnit; label: string; hint: string }> = [
+  { id: 'EVENT', label: 'Par événement', hint: 'Un forfait pour toute la prestation ou la location.' },
+  { id: 'DAY', label: 'Par jour', hint: 'Journée civile (voiture, chapiteau, sécurité…).' },
+  { id: 'HOUR', label: 'Par heure', hint: 'DJ, photo, moto, salle de conférence…' },
+  { id: 'MINUTE', label: 'Par minute', hint: 'Rare : studio, captation courte.' },
+  { id: 'PERSON', label: 'Par personne', hint: 'Traiteur, cocktail, bouquet par invité.' },
+  { id: 'QUOTA', label: 'Par quota d’invités', hint: 'Forfait selon une fourchette de convives.' },
 ];
 
 export const RADIUS_KM_OPTIONS = [2, 5, 10, 15, 25, 40] as const;

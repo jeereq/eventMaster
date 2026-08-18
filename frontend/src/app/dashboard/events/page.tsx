@@ -2722,6 +2722,7 @@ Merci de confirmer votre présence :
  onSave={handleSaveTablePlan}
  roomName={selectedEvent.room?.name}
  canImportRoomLayout={selectedRoomHasLayout || Boolean(selectedEvent.roomId && orgRooms.find((r) => r.id === selectedEvent.roomId)?.layoutBlueprint)}
+ editorLevel={planFeatures?.roomEditorLevel}
  onImportRoomLayout={handleImportRoomLayout}
  importingLayout={importingLayout}
  />

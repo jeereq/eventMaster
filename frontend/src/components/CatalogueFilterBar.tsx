@@ -8,10 +8,12 @@ import {
   PRICE_UNIT_OPTIONS,
   RADIUS_KM_OPTIONS,
   SERVICE_CATEGORY_LABELS,
+  SERVICE_CATEGORY_META,
   SERVICE_MOBILITY_OPTIONS,
   SERVICE_RENTAL_CATEGORIES,
   SERVICE_TRADE_CATEGORIES,
   clampRadiusKm,
+  unitsForServiceCategory,
   type CatalogueGeoState,
   type CatalogueProximity,
   type CatalogueViewMode,
@@ -22,6 +24,9 @@ import {
   EVENT_ENTRY_OPTIONS,
   KIND_FILTER_OPTIONS,
   ROOM_TYPE_FILTER_OPTIONS,
+  pickCatalogueExtras,
+  type CatalogueEntityExtras,
+  type CatalogueKind,
 } from '@/lib/catalogueEntityFilters';
 import { communesForCity, neighborhoodsFor, normalizeRdcCity } from '@/lib/rdcCities';
 import CatalogueViewToggle, { CatalogueGridColsToggle, type CatalogueGridCols } from '@/components/CatalogueViewToggle';
@@ -628,8 +633,11 @@ export function CatalogueEntityFilterFields({
   const showVenue = kind === 'all' || kind === 'venue';
   const showService = kind === 'all' || kind === 'service';
   const showEvent = kind === 'all' || kind === 'event';
-  const setExtras = (patch: Partial<import('@/lib/catalogueEntityFilters').CatalogueEntityExtras>) => {
-    onChange(value, { ...extras, ...patch });
+  const emit = (geo: CatalogueGeoState, nextExtras: CatalogueEntityExtras) => {
+    onChange(geo, pickCatalogueExtras(nextExtras));
+  };
+  const setExtras = (patch: Partial<CatalogueEntityExtras>) => {
+    emit(value, { ...extras, ...patch });
   };
 
   return (
@@ -655,7 +663,7 @@ export function CatalogueEntityFilterFields({
       ) : null}
       <CatalogueGeoFields
         value={value}
-        onChange={(next) => onChange(next, extras)}
+        onChange={(next) => emit(next, extras)}
         error={error}
         showCapacity={kind !== 'service'}
         showProximity={showProximity}
@@ -685,7 +693,15 @@ export function CatalogueEntityFilterFields({
                 <CatalogueChoicePills
                   options={SERVICE_TRADE_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] }))}
                   value={extras.category}
-                  onChange={(id) => setExtras({ category: id })}
+                  onChange={(id) => {
+                    const allowed = unitsForServiceCategory(id);
+                    setExtras({
+                      category: id,
+                      priceUnit: extras.priceUnit && allowed.includes(extras.priceUnit as (typeof allowed)[number])
+                        ? extras.priceUnit
+                        : '',
+                    });
+                  }}
                 />
               </div>
               <div>
@@ -693,7 +709,15 @@ export function CatalogueEntityFilterFields({
                 <CatalogueChoicePills
                   options={SERVICE_RENTAL_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] }))}
                   value={extras.category}
-                  onChange={(id) => setExtras({ category: id })}
+                  onChange={(id) => {
+                    const allowed = unitsForServiceCategory(id);
+                    setExtras({
+                      category: id,
+                      priceUnit: extras.priceUnit && allowed.includes(extras.priceUnit as (typeof allowed)[number])
+                        ? extras.priceUnit
+                        : '',
+                    });
+                  }}
                 />
               </div>
             </div>
@@ -705,9 +729,19 @@ export function CatalogueEntityFilterFields({
               onChange={(id) => setExtras({ mobility: (id as import('@/lib/marketplace').ServiceMobility) || '' })}
             />
           </CatalogueFilterField>
-          <CatalogueFilterField label="Unité tarifaire">
+          <CatalogueFilterField
+            label="Unité tarifaire"
+            hint={
+              extras.category && extras.category in SERVICE_CATEGORY_META
+                ? SERVICE_CATEGORY_META[extras.category as import('@/lib/marketplace').ServiceCategory].hint
+                : 'Filtre les fiches selon l’unité affichée (événement, jour, personne…).'
+            }
+          >
             <CatalogueChoicePills
-              options={PRICE_UNIT_OPTIONS}
+              options={(extras.category ? unitsForServiceCategory(extras.category) : PRICE_UNIT_OPTIONS.map((o) => o.id)).map((id) => ({
+                id,
+                label: PRICE_UNIT_OPTIONS.find((opt) => opt.id === id)?.label || id,
+              }))}
               value={extras.priceUnit}
               onChange={(id) => setExtras({ priceUnit: id })}
             />

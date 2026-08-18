@@ -925,6 +925,7 @@ export default function RoomsManagement() {
               onChange={setBlueprintDraft}
               onRegenerate={regenerateBlueprint}
               allowThemesFixtures={planFeatures?.roomThemesFixtures === true}
+              editorLevel={planFeatures?.roomEditorLevel}
             />
           </div>
         )}
@@ -1191,6 +1192,7 @@ export default function RoomsManagement() {
               blueprint={editBlueprint}
               onChange={setEditBlueprint}
               allowThemesFixtures={planFeatures?.roomThemesFixtures === true}
+              editorLevel={planFeatures?.roomEditorLevel}
               onRegenerate={() => {
                 setEditBlueprint(refreshBlueprintMetadata(generateRoomBlueprint(editBlueprint.roomType)));
               }}

@@ -4,6 +4,7 @@ import {
   SERVICE_CATEGORIES,
   SERVICE_CATEGORY_LABELS,
   SERVICE_MOBILITY_OPTIONS,
+  type CatalogueGeoState,
   type CatalogueItem,
   type ServiceMobility,
 } from '@/lib/marketplace';
@@ -122,6 +123,28 @@ export function catalogueEntityExtraChips(extras: CatalogueEntityExtras): Array<
   if (extras.entry === 'paid') chips.push({ id: 'entry', label: 'Entrée', value: 'Payant', tone: 'event' });
   if (extras.entry === 'free') chips.push({ id: 'entry', label: 'Entrée', value: 'Libre', tone: 'event' });
   return chips;
+}
+
+export function pickCatalogueExtras(
+  value: Partial<CatalogueEntityExtras> | Record<string, unknown>,
+): CatalogueEntityExtras {
+  const mobility = value.mobility;
+  return {
+    kind: parseCatalogueKind(typeof value.kind === 'string' ? value.kind : ''),
+    roomType: typeof value.roomType === 'string' ? value.roomType : '',
+    category: typeof value.category === 'string' ? value.category : '',
+    mobility: mobility === 'on_site' || mobility === 'travels' ? mobility : '',
+    priceUnit: typeof value.priceUnit === 'string' ? value.priceUnit : '',
+    entry: parseEventEntry(typeof value.entry === 'string' ? value.entry : ''),
+  };
+}
+
+/** Fusionne lieu + extras sans écraser la ville / commune (le brouillon mélangeait les deux). */
+export function mergeGeoAndExtras(
+  geo: CatalogueGeoState,
+  extras: Partial<CatalogueEntityExtras> | Record<string, unknown>,
+): CatalogueGeoState & CatalogueEntityExtras {
+  return { ...geo, ...pickCatalogueExtras(extras) };
 }
 
 export function clearCatalogueExtraChip<T extends object>(filters: T, id: string): T {

@@ -51,6 +51,7 @@ import {
   catalogueItemMatchesExtras,
   clearCatalogueExtraChip,
   mergeCatalogueExtras,
+  mergeGeoAndExtras,
   splitCatalogueExtras,
   type CatalogueEntityExtras,
 } from '@/lib/catalogueEntityFilters';
@@ -450,7 +451,7 @@ function ClientMarketplaceInner() {
           value={draft}
           extras={draft}
           error={filterError}
-          onChange={(geo, extras) => setDraft({ ...geo, ...extras })}
+          onChange={(geo, extras) => setDraft(mergeGeoAndExtras(geo, extras))}
         />
       }
     />

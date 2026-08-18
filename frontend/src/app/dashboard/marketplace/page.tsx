@@ -21,6 +21,9 @@ import {
   mediaPosterUrl,
   missingPublishLocation,
   parseBlockedDates,
+  defaultUnitForServiceCategory,
+  unitsForServiceCategory,
+  SERVICE_CATEGORY_META,
   type MarketplaceBookingItem,
   type MarketplaceInquiryItem,
   type ServiceCategory,
@@ -667,7 +670,16 @@ export default function MarketplaceDeskPage() {
             <span className="block text-xs font-medium text-muted mb-1.5">Catégorie</span>
             <select
               value={draft.category}
-              onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value as ServiceCategory }))}
+              onChange={(e) => {
+                const category = e.target.value as ServiceCategory;
+                setDraft((d) => ({
+                  ...d,
+                  category,
+                  priceUnit: unitsForServiceCategory(category).includes(d.priceUnit)
+                    ? d.priceUnit
+                    : defaultUnitForServiceCategory(category),
+                }));
+              }}
               className={fieldClass}
             >
               <optgroup label="Prestations">
@@ -684,9 +696,11 @@ export default function MarketplaceDeskPage() {
           </label>
           {isServiceRentalCategory(draft.category) ? (
             <p className="text-[11px] text-muted -mt-1">
-              Location : habits (homme, femme, enfant), voitures, motos ou matériel. Indiquez le parc, les tailles / modèles et la caution dans la fiche.
+              {SERVICE_CATEGORY_META[draft.category].hint} Indiquez le parc, les tailles / modèles et la caution dans la fiche.
             </p>
-          ) : null}
+          ) : (
+            <p className="text-[11px] text-muted -mt-1">{SERVICE_CATEGORY_META[draft.category].hint}</p>
+          )}
           <label>
             <span className="block text-xs font-medium text-muted mb-1.5">Description</span>
             <textarea
@@ -768,10 +782,19 @@ export default function MarketplaceDeskPage() {
                 onChange={(e) => setDraft((d) => ({ ...d, priceUnit: e.target.value as VenuePriceUnit }))}
                 className={fieldClass}
               >
-                {PRICE_UNIT_OPTIONS.map((opt) => (
-                  <option key={opt.id} value={opt.id}>{opt.label}</option>
-                ))}
+                {unitsForServiceCategory(draft.category).map((id) => {
+                  const opt = PRICE_UNIT_OPTIONS.find((item) => item.id === id);
+                  return (
+                    <option key={id} value={id}>
+                      {opt?.label || id}
+                    </option>
+                  );
+                })}
               </select>
+              <p className="text-[11px] text-muted mt-1">
+                {PRICE_UNIT_OPTIONS.find((opt) => opt.id === draft.priceUnit)?.hint
+                  || 'Choisissez l’unité affichée aux clients.'}
+              </p>
             </label>
             <Input
               label="Quota min. invités"

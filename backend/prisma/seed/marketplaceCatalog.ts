@@ -196,11 +196,26 @@ function venuePriceUnit(roomType: RoomType, index: number): VenuePriceUnit {
 }
 
 function servicePriceUnit(category: ServiceCategory, index: number): VenuePriceUnit {
-  if (category === 'CATERING') return index % 2 === 0 ? 'PERSON' : 'EVENT';
-  if (category === 'RENTAL_CAR' || category === 'RENTAL_MOTO' || category === 'RENTAL_EQUIPMENT') return 'DAY';
-  if (category.startsWith('RENTAL_CLOTHING')) return 'EVENT';
-  if (category === 'DJ' && index % 4 === 0) return 'HOUR';
-  return 'EVENT';
+  const byCategory: Record<string, VenuePriceUnit[]> = {
+    CATERING: ['PERSON', 'EVENT', 'QUOTA'],
+    PHOTOGRAPHY: ['EVENT', 'HOUR', 'DAY'],
+    VIDEO: ['EVENT', 'HOUR', 'DAY'],
+    DJ: ['EVENT', 'HOUR', 'DAY'],
+    DECORATION: ['EVENT', 'DAY'],
+    SECURITY: ['DAY', 'EVENT', 'HOUR'],
+    FLORIST: ['EVENT', 'PERSON'],
+    TRANSPORT: ['DAY', 'EVENT', 'HOUR'],
+    MC: ['EVENT', 'HOUR'],
+    OTHER: ['EVENT', 'DAY', 'HOUR'],
+    RENTAL_CLOTHING_MEN: ['EVENT', 'DAY'],
+    RENTAL_CLOTHING_WOMEN: ['EVENT', 'DAY'],
+    RENTAL_CLOTHING_CHILD: ['EVENT', 'DAY'],
+    RENTAL_CAR: ['DAY', 'HOUR', 'EVENT'],
+    RENTAL_MOTO: ['DAY', 'HOUR'],
+    RENTAL_EQUIPMENT: ['DAY', 'EVENT', 'HOUR'],
+  };
+  const units = byCategory[category] || ['EVENT'];
+  return units[index % units.length];
 }
 
 function orgPhone(seed: number): string {

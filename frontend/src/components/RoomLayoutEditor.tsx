@@ -23,6 +23,7 @@ import {
  createBlueprintFixture,
  createBlueprintRow,
  createBlueprintTable,
+ createBlueprintZone,
  defaultRoomOutline,
  ensureBlueprintDefaults,
  flowerTypeLabels,
@@ -32,6 +33,7 @@ import {
  roomOutlineLabels,
  roomTypeLabels,
 } from '@/lib/roomLayoutUtils';
+import { roomEditorCapabilities, snapLayoutPct } from '@/lib/roomEditorAccess';
 import { prependLayoutAction, LayoutActionEntry } from '@/lib/layoutActionLog';
 import { getSeatCoordinates, getTableVisualStyle } from '@/lib/tablePlanUtils';
 import { readImageFile } from '@/lib/imageCropUtils';
@@ -49,6 +51,8 @@ interface RoomLayoutEditorProps {
  readOnly?: boolean;
  /** Thèmes, textures de sol et fixtures décoratives (scène, fleurs…). */
  allowThemesFixtures?: boolean;
+ /** Niveau d’éditeur selon le forfait (basic / standard / advanced / complete). */
+ editorLevel?: string | null;
 }
 
 type CropTarget = { kind: 'fixture'; id: string } | null;
@@ -59,8 +63,10 @@ export default function RoomLayoutEditor({
  onRegenerate,
  readOnly = false,
  allowThemesFixtures = true,
+ editorLevel = 'complete',
 }: RoomLayoutEditorProps) {
  const blueprint = ensureBlueprintDefaults(rawBlueprint);
+ const caps = roomEditorCapabilities(editorLevel, allowThemesFixtures);
  const canvasRef = useRef<HTMLDivElement>(null);
  const [selected, setSelected] = useState<{ kind: SelectableKind; id: string } | null>(null);
  const [dragging, setDragging] = useState<{ kind: SelectableKind; id: string } | null>(null);
@@ -93,6 +99,13 @@ export default function RoomLayoutEditor({
  ) => {
  if (readOnly) return;
  if (e.target instanceof HTMLButtonElement || e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
+ const furniture = blueprint.furniture.find((f) => f.id === id);
+ if (furniture?.kind === 'table' && furniture.locked) {
+   e.preventDefault();
+   e.stopPropagation();
+   setSelected({ kind, id });
+   return;
+ }
  e.preventDefault();
  e.stopPropagation();
  setSelected({ kind, id });
@@ -123,8 +136,10 @@ export default function RoomLayoutEditor({
  const handleMouseMove = (e: React.MouseEvent) => {
  if (!dragging || !canvasRef.current || readOnly) return;
  const rect = canvasRef.current.getBoundingClientRect();
- const xPct = (Math.max(0, Math.min(rect.width, e.clientX - rect.left - dragOffset.x)) / rect.width) * 100;
- const yPct = (Math.max(0, Math.min(rect.height, e.clientY - rect.top - dragOffset.y)) / rect.height) * 100;
+ const rawX = (Math.max(0, Math.min(rect.width, e.clientX - rect.left - dragOffset.x)) / rect.width) * 100;
+ const rawY = (Math.max(0, Math.min(rect.height, e.clientY - rect.top - dragOffset.y)) / rect.height) * 100;
+ const xPct = snapLayoutPct(rawX, caps.canSnapGrid);
+ const yPct = snapLayoutPct(rawY, caps.canSnapGrid);
 
  if (dragging.kind === 'fixture') {
  updateBlueprint({
@@ -168,15 +183,29 @@ export default function RoomLayoutEditor({
  };
 
  const addTable = () => {
- const count = blueprint.furniture.filter((f) => f.kind === 'table').length + 1;
+ const tableCount = blueprint.furniture.filter((f) => f.kind === 'table').length;
+ if (tableCount >= caps.maxTables) {
+   log(`Limite de ${caps.maxTables} tables atteinte (${caps.label})`, 'info');
+   return;
+ }
+ const count = tableCount + 1;
  const defaultChair: ChairType =
  blueprint.roomType === 'CONFERENCE' || blueprint.roomType === 'AMPHITHEATER' ? 'THEATER' : 'BANQUET';
- const table = createBlueprintTable(count, { chairType: defaultChair });
+ const table = createBlueprintTable(count, { chairType: defaultChair, shape: caps.tableShapes[0] });
  updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, table] }, { message: `Table « ${table.name} » ajoutée`, kind: 'add' });
  setSelected({ kind: 'table', id: table.id });
  };
 
  const duplicateSelectedTable = () => {
+ if (!caps.canDuplicate) {
+   log('La duplication n’est pas incluse dans votre forfait', 'info');
+   return;
+ }
+ const tableCount = blueprint.furniture.filter((f) => f.kind === 'table').length;
+ if (tableCount >= caps.maxTables) {
+   log(`Limite de ${caps.maxTables} tables atteinte (${caps.label})`, 'info');
+   return;
+ }
  const item = blueprint.furniture.find((f) => f.kind === 'table' && f.id === selected?.id);
  if (!item || item.kind !== 'table') return;
  const count = blueprint.furniture.filter((f) => f.kind === 'table').length + 1;
@@ -193,15 +222,35 @@ export default function RoomLayoutEditor({
  };
 
  const addRow = () => {
- const count = blueprint.furniture.filter((f) => f.kind === 'row').length + 1;
+ if (!caps.canAddRows) {
+   log('Les rangées ne sont pas incluses dans votre forfait', 'info');
+   return;
+ }
+ const rowCount = blueprint.furniture.filter((f) => f.kind === 'row').length;
+ if (rowCount >= caps.maxRows) {
+   log(`Limite de ${caps.maxRows} rangées atteinte (${caps.label})`, 'info');
+   return;
+ }
+ const count = rowCount + 1;
  const row = createBlueprintRow(count);
  updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, row] }, { message: `Rangée « ${row.label} » ajoutée`, kind: 'add' });
  setSelected({ kind: 'row', id: row.id });
  };
 
+ const addZone = (label: string) => {
+ if (!caps.canZones) {
+   log('Les zones (piste, VIP, buffet) ne sont pas incluses dans votre forfait', 'info');
+   return;
+ }
+ const count = blueprint.furniture.filter((f) => f.kind === 'zone').length + 1;
+ const zone = createBlueprintZone(label, count);
+ updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, zone] }, { message: `Zone « ${zone.label} » ajoutée`, kind: 'add' });
+ setSelected({ kind: 'zone', id: zone.id });
+ };
+
  const addFixture = (kind: RoomLayoutBlueprint['fixtures'][number]['kind']) => {
- if (!allowThemesFixtures) {
- log('Thèmes & fixtures non inclus dans votre forfait', 'info');
+ if (!caps.canFixtures || !caps.fixtureKinds.includes(kind as (typeof caps.fixtureKinds)[number])) {
+ log('Cet élément n’est pas inclus dans votre forfait', 'info');
  return;
  }
  const fixture = createBlueprintFixture(kind);
@@ -441,7 +490,9 @@ export default function RoomLayoutEditor({
  style={{
  left: `${item.x}%`,
  top: `${item.y}%`,
- transform: isDrag ? undefined : 'translate(-50%, -50%)',
+ transform: isDrag
+ ? undefined
+ : `translate(-50%, -50%)${item.rotation ? ` rotate(${item.rotation}deg)` : ''}`,
  }}
  >
  <div
@@ -538,13 +589,13 @@ export default function RoomLayoutEditor({
  if (!selected) {
  return (
  <div className="space-y-4">
- {!allowThemesFixtures ? (
+ {!caps.canThemes ? (
  <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 space-y-2">
  <p className="text-xs font-bold uppercase text-amber-800 flex items-center gap-1">
- <Sparkles className="w-3.5 h-3.5" /> Thèmes & fixtures
+ <Sparkles className="w-3.5 h-3.5" /> Forfait {caps.label}
  </p>
  <p className="text-xs text-amber-900/80">
- Les thèmes de salle, textures de sol et éléments décoratifs (scène, fleurs…) ne sont pas inclus dans votre forfait actuel.
+ {caps.description}
  </p>
  <a href="/dashboard/billing" className="inline-block text-xs font-bold text-primary hover:underline">
  Voir les forfaits →
@@ -581,12 +632,14 @@ export default function RoomLayoutEditor({
  </button>
  ))}
  </div>
+ {caps.canCustomTheme ? (
  <CustomRoomThemePanel
  blueprint={blueprint}
  onChange={(next) => updateBlueprint(next)}
  onApplyTheme={(id) => applyTheme(id as RoomThemeId)}
  activeThemeId={blueprint.metadata.roomThemeId}
  />
+ ) : null}
  </div>
  <div className="p-4 bg-surface-muted rounded-xl border space-y-3">
  <p className="text-xs font-bold uppercase text-muted flex items-center gap-1"><Layers className="w-3.5 h-3.5" /> Sol de la salle</p>
@@ -610,6 +663,7 @@ export default function RoomLayoutEditor({
  </button>
  ))}
  </div>
+ {caps.canCustomImages ? (
  <label className="block text-xs space-y-1">
  <span className="font-semibold text-muted flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> Importer une texture (photo de sol)</span>
  <input
@@ -635,6 +689,7 @@ export default function RoomLayoutEditor({
  </button>
  )}
  </label>
+ ) : null}
  </div>
  </>
  )}
@@ -683,6 +738,7 @@ export default function RoomLayoutEditor({
  </button>
  </div>
  </div>
+ {caps.canChangeOutline ? (
  <div className="p-4 bg-surface-muted rounded-xl border space-y-3">
  <p className="text-xs font-bold uppercase text-muted flex items-center gap-1"><Shapes className="w-3.5 h-3.5" /> Forme de la salle</p>
  <div className="grid grid-cols-2 gap-2">
@@ -698,6 +754,7 @@ export default function RoomLayoutEditor({
  ))}
  </div>
  </div>
+ ) : null}
  <LayoutActionPanel actions={actionLog} />
  </div>
  );
@@ -811,10 +868,10 @@ export default function RoomLayoutEditor({
  <label className="text-xs space-y-1">
  <span className="font-semibold text-muted">Forme</span>
  <select value={selectedFurniture.shape} onChange={(e) => updateFurniture(selectedFurniture.id, { shape: e.target.value as TableShape })} className="w-full px-2 py-1.5 rounded-lg border text-sm">
- <option value="round">Ronde</option>
- <option value="rectangular">Rectangulaire</option>
- <option value="square">Carrée</option>
- <option value="oval">Ovale</option>
+ {caps.tableShapes.includes('round') ? <option value="round">Ronde</option> : null}
+ {caps.tableShapes.includes('rectangular') ? <option value="rectangular">Rectangulaire</option> : null}
+ {caps.tableShapes.includes('square') ? <option value="square">Carrée</option> : null}
+ {caps.tableShapes.includes('oval') ? <option value="oval">Ovale</option> : null}
  </select>
  </label>
  <label className="text-xs space-y-1">
@@ -848,9 +905,24 @@ export default function RoomLayoutEditor({
  ))}
  </select>
  </label>
- {renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl)}
- {renderTableImageUpload(selectedFurniture.id, selectedFurniture.tableImageUrl)}
+ {caps.canCustomImages ? renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl) : null}
+ {caps.canCustomImages ? renderTableImageUpload(selectedFurniture.id, selectedFurniture.tableImageUrl) : null}
+ {caps.canRotate ? (
+ <label className="block text-xs space-y-1">
+ <span className="font-semibold text-muted">Rotation (°)</span>
+ <input
+ type="number"
+ min={0}
+ max={360}
+ step={15}
+ value={selectedFurniture.rotation ?? 0}
+ onChange={(e) => updateFurniture(selectedFurniture.id, { rotation: parseFloat(e.target.value) || 0 }, 'Rotation de table')}
+ className="w-full px-2 py-1.5 rounded-lg border text-sm"
+ />
+ </label>
+ ) : null}
  <div className="flex gap-2">
+ {caps.canLock ? (
  <button
  type="button"
  onClick={() => updateFurniture(selectedFurniture.id, { locked: !selectedFurniture.locked }, selectedFurniture.locked ? 'Table déverrouillée' : 'Table verrouillée')}
@@ -859,6 +931,8 @@ export default function RoomLayoutEditor({
  {selectedFurniture.locked ? <Unlock className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
  {selectedFurniture.locked ? 'Déverrouiller' : 'Verrouiller'}
  </button>
+ ) : null}
+ {caps.canDuplicate ? (
  <button
  type="button"
  onClick={duplicateSelectedTable}
@@ -866,6 +940,7 @@ export default function RoomLayoutEditor({
  >
  <Copy className="w-3 h-3" /> Dupliquer
  </button>
+ ) : null}
  </div>
  </div>
  <LayoutActionPanel actions={actionLog} />
@@ -894,7 +969,32 @@ export default function RoomLayoutEditor({
  ))}
  </select>
  </label>
- {renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl)}
+ {caps.canCustomImages ? renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl) : null}
+ </div>
+ <LayoutActionPanel actions={actionLog} />
+ </div>
+ );
+ }
+
+ if (selectedFurniture?.kind === 'zone') {
+ return (
+ <div className="space-y-3">
+ <div className="p-4 bg-surface-muted rounded-xl border space-y-3">
+ <p className="text-xs font-bold uppercase text-muted">Zone</p>
+ <label className="block text-xs space-y-1">
+ <span className="font-semibold text-muted">Libellé</span>
+ <input value={selectedFurniture.label} onChange={(e) => updateFurniture(selectedFurniture.id, { label: e.target.value })} className="w-full px-3 py-2 rounded-lg border text-sm" />
+ </label>
+ <div className="grid grid-cols-2 gap-2">
+ <label className="text-xs space-y-1">
+ <span className="font-semibold text-muted">Largeur %</span>
+ <input type="number" min={8} max={90} value={selectedFurniture.w} onChange={(e) => updateFurniture(selectedFurniture.id, { w: parseInt(e.target.value, 10) || 20 })} className="w-full px-2 py-1.5 rounded-lg border text-sm" />
+ </label>
+ <label className="text-xs space-y-1">
+ <span className="font-semibold text-muted">Hauteur %</span>
+ <input type="number" min={8} max={90} value={selectedFurniture.h} onChange={(e) => updateFurniture(selectedFurniture.id, { h: parseInt(e.target.value, 10) || 16 })} className="w-full px-2 py-1.5 rounded-lg border text-sm" />
+ </label>
+ </div>
  </div>
  <LayoutActionPanel actions={actionLog} />
  </div>
@@ -904,7 +1004,7 @@ export default function RoomLayoutEditor({
  return null;
  };
 
- const templateBar = !readOnly && (
+ const templateBar = !readOnly && caps.canTemplates && (
  <div className="space-y-2">
  <p className="text-[10px] font-bold uppercase tracking-wider text-muted flex items-center gap-1">
  <LayoutTemplate className="w-3.5 h-3.5" /> Modèles de salle
@@ -930,23 +1030,42 @@ export default function RoomLayoutEditor({
  <button type="button" onClick={addTable} className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold shadow-sm">
  <Plus className="w-3.5 h-3.5" /> Table
  </button>
+ {caps.canAddRows ? (
  <button type="button" onClick={addRow} className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-border text-foreground rounded-lg text-xs font-bold">
  <Plus className="w-3.5 h-3.5" /> Rangée
  </button>
- {allowThemesFixtures ? (
+ ) : null}
+ {caps.canZones ? (
  <>
+ <button type="button" onClick={() => addZone('Piste de danse')} className="px-3 py-1.5 bg-violet-50 border border-violet-200 text-violet-800 rounded-lg text-xs font-bold">Piste</button>
+ <button type="button" onClick={() => addZone('Espace VIP')} className="px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-xs font-bold">VIP</button>
+ <button type="button" onClick={() => addZone('Buffet')} className="px-3 py-1.5 bg-orange-50 border border-orange-200 text-orange-800 rounded-lg text-xs font-bold">Buffet</button>
+ </>
+ ) : null}
+ {caps.fixtureKinds.includes('stage') ? (
  <button type="button" onClick={() => addFixture('stage')} className="px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-xs font-bold">Scène</button>
+ ) : null}
+ {caps.fixtureKinds.includes('podium') ? (
  <button type="button" onClick={() => addFixture('podium')} className="px-3 py-1.5 bg-orange-50 border border-orange-200 text-orange-800 rounded-lg text-xs font-bold">Podium</button>
+ ) : null}
+ {caps.fixtureKinds.includes('column') ? (
  <button type="button" onClick={() => addFixture('column')} className="inline-flex items-center gap-1 px-3 py-1.5 bg-stone-100 border border-stone-300 text-stone-700 rounded-lg text-xs font-bold">
  <Columns3 className="w-3.5 h-3.5" /> Colonne
  </button>
+ ) : null}
+ {caps.fixtureKinds.includes('flower') ? (
  <button type="button" onClick={() => addFixture('flower')} className="inline-flex items-center gap-1 px-3 py-1.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-xs font-bold">
  <Flower2 className="w-3.5 h-3.5" /> Fleurs
  </button>
+ ) : null}
+ {caps.fixtureKinds.includes('aisle') ? (
  <button type="button" onClick={() => addFixture('aisle')} className="px-3 py-1.5 bg-surface-muted border border-border text-muted rounded-lg text-xs font-bold">Allée</button>
+ ) : null}
+ {caps.fixtureKinds.includes('entrance') ? (
  <button type="button" onClick={() => addFixture('entrance')} className="px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs font-bold">Entrée</button>
+ ) : null}
+ {caps.fixtureKinds.includes('perimeter') ? (
  <button type="button" onClick={() => addFixture('perimeter')} className="px-3 py-1.5 bg-sky-50 border border-sky-200 text-sky-800 rounded-lg text-xs font-bold">Périmètre</button>
- </>
  ) : null}
  {selected && (
  <button type="button" onClick={deleteSelected} className="inline-flex items-center gap-1 px-3 py-1.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-xs font-bold ml-auto">
@@ -969,7 +1088,8 @@ export default function RoomLayoutEditor({
  Éditeur 2D — {roomTypeLabels[blueprint.roomType as RoomType]}
  </p>
  <p className="text-xs text-muted mt-0.5">
- {blueprint.metadata.totalSeats} places · {roomOutlineLabels[outline.shape]} · Glissez-déposez
+ {blueprint.metadata.totalSeats} places · {roomOutlineLabels[outline.shape]}
+ {caps.canSnapGrid ? ' · Grille' : ''} · Éditeur {caps.label}
  </p>
  </div>
  <button

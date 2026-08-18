@@ -30,6 +30,7 @@ import {
   catalogueEntityExtraChips,
   catalogueItemMatchesExtras,
   clearCatalogueExtraChip,
+  mergeGeoAndExtras,
   type CatalogueEntityExtras,
 } from '@/lib/catalogueEntityFilters';
 import {
@@ -252,7 +253,7 @@ export default function LandingVitrineSection({
           value={draft}
           extras={{ ...draft, kind: entity === 'all' ? 'all' : entity }}
           error={filterError}
-          onChange={(geo, extras) => setDraft({ ...geo, ...extras, kind: entity === 'all' ? extras.kind : entity })}
+          onChange={(geo, extras) => setDraft({ ...mergeGeoAndExtras(geo, extras), kind: entity === 'all' ? extras.kind : entity })}
         />
       }
     />

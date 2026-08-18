@@ -73,6 +73,7 @@ export interface RoomLayoutBlueprint {
         x: number;
         y: number;
         locked?: boolean;
+        rotation?: number;
       }
     | {
         id: string;
@@ -160,6 +161,21 @@ export function createBlueprintRow(
     tier: defaults.tier ?? 0,
     x: 50,
     y: 20 + index * 10,
+  };
+}
+
+export function createBlueprintZone(
+  label: string,
+  index = 1,
+): Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'zone' }> {
+  return {
+    id: makeLayoutId('zone'),
+    kind: 'zone',
+    label,
+    x: 18 + (index % 3) * 10,
+    y: 28 + (index % 2) * 8,
+    w: 26,
+    h: 16,
   };
 }
 
