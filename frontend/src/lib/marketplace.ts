@@ -490,7 +490,7 @@ export function catalogueGeoChips(
   return [...next, ...extra];
 }
 
-export function clearCatalogueGeoChip(filters: CatalogueGeoState, id: string): CatalogueGeoState {
+export function clearCatalogueGeoChip<T extends CatalogueGeoState>(filters: T, id: string): T {
   if (id === 'proximity') {
     return { ...filters, proximity: '', nearPlace: '', lat: null, lng: null };
   }
@@ -665,6 +665,9 @@ export interface CatalogueItem {
   address?: string | null;
   distanceKm?: number | null;
   eventDate?: string | null;
+  roomType?: RoomType;
+  category?: ServiceCategory;
+  priceUnit?: VenuePriceUnit;
 }
 
 export function dashboardVenueHref(slug: string) {
@@ -704,6 +707,7 @@ export function venueToCatalogueItem(venue: PublicVenue): CatalogueItem {
     quotaMax: venue.quotaMax ?? null,
     address: venue.address,
     distanceKm: venue.distanceKm ?? null,
+    roomType: venue.roomType,
   };
 }
 
@@ -758,6 +762,8 @@ export function catalogueItemMatchesGeo(item: CatalogueItem, filters: CatalogueG
     if (commune && !loc.includes(commune)) return false;
     if (neighborhood && !loc.includes(neighborhood)) return false;
   }
+  const street = filters.street.trim().toLowerCase();
+  if (street && !loc.includes(street)) return false;
   const minP = Number(filters.minPrice);
   const maxP = Number(filters.maxPrice);
   if (filters.minPrice.trim() && Number.isFinite(minP) && (item.priceFromFc == null || item.priceFromFc < minP)) return false;
@@ -798,6 +804,8 @@ export function serviceToCatalogueItem(service: PublicService): CatalogueItem {
     quotaMin: service.quotaMin ?? null,
     quotaMax: service.quotaMax ?? null,
     distanceKm: service.distanceKm ?? null,
+    category: service.category,
+    priceUnit: service.priceUnit,
   };
 }
 

@@ -6,18 +6,14 @@ import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import CatalogueSearchLayout from '@/components/CatalogueSearchLayout';
 import { usePageSize } from '@/components/ui';
 import CatalogueFilterBar, {
-  CatalogueChoicePills,
-  CatalogueFilterField,
-  CatalogueGeoFields,
+  CatalogueEntityFilterFields,
   type CatalogueFilterChip,
 } from '@/components/CatalogueFilterBar';
 import { useCatalogueQueryState } from '@/lib/catalogueQuery';
 import {
   EMPTY_CATALOGUE_GEO,
   PRICE_UNIT_OPTIONS,
-  SERVICE_CATEGORIES,
   SERVICE_CATEGORY_LABELS,
-  SERVICE_MOBILITY_OPTIONS,
   appendCatalogueGeoParams,
   catalogueGeoChips,
   catalogueItemToMapMarker,
@@ -29,6 +25,7 @@ import {
   type PublicService,
   type ServiceMobility,
 } from '@/lib/marketplace';
+import { EMPTY_CATALOGUE_EXTRAS } from '@/lib/catalogueEntityFilters';
 
 type ServiceFilters = CatalogueGeoState & { category: string; priceUnit: string; mobility: ServiceMobility };
 
@@ -197,34 +194,24 @@ function MarketplaceServicesPageInner() {
           }}
           modalTitle="Filtrer les prestataires"
           filters={
-            <>
-              <CatalogueGeoFields
-                value={draft}
-                onChange={(next) => setDraft({ ...next, category: draft.category, priceUnit: draft.priceUnit, mobility: draft.mobility })}
-                error={filterError}
-              />
-              <CatalogueFilterField label="Intervention">
-                <CatalogueChoicePills
-                  options={SERVICE_MOBILITY_OPTIONS.filter((opt) => opt.id)}
-                  value={draft.mobility}
-                  onChange={(id) => setDraft((d) => ({ ...d, mobility: (id as ServiceMobility) || '' }))}
-                />
-              </CatalogueFilterField>
-              <CatalogueFilterField label="Catégorie">
-                <CatalogueChoicePills
-                  options={SERVICE_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] }))}
-                  value={draft.category}
-                  onChange={(id) => setDraft((d) => ({ ...d, category: id }))}
-                />
-              </CatalogueFilterField>
-              <CatalogueFilterField label="Unité tarifaire">
-                <CatalogueChoicePills
-                  options={PRICE_UNIT_OPTIONS.map((opt) => ({ id: opt.id, label: opt.label }))}
-                  value={draft.priceUnit}
-                  onChange={(id) => setDraft((d) => ({ ...d, priceUnit: id }))}
-                />
-              </CatalogueFilterField>
-            </>
+            <CatalogueEntityFilterFields
+              entity="service"
+              value={draft}
+              extras={{
+                ...EMPTY_CATALOGUE_EXTRAS,
+                kind: 'service',
+                category: draft.category,
+                priceUnit: draft.priceUnit,
+                mobility: draft.mobility,
+              }}
+              error={filterError}
+              onChange={(geo, extras) => setDraft({
+                ...geo,
+                category: extras.category,
+                priceUnit: extras.priceUnit,
+                mobility: extras.mobility,
+              })}
+            />
           }
         />
       )}

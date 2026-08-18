@@ -8,6 +8,8 @@ import {
 import { getPlanLimitsForTenant } from '../config/plansConfig';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { parsePhotoUrls, coverFromMedia } from '../utils/publicVenue';
+import { haversineKm, toDateKey } from '../utils/marketplaceDates';
+import { normalizeAllowedCity, pointInCityBounds } from '../utils/rdcCities';
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_mock';
 const stripe = new Stripe(STRIPE_SECRET_KEY, {
@@ -110,26 +112,77 @@ function serializePublicEvent(event: {
 export async function listPublicEvents(req: Request, res: Response) {
   try {
     const q = String(req.query.q || '').trim();
+    const city = normalizeAllowedCity(req.query.city) || '';
+    const commune = String(req.query.commune || '').trim();
+    const neighborhood = String(req.query.neighborhood || '').trim();
+    const street = String(req.query.street || '').trim();
+    const entry = String(req.query.entry || '').trim();
+    const minPrice = Number.parseInt(String(req.query.minPrice || ''), 10);
+    const maxPrice = Number.parseInt(String(req.query.maxPrice || ''), 10);
+    const fromKey = toDateKey(String(req.query.availableFrom || ''));
+    const toKey = toDateKey(String(req.query.availableTo || ''));
+    const lat = Number(req.query.lat);
+    const lng = Number(req.query.lng);
+    const radiusKm = Number(req.query.radiusKm);
+    const hasGeo = Number.isFinite(lat) && Number.isFinite(lng) && Number.isFinite(radiusKm) && radiusKm > 0;
+    const dateFrom = fromKey ? new Date(`${fromKey}T00:00:00.000Z`) : null;
+    const dateTo = toKey ? new Date(`${toKey}T23:59:59.999Z`) : null;
+
+    const locationBits = [city, commune, neighborhood, street].filter(Boolean);
+
+    const priceFilter: { gt?: number; gte?: number; lte?: number } = {};
+    if (entry === 'paid') priceFilter.gt = 0;
+    if (Number.isFinite(minPrice) && minPrice >= 0) priceFilter.gte = minPrice;
+    if (Number.isFinite(maxPrice) && maxPrice >= 0) priceFilter.lte = maxPrice;
+
     const events = await prisma.event.findMany({
       where: {
         isPublic: true,
         slug: { not: null },
-        date: { gte: new Date(Date.now() - 12 * 60 * 60 * 1000) },
-        ...(q
+        date: {
+          gte: dateFrom || new Date(Date.now() - 12 * 60 * 60 * 1000),
+          ...(dateTo ? { lte: dateTo } : {}),
+        },
+        ...(entry === 'free' ? { OR: [{ ticketingEnabled: false }, { ticketPriceFc: { lte: 0 } }] } : {}),
+        ...(entry === 'paid' ? { ticketingEnabled: true } : {}),
+        ...(Object.keys(priceFilter).length ? { ticketPriceFc: priceFilter } : {}),
+        ...((q || locationBits.length)
           ? {
-              OR: [
-                { title: { contains: q, mode: 'insensitive' } },
-                { location: { contains: q, mode: 'insensitive' } },
-                { description: { contains: q, mode: 'insensitive' } },
+              AND: [
+                ...(q
+                  ? [{
+                      OR: [
+                        { title: { contains: q, mode: 'insensitive' as const } },
+                        { location: { contains: q, mode: 'insensitive' as const } },
+                        { description: { contains: q, mode: 'insensitive' as const } },
+                        { tenant: { name: { contains: q, mode: 'insensitive' as const } } },
+                      ],
+                    }]
+                  : []),
+                ...locationBits.map((bit) => ({
+                  location: { contains: bit, mode: 'insensitive' as const },
+                })),
               ],
             }
           : {}),
       },
       include: { tenant: { select: { name: true } } },
       orderBy: { date: 'asc' },
-      take: 80,
+      take: hasGeo || locationBits.length ? 200 : 80,
     });
-    return res.json({ events: events.map(serializePublicEvent) });
+
+    const filtered = events.filter((event) => {
+      if (city && event.latitude != null && event.longitude != null && !pointInCityBounds(event.latitude, event.longitude, city)) {
+        return false;
+      }
+      if (hasGeo) {
+        if (event.latitude == null || event.longitude == null) return false;
+        if (haversineKm(lat, lng, event.latitude, event.longitude) > Math.min(80, radiusKm)) return false;
+      }
+      return true;
+    });
+
+    return res.json({ events: filtered.map(serializePublicEvent) });
   } catch (error) {
     console.error('[Public events] list', error);
     return res.status(500).json({ error: 'Impossible de charger les événements publics.' });

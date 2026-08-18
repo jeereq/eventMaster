@@ -15,24 +15,14 @@ import {
   type PublicVenue,
 } from '@/lib/marketplace';
 import { useCatalogueQueryState } from '@/lib/catalogueQuery';
-import { roomTypeLabels } from '@/lib/roomLayoutUtils';
+import { EMPTY_CATALOGUE_EXTRAS, ROOM_TYPE_FILTER_OPTIONS } from '@/lib/catalogueEntityFilters';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import CatalogueSearchLayout from '@/components/CatalogueSearchLayout';
 import { usePageSize } from '@/components/ui';
 import CatalogueFilterBar, {
-  CatalogueChoicePills,
-  CatalogueFilterField,
-  CatalogueGeoFields,
+  CatalogueEntityFilterFields,
   type CatalogueFilterChip,
 } from '@/components/CatalogueFilterBar';
-
-const ROOM_FILTERS: Array<{ id: string; label: string }> = [
-  { id: 'BANQUET', label: roomTypeLabels.BANQUET },
-  { id: 'CONFERENCE', label: roomTypeLabels.CONFERENCE },
-  { id: 'AMPHITHEATER', label: roomTypeLabels.AMPHITHEATER },
-  { id: 'TENT', label: roomTypeLabels.TENT },
-  { id: 'CUSTOM', label: roomTypeLabels.CUSTOM },
-];
 
 type VenueFilters = CatalogueGeoState & { roomType: string };
 
@@ -93,7 +83,7 @@ function MarketplaceVenuesPageInner() {
       extra.push({
         id: 'roomType',
         label: 'Type',
-        value: ROOM_FILTERS.find((opt) => opt.id === applied.roomType)?.label || applied.roomType,
+        value: ROOM_TYPE_FILTER_OPTIONS.find((opt) => opt.id === applied.roomType)?.label || applied.roomType,
       });
     }
     return catalogueGeoChips(applied, extra);
@@ -172,21 +162,13 @@ function MarketplaceVenuesPageInner() {
           }}
           modalTitle="Filtrer les salles"
           filters={
-            <>
-              <CatalogueGeoFields
-                value={draft}
-                onChange={(next) => setDraft({ ...next, roomType: draft.roomType })}
-                error={filterError}
-                showCapacity
-              />
-              <CatalogueFilterField label="Type de salle">
-                <CatalogueChoicePills
-                  options={ROOM_FILTERS}
-                  value={draft.roomType}
-                  onChange={(id) => setDraft((d) => ({ ...d, roomType: id }))}
-                />
-              </CatalogueFilterField>
-            </>
+            <CatalogueEntityFilterFields
+              entity="venue"
+              value={draft}
+              extras={{ ...EMPTY_CATALOGUE_EXTRAS, kind: 'venue', roomType: draft.roomType }}
+              error={filterError}
+              onChange={(geo, extras) => setDraft({ ...geo, roomType: extras.roomType })}
+            />
           }
         />
       )}

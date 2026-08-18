@@ -30,6 +30,8 @@ import {
  applyInvitationGuidelineVariables,
 } from '@/lib/guestGuidelines';
 import { PageHeader, Button, ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, Breadcrumbs, Modal, Input, Pagination, paginateItems, PhoneInput, usePageSize } from '@/components/ui';
+import CatalogueFilterBar, { CatalogueChoicePills, CatalogueFilterField, type CatalogueFilterChip } from '@/components/CatalogueFilterBar';
+import { EVENT_ENTRY_OPTIONS } from '@/lib/catalogueEntityFilters';
 import { cn } from '@/lib/cn';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { parseStoredPhone } from '@/components/ui/PhoneInput';
@@ -284,6 +286,8 @@ export default function EventsPage() {
  const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
  const [eventSearch, setEventSearch] = useState('');
  const [eventWhen, setEventWhen] = useState<'ALL' | 'upcoming' | 'past'>('ALL');
+ const [eventVisibility, setEventVisibility] = useState<'all' | 'public' | 'private'>('all');
+ const [eventEntry, setEventEntry] = useState<'' | 'paid' | 'free'>('');
  
  // Tabs
  const [activeTab, setActiveTab] = useState<'guests' | 'invitations' | 'tablePlan' | 'feed' | 'staff' | 'protocol' | 'guestInfo'>(
@@ -480,7 +484,14 @@ export default function EventsPage() {
  const matchesWhen = eventWhen === 'ALL'
   || (eventWhen === 'upcoming' && when >= Date.now())
   || (eventWhen === 'past' && when < Date.now());
- return matchesSearch && matchesWhen;
+ const matchesVisibility = eventVisibility === 'all'
+  || (eventVisibility === 'public' && Boolean(event.isPublic))
+  || (eventVisibility === 'private' && !event.isPublic);
+ const paid = Boolean(event.ticketingEnabled && event.ticketPriceFc != null && event.ticketPriceFc > 0);
+ const matchesEntry = !eventEntry
+  || (eventEntry === 'paid' && paid)
+  || (eventEntry === 'free' && !paid);
+ return matchesSearch && matchesWhen && matchesVisibility && matchesEntry;
  });
  const paginatedEventsList = paginateItems(filteredEventsList, eventsListPage, eventsPageSize);
  const paginatedGuestsList = paginateItems(filteredGuests, guestsListPage, guestsPageSize);
@@ -1729,27 +1740,68 @@ Merci de confirmer votre présence :
  <GettingStartedChecklist hasEvents={false} />
  )}
  {events.length > 0 && (
- <div className="flex flex-col sm:flex-row gap-2">
- <div className="relative flex-1">
- <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted w-4 h-4" />
- <input
- type="text"
- value={eventSearch}
- onChange={(e) => { setEventSearch(e.target.value); setEventsListPage(1); }}
- placeholder="Rechercher un événement, un lieu, une salle..."
- className="w-full pl-9 pr-3 py-2.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-sm focus:outline-none focus:border-primary"
+ <CatalogueFilterBar
+ search={eventSearch}
+ onSearchChange={(value) => { setEventSearch(value); setEventsListPage(1); }}
+ searchPlaceholder="Rechercher un événement, un lieu, une salle…"
+ view={eventsViewMode}
+ onViewChange={(mode) => {
+ if (mode === 'grid' || mode === 'list') setEventsViewMode(mode);
+ }}
+ hideViewToggle
+ chips={[
+ ...(eventWhen !== 'ALL' ? [{ id: 'when', label: 'Dates', value: eventWhen === 'upcoming' ? 'À venir' : 'Passés' }] : []),
+ ...(eventVisibility !== 'all' ? [{ id: 'visibility', label: 'Visibilité', value: eventVisibility === 'public' ? 'Publics' : 'Privés' }] : []),
+ ...(eventEntry ? [{ id: 'entry', label: 'Entrée', value: eventEntry === 'paid' ? 'Payant' : 'Libre' }] : []),
+ ] as CatalogueFilterChip[]}
+ onRemoveChip={(id) => {
+ if (id === 'when') setEventWhen('ALL');
+ if (id === 'visibility') setEventVisibility('all');
+ if (id === 'entry') setEventEntry('');
+ setEventsListPage(1);
+ }}
+ onClearChips={() => {
+ setEventSearch('');
+ setEventWhen('ALL');
+ setEventVisibility('all');
+ setEventEntry('');
+ setEventsListPage(1);
+ }}
+ resultLabel={`${filteredEventsList.length} événement${filteredEventsList.length > 1 ? 's' : ''}`}
+ modalTitle="Filtrer les événements"
+ filters={
+ <>
+ <CatalogueFilterField label="Dates">
+ <CatalogueChoicePills
+ options={[
+ { id: 'upcoming', label: 'À venir' },
+ { id: 'past', label: 'Passés' },
+ ]}
+ value={eventWhen === 'ALL' ? '' : eventWhen}
+ onChange={(id) => { setEventWhen(id === 'upcoming' || id === 'past' ? id : 'ALL'); setEventsListPage(1); }}
  />
- </div>
- <select
- value={eventWhen}
- onChange={(e) => { setEventWhen(e.target.value as 'ALL' | 'upcoming' | 'past'); setEventsListPage(1); }}
- className="sm:w-44 px-3 py-2.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-sm font-semibold"
- >
- <option value="ALL">Toutes les dates</option>
- <option value="upcoming">À venir</option>
- <option value="past">Passés</option>
- </select>
- </div>
+ </CatalogueFilterField>
+ <CatalogueFilterField label="Visibilité">
+ <CatalogueChoicePills
+ options={[
+ { id: 'all', label: 'Tous' },
+ { id: 'public', label: 'Publics' },
+ { id: 'private', label: 'Privés' },
+ ]}
+ value={eventVisibility}
+ onChange={(id) => { setEventVisibility((id as 'all' | 'public' | 'private') || 'all'); setEventsListPage(1); }}
+ />
+ </CatalogueFilterField>
+ <CatalogueFilterField label="Entrée" hint="Événements avec billetterie payante, ou entrée libre / inscription.">
+ <CatalogueChoicePills
+ options={EVENT_ENTRY_OPTIONS}
+ value={eventEntry}
+ onChange={(id) => { setEventEntry(id === 'paid' || id === 'free' ? id : ''); setEventsListPage(1); }}
+ />
+ </CatalogueFilterField>
+ </>
+ }
+ />
  )}
  </>
  ) : (

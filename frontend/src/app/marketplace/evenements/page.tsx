@@ -4,6 +4,7 @@ import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'reac
 import { api } from '@/lib/api';
 import {
   EMPTY_CATALOGUE_GEO,
+  appendCatalogueGeoParams,
   catalogueGeoChips,
   catalogueItemMatchesGeo,
   catalogueItemToMapMarker,
@@ -16,13 +17,12 @@ import {
   type PublicEventCard,
 } from '@/lib/marketplace';
 import { useCatalogueQueryState } from '@/lib/catalogueQuery';
+import { EMPTY_CATALOGUE_EXTRAS, appendCatalogueEntityParams } from '@/lib/catalogueEntityFilters';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import CatalogueSearchLayout from '@/components/CatalogueSearchLayout';
 import { usePageSize } from '@/components/ui';
 import CatalogueFilterBar, {
-  CatalogueChoicePills,
-  CatalogueFilterField,
-  CatalogueGeoFields,
+  CatalogueEntityFilterFields,
   type CatalogueFilterChip,
 } from '@/components/CatalogueFilterBar';
 
@@ -52,12 +52,14 @@ function MarketplaceEventsPageInner() {
   const [filterError, setFilterError] = useState('');
   const [pageSize, setPageSize] = usePageSize('marketplace-events', 12);
 
-  const load = useCallback(async (_filters: EventFilters, search: string) => {
+  const load = useCallback(async (filters: EventFilters, search: string) => {
     setLoading(true);
     setError('');
     try {
       const params = new URLSearchParams();
       if (search.trim()) params.set('q', search.trim());
+      appendCatalogueGeoParams(params, filters);
+      appendCatalogueEntityParams(params, { ...EMPTY_CATALOGUE_EXTRAS, entry: filters.entry }, 'event');
       const data = await api.get(`/public/events${params.toString() ? `?${params}` : ''}`);
       setEvents(data.events || []);
     } catch (err: unknown) {
@@ -173,23 +175,13 @@ function MarketplaceEventsPageInner() {
           }}
           modalTitle="Filtrer les événements"
           filters={
-            <>
-              <CatalogueGeoFields
-                value={draft}
-                onChange={(next) => setDraft({ ...next, entry: draft.entry })}
-                error={filterError}
-              />
-              <CatalogueFilterField label="Entrée">
-                <CatalogueChoicePills
-                  options={[
-                    { id: 'paid', label: 'Payant' },
-                    { id: 'free', label: 'Entrée libre' },
-                  ]}
-                  value={draft.entry}
-                  onChange={(id) => setDraft((d) => ({ ...d, entry: id === 'paid' || id === 'free' ? id : '' }))}
-                />
-              </CatalogueFilterField>
-            </>
+            <CatalogueEntityFilterFields
+              entity="event"
+              value={draft}
+              extras={{ ...EMPTY_CATALOGUE_EXTRAS, kind: 'event', entry: draft.entry }}
+              error={filterError}
+              onChange={(geo, extras) => setDraft({ ...geo, entry: extras.entry })}
+            />
           }
         />
       )}

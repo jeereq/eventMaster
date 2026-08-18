@@ -1,9 +1,9 @@
 import { Response } from 'express';
-import { MarketplaceBookingStatus, MarketplaceInquiryStatus } from '@prisma/client';
+import { MarketplaceBookingStatus, MarketplaceInquiryStatus, RoomType, VenuePriceUnit } from '@prisma/client';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { auditReq } from '../services/adminAuditService';
-import { parseServiceCategory, priceUnitLabel, serviceCategoryLabel, parsePhotoUrls, coverFromMedia } from '../utils/publicVenue';
+import { parseServiceCategory, parsePriceUnit, priceUnitLabel, serviceCategoryLabel, parsePhotoUrls, coverFromMedia } from '../utils/publicVenue';
 
 function pager(req: AuthenticatedRequest) {
   const page = Math.max(parseInt(String(req.query.page || '1'), 10) || 1, 1);
@@ -21,6 +21,43 @@ function cityFilter(req: AuthenticatedRequest) {
 
 function communeFilter(req: AuthenticatedRequest) {
   return typeof req.query.commune === 'string' && req.query.commune.trim() ? req.query.commune.trim() : undefined;
+}
+
+function neighborhoodFilter(req: AuthenticatedRequest) {
+  return typeof req.query.neighborhood === 'string' && req.query.neighborhood.trim() ? req.query.neighborhood.trim() : undefined;
+}
+
+function streetFilter(req: AuthenticatedRequest) {
+  return typeof req.query.street === 'string' && req.query.street.trim() ? req.query.street.trim() : undefined;
+}
+
+const ROOM_TYPES: RoomType[] = ['SIMPLE', 'BANQUET', 'CONFERENCE', 'AMPHITHEATER', 'TENT', 'CUSTOM'];
+
+function roomTypeFilter(req: AuthenticatedRequest): RoomType | undefined {
+  const raw = typeof req.query.roomType === 'string' ? req.query.roomType.trim() : '';
+  return ROOM_TYPES.includes(raw as RoomType) ? (raw as RoomType) : undefined;
+}
+
+function capacityRange(req: AuthenticatedRequest): { gte?: number; lte?: number } | undefined {
+  const min = Number.parseInt(String(req.query.minCapacity || ''), 10);
+  const max = Number.parseInt(String(req.query.maxCapacity || ''), 10);
+  const range: { gte?: number; lte?: number } = {};
+  if (Number.isFinite(min) && min > 0) range.gte = min;
+  if (Number.isFinite(max) && max > 0) range.lte = max;
+  return range.gte != null || range.lte != null ? range : undefined;
+}
+
+function priceUnitFilter(req: AuthenticatedRequest): VenuePriceUnit | undefined {
+  const raw = typeof req.query.priceUnit === 'string' ? req.query.priceUnit.trim() : '';
+  if (!raw) return undefined;
+  return parsePriceUnit(raw);
+}
+
+function travelsFilter(req: AuthenticatedRequest): boolean | undefined {
+  const mobility = typeof req.query.mobility === 'string' ? req.query.mobility.trim() : '';
+  if (mobility === 'travels') return true;
+  if (mobility === 'on_site') return false;
+  return undefined;
 }
 
 function priceRange(req: AuthenticatedRequest): { gte?: number; lte?: number } | undefined {
@@ -117,13 +154,27 @@ export async function listAdminVenues(req: AuthenticatedRequest, res: Response) 
     const isPublic = publicFilter(req);
     const city = cityFilter(req);
     const commune = communeFilter(req);
+    const neighborhood = neighborhoodFilter(req);
+    const street = streetFilter(req);
     const price = priceRange(req);
+    const roomType = roomTypeFilter(req);
+    const capacity = capacityRange(req);
+    const unit = priceUnitFilter(req);
+
+    const roomWhere = {
+      ...(roomType ? { roomType } : {}),
+      ...(capacity ? { capacity } : {}),
+    };
 
     const where = {
       isPublic,
       ...(city ? { city: { contains: city, mode: 'insensitive' as const } } : {}),
       ...(commune ? { commune: { contains: commune, mode: 'insensitive' as const } } : {}),
+      ...(neighborhood ? { neighborhood: { contains: neighborhood, mode: 'insensitive' as const } } : {}),
+      ...(street ? { address: { contains: street, mode: 'insensitive' as const } } : {}),
       ...(price ? { priceFromFc: price } : {}),
+      ...(unit ? { priceUnit: unit } : {}),
+      ...(Object.keys(roomWhere).length > 0 ? { room: roomWhere } : {}),
       ...(q
         ? {
             OR: [
@@ -131,6 +182,8 @@ export async function listAdminVenues(req: AuthenticatedRequest, res: Response) 
               { slug: { contains: q, mode: 'insensitive' as const } },
               { city: { contains: q, mode: 'insensitive' as const } },
               { commune: { contains: q, mode: 'insensitive' as const } },
+              { neighborhood: { contains: q, mode: 'insensitive' as const } },
+              { address: { contains: q, mode: 'insensitive' as const } },
               { room: { name: { contains: q, mode: 'insensitive' as const } } },
               { tenant: { name: { contains: q, mode: 'insensitive' as const } } },
             ],
@@ -142,7 +195,7 @@ export async function listAdminVenues(req: AuthenticatedRequest, res: Response) 
       prisma.venueListing.findMany({
         where,
         include: {
-          room: { select: { name: true } },
+          room: { select: { name: true, roomType: true, capacity: true } },
           tenant: { select: { id: true, name: true } },
         },
         orderBy: { updatedAt: 'desc' },
@@ -161,6 +214,8 @@ export async function listAdminVenues(req: AuthenticatedRequest, res: Response) 
           isPublic: row.isPublic,
           headline: row.headline || row.room.name,
           roomName: row.room.name,
+          roomType: row.room.roomType,
+          capacity: row.room.capacity,
           city: row.city,
           commune: row.commune,
           neighborhood: row.neighborhood,
@@ -170,6 +225,7 @@ export async function listAdminVenues(req: AuthenticatedRequest, res: Response) 
           coverUrl: coverFromMedia(photos),
           photos,
           priceFromFc: row.priceFromFc,
+          priceUnit: row.priceUnit,
           priceUnitLabel: priceUnitLabel(row.priceUnit),
           publishedAt: row.publishedAt,
           createdAt: row.createdAt,
@@ -201,14 +257,30 @@ export async function listAdminOfferings(req: AuthenticatedRequest, res: Respons
     const category = parseServiceCategory(req.query.category) || undefined;
     const city = cityFilter(req);
     const commune = communeFilter(req);
+    const neighborhood = neighborhoodFilter(req);
+    const street = streetFilter(req);
     const price = priceRange(req);
+    const unit = priceUnitFilter(req);
+    const travels = travelsFilter(req);
 
     const where = {
       isPublic,
       category,
       ...(city ? { city: { contains: city, mode: 'insensitive' as const } } : {}),
       ...(commune ? { commune: { contains: commune, mode: 'insensitive' as const } } : {}),
+      ...(neighborhood ? { neighborhood: { contains: neighborhood, mode: 'insensitive' as const } } : {}),
+      ...(street
+        ? {
+            OR: [
+              { neighborhood: { contains: street, mode: 'insensitive' as const } },
+              { commune: { contains: street, mode: 'insensitive' as const } },
+              { city: { contains: street, mode: 'insensitive' as const } },
+            ],
+          }
+        : {}),
       ...(price ? { priceFromFc: price } : {}),
+      ...(unit ? { priceUnit: unit } : {}),
+      ...(travels == null ? {} : { travels }),
       ...(q
         ? {
             OR: [
@@ -216,6 +288,7 @@ export async function listAdminOfferings(req: AuthenticatedRequest, res: Respons
               { slug: { contains: q, mode: 'insensitive' as const } },
               { city: { contains: q, mode: 'insensitive' as const } },
               { commune: { contains: q, mode: 'insensitive' as const } },
+              { neighborhood: { contains: q, mode: 'insensitive' as const } },
               { tenant: { name: { contains: q, mode: 'insensitive' as const } } },
             ],
           }
@@ -251,7 +324,9 @@ export async function listAdminOfferings(req: AuthenticatedRequest, res: Respons
           coverUrl: coverFromMedia(photos),
           photos,
           priceFromFc: row.priceFromFc,
+          priceUnit: row.priceUnit,
           priceUnitLabel: priceUnitLabel(row.priceUnit),
+          travels: row.travels,
           publishedAt: row.publishedAt,
           createdAt: row.createdAt,
           tenantId: row.tenantId,

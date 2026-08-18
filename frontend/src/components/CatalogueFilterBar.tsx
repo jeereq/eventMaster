@@ -5,12 +5,21 @@ import { Search, SlidersHorizontal, X } from 'lucide-react';
 import { Button, Input, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
+  PRICE_UNIT_OPTIONS,
   RADIUS_KM_OPTIONS,
+  SERVICE_CATEGORIES,
+  SERVICE_CATEGORY_LABELS,
+  SERVICE_MOBILITY_OPTIONS,
   clampRadiusKm,
   type CatalogueGeoState,
   type CatalogueProximity,
   type CatalogueViewMode,
 } from '@/lib/marketplace';
+import {
+  EVENT_ENTRY_OPTIONS,
+  KIND_FILTER_OPTIONS,
+  ROOM_TYPE_FILTER_OPTIONS,
+} from '@/lib/catalogueEntityFilters';
 import { communesForCity, neighborhoodsFor, normalizeRdcCity } from '@/lib/rdcCities';
 import CatalogueViewToggle, { CatalogueGridColsToggle, type CatalogueGridCols } from '@/components/CatalogueViewToggle';
 
@@ -315,11 +324,19 @@ export function CatalogueGeoFields({
   onChange,
   error,
   showCapacity = false,
+  showAvailability = true,
+  showProximity = true,
+  availabilityHint,
+  capacityHint,
 }: {
   value: CatalogueGeoState;
   onChange: (next: CatalogueGeoState) => void;
   error?: string;
   showCapacity?: boolean;
+  showAvailability?: boolean;
+  showProximity?: boolean;
+  availabilityHint?: string;
+  capacityHint?: string;
 }) {
   const set = (patch: Partial<CatalogueGeoState>) => onChange({ ...value, ...patch });
 
@@ -385,7 +402,7 @@ export function CatalogueGeoFields({
         </div>
       </CatalogueFilterField>
       {showCapacity ? (
-        <CatalogueFilterField label="Nombre de places" hint="Capacité de la salle (invités).">
+        <CatalogueFilterField label="Nombre de places" hint={capacityHint || 'Capacité de la salle (invités).'}>
           <div className="grid grid-cols-2 gap-2">
             <Input
               type="number"
@@ -404,9 +421,10 @@ export function CatalogueGeoFields({
           </div>
         </CatalogueFilterField>
       ) : null}
+      {showAvailability ? (
       <CatalogueFilterField
         label="Disponibilités"
-        hint="N’affiche que les fiches libres sur toute la période (un jour ou du… au…)."
+        hint={availabilityHint || 'N’affiche que les fiches libres sur toute la période (un jour ou du… au…).'}
       >
         <div className="grid grid-cols-2 gap-2">
           <Input
@@ -423,6 +441,8 @@ export function CatalogueGeoFields({
           />
         </div>
       </CatalogueFilterField>
+      ) : null}
+      {showProximity ? (
       <CatalogueFilterField
         label="Proximité"
         hint="Autour de vous, ou autour d’une commune / un quartier de Kinshasa ou Lubumbashi."
@@ -499,6 +519,106 @@ export function CatalogueGeoFields({
         ) : null}
         {error ? <p className="text-xs text-rose-600 font-medium">{error}</p> : null}
       </CatalogueFilterField>
+      ) : null}
+    </>
+  );
+}
+
+export function CatalogueEntityFilterFields({
+  value,
+  extras,
+  onChange,
+  error,
+  showKind = false,
+  entity = 'all',
+  showProximity = true,
+  showAvailability = true,
+}: {
+  value: CatalogueGeoState;
+  extras: import('@/lib/catalogueEntityFilters').CatalogueEntityExtras;
+  onChange: (geo: CatalogueGeoState, extras: import('@/lib/catalogueEntityFilters').CatalogueEntityExtras) => void;
+  error?: string;
+  showKind?: boolean;
+  entity?: import('@/lib/catalogueEntityFilters').CatalogueKind;
+  showProximity?: boolean;
+  showAvailability?: boolean;
+}) {
+  const kind = showKind ? extras.kind : entity;
+  const showVenue = kind === 'all' || kind === 'venue';
+  const showService = kind === 'all' || kind === 'service';
+  const showEvent = kind === 'all' || kind === 'event';
+  const setExtras = (patch: Partial<import('@/lib/catalogueEntityFilters').CatalogueEntityExtras>) => {
+    onChange(value, { ...extras, ...patch });
+  };
+
+  return (
+    <>
+      {showKind ? (
+        <CatalogueFilterField label="Type de fiche">
+          <CatalogueChoicePills
+            options={KIND_FILTER_OPTIONS}
+            value={extras.kind}
+            onChange={(id) => setExtras({ kind: (id as import('@/lib/catalogueEntityFilters').CatalogueKind) || 'all' })}
+          />
+        </CatalogueFilterField>
+      ) : null}
+      <CatalogueGeoFields
+        value={value}
+        onChange={(next) => onChange(next, extras)}
+        error={error}
+        showCapacity={kind !== 'service'}
+        showProximity={showProximity}
+        showAvailability={showAvailability}
+        availabilityHint={kind === 'event'
+          ? 'Date de l’événement (un jour ou du… au…).'
+          : kind === 'service'
+            ? 'N’affiche que les prestataires libres sur toute la période.'
+            : undefined}
+        capacityHint={kind === 'event' ? 'Places / billets restants.' : undefined}
+      />
+      {showVenue ? (
+        <CatalogueFilterField label="Type de salle" hint={kind === 'all' ? 'S’applique uniquement aux salles.' : undefined}>
+          <CatalogueChoicePills
+            options={ROOM_TYPE_FILTER_OPTIONS}
+            value={extras.roomType}
+            onChange={(id) => setExtras({ roomType: id })}
+          />
+        </CatalogueFilterField>
+      ) : null}
+      {showService ? (
+        <>
+          <CatalogueFilterField label="Métier du prestataire" hint={kind === 'all' ? 'S’applique uniquement aux prestataires.' : undefined}>
+            <CatalogueChoicePills
+              options={SERVICE_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] }))}
+              value={extras.category}
+              onChange={(id) => setExtras({ category: id })}
+            />
+          </CatalogueFilterField>
+          <CatalogueFilterField label="Intervention">
+            <CatalogueChoicePills
+              options={SERVICE_MOBILITY_OPTIONS.filter((opt) => opt.id)}
+              value={extras.mobility}
+              onChange={(id) => setExtras({ mobility: (id as import('@/lib/marketplace').ServiceMobility) || '' })}
+            />
+          </CatalogueFilterField>
+          <CatalogueFilterField label="Unité tarifaire">
+            <CatalogueChoicePills
+              options={PRICE_UNIT_OPTIONS}
+              value={extras.priceUnit}
+              onChange={(id) => setExtras({ priceUnit: id })}
+            />
+          </CatalogueFilterField>
+        </>
+      ) : null}
+      {showEvent ? (
+        <CatalogueFilterField label="Entrée" hint={kind === 'all' ? 'S’applique uniquement aux événements publics.' : undefined}>
+          <CatalogueChoicePills
+            options={EVENT_ENTRY_OPTIONS}
+            value={extras.entry}
+            onChange={(id) => setExtras({ entry: id === 'paid' || id === 'free' ? id : '' })}
+          />
+        </CatalogueFilterField>
+      ) : null}
     </>
   );
 }

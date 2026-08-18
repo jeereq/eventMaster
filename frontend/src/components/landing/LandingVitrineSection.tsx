@@ -1,28 +1,47 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { Button, Input, Pagination, paginateItems, Skeleton, SkeletonLandingTemplateGrid, usePageSize } from '@/components/ui';
+import { Button, Pagination, paginateItems, Skeleton, SkeletonLandingTemplateGrid, usePageSize } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import CatalogueResults, { CatalogueResultsSkeleton } from '@/components/CatalogueResults';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
+import CatalogueFilterBar, { CatalogueEntityFilterFields } from '@/components/CatalogueFilterBar';
 import {
-  SERVICE_CATEGORIES,
-  SERVICE_CATEGORY_LABELS,
+  EMPTY_CATALOGUE_GEO,
+  appendCatalogueGeoParams,
+  catalogueGeoChips,
+  catalogueItemMatchesGeo,
+  clearCatalogueGeoChip,
+  eventToCatalogueItem,
   filterCatalogueItems,
+  resolveCatalogueGeo,
   serviceToCatalogueItem,
   venueToCatalogueItem,
+  type CatalogueGeoState,
+  type PublicEventCard,
   type PublicService,
   type PublicVenue,
 } from '@/lib/marketplace';
 import {
+  EMPTY_CATALOGUE_EXTRAS,
+  appendCatalogueEntityParams,
+  catalogueEntityExtraChips,
+  catalogueItemMatchesExtras,
+  clearCatalogueExtraChip,
+  type CatalogueEntityExtras,
+} from '@/lib/catalogueEntityFilters';
+import {
   buildLandingTemplateGroups,
   type LandingTemplate,
 } from '@/config/landingTemplates';
-import { ArrowRight, Building2, Search, Sparkles, FileText } from 'lucide-react';
+import { ArrowRight, Building2, Calendar, FileText, Sparkles } from 'lucide-react';
 
-type VitrineTab = 'venues' | 'services' | 'templates';
+type VitrineTab = 'venues' | 'services' | 'events' | 'templates';
+type EntityFilters = CatalogueGeoState & CatalogueEntityExtras;
+
+const emptyFilters: EntityFilters = { ...EMPTY_CATALOGUE_GEO, ...EMPTY_CATALOGUE_EXTRAS };
 
 function getCategoryLabel(category: string) {
   if (category === 'private') return 'Privé';
@@ -44,29 +63,52 @@ export default function LandingVitrineSection({
   const [tab, setTab] = useState<VitrineTab>('venues');
   const [venues, setVenues] = useState<PublicVenue[]>([]);
   const [services, setServices] = useState<PublicService[]>([]);
+  const [events, setEvents] = useState<PublicEventCard[]>([]);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
-  const [venueQuery, setVenueQuery] = useState('');
-  const [serviceQuery, setServiceQuery] = useState('');
-  const [serviceCategory, setServiceCategory] = useState('');
+  const [query, setQuery] = useState('');
+  const [applied, setApplied] = useState<EntityFilters>(emptyFilters);
+  const [draft, setDraft] = useState<EntityFilters>(emptyFilters);
+  const [filterError, setFilterError] = useState('');
   const [templateCategory, setTemplateCategory] = useState('all');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePageSize('landing-vitrine', 8);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const [venuesData, servicesData] = await Promise.all([
-          api.get('/public/venues').catch(() => ({ venues: [] })),
-          api.get('/public/services').catch(() => ({ services: [] })),
-        ]);
-        setVenues(venuesData.venues || []);
-        setServices(servicesData.services || []);
-      } finally {
-        setLoadingCatalog(false);
+  const entity = tab === 'venues' ? 'venue' : tab === 'services' ? 'service' : tab === 'events' ? 'event' : 'all';
+
+  const load = useCallback(async (filters: EntityFilters, search: string) => {
+    setLoadingCatalog(true);
+    try {
+      const venueParams = new URLSearchParams();
+      const serviceParams = new URLSearchParams();
+      const eventParams = new URLSearchParams();
+      if (search.trim()) {
+        venueParams.set('q', search.trim());
+        serviceParams.set('q', search.trim());
+        eventParams.set('q', search.trim());
       }
+      appendCatalogueGeoParams(venueParams, filters);
+      appendCatalogueGeoParams(serviceParams, filters);
+      appendCatalogueGeoParams(eventParams, filters);
+      appendCatalogueEntityParams(venueParams, { ...filters, kind: 'venue' }, 'venue');
+      appendCatalogueEntityParams(serviceParams, { ...filters, kind: 'service' }, 'service');
+      appendCatalogueEntityParams(eventParams, { ...filters, kind: 'event' }, 'event');
+      const [venuesData, servicesData, eventsData] = await Promise.all([
+        api.get(`/public/venues?${venueParams.toString()}`).catch(() => ({ venues: [] })),
+        api.get(`/public/services?${serviceParams.toString()}`).catch(() => ({ services: [] })),
+        api.get(`/public/events?${eventParams.toString()}`).catch(() => ({ events: [] })),
+      ]);
+      setVenues(venuesData.venues || []);
+      setServices(servicesData.services || []);
+      setEvents(eventsData.events || []);
+    } finally {
+      setLoadingCatalog(false);
     }
-    load();
   }, []);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => load(applied, query), 280);
+    return () => window.clearTimeout(t);
+  }, [applied, query, load]);
 
   useEffect(() => {
     const applyHash = () => {
@@ -74,6 +116,7 @@ export default function LandingVitrineSection({
       if (hash === 'modeles') setTab('templates');
       if (hash === 'salles' || hash === 'catalogue' || hash === 'marketplace') setTab('venues');
       if (hash === 'prestataires') setTab('services');
+      if (hash === 'evenements') setTab('events');
     };
     applyHash();
     window.addEventListener('hashchange', applyHash);
@@ -82,18 +125,34 @@ export default function LandingVitrineSection({
 
   useEffect(() => {
     setPage(1);
-  }, [tab, venueQuery, serviceQuery, serviceCategory, templateCategory]);
+  }, [tab, query, applied, templateCategory]);
 
   const venueItems = useMemo(
-    () => filterCatalogueItems(venues.map(venueToCatalogueItem), venueQuery),
-    [venues, venueQuery],
+    () =>
+      filterCatalogueItems(venues.map(venueToCatalogueItem), query).filter(
+        (item) => catalogueItemMatchesGeo(item, applied) && catalogueItemMatchesExtras(item, { ...applied, kind: 'venue' }),
+      ),
+    [venues, query, applied],
   );
-  const serviceItems = useMemo(() => {
-    const mapped = services
-      .filter((s) => !serviceCategory || s.category === serviceCategory)
-      .map(serviceToCatalogueItem);
-    return filterCatalogueItems(mapped, serviceQuery);
-  }, [services, serviceQuery, serviceCategory]);
+  const serviceItems = useMemo(
+    () =>
+      filterCatalogueItems(services.map(serviceToCatalogueItem), query).filter(
+        (item) => catalogueItemMatchesGeo(item, applied) && catalogueItemMatchesExtras(item, { ...applied, kind: 'service' }),
+      ),
+    [services, query, applied],
+  );
+  const eventItems = useMemo(
+    () =>
+      filterCatalogueItems(
+        events
+          .map(eventToCatalogueItem)
+          .filter((item): item is NonNullable<typeof item> => Boolean(item)),
+        query,
+      ).filter(
+        (item) => catalogueItemMatchesGeo(item, applied) && catalogueItemMatchesExtras(item, { ...applied, kind: 'event' }),
+      ),
+    [events, query, applied],
+  );
 
   const templateList = useMemo(
     () => buildLandingTemplateGroups(publicTemplates, templateCategory)[0]?.templates || [],
@@ -103,6 +162,7 @@ export default function LandingVitrineSection({
   const tabs: Array<{ id: VitrineTab; label: string; icon: typeof Building2; hash: string }> = [
     { id: 'venues', label: 'Salles', icon: Building2, hash: 'salles' },
     { id: 'services', label: 'Prestataires', icon: Sparkles, hash: 'prestataires' },
+    { id: 'events', label: 'Événements', icon: Calendar, hash: 'evenements' },
     { id: 'templates', label: 'Modèles', icon: FileText, hash: 'modeles' },
   ];
 
@@ -115,7 +175,73 @@ export default function LandingVitrineSection({
 
   const pagedVenues = paginateItems(venueItems, page, pageSize);
   const pagedServices = paginateItems(serviceItems, page, pageSize);
+  const pagedEvents = paginateItems(eventItems, page, pageSize);
   const pagedTemplates = paginateItems(templateList, page, pageSize);
+  const chips = catalogueGeoChips(applied, catalogueEntityExtraChips({ ...applied, kind: entity === 'all' ? 'all' : entity }));
+
+  const catalogFilters = tab !== 'templates' && (
+    <CatalogueFilterBar
+      search={query}
+      onSearchChange={setQuery}
+      searchPlaceholder={
+        tab === 'venues'
+          ? 'Rechercher une salle…'
+          : tab === 'services'
+            ? 'Rechercher un prestataire…'
+            : 'Rechercher un événement…'
+      }
+      view="grid"
+      onViewChange={() => undefined}
+      hideViewToggle
+      resultLabel={!loadingCatalog
+        ? tab === 'venues'
+          ? `${venueItems.length} salle${venueItems.length > 1 ? 's' : ''}`
+          : tab === 'services'
+            ? `${serviceItems.length} prestataire${serviceItems.length > 1 ? 's' : ''}`
+            : `${eventItems.length} événement${eventItems.length > 1 ? 's' : ''}`
+        : undefined}
+      chips={chips}
+      onRemoveChip={(id) => {
+        const next = clearCatalogueExtraChip(clearCatalogueGeoChip(applied, id), id);
+        setApplied(next);
+        setDraft(next);
+      }}
+      onClearChips={() => {
+        setQuery('');
+        setApplied(emptyFilters);
+        setDraft(emptyFilters);
+      }}
+      onOpen={() => {
+        setDraft(applied);
+        setFilterError('');
+      }}
+      onApply={async () => {
+        try {
+          const geo = await resolveCatalogueGeo(draft);
+          setApplied({ ...draft, ...geo });
+        } catch (err: unknown) {
+          setFilterError(err instanceof Error ? err.message : 'Filtre de proximité impossible.');
+          throw err;
+        }
+      }}
+      modalTitle={
+        tab === 'venues'
+          ? 'Filtrer les salles'
+          : tab === 'services'
+            ? 'Filtrer les prestataires'
+            : 'Filtrer les événements'
+      }
+      filters={
+        <CatalogueEntityFilterFields
+          entity={entity === 'all' ? 'all' : entity}
+          value={draft}
+          extras={{ ...draft, kind: entity === 'all' ? 'all' : entity }}
+          error={filterError}
+          onChange={(geo, extras) => setDraft({ ...geo, ...extras, kind: entity === 'all' ? extras.kind : entity })}
+        />
+      }
+    />
+  );
 
   return (
     <section id="catalogue" className="py-14 sm:py-16 border-t border-border bg-surface scroll-mt-16">
@@ -124,11 +250,10 @@ export default function LandingVitrineSection({
           <div className="max-w-xl space-y-2">
             <p className="em-festive-chip w-fit">Vitrine</p>
             <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-              Salles, prestataires et modèles
+              Salles, prestataires, événements et modèles
             </h2>
             <p className="text-sm text-muted leading-relaxed">
-              Parcourez le marketplace EventMaster et les modèles d’invitation publiés
-              par la plateforme.
+              Filtrez le marketplace EventMaster par lieu, dates, prix, type de salle, métier, mobilité ou entrée.
             </p>
           </div>
           <Link href="/marketplace">
@@ -159,12 +284,7 @@ export default function LandingVitrineSection({
 
         {tab === 'venues' && (
           <div id="salles" className="space-y-4 scroll-mt-20">
-            <Input
-              value={venueQuery}
-              onChange={(e) => setVenueQuery(e.target.value)}
-              placeholder="Filtrer une salle (nom, ville, organisation)…"
-              leftIcon={<Search className="w-4 h-4" />}
-            />
+            {catalogFilters}
             {loadingCatalog ? (
               <CatalogueResultsSkeleton mode="grid" count={pageSize} />
             ) : (
@@ -190,26 +310,7 @@ export default function LandingVitrineSection({
 
         {tab === 'services' && (
           <div id="prestataires" className="space-y-4 scroll-mt-20">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex-1 min-w-0">
-                <Input
-                  value={serviceQuery}
-                  onChange={(e) => setServiceQuery(e.target.value)}
-                  placeholder="Filtrer un prestataire…"
-                  leftIcon={<Search className="w-4 h-4" />}
-                />
-              </div>
-              <select
-                value={serviceCategory}
-                onChange={(e) => setServiceCategory(e.target.value)}
-                className="w-full sm:w-56 px-3 py-2.5 rounded-[var(--radius-button)] border border-border bg-background text-sm"
-              >
-                <option value="">Toutes les catégories</option>
-                {SERVICE_CATEGORIES.map((id) => (
-                  <option key={id} value={id}>{SERVICE_CATEGORY_LABELS[id]}</option>
-                ))}
-              </select>
-            </div>
+            {catalogFilters}
             {loadingCatalog ? (
               <CatalogueResultsSkeleton mode="grid" count={pageSize} />
             ) : (
@@ -227,6 +328,32 @@ export default function LandingVitrineSection({
                   onPageChange={setPage}
                   onPageSizeChange={setPageSize}
                   itemLabel="prestataires"
+                />
+              </>
+            )}
+          </div>
+        )}
+
+        {tab === 'events' && (
+          <div id="evenements" className="space-y-4 scroll-mt-20">
+            {catalogFilters}
+            {loadingCatalog ? (
+              <CatalogueResultsSkeleton mode="grid" count={pageSize} />
+            ) : (
+              <>
+                <CatalogueResults
+                  items={pagedEvents}
+                  mode="grid"
+                  emptyTitle="Aucun événement public"
+                  emptyDescription="Les événements publiés sur EventMaster apparaîtront ici."
+                />
+                <Pagination
+                  page={page}
+                  pageSize={pageSize}
+                  total={eventItems.length}
+                  onPageChange={setPage}
+                  onPageSizeChange={setPageSize}
+                  itemLabel="événements"
                 />
               </>
             )}

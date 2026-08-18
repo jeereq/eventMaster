@@ -6,19 +6,15 @@ import CatalogueSearchLayout from '@/components/CatalogueSearchLayout';
 import { usePageSize } from '@/components/ui';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import CatalogueFilterBar, {
-  CatalogueChoicePills,
-  CatalogueFilterField,
-  CatalogueGeoFields,
+  CatalogueEntityFilterFields,
 } from '@/components/CatalogueFilterBar';
 import { useCatalogueQueryState } from '@/lib/catalogueQuery';
 import {
   EMPTY_CATALOGUE_GEO,
-  SERVICE_MOBILITY_OPTIONS,
   appendCatalogueGeoParams,
   catalogueGeoChips,
   catalogueItemMatchesGeo,
   catalogueItemToMapMarker,
-  catalogueKindFilterLabel,
   clearCatalogueGeoChip,
   eventToCatalogueItem,
   resolveCatalogueGeo,
@@ -30,29 +26,34 @@ import {
   type PublicEventCard,
   type PublicService,
   type PublicVenue,
-  type ServiceMobility,
 } from '@/lib/marketplace';
+import {
+  EMPTY_CATALOGUE_EXTRAS,
+  HUB_FILTER_EXTRA_KEYS,
+  appendCatalogueEntityParams,
+  catalogueEntityExtraChips,
+  catalogueItemMatchesExtras,
+  clearCatalogueExtraChip,
+  mergeCatalogueExtras,
+  splitCatalogueExtras,
+  type CatalogueEntityExtras,
+} from '@/lib/catalogueEntityFilters';
 
-type HubFilters = CatalogueGeoState & { kind: 'all' | 'venue' | 'service' | 'event'; mobility: ServiceMobility };
+type HubFilters = CatalogueGeoState & CatalogueEntityExtras;
 
 const emptyFilters: HubFilters = {
   ...EMPTY_CATALOGUE_GEO,
-  kind: 'all',
-  mobility: '',
+  ...EMPTY_CATALOGUE_EXTRAS,
 };
 
 const QUERY_OPTS = {
-  extraKeys: ['kind', 'mobility'],
-  emptyExtra: { kind: 'all', mobility: '' },
+  extraKeys: [...HUB_FILTER_EXTRA_KEYS],
+  emptyExtra: { ...splitCatalogueExtras(EMPTY_CATALOGUE_EXTRAS) },
   merge: (geo: CatalogueGeoState, extra: Record<string, string>): HubFilters => ({
     ...geo,
-    kind: extra.kind === 'venue' || extra.kind === 'service' || extra.kind === 'event' ? extra.kind : 'all',
-    mobility: (extra.mobility as ServiceMobility) || '',
+    ...mergeCatalogueExtras(extra),
   }),
-  split: (filters: HubFilters) => ({
-    kind: filters.kind,
-    mobility: filters.mobility,
-  }),
+  split: (filters: HubFilters) => splitCatalogueExtras(filters),
 };
 
 function MarketplaceHubPageInner() {
@@ -71,16 +72,20 @@ function MarketplaceHubPageInner() {
       const params = new URLSearchParams();
       if (search.trim()) params.set('q', search.trim());
       appendCatalogueGeoParams(params, filters);
-      const venueQs = params.toString() ? `?${params}` : '';
+      const venueParams = new URLSearchParams(params);
+      appendCatalogueEntityParams(venueParams, filters, 'venue');
       const serviceParams = new URLSearchParams(params);
-      if (filters.mobility) serviceParams.set('mobility', filters.mobility);
+      appendCatalogueEntityParams(serviceParams, filters, 'service');
+      const eventParams = new URLSearchParams();
+      if (search.trim()) eventParams.set('q', search.trim());
+      appendCatalogueGeoParams(eventParams, filters);
+      appendCatalogueEntityParams(eventParams, filters, 'event');
+      const venueQs = venueParams.toString() ? `?${venueParams}` : '';
       const serviceQs = serviceParams.toString() ? `?${serviceParams}` : '';
+      const eventQs = eventParams.toString() ? `?${eventParams}` : '';
       const loadVenues = filters.kind !== 'service' && filters.kind !== 'event';
       const loadServices = filters.kind !== 'venue' && filters.kind !== 'event';
       const loadEvents = filters.kind !== 'venue' && filters.kind !== 'service';
-      const eventParams = new URLSearchParams();
-      if (search.trim()) eventParams.set('q', search.trim());
-      const eventQs = eventParams.toString() ? `?${eventParams}` : '';
       const [venuesData, servicesData, eventsData] = await Promise.all([
         loadVenues ? api.get(`/public/venues${venueQs}`).catch(() => ({ venues: [] })) : Promise.resolve({ venues: [] }),
         loadServices ? api.get(`/public/services${serviceQs}`).catch(() => ({ services: [] })) : Promise.resolve({ services: [] }),
@@ -106,15 +111,15 @@ function MarketplaceHubPageInner() {
         .map(eventToCatalogueItem)
         .filter((item): item is NonNullable<typeof item> => Boolean(item))
         .map((item) => withCatalogueDistance(item, applied.lat, applied.lng))
-        .filter((item) => catalogueItemMatchesGeo(item, applied)),
+        .filter((item) => catalogueItemMatchesGeo(item, applied) && catalogueItemMatchesExtras(item, applied)),
     ]),
     [venues, services, events, applied],
   );
 
-  const visible = useMemo(() => {
-    if (applied.kind === 'all') return items;
-    return items.filter((item) => item.kind === applied.kind);
-  }, [items, applied.kind]);
+  const visible = useMemo(
+    () => items.filter((item) => catalogueItemMatchesExtras(item, applied)),
+    [items, applied],
+  );
 
   const markers = useMemo(
     () =>
@@ -128,15 +133,7 @@ function MarketplaceHubPageInner() {
     ? { lat: applied.lat, lng: applied.lng }
     : null;
 
-  const chips = catalogueGeoChips(
-    applied,
-    [
-      ...(applied.kind === 'all' ? [] : [{ id: 'kind', label: 'Type', value: catalogueKindFilterLabel(applied.kind) }]),
-      ...(applied.mobility
-        ? [{ id: 'mobility', label: 'Intervention', value: applied.mobility === 'on_site' ? 'Sur place' : 'Se déplace' }]
-        : []),
-    ],
-  );
+  const chips = catalogueGeoChips(applied, catalogueEntityExtraChips(applied));
 
   return (
     <CatalogueSearchLayout
@@ -184,9 +181,7 @@ function MarketplaceHubPageInner() {
           resultLabel={!loading ? `${visible.length} fiche${visible.length > 1 ? 's' : ''}` : undefined}
           chips={chips}
           onRemoveChip={(id) => {
-            if (id === 'kind') applyFilters({ ...applied, kind: 'all' });
-            else if (id === 'mobility') applyFilters({ ...applied, mobility: '' });
-            else applyFilters({ ...clearCatalogueGeoChip(applied, id), kind: applied.kind, mobility: applied.mobility });
+            applyFilters(clearCatalogueExtraChip(clearCatalogueGeoChip(applied, id), id));
           }}
           onClearChips={() => applyFilters(emptyFilters)}
           onOpen={() => {
@@ -196,7 +191,7 @@ function MarketplaceHubPageInner() {
           onApply={async () => {
             try {
               const geo = await resolveCatalogueGeo(draft);
-              applyFilters({ ...geo, kind: draft.kind, mobility: draft.mobility });
+              applyFilters({ ...draft, ...geo });
             } catch (err: unknown) {
               setFilterError(err instanceof Error ? err.message : 'Filtre de proximité impossible.');
               throw err;
@@ -204,35 +199,13 @@ function MarketplaceHubPageInner() {
           }}
           modalTitle="Filtrer le marketplace"
           filters={
-            <>
-              <CatalogueFilterField label="Type">
-                <CatalogueChoicePills
-                  options={[
-                    { id: 'all', label: 'Tous' },
-                    { id: 'venue', label: 'Salles' },
-                    { id: 'service', label: 'Prestataires' },
-                    { id: 'event', label: 'Événements' },
-                  ]}
-                  value={draft.kind}
-                  onChange={(id) => setDraft((d) => ({ ...d, kind: (id as HubFilters['kind']) || 'all' }))}
-                />
-              </CatalogueFilterField>
-              <CatalogueGeoFields
-                value={draft}
-                onChange={(next) => setDraft({ ...next, kind: draft.kind, mobility: draft.mobility })}
-                error={filterError}
-                showCapacity={draft.kind !== 'service'}
-              />
-              {draft.kind !== 'event' ? (
-              <CatalogueFilterField label="Prestataires — intervention">
-                <CatalogueChoicePills
-                  options={SERVICE_MOBILITY_OPTIONS.filter((opt) => opt.id)}
-                  value={draft.mobility}
-                  onChange={(id) => setDraft((d) => ({ ...d, mobility: (id as ServiceMobility) || '' }))}
-                />
-              </CatalogueFilterField>
-              ) : null}
-            </>
+            <CatalogueEntityFilterFields
+              showKind
+              value={draft}
+              extras={draft}
+              error={filterError}
+              onChange={(geo, extras) => setDraft({ ...geo, ...extras })}
+            />
           }
         />
       )}

@@ -15,6 +15,8 @@ import {
   ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonRoomsView,
   Button, Modal, EmptyState, Alert, Input, Pagination, paginateItems, usePageSize,
 } from '@/components/ui';
+import CatalogueFilterBar, { CatalogueChoicePills, CatalogueFilterField, type CatalogueFilterChip } from '@/components/CatalogueFilterBar';
+import { ROOM_TYPE_FILTER_OPTIONS } from '@/lib/catalogueEntityFilters';
 import { cn } from '@/lib/cn';
 import {
   ChairType,
@@ -126,6 +128,10 @@ export default function RoomsManagement() {
   const { mode: roomsViewMode, setViewMode: setRoomsViewMode, columns: roomsColumns, setGridColumns: setRoomsColumns, gridClassName: roomsGridClass } = useViewMode('em-view-rooms', 'grid', 3);
   const [roomsPage, setRoomsPage] = useState(1);
   const [roomsPageSize, setRoomsPageSize] = usePageSize('org-rooms', 9);
+  const [roomQuery, setRoomQuery] = useState('');
+  const [filterRoomType, setFilterRoomType] = useState('');
+  const [filterVisibility, setFilterVisibility] = useState<'all' | 'public' | 'hidden'>('all');
+  const [filterCity, setFilterCity] = useState('');
   const [rooms, setRooms] = useState<RoomItem[]>([]);
   const [canManage, setCanManage] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMemberOption[]>([]);
@@ -188,6 +194,35 @@ export default function RoomsManagement() {
     planQuota.limits.maxRooms < 9999 &&
     planQuota.usage.rooms >= planQuota.limits.maxRooms,
   );
+
+  const filteredRooms = useMemo(() => {
+    const q = roomQuery.trim().toLowerCase();
+    return rooms.filter((room) => {
+      const listing = room.venueListing;
+      const hay = [
+        room.name,
+        room.description,
+        room.floor,
+        room.location,
+        listing?.headline,
+        listing?.city,
+        listing?.commune,
+        listing?.neighborhood,
+      ].filter(Boolean).join(' ').toLowerCase();
+      const matchesSearch = !q || hay.includes(q);
+      const matchesType = !filterRoomType || room.roomType === filterRoomType;
+      const isPublic = Boolean(listing?.isPublic);
+      const matchesVisibility = filterVisibility === 'all'
+        || (filterVisibility === 'public' && isPublic)
+        || (filterVisibility === 'hidden' && !isPublic);
+      const matchesCity = !filterCity || (listing?.city || '').toLowerCase() === filterCity.toLowerCase();
+      return matchesSearch && matchesType && matchesVisibility && matchesCity;
+    });
+  }, [rooms, roomQuery, filterRoomType, filterVisibility, filterCity]);
+
+  useEffect(() => {
+    setRoomsPage(1);
+  }, [roomQuery, filterRoomType, filterVisibility, filterCity, roomsPageSize]);
 
   const regenerateBlueprint = () => {
     const bp =
@@ -634,6 +669,74 @@ export default function RoomsManagement() {
         </Alert>
       )}
 
+      {rooms.length > 0 && (() => {
+        const chips: CatalogueFilterChip[] = [
+          ...(filterRoomType ? [{ id: 'roomType', label: 'Type', value: roomTypeLabels[filterRoomType as RoomType] || filterRoomType }] : []),
+          ...(filterVisibility !== 'all' ? [{ id: 'visibility', label: 'Visibilité', value: filterVisibility === 'public' ? 'Publiées' : 'Non publiées' }] : []),
+          ...(filterCity ? [{ id: 'city', label: 'Ville', value: filterCity }] : []),
+        ];
+        return (
+          <CatalogueFilterBar
+            search={roomQuery}
+            onSearchChange={setRoomQuery}
+            searchPlaceholder="Nom, emplacement, commune…"
+            view={roomsViewMode}
+            onViewChange={(mode) => {
+              if (mode === 'grid' || mode === 'list') setRoomsViewMode(mode);
+            }}
+            hideViewToggle
+            chips={chips}
+            onRemoveChip={(id) => {
+              if (id === 'roomType') setFilterRoomType('');
+              if (id === 'visibility') setFilterVisibility('all');
+              if (id === 'city') setFilterCity('');
+            }}
+            onClearChips={() => {
+              setRoomQuery('');
+              setFilterRoomType('');
+              setFilterVisibility('all');
+              setFilterCity('');
+            }}
+            resultLabel={`${filteredRooms.length} salle${filteredRooms.length > 1 ? 's' : ''}`}
+            modalTitle="Filtrer les salles"
+            filters={
+              <>
+                <CatalogueFilterField label="Type de salle">
+                  <CatalogueChoicePills
+                    options={ROOM_TYPE_FILTER_OPTIONS}
+                    value={filterRoomType}
+                    onChange={setFilterRoomType}
+                  />
+                </CatalogueFilterField>
+                {canCatalogPublish ? (
+                  <CatalogueFilterField label="Publication marketplace">
+                    <CatalogueChoicePills
+                      options={[
+                        { id: 'all', label: 'Toutes' },
+                        { id: 'public', label: 'Publiées' },
+                        { id: 'hidden', label: 'Non publiées' },
+                      ]}
+                      value={filterVisibility}
+                      onChange={(id) => setFilterVisibility((id as 'all' | 'public' | 'hidden') || 'all')}
+                    />
+                  </CatalogueFilterField>
+                ) : null}
+                <CatalogueFilterField label="Ville de la fiche">
+                  <CatalogueChoicePills
+                    options={[
+                      { id: 'Kinshasa', label: 'Kinshasa' },
+                      { id: 'Lubumbashi', label: 'Lubumbashi' },
+                    ]}
+                    value={filterCity}
+                    onChange={setFilterCity}
+                  />
+                </CatalogueFilterField>
+              </>
+            }
+          />
+        );
+      })()}
+
       <Modal
         open={showWizard && canManage}
         onClose={closeWizard}
@@ -842,6 +945,12 @@ export default function RoomsManagement() {
             ) : undefined
           }
         />
+      ) : filteredRooms.length === 0 ? (
+        <EmptyState
+          icon={<Building2 className="w-5 h-5" />}
+          title="Aucune salle pour ces filtres"
+          description="Élargissez le type, la ville ou la visibilité, ou créez une nouvelle salle."
+        />
       ) : (
         <div
           className={
@@ -850,7 +959,7 @@ export default function RoomsManagement() {
               : listStackClass
           }
         >
-          {paginateItems(rooms, roomsPage, roomsPageSize).map((room) => {
+          {paginateItems(filteredRooms, roomsPage, roomsPageSize).map((room) => {
             const metaLine = [room.floor, room.location, room.capacity ? `${room.capacity} places` : null]
               .filter(Boolean)
               .join(' · ') || 'Sans détails';
@@ -1013,11 +1122,11 @@ export default function RoomsManagement() {
           })}
         </div>
       )}
-      {rooms.length > 0 && (
+      {filteredRooms.length > 0 && (
         <Pagination
           page={roomsPage}
           pageSize={roomsPageSize}
-          total={rooms.length}
+          total={filteredRooms.length}
           onPageChange={setRoomsPage}
           onPageSizeChange={setRoomsPageSize}
           itemLabel="salles"

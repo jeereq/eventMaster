@@ -10,16 +10,19 @@ import {
   PageHeader, Button, Breadcrumbs, Alert, Input, Modal, EmptyState, StatusPill,
   Pagination, paginateItems, usePageSize, ViewModeToggle, useViewMode, listStackClass,
 } from '@/components/ui';
+import CatalogueFilterBar, { CatalogueChoicePills, CatalogueFilterField, type CatalogueFilterChip } from '@/components/CatalogueFilterBar';
 import {
   PRICE_UNIT_OPTIONS,
   SERVICE_CATEGORIES,
   SERVICE_CATEGORY_LABELS,
+  SERVICE_MOBILITY_OPTIONS,
   mediaPosterUrl,
   missingPublishLocation,
   parseBlockedDates,
   type MarketplaceBookingItem,
   type MarketplaceInquiryItem,
   type ServiceCategory,
+  type ServiceMobility,
   type VenuePriceUnit,
 } from '@/lib/marketplace';
 import { EMPTY_LISTING_DETAILS, parseListingDetails, type ListingDetails } from '@/lib/listingDetails';
@@ -82,6 +85,11 @@ export default function MarketplaceDeskPage() {
   const [success, setSuccess] = useState('');
   const [servicesPage, setServicesPage] = useState(1);
   const [servicesPageSize, setServicesPageSize] = usePageSize('marketplace-desk-services', 8);
+  const [svcQuery, setSvcQuery] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterCity, setFilterCity] = useState('');
+  const [filterVisibility, setFilterVisibility] = useState<'all' | 'public' | 'hidden'>('all');
+  const [filterMobility, setFilterMobility] = useState<ServiceMobility>('');
   const {
     mode: servicesViewMode,
     setViewMode: setServicesViewMode,
@@ -147,7 +155,7 @@ export default function MarketplaceDeskPage() {
 
   useEffect(() => {
     setServicesPage(1);
-  }, [servicesPageSize]);
+  }, [servicesPageSize, svcQuery, filterCategory, filterCity, filterVisibility, filterMobility]);
 
   const photosOf = (item: ServiceItem) =>
     Array.isArray(item.photos) ? item.photos.filter((p): p is string => typeof p === 'string') : [];
@@ -314,6 +322,29 @@ export default function MarketplaceDeskPage() {
 
   const newCount = inquiries.filter((i) => i.status === 'NEW').length;
 
+  const filteredServices = services.filter((item) => {
+    const q = svcQuery.trim().toLowerCase();
+    const hay = [item.title, item.description, item.city, item.commune, item.neighborhood].filter(Boolean).join(' ').toLowerCase();
+    const matchesSearch = !q || hay.includes(q);
+    const matchesCategory = !filterCategory || item.category === filterCategory;
+    const matchesCity = !filterCity || (item.city || '').toLowerCase() === filterCity.toLowerCase();
+    const matchesVisibility = filterVisibility === 'all'
+      || (filterVisibility === 'public' && item.isPublic)
+      || (filterVisibility === 'hidden' && !item.isPublic);
+    const travels = item.travels ?? Boolean(item.coverageRadiusKm && item.coverageRadiusKm > 0);
+    const matchesMobility = !filterMobility
+      || (filterMobility === 'on_site' && travels === false)
+      || (filterMobility === 'travels' && travels !== false);
+    return matchesSearch && matchesCategory && matchesCity && matchesVisibility && matchesMobility;
+  });
+
+  const serviceChips: CatalogueFilterChip[] = [
+    ...(filterCategory ? [{ id: 'category', label: 'Métier', value: SERVICE_CATEGORY_LABELS[filterCategory as ServiceCategory] || filterCategory }] : []),
+    ...(filterCity ? [{ id: 'city', label: 'Ville', value: filterCity }] : []),
+    ...(filterVisibility !== 'all' ? [{ id: 'visibility', label: 'Visibilité', value: filterVisibility === 'public' ? 'Publiées' : 'Brouillons' }] : []),
+    ...(filterMobility ? [{ id: 'mobility', label: 'Intervention', value: filterMobility === 'on_site' ? 'Sur place' : 'Se déplace' }] : []),
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -386,6 +417,74 @@ export default function MarketplaceDeskPage() {
       {error && <Alert variant="error">{error}</Alert>}
       {success && <Alert variant="success">{success}</Alert>}
 
+      {tab === 'services' && services.length > 0 && (
+        <CatalogueFilterBar
+          search={svcQuery}
+          onSearchChange={setSvcQuery}
+          searchPlaceholder="Titre, ville, commune…"
+          view={servicesViewMode}
+          onViewChange={(mode) => {
+            if (mode === 'grid' || mode === 'list') setServicesViewMode(mode);
+          }}
+          hideViewToggle
+          chips={serviceChips}
+          onRemoveChip={(id) => {
+            if (id === 'category') setFilterCategory('');
+            if (id === 'city') setFilterCity('');
+            if (id === 'visibility') setFilterVisibility('all');
+            if (id === 'mobility') setFilterMobility('');
+          }}
+          onClearChips={() => {
+            setSvcQuery('');
+            setFilterCategory('');
+            setFilterCity('');
+            setFilterVisibility('all');
+            setFilterMobility('');
+          }}
+          resultLabel={`${filteredServices.length} prestation${filteredServices.length > 1 ? 's' : ''}`}
+          modalTitle="Filtrer les prestations"
+          filters={
+            <>
+              <CatalogueFilterField label="Métier">
+                <CatalogueChoicePills
+                  options={SERVICE_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] }))}
+                  value={filterCategory}
+                  onChange={setFilterCategory}
+                />
+              </CatalogueFilterField>
+              <CatalogueFilterField label="Ville">
+                <CatalogueChoicePills
+                  options={[
+                    { id: 'Kinshasa', label: 'Kinshasa' },
+                    { id: 'Lubumbashi', label: 'Lubumbashi' },
+                  ]}
+                  value={filterCity}
+                  onChange={setFilterCity}
+                />
+              </CatalogueFilterField>
+              <CatalogueFilterField label="Publication">
+                <CatalogueChoicePills
+                  options={[
+                    { id: 'all', label: 'Toutes' },
+                    { id: 'public', label: 'Publiées' },
+                    { id: 'hidden', label: 'Brouillons' },
+                  ]}
+                  value={filterVisibility}
+                  onChange={(id) => setFilterVisibility((id as 'all' | 'public' | 'hidden') || 'all')}
+                />
+              </CatalogueFilterField>
+              <CatalogueFilterField label="Intervention">
+                <CatalogueChoicePills
+                  options={SERVICE_MOBILITY_OPTIONS.filter((opt) => opt.id)}
+                  value={filterMobility}
+                  onChange={(id) => setFilterMobility((id as ServiceMobility) || '')}
+                />
+              </CatalogueFilterField>
+            </>
+          }
+        />
+      )}
+
       {loading ? (
         <div className="flex justify-center py-16">
           <Loader2 className="w-7 h-7 animate-spin text-primary" />
@@ -409,10 +508,16 @@ export default function MarketplaceDeskPage() {
               </Button>
             }
           />
+        ) : filteredServices.length === 0 ? (
+          <EmptyState
+            icon={<Sparkles className="w-5 h-5" />}
+            title="Aucune prestation pour ces filtres"
+            description="Élargissez le métier, la ville ou la visibilité."
+          />
         ) : (
           <>
           <div className={servicesViewMode === 'grid' ? servicesGridClass : listStackClass}>
-            {paginateItems(services, servicesPage, servicesPageSize).map((item) => {
+            {paginateItems(filteredServices, servicesPage, servicesPageSize).map((item) => {
               const photos = photosOf(item);
               const cover = photos[0] ? mediaPosterUrl(photos[0]) : null;
               const meta = [
@@ -507,7 +612,7 @@ export default function MarketplaceDeskPage() {
           <Pagination
             page={servicesPage}
             pageSize={servicesPageSize}
-            total={services.length}
+            total={filteredServices.length}
             onPageChange={setServicesPage}
             onPageSizeChange={setServicesPageSize}
             itemLabel="prestations"

@@ -12,13 +12,32 @@ import {
   PageHeader, Breadcrumbs, Alert, EmptyState, Pagination, Button, Badge, Modal, StatusPill, usePageSize,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import CatalogueFilterBar, {
+  CatalogueChoicePills,
+  CatalogueEntityFilterFields,
+  CatalogueFilterField,
+  type CatalogueFilterChip,
+} from '@/components/CatalogueFilterBar';
 import {
-  ACCOUNT_KIND_LABELS, SERVICE_CATEGORIES, SERVICE_CATEGORY_LABELS,
-  catalogueItemToMapMarker, isCatalogueMapView,
-  type CatalogueItem, type CatalogueViewMode, type TenantAccountKind,
+  ACCOUNT_KIND_LABELS,
+  EMPTY_CATALOGUE_GEO,
+  appendCatalogueGeoParams,
+  catalogueGeoChips,
+  catalogueItemToMapMarker,
+  clearCatalogueGeoChip,
+  isCatalogueMapView,
+  type CatalogueItem,
+  type CatalogueViewMode,
+  type TenantAccountKind,
 } from '@/lib/marketplace';
 import { formatFc } from '@/config/landingPricing';
-import CatalogueFilterBar, { CatalogueChoicePills, CatalogueFilterField, type CatalogueFilterChip } from '@/components/CatalogueFilterBar';
+import {
+  EMPTY_CATALOGUE_EXTRAS,
+  appendCatalogueEntityParams,
+  catalogueEntityExtraChips,
+  clearCatalogueExtraChip,
+  type CatalogueEntityExtras,
+} from '@/lib/catalogueEntityFilters';
 import CatalogueResults, { CatalogueResultsSkeleton } from '@/components/CatalogueResults';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
@@ -39,6 +58,8 @@ interface VenueRow {
   isPublic: boolean;
   headline: string;
   roomName: string;
+  roomType?: string;
+  capacity?: number | null;
   city: string | null;
   commune: string | null;
   neighborhood?: string | null;
@@ -48,6 +69,7 @@ interface VenueRow {
   coverUrl?: string | null;
   photos?: string[];
   priceFromFc: number | null;
+  priceUnit?: string;
   priceUnitLabel: string;
   publishedAt: string | null;
   createdAt: string;
@@ -72,7 +94,9 @@ interface OfferingRow {
   coverUrl?: string | null;
   photos?: string[];
   priceFromFc: number | null;
+  priceUnit?: string;
   priceUnitLabel: string;
+  travels?: boolean;
   publishedAt: string | null;
   createdAt: string;
   tenantId: string;
@@ -189,6 +213,9 @@ function venueToItem(row: VenueRow): CatalogueItem {
     latitude: row.latitude ?? null,
     longitude: row.longitude ?? null,
     address: row.address || null,
+    roomType: row.roomType as CatalogueItem['roomType'],
+    capacity: row.capacity ?? null,
+    priceUnit: row.priceUnit as CatalogueItem['priceUnit'],
   };
 }
 
@@ -208,6 +235,9 @@ function offeringToItem(row: OfferingRow): CatalogueItem {
     priceUnitLabel: row.priceUnitLabel,
     latitude: row.latitude ?? null,
     longitude: row.longitude ?? null,
+    category: row.category as CatalogueItem['category'],
+    priceUnit: row.priceUnit as CatalogueItem['priceUnit'],
+    travels: row.travels,
   };
 }
 
@@ -220,8 +250,8 @@ export default function AdminCataloguePage() {
   const [qInput, setQInput] = useState('');
   const [q, setQ] = useState('');
   const [visibility, setVisibility] = useState<'all' | 'public' | 'hidden'>('all');
-  const [category, setCategory] = useState('');
-  const [city, setCity] = useState('');
+  const [geo, setGeo] = useState({ ...EMPTY_CATALOGUE_GEO });
+  const [extras, setExtras] = useState<CatalogueEntityExtras>({ ...EMPTY_CATALOGUE_EXTRAS });
   const [inquiryStatus, setInquiryStatus] = useState('');
   const [bookingStatus, setBookingStatus] = useState('');
   const { mode: view, setView, gridCols, setGridCols } = useCatalogueView('list');
@@ -272,12 +302,16 @@ export default function AdminCataloguePage() {
       params.set('limit', String(pageSize));
       params.set('page', String(page));
       if (q) params.set('q', q);
-      if (city) params.set('city', city);
       if (tab === 'venues' || tab === 'offerings') {
+        appendCatalogueGeoParams(params, geo);
+        appendCatalogueEntityParams(
+          params,
+          { ...extras, kind: tab === 'venues' ? 'venue' : 'service' },
+          tab === 'venues' ? 'venue' : 'service',
+        );
         if (visibility === 'public') params.set('isPublic', '1');
         if (visibility === 'hidden') params.set('isPublic', '0');
       }
-      if (tab === 'offerings' && category) params.set('category', category);
       if (tab === 'inquiries' && inquiryStatus) params.set('status', inquiryStatus);
       if (tab === 'bookings' && bookingStatus) params.set('status', bookingStatus);
       if ((tab === 'venues' || tab === 'offerings') && isCatalogueMapView(view)) {
@@ -294,7 +328,7 @@ export default function AdminCataloguePage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.role, tab, page, pageSize, q, visibility, category, inquiryStatus, bookingStatus, city, view]);
+  }, [user?.role, tab, page, pageSize, q, visibility, extras, inquiryStatus, bookingStatus, geo, view]);
 
   useEffect(() => {
     void loadOverview();
@@ -379,10 +413,13 @@ export default function AdminCataloguePage() {
   const mapMode = (tab === 'venues' || tab === 'offerings') && isCatalogueMapView(view);
 
   const listingTab = tab === 'venues' || tab === 'offerings';
+  const listingExtras: CatalogueEntityExtras = {
+    ...extras,
+    kind: tab === 'venues' ? 'venue' : tab === 'offerings' ? 'service' : 'all',
+  };
   const chips: CatalogueFilterChip[] = [
     ...(listingTab && visibility !== 'all' ? [{ id: 'visibility', label: 'Visibilité', value: visibility === 'public' ? 'Publiques' : 'Dépubliées' }] : []),
-    ...(listingTab && city ? [{ id: 'city', label: 'Ville', value: city }] : []),
-    ...(category && tab === 'offerings' ? [{ id: 'category', label: 'Catégorie', value: SERVICE_CATEGORY_LABELS[category as keyof typeof SERVICE_CATEGORY_LABELS] || category }] : []),
+    ...(listingTab ? catalogueGeoChips(geo, catalogueEntityExtraChips(listingExtras)) : []),
     ...(tab === 'inquiries' && inquiryStatus ? [{ id: 'inquiry', label: 'Statut', value: inquiryStatus === 'NEW' ? 'Nouveau' : 'Contacté' }] : []),
     ...(tab === 'bookings' && bookingStatus ? [{ id: 'booking', label: 'Statut', value: BOOKING_STATUS_LABELS[bookingStatus] || bookingStatus }] : []),
   ];
@@ -451,16 +488,18 @@ export default function AdminCataloguePage() {
         chips={chips}
         onRemoveChip={(id) => {
           if (id === 'visibility') setVisibility('all');
-          if (id === 'city') setCity('');
-          if (id === 'category') setCategory('');
-          if (id === 'inquiry') setInquiryStatus('');
-          if (id === 'booking') setBookingStatus('');
+          else if (id === 'inquiry') setInquiryStatus('');
+          else if (id === 'booking') setBookingStatus('');
+          else {
+            setGeo((prev) => clearCatalogueGeoChip(prev, id));
+            setExtras((prev) => clearCatalogueExtraChip(prev, id));
+          }
           setPage(1);
         }}
         onClearChips={() => {
           setVisibility('all');
-          setCity('');
-          setCategory('');
+          setGeo({ ...EMPTY_CATALOGUE_GEO });
+          setExtras({ ...EMPTY_CATALOGUE_EXTRAS });
           setInquiryStatus('');
           setBookingStatus('');
           setPage(1);
@@ -478,30 +517,23 @@ export default function AdminCataloguePage() {
                     { id: 'hidden', label: 'Dépubliées' },
                   ]}
                   value={visibility}
-                  onChange={(id) => setVisibility((id as 'all' | 'public' | 'hidden') || 'all')}
+                  onChange={(id) => { setVisibility((id as 'all' | 'public' | 'hidden') || 'all'); setPage(1); }}
                 />
               </CatalogueFilterField>
             )}
             {(tab === 'venues' || tab === 'offerings') && (
-              <CatalogueFilterField label="Ville">
-                <CatalogueChoicePills
-                  options={[
-                    { id: 'Kinshasa', label: 'Kinshasa' },
-                    { id: 'Lubumbashi', label: 'Lubumbashi' },
-                  ]}
-                  value={city}
-                  onChange={setCity}
-                />
-              </CatalogueFilterField>
-            )}
-            {tab === 'offerings' && (
-              <CatalogueFilterField label="Catégorie">
-                <CatalogueChoicePills
-                  options={SERVICE_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] }))}
-                  value={category}
-                  onChange={setCategory}
-                />
-              </CatalogueFilterField>
+              <CatalogueEntityFilterFields
+                entity={tab === 'venues' ? 'venue' : 'service'}
+                value={geo}
+                extras={listingExtras}
+                showProximity={false}
+                showAvailability={false}
+                onChange={(nextGeo, nextExtras) => {
+                  setGeo(nextGeo);
+                  setExtras({ ...nextExtras, kind: 'all' });
+                  setPage(1);
+                }}
+              />
             )}
             {tab === 'inquiries' && (
               <CatalogueFilterField label="Statut">
@@ -511,7 +543,7 @@ export default function AdminCataloguePage() {
                     { id: 'CONTACTED', label: 'Contacté' },
                   ]}
                   value={inquiryStatus}
-                  onChange={setInquiryStatus}
+                  onChange={(id) => { setInquiryStatus(id); setPage(1); }}
                 />
               </CatalogueFilterField>
             )}
@@ -520,7 +552,7 @@ export default function AdminCataloguePage() {
                 <CatalogueChoicePills
                   options={Object.entries(BOOKING_STATUS_LABELS).map(([id, label]) => ({ id, label }))}
                   value={bookingStatus}
-                  onChange={setBookingStatus}
+                  onChange={(id) => { setBookingStatus(id); setPage(1); }}
                 />
               </CatalogueFilterField>
             )}
@@ -546,7 +578,7 @@ export default function AdminCataloguePage() {
               listingSearch
               navigateOnClick
               height={480}
-              city={city || null}
+              city={geo.city || null}
             />
           )
         ) : (
