@@ -62,7 +62,7 @@ function GridCard({
   return (
     <Link
       href={item.href}
-      className="group relative flex flex-col bg-surface border border-border rounded-[1.35rem] overflow-hidden shadow-[var(--shadow-soft)] hover:border-primary/40 hover:shadow-[0_22px_44px_-24px_rgba(15,23,42,0.5)] hover:-translate-y-1 transition duration-200 ring-1 ring-black/[0.03]"
+      className="group relative flex flex-col bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden shadow-[var(--shadow-soft)] hover:border-primary/40 hover:shadow-[0_22px_44px_-24px_rgba(15,23,42,0.5)] hover:-translate-y-0.5 transition duration-200"
     >
       <div className={cn('relative overflow-hidden bg-surface-muted', compact ? 'aspect-[5/4]' : 'aspect-[4/3]')}>
         <Cover item={item} className="w-full h-full" />
@@ -139,9 +139,9 @@ function ListRow({
   return (
     <Link
       href={item.href}
-      className="group flex items-center gap-3 sm:gap-4 bg-surface border border-border rounded-2xl p-3 hover:border-primary/35 hover:shadow-[var(--shadow-soft)] transition"
+      className="group flex items-center gap-3 sm:gap-4 bg-surface border border-border rounded-[var(--radius-card)] p-2.5 sm:p-3 hover:border-primary/35 hover:shadow-[var(--shadow-soft)] transition"
     >
-      <div className="w-20 h-16 sm:w-28 sm:h-20 rounded-xl overflow-hidden bg-surface-muted shrink-0">
+      <div className="w-20 h-16 sm:w-28 sm:h-20 rounded-md overflow-hidden bg-surface-muted shrink-0">
         <Cover item={item} className="w-full h-full" />
       </div>
       <div className="min-w-0 flex-1 space-y-1">
@@ -197,7 +197,7 @@ export default function CatalogueResults({
 }) {
   if (items.length === 0) {
     return (
-      <div className="text-center py-16 px-6 border border-dashed border-border rounded-2xl bg-surface">
+      <div className="text-center py-16 px-6 border border-dashed border-border rounded-[var(--radius-card)] bg-surface">
         <Building2 className="w-10 h-10 text-muted mx-auto mb-3" />
         <h2 className="font-semibold text-foreground">{emptyTitle}</h2>
         <p className="text-sm text-muted mt-2 max-w-md mx-auto leading-relaxed">{emptyDescription}</p>
@@ -239,7 +239,7 @@ export default function CatalogueResults({
 
 function CatalogueGridCardSkeleton() {
   return (
-    <div className="bg-surface border border-border rounded-[1.35rem] overflow-hidden" aria-hidden>
+    <div className="bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden" aria-hidden>
       <Skeleton className="aspect-[4/3] w-full rounded-none" />
       <div className="p-3 space-y-2">
         <Skeleton className="h-3 w-2/3" />
@@ -252,8 +252,8 @@ function CatalogueGridCardSkeleton() {
 
 function CatalogueListRowSkeleton() {
   return (
-    <div className="flex items-center gap-3 sm:gap-4 bg-surface border border-border rounded-2xl p-3" aria-hidden>
-      <Skeleton className="w-20 h-16 sm:w-28 sm:h-20 rounded-xl shrink-0" />
+    <div className="flex items-center gap-3 sm:gap-4 bg-surface border border-border rounded-[var(--radius-card)] p-2.5 sm:p-3" aria-hidden>
+      <Skeleton className="w-20 h-16 sm:w-28 sm:h-20 rounded-md shrink-0" />
       <div className="min-w-0 flex-1 space-y-2">
         <Skeleton className="h-4 w-16 rounded-full" />
         <Skeleton className="h-4 w-2/3" />

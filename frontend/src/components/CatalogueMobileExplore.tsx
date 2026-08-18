@@ -50,7 +50,7 @@ function StoryCard({
     <article
       data-card-id={item.id}
       className={cn(
-        'em-snap-card relative overflow-hidden rounded-[1.35rem] border bg-surface shadow-lg transition-transform',
+        'em-snap-card relative overflow-hidden rounded-[var(--radius-card)] border bg-surface shadow-lg transition-transform',
         selected ? 'border-primary ring-2 ring-primary/40 scale-[1.02]' : 'border-border',
       )}
     >
@@ -125,11 +125,11 @@ function SheetRow({
       type="button"
       onClick={onSelect}
       className={cn(
-        'w-full flex items-center gap-3 rounded-2xl p-2 text-left border transition',
+        'w-full flex items-center gap-3 rounded-[var(--radius-card)] p-2 text-left border transition',
         selected ? 'border-primary bg-primary/5' : 'border-transparent bg-surface-muted/60',
       )}
     >
-      <div className="w-[4.5rem] h-14 rounded-xl overflow-hidden bg-surface-muted shrink-0">
+      <div className="w-[4.5rem] h-14 rounded-md overflow-hidden bg-surface-muted shrink-0">
         {item.coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={item.coverUrl} alt="" className="w-full h-full object-cover" />
@@ -418,7 +418,7 @@ export default function CatalogueMobileExplore({
           >
             {loading && items.length === 0 ? (
               Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="em-snap-card h-[12.5rem] rounded-[1.35rem] bg-surface-muted animate-pulse" />
+                <div key={i} className="em-snap-card h-[12.5rem] rounded-[var(--radius-card)] bg-surface-muted animate-pulse" />
               ))
             ) : items.length === 0 ? (
               <div className="px-2 py-6 text-center w-full">
