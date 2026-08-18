@@ -6,9 +6,13 @@ import { cn } from '@/lib/cn';
 import type { CatalogueViewMode } from '@/lib/marketplace';
 
 const STORAGE_KEY = 'em-catalogue-view';
+const COLS_KEY = 'em-catalogue-grid-cols';
+
+export type CatalogueGridCols = 2 | 3 | 4 | 5;
 
 export function useCatalogueView(defaultMode: CatalogueViewMode = 'grid') {
   const [mode, setMode] = useState<CatalogueViewMode>(defaultMode);
+  const [gridCols, setGridColsState] = useState<CatalogueGridCols>(4);
 
   useEffect(() => {
     try {
@@ -16,6 +20,8 @@ export function useCatalogueView(defaultMode: CatalogueViewMode = 'grid') {
       if (stored === 'grid' || stored === 'list' || stored === 'map' || stored === 'focus') {
         setMode(stored);
       }
+      const cols = Number(localStorage.getItem(COLS_KEY));
+      if (cols === 2 || cols === 3 || cols === 4 || cols === 5) setGridColsState(cols);
     } catch {
       /* ignore */
     }
@@ -30,7 +36,55 @@ export function useCatalogueView(defaultMode: CatalogueViewMode = 'grid') {
     }
   };
 
-  return { mode, setView };
+  const setGridCols = (next: CatalogueGridCols) => {
+    setGridColsState(next);
+    try {
+      localStorage.setItem(COLS_KEY, String(next));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  return { mode, setView, gridCols, setGridCols };
+}
+
+export function CatalogueGridColsToggle({
+  value,
+  onChange,
+  className,
+}: {
+  value: CatalogueGridCols;
+  onChange: (cols: CatalogueGridCols) => void;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        'inline-flex items-center rounded-full border border-border bg-surface-muted p-0.5',
+        className,
+      )}
+      role="group"
+      aria-label="Nombre de colonnes"
+    >
+      {([2, 3, 4, 5] as const).map((cols) => (
+        <button
+          key={cols}
+          type="button"
+          onClick={() => onChange(cols)}
+          aria-pressed={value === cols}
+          title={`${cols} colonnes`}
+          className={cn(
+            'min-w-8 px-2 py-1.5 rounded-full text-[11px] font-semibold transition',
+            value === cols
+              ? 'bg-surface text-primary shadow-sm ring-1 ring-border'
+              : 'text-muted hover:text-foreground',
+          )}
+        >
+          {cols}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 export default function CatalogueViewToggle({

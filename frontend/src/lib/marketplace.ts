@@ -45,6 +45,7 @@ export interface PublicVenue {
   bookedDates?: string[];
   unavailableDates?: string[];
   distanceKm?: number | null;
+  details?: import('./listingDetails').ListingDetails | null;
 }
 
 export interface VenueListingDraft {
@@ -132,6 +133,7 @@ export interface PublicService {
   bookedDates?: string[];
   unavailableDates?: string[];
   distanceKm?: number | null;
+  details?: import('./listingDetails').ListingDetails | null;
 }
 
 export interface MarketplaceInquiryItem {

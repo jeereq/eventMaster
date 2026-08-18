@@ -2,42 +2,43 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Building2, MapPin, Sparkles, Users } from 'lucide-react';
+import { ArrowRight, Building2, MapPin, Sparkles, Users } from 'lucide-react';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import { listStackClass } from '@/components/ui';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { formatDistanceKm, formatQuotaLabel, serviceMobilityLabel, type CatalogueItem, type CatalogueViewMode } from '@/lib/marketplace';
 
+export const CATALOGUE_GRID_COLS = [2, 3, 4, 5] as const;
+export type CatalogueGridCols = (typeof CATALOGUE_GRID_COLS)[number];
+
+const GRID_CLASS: Record<CatalogueGridCols, string> = {
+  2: 'grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5',
+  3: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4',
+  4: 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4',
+  5: 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3',
+};
+
 function Cover({ item, className }: { item: CatalogueItem; className?: string }) {
   if (item.coverUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={item.coverUrl} alt="" className={cn('object-cover transition duration-500 group-hover:scale-105', className)} />
+      <img src={item.coverUrl} alt="" className={cn('object-cover transition duration-500 group-hover:scale-110', className)} />
     );
   }
   const Icon = item.kind === 'venue' ? Building2 : Sparkles;
   return (
     <div className={cn('flex items-center justify-center bg-surface-muted text-muted', className)}>
-      <Icon className="w-7 h-7" />
+      <Icon className="w-8 h-8" />
     </div>
   );
 }
 
-function Price({ item }: { item: CatalogueItem }) {
-  return (
-    <span className="text-sm font-semibold text-foreground">
-      {item.priceFromFc != null ? `Dès ${formatFc(item.priceFromFc)}` : 'Sur devis'}
-      <span className="block text-[11px] font-normal text-muted">{item.priceUnitLabel}</span>
-    </span>
-  );
-}
-
 function KindBadge({ item }: { item: CatalogueItem }) {
-  const Icon = item.kind === 'venue' ? Building2 : Sparkles;
+  const Icon = item.kind === 'service' ? Sparkles : Building2;
   return (
     <span className={cn(
-      'inline-flex items-center gap-1 rounded-full bg-background/90 backdrop-blur-sm px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider border border-border',
+      'inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-sm px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider shadow-sm',
       item.kind === 'service' ? 'text-[color:var(--festive-accent)]' : 'text-primary',
     )}>
       <Icon className="w-3 h-3" />
@@ -46,22 +47,35 @@ function KindBadge({ item }: { item: CatalogueItem }) {
   );
 }
 
-function GridCard({ item }: { item: CatalogueItem }) {
+function GridCard({ item, compact }: { item: CatalogueItem; compact?: boolean }) {
+  const isService = item.kind === 'service';
   return (
     <Link
       href={item.href}
-      className="group bg-surface border border-border rounded-2xl overflow-hidden hover:border-primary/35 hover:shadow-[var(--shadow-soft)] transition duration-200"
+      className="group relative flex flex-col bg-surface border border-border rounded-[1.35rem] overflow-hidden shadow-[var(--shadow-soft)] hover:border-primary/40 hover:shadow-[0_22px_44px_-24px_rgba(15,23,42,0.5)] hover:-translate-y-1 transition duration-200 ring-1 ring-black/[0.03]"
     >
-      <div className="relative aspect-[16/10] bg-surface-muted overflow-hidden">
+      <div className={cn('relative overflow-hidden bg-surface-muted', compact ? 'aspect-[5/4]' : 'aspect-[4/3]')}>
         <Cover item={item} className="w-full h-full" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
         <div className="absolute top-2.5 left-2.5">
           <KindBadge item={item} />
         </div>
+        {formatDistanceKm(item.distanceKm) ? (
+          <span className="absolute top-2.5 right-2.5 rounded-full bg-black/55 text-white text-[10px] font-semibold px-2 py-0.5">
+            {formatDistanceKm(item.distanceKm)}
+          </span>
+        ) : null}
+        <div className="absolute left-3 right-3 bottom-2.5 text-white">
+          <p className="font-display font-semibold text-sm leading-snug line-clamp-2 drop-shadow">
+            {item.title}
+          </p>
+          <p className="text-[11px] text-white/85 mt-0.5">
+            {item.priceFromFc != null ? `Dès ${formatFc(item.priceFromFc)}` : 'Sur devis'}
+            <span className="text-white/70"> · {item.priceUnitLabel}</span>
+          </p>
+        </div>
       </div>
-      <div className="p-3 space-y-1.5">
-        <h2 className="font-display font-semibold text-sm text-foreground group-hover:text-primary transition leading-snug line-clamp-2">
-          {item.title}
-        </h2>
+      <div className="p-3 space-y-2 flex-1 flex flex-col">
         <p className="text-xs text-muted truncate">{item.orgName}{item.categoryLabel ? ` · ${item.categoryLabel}` : ''}</p>
         {item.location ? (
           <p className="text-xs text-muted inline-flex items-center gap-1 min-w-0">
@@ -69,21 +83,26 @@ function GridCard({ item }: { item: CatalogueItem }) {
             <span className="truncate">{item.location}</span>
           </p>
         ) : null}
-        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted">
-          {formatDistanceKm(item.distanceKm) ? <span className="font-semibold text-primary">{formatDistanceKm(item.distanceKm)}</span> : null}
+        <div className="flex flex-wrap gap-1.5 text-[11px] text-muted">
           {item.capacity ? (
-            <span className="inline-flex items-center gap-1">
+            <span className="inline-flex items-center gap-1 rounded-full bg-surface-muted border border-border px-2 py-0.5">
               <Users className="w-3 h-3" /> {item.capacity} places
             </span>
           ) : null}
-          {formatQuotaLabel(item.quotaMin, item.quotaMax) ? <span>{formatQuotaLabel(item.quotaMin, item.quotaMax)}</span> : null}
-          {item.kind === 'service' ? (
-            <span>{serviceMobilityLabel(Boolean(item.travels ?? (item.coverageRadiusKm && item.coverageRadiusKm > 0)), item.coverageRadiusKm)}</span>
+          {formatQuotaLabel(item.quotaMin, item.quotaMax) ? (
+            <span className="rounded-full bg-surface-muted border border-border px-2 py-0.5">
+              {formatQuotaLabel(item.quotaMin, item.quotaMax)}
+            </span>
+          ) : null}
+          {isService ? (
+            <span className="rounded-full bg-surface-muted border border-border px-2 py-0.5">
+              {serviceMobilityLabel(Boolean(item.travels ?? (item.coverageRadiusKm && item.coverageRadiusKm > 0)), item.coverageRadiusKm)}
+            </span>
           ) : null}
         </div>
-        <div className="pt-2 border-t border-border">
-          <Price item={item} />
-        </div>
+        <span className="mt-auto pt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
+          Voir la fiche <ArrowRight className="w-3 h-3 transition group-hover:translate-x-0.5" />
+        </span>
       </div>
     </Link>
   );
@@ -118,7 +137,10 @@ function ListRow({ item }: { item: CatalogueItem }) {
         ) : null}
       </div>
       <div className="shrink-0 text-right">
-        <Price item={item} />
+        <span className="text-sm font-semibold text-foreground">
+          {item.priceFromFc != null ? `Dès ${formatFc(item.priceFromFc)}` : 'Sur devis'}
+        </span>
+        <span className="block text-[11px] text-muted">{item.priceUnitLabel}</span>
       </div>
     </Link>
   );
@@ -129,11 +151,13 @@ export default function CatalogueResults({
   mode,
   emptyTitle,
   emptyDescription,
+  gridCols = 4,
 }: {
   items: CatalogueItem[];
   mode: Exclude<CatalogueViewMode, 'map' | 'focus'>;
   emptyTitle: string;
   emptyDescription: string;
+  gridCols?: CatalogueGridCols;
 }) {
   if (items.length === 0) {
     return (
@@ -155,10 +179,12 @@ export default function CatalogueResults({
     );
   }
 
+  const cols = CATALOGUE_GRID_COLS.includes(gridCols as CatalogueGridCols) ? gridCols : 4;
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+    <div className={GRID_CLASS[cols]}>
       {items.map((item) => (
-        <GridCard key={item.id} item={item} />
+        <GridCard key={item.id} item={item} compact={cols >= 5} />
       ))}
     </div>
   );
@@ -166,16 +192,12 @@ export default function CatalogueResults({
 
 function CatalogueGridCardSkeleton() {
   return (
-    <div className="bg-surface border border-border rounded-2xl overflow-hidden" aria-hidden>
-      <Skeleton className="aspect-[16/10] w-full rounded-none" />
+    <div className="bg-surface border border-border rounded-[1.35rem] overflow-hidden" aria-hidden>
+      <Skeleton className="aspect-[4/3] w-full rounded-none" />
       <div className="p-3 space-y-2">
-        <Skeleton className="h-4 w-3/4" />
-        <Skeleton className="h-3 w-1/2" />
         <Skeleton className="h-3 w-2/3" />
-        <div className="pt-2 border-t border-border">
-          <Skeleton className="h-4 w-28" />
-          <Skeleton className="h-3 w-16 mt-1.5" />
-        </div>
+        <Skeleton className="h-3 w-1/2" />
+        <Skeleton className="h-6 w-24 rounded-full" />
       </div>
     </div>
   );
@@ -201,9 +223,11 @@ function CatalogueListRowSkeleton() {
 export function CatalogueResultsSkeleton({
   mode = 'grid',
   count = 9,
+  gridCols = 4,
 }: {
   mode?: CatalogueViewMode;
   count?: number;
+  gridCols?: CatalogueGridCols;
 }) {
   if (mode === 'map' || mode === 'focus') {
     return (
@@ -235,9 +259,11 @@ export function CatalogueResultsSkeleton({
     );
   }
 
+  const cols = CATALOGUE_GRID_COLS.includes(gridCols as CatalogueGridCols) ? gridCols : 4;
+
   return (
     <div
-      className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4"
+      className={GRID_CLASS[cols]}
       role="status"
       aria-live="polite"
       aria-label="Chargement du marketplace"

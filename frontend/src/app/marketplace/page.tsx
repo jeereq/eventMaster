@@ -35,7 +35,7 @@ const emptyFilters: HubFilters = {
 };
 
 export default function MarketplaceHubPage() {
-  const { mode, setView } = useCatalogueView();
+  const { mode, setView, gridCols, setGridCols } = useCatalogueView();
   const [venues, setVenues] = useState<PublicVenue[]>([]);
   const [services, setServices] = useState<PublicService[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,6 +126,7 @@ export default function MarketplaceHubPage() {
       heroDescription="Explorez le marketplace EventMaster. Affinez par ville, commune, prix ou autour de vous."
       mode={mode}
       onViewChange={setView}
+      gridCols={gridCols}
       items={visible}
       markers={markers}
       loading={loading}
@@ -158,6 +159,8 @@ export default function MarketplaceHubPage() {
           searchPlaceholder="Nom, organisation, ville…"
           view={mode}
           onViewChange={setView}
+          gridCols={gridCols}
+          onGridColsChange={setGridCols}
           resultLabel={!loading ? `${visible.length} fiche${visible.length > 1 ? 's' : ''}` : undefined}
           chips={chips}
           onRemoveChip={(id) => {

@@ -12,7 +12,7 @@ import {
   type CatalogueViewMode,
 } from '@/lib/marketplace';
 import { communesForCity, neighborhoodsFor, normalizeRdcCity } from '@/lib/rdcCities';
-import CatalogueViewToggle from '@/components/CatalogueViewToggle';
+import CatalogueViewToggle, { CatalogueGridColsToggle, type CatalogueGridCols } from '@/components/CatalogueViewToggle';
 
 export type CatalogueFilterChip = {
   id: string;
@@ -90,6 +90,8 @@ export default function CatalogueFilterBar({
   variant = 'card',
   hideViewToggle = false,
   compactToggle = false,
+  gridCols,
+  onGridColsChange,
 }: {
   search: string;
   onSearchChange: (value: string) => void;
@@ -109,6 +111,8 @@ export default function CatalogueFilterBar({
   variant?: 'card' | 'float';
   hideViewToggle?: boolean;
   compactToggle?: boolean;
+  gridCols?: CatalogueGridCols;
+  onGridColsChange?: (cols: CatalogueGridCols) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -241,6 +245,16 @@ export default function CatalogueFilterBar({
             className="w-full justify-between bg-surface/90 backdrop-blur-xl border-white/25 dark:border-white/10 shadow-lg"
           />
         ) : null}
+        {view === 'grid' && gridCols && onGridColsChange ? (
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold text-muted">Colonnes</span>
+            <CatalogueGridColsToggle
+              value={gridCols}
+              onChange={onGridColsChange}
+              className="bg-surface/90 backdrop-blur-xl border-white/25 dark:border-white/10 shadow-lg"
+            />
+          </div>
+        ) : null}
         {chipsRow}
         {filterModal}
       </div>
@@ -282,6 +296,9 @@ export default function CatalogueFilterBar({
               compact={compactToggle}
               className="flex-1 sm:flex-none justify-between sm:justify-start"
             />
+          ) : null}
+          {view === 'grid' && gridCols && onGridColsChange ? (
+            <CatalogueGridColsToggle value={gridCols} onChange={onGridColsChange} />
           ) : null}
         </div>
       </div>

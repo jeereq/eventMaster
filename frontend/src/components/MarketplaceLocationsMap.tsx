@@ -3,7 +3,7 @@
 import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Building2, Loader2, MapPin, Navigation, Search, Sparkles, Users, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Building2, Loader2, MapPin, Navigation, Search, Sparkles, Users, Volume2, VolumeX, X } from 'lucide-react';
 import { loadLeaflet, leafletBasemap, documentMapTheme, reverseGeocode, searchPlaces, type GeoPlace } from '@/lib/leafletLoader';
 import {
   fetchDrivingRoute,
@@ -15,6 +15,14 @@ import { findRdcCity, cityForPoint, leafletMaxBounds, nominatimViewbox, pointInA
 import { formatDistanceKm, haversineKm, isVideoUrl } from '@/lib/marketplace';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import {
+  isRouteVoiceSupported,
+  readRouteVoiceEnabled,
+  routeIntroScript,
+  speakRouteGuide,
+  stopRouteVoice,
+  writeRouteVoiceEnabled,
+} from '@/lib/routeVoice';
 
 export interface MarketplaceMapMarker {
   id: string;
@@ -69,14 +77,17 @@ function markerImageUrls(marker: { coverUrl?: string | null; photos?: string[] }
   return list;
 }
 
-function listingIconHtml(kind?: 'venue' | 'service', coverUrl?: string | null) {
+function listingIconHtml(kind?: 'venue' | 'service', coverUrl?: string | null, title?: string) {
   const isService = kind === 'service';
+  const caption = title
+    ? `<span class="em-map-marker-caption">${escapeAttr(title)}</span>`
+    : '';
   if (coverUrl) {
     const badge = isService ? SERVICE_ICON_SVG : VENUE_ICON_SVG;
-    return `<span class="em-map-marker-hit em-map-marker-hit-photo"><span class="em-map-marker-photo-pin ${isService ? 'is-service' : 'is-venue'}"><span class="em-map-marker-photo-wrap"><span class="em-map-marker-photo-frame"><img class="em-map-marker-photo" src="${escapeAttr(coverUrl)}" alt="" /></span><span class="em-map-marker-photo-badge">${badge}</span></span><span class="em-map-marker-photo-pointer"></span></span></span>`;
+    return `<span class="em-map-marker-hit em-map-marker-hit-photo">${caption}<span class="em-map-marker-photo-pin ${isService ? 'is-service' : 'is-venue'}"><span class="em-map-marker-photo-wrap"><span class="em-map-marker-photo-frame"><img class="em-map-marker-photo" src="${escapeAttr(coverUrl)}" alt="" /></span><span class="em-map-marker-photo-badge">${badge}</span></span><span class="em-map-marker-photo-pointer"></span></span></span>`;
   }
   const icon = isService ? SERVICE_ICON_SVG : VENUE_ICON_SVG;
-  return `<span class="em-map-marker-hit"><span class="em-map-marker-inner"><span class="em-map-marker-head">${icon}</span><span class="em-map-marker-tail"></span></span></span>`;
+  return `<span class="em-map-marker-hit">${caption}<span class="em-map-marker-inner"><span class="em-map-marker-head">${icon}</span><span class="em-map-marker-tail"></span></span></span>`;
 }
 
 function hereIconHtml() {
@@ -376,6 +387,16 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
   const suppressMapClickRef = useRef(false);
   const navGenRef = useRef(0);
   const [navDestId, setNavDestId] = useState<string | null>(null);
+  const [voiceOn, setVoiceOn] = useState(true);
+  const voiceOnRef = useRef(true);
+  const lastSpokenRef = useRef('');
+
+  useEffect(() => {
+    const enabled = readRouteVoiceEnabled();
+    setVoiceOn(enabled);
+    voiceOnRef.current = enabled;
+    return () => stopRouteVoice();
+  }, []);
 
   const clearHideTimer = () => {
     if (hideTimer.current) {
@@ -475,9 +496,9 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
           const leafletMarker = L.marker([m.lat, m.lng], {
             icon: L.divIcon({
               className: `leaflet-interactive em-map-marker ${isService ? 'em-map-marker-service' : 'em-map-marker-venue'}${hasPhoto ? ' has-photo-pin' : ''}`,
-              html: listingIconHtml(m.kind, photoUrl),
-              iconSize: hasPhoto ? [36, 44] : [44, 52],
-              iconAnchor: hasPhoto ? [18, 42] : [22, 50],
+              html: listingIconHtml(m.kind, photoUrl, m.title),
+              iconSize: hasPhoto ? [48, 58] : [52, 62],
+              iconAnchor: hasPhoto ? [24, 56] : [26, 60],
             }),
             interactive: true,
             bubblingMouseEvents: false,
@@ -711,6 +732,8 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
     setRouteHint('');
     setRouting(false);
     setNavDestId(null);
+    stopRouteVoice();
+    lastSpokenRef.current = '';
     if (map && overviewBoundsRef.current) {
       map.fitBounds(overviewBoundsRef.current, { maxZoom: 14, animate: true });
     }
@@ -742,11 +765,29 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
         { color, weight: 5, opacity: 0.9, interactive: false },
       ).addTo(map);
       map.fitBounds(routeLineRef.current.getBounds(), { padding: [36, 36], maxZoom: 15 });
+      const initial = lastRecalcRef.current === 0;
       setRoute(next);
       setRouteTitle(dest.title);
       setNavDestId(dest.id);
       lastRecalcRef.current = Date.now();
       setRouteHint('Navigation active. Survolez les autres pins pour comparer. Annulez à tout moment.');
+      if (voiceOnRef.current) {
+        if (initial) {
+          lastSpokenRef.current = next.steps[0]?.instruction || '';
+          void speakRouteGuide(routeIntroScript(
+            dest.title,
+            formatRouteDuration(next.duration),
+            formatRouteDistance(next.distance),
+            next.steps.map((step) => step.instruction),
+          ));
+        } else {
+          const step = next.steps[0]?.instruction || '';
+          if (step && step !== lastSpokenRef.current) {
+            lastSpokenRef.current = step;
+            void speakRouteGuide(step);
+          }
+        }
+      }
       if (watchIdRef.current == null && navigator.geolocation) {
         watchIdRef.current = navigator.geolocation.watchPosition(
           (pos) => {
@@ -782,6 +823,8 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
     }
+    lastSpokenRef.current = '';
+    lastRecalcRef.current = 0;
     routeDestRef.current = dest;
     setNavDestId(dest.id);
     setRoute(null);
@@ -1064,9 +1107,28 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
                   </p>
                 ) : null}
               </div>
-              <button type="button" onClick={clearRoute} className="p-1 rounded-md text-muted hover:text-foreground" aria-label="Annuler la navigation">
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-1">
+                {isRouteVoiceSupported() ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !voiceOn;
+                      setVoiceOn(next);
+                      voiceOnRef.current = next;
+                      writeRouteVoiceEnabled(next);
+                      if (!next) stopRouteVoice();
+                    }}
+                    className="p-1 rounded-md text-muted hover:text-foreground"
+                    aria-label={voiceOn ? 'Couper la voix' : 'Activer la voix'}
+                    title={voiceOn ? 'Couper la voix féminine' : 'Activer la voix féminine'}
+                  >
+                    {voiceOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                  </button>
+                ) : null}
+                <button type="button" onClick={clearRoute} className="p-1 rounded-md text-muted hover:text-foreground" aria-label="Annuler la navigation">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
             {routing && (
               <p className="text-xs text-muted inline-flex items-center gap-1.5">

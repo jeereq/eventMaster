@@ -38,7 +38,7 @@ const emptyFilters: ServiceFilters = {
 };
 
 export default function MarketplaceServicesPage() {
-  const { mode, setView } = useCatalogueView();
+  const { mode, setView, gridCols, setGridCols } = useCatalogueView();
   const [services, setServices] = useState<PublicService[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
@@ -129,6 +129,7 @@ export default function MarketplaceServicesPage() {
       heroDescription="Traiteur, photo, DJ, déco… Filtrez par zone, catégorie, prix ou autour de vous."
       mode={mode}
       onViewChange={setView}
+      gridCols={gridCols}
       items={items}
       markers={markers}
       loading={loading}
@@ -161,6 +162,8 @@ export default function MarketplaceServicesPage() {
           searchPlaceholder="Nom, prestataire…"
           view={mode}
           onViewChange={setView}
+          gridCols={gridCols}
+          onGridColsChange={setGridCols}
           chips={chips}
           resultLabel={!loading ? `${items.length} prestataire${items.length > 1 ? 's' : ''}` : undefined}
           onRemoveChip={(id) => {

@@ -15,6 +15,7 @@ import {
   type CatalogueItem,
   type CatalogueViewMode,
 } from '@/lib/marketplace';
+import type { CatalogueGridCols } from '@/components/CatalogueViewToggle';
 
 export default function CatalogueSearchLayout({
   activeNav,
@@ -39,6 +40,7 @@ export default function CatalogueSearchLayout({
   city,
   searchOriginLabel,
   showKindLegend = false,
+  gridCols = 4,
 }: {
   activeNav: 'hub' | 'venues' | 'services';
   heroTitle: string;
@@ -69,6 +71,7 @@ export default function CatalogueSearchLayout({
   city?: string | null;
   searchOriginLabel?: string;
   showKindLegend?: boolean;
+  gridCols?: CatalogueGridCols;
 }) {
   const isMobile = useIsMobile();
   const mapMode = isCatalogueMapView(mode);
@@ -189,7 +192,7 @@ export default function CatalogueSearchLayout({
               </div>
             )}
             {loading && markers.length === 0 ? (
-              <CatalogueResultsSkeleton mode={mode} count={pageSize} />
+          <CatalogueResultsSkeleton mode={mode} count={pageSize} gridCols={gridCols} />
             ) : (
               <MarketplaceLocationsMap
                 markers={markers}
@@ -204,12 +207,13 @@ export default function CatalogueSearchLayout({
             )}
           </div>
         ) : loading ? (
-          <CatalogueResultsSkeleton mode={mode} count={pageSize} />
+          <CatalogueResultsSkeleton mode={mode} count={pageSize} gridCols={gridCols} />
         ) : (
           <>
             <CatalogueResults
               items={paginateItems(items, page, pageSize)}
               mode={mode === 'list' ? 'list' : 'grid'}
+              gridCols={gridCols}
               emptyTitle={emptyTitle}
               emptyDescription={emptyDescription}
             />

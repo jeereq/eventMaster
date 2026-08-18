@@ -28,6 +28,8 @@ import {
   roomTypeLabels,
 } from '@/lib/roomLayoutUtils';
 import { PRICE_UNIT_OPTIONS, bookingDateKeys, missingPublishLocation, parseBlockedDates, type VenuePriceUnit } from '@/lib/marketplace';
+import { EMPTY_LISTING_DETAILS, parseListingDetails, type ListingDetails } from '@/lib/listingDetails';
+import ListingDetailsFields from '@/components/ListingDetailsFields';
 import { formatFc } from '@/config/landingPricing';
 import BlockedDatesField from '@/components/BlockedDatesField';
 import MarketplaceMediaField from '@/components/MarketplaceMediaField';
@@ -70,6 +72,7 @@ interface RoomItem {
     bookings?: Array<{ eventDate: string; eventEndDate?: string | null }>;
     latitude: number | null;
     longitude: number | null;
+    details?: unknown;
   } | null;
   _count?: { events: number };
 }
@@ -165,6 +168,7 @@ export default function RoomsManagement() {
     bookedDates: [] as string[],
     latitude: '',
     longitude: '',
+    details: EMPTY_LISTING_DETAILS,
   });
   const [savingListing, setSavingListing] = useState(false);
   const [listingTab, setListingTab] = useState<MarketplaceFormTab>('details');
@@ -337,6 +341,7 @@ export default function RoomsManagement() {
       bookedDates: parseBlockedDates((listing?.bookings || []).flatMap((b) => bookingDateKeys(b))),
       latitude: listing?.latitude != null ? String(listing.latitude) : '',
       longitude: listing?.longitude != null ? String(listing.longitude) : '',
+      details: parseListingDetails(listing?.details),
     });
     setListingTab('details');
     setError('');
@@ -380,6 +385,7 @@ export default function RoomsManagement() {
         blockedDates: listingDraft.blockedDates,
         latitude: listingDraft.latitude || null,
         longitude: listingDraft.longitude || null,
+        details: listingDraft.details,
       });
       setSuccess(publish ? 'Salle publiée sur le marketplace.' : 'Publication enregistrée (non visible).');
       setListingRoom(null);
@@ -1190,6 +1196,11 @@ export default function RoomsManagement() {
                 onChange={(e) => setListingDraft((d) => ({ ...d, quotaMax: e.target.value }))}
               />
             </div>
+            <ListingDetailsFields
+              kind="venue"
+              value={listingDraft.details}
+              onChange={(details: ListingDetails) => setListingDraft((d) => ({ ...d, details }))}
+            />
             <BlockedDatesField
               value={listingDraft.blockedDates}
               bookedDates={listingDraft.bookedDates}

@@ -22,6 +22,7 @@ import {
   parseBlockedDates,
   toDateKey,
 } from '../utils/marketplaceDates';
+import { parseListingDetails } from '../utils/listingDetails';
 import { RoomType, ServiceCategory, TenantAccountKind, MarketplaceBookingStatus, VenuePriceUnit } from '@prisma/client';
 import { PlanFeatureError, assertServiceQuota, assertVenueCatalogPublish } from '../services/planFeaturesService';
 import {
@@ -64,13 +65,15 @@ function toPublicVenue(listing: {
     vendorProfile: { displayName: string; city: string | null } | null;
   };
   bookings?: Array<{ eventDate: Date; eventEndDate?: Date | null }>;
+  details?: unknown;
 }) {
   const photos = parsePhotoUrls(listing.photos);
+  const extra = parseListingDetails(listing.details);
   return {
     slug: listing.slug,
     name: listing.room.name,
     headline: listing.headline || listing.room.name,
-    description: listing.room.description,
+    description: extra.description || listing.room.description,
     city: listing.city,
     commune: listing.commune || null,
     neighborhood: listing.neighborhood || null,
@@ -94,6 +97,7 @@ function toPublicVenue(listing: {
     blockedDates: parseBlockedDates(listing.blockedDates),
     bookedDates: collectUnavailableDates([], listing.bookings),
     unavailableDates: collectUnavailableDates(listing.blockedDates, listing.bookings),
+    details: extra,
   };
 }
 
@@ -486,6 +490,7 @@ export async function upsertRoomListing(req: AuthenticatedRequest, res: Response
       quotaMax,
       photos,
       blockedDates,
+      details,
     } = req.body || {};
 
     const wantPublic = Boolean(isPublic);
@@ -495,6 +500,7 @@ export async function upsertRoomListing(req: AuthenticatedRequest, res: Response
       return res.status(400).json({ error: `Maximum ${MARKETPLACE_MAX_VIDEOS} vidéos par salle.` });
     }
     const blockedSafe = parseBlockedDates(blockedDates);
+    const detailsSafe = parseListingDetails(details);
     const place = normalizeListingPlace(city, commune, neighborhood);
     if ('error' in place) return res.status(400).json({ error: place.error });
 
@@ -541,6 +547,7 @@ export async function upsertRoomListing(req: AuthenticatedRequest, res: Response
         quotaMax: parseOptionalInt(quotaMax),
         photos: photosSafe,
         blockedDates: blockedSafe,
+        details: detailsSafe,
         publishedAt: wantPublic ? new Date() : null,
       },
       update: {
@@ -558,6 +565,7 @@ export async function upsertRoomListing(req: AuthenticatedRequest, res: Response
         quotaMax: quotaMax !== undefined ? parseOptionalInt(quotaMax) : undefined,
         photos: photos !== undefined ? photosSafe : undefined,
         blockedDates: blockedDates !== undefined ? blockedSafe : undefined,
+        details: details !== undefined ? detailsSafe : undefined,
         publishedAt: wantPublic ? (existing?.publishedAt || new Date()) : null,
       },
     });
@@ -597,6 +605,7 @@ function toPublicService(offering: {
   quotaMin?: number | null;
   quotaMax?: number | null;
   photos: unknown;
+  details?: unknown;
   blockedDates?: unknown;
   publishedAt: Date | null;
   vendorProfile: { displayName: string; city: string | null; slug: string };
@@ -604,10 +613,11 @@ function toPublicService(offering: {
   bookings?: Array<{ eventDate: Date; eventEndDate?: Date | null }>;
 }) {
   const photos = parsePhotoUrls(offering.photos);
+  const extra = parseListingDetails(offering.details);
   return {
     slug: offering.slug,
     title: offering.title,
-    description: offering.description,
+    description: extra.description || offering.description,
     category: offering.category,
     categoryLabel: serviceCategoryLabel(offering.category),
     city: offering.city,
@@ -630,6 +640,7 @@ function toPublicService(offering: {
     blockedDates: parseBlockedDates(offering.blockedDates),
     bookedDates: collectUnavailableDates([], offering.bookings),
     unavailableDates: collectUnavailableDates(offering.blockedDates, offering.bookings),
+    details: extra,
   };
 }
 
@@ -906,7 +917,7 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
 
     const {
       title, description, city, commune, neighborhood, coverageRadiusKm, travels, latitude, longitude,
-      priceFromFc, priceUnit, quotaMin, quotaMax, photos, isPublic, category, blockedDates,
+      priceFromFc, priceUnit, quotaMin, quotaMax, photos, isPublic, category, blockedDates, details,
     } = req.body || {};
     if (!title?.trim()) return res.status(400).json({ error: 'Le titre est requis.' });
     const parsedCategory = parseServiceCategory(category) || 'OTHER';
@@ -921,6 +932,7 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
       return res.status(400).json({ error: `Maximum ${MARKETPLACE_MAX_VIDEOS} vidéos par prestation.` });
     }
     const blockedSafe = parseBlockedDates(blockedDates);
+    const detailsSafe = parseListingDetails(details);
     const place = normalizeListingPlace(city, commune, neighborhood);
     if ('error' in place) return res.status(400).json({ error: place.error });
 
@@ -977,6 +989,7 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
       quotaMax: parseOptionalInt(quotaMax),
       photos: photosSafe,
       blockedDates: blockedSafe,
+      details: detailsSafe,
       isPublic: wantPublic,
       category: parsedCategory,
       publishedAt: wantPublic ? (existing?.publishedAt || new Date()) : null,

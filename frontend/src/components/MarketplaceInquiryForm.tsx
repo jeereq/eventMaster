@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { api } from '@/lib/api';
 import { Alert, Button, Input } from '@/components/ui';
+import { LISTING_EVENT_TYPES } from '@/lib/listingDetails';
 import { Calendar, Send } from 'lucide-react';
 
 export default function MarketplaceInquiryForm({
@@ -20,6 +21,10 @@ export default function MarketplaceInquiryForm({
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [internalDate, setInternalDate] = useState('');
+  const [eventEndDate, setEventEndDate] = useState('');
+  const [eventTime, setEventTime] = useState('');
+  const [eventType, setEventType] = useState('');
+  const [budget, setBudget] = useState('');
   const [guestCount, setGuestCount] = useState('');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
@@ -27,6 +32,18 @@ export default function MarketplaceInquiryForm({
   const [formError, setFormError] = useState('');
   const selectedDate = eventDate ?? internalDate;
   const setSelectedDate = onEventDateChange ?? setInternalDate;
+
+  const composedMessage = () => {
+    const extras = [
+      eventType ? `Type d’événement : ${LISTING_EVENT_TYPES.find((item) => item.id === eventType)?.label || eventType}` : '',
+      selectedDate ? `Date de début : ${selectedDate}` : '',
+      eventEndDate ? `Date de fin : ${eventEndDate}` : '',
+      eventTime ? `Heure : ${eventTime}` : '',
+      budget ? `Budget indicatif : ${budget} FC` : '',
+      guestCount ? `Invités estimés : ${guestCount}` : '',
+    ].filter(Boolean);
+    return extras.length ? `${message.trim()}\n\n—\n${extras.join('\n')}` : message.trim();
+  };
 
   const handleInquire = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +57,7 @@ export default function MarketplaceInquiryForm({
         phone: phone || undefined,
         eventDate: selectedDate || undefined,
         guestCount: guestCount || undefined,
-        message,
+        message: composedMessage(),
       });
       setSent(data.message || successCopy);
       setMessage('');
@@ -63,16 +80,52 @@ export default function MarketplaceInquiryForm({
       <Input label="Votre nom" required value={name} onChange={(e) => setName(e.target.value)} />
       <Input label="E-mail" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
       <Input label="Téléphone" value={phone} onChange={(e) => setPhone(e.target.value)} />
-      <Input
-        label="Date souhaitée"
-        type="date"
-        leftIcon={<Calendar className="w-4 h-4" />}
-        value={selectedDate}
-        onChange={(e) => setSelectedDate(e.target.value)}
-      />
+      <label className="block space-y-1.5">
+        <span className="text-xs font-medium text-muted">Type d’événement</span>
+        <select
+          value={eventType}
+          onChange={(e) => setEventType(e.target.value)}
+          className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+        >
+          <option value="">À préciser</option>
+          {LISTING_EVENT_TYPES.map((item) => (
+            <option key={item.id} value={item.id}>{item.label}</option>
+          ))}
+        </select>
+      </label>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Input
+          label="Date de début"
+          type="date"
+          leftIcon={<Calendar className="w-4 h-4" />}
+          value={selectedDate}
+          onChange={(e) => setSelectedDate(e.target.value)}
+        />
+        <Input
+          label="Date de fin"
+          type="date"
+          value={eventEndDate}
+          min={selectedDate || undefined}
+          onChange={(e) => setEventEndDate(e.target.value)}
+        />
+        <Input
+          label="Heure souhaitée"
+          type="time"
+          value={eventTime}
+          onChange={(e) => setEventTime(e.target.value)}
+        />
+        <Input
+          label="Budget indicatif (FC)"
+          type="number"
+          min={0}
+          value={budget}
+          onChange={(e) => setBudget(e.target.value)}
+        />
+      </div>
       {selectedDate && (
         <p className="text-[11px] text-muted">
           Alignée sur le calendrier : {new Date(`${selectedDate}T12:00:00`).toLocaleDateString('fr-FR')}
+          {eventEndDate ? ` → ${new Date(`${eventEndDate}T12:00:00`).toLocaleDateString('fr-FR')}` : ''}
         </p>
       )}
       <Input
@@ -90,7 +143,7 @@ export default function MarketplaceInquiryForm({
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
-          placeholder="Type d’événement, horaires, besoins…"
+          placeholder="Besoins, style, contraintes, questions…"
         />
       </label>
       <Button type="submit" loading={sending} leftIcon={<Send className="w-4 h-4" />} fullWidth>

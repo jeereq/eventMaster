@@ -20,6 +20,8 @@ import {
   type ServiceCategory,
   type VenuePriceUnit,
 } from '@/lib/marketplace';
+import { EMPTY_LISTING_DETAILS, parseListingDetails, type ListingDetails } from '@/lib/listingDetails';
+import ListingDetailsFields from '@/components/ListingDetailsFields';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import {
@@ -53,6 +55,7 @@ interface ServiceItem {
   blockedDates?: unknown;
   bookedDates?: string[];
   isPublic: boolean;
+  details?: unknown;
 }
 
 type DeskTab = 'services' | 'inquiries' | 'bookings';
@@ -95,6 +98,7 @@ export default function MarketplaceDeskPage() {
     blockedDates: [] as string[],
     bookedDates: [] as string[],
     isPublic: true,
+    details: EMPTY_LISTING_DETAILS,
   });
 
   const load = async () => {
@@ -158,6 +162,7 @@ export default function MarketplaceDeskPage() {
       blockedDates: [],
       bookedDates: [],
       isPublic: true,
+      details: EMPTY_LISTING_DETAILS,
     });
     setEditorTab('details');
     setEditorOpen(true);
@@ -184,6 +189,7 @@ export default function MarketplaceDeskPage() {
       blockedDates: parseBlockedDates(item.blockedDates),
       bookedDates: parseBlockedDates(item.bookedDates),
       isPublic: item.isPublic,
+      details: parseListingDetails(item.details),
     });
     setEditorTab('details');
     setEditorOpen(true);
@@ -234,6 +240,7 @@ export default function MarketplaceDeskPage() {
         photos: draft.photos,
         blockedDates: draft.blockedDates,
         isPublic: publish,
+        details: { ...draft.details, description: draft.description || draft.details.description },
       };
       if (editing) await api.put(`/marketplace/services/${editing.id}`, payload);
       else await api.post('/marketplace/services', payload);
@@ -513,6 +520,12 @@ export default function MarketplaceDeskPage() {
               className={fieldClass}
             />
           </label>
+          <ListingDetailsFields
+            kind="service"
+            hideDescription
+            value={draft.details}
+            onChange={(details: ListingDetails) => setDraft((d) => ({ ...d, details }))}
+          />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="sm:col-span-2">
               <CityLocationFields

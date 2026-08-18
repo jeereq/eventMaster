@@ -494,6 +494,7 @@ model VenueListing {
   quotaMin     Int?
   quotaMax     Int?
   photos       Json?
+  details      Json?
   blockedDates Json?
   publishedAt  DateTime?
   createdAt    DateTime       @default(now())
@@ -585,6 +586,7 @@ model ServiceOffering {
   quotaMin          Int?
   quotaMax          Int?
   photos            Json?
+  details           Json?
   blockedDates      Json?
   isPublic          Boolean          @default(false)
   publishedAt       DateTime?
