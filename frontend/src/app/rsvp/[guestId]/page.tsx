@@ -85,6 +85,8 @@ interface GuestRsvpData {
   roomThemeId?: string | null;
   floorType?: string | null;
   floorImageUrl?: string | null;
+  depthAmount?: number | null;
+  depthView?: boolean | null;
   eventPassed?: boolean;
   rsvpLocked?: boolean;
   event: {
@@ -717,6 +719,8 @@ export default function RsvpPage() {
                 roomThemeId={guest.roomThemeId ?? null}
                 floorType={guest.floorType ?? null}
                 floorImageUrl={guest.floorImageUrl ?? null}
+                depthAmount={guest.depthAmount ?? null}
+                depthView={guest.depthView ?? null}
                 guestFirstName={guest.firstName}
                 guestLastName={guest.lastName}
               />

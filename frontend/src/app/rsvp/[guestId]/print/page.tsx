@@ -31,6 +31,8 @@ type GuestApiResponse = {
   roomThemeId?: string | null;
   floorType?: string | null;
   floorImageUrl?: string | null;
+  depthAmount?: number | null;
+  depthView?: boolean | null;
   branding?: GuestPrintDocumentData['branding'];
   organizationName?: string;
   event: {
@@ -90,6 +92,8 @@ export default function GuestInvitationPrintPage() {
           roomThemeId: guest.placementAccessible ? guest.roomThemeId ?? null : null,
           floorType: guest.placementAccessible ? guest.floorType ?? null : null,
           floorImageUrl: guest.placementAccessible ? guest.floorImageUrl ?? null : null,
+          depthAmount: guest.placementAccessible ? guest.depthAmount ?? null : null,
+          depthView: guest.placementAccessible ? guest.depthView ?? null : null,
           showQrCode: guest.rsvp === 'ACCEPTED',
           branding: guest.branding,
           organizationName: guest.organizationName,

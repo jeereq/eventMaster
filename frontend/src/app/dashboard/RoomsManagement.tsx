@@ -38,7 +38,8 @@ import MarketplaceMediaField from '@/components/MarketplaceMediaField';
 import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import LocationPickerMap from '@/components/LocationPickerMap';
 import CityLocationFields from '@/components/CityLocationFields';
-import { getQuotaLockMessage, getRoomTypeLockMessage, ROOM_TYPE_MIN_LEVEL, canPublishVenueCatalog } from '@/lib/planAccess';
+import { getQuotaLockMessage, getQuotaActionMessage, getRoomTypeLockMessage, ROOM_TYPE_MIN_LEVEL, canPublishVenueCatalog } from '@/lib/planAccess';
+import PlanLimitCallout from '@/components/PlanLimitCallout';
 
 interface RoomStaffItem {
   id: string;
@@ -250,7 +251,10 @@ export default function RoomsManagement() {
   };
 
   const openWizard = () => {
-    if (roomsAtLimit) return;
+    if (roomsAtLimit) {
+      setError(getQuotaActionMessage('rooms', planQuota, tenant?.plan));
+      return;
+    }
     resetWizard();
     setError('');
     setShowWizard(true);
@@ -743,10 +747,7 @@ export default function RoomsManagement() {
       {success && <Alert variant="success">{success}</Alert>}
 
       {roomsAtLimit && (
-        <Alert variant="warning">
-          {roomsQuotaMsg || `Quota de salles atteint pour le forfait ${tenant?.plan || 'actuel'}.`}{' '}
-          <Link href="/dashboard/billing" className="font-semibold underline">Voir les forfaits</Link>
-        </Alert>
+        <PlanLimitCallout kind="rooms" planQuota={planQuota} planName={tenant?.plan} />
       )}
 
       {rooms.length > 0 && (() => {

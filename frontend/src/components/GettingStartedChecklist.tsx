@@ -93,7 +93,7 @@ export default function GettingStartedChecklist({
       ];
     }
     const guestsHref = firstEventId
-      ? `/dashboard/events?id=${firstEventId}`
+      ? `/dashboard/events/${firstEventId}`
       : '/dashboard/events';
     return [
       {

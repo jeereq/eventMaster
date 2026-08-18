@@ -19,6 +19,8 @@ import {
  ArrowUp, ArrowDown, Crop, Copy, Upload, Globe
 } from 'lucide-react';
 import { PageHeader, Alert, Button, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, paginateItems, usePageSize } from '@/components/ui';
+import PlanLimitCallout from '@/components/PlanLimitCallout';
+import { getFeatureLockMessage, getQuotaActionMessage } from '@/lib/planAccess';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
 import {
  type RsvpField,
@@ -315,8 +317,14 @@ export default function TemplatesPage() {
  }, [templates]);
 
  const handleCreateTemplateClick = (origin: StudioOrigin = 'studio') => {
- if (!canUseCustomTemplates) return;
- if (templatesAtLimit) return;
+ if (!canUseCustomTemplates) {
+ setError(getFeatureLockMessage('customTemplates', tenant?.plan) + ' La bibliothèque EventMaster reste disponible.');
+ return;
+ }
+ if (templatesAtLimit) {
+ setError(getQuotaActionMessage('templates', planQuota, tenant?.plan));
+ return;
+ }
  setStudioOrigin(origin);
  setEditingTemplateId(null);
  setTemplateName('Nouveau Modèle d\'Invitation');
@@ -615,7 +623,7 @@ export default function TemplatesPage() {
 
  if (useOcr) {
  if (!canUseMockupOcr) {
- setError('La détection de texte (OCR) nécessite le forfait Business Premium 2 ou supérieur.');
+ setError(getFeatureLockMessage('mockupOcr', tenant?.plan) + ' Passez à Business Premium 2 ou plus pour détecter le texte automatiquement.');
  return;
  }
  setOcrProgress(0);
@@ -3712,12 +3720,7 @@ export default function TemplatesPage() {
  />
 
  {templatesAtLimit && user?.role === 'USER' && (
- <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-xs">
- {templatesQuotaMsg}{' '}
- <Link href="/dashboard/billing" className="font-bold hover:underline">
- Voir les forfaits →
- </Link>
- </div>
+ <PlanLimitCallout kind="templates" planQuota={planQuota} planName={tenant?.plan} />
  )}
  {user?.role === 'SUPER_ADMIN' && (
  <div className="rounded-[var(--radius-card)] border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground space-y-1">
@@ -3733,16 +3736,10 @@ export default function TemplatesPage() {
  )}
 
  {!canUseCustomTemplates && user?.role === 'USER' && (
- <div className="p-4 bg-sky-50 border border-sky-200 text-sky-900 rounded-xl text-sm space-y-2">
- <p className="font-bold">Bibliothèque de modèles EventMaster</p>
- <p>
- Parcourez les modèles ci-dessous et cliquez sur <strong>Utiliser ce modèle</strong> pour l&apos;ajouter à votre organisation.
- L&apos;éditeur visuel avancé nécessite le forfait <strong>Business Premium 1</strong> ou supérieur.
- </p>
- <Link href="/dashboard/billing" className="inline-block text-primary font-bold text-xs hover:underline">
- Voir les forfaits →
- </Link>
- </div>
+ <PlanLimitCallout feature="customTemplates" planName={tenant?.plan} />
+ )}
+ {canUseCustomTemplates && !canUseMockupOcr && user?.role === 'USER' && (
+ <PlanLimitCallout feature="mockupOcr" planName={tenant?.plan} />
  )}
 
  {error && <Alert variant="error">{error}</Alert>}

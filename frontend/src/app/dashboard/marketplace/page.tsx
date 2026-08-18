@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { getQuotaLockMessage } from '@/lib/planAccess';
+import { getQuotaLockMessage, getQuotaActionMessage } from '@/lib/planAccess';
+import PlanLimitCallout from '@/components/PlanLimitCallout';
 import {
   PageHeader, Button, Breadcrumbs, Alert, Input, Modal, EmptyState, StatusPill,
   Pagination, paginateItems, usePageSize, ViewModeToggle, useViewMode, listStackClass,
@@ -78,7 +79,7 @@ const fieldClass =
 
 export default function MarketplaceDeskPage() {
   useRememberListReturn();
-  const { access, refreshProfile, planQuota } = useAuth();
+  const { access, refreshProfile, planQuota, tenant } = useAuth();
   const router = useRouter();
   const canManage = Boolean(access?.canManageRooms);
   const [tab, setTab] = useState<DeskTab>('services');
@@ -176,7 +177,7 @@ export default function MarketplaceDeskPage() {
   const openCreate = (mode: 'trade' | 'rental' = 'trade') => {
     const lock = getQuotaLockMessage('services', planQuota);
     if (lock) {
-      setError(lock);
+      setError(getQuotaActionMessage('services', planQuota, tenant?.plan));
       return;
     }
     const category: ServiceCategory = mode === 'rental' ? 'RENTAL_EQUIPMENT' : 'CATERING';
@@ -402,8 +403,10 @@ export default function MarketplaceDeskPage() {
         <p className="text-xs text-muted">
           Fiches : {planQuota.usage.services ?? 0} /{' '}
           {(planQuota.limits.maxServices ?? 0) >= 9999 ? '∞' : planQuota.limits.maxServices}
-          {servicesAtLimit ? ' — quota atteint, passez au forfait Prestataire ou Salle & presta.' : ''}
         </p>
+      )}
+      {servicesAtLimit && (
+        <PlanLimitCallout kind="services" planQuota={planQuota} planName={tenant?.plan} />
       )}
 
       <div className="flex gap-1.5">

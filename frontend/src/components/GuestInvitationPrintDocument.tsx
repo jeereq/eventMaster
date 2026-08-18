@@ -77,6 +77,8 @@ export type GuestPrintDocumentData = {
   roomThemeId?: string | null;
   floorType?: string | null;
   floorImageUrl?: string | null;
+  depthAmount?: number | null;
+  depthView?: boolean | null;
   showQrCode?: boolean;
   branding?: {
     primary?: string;
@@ -376,6 +378,8 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
               roomThemeId={data.roomThemeId}
               floorType={data.floorType}
               floorImageUrl={data.floorImageUrl}
+              depthAmount={data.depthAmount}
+              depthView={data.depthView}
               guestTableId={guestTableId}
               guestFullName={`${data.firstName} ${data.lastName}`}
               neighborNames={neighborNames}

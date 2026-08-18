@@ -14,6 +14,8 @@ import {
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
+import { getQuotaActionMessage } from '@/lib/planAccess';
+import PlanLimitCallout from '@/components/PlanLimitCallout';
 
 interface TeamMember {
   id: string;
@@ -159,7 +161,7 @@ export default function TeamManagement() {
       return;
     }
     if (orgRole === 'MANAGER' && managersAtLimit) {
-      setError(`Quota de managers atteint (${maxManagers} max). Passez à un forfait supérieur.`);
+      setError(getQuotaActionMessage('orgManagers', planQuota, tenant?.plan));
       setSubmitting(false);
       return;
     }
@@ -280,6 +282,10 @@ export default function TeamManagement() {
           )}
         </div>
       </div>
+
+      {managersAtLimit && (
+        <PlanLimitCallout kind="orgManagers" planQuota={planQuota} planName={tenant?.plan} />
+      )}
 
       {hasCommercialNetwork && canManageTeam && (
         <div className="bg-surface-muted border border-border rounded-[var(--radius-card)] p-4 space-y-3">
@@ -458,9 +464,7 @@ export default function TeamManagement() {
           )}
 
           {orgRole === 'MANAGER' && managersAtLimit && (
-            <Alert variant="warning">
-              Quota managers atteint. Les agents protocole restent disponibles, ou passez à un forfait supérieur.
-            </Alert>
+            <PlanLimitCallout kind="orgManagers" planQuota={planQuota} planName={tenant?.plan} compact />
           )}
         </form>
       </Modal>

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import Link from 'next/link';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import * as XLSX from 'xlsx';
@@ -38,10 +39,13 @@ import { parseStoredPhone } from '@/components/ui/PhoneInput';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
 import {
  getFeatureLockMessage,
+ getQuotaActionMessage,
  getQuotaLockMessage,
  isAtQuota,
  isPlanFeatureLocked,
 } from '@/lib/planAccess';
+import PlanLimitCallout from '@/components/PlanLimitCallout';
+import { eventDashboardHref, eventsListHref, isEventWorkspaceTab } from '@/lib/eventRoutes';
 import {
  extractRsvpFieldsFromTemplateContent,
  supplementFieldsFromGuestPreferences,
@@ -259,6 +263,10 @@ A très vite !`
 
 export default function EventsPage() {
  const { user, access, planFeatures, planQuota, tenant } = useAuth();
+ const router = useRouter();
+ const params = useParams();
+ const searchParams = useSearchParams();
+ const eventIdFromRoute = typeof params?.eventId === 'string' ? params.eventId : null;
  const { mode: eventsViewMode, setViewMode: setEventsViewMode, columns: eventsColumns, setGridColumns: setEventsColumns, gridClassName: eventsGridClass } = useViewMode('em-view-events', 'grid', 3);
  const {
    mode: guestsViewMode,
@@ -464,9 +472,8 @@ export default function EventsPage() {
  }, [events.length]);
 
  useEffect(() => {
- const params = new URLSearchParams(window.location.search);
- setProtocolDesk(isProtocolOnly || params.get('mode') === 'protocol');
- }, [isProtocolOnly]);
+ setProtocolDesk(isProtocolOnly || searchParams.get('mode') === 'protocol');
+ }, [isProtocolOnly, searchParams]);
 
  useEffect(() => {
  if (protocolDesk && selectedEvent) {
@@ -513,7 +520,10 @@ export default function EventsPage() {
  const handleWorkflowNavigate = useCallback((tab: EventWorkflowTab) => {
  if (tab === 'analytics') return;
  setActiveTab(tab);
- }, []);
+ if (eventIdFromRoute) {
+ router.replace(eventDashboardHref(eventIdFromRoute, { tab, protocol: protocolDesk }), { scroll: false });
+ }
+ }, [eventIdFromRoute, protocolDesk, router]);
 
  const handleWorkflowAction = useCallback((stepId: string) => {
  switch (stepId) {
@@ -757,7 +767,10 @@ export default function EventsPage() {
  };
 
  const openCreateEventModal = () => {
- if (eventsAtLimit) return;
+ if (eventsAtLimit) {
+ setError(getQuotaActionMessage('events', planQuota, tenant?.plan));
+ return;
+ }
  resetEventForm();
  setShowEventModal(true);
  };
@@ -792,8 +805,7 @@ Merci de confirmer votre présence :
 
  const openEventTablePlan = async (event: EventItem) => {
  setShowEventModal(false);
- await handleManageEvent(event);
- setActiveTab('tablePlan');
+ router.push(eventDashboardHref(event.id, { tab: 'tablePlan', protocol: protocolDesk }));
  };
 
  useEffect(() => {
@@ -822,7 +834,10 @@ Merci de confirmer votre présence :
  }, [showEventModal, editingEventId]);
 
  const openAddGuestModal = () => {
- if (guestsAtLimit && !editingGuestId) return;
+ if (guestsAtLimit && !editingGuestId) {
+ setError(getQuotaActionMessage('guests', planQuota, tenant?.plan));
+ return;
+ }
  setEditingGuestId(null);
  setGuestFirstName('');
  setGuestLastName('');
@@ -928,6 +943,11 @@ Merci de confirmer votre présence :
  await openEventTablePlan(savedEvent);
  return;
  }
+ resetEventForm();
+ setShowEventModal(false);
+ loadEvents();
+ router.push(eventDashboardHref(savedEvent.id, { protocol: protocolDesk }));
+ return;
  }
 
  resetEventForm();
@@ -968,7 +988,9 @@ Merci de confirmer votre présence :
  try {
  await api.delete(`/events/${id}`);
  setEvents(events.filter(e => e.id !== id));
- if (selectedEvent?.id === id) setSelectedEvent(null);
+ if (selectedEvent?.id === id) {
+ router.push(eventsListHref(protocolDesk));
+ }
  setSuccess('Événement supprimé.');
  } catch (err: any) {
  setError(err.message || 'Erreur de suppression');
@@ -1066,6 +1088,46 @@ Merci de confirmer votre présence :
  setLoading(false);
  }
  };
+
+ useEffect(() => {
+ const tab = searchParams.get('tab');
+ if (isEventWorkspaceTab(tab) && !(protocolDesk && tab !== 'protocol')) {
+ setActiveTab(tab);
+ }
+ }, [searchParams, protocolDesk]);
+
+ useEffect(() => {
+ if (!eventIdFromRoute) {
+ setSelectedEvent(null);
+ return;
+ }
+ if (selectedEvent?.id === eventIdFromRoute) return;
+
+ const found = events.find((item) => item.id === eventIdFromRoute);
+ if (found) {
+ void handleManageEvent(found);
+ return;
+ }
+ if (loading && events.length === 0) return;
+
+ let cancelled = false;
+ (async () => {
+ try {
+ const ev = (await api.get(`/events/${eventIdFromRoute}`)) as EventItem;
+ if (cancelled) return;
+ setEvents((prev) => (prev.some((item) => item.id === ev.id) ? prev : [ev, ...prev]));
+ await handleManageEvent(ev);
+ } catch {
+ if (!cancelled) {
+ setError('Événement introuvable.');
+ router.replace(eventsListHref(protocolDesk));
+ }
+ }
+ })();
+ return () => {
+ cancelled = true;
+ };
+ }, [eventIdFromRoute, events, loading]);
 
  const handleSaveGuestGuidelines = async () => {
  if (!selectedEvent) return;
@@ -1736,6 +1798,9 @@ Merci de confirmer votre présence :
  </div>
  }
  />
+ {eventsAtLimit && (
+ <PlanLimitCallout kind="events" planQuota={planQuota} planName={tenant?.plan} />
+ )}
  {events.length === 0 && !protocolDesk && (
  <GettingStartedChecklist hasEvents={false} />
  )}
@@ -1810,13 +1875,13 @@ Merci de confirmer votre présence :
  <Breadcrumbs
  items={[
  { label: 'Accueil', href: '/dashboard' },
- { label: 'Événements', href: '/dashboard/events' },
+ { label: 'Événements', href: eventsListHref(protocolDesk) },
  { label: selectedEvent.title },
  ]}
  />
  <button
  type="button"
- onClick={() => setSelectedEvent(null)}
+ onClick={() => router.push(eventsListHref(protocolDesk))}
  className="inline-flex items-center gap-1 text-xs font-medium text-muted hover:text-foreground transition"
  >
  <ArrowLeft className="w-3.5 h-3.5" />
@@ -1994,7 +2059,7 @@ Merci de confirmer votre présence :
  {eventsViewMode === 'grid' ? (
  <button
  type="button"
- onClick={() => handleManageEvent(event)}
+ onClick={() => router.push(eventDashboardHref(event.id, { protocol: protocolDesk }))}
  className="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary/15 transition"
  >
  {protocolDesk ? 'Accueillir' : 'Gérer'}
@@ -2003,7 +2068,7 @@ Merci de confirmer votre présence :
  ) : (
  <button
  type="button"
- onClick={() => handleManageEvent(event)}
+ onClick={() => router.push(eventDashboardHref(event.id, { protocol: protocolDesk }))}
  className="inline-flex items-center"
  title={protocolDesk ? 'Ouvrir le protocole' : 'Voir détails'}
  >
@@ -2056,7 +2121,7 @@ Merci de confirmer votre présence :
  ? event.description
  : undefined
  }
- onClick={() => handleManageEvent(event)}
+ onClick={() => router.push(eventDashboardHref(event.id, { protocol: protocolDesk }))}
  actions={actions}
  />
  );
@@ -2103,7 +2168,12 @@ Merci de confirmer votre présence :
  <button
  key={id}
  type="button"
- onClick={() => setActiveTab(id)}
+ onClick={() => {
+ setActiveTab(id);
+ if (eventIdFromRoute) {
+ router.replace(eventDashboardHref(eventIdFromRoute, { tab: id, protocol: protocolDesk }), { scroll: false });
+ }
+ }}
  title={locked ? protocolLockMsg : undefined}
  className={cn(
  'inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium whitespace-nowrap transition-colors',
@@ -2126,7 +2196,13 @@ Merci de confirmer votre présence :
  </div>
 
  {activeTab === 'protocol' && selectedEvent && (
+ <>
+ {protocolLocked ? (
+ <PlanLimitCallout feature="protocolQr" planName={tenant?.plan} />
+ ) : (
  <GuestProtocolPanel eventId={selectedEvent.id} />
+ )}
+ </>
  )}
 
  {/* Tab Content: Guests */}
@@ -2156,7 +2232,10 @@ Merci de confirmer votre présence :
  )}
  <button 
  onClick={() => {
- if (guestsAtLimit) return;
+ if (guestsAtLimit) {
+ setError(getQuotaActionMessage('guests', planQuota, tenant?.plan));
+ return;
+ }
  setShowImportModal(true);
  }}
  disabled={guestsAtLimit}
@@ -2188,12 +2267,7 @@ Merci de confirmer votre présence :
  </div>
  </div>
  {guestsAtLimit && (
- <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
- {guestsQuotaMsg}{' '}
- <Link href="/dashboard/billing" className="font-bold hover:underline">
- Voir les forfaits →
- </Link>
- </p>
+ <PlanLimitCallout kind="guests" planQuota={planQuota} planName={tenant?.plan} />
  )}
 
  {/* Search & Filtering Controls */}
@@ -2376,7 +2450,13 @@ Merci de confirmer votre présence :
  </Button>
  <Button
  variant="secondary"
- onClick={() => setShowImportModal(true)}
+ onClick={() => {
+ if (guestsAtLimit) {
+ setError(getQuotaActionMessage('guests', planQuota, tenant?.plan));
+ return;
+ }
+ setShowImportModal(true);
+ }}
  disabled={guestsAtLimit}
  title={guestsQuotaMsg || undefined}
  >
@@ -2384,11 +2464,7 @@ Merci de confirmer votre présence :
  </Button>
  </div>
  {guestsAtLimit && (
- <p className="mt-3 text-xs text-amber-700">
- <Link href="/dashboard/billing" className="font-semibold hover:underline">
- Quota atteint — voir les forfaits →
- </Link>
- </p>
+ <PlanLimitCallout kind="guests" planQuota={planQuota} planName={tenant?.plan} className="mt-3" />
  )}
  </div>
  ) : filteredGuests.length === 0 ? (

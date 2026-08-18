@@ -144,6 +144,17 @@ export function resolveDepthAmount(meta?: {
   return meta?.depthView ? 55 : 0;
 }
 
+/** Vue invité : conserver le réglage org, sinon une profondeur lisible par défaut. */
+export const GUEST_PLAN_DEFAULT_DEPTH = 48;
+
+export function resolveGuestDepthAmount(meta?: {
+  depthView?: boolean;
+  depthAmount?: number;
+} | null): number {
+  const resolved = resolveDepthAmount(meta);
+  return resolved > 0 ? resolved : GUEST_PLAN_DEFAULT_DEPTH;
+}
+
 export function depthScaleForY(yPct: number, amount: number): number {
   if (amount <= 0) return 1;
   const t = Math.min(1, Math.max(0, yPct / 100));

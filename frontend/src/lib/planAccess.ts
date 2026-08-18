@@ -78,6 +78,116 @@ export function getFeatureLockMessage(
   return planName ? `${base} (actuel : ${planName}).` : `${base}.`;
 }
 
+export type QuotaKind = 'events' | 'guests' | 'templates' | 'rooms' | 'services' | 'orgManagers';
+
+export type PlanLimitGuide = {
+  title: string;
+  what: string;
+  why: string;
+  how: string;
+  href: string;
+};
+
+export const QUOTA_GUIDES: Record<QuotaKind, PlanLimitGuide> = {
+  events: {
+    title: 'Limite d’événements',
+    what: 'Votre forfait plafonne le nombre d’événements que vous pouvez créer.',
+    why: 'Chaque événement consomme invitations, stockage, envois RSVP et éventuellement de la billetterie.',
+    how: 'Passez à un forfait supérieur depuis Facturation, ou supprimez un événement terminé pour libérer une place.',
+    href: '/dashboard/billing',
+  },
+  guests: {
+    title: 'Limite d’invités',
+    what: 'Le nombre total d’invités (tous événements) est plafonné par votre offre.',
+    why: 'Les envois, le RSVP et le plan de table sont dimensionnés selon ce quota.',
+    how: 'Augmentez le forfait pour plus d’invités, ou retirez des invités en trop. L’import CSV compte aussi dans le quota.',
+    href: '/dashboard/billing',
+  },
+  templates: {
+    title: 'Limite de modèles',
+    what: 'Vous avez atteint le nombre de modèles d’invitation de votre forfait.',
+    why: 'Les modèles personnalisés et l’éditeur visuel sont des options payantes au-delà de la bibliothèque.',
+    how: 'Passez à Business Premium (ou plus) pour l’éditeur, ou supprimez un modèle existant. La bibliothèque EventMaster reste utilisable.',
+    href: '/dashboard/billing',
+  },
+  rooms: {
+    title: 'Limite de salles',
+    what: 'Votre forfait limite le nombre de salles (plans 2D) configurables.',
+    why: 'Chaque salle stocke un plan, des thèmes et éventuellement une fiche marketplace.',
+    how: 'Passez à un forfait Salle / Premium, ou supprimez une salle inutilisée. La publication catalogue dépend aussi de l’audience du forfait.',
+    href: '/dashboard/billing',
+  },
+  services: {
+    title: 'Limite de prestations',
+    what: 'Le nombre de fiches prestataire / location est plafonné.',
+    why: 'Chaque fiche apparaît sur le marketplace et consomme photos, carte et demandes.',
+    how: 'Passez au forfait Prestataire ou Salle & presta, ou archivez une fiche pour en créer une autre.',
+    href: '/dashboard/billing',
+  },
+  orgManagers: {
+    title: 'Limite de managers',
+    what: 'Le nombre de managers d’organisation est limité.',
+    why: 'Un manager a accès à toute l’organisation ; les agents protocole restent souvent illimités.',
+    how: 'Passez à un forfait supérieur, ou assignez le rôle Protocole (accueil jour J) plutôt que Manager.',
+    href: '/dashboard/billing',
+  },
+};
+
+export const FEATURE_GUIDES: Partial<Record<keyof PlanCapabilities, PlanLimitGuide>> = {
+  protocolQr: {
+    title: 'Protocole QR non inclus',
+    what: 'Le scan des badges et la confirmation de présence le jour J nécessitent un forfait avec protocole.',
+    why: 'C’est un module d’accueil (QR, check-in, notes) distinct de la simple liste d’invités.',
+    how: 'Activez-le en passant à un forfait Business / Premium depuis Facturation.',
+    href: '/dashboard/billing',
+  },
+  seatNotifications: {
+    title: 'Notifications de placement',
+    what: 'L’envoi automatique du PDF de table, du siège et du GPS n’est pas dans votre offre actuelle.',
+    why: 'Ces envois (email / WhatsApp) sont facturés dans les forfaits payants.',
+    how: 'Passez à un forfait payant pour notifier les invités dès qu’un siège leur est attribué.',
+    href: '/dashboard/billing',
+  },
+  customTemplates: {
+    title: 'Éditeur de modèles',
+    what: 'L’éditeur visuel et les modèles 100 % perso ne sont pas inclus.',
+    why: 'Vous pouvez toujours utiliser la bibliothèque EventMaster.',
+    how: 'Passez à Business Premium 1 ou plus pour concevoir vos propres invitations.',
+    href: '/dashboard/billing',
+  },
+  mockupOcr: {
+    title: 'Import OCR',
+    what: 'La reconnaissance de texte sur une maquette n’est pas incluse.',
+    why: 'L’OCR analyse l’image et pré-remplit l’éditeur.',
+    how: 'Passez à un forfait qui inclut l’OCR, ou importez une maquette sans texte auto.',
+    href: '/dashboard/billing',
+  },
+  roomThemesFixtures: {
+    title: 'Thèmes de salle',
+    what: 'Thèmes, textures de sol et décorations avancées ne sont pas dans ce forfait.',
+    why: 'L’éditeur essentiel (tables simples) reste disponible selon le niveau d’éditeur.',
+    how: 'Passez à Premium / Complet pour thèmes, sol, scène et fleurs.',
+    href: '/dashboard/billing',
+  },
+};
+
+export function getQuotaGuide(kind: QuotaKind): PlanLimitGuide {
+  return QUOTA_GUIDES[kind];
+}
+
+export function getQuotaActionMessage(
+  kind: QuotaKind,
+  planQuota: PlanQuotaInfo | null | undefined,
+  planName?: string | null,
+): string {
+  const lock = getQuotaLockMessage(kind, planQuota);
+  const guide = QUOTA_GUIDES[kind];
+  if (lock) {
+    return `${lock} ${guide.how}${planName ? ` Offre actuelle : ${planName}.` : ''}`;
+  }
+  return `${guide.what} ${guide.how}`;
+}
+
 export type RoomEditorLevel = 'basic' | 'standard' | 'advanced' | 'complete';
 
 export const ROOM_TYPE_MIN_LEVEL: Record<string, RoomEditorLevel> = {

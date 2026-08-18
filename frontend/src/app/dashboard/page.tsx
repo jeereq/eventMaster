@@ -4881,10 +4881,10 @@ function DashboardPageContent() {
  }
  value={homeEventsMode === 'list' ? dateLabel : undefined}
  description={homeEventsMode === 'grid' ? event.description : undefined}
- onClick={() => router.push(`/dashboard/events?id=${event.id}`)}
+ onClick={() => router.push(`/dashboard/events/${event.id}`)}
  actions={
                   <Link 
-                    href={`/dashboard/events?id=${event.id}`}
+                    href={`/dashboard/events/${event.id}`}
  className="inline-flex items-center"
  onClick={(e) => e.stopPropagation()}
  >

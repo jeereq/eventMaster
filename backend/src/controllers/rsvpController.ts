@@ -256,6 +256,8 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
     let roomThemeId: string | null = null;
     let floorType: string | null = null;
     let floorImageUrl: string | null = null;
+    let depthAmount = 0;
+    let depthView = false;
 
     const eventObj = guest.event as any;
     if (placementAccessible && eventObj && eventObj.tablePlan && typeof eventObj.tablePlan === 'object') {
@@ -345,6 +347,17 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
       } else if (plan.floorImageUrl) {
         floorImageUrl = plan.floorImageUrl;
       }
+      const meta = room?.layoutBlueprint?.metadata;
+      if (typeof meta?.depthAmount === 'number') {
+        depthAmount = meta.depthAmount;
+        depthView = meta.depthAmount > 0;
+      } else if (typeof plan.depthAmount === 'number') {
+        depthAmount = plan.depthAmount;
+        depthView = plan.depthAmount > 0;
+      } else if (meta?.depthView || plan.depthView) {
+        depthView = true;
+        depthAmount = 55;
+      }
     }
 
     const { event: guestEvent, ...guestWithoutEvent } = guest;
@@ -369,6 +382,8 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
       roomThemeId,
       floorType,
       floorImageUrl,
+      depthAmount,
+      depthView,
       eventPassed: isEventDatePassed(guest.event.date),
       rsvpLocked: isEventDatePassed(guest.event.date),
     });

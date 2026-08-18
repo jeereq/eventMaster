@@ -78,6 +78,8 @@ interface GuestTablePlanViewProps {
   roomThemeId?: string | null;
   floorType?: string | null;
   floorImageUrl?: string | null;
+  depthAmount?: number | null;
+  depthView?: boolean | null;
   guestFirstName: string;
   guestLastName: string;
 }
@@ -116,6 +118,8 @@ export default function GuestTablePlanView({
   roomThemeId,
   floorType,
   floorImageUrl,
+  depthAmount,
+  depthView,
   guestFirstName,
   guestLastName,
   placementAccessible = false,
@@ -183,6 +187,8 @@ export default function GuestTablePlanView({
           roomThemeId={roomThemeId}
           floorType={floorType}
           floorImageUrl={floorImageUrl}
+          depthAmount={depthAmount}
+          depthView={depthView}
           guestTableId={guestTableId}
           guestFullName={guestFullName}
           neighborNames={neighborNames}
