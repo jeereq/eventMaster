@@ -305,7 +305,7 @@ export type MarketplaceMapHandle = {
 
 const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
   markers: MarketplaceMapMarker[];
-  height?: number;
+  height?: number | string;
   searchable?: boolean;
   listingSearch?: boolean;
   searchCenter?: { lat: number; lng: number } | null;
@@ -956,6 +956,7 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
 
   const showSearch = !immersive && (searchable || listingSearch);
   const fillViewport = immersive || variant === 'focus';
+  const fillHeight = fillViewport || typeof height === 'string';
   const searchOverlay = fillViewport || listingSearch || searchable;
   const mapHeight = fillViewport ? '100%' : height;
 
@@ -1037,9 +1038,9 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
   ) : null;
 
   return (
-    <div className={cn(fillViewport ? 'h-full' : 'space-y-2', className)}>
+    <div className={cn(fillHeight ? 'h-full' : 'space-y-2', className)}>
       {showSearch && !searchOverlay && searchField}
-      <div className={cn('relative isolate', fillViewport && 'h-full')}>
+      <div className={cn('relative isolate', fillHeight && 'h-full')}>
         {searchOverlay && searchField && (
           <div className="absolute z-[1100] top-3 left-3 right-3 sm:right-auto sm:w-80 pointer-events-auto">
             {searchField}
@@ -1073,7 +1074,8 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
           ref={hostRef}
           className={cn(
             'em-marketplace-map w-full overflow-hidden bg-background',
-            fillViewport ? 'h-full rounded-none border-0 em-explore-map' : 'rounded-[var(--radius-card)] border border-border',
+            fillHeight ? 'h-full rounded-none border-0' : 'rounded-[var(--radius-card)] border border-border',
+            fillViewport && 'em-explore-map',
             mapTheme === 'dark' && 'em-map-dark',
           )}
           style={{ height: mapHeight }}

@@ -9,10 +9,12 @@ export default function PublicPageShell({
   children,
   faqHref = '/#faq',
   hideFooter = false,
+  mobileFooterPad = false,
 }: {
   children: React.ReactNode;
   faqHref?: string;
   hideFooter?: boolean;
+  mobileFooterPad?: boolean;
 }) {
   return (
     <div className={cn(
@@ -21,7 +23,9 @@ export default function PublicPageShell({
     )}>
       <SiteHeader />
       {children}
-      {hideFooter ? null : <SiteFooter faqHref={faqHref} />}
+      {hideFooter ? null : (
+        <SiteFooter faqHref={faqHref} className={mobileFooterPad ? 'pb-24 lg:pb-0' : undefined} />
+      )}
     </div>
   );
 }

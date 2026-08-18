@@ -1,0 +1,290 @@
+'use client';
+
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { Button, Skeleton, SkeletonListingDetail } from '@/components/ui';
+import { formatFc } from '@/config/landingPricing';
+import { cn } from '@/lib/cn';
+import { isVideoUrl, mediaPosterUrl } from '@/lib/marketplace';
+import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
+import { ArrowLeft, Play } from 'lucide-react';
+
+function ListingMediaGallery({
+  photos,
+  photoIndex,
+  onPhotoIndex,
+  fallback,
+}: {
+  photos: string[];
+  photoIndex: number;
+  onPhotoIndex: (index: number) => void;
+  fallback: React.ReactNode;
+}) {
+  const current = photos[photoIndex];
+  return (
+    <div className="space-y-3">
+      <div className="aspect-[5/4] sm:aspect-[16/9] rounded-2xl sm:rounded-[var(--radius-card)] overflow-hidden bg-black/80 border border-border">
+        {current ? (
+          isVideoUrl(current) ? (
+            <video
+              key={current}
+              src={current}
+              poster={mediaPosterUrl(current)}
+              controls
+              playsInline
+              className="w-full h-full object-contain"
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={current} alt="" className="w-full h-full object-cover" />
+          )
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-muted bg-surface-muted">
+            {fallback}
+          </div>
+        )}
+      </div>
+      {photos.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory">
+          {photos.map((url, i) => (
+            <button
+              key={url}
+              type="button"
+              onClick={() => onPhotoIndex(i)}
+              className={cn(
+                'relative snap-start shrink-0 w-[4.75rem] sm:w-[5.5rem] aspect-[4/3] rounded-lg overflow-hidden border bg-surface-muted',
+                i === photoIndex ? 'border-primary ring-2 ring-primary/30' : 'border-border',
+              )}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={mediaPosterUrl(url)} alt="" className="w-full h-full object-cover" />
+              {isVideoUrl(url) && (
+                <span className="absolute inset-0 flex items-center justify-center bg-black/35">
+                  <Play className="w-3.5 h-3.5 text-white fill-white" />
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function ListingDetailLayout({
+  backHref,
+  backLabel,
+  loading,
+  error,
+  errorIcon,
+  errorMessage,
+  heroUrl,
+  fallbackIcon,
+  chip,
+  title,
+  subtitle,
+  photos,
+  photoIndex,
+  onPhotoIndex,
+  tab,
+  onTab,
+  details,
+  map,
+  priceFromFc,
+  priceUnitLabel,
+  quotaLabel,
+  inquiry,
+  booking,
+}: {
+  backHref: string;
+  backLabel: string;
+  loading: boolean;
+  error?: string;
+  errorIcon: React.ReactNode;
+  errorMessage: string;
+  heroUrl?: string | null;
+  fallbackIcon: React.ReactNode;
+  chip: string;
+  title: string;
+  subtitle: string;
+  photos: string[];
+  photoIndex: number;
+  onPhotoIndex: (index: number) => void;
+  tab: MarketplaceFormTab;
+  onTab: (tab: MarketplaceFormTab) => void;
+  details: React.ReactNode;
+  map: React.ReactNode;
+  priceFromFc: number | null;
+  priceUnitLabel?: string | null;
+  quotaLabel?: string | null;
+  inquiry: React.ReactNode;
+  booking: React.ReactNode;
+}) {
+  const [mobileAction, setMobileAction] = useState<'inquire' | 'book'>('inquire');
+  const priceLabel = priceFromFc != null ? formatFc(priceFromFc) : 'Sur devis';
+
+  const scrollToContact = (action: 'inquire' | 'book') => {
+    setMobileAction(action);
+    document.getElementById('listing-contact')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const priceBlock = (
+    <div className="border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface space-y-1">
+      <p className="text-xs text-muted">À partir de</p>
+      <p className="text-2xl font-semibold text-foreground">{priceLabel}</p>
+      {priceUnitLabel ? <p className="text-xs text-muted">{priceUnitLabel}</p> : null}
+      {quotaLabel ? <p className="text-xs text-muted">{quotaLabel}</p> : null}
+    </div>
+  );
+
+  return (
+    <main className="page-container pt-4 pb-24 sm:pt-8 lg:py-10 lg:pb-10 flex-1">
+      <Link
+        href={backHref}
+        className="inline-flex items-center gap-1.5 min-h-11 -ml-1 px-1 text-xs font-semibold text-muted hover:text-foreground mb-3 sm:mb-5"
+      >
+        <ArrowLeft className="w-3.5 h-3.5" />
+        {backLabel}
+      </Link>
+
+      {loading ? (
+        <SkeletonListingDetail />
+      ) : error ? (
+        <div className="max-w-md mx-auto text-center py-16 border border-border rounded-[var(--radius-card)] bg-surface">
+          {errorIcon}
+          <p className="text-sm text-muted">{error || errorMessage}</p>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 lg:gap-8 items-start">
+            <div className="lg:col-span-3 space-y-4 sm:space-y-5 min-w-0">
+              <div className="relative aspect-[5/4] sm:aspect-[16/9] rounded-2xl sm:rounded-[1.5rem] overflow-hidden bg-black/80 border border-border shadow-[var(--shadow-soft)]">
+                {heroUrl ? (
+                  isVideoUrl(heroUrl) ? (
+                    <video src={heroUrl} poster={mediaPosterUrl(heroUrl)} className="w-full h-full object-cover" muted playsInline />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={heroUrl} alt="" className="w-full h-full object-cover" />
+                  )
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-muted bg-surface-muted">
+                    {fallbackIcon}
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6 text-white space-y-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-white/80">{chip}</p>
+                  <h1 className="text-xl sm:text-3xl font-display font-semibold tracking-tight drop-shadow leading-tight">
+                    {title}
+                  </h1>
+                  <p className="text-sm text-white/85 truncate">{subtitle}</p>
+                </div>
+              </div>
+
+              <div className="lg:hidden flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-3.5">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">À partir de</p>
+                  <p className="text-base font-semibold truncate">{priceLabel}</p>
+                  {priceUnitLabel ? <p className="text-[11px] text-muted truncate">{priceUnitLabel}</p> : null}
+                </div>
+                <Button size="sm" className="shrink-0 min-h-10" onClick={() => scrollToContact('inquire')}>
+                  Devis
+                </Button>
+              </div>
+
+              <div className="sticky top-14 z-20 -mx-1 px-1 py-1 bg-background/95 backdrop-blur-md">
+                <MarketplaceFormTabs value={tab} onChange={onTab} />
+              </div>
+
+              {tab === 'medias' && (
+                <ListingMediaGallery
+                  photos={photos}
+                  photoIndex={photoIndex}
+                  onPhotoIndex={onPhotoIndex}
+                  fallback={fallbackIcon}
+                />
+              )}
+              {tab === 'details' && details}
+              {tab === 'map' && map}
+            </div>
+
+            <aside
+              id="listing-contact"
+              className="lg:col-span-2 space-y-3 sm:space-y-4 lg:sticky lg:top-24 scroll-mt-32"
+            >
+              <div className="hidden lg:block">{priceBlock}</div>
+
+              <div className="lg:hidden flex gap-1 p-1 rounded-lg bg-surface-muted border border-border">
+                <button
+                  type="button"
+                  onClick={() => setMobileAction('inquire')}
+                  className={cn(
+                    'flex-1 min-h-11 px-3 rounded-md text-xs font-semibold transition',
+                    mobileAction === 'inquire'
+                      ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
+                      : 'text-muted',
+                  )}
+                >
+                  Demander un devis
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileAction('book')}
+                  className={cn(
+                    'flex-1 min-h-11 px-3 rounded-md text-xs font-semibold transition',
+                    mobileAction === 'book'
+                      ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
+                      : 'text-muted',
+                  )}
+                >
+                  Réserver
+                </button>
+              </div>
+
+              <div className={cn(mobileAction === 'inquire' ? 'block' : 'hidden', 'lg:block')}>
+                {inquiry}
+              </div>
+              <div className={cn(mobileAction === 'book' ? 'block' : 'hidden', 'lg:block')}>
+                {booking}
+              </div>
+            </aside>
+          </div>
+
+        </>
+      )}
+
+      {!error && (
+        <div
+          className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-background/95 backdrop-blur-md"
+          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+        >
+          <div className="page-container pt-3 flex items-center gap-2">
+            {loading ? (
+              <>
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <Skeleton className="h-2 w-14" />
+                  <Skeleton className="h-4 w-28" />
+                </div>
+                <Skeleton className="h-11 w-[4.75rem] rounded-[var(--radius-button)] shrink-0" />
+                <Skeleton className="h-11 w-16 rounded-[var(--radius-button)] shrink-0" />
+              </>
+            ) : (
+              <>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] text-muted leading-none">À partir de</p>
+                  <p className="text-sm font-semibold truncate">{priceLabel}</p>
+                </div>
+                <Button size="sm" variant="secondary" className="shrink-0 min-h-11" onClick={() => scrollToContact('book')}>
+                  Réserver
+                </Button>
+                <Button size="sm" className="shrink-0 min-h-11" onClick={() => scrollToContact('inquire')}>
+                  Devis
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </main>
+  );
+}

@@ -9,13 +9,15 @@ import {
   FOOTER_RESOURCES,
 } from '@/config/siteContent';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { cn } from '@/lib/cn';
 
 interface SiteFooterProps {
   /** Lien FAQ : ancre sur l'accueil ou page contact */
   faqHref?: string;
+  className?: string;
 }
 
-export default function SiteFooter({ faqHref = '/#faq' }: SiteFooterProps) {
+export default function SiteFooter({ faqHref = '/#faq', className }: SiteFooterProps) {
   const { site } = usePlatformSite();
   const product = FOOTER_PRODUCT.map((item) =>
     item.label === 'FAQ' ? { ...item, href: faqHref } : item,
@@ -26,7 +28,7 @@ export default function SiteFooter({ faqHref = '/#faq' }: SiteFooterProps) {
     'text-sm text-muted hover:text-foreground transition-colors';
 
   return (
-    <footer className="mt-auto border-t border-border bg-surface text-foreground">
+    <footer className={cn('mt-auto border-t border-border bg-surface text-foreground', className)}>
       <div className="page-container py-14 sm:py-16">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8">
           <div className="sm:col-span-2 lg:col-span-4 space-y-4">

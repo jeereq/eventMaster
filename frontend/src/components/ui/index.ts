@@ -24,6 +24,7 @@ export {
   SkeletonProfileView,
   SkeletonLandingTemplateCard,
   SkeletonLandingTemplateGrid,
+  SkeletonListingDetail,
 } from './Skeleton';
 export { default as Input } from './Input';
 export { default as Alert } from './Alert';

@@ -69,7 +69,7 @@ export default function MarketplaceInquiryForm({
   };
 
   return (
-    <form onSubmit={handleInquire} className="border border-border rounded-[var(--radius-card)] p-5 bg-surface space-y-3">
+    <form onSubmit={handleInquire} className="border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface space-y-3">
       <h2 className="text-sm font-semibold text-foreground">Demander un devis</h2>
       <p className="text-xs text-muted leading-relaxed">
         Le professionnel reçoit votre message par e-mail. Pour bloquer une date avec acompte, connectez-vous et
@@ -146,7 +146,7 @@ export default function MarketplaceInquiryForm({
           placeholder="Besoins, style, contraintes, questions…"
         />
       </label>
-      <Button type="submit" loading={sending} leftIcon={<Send className="w-4 h-4" />} fullWidth>
+      <Button type="submit" loading={sending} leftIcon={<Send className="w-4 h-4" />} fullWidth className="min-h-11">
         Envoyer la demande
       </Button>
     </form>

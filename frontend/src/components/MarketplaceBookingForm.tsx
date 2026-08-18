@@ -122,7 +122,7 @@ export default function MarketplaceBookingForm({
     return (
       <div className="space-y-3">
         {calendar}
-        <div className="border border-border rounded-[var(--radius-card)] p-5 bg-surface">
+        <div className="border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface">
           <p className="text-xs text-muted leading-relaxed">
             Cette offre est sur devis. Envoyez une demande ci-dessus : la réservation avec acompte n’est disponible
             que lorsqu’un tarif de départ est publié.
@@ -136,7 +136,7 @@ export default function MarketplaceBookingForm({
     return (
       <div className="space-y-3">
         {calendar}
-        <div className="border border-border rounded-[var(--radius-card)] p-5 bg-surface space-y-3">
+        <div className="border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface space-y-3">
           <h2 className="text-sm font-semibold text-foreground">Réserver</h2>
           <p className="text-xs text-muted leading-relaxed">
             Créez un compte client (gratuit) pour demander une date ou une période. L’acompte (30 %) se verse hors
@@ -158,7 +158,7 @@ export default function MarketplaceBookingForm({
   return (
     <form onSubmit={handleBook} className="space-y-3">
       {calendar}
-      <div className="border border-border rounded-[var(--radius-card)] p-5 bg-surface space-y-3">
+      <div className="border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface space-y-3">
         <h2 className="text-sm font-semibold text-foreground">Réserver une date ou une période</h2>
         <p className="text-xs text-muted leading-relaxed">
           Cliquez un jour libre, puis éventuellement le dernier jour. Demande → acceptation → acompte 30 % hors
@@ -206,7 +206,7 @@ export default function MarketplaceBookingForm({
             </p>
           </div>
         )}
-        <Button type="submit" loading={sending} fullWidth disabled={dateTaken}>
+        <Button type="submit" loading={sending} fullWidth disabled={dateTaken} className="min-h-11">
           Envoyer la demande de réservation
         </Button>
         <p className="text-[11px] text-muted">

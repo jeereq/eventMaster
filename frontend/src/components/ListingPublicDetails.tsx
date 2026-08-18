@@ -18,7 +18,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-border bg-surface p-4 space-y-2.5">
+    <section className="rounded-2xl border border-border bg-surface p-3.5 sm:p-4 space-y-2.5">
       <h2 className="text-sm font-semibold text-foreground inline-flex items-center gap-2">
         <span className="text-primary">{icon}</span>
         {title}

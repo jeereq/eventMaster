@@ -93,22 +93,22 @@ export default function AvailabilityCalendar({
   };
 
   return (
-    <div className="border border-border rounded-[var(--radius-card)] bg-surface p-4 space-y-3">
+    <div className="border border-border rounded-[var(--radius-card)] bg-surface p-3 sm:p-4 space-y-3">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold capitalize">{title}</h2>
         <div className="flex items-center gap-1">
           <button
             type="button"
-            className="p-1.5 rounded-md border border-border text-muted hover:text-foreground"
+            className="min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 p-2 sm:p-1.5 inline-flex items-center justify-center rounded-md border border-border text-muted hover:text-foreground"
             onClick={() => setCursor((c) => (c.month === 0 ? { year: c.year - 1, month: 11 } : { year: c.year, month: c.month - 1 }))}
             aria-label="Mois précédent"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="text-xs font-semibold min-w-[8.5rem] text-center capitalize">{monthLabel}</span>
+          <span className="text-xs font-semibold min-w-[7.5rem] sm:min-w-[8.5rem] text-center capitalize">{monthLabel}</span>
           <button
             type="button"
-            className="p-1.5 rounded-md border border-border text-muted hover:text-foreground"
+            className="min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 p-2 sm:p-1.5 inline-flex items-center justify-center rounded-md border border-border text-muted hover:text-foreground"
             onClick={() => setCursor((c) => (c.month === 11 ? { year: c.year + 1, month: 0 } : { year: c.year, month: c.month + 1 }))}
             aria-label="Mois suivant"
           >
@@ -146,7 +146,7 @@ export default function AvailabilityCalendar({
               disabled={!clickable}
               onClick={() => handleDay(cell.key)}
               className={cn(
-                'aspect-square rounded-md text-xs font-medium border',
+                'aspect-square min-h-9 sm:min-h-0 rounded-md text-sm sm:text-xs font-medium border',
                 isBooked && 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30',
                 !isBooked && isBlocked && 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/30',
                 isEdge && !isBooked && !isBlocked && 'bg-primary text-white border-primary',
