@@ -511,6 +511,7 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
   width: 36px;
   height: 36px;
   flex-shrink: 0;
+  z-index: 1;
 }
 
 .em-map-marker-photo-frame {
@@ -532,11 +533,13 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
   display: block;
 }
 
-.em-map-marker-photo-pin.is-venue .em-map-marker-photo-frame {
+.em-map-marker-photo-pin.is-venue .em-map-marker-photo-frame,
+.em-map-marker-photo-pin.is-event .em-map-marker-photo-frame {
   border-radius: 8px;
 }
 
-.em-map-marker-photo-pin.is-venue .em-map-marker-photo {
+.em-map-marker-photo-pin.is-venue .em-map-marker-photo,
+.em-map-marker-photo-pin.is-event .em-map-marker-photo {
   border-radius: 6px;
 }
 
@@ -558,7 +561,7 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
   place-items: center;
   border: 1.5px solid #fff;
   color: #fff;
-  z-index: 1;
+  z-index: 2;
 }
 
 .em-map-marker-photo-badge svg {
@@ -576,50 +579,52 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
   border-radius: 999px;
 }
 
-.em-map-marker-photo-pointer,
-.em-map-marker-tail {
-  display: block;
-  width: 0;
-  height: 0;
-  flex-shrink: 0;
-  align-self: center;
-  margin: 2px 0 0;
-  border-left: 7px solid transparent;
-  border-right: 7px solid transparent;
-  border-top-width: 9px;
-  border-top-style: solid;
-  background: none !important;
-  transform: none !important;
-  border-radius: 0;
-}
-
-.em-map-marker-photo-pin.is-venue .em-map-marker-photo-pointer,
-.em-map-marker-venue .em-map-marker-tail {
-  border-top-color: var(--primary, #4f46e5);
-}
-
-.em-map-marker-photo-pin.is-service .em-map-marker-photo-pointer,
-.em-map-marker-service .em-map-marker-tail {
-  border-top-color: var(--festive-accent, #b45309);
-  margin-top: 3px;
-}
-
-.em-map-marker-photo-pin.is-event .em-map-marker-photo-frame {
-  border-radius: 7px;
-}
-
-.em-map-marker-photo-pin.is-event .em-map-marker-photo {
-  border-radius: 5px;
-}
-
 .em-map-marker-photo-pin.is-event .em-map-marker-photo-badge {
   background: #059669;
   border-radius: 4px;
 }
 
+.em-map-marker-photo-pointer,
+.em-map-marker-tail {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  width: 14px;
+  height: 9px;
+  flex-shrink: 0;
+  align-self: center;
+  margin-top: -5px;
+  color: var(--primary, #4f46e5);
+  background: none !important;
+  border: 0 !important;
+  transform: none !important;
+  border-radius: 0;
+  z-index: 0;
+  filter: drop-shadow(0 1px 1px rgba(15, 23, 42, 0.25));
+}
+
+.em-map-marker-arrow {
+  display: block;
+  width: 14px;
+  height: 9px;
+}
+
+.em-map-marker-photo-pin.is-venue .em-map-marker-photo-pointer,
+.em-map-marker-inner.is-venue .em-map-marker-tail,
+.em-map-marker-venue .em-map-marker-tail {
+  color: var(--primary, #4f46e5);
+}
+
+.em-map-marker-photo-pin.is-service .em-map-marker-photo-pointer,
+.em-map-marker-inner.is-service .em-map-marker-tail,
+.em-map-marker-service .em-map-marker-tail {
+  color: var(--festive-accent, #b45309);
+}
+
 .em-map-marker-photo-pin.is-event .em-map-marker-photo-pointer,
+.em-map-marker-inner.is-event .em-map-marker-tail,
 .em-map-marker-event .em-map-marker-tail {
-  border-top-color: #059669;
+  color: #059669;
 }
 
 .em-map-marker-chip {

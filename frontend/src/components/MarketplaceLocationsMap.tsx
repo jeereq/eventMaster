@@ -78,6 +78,8 @@ function markerImageUrls(marker: { coverUrl?: string | null; photos?: string[] }
   return list;
 }
 
+const PIN_ARROW_SVG = '<svg class="em-map-marker-arrow" viewBox="0 0 14 9" width="14" height="9" aria-hidden="true"><path d="M7 9 0 0h14z" fill="currentColor"/></svg>';
+
 function listingIconHtml(kind?: 'venue' | 'service' | 'event', coverUrl?: string | null, title?: string) {
   const pinClass = kind === 'service' ? 'is-service' : kind === 'event' ? 'is-event' : 'is-venue';
   const icon = kind === 'service' ? SERVICE_ICON_SVG : kind === 'event' ? EVENT_ICON_SVG : VENUE_ICON_SVG;
@@ -87,9 +89,9 @@ function listingIconHtml(kind?: 'venue' | 'service' | 'event', coverUrl?: string
     ? `<span class="em-map-marker-caption">${escapeAttr(title)}</span>`
     : '';
   if (coverUrl) {
-    return `<span class="em-map-marker-hit em-map-marker-hit-photo">${chip}${caption}<span class="em-map-marker-photo-pin ${pinClass}"><span class="em-map-marker-photo-wrap"><span class="em-map-marker-photo-frame"><img class="em-map-marker-photo" src="${escapeAttr(coverUrl)}" alt="" /></span><span class="em-map-marker-photo-badge">${icon}</span></span><span class="em-map-marker-photo-pointer"></span></span></span>`;
+    return `<span class="em-map-marker-hit em-map-marker-hit-photo">${chip}${caption}<span class="em-map-marker-photo-pin ${pinClass}"><span class="em-map-marker-photo-wrap"><span class="em-map-marker-photo-frame"><img class="em-map-marker-photo" src="${escapeAttr(coverUrl)}" alt="" /></span><span class="em-map-marker-photo-badge">${icon}</span></span><span class="em-map-marker-photo-pointer">${PIN_ARROW_SVG}</span></span></span>`;
   }
-  return `<span class="em-map-marker-hit">${chip}${caption}<span class="em-map-marker-inner"><span class="em-map-marker-head">${icon}</span><span class="em-map-marker-tail"></span></span></span>`;
+  return `<span class="em-map-marker-hit">${chip}${caption}<span class="em-map-marker-inner ${pinClass}"><span class="em-map-marker-head">${icon}</span><span class="em-map-marker-tail">${PIN_ARROW_SVG}</span></span></span>`;
 }
 
 function hereIconHtml() {
