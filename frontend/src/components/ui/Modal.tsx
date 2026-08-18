@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
 import { X } from 'lucide-react';
@@ -49,12 +49,19 @@ export default function Modal({
   hideHeader = false,
 }: ModalProps) {
   const [mounted, setMounted] = useState(false);
+  const openedAtRef = useRef(0);
+
+  const requestClose = useCallback(() => {
+    // Le tap/clic qui ouvre la fenêtre retombe parfois sur le fond (iOS / Focus / carte).
+    if (Date.now() - openedAtRef.current < 450) return;
+    onClose();
+  }, [onClose]);
 
   const handleEscape = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') requestClose();
     },
-    [onClose],
+    [requestClose],
   );
 
   useEffect(() => {
@@ -63,13 +70,15 @@ export default function Modal({
 
   useEffect(() => {
     if (!open) return;
+    openedAtRef.current = Date.now();
     if (dismissible) {
       document.addEventListener('keydown', handleEscape);
     }
+    const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = '';
+      document.body.style.overflow = previousOverflow;
     };
   }, [open, handleEscape, dismissible]);
 
@@ -80,7 +89,7 @@ export default function Modal({
   return createPortal(
     <div
       className={cn(
-        'fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4',
+        'fixed inset-0 z-[9999] isolate flex items-end sm:items-center justify-center p-0 sm:p-4',
         containerClassName,
       )}
     >
@@ -88,17 +97,19 @@ export default function Modal({
         <button
           type="button"
           aria-label="Fermer"
-          className={modalBackdropClass}
-          onClick={onClose}
+          className={cn(modalBackdropClass, 'z-0')}
+          onClick={requestClose}
         />
       ) : (
-        <div className={modalBackdropClass} aria-hidden />
+        <div className={cn(modalBackdropClass, 'z-0')} aria-hidden />
       )}
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}
-        className={cn(modalPanelClass, sizeMap[size], className)}
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+        className={cn(modalPanelClass, 'z-10 pointer-events-auto', sizeMap[size], className)}
       >
         {showHeader && (
           <div className="flex items-start justify-between gap-4 p-5 sm:p-6 border-b border-border shrink-0">
@@ -115,7 +126,7 @@ export default function Modal({
             {dismissible && (
               <button
                 type="button"
-                onClick={onClose}
+                onClick={requestClose}
                 className="p-2 rounded-xl text-muted hover:text-foreground hover:bg-surface-muted transition shrink-0"
                 aria-label="Fermer la fenêtre"
               >
@@ -124,7 +135,7 @@ export default function Modal({
             )}
           </div>
         )}
-        <div className="overflow-y-auto flex-1 p-5 sm:p-6">{children}</div>
+        <div className="overflow-y-auto overscroll-contain flex-1 p-5 sm:p-6 touch-pan-y">{children}</div>
         {footer && (
           <div className="border-t border-border p-4 sm:p-5 shrink-0 flex flex-wrap gap-2 justify-end bg-surface-muted/40">
             {footer}

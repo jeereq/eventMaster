@@ -127,6 +127,21 @@ export default function LandingVitrineSection({
     setPage(1);
   }, [tab, query, applied, templateCategory]);
 
+  useEffect(() => {
+    if (entity === 'all') return;
+    const prune = (filters: EntityFilters): EntityFilters => ({
+      ...filters,
+      kind: entity,
+      roomType: entity === 'service' || entity === 'event' ? '' : filters.roomType,
+      category: entity === 'venue' || entity === 'event' ? '' : filters.category,
+      mobility: entity === 'venue' || entity === 'event' ? '' : filters.mobility,
+      priceUnit: entity === 'venue' || entity === 'event' ? '' : filters.priceUnit,
+      entry: entity === 'venue' || entity === 'service' ? '' : filters.entry,
+    });
+    setApplied(prune);
+    setDraft(prune);
+  }, [entity]);
+
   const venueItems = useMemo(
     () =>
       filterCatalogueItems(venues.map(venueToCatalogueItem), query).filter(

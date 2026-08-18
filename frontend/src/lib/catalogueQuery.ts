@@ -190,10 +190,22 @@ export function useCatalogueQueryState<T extends CatalogueGeoState>(opts: {
   const [inputQ, setInputQ] = useState(parsed.q);
   const [draft, setDraft] = useState(parsed.filters);
 
+  const filtersKey = useMemo(() => {
+    const params = new URLSearchParams(searchKey);
+    params.delete('q');
+    params.delete('page');
+    return params.toString();
+  }, [searchKey]);
+
   useEffect(() => {
     setInputQ(parsed.q);
+  }, [parsed.q]);
+
+  useEffect(() => {
     setDraft(parsed.filters);
-  }, [parsed]);
+    // Ne pas resynchroniser le brouillon quand seule la recherche `q` change (sinon la modale perd les choix).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtersKey]);
 
   const replaceQuery = useCallback(
     (filters: T, search: string, page: number) => {

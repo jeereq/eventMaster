@@ -541,7 +541,7 @@ function ClientMarketplaceInner() {
         ))}
       </div>
 
-      {tab === 'explore' ? (
+      {tab === 'explore' && !focusMode ? (
         <>
           {exploreFilterBar('card')}
 

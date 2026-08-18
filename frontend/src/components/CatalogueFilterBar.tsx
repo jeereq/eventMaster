@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
 import { Button, Input, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -67,7 +67,7 @@ export function CatalogueChoicePills({
             type="button"
             onClick={() => onChange(active && opt.id ? '' : opt.id)}
             className={cn(
-              'px-3 py-1.5 rounded-full text-xs font-medium border transition',
+              'px-3 py-1.5 rounded-full text-xs font-medium border transition touch-manipulation',
               active
                 ? 'bg-primary text-white border-primary'
                 : 'bg-surface-muted text-muted border-border hover:text-foreground hover:border-primary/30',
@@ -126,12 +126,17 @@ export default function CatalogueFilterBar({
 }) {
   const [open, setOpen] = useState(false);
   const [applying, setApplying] = useState(false);
+  const openTimerRef = useRef<number>(0);
   const hasFilters = Boolean(filters);
   const count = chips.length;
 
+  useEffect(() => () => window.clearTimeout(openTimerRef.current), []);
+
   const openModal = () => {
     onOpen?.();
-    setOpen(true);
+    window.clearTimeout(openTimerRef.current);
+    // Après le clic/tap « Filtres », laisser l’événement se terminer avant d’afficher le fond.
+    openTimerRef.current = window.setTimeout(() => setOpen(true), 50);
   };
 
   const apply = async () => {
@@ -567,7 +572,17 @@ export function CatalogueEntityFilterFields({
           <CatalogueChoicePills
             options={KIND_FILTER_OPTIONS}
             value={extras.kind}
-            onChange={(id) => setExtras({ kind: (id as import('@/lib/catalogueEntityFilters').CatalogueKind) || 'all' })}
+            onChange={(id) => {
+              const kind = (id as import('@/lib/catalogueEntityFilters').CatalogueKind) || 'all';
+              setExtras({
+                kind,
+                roomType: kind === 'service' || kind === 'event' ? '' : extras.roomType,
+                category: kind === 'venue' || kind === 'event' ? '' : extras.category,
+                mobility: kind === 'venue' || kind === 'event' ? '' : extras.mobility,
+                priceUnit: kind === 'venue' || kind === 'event' ? '' : extras.priceUnit,
+                entry: kind === 'venue' || kind === 'service' ? '' : extras.entry,
+              });
+            }}
           />
         </CatalogueFilterField>
       ) : null}
