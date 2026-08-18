@@ -33,6 +33,7 @@ export interface MarketplaceMapMarker {
   location?: string;
   address?: string;
   coverageRadiusKm?: number | null;
+  travels?: boolean;
   capacity?: number | null;
   quotaLabel?: string | null;
   distanceKm?: number | null;
@@ -253,8 +254,11 @@ function MarkerPreviewCard({
             </span>
           ) : null}
           {marker.quotaLabel ? <span>{marker.quotaLabel}</span> : null}
-          {isService && marker.coverageRadiusKm ? (
-            <span>Intervient jusqu’à {marker.coverageRadiusKm} km</span>
+          {isService && marker.travels && marker.coverageRadiusKm ? (
+            <span>Se déplace jusqu’à {marker.coverageRadiusKm} km</span>
+          ) : null}
+          {isService && marker.travels === false ? (
+            <span>Sur place uniquement</span>
           ) : null}
         </div>
         {marker.priceLabel ? (
@@ -403,7 +407,7 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
   const hidePreviewRef = useRef(hidePreview);
   hidePreviewRef.current = hidePreview;
 
-  const markersKey = markers.map((m) => `${m.id}:${m.lat}:${m.lng}:${m.kind || ''}:${m.coverageRadiusKm || ''}:${m.coverUrl || ''}`).join('|');
+  const markersKey = markers.map((m) => `${m.id}:${m.lat}:${m.lng}:${m.kind || ''}:${m.coverageRadiusKm || ''}:${m.travels ? '1' : '0'}:${m.coverUrl || ''}`).join('|');
   const centerKey = searchCenter ? `${searchCenter.lat}:${searchCenter.lng}:${radiusKm}` : '';
 
   useEffect(() => {
@@ -472,8 +476,8 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
             icon: L.divIcon({
               className: `leaflet-interactive em-map-marker ${isService ? 'em-map-marker-service' : 'em-map-marker-venue'}${hasPhoto ? ' has-photo-pin' : ''}`,
               html: listingIconHtml(m.kind, photoUrl),
-              iconSize: hasPhoto ? [52, 62] : [44, 52],
-              iconAnchor: hasPhoto ? [26, 60] : [22, 50],
+              iconSize: hasPhoto ? [36, 44] : [44, 52],
+              iconAnchor: hasPhoto ? [18, 42] : [22, 50],
             }),
             interactive: true,
             bubblingMouseEvents: false,
@@ -956,7 +960,8 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
                       {place.kind === 'service' ? 'Prestataire' : 'Salle'}
                       {place.categoryLabel ? ` · ${place.categoryLabel}` : ''}
                       {formatDistanceKm(place.distanceKm) ? ` · ${formatDistanceKm(place.distanceKm)}` : ''}
-                      {place.coverageRadiusKm ? ` · rayon ${place.coverageRadiusKm} km` : ''}
+                      {place.coverageRadiusKm ? ` · se déplace ${place.coverageRadiusKm} km` : ''}
+                      {place.kind === 'service' && place.travels === false ? ' · sur place' : ''}
                     </span>
                   </span>
                 </button>

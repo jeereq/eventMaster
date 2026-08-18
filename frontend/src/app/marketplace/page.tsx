@@ -11,6 +11,7 @@ import CatalogueFilterBar, {
 } from '@/components/CatalogueFilterBar';
 import {
   EMPTY_CATALOGUE_GEO,
+  SERVICE_MOBILITY_OPTIONS,
   appendCatalogueGeoParams,
   catalogueGeoChips,
   catalogueItemToMapMarker,
@@ -22,13 +23,15 @@ import {
   type CatalogueGeoState,
   type PublicService,
   type PublicVenue,
+  type ServiceMobility,
 } from '@/lib/marketplace';
 
-type HubFilters = CatalogueGeoState & { kind: 'all' | 'venue' | 'service' };
+type HubFilters = CatalogueGeoState & { kind: 'all' | 'venue' | 'service'; mobility: ServiceMobility };
 
 const emptyFilters: HubFilters = {
   ...EMPTY_CATALOGUE_GEO,
   kind: 'all',
+  mobility: '',
 };
 
 export default function MarketplaceHubPage() {
@@ -49,10 +52,13 @@ export default function MarketplaceHubPage() {
       const params = new URLSearchParams();
       if (search.trim()) params.set('q', search.trim());
       appendCatalogueGeoParams(params, filters);
-      const qs = params.toString() ? `?${params}` : '';
+      const venueQs = params.toString() ? `?${params}` : '';
+      const serviceParams = new URLSearchParams(params);
+      if (filters.mobility) serviceParams.set('mobility', filters.mobility);
+      const serviceQs = serviceParams.toString() ? `?${serviceParams}` : '';
       const [venuesData, servicesData] = await Promise.all([
-        api.get(`/public/venues${qs}`).catch(() => ({ venues: [] })),
-        api.get(`/public/services${qs}`).catch(() => ({ services: [] })),
+        api.get(`/public/venues${venueQs}`).catch(() => ({ venues: [] })),
+        api.get(`/public/services${serviceQs}`).catch(() => ({ services: [] })),
       ]);
       setVenues(venuesData.venues || []);
       setServices(servicesData.services || []);
@@ -105,9 +111,12 @@ export default function MarketplaceHubPage() {
 
   const chips = catalogueGeoChips(
     applied,
-    applied.kind === 'all'
-      ? []
-      : [{ id: 'kind', label: 'Type', value: applied.kind === 'venue' ? 'Salles' : 'Prestataires' }],
+    [
+      ...(applied.kind === 'all' ? [] : [{ id: 'kind', label: 'Type', value: applied.kind === 'venue' ? 'Salles' : 'Prestataires' }]),
+      ...(applied.mobility
+        ? [{ id: 'mobility', label: 'Intervention', value: applied.mobility === 'on_site' ? 'Sur place' : 'Se déplace' }]
+        : []),
+    ],
   );
 
   return (
@@ -153,7 +162,8 @@ export default function MarketplaceHubPage() {
           chips={chips}
           onRemoveChip={(id) => {
             if (id === 'kind') applyFilters({ ...applied, kind: 'all' });
-            else applyFilters({ ...clearCatalogueGeoChip(applied, id), kind: applied.kind });
+            else if (id === 'mobility') applyFilters({ ...applied, mobility: '' });
+            else applyFilters({ ...clearCatalogueGeoChip(applied, id), kind: applied.kind, mobility: applied.mobility });
           }}
           onClearChips={() => applyFilters(emptyFilters)}
           onOpen={() => {
@@ -163,7 +173,7 @@ export default function MarketplaceHubPage() {
           onApply={async () => {
             try {
               const geo = await resolveCatalogueGeo(draft);
-              applyFilters({ ...geo, kind: draft.kind });
+              applyFilters({ ...geo, kind: draft.kind, mobility: draft.mobility });
             } catch (err: unknown) {
               setFilterError(err instanceof Error ? err.message : 'Filtre de proximité impossible.');
               throw err;
@@ -185,9 +195,16 @@ export default function MarketplaceHubPage() {
               </CatalogueFilterField>
               <CatalogueGeoFields
                 value={draft}
-                onChange={(next) => setDraft({ ...next, kind: draft.kind })}
+                onChange={(next) => setDraft({ ...next, kind: draft.kind, mobility: draft.mobility })}
                 error={filterError}
               />
+              <CatalogueFilterField label="Prestataires — intervention">
+                <CatalogueChoicePills
+                  options={SERVICE_MOBILITY_OPTIONS.filter((opt) => opt.id)}
+                  value={draft.mobility}
+                  onChange={(id) => setDraft((d) => ({ ...d, mobility: (id as ServiceMobility) || '' }))}
+                />
+              </CatalogueFilterField>
             </>
           }
         />

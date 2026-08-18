@@ -576,6 +576,7 @@ model ServiceOffering {
   commune           String?
   neighborhood      String?
   coverageRadiusKm  Int?
+  travels           Boolean          @default(true)
   latitude          Float?
   longitude         Float?
   priceFromFc       Int?

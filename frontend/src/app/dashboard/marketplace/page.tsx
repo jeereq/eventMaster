@@ -42,6 +42,7 @@ interface ServiceItem {
   commune?: string | null;
   neighborhood?: string | null;
   coverageRadiusKm: number | null;
+  travels?: boolean;
   latitude?: number | null;
   longitude?: number | null;
   priceFromFc: number | null;
@@ -83,6 +84,7 @@ export default function MarketplaceDeskPage() {
     commune: '',
     neighborhood: '',
     coverageRadiusKm: '',
+    travels: true,
     latitude: '',
     longitude: '',
     priceFromFc: '',
@@ -145,6 +147,7 @@ export default function MarketplaceDeskPage() {
       commune: '',
       neighborhood: '',
       coverageRadiusKm: '',
+      travels: true,
       latitude: '',
       longitude: '',
       priceFromFc: '',
@@ -170,6 +173,7 @@ export default function MarketplaceDeskPage() {
       commune: item.commune || '',
       neighborhood: item.neighborhood || '',
       coverageRadiusKm: item.coverageRadiusKm != null ? String(item.coverageRadiusKm) : '',
+      travels: item.travels ?? Boolean(item.coverageRadiusKm && item.coverageRadiusKm > 0),
       latitude: item.latitude != null ? String(item.latitude) : '',
       longitude: item.longitude != null ? String(item.longitude) : '',
       priceFromFc: item.priceFromFc != null ? String(item.priceFromFc) : '',
@@ -203,6 +207,11 @@ export default function MarketplaceDeskPage() {
         setError('Ville, commune et quartier sont obligatoires pour publier.');
         return;
       }
+      if (draft.travels && !(Number(draft.coverageRadiusKm) > 0)) {
+        setEditorTab('details');
+        setError('Indiquez le rayon d’intervention si vous vous déplacez.');
+        return;
+      }
     }
     setSaving(true);
     setError('');
@@ -214,7 +223,8 @@ export default function MarketplaceDeskPage() {
         city: draft.city,
         commune: draft.commune,
         neighborhood: draft.neighborhood,
-        coverageRadiusKm: draft.coverageRadiusKm ? Number(draft.coverageRadiusKm) : null,
+        coverageRadiusKm: draft.travels && draft.coverageRadiusKm ? Number(draft.coverageRadiusKm) : null,
+        travels: draft.travels,
         latitude: draft.latitude ? Number(draft.latitude) : null,
         longitude: draft.longitude ? Number(draft.longitude) : null,
         priceFromFc: draft.priceFromFc ? Number(draft.priceFromFc) : null,
@@ -369,9 +379,15 @@ export default function MarketplaceDeskPage() {
                     </p>
                     <h3 className="font-semibold text-foreground">{item.title}</h3>
                     <p className="text-xs text-muted mt-0.5">
-                      {[item.city, item.priceFromFc != null ? `dès ${formatFc(item.priceFromFc)}` : null]
-                        .filter(Boolean)
-                        .join(' · ')}
+                      {[
+                        item.city,
+                        item.travels === false
+                          ? 'Sur place'
+                          : item.coverageRadiusKm
+                            ? `Se déplace · ${item.coverageRadiusKm} km`
+                            : 'Se déplace',
+                        item.priceFromFc != null ? `dès ${formatFc(item.priceFromFc)}` : null,
+                      ].filter(Boolean).join(' · ')}
                     </p>
                   </div>
                   <StatusPill tone={item.isPublic ? 'emerald' : 'slate'}>
@@ -508,13 +524,46 @@ export default function MarketplaceDeskPage() {
                 }
               />
             </div>
-            <Input
-              label="Rayon d’intervention (km)"
-              type="number"
-              min={0}
-              value={draft.coverageRadiusKm}
-              onChange={(e) => setDraft((d) => ({ ...d, coverageRadiusKm: e.target.value }))}
-            />
+            <div className="sm:col-span-2 space-y-2">
+              <span className="block text-xs font-medium text-muted">Zone d’intervention</span>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { id: false, label: 'Sur place uniquement' },
+                  { id: true, label: 'Je me déplace' },
+                ].map((opt) => (
+                  <button
+                    key={String(opt.id)}
+                    type="button"
+                    onClick={() => setDraft((d) => ({
+                      ...d,
+                      travels: opt.id,
+                      coverageRadiusKm: opt.id ? d.coverageRadiusKm : '',
+                    }))}
+                    className={cn(
+                      'px-3 py-1.5 rounded-full text-xs font-semibold border transition',
+                      draft.travels === opt.id
+                        ? 'bg-foreground text-background border-foreground'
+                        : 'bg-surface text-muted border-border hover:text-foreground',
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              {draft.travels ? (
+                <Input
+                  label="Rayon d’intervention (km)"
+                  type="number"
+                  min={1}
+                  value={draft.coverageRadiusKm}
+                  onChange={(e) => setDraft((d) => ({ ...d, coverageRadiusKm: e.target.value }))}
+                />
+              ) : (
+                <p className="text-[11px] text-muted">
+                  Les clients viennent à votre adresse. Aucun rayon n’est affiché sur la carte.
+                </p>
+              )}
+            </div>
             <Input
               label="Tarif de départ (FC)"
               type="number"

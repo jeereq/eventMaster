@@ -7,7 +7,7 @@ import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import { listStackClass } from '@/components/ui';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { formatDistanceKm, formatQuotaLabel, type CatalogueItem, type CatalogueViewMode } from '@/lib/marketplace';
+import { formatDistanceKm, formatQuotaLabel, serviceMobilityLabel, type CatalogueItem, type CatalogueViewMode } from '@/lib/marketplace';
 
 function Cover({ item, className }: { item: CatalogueItem; className?: string }) {
   if (item.coverUrl) {
@@ -77,7 +77,9 @@ function GridCard({ item }: { item: CatalogueItem }) {
             </span>
           ) : null}
           {formatQuotaLabel(item.quotaMin, item.quotaMax) ? <span>{formatQuotaLabel(item.quotaMin, item.quotaMax)}</span> : null}
-          {item.kind === 'service' && item.coverageRadiusKm ? <span>Rayon {item.coverageRadiusKm} km</span> : null}
+          {item.kind === 'service' ? (
+            <span>{serviceMobilityLabel(Boolean(item.travels ?? (item.coverageRadiusKm && item.coverageRadiusKm > 0)), item.coverageRadiusKm)}</span>
+          ) : null}
         </div>
         <div className="pt-2 border-t border-border">
           <Price item={item} />
@@ -102,7 +104,14 @@ function ListRow({ item }: { item: CatalogueItem }) {
           {item.title}
         </h2>
         <p className="text-xs text-muted truncate">
-          {[item.orgName, item.categoryLabel, item.location].filter(Boolean).join(' · ')}
+          {[
+            item.orgName,
+            item.categoryLabel,
+            item.location,
+            item.kind === 'service'
+              ? serviceMobilityLabel(Boolean(item.travels ?? (item.coverageRadiusKm && item.coverageRadiusKm > 0)), item.coverageRadiusKm)
+              : null,
+          ].filter(Boolean).join(' · ')}
         </p>
         {formatDistanceKm(item.distanceKm) ? (
           <p className="text-[11px] font-semibold text-primary">{formatDistanceKm(item.distanceKm)}</p>

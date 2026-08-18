@@ -92,6 +92,19 @@ export const SERVICE_CATEGORY_LABELS: Record<ServiceCategory, string> = {
 
 export const SERVICE_CATEGORIES = Object.keys(SERVICE_CATEGORY_LABELS) as ServiceCategory[];
 
+export type ServiceMobility = '' | 'on_site' | 'travels';
+
+export const SERVICE_MOBILITY_OPTIONS: Array<{ id: ServiceMobility; label: string }> = [
+  { id: '', label: 'Tous' },
+  { id: 'on_site', label: 'Sur place' },
+  { id: 'travels', label: 'Se déplace' },
+];
+
+export function serviceMobilityLabel(travels: boolean, radiusKm?: number | null): string {
+  if (!travels) return 'Sur place uniquement';
+  return radiusKm && radiusKm > 0 ? `Se déplace · ${radiusKm} km` : 'Se déplace';
+}
+
 export interface PublicService {
   slug: string;
   title: string;
@@ -102,6 +115,7 @@ export interface PublicService {
   commune?: string | null;
   neighborhood?: string | null;
   coverageRadiusKm: number | null;
+  travels?: boolean;
   latitude?: number | null;
   longitude?: number | null;
   priceFromFc: number | null;
@@ -479,6 +493,7 @@ export interface CatalogueItem {
   latitude: number | null;
   longitude: number | null;
   coverageRadiusKm?: number | null;
+  travels?: boolean;
   capacity?: number | null;
   quotaMin?: number | null;
   quotaMax?: number | null;
@@ -526,7 +541,8 @@ export function serviceToCatalogueItem(service: PublicService): CatalogueItem {
     priceUnitLabel: service.priceUnitLabel,
     latitude: service.latitude ?? null,
     longitude: service.longitude ?? null,
-    coverageRadiusKm: service.coverageRadiusKm,
+    coverageRadiusKm: service.travels === false ? null : service.coverageRadiusKm,
+    travels: service.travels ?? Boolean(service.coverageRadiusKm && service.coverageRadiusKm > 0),
     quotaMin: service.quotaMin ?? null,
     quotaMax: service.quotaMax ?? null,
     distanceKm: service.distanceKm ?? null,
@@ -563,6 +579,9 @@ export function catalogueItemToMapMarker(item: CatalogueItem) {
     location: item.location || undefined,
     address: item.address || undefined,
     coverageRadiusKm: item.coverageRadiusKm ?? null,
+    travels: item.kind === 'service'
+      ? (item.travels ?? Boolean(item.coverageRadiusKm && item.coverageRadiusKm > 0))
+      : undefined,
     capacity: item.capacity ?? null,
     quotaLabel: formatQuotaLabel(item.quotaMin, item.quotaMax),
     distanceKm: item.distanceKm ?? null,

@@ -1,38 +1,24 @@
 'use client';
 
-import React, { useLayoutEffect } from 'react';
+import React from 'react';
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
-import CelebrateMood from '@/components/CelebrateMood';
 import { cn } from '@/lib/cn';
-
-function CatalogMood() {
-  useLayoutEffect(() => {
-    const root = document.documentElement;
-    if (root.dataset.mood === 'celebrate') {
-      root.dataset.mood = 'work';
-    }
-  }, []);
-  return null;
-}
 
 export default function PublicPageShell({
   children,
   faqHref = '/#faq',
   hideFooter = false,
-  festive = false,
 }: {
   children: React.ReactNode;
   faqHref?: string;
   hideFooter?: boolean;
-  festive?: boolean;
 }) {
   return (
     <div className={cn(
       'flex flex-col min-h-screen bg-background text-foreground font-sans antialiased',
       hideFooter && 'h-dvh overflow-hidden',
     )}>
-      {festive ? <CelebrateMood /> : <CatalogMood />}
       <SiteHeader />
       {children}
       {hideFooter ? null : <SiteFooter faqHref={faqHref} />}

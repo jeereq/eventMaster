@@ -16,6 +16,7 @@ import {
   formatQuotaLabel,
   isVideoUrl,
   mediaPosterUrl,
+  serviceMobilityLabel,
   serviceToCatalogueItem,
   type PublicService,
 } from '@/lib/marketplace';
@@ -131,7 +132,7 @@ export default function MarketplaceServiceDetailPage() {
                   <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-muted border border-border">
                     <MapPin className="w-3.5 h-3.5" />
                     {formatLocationLine(service)}
-                    {service.coverageRadiusKm ? ` · rayon ${service.coverageRadiusKm} km` : ''}
+                    {` · ${serviceMobilityLabel(service.travels ?? Boolean(service.coverageRadiusKm), service.coverageRadiusKm)}`}
                   </span>
                 )}
                 {service.latitude != null && service.longitude != null && (

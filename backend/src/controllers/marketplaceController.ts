@@ -558,6 +558,7 @@ function toPublicService(offering: {
   commune?: string | null;
   neighborhood?: string | null;
   coverageRadiusKm: number | null;
+  travels: boolean;
   latitude?: number | null;
   longitude?: number | null;
   priceFromFc: number | null;
@@ -581,7 +582,8 @@ function toPublicService(offering: {
     city: offering.city,
     commune: offering.commune || null,
     neighborhood: offering.neighborhood || null,
-    coverageRadiusKm: offering.coverageRadiusKm,
+    coverageRadiusKm: offering.travels ? offering.coverageRadiusKm : null,
+    travels: Boolean(offering.travels),
     latitude: offering.latitude ?? null,
     longitude: offering.longitude ?? null,
     priceFromFc: offering.priceFromFc,
@@ -622,6 +624,8 @@ export async function listPublicServices(req: Request, res: Response) {
       ? priceUnit
       : null;
     const priceRange = readPriceRange(req);
+    const mobility = typeof req.query.mobility === 'string' ? req.query.mobility.trim() : '';
+    const travelsFilter = mobility === 'travels' ? true : mobility === 'on_site' ? false : null;
 
     const offerings = await prisma.serviceOffering.findMany({
       where: {
@@ -632,6 +636,7 @@ export async function listPublicServices(req: Request, res: Response) {
         ...(category ? { category } : {}),
         ...(wantUnit ? { priceUnit: wantUnit } : {}),
         ...(priceRange ? { priceFromFc: priceRange } : {}),
+        ...(travelsFilter == null ? {} : { travels: travelsFilter }),
         ...((street || q)
           ? {
               AND: [
@@ -868,7 +873,7 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
     }
 
     const {
-      title, description, city, commune, neighborhood, coverageRadiusKm, latitude, longitude,
+      title, description, city, commune, neighborhood, coverageRadiusKm, travels, latitude, longitude,
       priceFromFc, priceUnit, quotaMin, quotaMax, photos, isPublic, category, blockedDates,
     } = req.body || {};
     if (!title?.trim()) return res.status(400).json({ error: 'Le titre est requis.' });
@@ -876,6 +881,9 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
     const wantPublic = Boolean(isPublic);
     const parsedPrice = Number.parseInt(String(priceFromFc ?? ''), 10);
     const parsedRadius = Number.parseInt(String(coverageRadiusKm ?? ''), 10);
+    const doesTravel = travels === undefined || travels === null
+      ? Number.isFinite(parsedRadius) && parsedRadius > 0
+      : Boolean(travels);
     const photosSafe = parsePhotoUrls(photos);
     if (photosSafe.filter(isVideoUrl).length > MARKETPLACE_MAX_VIDEOS) {
       return res.status(400).json({ error: `Maximum ${MARKETPLACE_MAX_VIDEOS} vidéos par prestation.` });
@@ -889,6 +897,9 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
       if (locationError) return res.status(400).json({ error: locationError });
       if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
         return res.status(400).json({ error: 'Indiquez un tarif de départ en FC.' });
+      }
+      if (doesTravel && !(Number.isFinite(parsedRadius) && parsedRadius > 0)) {
+        return res.status(400).json({ error: 'Indiquez le rayon d’intervention (km) si vous vous déplacez.' });
       }
     }
 
@@ -924,7 +935,8 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
       city: place.city,
       commune: place.commune,
       neighborhood: place.neighborhood,
-      coverageRadiusKm: Number.isFinite(parsedRadius) && parsedRadius > 0 ? parsedRadius : null,
+      coverageRadiusKm: doesTravel && Number.isFinite(parsedRadius) && parsedRadius > 0 ? parsedRadius : null,
+      travels: doesTravel,
       latitude: latitude != null && latitude !== '' && Number.isFinite(Number(latitude)) ? Number(latitude) : null,
       longitude: longitude != null && longitude !== '' && Number.isFinite(Number(longitude)) ? Number(longitude) : null,
       priceFromFc: Number.isFinite(parsedPrice) ? parsedPrice : null,

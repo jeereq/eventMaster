@@ -15,6 +15,7 @@ import {
   PRICE_UNIT_OPTIONS,
   SERVICE_CATEGORIES,
   SERVICE_CATEGORY_LABELS,
+  SERVICE_MOBILITY_OPTIONS,
   appendCatalogueGeoParams,
   catalogueGeoChips,
   catalogueItemToMapMarker,
@@ -24,14 +25,16 @@ import {
   serviceToCatalogueItem,
   type CatalogueGeoState,
   type PublicService,
+  type ServiceMobility,
 } from '@/lib/marketplace';
 
-type ServiceFilters = CatalogueGeoState & { category: string; priceUnit: string };
+type ServiceFilters = CatalogueGeoState & { category: string; priceUnit: string; mobility: ServiceMobility };
 
 const emptyFilters: ServiceFilters = {
   ...EMPTY_CATALOGUE_GEO,
   category: '',
   priceUnit: '',
+  mobility: '',
 };
 
 export default function MarketplaceServicesPage() {
@@ -55,6 +58,7 @@ export default function MarketplaceServicesPage() {
       appendCatalogueGeoParams(params, filters);
       if (filters.category) params.set('category', filters.category);
       if (filters.priceUnit) params.set('priceUnit', filters.priceUnit);
+      if (filters.mobility) params.set('mobility', filters.mobility);
       const data = await api.get(`/public/services${params.toString() ? `?${params}` : ''}`);
       setServices(data.services || []);
       setPage(1);
@@ -89,6 +93,13 @@ export default function MarketplaceServicesPage() {
         id: 'priceUnit',
         label: 'Tarif',
         value: PRICE_UNIT_OPTIONS.find((opt) => opt.id === applied.priceUnit)?.label || applied.priceUnit,
+      });
+    }
+    if (applied.mobility) {
+      extra.push({
+        id: 'mobility',
+        label: 'Intervention',
+        value: applied.mobility === 'on_site' ? 'Sur place' : 'Se déplace',
       });
     }
     return catalogueGeoChips(applied, extra);
@@ -153,8 +164,13 @@ export default function MarketplaceServicesPage() {
           chips={chips}
           resultLabel={!loading ? `${items.length} prestataire${items.length > 1 ? 's' : ''}` : undefined}
           onRemoveChip={(id) => {
-            if (id === 'category' || id === 'priceUnit') applyFilters({ ...applied, [id]: '' });
-            else applyFilters({ ...clearCatalogueGeoChip(applied, id), category: applied.category, priceUnit: applied.priceUnit });
+            if (id === 'category' || id === 'priceUnit' || id === 'mobility') applyFilters({ ...applied, [id]: '' });
+            else applyFilters({
+              ...clearCatalogueGeoChip(applied, id),
+              category: applied.category,
+              priceUnit: applied.priceUnit,
+              mobility: applied.mobility,
+            });
           }}
           onClearChips={() => applyFilters(emptyFilters)}
           onOpen={() => {
@@ -164,7 +180,7 @@ export default function MarketplaceServicesPage() {
           onApply={async () => {
             try {
               const geo = await resolveCatalogueGeo(draft);
-              applyFilters({ ...geo, category: draft.category, priceUnit: draft.priceUnit });
+              applyFilters({ ...geo, category: draft.category, priceUnit: draft.priceUnit, mobility: draft.mobility });
             } catch (err: unknown) {
               setFilterError(err instanceof Error ? err.message : 'Filtre de proximité impossible.');
               throw err;
@@ -175,9 +191,16 @@ export default function MarketplaceServicesPage() {
             <>
               <CatalogueGeoFields
                 value={draft}
-                onChange={(next) => setDraft({ ...next, category: draft.category, priceUnit: draft.priceUnit })}
+                onChange={(next) => setDraft({ ...next, category: draft.category, priceUnit: draft.priceUnit, mobility: draft.mobility })}
                 error={filterError}
               />
+              <CatalogueFilterField label="Intervention">
+                <CatalogueChoicePills
+                  options={SERVICE_MOBILITY_OPTIONS.filter((opt) => opt.id)}
+                  value={draft.mobility}
+                  onChange={(id) => setDraft((d) => ({ ...d, mobility: (id as ServiceMobility) || '' }))}
+                />
+              </CatalogueFilterField>
               <CatalogueFilterField label="Catégorie">
                 <CatalogueChoicePills
                   options={SERVICE_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] }))}
