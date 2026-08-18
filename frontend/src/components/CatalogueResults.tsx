@@ -2,13 +2,12 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Building2, MapPin, Sparkles, Users } from 'lucide-react';
-import { formatFc } from '@/config/landingPricing';
+import { ArrowRight, Building2, Calendar, MapPin, Sparkles, Users } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { listStackClass } from '@/components/ui';
 import { Skeleton } from '@/components/ui/Skeleton';
 import FavoriteHeart from '@/components/FavoriteHeart';
-import { formatDistanceKm, formatQuotaLabel, serviceMobilityLabel, type CatalogueItem, type CatalogueViewMode } from '@/lib/marketplace';
+import { catalogueKindLabel, cataloguePriceCaption, formatDistanceKm, formatQuotaLabel, serviceMobilityLabel, type CatalogueItem, type CatalogueViewMode } from '@/lib/marketplace';
 
 export const CATALOGUE_GRID_COLS = [2, 3, 4, 5] as const;
 export type CatalogueGridCols = (typeof CATALOGUE_GRID_COLS)[number];
@@ -27,7 +26,7 @@ function Cover({ item, className }: { item: CatalogueItem; className?: string })
       <img src={item.coverUrl} alt="" className={cn('object-cover transition duration-500 group-hover:scale-110', className)} />
     );
   }
-  const Icon = item.kind === 'venue' ? Building2 : Sparkles;
+  const Icon = item.kind === 'venue' ? Building2 : item.kind === 'event' ? Calendar : Sparkles;
   return (
     <div className={cn('flex items-center justify-center bg-surface-muted text-muted', className)}>
       <Icon className="w-8 h-8" />
@@ -36,14 +35,14 @@ function Cover({ item, className }: { item: CatalogueItem; className?: string })
 }
 
 function KindBadge({ item }: { item: CatalogueItem }) {
-  const Icon = item.kind === 'service' ? Sparkles : Building2;
+  const Icon = item.kind === 'venue' ? Building2 : item.kind === 'event' ? Calendar : Sparkles;
   return (
     <span className={cn(
       'inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-sm px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider shadow-sm',
-      item.kind === 'service' ? 'text-[color:var(--festive-accent)]' : 'text-primary',
+      item.kind === 'service' ? 'text-[color:var(--festive-accent)]' : item.kind === 'event' ? 'text-emerald-700' : 'text-primary',
     )}>
       <Icon className="w-3 h-3" />
-      {item.kind === 'venue' ? 'Salle' : 'Prestataire'}
+      {catalogueKindLabel(item.kind)}
     </span>
   );
 }
@@ -71,7 +70,7 @@ function GridCard({
         <div className="absolute top-2.5 left-2.5">
           <KindBadge item={item} />
         </div>
-        {onToggleFavorite ? (
+        {onToggleFavorite && item.kind !== 'event' ? (
           <div className="absolute top-2.5 right-2.5 z-10">
             <FavoriteHeart active={Boolean(favorited)} onToggle={() => onToggleFavorite(item)} />
           </div>
@@ -90,7 +89,7 @@ function GridCard({
             {item.title}
           </p>
           <p className="text-[11px] text-white/85 mt-0.5">
-            {item.priceFromFc != null ? `Dès ${formatFc(item.priceFromFc)}` : 'Sur devis'}
+            {cataloguePriceCaption(item)}
             <span className="text-white/70"> · {item.priceUnitLabel}</span>
           </p>
         </div>
@@ -165,12 +164,12 @@ function ListRow({
         ) : null}
       </div>
       <div className="shrink-0 flex items-center gap-2">
-        {onToggleFavorite ? (
+        {onToggleFavorite && item.kind !== 'event' ? (
           <FavoriteHeart active={Boolean(favorited)} onToggle={() => onToggleFavorite(item)} />
         ) : null}
         <div className="text-right">
           <span className="text-sm font-semibold text-foreground">
-            {item.priceFromFc != null ? `Dès ${formatFc(item.priceFromFc)}` : 'Sur devis'}
+            {cataloguePriceCaption(item)}
           </span>
           <span className="block text-[11px] text-muted">{item.priceUnitLabel}</span>
         </div>

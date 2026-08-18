@@ -69,13 +69,13 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'public-events',
     question: 'Puis-je organiser un événement public avec billets payants ?',
     answer:
-      'Oui. Dans Événements, choisissez Public : la fiche apparaît sur /evenements. Inscription gratuite, ou billets payants en ligne (carte via Stripe). Les acheteurs deviennent des invités avec badge QR. Un événement Privé reste sur liste d’invités uniquement (mariage, soirée fermée).',
+      'Oui. Dans Événements, choisissez Public : la fiche apparaît sur le marketplace, la carte et /evenements. Inscription gratuite, ou billets payants en ligne (carte via Stripe). Les acheteurs deviennent des invités avec badge QR. Placez le pin GPS pour que l’événement soit visible sur la carte. Un événement Privé reste sur liste d’invités uniquement (mariage, soirée fermée).',
   },
   {
     id: 'marketplace-venues',
     question: 'Puis-je trouver une salle ou un prestataire sur EventMaster ?',
     answer:
-      'Oui. Le marketplace liste les salles et prestations (traiteur, photo, DJ, déco…) publiées, avec photos, vidéos, carte et calendrier. Sans compte, vous parcourez le catalogue public. Avec un compte client, vous mettez des fiches en favoris, préparez un événement selon votre budget (trois packs) et suivez vos réservations dans le tableau de bord. Vous pouvez aussi demander un devis ou une date : l’acompte (30 %) se verse au professionnel, hors EventMaster.',
+      'Oui. Le marketplace liste les salles, les prestations (traiteur, photo, DJ, déco…) et les événements publics, avec photos, vidéos, carte et calendrier. Sans compte, vous parcourez le catalogue public. Avec un compte client, vous mettez des fiches en favoris, préparez un événement selon votre budget (trois packs) et suivez vos réservations dans le tableau de bord. Vous pouvez aussi demander un devis ou une date : l’acompte (30 %) se verse au professionnel, hors EventMaster.',
   },
   {
     id: 'marketplace-booking',

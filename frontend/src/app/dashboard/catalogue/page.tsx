@@ -30,16 +30,21 @@ import {
   SERVICE_CATEGORY_LABELS,
   appendCatalogueGeoParams,
   catalogueGeoChips,
+  catalogueItemMatchesGeo,
   catalogueItemToMapMarker,
+  catalogueKindFilterLabel,
   clearCatalogueGeoChip,
+  eventToCatalogueItem,
   isCatalogueMapView,
   resolveCatalogueGeo,
   serviceToCatalogueItem,
   sortCatalogueByDistance,
   venueToCatalogueItem,
+  withCatalogueDistance,
   withDashboardListingHref,
   type CatalogueGeoState,
   type CatalogueItem,
+  type PublicEventCard,
   type PublicService,
   type PublicVenue,
   type ServiceCategory,
@@ -54,7 +59,7 @@ import EventSavedPacks from '@/components/EventSavedPacks';
 import CatalogueViewToggle from '@/components/CatalogueViewToggle';
 
 type HubTab = 'explore' | 'favorites' | 'plan' | 'packs';
-type HubFilters = CatalogueGeoState & { kind: 'all' | 'venue' | 'service'; mobility: ServiceMobility; tab: HubTab };
+type HubFilters = CatalogueGeoState & { kind: 'all' | 'venue' | 'service' | 'event'; mobility: ServiceMobility; tab: HubTab };
 
 const emptyFilters: HubFilters = {
   ...EMPTY_CATALOGUE_GEO,
@@ -68,7 +73,7 @@ const QUERY_OPTS = {
   emptyExtra: { kind: 'all', mobility: '', tab: 'explore' },
   merge: (geo: CatalogueGeoState, extra: Record<string, string>): HubFilters => ({
     ...geo,
-    kind: extra.kind === 'venue' || extra.kind === 'service' ? extra.kind : 'all',
+    kind: extra.kind === 'venue' || extra.kind === 'service' || extra.kind === 'event' ? extra.kind : 'all',
     mobility: (extra.mobility as ServiceMobility) || '',
     tab: extra.tab === 'favorites' || extra.tab === 'plan' || extra.tab === 'packs' ? extra.tab : 'explore',
   }),
@@ -86,6 +91,7 @@ function ClientMarketplaceInner() {
   const { isFavorite, toggleFavorite, items: favoriteRows, loading: favoritesLoading, reload: reloadFavorites } = useListingFavorites();
   const [venues, setVenues] = useState<PublicVenue[]>([]);
   const [services, setServices] = useState<PublicService[]>([]);
+  const [events, setEvents] = useState<PublicEventCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterError, setFilterError] = useState('');
   const [pageSize, setPageSize] = usePageSize('dashboard-catalogue', 12);
@@ -119,12 +125,20 @@ function ClientMarketplaceInner() {
       const serviceParams = new URLSearchParams(params);
       if (filters.mobility) serviceParams.set('mobility', filters.mobility);
       const serviceQs = serviceParams.toString() ? `?${serviceParams}` : '';
-      const [venuesData, servicesData] = await Promise.all([
-        api.get(`/public/venues${venueQs}`).catch(() => ({ venues: [] })),
-        api.get(`/public/services${serviceQs}`).catch(() => ({ services: [] })),
+      const loadVenues = filters.kind !== 'service' && filters.kind !== 'event';
+      const loadServices = filters.kind !== 'venue' && filters.kind !== 'event';
+      const loadEvents = filters.kind !== 'venue' && filters.kind !== 'service';
+      const eventParams = new URLSearchParams();
+      if (search.trim()) eventParams.set('q', search.trim());
+      const eventQs = eventParams.toString() ? `?${eventParams}` : '';
+      const [venuesData, servicesData, eventsData] = await Promise.all([
+        loadVenues ? api.get(`/public/venues${venueQs}`).catch(() => ({ venues: [] })) : Promise.resolve({ venues: [] }),
+        loadServices ? api.get(`/public/services${serviceQs}`).catch(() => ({ services: [] })) : Promise.resolve({ services: [] }),
+        loadEvents ? api.get(`/public/events${eventQs}`).catch(() => ({ events: [] })) : Promise.resolve({ events: [] }),
       ]);
       setVenues(venuesData.venues || []);
       setServices(servicesData.services || []);
+      setEvents(eventsData.events || []);
     } finally {
       setLoading(false);
     }
@@ -156,8 +170,13 @@ function ClientMarketplaceInner() {
     () => sortCatalogueByDistance([
       ...venues.map((venue) => withDashboardListingHref(venueToCatalogueItem(venue))),
       ...services.map((service) => withDashboardListingHref(serviceToCatalogueItem(service))),
+      ...events
+        .map(eventToCatalogueItem)
+        .filter((item): item is NonNullable<typeof item> => Boolean(item))
+        .map((item) => withCatalogueDistance(item, applied.lat, applied.lng))
+        .filter((item) => catalogueItemMatchesGeo(item, applied)),
     ]),
-    [venues, services],
+    [venues, services, events, applied],
   );
 
   const visible = useMemo(() => {
@@ -194,7 +213,7 @@ function ClientMarketplaceInner() {
   const chips = catalogueGeoChips(
     applied,
     [
-      ...(applied.kind === 'all' ? [] : [{ id: 'kind', label: 'Type', value: applied.kind === 'venue' ? 'Salles' : 'Prestataires' }]),
+      ...(applied.kind === 'all' ? [] : [{ id: 'kind', label: 'Type', value: catalogueKindFilterLabel(applied.kind) }]),
       ...(applied.mobility
         ? [{ id: 'mobility', label: 'Intervention', value: applied.mobility === 'on_site' ? 'Sur place' : 'Se déplace' }]
         : []),
@@ -204,6 +223,7 @@ function ClientMarketplaceInner() {
   const setTab = (next: HubTab) => applyFilters({ ...applied, tab: next });
 
   const onToggleFavorite = (item: CatalogueItem) => {
+    if (item.kind === 'event') return;
     void toggleFavorite(item.kind, item.slug);
   };
 
@@ -388,12 +408,13 @@ function ClientMarketplaceInner() {
             modalTitle="Filtrer le marketplace"
             filters={
               <>
-                <CatalogueFilterField label="Salles ou prestataires">
+                <CatalogueFilterField label="Type">
                   <CatalogueChoicePills
                     options={[
                       { id: 'all', label: 'Tous' },
                       { id: 'venue', label: 'Salles' },
                       { id: 'service', label: 'Prestataires' },
+                      { id: 'event', label: 'Événements' },
                     ]}
                     value={draft.kind}
                     onChange={(id) => setDraft((d) => ({ ...d, kind: (id as HubFilters['kind']) || 'all' }))}
@@ -405,6 +426,7 @@ function ClientMarketplaceInner() {
                   error={filterError}
                   showCapacity={draft.kind !== 'service'}
                 />
+                {draft.kind !== 'event' ? (
                 <CatalogueFilterField label="Prestataires — intervention">
                   <CatalogueChoicePills
                     options={SERVICE_MOBILITY_OPTIONS.filter((opt) => opt.id)}
@@ -412,6 +434,7 @@ function ClientMarketplaceInner() {
                     onChange={(id) => setDraft((d) => ({ ...d, mobility: (id as ServiceMobility) || '' }))}
                   />
                 </CatalogueFilterField>
+                ) : null}
               </>
             }
           />
@@ -440,8 +463,8 @@ function ClientMarketplaceInner() {
                 mode={mode === 'list' ? 'list' : 'grid'}
                 gridCols={gridCols}
                 emptyTitle="Aucune fiche pour cette recherche"
-                emptyDescription="Élargissez les mots-clés, la ville ou le type pour voir des salles et prestataires."
-                isFavorite={(item) => isFavorite(item.kind, item.slug)}
+                emptyDescription="Élargissez les mots-clés, la ville ou le type pour voir des salles, prestataires et événements."
+                isFavorite={(item) => item.kind !== 'event' && isFavorite(item.kind, item.slug)}
                 onToggleFavorite={onToggleFavorite}
               />
               <Pagination
@@ -504,7 +527,7 @@ function ClientMarketplaceInner() {
               emptyDescription={favoriteItems.length === 0
                 ? 'Dans Explorer, cliquez sur le cœur d’une salle ou d’un prestataire pour le retrouver ici.'
                 : 'Changez le type (salles / prestataires) ou le mot-clé.'}
-              isFavorite={(item) => isFavorite(item.kind, item.slug)}
+              isFavorite={(item) => item.kind !== 'event' && isFavorite(item.kind, item.slug)}
               onToggleFavorite={onToggleFavorite}
             />
           </div>

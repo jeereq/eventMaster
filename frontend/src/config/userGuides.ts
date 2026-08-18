@@ -185,7 +185,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'create-event',
         title: 'Créer un événement complet',
         content:
-          '1. Allez dans Événements → Créer.\n2. Choisissez Privé (liste d’invités) ou Public (fiche sur /evenements).\n3. Pour un public payant, activez les billets en ligne et le prix en FC.\n4. Renseignez titre, date, lieu ; associez une salle si besoin.\n5. Suivez le parcours : invités (ou acheteurs de billets) → invitation RSVP → plan de table → protocole.',
+          '1. Allez dans Événements → Créer.\n2. Choisissez Privé (liste d’invités) ou Public (fiche sur le marketplace, la carte et /evenements).\n3. Pour un public payant, activez les billets en ligne et le prix en FC.\n4. Renseignez titre, date, lieu et GPS ; associez une salle (importe le plan 2D) et un modèle de formulaire RSVP si besoin.\n5. Suivez le parcours : invités (ou acheteurs de billets) → invitation RSVP → plan de table → protocole.',
         links: [{ label: 'Événements', href: '/dashboard/events' }],
       },
       {
@@ -411,7 +411,7 @@ export const USER_GUIDES: UserGuide[] = [
     summary:
       'Vous cherchez une salle ou des prestataires sans créer d’événements. Marketplace, favoris, packs budget et réservations sont dans votre tableau de bord. Pour organiser une fête ou publier vos offres, changez le type de compte dans Mon compte.',
     canDo: [
-      'Explorer salles et prestataires dans le Marketplace du tableau de bord',
+      'Explorer salles, prestataires et événements publics dans le Marketplace du tableau de bord',
       'Mettre des fiches en favoris (filtre salles / prestataires, vue grille ou liste)',
       'Préparer un événement selon le budget et obtenir trois packs distincts',
       'Sauvegarder un pack de recherche ou composer un pack parfait depuis les favoris',
@@ -434,7 +434,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'explore-favorites',
         title: 'Explorer et enregistrer des favoris',
         content:
-          '1. Ouvrez Marketplace (tableau de bord).\n2. Onglet Explorer : filtrez par ville, type, prix.\n3. Cliquez sur le cœur pour enregistrer une salle ou un prestataire.\n4. Onglet Favoris : filtrez salles / prestataires et passez en grille ou liste.',
+          '1. Ouvrez Marketplace (tableau de bord).\n2. Onglet Explorer : filtrez par ville, type (salles, prestataires, événements), prix.\n3. Cliquez sur le cœur pour enregistrer une salle ou un prestataire (les événements publics s’ouvrent sur leur fiche).\n4. Onglet Favoris : filtrez salles / prestataires et passez en grille ou liste.',
         links: [{ label: 'Marketplace', href: '/dashboard/catalogue' }],
       },
       {

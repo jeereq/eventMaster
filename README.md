@@ -99,10 +99,10 @@ eventmaster/
 
 - **Types de compte** : organisateur, prestataire / salles, les deux, ou **client marketplace** (sans abo SaaS).
 - **Dashboard** : quotas selon le forfait (Essentials, Particulier, Business / Premium / Enterprise, Salle, Prestataire, Salle & presta).
-- **Événements** : **privés** (liste d’invités) ou **publics** (`/evenements`) avec inscription gratuite ou **billets payants** (Stripe ; simulé en local). Invités, import CSV, plan de table 2D, protocole QR.
+- **Événements** : **privés** (liste d’invités) ou **publics** (marketplace, carte, `/evenements`) avec inscription gratuite ou **billets payants** (Stripe ; simulé en local). À la création : modèle de formulaire RSVP, import du plan de salle, éditeur 2D. Invités, import CSV, protocole QR.
 - **Invitations & RSVP** : concepteur visuel, e-mail / WhatsApp, portail public, badge QR. PDF / plan / GPS partent **dès acceptation RSVP** (si place assignée, Premium 1+), pas à l’envoi de l’invitation.
 - **Marketplace** :
-  - Catalogue public et hub client (`/dashboard/catalogue`) : explorer, **favoris** (grille / liste), **préparer un événement** (budget min. 50 000 FC → 3 packs distincts éco / équilibré / confort), packs sauvegardés.
+  - Catalogue public et hub client (`/dashboard/catalogue`) : salles, prestataires **et événements publics**, explorer, **favoris** (grille / liste, salles / prestas), **préparer un événement** (budget min. 50 000 FC → 3 packs distincts éco / équilibré / confort), packs sauvegardés.
   - Desk prestataire (`/dashboard/marketplace`) : prestations (pagination, vues grille / liste), **demandes** (contact, conversion), **réservations** (Demande → Acceptée → Acompte hors plateforme 30 % → Confirmée). Commission vendeur **8 %**, distincte de l’abonnement.
 - **Facturation** : demandes de forfait, factures PDF, Stripe + simulation en développement.
 

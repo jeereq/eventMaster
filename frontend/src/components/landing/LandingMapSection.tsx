@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Building2, MapPin, Sparkles } from 'lucide-react';
+import { ArrowRight, Building2, Calendar, MapPin, Sparkles } from 'lucide-react';
 import { api } from '@/lib/api';
 import MarketplaceLocationsMap, { type MarketplaceMapMarker } from '@/components/MarketplaceLocationsMap';
 import { Button, Input, Skeleton } from '@/components/ui';
@@ -11,19 +11,23 @@ import {
   SERVICE_CATEGORIES,
   SERVICE_CATEGORY_LABELS,
   catalogueItemToMapMarker,
+  catalogueKindLabel,
+  cataloguePriceCaption,
+  eventToCatalogueItem,
   serviceToCatalogueItem,
   venueToCatalogueItem,
+  type PublicEventCard,
   type PublicService,
   type PublicVenue,
 } from '@/lib/marketplace';
-import { formatFc } from '@/config/landingPricing';
 import { RDC_CITIES } from '@/lib/rdcCities';
 
-type KindFilter = 'all' | 'venue' | 'service';
+type KindFilter = 'all' | 'venue' | 'service' | 'event';
 
 export default function LandingMapSection() {
   const [venues, setVenues] = useState<PublicVenue[]>([]);
   const [services, setServices] = useState<PublicService[]>([]);
+  const [events, setEvents] = useState<PublicEventCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [kind, setKind] = useState<KindFilter>('all');
   const [city, setCity] = useState('');
@@ -36,10 +40,12 @@ export default function LandingMapSection() {
     Promise.all([
       api.get('/public/venues').catch(() => ({ venues: [] })),
       api.get('/public/services').catch(() => ({ services: [] })),
-    ]).then(([venuesData, servicesData]) => {
+      api.get('/public/events').catch(() => ({ events: [] })),
+    ]).then(([venuesData, servicesData, eventsData]) => {
       if (cancelled) return;
       setVenues(venuesData.venues || []);
       setServices(servicesData.services || []);
+      setEvents(eventsData.events || []);
       setLoading(false);
     });
     return () => {
@@ -50,19 +56,24 @@ export default function LandingMapSection() {
   const items = useMemo(() => {
     const q = query.trim().toLowerCase();
     const venueItems = venues
-      .filter((venue) => kind !== 'service')
+      .filter(() => kind !== 'service' && kind !== 'event')
       .filter((venue) => !city || venue.city === city)
       .map(venueToCatalogueItem);
     const serviceItems = services
-      .filter((service) => kind !== 'venue')
+      .filter(() => kind !== 'venue' && kind !== 'event')
       .filter((service) => !city || service.city === city)
       .filter((service) => !category || service.category === category)
       .map(serviceToCatalogueItem);
-    return [...venueItems, ...serviceItems].filter((item) => {
+    const eventItems = events
+      .filter(() => kind !== 'venue' && kind !== 'service')
+      .filter((event) => !city || (event.location || '').toLowerCase().includes(city.toLowerCase()))
+      .map(eventToCatalogueItem)
+      .filter((item): item is NonNullable<typeof item> => Boolean(item));
+    return [...venueItems, ...serviceItems, ...eventItems].filter((item) => {
       if (!q) return true;
       return `${item.title} ${item.orgName || ''} ${item.categoryLabel || ''} ${item.location || ''}`.toLowerCase().includes(q);
     });
-  }, [venues, services, kind, city, category, query]);
+  }, [venues, services, events, kind, city, category, query]);
 
   const markers = useMemo(
     () =>
@@ -91,10 +102,10 @@ export default function LandingMapSection() {
               Sur la carte
             </p>
             <h2 className="text-2xl font-semibold text-foreground tracking-tight">
-              Salles et prestataires à Kinshasa et Lubumbashi
+              Salles, prestataires et événements à Kinshasa et Lubumbashi
             </h2>
             <p className="text-sm text-muted leading-relaxed">
-              Filtrez, sélectionnez un pin, puis ouvrez la fiche. L’itinéraire se lance depuis la carte.
+              Filtrez, sélectionnez un pin, puis ouvrez la fiche. Les événements publics avec GPS apparaissent aussi sur la carte.
             </p>
           </div>
           <Link href="/marketplace">
@@ -134,11 +145,12 @@ export default function LandingMapSection() {
                   { id: '', label: 'Tous' },
                   { id: 'venue', label: 'Salles' },
                   { id: 'service', label: 'Prestataires' },
+                  { id: 'event', label: 'Événements' },
                 ]}
               />
             </div>
           </div>
-          {kind !== 'venue' && (
+          {kind !== 'venue' && kind !== 'event' && (
             <div className="space-y-1.5">
               <p className="text-xs font-semibold text-muted">Catégorie de prestation</p>
               <CatalogueChoicePills
@@ -176,8 +188,8 @@ export default function LandingMapSection() {
               {selectedItem ? (
                 <>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
-                    {selectedItem.kind === 'venue' ? <Building2 className="w-3.5 h-3.5" /> : <Sparkles className="w-3.5 h-3.5" />}
-                    {selectedItem.kind === 'venue' ? 'Salle' : 'Prestation'}
+                    {selectedItem.kind === 'venue' ? <Building2 className="w-3.5 h-3.5" /> : selectedItem.kind === 'event' ? <Calendar className="w-3.5 h-3.5" /> : <Sparkles className="w-3.5 h-3.5" />}
+                    {catalogueKindLabel(selectedItem.kind)}
                   </p>
                   <h3 className="text-sm font-semibold text-foreground leading-snug">{selectedItem.title}</h3>
                   {selectedItem.location ? (
@@ -187,7 +199,7 @@ export default function LandingMapSection() {
                     <p className="text-xs text-muted">{selectedItem.categoryLabel}</p>
                   ) : null}
                   <p className="text-sm font-semibold text-foreground">
-                    {selectedItem.priceFromFc != null ? formatFc(selectedItem.priceFromFc) : 'Sur devis'}
+                    {cataloguePriceCaption(selectedItem)}
                     {selectedItem.priceUnitLabel ? (
                       <span className="text-xs font-medium text-muted"> · {selectedItem.priceUnitLabel}</span>
                     ) : null}
@@ -200,7 +212,7 @@ export default function LandingMapSection() {
                 </>
               ) : (
                 <p className="text-sm text-muted leading-relaxed">
-                  Touchez un pin pour sélectionner une salle ou un prestataire, puis ouvrez la fiche.
+                  Touchez un pin pour sélectionner une salle, un prestataire ou un événement, puis ouvrez la fiche.
                 </p>
               )}
             </aside>

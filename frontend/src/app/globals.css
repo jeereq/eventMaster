@@ -592,6 +592,26 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
   background: var(--festive-accent, #b45309);
 }
 
+.em-map-marker-photo-pin.is-event .em-map-marker-photo-frame {
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 2px #059669,
+    0 0 0 6px color-mix(in srgb, #059669 28%, transparent);
+}
+
+.em-map-marker-photo-pin.is-event .em-map-marker-photo {
+  border-radius: 7px;
+}
+
+.em-map-marker-photo-pin.is-event .em-map-marker-photo-badge {
+  background: #059669;
+  border-radius: 6px;
+}
+
+.em-map-marker-photo-pin.is-event .em-map-marker-photo-pointer {
+  background: #059669;
+}
+
 .em-map-marker-caption {
   position: absolute;
   left: 50%;
@@ -652,6 +672,23 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
   border-radius: 1px;
 }
 
+.em-map-marker-event .em-map-marker-head {
+  width: 36px;
+  height: 36px;
+  background: #059669;
+  border-radius: 10px;
+  box-shadow: 0 0 0 5px color-mix(in srgb, #059669 28%, transparent);
+}
+
+.em-map-marker-event .em-map-marker-tail {
+  width: 11px;
+  height: 11px;
+  margin-top: -5px;
+  background: #059669;
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+
 .em-map-marker-here .em-map-marker-head {
   width: 26px;
   height: 26px;
@@ -668,6 +705,7 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
 
 .em-map-legend-venue,
 .em-map-legend-service,
+.em-map-legend-event,
 .em-map-legend-here {
   width: 12px;
   height: 12px;
@@ -684,6 +722,11 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
 .em-map-legend-service {
   background: var(--festive-accent, #b45309);
   border-radius: 999px;
+}
+
+.em-map-legend-event {
+  background: #059669;
+  border-radius: 3px;
 }
 
 .em-map-legend-here {

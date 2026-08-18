@@ -3,7 +3,7 @@
 import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Building2, Loader2, MapPin, Navigation, Search, Sparkles, Users, Volume2, VolumeX, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Building2, Calendar, Loader2, MapPin, Navigation, Search, Sparkles, Users, Volume2, VolumeX, X } from 'lucide-react';
 import { loadLeaflet, leafletBasemap, documentMapTheme, reverseGeocode, searchPlaces, type GeoPlace } from '@/lib/leafletLoader';
 import {
   fetchDrivingRoute,
@@ -12,7 +12,7 @@ import {
   type DrivingRoute,
 } from '@/lib/osrm';
 import { findRdcCity, cityForPoint, leafletMaxBounds, nominatimViewbox, pointInAllowedRdcCities, pointInBounds } from '@/lib/rdcCities';
-import { formatDistanceKm, haversineKm, isVideoUrl } from '@/lib/marketplace';
+import { formatDistanceKm, haversineKm, isVideoUrl, catalogueKindLabel } from '@/lib/marketplace';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
@@ -31,7 +31,7 @@ export interface MarketplaceMapMarker {
   title: string;
   href: string;
   subtitle?: string;
-  kind?: 'venue' | 'service';
+  kind?: 'venue' | 'service' | 'event';
   coverUrl?: string | null;
   photos?: string[];
   priceLabel?: string;
@@ -52,6 +52,7 @@ const KINSHASA = { lat: -4.325, lng: 15.322 };
 
 const VENUE_ICON_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18"/><path d="M6 12H4a2 2 0 0 0-2 2v8h20v-8a2 2 0 0 0-2-2h-2"/><path d="M10 6h4M10 10h4M10 14h4M10 18h4"/></svg>';
 const SERVICE_ICON_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>';
+const EVENT_ICON_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>';
 const HERE_ICON_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>';
 
 function escapeAttr(value: string) {
@@ -77,16 +78,15 @@ function markerImageUrls(marker: { coverUrl?: string | null; photos?: string[] }
   return list;
 }
 
-function listingIconHtml(kind?: 'venue' | 'service', coverUrl?: string | null, title?: string) {
-  const isService = kind === 'service';
+function listingIconHtml(kind?: 'venue' | 'service' | 'event', coverUrl?: string | null, title?: string) {
+  const pinClass = kind === 'service' ? 'is-service' : kind === 'event' ? 'is-event' : 'is-venue';
+  const icon = kind === 'service' ? SERVICE_ICON_SVG : kind === 'event' ? EVENT_ICON_SVG : VENUE_ICON_SVG;
   const caption = title
     ? `<span class="em-map-marker-caption">${escapeAttr(title)}</span>`
     : '';
   if (coverUrl) {
-    const badge = isService ? SERVICE_ICON_SVG : VENUE_ICON_SVG;
-    return `<span class="em-map-marker-hit em-map-marker-hit-photo">${caption}<span class="em-map-marker-photo-pin ${isService ? 'is-service' : 'is-venue'}"><span class="em-map-marker-photo-wrap"><span class="em-map-marker-photo-frame"><img class="em-map-marker-photo" src="${escapeAttr(coverUrl)}" alt="" /></span><span class="em-map-marker-photo-badge">${badge}</span></span><span class="em-map-marker-photo-pointer"></span></span></span>`;
+    return `<span class="em-map-marker-hit em-map-marker-hit-photo">${caption}<span class="em-map-marker-photo-pin ${pinClass}"><span class="em-map-marker-photo-wrap"><span class="em-map-marker-photo-frame"><img class="em-map-marker-photo" src="${escapeAttr(coverUrl)}" alt="" /></span><span class="em-map-marker-photo-badge">${icon}</span></span><span class="em-map-marker-photo-pointer"></span></span></span>`;
   }
-  const icon = isService ? SERVICE_ICON_SVG : VENUE_ICON_SVG;
   return `<span class="em-map-marker-hit">${caption}<span class="em-map-marker-inner"><span class="em-map-marker-head">${icon}</span><span class="em-map-marker-tail"></span></span></span>`;
 }
 
@@ -100,10 +100,16 @@ function cssVar(name: string, fallback: string) {
   return value || fallback;
 }
 
-function markerColor(kind?: 'venue' | 'service') {
-  return kind === 'service'
-    ? cssVar('--festive-accent', '#b45309')
-    : cssVar('--primary', '#4f46e5');
+function markerColor(kind?: 'venue' | 'service' | 'event') {
+  if (kind === 'service') return cssVar('--festive-accent', '#b45309');
+  if (kind === 'event') return '#059669';
+  return cssVar('--primary', '#4f46e5');
+}
+
+function markerKindClass(kind?: 'venue' | 'service' | 'event') {
+  if (kind === 'service') return 'em-map-marker-service';
+  if (kind === 'event') return 'em-map-marker-event';
+  return 'em-map-marker-venue';
 }
 
 function hexToRgba(hex: string, alpha: number) {
@@ -198,8 +204,9 @@ function MarkerPreviewCard({
   searchCenter?: { lat: number; lng: number } | null;
 }) {
   const isService = marker.kind === 'service';
-  const KindIcon = isService ? Sparkles : Building2;
-  const kindLabel = isService ? 'Prestataire' : 'Salle';
+  const isEvent = marker.kind === 'event';
+  const KindIcon = isEvent ? Calendar : isService ? Sparkles : Building2;
+  const kindLabel = catalogueKindLabel(marker.kind);
   const distance = formatDistanceKm(
     marker.distanceKm
     ?? (searchCenter ? haversineKm(searchCenter.lat, searchCenter.lng, marker.lat, marker.lng) : null),
@@ -225,7 +232,11 @@ function MarkerPreviewCard({
         fallbackIcon={
           <div className={cn(
             'h-16 w-full flex items-center justify-center',
-            isService ? 'bg-[color:var(--festive-accent)]/12 text-[color:var(--festive-accent)]' : 'bg-primary/10 text-primary',
+            isEvent
+              ? 'bg-emerald-50 text-emerald-700'
+              : isService
+                ? 'bg-[color:var(--festive-accent)]/12 text-[color:var(--festive-accent)]'
+                : 'bg-primary/10 text-primary',
           )}>
             <KindIcon className="w-7 h-7" />
           </div>
@@ -235,7 +246,11 @@ function MarkerPreviewCard({
         <div className="flex flex-wrap items-center gap-1.5">
           <span className={cn(
             'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider border border-border',
-            isService ? 'text-[color:var(--festive-accent)]' : 'text-primary',
+            isEvent
+              ? 'text-emerald-700'
+              : isService
+                ? 'text-[color:var(--festive-accent)]'
+                : 'text-primary',
           )}>
             <KindIcon className="w-3 h-3" />
             {kindLabel}
@@ -441,7 +456,7 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
     ? markers.filter((m) => {
         const q = query.trim().toLowerCase();
         if (q.length < 1) return false;
-        return [m.title, m.subtitle, m.orgName, m.location, m.kind === 'venue' ? 'salle' : 'prestataire']
+        return [m.title, m.subtitle, m.orgName, m.location, catalogueKindLabel(m.kind)]
           .filter(Boolean)
           .join(' ')
           .toLowerCase()
@@ -490,12 +505,11 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
           && (cityMeta ? pointInBounds(m.lat, m.lng, cityMeta.bounds) : pointInAllowedRdcCities(m.lat, m.lng)),
         );
         const layers: any[] = points.map((m) => {
-          const isService = m.kind === 'service';
           const photoUrl = markerPhotoUrl(m);
           const hasPhoto = Boolean(photoUrl);
           const leafletMarker = L.marker([m.lat, m.lng], {
             icon: L.divIcon({
-              className: `leaflet-interactive em-map-marker ${isService ? 'em-map-marker-service' : 'em-map-marker-venue'}${hasPhoto ? ' has-photo-pin' : ''}`,
+              className: `leaflet-interactive em-map-marker ${markerKindClass(m.kind)}${hasPhoto ? ' has-photo-pin' : ''}`,
               html: listingIconHtml(m.kind, photoUrl, m.title),
               iconSize: hasPhoto ? [48, 58] : [52, 62],
               iconAnchor: hasPhoto ? [24, 56] : [26, 60],
@@ -503,7 +517,7 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
             interactive: true,
             bubblingMouseEvents: false,
             keyboard: true,
-            zIndexOffset: isService ? 20 : 10,
+            zIndexOffset: m.kind === 'event' ? 30 : m.kind === 'service' ? 20 : 10,
             riseOnHover: true,
           });
 
@@ -977,7 +991,7 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
         }}
         placeholder={
           listingSearch
-            ? 'Rechercher une salle ou un prestataire EventMaster…'
+            ? 'Rechercher une salle, un prestataire ou un événement…'
             : 'Chercher un lieu sur la carte…'
         }
         className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-border bg-surface text-sm shadow-[var(--shadow-soft)]"
@@ -987,7 +1001,7 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
         <ul className="absolute z-20 mt-1 w-full max-h-56 overflow-auto rounded-xl border border-border bg-surface shadow-[var(--shadow-soft)]">
           {listingMatches.length === 0 ? (
             <li className="px-3 py-2.5 text-xs text-muted">
-              Aucune salle ni prestataire EventMaster ne correspond.
+              Aucune salle, prestation ni événement EventMaster ne correspond.
             </li>
           ) : (
             listingMatches.map((place) => (
@@ -999,14 +1013,18 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
                 >
                   <span className={cn(
                     'mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-md shrink-0',
-                    place.kind === 'service' ? 'bg-[color:var(--festive-accent)]/15 text-[color:var(--festive-accent)]' : 'bg-primary/10 text-primary',
+                    place.kind === 'service'
+                      ? 'bg-[color:var(--festive-accent)]/15 text-[color:var(--festive-accent)]'
+                      : place.kind === 'event'
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'bg-primary/10 text-primary',
                   )}>
-                    {place.kind === 'service' ? <Sparkles className="w-3.5 h-3.5" /> : <Building2 className="w-3.5 h-3.5" />}
+                    {place.kind === 'service' ? <Sparkles className="w-3.5 h-3.5" /> : place.kind === 'event' ? <Calendar className="w-3.5 h-3.5" /> : <Building2 className="w-3.5 h-3.5" />}
                   </span>
                   <span className="min-w-0">
                     <span className="font-semibold text-foreground">{place.title}</span>
                     <span className="block text-muted">
-                      {place.kind === 'service' ? 'Prestataire' : 'Salle'}
+                      {catalogueKindLabel(place.kind)}
                       {place.categoryLabel ? ` · ${place.categoryLabel}` : ''}
                       {formatDistanceKm(place.distanceKm) ? ` · ${formatDistanceKm(place.distanceKm)}` : ''}
                       {place.coverageRadiusKm ? ` · se déplace ${place.coverageRadiusKm} km` : ''}
@@ -1059,6 +1077,10 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
               <p className="inline-flex items-center gap-1.5">
                 <span className="em-map-legend-service" aria-hidden />
                 Prestataire
+              </p>
+              <p className="inline-flex items-center gap-1.5">
+                <span className="em-map-legend-event" aria-hidden />
+                Événement
               </p>
               {searchCenter ? (
                 <p className="inline-flex items-center gap-1.5">

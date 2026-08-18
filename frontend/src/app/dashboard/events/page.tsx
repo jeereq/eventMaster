@@ -10,7 +10,7 @@ import {
  ChevronRight, ArrowLeft, Check, Upload, Mail, Send, 
  Sparkles, CheckCircle2, XCircle, AlertCircle, HelpCircle, Loader2,
  Copy, MessageSquare, Share2, Search, Filter, RefreshCw,
- Eye, Utensils, FileSpreadsheet, Download, LayoutGrid, Building2, ScanLine, Shirt, Globe, GlobeLock, Ticket
+ Eye, Utensils, FileSpreadsheet, Download, LayoutGrid, Building2, ScanLine, Shirt, Globe, GlobeLock, Ticket, LayoutTemplate
 } from 'lucide-react';
 import TablePlanner from './TablePlanner';
 import EventStaffPanel from './EventStaffPanel';
@@ -302,6 +302,8 @@ export default function EventsPage() {
  const [eventTicketPrice, setEventTicketPrice] = useState('');
  const [eventTicketsTotal, setEventTicketsTotal] = useState('');
  const [eventRoomId, setEventRoomId] = useState('');
+ const [eventFormTemplateId, setEventFormTemplateId] = useState('');
+ const [openTablePlanAfterSave, setOpenTablePlanAfterSave] = useState(false);
  const [orgRooms, setOrgRooms] = useState<OrgRoomOption[]>([]);
  const [loadingRooms, setLoadingRooms] = useState(false);
  const [editingEventId, setEditingEventId] = useState<string | null>(null);
@@ -732,6 +734,8 @@ export default function EventsPage() {
  setEventTicketPrice('');
  setEventTicketsTotal('');
  setEventRoomId('');
+ setEventFormTemplateId('');
+ setOpenTablePlanAfterSave(false);
  setEditingEventId(null);
  setEventMapOpen(false);
  setSearchError('');
@@ -742,6 +746,65 @@ export default function EventsPage() {
  resetEventForm();
  setShowEventModal(true);
  };
+
+ const defaultRsvpInviteBody = (title: string) =>
+ `Bonjour {{firstName}},
+
+Vous êtes invité(e) à ${title}.
+
+Rendez-vous le {{date}} à {{location}}.
+
+Merci de confirmer votre présence :
+{{rsvpLink}}`;
+
+ const syncEventRsvpForm = async (eventId: string, templateId: string, title: string) => {
+ if (!templateId) return;
+ const invites = await api.get(`/events/${eventId}/invitations`);
+ const list = Array.isArray(invites) ? invites : [];
+ const first = list[0] as InvitationItem | undefined;
+ const payload = {
+ templateId,
+ subject: first?.subject || `Invitation : ${title}`,
+ body: first?.body || defaultRsvpInviteBody(title),
+ channel: first?.channel || 'EMAIL',
+ };
+ if (first?.id) {
+ await api.put(`/events/${eventId}/invitations/${first.id}`, payload);
+ } else {
+ await api.post(`/events/${eventId}/invitations`, payload);
+ }
+ };
+
+ const openEventTablePlan = async (event: EventItem) => {
+ setShowEventModal(false);
+ await handleManageEvent(event);
+ setActiveTab('tablePlan');
+ };
+
+ useEffect(() => {
+ if (!showEventModal) return;
+ let cancelled = false;
+ (async () => {
+ try {
+ const templatesData = await api.get('/templates');
+ if (!cancelled) setTemplates(Array.isArray(templatesData) ? templatesData : []);
+ } catch {
+ /* ignore */
+ }
+ if (!editingEventId) return;
+ try {
+ const invitesData = await api.get(`/events/${editingEventId}/invitations`);
+ if (cancelled) return;
+ const first = Array.isArray(invitesData) ? invitesData[0] : null;
+ setEventFormTemplateId(first?.template?.id || '');
+ } catch {
+ if (!cancelled) setEventFormTemplateId('');
+ }
+ })();
+ return () => {
+ cancelled = true;
+ };
+ }, [showEventModal, editingEventId]);
 
  const openAddGuestModal = () => {
  if (guestsAtLimit && !editingGuestId) return;
@@ -812,21 +875,43 @@ export default function EventsPage() {
 
  if (editingEventId) {
  const savedEvent: EventItem = await api.put(`/events/${editingEventId}`, payload);
+ if (eventFormTemplateId) {
+ await syncEventRsvpForm(savedEvent.id, eventFormTemplateId, eventTitle);
+ }
  setSuccess('Événement mis à jour avec succès !');
  if (selectedEvent?.id === editingEventId) {
  setSelectedEvent((prev) => (prev ? { ...prev, ...savedEvent } : prev));
+ }
+ if (openTablePlanAfterSave) {
+ setShowEventModal(false);
+ resetEventForm();
+ loadEvents();
+ await openEventTablePlan(savedEvent);
+ return;
  }
  } else {
  const savedEvent: EventItem = await api.post('/events', {
  ...payload,
  importRoomLayout: Boolean(eventRoomId),
  });
+ if (eventFormTemplateId) {
+ await syncEventRsvpForm(savedEvent.id, eventFormTemplateId, eventTitle);
+ }
  const importedPlan = savedEvent.tablePlan?.tables?.length;
  setSuccess(
  importedPlan
  ? 'Événement créé et plan de table importé depuis la salle.'
+ : eventFormTemplateId
+ ? 'Événement créé avec le formulaire RSVP.'
  : 'Événement créé avec succès !'
  );
+ if (openTablePlanAfterSave) {
+ setShowEventModal(false);
+ resetEventForm();
+ loadEvents();
+ await openEventTablePlan(savedEvent);
+ return;
+ }
  }
 
  resetEventForm();
@@ -2693,7 +2778,7 @@ export default function EventsPage() {
  </div>
  <p className="text-[11px] text-muted leading-relaxed">
  {eventIsPublic
- ? 'La fiche sera listée sur /evenements. Les gens s’inscrivent ou achètent un billet ; ils apparaissent ensuite dans Invités.'
+ ? 'La fiche sera listée sur le marketplace, la carte et /evenements. Les visiteurs s’inscrivent ou achètent un billet ; ils apparaissent ensuite dans Invités. Placez le pin GPS pour qu’il apparaisse sur la carte.'
  : 'Seules les personnes que vous ajoutez (ou invitez) ont accès via leur lien RSVP.'}
  </p>
  {eventIsPublic && (
@@ -2783,7 +2868,7 @@ export default function EventsPage() {
  , ou parcourez le marketplace.
  </>
  )
- : 'Préremplit le lieu et lie le staff de la salle. À la création, le plan 2D peut être importé.'}
+ : 'Préremplit le lieu et lie le staff de la salle. À la création, le plan 2D de la salle est importé si un modèle existe.'}
  {' '}
  <Link href="/marketplace/salles" className="font-semibold text-primary hover:underline">
  Trouver une salle
@@ -2813,6 +2898,67 @@ export default function EventsPage() {
  </label>
  </section>
 
+ <section className="space-y-3 pt-1 border-t border-border">
+ <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted pt-3">Plan de table &amp; formulaire RSVP</h4>
+ <p className="text-[11px] text-muted leading-relaxed">
+ Associez une salle ci-dessus pour importer son plan 2D à la création. Vous pouvez aussi ouvrir l’éditeur après enregistrement. Le modèle définit les champs du formulaire RSVP (allergies, accompagnants, etc.).
+ </p>
+ <label className="block space-y-1.5">
+ <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">
+ <LayoutTemplate className="w-3.5 h-3.5" />
+ Modèle de formulaire RSVP
+ </span>
+ <select
+ value={eventFormTemplateId}
+ onChange={(e) => setEventFormTemplateId(e.target.value)}
+ className="w-full px-3.5 py-2.5 bg-surface-muted dark:bg-background border border-border dark:border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
+ >
+ <option value="">Aucun — je configurerai plus tard</option>
+ {templates.map((t) => (
+ <option key={t.id} value={t.id}>{t.name}</option>
+ ))}
+ </select>
+ {templates.length === 0 ? (
+ <p className="text-[11px] text-muted">
+ Aucun modèle pour l’instant. Créez-en un dans{' '}
+ <Link href="/dashboard/templates" className="font-semibold text-primary hover:underline">Modèles</Link>
+ .
+ </p>
+ ) : (
+ <p className="text-[11px] text-muted">
+ Une invitation e-mail sera créée (ou mise à jour) avec ce modèle. Vous pourrez encore modifier le message dans l’onglet Invitations.
+ </p>
+ )}
+ </label>
+ {editingEventId ? (
+ <Button
+ type="button"
+ variant="secondary"
+ size="sm"
+ leftIcon={<LayoutGrid className="w-3.5 h-3.5" />}
+ onClick={() => {
+ const event = events.find((e) => e.id === editingEventId);
+ if (event) void openEventTablePlan(event);
+ }}
+ >
+ Ouvrir le plan de table 2D
+ </Button>
+ ) : (
+ <label className="flex items-start gap-2 text-sm">
+ <input
+ type="checkbox"
+ checked={openTablePlanAfterSave}
+ onChange={(e) => setOpenTablePlanAfterSave(e.target.checked)}
+ className="mt-0.5 rounded border-border"
+ />
+ <span>
+ Ouvrir le plan de table après création
+ <span className="block text-[11px] text-muted">Utile si vous n’avez pas de salle liée, pour dessiner les tables à la main.</span>
+ </span>
+ </label>
+ )}
+ </section>
+
  <section className="pt-1 border-t border-border">
  <button
  type="button"
@@ -2824,7 +2970,7 @@ export default function EventsPage() {
  <p className="text-xs text-muted mt-0.5">
  {eventLatitude && eventLongitude
  ? `${eventLatitude}, ${eventLongitude}`
- : 'Optionnel — pour le pin WhatsApp dès acceptation RSVP'}
+ : 'Optionnel — pin WhatsApp à l’acceptation RSVP, et carte marketplace si l’événement est public'}
  </p>
  </div>
  <span className={cn(

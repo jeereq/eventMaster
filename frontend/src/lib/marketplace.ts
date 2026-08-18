@@ -1,6 +1,6 @@
 import { roomTypeLabels, type RoomType } from '@/lib/roomLayoutUtils';
 import { formatFc } from '@/config/landingPricing';
-import { findRdcCommune, isAllowedRdcCity, neighborhoodsFor } from '@/lib/rdcCities';
+import { findRdcCommune, isAllowedRdcCity, neighborhoodsFor, pointInRdcCity } from '@/lib/rdcCities';
 
 export type VenuePriceUnit = 'EVENT' | 'DAY' | 'HOUR' | 'MINUTE' | 'PERSON' | 'QUOTA';
 export type TenantAccountKind = 'ORGANIZER' | 'VENDOR' | 'BOTH' | 'CLIENT';
@@ -578,11 +578,51 @@ export function formatQuotaLabel(quotaMin?: number | null, quotaMax?: number | n
   return null;
 }
 
-export type CatalogueKind = 'venue' | 'service';
+export type CatalogueKind = 'venue' | 'service' | 'event';
 export type CatalogueViewMode = 'grid' | 'list' | 'map' | 'focus';
+
+export function catalogueKindLabel(kind?: CatalogueKind | string | null): string {
+  if (kind === 'service') return 'Prestataire';
+  if (kind === 'event') return 'Événement';
+  return 'Salle';
+}
+
+export function catalogueKindFilterLabel(kind?: CatalogueKind | 'all' | string | null): string {
+  if (kind === 'venue') return 'Salles';
+  if (kind === 'service') return 'Prestataires';
+  if (kind === 'event') return 'Événements';
+  return 'Tous';
+}
+
+export function cataloguePriceCaption(item: Pick<CatalogueItem, 'kind' | 'priceFromFc' | 'priceUnitLabel'>): string {
+  if (item.kind === 'event') {
+    if (item.priceFromFc != null && item.priceFromFc > 0) return formatFc(item.priceFromFc);
+    return 'Entrée libre';
+  }
+  return item.priceFromFc != null ? `Dès ${formatFc(item.priceFromFc)}` : 'Sur devis';
+}
 
 export function isCatalogueMapView(mode: CatalogueViewMode): mode is 'map' | 'focus' {
   return mode === 'map' || mode === 'focus';
+}
+
+export interface PublicEventCard {
+  id: string;
+  slug: string | null;
+  title: string;
+  description: string | null;
+  date: string;
+  location: string;
+  latitude: number | null;
+  longitude: number | null;
+  orgName: string;
+  ticketingEnabled: boolean;
+  ticketPriceFc: number;
+  paid: boolean;
+  ticketsTotal: number | null;
+  ticketsSold: number;
+  ticketsRemaining: number | null;
+  soldOut: boolean;
 }
 
 export interface CatalogueItem {
@@ -607,6 +647,7 @@ export interface CatalogueItem {
   quotaMax?: number | null;
   address?: string | null;
   distanceKm?: number | null;
+  eventDate?: string | null;
 }
 
 export function dashboardVenueHref(slug: string) {
@@ -618,6 +659,7 @@ export function dashboardServiceHref(slug: string) {
 }
 
 export function withDashboardListingHref(item: CatalogueItem): CatalogueItem {
+  if (item.kind === 'event') return item;
   return {
     ...item,
     href: item.kind === 'venue' ? dashboardVenueHref(item.slug) : dashboardServiceHref(item.slug),
@@ -646,6 +688,75 @@ export function venueToCatalogueItem(venue: PublicVenue): CatalogueItem {
     address: venue.address,
     distanceKm: venue.distanceKm ?? null,
   };
+}
+
+export function eventToCatalogueItem(event: PublicEventCard): CatalogueItem | null {
+  if (!event.slug) return null;
+  const paid = event.paid || (event.ticketingEnabled && event.ticketPriceFc > 0);
+  const dateLabel = event.date
+    ? new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+    : 'Événement';
+  return {
+    kind: 'event',
+    id: `event:${event.slug}`,
+    slug: event.slug,
+    href: `/evenements/${event.slug}`,
+    title: event.title,
+    orgName: event.orgName,
+    categoryLabel: dateLabel,
+    location: event.location,
+    coverUrl: null,
+    priceFromFc: paid ? event.ticketPriceFc : null,
+    priceUnitLabel: paid ? '/ personne' : 'Entrée libre',
+    latitude: event.latitude ?? null,
+    longitude: event.longitude ?? null,
+    capacity: event.ticketsTotal ?? event.ticketsRemaining ?? null,
+    address: event.location,
+    eventDate: event.date,
+  };
+}
+
+export function withCatalogueDistance(
+  item: CatalogueItem,
+  lat: number | null | undefined,
+  lng: number | null | undefined,
+): CatalogueItem {
+  if (lat == null || lng == null || item.latitude == null || item.longitude == null) return item;
+  return { ...item, distanceKm: haversineKm(lat, lng, item.latitude, item.longitude) };
+}
+
+export function catalogueItemMatchesGeo(item: CatalogueItem, filters: CatalogueGeoState): boolean {
+  const loc = `${item.location || ''} ${item.address || ''}`.toLowerCase();
+  const city = filters.city.trim().toLowerCase();
+  const commune = filters.commune.trim().toLowerCase();
+  const neighborhood = filters.neighborhood.trim().toLowerCase();
+  if (city) {
+    const inCity = item.latitude != null && item.longitude != null
+      ? pointInRdcCity(item.latitude, item.longitude, filters.city)
+      : loc.includes(city);
+    if (!inCity) return false;
+  }
+  if (filters.proximity !== 'near') {
+    if (commune && !loc.includes(commune)) return false;
+    if (neighborhood && !loc.includes(neighborhood)) return false;
+  }
+  const minP = Number(filters.minPrice);
+  const maxP = Number(filters.maxPrice);
+  if (filters.minPrice.trim() && Number.isFinite(minP) && (item.priceFromFc == null || item.priceFromFc < minP)) return false;
+  if (filters.maxPrice.trim() && Number.isFinite(maxP) && (item.priceFromFc == null || item.priceFromFc > maxP)) return false;
+  const minC = Number(filters.minCapacity);
+  const maxC = Number(filters.maxCapacity);
+  if (filters.minCapacity.trim() && Number.isFinite(minC) && (item.capacity == null || item.capacity < minC)) return false;
+  if (filters.maxCapacity.trim() && Number.isFinite(maxC) && (item.capacity == null || item.capacity > maxC)) return false;
+  if (filters.proximity && filters.lat != null && filters.lng != null) {
+    if (item.latitude == null || item.longitude == null) return false;
+    if (haversineKm(filters.lat, filters.lng, item.latitude, item.longitude) > filters.radiusKm) return false;
+  }
+  if (filters.availableFrom && item.eventDate && new Date(item.eventDate) < new Date(filters.availableFrom)) return false;
+  if (filters.availableTo && item.eventDate && new Date(item.eventDate) > new Date(`${filters.availableTo}T23:59:59`)) {
+    return false;
+  }
+  return true;
 }
 
 export function serviceToCatalogueItem(service: PublicService): CatalogueItem {
@@ -695,9 +806,9 @@ export function catalogueItemToMapMarker(item: CatalogueItem) {
     kind: item.kind,
     coverUrl: item.coverUrl,
     photos: (item.photos || []).filter(Boolean),
-    priceLabel: item.priceFromFc != null ? `Dès ${formatFc(item.priceFromFc)}` : 'Sur devis',
+    priceLabel: cataloguePriceCaption(item),
     priceUnitLabel: item.priceUnitLabel,
-    categoryLabel: item.kind === 'venue' ? 'Salle' : item.categoryLabel,
+    categoryLabel: item.kind === 'venue' ? 'Salle' : item.kind === 'event' ? 'Événement' : item.categoryLabel,
     orgName: item.orgName,
     location: item.location || undefined,
     address: item.address || undefined,
