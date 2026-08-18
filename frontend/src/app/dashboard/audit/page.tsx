@@ -5,9 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2, ScrollText } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { PageHeader, Breadcrumbs, Alert, EmptyState, Pagination, Input } from '@/components/ui';
-
-const PAGE_SIZE = 30;
+import { PageHeader, Breadcrumbs, Alert, EmptyState, Pagination, Input, usePageSize } from '@/components/ui';
 
 const ACTION_LABELS: Record<string, string> = {
   TENANT_CREATE: 'Organisation créée',
@@ -72,6 +70,7 @@ export default function AuditPage() {
   const [qInput, setQInput] = useState('');
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = usePageSize('audit-logs', 30);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [data, setData] = useState<AuditResponse | null>(null);
@@ -104,7 +103,7 @@ export default function AuditPage() {
     setError('');
     try {
       const params = new URLSearchParams();
-      params.set('limit', String(PAGE_SIZE));
+      params.set('limit', String(pageSize));
       params.set('page', String(page));
       if (action) params.set('action', action);
       if (tenantId) params.set('tenantId', tenantId);
@@ -118,7 +117,7 @@ export default function AuditPage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.role, action, tenantId, from, to, q, page]);
+  }, [user?.role, action, tenantId, from, to, q, page, pageSize]);
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -250,12 +249,13 @@ export default function AuditPage() {
         </ul>
       )}
 
-      {data && data.total > PAGE_SIZE && (
+      {data && data.total > 0 && (
         <Pagination
           page={page}
-          pageSize={PAGE_SIZE}
+          pageSize={pageSize}
           total={data.total}
           onPageChange={setPage}
+          onPageSizeChange={setPageSize}
           itemLabel="entrées"
         />
       )}

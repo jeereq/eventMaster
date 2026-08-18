@@ -10,20 +10,50 @@ import {
   type CatalogueProximity,
 } from '@/lib/marketplace';
 
-const RETURN_KEY = 'em-catalogue-return';
+const MARKETPLACE_RETURN_KEY = 'em-catalogue-return-marketplace';
+const DASHBOARD_RETURN_KEY = 'em-catalogue-return-dashboard';
+
+function pathOnly(href: string): string {
+  return href.split('?')[0] || href;
+}
+
+function returnKeyFor(href: string): string | null {
+  const path = pathOnly(href);
+  if (path.startsWith('/dashboard')) return DASHBOARD_RETURN_KEY;
+  if (path.startsWith('/marketplace')) return MARKETPLACE_RETURN_KEY;
+  return null;
+}
+
+export function isCatalogueDetailPath(pathname: string): boolean {
+  return (
+    /^\/marketplace\/(salles|prestataires)\/[^/]+$/.test(pathname)
+    || /^\/dashboard\/catalogue\/(salles|prestataires)\/[^/]+$/.test(pathname)
+  );
+}
 
 export function rememberCatalogueReturn(href: string) {
+  const path = pathOnly(href);
+  if (!isCatalogueListPath(path)) return;
+  const key = returnKeyFor(href);
+  if (!key) return;
   try {
-    sessionStorage.setItem(RETURN_KEY, href);
+    sessionStorage.setItem(key, href);
   } catch {
     /* ignore */
   }
 }
 
-export function getCatalogueReturn(fallback: string): string {
+export function getCatalogueReturn(fallback: string, scope?: string): string {
+  const key = returnKeyFor(scope || fallback);
+  if (!key) return fallback;
   try {
-    const stored = sessionStorage.getItem(RETURN_KEY);
-    if (stored && (stored.startsWith('/marketplace') || stored.startsWith('/dashboard'))) return stored;
+    const stored = sessionStorage.getItem(key);
+    if (!stored) return fallback;
+    const storedPath = pathOnly(stored);
+    const expectedPrefix = key === DASHBOARD_RETURN_KEY ? '/dashboard' : '/marketplace';
+    if (!stored.startsWith(expectedPrefix)) return fallback;
+    if (isCatalogueDetailPath(storedPath)) return fallback;
+    if (isCatalogueListPath(storedPath) || stored.startsWith(expectedPrefix)) return stored;
   } catch {
     /* ignore */
   }
@@ -38,7 +68,7 @@ export function isCatalogueListPath(pathname: string): boolean {
     || pathname === '/dashboard/admin/catalogue'
     || pathname === '/dashboard/rooms'
     || pathname === '/dashboard/marketplace'
-    || pathname.startsWith('/dashboard/catalogue/')
+    || pathname === '/dashboard/bookings'
   );
 }
 
@@ -95,6 +125,17 @@ export function serializeCatalogueQuery(opts: {
   }
   if (opts.page && opts.page > 1) params.set('page', String(opts.page));
   return params.toString();
+}
+
+export function useRememberListReturn() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const searchKey = searchParams.toString();
+
+  useEffect(() => {
+    if (!isCatalogueListPath(pathname)) return;
+    rememberCatalogueReturn(searchKey ? `${pathname}?${searchKey}` : pathname);
+  }, [pathname, searchKey]);
 }
 
 export function useCatalogueQueryState<T extends CatalogueGeoState>(opts: {

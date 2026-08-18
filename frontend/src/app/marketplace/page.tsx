@@ -3,6 +3,7 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import CatalogueSearchLayout from '@/components/CatalogueSearchLayout';
+import { usePageSize } from '@/components/ui';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import CatalogueFilterBar, {
   CatalogueChoicePills,
@@ -56,7 +57,7 @@ function MarketplaceHubPageInner() {
   const [services, setServices] = useState<PublicService[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterError, setFilterError] = useState('');
-  const PAGE_SIZE = 12;
+  const [pageSize, setPageSize] = usePageSize('marketplace-hub', 12);
 
   const load = useCallback(async (filters: HubFilters, search: string) => {
     setLoading(true);
@@ -132,8 +133,9 @@ function MarketplaceHubPageInner() {
       emptyTitle="Aucune fiche pour cette recherche"
       emptyDescription="Élargissez les mots-clés, ou publiez une salle / prestation depuis votre organisation."
       page={page}
-      pageSize={PAGE_SIZE}
+      pageSize={pageSize}
       onPageChange={setPage}
+      onPageSizeChange={setPageSize}
       itemLabel="fiches"
       searchCenter={searchCenter}
       radiusKm={searchCenter ? applied.radiusKm : 0}

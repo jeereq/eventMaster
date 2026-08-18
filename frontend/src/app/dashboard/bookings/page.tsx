@@ -7,9 +7,11 @@ import { useAuth } from '@/context/AuthContext';
 import { PageHeader, Breadcrumbs, Alert, Button } from '@/components/ui';
 import type { MarketplaceBookingItem } from '@/lib/marketplace';
 import MarketplaceBookingsPanel from '@/components/MarketplaceBookingsPanel';
+import { useRememberListReturn } from '@/lib/catalogueQuery';
 import { Loader2, Store } from 'lucide-react';
 
 export default function ClientBookingsPage() {
+  useRememberListReturn();
   const { access, tenant } = useAuth();
   const [bookings, setBookings] = useState<MarketplaceBookingItem[]>([]);
   const [loading, setLoading] = useState(true);

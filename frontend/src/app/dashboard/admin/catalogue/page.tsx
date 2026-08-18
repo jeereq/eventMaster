@@ -9,7 +9,7 @@ import {
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
-  PageHeader, Breadcrumbs, Alert, EmptyState, Pagination, Button, Badge, Modal, StatusPill,
+  PageHeader, Breadcrumbs, Alert, EmptyState, Pagination, Button, Badge, Modal, StatusPill, usePageSize,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
@@ -22,8 +22,7 @@ import CatalogueFilterBar, { CatalogueChoicePills, CatalogueFilterField, type Ca
 import CatalogueResults, { CatalogueResultsSkeleton } from '@/components/CatalogueResults';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
-
-const PAGE_SIZE = 20;
+import { useRememberListReturn } from '@/lib/catalogueQuery';
 
 type CatalogTab = 'venues' | 'offerings' | 'inquiries' | 'bookings';
 
@@ -213,6 +212,7 @@ function offeringToItem(row: OfferingRow): CatalogueItem {
 }
 
 export default function AdminCataloguePage() {
+  useRememberListReturn();
   const router = useRouter();
   const { user, loading: authLoading, enterSupportSession } = useAuth();
   const [tab, setTab] = useState<CatalogTab>('venues');
@@ -226,6 +226,7 @@ export default function AdminCataloguePage() {
   const [bookingStatus, setBookingStatus] = useState('');
   const { mode: view, setView, gridCols, setGridCols } = useCatalogueView('list');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = usePageSize('admin-catalogue', 20);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [venues, setVenues] = useState<ListResponse<VenueRow> | null>(null);
@@ -268,7 +269,7 @@ export default function AdminCataloguePage() {
     setError('');
     try {
       const params = new URLSearchParams();
-      params.set('limit', String(PAGE_SIZE));
+      params.set('limit', String(pageSize));
       params.set('page', String(page));
       if (q) params.set('q', q);
       if (city) params.set('city', city);
@@ -293,7 +294,7 @@ export default function AdminCataloguePage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.role, tab, page, q, visibility, category, inquiryStatus, bookingStatus, city, view]);
+  }, [user?.role, tab, page, pageSize, q, visibility, category, inquiryStatus, bookingStatus, city, view]);
 
   useEffect(() => {
     void loadOverview();
@@ -660,8 +661,15 @@ export default function AdminCataloguePage() {
         </ul>
       )}
 
-      {currentTotal > PAGE_SIZE && (
-        <Pagination page={page} pageSize={PAGE_SIZE} total={currentTotal} onPageChange={setPage} itemLabel="éléments" />
+      {currentTotal > 0 && (
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={currentTotal}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          itemLabel="éléments"
+        />
       )}
 
       <Modal

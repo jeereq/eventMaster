@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { PageHeader, Breadcrumbs, Alert } from '@/components/ui';
 import { canPublishVenueCatalog } from '@/lib/planAccess';
+import { useRememberListReturn } from '@/lib/catalogueQuery';
 import RoomsManagement from '../RoomsManagement';
 
 export default function DashboardRoomsPage() {
+  useRememberListReturn();
   const { user, tenant, access, planFeatures, planQuota } = useAuth();
   const router = useRouter();
   const canManage = Boolean(user?.role === 'USER' && tenant && access?.canManageRooms);

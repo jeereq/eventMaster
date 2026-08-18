@@ -10,7 +10,7 @@ import {
 import {
   SkeletonGrid, ViewModeToggle, useViewMode, listStackClass,
   ProjectCard, StatusPill, ListRowAction, PhoneInput,
-  Button, Modal, EmptyState, Alert, Input, Badge, Pagination, paginateItems,
+  Button, Modal, EmptyState, Alert, Input, Badge, Pagination, paginateItems, usePageSize,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
@@ -70,7 +70,7 @@ export default function TeamManagement() {
     gridClassName: teamGridClass,
   } = useViewMode('em-view-team', 'grid', 2);
   const [membersPage, setMembersPage] = useState(1);
-  const MEMBERS_PER_PAGE = 10;
+  const [membersPageSize, setMembersPageSize] = usePageSize('org-team', 10);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [canManageTeam, setCanManageTeam] = useState(false);
   const [defaultCommissionRate, setDefaultCommissionRate] = useState(0.3);
@@ -482,7 +482,7 @@ export default function TeamManagement() {
         />
       ) : (
         <div className={teamViewMode === 'list' ? listStackClass : teamGridClass}>
-          {paginateItems(members, membersPage, MEMBERS_PER_PAGE).map((member) => {
+          {paginateItems(members, membersPage, membersPageSize).map((member) => {
             const roleTone =
               member.isOwner
                 ? 'amber'
@@ -693,9 +693,10 @@ export default function TeamManagement() {
       {members.length > 0 && (
         <Pagination
           page={membersPage}
-          pageSize={MEMBERS_PER_PAGE}
+          pageSize={membersPageSize}
           total={members.length}
           onPageChange={setMembersPage}
+          onPageSizeChange={setMembersPageSize}
           itemLabel="membres"
         />
       )}

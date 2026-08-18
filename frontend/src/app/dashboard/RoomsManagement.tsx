@@ -13,7 +13,7 @@ import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import RoomLayoutEditor from '@/components/RoomLayoutEditor';
 import {
   ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonRoomsView,
-  Button, Modal, EmptyState, Alert, Input, Pagination, paginateItems,
+  Button, Modal, EmptyState, Alert, Input, Pagination, paginateItems, usePageSize,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
@@ -125,7 +125,7 @@ export default function RoomsManagement() {
   const canCatalogPublish = canPublishVenueCatalog(planFeatures, planQuota, tenant?.plan);
   const { mode: roomsViewMode, setViewMode: setRoomsViewMode, columns: roomsColumns, setGridColumns: setRoomsColumns, gridClassName: roomsGridClass } = useViewMode('em-view-rooms', 'grid', 3);
   const [roomsPage, setRoomsPage] = useState(1);
-  const ROOMS_PER_PAGE = 9;
+  const [roomsPageSize, setRoomsPageSize] = usePageSize('org-rooms', 9);
   const [rooms, setRooms] = useState<RoomItem[]>([]);
   const [canManage, setCanManage] = useState(false);
   const [teamMembers, setTeamMembers] = useState<TeamMemberOption[]>([]);
@@ -850,7 +850,7 @@ export default function RoomsManagement() {
               : listStackClass
           }
         >
-          {paginateItems(rooms, roomsPage, ROOMS_PER_PAGE).map((room) => {
+          {paginateItems(rooms, roomsPage, roomsPageSize).map((room) => {
             const metaLine = [room.floor, room.location, room.capacity ? `${room.capacity} places` : null]
               .filter(Boolean)
               .join(' · ') || 'Sans détails';
@@ -1016,9 +1016,10 @@ export default function RoomsManagement() {
       {rooms.length > 0 && (
         <Pagination
           page={roomsPage}
-          pageSize={ROOMS_PER_PAGE}
+          pageSize={roomsPageSize}
           total={rooms.length}
           onPageChange={setRoomsPage}
+          onPageSizeChange={setRoomsPageSize}
           itemLabel="salles"
         />
       )}

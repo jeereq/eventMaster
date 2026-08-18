@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
+import { getCatalogueReturn } from '@/lib/catalogueQuery';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import MarketplaceLocationsMap, { type MarketplaceMapHandle } from '@/components/MarketplaceLocationsMap';
@@ -69,16 +70,25 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
   };
 
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
-  const backHref = isSuperAdmin
+  const defaultBackHref = isSuperAdmin
     ? '/dashboard/admin/catalogue'
     : kind === 'venue'
       ? '/dashboard/rooms'
       : '/dashboard/marketplace';
-  const backLabel = isSuperAdmin
+  const [backHref, setBackHref] = useState(defaultBackHref);
+
+  useEffect(() => {
+    setBackHref(getCatalogueReturn(defaultBackHref, '/dashboard'));
+  }, [defaultBackHref]);
+  const backLabel = backHref.startsWith('/dashboard/admin/catalogue')
     ? 'Catalogue'
-    : kind === 'venue'
+    : backHref.startsWith('/dashboard/rooms')
       ? 'Salles'
-      : 'Prestations';
+      : backHref.startsWith('/dashboard/bookings')
+        ? 'Réservations'
+        : backHref.startsWith('/dashboard/marketplace')
+          ? 'Prestations'
+          : 'Retour';
 
   const item = venue
     ? withDashboardListingHref(venueToCatalogueItem(venue))
@@ -98,6 +108,7 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
     <ListingDetailLayout
       backHref={backHref}
       backLabel={backLabel}
+      embedded
       loading={loading}
       error={error || (!loading && !venue && !service ? 'Fiche introuvable.' : '')}
       errorIcon={

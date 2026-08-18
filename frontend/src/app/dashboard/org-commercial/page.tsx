@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import {
  Building2, Loader2, TrendingUp, Users, Wallet,
 } from 'lucide-react';
-import { Button, PageHeader, SkeletonCommercialView, Pagination, paginateItems } from '@/components/ui';
+import { Button, PageHeader, SkeletonCommercialView, Pagination, paginateItems, usePageSize } from '@/components/ui';
 import ReferralShareButtons from '@/components/commercial/ReferralShareButtons';
 
  interface OrgCommercialDashboard {
@@ -45,8 +45,8 @@ export default function OrgCommercialPage() {
  const [loading, setLoading] = useState(true);
  const [orgsPage, setOrgsPage] = useState(1);
  const [commPage, setCommPage] = useState(1);
- const ORGS_PER_PAGE = 10;
- const COMM_PER_PAGE = 10;
+ const [orgsPageSize, setOrgsPageSize] = usePageSize('org-commercial-orgs', 10);
+ const [commPageSize, setCommPageSize] = usePageSize('org-commercial-comms', 10);
 
  useEffect(() => {
  if (access?.level !== 'commercial') return;
@@ -68,8 +68,8 @@ export default function OrgCommercialPage() {
  return <SkeletonCommercialView />;
  }
 
- const paginatedOrgs = paginateItems(data.organizations, orgsPage, ORGS_PER_PAGE);
- const paginatedComms = paginateItems(data.commissions, commPage, COMM_PER_PAGE);
+ const paginatedOrgs = paginateItems(data.organizations, orgsPage, orgsPageSize);
+ const paginatedComms = paginateItems(data.commissions, commPage, commPageSize);
 
  return (
  <div className="space-y-6">
@@ -168,9 +168,10 @@ export default function OrgCommercialPage() {
 
  <Pagination
  page={orgsPage}
- pageSize={ORGS_PER_PAGE}
+ pageSize={orgsPageSize}
  total={data.organizations.length}
  onPageChange={setOrgsPage}
+ onPageSizeChange={setOrgsPageSize}
  itemLabel="organisations"
  />
 
@@ -223,9 +224,10 @@ export default function OrgCommercialPage() {
  </div>
  <Pagination
  page={commPage}
- pageSize={COMM_PER_PAGE}
+ pageSize={commPageSize}
  total={data.commissions.length}
  onPageChange={setCommPage}
+ onPageSizeChange={setCommPageSize}
  itemLabel="commissions"
  />
  </div>

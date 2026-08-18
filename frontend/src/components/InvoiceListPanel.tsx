@@ -10,6 +10,7 @@ import {
   StatusPill,
   ListRowAction,
   listStackClass,
+  usePageSize,
 } from '@/components/ui';
 import type { ProjectCardLayout, StatusPillTone } from '@/components/ui';
 
@@ -47,8 +48,8 @@ export default function InvoiceListPanel({
 }) {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 10;
-  const paginated = paginateItems(invoices, page, PAGE_SIZE);
+  const [pageSize, setPageSize] = usePageSize('invoices', 10);
+  const paginated = paginateItems(invoices, page, pageSize);
 
   if (invoices.length === 0) {
     return (
@@ -152,9 +153,10 @@ export default function InvoiceListPanel({
 
       <Pagination
         page={page}
-        pageSize={PAGE_SIZE}
+        pageSize={pageSize}
         total={invoices.length}
         onPageChange={setPage}
+        onPageSizeChange={setPageSize}
         itemLabel="factures"
       />
 

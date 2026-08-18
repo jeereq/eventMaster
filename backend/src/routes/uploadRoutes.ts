@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import multer from 'multer';
 import { requireAuth, requireActiveLicense } from '../middleware/auth';
-import { uploadTemplateImage, uploadMarketplaceMedia } from '../controllers/uploadController';
+import { uploadTemplateImage, uploadMarketplaceMedia, uploadAvatar } from '../controllers/uploadController';
 
 const router = Router();
 const uploadImage = multer({
@@ -26,6 +26,7 @@ function withMulterLimit(mw: ReturnType<typeof uploadImage.single>) {
 }
 
 router.use(requireAuth);
+router.post('/avatar', withMulterLimit(uploadImage.single('file')), uploadAvatar);
 router.use(requireActiveLicense);
 
 router.post('/image', withMulterLimit(uploadImage.single('file')), uploadTemplateImage);

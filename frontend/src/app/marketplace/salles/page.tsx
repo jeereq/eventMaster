@@ -18,6 +18,7 @@ import { useCatalogueQueryState } from '@/lib/catalogueQuery';
 import { roomTypeLabels } from '@/lib/roomLayoutUtils';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import CatalogueSearchLayout from '@/components/CatalogueSearchLayout';
+import { usePageSize } from '@/components/ui';
 import CatalogueFilterBar, {
   CatalogueChoicePills,
   CatalogueFilterField,
@@ -57,7 +58,7 @@ function MarketplaceVenuesPageInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filterError, setFilterError] = useState('');
-  const PAGE_SIZE = 12;
+  const [pageSize, setPageSize] = usePageSize('marketplace-venues', 12);
 
   const load = useCallback(async (filters: VenueFilters, search: string) => {
     setLoading(true);
@@ -121,8 +122,9 @@ function MarketplaceVenuesPageInner() {
       emptyTitle="Aucune salle pour ces filtres"
       emptyDescription="Élargissez la recherche, ou publiez une salle depuis Salles dans le tableau de bord."
       page={page}
-      pageSize={PAGE_SIZE}
+      pageSize={pageSize}
       onPageChange={setPage}
+      onPageSizeChange={setPageSize}
       itemLabel="salles"
       searchCenter={searchCenter}
       radiusKm={searchCenter ? applied.radiusKm : 0}

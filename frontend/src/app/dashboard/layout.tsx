@@ -17,6 +17,7 @@ import UserLegalGate from '@/components/UserLegalGate';
 import SupportSessionBanner from '@/components/admin/SupportSessionBanner';
 import { NotificationBell } from '@/components/CommercialNotifications';
 import DashboardTopBar from '@/components/DashboardTopBar';
+import UserAvatar from '@/components/UserAvatar';
 import ViewCustomizerDrawer, {
  ViewCustomizerEdgeHandle,
  ViewCustomizerTrigger,
@@ -622,9 +623,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  sidebarCollapsed ? 'justify-center p-2' : 'gap-3 p-2',
  )}
  >
- <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center font-bold text-primary text-xs shrink-0 ring-1 ring-primary/20">
- {user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)}
- </div>
+ <UserAvatar name={user.name} src={user.avatarUrl} size="md" />
  {!sidebarCollapsed && (
  <div className="min-w-0 flex-1">
  <span className="font-semibold text-foreground text-sm truncate block group-hover:text-primary transition-colors">

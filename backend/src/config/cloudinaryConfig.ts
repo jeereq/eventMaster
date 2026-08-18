@@ -24,6 +24,10 @@ export function getVenueMediaFolder(tenantId: string | null | undefined): string
   return `eventmaster/venues/${scope}`;
 }
 
+export function getAvatarUploadFolder(userId: string): string {
+  return `eventmaster/avatars/${userId}`;
+}
+
 export function getSeatingInvitationUploadFolder(eventId: string, guestId: string): string {
   return `eventmaster/seating-invitations/${eventId}/${guestId}`;
 }

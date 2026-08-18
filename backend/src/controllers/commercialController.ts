@@ -9,6 +9,7 @@ import {
 } from '../services/commercialService';
 import { setupUserOtpVerification } from './authController';
 import { VerificationMethod } from '../services/otpService';
+import { resolvePhoneFields } from '../utils/phone';
 
 export async function getCommercialDashboard(req: AuthenticatedRequest, res: Response) {
   try {
@@ -89,7 +90,12 @@ export async function createCommercialOrganization(req: AuthenticatedRequest, re
       return res.status(403).json({ error: 'Accès réservé aux commerciaux plateforme (sans organisation).' });
     }
 
-    const { organizationName, managerName, managerEmail, managerPassword, managerPhone, plan, verificationMethod = 'EMAIL' } = req.body;
+    const { organizationName, managerName, managerEmail, managerPassword, managerPhone, phoneCountryCode, nationalNumber, plan, verificationMethod = 'EMAIL' } = req.body;
+    const phoneFields = resolvePhoneFields({
+      phone: managerPhone,
+      phoneCountryCode,
+      nationalNumber,
+    });
 
     if (!organizationName || !managerName || !managerEmail || !managerPassword) {
       return res.status(400).json({
@@ -98,7 +104,7 @@ export async function createCommercialOrganization(req: AuthenticatedRequest, re
     }
 
     const method = (verificationMethod === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL') as VerificationMethod;
-    if (method === 'WHATSAPP' && !managerPhone) {
+    if (method === 'WHATSAPP' && !phoneFields.phone) {
       return res.status(400).json({ error: 'Le téléphone est obligatoire pour la validation par WhatsApp.' });
     }
 
@@ -127,7 +133,8 @@ export async function createCommercialOrganization(req: AuthenticatedRequest, re
         data: {
           name: managerName.trim(),
           email: managerEmail.trim().toLowerCase(),
-          phone: managerPhone || null,
+          phone: phoneFields.phone,
+          phoneCountryCode: phoneFields.phoneCountryCode,
           passwordHash,
           role: 'USER',
           tenantId: tenant.id,
@@ -148,7 +155,7 @@ export async function createCommercialOrganization(req: AuthenticatedRequest, re
       userId: result.manager.id,
       name: result.manager.name || managerName.trim(),
       email: result.manager.email,
-      phone: managerPhone,
+      phone: phoneFields.phone,
       method,
       invitedByCommercial: true,
     });

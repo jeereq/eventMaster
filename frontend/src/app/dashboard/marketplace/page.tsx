@@ -33,6 +33,7 @@ import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/Marke
 import LocationPickerMap from '@/components/LocationPickerMap';
 import CityLocationFields from '@/components/CityLocationFields';
 import MarketplaceBookingsPanel from '@/components/MarketplaceBookingsPanel';
+import { useRememberListReturn } from '@/lib/catalogueQuery';
 
 interface ServiceItem {
   id: string;
@@ -64,6 +65,7 @@ const fieldClass =
   'w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm';
 
 export default function MarketplaceDeskPage() {
+  useRememberListReturn();
   const { access, refreshProfile, planQuota } = useAuth();
   const router = useRouter();
   const canManage = Boolean(access?.canManageRooms);

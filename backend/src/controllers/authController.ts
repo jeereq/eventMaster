@@ -63,6 +63,28 @@ async function issueAndSendOtp(params: {
   return sentVia;
 }
 
+function publicUser(user: {
+  id: string;
+  email: string;
+  name: string | null;
+  phone?: string | null;
+  phoneCountryCode?: string | null;
+  avatarUrl?: string | null;
+  role: string;
+  orgRole?: string | null;
+}) {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    phone: user.phone,
+    phoneCountryCode: user.phoneCountryCode ?? null,
+    avatarUrl: user.avatarUrl ?? null,
+    role: user.role,
+    orgRole: user.orgRole ?? null,
+  };
+}
+
 function buildAuthToken(
   user: { id: string; tenantId: string | null; role: string },
   options?: { impersonatedBy?: string; expiresIn?: string },
@@ -199,13 +221,7 @@ export async function register(req: Request, res: Response) {
       requiresVerification: true,
       verificationMethod: sentVia,
       email: result.user.email,
-      user: {
-        id: result.user.id,
-        email: result.user.email,
-        name: result.user.name,
-        phone: result.user.phone,
-        role: result.user.role,
-      },
+      user: publicUser(result.user),
       tenant: formatTenantResponse(result.tenant),
     });
   } catch (error: any) {
@@ -264,14 +280,7 @@ export async function verifyOtp(req: Request, res: Response) {
     return res.json({
       message: 'Compte validé avec succès ! Connexion en cours...',
       token,
-      user: {
-        id: updatedUser.id,
-        email: updatedUser.email,
-        name: updatedUser.name,
-        phone: updatedUser.phone,
-        role: updatedUser.role,
-        orgRole: updatedUser.orgRole,
-      },
+      user: publicUser(updatedUser),
       tenant: user.tenant ? formatTenantResponse(user.tenant) : null,
       access,
     });
@@ -341,9 +350,19 @@ export async function login(req: Request, res: Response) {
       return res.status(400).json({ error: 'Veuillez saisir votre email (ou téléphone) et mot de passe' });
     }
 
+    const identifier = String(email).trim();
+    const digits = identifier.replace(/[^\d]/g, '');
+    const phoneCandidates = Array.from(new Set([
+      identifier,
+      identifier.startsWith('+') ? identifier : digits ? `+${digits}` : '',
+    ].filter(Boolean)));
+
     const user = await prisma.user.findFirst({
       where: {
-        OR: [{ email: email }, { phone: email }],
+        OR: [
+          { email: identifier },
+          ...phoneCandidates.map((phone) => ({ phone })),
+        ],
       },
       include: { tenant: true },
     });
@@ -375,14 +394,7 @@ export async function login(req: Request, res: Response) {
 
     return res.json({
       token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        phone: user.phone,
-        role: user.role,
-        orgRole: user.orgRole,
-      },
+      user: publicUser(user),
       tenant: user.tenant ? formatTenantResponse(user.tenant) : null,
       access,
     });
@@ -425,13 +437,7 @@ export async function verifyEmail(req: Request, res: Response) {
     return res.json({
       message: 'Votre compte a été confirmé avec succès ! Connexion automatique en cours...',
       token: jwtToken,
-      user: {
-        id: updatedUser.id,
-        email: updatedUser.email,
-        name: updatedUser.name,
-        phone: updatedUser.phone,
-        role: updatedUser.role,
-      },
+      user: publicUser(updatedUser),
       tenant: user.tenant ? formatTenantResponse(user.tenant) : null,
     });
   } catch (error: any) {
@@ -461,12 +467,7 @@ export async function getProfile(req: AuthenticatedRequest, res: Response) {
 
     return res.json({
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        phone: user.phone,
-        role: user.role,
-        orgRole: user.orgRole,
+        ...publicUser(user),
         impersonatedBy: req.user.impersonatedBy || null,
       },
       tenant: user.tenant ? formatTenantResponse(user.tenant) : null,
@@ -484,7 +485,7 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
       return res.status(401).json({ error: 'Non authentifié.' });
     }
 
-    const { name, email, phone, password, tenantName, accountKind } = req.body;
+    const { name, email, phone, phoneCountryCode, nationalNumber, avatarUrl, password, tenantName, accountKind } = req.body;
 
     if (!name || !email) {
       return res.status(400).json({ error: 'Le nom et l\'adresse e-mail sont obligatoires.' });
@@ -501,11 +502,19 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
       return res.status(400).json({ error: 'Cette adresse e-mail est déjà utilisée par un autre compte.' });
     }
 
+    const phoneFields = resolvePhoneFields({ phone, phoneCountryCode, nationalNumber });
     const updateData: any = {
       name,
       email,
-      phone: phone || null,
+      phone: phoneFields.phone,
+      phoneCountryCode: phoneFields.phoneCountryCode,
     };
+    if (typeof avatarUrl === 'string') {
+      updateData.avatarUrl = avatarUrl.trim() || null;
+    }
+    if (avatarUrl === null) {
+      updateData.avatarUrl = null;
+    }
 
     if (password && password.trim() !== '') {
       updateData.passwordHash = await bcrypt.hash(password, 10);
@@ -568,13 +577,7 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
         ? 'Profil mis à jour. L’ancien forfait n’était pas destiné à ce type de compte : l’espace est passé à l’essai Essentials. Choisissez un forfait adapté dans Facturation.'
         : 'Profil mis à jour avec succès !',
       planResetToFree: result.planResetToFree,
-      user: {
-        id: result.user.id,
-        email: result.user.email,
-        name: result.user.name,
-        phone: result.user.phone,
-        role: result.user.role,
-      },
+      user: publicUser(result.user),
       tenant: result.tenant ? formatTenantResponse(result.tenant) : null,
     });
   } catch (error: any) {

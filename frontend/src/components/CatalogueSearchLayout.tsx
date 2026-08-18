@@ -32,6 +32,7 @@ export default function CatalogueSearchLayout({
   page,
   pageSize,
   onPageChange,
+  onPageSizeChange,
   itemLabel,
   mode,
   onViewChange,
@@ -63,6 +64,7 @@ export default function CatalogueSearchLayout({
   page: number;
   pageSize: number;
   onPageChange: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
   itemLabel: string;
   mode: CatalogueViewMode;
   onViewChange: (mode: CatalogueViewMode) => void;
@@ -222,6 +224,7 @@ export default function CatalogueSearchLayout({
               pageSize={pageSize}
               total={items.length}
               onPageChange={onPageChange}
+              onPageSizeChange={onPageSizeChange}
               itemLabel={itemLabel}
             />
           </>

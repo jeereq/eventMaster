@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { Button, Input, Pagination, paginateItems, Skeleton, SkeletonLandingTemplateGrid } from '@/components/ui';
+import { Button, Input, Pagination, paginateItems, Skeleton, SkeletonLandingTemplateGrid, usePageSize } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import CatalogueResults, { CatalogueResultsSkeleton } from '@/components/CatalogueResults';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
@@ -23,8 +23,6 @@ import {
 import { ArrowRight, Building2, Search, Sparkles, FileText } from 'lucide-react';
 
 type VitrineTab = 'venues' | 'services' | 'templates';
-
-const PAGE_SIZE = 8;
 
 function getCategoryLabel(category: string) {
   if (category === 'private') return 'Privé';
@@ -52,6 +50,7 @@ export default function LandingVitrineSection({
   const [serviceCategory, setServiceCategory] = useState('');
   const [templateCategory, setTemplateCategory] = useState('all');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = usePageSize('landing-vitrine', 8);
 
   useEffect(() => {
     async function load() {
@@ -114,9 +113,9 @@ export default function LandingVitrineSection({
     }
   };
 
-  const pagedVenues = paginateItems(venueItems, page, PAGE_SIZE);
-  const pagedServices = paginateItems(serviceItems, page, PAGE_SIZE);
-  const pagedTemplates = paginateItems(templateList, page, PAGE_SIZE);
+  const pagedVenues = paginateItems(venueItems, page, pageSize);
+  const pagedServices = paginateItems(serviceItems, page, pageSize);
+  const pagedTemplates = paginateItems(templateList, page, pageSize);
 
   return (
     <section id="catalogue" className="py-14 sm:py-16 border-t border-border bg-surface scroll-mt-16">
@@ -167,7 +166,7 @@ export default function LandingVitrineSection({
               leftIcon={<Search className="w-4 h-4" />}
             />
             {loadingCatalog ? (
-              <CatalogueResultsSkeleton mode="grid" count={PAGE_SIZE} />
+              <CatalogueResultsSkeleton mode="grid" count={pageSize} />
             ) : (
               <>
                 <CatalogueResults
@@ -178,9 +177,10 @@ export default function LandingVitrineSection({
                 />
                 <Pagination
                   page={page}
-                  pageSize={PAGE_SIZE}
+                  pageSize={pageSize}
                   total={venueItems.length}
                   onPageChange={setPage}
+                  onPageSizeChange={setPageSize}
                   itemLabel="salles"
                 />
               </>
@@ -211,7 +211,7 @@ export default function LandingVitrineSection({
               </select>
             </div>
             {loadingCatalog ? (
-              <CatalogueResultsSkeleton mode="grid" count={PAGE_SIZE} />
+              <CatalogueResultsSkeleton mode="grid" count={pageSize} />
             ) : (
               <>
                 <CatalogueResults
@@ -222,9 +222,10 @@ export default function LandingVitrineSection({
                 />
                 <Pagination
                   page={page}
-                  pageSize={PAGE_SIZE}
+                  pageSize={pageSize}
                   total={serviceItems.length}
                   onPageChange={setPage}
+                  onPageSizeChange={setPageSize}
                   itemLabel="prestataires"
                 />
               </>
@@ -270,7 +271,7 @@ export default function LandingVitrineSection({
             </div>
 
             {loadingTemplates ? (
-              <SkeletonLandingTemplateGrid count={PAGE_SIZE} />
+              <SkeletonLandingTemplateGrid count={pageSize} />
             ) : publicTemplates.length === 0 ? (
               <div className="py-12 px-6 border border-dashed border-border rounded-[var(--radius-card)] bg-background text-center max-w-lg">
                 <p className="text-sm text-muted leading-relaxed">
@@ -320,9 +321,10 @@ export default function LandingVitrineSection({
                 </div>
                 <Pagination
                   page={page}
-                  pageSize={PAGE_SIZE}
+                  pageSize={pageSize}
                   total={templateList.length}
                   onPageChange={setPage}
+                  onPageSizeChange={setPageSize}
                   itemLabel="modèles"
                 />
               </>

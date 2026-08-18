@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { NotificationBell } from '@/components/CommercialNotifications';
+import UserAvatar from '@/components/UserAvatar';
 import { ViewCustomizerTrigger } from '@/components/ViewCustomizer';
 import { Sun, Moon, User } from 'lucide-react';
 
@@ -28,6 +29,8 @@ function useDashboardTitle(): { title: string; subtitle?: string } {
     if (pathname.startsWith('/dashboard/profile')) return { title: 'Mon compte', subtitle: 'Profil et sécurité' };
     if (pathname.startsWith('/dashboard/notifications')) return { title: 'Notifications', subtitle: 'Alertes de votre compte' };
     if (pathname.startsWith('/dashboard/audit')) return { title: 'Journal d’audit', subtitle: 'Actions plateforme' };
+    if (pathname.startsWith('/dashboard/catalogue/salles')) return { title: 'Salle', subtitle: 'Fiche interne' };
+    if (pathname.startsWith('/dashboard/catalogue/prestataires')) return { title: 'Prestation', subtitle: 'Fiche interne' };
     if (pathname.startsWith('/dashboard/admin/catalogue')) return { title: 'Catalogue', subtitle: 'Modération marketplace' };
     if (pathname.startsWith('/dashboard/commercial')) return { title: 'Parrainage', subtitle: 'Commissions plateforme' };
     if (pathname.startsWith('/dashboard/org-commercial')) return { title: 'Réseau commercial', subtitle: 'Parrainage organisation' };
@@ -96,14 +99,7 @@ export default function DashboardTopBar() {
           href="/dashboard/profile"
           className="inline-flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-[var(--radius-button)] border border-border hover:bg-surface-muted transition max-w-[14rem]"
         >
-          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary text-[10px] font-bold shrink-0">
-            {(user?.name || 'U')
-              .split(' ')
-              .map((n) => n[0])
-              .join('')
-              .toUpperCase()
-              .slice(0, 2)}
-          </span>
+          <UserAvatar name={user?.name} src={user?.avatarUrl} size="sm" className="rounded-md" />
           <span className="min-w-0 hidden lg:block">
             <span className="block text-xs font-semibold text-foreground truncate">{user?.name || 'Compte'}</span>
             <span className="block text-[10px] text-muted truncate">{roleLabel}</span>

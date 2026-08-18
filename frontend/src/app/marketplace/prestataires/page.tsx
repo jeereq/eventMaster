@@ -4,6 +4,7 @@ import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'reac
 import { api } from '@/lib/api';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import CatalogueSearchLayout from '@/components/CatalogueSearchLayout';
+import { usePageSize } from '@/components/ui';
 import CatalogueFilterBar, {
   CatalogueChoicePills,
   CatalogueFilterField,
@@ -61,7 +62,7 @@ function MarketplaceServicesPageInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filterError, setFilterError] = useState('');
-  const PAGE_SIZE = 12;
+  const [pageSize, setPageSize] = usePageSize('marketplace-services', 12);
 
   const load = useCallback(async (filters: ServiceFilters, search: string) => {
     setLoading(true);
@@ -141,8 +142,9 @@ function MarketplaceServicesPageInner() {
       emptyTitle="Aucun prestataire pour ces filtres"
       emptyDescription="Élargissez la commune ou la catégorie, ou publiez une prestation depuis Marketplace."
       page={page}
-      pageSize={PAGE_SIZE}
+      pageSize={pageSize}
       onPageChange={setPage}
+      onPageSizeChange={setPageSize}
       itemLabel="prestataires"
       searchCenter={searchCenter}
       radiusKm={searchCenter ? applied.radiusKm : 0}

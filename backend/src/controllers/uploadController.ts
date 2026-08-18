@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
-import { getTemplateUploadFolder, getVenueMediaFolder, isCloudinaryConfigured } from '../config/cloudinaryConfig';
+import { prisma } from '../db';
+import { getTemplateUploadFolder, getVenueMediaFolder, getAvatarUploadFolder, isCloudinaryConfigured } from '../config/cloudinaryConfig';
 import { uploadDataUrl, uploadImageBuffer, uploadVideoBuffer } from '../services/cloudinaryService';
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -132,5 +133,54 @@ export async function uploadMarketplaceMedia(req: AuthenticatedRequest, res: Res
   } catch (error: any) {
     console.error('Erreur upload média Cloudinary:', error);
     return res.status(500).json({ error: error.message || 'Échec de l\'upload.' });
+  }
+}
+
+export async function uploadAvatar(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Non authentifié.' });
+    }
+    if (!isCloudinaryConfigured()) {
+      return res.status(503).json({ error: 'Stockage Cloudinary non configuré sur le serveur.' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: 'Fichier image requis.' });
+    }
+    if (!isAllowedImageFile(req.file)) {
+      return res.status(400).json({ error: 'Format image non supporté (JPEG, PNG, WebP, HEIC).' });
+    }
+    if (req.file.size > MAX_IMAGE_BYTES) {
+      return res.status(400).json({ error: 'Image trop volumineuse (max 10 Mo).' });
+    }
+
+    const result = await uploadImageBuffer(
+      req.file.buffer,
+      getAvatarUploadFolder(req.user.id),
+      req.file.originalname,
+    );
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: { avatarUrl: result.url },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        phoneCountryCode: true,
+        avatarUrl: true,
+        role: true,
+        orgRole: true,
+      },
+    });
+
+    return res.json({
+      url: result.url,
+      publicId: result.publicId,
+      user,
+    });
+  } catch (error: any) {
+    console.error('Erreur upload avatar Cloudinary:', error);
+    return res.status(500).json({ error: error.message || 'Échec de l\'upload de la photo.' });
   }
 }

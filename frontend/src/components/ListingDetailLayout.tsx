@@ -97,6 +97,7 @@ export default function ListingDetailLayout({
   inquiry,
   booking,
   preview,
+  embedded,
 }: {
   backHref: string;
   backLabel: string;
@@ -122,31 +123,37 @@ export default function ListingDetailLayout({
   inquiry?: React.ReactNode;
   booking?: React.ReactNode;
   preview?: boolean;
+  /** Dans le dashboard : pas de second `main.page-container`. */
+  embedded?: boolean;
 }) {
   const router = useRouter();
   const [mobileAction, setMobileAction] = useState<'inquire' | 'book'>('inquire');
   const priceLabel = priceFromFc != null ? formatFc(priceFromFc) : 'Sur devis';
   const showCommerce = !preview && Boolean(inquiry || booking);
+  const returnScope = backHref.startsWith('/dashboard') ? '/dashboard' : '/marketplace';
 
   const goBack = (e: React.MouseEvent) => {
     e.preventDefault();
-    const stored = getCatalogueReturn(backHref);
+    const stored = getCatalogueReturn(backHref, returnScope);
     if (typeof window !== 'undefined' && window.history.length > 1) {
       try {
         const ref = document.referrer ? new URL(document.referrer) : null;
-        if (ref && ref.origin === window.location.origin && isCatalogueListPath(ref.pathname)) {
+        if (
+          ref
+          && ref.origin === window.location.origin
+          && isCatalogueListPath(ref.pathname)
+          && ref.pathname.startsWith(returnScope)
+        ) {
           router.back();
           return;
         }
       } catch {
         /* ignore */
       }
-      if (stored !== backHref && (stored.startsWith('/marketplace') || stored.startsWith('/dashboard'))) {
+      if (stored !== backHref && stored.startsWith(returnScope)) {
         router.push(stored);
         return;
       }
-      router.back();
-      return;
     }
     router.push(stored);
   };
@@ -166,7 +173,7 @@ export default function ListingDetailLayout({
   );
 
   return (
-    <main className="page-container pt-4 pb-24 sm:pt-8 lg:py-10 lg:pb-10 flex-1">
+    <main className={embedded ? 'pb-8 sm:pb-10 flex-1' : 'page-container pt-4 pb-24 sm:pt-8 lg:py-10 lg:pb-10 flex-1'}>
       <button
         type="button"
         onClick={goBack}

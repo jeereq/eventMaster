@@ -6,7 +6,8 @@ import { useAuth } from '@/context/AuthContext';
 import {
  Building2, Loader2, PlusCircle, TrendingUp, Users, Wallet, Mail, MessageSquare, RefreshCw, AlertCircle, CheckCircle2,
 } from 'lucide-react';
-import { Button, PageHeader, SkeletonCommercialView, Pagination, paginateItems } from '@/components/ui';
+import { Button, PageHeader, SkeletonCommercialView, Pagination, paginateItems, PhoneInput, usePageSize } from '@/components/ui';
+import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import ReferralShareButtons from '@/components/commercial/ReferralShareButtons';
 
  interface CommercialDashboard {
@@ -48,8 +49,8 @@ export default function CommercialDashboardPage() {
  const [showForm, setShowForm] = useState(false);
  const [orgsPage, setOrgsPage] = useState(1);
  const [commPage, setCommPage] = useState(1);
- const ORGS_PER_PAGE = 10;
- const COMM_PER_PAGE = 10;
+ const [orgsPageSize, setOrgsPageSize] = usePageSize('commercial-orgs', 10);
+ const [commPageSize, setCommPageSize] = usePageSize('commercial-comms', 10);
  const [form, setForm] = useState({
  organizationName: '',
  managerName: '',
@@ -57,6 +58,8 @@ export default function CommercialDashboardPage() {
  managerPassword: '',
  managerPhone: '',
  });
+ const [phoneCountryCode, setPhoneCountryCode] = useState(DEFAULT_PHONE_COUNTRY_CODE);
+ const [phoneNational, setPhoneNational] = useState('');
  const [submitting, setSubmitting] = useState(false);
  const [verificationMethod, setVerificationMethod] = useState<'EMAIL' | 'WHATSAPP'>('EMAIL');
  const [error, setError] = useState('');
@@ -76,16 +79,25 @@ export default function CommercialDashboardPage() {
  setError('');
  setSuccess('');
  setSubmitting(true);
- if (verificationMethod === 'WHATSAPP' && !form.managerPhone) {
+ if (verificationMethod === 'WHATSAPP' && !phoneNational.trim()) {
  setError('Le téléphone est obligatoire pour envoyer le code OTP par WhatsApp.');
  setSubmitting(false);
  return;
  }
  try {
- const data = await api.post('/commercial/organizations', { ...form, verificationMethod });
+ const managerPhone = composeE164(phoneCountryCode, phoneNational) || '';
+ const data = await api.post('/commercial/organizations', {
+ ...form,
+ managerPhone,
+ phoneCountryCode,
+ nationalNumber: phoneNational,
+ verificationMethod,
+ });
  setSuccess(data.message || 'Organisation créée.');
  setShowForm(false);
  setForm({ organizationName: '', managerName: '', managerEmail: '', managerPassword: '', managerPhone: '' });
+ setPhoneNational('');
+ setPhoneCountryCode(DEFAULT_PHONE_COUNTRY_CODE);
  setVerificationMethod('EMAIL');
  const refreshed = await api.get('/commercial/dashboard');
  setData(refreshed);
@@ -122,8 +134,8 @@ export default function CommercialDashboardPage() {
  return <SkeletonCommercialView />;
  }
 
- const paginatedOrgs = paginateItems(data.organizations, orgsPage, ORGS_PER_PAGE);
- const paginatedComms = paginateItems(data.commissions, commPage, COMM_PER_PAGE);
+ const paginatedOrgs = paginateItems(data.organizations, orgsPage, orgsPageSize);
+ const paginatedComms = paginateItems(data.commissions, commPage, commPageSize);
 
  return (
  <div className="space-y-6">
@@ -192,23 +204,33 @@ export default function CommercialDashboardPage() {
  {showForm && (
  <form onSubmit={handleCreateOrg} className="bg-white dark:bg-background border rounded-2xl p-5 space-y-4">
  <div className="grid sm:grid-cols-2 gap-4">
- {(['organizationName', 'managerName', 'managerEmail', 'managerPassword', 'managerPhone'] as const).map((field) => (
+ {(['organizationName', 'managerName', 'managerEmail', 'managerPassword'] as const).map((field) => (
  <input
  key={field}
- required={field !== 'managerPhone'}
- type={field.includes('Password') ? 'password' : field.includes('Email') ? 'email' : field === 'managerPhone' ? 'tel' : 'text'}
+ required
+ type={field.includes('Password') ? 'password' : field.includes('Email') ? 'email' : 'text'}
  placeholder={
  field === 'organizationName' ? 'Nom organisation' :
  field === 'managerName' ? 'Nom du manager' :
  field === 'managerEmail' ? 'E-mail manager' :
- field === 'managerPassword' ? 'Mot de passe manager (min. 6 car.)' :
- verificationMethod === 'WHATSAPP' ? 'Téléphone WhatsApp (+243…)' : 'Téléphone (optionnel)'
+ 'Mot de passe manager (min. 6 car.)'
  }
  value={form[field]}
  onChange={(e) => setForm({ ...form, [field]: e.target.value })}
  className="px-4 py-2.5 rounded-xl border text-sm"
  />
  ))}
+ <div className="sm:col-span-2">
+ <PhoneInput
+ id="manager-phone"
+ label={verificationMethod === 'WHATSAPP' ? 'Téléphone WhatsApp' : 'Téléphone (optionnel)'}
+ countryCode={phoneCountryCode}
+ national={phoneNational}
+ onCountryCodeChange={setPhoneCountryCode}
+ onNationalChange={setPhoneNational}
+ required={verificationMethod === 'WHATSAPP'}
+ />
+ </div>
  </div>
  <div>
  <label className="block text-xs font-bold text-muted uppercase mb-2">Validation du compte manager (OTP)</label>
@@ -321,9 +343,10 @@ export default function CommercialDashboardPage() {
 
  <Pagination
  page={orgsPage}
- pageSize={ORGS_PER_PAGE}
+ pageSize={orgsPageSize}
  total={data.organizations.length}
  onPageChange={setOrgsPage}
+ onPageSizeChange={setOrgsPageSize}
  itemLabel="organisations"
  />
 
@@ -370,9 +393,10 @@ export default function CommercialDashboardPage() {
  </div>
  <Pagination
  page={commPage}
- pageSize={COMM_PER_PAGE}
+ pageSize={commPageSize}
  total={data.commissions.length}
  onPageChange={setCommPage}
+ onPageSizeChange={setCommPageSize}
  itemLabel="commissions"
  />
  </div>

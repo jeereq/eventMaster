@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -14,11 +14,43 @@ export function totalPagesFor(total: number, pageSize: number): number {
   return Math.max(1, Math.ceil(Math.max(0, total) / Math.max(1, pageSize)));
 }
 
+export const PAGE_SIZE_OPTIONS = [6, 8, 12, 20, 50, 100];
+
+export function usePageSize(storageKey: string, defaultSize = 12): [number, (next: number) => void] {
+  const [pageSize, setPageSize] = useState(defaultSize);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(`em-page-size:${storageKey}`);
+      const n = raw ? Number(raw) : NaN;
+      if (Number.isFinite(n) && n > 0) {
+        setPageSize(Math.min(100, Math.max(1, Math.floor(n))));
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [storageKey]);
+
+  const update = useCallback((next: number) => {
+    const value = Math.min(100, Math.max(1, Math.floor(next)));
+    setPageSize(value);
+    try {
+      localStorage.setItem(`em-page-size:${storageKey}`, String(value));
+    } catch {
+      /* ignore */
+    }
+  }, [storageKey]);
+
+  return [pageSize, update];
+}
+
 export interface PaginationProps {
   page: number;
   pageSize: number;
   total: number;
   onPageChange: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
+  pageSizeOptions?: number[];
   /** Libellé du type d’éléments, ex. « organisations » */
   itemLabel?: string;
   className?: string;
@@ -45,6 +77,8 @@ export default function Pagination({
   pageSize,
   total,
   onPageChange,
+  onPageSizeChange,
+  pageSizeOptions = PAGE_SIZE_OPTIONS,
   itemLabel,
   className,
   maxButtons = 7,
@@ -57,6 +91,9 @@ export default function Pagination({
   const to = Math.min(safePage * pageSize, total);
   const pages = pageWindow(safePage, totalPages, maxButtons);
   const singlePage = totalPages <= 1;
+  const sizeOptions = pageSizeOptions.includes(pageSize)
+    ? pageSizeOptions
+    : [...pageSizeOptions, pageSize].sort((a, b) => a - b);
 
   return (
     <nav
@@ -67,11 +104,31 @@ export default function Pagination({
         className,
       )}
     >
-      <span className="text-xs font-medium text-foreground/80">
-        {from}–{to} sur {total}
-        {itemLabel ? ` ${itemLabel}` : ''}
-        {singlePage ? ' · 1 page' : ` · ${totalPages} pages`}
-      </span>
+      <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+        <span className="text-xs font-medium text-foreground/80">
+          {from}–{to} sur {total}
+          {itemLabel ? ` ${itemLabel}` : ''}
+          {singlePage ? ' · 1 page' : ` · ${totalPages} pages`}
+        </span>
+        {onPageSizeChange && (
+          <label className="inline-flex items-center gap-1.5 text-xs text-muted">
+            <span className="sr-only sm:not-sr-only">Par page</span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                onPageSizeChange(Number(e.target.value));
+                onPageChange(1);
+              }}
+              className="h-8 rounded-[var(--radius-button)] border border-border bg-surface px-2 text-xs font-semibold text-foreground"
+              aria-label="Nombre d’éléments par page"
+            >
+              {sizeOptions.map((size) => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
       <div className="flex items-center gap-1 overflow-x-auto max-w-full pb-0.5">
         <button
           type="button"

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Bell, Check, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { PageHeader, Breadcrumbs, Button, EmptyState, Pagination, Alert } from '@/components/ui';
+import { PageHeader, Breadcrumbs, Button, EmptyState, Pagination, Alert, usePageSize } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
   notificationFamilyLabel,
@@ -30,8 +30,6 @@ interface NotificationsResponse {
   pageSize: number;
   hasMore: boolean;
 }
-
-const PAGE_SIZE = 20;
 
 function formatWhen(iso: string): string {
   return new Date(iso).toLocaleString('fr-FR', {
@@ -60,6 +58,7 @@ export default function NotificationsPage() {
   const [family, setFamily] = useState<NotificationFamily>('all');
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = usePageSize('notifications', 20);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [data, setData] = useState<NotificationsResponse | null>(null);
@@ -94,7 +93,7 @@ export default function NotificationsPage() {
     setError('');
     try {
       const params = new URLSearchParams();
-      params.set('limit', String(PAGE_SIZE));
+      params.set('limit', String(pageSize));
       params.set('page', String(page));
       if (unreadOnly) params.set('unread', '1');
       if (family !== 'all') params.set('family', family);
@@ -105,7 +104,7 @@ export default function NotificationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [family, unreadOnly, page]);
+  }, [family, unreadOnly, page, pageSize]);
 
   useEffect(() => {
     void load();
@@ -226,12 +225,13 @@ export default function NotificationsPage() {
         </ul>
       )}
 
-      {data && data.total > PAGE_SIZE && (
+      {data && data.total > 0 && (
         <Pagination
           page={page}
-          pageSize={PAGE_SIZE}
+          pageSize={pageSize}
           total={data.total}
           onPageChange={setPage}
+          onPageSizeChange={setPageSize}
           itemLabel="notifications"
         />
       )}

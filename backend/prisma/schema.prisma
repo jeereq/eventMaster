@@ -151,6 +151,7 @@ model User {
   email         String     @unique
   passwordHash  String
   name          String?
+  avatarUrl     String?
   phone         String?
   /** Indicatif pays dédié, ex. +243 — saisi séparément du numéro national */
   phoneCountryCode String?

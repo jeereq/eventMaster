@@ -4,10 +4,12 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import {
-  Calendar, Mail, Lock, PartyPopper, Sparkles, Table, MessageSquare,
+  Calendar, Lock, PartyPopper, Sparkles, Table, MessageSquare,
 } from 'lucide-react';
 import { AuthSplitLayout } from '@/components/AuthSplitLayout';
-import { Button, Alert, Input, Card } from '@/components/ui';
+import { Button, Alert, Input, Card, IdentifierInput, identifierValue } from '@/components/ui';
+import type { IdentifierMode } from '@/components/ui';
+import { DEFAULT_PHONE_COUNTRY_CODE } from '@/lib/phone';
 
 const FEATURES = [
   { icon: Calendar, title: "Gestion d'événements & RSVP", desc: 'Invitations par e-mail ou WhatsApp, suivi des réponses en temps réel.' },
@@ -18,7 +20,10 @@ const FEATURES = [
 
 export default function LoginPage() {
   const { login } = useAuth();
-  const [identifier, setIdentifier] = useState('');
+  const [mode, setMode] = useState<IdentifierMode>('email');
+  const [email, setEmail] = useState('');
+  const [phoneCountryCode, setPhoneCountryCode] = useState(DEFAULT_PHONE_COUNTRY_CODE);
+  const [phoneNational, setPhoneNational] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -26,6 +31,11 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    const identifier = identifierValue(mode, email, phoneCountryCode, phoneNational);
+    if (!identifier) {
+      setError(mode === 'email' ? 'Saisissez votre adresse e-mail.' : 'Saisissez votre numéro de téléphone.');
+      return;
+    }
     setLoading(true);
     try {
       await login(identifier, password);
@@ -61,15 +71,15 @@ export default function LoginPage() {
         {error && <Alert variant="error" className="mb-5">{error}</Alert>}
 
         <form className="space-y-5" onSubmit={handleSubmit}>
-          <Input
-            label="Email ou numéro WhatsApp"
-            id="identifier"
-            required
-            value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
-            placeholder="nom@exemple.com ou +243…"
-            hint="Utilisez votre e-mail d'inscription ou votre numéro WhatsApp."
-            leftIcon={<Mail className="w-4 h-4" />}
+          <IdentifierInput
+            mode={mode}
+            onModeChange={setMode}
+            email={email}
+            onEmailChange={setEmail}
+            countryCode={phoneCountryCode}
+            national={phoneNational}
+            onCountryCodeChange={setPhoneCountryCode}
+            onNationalChange={setPhoneNational}
           />
 
           <div className="space-y-1.5">

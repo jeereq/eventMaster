@@ -19,7 +19,7 @@ import QuotaUsagePanel from '@/components/QuotaUsagePanel';
 import SubscriptionApprovalModal, { type SubscriptionApprovalRequest } from '@/components/SubscriptionApprovalModal';
 import BillingDiscountFields, { getBillingPricingFromFields } from '@/components/BillingDiscountFields';
 import type { QuotaSnapshot } from '@/lib/quotaDisplay';
-import { PageHeader, Alert, Button, ProjectCard, ListRowAction, StatusPill, SkeletonDashboardHome, SkeletonTabContent, ViewModeToggle, useViewMode, listStackClass, Breadcrumbs, Pagination, paginateItems, PhoneInput } from '@/components/ui';
+import { PageHeader, Alert, Button, ProjectCard, ListRowAction, StatusPill, SkeletonDashboardHome, SkeletonTabContent, ViewModeToggle, useViewMode, listStackClass, Breadcrumbs, Pagination, paginateItems, PhoneInput, usePageSize } from '@/components/ui';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { parseStoredPhone } from '@/components/ui/PhoneInput';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
@@ -472,12 +472,14 @@ function DashboardPageContent() {
  const [subRequestsPage, setSubRequestsPage] = useState(1);
  const [homeEventsPage, setHomeEventsPage] = useState(1);
  const [plansPage, setPlansPage] = useState(1);
- const ITEMS_PER_PAGE = 8;
- const TENANTS_PER_PAGE = 8;
- const TEMPLATE_CARDS_PER_PAGE = 8;
- const SUB_REQUESTS_PER_PAGE = 8;
- const HOME_EVENTS_PER_PAGE = 6;
- const PLANS_PER_PAGE = 4;
+ const [tenantsPageSize, setTenantsPageSize] = usePageSize('admin-tenants', 8);
+ const [usersPageSize, setUsersPageSize] = usePageSize('admin-users', 8);
+ const [templatesPageSize, setTemplatesPageSize] = usePageSize('admin-templates', 8);
+ const [eventsPageSize, setEventsPageSize] = usePageSize('admin-events', 8);
+ const [guestsPageSize, setGuestsPageSize] = usePageSize('admin-guests', 8);
+ const [subRequestsPageSize, setSubRequestsPageSize] = usePageSize('admin-sub-requests', 8);
+ const [homeEventsPageSize, setHomeEventsPageSize] = usePageSize('home-events', 6);
+ const [plansPageSize, setPlansPageSize] = usePageSize('admin-plans', 4);
 
  // Guest CRUD Modals states (Super Admin)
  const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
@@ -1606,13 +1608,13 @@ function DashboardPageContent() {
  return matchesSearch && matchesRsvp && matchesOrg && matchesEvent && matchesCategory && matchesCheckin;
  });
 
- const paginatedTenants = paginateItems(filteredTenants, tenantsPage, TENANTS_PER_PAGE);
- const paginatedUsers = paginateItems(filteredUsers, usersPage, ITEMS_PER_PAGE);
- const paginatedTemplates = paginateItems(filteredTemplates, templatesPage, TEMPLATE_CARDS_PER_PAGE);
- const paginatedEvents = paginateItems(filteredEvents, eventsPage, ITEMS_PER_PAGE);
- const paginatedGuests = paginateItems(filteredGuests, guestsPage, ITEMS_PER_PAGE);
- const paginatedSubRequests = paginateItems(subscriptionRequests, subRequestsPage, SUB_REQUESTS_PER_PAGE);
- const paginatedPlanIds = paginateItems([...PLAN_IDS], plansPage, PLANS_PER_PAGE);
+ const paginatedTenants = paginateItems(filteredTenants, tenantsPage, tenantsPageSize);
+ const paginatedUsers = paginateItems(filteredUsers, usersPage, usersPageSize);
+ const paginatedTemplates = paginateItems(filteredTemplates, templatesPage, templatesPageSize);
+ const paginatedEvents = paginateItems(filteredEvents, eventsPage, eventsPageSize);
+ const paginatedGuests = paginateItems(filteredGuests, guestsPage, guestsPageSize);
+ const paginatedSubRequests = paginateItems(subscriptionRequests, subRequestsPage, subRequestsPageSize);
+ const paginatedPlanIds = paginateItems([...PLAN_IDS], plansPage, plansPageSize);
  const userOrgOptions = [...new Set(users.map((u) => u.tenantName).filter(Boolean))].sort();
  const eventOrgOptions = [...new Set(adminEvents.map((e) => e.tenantName).filter(Boolean))].sort();
  const guestOrgOptions = [...new Set(adminGuests.map((g) => g.tenantName).filter(Boolean))].sort();
@@ -2210,9 +2212,10 @@ function DashboardPageContent() {
 
  <Pagination
  page={tenantsPage}
- pageSize={TENANTS_PER_PAGE}
+ pageSize={tenantsPageSize}
  total={filteredTenants.length}
  onPageChange={setTenantsPage}
+ onPageSizeChange={setTenantsPageSize}
  itemLabel="organisations"
  />
  </div>
@@ -2325,9 +2328,10 @@ function DashboardPageContent() {
 
  <Pagination
  page={usersPage}
- pageSize={ITEMS_PER_PAGE}
+ pageSize={usersPageSize}
  total={filteredUsers.length}
  onPageChange={setUsersPage}
+ onPageSizeChange={setUsersPageSize}
  itemLabel="utilisateurs"
  />
  </>
@@ -2398,9 +2402,10 @@ function DashboardPageContent() {
 
  <Pagination
  page={templatesPage}
- pageSize={TEMPLATE_CARDS_PER_PAGE}
+ pageSize={templatesPageSize}
  total={filteredTemplates.length}
  onPageChange={setTemplatesPage}
+ onPageSizeChange={setTemplatesPageSize}
  itemLabel="modèles"
  />
  </>
@@ -2529,9 +2534,10 @@ function DashboardPageContent() {
 
  <Pagination
  page={eventsPage}
- pageSize={ITEMS_PER_PAGE}
+ pageSize={eventsPageSize}
  total={filteredEvents.length}
  onPageChange={setEventsPage}
+ onPageSizeChange={setEventsPageSize}
  itemLabel="événements"
  />
  </>
@@ -2635,9 +2641,10 @@ function DashboardPageContent() {
 
  <Pagination
  page={guestsPage}
- pageSize={ITEMS_PER_PAGE}
+ pageSize={guestsPageSize}
  total={filteredGuests.length}
  onPageChange={setGuestsPage}
+ onPageSizeChange={setGuestsPageSize}
  itemLabel="invités"
  />
  </>
@@ -3065,9 +3072,10 @@ function DashboardPageContent() {
  </div>
  <Pagination
  page={subRequestsPage}
- pageSize={SUB_REQUESTS_PER_PAGE}
+ pageSize={subRequestsPageSize}
  total={subscriptionRequests.length}
  onPageChange={setSubRequestsPage}
+ onPageSizeChange={setSubRequestsPageSize}
  itemLabel="demandes"
  />
  </>
@@ -3338,9 +3346,10 @@ function DashboardPageContent() {
 
  <Pagination
  page={plansPage}
- pageSize={PLANS_PER_PAGE}
+ pageSize={plansPageSize}
  total={PLAN_IDS.length}
  onPageChange={setPlansPage}
+ onPageSizeChange={setPlansPageSize}
  itemLabel="forfaits"
  />
 
@@ -4639,7 +4648,7 @@ function DashboardPageContent() {
  }
 
  // Render Regular Tenant Dashboard
- const homeEvents = paginateItems(events, homeEventsPage, HOME_EVENTS_PER_PAGE);
+ const homeEvents = paginateItems(events, homeEventsPage, homeEventsPageSize);
  const usage = orgQuota?.usage;
  const limits = orgQuota?.limits;
  const formatQuota = (used?: number, max?: number) => {
@@ -4895,9 +4904,10 @@ function DashboardPageContent() {
                 </div>
  <Pagination
  page={homeEventsPage}
- pageSize={HOME_EVENTS_PER_PAGE}
+ pageSize={homeEventsPageSize}
  total={events.length}
  onPageChange={setHomeEventsPage}
+ onPageSizeChange={setHomeEventsPageSize}
  itemLabel="événements"
  />
  </>

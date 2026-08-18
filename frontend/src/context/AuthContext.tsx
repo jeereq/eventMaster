@@ -28,6 +28,7 @@ interface User {
   name: string;
   phone?: string | null;
   phoneCountryCode?: string | null;
+  avatarUrl?: string | null;
   role: 'SUPER_ADMIN' | 'COMMERCIAL' | 'USER';
   orgRole?: 'MANAGER' | 'PROTOCOL' | 'COMMERCIAL' | null;
   impersonatedBy?: string | null;

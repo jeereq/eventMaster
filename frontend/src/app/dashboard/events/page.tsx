@@ -28,7 +28,7 @@ import {
  normalizeGuestGuidelines,
  applyInvitationGuidelineVariables,
 } from '@/lib/guestGuidelines';
-import { PageHeader, Button, ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, Breadcrumbs, Modal, Input, Pagination, paginateItems, PhoneInput } from '@/components/ui';
+import { PageHeader, Button, ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, Breadcrumbs, Modal, Input, Pagination, paginateItems, PhoneInput, usePageSize } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { parseStoredPhone } from '@/components/ui/PhoneInput';
@@ -258,8 +258,8 @@ export default function EventsPage() {
  } = useViewMode('em-view-guests', 'list', 3);
  const [eventsListPage, setEventsListPage] = useState(1);
  const [guestsListPage, setGuestsListPage] = useState(1);
- const EVENTS_PER_PAGE = 8;
- const GUESTS_PER_PAGE = 8;
+ const [eventsPageSize, setEventsPageSize] = usePageSize('org-events', 8);
+ const [guestsPageSize, setGuestsPageSize] = usePageSize('org-guests', 8);
  const isProtocolOnly = access?.isProtocolOnly ?? false;
  const [protocolDesk, setProtocolDesk] = useState(isProtocolOnly);
  const canManageEvents = access?.canManageAllEvents ?? false;
@@ -466,8 +466,8 @@ export default function EventsPage() {
   || (eventWhen === 'past' && when < Date.now());
  return matchesSearch && matchesWhen;
  });
- const paginatedEventsList = paginateItems(filteredEventsList, eventsListPage, EVENTS_PER_PAGE);
- const paginatedGuestsList = paginateItems(filteredGuests, guestsListPage, GUESTS_PER_PAGE);
+ const paginatedEventsList = paginateItems(filteredEventsList, eventsListPage, eventsPageSize);
+ const paginatedGuestsList = paginateItems(filteredGuests, guestsListPage, guestsPageSize);
 
  const isAllFilteredSelected = filteredGuests.length > 0 && filteredGuests.every(g => selectedGuestIds.includes(g.id));
 
@@ -1872,9 +1872,10 @@ export default function EventsPage() {
  {!selectedEvent && (
  <Pagination
  page={eventsListPage}
- pageSize={EVENTS_PER_PAGE}
+ pageSize={eventsPageSize}
  total={filteredEventsList.length}
  onPageChange={setEventsListPage}
+ onPageSizeChange={setEventsPageSize}
  itemLabel="événements"
  />
  )}
@@ -2382,9 +2383,10 @@ export default function EventsPage() {
 
  <Pagination
  page={guestsListPage}
- pageSize={GUESTS_PER_PAGE}
+ pageSize={guestsPageSize}
  total={filteredGuests.length}
  onPageChange={setGuestsListPage}
+ onPageSizeChange={setGuestsPageSize}
  itemLabel="invités"
  />
  </div>

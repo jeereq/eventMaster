@@ -18,7 +18,7 @@ import {
  Spline, Triangle, Plus, Trash, Layout, Palette, Square,
  ArrowUp, ArrowDown, Crop, Copy, Upload, Globe
 } from 'lucide-react';
-import { PageHeader, Alert, Button, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, paginateItems } from '@/components/ui';
+import { PageHeader, Alert, Button, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, paginateItems, usePageSize } from '@/components/ui';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
 import {
  type RsvpField,
@@ -144,7 +144,7 @@ export default function TemplatesPage() {
  } = useViewMode('em-view-templates', 'grid', 3);
  const [catalogPage, setCatalogPage] = useState(1);
  const [ownTemplatesPage, setOwnTemplatesPage] = useState(1);
- const TEMPLATES_PER_PAGE = 9;
+ const [templatesPageSize, setTemplatesPageSize] = usePageSize('templates', 9);
  const [templates, setTemplates] = useState<TemplateItem[]>([]);
  const [loading, setLoading] = useState(true);
  const [editorOpen, setEditorOpen] = useState(false);
@@ -1267,8 +1267,8 @@ export default function TemplatesPage() {
  const ownTemplates = templates.filter((t) => t.isOwned ?? Boolean(t.tenantId));
  const canDuplicateAny = user?.role === 'SUPER_ADMIN' || catalogTemplates.length > 0 || canUseCustomTemplates;
  const listTemplates = user?.role === 'SUPER_ADMIN' ? templates : ownTemplates;
- const paginatedCatalog = paginateItems(catalogTemplates, catalogPage, TEMPLATES_PER_PAGE);
- const paginatedOwn = paginateItems(listTemplates, ownTemplatesPage, TEMPLATES_PER_PAGE);
+ const paginatedCatalog = paginateItems(catalogTemplates, catalogPage, templatesPageSize);
+ const paginatedOwn = paginateItems(listTemplates, ownTemplatesPage, templatesPageSize);
 
  // Helper to get background style
  const getBackgroundStyle = (type: string, color: string, url: string, pattern: string) => {
@@ -3774,9 +3774,10 @@ export default function TemplatesPage() {
  />
  <Pagination
  page={catalogPage}
- pageSize={TEMPLATES_PER_PAGE}
+ pageSize={templatesPageSize}
  total={catalogTemplates.length}
  onPageChange={setCatalogPage}
+ onPageSizeChange={setTemplatesPageSize}
  itemLabel="modèles"
  />
  </section>
@@ -3843,9 +3844,10 @@ export default function TemplatesPage() {
  />
  <Pagination
  page={ownTemplatesPage}
- pageSize={TEMPLATES_PER_PAGE}
+ pageSize={templatesPageSize}
  total={listTemplates.length}
  onPageChange={setOwnTemplatesPage}
+ onPageSizeChange={setTemplatesPageSize}
  itemLabel="modèles"
  />
  </section>

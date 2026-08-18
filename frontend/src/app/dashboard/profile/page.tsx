@@ -6,10 +6,13 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
-  User, Mail, Phone, Lock, Building, Loader2,
-  Save, Award, Calendar, Palette,
+  User, Mail, Lock, Building, Loader2,
+  Save, Award, Calendar, Palette, Camera, Trash2,
 } from 'lucide-react';
-import { PageHeader, Alert, SkeletonProfileView, Button, Breadcrumbs, Input } from '@/components/ui';
+import { PageHeader, Alert, SkeletonProfileView, Button, Breadcrumbs, Input, PhoneInput } from '@/components/ui';
+import { parseStoredPhone } from '@/components/ui/PhoneInput';
+import UserAvatar from '@/components/UserAvatar';
+import { DEFAULT_PHONE_COUNTRY_CODE } from '@/lib/phone';
 import { ACCOUNT_KIND_DESCRIPTIONS, ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
 import { paidPlanIdsForAccountKind } from '@/config/landingPricing';
 
@@ -20,7 +23,10 @@ function ProfilePageContent() {
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const [phoneCountryCode, setPhoneCountryCode] = useState(DEFAULT_PHONE_COUNTRY_CODE);
+  const [phoneNational, setPhoneNational] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [tenantName, setTenantName] = useState('');
   const [accountKind, setAccountKind] = useState<TenantAccountKind>('ORGANIZER');
   const [password, setPassword] = useState('');
@@ -55,7 +61,10 @@ function ProfilePageContent() {
     if (user) {
       setName(user.name || '');
       setEmail(user.email || '');
-      setPhone(user.phone || '');
+      const parsed = parseStoredPhone(user.phone, user.phoneCountryCode);
+      setPhoneCountryCode(parsed.countryCode);
+      setPhoneNational(parsed.national);
+      setAvatarUrl(user.avatarUrl || null);
     }
     if (tenant) {
       setTenantName(tenant.name || '');
@@ -98,6 +107,51 @@ function ProfilePageContent() {
     }
   };
 
+  const handleAvatarChange = async (file: File | null) => {
+    if (!file) return;
+    setError('');
+    setSuccess('');
+    setAvatarUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const data = await api.post('/uploads/avatar', formData);
+      setAvatarUrl(data.url || data.user?.avatarUrl || null);
+      if (data.user) {
+        updateUserAndTenant(data.user, tenant);
+      }
+      setSuccess('Photo de profil mise à jour.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Impossible d’envoyer la photo.');
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    setError('');
+    setAvatarUploading(true);
+    try {
+      const data = await api.put('/auth/profile', {
+        name,
+        email,
+        phone: phoneNational,
+        phoneCountryCode,
+        nationalNumber: phoneNational,
+        avatarUrl: null,
+        tenantName: user?.role !== 'SUPER_ADMIN' && user?.role !== 'COMMERCIAL' ? tenantName : undefined,
+        accountKind: user?.role !== 'SUPER_ADMIN' && user?.role !== 'COMMERCIAL' ? accountKind : undefined,
+      });
+      setAvatarUrl(null);
+      updateUserAndTenant({ ...data.user, avatarUrl: null }, data.tenant);
+      setSuccess('Photo de profil retirée.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Impossible de retirer la photo.');
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -114,7 +168,10 @@ function ProfilePageContent() {
       const data = await api.put('/auth/profile', {
         name,
         email,
-        phone,
+        phone: phoneNational,
+        phoneCountryCode,
+        nationalNumber: phoneNational,
+        avatarUrl,
         password: password || undefined,
         tenantName: user?.role !== 'SUPER_ADMIN' && user?.role !== 'COMMERCIAL' ? tenantName : undefined,
         accountKind: user?.role !== 'SUPER_ADMIN' && user?.role !== 'COMMERCIAL' ? accountKind : undefined,
@@ -130,16 +187,6 @@ function ProfilePageContent() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const getInitials = (userName: string) => {
-    if (!userName) return 'U';
-    return userName
-      .split(' ')
-      .map((n) => n[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase();
   };
 
   return (
@@ -160,8 +207,22 @@ function ProfilePageContent() {
       {/* En-tête profil compact */}
       <div className="bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5 min-w-0">
-          <div className="w-12 h-12 rounded-[var(--radius-button)] bg-primary/10 border border-primary/20 flex items-center justify-center text-sm font-semibold text-primary shrink-0">
-            {getInitials(name)}
+          <div className="relative shrink-0">
+            <UserAvatar name={name} src={avatarUrl} size="lg" className="rounded-[var(--radius-button)] w-14 h-14" />
+            <label className="absolute -bottom-1 -right-1 inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white cursor-pointer shadow-sm">
+              {avatarUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                className="sr-only"
+                disabled={avatarUploading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  e.target.value = '';
+                  void handleAvatarChange(file);
+                }}
+              />
+            </label>
           </div>
           <div className="min-w-0">
             <h2 className="text-base font-semibold text-foreground tracking-tight truncate">{name || 'Utilisateur'}</h2>
@@ -178,6 +239,11 @@ function ProfilePageContent() {
             </div>
           </div>
         </div>
+        {avatarUrl && (
+          <Button type="button" size="sm" variant="secondary" disabled={avatarUploading} onClick={() => void handleRemoveAvatar()} leftIcon={<Trash2 className="w-3.5 h-3.5" />}>
+            Retirer la photo
+          </Button>
+        )}
 
         {tenant && user?.role === 'USER' && (
           <div className="flex items-center gap-3 px-3 py-2 rounded-[var(--radius-button)] bg-surface-muted border border-border shrink-0">
@@ -210,7 +276,15 @@ function ProfilePageContent() {
                 <div className="space-y-3">
                   <Input label="Nom complet" leftIcon={<User className="w-4 h-4" />} required value={name} onChange={(e) => setName(e.target.value)} />
                   <Input label="E-mail" type="email" leftIcon={<Mail className="w-4 h-4" />} required value={email} onChange={(e) => setEmail(e.target.value)} />
-                  <Input label="Téléphone (WhatsApp)" type="tel" leftIcon={<Phone className="w-4 h-4" />} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+243..." />
+                  <PhoneInput
+                    id="profile-phone"
+                    label="Téléphone (WhatsApp)"
+                    countryCode={phoneCountryCode}
+                    national={phoneNational}
+                    onCountryCodeChange={setPhoneCountryCode}
+                    onNationalChange={setPhoneNational}
+                    hint="Indicatif pays + numéro national (sans le 0)."
+                  />
                   {user?.role === 'USER' && tenant && (
                     <>
                     <Input
