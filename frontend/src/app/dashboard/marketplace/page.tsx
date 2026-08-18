@@ -8,11 +8,13 @@ import { useAuth } from '@/context/AuthContext';
 import { getQuotaLockMessage } from '@/lib/planAccess';
 import {
   PageHeader, Button, Breadcrumbs, Alert, Input, Modal, EmptyState, StatusPill,
+  Pagination, paginateItems, usePageSize, ViewModeToggle, useViewMode, listStackClass,
 } from '@/components/ui';
 import {
   PRICE_UNIT_OPTIONS,
   SERVICE_CATEGORIES,
   SERVICE_CATEGORY_LABELS,
+  mediaPosterUrl,
   missingPublishLocation,
   parseBlockedDates,
   type MarketplaceBookingItem,
@@ -25,7 +27,7 @@ import ListingDetailsFields from '@/components/ListingDetailsFields';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import {
-  Globe, GlobeLock, Loader2, Plus, Sparkles, Trash2, Inbox, CheckCircle2, CalendarCheck,
+  Globe, GlobeLock, Loader2, Plus, Sparkles, Trash2,
 } from 'lucide-react';
 import BlockedDatesField from '@/components/BlockedDatesField';
 import MarketplaceMediaField from '@/components/MarketplaceMediaField';
@@ -33,6 +35,7 @@ import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/Marke
 import LocationPickerMap from '@/components/LocationPickerMap';
 import CityLocationFields from '@/components/CityLocationFields';
 import MarketplaceBookingsPanel from '@/components/MarketplaceBookingsPanel';
+import MarketplaceInquiriesPanel from '@/components/MarketplaceInquiriesPanel';
 import { useRememberListReturn } from '@/lib/catalogueQuery';
 
 interface ServiceItem {
@@ -77,6 +80,15 @@ export default function MarketplaceDeskPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [servicesPage, setServicesPage] = useState(1);
+  const [servicesPageSize, setServicesPageSize] = usePageSize('marketplace-desk-services', 8);
+  const {
+    mode: servicesViewMode,
+    setViewMode: setServicesViewMode,
+    columns: servicesColumns,
+    setGridColumns: setServicesColumns,
+    gridClassName: servicesGridClass,
+  } = useViewMode('em-view-marketplace-services', 'grid', 2);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<ServiceItem | null>(null);
   const [saving, setSaving] = useState(false);
@@ -132,6 +144,10 @@ export default function MarketplaceDeskPage() {
     if (canManage) load();
     else setLoading(false);
   }, [canManage]);
+
+  useEffect(() => {
+    setServicesPage(1);
+  }, [servicesPageSize]);
 
   const photosOf = (item: ServiceItem) =>
     Array.isArray(item.photos) ? item.photos.filter((p): p is string => typeof p === 'string') : [];
@@ -308,9 +324,20 @@ export default function MarketplaceDeskPage() {
         }
         action={
           tab === 'services' ? (
-            <Button size="sm" onClick={openCreate} disabled={servicesAtLimit} leftIcon={<Plus className="w-4 h-4" />}>
-              Nouvelle prestation
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              {services.length > 0 && (
+                <ViewModeToggle
+                  storageKey="em-view-marketplace-services"
+                  value={servicesViewMode}
+                  onChange={setServicesViewMode}
+                  columns={servicesColumns}
+                  onColumnsChange={setServicesColumns}
+                />
+              )}
+              <Button size="sm" onClick={openCreate} disabled={servicesAtLimit} leftIcon={<Plus className="w-4 h-4" />}>
+                Nouvelle prestation
+              </Button>
+            </div>
           ) : undefined
         }
       />
@@ -365,8 +392,13 @@ export default function MarketplaceDeskPage() {
         </div>
       ) : tab === 'bookings' ? (
         <MarketplaceBookingsPanel bookings={bookings} commissionDueFc={commissionDueFc} onChanged={load} />
-      ) : tab === 'services' ? (
-        services.length === 0 ? (
+      ) : tab === 'inquiries' ? (
+        <MarketplaceInquiriesPanel
+          inquiries={inquiries}
+          onMarkContacted={markContacted}
+          onConvert={convertInquiry}
+        />
+      ) : services.length === 0 ? (
           <EmptyState
             icon={<Sparkles className="w-5 h-5" />}
             title="Aucune prestation"
@@ -378,32 +410,22 @@ export default function MarketplaceDeskPage() {
             }
           />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {services.map((item) => (
-              <div key={item.id} className="border border-border rounded-[var(--radius-card)] bg-surface p-4 space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">
-                      {SERVICE_CATEGORY_LABELS[item.category]}
-                    </p>
-                    <h3 className="font-semibold text-foreground">{item.title}</h3>
-                    <p className="text-xs text-muted mt-0.5">
-                      {[
-                        item.city,
-                        item.travels === false
-                          ? 'Sur place'
-                          : item.coverageRadiusKm
-                            ? `Se déplace · ${item.coverageRadiusKm} km`
-                            : 'Se déplace',
-                        item.priceFromFc != null ? `dès ${formatFc(item.priceFromFc)}` : null,
-                      ].filter(Boolean).join(' · ')}
-                    </p>
-                  </div>
-                  <StatusPill tone={item.isPublic ? 'emerald' : 'slate'}>
-                    {item.isPublic ? 'Publiée' : 'Brouillon'}
-                  </StatusPill>
-                </div>
-                <div className="flex gap-2 pt-1">
+          <>
+          <div className={servicesViewMode === 'grid' ? servicesGridClass : listStackClass}>
+            {paginateItems(services, servicesPage, servicesPageSize).map((item) => {
+              const photos = photosOf(item);
+              const cover = photos[0] ? mediaPosterUrl(photos[0]) : null;
+              const meta = [
+                item.city,
+                item.travels === false
+                  ? 'Sur place'
+                  : item.coverageRadiusKm
+                    ? `Se déplace · ${item.coverageRadiusKm} km`
+                    : 'Se déplace',
+                item.priceFromFc != null ? `dès ${formatFc(item.priceFromFc)}` : null,
+              ].filter(Boolean).join(' · ');
+              const actions = (
+                <div className={cn('flex gap-2', servicesViewMode === 'list' && 'flex-wrap justify-end')}>
                   <Button size="sm" variant="secondary" onClick={() => openEdit(item)}>
                     Modifier
                   </Button>
@@ -418,60 +440,80 @@ export default function MarketplaceDeskPage() {
                     Supprimer
                   </Button>
                 </div>
-              </div>
-            ))}
-          </div>
-        )
-      ) : inquiries.length === 0 ? (
-        <EmptyState
-          icon={<Inbox className="w-5 h-5" />}
-          title="Aucune demande"
-          description="Les devis salles et prestataires arriveront ici."
-        />
-      ) : (
-        <div className="space-y-3">
-          {inquiries.map((item) => (
-            <div key={item.id} className="border border-border rounded-[var(--radius-card)] bg-surface p-4 space-y-2">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">
-                    {item.kind === 'venue' ? 'Salle' : 'Prestation'} · {item.title}
-                  </p>
-                  <h3 className="font-semibold text-sm">{item.fromName}</h3>
-                  <p className="text-xs text-muted">
-                    {item.fromEmail}
-                    {item.fromPhone ? ` · ${item.fromPhone}` : ''}
-                  </p>
+              );
+              if (servicesViewMode === 'list') {
+                return (
+                  <div
+                    key={item.id}
+                    className="flex flex-col sm:flex-row sm:items-center gap-3 border border-border rounded-[var(--radius-card)] bg-surface p-3 sm:p-3.5"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-xl bg-surface-muted">
+                        {cover ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={cover} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center text-muted">
+                            <Sparkles className="w-5 h-5" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+                          {SERVICE_CATEGORY_LABELS[item.category]}
+                        </p>
+                        <h3 className="font-semibold text-foreground truncate">{item.title}</h3>
+                        <p className="text-xs text-muted mt-0.5 truncate">{meta}</p>
+                      </div>
+                      <StatusPill tone={item.isPublic ? 'emerald' : 'slate'}>
+                        {item.isPublic ? 'Publiée' : 'Brouillon'}
+                      </StatusPill>
+                    </div>
+                    {actions}
+                  </div>
+                );
+              }
+              return (
+                <div key={item.id} className="border border-border rounded-[var(--radius-card)] bg-surface overflow-hidden flex flex-col">
+                  <div className="relative aspect-[16/10] bg-surface-muted">
+                    {cover ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={cover} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-muted">
+                        <Sparkles className="w-8 h-8" />
+                      </div>
+                    )}
+                    <div className="absolute top-2.5 right-2.5">
+                      <StatusPill tone={item.isPublic ? 'emerald' : 'slate'}>
+                        {item.isPublic ? 'Publiée' : 'Brouillon'}
+                      </StatusPill>
+                    </div>
+                  </div>
+                  <div className="p-4 space-y-2 flex-1 flex flex-col">
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+                        {SERVICE_CATEGORY_LABELS[item.category]}
+                      </p>
+                      <h3 className="font-semibold text-foreground">{item.title}</h3>
+                      <p className="text-xs text-muted mt-0.5">{meta}</p>
+                    </div>
+                    <div className="pt-1 mt-auto">{actions}</div>
+                  </div>
                 </div>
-                <StatusPill tone={item.status === 'NEW' ? 'amber' : 'emerald'}>
-                  {item.status === 'NEW' ? 'Nouveau' : 'Contacté'}
-                </StatusPill>
-              </div>
-              <p className="text-sm text-muted whitespace-pre-line">{item.message}</p>
-              <p className="text-[11px] text-muted">
-                {new Date(item.createdAt).toLocaleString('fr-FR')}
-                {item.eventDate ? ` · date souhaitée ${new Date(item.eventDate).toLocaleDateString('fr-FR')}` : ''}
-                {item.guestCount ? ` · ${item.guestCount} invités` : ''}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {item.status === 'NEW' && (
-                  <Button size="sm" variant="secondary" onClick={() => markContacted(item.id)} leftIcon={<CheckCircle2 className="w-3.5 h-3.5" />}>
-                    Marquer comme contacté
-                  </Button>
-                )}
-                {item.eventDate && !item.hasBooking && (
-                  <Button size="sm" onClick={() => convertInquiry(item.id)} leftIcon={<CalendarCheck className="w-3.5 h-3.5" />}>
-                    Convertir en réservation
-                  </Button>
-                )}
-                {item.hasBooking && (
-                  <StatusPill tone="slate">Déjà réservée</StatusPill>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+              );
+            })}
+          </div>
+          <Pagination
+            page={servicesPage}
+            pageSize={servicesPageSize}
+            total={services.length}
+            onPageChange={setServicesPage}
+            onPageSizeChange={setServicesPageSize}
+            itemLabel="prestations"
+          />
+          </>
+        )}
 
       <Modal
         open={editorOpen}

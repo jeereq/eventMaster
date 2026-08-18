@@ -194,6 +194,13 @@ export const BOOKING_STATUS_LABELS: Record<MarketplaceBookingStatus, string> = {
   COMPLETED: 'Terminée',
 };
 
+export const BOOKING_PIPELINE_STEPS = [
+  { id: 'REQUESTED', label: 'Demande' },
+  { id: 'ACCEPTED', label: 'Acceptée' },
+  { id: 'DEPOSIT', label: 'Acompte' },
+  { id: 'CONFIRMED', label: 'Confirmée' },
+] as const;
+
 export interface MarketplaceBookingItem {
   id: string;
   kind: 'venue' | 'service';
@@ -217,6 +224,53 @@ export interface MarketplaceBookingItem {
   createdAt: string;
   event: { id: string; title: string; date: string } | null;
   viewerRole?: 'vendor' | 'organizer';
+}
+
+export function bookingPipelineIndex(item: MarketplaceBookingItem): number {
+  if (item.status === 'CANCELLED') return -1;
+  if (item.status === 'CONFIRMED' || item.status === 'COMPLETED') return 3;
+  if (item.status === 'ACCEPTED') return item.depositMarkedAt ? 2 : 1;
+  return 0;
+}
+
+export function bookingNextStep(item: MarketplaceBookingItem): { title: string; detail: string } {
+  const isVendor = item.viewerRole === 'vendor';
+  if (item.status === 'CANCELLED') {
+    return { title: 'Annulée', detail: 'Aucune action requise.' };
+  }
+  if (item.status === 'COMPLETED') {
+    return { title: 'Terminée', detail: 'L’événement est passé.' };
+  }
+  if (item.status === 'CONFIRMED') {
+    return { title: 'Date bloquée', detail: 'La réservation est confirmée au calendrier.' };
+  }
+  if (item.status === 'REQUESTED') {
+    return isVendor
+      ? { title: 'À traiter', detail: 'Vérifiez le montant, puis acceptez ou refusez.' }
+      : { title: 'En attente', detail: 'Le professionnel n’a pas encore répondu.' };
+  }
+  if (item.status === 'ACCEPTED' && !item.depositMarkedAt) {
+    return isVendor
+      ? { title: 'Acompte à marquer', detail: 'Quand les 30 % sont versés hors plateforme, marquez l’acompte reçu.' }
+      : { title: 'Acompte à verser', detail: `Versez ${Math.round(MARKETPLACE_DEPOSIT_RATE * 100)} % au professionnel hors EventMaster.` };
+  }
+  return isVendor
+    ? { title: 'À confirmer', detail: 'Confirmez pour bloquer la date au calendrier.' }
+    : { title: 'Confirmation en cours', detail: 'L’acompte est marqué. Le professionnel va bloquer la date.' };
+}
+
+export function inquiryNextStep(item: MarketplaceInquiryItem): { title: string; detail: string } {
+  if (item.hasBooking) {
+    return { title: 'Déjà convertie', detail: 'Une réservation existe déjà pour cette demande.' };
+  }
+  if (item.status === 'NEW') {
+    return item.eventDate
+      ? { title: 'Nouveau devis', detail: 'Contactez le client, puis convertissez en réservation si la date convient.' }
+      : { title: 'Nouveau devis', detail: 'Contactez le client, puis marquez la demande comme contactée.' };
+  }
+  return item.eventDate
+    ? { title: 'Prêt à réserver', detail: 'Convertissez cette demande en réservation pour suivre l’acompte et bloquer la date.' }
+    : { title: 'Contacté', detail: 'Pas de date indiquée : convenez d’un jour avant de créer une réservation.' };
 }
 
 export function parseBlockedDates(input: unknown): string[] {

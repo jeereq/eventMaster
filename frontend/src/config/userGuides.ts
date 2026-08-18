@@ -145,13 +145,14 @@ export const USER_GUIDES: UserGuide[] = [
     title: 'Guide Propriétaire d\'organisation',
     badge: 'Organisation',
     summary:
-      'En tant que propriétaire (créateur de l\'organisation), vous disposez de tous les droits : équipe, salles, événements, modèles, facturation et factures.',
+      'En tant que propriétaire (créateur de l\'organisation), vous disposez de tous les droits : équipe, salles, événements, modèles, marketplace, facturation et factures.',
     canDo: [
       'Gérer l\'équipe (managers, protocoles, commerciaux org.)',
       'Créer et configurer les salles 2D',
       'Créer et gérer tous les événements de l\'organisation',
       'Accéder à la facturation, au forfait et aux factures',
       'Personnaliser les modèles d\'invitation et messages invités',
+      'Publier des prestations et traiter devis / réservations marketplace',
     ],
     cannotDo: [
       'Voir les données d\'autres organisations',
@@ -222,12 +223,13 @@ export const USER_GUIDES: UserGuide[] = [
     title: 'Guide Manager organisation',
     badge: 'Organisation',
     summary:
-      'Vous pilotez l\'organisation au quotidien : équipe, salles, événements et modèles. La facturation reste réservée au propriétaire.',
+      'Vous pilotez l\'organisation au quotidien : équipe, salles, événements, modèles et marketplace. La facturation reste réservée au propriétaire.',
     canDo: [
       'Gérer l\'équipe et les rôles organisationnels',
       'Créer salles et événements',
       'Gérer invités, invitations et modèles',
       'Consulter les factures (sans modifier le forfait)',
+      'Publier des prestations et traiter devis / réservations marketplace',
     ],
     cannotDo: [
       'Accéder à la facturation ni changer de forfait',
@@ -282,6 +284,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Respectez le quota de managers org. selon votre forfait.',
       'Déléguez le protocole aux membres Protocole pour le jour J.',
       'Utilisez les modèles globaux comme base dans le concepteur visuel.',
+      'La commission marketplace (8 %) est due par le vendeur, distincte de l’abonnement SaaS.',
     ],
   },
   {

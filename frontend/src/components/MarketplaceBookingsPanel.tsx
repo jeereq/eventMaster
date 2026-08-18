@@ -1,13 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
-import { Alert, Button, EmptyState, Input, StatusPill } from '@/components/ui';
+import { Alert, Button, EmptyState, Input, Pagination, paginateItems, StatusPill, usePageSize } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
+import { cn } from '@/lib/cn';
 import {
+  BOOKING_PIPELINE_STEPS,
   BOOKING_STATUS_LABELS,
   bookingDateKeys,
+  bookingNextStep,
+  bookingPipelineIndex,
   formatBookingPeriod,
   parseBlockedDates,
   type MarketplaceBookingItem,
@@ -21,6 +25,61 @@ function toneFor(status: MarketplaceBookingStatus): 'amber' | 'emerald' | 'slate
   if (status === 'ACCEPTED') return 'amber';
   if (status === 'CANCELLED') return 'rose';
   return 'slate';
+}
+
+function Chip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'px-3 py-1.5 rounded-full text-xs font-semibold border',
+        active ? 'bg-primary text-white border-primary' : 'border-border text-muted',
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function BookingStepper({ item }: { item: MarketplaceBookingItem }) {
+  if (item.status === 'CANCELLED') {
+    return (
+      <p className="text-xs font-semibold text-rose-600 dark:text-rose-400">Réservation annulée</p>
+    );
+  }
+  const idx = bookingPipelineIndex(item);
+  return (
+    <ol className="flex flex-wrap items-center gap-1.5" aria-label="Étapes de la réservation">
+      {BOOKING_PIPELINE_STEPS.map((step, i) => (
+        <li key={step.id} className="flex items-center gap-1.5">
+          <span
+            className={cn(
+              'px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border',
+              i <= idx
+                ? 'bg-primary text-white border-primary'
+                : 'border-border text-muted bg-surface',
+            )}
+          >
+            {step.label}
+          </span>
+          {i < BOOKING_PIPELINE_STEPS.length - 1 && (
+            <span className="text-border text-[10px]" aria-hidden>
+              →
+            </span>
+          )}
+        </li>
+      ))}
+    </ol>
+  );
 }
 
 export default function MarketplaceBookingsPanel({
@@ -43,8 +102,10 @@ export default function MarketplaceBookingsPanel({
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState('');
   const [acceptAmount, setAcceptAmount] = useState<Record<string, string>>({});
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = usePageSize('marketplace-desk-bookings', 8);
 
-  const visible = bookings.filter((b) => {
+  const visible = useMemo(() => bookings.filter((b) => {
     if (filter === 'received') {
       if (b.viewerRole !== 'vendor') return false;
     } else if (filter === 'sent') {
@@ -61,7 +122,12 @@ export default function MarketplaceBookingsPanel({
     if (fromDate && day && day < fromDate) return false;
     if (toDate && day && day > toDate) return false;
     return true;
-  });
+  }), [bookings, filter, status, kind, query, fromDate, toDate]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter, status, kind, query, fromDate, toDate, pageSize]);
+
   const calendarDates = parseBlockedDates(
     visible
       .filter((b) => b.status !== 'CANCELLED')
@@ -100,7 +166,7 @@ export default function MarketplaceBookingsPanel({
 
       {error && <Alert variant="error">{error}</Alert>}
 
-      <div className="space-y-3">
+      <div className="rounded-[var(--radius-card)] border border-border bg-surface p-3 sm:p-4 space-y-3">
         {!organizerView && (
         <div className="flex gap-1.5 flex-wrap">
           {([
@@ -108,40 +174,16 @@ export default function MarketplaceBookingsPanel({
             ['received', 'Reçues'],
             ['sent', 'Envoyées'],
           ] as const).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setFilter(id)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${
-                filter === id ? 'bg-primary text-white border-primary' : 'border-border text-muted'
-              }`}
-            >
-              {label}
-            </button>
+            <Chip key={id} active={filter === id} onClick={() => setFilter(id)}>{label}</Chip>
           ))}
         </div>
         )}
         <div className="flex flex-wrap gap-1.5">
-          <button
-            type="button"
-            onClick={() => setStatus('all')}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${
-              status === 'all' ? 'bg-primary text-white border-primary' : 'border-border text-muted'
-            }`}
-          >
-            Tous statuts
-          </button>
+          <Chip active={status === 'all'} onClick={() => setStatus('all')}>Tous statuts</Chip>
           {(Object.keys(BOOKING_STATUS_LABELS) as MarketplaceBookingStatus[]).map((id) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setStatus(id)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${
-                status === id ? 'bg-primary text-white border-primary' : 'border-border text-muted'
-              }`}
-            >
+            <Chip key={id} active={status === id} onClick={() => setStatus(id)}>
               {BOOKING_STATUS_LABELS[id]}
-            </button>
+            </Chip>
           ))}
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -150,16 +192,7 @@ export default function MarketplaceBookingsPanel({
             ['venue', 'Salles'],
             ['service', 'Prestataires'],
           ] as const).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setKind(id)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${
-                kind === id ? 'bg-primary text-white border-primary' : 'border-border text-muted'
-              }`}
-            >
-              {label}
-            </button>
+            <Chip key={id} active={kind === id} onClick={() => setKind(id)}>{label}</Chip>
           ))}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -178,20 +211,27 @@ export default function MarketplaceBookingsPanel({
             : 'Les demandes de date (salles et prestations) apparaîtront ici.'}
         />
       ) : (
+        <>
         <div className="space-y-3">
-          {visible.map((item) => {
+          {paginateItems(visible, page, pageSize).map((item) => {
             const isVendor = item.viewerRole === 'vendor';
             const busy = busyId === item.id;
             const amountDraft = acceptAmount[item.id] ?? String(item.amountFc);
+            const next = bookingNextStep(item);
+            const listingHref = item.listingSlug
+              ? `/dashboard/catalogue/salles/${item.listingSlug}`
+              : item.offeringSlug
+                ? `/dashboard/catalogue/prestataires/${item.offeringSlug}`
+                : null;
             return (
-              <div key={item.id} className="border border-border rounded-[var(--radius-card)] bg-surface p-4 space-y-2">
+              <article key={item.id} className="border border-border rounded-[var(--radius-card)] bg-surface p-4 space-y-3">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">
                       {item.kind === 'venue' ? 'Salle' : 'Prestation'} · {isVendor ? 'Reçue' : 'Envoyée'}
                     </p>
-                    <h3 className="font-semibold text-sm">{item.title}</h3>
-                    <p className="text-xs text-muted">
+                    <h3 className="font-semibold text-sm mt-0.5">{item.title}</h3>
+                    <p className="text-xs text-muted mt-0.5">
                       {isVendor ? item.organizerName || 'Organisateur' : item.vendorName}
                       {' · '}
                       {formatBookingPeriod(item.eventDate, item.eventEndDate)}
@@ -199,13 +239,23 @@ export default function MarketplaceBookingsPanel({
                   </div>
                   <StatusPill tone={toneFor(item.status)}>{BOOKING_STATUS_LABELS[item.status]}</StatusPill>
                 </div>
+
+                <BookingStepper item={item} />
+
                 <p className="text-xs text-muted">
                   {formatFc(item.amountFc)} · acompte {formatFc(item.depositFc)}
                   {isVendor ? ` · commission ${formatFc(item.commissionFc)}` : ''}
                   {item.depositMarkedAt ? ' · acompte marqué' : ''}
                 </p>
                 {item.notes && <p className="text-sm text-muted whitespace-pre-line">{item.notes}</p>}
-                <div className="flex flex-wrap gap-2 pt-1 items-end">
+
+                <div className="rounded-lg border border-border bg-surface-muted/70 px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Prochaine étape</p>
+                  <p className="text-sm font-semibold text-foreground mt-0.5">{next.title}</p>
+                  <p className="text-xs text-muted mt-0.5 leading-relaxed">{next.detail}</p>
+                </div>
+
+                <div className="flex flex-wrap gap-2 pt-0.5 items-end">
                   {isVendor && item.status === 'REQUESTED' && (
                     <>
                       <div className="w-36">
@@ -231,8 +281,8 @@ export default function MarketplaceBookingsPanel({
                     </>
                   )}
                   {item.status === 'ACCEPTED' && !item.depositMarkedAt && (
-                    <Button size="sm" variant="secondary" loading={busy} onClick={() => run(item.id, 'mark-deposit')}>
-                      Marquer l’acompte reçu
+                    <Button size="sm" loading={busy} onClick={() => run(item.id, 'mark-deposit')}>
+                      {isVendor ? 'Marquer l’acompte reçu' : 'J’ai versé l’acompte'}
                     </Button>
                   )}
                   {isVendor && item.status === 'ACCEPTED' && item.depositMarkedAt && (
@@ -240,26 +290,30 @@ export default function MarketplaceBookingsPanel({
                       Confirmer et bloquer la date
                     </Button>
                   )}
-                  {(item.status === 'REQUESTED' || item.status === 'ACCEPTED') && (
+                  {(item.status === 'ACCEPTED' || (item.status === 'REQUESTED' && !isVendor)) && (
                     <Button size="sm" variant="ghost" loading={busy} onClick={() => run(item.id, 'cancel')}>
                       Annuler
                     </Button>
                   )}
-                  {item.listingSlug && (
-                    <Link href={`/dashboard/catalogue/salles/${item.listingSlug}`} className="inline-flex">
-                      <Button size="sm" variant="ghost">Voir la fiche</Button>
-                    </Link>
-                  )}
-                  {item.offeringSlug && (
-                    <Link href={`/dashboard/catalogue/prestataires/${item.offeringSlug}`} className="inline-flex">
+                  {listingHref && (
+                    <Link href={listingHref} className="inline-flex">
                       <Button size="sm" variant="ghost">Voir la fiche</Button>
                     </Link>
                   )}
                 </div>
-              </div>
+              </article>
             );
           })}
         </div>
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={visible.length}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          itemLabel="réservations"
+        />
+        </>
       )}
     </div>
   );
