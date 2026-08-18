@@ -78,7 +78,7 @@ function markerImageUrls(marker: { coverUrl?: string | null; photos?: string[] }
   return list;
 }
 
-const PIN_ARROW_SVG = '<svg class="em-map-marker-arrow" viewBox="0 0 14 9" width="14" height="9" aria-hidden="true"><path d="M7 9 0 0h14z" fill="currentColor"/></svg>';
+const PIN_ARROW_SVG = '<svg class="em-map-marker-arrow" viewBox="0 0 10 7" width="10" height="7" aria-hidden="true"><path d="M5 7 0 0h10z" fill="currentColor"/></svg>';
 
 function listingIconHtml(kind?: 'venue' | 'service' | 'event', coverUrl?: string | null, title?: string) {
   const pinClass = kind === 'service' ? 'is-service' : kind === 'event' ? 'is-event' : 'is-venue';

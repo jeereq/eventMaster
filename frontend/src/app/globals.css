@@ -535,12 +535,12 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
 
 .em-map-marker-photo-pin.is-venue .em-map-marker-photo-frame,
 .em-map-marker-photo-pin.is-event .em-map-marker-photo-frame {
-  border-radius: 8px;
+  border-radius: 4px;
 }
 
 .em-map-marker-photo-pin.is-venue .em-map-marker-photo,
 .em-map-marker-photo-pin.is-event .em-map-marker-photo {
-  border-radius: 6px;
+  border-radius: 2px;
 }
 
 .em-map-marker-photo-pin.is-service .em-map-marker-photo-frame {
@@ -589,24 +589,29 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  width: 14px;
-  height: 9px;
+  width: 10px;
+  height: 7px;
   flex-shrink: 0;
   align-self: center;
-  margin-top: -5px;
+  margin-top: -3px;
   color: var(--primary, #4f46e5);
   background: none !important;
   border: 0 !important;
   transform: none !important;
   border-radius: 0;
   z-index: 0;
-  filter: drop-shadow(0 1px 1px rgba(15, 23, 42, 0.25));
+  filter: drop-shadow(0 1px 1px rgba(15, 23, 42, 0.22));
+}
+
+.em-map-marker-photo-pin.is-service .em-map-marker-photo-pointer,
+.em-map-marker-inner.is-service .em-map-marker-tail {
+  margin-top: -6px;
 }
 
 .em-map-marker-arrow {
   display: block;
-  width: 14px;
-  height: 9px;
+  width: 10px;
+  height: 7px;
 }
 
 .em-map-marker-photo-pin.is-venue .em-map-marker-photo-pointer,
@@ -696,7 +701,7 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
 
 .em-map-marker-venue .em-map-marker-head {
   background: var(--primary, #4f46e5);
-  border-radius: 8px;
+  border-radius: 4px;
 }
 
 .em-map-marker-service .em-map-marker-head {
@@ -706,7 +711,7 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
 
 .em-map-marker-event .em-map-marker-head {
   background: #059669;
-  border-radius: 7px;
+  border-radius: 4px;
 }
 
 .em-map-marker-here .em-map-marker-head {
