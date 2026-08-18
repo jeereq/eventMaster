@@ -22,6 +22,11 @@ interface GuestInvitationItem {
     location: string;
   };
   organizationName: string;
+  branding?: {
+    primary?: string;
+    accent?: string;
+    sidebar?: string;
+  } | null;
   eventPassed: boolean;
   rsvpLocked: boolean;
   isCurrent: boolean;
@@ -160,12 +165,14 @@ export default function GuestHomePage() {
 
   const upcoming = data.invitations.filter((i) => !i.eventPassed);
   const past = data.invitations.filter((i) => i.eventPassed);
+  const current = data.invitations.find((i) => i.isCurrent);
 
   return (
     <GuestPortalShell
       showBrand
       title={`Bonjour ${data.guest.firstName}`}
       eyebrow="Espace invité"
+      organizationName={current?.organizationName}
       contentClassName="space-y-6"
     >
       <p className="text-sm text-muted -mt-3">

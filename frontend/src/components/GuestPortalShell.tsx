@@ -12,6 +12,7 @@ interface GuestPortalShellProps {
   eyebrow?: string;
   guestId?: string;
   showBrand?: boolean;
+  organizationName?: string;
   children: React.ReactNode;
   tabs?: React.ReactNode;
   footer?: React.ReactNode;
@@ -27,12 +28,14 @@ export default function GuestPortalShell({
   eyebrow = 'Espace invité',
   guestId,
   showBrand = false,
+  organizationName,
   children,
   tabs,
   footer,
   className,
   contentClassName,
 }: GuestPortalShellProps) {
+  const brandLabel = organizationName?.trim() || 'EventMaster';
   return (
     <div className={cn('em-guest-page flex flex-col', className)}>
       <CelebrateMood />
@@ -43,7 +46,7 @@ export default function GuestPortalShell({
               <span className="inline-flex items-center justify-center w-8 h-8 rounded-[var(--radius-button)] bg-primary text-white shrink-0">
                 <PartyPopper className="w-3.5 h-3.5" />
               </span>
-              <span className="font-display font-semibold text-foreground truncate">EventMaster</span>
+              <span className="font-display font-semibold text-foreground truncate">{brandLabel}</span>
             </Link>
           ) : (
             <div className="min-w-0 space-y-0.5">

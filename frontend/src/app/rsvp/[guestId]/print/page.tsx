@@ -31,6 +31,8 @@ type GuestApiResponse = {
   roomThemeId?: string | null;
   floorType?: string | null;
   floorImageUrl?: string | null;
+  branding?: GuestPrintDocumentData['branding'];
+  organizationName?: string;
   event: {
     title: string;
     description?: string | null;
@@ -89,6 +91,8 @@ export default function GuestInvitationPrintPage() {
           floorType: guest.placementAccessible ? guest.floorType ?? null : null,
           floorImageUrl: guest.placementAccessible ? guest.floorImageUrl ?? null : null,
           showQrCode: guest.rsvp === 'ACCEPTED',
+          branding: guest.branding,
+          organizationName: guest.organizationName,
         });
       } catch (err: unknown) {
         if (!cancelled) {

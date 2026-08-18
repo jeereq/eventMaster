@@ -3,6 +3,13 @@ import { sendRealEmail, sendRealWhatsApp } from './notificationService';
 import { resolveDeliveryChannels } from '../utils/notificationChannels';
 import { renderGuestMessage, polishWhatsAppBody, applyTemplateVariables } from './messageTemplateService';
 import { applyInvitationGuidelineVariables } from '../utils/guestGuidelines';
+import {
+  brandedEventDetailsHtml,
+  loadOrgBrand,
+  withOrgSignoff,
+  wrapBrandedEmail,
+} from '../utils/brandedMessaging';
+import { escapeHtml } from '../utils/brandingUtils';
 import fs from 'fs';
 import path from 'path';
 
@@ -138,6 +145,7 @@ export async function processReminders() {
 
       console.log(`[Reminder Service] Sending reminders for event "${event.title}" to ${pendingGuests.length} pending guests...`);
 
+      const orgBrand = await loadOrgBrand(event.tenantId);
       const formattedDate = event.date ? new Date(event.date).toLocaleDateString('fr-FR', {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
       }) : '';
@@ -156,14 +164,16 @@ export async function processReminders() {
           .replaceAll('{{location}}', event.location || '')
           .replaceAll('{{date}}', formattedDate);
         
+        const rsvpLink = `${FRONTEND_URL}/rsvp/${guest.id}`;
         const templateVars = {
           firstName: guest.firstName || '',
           lastName: guest.lastName || '',
-          rsvpLink: `${FRONTEND_URL}/rsvp/${guest.id}`,
+          rsvpLink,
           title: event.title || '',
           description: event.description || '',
           location: event.location || '',
           date: formattedDate,
+          orgName: orgBrand.orgName,
         };
 
         let body = (await renderGuestMessage('REMINDER_WHATSAPP', templateVars)).body;
@@ -172,71 +182,31 @@ export async function processReminders() {
           customPart = applyInvitationGuidelineVariables(customPart, event.guestGuidelines);
           body = `${body}\n\n---\n\n${customPart}`;
         }
-        body = polishWhatsAppBody(body);
+        body = polishWhatsAppBody(withOrgSignoff(body, orgBrand.orgName));
 
         const channel = latestInvitation.channel || 'EMAIL';
         const channelsToSend = resolveDeliveryChannels(channel);
 
         for (const chan of channelsToSend) {
           if (chan === 'EMAIL') {
-            const htmlBody = `
-              <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f8fafc; padding: 40px 15px; margin: 0; width: 100%;">
-                <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0;">
-                  
-                  <!-- Banner Header -->
-                  <div style="background: linear-gradient(135deg, #e11d48 0%, #f43f5e 100%); padding: 40px 30px; text-align: center; color: #ffffff; position: relative;">
-                    <span style="font-size: 32px; display: block; margin-bottom: 15px;">🔔</span>
-                    <h1 style="margin: 0; font-size: 24px; font-weight: 900; letter-spacing: -0.025em; line-height: 1.2;">Rappel : ${event.title}</h1>
-                    <p style="margin: 10px 0 0 0; font-size: 14px; color: #ffe4e6; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">Réponse RSVP en attente</p>
-                  </div>
-
-                  <!-- Main Content -->
-                  <div style="padding: 40px 35px; color: #334155;">
-                    <p style="font-size: 16px; font-weight: 700; color: #1e1b4b; margin-top: 0; margin-bottom: 15px;">Bonjour ${guest.firstName},</p>
-                    
-                    <div style="font-size: 15px; line-height: 1.7; color: #475569; margin-bottom: 30px; white-space: pre-line;">
-                      ${body.replace(`${FRONTEND_URL}/rsvp/${guest.id}`, '')}
-                    </div>
-
-                    <!-- Event Card -->
-                    <div style="background-color: #f1f5f9; border-radius: 18px; padding: 25px; margin-bottom: 35px; border: 1px solid #e2e8f0;">
-                      <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 14px; font-weight: 800; color: #e11d48; text-transform: uppercase; letter-spacing: 0.05em;">📅 Détails de la Réception</h3>
-                      
-                      <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-                        <tr>
-                          <td style="padding: 8px 0; font-weight: bold; color: #1e293b; width: 80px; vertical-align: top;">Date :</td>
-                          <td style="padding: 8px 0; color: #475569; vertical-align: top;">${formattedDate}</td>
-                        </tr>
-                        <tr>
-                          <td style="padding: 8px 0; font-weight: bold; color: #1e293b; vertical-align: top;">Lieu :</td>
-                          <td style="padding: 8px 0; color: #475569; vertical-align: top;">${event.location || 'Non spécifié'}</td>
-                        </tr>
-                      </table>
-                    </div>
-
-                    <!-- Action Button -->
-                    <div style="text-align: center; margin-bottom: 20px;">
-                      <a href="${FRONTEND_URL}/rsvp/${guest.id}" style="display: inline-block; background-color: #e11d48; color: #ffffff; padding: 16px 32px; font-weight: bold; font-size: 15px; text-decoration: none; border-radius: 14px; box-shadow: 0 10px 15px -3px rgba(225, 29, 72, 0.3); transition: background-color 0.2s;">
-                        Confirmer ma présence (RSVP)
-                      </a>
-                    </div>
-                    
-                    <p style="text-align: center; font-size: 12px; color: #94a3b8; margin-top: 25px; margin-bottom: 0;">
-                      Merci de bien vouloir répondre avant la date de l'événement.
-                    </p>
-                  </div>
-
-                  <!-- Footer -->
-                  <div style="background-color: #f8fafc; padding: 25px 30px; text-align: center; border-top: 1px solid #f1f5f9;">
-                    <p style="margin: 0; font-size: 11px; color: #94a3b8; line-height: 1.5;">
-                      Cet e-mail de rappel vous a été envoyé de la part de l'organisateur via <strong>EventMaster</strong>.<br />
-                      © 2026 EventMaster. Tous droits réservés.
-                    </p>
-                  </div>
-
-                </div>
-              </div>
-            `;
+            const plainBody = escapeHtml(body.replace(rsvpLink, '')).replace(/\n/g, '<br />');
+            const htmlBody = wrapBrandedEmail({
+              branding: orgBrand.branding,
+              orgName: orgBrand.orgName,
+              title: `Rappel : ${event.title || 'Événement'}`,
+              eyebrow: 'Réponse RSVP en attente',
+              headerEmoji: '🔔',
+              innerHtml: `
+                <p style="font-size:16px;font-weight:700;color:#1e1b4b;margin:0 0 15px;">Bonjour ${escapeHtml(guest.firstName || '')},</p>
+                <div style="font-size:15px;line-height:1.7;color:#475569;margin-bottom:28px;">${plainBody}</div>
+                ${brandedEventDetailsHtml(orgBrand.branding, [
+                  { label: 'Date', value: formattedDate },
+                  { label: 'Lieu', value: event.location || 'Non spécifié' },
+                ])}
+              `,
+              cta: { href: rsvpLink, label: 'Confirmer ma présence (RSVP)' },
+              footerNote: 'Merci de bien vouloir répondre avant la date de l’événement.',
+            });
             await sendRealEmail(guest.email, subject, body, htmlBody);
           } else if (chan === 'WHATSAPP') {
             const phone = getGuestPhone(guest);

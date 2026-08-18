@@ -134,7 +134,7 @@ export default function GuestRoomPlanCanvas({
         className="relative w-full overflow-auto rounded-[var(--radius-card)] border border-border touch-pan-x touch-pan-y shadow-[var(--shadow-soft)]"
         style={{
           height: `${height}px`,
-          background: theme.guestCanvasBg,
+          background: 'var(--surface-muted)',
         }}
       >
         <div

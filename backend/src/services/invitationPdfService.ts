@@ -2,6 +2,7 @@ import PDFDocument from 'pdfkit';
 import { normalizeInvoiceText } from '../utils/invoiceText';
 import type { TablePlanPdfRow } from '../utils/tablePlanPdfSummary';
 import { generateQrPngBuffer } from '../utils/qrCode';
+import { mixHexWithWhite, resolveBranding, type ResolvedBranding } from '../utils/brandingUtils';
 
 export type SeatingInvitationPdfInput = {
   guestFirstName: string;
@@ -17,6 +18,8 @@ export type SeatingInvitationPdfInput = {
   dressCode?: string | null;
   tablePlanTables?: TablePlanPdfRow[];
   includeQrCode?: boolean;
+  orgName?: string | null;
+  branding?: ResolvedBranding | null;
 };
 
 function formatFrenchDate(date: Date | string): string {
@@ -53,7 +56,13 @@ export async function buildSeatingInvitationPdf(input: SeatingInvitationPdfInput
     dressCode,
     tablePlanTables,
     includeQrCode = true,
+    orgName,
+    branding: brandingInput,
   } = input;
+
+  const branding = resolveBranding(brandingInput);
+  const brandName = (orgName || '').trim() || 'Organisation';
+  const tint = mixHexWithWhite(branding.primary, 0.9);
 
   const qrBuffer = includeQrCode ? await buildQrPng(rsvpUrl) : null;
 
@@ -73,17 +82,17 @@ export async function buildSeatingInvitationPdf(input: SeatingInvitationPdfInput
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    // Bandeau indigo/violet (aligné plateforme)
+    // Bandeau aux couleurs de l’organisation
     const headerH = 68;
     const grad = doc.linearGradient(50, 0, 50 + pageW, 0);
-    grad.stop(0, '#4f46e5').stop(1, '#7c3aed');
+    grad.stop(0, branding.primary).stop(1, branding.accent);
     doc.save();
     doc.rect(50, 40, pageW, headerH).fill(grad);
-    doc.fillColor('#ffffff').fontSize(20).font('Helvetica-Bold').text('EventMaster', 50, 52, {
+    doc.fillColor('#ffffff').fontSize(20).font('Helvetica-Bold').text(brandName, 50, 52, {
       width: pageW,
       align: 'center',
     });
-    doc.fontSize(9).font('Helvetica').fillColor('#e0e7ff').text('Invitation & placement', 50, 76, {
+    doc.fontSize(9).font('Helvetica').fillColor('#ffffff').text('Invitation & placement', 50, 76, {
       width: pageW,
       align: 'center',
     });
@@ -117,8 +126,8 @@ export async function buildSeatingInvitationPdf(input: SeatingInvitationPdfInput
 
     if (table?.trim()) {
       const boxY = doc.y;
-      doc.roundedRect(50, boxY, pageW, 88, 12).fill('#eef2ff');
-      doc.fillColor('#4338ca').fontSize(9).font('Helvetica-Bold').text('VOTRE PLACEMENT', 62, boxY + 14, {
+      doc.roundedRect(50, boxY, pageW, 88, 12).fill(tint);
+      doc.fillColor(branding.primary).fontSize(9).font('Helvetica-Bold').text('VOTRE PLACEMENT', 62, boxY + 14, {
         width: pageW - 24,
         align: 'center',
       });
@@ -127,7 +136,7 @@ export async function buildSeatingInvitationPdf(input: SeatingInvitationPdfInput
         align: 'center',
       });
       if (seatNumber) {
-        doc.fillColor('#4f46e5').fontSize(12).font('Helvetica').text(`Siège n°${seatNumber}`, 62, boxY + 54, {
+        doc.fillColor(branding.primary).fontSize(12).font('Helvetica').text(`Siège n°${seatNumber}`, 62, boxY + 54, {
           width: pageW - 24,
           align: 'center',
         });
@@ -152,7 +161,7 @@ export async function buildSeatingInvitationPdf(input: SeatingInvitationPdfInput
       for (const row of tablePlanTables) {
         const label = `${row.name}  (${row.occupiedCount}/${row.capacity} places)${row.isGuestTable ? '  ← votre table' : ''}`;
         if (row.isGuestTable) {
-          doc.font('Helvetica-Bold').fillColor('#4f46e5');
+          doc.font('Helvetica-Bold').fillColor(branding.primary);
         } else {
           doc.font('Helvetica').fillColor('#475569');
         }
@@ -174,7 +183,7 @@ export async function buildSeatingInvitationPdf(input: SeatingInvitationPdfInput
     }
 
     if (qrBuffer) {
-      doc.fontSize(10).font('Helvetica-Bold').fillColor('#4f46e5').text('Badge QR — confirmation de présence', {
+      doc.fontSize(10).font('Helvetica-Bold').fillColor(branding.primary).text('Badge QR — confirmation de présence', {
         align: 'center',
         width: pageW,
       });
@@ -190,12 +199,12 @@ export async function buildSeatingInvitationPdf(input: SeatingInvitationPdfInput
       doc.moveDown(0.8);
     }
 
-    doc.fontSize(9).font('Helvetica-Bold').fillColor('#4f46e5').text('Portail invité :');
+    doc.fontSize(9).font('Helvetica-Bold').fillColor(branding.primary).text('Portail invité :');
     doc.fontSize(9).font('Helvetica').fillColor('#334155').text(rsvpUrl, { link: rsvpUrl, underline: true, width: pageW });
     doc.moveDown(1.2);
 
     doc.fontSize(8).font('Helvetica').fillColor('#94a3b8').text(
-      'Document généré par EventMaster — Merci de conserver cette invitation.',
+      `Document généré pour ${brandName} — Merci de conserver cette invitation.`,
       { align: 'center', width: pageW },
     );
 

@@ -1,10 +1,20 @@
 import type { TemplatePalette } from '@/lib/imagePalette';
+import { adjustHex, hexToRgbChannels, type TenantBranding } from '@/lib/brandTheme';
 
 export interface InvitationColorTheme {
   id: string;
   name: string;
   description: string;
   palette: TemplatePalette;
+}
+
+export const ORG_BRAND_THEME_ID = 'org-brand';
+
+function mixWithWhite(hex: string, whiteRatio: number): string {
+  const channels = hexToRgbChannels(hex).split(',').map((part) => Number(part.trim()));
+  if (channels.length !== 3 || channels.some((n) => Number.isNaN(n))) return '#f8fafc';
+  const mix = (channel: number) => Math.round(channel * (1 - whiteRatio) + 255 * whiteRatio);
+  return `#${channels.map((channel) => mix(channel).toString(16).padStart(2, '0')).join('')}`;
 }
 
 export const INVITATION_COLOR_THEMES: InvitationColorTheme[] = [
@@ -75,7 +85,7 @@ export function applyPaletteToElements<T extends ColorableElement>(
     if (el.type === 'divider' || el.type === 'curve' || el.type === 'triangle') {
       return { ...el, color: palette.accent };
     }
-    if (el.type === 'button') {
+    if (el.type === 'button' || el.type === 'rsvp-block') {
       return { ...el, color: palette.accent };
     }
     if (el.type === 'text') {
@@ -85,4 +95,49 @@ export function applyPaletteToElements<T extends ColorableElement>(
     }
     return el;
   });
+}
+
+/** Palette d’invitation dérivée des couleurs de l’organisation. */
+export function buildOrgBrandInvitationTheme(branding?: TenantBranding | null): InvitationColorTheme {
+  const primary = branding?.primary || '#4f46e5';
+  const accent = branding?.accent || primary;
+  return {
+    id: ORG_BRAND_THEME_ID,
+    name: 'Organisation',
+    description: 'Couleurs de votre organisation',
+    palette: {
+      primary: adjustHex(primary, -18),
+      secondary: adjustHex(primary, 12),
+      accent,
+      background: mixWithWhite(primary, 0.94),
+      isDark: false,
+    },
+  };
+}
+
+export function invitationColorThemes(branding?: TenantBranding | null): InvitationColorTheme[] {
+  return [buildOrgBrandInvitationTheme(branding), ...INVITATION_COLOR_THEMES];
+}
+
+export function usesLiveOrgInvitationTheme(
+  global?: { colorThemeId?: string; importedFromMockup?: boolean } | null,
+): boolean {
+  if (global?.importedFromMockup) return false;
+  if (!global?.colorThemeId) return true;
+  return global.colorThemeId === ORG_BRAND_THEME_ID;
+}
+
+export function applyOrgInvitationThemeIfNeeded<T extends ColorableElement>(
+  global: { colorThemeId?: string; importedFromMockup?: boolean } | undefined,
+  elements: T[],
+  branding?: TenantBranding | null,
+): { elements: T[]; background?: string } {
+  if (!usesLiveOrgInvitationTheme(global)) {
+    return { elements };
+  }
+  const theme = buildOrgBrandInvitationTheme(branding);
+  return {
+    elements: applyPaletteToElements(elements, theme.palette),
+    background: theme.palette.background,
+  };
 }

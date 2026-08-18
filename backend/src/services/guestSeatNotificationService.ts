@@ -8,6 +8,14 @@ import { generateAndStoreSeatingInvitationPdf } from './seatingInvitationStorage
 import { extractGuestEmail, extractGuestPhone } from '../utils/guestIdentity';
 import { resolveDeliveryChannels } from '../utils/notificationChannels';
 import { applyInvitationGuidelineVariables } from '../utils/guestGuidelines';
+import { prisma } from '../db';
+import {
+  brandedEventDetailsHtml,
+  loadOrgBrand,
+  withOrgSignoff,
+  wrapBrandedEmail,
+} from '../utils/brandedMessaging';
+import { escapeHtml } from '../utils/brandingUtils';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -106,6 +114,11 @@ export async function notifyGuestTableAssignment(params: {
   const isAnnouncement = delivery === 'announcement';
   const channels: string[] = [];
   const errors: string[] = [];
+  const eventMeta = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { tenantId: true },
+  });
+  const orgBrand = await loadOrgBrand(eventMeta?.tenantId);
 
   const email = extractGuestEmail(guest);
   const phone = extractGuestPhone(guest);
@@ -208,82 +221,79 @@ export async function notifyGuestTableAssignment(params: {
     }
   }
 
-  const htmlBody = isAnnouncement
-    ? `
-    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
-      <h2 style="color: #1e1b4b; text-align: center; margin-bottom: 8px;">Votre table est assignée</h2>
-      <p style="text-align: center; color: #4f46e5; font-weight: bold; margin-top: 0;">Bonjour ${guest.firstName} !</p>
-      <div style="background-color: #eef2ff; border: 1px solid #c7d2fe; border-radius: 12px; padding: 20px; margin: 20px 0; text-align: center;">
-        <p style="margin: 0 0 8px; font-size: 12px; font-weight: bold; color: #4338ca; text-transform: uppercase;">Votre place</p>
-        <p style="margin: 0; font-size: 20px; font-weight: bold; color: #1e1b4b;">${assignedSeat.tableName}</p>
-        <p style="margin: 8px 0 0; font-size: 16px; color: #4f46e5;">Siège n°${seatNumber}</p>
+  const seatTint = orgBrand.branding.primary;
+  const htmlBody = wrapBrandedEmail({
+    branding: orgBrand.branding,
+    orgName: orgBrand.orgName,
+    title: isAnnouncement ? 'Votre table est assignée' : 'Votre placement est confirmé',
+    eyebrow: event.title || 'Placement',
+    headerEmoji: '🪑',
+    innerHtml: `
+      <p style="text-align:center;color:${seatTint};font-weight:700;margin:0 0 16px;">Bonjour ${escapeHtml(guest.firstName || '')} !</p>
+      ${isAnnouncement ? '' : `<div style="font-size:15px;line-height:1.7;color:#475569;margin-bottom:20px;white-space:pre-line;">${escapeHtml(textBody.replace(rsvpUrl, '').trim())}</div>`}
+      <div style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin:8px 0 20px;text-align:center;">
+        <p style="margin:0 0 8px;font-size:12px;font-weight:800;color:${seatTint};text-transform:uppercase;letter-spacing:0.05em;">Votre place</p>
+        <p style="margin:0;font-size:20px;font-weight:800;color:#1e1b4b;">${escapeHtml(assignedSeat.tableName)}</p>
+        <p style="margin:8px 0 0;font-size:16px;color:${seatTint};">Siège n°${escapeHtml(seatNumber)}</p>
       </div>
-      <div style="background-color: #f8fafc; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
-        <p style="margin: 0 0 8px; font-size: 13px; font-weight: bold; color: #0f172a;">${tableMates.length > 0 ? 'Vous serez accompagné(e) de :' : 'Votre table'}</p>
-        <p style="margin: 0; font-size: 14px; color: #334155; white-space: pre-line;">${tableMatesText}</p>
+      <div style="background-color:#f8fafc;border-radius:12px;padding:16px;margin-bottom:8px;">
+        <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#0f172a;">${tableMates.length > 0 ? 'Vous serez accompagné(e) de :' : 'Votre table'}</p>
+        <p style="margin:0;font-size:14px;color:#334155;white-space:pre-line;">${escapeHtml(tableMatesText)}</p>
       </div>
-      <div style="text-align: center; margin: 24px 0;">
-        <a href="${rsvpUrl}" style="display: inline-block; background-color: #4f46e5; color: #ffffff; padding: 14px 28px; font-weight: bold; text-decoration: none; border-radius: 12px;">Voir mon portail RSVP</a>
-      </div>
-      <p style="font-size: 12px; color: #64748b; text-align: center;">Votre invitation PDF et la localisation GPS vous seront envoyées à votre arrivée.</p>
-    </div>
-  `
-    : `
-    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
-      <h2 style="color: #1e1b4b; text-align: center; margin-bottom: 8px;">Votre placement est confirmé</h2>
-      <p style="text-align: center; color: #4f46e5; font-weight: bold; margin-top: 0;">Bonjour ${guest.firstName} !</p>
-      <div style="font-size: 15px; line-height: 1.7; color: #475569; margin-bottom: 24px; white-space: pre-line;">${textBody.replace(rsvpUrl, '').trim()}</div>
-      <div style="background-color: #eef2ff; border: 1px solid #c7d2fe; border-radius: 12px; padding: 20px; margin: 20px 0; text-align: center;">
-        <p style="margin: 0 0 8px; font-size: 12px; font-weight: bold; color: #4338ca; text-transform: uppercase;">Votre place</p>
-        <p style="margin: 0; font-size: 20px; font-weight: bold; color: #1e1b4b;">${assignedSeat.tableName}</p>
-        <p style="margin: 8px 0 0; font-size: 16px; color: #4f46e5;">Siège n°${seatNumber}</p>
-      </div>
-      ${tableMates.length > 0 ? `
-      <div style="background-color: #f8fafc; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
-        <p style="margin: 0 0 8px; font-size: 13px; font-weight: bold; color: #0f172a;">Vous serez accompagné(e) de :</p>
-        <p style="margin: 0; font-size: 14px; color: #334155; white-space: pre-line;">${tableMatesText}</p>
-      </div>` : ''}
-      <div style="text-align: center; margin: 24px 0;">
-        <a href="${rsvpUrl}" style="display: inline-block; background-color: #4f46e5; color: #ffffff; padding: 14px 28px; font-weight: bold; text-decoration: none; border-radius: 12px;">Voir mon invitation</a>
-      </div>
-      <p style="font-size: 12px; color: #64748b; text-align: center;">Votre invitation PDF est jointe à cet e-mail${storedPdfUrl ? ' et disponible en ligne.' : '.'}</p>
-    </div>
-  `;
+      ${brandedEventDetailsHtml(orgBrand.branding, [
+        { label: 'Date', value: formattedDate },
+        { label: 'Lieu', value: event.location || '' },
+      ])}
+    `,
+    cta: {
+      href: rsvpUrl,
+      label: isAnnouncement ? 'Voir mon portail RSVP' : 'Voir mon invitation',
+    },
+    footerNote: isAnnouncement
+      ? 'Votre invitation PDF et la localisation GPS vous seront envoyées à votre arrivée.'
+      : `Votre invitation PDF est jointe à cet e-mail${storedPdfUrl ? ' et disponible en ligne.' : '.'}`,
+  });
 
-  const whatsappBody = isAnnouncement
-    ? [
-        `Bonjour ${guest.firstName} 👋`,
-        '',
-        `Votre table pour *${event.title}* vient d'être assignée ✅`,
-        '',
-        `🪑 *${assignedSeat.tableName}* — Siège n°${seatNumber}`,
-        tableMates.length > 0 ? '\n👥 *Vous serez avec :*' : '',
-        ...tableMates.map((m) => `• ${m.firstName} ${m.lastName}`.trim()),
-        tableMates.length === 0 ? '\n_Aucun autre invité assigné pour le moment._' : '',
-        formattedDate ? `\n📅 ${formattedDate}` : '',
-        event.location ? `\n📍 ${event.location}` : '',
-        '',
-        `🔗 Portail RSVP : ${rsvpUrl}`,
-        '',
-        '_Votre PDF et la localisation GPS vous seront envoyés à votre arrivée._',
-      ]
-        .filter((line) => line !== '')
-        .join('\n')
-    : [
-        `Bonjour ${guest.firstName} 👋`,
-        '',
-        `Votre placement pour *${event.title}* est confirmé ✅`,
-        '',
-        `🪑 *${assignedSeat.tableName}* — Siège n°${seatNumber}`,
-        tableMatesInline ? `\n👥 Avec : ${tableMatesInline}` : '',
-        event.location ? `\n📍 ${event.location}` : '',
-        formattedDate ? `\n📅 ${formattedDate}` : '',
-        '',
-        `📄 Invitation PDF : ${storedPdfUrl || 'voir pièce jointe'}`,
-        `\n🔗 Plan de table : ${rsvpUrl}`,
-      ]
-        .filter(Boolean)
-        .join('\n');
+  const whatsappBody = withOrgSignoff(
+    (isAnnouncement
+      ? [
+          `Bonjour ${guest.firstName} 👋`,
+          '',
+          `Votre table pour *${event.title}* vient d'être assignée ✅`,
+          '',
+          `🪑 *${assignedSeat.tableName}* — Siège n°${seatNumber}`,
+          tableMates.length > 0 ? '\n👥 *Vous serez avec :*' : '',
+          ...tableMates.map((m) => `• ${m.firstName} ${m.lastName}`.trim()),
+          tableMates.length === 0 ? '\n_Aucun autre invité assigné pour le moment._' : '',
+          formattedDate ? `\n📅 ${formattedDate}` : '',
+          event.location ? `\n📍 ${event.location}` : '',
+          '',
+          `🔗 Portail RSVP : ${rsvpUrl}`,
+          '',
+          '_Votre PDF et la localisation GPS vous seront envoyés à votre arrivée._',
+          '',
+          `— ${orgBrand.orgName}`,
+        ]
+      : [
+          `Bonjour ${guest.firstName} 👋`,
+          '',
+          `Votre placement pour *${event.title}* est confirmé ✅`,
+          '',
+          `🪑 *${assignedSeat.tableName}* — Siège n°${seatNumber}`,
+          tableMatesInline ? `\n👥 Avec : ${tableMatesInline}` : '',
+          event.location ? `\n📍 ${event.location}` : '',
+          formattedDate ? `\n📅 ${formattedDate}` : '',
+          '',
+          `📄 Invitation PDF : ${storedPdfUrl || 'voir pièce jointe'}`,
+          `\n🔗 Plan de table : ${rsvpUrl}`,
+          '',
+          `— ${orgBrand.orgName}`,
+        ]
+    )
+      .filter((line) => line !== '')
+      .join('\n'),
+    orgBrand.orgName,
+  );
 
   const channelsToSend = resolveDeliveryChannels(invitation?.channel);
   const tasks: Promise<void>[] = [];

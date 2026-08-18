@@ -14,6 +14,14 @@ import { normalizeGuestGuidelines, formatDressCodeText } from '../utils/guestGui
 import { canGuestAccessPlacement } from '../utils/guestPlacementAccess';
 import { deliverGuestPlacementIfEligible } from '../services/guestPlacementDeliveryService';
 import { buildGuestQrImageUrl, generateQrPngBuffer } from '../utils/qrCode';
+import {
+  brandedEventDetailsHtml,
+  loadOrgBrand,
+  orgBrandFromTenant,
+  withOrgSignoff,
+  wrapBrandedEmail,
+} from '../utils/brandedMessaging';
+import { escapeHtml, resolveBranding } from '../utils/brandingUtils';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -84,12 +92,14 @@ async function notifyOrganizerOfRsvp(params: {
   eventTitle: string;
   rsvp: 'ACCEPTED' | 'DECLINED';
   preferences: unknown;
+  tenantId?: string | null;
 }) {
   const { organizer, guest, eventTitle, rsvp, preferences } = params;
   const statusLabel = rsvp === 'ACCEPTED' ? 'Présence confirmée (Oui)' : 'Absence (Décliné)';
   const preferencesDetails = formatPreferencesDetails(preferences);
   const ownerSubject = `[RSVP] ${guest.firstName} ${guest.lastName} — ${rsvp === 'ACCEPTED' ? 'Présent' : 'Décliné'}`;
   const dashboardUrl = `${FRONTEND_URL}/dashboard/events`;
+  const orgBrand = await loadOrgBrand(params.tenantId);
 
   const ownerTextBody =
     `Bonjour ${organizer.name || 'Organisateur'},\n\n` +
@@ -98,28 +108,24 @@ async function notifyOrganizerOfRsvp(params: {
     `Email : ${guest.email}\n` +
     `Statut : ${statusLabel}${preferencesDetails}\n\n` +
     `Consultez la liste complète : ${dashboardUrl}\n\n` +
-    `L'équipe EventMaster`;
+    `${orgBrand.orgName}`;
 
-  const ownerHtmlBody = `
-    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
-      <h2 style="color: #1e1b4b; margin-bottom: 5px;">Nouvelle réponse RSVP</h2>
-      <p style="color: #64748b; margin-top: 0; margin-bottom: 20px;">Un invité a répondu pour <strong>${eventTitle}</strong>.</p>
-      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-        <p style="margin: 0 0 8px;"><strong>Invité :</strong> ${guest.firstName} ${guest.lastName}</p>
-        <p style="margin: 0 0 8px;"><strong>Email :</strong> ${guest.email}</p>
-        <p style="margin: 0;">
-          <strong>Statut :</strong>
-          <span style="display: inline-block; padding: 4px 10px; font-size: 12px; font-weight: bold; border-radius: 20px; margin-left: 6px; ${rsvp === 'ACCEPTED' ? 'background-color: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;' : 'background-color: #fff1f2; color: #be123c; border: 1px solid #fecdd3;'}">
-            ${statusLabel}
-          </span>
-        </p>
+  const ownerHtmlBody = wrapBrandedEmail({
+    branding: orgBrand.branding,
+    orgName: orgBrand.orgName,
+    title: 'Nouvelle réponse RSVP',
+    eyebrow: eventTitle,
+    innerHtml: `
+      <p style="color:#64748b;margin:0 0 18px;">Un invité a répondu pour <strong>${escapeHtml(eventTitle)}</strong>.</p>
+      <div style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:8px;">
+        <p style="margin:0 0 8px;"><strong>Invité :</strong> ${escapeHtml(`${guest.firstName} ${guest.lastName}`)}</p>
+        <p style="margin:0 0 8px;"><strong>Email :</strong> ${escapeHtml(guest.email)}</p>
+        <p style="margin:0;"><strong>Statut :</strong> ${escapeHtml(statusLabel)}</p>
       </div>
-      ${preferencesDetails ? `<pre style="background-color: #fffbeb; border: 1px solid #fef3c7; border-radius: 8px; padding: 15px; font-size: 13px; white-space: pre-wrap;">${preferencesDetails.trim()}</pre>` : ''}
-      <div style="text-align: center; margin-top: 25px;">
-        <a href="${dashboardUrl}" style="display: inline-block; background-color: #4f46e5; color: white; padding: 12px 24px; font-weight: bold; border-radius: 8px; text-decoration: none; font-size: 14px;">Voir mes invités</a>
-      </div>
-    </div>
-  `;
+      ${preferencesDetails ? `<pre style="background-color:#fffbeb;border:1px solid #fef3c7;border-radius:8px;padding:15px;font-size:13px;white-space:pre-wrap;">${escapeHtml(preferencesDetails.trim())}</pre>` : ''}
+    `,
+    cta: { href: dashboardUrl, label: 'Voir mes invités' },
+  });
 
   const ownerWhatsappRendered = await renderGuestMessage('RSVP_ORGANIZER_WHATSAPP', {
     title: eventTitle,
@@ -128,8 +134,9 @@ async function notifyOrganizerOfRsvp(params: {
     statusLabel: rsvp === 'ACCEPTED' ? '✅ Présent' : '❌ Décliné',
     preferencesDetails: preferencesDetails ? `\n\n📋 *Préférences* :${preferencesDetails}` : '',
     dashboardUrl,
+    orgName: orgBrand.orgName,
   });
-  const ownerWhatsappBody = polishWhatsAppBody(ownerWhatsappRendered.body);
+  const ownerWhatsappBody = polishWhatsAppBody(withOrgSignoff(ownerWhatsappRendered.body, orgBrand.orgName));
 
   const organizerPhone = getUserPhone(organizer);
   const results: string[] = [];
@@ -187,6 +194,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
                 layoutBlueprint: true,
               },
             },
+            tenant: { select: { name: true, branding: true } },
             invitations: {
               where: {
                 templateId: { not: null }
@@ -340,13 +348,18 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
     }
 
     const { event: guestEvent, ...guestWithoutEvent } = guest;
+    const tenant = (guestEvent as { tenant?: { name?: string; branding?: unknown } }).tenant;
+    const { tenant: _tenant, ...eventWithoutTenant } = guestEvent as typeof guestEvent & { tenant?: unknown };
+    void _tenant;
     const eventForClient = placementAccessible
-      ? guestEvent
-      : { ...guestEvent, latitude: null, longitude: null };
+      ? eventWithoutTenant
+      : { ...eventWithoutTenant, latitude: null, longitude: null };
 
     return res.json({
       ...guestWithoutEvent,
       event: eventForClient,
+      branding: resolveBranding(tenant?.branding),
+      organizationName: tenant?.name || 'Organisation',
       placementAccessible,
       seatingInvitationPdfUrl: placementAccessible ? guest.seatingInvitationPdfUrl ?? null : null,
       tableDetails,
@@ -391,6 +404,7 @@ export async function getGuestAllInvitations(req: Request, res: Response) {
           rsvp: record.rsvp,
           event: record.event,
           organizationName: record.event.tenant?.name || 'Organisation',
+          branding: resolveBranding(record.event.tenant?.branding),
           eventPassed,
           rsvpLocked: eventPassed,
           isCurrent: record.id === guestId,
@@ -476,45 +490,39 @@ export async function submitRsvp(req: Request, res: Response) {
 
     if (rsvp === 'ACCEPTED') {
       const qrCodeUrl = buildGuestQrImageUrl(guest.id, 300);
+      const orgBrand = orgBrandFromTenant(guest.event.tenant);
 
       const subject = `Confirmation de votre présence - ${guest.event.title}`;
-      const textBody = `Bonjour ${guest.firstName},\n\nVotre présence à l'événement "${guest.event.title}" a été confirmée avec succès !\n\nVoici votre badge de confirmation de présence (QR Code) : ${qrCodeUrl}\n\nPrésentez ce QR Code à l'entrée le jour J.\n\nDate : ${formattedDate}\nLieu : ${guest.event.location || 'Non défini'}\n\nVotre plan de table, invitation PDF et localisation GPS vous sont envoyés dès maintenant (si votre place est déjà assignée et selon le forfait de l'organisateur).\n\nMerci et à très bientôt !`;
-      const htmlBody = `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
-          <h2 style="color: #1e1b4b; text-align: center; margin-bottom: 5px;">Présence Confirmée !</h2>
-          <p style="text-align: center; color: #4f46e5; font-weight: bold; margin-top: 0; margin-bottom: 20px;">Merci, ${guest.firstName} !</p>
-          <p>Bonjour <strong>${guest.firstName} ${guest.lastName}</strong>,</p>
-          <p>Votre présence à l'événement <strong>${guest.event.title}</strong> a été enregistrée avec succès.</p>
-          
-          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
-            <span style="font-size: 12px; font-weight: bold; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 10px;">Votre badge de confirmation de présence</span>
-            <img src="${qrCodeUrl}" alt="QR Code de confirmation de présence" style="width: 180px; height: 180px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 5px; background-color: white;" />
-            <p style="font-size: 12px; color: #64748b; margin-top: 10px; margin-bottom: 0;">Présentez ce QR Code à l'entrée le jour J.</p>
+      const textBody = `Bonjour ${guest.firstName},\n\nVotre présence à l'événement "${guest.event.title}" a été confirmée avec succès !\n\nVoici votre badge de confirmation de présence (QR Code) : ${qrCodeUrl}\n\nPrésentez ce QR Code à l'entrée le jour J.\n\nDate : ${formattedDate}\nLieu : ${guest.event.location || 'Non défini'}\n\nVotre plan de table, invitation PDF et localisation GPS vous sont envoyés dès maintenant (si votre place est déjà assignée et selon le forfait de l'organisateur).\n\nMerci et à très bientôt !\n${orgBrand.orgName}`;
+      const htmlBody = wrapBrandedEmail({
+        branding: orgBrand.branding,
+        orgName: orgBrand.orgName,
+        title: 'Présence confirmée',
+        eyebrow: guest.event.title,
+        innerHtml: `
+          <p style="text-align:center;color:${orgBrand.branding.primary};font-weight:700;margin:0 0 16px;">Merci, ${escapeHtml(guest.firstName)} !</p>
+          <p>Votre présence à <strong>${escapeHtml(guest.event.title)}</strong> a été enregistrée.</p>
+          <div style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;text-align:center;margin:20px 0;">
+            <span style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:10px;">Votre badge</span>
+            <img src="${qrCodeUrl}" alt="QR Code" style="width:180px;height:180px;border:1px solid #cbd5e1;border-radius:8px;padding:5px;background:#fff;" />
+            <p style="font-size:12px;color:#64748b;margin:10px 0 0;">Présentez ce QR Code à l'entrée le jour J.</p>
           </div>
-
-          <div style="margin-top: 20px; font-size: 14px; color: #334155; background-color: #f1f5f9; padding: 15px; border-radius: 8px;">
-            <strong>Détails de l'événement :</strong><br />
-            📅 Date : ${formattedDate}<br />
-            📍 Lieu : ${guest.event.location || 'Non défini'}
-          </div>
-
-          <p style="font-size: 13px; color: #475569; margin-top: 16px;">
-            Votre plan de table, invitation PDF et localisation GPS sont débloqués dès cette confirmation
-            (dès que votre place est assignée, selon le forfait de l'organisateur).
-          </p>
-          
-          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-          <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 0;">Cet e-mail automatique a été envoyé par EventMaster.</p>
-        </div>
-      `;
+          ${brandedEventDetailsHtml(orgBrand.branding, [
+            { label: 'Date', value: formattedDate },
+            { label: 'Lieu', value: guest.event.location || 'Non défini' },
+          ])}
+        `,
+        footerNote: 'Votre plan de table, invitation PDF et localisation GPS sont débloqués dès cette confirmation, dès que votre place est assignée.',
+      });
 
       const whatsappRendered = await renderGuestMessage('RSVP_CONFIRMATION_WHATSAPP', {
         firstName: guest.firstName,
         title: guest.event.title,
         date: formattedDate,
         location: guest.event.location || 'Non défini',
+        orgName: orgBrand.orgName,
       });
-      const whatsappCaption = polishWhatsAppBody(whatsappRendered.body);
+      const whatsappCaption = polishWhatsAppBody(withOrgSignoff(whatsappRendered.body, orgBrand.orgName));
 
       // Run sending in the background to avoid blocking the user response
       (async () => {
@@ -580,6 +588,7 @@ export async function submitRsvp(req: Request, res: Response) {
             eventTitle: guest.event.title,
             rsvp,
             preferences: preferences || {},
+            tenantId: guest.event.tenantId,
           });
         } catch (ownerNotifErr) {
           console.error('[RSVP Controller] Error sending notification to event organizer:', ownerNotifErr);

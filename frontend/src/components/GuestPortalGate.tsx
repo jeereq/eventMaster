@@ -6,11 +6,18 @@ import { api } from '@/lib/api';
 import { Loader2 } from 'lucide-react';
 import LegalAcceptanceModal from '@/components/LegalAcceptanceModal';
 import PWAInstallPrompt from '@/components/PWAInstallPrompt';
+import GuestBrandSync from '@/components/GuestBrandSync';
 
 interface GuestLegalStatus {
   termsAccepted: boolean;
   privacyAccepted: boolean;
   requiresAcceptance: boolean;
+  branding?: {
+    primary?: string;
+    accent?: string;
+    sidebar?: string;
+  } | null;
+  organizationName?: string;
 }
 
 export default function GuestPortalGate({ children }: { children: React.ReactNode }) {
@@ -46,7 +53,11 @@ export default function GuestPortalGate({ children }: { children: React.ReactNod
         acceptTerms,
         acceptPrivacy,
       });
-      setLegalStatus(data);
+      setLegalStatus((prev) => ({
+        ...data,
+        branding: data.branding || prev?.branding,
+        organizationName: data.organizationName || prev?.organizationName,
+      }));
     } catch (err: any) {
       setError(err.message || 'Impossible d\'enregistrer votre acceptation.');
     } finally {
@@ -66,10 +77,15 @@ export default function GuestPortalGate({ children }: { children: React.ReactNod
 
   return (
     <>
+      <GuestBrandSync branding={legalStatus?.branding} />
       <LegalAcceptanceModal
         open={requiresAcceptance}
         title="Bienvenue dans votre espace invité"
-        subtitle="Avant d'accéder à vos invitations, veuillez accepter nos conditions d'utilisation et notre politique de confidentialité."
+        subtitle={
+          legalStatus?.organizationName
+            ? `Avant d’accéder à vos invitations de ${legalStatus.organizationName}, veuillez accepter les conditions d’utilisation et la politique de confidentialité.`
+            : "Avant d'accéder à vos invitations, veuillez accepter nos conditions d'utilisation et notre politique de confidentialité."
+        }
         submitting={submitting}
         error={error}
         onAccept={handleAccept}

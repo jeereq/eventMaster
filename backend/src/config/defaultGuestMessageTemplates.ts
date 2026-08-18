@@ -35,7 +35,7 @@ export const DEFAULT_GUEST_MESSAGE_TEMPLATES: DefaultGuestMessageTemplate[] = [
 
 _Votre plan de table, PDF et localisation GPS vous seront envoyés dès votre confirmation RSVP (si votre place est déjà assignée)._
 _Nous serons ravis de vous compter parmi nous._
-— L'équipe organisatrice · EventMaster`,
+— {{orgName}}`,
   },
   {
     type: 'REMINDER_WHATSAPP',
@@ -57,7 +57,7 @@ Nous n'avons pas encore reçu votre réponse RSVP.
 
 _Après confirmation, votre placement (PDF, plan, GPS) vous est envoyé dès que votre place est assignée._
 _Votre réponse nous aide à mieux organiser cette réception._
-— EventMaster`,
+— {{orgName}}`,
   },
   {
     type: 'RSVP_CONFIRMATION_WHATSAPP',
@@ -75,7 +75,7 @@ Présentez le QR Code ci-joint à l'entrée le jour J.
 Votre plan de table, invitation PDF et localisation GPS vous sont envoyés dès maintenant (si votre place est déjà assignée).
 
 _Au plaisir de vous accueillir très bientôt !_
-— L'équipe organisatrice · EventMaster`,
+— {{orgName}}`,
   },
   {
     type: 'RSVP_ORGANIZER_WHATSAPP',
@@ -93,7 +93,7 @@ _Au plaisir de vous accueillir très bientôt !_
 👉 Voir la liste des invités :
 {{dashboardUrl}}
 
-_EventMaster — suivi en temps réel_`,
+_{{orgName}} — suivi en temps réel_`,
   },
   {
     type: 'CONTACT_ADMIN_WHATSAPP',

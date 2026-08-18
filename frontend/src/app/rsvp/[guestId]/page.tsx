@@ -28,6 +28,7 @@ import {
   restoreFieldValuesFromPreferences,
 } from '@/lib/rsvpFormFields';
 import { getGuestQrImageUrl } from '@/lib/guestQr';
+import { applyOrgInvitationThemeIfNeeded } from '@/lib/templateColorThemes';
 
 interface GuestRsvpData {
   id: string;
@@ -103,6 +104,12 @@ interface GuestRsvpData {
       } | null;
     }>;
   };
+  branding?: {
+    primary?: string;
+    accent?: string;
+    sidebar?: string;
+  } | null;
+  organizationName?: string;
 }
 
 const darkenColor = (hex: string, percent = 30) => {
@@ -506,6 +513,7 @@ export default function RsvpPage() {
           title={guest.event.title}
           eyebrow="Réponse enregistrée"
           guestId={guestId}
+          organizationName={guest.organizationName}
           contentClassName="space-y-5"
         >
           <GuestPortalCard festive className="text-center space-y-4 py-8">
@@ -546,6 +554,7 @@ export default function RsvpPage() {
           title={guest.event.title}
           eyebrow="Invitation confirmée"
           guestId={guestId}
+          organizationName={guest.organizationName}
           tabs={
             <GuestPortalTabBar
               tabs={guestTabs}
@@ -1151,17 +1160,21 @@ export default function RsvpPage() {
 
   const template = guest.event.invitations?.[0]?.template;
   const global = template?.content?.global || {};
+  const themedInvitation = applyOrgInvitationThemeIfNeeded(
+    global,
+    (template?.content?.elements || []) as Array<{ id: string; type: string; rsvpPlacement?: string; color?: string; fontSize?: string; text?: string; [key: string]: unknown }>,
+    guest.branding,
+  );
   const bgType = global.bgType || 'color';
-  const bgColor = global.bgColor || '#ffffff';
+  const bgColor = themedInvitation.background || global.bgColor || '#ffffff';
   const bgImageUrl = global.bgImageUrl || '';
   const bgPattern = global.bgPattern || 'none';
   const frameType = global.frameType || 'none';
-  const floralColor = global.floralColor || '#b91c1c';
+  const floralColor = global.floralColor || guest.branding?.accent || '#b91c1c';
   const floralType = global.floralType || 'roses';
   const floralDensity = global.floralDensity !== undefined ? global.floralDensity : 40;
   const canvasStyle = getCanvasStyle(global);
-  const templateElements: Array<{ id: string; type: string; rsvpPlacement?: string; [key: string]: unknown }> =
-    template?.content?.elements || [];
+  const templateElements = themedInvitation.elements;
   const inlineTemplateElements = templateElements.filter(
     (el) => el.type !== 'rsvp-block' || el.rsvpPlacement !== 'outside',
   );
@@ -1474,7 +1487,7 @@ export default function RsvpPage() {
         <div className="flex justify-between items-center px-3 py-2.5 gap-2">
           <div className="min-w-0">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--festive-accent)]">
-              Votre invitation
+              {guest.organizationName || 'Votre invitation'}
             </p>
             <p className="text-xs font-display font-semibold text-foreground truncate">
               {guest.event.title}

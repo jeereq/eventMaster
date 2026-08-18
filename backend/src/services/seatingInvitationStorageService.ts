@@ -7,6 +7,7 @@ import {
 } from '../config/cloudinaryConfig';
 import { extractTablePlanSummaryForPdf } from '../utils/tablePlanPdfSummary';
 import type { SeatingInvitationPdfInput } from './invitationPdfService';
+import { orgBrandFromTenant } from '../utils/brandedMessaging';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -34,6 +35,7 @@ export type StoredGuestInvitationPdf = {
 function buildFallbackInput(
   input: GuestInvitationPdfStoreInput,
   tablePlan: unknown,
+  brand?: { orgName: string; branding: SeatingInvitationPdfInput['branding'] },
 ): SeatingInvitationPdfInput {
   const summary = extractTablePlanSummaryForPdf(tablePlan, input.guestId);
   return {
@@ -50,6 +52,8 @@ function buildFallbackInput(
     dressCode: input.dressCode,
     tablePlanTables: summary?.tables,
     includeQrCode: true,
+    orgName: brand?.orgName,
+    branding: brand?.branding,
   };
 }
 
@@ -59,12 +63,13 @@ export async function generateAndStoreGuestInvitationPdf(
 ): Promise<StoredGuestInvitationPdf> {
   const eventRecord = await prisma.event.findUnique({
     where: { id: input.eventId },
-    select: { tablePlan: true },
+    select: { tablePlan: true, tenant: { select: { name: true, branding: true } } },
   });
+  const brand = orgBrandFromTenant(eventRecord?.tenant);
 
   const buffer = await buildGuestInvitationPdfWithFallback(
     input.guestId,
-    buildFallbackInput(input, eventRecord?.tablePlan),
+    buildFallbackInput(input, eventRecord?.tablePlan, brand),
   );
 
   if (!isCloudinaryConfigured()) {

@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import { uploadImageFile, uploadDataUrlImage, isCloudinaryUrl } from '@/lib/cloudinaryUpload';
 import { extractPaletteFromSource, type TemplatePalette } from '@/lib/imagePalette';
-import { INVITATION_COLOR_THEMES, applyPaletteToElements } from '@/lib/templateColorThemes';
+import { applyPaletteToElements, invitationColorThemes, ORG_BRAND_THEME_ID, buildOrgBrandInvitationTheme } from '@/lib/templateColorThemes';
 import { FONT_THEMES, applyFontThemeToElements, getFontTheme } from '@/lib/templateFontThemes';
 import { buildMockupTemplate, applyMockupToEditor, applyMockupTextMode, buildTextElementsFromOcrLines, type MockupImportTextMode } from '@/lib/templateMockupImport';
 import { extractTextFromImageSource, mergeOcrIntoMockupElements } from '@/lib/templateOcrImport';
@@ -219,6 +219,7 @@ export default function TemplatesPage() {
  const [imageUploading, setImageUploading] = useState(false);
  const [mockupImporting, setMockupImporting] = useState(false);
  const [importedPalette, setImportedPalette] = useState<TemplatePalette | null>(null);
+ const [colorThemeId, setColorThemeId] = useState(ORG_BRAND_THEME_ID);
  const [layoutMode, setLayoutMode] = useState<'flow' | 'free'>('flow');
  const [showGuestPreview, setShowGuestPreview] = useState(false);
  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
@@ -320,39 +321,41 @@ export default function TemplatesPage() {
  setEditingTemplateId(null);
  setTemplateName('Nouveau Modèle d\'Invitation');
  setSelectedTenantId('');
- setImportedPalette(null);
+ const orgTheme = buildOrgBrandInvitationTheme(tenant?.branding);
+ setImportedPalette(orgTheme.palette);
  setImportedWithOcr(false);
- setCanvasElements([
- { id: '1', type: 'text', text: 'CÉLÉBRATION UNIQUE', color: '#c5a059', fontSize: '12px', align: 'center', width: 'full', fontFamily: 'Montserrat', letterSpacing: '0.2em', bold: true },
- { id: '2', type: 'text', text: 'Hassan & Ayesha', color: '#1e293b', fontSize: '32px', align: 'center', width: 'full', fontFamily: 'Great Vibes' },
- { id: '3', type: 'divider', text: '', color: '#c5a059', fontSize: '14px', align: 'center', width: 'full', dividerStyle: 'ornament-flower' },
- { id: '4', type: 'text', text: 'Rejoignez-nous pour célébrer notre union le dimanche 15 juin à 19h00.', color: '#475569', fontSize: '16px', align: 'center', width: 'full', fontFamily: 'Cormorant Garamond', italic: true },
- { id: '5', type: 'text', text: 'DIMANCHE', color: '#1e293b', fontSize: '12px', align: 'center', width: 'third', fontFamily: 'Montserrat', letterSpacing: '0.1em', bold: true },
- { id: '6', type: 'text', text: '15 JUIN', color: '#c5a059', fontSize: '16px', align: 'center', width: 'third', fontFamily: 'Cormorant Garamond', bold: true },
- { id: '7', type: 'text', text: '19H00', color: '#1e293b', fontSize: '12px', align: 'center', width: 'third', fontFamily: 'Montserrat', letterSpacing: '0.1em', bold: true },
- { id: '8', type: 'divider', text: '', color: '#cbd5e1', fontSize: '12px', align: 'center', width: 'full', dividerStyle: 'solid' },
+ setColorThemeId(ORG_BRAND_THEME_ID);
+ setCanvasElements(applyPaletteToElements([
+ { id: '1', type: 'text', text: 'CÉLÉBRATION UNIQUE', color: orgTheme.palette.accent, fontSize: '12px', align: 'center', width: 'full', fontFamily: 'Montserrat', letterSpacing: '0.2em', bold: true },
+ { id: '2', type: 'text', text: 'Hassan & Ayesha', color: orgTheme.palette.primary, fontSize: '32px', align: 'center', width: 'full', fontFamily: 'Great Vibes' },
+ { id: '3', type: 'divider', text: '', color: orgTheme.palette.accent, fontSize: '14px', align: 'center', width: 'full', dividerStyle: 'ornament-flower' },
+ { id: '4', type: 'text', text: 'Rejoignez-nous pour célébrer notre union le dimanche 15 juin à 19h00.', color: orgTheme.palette.secondary, fontSize: '16px', align: 'center', width: 'full', fontFamily: 'Cormorant Garamond', italic: true },
+ { id: '5', type: 'text', text: 'DIMANCHE', color: orgTheme.palette.primary, fontSize: '12px', align: 'center', width: 'third', fontFamily: 'Montserrat', letterSpacing: '0.1em', bold: true },
+ { id: '6', type: 'text', text: '15 JUIN', color: orgTheme.palette.accent, fontSize: '16px', align: 'center', width: 'third', fontFamily: 'Cormorant Garamond', bold: true },
+ { id: '7', type: 'text', text: '19H00', color: orgTheme.palette.primary, fontSize: '12px', align: 'center', width: 'third', fontFamily: 'Montserrat', letterSpacing: '0.1em', bold: true },
+ { id: '8', type: 'divider', text: '', color: orgTheme.palette.secondary, fontSize: '12px', align: 'center', width: 'full', dividerStyle: 'solid' },
  { 
  id: '9', 
  type: 'rsvp-block', 
  text: 'Confirmer votre présence', 
- color: '#c5a059', 
+ color: orgTheme.palette.accent, 
  fontSize: '16px', 
  align: 'center',
  width: 'full',
  rsvpFields: createDefaultReportingRsvpFields(),
  rsvpPlacement: 'outside',
  },
- ]);
+ ], orgTheme.palette));
  
  // Set global styles for paper texture and double border
  setBgType('pattern');
- setBgColor('#faf8f5');
+ setBgColor(orgTheme.palette.background);
  setBgImageUrl('');
  setBgPattern('paper');
  setFrameType('double-border');
  setFontTheme('classic');
  setLayoutMode('flow');
- setFloralColor('#b91c1c');
+ setFloralColor(orgTheme.palette.accent);
  setFloralType('roses');
  setFloralDensity(40);
  setLandingCategory('private');
@@ -386,6 +389,7 @@ export default function TemplatesPage() {
  setFloralType(global.floralType || 'roses');
  setFloralDensity(global.floralDensity !== undefined ? global.floralDensity : 40);
  setImportedPalette(global.palette || null);
+ setColorThemeId(typeof global.colorThemeId === 'string' ? global.colorThemeId : '');
  setLayoutMode(global.layoutMode === 'free' ? 'free' : 'flow');
  setLandingCategory(global.landingCategory || 'private');
  setLandingDescription(global.landingDescription || '');
@@ -645,6 +649,7 @@ export default function TemplatesPage() {
  });
  setImportedPalette(palette);
  setImportedWithOcr(useOcr);
+ setColorThemeId('');
  setEditingTemplateId(null);
  if (openEditor) setEditorOpen(true);
  setSuccess(
@@ -1029,8 +1034,9 @@ export default function TemplatesPage() {
  };
 
  const applyColorTheme = (themeId: string, recolorElements: boolean) => {
- const theme = INVITATION_COLOR_THEMES.find((t) => t.id === themeId);
+ const theme = invitationColorThemes(tenant?.branding).find((t) => t.id === themeId);
  if (!theme) return;
+ setColorThemeId(theme.id);
  setImportedPalette(theme.palette);
  setBgColor(theme.palette.background);
  setBgType('color');
@@ -1192,8 +1198,10 @@ export default function TemplatesPage() {
  canvasSizePreset,
  canvasWidth,
  canvasHeight,
+ colorThemeId: colorThemeId || undefined,
  ...(isGlobalTemplate ? { landingCategory, landingDescription: landingDescription.trim() || undefined } : {}),
- ...(importedPalette ? { palette: importedPalette, importedFromMockup: true, importedWithOcr } : {}),
+ ...(importedPalette ? { palette: importedPalette } : {}),
+ ...(importedWithOcr ? { importedFromMockup: true, importedWithOcr } : {}),
  },
  elements: canvasElements 
  },
@@ -1612,12 +1620,16 @@ export default function TemplatesPage() {
  <div className="space-y-3 pb-4 border-b border-border-subtle">
  <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Thèmes couleurs</h3>
  <div className="grid grid-cols-2 gap-2">
- {INVITATION_COLOR_THEMES.map((theme) => (
+ {invitationColorThemes(tenant?.branding).map((theme) => (
  <button
  key={theme.id}
  type="button"
  onClick={() => applyColorTheme(theme.id, true)}
- className="text-left p-2 rounded-xl border border-border hover:border-primary hover:bg-primary/5 transition"
+ className={`text-left p-2 rounded-xl border transition ${
+ colorThemeId === theme.id
+ ? 'border-primary bg-primary/5'
+ : 'border-border hover:border-primary hover:bg-primary/5'
+ }`}
  title={theme.description}
  >
  <div className="flex gap-0.5 mb-1.5">
@@ -1750,7 +1762,7 @@ export default function TemplatesPage() {
  type="button"
  onClick={() => {
  const themeFonts = getFontTheme(fontTheme);
- const palette = importedPalette || INVITATION_COLOR_THEMES[0].palette;
+ const palette = importedPalette || invitationColorThemes(tenant?.branding)[0].palette;
  const baseId = Date.now();
  const presets: CanvasElement[] = [
  {

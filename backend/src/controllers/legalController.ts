@@ -6,6 +6,8 @@ import {
   recordGuestLegalAcceptance,
   recordUserLegalAcceptance,
 } from '../services/legalService';
+import { prisma } from '../db';
+import { resolveBranding } from '../utils/brandingUtils';
 
 function getRequestMeta(req: Request) {
   return {
@@ -26,9 +28,16 @@ export async function getGuestLegalStatusHandler(req: Request, res: Response) {
       return res.status(404).json({ error: 'Invité non trouvé.' });
     }
 
+    const guest = await prisma.guest.findUnique({
+      where: { id: guestId },
+      select: { event: { select: { tenant: { select: { name: true, branding: true } } } } },
+    });
+
     return res.json({
       ...status,
       requiresAcceptance: !(status.termsAccepted && status.privacyAccepted),
+      branding: resolveBranding(guest?.event?.tenant?.branding),
+      organizationName: guest?.event?.tenant?.name || 'Organisation',
     });
   } catch (error) {
     console.error('Erreur statut légal invité:', error);
@@ -52,10 +61,17 @@ export async function acceptGuestLegalHandler(req: Request, res: Response) {
       return res.status(404).json({ error: 'Invité non trouvé.' });
     }
 
+    const guest = await prisma.guest.findUnique({
+      where: { id: guestId },
+      select: { event: { select: { tenant: { select: { name: true, branding: true } } } } },
+    });
+
     return res.json({
       message: 'Acceptation enregistrée avec succès.',
       ...status,
       requiresAcceptance: false,
+      branding: resolveBranding(guest?.event?.tenant?.branding),
+      organizationName: guest?.event?.tenant?.name || 'Organisation',
     });
   } catch (error: any) {
     if (error.message === 'TERMS_AND_PRIVACY_REQUIRED') {

@@ -14,6 +14,7 @@ import type {
 } from '@/app/rsvp/GuestTablePlanView';
 
 import { getGuestQrImageUrl } from '@/lib/guestQr';
+import { applyOrgInvitationThemeIfNeeded } from '@/lib/templateColorThemes';
 
 function buildQrCodeUrl(guestId: string, size = 200): string {
   return getGuestQrImageUrl(guestId, size);
@@ -77,6 +78,12 @@ export type GuestPrintDocumentData = {
   floorType?: string | null;
   floorImageUrl?: string | null;
   showQrCode?: boolean;
+  branding?: {
+    primary?: string;
+    accent?: string;
+    sidebar?: string;
+  } | null;
+  organizationName?: string;
 };
 
 function widthClass(width?: string) {
@@ -111,21 +118,29 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
   };
 
   const global = (data.templateContent?.global || {}) as Record<string, string | number | undefined>;
+  const themed = applyOrgInvitationThemeIfNeeded(
+    {
+      colorThemeId: global.colorThemeId as string | undefined,
+      importedFromMockup: Boolean(global.importedFromMockup),
+    },
+    data.templateContent?.elements || [],
+    data.branding,
+  );
   const bgType = (global.bgType as string) || 'color';
-  const bgColor = (global.bgColor as string) || '#ffffff';
+  const bgColor = themed.background || (global.bgColor as string) || '#ffffff';
   const bgImageUrl = (global.bgImageUrl as string) || '';
   const bgPattern = (global.bgPattern as string) || 'none';
   const frameType = (global.frameType as string) || 'none';
   const canvasStyle = getCanvasStyle(global);
   const backgroundStyle = getTemplateBackgroundStyle(bgType, bgColor, bgImageUrl, bgPattern);
 
-  const elements = (data.templateContent?.elements || []).filter(
+  const elements = themed.elements.filter(
     (el) => el.type !== 'rsvp-block' || el.rsvpPlacement !== 'outside',
   );
-  const outsideRsvp = (data.templateContent?.elements || []).find(
+  const outsideRsvp = themed.elements.find(
     (el) => el.type === 'rsvp-block' && el.rsvpPlacement === 'outside',
   );
-  const inlineRsvp = (data.templateContent?.elements || []).find(
+  const inlineRsvp = themed.elements.find(
     (el) => el.type === 'rsvp-block' && el.rsvpPlacement !== 'outside',
   );
   const rsvpBlock = outsideRsvp || inlineRsvp;
