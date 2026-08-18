@@ -716,7 +716,10 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
       notes.push(`Sous le budget minimum (${formatFc(input.budgetMinFc)}).`);
     }
     if (input.marginPct > 0) {
-      notes.push(`Marge de sécurité ${input.marginPct} % · enveloppe utile ${formatFc(envelope)}.`);
+      const reservedFc = Math.max(0, input.budgetMaxFc - envelope);
+      notes.push(
+        `Marge de sécurité ${input.marginPct} % = ${formatFc(reservedFc)} mis de côté · enveloppe utile ${formatFc(envelope)}.`,
+      );
     }
     if (!missing.length && leftoverFc > 0) {
       notes.push(`Reste ${formatFc(leftoverFc)} à réallouer ou à garder en marge.`);

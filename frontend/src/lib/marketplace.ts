@@ -670,6 +670,9 @@ export interface CatalogueItem {
   priceUnit?: VenuePriceUnit;
 }
 
+/** Agenda client : événements publics dans le marketplace du tableau de bord. */
+export const CLIENT_AGENDA_HREF = '/dashboard/catalogue?kind=event';
+
 export function dashboardVenueHref(slug: string) {
   return `/dashboard/catalogue/salles/${slug}`;
 }

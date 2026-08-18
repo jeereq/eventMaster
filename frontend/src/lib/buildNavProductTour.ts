@@ -186,6 +186,8 @@ export function buildNavProductTour(
     case 'client':
       return buildSteps([
         { tourId: 'nav-catalogue' },
+        { tourId: 'nav-agenda' },
+        { tourId: 'nav-tickets' },
         { tourId: 'nav-bookings' },
         { tourId: 'nav-guide' },
         { tourId: 'nav-profile' },

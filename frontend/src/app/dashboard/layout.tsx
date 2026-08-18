@@ -42,6 +42,27 @@ interface NavSection {
  items: NavItem[];
 }
 
+function navItemIsActive(pathname: string, search: string, item: NavItem, currentTab: string) {
+ if (item.tab) return pathname === '/dashboard' && currentTab === item.tab;
+ const qIndex = item.href.indexOf('?');
+ const path = qIndex >= 0 ? item.href.slice(0, qIndex) : item.href;
+ const query = qIndex >= 0 ? item.href.slice(qIndex + 1) : '';
+ const pathMatch = pathname === path || (path !== '/dashboard' && pathname.startsWith(path));
+ if (!pathMatch) return false;
+ if (query) {
+  const want = new URLSearchParams(query);
+  const have = new URLSearchParams(search);
+  for (const [key, value] of want.entries()) {
+   if (have.get(key) !== value) return false;
+  }
+  return pathname === path;
+ }
+ if (path === '/dashboard/catalogue' && pathname === '/dashboard/catalogue') {
+  return new URLSearchParams(search).get('kind') !== 'event';
+ }
+ return true;
+}
+
 /** Infobulles par défaut (sidebar réduite). */
 const NAV_TOOLTIPS: Record<string, string> = {
  Accueil: 'File du jour : demandes, licences, factures',
@@ -66,6 +87,8 @@ const NAV_TOOLTIPS: Record<string, string> = {
  Protocole: 'Scan QR et accueil invités',
  'Tableau de bord': 'Vue d’ensemble et quotas',
  'Mes réservations': 'Demandes de dates envoyées',
+ Agenda: 'Événements publics du marketplace',
+ 'Mes billets': 'Inscriptions, filtres et badge QR',
  Statistiques: 'RSVP et analyses d’événements',
  Modèles: 'Concepteur d’invitations',
  'Facturation & plan': 'Forfait, quotas et upgrade',
@@ -114,9 +137,7 @@ function SidebarNav({
  <div className="space-y-0.5">
  {section.items.map((item) => {
  const Icon = item.icon;
- const isActive = item.tab
- ? pathname === '/dashboard' && currentTab === item.tab
- : pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+ const isActive = navItemIsActive(pathname, searchParams.toString(), item, currentTab);
 
  const tip = item.description ? (
  <span className="flex flex-col gap-0.5 text-left">
@@ -393,7 +414,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  {
  items: [
  { name: 'Marketplace', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires, favoris et préparation d’événement' },
- { name: 'Mes billets', href: '/dashboard/tickets', tourId: 'nav-tickets', icon: Ticket, description: 'Inscriptions et badges QR des événements publics' },
+ { name: 'Agenda', href: '/dashboard/catalogue?kind=event', tourId: 'nav-agenda', icon: Calendar, description: 'Événements publics du marketplace — inscriptions et billets' },
+ { name: 'Mes billets', href: '/dashboard/tickets', tourId: 'nav-tickets', icon: Ticket, description: 'Inscriptions, filtres, vue grille/liste et badges QR' },
  { name: 'Mes réservations', href: '/dashboard/bookings', tourId: 'nav-bookings', icon: CalendarCheck },
  { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
  { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },

@@ -176,8 +176,8 @@ export default function EventPlanPacks({
               </div>
               <p className={cn('text-xs mt-1', pack.overBudget ? 'text-rose-600' : 'text-muted')}>
                 {pack.overBudget
-                  ? `Au-dessus du budget de ${formatFc(budgetFc)}`
-                  : `${usedRatio} % de l’enveloppe · reste ${formatFc(pack.leftoverFc)}`}
+                  ? `Au-dessus du budget de ${formatFc(budgetFc)} (${formatFc(pack.totalFc)})`
+                  : `${usedRatio} % de l’enveloppe · ${formatFc(pack.totalFc)} sur ${formatFc(envelope)} · reste ${formatFc(pack.leftoverFc)}`}
               </p>
               {allocation.length > 1 ? (
                 <div className="mt-2 space-y-1">
@@ -195,7 +195,7 @@ export default function EventPlanPacks({
                     ))}
                   </div>
                   <p className="text-[10px] text-muted leading-relaxed">
-                    {allocation.map((item) => `${item.label} ${Math.round((item.amountFc / allocTotal) * 100)} %`).join(' · ')}
+                    {allocation.map((item) => `${item.label} ${Math.round((item.amountFc / allocTotal) * 100)} % · ${formatFc(item.amountFc)}`).join(' · ')}
                   </p>
                 </div>
               ) : null}

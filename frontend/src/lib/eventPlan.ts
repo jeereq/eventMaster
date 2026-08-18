@@ -182,16 +182,51 @@ export function briefWithEventType(brief: EventPlanBrief, eventType: ListingEven
   };
 }
 
-export function shareRows(brief: EventPlanBrief): Array<{ key: string; label: string; pct: number }> {
+/** Enveloppe réellement cherchée (budget max moins la marge). Aligné sur le backend (plancher 50 000 FC). */
+export function briefSpendableFc(brief: EventPlanBrief): number {
+  const max = Math.max(0, brief.budgetMaxFc);
+  return Math.max(50000, Math.round(max * (1 - brief.marginPct / 100)));
+}
+
+/** Montant exact mis de côté grâce à la marge (budget max − enveloppe utile). */
+export function briefMarginFc(brief: EventPlanBrief): number {
+  return Math.max(0, brief.budgetMaxFc - briefSpendableFc(brief));
+}
+
+export function shareRows(brief: EventPlanBrief): Array<{ key: string; label: string; pct: number; amountFc: number }> {
+  const spendable = briefSpendableFc(brief);
   const keys = [
     ...(brief.includeVenue === 'no' ? [] : ['venue']),
     ...SERVICE_CATEGORIES.filter((category) => brief.slots[category] !== 'excluded'),
   ];
-  return keys.map((key) => ({
-    key,
-    label: key === 'venue' ? 'Salle' : SERVICE_CATEGORY_LABELS[key as ServiceCategory],
-    pct: brief.shares[key] || 0,
-  }));
+  return keys.map((key) => {
+    const pct = brief.shares[key] || 0;
+    return {
+      key,
+      label: key === 'venue' ? 'Salle' : SERVICE_CATEGORY_LABELS[key as ServiceCategory],
+      pct,
+      amountFc: Math.round(spendable * (pct / 100)),
+    };
+  });
+}
+
+/** Brief d’exemple : mariage à Kinshasa, 100 invités, 1 500 000 FC. */
+export function createDemoWeddingBrief(): EventPlanBrief {
+  const date = new Date();
+  date.setMonth(date.getMonth() + 3);
+  const toSaturday = (6 - date.getDay() + 7) % 7;
+  date.setDate(date.getDate() + toSaturday);
+  return {
+    ...createDefaultBrief('wedding'),
+    budgetMinFc: 0,
+    budgetMaxFc: 1_500_000,
+    marginPct: 5,
+    city: 'Kinshasa',
+    commune: '',
+    guestCount: 100,
+    eventDate: date.toISOString().slice(0, 10),
+    includeVenue: 'yes',
+  };
 }
 
 export function cycleSlotPriority(current: SlotPriority): SlotPriority {

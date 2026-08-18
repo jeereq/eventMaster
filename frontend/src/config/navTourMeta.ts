@@ -172,8 +172,14 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-catalogue': {
     title: 'Marketplace',
     description:
-      'Parcourez salles, prestataires et événements publics, enregistrez des favoris, préparez un événement via un brief budget configurable (3 packs) et sauvegardez brief ou pack.',
+      'Explorer salles, prestataires et événements (filtres, carte Focus, grille ou liste). Onglets Favoris, Préparer un événement (brief budget) et Mes packs.',
     route: '/dashboard/catalogue',
+  },
+  'nav-agenda': {
+    title: 'Agenda',
+    description:
+      'Événements publics du marketplace client. Filtrez, ouvrez une fiche, inscrivez-vous ou achetez un billet — il apparaît dans Mes billets.',
+    route: '/dashboard/catalogue?kind=event',
   },
   'nav-bookings': {
     title: 'Mes réservations',
@@ -184,7 +190,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-tickets': {
     title: 'Mes billets',
     description:
-      'Retrouvez vos inscriptions et achats d’événements publics, avec le lien RSVP et le badge QR.',
+      'Retrouvez vos inscriptions et achats, filtrez (date, entrée, lieu), passez en grille ou liste, puis ouvrez le badge QR. L’agenda mène au marketplace.',
     route: '/dashboard/tickets',
   },
 };

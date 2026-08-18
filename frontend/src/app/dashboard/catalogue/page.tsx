@@ -487,13 +487,23 @@ function ClientMarketplaceInner() {
         />
       ) : null}
       <PageHeader
-        title="Marketplace"
-        description="Explorez les salles et prestataires, enregistrez vos favoris, puis préparez un événement selon votre budget."
+        title={searchParams.get('kind') === 'event' && tab === 'explore' ? 'Agenda' : 'Marketplace'}
+        description={
+          tab === 'plan'
+            ? 'Décrivez l’enveloppe et les besoins : EventMaster propose 3 packs dans votre budget, avec les montants exacts à côté des pourcentages.'
+            : tab === 'favorites'
+              ? 'Salles et prestataires enregistrés. Filtrez et changez la vue grille ou liste.'
+              : tab === 'packs'
+                ? 'Packs et briefs sauvegardés, à reprendre ou à envoyer en devis.'
+                : searchParams.get('kind') === 'event'
+                  ? 'Événements publics du marketplace. Inscrivez-vous ou achetez un billet — il apparaît dans Mes billets.'
+                  : 'Explorez les salles et prestataires, enregistrez vos favoris, puis préparez un événement selon votre budget.'
+        }
         breadcrumbs={
           <Breadcrumbs
             items={[
               { label: 'Marketplace', href: '/dashboard/catalogue' },
-              { label: tab === 'favorites' ? 'Favoris' : tab === 'plan' ? 'Préparer un événement' : tab === 'packs' ? 'Mes packs' : 'Explorer' },
+              { label: tab === 'favorites' ? 'Favoris' : tab === 'plan' ? 'Préparer un événement' : tab === 'packs' ? 'Mes packs' : searchParams.get('kind') === 'event' ? 'Agenda' : 'Explorer' },
             ]}
           />
         }

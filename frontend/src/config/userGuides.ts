@@ -409,14 +409,15 @@ export const USER_GUIDES: UserGuide[] = [
     title: 'Guide Client marketplace',
     badge: 'Client',
     summary:
-      'Vous cherchez une salle ou des prestataires sans créer d’événements. Marketplace, favoris, packs budget et réservations sont dans votre tableau de bord. Pour organiser une fête ou publier vos offres, changez le type de compte dans Mon compte.',
+      'Vous cherchez une salle, des prestataires ou un événement public, sans créer d’événements. Marketplace (Explorer, Favoris, Préparer, Mes packs), Agenda, billets et réservations sont dans le tableau de bord. Pour organiser une fête ou publier vos offres, changez le type de compte dans Mon compte.',
     canDo: [
-      'Explorer salles, prestataires et événements publics dans le Marketplace du tableau de bord',
-      'Mettre des fiches en favoris (filtre salles / prestataires, vue grille ou liste)',
-      'Préparer un événement selon un brief budget (enveloppe min/max, date, métiers, répartition) et obtenir trois packs',
-      'Sauvegarder un brief, un pack de recherche, ou composer un pack parfait depuis les favoris',
-      'Demander un devis ou une date, puis suivre les réservations (filtres statut / dates)',
-      'Retrouver vos billets d’événements publics et le badge QR',
+      'Explorer salles, prestataires et événements (filtres ville, type, prix, carte Focus, grille ou liste)',
+      'Ouvrir l’Agenda : événements publics du marketplace, pour s’inscrire ou acheter un billet',
+      'Mettre des fiches salles / prestataires en favoris',
+      'Préparer un événement avec un brief budget simple (enveloppe, marge en FC, métiers) et obtenir 3 packs',
+      'Sauvegarder un brief ou un pack, ou composer un pack depuis les favoris',
+      'Demander un devis ou une date, puis suivre les réservations',
+      'Retrouver vos billets, les filtrer, passer en grille ou liste, et ouvrir le badge QR',
       'Passer organisateur ou prestataire depuis Mon compte',
     ],
     cannotDo: [
@@ -426,6 +427,7 @@ export const USER_GUIDES: UserGuide[] = [
     ],
     navLinks: [
       { label: 'Marketplace', href: '/dashboard/catalogue' },
+      { label: 'Agenda', href: '/dashboard/catalogue?kind=event' },
       { label: 'Mes billets', href: '/dashboard/tickets' },
       { label: 'Mes réservations', href: '/dashboard/bookings' },
       { label: 'Guide utilisateur', href: '/dashboard/guide' },
@@ -436,21 +438,31 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'explore-favorites',
         title: 'Explorer et enregistrer des favoris',
         content:
-          '1. Ouvrez Marketplace (tableau de bord).\n2. Onglet Explorer : filtrez par ville, type (salles, prestataires, événements), prix.\n3. Cliquez sur le cœur pour enregistrer une salle ou un prestataire (les événements publics s’ouvrent sur leur fiche).\n4. Onglet Favoris : filtrez salles / prestataires et passez en grille ou liste.',
+          '1. Ouvrez Marketplace.\n2. Onglet Explorer : filtrez par mot-clé, ville, commune, type (salles / prestataires / événements), prix, places.\n3. Passez en grille, liste, carte ou Focus (plein écran). Les pastilles indiquent Salle, Presta ou Évén.\n4. Cliquez sur le cœur d’une salle ou d’un prestataire.\n5. Onglet Favoris : filtrez salles / prestataires et changez la vue.',
         links: [{ label: 'Marketplace', href: '/dashboard/catalogue' }],
       },
       {
         id: 'prepare-event',
-        title: 'Préparer un événement et sauvegarder un pack',
+        title: 'Préparer un événement avec un brief budget',
         content:
-          '1. Onglet Préparer un événement.\n2. Indiquez le type, le budget min/max (max ≥ 50 000 FC), la marge, la ville/commune, les invités et la date.\n3. Choisissez si la salle est obligatoire, optionnelle ou absente. Cliquez les métiers : obligatoire → souhaité → exclu.\n4. Affiner : curseurs de répartition, favoris forcés, équipements salle, élargissement auto.\n5. Lancez la recherche, comparez les 3 packs, élargissez un poste manquant ou figez une ligne puis relancez.\n6. Sauvegardez le brief (pour le réutiliser) et/ou le pack dans Mes packs.',
-        links: [{ label: 'Marketplace', href: '/dashboard/catalogue?hub=plan' }],
+          'À quoi ça sert : vous donnez un budget max et ce dont vous avez besoin. EventMaster propose 3 packs (économique, équilibré, confort) qui tiennent dans l’enveloppe — salle et prestataires déjà combinés. Rien n’est réservé : vous comparez, puis contactez.\n\nCas d’usage — Marie, mariage à Kinshasa, 100 invités, 1 500 000 FC :\n1. Onglet Préparer un événement.\n2. (Facultatif) ouvrez « Exemple — mariage à Kinshasa » et cliquez Appliquer cet exemple.\n3. Budget max = 1 500 000 FC. Marge 5 % = 75 000 FC de réserve ; la recherche porte sur 1 425 000 FC. Les pourcentages (salle 38 %, traiteur 28 %…) s’affichent aussi en francs.\n4. Ville Kinshasa, 100 invités, date. Salle obligatoire. Métiers : un clic = obligatoire → si ça rentre → exclu.\n5. Lancez la recherche, comparez les 3 packs (chaque barre montre le montant exact). Élargissez un poste manquant ou figez une ligne puis relancez.\n6. Sauvegardez le brief et/ou le pack dans Mes packs, puis envoyez un devis depuis une fiche.',
+        links: [{ label: 'Préparer un événement', href: '/dashboard/catalogue?hub=plan' }],
+      },
+      {
+        id: 'browse-agenda',
+        title: 'Parcourir l’agenda et s’inscrire',
+        content:
+          '1. Ouvrez Agenda (ou Marketplace filtré sur Événements).\n2. Filtrez par date, ville, entrée payante / libre.\n3. Ouvrez une fiche, inscrivez-vous ou achetez un billet (compte ou invité).\n4. Le billet apparaît dans Mes billets si vous êtes connecté ou si l’e-mail correspond.',
+        links: [
+          { label: 'Agenda', href: '/dashboard/catalogue?kind=event' },
+          { label: 'Mes billets', href: '/dashboard/tickets' },
+        ],
       },
       {
         id: 'book-venue',
         title: 'Réserver une salle ou un prestataire',
         content:
-          '1. Ouvrez une fiche depuis Explorer, Favoris ou un pack.\n2. Envoyez un devis ou une demande de date.\n3. Versez l’acompte (30 %) directement au professionnel, hors EventMaster, après acceptation.\n4. Suivez le statut dans Mes réservations (filtres par statut, type et dates).',
+          '1. Ouvrez une fiche depuis Explorer, Favoris, l’Agenda ou un pack.\n2. Envoyez un devis ou une demande de date.\n3. Versez l’acompte (30 %) directement au professionnel, hors EventMaster, après acceptation.\n4. Suivez le statut dans Mes réservations (filtres par statut, type et dates).',
         links: [
           { label: 'Marketplace', href: '/dashboard/catalogue' },
           { label: 'Mes réservations', href: '/dashboard/bookings' },
@@ -458,12 +470,12 @@ export const USER_GUIDES: UserGuide[] = [
       },
       {
         id: 'my-tickets',
-        title: 'Retrouver un billet ou une inscription',
+        title: 'Retrouver, filtrer et afficher un billet',
         content:
-          '1. Sur une fiche marketplace (salle, presta ou événement), connectez-vous (ou créez un compte client) — le formulaire reprend vos nom, e-mail et téléphone.\n2. Vous pouvez aussi continuer en invité sans compte.\n3. Les commandes de billets liées à votre compte ou à votre e-mail apparaissent dans Mes billets.\n4. Ouvrez Badge QR pour le portail RSVP.',
+          '1. Les commandes liées à votre compte ou à votre e-mail apparaissent dans Mes billets.\n2. Filtrez par mot-clé, à venir / passés, payant / entrée libre, et lieu.\n3. Passez en grille ou liste (nombre de colonnes mémorisé).\n4. Ouvrez Badge QR pour le portail RSVP, ou Fiche pour l’événement.\n5. Le bouton Agenda ouvre les événements du marketplace client — pas le site public.',
         links: [
           { label: 'Mes billets', href: '/dashboard/tickets' },
-          { label: 'Marketplace — événements', href: '/marketplace/evenements' },
+          { label: 'Agenda', href: '/dashboard/catalogue?kind=event' },
         ],
       },
       {
@@ -476,8 +488,10 @@ export const USER_GUIDES: UserGuide[] = [
     ],
     tips: [
       'Le compte client n’exige pas de licence SaaS.',
+      'La marge du brief est un montant : 5 % de 1 500 000 FC = 75 000 FC mis de côté.',
       'Les trois packs d’une recherche évitent de proposer la même salle si le catalogue le permet.',
-      'Enregistrez un brief pour relancer la même recherche plus tard ; figez une salle puis relancez pour recalculer uniquement les prestataires.',
+      'Enregistrez un brief pour relancer la même recherche ; figez une salle puis relancez pour recalculer uniquement les prestataires.',
+      'L’Agenda du menu ouvre le marketplace client (événements), pas /marketplace/evenements.',
       'La commission vendeur (8 %) est distincte de l’abonnement EventMaster ; vous ne la payez pas en tant que client.',
     ],
   },
