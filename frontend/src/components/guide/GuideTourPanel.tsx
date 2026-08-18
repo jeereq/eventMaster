@@ -1,12 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Play, RotateCcw, ListOrdered, LayoutGrid, Sparkles } from 'lucide-react';
 import { useTour } from '@/context/TourContext';
 import { useAuth } from '@/context/AuthContext';
 import { getProductTour } from '@/config/productTours';
 import type { UserGuideId } from '@/config/userGuides';
 import { getGuideLabel } from '@/lib/resolveUserGuideRole';
+import { buildNavTourOptions, type NavTourOptions } from '@/lib/buildNavProductTour';
 import { Button } from '@/components/ui';
 
 interface GuideTourPanelProps {
@@ -14,10 +15,22 @@ interface GuideTourPanelProps {
 }
 
 export default function GuideTourPanel({ guideId }: GuideTourPanelProps) {
-  const { access } = useAuth();
+  const { access, tenant, planQuota, planFeatures } = useAuth();
   const { startTour, isActive } = useTour();
-  const steps = getProductTour(guideId, access);
+  const tourOpts = useMemo<NavTourOptions>(
+    () =>
+      buildNavTourOptions({
+        accountKind: tenant?.accountKind,
+        access,
+        planQuota,
+        planFeatures,
+        planId: tenant?.plan,
+      }),
+    [access, tenant?.accountKind, tenant?.plan, planQuota, planFeatures],
+  );
+  const steps = getProductTour(guideId, access, tourOpts);
   const tabSteps = steps.filter((s) => s.target);
+  const spaceLabel = tourOpts.planName;
 
   if (guideId === 'guest' || steps.length === 0) {
     return (
@@ -27,6 +40,11 @@ export default function GuideTourPanel({ guideId }: GuideTourPanelProps) {
     );
   }
 
+  const heading =
+    guideId === 'owner' || guideId === 'org_manager' || guideId === 'staff_scope'
+      ? `Parcours des onglets — espace ${spaceLabel}`
+      : `Parcours des onglets — ${getGuideLabel(guideId)}`;
+
   return (
     <div className="space-y-5">
       <div className="p-5 sm:p-6 rounded-[var(--radius-card)] border border-primary/20 bg-primary/5 space-y-4">
@@ -35,16 +53,14 @@ export default function GuideTourPanel({ guideId }: GuideTourPanelProps) {
             <Sparkles className="w-3.5 h-3.5" />
             Visite interactive
           </span>
-          <h2 className="text-lg font-semibold text-foreground">
-            Parcours des onglets — {getGuideLabel(guideId)}
-          </h2>
+          <h2 className="text-lg font-semibold text-foreground">{heading}</h2>
           <p className="text-sm text-muted leading-relaxed max-w-2xl">
             Survolez votre menu : chaque étape met en surbrillance un onglet et explique son rôle.
             Relancez la visite à tout moment.
           </p>
         </div>
         <Button
-          onClick={() => startTour(guideId, access)}
+          onClick={() => startTour(guideId, access, tourOpts)}
           disabled={isActive}
           leftIcon={
             isActive ? <RotateCcw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />

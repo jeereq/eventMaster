@@ -10,13 +10,14 @@ import GuideTourPanel from '@/components/guide/GuideTourPanel';
 import { DASHBOARD_GUIDE_IDS, type UserGuideId } from '@/config/userGuides';
 import { getGuideLabel, resolveUserGuideRole } from '@/lib/resolveUserGuideRole';
 import { useTour } from '@/context/TourContext';
+import { buildNavTourOptions } from '@/lib/buildNavProductTour';
 import { BookOpen, HelpCircle, Map, Play } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 type GuideViewTab = 'doc' | 'tour';
 
 function DashboardGuidePageContent() {
-  const { user, access } = useAuth();
+  const { user, access, tenant, planQuota, planFeatures } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
   const { startTour } = useTour();
@@ -38,6 +39,18 @@ function DashboardGuidePageContent() {
 
   const activeGuideId = selectedGuideId ?? resolved.guideId;
 
+  const tourOpts = useMemo(
+    () =>
+      buildNavTourOptions({
+        accountKind: tenant?.accountKind,
+        access,
+        planQuota,
+        planFeatures,
+        planId: tenant?.plan,
+      }),
+    [access, tenant?.accountKind, tenant?.plan, planQuota, planFeatures],
+  );
+
   const setTab = (tab: GuideViewTab) => {
     setActiveTab(tab);
     const params = new URLSearchParams(searchParams.toString());
@@ -49,12 +62,12 @@ function DashboardGuidePageContent() {
 
   useEffect(() => {
     if (searchParams.get('start') === '1' && activeTab === 'tour') {
-      startTour(activeGuideId, access);
+      startTour(activeGuideId, access, tourOpts);
       const params = new URLSearchParams(searchParams.toString());
       params.delete('start');
       router.replace(`/dashboard/guide?${params.toString()}`, { scroll: false });
     }
-  }, [searchParams, activeTab, activeGuideId, access, startTour, router]);
+  }, [searchParams, activeTab, activeGuideId, access, startTour, router, tourOpts]);
 
   return (
     <div className="space-y-6 w-full">
@@ -77,7 +90,7 @@ function DashboardGuidePageContent() {
               leftIcon={<Play className="w-3.5 h-3.5" />}
               onClick={() => {
                 setTab('tour');
-                setTimeout(() => startTour(activeGuideId, access), 100);
+                setTimeout(() => startTour(activeGuideId, access, tourOpts), 100);
               }}
             >
               Visite guidée
@@ -156,7 +169,7 @@ function DashboardGuidePageContent() {
               guideId={activeGuideId}
               onStartTour={() => {
                 setTab('tour');
-                setTimeout(() => startTour(activeGuideId, access), 120);
+                setTimeout(() => startTour(activeGuideId, access, tourOpts), 120);
               }}
             />
           ) : (

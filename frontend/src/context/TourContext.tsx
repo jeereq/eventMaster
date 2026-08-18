@@ -5,13 +5,14 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { getProductTour, type ProductTourStep } from '@/config/productTours';
 import type { OrgAccess } from '@/context/AuthContext';
 import type { UserGuideId } from '@/config/userGuides';
+import type { NavTourOptions } from '@/lib/buildNavProductTour';
 
 interface TourContextValue {
   isActive: boolean;
   steps: ProductTourStep[];
   stepIndex: number;
   currentStep: ProductTourStep | null;
-  startTour: (guideId: UserGuideId, access?: OrgAccess | null) => void;
+  startTour: (guideId: UserGuideId, access?: OrgAccess | null, opts?: NavTourOptions) => void;
   stopTour: () => void;
   nextStep: () => void;
   prevStep: () => void;
@@ -64,8 +65,8 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const startTour = useCallback(
-    (guideId: UserGuideId, access?: OrgAccess | null) => {
-      const tourSteps = getProductTour(guideId, access);
+    (guideId: UserGuideId, access?: OrgAccess | null, opts?: NavTourOptions) => {
+      const tourSteps = getProductTour(guideId, access, opts);
       if (tourSteps.length === 0) return;
       setSteps(tourSteps);
       setStepIndex(0);

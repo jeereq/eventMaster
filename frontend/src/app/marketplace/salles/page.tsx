@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import {
   EMPTY_CATALOGUE_GEO,
@@ -14,6 +14,7 @@ import {
   type CatalogueGeoState,
   type PublicVenue,
 } from '@/lib/marketplace';
+import { useCatalogueQueryState } from '@/lib/catalogueQuery';
 import { roomTypeLabels } from '@/lib/roomLayoutUtils';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import CatalogueSearchLayout from '@/components/CatalogueSearchLayout';
@@ -39,16 +40,23 @@ const emptyFilters: VenueFilters = {
   roomType: '',
 };
 
-export default function MarketplaceVenuesPage() {
+const QUERY_OPTS = {
+  extraKeys: ['roomType'],
+  emptyExtra: { roomType: '' },
+  merge: (geo: CatalogueGeoState, extra: Record<string, string>): VenueFilters => ({
+    ...geo,
+    roomType: extra.roomType || '',
+  }),
+  split: (filters: VenueFilters) => ({ roomType: filters.roomType }),
+};
+
+function MarketplaceVenuesPageInner() {
   const { mode, setView, gridCols, setGridCols } = useCatalogueView();
+  const { q, setQ, searchQ, applied, draft, setDraft, page, applyFilters, setPage } = useCatalogueQueryState(QUERY_OPTS);
   const [venues, setVenues] = useState<PublicVenue[]>([]);
   const [loading, setLoading] = useState(true);
-  const [q, setQ] = useState('');
-  const [applied, setApplied] = useState<VenueFilters>(emptyFilters);
-  const [draft, setDraft] = useState<VenueFilters>(emptyFilters);
   const [error, setError] = useState('');
   const [filterError, setFilterError] = useState('');
-  const [page, setPage] = useState(1);
   const PAGE_SIZE = 12;
 
   const load = useCallback(async (filters: VenueFilters, search: string) => {
@@ -61,7 +69,6 @@ export default function MarketplaceVenuesPage() {
       if (filters.roomType) params.set('roomType', filters.roomType);
       const data = await api.get(`/public/venues${params.toString() ? `?${params}` : ''}`);
       setVenues(data.venues || []);
-      setPage(1);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossible de charger les salles.');
       setVenues([]);
@@ -91,18 +98,9 @@ export default function MarketplaceVenuesPage() {
     return catalogueGeoChips(applied, extra);
   }, [applied]);
 
-  const applyFilters = (next: VenueFilters) => {
-    setFilterError('');
-    setApplied(next);
-    setDraft(next);
-  };
-
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void load(applied, q);
-    }, q.trim() ? 350 : 0);
-    return () => window.clearTimeout(timer);
-  }, [applied, q, load]);
+    void load(applied, searchQ);
+  }, [applied, searchQ, load]);
 
   const searchCenter = applied.proximity && applied.lat != null && applied.lng != null
     ? { lat: applied.lat, lng: applied.lng }
@@ -191,5 +189,13 @@ export default function MarketplaceVenuesPage() {
         />
       )}
     />
+  );
+}
+
+export default function MarketplaceVenuesPage() {
+  return (
+    <Suspense fallback={<div className="page-container py-16 text-sm text-muted">Chargement des salles…</div>}>
+      <MarketplaceVenuesPageInner />
+    </Suspense>
   );
 }

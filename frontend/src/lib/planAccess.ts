@@ -54,6 +54,9 @@ export function getQuotaLockMessage(
     },
   } as const;
   const row = map[kind];
+  if (!isUnlimitedQuota(row.limit) && (row.limit as number) <= 0) {
+    return `${row.label.charAt(0).toUpperCase()}${row.label.slice(1)} non inclus dans votre forfait. Choisissez une offre adaptée.`;
+  }
   if (!isAtQuota(row.usage, row.limit)) return null;
   return `Quota ${row.label} atteint (${row.usage}/${row.limit}). Passez à un forfait supérieur.`;
 }
@@ -93,7 +96,7 @@ const ROOM_LEVEL_HINT: Record<RoomEditorLevel, string> = {
   complete: 'Salle, Particulier, Salle & presta ou Enterprise 1',
 };
 
-/** Publication d’une salle sur le marketplace (interdit au forfait Particulier). */
+/** Publication d’une salle sur le marketplace (VENUE / CATALOG, ou essai FREE). */
 export function canPublishVenueCatalog(
   planFeatures?: PlanCapabilities | null,
   planQuota?: PlanQuotaInfo | null,
@@ -102,7 +105,11 @@ export function canPublishVenueCatalog(
   if (planId?.startsWith('PERSONAL') || planFeatures?.audience === 'B2C') return false;
   const maxRooms = planQuota?.limits.maxRooms;
   if (maxRooms != null && maxRooms <= 0) return false;
-  return true;
+  const audience = planFeatures?.audience;
+  if (audience === 'VENUE' || audience === 'CATALOG') return true;
+  if (planId === 'FREE') return (maxRooms ?? 0) > 0;
+  if (audience === 'B2B' || audience === 'SERVICE') return false;
+  return (maxRooms ?? 0) > 0;
 }
 
 export function getRoomTypeLockMessage(roomType: string, planName?: string | null): string {
@@ -139,7 +146,7 @@ export function getWorkspaceModules(opts: {
     return {
       showEvents: false,
       showRooms: canRooms,
-      showMarketplace: canRooms,
+      showMarketplace: !protocolOnly,
       showTemplates: false,
       showAnalytics: false,
       showProtocol: false,
@@ -152,9 +159,9 @@ export function getWorkspaceModules(opts: {
   const maxTemplates = opts.planQuota?.limits.maxTemplates ?? 2;
   const maxServices = opts.planQuota?.limits.maxServices ?? 0;
 
-  const showEvents = !vendorOnly || maxEvents > 0;
+  const showEvents = maxEvents > 0;
   const showRooms = canRooms && maxRooms > 0;
-  const showMarketplace = canRooms && maxServices > 0;
+  const showMarketplace = maxServices > 0 && !protocolOnly;
 
   return {
     showEvents,

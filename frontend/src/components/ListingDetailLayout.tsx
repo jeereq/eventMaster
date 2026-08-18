@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button, Skeleton, SkeletonListingDetail } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
+import { getCatalogueReturn, isCatalogueListPath } from '@/lib/catalogueQuery';
 import { isVideoUrl, mediaPosterUrl } from '@/lib/marketplace';
 import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import { ArrowLeft, Play } from 'lucide-react';
@@ -120,8 +121,32 @@ export default function ListingDetailLayout({
   inquiry: React.ReactNode;
   booking: React.ReactNode;
 }) {
+  const router = useRouter();
   const [mobileAction, setMobileAction] = useState<'inquire' | 'book'>('inquire');
   const priceLabel = priceFromFc != null ? formatFc(priceFromFc) : 'Sur devis';
+
+  const goBack = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const stored = getCatalogueReturn(backHref);
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      try {
+        const ref = document.referrer ? new URL(document.referrer) : null;
+        if (ref && ref.origin === window.location.origin && isCatalogueListPath(ref.pathname)) {
+          router.back();
+          return;
+        }
+      } catch {
+        /* ignore */
+      }
+      if (stored !== backHref && stored.startsWith('/marketplace')) {
+        router.push(stored);
+        return;
+      }
+      router.back();
+      return;
+    }
+    router.push(stored);
+  };
 
   const scrollToContact = (action: 'inquire' | 'book') => {
     setMobileAction(action);
@@ -139,13 +164,14 @@ export default function ListingDetailLayout({
 
   return (
     <main className="page-container pt-4 pb-24 sm:pt-8 lg:py-10 lg:pb-10 flex-1">
-      <Link
-        href={backHref}
+      <button
+        type="button"
+        onClick={goBack}
         className="inline-flex items-center gap-1.5 min-h-11 -ml-1 px-1 text-xs font-semibold text-muted hover:text-foreground mb-3 sm:mb-5"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
         {backLabel}
-      </Link>
+      </button>
 
       {loading ? (
         <SkeletonListingDetail />

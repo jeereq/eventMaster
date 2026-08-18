@@ -7,6 +7,12 @@ export interface NavTourMeta {
 }
 
 export const NAV_TOUR_META: Record<string, NavTourMeta> = {
+  'nav-overview': {
+    title: 'Accueil plateforme',
+    description:
+      'File du jour : demandes d’abonnement à traiter, licences qui expirent et factures récentes. Point d’entrée Super Admin pour prioriser la journée.',
+    route: '/dashboard?tab=overview',
+  },
   'nav-tenants': {
     title: 'Organisations',
     description:

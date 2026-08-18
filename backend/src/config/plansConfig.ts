@@ -108,7 +108,7 @@ export function annualMonthlyEquivalent(monthlyFc: number): string {
 function organizerPlan(
   rest: Omit<PlanDefinition, 'maxServices'> & { maxServices?: number },
 ): PlanDefinition {
-  return { ...rest, maxServices: rest.maxServices ?? 9999 };
+  return { ...rest, maxServices: rest.maxServices ?? 0 };
 }
 
 function personalPlan(
@@ -200,7 +200,6 @@ export function getDefaultPlans(): PlansConfiguration {
       maxGuests: 150,
       maxTemplates: 5,
       maxRooms: 3,
-      maxServices: 3,
       maxOrgManagers: 3,
       customTemplates: false,
       mockupOcr: false,
@@ -222,7 +221,6 @@ export function getDefaultPlans(): PlansConfiguration {
       maxGuests: 500,
       maxTemplates: 8,
       maxRooms: 5,
-      maxServices: 5,
       maxOrgManagers: 5,
       customTemplates: true,
       mockupOcr: false,
@@ -244,7 +242,6 @@ export function getDefaultPlans(): PlansConfiguration {
       maxGuests: 1000,
       maxTemplates: 10,
       maxRooms: 10,
-      maxServices: 8,
       maxOrgManagers: 10,
       customTemplates: true,
       mockupOcr: true,
@@ -266,7 +263,6 @@ export function getDefaultPlans(): PlansConfiguration {
       maxGuests: 3500,
       maxTemplates: 18,
       maxRooms: 25,
-      maxServices: 15,
       maxOrgManagers: 18,
       customTemplates: true,
       mockupOcr: true,
@@ -288,7 +284,6 @@ export function getDefaultPlans(): PlansConfiguration {
       maxGuests: 5000,
       maxTemplates: 30,
       maxRooms: 50,
-      maxServices: 30,
       maxOrgManagers: 30,
       customTemplates: true,
       mockupOcr: true,
@@ -310,7 +305,6 @@ export function getDefaultPlans(): PlansConfiguration {
       maxGuests: 99999,
       maxTemplates: 9999,
       maxRooms: 9999,
-      maxServices: 9999,
       maxOrgManagers: 9999,
       customTemplates: true,
       mockupOcr: true,
@@ -324,16 +318,16 @@ export function getDefaultPlans(): PlansConfiguration {
     }),
     VENUE: {
       name: 'Salle',
-      price: '25.000 FC',
-      monthlyPriceFc: 25000,
+      price: '14.900 FC',
+      monthlyPriceFc: 14900,
       description:
-        'Gestionnaire de salles : publiez jusqu’à 5 lieux, éditeur 2D complet (banquet, tente, custom) et protocole QR sur place.',
+        'Gestionnaire de salles : publiez jusqu’à 5 lieux, éditeur 2D complet (banquet, tente, custom) et protocole QR sur place — sans prestations marketplace.',
       audience: 'VENUE',
       maxEvents: 3,
       maxGuests: 100,
       maxTemplates: 2,
       maxRooms: 5,
-      maxServices: 1,
+      maxServices: 0,
       maxOrgManagers: 3,
       customTemplates: false,
       mockupOcr: false,
@@ -347,8 +341,8 @@ export function getDefaultPlans(): PlansConfiguration {
     },
     SERVICE: {
       name: 'Prestataire',
-      price: '18.000 FC',
-      monthlyPriceFc: 18000,
+      price: '9.900 FC',
+      monthlyPriceFc: 9900,
       description:
         'Prestataire : fiches illimitées (traiteur, photo, DJ…) avec photos, vidéos, rayon d’intervention et calendrier, dès l’abonnement payé.',
       audience: 'SERVICE',
@@ -370,8 +364,8 @@ export function getDefaultPlans(): PlansConfiguration {
     },
     CATALOG: {
       name: 'Salle & presta',
-      price: '35.000 FC',
-      monthlyPriceFc: 35000,
+      price: '19.900 FC',
+      monthlyPriceFc: 19900,
       description:
         'Les deux : 5 salles (éditeur complet) et 5 prestations, pour les lieux qui proposent aussi un service.',
       audience: 'CATALOG',
@@ -458,7 +452,7 @@ export function getPlanLimits(planKey: string): PlanDefinition {
 }
 
 /**
- * Quotas effectifs : l’essai FREE d’un vendeur n’ouvre pas l’organisation d’événements.
+ * Quotas effectifs : un compte VENDOR (essai ou payant) n’organise pas d’événements.
  * Un compte client n’a aucun quota SaaS.
  */
 export function applyAccountKindToPlan(
@@ -477,13 +471,16 @@ export function applyAccountKindToPlan(
       maxOrgManagers: 0,
     };
   }
-  if (kind === 'VENDOR' && planKey && normalizePlanKey(planKey) === 'FREE') {
+  if (kind === 'VENDOR') {
+    const isFree = planKey ? normalizePlanKey(planKey) === 'FREE' : false;
     return {
       ...plan,
       maxEvents: 0,
       maxGuests: 0,
       maxTemplates: 0,
-      description: 'Essai catalogue : 1 salle et 1 prestation, sans organisation d’événements.',
+      ...(isFree
+        ? { description: 'Essai catalogue : 1 salle et 1 prestation, sans organisation d’événements.' }
+        : {}),
     };
   }
   return plan;

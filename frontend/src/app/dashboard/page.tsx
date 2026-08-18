@@ -4559,7 +4559,7 @@ function DashboardPageContent() {
  }
  breadcrumbs={<Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Tableau de bord' }]} />}
  action={
- tenant?.accountKind === 'VENDOR' ? (
+ tenant?.accountKind === 'VENDOR' || (planQuota != null && (planQuota.limits.maxEvents ?? 0) <= 0) ? (
  (planQuota?.limits.maxRooms ?? 0) > 0 ? (
  <Button onClick={() => router.push('/dashboard/rooms')} leftIcon={<PlusCircle className="w-4 h-4" />}>
  Nouvelle salle
@@ -4583,7 +4583,7 @@ function DashboardPageContent() {
  <GettingStartedChecklist
  hasEvents={events.length > 0}
  firstEventId={events[0]?.id}
- variant={tenant?.accountKind === 'VENDOR' ? 'vendor' : 'organizer'}
+ variant={tenant?.accountKind === 'VENDOR' || (planQuota != null && (planQuota.limits.maxEvents ?? 0) <= 0) ? 'vendor' : 'organizer'}
  hasRooms={(planQuota?.usage.rooms ?? 0) > 0}
  hasServices={(planQuota?.usage.services ?? 0) > 0}
  preferServices={(planQuota?.limits.maxRooms ?? 1) <= 0}

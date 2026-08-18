@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import CatalogueSearchLayout from '@/components/CatalogueSearchLayout';
@@ -10,6 +10,7 @@ import CatalogueFilterBar, {
   CatalogueGeoFields,
   type CatalogueFilterChip,
 } from '@/components/CatalogueFilterBar';
+import { useCatalogueQueryState } from '@/lib/catalogueQuery';
 import {
   EMPTY_CATALOGUE_GEO,
   PRICE_UNIT_OPTIONS,
@@ -37,16 +38,29 @@ const emptyFilters: ServiceFilters = {
   mobility: '',
 };
 
-export default function MarketplaceServicesPage() {
+const QUERY_OPTS = {
+  extraKeys: ['category', 'priceUnit', 'mobility'],
+  emptyExtra: { category: '', priceUnit: '', mobility: '' },
+  merge: (geo: CatalogueGeoState, extra: Record<string, string>): ServiceFilters => ({
+    ...geo,
+    category: extra.category || '',
+    priceUnit: extra.priceUnit || '',
+    mobility: (extra.mobility as ServiceMobility) || '',
+  }),
+  split: (filters: ServiceFilters) => ({
+    category: filters.category,
+    priceUnit: filters.priceUnit,
+    mobility: filters.mobility,
+  }),
+};
+
+function MarketplaceServicesPageInner() {
   const { mode, setView, gridCols, setGridCols } = useCatalogueView();
+  const { q, setQ, searchQ, applied, draft, setDraft, page, applyFilters, setPage } = useCatalogueQueryState(QUERY_OPTS);
   const [services, setServices] = useState<PublicService[]>([]);
   const [loading, setLoading] = useState(true);
-  const [q, setQ] = useState('');
-  const [applied, setApplied] = useState<ServiceFilters>(emptyFilters);
-  const [draft, setDraft] = useState<ServiceFilters>(emptyFilters);
   const [error, setError] = useState('');
   const [filterError, setFilterError] = useState('');
-  const [page, setPage] = useState(1);
   const PAGE_SIZE = 12;
 
   const load = useCallback(async (filters: ServiceFilters, search: string) => {
@@ -61,7 +75,6 @@ export default function MarketplaceServicesPage() {
       if (filters.mobility) params.set('mobility', filters.mobility);
       const data = await api.get(`/public/services${params.toString() ? `?${params}` : ''}`);
       setServices(data.services || []);
-      setPage(1);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossible de charger les prestataires.');
       setServices([]);
@@ -105,18 +118,9 @@ export default function MarketplaceServicesPage() {
     return catalogueGeoChips(applied, extra);
   }, [applied]);
 
-  const applyFilters = (next: ServiceFilters) => {
-    setFilterError('');
-    setApplied(next);
-    setDraft(next);
-  };
-
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void load(applied, q);
-    }, q.trim() ? 350 : 0);
-    return () => window.clearTimeout(timer);
-  }, [applied, q, load]);
+    void load(applied, searchQ);
+  }, [applied, searchQ, load]);
 
   const searchCenter = applied.proximity && applied.lat != null && applied.lng != null
     ? { lat: applied.lat, lng: applied.lng }
@@ -223,5 +227,13 @@ export default function MarketplaceServicesPage() {
         />
       )}
     />
+  );
+}
+
+export default function MarketplaceServicesPage() {
+  return (
+    <Suspense fallback={<div className="page-container py-16 text-sm text-muted">Chargement des prestataires…</div>}>
+      <MarketplaceServicesPageInner />
+    </Suspense>
   );
 }

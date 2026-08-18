@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import CatalogueSearchLayout from '@/components/CatalogueSearchLayout';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
@@ -9,6 +9,7 @@ import CatalogueFilterBar, {
   CatalogueFilterField,
   CatalogueGeoFields,
 } from '@/components/CatalogueFilterBar';
+import { useCatalogueQueryState } from '@/lib/catalogueQuery';
 import {
   EMPTY_CATALOGUE_GEO,
   SERVICE_MOBILITY_OPTIONS,
@@ -34,16 +35,27 @@ const emptyFilters: HubFilters = {
   mobility: '',
 };
 
-export default function MarketplaceHubPage() {
+const QUERY_OPTS = {
+  extraKeys: ['kind', 'mobility'],
+  emptyExtra: { kind: 'all', mobility: '' },
+  merge: (geo: CatalogueGeoState, extra: Record<string, string>): HubFilters => ({
+    ...geo,
+    kind: extra.kind === 'venue' || extra.kind === 'service' ? extra.kind : 'all',
+    mobility: (extra.mobility as ServiceMobility) || '',
+  }),
+  split: (filters: HubFilters) => ({
+    kind: filters.kind,
+    mobility: filters.mobility,
+  }),
+};
+
+function MarketplaceHubPageInner() {
   const { mode, setView, gridCols, setGridCols } = useCatalogueView();
+  const { q: query, setQ: setQuery, searchQ, applied, draft, setDraft, page, applyFilters, setPage } = useCatalogueQueryState(QUERY_OPTS);
   const [venues, setVenues] = useState<PublicVenue[]>([]);
   const [services, setServices] = useState<PublicService[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState('');
-  const [applied, setApplied] = useState<HubFilters>(emptyFilters);
-  const [draft, setDraft] = useState<HubFilters>(emptyFilters);
   const [filterError, setFilterError] = useState('');
-  const [page, setPage] = useState(1);
   const PAGE_SIZE = 12;
 
   const load = useCallback(async (filters: HubFilters, search: string) => {
@@ -68,11 +80,8 @@ export default function MarketplaceHubPage() {
   }, []);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void load(applied, query);
-    }, query.trim() ? 350 : 0);
-    return () => window.clearTimeout(timer);
-  }, [applied, query, load]);
+    void load(applied, searchQ);
+  }, [applied, searchQ, load]);
 
   const items = useMemo(
     () => sortCatalogueByDistance([
@@ -87,10 +96,6 @@ export default function MarketplaceHubPage() {
     return items.filter((item) => item.kind === applied.kind);
   }, [items, applied.kind]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [query, mode, applied]);
-
   const markers = useMemo(
     () =>
       visible
@@ -102,12 +107,6 @@ export default function MarketplaceHubPage() {
   const searchCenter = applied.proximity && applied.lat != null && applied.lng != null
     ? { lat: applied.lat, lng: applied.lng }
     : null;
-
-  const applyFilters = (next: HubFilters) => {
-    setFilterError('');
-    setApplied(next);
-    setDraft(next);
-  };
 
   const chips = catalogueGeoChips(
     applied,
@@ -214,5 +213,13 @@ export default function MarketplaceHubPage() {
         />
       )}
     />
+  );
+}
+
+export default function MarketplaceHubPage() {
+  return (
+    <Suspense fallback={<div className="page-container py-16 text-sm text-muted">Chargement du marketplace…</div>}>
+      <MarketplaceHubPageInner />
+    </Suspense>
   );
 }

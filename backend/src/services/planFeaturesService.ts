@@ -132,7 +132,9 @@ export async function assertVenueCatalogPublish(tenantId: string): Promise<void>
   const snapshot = await getTenantPlanSnapshot(tenantId);
   if (!snapshot) throw new PlanFeatureError('Organisation introuvable.');
   const { audience, maxRooms, name } = snapshot.features;
-  if (audience === 'B2C' || maxRooms <= 0) {
+  const isTrial = snapshot.plan === 'FREE' && maxRooms > 0;
+  const isCatalogPlan = audience === 'VENUE' || audience === 'CATALOG';
+  if ((!isCatalogPlan && !isTrial) || maxRooms <= 0) {
     throw new PlanFeatureError(
       `La publication d’une salle au catalogue n’est pas incluse dans ${name}. Choisissez le forfait Salle ou Salle & presta.`,
     );
