@@ -1,0 +1,60 @@
+export const PLATFORM_NOTIFICATION_TYPE = {
+  SUBSCRIPTION_APPROVAL: 'SUBSCRIPTION_APPROVAL',
+  ADMIN_ACTIVATION: 'ADMIN_ACTIVATION',
+  ADMIN_RENEWAL: 'ADMIN_RENEWAL',
+  ADMIN_PLAN_CHANGE: 'ADMIN_PLAN_CHANGE',
+  LICENSE_RENEWAL: 'LICENSE_RENEWAL',
+  MONTHLY_COMMISSION_DUE: 'MONTHLY_COMMISSION_DUE',
+  MONTHLY_COMMISSION_PAID: 'MONTHLY_COMMISSION_PAID',
+  SUBSCRIPTION_REQUEST_PENDING: 'SUBSCRIPTION_REQUEST_PENDING',
+  LICENSE_EXPIRING: 'LICENSE_EXPIRING',
+  INVOICE_ISSUED: 'INVOICE_ISSUED',
+  MARKETPLACE_INQUIRY: 'MARKETPLACE_INQUIRY',
+  MARKETPLACE_BOOKING: 'MARKETPLACE_BOOKING',
+  MARKETPLACE_BOOKING_STATUS: 'MARKETPLACE_BOOKING_STATUS',
+} as const;
+
+export type NotificationFamily = 'billing' | 'commissions' | 'catalog' | 'all';
+
+export const NOTIFICATION_FAMILY_LABELS: Record<Exclude<NotificationFamily, 'all'>, string> = {
+  billing: 'Billing',
+  commissions: 'Commissions',
+  catalog: 'Catalogue',
+};
+
+const BILLING_TYPES = new Set([
+  PLATFORM_NOTIFICATION_TYPE.SUBSCRIPTION_APPROVAL,
+  PLATFORM_NOTIFICATION_TYPE.ADMIN_ACTIVATION,
+  PLATFORM_NOTIFICATION_TYPE.ADMIN_RENEWAL,
+  PLATFORM_NOTIFICATION_TYPE.ADMIN_PLAN_CHANGE,
+  PLATFORM_NOTIFICATION_TYPE.LICENSE_RENEWAL,
+  PLATFORM_NOTIFICATION_TYPE.SUBSCRIPTION_REQUEST_PENDING,
+  PLATFORM_NOTIFICATION_TYPE.LICENSE_EXPIRING,
+  PLATFORM_NOTIFICATION_TYPE.INVOICE_ISSUED,
+]);
+
+const COMMISSION_TYPES = new Set([
+  PLATFORM_NOTIFICATION_TYPE.MONTHLY_COMMISSION_DUE,
+  PLATFORM_NOTIFICATION_TYPE.MONTHLY_COMMISSION_PAID,
+]);
+
+const CATALOG_TYPES = new Set([
+  PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
+  PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING,
+  PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING_STATUS,
+]);
+
+export function notificationFamily(type: string): Exclude<NotificationFamily, 'all'> | 'account' {
+  if (BILLING_TYPES.has(type as never)) return 'billing';
+  if (COMMISSION_TYPES.has(type as never)) return 'commissions';
+  if (CATALOG_TYPES.has(type as never)) return 'catalog';
+  return 'account';
+}
+
+export function notificationFamilyLabel(type: string): string {
+  const family = notificationFamily(type);
+  if (family === 'billing') return 'Billing';
+  if (family === 'commissions') return 'Commissions';
+  if (family === 'catalog') return 'Catalogue';
+  return 'Compte';
+}

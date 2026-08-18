@@ -143,6 +143,7 @@ export function NotificationBell({ className }: { className?: string }) {
  <div className="absolute right-0 top-full mt-2 w-[min(100vw-2rem,22rem)] z-[60] bg-white dark:bg-background border border-border dark:border-border rounded-2xl shadow-xl overflow-hidden">
  <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle dark:border-border">
  <p className="font-semibold text-sm">Notifications</p>
+ <div className="flex items-center gap-2">
  {unreadCount > 0 && (
  <button
  type="button"
@@ -153,6 +154,17 @@ export function NotificationBell({ className }: { className?: string }) {
  Tout marquer lu
  </button>
  )}
+ <button
+ type="button"
+ onClick={() => {
+ setOpen(false);
+ router.push('/dashboard/notifications');
+ }}
+ className="text-xs font-medium text-muted hover:text-foreground"
+ >
+ Voir tout
+ </button>
+ </div>
  </div>
 
  <div className="max-h-80 overflow-y-auto">
@@ -195,112 +207,6 @@ export function NotificationBell({ className }: { className?: string }) {
  )}
  </div>
  </div>
- )}
- </div>
- );
-}
-
-export function CommercialNotificationsPanel() {
- const [loading, setLoading] = useState(true);
- const [data, setData] = useState<NotificationsResponse | null>(null);
-
- useEffect(() => {
- api.get('/notifications?limit=50')
- .then(setData)
- .catch(console.error)
- .finally(() => setLoading(false));
- }, []);
-
- const markRead = async (id: string) => {
- await api.patch(`/notifications/${id}/read`, {});
- setData((prev) => {
- if (!prev) return prev;
- const wasUnread = prev.items.find((n) => n.id === id && !n.readAt);
- return {
- unreadCount: wasUnread ? Math.max(0, prev.unreadCount - 1) : prev.unreadCount,
- items: prev.items.map((n) =>
- n.id === id ? { ...n, readAt: n.readAt ?? new Date().toISOString() } : n,
- ),
- };
- });
- };
-
- const markAllRead = async () => {
- await api.post('/notifications/read-all', {});
- const now = new Date().toISOString();
- setData((prev) =>
- prev
- ? { unreadCount: 0, items: prev.items.map((n) => ({ ...n, readAt: n.readAt ?? now })) }
- : prev,
- );
- };
-
- if (loading) {
- return (
- <div className="flex justify-center py-10">
- <Loader2 className="w-6 h-6 animate-spin text-primary" />
- </div>
- );
- }
-
- return (
- <div className="bg-white dark:bg-background border rounded-2xl overflow-hidden">
- <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle dark:border-border">
- <div>
- <h2 className="font-bold text-lg flex items-center gap-2">
- <Bell className="w-5 h-5 text-primary" />
- Notifications
- </h2>
- {(data?.unreadCount ?? 0) > 0 && (
- <p className="text-xs text-muted mt-0.5">{data?.unreadCount} non lue(s)</p>
- )}
- </div>
- {(data?.unreadCount ?? 0) > 0 && (
- <button
- type="button"
- onClick={markAllRead}
- className="text-xs font-medium text-primary dark:text-primary hover:underline"
- >
- Tout marquer lu
- </button>
- )}
- </div>
-
- {!data?.items.length ? (
- <p className="text-sm text-muted text-center py-12 px-4">
- Aucune notification pour le moment. Vous serez alerté ici lors d&apos;approbations d&apos;abonnement ou de facturation.
- </p>
- ) : (
- <ul className="divide-y divide-border dark:divide-border">
- {data.items.map((n) => (
- <li
- key={n.id}
- className={cn(
- 'px-5 py-4',
- !n.readAt && 'bg-primary/10 dark:bg-primary/10',
- )}
- >
- <div className="flex items-start justify-between gap-3">
- <div>
- <p className="font-semibold text-sm">{n.title}</p>
- <p className="text-sm text-muted dark:text-muted mt-1">{n.message}</p>
- <p className="text-xs text-muted mt-2">
- {new Date(n.createdAt).toLocaleString('fr-FR')}
- </p>
- </div>
- {!n.readAt && (
- <button
- type="button"
- onClick={() => markRead(n.id)}
- className="shrink-0 text-xs font-medium text-primary dark:text-primary hover:underline"
- >
- Marquer lu
- </button>
- )}
- </div>
- </li>
- ))}
- </ul>
  )}
  </div>
  );

@@ -324,7 +324,7 @@ export default function AdminOpsHome() {
         <QueueSection
           title="Journal d’audit"
           count={data?.recentAudit.length ?? 0}
-          href="/dashboard?tab=overview"
+          href="/dashboard/audit"
           empty="Aucune action Super Admin enregistrée pour l’instant."
         >
           {data?.recentAudit.map((log) => (

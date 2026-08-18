@@ -4,6 +4,8 @@ import { prisma } from '../db';
 import { getPlanLimits, getCatalogMonthlyPriceFc, getEffectiveMonthlyPriceFc } from '../config/plansConfig';
 import { parsePlanPrice, getBillingPeriod } from './commercialService';
 import { sendRealEmail, sendRealWhatsApp } from './notificationService';
+import { notifyTenantOperators, notifyPlatformStaff } from './platformNotificationService';
+import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
 import {
   escapeHtml,
   formatAmountFc,
@@ -369,6 +371,18 @@ export async function createAndSendInvoice(params: {
     }
   }
 
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  void notifyTenantOperators(params.tenantId, {
+    type: PLATFORM_NOTIFICATION_TYPE.INVOICE_ISSUED,
+    title: `Facture ${invoiceNumber}`,
+    message: `${planDef.name} — ${formatAmountFc(amount)}. Consultez Factures pour le PDF.`,
+    metadata: {
+      invoiceId: invoice.id,
+      invoiceNumber,
+      href: `${frontendUrl}/dashboard/invoices`,
+    },
+  });
+
   return invoice;
 }
 
@@ -435,6 +449,29 @@ export async function sendLicenseExpiryWarning(params: {
       console.error(`[Invoice Service] Échec WhatsApp rappel J-7: ${waResult.error}`);
     }
   }
+
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const expiryIso = params.expiresAt.toISOString().slice(0, 10);
+  void notifyTenantOperators(params.tenantId, {
+    type: PLATFORM_NOTIFICATION_TYPE.LICENSE_EXPIRING,
+    title: 'Licence : expiration dans 7 jours',
+    message: `« ${params.tenantName} » (${planDef.name}) expire le ${expiryStr}. Renouvelez depuis Facturation.`,
+    metadata: {
+      tenantId: params.tenantId,
+      expiresAt: expiryIso,
+      href: `${frontendUrl}/dashboard/billing`,
+    },
+  });
+  void notifyPlatformStaff({
+    type: PLATFORM_NOTIFICATION_TYPE.LICENSE_EXPIRING,
+    title: `Licence J-7 — ${params.tenantName}`,
+    message: `Le forfait ${planDef.name} expire le ${expiryStr}.`,
+    metadata: {
+      tenantId: params.tenantId,
+      expiresAt: expiryIso,
+      href: `${frontendUrl}/dashboard?tab=tenants`,
+    },
+  });
 }
 
 const INVOICE_TYPE_LABELS: Record<string, string> = {

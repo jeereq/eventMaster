@@ -10,7 +10,7 @@ import {
  Calendar, Users, Mail, CreditCard, LayoutDashboard,
  LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper, User, Sun, Moon, BarChart3,
  Building2, FileText, Key, MessageSquare, ScanLine, Briefcase, Clock, BookOpen,
- PanelLeftClose, PanelLeft, Store, CalendarCheck,
+ PanelLeftClose, PanelLeft, Store, CalendarCheck, Bell, ScrollText,
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import UserLegalGate from '@/components/UserLegalGate';
@@ -68,6 +68,9 @@ const NAV_TOOLTIPS: Record<string, string> = {
  Statistiques: 'RSVP et analyses d’événements',
  Modèles: 'Concepteur d’invitations',
  'Facturation & plan': 'Forfait, quotas et upgrade',
+ Notifications: 'Alertes de votre compte',
+ 'Journal d’audit': 'Actions Super Admin et Commercial',
+ Catalogue: 'Fiches, demandes et réservations publiques',
 };
 
 function withNavTips(sections: NavSection[]): NavSection[] {
@@ -235,7 +238,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
  useEffect(() => {
  if (loading || !token || !user || !isClientAccount) return;
- const allowed = ['/dashboard/bookings', '/dashboard/profile', '/dashboard/guide'].some(
+ const allowed = ['/dashboard/bookings', '/dashboard/profile', '/dashboard/guide', '/dashboard/notifications'].some(
  (p) => pathname === p || pathname.startsWith(`${p}/`),
  );
  if (pathname.startsWith('/dashboard') && !allowed) {
@@ -325,6 +328,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  items: [
  { name: 'Modèles invitation', href: '/dashboard?tab=templates', tab: 'templates', tourId: 'nav-templates', icon: FileText },
  { name: 'Messages automatiques', href: '/dashboard?tab=message-templates', tab: 'message-templates', tourId: 'nav-message-templates', icon: MessageSquare },
+ { name: 'Catalogue', href: '/dashboard/admin/catalogue', tourId: 'nav-catalog-admin', icon: Store },
  ],
  },
  {
@@ -334,11 +338,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  { name: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests', tab: 'subscription-requests', tourId: 'nav-subscription-requests', icon: Clock },
  { name: 'Forfaits & tarifs', href: '/dashboard?tab=subscription-plans', tab: 'subscription-plans', tourId: 'nav-subscription-plans', icon: CreditCard },
  { name: 'Factures', href: '/dashboard?tab=invoices', tab: 'invoices', tourId: 'nav-invoices', icon: FileText },
+ { name: 'Journal d’audit', href: '/dashboard/audit', tourId: 'nav-audit', icon: ScrollText },
  { name: 'Réglages plateforme', href: '/dashboard?tab=settings', tab: 'settings', tourId: 'nav-settings', icon: Key },
  ],
  },
  {
  items: [
+ { name: 'Notifications', href: '/dashboard/notifications', tourId: 'nav-notifications', icon: Bell },
  { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
  { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
  ],
@@ -357,6 +363,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  {
  items: [
  { name: 'Parrainage & commissions', href: '/dashboard/commercial', tourId: 'nav-commercial', icon: Briefcase },
+ { name: 'Notifications', href: '/dashboard/notifications', tourId: 'nav-notifications', icon: Bell },
  { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
  { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
  ],
@@ -367,6 +374,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  {
  items: [
  { name: 'Réseau commercial', href: '/dashboard/org-commercial', tourId: 'nav-org-commercial', icon: Briefcase },
+ { name: 'Notifications', href: '/dashboard/notifications', tourId: 'nav-notifications', icon: Bell },
  { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
  { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
  ],
@@ -378,6 +386,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  items: [
  { name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar },
  { name: 'Protocole', href: '/dashboard/events?mode=protocol', tourId: 'nav-protocol', icon: ScanLine },
+ { name: 'Notifications', href: '/dashboard/notifications', tourId: 'nav-notifications', icon: Bell },
  { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
  { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
  ],
@@ -389,6 +398,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  items: [
  { name: 'Marketplace', href: '/marketplace', tourId: 'nav-catalogue', icon: Store, description: 'Salles et prestataires publics' },
  { name: 'Mes réservations', href: '/dashboard/bookings', tourId: 'nav-bookings', icon: CalendarCheck },
+ { name: 'Notifications', href: '/dashboard/notifications', tourId: 'nav-notifications', icon: Bell },
  { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
  { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
  ],
@@ -421,13 +431,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  : []),
  ...(access?.canViewBilling ? [{ name: 'Facturation & plan', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }] : []),
  ...(access?.canViewInvoices ? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: FileText }] : []),
+ { name: 'Notifications', href: '/dashboard/notifications', tourId: 'nav-notifications', icon: Bell },
  { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
  { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
  ],
  },
  ];
 
- const showCommercialNotifications = user?.role === 'COMMERCIAL' || user?.role === 'SUPER_ADMIN' || access?.level === 'commercial';
+ const showNotifications = Boolean(user);
 
  return (
  <Suspense
@@ -459,7 +470,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  <span className="font-semibold text-base text-foreground">EventMaster</span>
  </div>
  <div className="flex items-center gap-1.5">
- {showCommercialNotifications && <NotificationBell />}
+ {showNotifications && <NotificationBell />}
  <ViewCustomizerTrigger />
  <button
  onClick={toggleTheme}
@@ -516,7 +527,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  )}
  </div>
  <div className={cn('flex items-center gap-1', sidebarCollapsed && 'flex-col')}>
- {showCommercialNotifications && !sidebarCollapsed && <NotificationBell />}
+ {showNotifications && !sidebarCollapsed && <NotificationBell />}
  <Tooltip content={sidebarCollapsed ? 'Agrandir le menu' : 'Réduire le menu'} side="right">
  <button
  type="button"
@@ -662,7 +673,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
  {/* Contenu principal */}
  <main id="main-content" className="flex-1 min-w-0 overflow-y-auto bg-background flex flex-col">
- <DashboardTopBar showCommercialNotifications={showCommercialNotifications} />
+ <DashboardTopBar />
  <div className="page-container py-5 sm:py-6 lg:py-8 flex-1 em-dashboard-content">
  <UserLegalGate>{children}</UserLegalGate>
  </div>

@@ -112,20 +112,83 @@ export async function getAuditLogs(req: AuthenticatedRequest, res: Response) {
       return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
     }
 
-    const tenantId = typeof req.query.tenantId === 'string' ? req.query.tenantId : undefined;
-    const action = typeof req.query.action === 'string' ? req.query.action : undefined;
-    const take = Math.min(Math.max(parseInt(String(req.query.limit || '50'), 10) || 50, 1), 100);
+    const tenantId = typeof req.query.tenantId === 'string' && req.query.tenantId.trim()
+      ? req.query.tenantId.trim()
+      : undefined;
+    const action = typeof req.query.action === 'string' && req.query.action.trim()
+      ? req.query.action.trim()
+      : undefined;
+    const q = typeof req.query.q === 'string' && req.query.q.trim() ? req.query.q.trim() : undefined;
+    const fromRaw = typeof req.query.from === 'string' ? req.query.from : undefined;
+    const toRaw = typeof req.query.to === 'string' ? req.query.to : undefined;
+    const page = Math.max(parseInt(String(req.query.page || '1'), 10) || 1, 1);
+    const pageSize = Math.min(Math.max(parseInt(String(req.query.limit || '50'), 10) || 50, 1), 100);
 
-    const logs = await prisma.adminAuditLog.findMany({
-      where: {
-        tenantId: tenantId || undefined,
-        action: action || undefined,
-      },
-      orderBy: { createdAt: 'desc' },
-      take,
+    const createdAt: { gte?: Date; lte?: Date } = {};
+    if (fromRaw) {
+      const from = new Date(fromRaw);
+      if (!Number.isNaN(from.getTime())) createdAt.gte = from;
+    }
+    if (toRaw) {
+      const to = new Date(toRaw);
+      if (!Number.isNaN(to.getTime())) {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(toRaw)) {
+          to.setHours(23, 59, 59, 999);
+        }
+        createdAt.lte = to;
+      }
+    }
+
+    const where = {
+      tenantId: tenantId || undefined,
+      action: action || undefined,
+      createdAt: Object.keys(createdAt).length ? createdAt : undefined,
+      ...(q
+        ? {
+            OR: [
+              { summary: { contains: q, mode: 'insensitive' as const } },
+              { actorEmail: { contains: q, mode: 'insensitive' as const } },
+              { action: { contains: q, mode: 'insensitive' as const } },
+            ],
+          }
+        : {}),
+    };
+
+    const [logs, total, actionRows] = await Promise.all([
+      prisma.adminAuditLog.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.adminAuditLog.count({ where }),
+      prisma.adminAuditLog.findMany({
+        distinct: ['action'],
+        select: { action: true },
+        orderBy: { action: 'asc' },
+      }),
+    ]);
+
+    const tenantIds = [...new Set(logs.map((log) => log.tenantId).filter((id): id is string => Boolean(id)))];
+    const tenants = tenantIds.length
+      ? await prisma.tenant.findMany({
+          where: { id: { in: tenantIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+    const tenantNameById = new Map(tenants.map((t) => [t.id, t.name]));
+
+    return res.json({
+      logs: logs.map((log) => ({
+        ...serializeAuditLog(log),
+        tenantName: log.tenantId ? tenantNameById.get(log.tenantId) || null : null,
+      })),
+      total,
+      page,
+      pageSize,
+      hasMore: page * pageSize < total,
+      actions: actionRows.map((row) => row.action),
     });
-
-    return res.json({ logs: logs.map(serializeAuditLog) });
   } catch (error) {
     console.error('Erreur audit-logs admin:', error);
     return res.status(500).json({ error: 'Impossible de charger le journal d’audit.' });

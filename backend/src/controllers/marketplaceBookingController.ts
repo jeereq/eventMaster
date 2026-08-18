@@ -4,6 +4,8 @@ import { prisma } from '../db';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { resolveOrgAccess } from '../services/permissionsService';
 import { sendRealEmail } from '../services/notificationService';
+import { notifyTenantOperators, notifyUsers } from '../services/platformNotificationService';
+import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
 import { getPlanLimitsForTenant } from '../config/plansConfig';
 import { computeMarketplaceAmounts, billedMarketplaceAmount } from '../config/marketplaceBilling';
 import {
@@ -76,6 +78,30 @@ function serializeBooking(row: {
     createdAt: row.createdAt,
     event: row.event,
   };
+}
+
+async function notifyBookingStatus(booking: {
+  id: string;
+  vendorTenantId: string;
+  organizerUserId: string | null;
+  listing: { headline: string | null; room: { name: string } } | null;
+  offering: { title: string } | null;
+}, message: string) {
+  const title = booking.offering?.title || booking.listing?.headline || booking.listing?.room.name || 'Réservation';
+  void notifyTenantOperators(booking.vendorTenantId, {
+    type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING_STATUS,
+    title: `${title}`,
+    message,
+    metadata: { bookingId: booking.id, href: `${FRONTEND_URL}/dashboard/marketplace` },
+  });
+  if (booking.organizerUserId) {
+    void notifyUsers([booking.organizerUserId], {
+      type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING_STATUS,
+      title: `${title}`,
+      message,
+      metadata: { bookingId: booking.id, href: `${FRONTEND_URL}/dashboard/bookings` },
+    });
+  }
 }
 
 async function ownerEmail(tenantId: string, managerId: string | null) {
@@ -246,6 +272,25 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
       );
     }
 
+    void notifyTenantOperators(vendorTenantId, {
+      type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING,
+      title: `Réservation — ${title}`,
+      message: `Demande ${period}. Montant ${amounts.amountFc} FC.`,
+      metadata: {
+        bookingId: booking.id,
+        href: `${FRONTEND_URL}/dashboard/marketplace`,
+      },
+    });
+    void notifyUsers([userId], {
+      type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING,
+      title: `Demande envoyée — ${title}`,
+      message: `Votre réservation ${period} a été transmise.`,
+      metadata: {
+        bookingId: booking.id,
+        href: `${FRONTEND_URL}/dashboard/bookings`,
+      },
+    });
+
     return res.status(201).json({
       booking: serializeBooking(booking),
       message: 'Demande de réservation envoyée. Le professionnel doit l’accepter, puis l’acompte sera marqué hors plateforme.',
@@ -328,6 +373,10 @@ export async function updateBooking(req: AuthenticatedRequest, res: Response) {
         data: { status: 'ACCEPTED', ...amounts },
         include: bookingInclude,
       });
+      void notifyBookingStatus(
+        { ...booking, organizerUserId: booking.organizerUserId },
+        'Réservation acceptée. En attente de l’acompte.',
+      );
       return res.json({ booking: serializeBooking(updated), message: 'Réservation acceptée. En attente de l’acompte.' });
     }
 
@@ -341,6 +390,7 @@ export async function updateBooking(req: AuthenticatedRequest, res: Response) {
         data: { status: 'CANCELLED' },
         include: bookingInclude,
       });
+      void notifyBookingStatus(booking, 'Réservation annulée.');
       return res.json({ booking: serializeBooking(updated), message: 'Réservation annulée.' });
     }
 
@@ -430,6 +480,7 @@ export async function updateBooking(req: AuthenticatedRequest, res: Response) {
         data: { status: 'CONFIRMED', eventId },
         include: bookingInclude,
       });
+      notifyBookingStatus(updated, `Réservation confirmée pour « ${updated.offering?.title || updated.listing?.headline || updated.listing?.room.name} ».`);
 
       return res.json({
         booking: serializeBooking(updated),

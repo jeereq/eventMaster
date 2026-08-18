@@ -12,6 +12,10 @@ import { getPlansConfiguration, getPlanLimits, PAID_PLAN_KEYS, isPlanAllowedForA
 import { issueTenantPlanInvoice, computeExtendedExpiry } from '../services/tenantBillingService';
 import { computeApprovedAmount, getPlanAmount } from '../services/invoiceService';
 import { auditReq } from '../services/adminAuditService';
+import { notifyPlatformStaff } from '../services/platformNotificationService';
+import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
+
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 // 1. Submit a subscription request (Tenant)
 export async function submitSubscriptionRequest(req: AuthenticatedRequest, res: Response) {
@@ -54,6 +58,23 @@ export async function submitSubscriptionRequest(req: AuthenticatedRequest, res: 
         proofOfPayment: proofOfPayment || null,
         status: 'PENDING',
       },
+    });
+
+    const org = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { name: true },
+    });
+    void notifyPlatformStaff({
+      type: PLATFORM_NOTIFICATION_TYPE.SUBSCRIPTION_REQUEST_PENDING,
+      title: `Demande d’abonnement — ${org?.name || 'Organisation'}`,
+      message: `Forfait ${requestedPlan} · ${days} jours. À traiter dans Demandes d’abonnement.`,
+      metadata: {
+        tenantId,
+        requestedPlan,
+        requestId: request.id,
+        href: `${FRONTEND_URL}/dashboard?tab=subscription-requests`,
+      },
+      includeCommercials: true,
     });
 
     return res.status(201).json({

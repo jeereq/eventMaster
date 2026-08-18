@@ -7,7 +7,6 @@ import {
  Building2, Loader2, TrendingUp, Users, Wallet,
 } from 'lucide-react';
 import { Button, PageHeader, SkeletonCommercialView, Pagination, paginateItems } from '@/components/ui';
-import { CommercialNotificationsPanel } from '@/components/CommercialNotifications';
 import ReferralShareButtons from '@/components/commercial/ReferralShareButtons';
 
 interface OrgCommercialDashboard {
@@ -77,8 +76,6 @@ export default function OrgCommercialPage() {
  title="Réseau commercial"
  description={`Parrainez de nouvelles organisations pour ${data.organizationName || 'votre organisation'} et suivez vos commissions.`}
  />
-
- <CommercialNotificationsPanel />
 
  <div className="grid sm:grid-cols-3 gap-4">
  <div className="bg-white dark:bg-background border rounded-2xl p-5">

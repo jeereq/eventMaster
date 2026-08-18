@@ -26,7 +26,9 @@ function useDashboardTitle(): { title: string; subtitle?: string } {
     if (pathname.startsWith('/dashboard/marketplace')) return { title: 'Marketplace', subtitle: 'Prestations & réservations' };
     if (pathname.startsWith('/dashboard/bookings')) return { title: 'Mes réservations', subtitle: 'Demandes de dates' };
     if (pathname.startsWith('/dashboard/profile')) return { title: 'Mon compte', subtitle: 'Profil et sécurité' };
-    if (pathname.startsWith('/dashboard/guide')) return { title: 'Guide', subtitle: 'Prise en main' };
+    if (pathname.startsWith('/dashboard/notifications')) return { title: 'Notifications', subtitle: 'Alertes de votre compte' };
+    if (pathname.startsWith('/dashboard/audit')) return { title: 'Journal d’audit', subtitle: 'Actions plateforme' };
+    if (pathname.startsWith('/dashboard/admin/catalogue')) return { title: 'Catalogue', subtitle: 'Modération marketplace' };
     if (pathname.startsWith('/dashboard/commercial')) return { title: 'Parrainage', subtitle: 'Commissions plateforme' };
     if (pathname.startsWith('/dashboard/org-commercial')) return { title: 'Réseau commercial', subtitle: 'Parrainage organisation' };
 
@@ -59,11 +61,7 @@ function useDashboardTitle(): { title: string; subtitle?: string } {
   }, [pathname, tab, user?.role]);
 }
 
-export default function DashboardTopBar({
-  showCommercialNotifications,
-}: {
-  showCommercialNotifications: boolean;
-}) {
+export default function DashboardTopBar() {
   const { user, tenant } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { title, subtitle } = useDashboardTitle();
@@ -84,7 +82,7 @@ export default function DashboardTopBar({
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
-        {showCommercialNotifications && <NotificationBell />}
+        <NotificationBell />
         <ViewCustomizerTrigger />
         <button
           type="button"

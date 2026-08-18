@@ -17,7 +17,17 @@ export async function listNotifications(req: AuthenticatedRequest, res: Response
     }
 
     const limit = Math.min(parseInt(String(req.query.limit ?? '30'), 10) || 30, 100);
-    const result = await getUserNotifications(req.user.id, limit);
+    const page = Math.max(parseInt(String(req.query.page ?? '1'), 10) || 1, 1);
+    const unread = req.query.unread === '1' || req.query.unread === 'true';
+    const type = typeof req.query.type === 'string' && req.query.type ? req.query.type : undefined;
+    const family = typeof req.query.family === 'string' && req.query.family ? req.query.family : undefined;
+    const result = await getUserNotifications(req.user.id, {
+      limit,
+      page,
+      unread: unread || undefined,
+      type,
+      family,
+    });
     return res.json(result);
   } catch (error: any) {
     console.error('[listNotifications]', error);

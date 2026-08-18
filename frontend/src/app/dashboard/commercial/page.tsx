@@ -7,7 +7,6 @@ import {
  Building2, Loader2, PlusCircle, TrendingUp, Users, Wallet, Mail, MessageSquare, RefreshCw, AlertCircle, CheckCircle2,
 } from 'lucide-react';
 import { Button, PageHeader, SkeletonCommercialView, Pagination, paginateItems } from '@/components/ui';
-import { CommercialNotificationsPanel } from '@/components/CommercialNotifications';
 import ReferralShareButtons from '@/components/commercial/ReferralShareButtons';
 
 interface CommercialDashboard {
@@ -131,8 +130,6 @@ export default function CommercialDashboardPage() {
  title="Parrainage & commissions"
  description="Compte commercial plateforme — sans organisation. Gérez vos parrainages et suivez vos commissions."
  />
-
- <CommercialNotificationsPanel />
 
  <div className="grid sm:grid-cols-3 gap-4">
  <div className="bg-white dark:bg-background border rounded-2xl p-5">

@@ -46,6 +46,15 @@ import {
   getTenantOps,
   impersonateTenant,
 } from '../controllers/adminOpsController';
+import {
+  getCatalogOverview,
+  listAdminVenues,
+  listAdminOfferings,
+  listAdminInquiries,
+  listAdminBookings,
+  unpublishVenueListing,
+  unpublishServiceOffering,
+} from '../controllers/adminCatalogController';
 
 const router = Router();
 
@@ -75,6 +84,14 @@ router.get('/ops-overview', getOpsOverview);
 router.get('/audit-logs', getAuditLogs);
 router.get('/tenants/:id/ops', getTenantOps);
 router.post('/tenants/:id/impersonate', impersonateTenant);
+
+router.get('/catalog/overview', getCatalogOverview);
+router.get('/catalog/venues', listAdminVenues);
+router.get('/catalog/offerings', listAdminOfferings);
+router.get('/catalog/inquiries', listAdminInquiries);
+router.get('/catalog/bookings', listAdminBookings);
+router.patch('/catalog/venues/:id/unpublish', unpublishVenueListing);
+router.patch('/catalog/offerings/:id/unpublish', unpublishServiceOffering);
 
 router.put('/tenants/:id', updateTenantPlanOrLicense);
 router.delete('/tenants/:id', deleteTenant);

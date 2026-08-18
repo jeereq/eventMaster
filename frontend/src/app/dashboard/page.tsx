@@ -353,7 +353,7 @@ function DashboardPageContent() {
  const [activeTab, setActiveTab] = useState<
  'overview' | 'tenants' | 'users' | 'templates' | 'message-templates' | 'events' | 'analytics' | 'guests' | 'settings'
  | 'subscription-requests' | 'subscription-plans' | 'invoices'
- >('tenants');
+ >('overview');
 
  useEffect(() => {
  if (isPlatformStaff(user?.role) && (tabParam || user?.role === 'SUPER_ADMIN')) {

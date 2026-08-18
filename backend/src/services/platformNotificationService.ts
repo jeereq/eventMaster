@@ -2,6 +2,9 @@ import { PlanType, Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import { getPlanLimits } from '../config/plansConfig';
 import { sendExpoPushToUser } from './expoPushService';
+import { typesForFamily } from '../config/platformNotificationTypes';
+
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 function formatAmountFc(amount: number): string {
   return `${amount.toLocaleString('fr-FR')} FC`;
@@ -77,6 +80,7 @@ export async function createCommercialBillingNotification(params: {
         discountAmount: params.discountAmount,
         invoiceNumber: params.invoiceNumber ?? null,
         commissionAmount: params.commissionAmount ?? null,
+        href: `${FRONTEND_URL}/dashboard/notifications`,
       },
     },
   }).then(async (notification) => {
@@ -138,19 +142,84 @@ export async function hasNotificationForPeriod(params: {
   });
 }
 
-export async function getUserNotifications(userId: string, limit = 30) {
-  const [items, unreadCount] = await Promise.all([
+export async function getUserNotifications(
+  userId: string,
+  opts?: { limit?: number; page?: number; unread?: boolean; type?: string; family?: string },
+) {
+  const limit = Math.min(Math.max(opts?.limit ?? 30, 1), 100);
+  const page = Math.max(opts?.page ?? 1, 1);
+  const familyTypes = typesForFamily(opts?.family);
+  const where: Prisma.PlatformNotificationWhereInput = {
+    userId,
+    ...(opts?.unread ? { readAt: null } : {}),
+    ...(opts?.type ? { type: opts.type } : {}),
+    ...(familyTypes ? { type: { in: familyTypes } } : {}),
+  };
+
+  const [items, unreadCount, total] = await Promise.all([
     prisma.platformNotification.findMany({
-      where: { userId },
+      where,
       orderBy: { createdAt: 'desc' },
       take: limit,
+      skip: (page - 1) * limit,
     }),
-    prisma.platformNotification.count({
-      where: { userId, readAt: null },
-    }),
+    prisma.platformNotification.count({ where: { userId, readAt: null } }),
+    prisma.platformNotification.count({ where }),
   ]);
 
-  return { items, unreadCount };
+  return {
+    items,
+    unreadCount,
+    total,
+    page,
+    pageSize: limit,
+    hasMore: page * limit < total,
+  };
+}
+
+export async function notifyUsers(
+  userIds: Array<string | null | undefined>,
+  params: { type: string; title: string; message: string; metadata?: Record<string, unknown> },
+) {
+  const unique = [...new Set(userIds.filter((id): id is string => Boolean(id)))];
+  await Promise.all(unique.map((userId) => createPlatformNotification({ userId, ...params })));
+}
+
+export async function notifyPlatformStaff(params: {
+  type: string;
+  title: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+  includeCommercials?: boolean;
+}) {
+  const users = await prisma.user.findMany({
+    where: params.includeCommercials
+      ? { OR: [{ role: 'SUPER_ADMIN' }, { role: 'COMMERCIAL', tenantId: null }] }
+      : { role: 'SUPER_ADMIN' },
+    select: { id: true },
+  });
+  await notifyUsers(
+    users.map((u) => u.id),
+    params,
+  );
+}
+
+export async function notifyTenantOperators(
+  tenantId: string,
+  params: { type: string; title: string; message: string; metadata?: Record<string, unknown> },
+) {
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: {
+      managerId: true,
+      users: {
+        where: { orgRole: 'MANAGER' },
+        select: { id: true },
+      },
+    },
+  });
+  if (!tenant) return;
+  await notifyUsers([tenant.managerId, ...tenant.users.map((u) => u.id)], params);
 }
 
 export async function markNotificationRead(userId: string, notificationId: string) {

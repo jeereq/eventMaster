@@ -139,6 +139,24 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
       'Consultez votre forfait actuel, les quotas consommés et disponibles. Soumettez une demande de changement de plan avec preuve de paiement si nécessaire.',
     route: '/dashboard/billing',
   },
+  'nav-notifications': {
+    title: 'Notifications',
+    description:
+      'Inbox de votre compte : factures, devis marketplace, réservations et alertes d’abonnement. Marquez comme lu et ouvrez l’écran concerné.',
+    route: '/dashboard/notifications',
+  },
+  'nav-audit': {
+    title: 'Journal d’audit',
+    description:
+      'Historique des actions Super Admin et Commercial plateforme : impersonation, changements de forfait, suppressions.',
+    route: '/dashboard/audit',
+  },
+  'nav-catalog-admin': {
+    title: 'Catalogue',
+    description:
+      'Modération des fiches salles et prestataires publiées, demandes de devis et réservations sur le marketplace.',
+    route: '/dashboard/admin/catalogue',
+  },
   'nav-guide': {
     title: 'Guide utilisateur',
     description:

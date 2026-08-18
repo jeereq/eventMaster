@@ -25,6 +25,8 @@ import {
 import { parseListingDetails } from '../utils/listingDetails';
 import { RoomType, ServiceCategory, TenantAccountKind, MarketplaceBookingStatus, VenuePriceUnit } from '@prisma/client';
 import { PlanFeatureError, assertServiceQuota, assertVenueCatalogPublish } from '../services/planFeaturesService';
+import { notifyTenantOperators } from '../services/platformNotificationService';
+import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
 import {
   allowedCityPrismaFilter,
   normalizeAllowedCity,
@@ -428,6 +430,17 @@ export async function createVenueInquiry(req: AuthenticatedRequest, res: Respons
       `;
       await sendRealEmail(ownerEmail, subject, text, html);
     }
+
+    void notifyTenantOperators(listing.tenant.id, {
+      type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
+      title: `Devis — ${listing.room.name}`,
+      message: `${inquiry.fromName} a demandé un devis pour votre salle.`,
+      metadata: {
+        listingId: listing.id,
+        inquiryId: inquiry.id,
+        href: `${FRONTEND_URL}/dashboard/rooms`,
+      },
+    });
 
     await sendRealEmail(
       fromEmail,
@@ -860,6 +873,17 @@ export async function createServiceInquiry(req: AuthenticatedRequest, res: Respo
       subjectTitle: offering.title,
       publicUrl: `${FRONTEND_URL}/marketplace/prestataires/${offering.slug}`,
       inquiry,
+    });
+
+    void notifyTenantOperators(offering.tenant.id, {
+      type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
+      title: `Devis — ${offering.title}`,
+      message: `${inquiry.fromName} a demandé un devis pour votre prestation.`,
+      metadata: {
+        offeringId: offering.id,
+        inquiryId: inquiry.id,
+        href: `${FRONTEND_URL}/dashboard/marketplace`,
+      },
     });
 
     return res.status(201).json({

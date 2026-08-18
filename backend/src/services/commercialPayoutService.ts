@@ -1,13 +1,14 @@
 import { prisma } from '../db';
 import { getBillingPeriod, formatAmountFc } from './commercialService';
 import { sendRealEmail, sendRealWhatsApp } from './notificationService';
+import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
 import {
   createPlatformNotification,
   hasNotificationForPeriod,
 } from './platformNotificationService';
 
-export const MONTHLY_PAYOUT_TYPE = 'MONTHLY_COMMISSION_DUE';
-export const MONTHLY_PAYOUT_PAID_TYPE = 'MONTHLY_COMMISSION_PAID';
+export const MONTHLY_PAYOUT_TYPE = PLATFORM_NOTIFICATION_TYPE.MONTHLY_COMMISSION_DUE;
+export const MONTHLY_PAYOUT_PAID_TYPE = PLATFORM_NOTIFICATION_TYPE.MONTHLY_COMMISSION_PAID;
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 

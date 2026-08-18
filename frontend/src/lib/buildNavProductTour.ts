@@ -75,7 +75,7 @@ export function buildOrgNavTourIds(
   if (workspace?.showTemplates) tabs.push({ tourId: 'nav-templates', route: '/dashboard/templates' });
   if (access?.canViewBilling) tabs.push({ tourId: 'nav-billing' });
   if (access?.canViewInvoices) tabs.push({ tourId: 'nav-invoices', route: '/dashboard/invoices' });
-  tabs.push({ tourId: 'nav-guide' }, { tourId: 'nav-profile' });
+  tabs.push({ tourId: 'nav-notifications' }, { tourId: 'nav-guide' }, { tourId: 'nav-profile' });
   return tabs;
 }
 
@@ -142,11 +142,14 @@ export function buildNavProductTour(
         { tourId: 'nav-guests' },
         { tourId: 'nav-templates' },
         { tourId: 'nav-message-templates' },
+        { tourId: 'nav-catalog-admin' },
         { tourId: 'nav-analytics' },
         { tourId: 'nav-subscription-requests' },
         { tourId: 'nav-subscription-plans' },
         { tourId: 'nav-invoices' },
+        { tourId: 'nav-audit' },
         { tourId: 'nav-settings' },
+        { tourId: 'nav-notifications' },
         { tourId: 'nav-guide' },
         { tourId: 'nav-profile' },
       ]);
@@ -157,6 +160,7 @@ export function buildNavProductTour(
         { tourId: 'nav-subscription-requests' },
         { tourId: 'nav-invoices' },
         { tourId: 'nav-commercial' },
+        { tourId: 'nav-notifications' },
         { tourId: 'nav-guide' },
         { tourId: 'nav-profile' },
       ]);
@@ -164,6 +168,7 @@ export function buildNavProductTour(
     case 'org_commercial':
       return buildSteps([
         { tourId: 'nav-org-commercial' },
+        { tourId: 'nav-notifications' },
         { tourId: 'nav-guide' },
         { tourId: 'nav-profile' },
       ]);
@@ -172,6 +177,7 @@ export function buildNavProductTour(
       return buildSteps([
         { tourId: 'nav-events' },
         { tourId: 'nav-protocol' },
+        { tourId: 'nav-notifications' },
         { tourId: 'nav-guide' },
         { tourId: 'nav-profile' },
       ]);
@@ -185,6 +191,7 @@ export function buildNavProductTour(
       return buildSteps([
         { tourId: 'nav-catalogue' },
         { tourId: 'nav-bookings' },
+        { tourId: 'nav-notifications' },
         { tourId: 'nav-guide' },
         { tourId: 'nav-profile' },
       ]);
