@@ -153,7 +153,10 @@ export default function LandingMapSection() {
           resultLabel={!loading ? `${items.length} fiche${items.length > 1 ? 's' : ''} · ${markers.length} sur la carte` : undefined}
           chips={chips}
           onRemoveChip={(id) => setApplied(clearCatalogueExtraChip(clearCatalogueGeoChip(applied, id), id))}
-          onClearChips={() => setApplied(emptyFilters)}
+          onClearChips={() => {
+            setApplied(emptyFilters);
+            setDraft(emptyFilters);
+          }}
           onOpen={() => { setDraft(applied); setFilterError(''); }}
           onApply={async () => {
             try {

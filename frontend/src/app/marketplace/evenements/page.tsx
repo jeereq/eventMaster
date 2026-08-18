@@ -17,7 +17,7 @@ import {
   type PublicEventCard,
 } from '@/lib/marketplace';
 import { useCatalogueQueryState } from '@/lib/catalogueQuery';
-import { EMPTY_CATALOGUE_EXTRAS, appendCatalogueEntityParams } from '@/lib/catalogueEntityFilters';
+import { EMPTY_CATALOGUE_EXTRAS, appendCatalogueEntityParams, clearCatalogueExtraChip } from '@/lib/catalogueEntityFilters';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import CatalogueSearchLayout from '@/components/CatalogueSearchLayout';
 import { usePageSize } from '@/components/ui';
@@ -155,10 +155,7 @@ function MarketplaceEventsPageInner() {
           onGridColsChange={setGridCols}
           chips={chips}
           resultLabel={!loading ? `${items.length} événement${items.length > 1 ? 's' : ''}` : undefined}
-          onRemoveChip={(id) => {
-            if (id === 'entry') applyFilters({ ...applied, entry: '' });
-            else applyFilters({ ...clearCatalogueGeoChip(applied, id), entry: applied.entry });
-          }}
+          onRemoveChip={(id) => applyFilters(clearCatalogueExtraChip(clearCatalogueGeoChip(applied, id), id))}
           onClearChips={() => applyFilters(emptyFilters)}
           onOpen={() => {
             setDraft(applied);

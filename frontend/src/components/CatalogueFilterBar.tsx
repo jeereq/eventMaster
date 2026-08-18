@@ -15,6 +15,7 @@ import {
   type CatalogueProximity,
   type CatalogueViewMode,
 } from '@/lib/marketplace';
+import { pauseCatalogueDraftSync, resumeCatalogueDraftSync } from '@/lib/catalogueQuery';
 import {
   EVENT_ENTRY_OPTIONS,
   KIND_FILTER_OPTIONS,
@@ -76,6 +77,7 @@ export function CatalogueChoicePills({
               }
               onChange(opt.id);
             }}
+            onPointerDown={(e) => e.stopPropagation()}
             className={cn(
               'px-3 py-1.5 rounded-full text-xs font-medium border transition touch-manipulation',
               active
@@ -101,7 +103,7 @@ export default function CatalogueFilterBar({
   onRemoveChip,
   onClearChips,
   modalTitle = 'Filtres',
-  modalDescription = 'Cliquez une seconde fois sur un choix pour le retirer, puis « Voir les résultats ». Les pastilles sous la recherche se retirent aussi avec ×.',
+  modalDescription = 'Cliquez une seconde fois sur un choix pour le retirer. Annuler ignore les changements. Tout effacer retire tous les filtres.',
   filters,
   onApply,
   onOpen,
@@ -137,12 +139,37 @@ export default function CatalogueFilterBar({
   const [open, setOpen] = useState(false);
   const [applying, setApplying] = useState(false);
   const openTimerRef = useRef<number>(0);
+  const pausedDraftRef = useRef(false);
   const hasFilters = Boolean(filters);
   const count = chips.length;
 
-  useEffect(() => () => window.clearTimeout(openTimerRef.current), []);
+  const pauseDraft = () => {
+    if (pausedDraftRef.current) return;
+    pausedDraftRef.current = true;
+    pauseCatalogueDraftSync();
+  };
+
+  const resumeDraft = () => {
+    if (!pausedDraftRef.current) return;
+    pausedDraftRef.current = false;
+    resumeCatalogueDraftSync();
+  };
+
+  useEffect(() => () => {
+    window.clearTimeout(openTimerRef.current);
+    resumeDraft();
+    // resumeDraft reads a ref; unmount-only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const closeModal = () => {
+    window.clearTimeout(openTimerRef.current);
+    resumeDraft();
+    setOpen(false);
+  };
 
   const openModal = () => {
+    pauseDraft();
     onOpen?.();
     window.clearTimeout(openTimerRef.current);
     // Après le clic/tap « Filtres », laisser l’événement se terminer avant d’afficher le fond.
@@ -153,12 +180,19 @@ export default function CatalogueFilterBar({
     setApplying(true);
     try {
       await onApply?.();
+      resumeDraft();
       setOpen(false);
     } catch {
       /* Le parent affiche l’erreur et garde la fenêtre ouverte. */
     } finally {
       setApplying(false);
     }
+  };
+
+  const clearAll = () => {
+    onClearChips?.();
+    resumeDraft();
+    setOpen(false);
   };
 
   const chipsRow = (count > 0 || resultLabel) ? (
@@ -221,15 +255,20 @@ export default function CatalogueFilterBar({
   const filterModal = hasFilters ? (
     <Modal
       open={open}
-      onClose={() => setOpen(false)}
+      onClose={closeModal}
       title={modalTitle}
       description={modalDescription}
       size={modalSize}
       footer={
         <>
-          <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-            Fermer sans changer
+          <Button type="button" variant="ghost" onClick={closeModal}>
+            Annuler
           </Button>
+          {onClearChips ? (
+            <Button type="button" variant="ghost" onClick={clearAll} disabled={applying}>
+              Tout effacer
+            </Button>
+          ) : null}
           <Button type="button" onClick={() => void apply()} loading={applying}>
             Voir les résultats
           </Button>

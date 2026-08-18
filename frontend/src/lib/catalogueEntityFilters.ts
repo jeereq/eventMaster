@@ -124,7 +124,7 @@ export function catalogueEntityExtraChips(extras: CatalogueEntityExtras): Array<
   return chips;
 }
 
-export function clearCatalogueExtraChip<T extends CatalogueEntityExtras>(filters: T, id: string): T {
+export function clearCatalogueExtraChip<T extends object>(filters: T, id: string): T {
   if (id === 'kind') return { ...filters, kind: 'all' };
   if (id === 'roomType') return { ...filters, roomType: '' };
   if (id === 'category') return { ...filters, category: '' };

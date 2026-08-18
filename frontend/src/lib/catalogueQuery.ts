@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   EMPTY_CATALOGUE_GEO,
@@ -12,6 +12,15 @@ import {
 
 const MARKETPLACE_RETURN_KEY = 'em-catalogue-return-marketplace';
 const DASHBOARD_RETURN_KEY = 'em-catalogue-return-dashboard';
+let catalogueDraftSyncLocks = 0;
+
+export function pauseCatalogueDraftSync() {
+  catalogueDraftSyncLocks += 1;
+}
+
+export function resumeCatalogueDraftSync() {
+  catalogueDraftSyncLocks = Math.max(0, catalogueDraftSyncLocks - 1);
+}
 
 function pathOnly(href: string): string {
   return href.split('?')[0] || href;
@@ -189,12 +198,16 @@ export function useCatalogueQueryState<T extends CatalogueGeoState>(opts: {
 
   const [inputQ, setInputQ] = useState(parsed.q);
   const [draft, setDraft] = useState(parsed.filters);
+  const draftPausedRef = useRef(false);
 
   const filtersKey = useMemo(() => {
     const params = new URLSearchParams(searchKey);
     params.delete('q');
     params.delete('page');
-    return params.toString();
+    return [...params.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) => `${key}=${value}`)
+      .join('&');
   }, [searchKey]);
 
   useEffect(() => {
@@ -202,6 +215,7 @@ export function useCatalogueQueryState<T extends CatalogueGeoState>(opts: {
   }, [parsed.q]);
 
   useEffect(() => {
+    if (draftPausedRef.current || catalogueDraftSyncLocks > 0) return;
     setDraft(parsed.filters);
     // Ne pas resynchroniser le brouillon quand seule la recherche `q` change (sinon la modale perd les choix).
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -218,11 +232,12 @@ export function useCatalogueQueryState<T extends CatalogueGeoState>(opts: {
       const params = new URLSearchParams(qs);
       const liveSearch = typeof window !== 'undefined' ? window.location.search.replace(/^\?/, '') : searchKey;
       const currentParams = new URLSearchParams(liveSearch);
-      const managed = new Set([...CATALOGUE_QUERY_KEYS, ...opts.extraKeys]);
+      const managed = new Set([...CATALOGUE_QUERY_KEYS, ...opts.extraKeys, 'hub', 'tab']);
       for (const [key, value] of currentParams.entries()) {
-        if (key === 'tab') continue;
         if (!managed.has(key) && value && !params.has(key)) params.set(key, value);
       }
+      if (currentParams.get('hub') && !params.has('hub')) params.set('hub', currentParams.get('hub') || '');
+      if (currentParams.get('tab') && !params.has('tab')) params.set('tab', currentParams.get('tab') || '');
       const nextQs = params.toString();
       const href = nextQs ? `${pathname}?${nextQs}` : pathname;
       const current = liveSearch ? `${pathname}?${liveSearch}` : pathname;
@@ -231,6 +246,15 @@ export function useCatalogueQueryState<T extends CatalogueGeoState>(opts: {
       router.replace(href, { scroll: false });
     },
     [opts, pathname, router, searchKey],
+  );
+
+  const applyFilters = useCallback(
+    (next: T) => {
+      draftPausedRef.current = false;
+      setDraft(next);
+      replaceQuery(next, inputQ, 1);
+    },
+    [inputQ, replaceQuery],
   );
 
   useEffect(() => {
@@ -254,7 +278,7 @@ export function useCatalogueQueryState<T extends CatalogueGeoState>(opts: {
     draft,
     setDraft,
     page: parsed.page,
-    applyFilters: (next: T) => replaceQuery(next, inputQ, 1),
+    applyFilters,
     setPage: (nextPage: number) => replaceQuery(parsed.filters, parsed.q, nextPage),
   };
 }

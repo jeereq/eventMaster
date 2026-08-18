@@ -25,7 +25,7 @@ import {
   type PublicService,
   type ServiceMobility,
 } from '@/lib/marketplace';
-import { EMPTY_CATALOGUE_EXTRAS } from '@/lib/catalogueEntityFilters';
+import { EMPTY_CATALOGUE_EXTRAS, clearCatalogueExtraChip } from '@/lib/catalogueEntityFilters';
 
 type ServiceFilters = CatalogueGeoState & { category: string; priceUnit: string; mobility: ServiceMobility };
 
@@ -169,15 +169,7 @@ function MarketplaceServicesPageInner() {
           onGridColsChange={setGridCols}
           chips={chips}
           resultLabel={!loading ? `${items.length} prestataire${items.length > 1 ? 's' : ''}` : undefined}
-          onRemoveChip={(id) => {
-            if (id === 'category' || id === 'priceUnit' || id === 'mobility') applyFilters({ ...applied, [id]: '' });
-            else applyFilters({
-              ...clearCatalogueGeoChip(applied, id),
-              category: applied.category,
-              priceUnit: applied.priceUnit,
-              mobility: applied.mobility,
-            });
-          }}
+          onRemoveChip={(id) => applyFilters(clearCatalogueExtraChip(clearCatalogueGeoChip(applied, id), id))}
           onClearChips={() => applyFilters(emptyFilters)}
           onOpen={() => {
             setDraft(applied);

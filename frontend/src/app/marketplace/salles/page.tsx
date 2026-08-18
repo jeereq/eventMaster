@@ -15,7 +15,7 @@ import {
   type PublicVenue,
 } from '@/lib/marketplace';
 import { useCatalogueQueryState } from '@/lib/catalogueQuery';
-import { EMPTY_CATALOGUE_EXTRAS, ROOM_TYPE_FILTER_OPTIONS } from '@/lib/catalogueEntityFilters';
+import { EMPTY_CATALOGUE_EXTRAS, ROOM_TYPE_FILTER_OPTIONS, clearCatalogueExtraChip } from '@/lib/catalogueEntityFilters';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import CatalogueSearchLayout from '@/components/CatalogueSearchLayout';
 import { usePageSize } from '@/components/ui';
@@ -142,10 +142,7 @@ function MarketplaceVenuesPageInner() {
           onGridColsChange={setGridCols}
           chips={chips}
           resultLabel={!loading ? `${items.length} salle${items.length > 1 ? 's' : ''}` : undefined}
-          onRemoveChip={(id) => {
-            if (id === 'roomType') applyFilters({ ...applied, roomType: '' });
-            else applyFilters({ ...clearCatalogueGeoChip(applied, id), roomType: applied.roomType });
-          }}
+          onRemoveChip={(id) => applyFilters(clearCatalogueExtraChip(clearCatalogueGeoChip(applied, id), id))}
           onClearChips={() => applyFilters(emptyFilters)}
           onOpen={() => {
             setDraft(applied);
