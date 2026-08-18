@@ -24,7 +24,7 @@ function useDashboardTitle(): { title: string; subtitle?: string } {
     if (pathname.startsWith('/dashboard/invoices')) return { title: 'Factures', subtitle: 'Historique' };
     if (pathname.startsWith('/dashboard/rooms')) return { title: 'Salles', subtitle: 'Plans 2D & publication' };
     if (pathname.startsWith('/dashboard/team')) return { title: 'Équipe', subtitle: 'Membres de l’organisation' };
-    if (pathname.startsWith('/dashboard/marketplace')) return { title: 'Marketplace', subtitle: 'Prestations & réservations' };
+    if (pathname.startsWith('/dashboard/marketplace')) return { title: 'Marketplace', subtitle: 'Prestations, locations et réservations' };
     if (pathname.startsWith('/dashboard/bookings')) return { title: 'Mes réservations', subtitle: 'Demandes de dates' };
     if (pathname.startsWith('/dashboard/profile')) return { title: 'Mon compte', subtitle: 'Profil et sécurité' };
     if (pathname.startsWith('/dashboard/notifications')) return { title: 'Notifications', subtitle: 'Alertes de votre compte' };
@@ -32,6 +32,7 @@ function useDashboardTitle(): { title: string; subtitle?: string } {
     if (pathname.startsWith('/dashboard/tickets')) return { title: 'Mes billets', subtitle: 'Inscriptions, filtres et badge QR' };
     if (pathname.startsWith('/dashboard/catalogue/salles')) return { title: 'Salle', subtitle: 'Fiche marketplace' };
     if (pathname.startsWith('/dashboard/catalogue/prestataires')) return { title: 'Prestation', subtitle: 'Fiche marketplace' };
+    if (pathname.startsWith('/dashboard/catalogue/locations')) return { title: 'Location', subtitle: 'Fiche marketplace' };
     if (pathname.startsWith('/dashboard/catalogue')) {
       const hub = searchParams.get('hub');
       const kind = searchParams.get('kind');
@@ -39,9 +40,9 @@ function useDashboardTitle(): { title: string; subtitle?: string } {
         return { title: 'Agenda', subtitle: 'Événements publics du marketplace' };
       }
       if (hub === 'plan') return { title: 'Préparer un événement', subtitle: 'Brief budget et 3 packs' };
-      if (hub === 'favorites') return { title: 'Favoris', subtitle: 'Salles et prestataires enregistrés' };
+      if (hub === 'favorites') return { title: 'Favoris', subtitle: 'Salles, prestataires et locations enregistrés' };
       if (hub === 'packs') return { title: 'Mes packs', subtitle: 'Compositions sauvegardées' };
-      return { title: 'Marketplace', subtitle: 'Salles, prestataires et préparation' };
+      return { title: 'Marketplace', subtitle: 'Salles, prestataires, locations et préparation' };
     }
     if (pathname.startsWith('/dashboard/admin/catalogue')) return { title: 'Catalogue', subtitle: 'Modération marketplace' };
     if (pathname.startsWith('/dashboard/commercial')) return { title: 'Parrainage', subtitle: 'Commissions plateforme' };

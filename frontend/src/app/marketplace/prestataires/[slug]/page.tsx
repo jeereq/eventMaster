@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, usePathname } from 'next/navigation';
 import { api } from '@/lib/api';
 import PublicPageShell from '@/components/PublicPageShell';
 import MarketplaceInquiryForm from '@/components/MarketplaceInquiryForm';
@@ -17,13 +17,15 @@ import {
   formatQuotaLabel,
   serviceMobilityLabel,
   serviceToCatalogueItem,
+  isServiceRentalCategory,
   type PublicService,
 } from '@/lib/marketplace';
 import type { MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
-import { MapPin, Navigation, Sparkles } from 'lucide-react';
+import { MapPin, Navigation, Sparkles, KeyRound } from 'lucide-react';
 
 export default function MarketplaceServiceDetailPage() {
   const params = useParams();
+  const pathname = usePathname();
   const slug = params.slug as string;
   const mapRef = useRef<MarketplaceMapHandle>(null);
   const [service, setService] = useState<PublicService | null>(null);
@@ -58,22 +60,23 @@ export default function MarketplaceServiceDetailPage() {
 
   const item = service ? serviceToCatalogueItem(service) : null;
   const quotaLabel = service ? formatQuotaLabel(service.quotaMin, service.quotaMax) : null;
+  const isRental = pathname.includes('/locations') || isServiceRentalCategory(service?.category);
 
   return (
     <PublicPageShell faqHref="/faq" mobileFooterPad>
       <ListingDetailLayout
-        backHref="/marketplace/prestataires"
-        backLabel="Tous les prestataires"
+        backHref={isRental ? '/marketplace/locations' : '/marketplace/prestataires'}
+        backLabel={isRental ? 'Toutes les locations' : 'Tous les prestataires'}
         loading={loading}
-        error={error || (!loading && !service ? 'Prestation introuvable.' : '')}
-        errorIcon={<Sparkles className="w-10 h-10 text-muted mx-auto mb-3" />}
-        errorMessage="Prestation introuvable."
+        error={error || (!loading && !service ? (isRental ? 'Location introuvable.' : 'Prestation introuvable.') : '')}
+        errorIcon={isRental ? <KeyRound className="w-10 h-10 text-muted mx-auto mb-3" /> : <Sparkles className="w-10 h-10 text-muted mx-auto mb-3" />}
+        errorMessage={isRental ? 'Location introuvable.' : 'Prestation introuvable.'}
         heroUrl={service?.photos[0]}
-        fallbackIcon={<Sparkles className="w-12 h-12" />}
+        fallbackIcon={isRental ? <KeyRound className="w-12 h-12" /> : <Sparkles className="w-12 h-12" />}
         chip={service?.categoryLabel || ''}
         title={service?.title || ''}
         subtitle={service?.orgName || ''}
-        shareKind="service"
+        shareKind={isRental ? 'rental' : 'service'}
         photos={service?.photos || []}
         photoIndex={photoIndex}
         onPhotoIndex={setPhotoIndex}

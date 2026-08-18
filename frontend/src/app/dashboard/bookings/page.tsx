@@ -39,7 +39,7 @@ export default function ClientBookingsPage() {
     <div className="space-y-6 w-full">
       <PageHeader
         title="Mes réservations"
-        description="Demandes de dates envoyées aux salles et prestataires. L’acompte (30 %) se verse hors plateforme."
+        description="Demandes de dates envoyées aux salles, prestataires et locations. L’acompte (30 %) se verse hors plateforme."
         breadcrumbs={
           <Breadcrumbs
             items={[

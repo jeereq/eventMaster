@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { prisma } from '../db';
 import { AuthenticatedRequest } from '../middleware/auth';
-import { parsePhotoUrls, coverFromMedia, priceUnitLabel, serviceCategoryLabel } from '../utils/publicVenue';
+import { parsePhotoUrls, coverFromMedia, priceUnitLabel, serviceCategoryLabel, isServiceRentalCategory } from '../utils/publicVenue';
 import { buildEventPlanProposals } from '../services/eventPlannerService';
 import { parseEventPlanInput, serializeBriefPayload } from '../services/eventPlanBrief';
 
@@ -59,6 +59,7 @@ export async function listFavorites(req: AuthenticatedRequest, res: Response) {
       priceUnitLabel: string;
       categoryLabel?: string;
       capacity?: number | null;
+      category?: string;
       href: string;
       createdAt: Date;
     }> => {
@@ -89,11 +90,14 @@ export async function listFavorites(req: AuthenticatedRequest, res: Response) {
         title: offering.title,
         orgName: offering.vendorProfile.displayName || offering.tenant.name,
         categoryLabel: serviceCategoryLabel(offering.category),
+        category: offering.category,
         location: [offering.neighborhood, offering.commune, offering.city].filter(Boolean).join(', '),
         coverUrl: coverFromMedia(photos),
         priceFromFc: offering.priceFromFc,
         priceUnitLabel: priceUnitLabel(offering.priceUnit),
-        href: `/dashboard/catalogue/prestataires/${offering.slug}`,
+        href: isServiceRentalCategory(offering.category)
+          ? `/dashboard/catalogue/locations/${offering.slug}`
+          : `/dashboard/catalogue/prestataires/${offering.slug}`,
         capacity: null,
         createdAt: row.createdAt,
       }];

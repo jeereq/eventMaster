@@ -11,6 +11,8 @@ import {
   MARKETPLACE_MAX_VIDEOS,
   parsePriceUnit,
   parseServiceCategory,
+  parseServiceGroup,
+  serviceGroupPrismaFilter,
   priceUnitLabel,
   sanitizeLayoutBlueprint,
   serviceCategoryLabel,
@@ -683,6 +685,7 @@ export async function listPublicServices(req: Request, res: Response) {
     const neighborhood = typeof req.query.neighborhood === 'string' ? req.query.neighborhood.trim() : '';
     const street = readStreetQuery(req);
     const category = parseServiceCategory(req.query.category);
+    const group = parseServiceGroup(req.query.group);
     const priceUnit = parsePriceUnit(req.query.priceUnit);
     const wantUnit = typeof req.query.priceUnit === 'string' && req.query.priceUnit.trim()
       ? priceUnit
@@ -698,7 +701,7 @@ export async function listPublicServices(req: Request, res: Response) {
         ...allowedCityPrismaFilter(city),
         ...(commune ? { commune: { contains: commune, mode: 'insensitive' } } : {}),
         ...(neighborhood ? { neighborhood: { contains: neighborhood, mode: 'insensitive' } } : {}),
-        ...(category ? { category } : {}),
+        ...(category ? { category } : serviceGroupPrismaFilter(group)),
         ...(wantUnit ? { priceUnit: wantUnit } : {}),
         ...(priceRange ? { priceFromFc: priceRange } : {}),
         ...(travelsFilter == null ? {} : { travels: travelsFilter }),

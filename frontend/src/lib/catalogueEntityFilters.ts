@@ -4,12 +4,13 @@ import {
   SERVICE_CATEGORIES,
   SERVICE_CATEGORY_LABELS,
   SERVICE_MOBILITY_OPTIONS,
+  isServiceRentalCategory,
   type CatalogueGeoState,
   type CatalogueItem,
   type ServiceMobility,
 } from '@/lib/marketplace';
 
-export type CatalogueKind = 'all' | 'venue' | 'service' | 'event';
+export type CatalogueKind = 'all' | 'venue' | 'service' | 'rental' | 'event';
 export type EventEntryFilter = '' | 'paid' | 'free';
 
 export type CatalogueEntityExtras = {
@@ -45,11 +46,12 @@ export const KIND_FILTER_OPTIONS = [
   { id: 'all', label: 'Tous' },
   { id: 'venue', label: 'Salles' },
   { id: 'service', label: 'Prestataires' },
+  { id: 'rental', label: 'Locations' },
   { id: 'event', label: 'Événements' },
 ];
 
 export function parseCatalogueKind(value: string | undefined): CatalogueKind {
-  return value === 'venue' || value === 'service' || value === 'event' ? value : 'all';
+  return value === 'venue' || value === 'service' || value === 'rental' || value === 'event' ? value : 'all';
 }
 
 export function parseEventEntry(value: string | undefined): EventEntryFilter {
@@ -84,8 +86,14 @@ export function catalogueEntityExtraChips(extras: CatalogueEntityExtras): Array<
     chips.push({
       id: 'kind',
       label: 'Type',
-      value: extras.kind === 'venue' ? 'Salles' : extras.kind === 'service' ? 'Prestataires' : 'Événements',
-      tone: extras.kind,
+      value: extras.kind === 'venue'
+        ? 'Salles'
+        : extras.kind === 'service'
+          ? 'Prestataires'
+          : extras.kind === 'rental'
+            ? 'Locations'
+            : 'Événements',
+      tone: extras.kind === 'rental' ? 'service' : extras.kind,
     });
   }
   if (extras.roomType) {
@@ -99,7 +107,7 @@ export function catalogueEntityExtraChips(extras: CatalogueEntityExtras): Array<
   if (extras.category) {
     chips.push({
       id: 'category',
-      label: 'Métier',
+      label: extras.kind === 'rental' || isServiceRentalCategory(extras.category) ? 'Location' : 'Métier',
       value: SERVICE_CATEGORY_LABELS[extras.category as keyof typeof SERVICE_CATEGORY_LABELS] || extras.category,
       tone: 'service',
     });
@@ -164,6 +172,10 @@ export function appendCatalogueEntityParams(
 ) {
   if (target === 'venue' && extras.roomType) params.set('roomType', extras.roomType);
   if (target === 'service') {
+    if (!extras.category) {
+      if (extras.kind === 'rental') params.set('group', 'rental');
+      if (extras.kind === 'service') params.set('group', 'trade');
+    }
     if (extras.category) params.set('category', extras.category);
     if (extras.priceUnit) params.set('priceUnit', extras.priceUnit);
     if (extras.mobility) params.set('mobility', extras.mobility);
@@ -172,7 +184,13 @@ export function appendCatalogueEntityParams(
 }
 
 export function catalogueItemMatchesExtras(item: CatalogueItem, extras: CatalogueEntityExtras): boolean {
-  if (extras.kind !== 'all' && item.kind !== extras.kind) return false;
+  if (extras.kind === 'rental') {
+    if (item.kind !== 'service' || !isServiceRentalCategory(item.category)) return false;
+  } else if (extras.kind === 'service') {
+    if (item.kind !== 'service' || isServiceRentalCategory(item.category)) return false;
+  } else if (extras.kind !== 'all' && item.kind !== extras.kind) {
+    return false;
+  }
   if (item.kind === 'venue' && extras.roomType && item.roomType !== extras.roomType) return false;
   if (item.kind === 'service') {
     if (extras.category && item.category !== extras.category) return false;

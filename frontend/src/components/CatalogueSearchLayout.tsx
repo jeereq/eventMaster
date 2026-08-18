@@ -105,7 +105,7 @@ export default function CatalogueSearchLayout({
   showKindLegend = false,
   gridCols = 4,
 }: {
-  activeNav: 'hub' | 'venues' | 'services' | 'events';
+  activeNav: 'hub' | 'venues' | 'services' | 'rentals' | 'events';
   heroTitle: string;
   heroDescription: string;
   cta: {
@@ -238,10 +238,14 @@ export default function CatalogueSearchLayout({
                   Prestataires
                 </span>
                 <span className="inline-flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-cyan-700" />
+                  Locations
+                </span>
+                <span className="inline-flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-sm bg-emerald-600" />
                   Événements
                 </span>
-                <span>Bâtiment = salle, étoile = prestataire, calendrier = événement.</span>
+                <span>Bâtiment = salle, étoile = prestataire, clé = location, calendrier = événement.</span>
               </div>
             )}
             {loading && markers.length === 0 ? (

@@ -37,9 +37,9 @@ import {
   buildLandingTemplateGroups,
   type LandingTemplate,
 } from '@/config/landingTemplates';
-import { ArrowRight, Building2, Calendar, FileText, Sparkles } from 'lucide-react';
+import { ArrowRight, Building2, Calendar, FileText, KeyRound, Sparkles } from 'lucide-react';
 
-type VitrineTab = 'venues' | 'services' | 'events' | 'templates';
+type VitrineTab = 'venues' | 'services' | 'rentals' | 'events' | 'templates';
 type EntityFilters = CatalogueGeoState & CatalogueEntityExtras;
 
 const emptyFilters: EntityFilters = { ...EMPTY_CATALOGUE_GEO, ...EMPTY_CATALOGUE_EXTRAS };
@@ -74,7 +74,7 @@ export default function LandingVitrineSection({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePageSize('landing-vitrine', 8);
 
-  const entity = tab === 'venues' ? 'venue' : tab === 'services' ? 'service' : tab === 'events' ? 'event' : 'all';
+  const entity = tab === 'venues' ? 'venue' : tab === 'services' ? 'service' : tab === 'rentals' ? 'rental' : tab === 'events' ? 'event' : 'all';
 
   const load = useCallback(async (filters: EntityFilters, search: string) => {
     setLoadingCatalog(true);
@@ -117,6 +117,7 @@ export default function LandingVitrineSection({
       if (hash === 'modeles') setTab('templates');
       if (hash === 'salles' || hash === 'catalogue' || hash === 'marketplace') setTab('venues');
       if (hash === 'prestataires') setTab('services');
+      if (hash === 'locations') setTab('rentals');
       if (hash === 'evenements') setTab('events');
     };
     applyHash();
@@ -133,11 +134,11 @@ export default function LandingVitrineSection({
     const prune = (filters: EntityFilters): EntityFilters => ({
       ...filters,
       kind: entity,
-      roomType: entity === 'service' || entity === 'event' ? '' : filters.roomType,
+      roomType: entity === 'service' || entity === 'rental' || entity === 'event' ? '' : filters.roomType,
       category: entity === 'venue' || entity === 'event' ? '' : filters.category,
       mobility: entity === 'venue' || entity === 'event' ? '' : filters.mobility,
       priceUnit: entity === 'venue' || entity === 'event' ? '' : filters.priceUnit,
-      entry: entity === 'venue' || entity === 'service' ? '' : filters.entry,
+      entry: entity === 'venue' || entity === 'service' || entity === 'rental' ? '' : filters.entry,
     });
     setApplied(prune);
     setDraft(prune);
@@ -154,6 +155,13 @@ export default function LandingVitrineSection({
     () =>
       filterCatalogueItems(services.map(serviceToCatalogueItem), query).filter(
         (item) => catalogueItemMatchesGeo(item, applied) && catalogueItemMatchesExtras(item, { ...applied, kind: 'service' }),
+      ),
+    [services, query, applied],
+  );
+  const rentalItems = useMemo(
+    () =>
+      filterCatalogueItems(services.map(serviceToCatalogueItem), query).filter(
+        (item) => catalogueItemMatchesGeo(item, applied) && catalogueItemMatchesExtras(item, { ...applied, kind: 'rental' }),
       ),
     [services, query, applied],
   );
@@ -178,6 +186,7 @@ export default function LandingVitrineSection({
   const tabs: Array<{ id: VitrineTab; label: string; icon: typeof Building2; hash: string }> = [
     { id: 'venues', label: 'Salles', icon: Building2, hash: 'salles' },
     { id: 'services', label: 'Prestataires', icon: Sparkles, hash: 'prestataires' },
+    { id: 'rentals', label: 'Locations', icon: KeyRound, hash: 'locations' },
     { id: 'events', label: 'Événements', icon: Calendar, hash: 'evenements' },
     { id: 'templates', label: 'Modèles', icon: FileText, hash: 'modeles' },
   ];
@@ -191,6 +200,7 @@ export default function LandingVitrineSection({
 
   const pagedVenues = paginateItems(venueItems, page, pageSize);
   const pagedServices = paginateItems(serviceItems, page, pageSize);
+  const pagedRentals = paginateItems(rentalItems, page, pageSize);
   const pagedEvents = paginateItems(eventItems, page, pageSize);
   const pagedTemplates = paginateItems(templateList, page, pageSize);
   const chips = catalogueGeoChips(applied, catalogueEntityExtraChips({ ...applied, kind: entity === 'all' ? 'all' : entity }));
@@ -204,7 +214,9 @@ export default function LandingVitrineSection({
           ? 'Rechercher une salle…'
           : tab === 'services'
             ? 'Rechercher un prestataire…'
-            : 'Rechercher un événement…'
+            : tab === 'rentals'
+              ? 'Rechercher une location…'
+              : 'Rechercher un événement…'
       }
       view="grid"
       onViewChange={() => undefined}
@@ -214,7 +226,9 @@ export default function LandingVitrineSection({
           ? `${venueItems.length} salle${venueItems.length > 1 ? 's' : ''}`
           : tab === 'services'
             ? `${serviceItems.length} prestataire${serviceItems.length > 1 ? 's' : ''}`
-            : `${eventItems.length} événement${eventItems.length > 1 ? 's' : ''}`
+            : tab === 'rentals'
+              ? `${rentalItems.length} location${rentalItems.length > 1 ? 's' : ''}`
+              : `${eventItems.length} événement${eventItems.length > 1 ? 's' : ''}`
         : undefined}
       chips={chips}
       onRemoveChip={(id) => {
@@ -245,7 +259,9 @@ export default function LandingVitrineSection({
           ? 'Filtrer les salles'
           : tab === 'services'
             ? 'Filtrer les prestataires'
-            : 'Filtrer les événements'
+            : tab === 'rentals'
+              ? 'Filtrer les locations'
+              : 'Filtrer les événements'
       }
       filters={
         <CatalogueEntityFilterFields
@@ -266,10 +282,10 @@ export default function LandingVitrineSection({
           <div className="max-w-xl space-y-2">
             <p className="em-festive-chip w-fit">Vitrine</p>
             <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-              Salles, prestataires, événements et modèles
+              Salles, prestataires, locations, événements et modèles
             </h2>
             <p className="text-sm text-muted leading-relaxed">
-              Filtrez le marketplace EventMaster par lieu, dates, prix, type de salle, métier, mobilité ou entrée.
+              Filtrez le marketplace EventMaster par lieu, dates, prix, type de salle, métier, location, mobilité ou entrée.
             </p>
           </div>
           <Link href="/marketplace">
@@ -344,6 +360,32 @@ export default function LandingVitrineSection({
                   onPageChange={setPage}
                   onPageSizeChange={setPageSize}
                   itemLabel="prestataires"
+                />
+              </>
+            )}
+          </div>
+        )}
+
+        {tab === 'rentals' && (
+          <div id="locations" className="space-y-4 scroll-mt-20">
+            {catalogFilters}
+            {loadingCatalog ? (
+              <CatalogueResultsSkeleton mode="grid" count={pageSize} />
+            ) : (
+              <>
+                <CatalogueResults
+                  items={pagedRentals}
+                  mode="grid"
+                  emptyTitle="Aucune location publiée"
+                  emptyDescription="Les locations d’habits, véhicules et matériel apparaîtront ici."
+                />
+                <Pagination
+                  page={page}
+                  pageSize={pageSize}
+                  total={rentalItems.length}
+                  onPageChange={setPage}
+                  onPageSizeChange={setPageSize}
+                  itemLabel="locations"
                 />
               </>
             )}

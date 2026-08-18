@@ -140,7 +140,7 @@ export default function ListingDetailLayout({
   hideBooking?: boolean;
   priceCaption?: string;
   shareUrl?: string;
-  shareKind?: 'venue' | 'service' | 'event';
+  shareKind?: 'venue' | 'service' | 'event' | 'rental';
 }) {
   const router = useRouter();
   const [mobileAction, setMobileAction] = useState<'inquire' | 'book'>('inquire');

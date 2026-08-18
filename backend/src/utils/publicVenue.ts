@@ -16,11 +16,30 @@ const SERVICE_CATEGORIES = [
   'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT',
 ] as ServiceCategory[];
 
-export function parseServiceCategory(value: unknown): ServiceCategory | null {
+const RENTAL_CATEGORIES = [
+  'RENTAL_CLOTHING_MEN', 'RENTAL_CLOTHING_WOMEN', 'RENTAL_CLOTHING_CHILD',
+  'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT',
+] as ServiceCategory[];
+
+export function parseServiceCategory(value: unknown): ServiceCategory | undefined {
   if (typeof value === 'string' && (SERVICE_CATEGORIES as string[]).includes(value)) {
     return value as ServiceCategory;
   }
-  return null;
+  return undefined;
+}
+
+export function isServiceRentalCategory(category?: string | null): boolean {
+  return Boolean(category && (RENTAL_CATEGORIES as string[]).includes(category));
+}
+
+export function parseServiceGroup(value: unknown): 'trade' | 'rental' | null {
+  return value === 'trade' || value === 'rental' ? value : null;
+}
+
+export function serviceGroupPrismaFilter(group: 'trade' | 'rental' | null) {
+  if (group === 'rental') return { category: { in: RENTAL_CATEGORIES } };
+  if (group === 'trade') return { category: { notIn: RENTAL_CATEGORIES } };
+  return {};
 }
 
 export function serviceCategoryLabel(category: ServiceCategory): string {

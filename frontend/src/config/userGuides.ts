@@ -276,7 +276,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'marketplace-desk',
         title: 'Gérer prestations, devis et réservations',
         content:
-          '1. Ouvrez Marketplace.\n2. Publiez ou mettez à jour vos fiches : métiers ou locations (habits, voitures, motos, matériel), vue grille ou liste.\n3. Traitez les demandes de devis (contacter, convertir en réservation).\n4. Dans Réservations, suivez l’étape suivante affichée sur chaque carte : accepter, acompte, confirmer.\n5. Partagez le lien public d’une fiche depuis la fiche marketplace, pas depuis l’URL interne.',
+          '1. Ouvrez Marketplace.\n2. Onglet Prestations pour les métiers, onglet Locations pour habits, voitures, motos ou matériel. Publiez ou mettez à jour vos fiches (vue grille ou liste).\n3. Traitez les demandes de devis (contacter, convertir en réservation).\n4. Dans Réservations, suivez l’étape suivante affichée sur chaque carte : accepter, acompte, confirmer.\n5. Partagez le lien public d’une fiche depuis la fiche marketplace, pas depuis l’URL interne.',
         links: [{ label: 'Marketplace', href: '/dashboard/marketplace' }],
       },
     ],
@@ -413,7 +413,7 @@ export const USER_GUIDES: UserGuide[] = [
     canDo: [
       'Explorer salles, prestataires (métiers et locations : habits, voitures, motos, matériel) et événements (filtres ville, type, prix, carte Focus, grille ou liste)',
       'Ouvrir l’Agenda : événements publics du marketplace, pour s’inscrire ou acheter un billet',
-      'Mettre des fiches salles / prestataires en favoris',
+      'Mettre des fiches salles / prestataires / locations en favoris',
       'Préparer un événement avec un brief budget simple (enveloppe, marge en FC, métiers) et obtenir 3 packs',
       'Sauvegarder un brief ou un pack, ou composer un pack depuis les favoris',
       'Partager une recherche (URL avec filtres) ou le lien public d’une fiche',
@@ -439,7 +439,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'explore-favorites',
         title: 'Explorer et enregistrer des favoris',
         content:
-          '1. Ouvrez Marketplace.\n2. Onglet Explorer : filtrez par mot-clé, ville, commune, type (salles / prestataires / événements), métier ou location (habits, véhicules, matériel), prix, places.\n3. Passez en grille, liste, carte ou Focus (plein écran). Les pastilles indiquent Salle, Presta ou Évén.\n4. Cliquez sur le cœur d’une salle ou d’un prestataire.\n5. Onglet Favoris : filtrez salles / prestataires et changez la vue.\n6. Bouton Partager : copie l’URL actuelle, avec vos filtres.',
+          '1. Ouvrez Marketplace.\n2. Onglet Explorer : filtrez par mot-clé, ville, commune, type (salles / prestataires / locations / événements), métier ou location (habits, véhicules, matériel), prix, places.\n3. Passez en grille, liste, carte ou Focus (plein écran). Les pastilles indiquent Salle, Presta, Loc. ou Évén.\n4. Cliquez sur le cœur d’une salle, d’un prestataire ou d’une location.\n5. Onglet Favoris : filtrez salles / prestataires / locations et changez la vue.\n6. Bouton Partager : copie l’URL actuelle, avec vos filtres.',
         links: [{ label: 'Marketplace', href: '/dashboard/catalogue' }],
       },
       {

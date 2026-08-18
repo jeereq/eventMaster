@@ -81,7 +81,7 @@ const NAV_TOOLTIPS: Record<string, string> = {
  'Mon compte': 'Profil et sécurité du compte',
  Salles: 'Plans 2D, publication et disponibilités',
  Équipe: 'Managers, protocole et commerciaux',
- Marketplace: 'Prestations publiées et réservations reçues',
+ Marketplace: 'Prestations, locations et réservations reçues',
  'Parrainage & commissions': 'Code parrainage et gains',
  'Réseau commercial': 'Organisations que vous parrainez',
  Protocole: 'Scan QR et accueil invités',
@@ -413,7 +413,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  ? [
  {
  items: [
- { name: 'Marketplace', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires, favoris et préparation d’événement' },
+ { name: 'Marketplace', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires, locations, favoris et préparation d’événement' },
  { name: 'Agenda', href: '/dashboard/catalogue?kind=event', tourId: 'nav-agenda', icon: Calendar, description: 'Événements publics du marketplace — inscriptions et billets' },
  { name: 'Mes billets', href: '/dashboard/tickets', tourId: 'nav-tickets', icon: Ticket, description: 'Inscriptions, filtres, vue grille/liste et badges QR' },
  { name: 'Mes réservations', href: '/dashboard/bookings', tourId: 'nav-bookings', icon: CalendarCheck },

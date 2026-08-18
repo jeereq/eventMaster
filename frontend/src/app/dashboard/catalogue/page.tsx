@@ -42,10 +42,12 @@ import {
   type PublicEventCard,
   type PublicService,
   type PublicVenue,
+  isServiceRentalCategory,
 } from '@/lib/marketplace';
 import {
   EMPTY_CATALOGUE_EXTRAS,
   HUB_FILTER_EXTRA_KEYS,
+  KIND_FILTER_OPTIONS,
   appendCatalogueEntityParams,
   catalogueEntityExtraChips,
   catalogueItemMatchesExtras,
@@ -54,6 +56,7 @@ import {
   mergeGeoAndExtras,
   splitCatalogueExtras,
   type CatalogueEntityExtras,
+  type CatalogueKind,
 } from '@/lib/catalogueEntityFilters';
 import { useCatalogueQueryState, useRememberListReturn } from '@/lib/catalogueQuery';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -129,7 +132,7 @@ function ClientMarketplaceInner() {
   const [flexSlots, setFlexSlots] = useState<string[]>([]);
   const [savedPacks, setSavedPacks] = useState<SavedEventPack[]>([]);
   const [savedBriefs, setSavedBriefs] = useState<SavedEventBrief[]>([]);
-  const [favKind, setFavKind] = useState<'all' | 'venue' | 'service'>('all');
+  const [favKind, setFavKind] = useState<'all' | 'venue' | 'service' | 'rental'>('all');
   const [favQ, setFavQ] = useState('');
   const [favMode, setFavMode] = useState<'grid' | 'list'>('grid');
   const [saveTarget, setSaveTarget] = useState<PlanPackage | null>(null);
@@ -180,9 +183,9 @@ function ClientMarketplaceInner() {
       const venueQs = venueParams.toString() ? `?${venueParams}` : '';
       const serviceQs = serviceParams.toString() ? `?${serviceParams}` : '';
       const eventQs = eventParams.toString() ? `?${eventParams}` : '';
-      const loadVenues = filters.kind !== 'service' && filters.kind !== 'event';
-      const loadServices = filters.kind !== 'venue' && filters.kind !== 'event';
-      const loadEvents = filters.kind !== 'venue' && filters.kind !== 'service';
+      const loadVenues = filters.kind === 'all' || filters.kind === 'venue';
+      const loadServices = filters.kind === 'all' || filters.kind === 'service' || filters.kind === 'rental';
+      const loadEvents = filters.kind === 'all' || filters.kind === 'event';
       const [venuesData, servicesData, eventsData] = await Promise.all([
         loadVenues ? api.get(`/public/venues${venueQs}`).catch(() => ({ venues: [] })) : Promise.resolve({ venues: [] }),
         loadServices ? api.get(`/public/services${serviceQs}`).catch(() => ({ services: [] })) : Promise.resolve({ services: [] }),
@@ -269,7 +272,9 @@ function ClientMarketplaceInner() {
   const visibleFavorites = useMemo(() => {
     const q = favQ.trim().toLowerCase();
     return favoriteItems.filter((item) => {
-      if (favKind !== 'all' && item.kind !== favKind) return false;
+      if (favKind === 'venue' && item.kind !== 'venue') return false;
+      if (favKind === 'service' && (item.kind !== 'service' || isServiceRentalCategory(item.category))) return false;
+      if (favKind === 'rental' && (item.kind !== 'service' || !isServiceRentalCategory(item.category))) return false;
       if (!q) return true;
       return [item.title, item.orgName, item.location, item.categoryLabel].join(' ').toLowerCase().includes(q);
     });
@@ -472,7 +477,7 @@ function ClientMarketplaceInner() {
           header={
             <div className="flex items-start gap-2">
               <p className="flex-1 min-w-0 h-9 inline-flex items-center px-3 rounded-full bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-xs font-semibold text-foreground">
-                Vue focus — salles, prestataires et événements
+                Vue focus — salles, prestataires, locations et événements
               </p>
               <button
                 type="button"
@@ -493,12 +498,12 @@ function ClientMarketplaceInner() {
           tab === 'plan'
             ? 'Décrivez l’enveloppe et les besoins : EventMaster propose 3 packs dans votre budget, avec les montants exacts à côté des pourcentages.'
             : tab === 'favorites'
-              ? 'Salles et prestataires enregistrés. Filtrez et changez la vue grille ou liste.'
+              ? 'Salles, prestataires et locations enregistrés. Filtrez et changez la vue grille ou liste.'
               : tab === 'packs'
                 ? 'Packs et briefs sauvegardés, à reprendre ou à envoyer en devis.'
                 : searchParams.get('kind') === 'event'
                   ? 'Événements publics du marketplace. Inscrivez-vous ou achetez un billet — il apparaît dans Mes billets.'
-                  : 'Explorez les salles et prestataires, enregistrez vos favoris, puis préparez un événement selon votre budget.'
+                  : 'Explorez les salles, prestataires et locations, enregistrez vos favoris, puis préparez un événement selon votre budget.'
         }
         breadcrumbs={
           <Breadcrumbs
@@ -544,6 +549,38 @@ function ClientMarketplaceInner() {
 
       {tab === 'explore' && !focusMode ? (
         <>
+          <div className="flex flex-wrap gap-1.5">
+            {KIND_FILTER_OPTIONS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  const kind = item.id as CatalogueKind;
+                  applyFilters({
+                    ...applied,
+                    kind,
+                    roomType: kind === 'service' || kind === 'rental' || kind === 'event' ? '' : applied.roomType,
+                    category: kind === 'venue' || kind === 'event'
+                      ? ''
+                      : kind === 'service' && isServiceRentalCategory(applied.category)
+                        ? ''
+                        : kind === 'rental' && applied.category && !isServiceRentalCategory(applied.category)
+                          ? ''
+                          : applied.category,
+                    mobility: kind === 'venue' || kind === 'event' ? '' : applied.mobility,
+                    priceUnit: kind === 'venue' || kind === 'event' ? '' : applied.priceUnit,
+                    entry: kind === 'venue' || kind === 'service' || kind === 'rental' ? '' : applied.entry,
+                  });
+                }}
+                className={cn(
+                  'px-3 py-1.5 rounded-full text-xs font-semibold border',
+                  applied.kind === item.id ? 'bg-primary text-white border-primary' : 'border-border text-muted hover:text-foreground',
+                )}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
           {exploreFilterBar('card')}
 
           {loading ? (
@@ -570,7 +607,7 @@ function ClientMarketplaceInner() {
                 mode={mode === 'list' ? 'list' : 'grid'}
                 gridCols={gridCols}
                 emptyTitle="Aucune fiche pour cette recherche"
-                emptyDescription="Élargissez les mots-clés, la ville ou le type pour voir des salles, prestataires et événements."
+                emptyDescription="Élargissez les mots-clés, la ville ou le type pour voir des salles, prestataires, locations et événements."
                 isFavorite={(item) => item.kind !== 'event' && isFavorite(item.kind, item.slug)}
                 onToggleFavorite={onToggleFavorite}
               />
@@ -598,6 +635,7 @@ function ClientMarketplaceInner() {
                   ['all', 'Tous'],
                   ['venue', 'Salles'],
                   ['service', 'Prestataires'],
+                  ['rental', 'Locations'],
                 ] as const).map(([id, label]) => (
                   <button
                     key={id}
@@ -632,8 +670,8 @@ function ClientMarketplaceInner() {
               gridCols={gridCols}
               emptyTitle={favoriteItems.length === 0 ? 'Aucun favori pour le moment' : 'Aucun favori pour ce filtre'}
               emptyDescription={favoriteItems.length === 0
-                ? 'Dans Explorer, cliquez sur le cœur d’une salle ou d’un prestataire pour le retrouver ici.'
-                : 'Changez le type (salles / prestataires) ou le mot-clé.'}
+                ? 'Dans Explorer, cliquez sur le cœur d’une salle, d’un prestataire ou d’une location pour le retrouver ici.'
+                : 'Changez le type (salles / prestataires / locations) ou le mot-clé.'}
               isFavorite={(item) => item.kind !== 'event' && isFavorite(item.kind, item.slug)}
               onToggleFavorite={onToggleFavorite}
             />

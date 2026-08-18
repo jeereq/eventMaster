@@ -23,7 +23,7 @@ const FEATURES = [
 const CLIENT_FEATURES = [
   { icon: Ticket, title: 'Billets et inscriptions', desc: 'Retrouvez vos places et votre badge QR dans Mes billets.' },
   { icon: Calendar, title: 'Devis et réservations', desc: 'Envoyez un devis salle ou presta, puis suivez vos demandes.' },
-  { icon: Table, title: 'Marketplace', desc: 'Salles, prestataires et événements publics — grille, liste ou carte.' },
+  { icon: Table, title: 'Marketplace', desc: 'Salles, prestataires, locations et événements publics — grille, liste ou carte.' },
   { icon: Sparkles, title: 'Compte client', desc: 'Sans abonnement SaaS — devis, billets et favoris.' },
 ];
 

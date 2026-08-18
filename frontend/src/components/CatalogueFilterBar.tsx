@@ -13,6 +13,7 @@ import {
   SERVICE_RENTAL_CATEGORIES,
   SERVICE_TRADE_CATEGORIES,
   clampRadiusKm,
+  isServiceRentalCategory,
   unitsForServiceCategory,
   type CatalogueGeoState,
   type CatalogueProximity,
@@ -322,7 +323,7 @@ export default function CatalogueFilterBar({
           <ShareButton
             variant="fab"
             title="Recherche EventMaster"
-            text="Salles, prestataires et événements filtrés sur EventMaster."
+            text="Salles, prestataires, locations et événements filtrés sur EventMaster."
             label="Partager la recherche"
           />
         </div>
@@ -381,7 +382,7 @@ export default function CatalogueFilterBar({
           <ShareButton
             variant="button"
             title="Recherche EventMaster"
-            text="Salles, prestataires et événements filtrés sur EventMaster."
+            text="Salles, prestataires, locations et événements filtrés sur EventMaster."
             label="Partager"
           />
           {!hideViewToggle ? (
@@ -631,7 +632,9 @@ export function CatalogueEntityFilterFields({
 }) {
   const kind = showKind ? extras.kind : entity;
   const showVenue = kind === 'all' || kind === 'venue';
-  const showService = kind === 'all' || kind === 'service';
+  const showTrade = kind === 'all' || kind === 'service';
+  const showRental = kind === 'all' || kind === 'rental';
+  const showOffering = showTrade || showRental;
   const showEvent = kind === 'all' || kind === 'event';
   const emit = (geo: CatalogueGeoState, nextExtras: CatalogueEntityExtras) => {
     onChange(geo, pickCatalogueExtras(nextExtras));
@@ -651,11 +654,17 @@ export function CatalogueEntityFilterFields({
               const kind = (id as import('@/lib/catalogueEntityFilters').CatalogueKind) || 'all';
               setExtras({
                 kind,
-                roomType: kind === 'service' || kind === 'event' ? '' : extras.roomType,
-                category: kind === 'venue' || kind === 'event' ? '' : extras.category,
+                roomType: kind === 'service' || kind === 'rental' || kind === 'event' ? '' : extras.roomType,
+                category: kind === 'venue' || kind === 'event'
+                  ? ''
+                  : kind === 'service' && isServiceRentalCategory(extras.category)
+                    ? ''
+                    : kind === 'rental' && extras.category && !isServiceRentalCategory(extras.category)
+                      ? ''
+                      : extras.category,
                 mobility: kind === 'venue' || kind === 'event' ? '' : extras.mobility,
                 priceUnit: kind === 'venue' || kind === 'event' ? '' : extras.priceUnit,
-                entry: kind === 'venue' || kind === 'service' ? '' : extras.entry,
+                entry: kind === 'venue' || kind === 'service' || kind === 'rental' ? '' : extras.entry,
               });
             }}
           />
@@ -665,12 +674,14 @@ export function CatalogueEntityFilterFields({
         value={value}
         onChange={(next) => emit(next, extras)}
         error={error}
-        showCapacity={kind !== 'service'}
+        showCapacity={kind !== 'service' && kind !== 'rental'}
         showProximity={showProximity}
         showAvailability={showAvailability}
         availabilityHint={kind === 'event'
           ? 'Date de l’événement (un jour ou du… au…).'
-          : kind === 'service'
+          : kind === 'rental'
+            ? 'N’affiche que les locations libres sur toute la période.'
+            : kind === 'service'
             ? 'N’affiche que les prestataires libres sur toute la période.'
             : undefined}
         capacityHint={kind === 'event' ? 'Places / billets restants.' : undefined}
@@ -684,12 +695,10 @@ export function CatalogueEntityFilterFields({
           />
         </CatalogueFilterField>
       ) : null}
-      {showService ? (
+      {showOffering ? (
         <>
-          <CatalogueFilterField label="Métier ou location" hint={kind === 'all' ? 'S’applique uniquement aux prestataires.' : undefined}>
-            <div className="space-y-3">
-              <div>
-                <span className="block text-[11px] text-muted mb-1.5">Prestations</span>
+          {showTrade ? (
+          <CatalogueFilterField label={kind === 'service' ? 'Métier' : 'Prestations'} hint={kind === 'all' ? 'S’applique uniquement aux prestataires métiers.' : undefined}>
                 <CatalogueChoicePills
                   options={SERVICE_TRADE_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] }))}
                   value={extras.category}
@@ -703,9 +712,10 @@ export function CatalogueEntityFilterFields({
                     });
                   }}
                 />
-              </div>
-              <div>
-                <span className="block text-[11px] text-muted mb-1.5">Location</span>
+          </CatalogueFilterField>
+          ) : null}
+          {showRental ? (
+          <CatalogueFilterField label={kind === 'rental' ? 'Type de location' : 'Location'} hint={kind === 'all' ? 'Habits, véhicules et matériel à louer.' : undefined}>
                 <CatalogueChoicePills
                   options={SERVICE_RENTAL_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] }))}
                   value={extras.category}
@@ -719,9 +729,8 @@ export function CatalogueEntityFilterFields({
                     });
                   }}
                 />
-              </div>
-            </div>
           </CatalogueFilterField>
+          ) : null}
           <CatalogueFilterField label="Intervention">
             <CatalogueChoicePills
               options={SERVICE_MOBILITY_OPTIONS.filter((opt) => opt.id)}

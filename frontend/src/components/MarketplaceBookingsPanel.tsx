@@ -12,7 +12,9 @@ import {
   bookingDateKeys,
   bookingNextStep,
   bookingPipelineIndex,
+  dashboardServiceHref,
   formatBookingPeriod,
+  isServiceRentalCategory,
   parseBlockedDates,
   type MarketplaceBookingItem,
   type MarketplaceBookingStatus,
@@ -95,7 +97,7 @@ export default function MarketplaceBookingsPanel({
 }) {
   const [filter, setFilter] = useState<'all' | 'received' | 'sent'>(organizerView ? 'sent' : 'all');
   const [status, setStatus] = useState<'all' | MarketplaceBookingStatus>('all');
-  const [kind, setKind] = useState<'all' | 'venue' | 'service'>('all');
+  const [kind, setKind] = useState<'all' | 'venue' | 'service' | 'rental'>('all');
   const [query, setQuery] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -112,7 +114,9 @@ export default function MarketplaceBookingsPanel({
       if (b.viewerRole !== 'organizer') return false;
     }
     if (status !== 'all' && b.status !== status) return false;
-    if (kind !== 'all' && b.kind !== kind) return false;
+    if (kind === 'venue' && b.kind !== 'venue') return false;
+    if (kind === 'service' && (b.kind !== 'service' || isServiceRentalCategory(b.offeringCategory))) return false;
+    if (kind === 'rental' && (b.kind !== 'service' || !isServiceRentalCategory(b.offeringCategory))) return false;
     const q = query.trim().toLowerCase();
     if (q) {
       const hay = [b.title, b.vendorName, b.organizerName, b.notes].filter(Boolean).join(' ').toLowerCase();
@@ -188,9 +192,10 @@ export default function MarketplaceBookingsPanel({
         </div>
         <div className="flex flex-wrap gap-1.5">
           {([
-            ['all', 'Salles et prestataires'],
+            ['all', 'Tous'],
             ['venue', 'Salles'],
             ['service', 'Prestataires'],
+            ['rental', 'Locations'],
           ] as const).map(([id, label]) => (
             <Chip key={id} active={kind === id} onClick={() => setKind(id)}>{label}</Chip>
           ))}
@@ -208,7 +213,7 @@ export default function MarketplaceBookingsPanel({
           title={bookings.length ? 'Aucune réservation pour ces filtres' : 'Aucune réservation'}
           description={bookings.length
             ? 'Changez le statut, le type ou les dates pour élargir la recherche.'
-            : 'Les demandes de date (salles et prestations) apparaîtront ici.'}
+            : 'Les demandes de date (salles, prestations et locations) apparaîtront ici.'}
         />
       ) : (
         <>
@@ -221,14 +226,15 @@ export default function MarketplaceBookingsPanel({
             const listingHref = item.listingSlug
               ? `/dashboard/catalogue/salles/${item.listingSlug}`
               : item.offeringSlug
-                ? `/dashboard/catalogue/prestataires/${item.offeringSlug}`
+                ? dashboardServiceHref(item.offeringSlug, item.offeringCategory)
                 : null;
+            const isRental = isServiceRentalCategory(item.offeringCategory);
             return (
               <article key={item.id} className="border border-border rounded-[var(--radius-card)] bg-surface p-4 space-y-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">
-                      {item.kind === 'venue' ? 'Salle' : 'Prestation'} · {isVendor ? 'Reçue' : 'Envoyée'}
+                      {item.kind === 'venue' ? 'Salle' : isRental ? 'Location' : 'Prestation'} · {isVendor ? 'Reçue' : 'Envoyée'}
                     </p>
                     <h3 className="font-semibold text-sm mt-0.5">{item.title}</h3>
                     <p className="text-xs text-muted mt-0.5">

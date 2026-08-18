@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
-import type { CatalogueItem } from '@/lib/marketplace';
+import { isServiceRentalCategory, type CatalogueItem, type ServiceCategory } from '@/lib/marketplace';
 
 export type FavoriteKind = 'venue' | 'service';
 
@@ -18,6 +18,7 @@ export type FavoriteListing = {
   priceFromFc: number | null;
   priceUnitLabel: string;
   categoryLabel?: string;
+  category?: ServiceCategory;
   capacity?: number | null;
   href: string;
 };
@@ -34,7 +35,7 @@ export function favoriteToCatalogueItem(row: FavoriteListing): CatalogueItem {
     href: row.href,
     title: row.title,
     orgName: row.orgName,
-    categoryLabel: row.categoryLabel || (row.kind === 'venue' ? 'Salle' : 'Prestataire'),
+    categoryLabel: row.categoryLabel || (row.kind === 'venue' ? 'Salle' : isServiceRentalCategory(row.category) ? 'Location' : 'Prestataire'),
     location: row.location,
     coverUrl: row.coverUrl,
     priceFromFc: row.priceFromFc,
@@ -42,6 +43,7 @@ export function favoriteToCatalogueItem(row: FavoriteListing): CatalogueItem {
     latitude: null,
     longitude: null,
     capacity: row.capacity ?? null,
+    category: row.category,
   };
 }
 

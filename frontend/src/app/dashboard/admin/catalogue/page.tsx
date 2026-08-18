@@ -43,11 +43,13 @@ import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
 import { useRememberListReturn } from '@/lib/catalogueQuery';
 
-type CatalogTab = 'venues' | 'offerings' | 'inquiries' | 'bookings';
+type CatalogTab = 'venues' | 'offerings' | 'rentals' | 'inquiries' | 'bookings';
 
 interface Overview {
   venues: { total: number; publicCount: number };
   offerings: { total: number; publicCount: number };
+  trades?: { total: number; publicCount: number };
+  rentals?: { total: number; publicCount: number };
   inquiries: { total: number; newCount: number };
   bookings: { total: number; requestedCount: number };
 }
@@ -302,11 +304,11 @@ export default function AdminCataloguePage() {
       params.set('limit', String(pageSize));
       params.set('page', String(page));
       if (q) params.set('q', q);
-      if (tab === 'venues' || tab === 'offerings') {
+      if (tab === 'venues' || tab === 'offerings' || tab === 'rentals') {
         appendCatalogueGeoParams(params, geo);
         appendCatalogueEntityParams(
           params,
-          { ...extras, kind: tab === 'venues' ? 'venue' : 'service' },
+          { ...extras, kind: tab === 'venues' ? 'venue' : tab === 'rentals' ? 'rental' : 'service' },
           tab === 'venues' ? 'venue' : 'service',
         );
         if (visibility === 'public') params.set('isPublic', '1');
@@ -314,13 +316,13 @@ export default function AdminCataloguePage() {
       }
       if (tab === 'inquiries' && inquiryStatus) params.set('status', inquiryStatus);
       if (tab === 'bookings' && bookingStatus) params.set('status', bookingStatus);
-      if ((tab === 'venues' || tab === 'offerings') && isCatalogueMapView(view)) {
+      if ((tab === 'venues' || tab === 'offerings' || tab === 'rentals') && isCatalogueMapView(view)) {
         params.set('limit', '100');
         params.set('page', '1');
       }
 
       if (tab === 'venues') setVenues(await api.get(`/admin/catalog/venues?${params}`));
-      if (tab === 'offerings') setOfferings(await api.get(`/admin/catalog/offerings?${params}`));
+      if (tab === 'offerings' || tab === 'rentals') setOfferings(await api.get(`/admin/catalog/offerings?${params}`));
       if (tab === 'inquiries') setInquiries(await api.get(`/admin/catalog/inquiries?${params}`));
       if (tab === 'bookings') setBookings(await api.get(`/admin/catalog/bookings?${params}`));
     } catch (err: unknown) {
@@ -387,7 +389,8 @@ export default function AdminCataloguePage() {
 
   const tabs: Array<{ id: CatalogTab; label: string; count?: number }> = [
     { id: 'venues', label: 'Salles', count: overview?.venues.total },
-    { id: 'offerings', label: 'Prestataires', count: overview?.offerings.total },
+    { id: 'offerings', label: 'Prestataires', count: overview?.trades?.total ?? overview?.offerings.total },
+    { id: 'rentals', label: 'Locations', count: overview?.rentals?.total },
     { id: 'inquiries', label: 'Demandes', count: overview?.inquiries.total },
     { id: 'bookings', label: 'Réservations', count: overview?.bookings.total },
   ];
@@ -395,7 +398,7 @@ export default function AdminCataloguePage() {
   const currentTotal =
     tab === 'venues'
       ? venues?.total ?? 0
-      : tab === 'offerings'
+      : tab === 'offerings' || tab === 'rentals'
         ? offerings?.total ?? 0
         : tab === 'inquiries'
           ? inquiries?.total ?? 0
@@ -404,18 +407,18 @@ export default function AdminCataloguePage() {
   const catalogItems: CatalogueItem[] =
     tab === 'venues'
       ? (venues?.items || []).map(venueToItem)
-      : tab === 'offerings'
+      : tab === 'offerings' || tab === 'rentals'
         ? (offerings?.items || []).map(offeringToItem)
         : [];
   const catalogMarkers = catalogItems
     .filter((item) => item.latitude != null && item.longitude != null)
     .map(catalogueItemToMapMarker);
-  const mapMode = (tab === 'venues' || tab === 'offerings') && isCatalogueMapView(view);
+  const mapMode = (tab === 'venues' || tab === 'offerings' || tab === 'rentals') && isCatalogueMapView(view);
 
-  const listingTab = tab === 'venues' || tab === 'offerings';
+  const listingTab = tab === 'venues' || tab === 'offerings' || tab === 'rentals';
   const listingExtras: CatalogueEntityExtras = {
     ...extras,
-    kind: tab === 'venues' ? 'venue' : tab === 'offerings' ? 'service' : 'all',
+    kind: tab === 'venues' ? 'venue' : tab === 'rentals' ? 'rental' : tab === 'offerings' ? 'service' : 'all',
   };
   const chips: CatalogueFilterChip[] = [
     ...(listingTab && visibility !== 'all' ? [{ id: 'visibility', label: 'Visibilité', value: visibility === 'public' ? 'Publiques' : 'Dépubliées' }] : []),
@@ -436,10 +439,11 @@ export default function AdminCataloguePage() {
 
       {error && <Alert variant="error">{error}</Alert>}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden">
         {[
           { label: 'Salles publiques', value: overview?.venues.publicCount ?? 0 },
-          { label: 'Prestations publiques', value: overview?.offerings.publicCount ?? 0 },
+          { label: 'Prestataires publics', value: overview?.trades?.publicCount ?? overview?.offerings.publicCount ?? 0 },
+          { label: 'Locations publiques', value: overview?.rentals?.publicCount ?? 0 },
           { label: 'Devis nouveaux', value: overview?.inquiries.newCount ?? 0 },
           { label: 'Réservations demandées', value: overview?.bookings.requestedCount ?? 0 },
         ].map((card) => (
@@ -458,6 +462,9 @@ export default function AdminCataloguePage() {
             onClick={() => {
               setTab(item.id);
               setPage(1);
+              if (item.id === 'venues' || item.id === 'offerings' || item.id === 'rentals') {
+                setExtras({ ...EMPTY_CATALOGUE_EXTRAS });
+              }
             }}
             className={cn(
               'px-3 py-1.5 rounded-md text-xs font-medium border transition',
@@ -508,7 +515,7 @@ export default function AdminCataloguePage() {
         modalTitle="Filtres catalogue"
         filters={
           <>
-            {(tab === 'venues' || tab === 'offerings') && (
+            {(tab === 'venues' || tab === 'offerings' || tab === 'rentals') && (
               <CatalogueFilterField label="Visibilité">
                 <CatalogueChoicePills
                   options={[
@@ -521,9 +528,9 @@ export default function AdminCataloguePage() {
                 />
               </CatalogueFilterField>
             )}
-            {(tab === 'venues' || tab === 'offerings') && (
+            {(tab === 'venues' || tab === 'offerings' || tab === 'rentals') && (
               <CatalogueEntityFilterFields
-                entity={tab === 'venues' ? 'venue' : 'service'}
+                entity={tab === 'venues' ? 'venue' : tab === 'rentals' ? 'rental' : 'service'}
                 value={geo}
                 extras={listingExtras}
                 showProximity={false}
@@ -561,14 +568,14 @@ export default function AdminCataloguePage() {
       />
 
       {loading ? (
-        (tab === 'venues' || tab === 'offerings') ? (
+        (tab === 'venues' || tab === 'offerings' || tab === 'rentals') ? (
           <CatalogueResultsSkeleton mode={mapMode ? 'map' : view === 'list' ? 'list' : 'grid'} count={8} gridCols={gridCols} />
         ) : (
           <div className="flex justify-center py-16">
             <Loader2 className="w-6 h-6 animate-spin text-primary" />
           </div>
         )
-      ) : tab === 'venues' || tab === 'offerings' ? (
+      ) : tab === 'venues' || tab === 'offerings' || tab === 'rentals' ? (
         mapMode ? (
           catalogMarkers.length === 0 ? (
             <EmptyState icon={<Store className="w-5 h-5" />} title="Aucune position" description="Aucune fiche géolocalisée ne correspond aux filtres." />
@@ -587,8 +594,12 @@ export default function AdminCataloguePage() {
               items={catalogItems}
               mode={view === 'list' ? 'list' : 'grid'}
               gridCols={gridCols}
-              emptyTitle={tab === 'venues' ? 'Aucune salle' : 'Aucun prestataire'}
-              emptyDescription={tab === 'venues' ? 'Les fiches salles apparaîtront ici.' : 'Les prestations publiées apparaîtront ici.'}
+              emptyTitle={tab === 'venues' ? 'Aucune salle' : tab === 'rentals' ? 'Aucune location' : 'Aucun prestataire'}
+              emptyDescription={tab === 'venues'
+                ? 'Les fiches salles apparaîtront ici.'
+                : tab === 'rentals'
+                  ? 'Les locations publiées apparaîtront ici.'
+                  : 'Les prestations publiées apparaîtront ici.'}
             />
             {catalogItems.length > 0 && (
               <ul className="divide-y divide-border border border-border rounded-[var(--radius-card)] overflow-hidden bg-surface">

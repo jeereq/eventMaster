@@ -61,6 +61,7 @@ function serializeBooking(row: {
     title,
     listingSlug: row.listing?.slug || null,
     offeringSlug: row.offering?.slug || null,
+    offeringCategory: row.offering?.category || null,
     vendorTenantId: row.vendorTenantId,
     organizerTenantId: row.organizerTenantId,
     vendorName: row.vendorTenant.name,

@@ -579,6 +579,11 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
   border-radius: 999px;
 }
 
+.em-map-marker-photo-pin.is-rental .em-map-marker-photo-badge {
+  background: #0e7490;
+  border-radius: 4px;
+}
+
 .em-map-marker-photo-pin.is-event .em-map-marker-photo-badge {
   background: #059669;
   border-radius: 4px;
@@ -626,6 +631,12 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
   color: var(--festive-accent, #b45309);
 }
 
+.em-map-marker-photo-pin.is-rental .em-map-marker-photo-pointer,
+.em-map-marker-inner.is-rental .em-map-marker-tail,
+.em-map-marker-rental .em-map-marker-tail {
+  color: #0e7490;
+}
+
 .em-map-marker-photo-pin.is-event .em-map-marker-photo-pointer,
 .em-map-marker-inner.is-event .em-map-marker-tail,
 .em-map-marker-event .em-map-marker-tail {
@@ -657,6 +668,11 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
 
 .em-map-marker-service .em-map-marker-chip {
   background: color-mix(in srgb, var(--festive-accent, #b45309) 92%, #fff);
+  color: #fff;
+}
+
+.em-map-marker-rental .em-map-marker-chip {
+  background: #0e7490;
   color: #fff;
 }
 
@@ -707,6 +723,11 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
 .em-map-marker-service .em-map-marker-head {
   background: var(--festive-accent, #b45309);
   border-radius: 50%;
+}
+
+.em-map-marker-rental .em-map-marker-head {
+  background: #0e7490;
+  border-radius: 4px;
 }
 
 .em-map-marker-event .em-map-marker-head {
@@ -807,6 +828,7 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
 
 .em-map-legend-venue,
 .em-map-legend-service,
+.em-map-legend-rental,
 .em-map-legend-event,
 .em-map-legend-here {
   width: 12px;
@@ -823,6 +845,11 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
 .em-map-legend-service {
   background: var(--festive-accent, #b45309);
   border-radius: 999px;
+}
+
+.em-map-legend-rental {
+  background: #0e7490;
+  border-radius: 4px;
 }
 
 .em-map-legend-event {

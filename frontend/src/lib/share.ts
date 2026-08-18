@@ -9,19 +9,21 @@ export function currentPageUrl(): string {
   return window.location.href;
 }
 
-export function listingPublicUrl(kind: 'venue' | 'service' | 'event', slug: string, origin?: string): string {
+export function listingPublicUrl(kind: 'venue' | 'service' | 'event' | 'rental', slug: string, origin?: string): string {
   const base = origin ?? (typeof window !== 'undefined' ? window.location.origin : '');
   const path =
     kind === 'venue'
       ? `/marketplace/salles/${encodeURIComponent(slug)}`
+      : kind === 'rental'
+        ? `/marketplace/locations/${encodeURIComponent(slug)}`
       : kind === 'service'
         ? `/marketplace/prestataires/${encodeURIComponent(slug)}`
         : `/marketplace/evenements/${encodeURIComponent(slug)}`;
   return `${base}${path}`;
 }
 
-export function listingShareTitle(kind: 'venue' | 'service' | 'event', name: string): string {
-  const prefix = kind === 'venue' ? 'Salle' : kind === 'service' ? 'Prestataire' : 'Événement';
+export function listingShareTitle(kind: 'venue' | 'service' | 'event' | 'rental', name: string): string {
+  const prefix = kind === 'venue' ? 'Salle' : kind === 'rental' ? 'Location' : kind === 'service' ? 'Prestataire' : 'Événement';
   return `${name} · ${prefix} EventMaster`;
 }
 

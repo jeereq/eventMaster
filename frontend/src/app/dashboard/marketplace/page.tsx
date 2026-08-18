@@ -24,6 +24,7 @@ import {
   defaultUnitForServiceCategory,
   unitsForServiceCategory,
   SERVICE_CATEGORY_META,
+  dashboardServiceHref,
   type MarketplaceBookingItem,
   type MarketplaceInquiryItem,
   type ServiceCategory,
@@ -35,7 +36,7 @@ import ListingDetailsFields from '@/components/ListingDetailsFields';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import {
-  Globe, GlobeLock, Loader2, Plus, Sparkles, Trash2,
+  Globe, GlobeLock, KeyRound, Loader2, Plus, Sparkles, Trash2,
 } from 'lucide-react';
 import BlockedDatesField from '@/components/BlockedDatesField';
 import MarketplaceMediaField from '@/components/MarketplaceMediaField';
@@ -70,7 +71,7 @@ interface ServiceItem {
   details?: unknown;
 }
 
-type DeskTab = 'services' | 'inquiries' | 'bookings';
+type DeskTab = 'services' | 'rentals' | 'inquiries' | 'bookings';
 
 const fieldClass =
   'w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm';
@@ -160,33 +161,39 @@ export default function MarketplaceDeskPage() {
 
   useEffect(() => {
     setServicesPage(1);
-  }, [servicesPageSize, svcQuery, filterCategory, filterCity, filterVisibility, filterMobility]);
+  }, [servicesPageSize, svcQuery, filterCategory, filterCity, filterVisibility, filterMobility, tab]);
+
+  useEffect(() => {
+    if (tab === 'services' && isServiceRentalCategory(filterCategory)) setFilterCategory('');
+    if (tab === 'rentals' && filterCategory && !isServiceRentalCategory(filterCategory)) setFilterCategory('');
+  }, [tab, filterCategory]);
 
   const photosOf = (item: ServiceItem) =>
     Array.isArray(item.photos) ? item.photos.filter((p): p is string => typeof p === 'string') : [];
 
   const servicesAtLimit = Boolean(getQuotaLockMessage('services', planQuota));
 
-  const openCreate = () => {
+  const openCreate = (mode: 'trade' | 'rental' = 'trade') => {
     const lock = getQuotaLockMessage('services', planQuota);
     if (lock) {
       setError(lock);
       return;
     }
+    const category: ServiceCategory = mode === 'rental' ? 'RENTAL_EQUIPMENT' : 'CATERING';
     setEditing(null);
     setDraft({
       title: '',
       description: '',
-      category: 'CATERING',
+      category,
       city: '',
       commune: '',
       neighborhood: '',
       coverageRadiusKm: '',
-      travels: true,
+      travels: mode !== 'rental',
       latitude: '',
       longitude: '',
       priceFromFc: '',
-      priceUnit: 'EVENT',
+      priceUnit: defaultUnitForServiceCategory(category),
       quotaMin: '',
       quotaMax: '',
       photos: [],
@@ -275,7 +282,9 @@ export default function MarketplaceDeskPage() {
       };
       if (editing) await api.put(`/marketplace/services/${editing.id}`, payload);
       else await api.post('/marketplace/services', payload);
-      setSuccess(publish ? 'Prestation publiée.' : 'Prestation enregistrée.');
+      setSuccess(publish
+        ? (isServiceRentalCategory(draft.category) ? 'Location publiée.' : 'Prestation publiée.')
+        : (isServiceRentalCategory(draft.category) ? 'Location enregistrée.' : 'Prestation enregistrée.'));
       setEditorOpen(false);
       await load();
       await refreshProfile?.();
@@ -290,7 +299,7 @@ export default function MarketplaceDeskPage() {
     if (!confirm(`Supprimer « ${item.title} » ?`)) return;
     try {
       await api.delete(`/marketplace/services/${item.id}`);
-      setSuccess('Prestation supprimée.');
+      setSuccess(isServiceRentalCategory(item.category) ? 'Location supprimée.' : 'Prestation supprimée.');
       await load();
     } catch (err: any) {
       setError(err.message || 'Suppression impossible.');
@@ -327,7 +336,13 @@ export default function MarketplaceDeskPage() {
 
   const newCount = inquiries.filter((i) => i.status === 'NEW').length;
 
-  const filteredServices = services.filter((item) => {
+  const listingTab = tab === 'services' || tab === 'rentals';
+  const listingIsRental = tab === 'rentals';
+  const listingPool = services.filter((item) => (
+    listingIsRental ? isServiceRentalCategory(item.category) : !isServiceRentalCategory(item.category)
+  ));
+
+  const filteredServices = listingPool.filter((item) => {
     const q = svcQuery.trim().toLowerCase();
     const hay = [item.title, item.description, item.city, item.commune, item.neighborhood].filter(Boolean).join(' ').toLowerCase();
     const matchesSearch = !q || hay.includes(q);
@@ -354,14 +369,14 @@ export default function MarketplaceDeskPage() {
     <div className="space-y-6">
       <PageHeader
         title="Marketplace"
-        description="Prestations, devis, réservations de dates. Acompte hors plateforme · commission vendeur 8 % (≠ abo SaaS)."
+        description="Prestations, locations, devis, réservations de dates. Acompte hors plateforme · commission vendeur 8 % (≠ abo SaaS)."
         breadcrumbs={
           <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Marketplace' }]} />
         }
         action={
-          tab === 'services' ? (
+          listingTab ? (
             <div className="flex flex-wrap items-center gap-2">
-              {services.length > 0 && (
+              {listingPool.length > 0 && (
                 <ViewModeToggle
                   storageKey="em-view-marketplace-services"
                   value={servicesViewMode}
@@ -370,17 +385,22 @@ export default function MarketplaceDeskPage() {
                   onColumnsChange={setServicesColumns}
                 />
               )}
-              <Button size="sm" onClick={openCreate} disabled={servicesAtLimit} leftIcon={<Plus className="w-4 h-4" />}>
-                Nouvelle prestation
+              <Button
+                size="sm"
+                onClick={() => openCreate(listingIsRental ? 'rental' : 'trade')}
+                disabled={servicesAtLimit}
+                leftIcon={<Plus className="w-4 h-4" />}
+              >
+                {listingIsRental ? 'Nouvelle location' : 'Nouvelle prestation'}
               </Button>
             </div>
           ) : undefined
         }
       />
 
-      {planQuota && tab === 'services' && (
+      {planQuota && listingTab && (
         <p className="text-xs text-muted">
-          Prestations : {planQuota.usage.services ?? 0} /{' '}
+          Fiches : {planQuota.usage.services ?? 0} /{' '}
           {(planQuota.limits.maxServices ?? 0) >= 9999 ? '∞' : planQuota.limits.maxServices}
           {servicesAtLimit ? ' — quota atteint, passez au forfait Prestataire ou Salle & presta.' : ''}
         </p>
@@ -396,6 +416,16 @@ export default function MarketplaceDeskPage() {
           )}
         >
           Prestations
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('rentals')}
+          className={cn(
+            'px-3 py-1.5 rounded-full text-xs font-semibold border',
+            tab === 'rentals' ? 'bg-primary text-white border-primary' : 'border-border text-muted',
+          )}
+        >
+          Locations
         </button>
         <button
           type="button"
@@ -422,7 +452,7 @@ export default function MarketplaceDeskPage() {
       {error && <Alert variant="error">{error}</Alert>}
       {success && <Alert variant="success">{success}</Alert>}
 
-      {tab === 'services' && services.length > 0 && (
+      {listingTab && listingPool.length > 0 && (
         <CatalogueFilterBar
           search={svcQuery}
           onSearchChange={setSvcQuery}
@@ -446,29 +476,21 @@ export default function MarketplaceDeskPage() {
             setFilterVisibility('all');
             setFilterMobility('');
           }}
-          resultLabel={`${filteredServices.length} prestation${filteredServices.length > 1 ? 's' : ''}`}
-          modalTitle="Filtrer les prestations"
+          resultLabel={`${filteredServices.length} ${listingIsRental
+            ? `location${filteredServices.length > 1 ? 's' : ''}`
+            : `prestation${filteredServices.length > 1 ? 's' : ''}`}`}
+          modalTitle={listingIsRental ? 'Filtrer les locations' : 'Filtrer les prestations'}
           filters={
             <>
-              <CatalogueFilterField label="Métier ou location">
-                <div className="space-y-3">
-                  <div>
-                    <span className="block text-[11px] text-muted mb-1.5">Prestations</span>
-                    <CatalogueChoicePills
-                      options={SERVICE_TRADE_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] }))}
-                      value={filterCategory}
-                      onChange={setFilterCategory}
-                    />
-                  </div>
-                  <div>
-                    <span className="block text-[11px] text-muted mb-1.5">Location</span>
-                    <CatalogueChoicePills
-                      options={SERVICE_RENTAL_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] }))}
-                      value={filterCategory}
-                      onChange={setFilterCategory}
-                    />
-                  </div>
-                </div>
+              <CatalogueFilterField label={listingIsRental ? 'Type de location' : 'Métier'}>
+                <CatalogueChoicePills
+                  options={(listingIsRental ? SERVICE_RENTAL_CATEGORIES : SERVICE_TRADE_CATEGORIES).map((id) => ({
+                    id,
+                    label: SERVICE_CATEGORY_LABELS[id],
+                  }))}
+                  value={filterCategory}
+                  onChange={setFilterCategory}
+                />
               </CatalogueFilterField>
               <CatalogueFilterField label="Ville">
                 <CatalogueChoicePills
@@ -515,22 +537,31 @@ export default function MarketplaceDeskPage() {
           onMarkContacted={markContacted}
           onConvert={convertInquiry}
         />
-      ) : services.length === 0 ? (
+      ) : listingPool.length === 0 ? (
           <EmptyState
-            icon={<Sparkles className="w-5 h-5" />}
-            title="Aucune prestation"
-            description="Ajoutez un traiteur, un DJ, un photographe… puis publiez la fiche."
+            icon={listingIsRental ? <KeyRound className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
+            title={listingIsRental ? 'Aucune location' : 'Aucune prestation'}
+            description={listingIsRental
+              ? 'Ajoutez une location d’habits, de véhicule ou de matériel, puis publiez la fiche.'
+              : 'Ajoutez un traiteur, un DJ, un photographe… puis publiez la fiche.'}
             action={
-              <Button size="sm" onClick={openCreate} disabled={servicesAtLimit} leftIcon={<Plus className="w-4 h-4" />}>
-                Créer une prestation
+              <Button
+                size="sm"
+                onClick={() => openCreate(listingIsRental ? 'rental' : 'trade')}
+                disabled={servicesAtLimit}
+                leftIcon={<Plus className="w-4 h-4" />}
+              >
+                {listingIsRental ? 'Créer une location' : 'Créer une prestation'}
               </Button>
             }
           />
         ) : filteredServices.length === 0 ? (
           <EmptyState
-            icon={<Sparkles className="w-5 h-5" />}
-            title="Aucune prestation pour ces filtres"
-            description="Élargissez le métier, la ville ou la visibilité."
+            icon={listingIsRental ? <KeyRound className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
+            title={listingIsRental ? 'Aucune location pour ces filtres' : 'Aucune prestation pour ces filtres'}
+            description={listingIsRental
+              ? 'Élargissez le type de location, la ville ou la visibilité.'
+              : 'Élargissez le métier, la ville ou la visibilité.'}
           />
         ) : (
           <>
@@ -553,7 +584,7 @@ export default function MarketplaceDeskPage() {
                     Modifier
                   </Button>
                   {item.isPublic && (
-                    <Link href={`/dashboard/catalogue/prestataires/${item.slug}`} className="inline-flex">
+                    <Link href={dashboardServiceHref(item.slug, item.category)} className="inline-flex">
                       <Button size="sm" variant="ghost" leftIcon={<Globe className="w-3.5 h-3.5" />}>
                         Voir
                       </Button>
@@ -577,7 +608,7 @@ export default function MarketplaceDeskPage() {
                           <img src={cover} alt="" className="h-full w-full object-cover" />
                         ) : (
                           <div className="h-full w-full flex items-center justify-center text-muted">
-                            <Sparkles className="w-5 h-5" />
+                            {listingIsRental ? <KeyRound className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
                           </div>
                         )}
                       </div>
@@ -604,7 +635,7 @@ export default function MarketplaceDeskPage() {
                       <img src={cover} alt="" className="h-full w-full object-cover" />
                     ) : (
                       <div className="h-full w-full flex items-center justify-center text-muted">
-                        <Sparkles className="w-8 h-8" />
+                        {listingIsRental ? <KeyRound className="w-8 h-8" /> : <Sparkles className="w-8 h-8" />}
                       </div>
                     )}
                     <div className="absolute top-2.5 right-2.5">
@@ -633,7 +664,7 @@ export default function MarketplaceDeskPage() {
             total={filteredServices.length}
             onPageChange={setServicesPage}
             onPageSizeChange={setServicesPageSize}
-            itemLabel="prestations"
+            itemLabel={listingIsRental ? 'locations' : 'prestations'}
           />
           </>
         )}
@@ -641,7 +672,11 @@ export default function MarketplaceDeskPage() {
       <Modal
         open={editorOpen}
         onClose={() => setEditorOpen(false)}
-        title={editing ? `Prestation — ${editing.title}` : 'Nouvelle prestation'}
+        title={editing
+          ? `${isServiceRentalCategory(editing.category) ? 'Location' : 'Prestation'} — ${editing.title}`
+          : isServiceRentalCategory(draft.category)
+            ? 'Nouvelle location'
+            : 'Nouvelle prestation'}
         description="Visible sur le marketplace uniquement après publication."
         size="xl"
         footer={
@@ -682,16 +717,15 @@ export default function MarketplaceDeskPage() {
               }}
               className={fieldClass}
             >
-              <optgroup label="Prestations">
-                {SERVICE_TRADE_CATEGORIES.map((id) => (
+              {isServiceRentalCategory(draft.category) ? (
+                SERVICE_RENTAL_CATEGORIES.map((id) => (
                   <option key={id} value={id}>{SERVICE_CATEGORY_LABELS[id]}</option>
-                ))}
-              </optgroup>
-              <optgroup label="Location">
-                {SERVICE_RENTAL_CATEGORIES.map((id) => (
+                ))
+              ) : (
+                SERVICE_TRADE_CATEGORIES.map((id) => (
                   <option key={id} value={id}>{SERVICE_CATEGORY_LABELS[id]}</option>
-                ))}
-              </optgroup>
+                ))
+              )}
             </select>
           </label>
           {isServiceRentalCategory(draft.category) ? (

@@ -17,6 +17,7 @@ import {
   formatQuotaLabel,
   serviceMobilityLabel,
   withDashboardListingHref,
+  isServiceRentalCategory,
   serviceToCatalogueItem,
   venueToCatalogueItem,
   type PublicService,
@@ -89,6 +90,7 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
   useEffect(() => {
     setBackHref(getCatalogueReturn(defaultBackHref, '/dashboard'));
   }, [defaultBackHref]);
+  const isRental = isServiceRentalCategory(service?.category);
   const backLabel = backHref.startsWith('/dashboard/admin/catalogue')
     ? 'Catalogue'
     : backHref.startsWith('/dashboard/catalogue')
@@ -98,7 +100,7 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
         : backHref.startsWith('/dashboard/bookings')
           ? 'Réservations'
           : backHref.startsWith('/dashboard/marketplace')
-            ? 'Prestations'
+            ? (isRental ? 'Locations' : 'Prestations')
             : 'Retour';
 
   const item = venue
@@ -112,6 +114,7 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
       ? formatQuotaLabel(service.quotaMin, service.quotaMax)
       : null;
   const isPublic = venue?.isPublic ?? service?.isPublic ?? true;
+  const shareKind = kind === 'venue' ? 'venue' : isRental ? 'rental' : 'service';
   const lat = venue?.latitude ?? service?.latitude ?? null;
   const lng = venue?.longitude ?? service?.longitude ?? null;
 
@@ -146,8 +149,8 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
       priceUnitLabel={venue?.priceUnitLabel || service?.priceUnitLabel}
       quotaLabel={quotaLabel}
       preview={!isClient}
-      shareKind={kind}
-      shareUrl={slug ? listingPublicUrl(kind, slug) : undefined}
+      shareKind={shareKind}
+      shareUrl={slug ? listingPublicUrl(shareKind, slug) : undefined}
       heroAction={isClient && slug ? (
         <FavoriteHeart
           active={isFavorite(kind, slug)}

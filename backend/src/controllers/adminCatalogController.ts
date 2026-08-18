@@ -3,7 +3,7 @@ import { MarketplaceBookingStatus, MarketplaceInquiryStatus, RoomType, VenuePric
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { auditReq } from '../services/adminAuditService';
-import { parseServiceCategory, parsePriceUnit, priceUnitLabel, serviceCategoryLabel, parsePhotoUrls, coverFromMedia } from '../utils/publicVenue';
+import { parseServiceCategory, parsePriceUnit, priceUnitLabel, serviceCategoryLabel, parsePhotoUrls, coverFromMedia, parseServiceGroup, serviceGroupPrismaFilter, isServiceRentalCategory } from '../utils/publicVenue';
 
 function pager(req: AuthenticatedRequest) {
   const page = Math.max(parseInt(String(req.query.page || '1'), 10) || 1, 1);
@@ -69,9 +69,10 @@ function priceRange(req: AuthenticatedRequest): { gte?: number; lte?: number } |
   return range.gte != null || range.lte != null ? range : undefined;
 }
 
-function listingHref(kind: 'venue' | 'offering', slug: string) {
-  return kind === 'venue'
-    ? `/dashboard/catalogue/salles/${slug}`
+function listingHref(kind: 'venue' | 'offering', slug: string, category?: string | null) {
+  if (kind === 'venue') return `/dashboard/catalogue/salles/${slug}`;
+  return isServiceRentalCategory(category)
+    ? `/dashboard/catalogue/locations/${slug}`
     : `/dashboard/catalogue/prestataires/${slug}`;
 }
 
@@ -116,6 +117,10 @@ export async function getCatalogOverview(req: AuthenticatedRequest, res: Respons
       venuesPublic,
       offeringsTotal,
       offeringsPublic,
+      tradesTotal,
+      tradesPublic,
+      rentalsTotal,
+      rentalsPublic,
       inquiriesTotal,
       inquiriesNew,
       bookingsTotal,
@@ -125,6 +130,10 @@ export async function getCatalogOverview(req: AuthenticatedRequest, res: Respons
       prisma.venueListing.count({ where: { isPublic: true } }),
       prisma.serviceOffering.count(),
       prisma.serviceOffering.count({ where: { isPublic: true } }),
+      prisma.serviceOffering.count({ where: serviceGroupPrismaFilter('trade') }),
+      prisma.serviceOffering.count({ where: { isPublic: true, ...serviceGroupPrismaFilter('trade') } }),
+      prisma.serviceOffering.count({ where: serviceGroupPrismaFilter('rental') }),
+      prisma.serviceOffering.count({ where: { isPublic: true, ...serviceGroupPrismaFilter('rental') } }),
       prisma.marketplaceInquiry.count(),
       prisma.marketplaceInquiry.count({ where: { status: 'NEW' } }),
       prisma.marketplaceBooking.count(),
@@ -134,6 +143,8 @@ export async function getCatalogOverview(req: AuthenticatedRequest, res: Respons
     return res.json({
       venues: { total: venuesTotal, publicCount: venuesPublic },
       offerings: { total: offeringsTotal, publicCount: offeringsPublic },
+      trades: { total: tradesTotal, publicCount: tradesPublic },
+      rentals: { total: rentalsTotal, publicCount: rentalsPublic },
       inquiries: { total: inquiriesTotal, newCount: inquiriesNew },
       bookings: { total: bookingsTotal, requestedCount: bookingsRequested },
     });
@@ -255,6 +266,7 @@ export async function listAdminOfferings(req: AuthenticatedRequest, res: Respons
     const q = searchQ(req);
     const isPublic = publicFilter(req);
     const category = parseServiceCategory(req.query.category) || undefined;
+    const group = parseServiceGroup(req.query.group);
     const city = cityFilter(req);
     const commune = communeFilter(req);
     const neighborhood = neighborhoodFilter(req);
@@ -265,7 +277,7 @@ export async function listAdminOfferings(req: AuthenticatedRequest, res: Respons
 
     const where = {
       isPublic,
-      category,
+      ...(category ? { category } : serviceGroupPrismaFilter(group)),
       ...(city ? { city: { contains: city, mode: 'insensitive' as const } } : {}),
       ...(commune ? { commune: { contains: commune, mode: 'insensitive' as const } } : {}),
       ...(neighborhood ? { neighborhood: { contains: neighborhood, mode: 'insensitive' as const } } : {}),
@@ -331,7 +343,7 @@ export async function listAdminOfferings(req: AuthenticatedRequest, res: Respons
           createdAt: row.createdAt,
           tenantId: row.tenantId,
           tenantName: row.tenant.name,
-          href: listingHref('offering', row.slug),
+          href: listingHref('offering', row.slug, row.category),
         };
       }),
       total,
@@ -385,6 +397,7 @@ export async function listAdminInquiries(req: AuthenticatedRequest, res: Respons
             select: {
               slug: true,
               title: true,
+              category: true,
               tenantId: true,
               tenant: { select: { name: true } },
             },
@@ -419,7 +432,7 @@ export async function listAdminInquiries(req: AuthenticatedRequest, res: Respons
           vendorTenantId,
           vendorName,
           href: slug
-            ? listingHref(kind === 'offering' ? 'offering' : 'venue', slug)
+            ? listingHref(kind === 'offering' ? 'offering' : 'venue', slug, row.offering?.category)
             : null,
         };
       }),
@@ -463,7 +476,7 @@ export async function listAdminBookings(req: AuthenticatedRequest, res: Response
         where,
         include: {
           listing: { select: { slug: true, headline: true, room: { select: { name: true } } } },
-          offering: { select: { slug: true, title: true } },
+          offering: { select: { slug: true, title: true, category: true } },
           vendorTenant: { select: { id: true, name: true } },
           organizerTenant: { select: { id: true, name: true } },
         },
@@ -495,7 +508,7 @@ export async function listAdminBookings(req: AuthenticatedRequest, res: Response
           organizerTenantId: row.organizerTenantId,
           organizerName: row.organizerTenant?.name || null,
           href: slug
-            ? listingHref(kind === 'offering' ? 'offering' : 'venue', slug)
+            ? listingHref(kind === 'offering' ? 'offering' : 'venue', slug, row.offering?.category)
             : null,
         };
       }),

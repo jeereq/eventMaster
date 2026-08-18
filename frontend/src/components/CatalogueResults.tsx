@@ -2,12 +2,12 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Building2, Calendar, MapPin, Sparkles, Users } from 'lucide-react';
+import { ArrowRight, Building2, Calendar, KeyRound, MapPin, Sparkles, Users } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { listStackClass } from '@/components/ui';
 import { Skeleton } from '@/components/ui/Skeleton';
 import FavoriteHeart from '@/components/FavoriteHeart';
-import { catalogueKindLabel, cataloguePriceCaption, formatDistanceKm, formatQuotaLabel, serviceMobilityLabel, type CatalogueItem, type CatalogueViewMode } from '@/lib/marketplace';
+import { catalogueItemDisplayKind, catalogueKindLabel, cataloguePriceCaption, formatDistanceKm, formatQuotaLabel, serviceMobilityLabel, type CatalogueItem, type CatalogueViewMode } from '@/lib/marketplace';
 
 export const CATALOGUE_GRID_COLS = [2, 3, 4, 5] as const;
 export type CatalogueGridCols = (typeof CATALOGUE_GRID_COLS)[number];
@@ -26,7 +26,8 @@ function Cover({ item, className }: { item: CatalogueItem; className?: string })
       <img src={item.coverUrl} alt="" className={cn('object-cover transition duration-500 group-hover:scale-110', className)} />
     );
   }
-  const Icon = item.kind === 'venue' ? Building2 : item.kind === 'event' ? Calendar : Sparkles;
+  const displayKind = catalogueItemDisplayKind(item);
+  const Icon = displayKind === 'venue' ? Building2 : displayKind === 'event' ? Calendar : displayKind === 'rental' ? KeyRound : Sparkles;
   return (
     <div className={cn('flex items-center justify-center bg-surface-muted text-muted', className)}>
       <Icon className="w-8 h-8" />
@@ -35,14 +36,15 @@ function Cover({ item, className }: { item: CatalogueItem; className?: string })
 }
 
 function KindBadge({ item }: { item: CatalogueItem }) {
-  const Icon = item.kind === 'venue' ? Building2 : item.kind === 'event' ? Calendar : Sparkles;
+  const displayKind = catalogueItemDisplayKind(item);
+  const Icon = displayKind === 'venue' ? Building2 : displayKind === 'event' ? Calendar : displayKind === 'rental' ? KeyRound : Sparkles;
   return (
     <span className={cn(
       'inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-sm px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider shadow-sm',
-      item.kind === 'service' ? 'text-[color:var(--festive-accent)]' : item.kind === 'event' ? 'text-emerald-700' : 'text-primary',
+      displayKind === 'rental' ? 'text-teal-700' : displayKind === 'service' ? 'text-[color:var(--festive-accent)]' : displayKind === 'event' ? 'text-emerald-700' : 'text-primary',
     )}>
       <Icon className="w-3 h-3" />
-      {catalogueKindLabel(item.kind)}
+      {catalogueKindLabel(displayKind)}
     </span>
   );
 }

@@ -35,8 +35,8 @@ function returnKeyFor(href: string): string | null {
 
 export function isCatalogueDetailPath(pathname: string): boolean {
   return (
-    /^\/marketplace\/(salles|prestataires|evenements)\/[^/]+$/.test(pathname)
-    || /^\/dashboard\/catalogue\/(salles|prestataires)\/[^/]+$/.test(pathname)
+    /^\/marketplace\/(salles|prestataires|locations|evenements)\/[^/]+$/.test(pathname)
+    || /^\/dashboard\/catalogue\/(salles|prestataires|locations)\/[^/]+$/.test(pathname)
   );
 }
 
@@ -73,7 +73,8 @@ export function isCatalogueListPath(pathname: string): boolean {
   return (
     pathname === '/marketplace'
     || pathname === '/marketplace/salles'
-    || pathname === '/marketplace/prestataires'
+    ||     pathname === '/marketplace/prestataires'
+    || pathname === '/marketplace/locations'
     || pathname === '/marketplace/evenements'
     || pathname === '/dashboard/admin/catalogue'
     || pathname === '/dashboard/rooms'

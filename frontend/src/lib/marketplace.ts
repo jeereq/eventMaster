@@ -360,6 +360,7 @@ export interface MarketplaceBookingItem {
   title: string;
   listingSlug: string | null;
   offeringSlug: string | null;
+  offeringCategory?: string | null;
   vendorTenantId: string;
   organizerTenantId: string | null;
   vendorName: string;
@@ -747,17 +748,25 @@ export function formatQuotaLabel(quotaMin?: number | null, quotaMax?: number | n
 }
 
 export type CatalogueKind = 'venue' | 'service' | 'event';
+export type CatalogueDisplayKind = CatalogueKind | 'rental';
 export type CatalogueViewMode = 'grid' | 'list' | 'map' | 'focus';
 
-export function catalogueKindLabel(kind?: CatalogueKind | string | null): string {
+export function catalogueItemDisplayKind(item: Pick<CatalogueItem, 'kind' | 'category'>): CatalogueDisplayKind {
+  if (item.kind === 'service' && isServiceRentalCategory(item.category)) return 'rental';
+  return item.kind;
+}
+
+export function catalogueKindLabel(kind?: CatalogueDisplayKind | string | null): string {
+  if (kind === 'rental') return 'Location';
   if (kind === 'service') return 'Prestataire';
   if (kind === 'event') return 'Événement';
   return 'Salle';
 }
 
-export function catalogueKindFilterLabel(kind?: CatalogueKind | 'all' | string | null): string {
+export function catalogueKindFilterLabel(kind?: CatalogueKind | 'all' | 'rental' | string | null): string {
   if (kind === 'venue') return 'Salles';
   if (kind === 'service') return 'Prestataires';
+  if (kind === 'rental') return 'Locations';
   if (kind === 'event') return 'Événements';
   return 'Tous';
 }
@@ -838,15 +847,23 @@ export function dashboardVenueHref(slug: string) {
   return `/dashboard/catalogue/salles/${slug}`;
 }
 
-export function dashboardServiceHref(slug: string) {
-  return `/dashboard/catalogue/prestataires/${slug}`;
+export function publicServiceHref(slug: string, category?: string | null): string {
+  return isServiceRentalCategory(category)
+    ? `/marketplace/locations/${slug}`
+    : `/marketplace/prestataires/${slug}`;
+}
+
+export function dashboardServiceHref(slug: string, category?: string | null) {
+  return isServiceRentalCategory(category)
+    ? `/dashboard/catalogue/locations/${slug}`
+    : `/dashboard/catalogue/prestataires/${slug}`;
 }
 
 export function withDashboardListingHref(item: CatalogueItem): CatalogueItem {
   if (item.kind === 'event') return item;
   return {
     ...item,
-    href: item.kind === 'venue' ? dashboardVenueHref(item.slug) : dashboardServiceHref(item.slug),
+    href: item.kind === 'venue' ? dashboardVenueHref(item.slug) : dashboardServiceHref(item.slug, item.category),
   };
 }
 
@@ -952,7 +969,7 @@ export function serviceToCatalogueItem(service: PublicService): CatalogueItem {
     kind: 'service',
     id: `service:${service.slug}`,
     slug: service.slug,
-    href: `/marketplace/prestataires/${service.slug}`,
+    href: publicServiceHref(service.slug, service.category),
     title: service.title,
     orgName: service.orgName,
     categoryLabel: service.categoryLabel,
@@ -993,7 +1010,7 @@ export function catalogueItemToMapMarker(item: CatalogueItem) {
     title: item.title,
     href: item.href,
     subtitle: [item.orgName, item.location].filter(Boolean).join(' · ') || undefined,
-    kind: item.kind,
+    kind: catalogueItemDisplayKind(item),
     coverUrl: item.coverUrl,
     photos: (item.photos || []).filter(Boolean),
     priceLabel: cataloguePriceCaption(item),

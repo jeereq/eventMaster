@@ -84,9 +84,9 @@ function MarketplaceHubPageInner() {
       const venueQs = venueParams.toString() ? `?${venueParams}` : '';
       const serviceQs = serviceParams.toString() ? `?${serviceParams}` : '';
       const eventQs = eventParams.toString() ? `?${eventParams}` : '';
-      const loadVenues = filters.kind !== 'service' && filters.kind !== 'event';
-      const loadServices = filters.kind !== 'venue' && filters.kind !== 'event';
-      const loadEvents = filters.kind !== 'venue' && filters.kind !== 'service';
+      const loadVenues = filters.kind === 'all' || filters.kind === 'venue';
+      const loadServices = filters.kind === 'all' || filters.kind === 'service' || filters.kind === 'rental';
+      const loadEvents = filters.kind === 'all' || filters.kind === 'event';
       const [venuesData, servicesData, eventsData] = await Promise.all([
         loadVenues ? api.get(`/public/venues${venueQs}`).catch(() => ({ venues: [] })) : Promise.resolve({ venues: [] }),
         loadServices ? api.get(`/public/services${serviceQs}`).catch(() => ({ services: [] })) : Promise.resolve({ services: [] }),
@@ -138,9 +138,15 @@ function MarketplaceHubPageInner() {
 
   return (
     <CatalogueSearchLayout
-      activeNav={applied.kind === 'event' ? 'events' : 'hub'}
-      heroTitle="Salles, prestataires et événements près de chez vous"
-      heroDescription="Explorez le marketplace EventMaster : locations, prestations et événements publics. Affinez par ville, commune, prix ou autour de vous."
+      activeNav={
+        applied.kind === 'event' ? 'events'
+          : applied.kind === 'service' ? 'services'
+            : applied.kind === 'rental' ? 'rentals'
+              : applied.kind === 'venue' ? 'venues'
+                : 'hub'
+      }
+      heroTitle="Salles, prestataires, locations et événements près de chez vous"
+      heroDescription="Explorez le marketplace EventMaster : salles, métiers, locations (habits, véhicules, matériel) et événements publics. Affinez par ville, commune, prix ou autour de vous."
       mode={mode}
       onViewChange={setView}
       gridCols={gridCols}
@@ -160,7 +166,7 @@ function MarketplaceHubPageInner() {
       searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
       showKindLegend
       cta={{
-        title: 'Vous proposez une salle ou un service ?',
+        title: 'Vous proposez une salle, un métier ou une location ?',
         description: 'Publiez une fiche depuis votre organisation EventMaster, avec photos, vidéos, carte et calendrier.',
         primaryHref: '/register',
         primaryLabel: 'Créer un compte',

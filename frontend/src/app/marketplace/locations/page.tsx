@@ -52,14 +52,14 @@ const QUERY_OPTS = {
   }),
 };
 
-function MarketplaceServicesPageInner() {
+function MarketplaceRentalsPageInner() {
   const { mode, setView, gridCols, setGridCols } = useCatalogueView();
   const { q, setQ, searchQ, applied, draft, setDraft, page, applyFilters, setPage } = useCatalogueQueryState(QUERY_OPTS);
   const [services, setServices] = useState<PublicService[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filterError, setFilterError] = useState('');
-  const [pageSize, setPageSize] = usePageSize('marketplace-services', 12);
+  const [pageSize, setPageSize] = usePageSize('marketplace-rentals', 12);
 
   const load = useCallback(async (filters: ServiceFilters, search: string) => {
     setLoading(true);
@@ -71,11 +71,11 @@ function MarketplaceServicesPageInner() {
       if (filters.category) params.set('category', filters.category);
       if (filters.priceUnit) params.set('priceUnit', filters.priceUnit);
       if (filters.mobility) params.set('mobility', filters.mobility);
-      params.set('group', 'trade');
+      params.set('group', 'rental');
       const data = await api.get(`/public/services${params.toString() ? `?${params}` : ''}`);
       setServices(data.services || []);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Impossible de charger les prestataires.');
+      setError(err instanceof Error ? err.message : 'Impossible de charger les locations.');
       setServices([]);
     } finally {
       setLoading(false);
@@ -96,7 +96,7 @@ function MarketplaceServicesPageInner() {
     if (applied.category) {
       extra.push({
         id: 'category',
-        label: 'Catégorie',
+        label: 'Location',
         value: SERVICE_CATEGORY_LABELS[applied.category as keyof typeof SERVICE_CATEGORY_LABELS] || applied.category,
       });
     }
@@ -110,8 +110,8 @@ function MarketplaceServicesPageInner() {
     if (applied.mobility) {
       extra.push({
         id: 'mobility',
-        label: 'Intervention',
-        value: applied.mobility === 'on_site' ? 'Sur place' : 'Se déplace',
+        label: 'Remise',
+        value: applied.mobility === 'on_site' ? 'Sur place' : 'Livraison / déplacement',
       });
     }
     return catalogueGeoChips(applied, extra);
@@ -127,9 +127,9 @@ function MarketplaceServicesPageInner() {
 
   return (
     <CatalogueSearchLayout
-      activeNav="services"
-      heroTitle="Trouvez un prestataire pour votre événement"
-      heroDescription="Traiteur, photo, DJ, déco… Les locations (habits, véhicules, matériel) ont leur propre onglet."
+      activeNav="rentals"
+      heroTitle="Louez habits, véhicules et matériel"
+      heroDescription="Costumes, robes, voitures, motos, chapiteaux… Filtrez par type, zone et dates de disponibilité."
       mode={mode}
       onViewChange={setView}
       gridCols={gridCols}
@@ -137,22 +137,22 @@ function MarketplaceServicesPageInner() {
       markers={markers}
       loading={loading}
       error={error}
-      emptyTitle="Aucun prestataire pour ces filtres"
-      emptyDescription="Élargissez la commune ou la catégorie, ou publiez une prestation depuis Marketplace."
+      emptyTitle="Aucune location pour ces filtres"
+      emptyDescription="Élargissez le type ou la commune, ou publiez une fiche location depuis votre espace prestataire."
       page={page}
       pageSize={pageSize}
       onPageChange={setPage}
       onPageSizeChange={setPageSize}
-      itemLabel="prestataires"
+      itemLabel="locations"
       searchCenter={searchCenter}
       radiusKm={searchCenter ? applied.radiusKm : 0}
       city={applied.city}
       searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
       cta={{
-        title: 'Vous proposez un service ?',
-        description: 'Publiez votre prestation avec zone d’intervention, médias et calendrier.',
+        title: 'Vous louez du matériel ou des tenues ?',
+        description: 'Publiez vos articles avec photos, caution et calendrier de disponibilité.',
         primaryHref: '/register',
-        primaryLabel: 'Proposer mes services',
+        primaryLabel: 'Proposer mes locations',
         secondaryHref: '/contact',
         secondaryLabel: 'Nous contacter',
       }}
@@ -163,13 +163,13 @@ function MarketplaceServicesPageInner() {
           compactToggle={variant === 'float'}
           search={q}
           onSearchChange={setQ}
-          searchPlaceholder="Nom, prestataire…"
+          searchPlaceholder="Habits, voiture, matériel…"
           view={mode}
           onViewChange={setView}
           gridCols={gridCols}
           onGridColsChange={setGridCols}
           chips={chips}
-          resultLabel={!loading ? `${items.length} prestataire${items.length > 1 ? 's' : ''}` : undefined}
+          resultLabel={!loading ? `${items.length} location${items.length > 1 ? 's' : ''}` : undefined}
           onRemoveChip={(id) => applyFilters(clearCatalogueExtraChip(clearCatalogueGeoChip(applied, id), id))}
           onClearChips={() => applyFilters(emptyFilters)}
           onOpen={() => {
@@ -185,14 +185,14 @@ function MarketplaceServicesPageInner() {
               throw err;
             }
           }}
-          modalTitle="Filtrer les prestataires"
+          modalTitle="Filtrer les locations"
           filters={
             <CatalogueEntityFilterFields
-              entity="service"
+              entity="rental"
               value={draft}
               extras={{
                 ...EMPTY_CATALOGUE_EXTRAS,
-                kind: 'service',
+                kind: 'rental',
                 category: draft.category,
                 priceUnit: draft.priceUnit,
                 mobility: draft.mobility,
@@ -212,10 +212,10 @@ function MarketplaceServicesPageInner() {
   );
 }
 
-export default function MarketplaceServicesPage() {
+export default function MarketplaceRentalsPage() {
   return (
-    <Suspense fallback={<div className="page-container py-16 text-sm text-muted">Chargement des prestataires…</div>}>
-      <MarketplaceServicesPageInner />
+    <Suspense fallback={<div className="page-container py-16 text-sm text-muted">Chargement des locations…</div>}>
+      <MarketplaceRentalsPageInner />
     </Suspense>
   );
 }

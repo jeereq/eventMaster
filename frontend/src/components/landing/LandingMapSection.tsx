@@ -65,9 +65,9 @@ export default function LandingMapSection() {
       if (search.trim()) eventParams.set('q', search.trim());
       appendCatalogueGeoParams(eventParams, filters);
       appendCatalogueEntityParams(eventParams, filters, 'event');
-      const loadVenues = filters.kind !== 'service' && filters.kind !== 'event';
-      const loadServices = filters.kind !== 'venue' && filters.kind !== 'event';
-      const loadEvents = filters.kind !== 'venue' && filters.kind !== 'service';
+      const loadVenues = filters.kind === 'all' || filters.kind === 'venue';
+      const loadServices = filters.kind === 'all' || filters.kind === 'service' || filters.kind === 'rental';
+      const loadEvents = filters.kind === 'all' || filters.kind === 'event';
       const [venuesData, servicesData, eventsData] = await Promise.all([
         loadVenues ? api.get(`/public/venues${venueParams.toString() ? `?${venueParams}` : ''}`).catch(() => ({ venues: [] })) : Promise.resolve({ venues: [] }),
         loadServices ? api.get(`/public/services${serviceParams.toString() ? `?${serviceParams}` : ''}`).catch(() => ({ services: [] })) : Promise.resolve({ services: [] }),
@@ -131,10 +131,10 @@ export default function LandingMapSection() {
               Sur la carte
             </p>
             <h2 className="text-2xl font-semibold text-foreground tracking-tight">
-              Salles, prestataires et événements à Kinshasa et Lubumbashi
+              Salles, prestataires, locations et événements à Kinshasa et Lubumbashi
             </h2>
             <p className="text-sm text-muted leading-relaxed">
-              Filtres complets (ville, dates, prix, type de salle, métier, entrée…). Sélectionnez un pin, puis ouvrez la fiche.
+              Filtres complets (ville, dates, prix, type de salle, métier, location, entrée…). Sélectionnez un pin, puis ouvrez la fiche.
             </p>
           </div>
           <Link href="/marketplace">
@@ -147,7 +147,7 @@ export default function LandingMapSection() {
         <CatalogueFilterBar
           search={query}
           onSearchChange={setQuery}
-          searchPlaceholder="Nom, quartier, prestataire, événement…"
+          searchPlaceholder="Nom, quartier, prestataire, location, événement…"
           view="map"
           onViewChange={() => undefined}
           hideViewToggle
