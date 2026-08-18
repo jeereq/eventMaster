@@ -65,6 +65,7 @@ const ROOM_TYPES: RoomType[] = ['BANQUET', 'CONFERENCE', 'AMPHITHEATER', 'TENT',
 const PRICE_UNITS: VenuePriceUnit[] = ['EVENT', 'DAY', 'HOUR', 'PERSON', 'QUOTA'];
 const SERVICE_CATEGORIES: ServiceCategory[] = [
   'CATERING', 'PHOTOGRAPHY', 'VIDEO', 'DJ', 'DECORATION', 'SECURITY', 'FLORIST', 'TRANSPORT', 'MC', 'OTHER',
+  'RENTAL_CLOTHING_MEN', 'RENTAL_CLOTHING_WOMEN', 'RENTAL_CLOTHING_CHILD', 'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT',
 ];
 
 const VENUE_ORGS = [
@@ -76,7 +77,7 @@ const VENUE_ORGS = [
 const SERVICE_ORGS = [
   'Saveurs de Kin', 'Studio Mwinda', 'Djembé Sound', 'Fleurs du Pool',
   'Protocole Royal', 'Lens & Light', 'Traiteur Maman Léonie', 'Sécurité Baobab',
-  'Déco Kuba', 'Navettes Hewa Bora',
+  'Déco Kuba', 'Navettes Hewa Bora', 'Atelier Sape Gombe', 'Auto Prestige Kin',
 ];
 
 const MANAGERS = [
@@ -94,7 +95,7 @@ const ROOM_LABELS: Record<RoomType, string[]> = {
   CUSTOM: ['Loft événementiel', 'Rooftop', 'Cour intérieure'],
 };
 
-const SERVICE_TITLES: Record<ServiceCategory, string[]> = {
+const SERVICE_TITLES: Record<string, string[]> = {
   CATERING: ['Buffet cocktail', 'Menu mariage 3 services', 'Coffee break entreprise', 'Grillade événementielle'],
   PHOTOGRAPHY: ['Reportage mariage', 'Portrait corporate', 'Couverture gala', 'Studio + drone'],
   VIDEO: ['Film de cérémonie', 'Aftermovie événement', 'Captation live', 'Clip institutionnel'],
@@ -104,7 +105,13 @@ const SERVICE_TITLES: Record<ServiceCategory, string[]> = {
   FLORIST: ['Bouquet de mariée', 'Centres de table', 'Décor église', 'Composition tropicale'],
   TRANSPORT: ['Navette invités', 'Cortège mariage', 'Minibus VIP', 'Transfert aéroport'],
   MC: ['Maître de cérémonie', 'Animation protocole', 'Présentation gala', 'Host bilingue'],
-  OTHER: ['Location mobilier', 'Générateur de secours', 'Photobooth', 'Coordination jour J'],
+  OTHER: ['Coordination jour J', 'Photobooth', 'Générateur de secours'],
+  RENTAL_CLOTHING_MEN: ['Costume mariage', 'Smoking gala', 'Tenue traditionnelle homme', 'Costume témoin'],
+  RENTAL_CLOTHING_WOMEN: ['Robe de soirée', 'Robe de mariée', 'Tenue traditionnelle femme', 'Cocktail gala'],
+  RENTAL_CLOTHING_CHILD: ['Costume cortège', 'Robe demoiselle d’honneur', 'Tenue baptême', 'Habits cérémonie enfant'],
+  RENTAL_CAR: ['Berline mariage', '4x4 cortège', 'Limousine gala', 'Voiture avec chauffeur'],
+  RENTAL_MOTO: ['Moto cortège', 'Scooter staff', 'Moto avec casques', 'Deux-roues événement'],
+  RENTAL_EQUIPMENT: ['Chapiteau + chaises', 'Tables banquet', 'Sono mobile', 'Groupe électrogène'],
 };
 
 const AVENUES = [

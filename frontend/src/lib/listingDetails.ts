@@ -20,7 +20,14 @@ export type ListingAmenityId =
   | 'install'
   | 'trial'
   | 'makeup'
-  | 'backup';
+  | 'backup'
+  | 'sizes'
+  | 'fitting'
+  | 'delivery'
+  | 'driver'
+  | 'fuel'
+  | 'helmet'
+  | 'childSeat';
 
 export type ListingEventTypeId =
   | 'wedding'
@@ -108,6 +115,16 @@ export const SERVICE_AMENITIES: Array<{ id: ListingAmenityId; label: string }> =
   { id: 'backup', label: 'Matériel de secours' },
 ];
 
+export const RENTAL_AMENITIES: Array<{ id: ListingAmenityId; label: string }> = [
+  { id: 'sizes', label: 'Plusieurs tailles' },
+  { id: 'fitting', label: 'Essayage' },
+  { id: 'delivery', label: 'Livraison / dépôt' },
+  { id: 'driver', label: 'Chauffeur inclus' },
+  { id: 'fuel', label: 'Carburant inclus' },
+  { id: 'helmet', label: 'Casque inclus' },
+  { id: 'childSeat', label: 'Siège enfant' },
+];
+
 export const LISTING_EVENT_TYPES: Array<{ id: ListingEventTypeId; label: string }> = [
   { id: 'wedding', label: 'Mariage' },
   { id: 'birthday', label: 'Anniversaire' },
@@ -118,7 +135,7 @@ export const LISTING_EVENT_TYPES: Array<{ id: ListingEventTypeId; label: string 
   { id: 'shooting', label: 'Shooting' },
 ];
 
-const AMENITY_IDS = new Set([...VENUE_AMENITIES, ...SERVICE_AMENITIES].map((item) => item.id));
+const AMENITY_IDS = new Set([...VENUE_AMENITIES, ...SERVICE_AMENITIES, ...RENTAL_AMENITIES].map((item) => item.id));
 const EVENT_IDS = new Set(LISTING_EVENT_TYPES.map((item) => item.id));
 
 export function parseListingDetails(input: unknown): ListingDetails {
@@ -157,7 +174,7 @@ export function parseListingDetails(input: unknown): ListingDetails {
 }
 
 export function amenityLabel(id: string) {
-  return [...VENUE_AMENITIES, ...SERVICE_AMENITIES].find((item) => item.id === id)?.label || id;
+  return [...VENUE_AMENITIES, ...SERVICE_AMENITIES, ...RENTAL_AMENITIES].find((item) => item.id === id)?.label || id;
 }
 
 export function eventTypeLabel(id: string) {

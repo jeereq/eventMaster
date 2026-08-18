@@ -5,12 +5,14 @@ import { Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
   LISTING_EVENT_TYPES,
+  RENTAL_AMENITIES,
   SERVICE_AMENITIES,
   VENUE_AMENITIES,
   type ListingAmenityId,
   type ListingDetails,
   type ListingEventTypeId,
 } from '@/lib/listingDetails';
+import { isServiceRentalCategory } from '@/lib/marketplace';
 
 function MultiPills({
   options,
@@ -50,13 +52,16 @@ export default function ListingDetailsFields({
   onChange,
   kind,
   hideDescription = false,
+  category,
 }: {
   value: ListingDetails;
   onChange: (next: ListingDetails) => void;
   kind: 'venue' | 'service';
   hideDescription?: boolean;
+  category?: string;
 }) {
-  const amenities = kind === 'venue' ? VENUE_AMENITIES : SERVICE_AMENITIES;
+  const isRental = kind === 'service' && isServiceRentalCategory(category);
+  const amenities = kind === 'venue' ? VENUE_AMENITIES : isRental ? [...SERVICE_AMENITIES, ...RENTAL_AMENITIES] : SERVICE_AMENITIES;
 
   return (
     <div className="space-y-4">
@@ -70,12 +75,19 @@ export default function ListingDetailsFields({
           className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
           placeholder={kind === 'venue'
             ? 'Ambiance, capacité réelle, horaires, ce qui rend la salle unique…'
-            : 'Style, matériel, équipe, déroulement type d’une prestation…'}
+            : isRental
+              ? 'Parc, tailles / modèles, conditions de caution, livraison, ce qui est inclus…'
+              : 'Style, matériel, équipe, déroulement type d’une prestation…'}
         />
       </label>
       )}
       <div className="space-y-1.5">
         <span className="text-xs font-semibold text-foreground">Équipements et atouts</span>
+        {isRental ? (
+          <p className="text-[11px] text-muted">
+            Précisez tailles, livraison, chauffeur ou ce qui est fourni avec la location.
+          </p>
+        ) : null}
         <MultiPills
           options={amenities}
           selected={value.amenities}

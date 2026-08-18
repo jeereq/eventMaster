@@ -4,31 +4,31 @@ import { SERVICE_CATEGORIES, SERVICE_CATEGORY_LABELS, type ServiceCategory } fro
 export const EVENT_PLAN_SLOTS: Record<ListingEventTypeId, { required: ServiceCategory[]; optional: ServiceCategory[] }> = {
   wedding: {
     required: ['CATERING', 'PHOTOGRAPHY', 'DJ', 'DECORATION'],
-    optional: ['VIDEO', 'FLORIST', 'MC'],
+    optional: ['VIDEO', 'FLORIST', 'MC', 'RENTAL_CLOTHING_WOMEN', 'RENTAL_CAR'],
   },
   birthday: {
     required: ['CATERING', 'DJ', 'DECORATION'],
-    optional: ['PHOTOGRAPHY'],
+    optional: ['PHOTOGRAPHY', 'RENTAL_CLOTHING_CHILD'],
   },
   corporate: {
     required: ['CATERING', 'MC'],
-    optional: ['PHOTOGRAPHY', 'VIDEO', 'TRANSPORT'],
+    optional: ['PHOTOGRAPHY', 'VIDEO', 'TRANSPORT', 'RENTAL_CAR'],
   },
   gala: {
     required: ['CATERING', 'DJ', 'DECORATION', 'MC'],
-    optional: ['PHOTOGRAPHY', 'VIDEO'],
+    optional: ['PHOTOGRAPHY', 'VIDEO', 'RENTAL_CLOTHING_MEN', 'RENTAL_CLOTHING_WOMEN'],
   },
   religious: {
     required: ['CATERING', 'DECORATION'],
-    optional: ['TRANSPORT', 'PHOTOGRAPHY', 'MC'],
+    optional: ['TRANSPORT', 'PHOTOGRAPHY', 'MC', 'RENTAL_EQUIPMENT'],
   },
   private: {
     required: ['CATERING', 'DJ'],
-    optional: ['DECORATION', 'PHOTOGRAPHY'],
+    optional: ['DECORATION', 'PHOTOGRAPHY', 'RENTAL_EQUIPMENT'],
   },
   shooting: {
     required: ['PHOTOGRAPHY', 'VIDEO'],
-    optional: ['DECORATION', 'OTHER'],
+    optional: ['DECORATION', 'OTHER', 'RENTAL_CLOTHING_WOMEN', 'RENTAL_CLOTHING_MEN'],
   },
 };
 

@@ -74,6 +74,7 @@ export default function MarketplaceVenueDetailPage() {
         chip={venue ? (roomTypeLabels[venue.roomType as RoomType] || venue.roomType) : ''}
         title={venue?.headline || ''}
         subtitle={venue?.orgName || ''}
+        shareKind="venue"
         photos={venue?.photos || []}
         photoIndex={photoIndex}
         onPhotoIndex={setPhotoIndex}

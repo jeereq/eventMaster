@@ -73,6 +73,7 @@ export default function MarketplaceServiceDetailPage() {
         chip={service?.categoryLabel || ''}
         title={service?.title || ''}
         subtitle={service?.orgName || ''}
+        shareKind="service"
         photos={service?.photos || []}
         photoIndex={photoIndex}
         onPhotoIndex={setPhotoIndex}

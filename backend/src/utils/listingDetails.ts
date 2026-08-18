@@ -2,6 +2,7 @@ const AMENITY_IDS = new Set([
   'wifi', 'parking', 'ac', 'generator', 'sound', 'kitchen', 'stage', 'cloakroom',
   'accessible', 'garden', 'security', 'projector', 'toilets', 'lighting', 'bar',
   'gear', 'assistant', 'urgent', 'install', 'trial', 'makeup', 'backup',
+  'sizes', 'fitting', 'delivery', 'driver', 'fuel', 'helmet', 'childSeat',
 ]);
 const EVENT_IDS = new Set([
   'wedding', 'birthday', 'corporate', 'gala', 'religious', 'private', 'shooting',

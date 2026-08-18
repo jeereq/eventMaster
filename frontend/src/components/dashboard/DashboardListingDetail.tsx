@@ -27,6 +27,7 @@ import type { MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import MarketplaceInquiryForm from '@/components/MarketplaceInquiryForm';
 import MarketplaceBookingForm from '@/components/MarketplaceBookingForm';
 import FavoriteHeart from '@/components/FavoriteHeart';
+import { listingPublicUrl } from '@/lib/share';
 import { useListingFavorites } from '@/lib/listingFavorites';
 import { Building2, MapPin, Navigation, Sparkles, Users } from 'lucide-react';
 
@@ -145,6 +146,8 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
       priceUnitLabel={venue?.priceUnitLabel || service?.priceUnitLabel}
       quotaLabel={quotaLabel}
       preview={!isClient}
+      shareKind={kind}
+      shareUrl={slug ? listingPublicUrl(kind, slug) : undefined}
       heroAction={isClient && slug ? (
         <FavoriteHeart
           active={isFavorite(kind, slug)}

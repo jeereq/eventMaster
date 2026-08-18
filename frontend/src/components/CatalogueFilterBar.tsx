@@ -7,15 +7,17 @@ import { cn } from '@/lib/cn';
 import {
   PRICE_UNIT_OPTIONS,
   RADIUS_KM_OPTIONS,
-  SERVICE_CATEGORIES,
   SERVICE_CATEGORY_LABELS,
   SERVICE_MOBILITY_OPTIONS,
+  SERVICE_RENTAL_CATEGORIES,
+  SERVICE_TRADE_CATEGORIES,
   clampRadiusKm,
   type CatalogueGeoState,
   type CatalogueProximity,
   type CatalogueViewMode,
 } from '@/lib/marketplace';
 import { pauseCatalogueDraftSync, resumeCatalogueDraftSync } from '@/lib/catalogueQuery';
+import ShareButton from '@/components/ShareButton';
 import {
   EVENT_ENTRY_OPTIONS,
   KIND_FILTER_OPTIONS,
@@ -312,6 +314,12 @@ export default function CatalogueFilterBar({
               ) : null}
             </button>
           )}
+          <ShareButton
+            variant="fab"
+            title="Recherche EventMaster"
+            text="Salles, prestataires et événements filtrés sur EventMaster."
+            label="Partager la recherche"
+          />
         </div>
         {!hideViewToggle ? (
           <CatalogueViewToggle
@@ -365,6 +373,12 @@ export default function CatalogueFilterBar({
               ) : null}
             </Button>
           )}
+          <ShareButton
+            variant="button"
+            title="Recherche EventMaster"
+            text="Salles, prestataires et événements filtrés sur EventMaster."
+            label="Partager"
+          />
           {!hideViewToggle ? (
             <CatalogueViewToggle
               value={view}
@@ -664,12 +678,25 @@ export function CatalogueEntityFilterFields({
       ) : null}
       {showService ? (
         <>
-          <CatalogueFilterField label="Métier du prestataire" hint={kind === 'all' ? 'S’applique uniquement aux prestataires.' : undefined}>
-            <CatalogueChoicePills
-              options={SERVICE_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] }))}
-              value={extras.category}
-              onChange={(id) => setExtras({ category: id })}
-            />
+          <CatalogueFilterField label="Métier ou location" hint={kind === 'all' ? 'S’applique uniquement aux prestataires.' : undefined}>
+            <div className="space-y-3">
+              <div>
+                <span className="block text-[11px] text-muted mb-1.5">Prestations</span>
+                <CatalogueChoicePills
+                  options={SERVICE_TRADE_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] }))}
+                  value={extras.category}
+                  onChange={(id) => setExtras({ category: id })}
+                />
+              </div>
+              <div>
+                <span className="block text-[11px] text-muted mb-1.5">Location</span>
+                <CatalogueChoicePills
+                  options={SERVICE_RENTAL_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] }))}
+                  value={extras.category}
+                  onChange={(id) => setExtras({ category: id })}
+                />
+              </div>
+            </div>
           </CatalogueFilterField>
           <CatalogueFilterField label="Intervention">
             <CatalogueChoicePills

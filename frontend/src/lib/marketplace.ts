@@ -15,7 +15,13 @@ export type ServiceCategory =
   | 'FLORIST'
   | 'TRANSPORT'
   | 'MC'
-  | 'OTHER';
+  | 'OTHER'
+  | 'RENTAL_CLOTHING_MEN'
+  | 'RENTAL_CLOTHING_WOMEN'
+  | 'RENTAL_CLOTHING_CHILD'
+  | 'RENTAL_CAR'
+  | 'RENTAL_MOTO'
+  | 'RENTAL_EQUIPMENT';
 
 export interface PublicVenue {
   slug: string;
@@ -90,10 +96,30 @@ export const SERVICE_CATEGORY_LABELS: Record<ServiceCategory, string> = {
   FLORIST: 'Fleuriste',
   TRANSPORT: 'Transport',
   MC: 'Maître de cérémonie',
-  OTHER: 'Autre',
+  OTHER: 'Autre prestation',
+  RENTAL_CLOTHING_MEN: 'Location habits homme',
+  RENTAL_CLOTHING_WOMEN: 'Location habits femme',
+  RENTAL_CLOTHING_CHILD: 'Location habits enfant',
+  RENTAL_CAR: 'Location voiture',
+  RENTAL_MOTO: 'Location moto',
+  RENTAL_EQUIPMENT: 'Location matériel',
 };
 
-export const SERVICE_CATEGORIES = Object.keys(SERVICE_CATEGORY_LABELS) as ServiceCategory[];
+export const SERVICE_TRADE_CATEGORIES: ServiceCategory[] = [
+  'CATERING', 'PHOTOGRAPHY', 'VIDEO', 'DJ', 'DECORATION',
+  'SECURITY', 'FLORIST', 'TRANSPORT', 'MC', 'OTHER',
+];
+
+export const SERVICE_RENTAL_CATEGORIES: ServiceCategory[] = [
+  'RENTAL_CLOTHING_MEN', 'RENTAL_CLOTHING_WOMEN', 'RENTAL_CLOTHING_CHILD',
+  'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT',
+];
+
+export const SERVICE_CATEGORIES = [...SERVICE_TRADE_CATEGORIES, ...SERVICE_RENTAL_CATEGORIES];
+
+export function isServiceRentalCategory(category?: string | null): boolean {
+  return Boolean(category && (SERVICE_RENTAL_CATEGORIES as string[]).includes(category));
+}
 
 export type ServiceMobility = '' | 'on_site' | 'travels';
 

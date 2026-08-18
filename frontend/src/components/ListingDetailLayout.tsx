@@ -9,6 +9,8 @@ import { getCatalogueReturn, isCatalogueListPath } from '@/lib/catalogueQuery';
 import { isVideoUrl, mediaPosterUrl } from '@/lib/marketplace';
 import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import { ArrowLeft, Play } from 'lucide-react';
+import ShareButton from '@/components/ShareButton';
+import { listingShareTitle } from '@/lib/share';
 
 function ListingMediaGallery({
   photos,
@@ -103,6 +105,8 @@ export default function ListingDetailLayout({
   bookLabel = 'Réserver',
   hideBooking = false,
   priceCaption,
+  shareUrl,
+  shareKind = 'venue',
 }: {
   backHref: string;
   backLabel: string;
@@ -135,6 +139,8 @@ export default function ListingDetailLayout({
   bookLabel?: string;
   hideBooking?: boolean;
   priceCaption?: string;
+  shareUrl?: string;
+  shareKind?: 'venue' | 'service' | 'event';
 }) {
   const router = useRouter();
   const [mobileAction, setMobileAction] = useState<'inquire' | 'book'>('inquire');
@@ -219,8 +225,17 @@ export default function ListingDetailLayout({
                   </div>
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
-                {heroAction ? (
-                  <div className="absolute top-3 right-3 z-10">{heroAction}</div>
+                {heroAction || title ? (
+                  <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+                    {heroAction}
+                    {title ? (
+                      <ShareButton
+                        title={listingShareTitle(shareKind, title)}
+                        text={subtitle ? `${chip ? `${chip} · ` : ''}${subtitle}` : chip}
+                        url={shareUrl}
+                      />
+                    ) : null}
+                  </div>
                 ) : null}
                 <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6 text-white space-y-1">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-white/80">{chip}</p>

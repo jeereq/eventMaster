@@ -9,20 +9,22 @@ export function parsePriceUnit(value: unknown): VenuePriceUnit {
   return 'EVENT';
 }
 
-const SERVICE_CATEGORIES: ServiceCategory[] = [
+const SERVICE_CATEGORIES = [
   'CATERING', 'PHOTOGRAPHY', 'VIDEO', 'DJ', 'DECORATION',
   'SECURITY', 'FLORIST', 'TRANSPORT', 'MC', 'OTHER',
-];
+  'RENTAL_CLOTHING_MEN', 'RENTAL_CLOTHING_WOMEN', 'RENTAL_CLOTHING_CHILD',
+  'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT',
+] as ServiceCategory[];
 
 export function parseServiceCategory(value: unknown): ServiceCategory | null {
-  if (typeof value === 'string' && SERVICE_CATEGORIES.includes(value as ServiceCategory)) {
+  if (typeof value === 'string' && (SERVICE_CATEGORIES as string[]).includes(value)) {
     return value as ServiceCategory;
   }
   return null;
 }
 
 export function serviceCategoryLabel(category: ServiceCategory): string {
-  const labels: Record<ServiceCategory, string> = {
+  const labels: Record<string, string> = {
     CATERING: 'Traiteur',
     PHOTOGRAPHY: 'Photographie',
     VIDEO: 'Vidéo',
@@ -32,9 +34,15 @@ export function serviceCategoryLabel(category: ServiceCategory): string {
     FLORIST: 'Fleuriste',
     TRANSPORT: 'Transport',
     MC: 'Maître de cérémonie',
-    OTHER: 'Autre',
+    OTHER: 'Autre prestation',
+    RENTAL_CLOTHING_MEN: 'Location habits homme',
+    RENTAL_CLOTHING_WOMEN: 'Location habits femme',
+    RENTAL_CLOTHING_CHILD: 'Location habits enfant',
+    RENTAL_CAR: 'Location voiture',
+    RENTAL_MOTO: 'Location moto',
+    RENTAL_EQUIPMENT: 'Location matériel',
   };
-  return labels[category];
+  return labels[category] || String(category);
 }
 
 export function sanitizeLayoutBlueprint(blueprint: unknown): unknown | null {

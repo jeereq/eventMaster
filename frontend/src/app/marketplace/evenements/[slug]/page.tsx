@@ -96,6 +96,7 @@ function MarketplaceEventDetailInner() {
         chip={event?.orgName || 'Événement'}
         title={event?.title || ''}
         subtitle={event?.location || ''}
+        shareKind="event"
         photos={photos}
         photoIndex={photoIndex}
         onPhotoIndex={setPhotoIndex}

@@ -31,6 +31,8 @@ const EVENT_PACKS: Record<EventPlanType, { venueShare: number; required: Array<{
       { category: 'VIDEO', share: 0.06 },
       { category: 'FLORIST', share: 0.05 },
       { category: 'MC', share: 0.04 },
+      { category: 'RENTAL_CLOTHING_WOMEN', share: 0.05 },
+      { category: 'RENTAL_CAR', share: 0.05 },
     ],
   },
   birthday: {
@@ -40,7 +42,7 @@ const EVENT_PACKS: Record<EventPlanType, { venueShare: number; required: Array<{
       { category: 'DJ', share: 0.14 },
       { category: 'DECORATION', share: 0.1 },
     ],
-    optional: [{ category: 'PHOTOGRAPHY', share: 0.08 }],
+    optional: [{ category: 'PHOTOGRAPHY', share: 0.08 }, { category: 'RENTAL_CLOTHING_CHILD', share: 0.06 }],
   },
   corporate: {
     venueShare: 0.42,
@@ -65,6 +67,8 @@ const EVENT_PACKS: Record<EventPlanType, { venueShare: number; required: Array<{
     optional: [
       { category: 'PHOTOGRAPHY', share: 0.08 },
       { category: 'VIDEO', share: 0.06 },
+      { category: 'RENTAL_CLOTHING_MEN', share: 0.05 },
+      { category: 'RENTAL_CLOTHING_WOMEN', share: 0.05 },
     ],
   },
   religious: {

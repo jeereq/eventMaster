@@ -13,9 +13,11 @@ import {
 import CatalogueFilterBar, { CatalogueChoicePills, CatalogueFilterField, type CatalogueFilterChip } from '@/components/CatalogueFilterBar';
 import {
   PRICE_UNIT_OPTIONS,
-  SERVICE_CATEGORIES,
   SERVICE_CATEGORY_LABELS,
   SERVICE_MOBILITY_OPTIONS,
+  SERVICE_RENTAL_CATEGORIES,
+  SERVICE_TRADE_CATEGORIES,
+  isServiceRentalCategory,
   mediaPosterUrl,
   missingPublishLocation,
   parseBlockedDates,
@@ -339,7 +341,7 @@ export default function MarketplaceDeskPage() {
   });
 
   const serviceChips: CatalogueFilterChip[] = [
-    ...(filterCategory ? [{ id: 'category', label: 'Métier', value: SERVICE_CATEGORY_LABELS[filterCategory as ServiceCategory] || filterCategory }] : []),
+    ...(filterCategory ? [{ id: 'category', label: 'Catégorie', value: SERVICE_CATEGORY_LABELS[filterCategory as ServiceCategory] || filterCategory }] : []),
     ...(filterCity ? [{ id: 'city', label: 'Ville', value: filterCity }] : []),
     ...(filterVisibility !== 'all' ? [{ id: 'visibility', label: 'Visibilité', value: filterVisibility === 'public' ? 'Publiées' : 'Brouillons' }] : []),
     ...(filterMobility ? [{ id: 'mobility', label: 'Intervention', value: filterMobility === 'on_site' ? 'Sur place' : 'Se déplace' }] : []),
@@ -445,12 +447,25 @@ export default function MarketplaceDeskPage() {
           modalTitle="Filtrer les prestations"
           filters={
             <>
-              <CatalogueFilterField label="Métier">
-                <CatalogueChoicePills
-                  options={SERVICE_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] }))}
-                  value={filterCategory}
-                  onChange={setFilterCategory}
-                />
+              <CatalogueFilterField label="Métier ou location">
+                <div className="space-y-3">
+                  <div>
+                    <span className="block text-[11px] text-muted mb-1.5">Prestations</span>
+                    <CatalogueChoicePills
+                      options={SERVICE_TRADE_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] }))}
+                      value={filterCategory}
+                      onChange={setFilterCategory}
+                    />
+                  </div>
+                  <div>
+                    <span className="block text-[11px] text-muted mb-1.5">Location</span>
+                    <CatalogueChoicePills
+                      options={SERVICE_RENTAL_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] }))}
+                      value={filterCategory}
+                      onChange={setFilterCategory}
+                    />
+                  </div>
+                </div>
               </CatalogueFilterField>
               <CatalogueFilterField label="Ville">
                 <CatalogueChoicePills
@@ -655,11 +670,23 @@ export default function MarketplaceDeskPage() {
               onChange={(e) => setDraft((d) => ({ ...d, category: e.target.value as ServiceCategory }))}
               className={fieldClass}
             >
-              {SERVICE_CATEGORIES.map((id) => (
-                <option key={id} value={id}>{SERVICE_CATEGORY_LABELS[id]}</option>
-              ))}
+              <optgroup label="Prestations">
+                {SERVICE_TRADE_CATEGORIES.map((id) => (
+                  <option key={id} value={id}>{SERVICE_CATEGORY_LABELS[id]}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Location">
+                {SERVICE_RENTAL_CATEGORIES.map((id) => (
+                  <option key={id} value={id}>{SERVICE_CATEGORY_LABELS[id]}</option>
+                ))}
+              </optgroup>
             </select>
           </label>
+          {isServiceRentalCategory(draft.category) ? (
+            <p className="text-[11px] text-muted -mt-1">
+              Location : habits (homme, femme, enfant), voitures, motos ou matériel. Indiquez le parc, les tailles / modèles et la caution dans la fiche.
+            </p>
+          ) : null}
           <label>
             <span className="block text-xs font-medium text-muted mb-1.5">Description</span>
             <textarea
@@ -672,6 +699,7 @@ export default function MarketplaceDeskPage() {
           <ListingDetailsFields
             kind="service"
             hideDescription
+            category={draft.category}
             value={draft.details}
             onChange={(details: ListingDetails) => setDraft((d) => ({ ...d, details }))}
           />
