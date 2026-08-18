@@ -546,6 +546,7 @@ model MarketplaceBooking {
   eventId            String?
   event              Event?                    @relation(fields: [eventId], references: [id], onDelete: SetNull)
   eventDate          DateTime
+  eventEndDate       DateTime?
   guestCount         Int?
   amountFc           Int
   depositFc          Int

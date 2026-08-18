@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { parseBlockedDates } from '@/lib/marketplace';
+import { eachDateKey, parseBlockedDates } from '@/lib/marketplace';
 
 const WEEKDAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
@@ -20,7 +20,9 @@ export default function AvailabilityCalendar({
   bookedDates = [],
   blockedDates = [],
   selectedDate,
+  selectedEndDate,
   onSelectDate,
+  onSelectRange,
   editable = false,
   onToggleBlocked,
   minDate,
@@ -29,7 +31,9 @@ export default function AvailabilityCalendar({
   bookedDates?: string[];
   blockedDates?: string[];
   selectedDate?: string;
+  selectedEndDate?: string;
   onSelectDate?: (key: string) => void;
+  onSelectRange?: (from: string, to: string) => void;
   editable?: boolean;
   onToggleBlocked?: (key: string) => void;
   minDate?: string;
@@ -40,6 +44,9 @@ export default function AvailabilityCalendar({
   const booked = useMemo(() => new Set(parseBlockedDates(bookedDates)), [bookedDates]);
   const blocked = useMemo(() => new Set(parseBlockedDates(blockedDates)), [blockedDates]);
   const floor = minDate || todayKey();
+  const rangeMode = Boolean(onSelectRange) && !editable;
+  const rangeStart = selectedDate || '';
+  const rangeEnd = selectedEndDate || selectedDate || '';
 
   const cells = useMemo(() => {
     const first = new Date(cursor.year, cursor.month, 1);
@@ -59,6 +66,10 @@ export default function AvailabilityCalendar({
     year: 'numeric',
   });
 
+  const rangeBusy = (from: string, to: string) => {
+    return eachDateKey(from, to).some((key) => booked.has(key) || blocked.has(key) || key < floor);
+  };
+
   const handleDay = (key: string) => {
     if (key < floor) return;
     if (booked.has(key)) return;
@@ -67,6 +78,17 @@ export default function AvailabilityCalendar({
       return;
     }
     if (blocked.has(key)) return;
+    if (rangeMode && onSelectRange) {
+      if (!rangeStart || (rangeStart && rangeEnd && rangeStart !== rangeEnd)) {
+        onSelectRange(key, key);
+        return;
+      }
+      if (rangeBusy(rangeStart, key)) return;
+      const from = rangeStart <= key ? rangeStart : key;
+      const to = rangeStart <= key ? key : rangeStart;
+      onSelectRange(from, to);
+      return;
+    }
     onSelectDate?.(key);
   };
 
@@ -95,6 +117,12 @@ export default function AvailabilityCalendar({
         </div>
       </div>
 
+      {rangeMode ? (
+        <p className="text-[11px] text-muted">
+          Cliquez le premier jour, puis le dernier, pour réserver du… au…. Un seul clic = une journée.
+        </p>
+      ) : null}
+
       <div className="grid grid-cols-7 gap-1 text-center">
         {WEEKDAYS.map((label) => (
           <div key={label} className="text-[10px] font-semibold uppercase tracking-wide text-muted py-1">
@@ -106,8 +134,11 @@ export default function AvailabilityCalendar({
           const isPast = cell.key < floor;
           const isBooked = booked.has(cell.key);
           const isBlocked = blocked.has(cell.key);
-          const isSelected = selectedDate === cell.key;
-          const clickable = !isPast && (editable ? !isBooked : Boolean(onSelectDate) && !isBooked && !isBlocked);
+          const inRange = Boolean(rangeStart && rangeEnd && cell.key >= rangeStart && cell.key <= rangeEnd);
+          const isEdge = cell.key === rangeStart || cell.key === rangeEnd;
+          const isSelected = !rangeMode && selectedDate === cell.key;
+          const selectable = Boolean(onSelectRange || onSelectDate);
+          const clickable = !isPast && (editable ? !isBooked : selectable && !isBooked && !isBlocked);
           return (
             <button
               key={cell.key}
@@ -118,8 +149,10 @@ export default function AvailabilityCalendar({
                 'aspect-square rounded-md text-xs font-medium border',
                 isBooked && 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30',
                 !isBooked && isBlocked && 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/30',
+                isEdge && !isBooked && !isBlocked && 'bg-primary text-white border-primary',
+                inRange && !isEdge && !isBooked && !isBlocked && 'bg-primary/20 text-foreground border-primary/20',
                 isSelected && !isBooked && !isBlocked && 'bg-primary text-white border-primary',
-                !isBooked && !isBlocked && !isSelected && !isPast && 'border-transparent hover:border-border hover:bg-surface-muted',
+                !isBooked && !isBlocked && !inRange && !isSelected && !isPast && 'border-transparent hover:border-border hover:bg-surface-muted',
                 isPast && 'text-muted/50 border-transparent',
               )}
             >
@@ -138,10 +171,10 @@ export default function AvailabilityCalendar({
           <span className="w-2.5 h-2.5 rounded-sm bg-amber-500/40 border border-amber-500/40" />
           Indisponible
         </span>
-        {onSelectDate && (
+        {(onSelectDate || onSelectRange) && (
           <span className="inline-flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-sm bg-primary" />
-            Date choisie
+            {rangeMode ? 'Période choisie' : 'Date choisie'}
           </span>
         )}
         {editable && <span>Cliquez un jour libre pour le marquer déjà booké.</span>}

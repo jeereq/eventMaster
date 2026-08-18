@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
+import { Minimize2 } from 'lucide-react';
 import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import PublicCtaBand from '@/components/PublicCtaBand';
 import MarketplacePublicNav from '@/components/MarketplacePublicNav';
@@ -108,16 +109,59 @@ export default function CatalogueSearchLayout({
     );
   }
 
+  if (mode === 'focus') {
+    return (
+      <PublicPageShell faqHref="/faq" hideFooter>
+        <div className="relative flex-1 min-h-0">
+          <MarketplaceLocationsMap
+            className="h-full"
+            markers={markers}
+            listingSearch={false}
+            navigateOnClick={false}
+            height={480}
+            variant="focus"
+            searchCenter={searchCenter}
+            radiusKm={searchCenter ? radiusKm : 0}
+            city={city}
+            searchOriginLabel={searchOriginLabel}
+          />
+          <div className="absolute inset-x-0 top-0 z-30 p-3 sm:p-4 space-y-2 pointer-events-none">
+            <div className="pointer-events-auto flex items-start gap-2">
+              <MarketplacePublicNav
+                active={activeNav}
+                className="flex-1 min-w-0 bg-surface/90 backdrop-blur-xl border-white/25 dark:border-white/10 shadow-lg"
+              />
+              <button
+                type="button"
+                onClick={exitMap}
+                className="h-9 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-full bg-surface/90 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-xs font-semibold text-foreground hover:bg-surface"
+              >
+                <Minimize2 className="w-3.5 h-3.5" />
+                Quitter
+              </button>
+            </div>
+            <div className="pointer-events-auto max-w-2xl">
+              {renderFilters('float')}
+            </div>
+            {error ? <p className="pointer-events-auto text-sm text-rose-600 bg-surface/90 rounded-lg px-3 py-2">{error}</p> : null}
+            {loading ? (
+              <p className="pointer-events-none text-[11px] font-medium text-muted bg-surface/90 rounded-full px-3 py-1.5 w-fit shadow-lg">
+                Mise à jour de la carte…
+              </p>
+            ) : null}
+          </div>
+        </div>
+      </PublicPageShell>
+    );
+  }
+
   return (
     <PublicPageShell faqHref="/faq">
-      {mode !== 'focus' && (
-        <PublicPageHero compact chip="Marketplace" title={heroTitle} description={heroDescription}>
-          <MarketplacePublicNav active={activeNav} />
-        </PublicPageHero>
-      )}
+      <PublicPageHero compact chip="Marketplace" title={heroTitle} description={heroDescription}>
+        <MarketplacePublicNav active={activeNav} />
+      </PublicPageHero>
 
       <main className="page-container py-6 sm:py-10 flex-1 space-y-4 sm:space-y-6">
-        {mode === 'focus' && <MarketplacePublicNav active={activeNav} />}
         {renderFilters('card')}
         {error ? <p className="text-sm text-rose-600">{error}</p> : null}
 
@@ -125,7 +169,7 @@ export default function CatalogueSearchLayout({
           <CatalogueResultsSkeleton mode={mode} count={pageSize} />
         ) : mapMode ? (
           <div className="space-y-3">
-            {mode !== 'focus' && showKindLegend && (
+            {showKindLegend && (
               <div className="flex flex-wrap items-center gap-4 text-xs text-muted">
                 <span className="inline-flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-primary" />
@@ -143,7 +187,6 @@ export default function CatalogueSearchLayout({
               listingSearch
               navigateOnClick={false}
               height={480}
-              variant={mode === 'focus' ? 'focus' : 'default'}
               searchCenter={searchCenter}
               radiusKm={searchCenter ? radiusKm : 0}
               city={city}
@@ -169,16 +212,14 @@ export default function CatalogueSearchLayout({
         )}
       </main>
 
-      {mode !== 'focus' && (
-        <PublicCtaBand
-          title={cta.title}
-          description={cta.description}
-          primaryHref={cta.primaryHref}
-          primaryLabel={cta.primaryLabel}
-          secondaryHref={cta.secondaryHref}
-          secondaryLabel={cta.secondaryLabel}
-        />
-      )}
+      <PublicCtaBand
+        title={cta.title}
+        description={cta.description}
+        primaryHref={cta.primaryHref}
+        primaryLabel={cta.primaryLabel}
+        secondaryHref={cta.secondaryHref}
+        secondaryLabel={cta.secondaryLabel}
+      />
     </PublicPageShell>
   );
 }

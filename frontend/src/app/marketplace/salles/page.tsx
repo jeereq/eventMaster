@@ -140,7 +140,7 @@ export default function MarketplaceVenuesPage() {
       renderFilters={(variant) => (
         <CatalogueFilterBar
           variant={variant}
-          hideViewToggle={variant === 'float'}
+          hideViewToggle={variant === 'float' && mode !== 'focus'}
           compactToggle={variant === 'float'}
           search={q}
           onSearchChange={setQ}
@@ -174,6 +174,7 @@ export default function MarketplaceVenuesPage() {
                 value={draft}
                 onChange={(next) => setDraft({ ...next, roomType: draft.roomType })}
                 error={filterError}
+                showCapacity
               />
               <CatalogueFilterField label="Type de salle">
                 <CatalogueChoicePills

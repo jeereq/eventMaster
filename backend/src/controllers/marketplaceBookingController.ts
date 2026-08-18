@@ -5,8 +5,15 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { resolveOrgAccess } from '../services/permissionsService';
 import { sendRealEmail } from '../services/notificationService';
 import { getPlanLimitsForTenant } from '../config/plansConfig';
-import { computeMarketplaceAmounts } from '../config/marketplaceBilling';
-import { mergeBlockedDate, parseBlockedDates, parseDateKey, toDateKey } from '../utils/marketplaceDates';
+import { computeMarketplaceAmounts, billedMarketplaceAmount } from '../config/marketplaceBilling';
+import {
+  eachDateKey,
+  isRangeAvailable,
+  mergeBlockedDates,
+  parseBlockedDates,
+  parseDateKey,
+  toDateKey,
+} from '../utils/marketplaceDates';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -28,6 +35,7 @@ function serializeBooking(row: {
   organizerTenantId: string | null;
   eventId: string | null;
   eventDate: Date;
+  eventEndDate: Date | null;
   guestCount: number | null;
   amountFc: number;
   depositFc: number;
@@ -56,6 +64,7 @@ function serializeBooking(row: {
     vendorName: row.vendorTenant.name,
     organizerName: row.organizerTenant?.name || null,
     eventDate: row.eventDate,
+    eventEndDate: row.eventEndDate,
     guestCount: row.guestCount,
     amountFc: row.amountFc,
     depositFc: row.depositFc,
@@ -76,22 +85,66 @@ async function ownerEmail(tenantId: string, managerId: string | null) {
   return user?.email;
 }
 
-async function isDateTaken(params: { listingId?: string | null; offeringId?: string | null; dateKey: string; excludeId?: string }) {
-  const eventDate = parseDateKey(params.dateKey);
-  if (!eventDate) return true;
-  const dayStart = new Date(`${params.dateKey}T00:00:00.000Z`);
-  const dayEnd = new Date(`${params.dateKey}T23:59:59.999Z`);
+async function isRangeTaken(params: {
+  listingId?: string | null;
+  offeringId?: string | null;
+  from: string;
+  to: string;
+  excludeId?: string;
+}) {
+  const start = parseDateKey(params.from);
+  const end = parseDateKey(params.to);
+  if (!start || !end) return true;
+  const rangeStart = new Date(`${params.from <= params.to ? params.from : params.to}T00:00:00.000Z`);
+  const rangeEnd = new Date(`${params.from <= params.to ? params.to : params.from}T23:59:59.999Z`);
   const clash = await prisma.marketplaceBooking.findFirst({
     where: {
       status: { in: HOLD_STATUSES },
-      eventDate: { gte: dayStart, lte: dayEnd },
       ...(params.listingId ? { listingId: params.listingId } : {}),
       ...(params.offeringId ? { offeringId: params.offeringId } : {}),
       ...(params.excludeId ? { id: { not: params.excludeId } } : {}),
+      OR: [
+        {
+          eventEndDate: null,
+          eventDate: { gte: rangeStart, lte: rangeEnd },
+        },
+        {
+          eventEndDate: { not: null },
+          AND: [
+            { eventDate: { lte: rangeEnd } },
+            { eventEndDate: { gte: rangeStart } },
+          ],
+        },
+      ],
     },
     select: { id: true },
   });
   return Boolean(clash);
+}
+
+function parseBookingRange(eventDate: unknown, eventEndDate: unknown) {
+  const from = toDateKey(String(eventDate || ''));
+  const to = toDateKey(String(eventEndDate || eventDate || '')) || from;
+  if (!from || !to) return null;
+  const start = from <= to ? from : to;
+  const end = from <= to ? to : from;
+  const keys = eachDateKey(start, end);
+  if (!keys.length || keys.length > 31) return null;
+  const parsedStart = parseDateKey(start);
+  const parsedEnd = parseDateKey(end);
+  if (!parsedStart || !parsedEnd) return null;
+  return {
+    from: start,
+    to: end,
+    keys,
+    parsedStart,
+    parsedEnd: start === end ? null : parsedEnd,
+    dayCount: keys.length,
+  };
+}
+
+function formatRangeLabel(from: string, to: string) {
+  return from === to ? from : `du ${from} au ${to}`;
 }
 
 export async function createBooking(req: AuthenticatedRequest, res: Response) {
@@ -102,11 +155,10 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
       return res.status(401).json({ error: 'Connectez-vous pour réserver.' });
     }
 
-    const { listingSlug, offeringSlug, eventDate, guestCount, eventId, notes } = req.body || {};
-    const dateKey = toDateKey(String(eventDate || ''));
-    const parsedDate = parseDateKey(dateKey);
-    if (!parsedDate || !dateKey) {
-      return res.status(400).json({ error: 'Indiquez une date d’événement.' });
+    const { listingSlug, offeringSlug, eventDate, eventEndDate, guestCount, eventId, notes } = req.body || {};
+    const range = parseBookingRange(eventDate, eventEndDate);
+    if (!range) {
+      return res.status(400).json({ error: 'Indiquez une date, ou une plage de 31 jours maximum.' });
     }
 
     const listing = listingSlug
@@ -137,8 +189,14 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
     }
 
     const blocked = parseBlockedDates(listing?.blockedDates ?? offering?.blockedDates);
-    if (blocked.includes(dateKey) || await isDateTaken({ listingId: listing?.id, offeringId: offering?.id, dateKey })) {
-      return res.status(409).json({ error: 'Cette date n’est plus disponible.' });
+    const taken = await isRangeTaken({
+      listingId: listing?.id,
+      offeringId: offering?.id,
+      from: range.from,
+      to: range.to,
+    });
+    if (!isRangeAvailable(blocked, range.from, range.to) || taken) {
+      return res.status(409).json({ error: 'Une ou plusieurs dates de cette plage ne sont plus disponibles.' });
     }
 
     let linkedEventId: string | null = null;
@@ -156,7 +214,7 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
       }
     }
 
-    const amounts = computeMarketplaceAmounts(price);
+    const amounts = billedMarketplaceAmount(price, listing?.priceUnit ?? offering?.priceUnit, range.dayCount);
     const parsedGuests = Number.parseInt(String(guestCount || ''), 10);
 
     const booking = await prisma.marketplaceBooking.create({
@@ -167,7 +225,8 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
         organizerTenantId: tenantId,
         organizerUserId: userId,
         eventId: linkedEventId,
-        eventDate: parsedDate,
+        eventDate: range.parsedStart,
+        eventEndDate: range.parsedEnd,
         guestCount: Number.isFinite(parsedGuests) && parsedGuests > 0 ? parsedGuests : null,
         ...amounts,
         notes: notes ? String(notes).trim().slice(0, 2000) : null,
@@ -176,13 +235,14 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
     });
 
     const title = offering?.title || listing?.headline || listing?.room.name || 'Offre';
+    const period = formatRangeLabel(range.from, range.to);
     const vendorMail = await ownerEmail(vendorTenantId, listing?.tenant.managerId || offering?.tenant.managerId || null);
     if (vendorMail) {
       await sendRealEmail(
         vendorMail,
         `[EventMaster] Demande de réservation — ${title}`,
-        `Nouvelle réservation le ${dateKey} pour « ${title} ». Montant ${amounts.amountFc} FC, acompte ${amounts.depositFc} FC.`,
-        `<p>Nouvelle réservation le <strong>${dateKey}</strong> pour <strong>${title}</strong>.</p><p>Montant : ${amounts.amountFc} FC · Acompte : ${amounts.depositFc} FC · Commission plateforme : ${amounts.commissionFc} FC (8 %).</p><p><a href="${FRONTEND_URL}/dashboard/marketplace">Ouvrir Marketplace</a></p>`,
+        `Nouvelle réservation ${period} pour « ${title} ». Montant ${amounts.amountFc} FC, acompte ${amounts.depositFc} FC.`,
+        `<p>Nouvelle réservation <strong>${period}</strong> pour <strong>${title}</strong>.</p><p>Montant : ${amounts.amountFc} FC · Acompte : ${amounts.depositFc} FC · Commission plateforme : ${amounts.commissionFc} FC (8 %).</p><p><a href="${FRONTEND_URL}/dashboard/marketplace">Ouvrir Marketplace</a></p>`,
       );
     }
 
@@ -304,7 +364,10 @@ export async function updateBooking(req: AuthenticatedRequest, res: Response) {
         return res.status(400).json({ error: 'Marquez d’abord l’acompte comme reçu.' });
       }
 
-      const dateKey = toDateKey(booking.eventDate);
+      const dateKeys = eachDateKey(
+        toDateKey(booking.eventDate) || '',
+        toDateKey(booking.eventEndDate || booking.eventDate) || toDateKey(booking.eventDate) || '',
+      );
       let eventId = booking.eventId;
       const attachEvent = req.body?.attachEvent !== false;
 
@@ -345,19 +408,19 @@ export async function updateBooking(req: AuthenticatedRequest, res: Response) {
         }
       }
 
-      if (dateKey) {
+      if (dateKeys.length) {
         if (booking.listingId) {
           const listing = await prisma.venueListing.findUnique({ where: { id: booking.listingId }, select: { blockedDates: true } });
           await prisma.venueListing.update({
             where: { id: booking.listingId },
-            data: { blockedDates: mergeBlockedDate(listing?.blockedDates, dateKey) },
+            data: { blockedDates: mergeBlockedDates(listing?.blockedDates, dateKeys) },
           });
         }
         if (booking.offeringId) {
           const offering = await prisma.serviceOffering.findUnique({ where: { id: booking.offeringId }, select: { blockedDates: true } });
           await prisma.serviceOffering.update({
             where: { id: booking.offeringId },
-            data: { blockedDates: mergeBlockedDate(offering?.blockedDates, dateKey) },
+            data: { blockedDates: mergeBlockedDates(offering?.blockedDates, dateKeys) },
           });
         }
       }
@@ -416,7 +479,11 @@ export async function convertInquiryToBooking(req: AuthenticatedRequest, res: Re
 
     const dateKey = toDateKey(inquiry.eventDate);
     const blocked = parseBlockedDates(inquiry.listing?.blockedDates ?? inquiry.offering?.blockedDates);
-    if (!dateKey || blocked.includes(dateKey) || await isDateTaken({ listingId: inquiry.listingId, offeringId: inquiry.offeringId, dateKey })) {
+    if (
+      !dateKey
+      || !isRangeAvailable(blocked, dateKey, dateKey)
+      || await isRangeTaken({ listingId: inquiry.listingId, offeringId: inquiry.offeringId, from: dateKey, to: dateKey })
+    ) {
       return res.status(409).json({ error: 'Cette date n’est plus disponible.' });
     }
 

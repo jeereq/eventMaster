@@ -151,7 +151,7 @@ export default function MarketplaceHubPage() {
       renderFilters={(variant) => (
         <CatalogueFilterBar
           variant={variant}
-          hideViewToggle={variant === 'float'}
+          hideViewToggle={variant === 'float' && mode !== 'focus'}
           compactToggle={variant === 'float'}
           search={query}
           onSearchChange={setQuery}
@@ -197,6 +197,7 @@ export default function MarketplaceHubPage() {
                 value={draft}
                 onChange={(next) => setDraft({ ...next, kind: draft.kind, mobility: draft.mobility })}
                 error={filterError}
+                showCapacity={draft.kind !== 'service'}
               />
               <CatalogueFilterField label="Prestataires — intervention">
                 <CatalogueChoicePills

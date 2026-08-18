@@ -79,7 +79,7 @@ export async function getRooms(req: AuthenticatedRequest, res: Response) {
           include: {
             bookings: {
               where: { status: { in: HOLD_BOOKING_STATUSES } },
-              select: { eventDate: true },
+              select: { eventDate: true, eventEndDate: true },
             },
           },
         },

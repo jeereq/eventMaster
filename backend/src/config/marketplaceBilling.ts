@@ -15,3 +15,10 @@ export function computeMarketplaceAmounts(amountFc: number) {
     commissionRate: MARKETPLACE_COMMISSION_RATE,
   };
 }
+
+/** Tarif « par jour » × nombre de jours ; les autres unités restent un forfait pour la plage. */
+export function billedMarketplaceAmount(priceFromFc: number, priceUnit: string | null | undefined, dayCount: number) {
+  const days = Math.max(1, dayCount);
+  const base = priceUnit === 'DAY' ? priceFromFc * days : priceFromFc;
+  return computeMarketplaceAmounts(base);
+}

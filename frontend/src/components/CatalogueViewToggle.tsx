@@ -44,12 +44,13 @@ export default function CatalogueViewToggle({
   className?: string;
   compact?: boolean;
 }) {
-  const options: Array<{ id: CatalogueViewMode; label: string; icon: typeof LayoutGrid }> = compact
-    ? [
-        { id: 'grid', label: 'Grille', icon: LayoutGrid },
-        { id: 'list', label: 'Liste', icon: List },
-        { id: 'map', label: 'Carte', icon: Map },
-      ]
+  const compactOptions: Array<{ id: CatalogueViewMode; label: string; icon: typeof LayoutGrid }> = [
+    { id: 'grid', label: 'Grille', icon: LayoutGrid },
+    { id: 'list', label: 'Liste', icon: List },
+    { id: 'map', label: 'Carte', icon: Map },
+  ];
+  const options: Array<{ id: CatalogueViewMode; label: string; icon: typeof LayoutGrid }> = compact && value !== 'focus'
+    ? compactOptions
     : [
         { id: 'grid', label: 'Grille', icon: LayoutGrid },
         { id: 'list', label: 'Liste', icon: List },

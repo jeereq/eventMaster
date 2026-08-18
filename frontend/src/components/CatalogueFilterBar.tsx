@@ -297,10 +297,12 @@ export function CatalogueGeoFields({
   value,
   onChange,
   error,
+  showCapacity = false,
 }: {
   value: CatalogueGeoState;
   onChange: (next: CatalogueGeoState) => void;
   error?: string;
+  showCapacity?: boolean;
 }) {
   const set = (patch: Partial<CatalogueGeoState>) => onChange({ ...value, ...patch });
 
@@ -362,6 +364,45 @@ export function CatalogueGeoFields({
             value={value.maxPrice}
             onChange={(e) => set({ maxPrice: e.target.value })}
             placeholder="Max"
+          />
+        </div>
+      </CatalogueFilterField>
+      {showCapacity ? (
+        <CatalogueFilterField label="Nombre de places" hint="Capacité de la salle (invités).">
+          <div className="grid grid-cols-2 gap-2">
+            <Input
+              type="number"
+              min={1}
+              value={value.minCapacity}
+              onChange={(e) => set({ minCapacity: e.target.value })}
+              placeholder="Min"
+            />
+            <Input
+              type="number"
+              min={1}
+              value={value.maxCapacity}
+              onChange={(e) => set({ maxCapacity: e.target.value })}
+              placeholder="Max"
+            />
+          </div>
+        </CatalogueFilterField>
+      ) : null}
+      <CatalogueFilterField
+        label="Disponibilités"
+        hint="N’affiche que les fiches libres sur toute la période (un jour ou du… au…)."
+      >
+        <div className="grid grid-cols-2 gap-2">
+          <Input
+            type="date"
+            label="Du"
+            value={value.availableFrom}
+            onChange={(e) => set({ availableFrom: e.target.value })}
+          />
+          <Input
+            type="date"
+            label="Au"
+            value={value.availableTo}
+            onChange={(e) => set({ availableTo: e.target.value })}
           />
         </div>
       </CatalogueFilterField>

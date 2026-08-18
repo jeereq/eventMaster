@@ -201,6 +201,7 @@ export interface MarketplaceBookingItem {
   vendorName: string;
   organizerName: string | null;
   eventDate: string;
+  eventEndDate?: string | null;
   guestCount: number | null;
   amountFc: number;
   depositFc: number;
@@ -240,8 +241,30 @@ export function eachDateKey(from: string, to: string): string[] {
   return keys;
 }
 
-export function previewMarketplaceAmounts(amountFc: number) {
-  const amount = Math.max(0, Math.round(amountFc));
+export function bookingDateKeys(booking: { eventDate: string; eventEndDate?: string | null }): string[] {
+  const start = String(booking.eventDate || '').slice(0, 10);
+  const end = String(booking.eventEndDate || booking.eventDate || '').slice(0, 10);
+  if (!start) return [];
+  return eachDateKey(start, end || start);
+}
+
+export function formatDateKeyFr(key: string) {
+  const match = String(key).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return key;
+  return new Date(`${match[1]}-${match[2]}-${match[3]}T12:00:00`).toLocaleDateString('fr-FR');
+}
+
+export function formatBookingPeriod(start?: string | null, end?: string | null) {
+  const from = start ? String(start).slice(0, 10) : '';
+  const to = end ? String(end).slice(0, 10) : from;
+  if (!from) return '';
+  if (!to || from === to) return formatDateKeyFr(from);
+  return `du ${formatDateKeyFr(from)} au ${formatDateKeyFr(to)}`;
+}
+
+export function previewMarketplaceAmounts(amountFc: number, dayCount = 1, priceUnit?: string | null) {
+  const days = Math.max(1, dayCount);
+  const amount = Math.max(0, Math.round(priceUnit === 'DAY' ? amountFc * days : amountFc));
   return {
     amountFc: amount,
     depositFc: Math.round(amount * MARKETPLACE_DEPOSIT_RATE),
@@ -294,6 +317,10 @@ export type CatalogueGeoState = {
   street: string;
   minPrice: string;
   maxPrice: string;
+  minCapacity: string;
+  maxCapacity: string;
+  availableFrom: string;
+  availableTo: string;
   proximity: CatalogueProximity;
   nearPlace: string;
   radiusKm: number;
@@ -308,6 +335,10 @@ export const EMPTY_CATALOGUE_GEO: CatalogueGeoState = {
   street: '',
   minPrice: '',
   maxPrice: '',
+  minCapacity: '',
+  maxCapacity: '',
+  availableFrom: '',
+  availableTo: '',
   proximity: '',
   nearPlace: '',
   radiusKm: 10,
@@ -346,6 +377,10 @@ export function appendCatalogueGeoParams(params: URLSearchParams, filters: Catal
   if (filters.street.trim()) params.set('street', filters.street.trim());
   if (filters.minPrice.trim()) params.set('minPrice', filters.minPrice.trim());
   if (filters.maxPrice.trim()) params.set('maxPrice', filters.maxPrice.trim());
+  if (filters.minCapacity.trim()) params.set('minCapacity', filters.minCapacity.trim());
+  if (filters.maxCapacity.trim()) params.set('maxCapacity', filters.maxCapacity.trim());
+  if (filters.availableFrom.trim()) params.set('availableFrom', filters.availableFrom.trim());
+  if (filters.availableTo.trim()) params.set('availableTo', filters.availableTo.trim());
   if (filters.proximity && filters.lat != null && filters.lng != null) {
     params.set('lat', String(filters.lat));
     params.set('lng', String(filters.lng));
@@ -366,6 +401,18 @@ export function catalogueGeoChips(
   if (filters.street.trim()) next.push({ id: 'street', label: 'Avenue', value: filters.street.trim() });
   if (filters.minPrice.trim()) next.push({ id: 'minPrice', label: 'Prix min', value: `${filters.minPrice.trim()} FC` });
   if (filters.maxPrice.trim()) next.push({ id: 'maxPrice', label: 'Prix max', value: `${filters.maxPrice.trim()} FC` });
+  if (filters.minCapacity.trim()) next.push({ id: 'minCapacity', label: 'Places min', value: filters.minCapacity.trim() });
+  if (filters.maxCapacity.trim()) next.push({ id: 'maxCapacity', label: 'Places max', value: filters.maxCapacity.trim() });
+  if (filters.availableFrom.trim() || filters.availableTo.trim()) {
+    const from = filters.availableFrom.trim();
+    const to = filters.availableTo.trim() || from;
+    const start = from || to;
+    next.push({
+      id: 'availability',
+      label: 'Disponible',
+      value: !to || start === to ? formatDateKeyFr(start) : `${formatDateKeyFr(start)} → ${formatDateKeyFr(to)}`,
+    });
+  }
   if (filters.proximity === 'around') {
     next.push({ id: 'proximity', label: 'Autour de moi', value: `${filters.radiusKm} km` });
   } else if (filters.proximity === 'near') {
@@ -384,6 +431,9 @@ export function clearCatalogueGeoChip(filters: CatalogueGeoState, id: string): C
   }
   if (id === 'radiusKm') {
     return { ...filters, radiusKm: 10 };
+  }
+  if (id === 'availability') {
+    return { ...filters, availableFrom: '', availableTo: '' };
   }
   if (id in filters) {
     return { ...filters, [id]: id === 'radiusKm' ? 10 : '' };

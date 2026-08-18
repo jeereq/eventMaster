@@ -685,7 +685,11 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
 
   useEffect(() => {
     const timer = window.setTimeout(() => mapRef.current?.invalidateSize(), 80);
-    return () => window.clearTimeout(timer);
+    const later = window.setTimeout(() => mapRef.current?.invalidateSize(), 320);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearTimeout(later);
+    };
   }, [variant, mapReady, immersive]);
 
   const clearRoute = () => {
@@ -907,9 +911,10 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
     }
   };
 
-  const showSearch = !immersive && (searchable || listingSearch);
-  const searchOverlay = variant === 'focus';
-  const mapHeight = immersive ? '100%' : variant === 'focus' ? 'calc(100dvh - 10.5rem)' : height;
+  const showSearch = !immersive && variant !== 'focus' && (searchable || listingSearch);
+  const searchOverlay = false;
+  const fillViewport = immersive || variant === 'focus';
+  const mapHeight = fillViewport ? '100%' : height;
 
   const searchField = showSearch ? (
     <div className={cn('relative', searchOverlay && 'pointer-events-auto')}>
@@ -989,16 +994,19 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
   ) : null;
 
   return (
-    <div className={cn(immersive ? 'h-full' : 'space-y-2', className)}>
+    <div className={cn(fillViewport ? 'h-full' : 'space-y-2', className)}>
       {showSearch && !searchOverlay && searchField}
-      <div className={cn('relative', immersive && 'h-full')}>
+      <div className={cn('relative', fillViewport && 'h-full')}>
         {searchOverlay && searchField && (
           <div className="absolute z-20 top-3 left-3 right-3 sm:right-auto sm:w-80">
             {searchField}
           </div>
         )}
         {!immersive ? (
-          <div className="absolute z-20 top-3 right-3 pointer-events-none">
+          <div className={cn(
+            'absolute z-20 pointer-events-none',
+            variant === 'focus' ? 'bottom-3 left-3' : 'top-3 right-3',
+          )}>
             <div className="rounded-xl border border-border bg-surface/95 shadow-[var(--shadow-soft)] px-2.5 py-2 space-y-1.5 text-[11px] text-foreground">
               <p className="inline-flex items-center gap-1.5">
                 <span className="em-map-legend-venue" aria-hidden />
@@ -1022,10 +1030,10 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
           ref={hostRef}
           className={cn(
             'em-marketplace-map w-full overflow-hidden bg-background',
-            immersive ? 'h-full rounded-none border-0 em-explore-map' : 'rounded-[var(--radius-card)] border border-border',
+            fillViewport ? 'h-full rounded-none border-0 em-explore-map' : 'rounded-[var(--radius-card)] border border-border',
             mapTheme === 'dark' && 'em-map-dark',
           )}
-          style={{ height: mapHeight, minHeight: immersive ? undefined : variant === 'focus' ? 420 : undefined }}
+          style={{ height: mapHeight }}
         />
         {!immersive && hovered ? (
           <MarkerPreviewCard
@@ -1044,7 +1052,7 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
         {(route || routeHint || routing) && (
           <div className={cn(
             'absolute z-40 left-3 right-3 sm:right-auto sm:w-80 rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-soft)] p-3 space-y-2 max-h-[42%] overflow-auto',
-            immersive ? 'top-[8.75rem] max-h-[28%]' : 'top-3',
+            immersive || variant === 'focus' ? 'top-[11.5rem] max-h-[28%]' : 'top-3',
           )}>
             <div className="flex items-start justify-between gap-2">
               <div>

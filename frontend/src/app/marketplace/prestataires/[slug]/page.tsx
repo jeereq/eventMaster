@@ -31,6 +31,7 @@ export default function MarketplaceServiceDetailPage() {
   const [error, setError] = useState('');
   const [photoIndex, setPhotoIndex] = useState(0);
   const [pickedDate, setPickedDate] = useState('');
+  const [pickedEndDate, setPickedEndDate] = useState('');
   const [tab, setTab] = useState<MarketplaceFormTab>('details');
   const [wantRoute, setWantRoute] = useState(false);
 
@@ -162,7 +163,11 @@ export default function MarketplaceServiceDetailPage() {
                 bookedDates={service.bookedDates}
                 blockedDates={service.blockedDates}
                 selectedDate={pickedDate}
-                onSelectDate={setPickedDate}
+                selectedEndDate={pickedEndDate}
+                onSelectRange={(from, to) => {
+                  setPickedDate(from);
+                  setPickedEndDate(to);
+                }}
               />
                 </>
               )}
@@ -200,7 +205,10 @@ export default function MarketplaceServiceDetailPage() {
                 endpoint={`/public/services/${encodeURIComponent(service.slug)}/inquire`}
                 successCopy="Demande transmise au prestataire."
                 eventDate={pickedDate}
-                onEventDateChange={setPickedDate}
+                onEventDateChange={(value) => {
+                  setPickedDate(value);
+                  setPickedEndDate(value);
+                }}
               />
               <MarketplaceBookingForm
                 offeringSlug={service.slug}
@@ -208,8 +216,11 @@ export default function MarketplaceServiceDetailPage() {
                 bookedDates={service.bookedDates}
                 blockedDates={service.blockedDates}
                 priceFromFc={service.priceFromFc}
+                priceUnit={service.priceUnit}
                 eventDate={pickedDate}
+                eventEndDate={pickedEndDate}
                 onEventDateChange={setPickedDate}
+                onEventEndDateChange={setPickedEndDate}
                 showCalendar={false}
               />
             </aside>

@@ -15,7 +15,13 @@ import {
   sanitizeLayoutBlueprint,
   serviceCategoryLabel,
 } from '../utils/publicVenue';
-import { collectUnavailableDates, haversineKm, parseBlockedDates } from '../utils/marketplaceDates';
+import {
+  collectUnavailableDates,
+  haversineKm,
+  isRangeAvailable,
+  parseBlockedDates,
+  toDateKey,
+} from '../utils/marketplaceDates';
 import { RoomType, ServiceCategory, TenantAccountKind, MarketplaceBookingStatus, VenuePriceUnit } from '@prisma/client';
 import { PlanFeatureError, assertServiceQuota, assertVenueCatalogPublish } from '../services/planFeaturesService';
 import {
@@ -57,7 +63,7 @@ function toPublicVenue(listing: {
     branding: unknown;
     vendorProfile: { displayName: string; city: string | null } | null;
   };
-  bookings?: Array<{ eventDate: Date }>;
+  bookings?: Array<{ eventDate: Date; eventEndDate?: Date | null }>;
 }) {
   const photos = parsePhotoUrls(listing.photos);
   return {
@@ -139,6 +145,26 @@ function readPriceRange(req: Request) {
   return Object.keys(filter).length ? filter : null;
 }
 
+function readAvailabilityRange(req: Request): { from: string; to: string } | null {
+  const from = toDateKey(String(req.query.availableFrom || ''));
+  const to = toDateKey(String(req.query.availableTo || ''));
+  if (!from && !to) return null;
+  const start = from || to!;
+  const end = to || from!;
+  return start <= end ? { from: start, to: end } : { from: end, to: start };
+}
+
+function filterByAvailability<T extends { blockedDates?: unknown; bookings?: Array<{ eventDate: Date; eventEndDate?: Date | null }> }>(
+  rows: T[],
+  range: { from: string; to: string } | null,
+): T[] {
+  if (!range) return rows;
+  return rows.filter((row) => {
+    const unavailable = collectUnavailableDates(row.blockedDates, row.bookings);
+    return isRangeAvailable(unavailable, range.from, range.to);
+  });
+}
+
 function publishLocationError(
   city: unknown,
   commune: unknown,
@@ -205,7 +231,7 @@ const listingInclude = {
   },
   bookings: {
     where: { status: { in: HOLD_BOOKING_STATUSES } },
-    select: { eventDate: true },
+    select: { eventDate: true, eventEndDate: true },
   },
 };
 
@@ -218,15 +244,20 @@ export async function listPublicVenues(req: Request, res: Response) {
     const street = readStreetQuery(req);
     const roomType = typeof req.query.roomType === 'string' ? req.query.roomType.trim() : '';
     const minCapacity = Number.parseInt(String(req.query.minCapacity || ''), 10);
+    const maxCapacity = Number.parseInt(String(req.query.maxCapacity || ''), 10);
     const priceRange = readPriceRange(req);
+    const availability = readAvailabilityRange(req);
 
-    const roomFilter: { roomType?: RoomType; capacity?: { gte: number } } = {};
+    const roomFilter: { roomType?: RoomType; capacity?: { gte?: number; lte?: number } } = {};
     const allowedTypes: RoomType[] = ['SIMPLE', 'BANQUET', 'CONFERENCE', 'AMPHITHEATER', 'TENT', 'CUSTOM'];
     if (roomType && allowedTypes.includes(roomType as RoomType)) {
       roomFilter.roomType = roomType as RoomType;
     }
     if (Number.isFinite(minCapacity) && minCapacity > 0) {
-      roomFilter.capacity = { gte: minCapacity };
+      roomFilter.capacity = { ...roomFilter.capacity, gte: minCapacity };
+    }
+    if (Number.isFinite(maxCapacity) && maxCapacity > 0) {
+      roomFilter.capacity = { ...roomFilter.capacity, lte: maxCapacity };
     }
 
     const listings = await prisma.venueListing.findMany({
@@ -268,11 +299,11 @@ export async function listPublicVenues(req: Request, res: Response) {
       },
       include: listingInclude,
       orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
-      take: 80,
+      take: availability ? 200 : 80,
     });
 
     const geo = readGeoQuery(req);
-    const venues = publicWithDistance(listings, geo, toPublicVenue);
+    const venues = publicWithDistance(filterByAvailability(listings, availability), geo, toPublicVenue);
 
     return res.json({
       venues,
@@ -570,7 +601,7 @@ function toPublicService(offering: {
   publishedAt: Date | null;
   vendorProfile: { displayName: string; city: string | null; slug: string };
   tenant: { name: string };
-  bookings?: Array<{ eventDate: Date }>;
+  bookings?: Array<{ eventDate: Date; eventEndDate?: Date | null }>;
 }) {
   const photos = parsePhotoUrls(offering.photos);
   return {
@@ -607,7 +638,7 @@ const offeringInclude = {
   tenant: { select: { name: true } },
   bookings: {
     where: { status: { in: HOLD_BOOKING_STATUSES } },
-    select: { eventDate: true },
+    select: { eventDate: true, eventEndDate: true },
   },
 };
 
@@ -624,6 +655,7 @@ export async function listPublicServices(req: Request, res: Response) {
       ? priceUnit
       : null;
     const priceRange = readPriceRange(req);
+    const availability = readAvailabilityRange(req);
     const mobility = typeof req.query.mobility === 'string' ? req.query.mobility.trim() : '';
     const travelsFilter = mobility === 'travels' ? true : mobility === 'on_site' ? false : null;
 
@@ -669,11 +701,11 @@ export async function listPublicServices(req: Request, res: Response) {
       },
       include: offeringInclude,
       orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
-      take: 80,
+      take: availability ? 200 : 80,
     });
 
     const geo = readGeoQuery(req);
-    const services = publicWithDistance(offerings, geo, toPublicService);
+    const services = publicWithDistance(filterByAvailability(offerings, availability), geo, toPublicService);
 
     return res.json({ services, total: services.length });
   } catch (error) {
@@ -844,7 +876,7 @@ export async function listMyServices(req: AuthenticatedRequest, res: Response) {
       include: {
         bookings: {
           where: { status: { in: HOLD_BOOKING_STATUSES } },
-          select: { eventDate: true },
+          select: { eventDate: true, eventEndDate: true },
         },
       },
       orderBy: { createdAt: 'desc' },

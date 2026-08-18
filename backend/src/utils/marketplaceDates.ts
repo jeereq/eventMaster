@@ -11,6 +11,22 @@ export function parseDateKey(value: unknown): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+export function eachDateKey(from: string, to: string): string[] {
+  const start = from <= to ? from : to;
+  const end = from <= to ? to : from;
+  const match = start.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const endMatch = end.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match || !endMatch) return [];
+  const keys: string[] = [];
+  const cursor = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  const last = new Date(Date.UTC(Number(endMatch[1]), Number(endMatch[2]) - 1, Number(endMatch[3])));
+  while (cursor.getTime() <= last.getTime() && keys.length < 366) {
+    keys.push(cursor.toISOString().slice(0, 10));
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return keys;
+}
+
 export function parseBlockedDates(input: unknown): string[] {
   if (!Array.isArray(input)) return [];
   const keys = new Set<string>();
@@ -25,11 +41,29 @@ export function mergeBlockedDate(existing: unknown, extra: string): string[] {
   return parseBlockedDates([...(parseBlockedDates(existing)), extra]);
 }
 
-export function collectUnavailableDates(blocked: unknown, bookings?: Array<{ eventDate: Date }>): string[] {
-  const fromBookings = (bookings || [])
-    .map((b) => toDateKey(b.eventDate))
-    .filter((key): key is string => Boolean(key));
+export function mergeBlockedDates(existing: unknown, extras: string[]): string[] {
+  return parseBlockedDates([...(parseBlockedDates(existing)), ...extras]);
+}
+
+export type BookingDateSpan = { eventDate: Date; eventEndDate?: Date | null };
+
+export function bookingOccupiedKeys(booking: BookingDateSpan): string[] {
+  const start = toDateKey(booking.eventDate);
+  if (!start) return [];
+  const end = toDateKey(booking.eventEndDate || booking.eventDate) || start;
+  return eachDateKey(start, end);
+}
+
+export function collectUnavailableDates(blocked: unknown, bookings?: BookingDateSpan[]): string[] {
+  const fromBookings = (bookings || []).flatMap(bookingOccupiedKeys);
   return parseBlockedDates([...(parseBlockedDates(blocked)), ...fromBookings]);
+}
+
+export function isRangeAvailable(unavailable: string[], from: string, to: string): boolean {
+  const keys = eachDateKey(from, to);
+  if (!keys.length) return false;
+  const blocked = new Set(unavailable);
+  return keys.every((key) => !blocked.has(key));
 }
 
 export function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {

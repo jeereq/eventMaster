@@ -7,6 +7,8 @@ import { Alert, Button, EmptyState, Input, StatusPill } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import {
   BOOKING_STATUS_LABELS,
+  bookingDateKeys,
+  formatBookingPeriod,
   parseBlockedDates,
   type MarketplaceBookingItem,
   type MarketplaceBookingStatus,
@@ -45,7 +47,7 @@ export default function MarketplaceBookingsPanel({
   const calendarDates = parseBlockedDates(
     visible
       .filter((b) => b.status !== 'CANCELLED')
-      .map((b) => b.eventDate),
+      .flatMap((b) => bookingDateKeys(b)),
   );
 
   const run = async (id: string, action: string, extra?: Record<string, unknown>) => {
@@ -124,7 +126,7 @@ export default function MarketplaceBookingsPanel({
                     <p className="text-xs text-muted">
                       {isVendor ? item.organizerName || 'Organisateur' : item.vendorName}
                       {' · '}
-                      {new Date(item.eventDate).toLocaleDateString('fr-FR')}
+                      {formatBookingPeriod(item.eventDate, item.eventEndDate)}
                     </p>
                   </div>
                   <StatusPill tone={toneFor(item.status)}>{BOOKING_STATUS_LABELS[item.status]}</StatusPill>

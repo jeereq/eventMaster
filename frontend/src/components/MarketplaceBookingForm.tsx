@@ -6,7 +6,12 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, Button, Input } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
-import { previewMarketplaceAmounts } from '@/lib/marketplace';
+import {
+  eachDateKey,
+  formatBookingPeriod,
+  previewMarketplaceAmounts,
+  type VenuePriceUnit,
+} from '@/lib/marketplace';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import { Lock } from 'lucide-react';
 
@@ -17,8 +22,11 @@ export default function MarketplaceBookingForm({
   bookedDates = [],
   blockedDates = [],
   priceFromFc,
+  priceUnit,
   eventDate,
+  eventEndDate,
   onEventDateChange,
+  onEventEndDateChange,
   showCalendar = true,
 }: {
   listingSlug?: string;
@@ -27,12 +35,16 @@ export default function MarketplaceBookingForm({
   bookedDates?: string[];
   blockedDates?: string[];
   priceFromFc: number | null;
+  priceUnit?: VenuePriceUnit | string | null;
   eventDate?: string;
+  eventEndDate?: string;
   onEventDateChange?: (value: string) => void;
+  onEventEndDateChange?: (value: string) => void;
   showCalendar?: boolean;
 }) {
   const { token, loading, tenant, access } = useAuth();
   const [internalDate, setInternalDate] = useState('');
+  const [internalEndDate, setInternalEndDate] = useState('');
   const [guestCount, setGuestCount] = useState('');
   const [notes, setNotes] = useState('');
   const [sending, setSending] = useState(false);
@@ -40,24 +52,38 @@ export default function MarketplaceBookingForm({
   const [formError, setFormError] = useState('');
 
   const selectedDate = eventDate ?? internalDate;
-  const setSelectedDate = onEventDateChange ?? setInternalDate;
+  const selectedEnd = (eventEndDate ?? internalEndDate) || selectedDate;
+  const setRange = (from: string, to: string) => {
+    if (onEventDateChange) onEventDateChange(from);
+    else setInternalDate(from);
+    if (onEventEndDateChange) onEventEndDateChange(to);
+    else setInternalEndDate(to);
+  };
   const blocked = useMemo(() => new Set(unavailableDates), [unavailableDates]);
-  const amounts = priceFromFc != null ? previewMarketplaceAmounts(priceFromFc) : null;
-  const dateTaken = Boolean(selectedDate && blocked.has(selectedDate));
+  const rangeKeys = selectedDate ? eachDateKey(selectedDate, selectedEnd || selectedDate) : [];
+  const dateTaken = rangeKeys.some((key) => blocked.has(key));
+  const amounts = priceFromFc != null
+    ? previewMarketplaceAmounts(priceFromFc, Math.max(1, rangeKeys.length), priceUnit)
+    : null;
   const loggedIn = Boolean(token && tenant?.id);
   const isClient = access?.level === 'client' || tenant?.accountKind === 'CLIENT';
   const bookingsHref = isClient ? '/dashboard/bookings' : '/dashboard/marketplace';
+  const periodLabel = selectedDate ? formatBookingPeriod(selectedDate, selectedEnd) : '';
 
   const handleBook = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
     setSent('');
     if (!selectedDate) {
-      setFormError('Choisissez une date sur le calendrier.');
+      setFormError('Choisissez une date, ou une période du… au…, sur le calendrier.');
+      return;
+    }
+    if (rangeKeys.length > 31) {
+      setFormError('La période ne peut pas dépasser 31 jours.');
       return;
     }
     if (dateTaken) {
-      setFormError('Cette date n’est plus disponible.');
+      setFormError('Une ou plusieurs dates de cette période ne sont plus disponibles.');
       return;
     }
     setSending(true);
@@ -66,6 +92,7 @@ export default function MarketplaceBookingForm({
         listingSlug,
         offeringSlug,
         eventDate: selectedDate,
+        eventEndDate: selectedEnd && selectedEnd !== selectedDate ? selectedEnd : undefined,
         guestCount: guestCount || undefined,
         notes: notes || undefined,
       });
@@ -86,7 +113,8 @@ export default function MarketplaceBookingForm({
       bookedDates={bookedDates}
       blockedDates={blockedDates.length ? blockedDates : unavailableDates}
       selectedDate={selectedDate}
-      onSelectDate={setSelectedDate}
+      selectedEndDate={selectedEnd}
+      onSelectRange={setRange}
     />
   ) : null;
 
@@ -111,8 +139,8 @@ export default function MarketplaceBookingForm({
         <div className="border border-border rounded-[var(--radius-card)] p-5 bg-surface space-y-3">
           <h2 className="text-sm font-semibold text-foreground">Réserver</h2>
           <p className="text-xs text-muted leading-relaxed">
-            Créez un compte client (gratuit) pour demander une date. L’acompte (30 %) se verse hors plateforme
-            au professionnel ; EventMaster n’encaisse pas ce paiement.
+            Créez un compte client (gratuit) pour demander une date ou une période. L’acompte (30 %) se verse hors
+            plateforme au professionnel ; EventMaster n’encaisse pas ce paiement.
           </p>
           <div className="flex flex-wrap gap-2">
             <Link href="/login" className="inline-flex">
@@ -131,21 +159,23 @@ export default function MarketplaceBookingForm({
     <form onSubmit={handleBook} className="space-y-3">
       {calendar}
       <div className="border border-border rounded-[var(--radius-card)] p-5 bg-surface space-y-3">
-        <h2 className="text-sm font-semibold text-foreground">Réserver cette date</h2>
+        <h2 className="text-sm font-semibold text-foreground">Réserver une date ou une période</h2>
         <p className="text-xs text-muted leading-relaxed">
-          Cliquez un jour libre sur le calendrier. Demande → acceptation → acompte 30 % hors plateforme → confirmation.
+          Cliquez un jour libre, puis éventuellement le dernier jour. Demande → acceptation → acompte 30 % hors
+          plateforme → confirmation.
         </p>
         {formError && <Alert variant="error">{formError}</Alert>}
         {sent && <Alert variant="success">{sent}</Alert>}
         {selectedDate ? (
           <p className="text-sm">
-            Date choisie : <strong>{new Date(`${selectedDate}T12:00:00`).toLocaleDateString('fr-FR')}</strong>
+            Période : <strong>{periodLabel}</strong>
+            {rangeKeys.length > 1 ? ` · ${rangeKeys.length} jours` : ''}
           </p>
         ) : (
           <p className="text-xs text-muted">Aucune date sélectionnée.</p>
         )}
         {dateTaken && (
-          <p className="text-[11px] text-red-600">Cette date est déjà bloquée ou réservée.</p>
+          <p className="text-[11px] text-red-600">Cette période chevauche une date déjà bloquée ou réservée.</p>
         )}
         <Input
           label="Nombre d’invités (estimé)"
@@ -167,6 +197,9 @@ export default function MarketplaceBookingForm({
         {amounts && (
           <div className="rounded-md border border-border bg-surface-muted px-3 py-2 text-xs space-y-1">
             <p>Montant indicatif : <strong>{formatFc(amounts.amountFc)}</strong></p>
+            {priceUnit === 'DAY' && rangeKeys.length > 1 ? (
+              <p className="text-muted">{formatFc(priceFromFc || 0)} / jour × {rangeKeys.length} jours</p>
+            ) : null}
             <p>Acompte 30 % à verser au professionnel : <strong>{formatFc(amounts.depositFc)}</strong></p>
             <p className="text-muted inline-flex items-center gap-1">
               <Lock className="w-3 h-3" /> Pas de paiement carte sur EventMaster.

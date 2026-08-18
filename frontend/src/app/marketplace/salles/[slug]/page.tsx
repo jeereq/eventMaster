@@ -32,6 +32,7 @@ export default function MarketplaceVenueDetailPage() {
   const [error, setError] = useState('');
   const [photoIndex, setPhotoIndex] = useState(0);
   const [pickedDate, setPickedDate] = useState('');
+  const [pickedEndDate, setPickedEndDate] = useState('');
   const [tab, setTab] = useState<MarketplaceFormTab>('details');
   const [wantRoute, setWantRoute] = useState(false);
 
@@ -180,7 +181,11 @@ export default function MarketplaceVenueDetailPage() {
                 bookedDates={venue.bookedDates}
                 blockedDates={venue.blockedDates}
                 selectedDate={pickedDate}
-                onSelectDate={setPickedDate}
+                selectedEndDate={pickedEndDate}
+                onSelectRange={(from, to) => {
+                  setPickedDate(from);
+                  setPickedEndDate(to);
+                }}
               />
                 </>
               )}
@@ -220,7 +225,10 @@ export default function MarketplaceVenueDetailPage() {
                 endpoint={`/public/venues/${encodeURIComponent(venue.slug)}/inquire`}
                 successCopy="Demande transmise au propriétaire."
                 eventDate={pickedDate}
-                onEventDateChange={setPickedDate}
+                onEventDateChange={(value) => {
+                  setPickedDate(value);
+                  setPickedEndDate(value);
+                }}
               />
               <MarketplaceBookingForm
                 listingSlug={venue.slug}
@@ -228,8 +236,11 @@ export default function MarketplaceVenueDetailPage() {
                 bookedDates={venue.bookedDates}
                 blockedDates={venue.blockedDates}
                 priceFromFc={venue.priceFromFc}
+                priceUnit={venue.priceUnit}
                 eventDate={pickedDate}
+                eventEndDate={pickedEndDate}
                 onEventDateChange={setPickedDate}
+                onEventEndDateChange={setPickedEndDate}
                 showCalendar={false}
               />
             </aside>

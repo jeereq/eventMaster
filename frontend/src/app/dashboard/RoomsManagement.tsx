@@ -27,7 +27,7 @@ import {
   roomTypeDescriptions,
   roomTypeLabels,
 } from '@/lib/roomLayoutUtils';
-import { PRICE_UNIT_OPTIONS, missingPublishLocation, parseBlockedDates, type VenuePriceUnit } from '@/lib/marketplace';
+import { PRICE_UNIT_OPTIONS, bookingDateKeys, missingPublishLocation, parseBlockedDates, type VenuePriceUnit } from '@/lib/marketplace';
 import { formatFc } from '@/config/landingPricing';
 import BlockedDatesField from '@/components/BlockedDatesField';
 import MarketplaceMediaField from '@/components/MarketplaceMediaField';
@@ -67,7 +67,7 @@ interface RoomItem {
     quotaMax?: number | null;
     photos: string[] | null;
     blockedDates?: unknown;
-    bookings?: Array<{ eventDate: string }>;
+    bookings?: Array<{ eventDate: string; eventEndDate?: string | null }>;
     latitude: number | null;
     longitude: number | null;
   } | null;
@@ -334,7 +334,7 @@ export default function RoomsManagement() {
       quotaMax: listing?.quotaMax != null ? String(listing.quotaMax) : '',
       photos,
       blockedDates: parseBlockedDates(listing?.blockedDates),
-      bookedDates: parseBlockedDates((listing?.bookings || []).map((b) => b.eventDate)),
+      bookedDates: parseBlockedDates((listing?.bookings || []).flatMap((b) => bookingDateKeys(b))),
       latitude: listing?.latitude != null ? String(listing.latitude) : '',
       longitude: listing?.longitude != null ? String(listing.longitude) : '',
     });
