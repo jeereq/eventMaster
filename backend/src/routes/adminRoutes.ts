@@ -38,7 +38,7 @@ import {
   approveSubscriptionRequest, 
   rejectSubscriptionRequest 
 } from '../controllers/subscriptionController';
-import { getRevenueReport, exportRevenueReport } from '../controllers/revenueReportController';
+import { getRevenueReport, exportRevenueReport, notifyRevenuePayouts, markRevenuePayoutPaid } from '../controllers/revenueReportController';
 import { getInvoiceDetail, downloadInvoicePdf, sendInvoiceByEmail } from '../controllers/invoiceController';
 import {
   getOpsOverview,
@@ -68,6 +68,8 @@ router.use(requireRole(['SUPER_ADMIN']));
 
 router.get('/reports/revenue', getRevenueReport);
 router.get('/reports/revenue/export', exportRevenueReport);
+router.post('/reports/revenue/notify-payouts', notifyRevenuePayouts);
+router.post('/reports/revenue/mark-paid', markRevenuePayoutPaid);
 
 router.get('/ops-overview', getOpsOverview);
 router.get('/audit-logs', getAuditLogs);

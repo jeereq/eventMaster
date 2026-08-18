@@ -4,7 +4,7 @@ import { prisma } from '../db';
 import Stripe from 'stripe';
 import { getPlanLimitsForTenant, getPlansConfiguration, PAID_PLAN_KEYS, PLAN_KEYS, isPlanAllowedForAccountKind, planAudienceMismatchMessage, resolveDurationDaysForPlan } from '../config/plansConfig';
 import { assertCanViewBilling, assertCanViewInvoices } from '../services/permissionsService';
-import { recordCommercialCommission } from '../services/commercialService';
+import { notifyCommercialsOnSubscriptionApproval, recordCommercialCommission } from '../services/commercialService';
 import { createAndSendInvoice, formatInvoiceForApi } from '../services/invoiceService';
 import {
   formatPlanFeaturesResponse,
@@ -319,13 +319,31 @@ export async function handleStripeWebhook(req: Request, res: Response) {
             status: 'PAID',
           });
 
-          await recordCommercialCommission({
+          const commissionRecords = await recordCommercialCommission({
             tenantId,
             plan: 'PREMIUM_2',
             source: 'STRIPE_WEBHOOK',
             invoiceAmount: invoice?.amount,
             platformInvoiceId: invoice?.id,
           });
+          const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
+          if (tenant && invoice) {
+            await notifyCommercialsOnSubscriptionApproval({
+              tenantId,
+              tenantName: tenant.name,
+              plan: 'PREMIUM_2',
+              durationDays: 30,
+              baseAmount: invoice.amount,
+              finalAmount: invoice.amount,
+              discountPercent: 0,
+              discountAmount: 0,
+              invoiceNumber: invoice.invoiceNumber,
+              event: 'ADMIN_ACTIVATION',
+              commissionsByUserId: Object.fromEntries(
+                commissionRecords.map((r) => [r.commercialId, r.commissionAmount]),
+              ),
+            });
+          }
           console.log(`[Stripe Webhook] Tenant ${tenantId} upgraded to PREMIUM_2 and license extended`);
         }
         break;

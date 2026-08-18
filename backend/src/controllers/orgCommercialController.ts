@@ -54,8 +54,10 @@ export async function getOrgCommercialDashboard(req: AuthenticatedRequest, res: 
     ]);
 
     const totalCommission = commissions.reduce((sum, c) => sum + c.commissionAmount, 0);
-    const monthlyCommission = commissions
-      .filter((c) => c.billingPeriod === new Date().toISOString().slice(0, 7))
+    const monthlyCommissions = commissions.filter((c) => c.billingPeriod === new Date().toISOString().slice(0, 7));
+    const monthlyCommission = monthlyCommissions.reduce((sum, c) => sum + c.commissionAmount, 0);
+    const monthlyDue = monthlyCommissions
+      .filter((c) => !c.paidAt)
       .reduce((sum, c) => sum + c.commissionAmount, 0);
 
     return res.json({
@@ -66,6 +68,7 @@ export async function getOrgCommercialDashboard(req: AuthenticatedRequest, res: 
         organizations: organizations.length,
         totalCommission,
         monthlyCommission,
+        monthlyDue,
       },
       organizations: organizations.map((o) => ({
         id: o.id,

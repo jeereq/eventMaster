@@ -18,6 +18,7 @@ interface OrgCommercialDashboard {
  organizations: number;
  totalCommission: number;
  monthlyCommission: number;
+ monthlyDue?: number;
  };
  organizations: Array<{
  id: string;
@@ -93,6 +94,9 @@ export default function OrgCommercialPage() {
  <TrendingUp className="w-5 h-5 text-emerald-600" />
  {data.stats.monthlyCommission.toLocaleString('fr-FR')} FC
  </div>
+ {(data.stats.monthlyDue ?? 0) > 0 && (
+ <p className="text-[11px] text-amber-700 mt-1">Dont {data.stats.monthlyDue!.toLocaleString('fr-FR')} FC à verser</p>
+ )}
  </div>
  <div className="bg-white dark:bg-background border rounded-2xl p-5">
  <div className="text-xs font-bold uppercase text-muted">Total commissions</div>

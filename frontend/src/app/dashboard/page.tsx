@@ -124,6 +124,10 @@ interface RevenueReport {
  invoiceCount: number;
  totalCommissions: number;
  totalCommissionsFormatted: string;
+ unpaidCommissions: number;
+ unpaidCommissionsFormatted: string;
+ paidCommissions: number;
+ paidCommissionsFormatted: string;
  netRevenue: number;
  netRevenueFormatted: string;
  };
@@ -143,8 +147,11 @@ interface RevenueReport {
  name: string | null;
  email: string;
  referralCode: string | null;
+ kind?: 'platform' | 'org';
  totalInvoiceAmount: number;
  totalCommission: number;
+ unpaidCommission?: number;
+ paidCommission?: number;
  entries: Array<{
  tenantName: string;
  plan: string;
@@ -423,6 +430,8 @@ function DashboardPageContent() {
  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
  });
  const [loadingRevenueReport, setLoadingRevenueReport] = useState(false);
+ const [notifyingPayouts, setNotifyingPayouts] = useState(false);
+ const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
  const [usersLoading, setUsersLoading] = useState(false);
  const [templatesLoading, setTemplatesLoading] = useState(false);
  const [adminEventsLoading, setAdminEventsLoading] = useState(false);
@@ -905,6 +914,33 @@ function DashboardPageContent() {
  );
  } catch (err: any) {
  alert(err.message || 'Erreur lors de l\'export du rapport.');
+ }
+ };
+
+ const notifyRevenuePayouts = async () => {
+ setNotifyingPayouts(true);
+ setError('');
+ try {
+ const data = await api.post('/admin/reports/revenue/notify-payouts', { period: revenuePeriod, force: true });
+ alert(data.message || 'Notifications de versement envoyées.');
+ } catch (err: any) {
+ setError(err.message || 'Impossible d\'envoyer les notifications de versement.');
+ } finally {
+ setNotifyingPayouts(false);
+ }
+ };
+
+ const markRevenuePayoutPaid = async (commercialId: string) => {
+ setMarkingPaidId(commercialId);
+ setError('');
+ try {
+ const data = await api.post('/admin/reports/revenue/mark-paid', { commercialId, period: revenuePeriod });
+ await loadRevenueReport(revenuePeriod);
+ alert(data.message || 'Versement marqué.');
+ } catch (err: any) {
+ setError(err.message || 'Impossible de marquer le versement.');
+ } finally {
+ setMarkingPaidId(null);
  }
  };
 
@@ -3498,6 +3534,14 @@ function DashboardPageContent() {
  <Download className="w-3.5 h-3.5" />
  PDF
  </button>
+ <button
+ onClick={notifyRevenuePayouts}
+ disabled={notifyingPayouts}
+ className="px-4 py-2 border border-amber-200 bg-amber-50 text-amber-900 text-xs font-bold rounded-xl hover:bg-amber-100 transition flex items-center gap-1.5 disabled:opacity-60"
+ >
+ {notifyingPayouts ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
+ Notifier les versements
+ </button>
               </div>
  </div>
 
@@ -3517,6 +3561,9 @@ function DashboardPageContent() {
  <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
  <span className="text-xs font-bold text-amber-600 uppercase">Commissions (30 %)</span>
  <p className="text-xl font-extrabold text-amber-900 mt-1">{revenueReport.summary.totalCommissionsFormatted}</p>
+ {revenueReport.summary.unpaidCommissionsFormatted ? (
+ <span className="text-xs text-amber-700">Dû : {revenueReport.summary.unpaidCommissionsFormatted}</span>
+ ) : null}
  </div>
  <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4">
  <span className="text-xs font-bold text-emerald-600 uppercase">Revenu net plateforme</span>
@@ -3550,19 +3597,30 @@ function DashboardPageContent() {
  <div className="space-y-3 max-h-64 overflow-y-auto">
  {revenueReport.commercialCommissions.map((c) => (
  <div key={c.commercialId} className="border border-border-subtle rounded-xl p-3">
- <div className="flex justify-between items-start">
+ <div className="flex justify-between items-start gap-2">
  <div>
  <p className="font-bold text-foreground">{c.name || c.email}</p>
- <p className="text-xs text-muted">{c.referralCode || '—'}</p>
+ <p className="text-xs text-muted">{c.referralCode || '—'}{c.kind === 'org' ? ' · org' : ' · plateforme'}</p>
  </div>
- <span className="font-extrabold text-amber-600">
+ <span className="font-extrabold text-amber-600 shrink-0">
  {c.totalCommission.toLocaleString('fr-FR')} FC
  </span>
  </div>
  <p className="text-xs text-muted mt-1">
  CA parrainé : {c.totalInvoiceAmount.toLocaleString('fr-FR')} FC · {c.entries.length} org.
-              </p>
-            </div>
+ {(c.unpaidCommission ?? 0) > 0 ? ` · Dû ${c.unpaidCommission!.toLocaleString('fr-FR')} FC` : ' · Versé'}
+ </p>
+ {(c.unpaidCommission ?? 0) > 0 && (
+ <button
+ type="button"
+ onClick={() => markRevenuePayoutPaid(c.commercialId)}
+ disabled={markingPaidId === c.commercialId}
+ className="mt-2 text-xs font-semibold text-primary hover:underline disabled:opacity-60"
+ >
+ {markingPaidId === c.commercialId ? 'Marquage…' : 'Marquer versé'}
+ </button>
+ )}
+ </div>
  ))}
  </div>
  )}

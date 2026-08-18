@@ -427,7 +427,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  },
  ];
 
- const showCommercialNotifications = user?.role === 'COMMERCIAL' || access?.level === 'commercial';
+ const showCommercialNotifications = user?.role === 'COMMERCIAL' || user?.role === 'SUPER_ADMIN' || access?.level === 'commercial';
 
  return (
  <Suspense

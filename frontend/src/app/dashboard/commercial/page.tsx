@@ -17,6 +17,7 @@ interface CommercialDashboard {
  organizations: number;
  totalCommission: number;
  monthlyCommission: number;
+ monthlyDue?: number;
  };
  organizations: Array<{
  id: string;
@@ -35,6 +36,7 @@ interface CommercialDashboard {
  invoiceAmount: number;
  commissionAmount: number;
  plan: string;
+ paidAt?: string | null;
  tenant: { name: string };
  }>;
 }
@@ -146,6 +148,9 @@ export default function CommercialDashboardPage() {
  <TrendingUp className="w-5 h-5 text-emerald-600" />
  {data.stats.monthlyCommission.toLocaleString('fr-FR')} FC
  </div>
+ {(data.stats.monthlyDue ?? 0) > 0 && (
+ <p className="text-[11px] text-amber-700 mt-1">Dont {data.stats.monthlyDue!.toLocaleString('fr-FR')} FC à verser</p>
+ )}
  </div>
  <div className="bg-white dark:bg-background border rounded-2xl p-5">
  <div className="text-xs font-bold uppercase text-muted">Total commissions</div>
@@ -160,7 +165,7 @@ export default function CommercialDashboardPage() {
  <div>
  <p className="text-white/80 text-sm font-semibold">Votre code parrainage</p>
  <p className="text-2xl font-black tracking-wider">{data.referralCode}</p>
- <p className="text-white/80 text-xs mt-1">{Math.round(data.commissionRate * 100)} % sur chaque facture mensuelle des org. parrainées</p>
+ <p className="text-white/80 text-xs mt-1">{Math.round(data.commissionRate * 100)} % sur chaque facture mensuelle des org. parrainées. Versement hors plateforme par EventMaster, notifié au Super Admin en début de mois.</p>
  </div>
  <ReferralShareButtons referralCode={data.referralCode} />
  </div>
@@ -336,7 +341,7 @@ export default function CommercialDashboardPage() {
  <p className="font-semibold text-sm text-foreground dark:text-foreground">{c.tenant.name}</p>
  <p className="font-bold text-emerald-600 text-sm shrink-0">{c.commissionAmount.toLocaleString('fr-FR')} FC</p>
  </div>
- <p className="text-xs text-muted">{c.billingPeriod}</p>
+ <p className="text-xs text-muted">{c.billingPeriod}{c.paidAt ? ' · versé' : ' · dû'}</p>
  <p className="text-xs text-muted">Facture : {c.invoiceAmount.toLocaleString('fr-FR')} FC ({Math.round(data.commissionRate * 100)} %)</p>
  </div>
  ))}
@@ -349,6 +354,7 @@ export default function CommercialDashboardPage() {
  <th>Organisation</th>
  <th>Facture</th>
  <th>Commission ({Math.round(data.commissionRate * 100)} %)</th>
+ <th>Statut</th>
  </tr>
  </thead>
  <tbody>
@@ -358,6 +364,7 @@ export default function CommercialDashboardPage() {
  <td>{c.tenant.name}</td>
  <td>{c.invoiceAmount.toLocaleString('fr-FR')} FC</td>
  <td className="font-bold text-emerald-600">{c.commissionAmount.toLocaleString('fr-FR')} FC</td>
+ <td className="text-xs text-muted">{c.paidAt ? 'Versé' : 'Dû'}</td>
  </tr>
  ))}
  </tbody>

@@ -1,4 +1,4 @@
-import { PlanType } from '@prisma/client';
+import { PlanType, Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import { getPlanLimits } from '../config/plansConfig';
 import { sendExpoPushToUser } from './expoPushService';
@@ -90,6 +90,51 @@ export async function createCommercialBillingNotification(params: {
       },
     });
     return notification;
+  });
+}
+
+export async function createPlatformNotification(params: {
+  userId: string;
+  type: string;
+  title: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+}) {
+  const notification = await prisma.platformNotification.create({
+    data: {
+      userId: params.userId,
+      type: params.type,
+      title: params.title,
+      message: params.message,
+      metadata: (params.metadata as Prisma.InputJsonValue | undefined) ?? undefined,
+    },
+  });
+  void sendExpoPushToUser(params.userId, {
+    title: notification.title,
+    body: notification.message,
+    data: {
+      notificationId: notification.id,
+      type: notification.type,
+      ...(notification.metadata as Record<string, unknown> | null),
+    },
+  });
+  return notification;
+}
+
+export async function hasNotificationForPeriod(params: {
+  userId: string;
+  type: string;
+  period: string;
+}) {
+  const rows = await prisma.platformNotification.findMany({
+    where: { userId: params.userId, type: params.type },
+    select: { metadata: true },
+    take: 40,
+    orderBy: { createdAt: 'desc' },
+  });
+  return rows.some((row) => {
+    const meta = row.metadata as { period?: string } | null;
+    return meta?.period === params.period;
   });
 }
 

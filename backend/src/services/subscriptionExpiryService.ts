@@ -1,6 +1,6 @@
 import { prisma } from '../db';
 import { createAndSendInvoice, getTenantOwner, sendLicenseExpiryWarning } from './invoiceService';
-import { recordCommercialCommission } from './commercialService';
+import { notifyCommercialsOnSubscriptionApproval, recordCommercialCommission } from './commercialService';
 import { resolveDurationDaysForPlan } from '../config/plansConfig';
 
 function startOfDay(date: Date): Date {
@@ -91,12 +91,28 @@ export async function processSubscriptionExpiryTasks() {
           });
 
           if (invoice) {
-            await recordCommercialCommission({
+            const commissionRecords = await recordCommercialCommission({
               tenantId: tenant.id,
               plan: tenant.plan,
               source: 'LICENSE_RENEWAL',
               invoiceAmount: invoice.amount,
               platformInvoiceId: invoice.id,
+            });
+            const commissionsByUserId = Object.fromEntries(
+              commissionRecords.map((r) => [r.commercialId, r.commissionAmount]),
+            );
+            await notifyCommercialsOnSubscriptionApproval({
+              tenantId: tenant.id,
+              tenantName: tenant.name,
+              plan: tenant.plan,
+              durationDays,
+              baseAmount: invoice.amount,
+              finalAmount: invoice.amount,
+              discountPercent: 0,
+              discountAmount: 0,
+              invoiceNumber: invoice.invoiceNumber,
+              event: 'LICENSE_RENEWAL',
+              commissionsByUserId,
             });
             console.log(`[Subscription Expiry] Facture renouvellement ${invoice.invoiceNumber} pour ${tenant.name}`);
           }

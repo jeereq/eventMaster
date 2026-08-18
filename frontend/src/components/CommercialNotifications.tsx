@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Bell, Check, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/cn';
@@ -32,6 +33,7 @@ function formatRelativeTime(iso: string): string {
 }
 
 export function NotificationBell({ className }: { className?: string }) {
+ const router = useRouter();
  const [open, setOpen] = useState(false);
  const [loading, setLoading] = useState(false);
  const [data, setData] = useState<NotificationsResponse | null>(null);
@@ -65,6 +67,21 @@ export function NotificationBell({ className }: { className?: string }) {
  document.addEventListener('mousedown', onClickOutside);
  return () => document.removeEventListener('mousedown', onClickOutside);
  }, [open]);
+
+ const followHref = (item: PlatformNotificationItem) => {
+ const href = item.metadata?.href;
+ if (typeof href !== 'string' || !href) return;
+ try {
+ const url = new URL(href, window.location.origin);
+ if (url.origin === window.location.origin) {
+ router.push(`${url.pathname}${url.search}`);
+ setOpen(false);
+ }
+ } catch {
+ router.push(href);
+ setOpen(false);
+ }
+ };
 
  const markRead = async (id: string) => {
  try {
@@ -150,7 +167,10 @@ export function NotificationBell({ className }: { className?: string }) {
  <button
  key={n.id}
  type="button"
- onClick={() => !n.readAt && markRead(n.id)}
+ onClick={() => {
+ if (!n.readAt) void markRead(n.id);
+ followHref(n);
+ }}
  className={cn(
  'w-full text-left px-4 py-3 border-b border-border-subtle dark:border-border/80 hover:bg-surface-muted hover:bg-surface-muted transition',
  !n.readAt && 'bg-primary/10 dark:bg-primary/15',

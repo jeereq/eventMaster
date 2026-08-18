@@ -20,6 +20,7 @@ import { handleStripeWebhook } from './controllers/billingController';
 import { prisma } from './db';
 import { startReminderWorker } from './services/reminderService';
 import { startSubscriptionExpiryWorker } from './services/subscriptionExpiryService';
+import { startCommercialPayoutWorker } from './services/commercialPayoutWorker';
 import { loadSubscriptionPlansFromDb } from './services/subscriptionPlanCatalogService';
 import { isSendGridConfigured, logNotificationConfigStatus } from './config/notificationConfig';
 import { maintenanceGuard } from './middleware/maintenanceGuard';
@@ -108,6 +109,7 @@ app.listen(PORT, async () => {
   // Start background workers
   startReminderWorker();
   startSubscriptionExpiryWorker();
+  startCommercialPayoutWorker();
 });
 
 // Reload ts-node-dev after Prisma generate (maxServices + forfaits VENUE / SERVICE / CATALOG).
