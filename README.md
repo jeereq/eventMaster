@@ -1,6 +1,6 @@
-# EventMaster SaaS - Plateforme SaaS Multi-tenant de Gestion d'Événements Privés
+# EventMaster SaaS — Plateforme multi-tenant d’événements et de marketplace
 
-EventMaster est une solution logicielle complète en modèle SaaS (Software as a Service) Multi-tenant, conçue pour l'organisation et la gestion d'événements privés. Elle garantit un cloisonnement strict des données entre organisations, propose un éditeur visuel de templates interactif et permet aux invités de répondre via un portail RSVP public personnalisé.
+EventMaster est une plateforme SaaS multi-tenant pour organiser un événement **et** trouver salle / prestataires en RDC. Chaque organisation a son espace isolé. Le cycle couvre invitations et RSVP, plan de table 2D, protocole QR le jour J, marketplace (favoris, packs budget, réservations de dates) et facturation par forfait. L’application mobile native est en construction : RSVP, protocole et tableau de bord fonctionnent déjà dans le navigateur, y compris sur téléphone.
 
 ---
 
@@ -10,20 +10,19 @@ L'application est découpée en **trois entités distinctes** :
 
 - **Backend (backend/)** :
   - Serveur Node.js + Express développé entièrement en TypeScript.
-  - Gestion de la persistance via Prisma ORM connecté à une base de données relationnelle PostgreSQL.
-  - Authentification sécurisée par jetons JWT (JSON Web Tokens) avec gestion des rôles (RBAC).
-  - Gestion des abonnements et quotas via Stripe (incluant un mode simulation "Mock" idéal pour le développement).
+  - Persistance Prisma / PostgreSQL (événements, salles, marketplace, packs, favoris).
+  - Authentification JWT + OTP (e-mail / WhatsApp), rôles RBAC par organisation.
+  - Forfaits et quotas en base ; demandes d’abonnement / factures PDF ; Stripe (dont mode simulation en dev).
+  - Marketplace : fiches salles/prestas, devis, réservations de dates, commission vendeur 8 %.
 
 - **Frontend (frontend/)** :
-  - Application moderne basée sur le framework Next.js (React) avec l'App Router.
-  - Interface soignée réalisée à l'aide de Tailwind CSS et de la bibliothèque d'icônes Lucide React.
-  - Gestion d'état unifiée pour l'authentification et le contexte d'organisation (Multi-tenant).
+  - Next.js (App Router), Tailwind CSS, Lucide React.
+  - Landing, catalogue public, dashboard organisateur / prestataire / client, portail RSVP, protocole web.
+  - Contexte d’auth et d’organisation (multi-tenant).
 
 - **Mobile (mobile/)** :
-  - Application React Native + Expo (TypeScript).
-  - Consomme la même API REST que le frontend web.
-  - Cible prioritaire : RSVP invité, protocole (scan QR, confirmation de présence), consultation événements/invités.
-  - Voir `mobile/PLAN.md` pour la feuille de route détaillée.
+  - React Native + Expo (TypeScript), même API REST.
+  - En construction / pas encore déployée sur les stores. Feuille de route : `mobile/PLAN.md`.
 
 ### Documentation
 
@@ -47,23 +46,27 @@ eventmaster/
 │   │   ├── schema.prisma        # Schéma de base de données relationnel
 │   │   └── migrations/          # Migrations SQL de la base
 │   ├── src/
-│   │   ├── controllers/         # Logique métier (Auth, Events, Guests, Templates, Billing, RSVP)
-│   │   ├── middleware/          # Protection d'API (Authentification JWT et RBAC)
-│   │   ├── routes/              # Déclaration des endpoints REST
-│   │   ├── db.ts                # Instanciation globale du client Prisma
-│   │   └── index.ts             # Fichier principal d'initialisation d'Express
+│   │   ├── controllers/         # Auth, Events, Guests, Templates, Billing, RSVP, Marketplace
+│   │   ├── middleware/          # JWT, RBAC, licence
+│   │   ├── routes/              # Endpoints REST
+│   │   ├── services/            # Packs événement, commissions, notifications, PDF
+│   │   ├── db.ts
+│   │   └── index.ts
 │   ├── package.json
 │   └── tsconfig.json
 │
 ├── frontend/
 │   ├── src/
 │   │   ├── app/                 # Pages (Next.js App Router)
-│   │   │   ├── dashboard/       # Interface privée d'administration
-│   │   │   ├── login/           # Formulaire de connexion
-│   │   │   ├── register/        # Formulaire de création de compte SaaS (Tenant automatique)
-│   │   │   └── rsvp/[guestId]/  # Portail RSVP public personnalisé d'un invité
-│   │   ├── context/             # Contexte d'authentification et d'organisation
-│   │   └── lib/                 # Service d'appel API d'envoi et d'authentification
+│   │   │   ├── dashboard/       # Org, prestataire (desk), client (catalogue, résas)
+│   │   │   ├── marketplace/     # Catalogue public
+│   │   │   ├── login/
+│   │   │   ├── register/
+│   │   │   └── rsvp/[guestId]/  # Portail RSVP public
+│   │   ├── components/          # Landing, catalogue, desk marketplace, UI
+│   │   ├── config/              # Guides, FAQ, tarifs landing
+│   │   ├── context/
+│   │   └── lib/
 │   ├── package.json
 │   └── tsconfig.json
 │
@@ -88,27 +91,20 @@ eventmaster/
    Le middleware extrait le jeton JWT envoyé dans les en-têtes HTTP de chaque requête. Ce jeton contient l'ID utilisateur, son rôle et son tenantId associé. Ces informations sont injectées dans la requête (req.user).
 
 3. **Filtrage des Données** :
-   Chaque requête vers la base de données (Événements, Invités, Modèles, Invitations) filtre systématiquement les opérations en ajoutant une contrainte where: { tenantId }. Aucune organisation ne peut lire ou écrire des données d'un autre tenant.
+   Les requêtes métier (événements, invités, salles, offres marketplace) filtrent par `tenantId`. Un compte **client** n’a pas de licence SaaS : il explore le catalogue, enregistre des favoris et prépare des packs, sans créer d’événements.
 
 ---
 
 ## 4. Fonctionnalités Core Implémentées
 
-- **Dashboard Global** : Suivi en temps réel des quotas (nombre d'événements, total d'invités, modèles d'invitations créés) selon le plan actif (FREE, PREMIUM, ENTERPRISE).
-- **Gestion d'Événements** : Création, modification et suppression d'événements (Titre, description, date, lieu).
-- **Gestion des Invités** :
-  - Ajout unitaire d'un invité (Nom, Prénom, Email, Catégorie).
-  - Importation groupée rapide en collant des lignes au format CSV : Prénom, Nom, Email, Catégorie.
-- **Modèles d'Invitations (Drag and Drop Editor)** :
-  - Un designer visuel permet de concevoir une invitation en ajoutant des composants (Titre, texte, bouton RSVP, champs de saisie de préférences).
-  - Sérialisation automatique du canevas au format JSON pour être persisté dans la base PostgreSQL.
-- **Diffusion et RSVP** :
-  - Outil de génération d'envois personnalisés remplaçant les variables dynamiques (firstName, lastName, rsvpLink).
-  - Simulation de diffusion qui génère des liens d'invitations individuels sécurisés pour chaque invité.
-  - **Portail RSVP Public** : L'invité clique sur son lien, accède à l'invitation stylisée et peut confirmer ou décliner sa présence, choisir son menu (végétarien, halal, etc.) et lister ses allergies alimentaires en temps réel.
-- **Modèle Économique & Stripe** :
-  - Intégration de Stripe pour la souscription d'abonnements récurrents et la facturation.
-  - En mode de développement local, un système de simulation ("Mock Upgrade") permet d'augmenter/diminuer instantanément le niveau d'abonnement en un clic depuis le dashboard pour tester la levée des quotas en temps réel.
+- **Types de compte** : organisateur, prestataire / salles, les deux, ou **client marketplace** (sans abo SaaS).
+- **Dashboard** : quotas selon le forfait (Essentials, Particulier, Business / Premium / Enterprise, Salle, Prestataire, Salle & presta).
+- **Événements & invités** : CRUD, import CSV, catégories, plan de table 2D, protocole QR (scan dans le navigateur).
+- **Invitations & RSVP** : concepteur visuel, e-mail / WhatsApp, portail public, badge QR. PDF / plan / GPS partent **dès acceptation RSVP** (si place assignée, Premium 1+), pas à l’envoi de l’invitation.
+- **Marketplace** :
+  - Catalogue public et hub client (`/dashboard/catalogue`) : explorer, **favoris** (grille / liste), **préparer un événement** (budget min. 50 000 FC → 3 packs distincts éco / équilibré / confort), packs sauvegardés.
+  - Desk prestataire (`/dashboard/marketplace`) : prestations (pagination, vues grille / liste), **demandes** (contact, conversion), **réservations** (Demande → Acceptée → Acompte hors plateforme 30 % → Confirmée). Commission vendeur **8 %**, distincte de l’abonnement.
+- **Facturation** : demandes de forfait, factures PDF, Stripe + simulation en développement.
 
 ---
 
@@ -171,11 +167,10 @@ eventmaster/
 
 ## 6. Processus de Test Recommandé
 
-1. **Création d'un Tenant** : Accédez à http://localhost:3000/register et créez une organisation (ex. "Agence Prestige").
-2. **Dashboard initial** : Vous êtes redirigé vers le tableau de bord avec le plan gratuit (FREE). Vous constatez vos quotas restreints (max 3 événements, max 50 invités).
-3. **Mise à niveau** : Accédez à l'onglet "Facturation & Plan" et cliquez sur "Activer le Plan Premium". Le système simule l'autorisation de paiement et déverrouille instantanément vos limites.
-4. **Création d'événement** : Allez dans "Événements" et créez votre premier événement privé.
-5. **Ajout d'invités** : Cliquez sur "Gérer les invités" de l'événement. Ajoutez des invités manuellement ou copiez-collez du texte CSV pour les importer en bloc.
-6. **Designer de Template** : Allez dans "Modèles", cliquez sur "Nouveau modèle", concevez votre carte d'invitation avec les boutons RSVP à l'aide de l'éditeur interactif, puis sauvegardez.
-7. **Création d'Invitation** : Retournez sur votre Événement, ongle "Invitations & Diffusion". Créez une invitation, sélectionnez votre modèle créé et saisissez le corps du message.
-8. **Envoi & RSVP** : Cliquez sur "Simuler la Diffusion". Un pop-up s'ouvre avec l'ensemble des liens d'invitations individuels générés pour vos invités. Cliquez sur l'un d'eux pour ouvrir le portail RSVP public. Confirmez la présence de l'invité et saisissez ses préférences. De retour sur votre tableau de bord d'événement, les statistiques se mettent à jour instantanément (Confirmés, Déclinés, En attente) !
+1. **Création d’un compte** : http://localhost:3000/register — organisateur, prestataire, ou client (je cherche une salle / un presta).
+2. **Organisateur** : tableau de bord Essentials (gratuit) → quotas visibles → Facturation pour un forfait payant (simulation possible en local).
+3. **Événement** : Événements → créer → invités (saisie ou CSV) → Modèles → invitation → diffusion. Le lien RSVP ne contient pas encore PDF/GPS.
+4. **RSVP** : ouvrir un lien généré, confirmer, vérifier que le badge QR apparaît ; avec place assignée (Premium+), PDF / plan / GPS partent à l’acceptation.
+5. **Client marketplace** : Marketplace du dashboard → Explorer / Favoris / Préparer un événement (budget + type) → sauvegarder un pack → Mes réservations.
+6. **Prestataire** : Marketplace → Prestations (grille ou liste) → publier → Demandes (contacter / convertir) → Réservations (accepter → marquer l’acompte 30 % hors plateforme → confirmer).
+7. **Jour J** : mode Protocole, scan QR dans le navigateur.
