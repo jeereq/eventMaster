@@ -444,7 +444,7 @@ export const USER_GUIDES: UserGuide[] = [
         title: 'Préparer un événement et sauvegarder un pack',
         content:
           '1. Onglet Préparer un événement.\n2. Choisissez le type, le budget (min. 50 000 FC), la ville et le nombre d’invités.\n3. Cochez les métiers voulus, lancez la recherche.\n4. Comparez les packs économique, équilibré et confort ; remplacez une ligne si besoin.\n5. Sauvegarder ce pack, ou créez un pack parfait depuis Mes packs + vos favoris.',
-        links: [{ label: 'Marketplace', href: '/dashboard/catalogue?tab=plan' }],
+        links: [{ label: 'Marketplace', href: '/dashboard/catalogue?hub=plan' }],
       },
       {
         id: 'book-venue',

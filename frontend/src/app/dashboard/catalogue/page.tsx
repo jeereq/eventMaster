@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Heart, Loader2, Sparkles, Store, Wallet, Bookmark } from 'lucide-react';
 import { api } from '@/lib/api';
 import {
@@ -51,6 +51,7 @@ import {
   type ServiceMobility,
 } from '@/lib/marketplace';
 import { useCatalogueQueryState, useRememberListReturn } from '@/lib/catalogueQuery';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { favoriteToCatalogueItem, useListingFavorites } from '@/lib/listingFavorites';
 import { LISTING_EVENT_TYPES, eventTypeLabel, type ListingEventTypeId } from '@/lib/listingDetails';
 import { EVENT_PLAN_SLOTS, snapshotPlanItems, type PlanItem, type PlanPackage, type SavedEventPack } from '@/lib/eventPlan';
@@ -59,33 +60,40 @@ import EventSavedPacks from '@/components/EventSavedPacks';
 import CatalogueViewToggle from '@/components/CatalogueViewToggle';
 
 type HubTab = 'explore' | 'favorites' | 'plan' | 'packs';
-type HubFilters = CatalogueGeoState & { kind: 'all' | 'venue' | 'service' | 'event'; mobility: ServiceMobility; tab: HubTab };
+type HubFilters = CatalogueGeoState & { kind: 'all' | 'venue' | 'service' | 'event'; mobility: ServiceMobility };
+
+const HUB_TABS: HubTab[] = ['explore', 'favorites', 'plan', 'packs'];
+
+function parseHubTab(params: URLSearchParams): HubTab {
+  const raw = params.get('hub') || params.get('tab');
+  return HUB_TABS.includes(raw as HubTab) ? (raw as HubTab) : 'explore';
+}
 
 const emptyFilters: HubFilters = {
   ...EMPTY_CATALOGUE_GEO,
   kind: 'all',
   mobility: '',
-  tab: 'explore',
 };
 
 const QUERY_OPTS = {
-  extraKeys: ['kind', 'mobility', 'tab'],
-  emptyExtra: { kind: 'all', mobility: '', tab: 'explore' },
+  extraKeys: ['kind', 'mobility'],
+  emptyExtra: { kind: 'all', mobility: '' },
   merge: (geo: CatalogueGeoState, extra: Record<string, string>): HubFilters => ({
     ...geo,
     kind: extra.kind === 'venue' || extra.kind === 'service' || extra.kind === 'event' ? extra.kind : 'all',
     mobility: (extra.mobility as ServiceMobility) || '',
-    tab: extra.tab === 'favorites' || extra.tab === 'plan' || extra.tab === 'packs' ? extra.tab : 'explore',
   }),
   split: (filters: HubFilters) => ({
     kind: filters.kind,
     mobility: filters.mobility,
-    tab: filters.tab,
   }),
 };
 
 function ClientMarketplaceInner() {
   useRememberListReturn();
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { mode, setView, gridCols, setGridCols } = useCatalogueView();
   const { q: query, setQ: setQuery, searchQ, applied, draft, setDraft, page, applyFilters, setPage } = useCatalogueQueryState(QUERY_OPTS);
   const { isFavorite, toggleFavorite, items: favoriteRows, loading: favoritesLoading, reload: reloadFavorites } = useListingFavorites();
@@ -113,7 +121,31 @@ function ClientMarketplaceInner() {
   const [saveBusy, setSaveBusy] = useState(false);
   const [saveError, setSaveError] = useState('');
 
-  const tab = applied.tab;
+  const urlTab = parseHubTab(searchParams);
+  const [tab, setTabState] = useState<HubTab>(urlTab);
+  const pendingTab = useRef<HubTab | null>(null);
+
+  useEffect(() => {
+    if (pendingTab.current) {
+      if (urlTab === pendingTab.current) pendingTab.current = null;
+      return;
+    }
+    setTabState(urlTab);
+  }, [urlTab]);
+
+  const setTab = (next: HubTab) => {
+    pendingTab.current = next;
+    setTabState(next);
+    const params = new URLSearchParams(
+      typeof window !== 'undefined' ? window.location.search : searchParams.toString(),
+    );
+    params.delete('tab');
+    if (next === 'explore') params.delete('hub');
+    else params.set('hub', next);
+    const qs = params.toString();
+    const href = qs ? `${pathname}?${qs}` : pathname;
+    router.replace(href, { scroll: false });
+  };
 
   const load = useCallback(async (filters: HubFilters, search: string) => {
     setLoading(true);
@@ -219,8 +251,6 @@ function ClientMarketplaceInner() {
         : []),
     ],
   );
-
-  const setTab = (next: HubTab) => applyFilters({ ...applied, tab: next });
 
   const onToggleFavorite = (item: CatalogueItem) => {
     if (item.kind === 'event') return;
@@ -347,7 +377,11 @@ function ClientMarketplaceInner() {
         }
       />
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div
+        role="tablist"
+        aria-label="Sections du marketplace"
+        className="flex flex-wrap items-center gap-1 rounded-xl border border-border bg-muted/40 p-1"
+      >
         {[
           { id: 'explore' as const, label: 'Explorer', icon: Store },
           { id: 'favorites' as const, label: 'Favoris', icon: Heart },
@@ -357,15 +391,17 @@ function ClientMarketplaceInner() {
           <button
             key={item.id}
             type="button"
+            role="tab"
+            aria-selected={tab === item.id}
             onClick={() => setTab(item.id)}
             className={cn(
-              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition',
+              'inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition',
               tab === item.id
-                ? 'bg-surface text-foreground border-border shadow-[var(--shadow-soft)]'
-                : 'text-muted border-transparent hover:text-foreground',
+                ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
+                : 'text-muted hover:bg-surface/70 hover:text-foreground',
             )}
           >
-            <item.icon className="w-3.5 h-3.5" />
+            <item.icon className="w-4 h-4 shrink-0" />
             {item.label}
             {item.id === 'favorites' && favoriteRows.length > 0 ? ` (${favoriteRows.length})` : ''}
             {item.id === 'packs' && savedPacks.length > 0 ? ` (${savedPacks.length})` : ''}
@@ -389,9 +425,9 @@ function ClientMarketplaceInner() {
             onRemoveChip={(id) => {
               if (id === 'kind') applyFilters({ ...applied, kind: 'all' });
               else if (id === 'mobility') applyFilters({ ...applied, mobility: '' });
-              else applyFilters({ ...clearCatalogueGeoChip(applied, id), kind: applied.kind, mobility: applied.mobility, tab: applied.tab });
+              else applyFilters({ ...clearCatalogueGeoChip(applied, id), kind: applied.kind, mobility: applied.mobility });
             }}
-            onClearChips={() => applyFilters({ ...emptyFilters, tab: 'explore' })}
+            onClearChips={() => applyFilters(emptyFilters)}
             onOpen={() => {
               setDraft(applied);
               setFilterError('');
@@ -399,7 +435,7 @@ function ClientMarketplaceInner() {
             onApply={async () => {
               try {
                 const geo = await resolveCatalogueGeo(draft);
-                applyFilters({ ...geo, kind: draft.kind, mobility: draft.mobility, tab: 'explore' });
+                applyFilters({ ...geo, kind: draft.kind, mobility: draft.mobility });
               } catch (err: unknown) {
                 setFilterError(err instanceof Error ? err.message : 'Filtre de proximité impossible.');
                 throw err;
@@ -422,7 +458,7 @@ function ClientMarketplaceInner() {
                 </CatalogueFilterField>
                 <CatalogueGeoFields
                   value={draft}
-                  onChange={(next) => setDraft({ ...next, kind: draft.kind, mobility: draft.mobility, tab: draft.tab })}
+                  onChange={(next) => setDraft({ ...next, kind: draft.kind, mobility: draft.mobility })}
                   error={filterError}
                   showCapacity={draft.kind !== 'service'}
                 />

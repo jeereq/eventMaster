@@ -108,6 +108,26 @@ export function parseGeoFromSearch(params: URLSearchParams): CatalogueGeoState {
   };
 }
 
+const CATALOGUE_QUERY_KEYS = [
+  'q',
+  'page',
+  'city',
+  'commune',
+  'neighborhood',
+  'street',
+  'minPrice',
+  'maxPrice',
+  'minCapacity',
+  'maxCapacity',
+  'availableFrom',
+  'availableTo',
+  'proximity',
+  'nearPlace',
+  'radiusKm',
+  'lat',
+  'lng',
+];
+
 export function serializeCatalogueQuery(opts: {
   q?: string;
   page?: number;
@@ -183,8 +203,17 @@ export function useCatalogueQueryState<T extends CatalogueGeoState>(opts: {
         geo: filters,
         extra: opts.split(filters),
       });
-      const href = qs ? `${pathname}?${qs}` : pathname;
-      const current = searchKey ? `${pathname}?${searchKey}` : pathname;
+      const params = new URLSearchParams(qs);
+      const liveSearch = typeof window !== 'undefined' ? window.location.search.replace(/^\?/, '') : searchKey;
+      const currentParams = new URLSearchParams(liveSearch);
+      const managed = new Set([...CATALOGUE_QUERY_KEYS, ...opts.extraKeys]);
+      for (const [key, value] of currentParams.entries()) {
+        if (key === 'tab') continue;
+        if (!managed.has(key) && value && !params.has(key)) params.set(key, value);
+      }
+      const nextQs = params.toString();
+      const href = nextQs ? `${pathname}?${nextQs}` : pathname;
+      const current = liveSearch ? `${pathname}?${liveSearch}` : pathname;
       if (href === current) return;
       rememberCatalogueReturn(href);
       router.replace(href, { scroll: false });
