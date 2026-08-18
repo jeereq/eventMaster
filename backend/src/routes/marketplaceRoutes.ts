@@ -18,6 +18,9 @@ import {
   addFavorite,
   removeFavorite,
   planEvent,
+  listSavedPacks,
+  createSavedPack,
+  deleteSavedPack,
 } from '../controllers/marketplaceClientController';
 
 const router = Router();
@@ -39,5 +42,8 @@ router.get('/favorites', listFavorites);
 router.post('/favorites', addFavorite);
 router.delete('/favorites/:kind/:slug', removeFavorite);
 router.post('/event-plan', planEvent);
+router.get('/event-packs', listSavedPacks);
+router.post('/event-packs', createSavedPack);
+router.delete('/event-packs/:id', deleteSavedPack);
 
 export default router;

@@ -190,6 +190,7 @@ model User {
   platformNotifications PlatformNotification[]
   pushDeviceTokens      PushDeviceToken[]
   listingFavorites      ListingFavorite[]
+  savedEventPacks       SavedEventPack[]
 }
 
 model Event {
@@ -620,6 +621,28 @@ model ListingFavorite {
   createdAt DateTime @default(now())
 
   @@unique([userId, kind, slug])
+  @@index([userId])
+}
+
+model SavedEventPack {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  eventType  String
+  budgetFc   Int
+  city       String?
+  guestCount Int?
+  eventDate  DateTime?
+  /** search | custom */
+  source     String   @default("search")
+  styleLabel String?
+  totalFc    Int
+  leftoverFc Int      @default(0)
+  items      Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
   @@index([userId])
 }
 

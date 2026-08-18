@@ -56,6 +56,41 @@ export type PlanMissingSlot = {
   reason: string;
 };
 
+export type SavedPackItem = Omit<PlanItem, 'alternatives' | 'match' | 'reused' | 'favorite' | 'category'>;
+
+export type SavedEventPack = {
+  id: string;
+  name: string;
+  eventType: string;
+  budgetFc: number;
+  city: string | null;
+  guestCount: number | null;
+  eventDate: string | null;
+  source: 'search' | 'custom';
+  styleLabel: string | null;
+  totalFc: number;
+  leftoverFc: number;
+  items: SavedPackItem[];
+  venue: SavedPackItem | null;
+  services: SavedPackItem[];
+  createdAt: string;
+};
+
+export function snapshotPlanItems(items: PlanItem[]): SavedPackItem[] {
+  return items.map((item) => ({
+    kind: item.kind,
+    slug: item.slug,
+    title: item.title,
+    orgName: item.orgName,
+    location: item.location,
+    coverUrl: item.coverUrl,
+    estimatedFc: item.estimatedFc,
+    categoryLabel: item.categoryLabel,
+    href: item.href,
+    capacity: item.capacity ?? null,
+  }));
+}
+
 export type PlanPackage = {
   id: string;
   label: string;
@@ -72,3 +107,4 @@ export type PlanPackage = {
   filledCount?: number;
   requiredCount?: number;
 };
+

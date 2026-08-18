@@ -2,10 +2,11 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Check, RefreshCw, Store } from 'lucide-react';
+import { Check, RefreshCw, Store, Bookmark } from 'lucide-react';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import FavoriteHeart from '@/components/FavoriteHeart';
+import { Button } from '@/components/ui';
 import type { PlanItem, PlanPackage } from '@/lib/eventPlan';
 
 function PackItemRow({
@@ -105,12 +106,14 @@ export default function EventPlanPacks({
   isFavorite,
   onToggleFavorite,
   onReplace,
+  onSave,
 }: {
   packages: PlanPackage[];
   budgetFc: number;
   isFavorite: (kind: 'venue' | 'service', slug: string) => boolean;
   onToggleFavorite: (kind: 'venue' | 'service', slug: string) => void;
   onReplace: (packId: string, currentSlug: string, next: PlanItem) => void;
+  onSave?: (pack: PlanPackage) => void;
 }) {
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
@@ -182,6 +185,11 @@ export default function EventPlanPacks({
                 />
               ))}
             </ul>
+            {onSave ? (
+              <Button size="sm" variant="secondary" onClick={() => onSave(pack)} leftIcon={<Bookmark className="w-3.5 h-3.5" />}>
+                Sauvegarder ce pack
+              </Button>
+            ) : null}
           </article>
         );
       })}

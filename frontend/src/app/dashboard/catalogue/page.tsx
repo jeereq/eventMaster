@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import { Heart, Loader2, Sparkles, Store, Wallet } from 'lucide-react';
+import { Heart, Loader2, Sparkles, Store, Wallet, Bookmark } from 'lucide-react';
 import { api } from '@/lib/api';
 import {
   Alert,
@@ -9,6 +9,7 @@ import {
   Button,
   EmptyState,
   Input,
+  Modal,
   PageHeader,
   Pagination,
   paginateItems,
@@ -47,10 +48,12 @@ import {
 import { useCatalogueQueryState, useRememberListReturn } from '@/lib/catalogueQuery';
 import { favoriteToCatalogueItem, useListingFavorites } from '@/lib/listingFavorites';
 import { LISTING_EVENT_TYPES, eventTypeLabel, type ListingEventTypeId } from '@/lib/listingDetails';
-import { EVENT_PLAN_SLOTS, type PlanItem, type PlanPackage } from '@/lib/eventPlan';
+import { EVENT_PLAN_SLOTS, snapshotPlanItems, type PlanItem, type PlanPackage, type SavedEventPack } from '@/lib/eventPlan';
 import EventPlanPacks from '@/components/EventPlanPacks';
+import EventSavedPacks from '@/components/EventSavedPacks';
+import CatalogueViewToggle from '@/components/CatalogueViewToggle';
 
-type HubTab = 'explore' | 'favorites' | 'plan';
+type HubTab = 'explore' | 'favorites' | 'plan' | 'packs';
 type HubFilters = CatalogueGeoState & { kind: 'all' | 'venue' | 'service'; mobility: ServiceMobility; tab: HubTab };
 
 const emptyFilters: HubFilters = {
@@ -67,7 +70,7 @@ const QUERY_OPTS = {
     ...geo,
     kind: extra.kind === 'venue' || extra.kind === 'service' ? extra.kind : 'all',
     mobility: (extra.mobility as ServiceMobility) || '',
-    tab: extra.tab === 'favorites' || extra.tab === 'plan' ? extra.tab : 'explore',
+    tab: extra.tab === 'favorites' || extra.tab === 'plan' || extra.tab === 'packs' ? extra.tab : 'explore',
   }),
   split: (filters: HubFilters) => ({
     kind: filters.kind,
@@ -95,6 +98,14 @@ function ClientMarketplaceInner() {
   const [planError, setPlanError] = useState('');
   const [packages, setPackages] = useState<PlanPackage[]>([]);
   const [planCategories, setPlanCategories] = useState<ServiceCategory[]>(EVENT_PLAN_SLOTS.wedding.required);
+  const [savedPacks, setSavedPacks] = useState<SavedEventPack[]>([]);
+  const [favKind, setFavKind] = useState<'all' | 'venue' | 'service'>('all');
+  const [favQ, setFavQ] = useState('');
+  const [favMode, setFavMode] = useState<'grid' | 'list'>('grid');
+  const [saveTarget, setSaveTarget] = useState<PlanPackage | null>(null);
+  const [saveName, setSaveName] = useState('');
+  const [saveBusy, setSaveBusy] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   const tab = applied.tab;
 
@@ -125,8 +136,21 @@ function ClientMarketplaceInner() {
   }, [applied, searchQ, load, tab]);
 
   useEffect(() => {
-    if (tab === 'favorites') void reloadFavorites();
+    if (tab === 'favorites' || tab === 'packs') void reloadFavorites();
   }, [tab, reloadFavorites]);
+
+  const loadSavedPacks = useCallback(async () => {
+    try {
+      const data = await api.get('/marketplace/event-packs');
+      setSavedPacks(data.packs || []);
+    } catch {
+      setSavedPacks([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (tab === 'packs' || tab === 'plan') void loadSavedPacks();
+  }, [tab, loadSavedPacks]);
 
   const items = useMemo(
     () => sortCatalogueByDistance([
@@ -145,6 +169,15 @@ function ClientMarketplaceInner() {
     () => favoriteRows.map(favoriteToCatalogueItem),
     [favoriteRows],
   );
+
+  const visibleFavorites = useMemo(() => {
+    const q = favQ.trim().toLowerCase();
+    return favoriteItems.filter((item) => {
+      if (favKind !== 'all' && item.kind !== favKind) return false;
+      if (!q) return true;
+      return [item.title, item.orgName, item.location, item.categoryLabel].join(' ').toLowerCase().includes(q);
+    });
+  }, [favoriteItems, favKind, favQ]);
 
   const markers = useMemo(
     () =>
@@ -238,6 +271,45 @@ function ClientMarketplaceInner() {
     ));
   };
 
+  const persistPack = async (payload: {
+    name: string;
+    eventType: string;
+    budgetFc: number;
+    city?: string;
+    guestCount?: number;
+    source: 'search' | 'custom';
+    styleLabel?: string;
+    items: ReturnType<typeof snapshotPlanItems>;
+  }) => {
+    await api.post('/marketplace/event-packs', payload);
+    await loadSavedPacks();
+  };
+
+  const saveSearchPack = async () => {
+    if (!saveTarget) return;
+    setSaveBusy(true);
+    setSaveError('');
+    try {
+      const items = snapshotPlanItems(saveTarget.venue ? [saveTarget.venue, ...saveTarget.services] : saveTarget.services);
+      await persistPack({
+        name: saveName.trim() || `${eventTypeLabel(eventType)} · ${saveTarget.label}`,
+        eventType,
+        budgetFc: Number(budgetFc.replace(/\s/g, '')) || saveTarget.totalFc,
+        city: planCity || undefined,
+        guestCount: Number(guestCount) || undefined,
+        source: 'search',
+        styleLabel: saveTarget.label,
+        items,
+      });
+      setSaveTarget(null);
+      setTab('packs');
+    } catch (err: unknown) {
+      setSaveError(err instanceof Error ? err.message : 'Impossible d’enregistrer le pack.');
+    } finally {
+      setSaveBusy(false);
+    }
+  };
+
   const mapMode = tab === 'explore' && isCatalogueMapView(mode);
 
   return (
@@ -249,7 +321,7 @@ function ClientMarketplaceInner() {
           <Breadcrumbs
             items={[
               { label: 'Marketplace', href: '/dashboard/catalogue' },
-              { label: tab === 'favorites' ? 'Favoris' : tab === 'plan' ? 'Préparer un événement' : 'Explorer' },
+              { label: tab === 'favorites' ? 'Favoris' : tab === 'plan' ? 'Préparer un événement' : tab === 'packs' ? 'Mes packs' : 'Explorer' },
             ]}
           />
         }
@@ -260,6 +332,7 @@ function ClientMarketplaceInner() {
           { id: 'explore' as const, label: 'Explorer', icon: Store },
           { id: 'favorites' as const, label: 'Favoris', icon: Heart },
           { id: 'plan' as const, label: 'Préparer un événement', icon: Wallet },
+          { id: 'packs' as const, label: 'Mes packs', icon: Bookmark },
         ].map((item) => (
           <button
             key={item.id}
@@ -275,6 +348,7 @@ function ClientMarketplaceInner() {
             <item.icon className="w-3.5 h-3.5" />
             {item.label}
             {item.id === 'favorites' && favoriteRows.length > 0 ? ` (${favoriteRows.length})` : ''}
+            {item.id === 'packs' && savedPacks.length > 0 ? ` (${savedPacks.length})` : ''}
           </button>
         ))}
       </div>
@@ -385,17 +459,55 @@ function ClientMarketplaceInner() {
 
       {tab === 'favorites' ? (
         favoritesLoading ? (
-          <CatalogueResultsSkeleton mode="grid" count={8} gridCols={gridCols} />
+          <CatalogueResultsSkeleton mode={favMode} count={8} gridCols={gridCols} />
         ) : (
-          <CatalogueResults
-            items={favoriteItems}
-            mode={mode === 'list' ? 'list' : 'grid'}
-            gridCols={gridCols}
-            emptyTitle="Aucun favori pour le moment"
-            emptyDescription="Dans Explorer, cliquez sur le cœur d’une salle ou d’un prestataire pour le retrouver ici."
-            isFavorite={(item) => isFavorite(item.kind, item.slug)}
-            onToggleFavorite={onToggleFavorite}
-          />
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex flex-wrap gap-1.5">
+                {([
+                  ['all', 'Tous'],
+                  ['venue', 'Salles'],
+                  ['service', 'Prestataires'],
+                ] as const).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setFavKind(id)}
+                    className={cn(
+                      'px-3 py-1.5 rounded-full text-xs font-semibold border',
+                      favKind === id ? 'bg-primary text-white border-primary' : 'border-border text-muted hover:text-foreground',
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex-1 min-w-[12rem]">
+                <Input
+                  value={favQ}
+                  onChange={(e) => setFavQ(e.target.value)}
+                  placeholder="Filtrer par nom, ville, métier…"
+                />
+              </div>
+              <CatalogueViewToggle
+                compact
+                hideMap
+                value={favMode}
+                onChange={(next) => setFavMode(next === 'list' ? 'list' : 'grid')}
+              />
+            </div>
+            <CatalogueResults
+              items={visibleFavorites}
+              mode={favMode}
+              gridCols={gridCols}
+              emptyTitle={favoriteItems.length === 0 ? 'Aucun favori pour le moment' : 'Aucun favori pour ce filtre'}
+              emptyDescription={favoriteItems.length === 0
+                ? 'Dans Explorer, cliquez sur le cœur d’une salle ou d’un prestataire pour le retrouver ici.'
+                : 'Changez le type (salles / prestataires) ou le mot-clé.'}
+              isFavorite={(item) => isFavorite(item.kind, item.slug)}
+              onToggleFavorite={onToggleFavorite}
+            />
+          </div>
         )
       ) : null}
 
@@ -493,6 +605,11 @@ function ClientMarketplaceInner() {
               isFavorite={isFavorite}
               onToggleFavorite={(kind, slug) => void toggleFavorite(kind, slug)}
               onReplace={replacePackItem}
+              onSave={(pack) => {
+                setSaveName(`${eventTypeLabel(eventType)} · ${pack.label}`);
+                setSaveError('');
+                setSaveTarget(pack);
+              }}
             />
           ) : !planning && !planError ? (
             <EmptyState
@@ -503,6 +620,44 @@ function ClientMarketplaceInner() {
           ) : null}
         </div>
       ) : null}
+
+      {tab === 'packs' ? (
+        <EventSavedPacks
+          packs={savedPacks}
+          favorites={favoriteRows}
+          eventType={eventType}
+          budgetFc={Number(budgetFc.replace(/\s/g, '')) || 0}
+          city={planCity}
+          guestCount={Number(guestCount) || 0}
+          onCreate={async (payload) => {
+            await persistPack(payload);
+          }}
+          onDelete={async (id) => {
+            await api.delete(`/marketplace/event-packs/${id}`);
+            await loadSavedPacks();
+          }}
+        />
+      ) : null}
+
+      <Modal
+        open={Boolean(saveTarget)}
+        onClose={() => setSaveTarget(null)}
+        title="Sauvegarder ce pack"
+        description="Il apparaîtra dans Mes packs, pour y revenir avant de réserver."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setSaveTarget(null)}>Annuler</Button>
+            <Button loading={saveBusy} onClick={() => void saveSearchPack()}>Enregistrer</Button>
+          </>
+        }
+      >
+        <Input
+          label="Nom du pack"
+          value={saveName}
+          onChange={(e) => setSaveName(e.target.value)}
+        />
+        {saveError ? <Alert variant="error" className="mt-3">{saveError}</Alert> : null}
+      </Modal>
     </div>
   );
 }

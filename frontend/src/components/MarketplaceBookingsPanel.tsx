@@ -35,13 +35,31 @@ export default function MarketplaceBookingsPanel({
   organizerView?: boolean;
 }) {
   const [filter, setFilter] = useState<'all' | 'received' | 'sent'>(organizerView ? 'sent' : 'all');
+  const [status, setStatus] = useState<'all' | MarketplaceBookingStatus>('all');
+  const [kind, setKind] = useState<'all' | 'venue' | 'service'>('all');
+  const [query, setQuery] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState('');
   const [acceptAmount, setAcceptAmount] = useState<Record<string, string>>({});
 
   const visible = bookings.filter((b) => {
-    if (filter === 'received') return b.viewerRole === 'vendor';
-    if (filter === 'sent') return b.viewerRole === 'organizer';
+    if (filter === 'received') {
+      if (b.viewerRole !== 'vendor') return false;
+    } else if (filter === 'sent') {
+      if (b.viewerRole !== 'organizer') return false;
+    }
+    if (status !== 'all' && b.status !== status) return false;
+    if (kind !== 'all' && b.kind !== kind) return false;
+    const q = query.trim().toLowerCase();
+    if (q) {
+      const hay = [b.title, b.vendorName, b.organizerName, b.notes].filter(Boolean).join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    const day = (b.eventDate || '').slice(0, 10);
+    if (fromDate && day && day < fromDate) return false;
+    if (toDate && day && day > toDate) return false;
     return true;
   });
   const calendarDates = parseBlockedDates(
@@ -80,34 +98,84 @@ export default function MarketplaceBookingsPanel({
         <AvailabilityCalendar title="Calendrier des réservations" bookedDates={calendarDates} />
       )}
 
-      {!organizerView && (
-      <div className="flex gap-1.5">
-        {([
-          ['all', 'Toutes'],
-          ['received', 'Reçues'],
-          ['sent', 'Envoyées'],
-        ] as const).map(([id, label]) => (
+      {error && <Alert variant="error">{error}</Alert>}
+
+      <div className="space-y-3">
+        {!organizerView && (
+        <div className="flex gap-1.5 flex-wrap">
+          {([
+            ['all', 'Toutes'],
+            ['received', 'Reçues'],
+            ['sent', 'Envoyées'],
+          ] as const).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setFilter(id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${
+                filter === id ? 'bg-primary text-white border-primary' : 'border-border text-muted'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        )}
+        <div className="flex flex-wrap gap-1.5">
           <button
-            key={id}
             type="button"
-            onClick={() => setFilter(id)}
+            onClick={() => setStatus('all')}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${
-              filter === id ? 'bg-primary text-white border-primary' : 'border-border text-muted'
+              status === 'all' ? 'bg-primary text-white border-primary' : 'border-border text-muted'
             }`}
           >
-            {label}
+            Tous statuts
           </button>
-        ))}
+          {(Object.keys(BOOKING_STATUS_LABELS) as MarketplaceBookingStatus[]).map((id) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setStatus(id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${
+                status === id ? 'bg-primary text-white border-primary' : 'border-border text-muted'
+              }`}
+            >
+              {BOOKING_STATUS_LABELS[id]}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {([
+            ['all', 'Salles et prestataires'],
+            ['venue', 'Salles'],
+            ['service', 'Prestataires'],
+          ] as const).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setKind(id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${
+                kind === id ? 'bg-primary text-white border-primary' : 'border-border text-muted'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Titre, organisation…" />
+          <Input label="Du" type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+          <Input label="Au" type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+        </div>
       </div>
-      )}
-
-      {error && <Alert variant="error">{error}</Alert>}
 
       {visible.length === 0 ? (
         <EmptyState
           icon={<CalendarCheck className="w-5 h-5" />}
-          title="Aucune réservation"
-          description="Les demandes de date (salles et prestations) apparaîtront ici."
+          title={bookings.length ? 'Aucune réservation pour ces filtres' : 'Aucune réservation'}
+          description={bookings.length
+            ? 'Changez le statut, le type ou les dates pour élargir la recherche.'
+            : 'Les demandes de date (salles et prestations) apparaîtront ici.'}
         />
       ) : (
         <div className="space-y-3">

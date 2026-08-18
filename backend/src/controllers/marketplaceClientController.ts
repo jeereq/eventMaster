@@ -176,3 +176,161 @@ export async function planEvent(req: AuthenticatedRequest, res: Response) {
     return res.status(500).json({ error: 'Impossible de préparer la proposition.' });
   }
 }
+
+type SavedPackItem = {
+  kind: 'venue' | 'service';
+  slug: string;
+  title: string;
+  orgName: string;
+  location: string;
+  coverUrl: string | null;
+  estimatedFc: number;
+  categoryLabel?: string;
+  href: string;
+  capacity?: number | null;
+};
+
+function parsePackItems(value: unknown): SavedPackItem[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((row) => {
+    if (!row || typeof row !== 'object') return [];
+    const item = row as Record<string, unknown>;
+    const kind = item.kind === 'venue' ? 'venue' as const : item.kind === 'service' ? 'service' as const : null;
+    const slug = typeof item.slug === 'string' ? item.slug.trim().toLowerCase() : '';
+    const title = typeof item.title === 'string' ? item.title.trim() : '';
+    if (!kind || !slug || !title) return [];
+    const estimatedFc = Number(item.estimatedFc);
+    return [{
+      kind,
+      slug,
+      title,
+      orgName: typeof item.orgName === 'string' ? item.orgName : '',
+      location: typeof item.location === 'string' ? item.location : '',
+      coverUrl: typeof item.coverUrl === 'string' ? item.coverUrl : null,
+      estimatedFc: Number.isFinite(estimatedFc) ? Math.max(0, Math.round(estimatedFc)) : 0,
+      categoryLabel: typeof item.categoryLabel === 'string' ? item.categoryLabel : undefined,
+      href: typeof item.href === 'string' && item.href.startsWith('/dashboard/catalogue/')
+        ? item.href
+        : (kind === 'venue' ? `/dashboard/catalogue/salles/${slug}` : `/dashboard/catalogue/prestataires/${slug}`),
+      capacity: typeof item.capacity === 'number' ? item.capacity : null,
+    }];
+  }).slice(0, 20);
+}
+
+function serializeSavedPack(row: {
+  id: string;
+  name: string;
+  eventType: string;
+  budgetFc: number;
+  city: string | null;
+  guestCount: number | null;
+  eventDate: Date | null;
+  source: string;
+  styleLabel: string | null;
+  totalFc: number;
+  leftoverFc: number;
+  items: unknown;
+  createdAt: Date;
+  updatedAt: Date;
+}) {
+  const items = parsePackItems(row.items);
+  return {
+    id: row.id,
+    name: row.name,
+    eventType: row.eventType,
+    budgetFc: row.budgetFc,
+    city: row.city,
+    guestCount: row.guestCount,
+    eventDate: row.eventDate,
+    source: row.source === 'custom' ? 'custom' : 'search',
+    styleLabel: row.styleLabel,
+    totalFc: row.totalFc,
+    leftoverFc: row.leftoverFc,
+    items,
+    venue: items.find((item) => item.kind === 'venue') || null,
+    services: items.filter((item) => item.kind === 'service'),
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  };
+}
+
+export async function listSavedPacks(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ error: 'Non authentifié.' });
+    const rows = await prisma.savedEventPack.findMany({
+      where: { userId: req.user.id },
+      orderBy: { updatedAt: 'desc' },
+      take: 50,
+    });
+    return res.json({ packs: rows.map(serializeSavedPack) });
+  } catch (error) {
+    console.error('listSavedPacks:', error);
+    return res.status(500).json({ error: 'Impossible de charger les packs.' });
+  }
+}
+
+export async function createSavedPack(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ error: 'Non authentifié.' });
+    const name = typeof req.body?.name === 'string' ? req.body.name.trim().slice(0, 80) : '';
+    const eventType = typeof req.body?.eventType === 'string' ? req.body.eventType.trim() : '';
+    const budgetFc = Number(req.body?.budgetFc);
+    const items = parsePackItems(req.body?.items);
+    if (!name) return res.status(400).json({ error: 'Donnez un nom à ce pack.' });
+    if (!eventType) return res.status(400).json({ error: 'Indiquez le type d’événement.' });
+    if (!Number.isFinite(budgetFc) || budgetFc < 0) {
+      return res.status(400).json({ error: 'Budget invalide.' });
+    }
+    if (!items.length) return res.status(400).json({ error: 'Ajoutez au moins une salle ou un prestataire.' });
+
+    const venues = items.filter((item) => item.kind === 'venue');
+    if (venues.length > 1) {
+      return res.status(400).json({ error: 'Un pack ne peut contenir qu’une seule salle.' });
+    }
+
+    const totalFc = items.reduce((sum, item) => sum + item.estimatedFc, 0);
+    const leftoverFc = Math.max(0, Math.round(budgetFc) - totalFc);
+    const guestCount = Number(req.body?.guestCount);
+    const city = typeof req.body?.city === 'string' ? req.body.city.trim() : '';
+    const eventDate = typeof req.body?.eventDate === 'string' && req.body.eventDate
+      ? new Date(req.body.eventDate)
+      : null;
+
+    const pack = await prisma.savedEventPack.create({
+      data: {
+        userId: req.user.id,
+        name,
+        eventType,
+        budgetFc: Math.round(budgetFc),
+        city: city || null,
+        guestCount: Number.isFinite(guestCount) && guestCount > 0 ? Math.floor(guestCount) : null,
+        eventDate: eventDate && !Number.isNaN(eventDate.getTime()) ? eventDate : null,
+        source: req.body?.source === 'custom' ? 'custom' : 'search',
+        styleLabel: typeof req.body?.styleLabel === 'string' ? req.body.styleLabel.trim().slice(0, 40) : null,
+        totalFc,
+        leftoverFc,
+        items,
+      },
+    });
+    return res.status(201).json({ pack: serializeSavedPack(pack) });
+  } catch (error) {
+    console.error('createSavedPack:', error);
+    return res.status(500).json({ error: 'Impossible d’enregistrer le pack.' });
+  }
+}
+
+export async function deleteSavedPack(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ error: 'Non authentifié.' });
+    const id = typeof req.params.id === 'string' ? req.params.id : '';
+    if (!id) return res.status(400).json({ error: 'Pack introuvable.' });
+    const result = await prisma.savedEventPack.deleteMany({
+      where: { id, userId: req.user.id },
+    });
+    if (!result.count) return res.status(404).json({ error: 'Pack introuvable.' });
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error('deleteSavedPack:', error);
+    return res.status(500).json({ error: 'Impossible de supprimer le pack.' });
+  }
+}

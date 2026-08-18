@@ -92,18 +92,25 @@ export default function CatalogueViewToggle({
   onChange,
   className,
   compact = false,
+  hideMap = false,
 }: {
   value: CatalogueViewMode;
   onChange: (mode: CatalogueViewMode) => void;
   className?: string;
   compact?: boolean;
+  hideMap?: boolean;
 }) {
-  const compactOptions: Array<{ id: CatalogueViewMode; label: string; icon: typeof LayoutGrid }> = [
-    { id: 'grid', label: 'Grille', icon: LayoutGrid },
-    { id: 'list', label: 'Liste', icon: List },
-    { id: 'map', label: 'Carte', icon: Map },
-  ];
-  const options: Array<{ id: CatalogueViewMode; label: string; icon: typeof LayoutGrid }> = compact && value !== 'focus'
+  const compactOptions: Array<{ id: CatalogueViewMode; label: string; icon: typeof LayoutGrid }> = hideMap
+    ? [
+        { id: 'grid', label: 'Grille', icon: LayoutGrid },
+        { id: 'list', label: 'Liste', icon: List },
+      ]
+    : [
+        { id: 'grid', label: 'Grille', icon: LayoutGrid },
+        { id: 'list', label: 'Liste', icon: List },
+        { id: 'map', label: 'Carte', icon: Map },
+      ];
+  const options: Array<{ id: CatalogueViewMode; label: string; icon: typeof LayoutGrid }> = hideMap || (compact && value !== 'focus')
     ? compactOptions
     : [
         { id: 'grid', label: 'Grille', icon: LayoutGrid },
