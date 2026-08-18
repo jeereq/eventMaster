@@ -123,7 +123,7 @@ export default function GuestRoomPlanCanvas({
   };
 
   return (
-    <div className={`space-y-2 ${className}`}>
+    <div className={`space-y-2 ${className}`} data-guest-no-swipe>
       <div className="flex items-center justify-end gap-1.5">
         <button type="button" onClick={() => adjustZoom(-0.15)} className="p-1.5 rounded-[var(--radius-button)] border border-border text-muted hover:text-foreground hover:bg-surface-muted transition" aria-label="Zoom arrière">
           <ZoomOut className="w-3.5 h-3.5" />

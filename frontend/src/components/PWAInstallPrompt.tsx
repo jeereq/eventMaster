@@ -104,7 +104,11 @@ export default function PWAInstallPrompt({
       : 'bg-primary text-white border-primary/40';
 
   return (
-    <div className={`fixed bottom-4 inset-x-4 md:inset-x-auto md:right-6 md:max-w-sm z-[150] border rounded-[var(--radius-card)] shadow-soft p-4 ${wrapperClass}`}>
+    <div className={`fixed inset-x-4 md:inset-x-auto md:right-6 md:max-w-sm z-[150] border rounded-[var(--radius-card)] shadow-soft p-4 ${wrapperClass} ${
+      variant === 'guest'
+        ? 'bottom-[calc(5.25rem+env(safe-area-inset-bottom))]'
+        : 'bottom-4'
+    }`}>
       <button
         type="button"
         onClick={dismiss}

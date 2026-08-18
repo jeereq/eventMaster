@@ -82,6 +82,7 @@ interface GuestTablePlanViewProps {
   depthView?: boolean | null;
   guestFirstName: string;
   guestLastName: string;
+  immersive?: boolean;
 }
 
 function getSeatOccupant(
@@ -123,6 +124,7 @@ export default function GuestTablePlanView({
   guestFirstName,
   guestLastName,
   placementAccessible = false,
+  immersive = false,
 }: GuestTablePlanViewProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const guestFullName = `${guestFirstName} ${guestLastName}`;
@@ -133,11 +135,10 @@ export default function GuestTablePlanView({
   if (!placementAccessible) {
     return (
       <div className="text-center py-12 space-y-3 max-w-sm mx-auto">
-        <span className="em-festive-chip mx-auto">Bientôt</span>
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-[var(--radius-card)] bg-[var(--festive-accent-soft)] text-[color:var(--festive-accent)] border border-[color-mix(in_srgb,var(--festive-accent)_25%,transparent)]">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-[var(--radius-card)] bg-surface-muted text-muted border border-border">
           <LayoutGrid className="w-5 h-5" />
         </div>
-        <h3 className="font-display font-semibold text-foreground text-sm">Votre place arrive</h3>
+        <h3 className="font-semibold text-foreground text-sm">Votre place arrive</h3>
         <p className="text-muted text-xs leading-relaxed">
           Votre plan de table, invitation PDF et localisation GPS sont disponibles dès votre confirmation RSVP,
           dès que les organisateurs vous ont assigné une place.
@@ -170,7 +171,7 @@ export default function GuestTablePlanView({
               Thème : <span style={{ color: theme.accentColor }}>{theme.name}</span>
             </p>
           </div>
-          {!isFullscreen && (
+          {!isFullscreen && !immersive && (
             <button
               type="button"
               onClick={() => setIsFullscreen(true)}
@@ -277,7 +278,7 @@ export default function GuestTablePlanView({
                     >
                       {occupant.type === 'guest' || occupant.type === 'neighbor' ? (
                         <div
-                          className={`w-9 h-9 rounded-full border flex items-center justify-center text-[8px] font-semibold ${
+                          className={`w-9 h-9 rounded-[var(--radius-button)] border flex items-center justify-center text-[8px] font-semibold ${
                             occupant.type === 'guest'
                               ? 'bg-primary text-white border-primary ring-2 ring-primary/25'
                               : 'bg-surface-muted border-border text-foreground'
@@ -309,7 +310,7 @@ export default function GuestTablePlanView({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {tableDetails.neighbors.map((neighbor) => (
               <div key={neighbor.id} className="bg-surface border border-border rounded-[var(--radius-card)] p-3 flex items-center gap-3 shadow-[var(--shadow-soft)]">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center font-semibold text-[10px] bg-primary/10 text-primary border border-primary/15">
+                <div className="w-8 h-8 rounded-[var(--radius-button)] flex items-center justify-center font-semibold text-[10px] bg-primary/10 text-primary border border-primary/15">
                   {neighbor.firstName[0]}{neighbor.lastName[0]}
                 </div>
                 <div>
@@ -339,9 +340,18 @@ export default function GuestTablePlanView({
   }
 
   return (
-    <div className="space-y-4 animate-fade-in w-full">
-      {seatDetailSection}
-      {planSection(420)}
+    <div className="space-y-4 w-full">
+      {immersive ? (
+        <>
+          {planSection(typeof window !== 'undefined' ? Math.max(360, window.innerHeight - 220) : 480)}
+          {seatDetailSection}
+        </>
+      ) : (
+        <>
+          {seatDetailSection}
+          {planSection(420)}
+        </>
+      )}
     </div>
   );
 }

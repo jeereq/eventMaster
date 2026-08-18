@@ -326,7 +326,7 @@ export default function GuestVenueGuide({
 
   return (
     <div className="space-y-3 animate-fade-in">
-      <div className="em-venue-guide rounded-[var(--radius-card)] border border-border overflow-hidden bg-surface shadow-[var(--shadow-soft)]">
+      <div className="em-venue-guide rounded-[var(--radius-card)] border border-border overflow-hidden bg-surface shadow-[var(--shadow-soft)]" data-guest-no-swipe>
         <div className="relative">
           <div ref={mapElRef} className="em-venue-guide-map h-[280px] sm:h-[340px] w-full bg-surface-muted" />
           {!ready && (
@@ -334,18 +334,18 @@ export default function GuestVenueGuide({
               <Loader2 className="w-6 h-6 text-primary animate-spin" />
             </div>
           )}
-          <div className="absolute top-3 left-3 em-festive-chip bg-surface/95">
+          <div className="absolute top-3 left-3 inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-button)] border border-border bg-surface text-[10px] font-semibold text-foreground">
             <MapPin className="w-3 h-3" />
             {destinationLabel}
           </div>
         </div>
 
-        <div className="em-celebrate-stripe p-4 space-y-3 bg-surface">
+        <div className="p-4 space-y-3 bg-surface border-t border-border">
           <div className="pl-1">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--festive-accent)]">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
               Guide jusqu’au lieu
             </p>
-            <h3 className="font-display font-semibold text-foreground text-sm leading-snug mt-0.5">
+            <h3 className="font-semibold text-foreground text-sm leading-snug mt-0.5">
               {eventTitle || 'Réception'}
             </h3>
             <p className="text-xs text-muted mt-1 leading-relaxed">{location}</p>
