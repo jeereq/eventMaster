@@ -1,5 +1,6 @@
 import type { PrismaClient, RoomType, ServiceCategory, VenuePriceUnit } from '@prisma/client';
 import { addDays, licenseKey } from './helpers';
+import { seedRoomBlueprint } from './roomBlueprints';
 
 type CityName = 'Kinshasa' | 'Lubumbashi';
 
@@ -116,7 +117,7 @@ function pick<T>(list: T[], index: number): T {
   return list[index % list.length];
 }
 
-function slugify(input: string): string {
+export function slugify(input: string): string {
   return input
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -124,6 +125,10 @@ function slugify(input: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 50) || 'fiche';
+}
+
+export function marketplacePlaceFor(index: number) {
+  return placeFor(index);
 }
 
 function placeFor(index: number): { city: City; commune: Commune; neighborhood: string; lat: number; lng: number } {
@@ -155,7 +160,8 @@ async function createVendorTenant(
     name: string;
     email: string;
     managerName: string;
-    plan: 'VENUE' | 'SERVICE';
+    plan: 'VENUE' | 'SERVICE' | 'CATALOG';
+    accountKind?: 'VENDOR' | 'BOTH';
     passwordHash: string;
     city: string;
   },
@@ -164,7 +170,7 @@ async function createVendorTenant(
     data: {
       name: opts.name,
       plan: opts.plan,
-      accountKind: 'VENDOR',
+      accountKind: opts.accountKind || 'VENDOR',
       licenseActive: true,
       licenseExpiresAt: addDays(365),
       licenseKey: licenseKey(),
@@ -223,6 +229,7 @@ export async function seedMarketplaceCatalog(
           floor: n % 3 === 0 ? 'RDC' : `Niveau ${n % 3}`,
           location: `${place.neighborhood}, ${place.commune.name}`,
           roomType,
+          layoutBlueprint: seedRoomBlueprint(roomType, index),
         },
       });
       await prisma.venueListing.create({

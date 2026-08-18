@@ -15,6 +15,9 @@ import {
   PLAN_AMOUNTS,
 } from './seed/helpers';
 import { seedMarketplaceCatalog } from './seed/marketplaceCatalog';
+import { seedAccountsMatrix } from './seed/accountsMatrix';
+import { seedEventsVolume } from './seed/eventsVolume';
+import { seedRoomBlueprint } from './seed/roomBlueprints';
 
 const PLAN_SORT_ORDER: Record<PlanTypeKey, number> = {
   FREE: 0,
@@ -44,6 +47,8 @@ async function clearDatabase() {
   console.log('Nettoyage des données existantes...');
   await prisma.platformNotification.deleteMany({});
   await prisma.pushDeviceToken.deleteMany({});
+  await prisma.listingFavorite.deleteMany({});
+  await prisma.savedEventPack.deleteMany({});
   await prisma.commercialCommission.deleteMany({});
   await prisma.platformInvoice.deleteMany({});
   await prisma.subscriptionRequest.deleteMany({});
@@ -56,6 +61,7 @@ async function clearDatabase() {
   await prisma.roomStaff.deleteMany({});
   await prisma.invitation.deleteMany({});
   await prisma.guest.deleteMany({});
+  await prisma.ticketOrder.deleteMany({});
   await prisma.event.deleteMany({});
   await prisma.adminAuditLog.deleteMany({});
   await prisma.marketplaceBooking.deleteMany({});
@@ -397,6 +403,7 @@ async function main() {
       floor: 'RDC',
       location: 'Hôtel Fleuve Congo',
       roomType: 'BANQUET',
+      layoutBlueprint: seedRoomBlueprint('BANQUET', 1),
     },
   });
 
@@ -407,6 +414,7 @@ async function main() {
       capacity: 120,
       roomType: 'AMPHITHEATER',
       location: 'Pullman Grand Hôtel',
+      layoutBlueprint: seedRoomBlueprint('AMPHITHEATER', 2),
     },
   });
 
@@ -709,6 +717,14 @@ async function main() {
 
   await seedMarketplaceCatalog(prisma, passwordHash);
 
+  const matrix = await seedAccountsMatrix(prisma, passwordHash, commercial.id);
+  await seedEventsVolume(prisma, {
+    organizers: matrix.organizers,
+    agendaTenantId: matrix.agendaTenantId,
+    protocolUserId: matrix.protocolUserId,
+    existingEventCount: await prisma.event.count(),
+  });
+
   // ─── Résumé ───────────────────────────────────────────────────────
   const counts = {
     users: await prisma.user.count(),
@@ -722,6 +738,8 @@ async function main() {
     rooms: await prisma.organizationRoom.count(),
     venueListings: await prisma.venueListing.count({ where: { isPublic: true } }),
     serviceOfferings: await prisma.serviceOffering.count({ where: { isPublic: true } }),
+    ticketOrders: await prisma.ticketOrder.count({ where: { status: 'PAID' } }),
+    publicEvents: await prisma.event.count({ where: { isPublic: true } }),
   };
 
   console.log('\n=== Seed terminé ===');
@@ -734,8 +752,12 @@ async function main() {
   console.log('  Mariage      : claire@mariagereve.cd');
   console.log('  Global Corp  : event@globalcorp.cd');
   console.log('  Nouvelle org.: demo@novaevents.cd  (FREE — bibliothèque modèles)');
-  console.log('  Salles 1–10  : salles1@eventmaster.cd … salles10@eventmaster.cd  (100 salles publiées)');
+  console.log('  Salles 1–10  : salles1@eventmaster.cd … salles10@eventmaster.cd  (100 salles publiées + plan 2D)');
   console.log('  Prestas 1–10 : prestas1@eventmaster.cd … prestas10@eventmaster.cd (100 prestataires publiés)');
+  console.log('  Forfaits / rôles :');
+  for (const line of matrix.logins) {
+    console.log(`    ${line}`);
+  }
   console.log(`\nSuper Admin id: ${superAdmin.id}`);
 }
 

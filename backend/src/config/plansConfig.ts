@@ -160,32 +160,32 @@ export function getDefaultPlans(): PlansConfiguration {
     }),
     PERSONAL_50: personalPlan({
       name: 'Particulier 50',
-      price: '10.000 FC',
-      monthlyPriceFc: 10000,
+      price: '60.000 FC',
+      monthlyPriceFc: 60000,
       description:
         'Fête privée jusqu’à 50 invités : organisation complète (QR, modèles, éditeur 2D), 3 événements, 2 salles de plan de table — sans catalogue. Facturation trimestrielle.',
       maxGuests: 50,
     }),
     PERSONAL_100: personalPlan({
       name: 'Particulier 100',
-      price: '15.000 FC',
-      monthlyPriceFc: 15000,
+      price: '90.000 FC',
+      monthlyPriceFc: 90000,
       description:
         'Fête privée jusqu’à 100 invités : organisation complète (QR, modèles, éditeur 2D), 3 événements, 2 salles de plan de table — sans catalogue. Facturation trimestrielle.',
       maxGuests: 100,
     }),
     PERSONAL_200: personalPlan({
       name: 'Particulier 200',
-      price: '20.000 FC',
-      monthlyPriceFc: 20000,
+      price: '120.000 FC',
+      monthlyPriceFc: 120000,
       description:
         'Fête privée jusqu’à 200 invités : organisation complète (QR, modèles, éditeur 2D), 3 événements, 2 salles de plan de table — sans catalogue. Facturation trimestrielle.',
       maxGuests: 200,
     }),
     PERSONAL_PLUS: personalPlan({
       name: 'Particulier +200',
-      price: '30.000 FC',
-      monthlyPriceFc: 30000,
+      price: '180.000 FC',
+      monthlyPriceFc: 180000,
       description:
         'Grande fête privée (plus de 200 invités) : organisation complète, invités illimités, 3 événements, 2 salles de plan de table — sans catalogue. Facturation trimestrielle.',
       maxGuests: 99999,
