@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useCallback } from 'react';
 import {
- Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye,
+ Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus,
 } from 'lucide-react';
 import ChairRenderer from '@/components/ChairRenderer';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
@@ -19,6 +19,8 @@ import {
  TableShape,
  ROOM_LAYOUT_TEMPLATES,
  applyRoomTemplate,
+ applySavedRoomTemplate,
+ applyTableStyleToAll,
  autoArrangeTables,
  arrangeDensityLabels,
  chairTypeLabels,
@@ -26,7 +28,9 @@ import {
  createBlueprintRow,
  createBlueprintTable,
  createBlueprintZone,
+ createSavedRoomTemplate,
  defaultRoomOutline,
+ deleteCustomTemplateFromBlueprint,
  ensureBlueprintDefaults,
  flowerTypeLabels,
  getRoomOutlineClipPath,
@@ -34,8 +38,11 @@ import {
  resolveTableColor,
  roomOutlineLabels,
  roomTypeLabels,
+ saveCustomTemplateToBlueprint,
  tableArrangeLabels,
+ tableShapeLabels,
  type ArrangeDensity,
+ type LayoutParams,
  type TableArrangePreset,
 } from '@/lib/roomLayoutUtils';
 import { roomEditorCapabilities, snapLayoutPct } from '@/lib/roomEditorAccess';
@@ -80,6 +87,15 @@ export default function RoomLayoutEditor({
  const [actionLog, setActionLog] = useState<LayoutActionEntry[]>([]);
  const [cropTarget, setCropTarget] = useState<CropTarget>(null);
  const [arrangeDensity, setArrangeDensity] = useState<ArrangeDensity>('comfortable');
+ const [keepTemplateStyle, setKeepTemplateStyle] = useState(true);
+ const [keepThemeFloor, setKeepThemeFloor] = useState(false);
+ const [customTplName, setCustomTplName] = useState('');
+ const [tplParams, setTplParams] = useState<LayoutParams>({
+  tableCount: 8,
+  seatsPerTable: 8,
+  tableShape: 'round',
+  chairType: 'BANQUET',
+ });
 
  const log = useCallback((message: string, kind: LayoutActionEntry['kind'] = 'info') => {
  setActionLog((prev) => prependLayoutAction(prev, message, kind));
@@ -265,10 +281,28 @@ export default function RoomLayoutEditor({
  };
 
  const applyTemplate = (templateId: string) => {
- const next = applyRoomTemplate(templateId);
+ const next = applyRoomTemplate(templateId, tplParams, blueprint, { keepStyle: keepTemplateStyle });
  if (!next) return;
  onChange(next);
  log(`Modèle « ${ROOM_LAYOUT_TEMPLATES.find((t) => t.id === templateId)?.name} » appliqué`, 'template');
+ setSelected(null);
+ };
+
+ const saveCurrentAsTemplate = () => {
+ const template = createSavedRoomTemplate(blueprint, customTplName || 'Mon modèle');
+ updateBlueprint(saveCustomTemplateToBlueprint(blueprint, template), {
+  message: `Modèle « ${template.name} » enregistré`,
+  kind: 'template',
+ });
+ setCustomTplName('');
+ };
+
+ const applyCustomTemplate = (templateId: string) => {
+ const next = applySavedRoomTemplate(blueprint, templateId, { keepStyle: keepTemplateStyle });
+ if (!next) return;
+ onChange(next);
+ const name = blueprint.metadata.customTemplates?.find((t) => t.id === templateId)?.name ?? 'perso.';
+ log(`Modèle « ${name} » appliqué`, 'template');
  setSelected(null);
  };
 
@@ -319,7 +353,7 @@ export default function RoomLayoutEditor({
  const cropFixture = cropTarget ? blueprint.fixtures.find((f) => f.id === cropTarget.id) : null;
 
  const applyTheme = (themeId: RoomThemeId) => {
- const next = applyRoomTheme(blueprint, themeId);
+ const next = applyRoomTheme(blueprint, themeId, { keepFloor: keepThemeFloor });
  onChange(refreshBlueprintMetadata(ensureBlueprintDefaults(next)));
  log(`Thème « ${getRoomTheme(themeId, blueprint).name} » appliqué`, 'settings');
  };
@@ -628,6 +662,15 @@ export default function RoomLayoutEditor({
  <>
  <div className="p-4 bg-surface-muted rounded-xl border space-y-3">
  <p className="text-xs font-bold uppercase text-muted flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> Thème de la salle</p>
+ <label className="flex items-center gap-2 text-[10px] text-muted cursor-pointer">
+ <input
+ type="checkbox"
+ checked={keepThemeFloor}
+ onChange={(e) => setKeepThemeFloor(e.target.checked)}
+ className="rounded border-border"
+ />
+ Conserver le sol actuel en changeant de thème
+ </label>
  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
  {availableThemes.map((theme) => (
  <button
@@ -1015,6 +1058,39 @@ export default function RoomLayoutEditor({
  </button>
  ) : null}
  </div>
+ <div className="pt-2 border-t border-border space-y-1.5">
+ <p className="text-[10px] font-bold uppercase text-muted">Appliquer à toutes les tables</p>
+ <div className="grid grid-cols-2 gap-1.5">
+ <button
+ type="button"
+ onClick={() => updateBlueprint(applyTableStyleToAll(blueprint, selectedFurniture.id, ['shape']), { message: 'Forme appliquée à toutes les tables', kind: 'edit' })}
+ className="py-1.5 px-2 rounded-lg border text-[10px] font-bold text-muted hover:bg-white"
+ >
+ Forme
+ </button>
+ <button
+ type="button"
+ onClick={() => updateBlueprint(applyTableStyleToAll(blueprint, selectedFurniture.id, ['chairType']), { message: 'Chaises appliquées à toutes les tables', kind: 'edit' })}
+ className="py-1.5 px-2 rounded-lg border text-[10px] font-bold text-muted hover:bg-white"
+ >
+ Chaises
+ </button>
+ <button
+ type="button"
+ onClick={() => updateBlueprint(applyTableStyleToAll(blueprint, selectedFurniture.id, ['tableColor']), { message: 'Couleur appliquée à toutes les tables', kind: 'edit' })}
+ className="py-1.5 px-2 rounded-lg border text-[10px] font-bold text-muted hover:bg-white"
+ >
+ Couleur
+ </button>
+ <button
+ type="button"
+ onClick={() => updateBlueprint(applyTableStyleToAll(blueprint, selectedFurniture.id, ['capacity']), { message: 'Places appliquées à toutes les tables', kind: 'edit' })}
+ className="py-1.5 px-2 rounded-lg border text-[10px] font-bold text-muted hover:bg-white"
+ >
+ Places
+ </button>
+ </div>
+ </div>
  </div>
  <LayoutActionPanel actions={actionLog} />
  </div>
@@ -1082,17 +1158,112 @@ export default function RoomLayoutEditor({
  <p className="text-[10px] font-bold uppercase tracking-wider text-muted flex items-center gap-1">
  <LayoutTemplate className="w-3.5 h-3.5" /> Modèles de salle
  </p>
+ <div className="flex flex-wrap items-end gap-2">
+ <label className="flex items-center gap-1.5 text-[10px] text-muted cursor-pointer pb-1">
+ <input
+ type="checkbox"
+ checked={keepTemplateStyle}
+ onChange={(e) => setKeepTemplateStyle(e.target.checked)}
+ className="rounded border-border"
+ />
+ Conserver thème et sol
+ </label>
+ <label className="text-[10px] space-y-0.5">
+ <span className="font-semibold text-muted">Nombre</span>
+ <input
+ type="number"
+ min={1}
+ max={80}
+ value={tplParams.tableCount ?? 8}
+ onChange={(e) => setTplParams((p) => ({ ...p, tableCount: parseInt(e.target.value, 10) || 1, rowCount: parseInt(e.target.value, 10) || 1 }))}
+ className="w-[72px] px-2 py-1 rounded-lg border text-xs"
+ title="Tables ou rangées selon le modèle"
+ />
+ </label>
+ <label className="text-[10px] space-y-0.5">
+ <span className="font-semibold text-muted">Places</span>
+ <input
+ type="number"
+ min={2}
+ max={24}
+ value={tplParams.seatsPerTable ?? 8}
+ onChange={(e) => setTplParams((p) => ({ ...p, seatsPerTable: parseInt(e.target.value, 10) || 2, seatsPerRow: parseInt(e.target.value, 10) || 2 }))}
+ className="w-[72px] px-2 py-1 rounded-lg border text-xs"
+ />
+ </label>
+ <label className="text-[10px] space-y-0.5">
+ <span className="font-semibold text-muted">Forme</span>
+ <select
+ value={tplParams.tableShape ?? 'round'}
+ onChange={(e) => setTplParams((p) => ({ ...p, tableShape: e.target.value as TableShape }))}
+ className="px-2 py-1 rounded-lg border text-xs"
+ >
+ {(Object.keys(tableShapeLabels) as TableShape[]).filter((shape) => caps.tableShapes.includes(shape)).map((shape) => (
+ <option key={shape} value={shape}>{tableShapeLabels[shape]}</option>
+ ))}
+ </select>
+ </label>
+ <label className="text-[10px] space-y-0.5">
+ <span className="font-semibold text-muted">Chaises</span>
+ <select
+ value={tplParams.chairType ?? 'BANQUET'}
+ onChange={(e) => setTplParams((p) => ({ ...p, chairType: e.target.value as ChairType }))}
+ className="px-2 py-1 rounded-lg border text-xs max-w-[140px]"
+ >
+ {Object.entries(chairTypeLabels).map(([k, v]) => (
+ <option key={k} value={k}>{v}</option>
+ ))}
+ </select>
+ </label>
+ </div>
  <div className="flex gap-2 overflow-x-auto pb-1">
  {ROOM_LAYOUT_TEMPLATES.map((tpl) => (
  <button
  key={tpl.id}
  type="button"
  onClick={() => applyTemplate(tpl.id)}
- className={`shrink-0 text-left px-3 py-2 rounded-xl border text-[10px] font-bold transition min-w-[120px] ${blueprint.templateId === tpl.id ? 'bg-primary/10 border-primary/50 text-primary' : 'bg-white border-border text-muted hover:border-primary/30'}`}
+ className={`shrink-0 text-left px-3 py-2 rounded-xl border text-[10px] font-bold transition min-w-[128px] ${blueprint.templateId === tpl.id ? 'bg-primary/10 border-primary/50 text-primary' : 'bg-white border-border text-muted hover:border-primary/30'}`}
  >
  <span className="block">{tpl.name}</span>
  <span className="font-normal text-muted">{tpl.description}</span>
  </button>
+ ))}
+ </div>
+ <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border-subtle">
+ <p className="text-[10px] font-bold uppercase text-muted shrink-0">Mes modèles</p>
+ <input
+ value={customTplName}
+ onChange={(e) => setCustomTplName(e.target.value)}
+ placeholder="Nom du modèle"
+ className="px-2 py-1 rounded-lg border text-xs min-w-[140px] flex-1 max-w-[220px]"
+ />
+ <button
+ type="button"
+ onClick={saveCurrentAsTemplate}
+ className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-primary/30 bg-primary/10 text-primary text-[10px] font-bold"
+ >
+ <BookmarkPlus className="w-3 h-3" />
+ Enregistrer le plan
+ </button>
+ {(blueprint.metadata.customTemplates ?? []).map((tpl) => (
+ <span key={tpl.id} className="inline-flex items-center gap-0.5">
+ <button
+ type="button"
+ onClick={() => applyCustomTemplate(tpl.id)}
+ className={`px-2.5 py-1 rounded-lg border text-[10px] font-bold ${blueprint.templateId === tpl.id ? 'bg-primary/10 border-primary/50 text-primary' : 'bg-white border-border text-muted hover:border-primary/30'}`}
+ title={tpl.description || tpl.name}
+ >
+ {tpl.name}
+ </button>
+ <button
+ type="button"
+ onClick={() => updateBlueprint(deleteCustomTemplateFromBlueprint(blueprint, tpl.id), { message: `Modèle « ${tpl.name} » supprimé`, kind: 'template' })}
+ className="p-1 text-rose-500 hover:bg-rose-50 rounded-md"
+ title="Supprimer"
+ >
+ <Trash2 className="w-3 h-3" />
+ </button>
+ </span>
  ))}
  </div>
  </div>

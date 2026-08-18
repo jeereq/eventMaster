@@ -349,6 +349,7 @@ export function getRoomTheme(
 export function applyRoomTheme(
   blueprint: RoomLayoutBlueprint,
   themeId: RoomThemeId,
+  options?: { keepFloor?: boolean },
 ): RoomLayoutBlueprint {
   const theme = getRoomTheme(themeId, blueprint);
   const shape = blueprint.roomOutline?.shape ?? 'rectangle';
@@ -366,8 +367,8 @@ export function applyRoomTheme(
       ...blueprint.metadata,
       roomThemeId: themeId,
       defaultTableColor: theme.defaultTableColor,
-      floorType: theme.defaultFloorType,
-      floorImageUrl: undefined,
+      floorType: options?.keepFloor ? (blueprint.metadata.floorType ?? theme.defaultFloorType) : theme.defaultFloorType,
+      floorImageUrl: options?.keepFloor ? blueprint.metadata.floorImageUrl : undefined,
     },
   };
 }

@@ -1,6 +1,9 @@
 export type RoomType = 'SIMPLE' | 'BANQUET' | 'CONFERENCE' | 'AMPHITHEATER' | 'TENT' | 'CUSTOM';
 export type ChairType = 'BANQUET' | 'FOLDING' | 'THEATER' | 'STOOL' | 'ARMCHAIR' | 'WHEELCHAIR';
 export type TableShape = 'round' | 'rectangular' | 'square' | 'oval';
+export type TableArrangePreset = 'grid' | 'banquet' | 'ushape' | 'circle';
+export type ArrangeDensity = 'compact' | 'comfortable' | 'ample';
+export type TableStyleField = 'shape' | 'chairType' | 'tableColor' | 'capacity';
 
 export type RoomOutlineShape = 'rectangle' | 'square' | 'circle' | 'lShape' | 'hexagon' | 'octagon';
 export type ColumnShape = 'round' | 'square';
@@ -26,6 +29,15 @@ export interface LayoutParams {
   tentLengthM?: number;
   canvasWidthM?: number;
   canvasHeightM?: number;
+  arrangePreset?: TableArrangePreset;
+}
+
+export interface SavedRoomTemplate {
+  id: string;
+  name: string;
+  description: string;
+  roomType: RoomType;
+  snapshot: RoomLayoutBlueprint;
 }
 
 export interface RoomLayoutBlueprint {
@@ -106,6 +118,7 @@ export interface RoomLayoutBlueprint {
     floorType?: import('@/lib/roomThemeUtils').FloorType;
     floorImageUrl?: string;
     customThemes?: import('@/lib/roomThemeUtils').CustomRoomTheme[];
+    customTemplates?: SavedRoomTemplate[];
     depthView?: boolean;
   };
 }
@@ -238,70 +251,403 @@ export interface RoomLayoutTemplate {
   build: (params?: LayoutParams) => RoomLayoutBlueprint;
 }
 
+function composeTemplate(
+  templateId: string,
+  roomType: RoomType,
+  outline: RoomOutlineShape,
+  params: LayoutParams,
+  arrange?: TableArrangePreset,
+): RoomLayoutBlueprint {
+  let next = ensureBlueprintDefaults({
+    ...generateRoomBlueprint(roomType, params),
+    templateId,
+    roomOutline: defaultRoomOutline(outline),
+  });
+  if (arrange) next = autoArrangeTables(next, arrange);
+  return next;
+}
+
+function emptyRoomTemplate(
+  templateId: string,
+  outline: RoomOutlineShape,
+  params?: LayoutParams,
+): RoomLayoutBlueprint {
+  return ensureBlueprintDefaults({
+    version: 1,
+    roomType: 'SIMPLE',
+    templateId,
+    canvas: { widthM: params?.canvasWidthM ?? 20, heightM: params?.canvasHeightM ?? 15 },
+    roomOutline: defaultRoomOutline(outline),
+    fixtures: [],
+    furniture: [],
+    metadata: { totalSeats: 0 },
+  });
+}
+
 export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
   {
     id: 'banquet-classic',
     name: 'Banquet classique',
-    description: '8 tables rondes + scène',
+    description: 'Tables rondes en grille + scène',
     roomType: 'BANQUET',
     outlineShape: 'rectangle',
-    build: (p) => ensureBlueprintDefaults({ ...generateRoomBlueprint('BANQUET', { tableCount: 8, ...p }), templateId: 'banquet-classic', roomOutline: defaultRoomOutline('rectangle') }),
+    build: (p) => composeTemplate('banquet-classic', 'BANQUET', 'rectangle', { tableCount: 8, tableShape: 'round', ...p }, 'grid'),
   },
   {
     id: 'banquet-oval',
     name: 'Banquet ovale',
-    description: '12 tables dans une salle ovale',
+    description: 'Salle ronde, tables en cercle',
     roomType: 'BANQUET',
     outlineShape: 'circle',
-    build: (p) => ensureBlueprintDefaults({ ...generateRoomBlueprint('BANQUET', { tableCount: 12, tableShape: 'round', ...p }), templateId: 'banquet-oval', roomOutline: defaultRoomOutline('circle') }),
+    build: (p) => composeTemplate('banquet-oval', 'BANQUET', 'circle', { tableCount: 12, tableShape: 'round', ...p }, 'circle'),
+  },
+  {
+    id: 'banquet-ushape',
+    name: 'Banquet en U',
+    description: 'Tables rectangulaires ouvertes vers la scène',
+    roomType: 'BANQUET',
+    outlineShape: 'rectangle',
+    build: (p) => composeTemplate('banquet-ushape', 'BANQUET', 'rectangle', { tableCount: 10, tableShape: 'rectangular', seatsPerTable: 6, ...p }, 'ushape'),
+  },
+  {
+    id: 'banquet-circle',
+    name: 'Banquet en cercle',
+    description: 'Tables autour d’un espace central',
+    roomType: 'BANQUET',
+    outlineShape: 'rectangle',
+    build: (p) => composeTemplate('banquet-circle', 'BANQUET', 'rectangle', { tableCount: 10, tableShape: 'round', ...p }, 'circle'),
+  },
+  {
+    id: 'banquet-honor',
+    name: 'Table d’honneur',
+    description: 'Table d’honneur verrouillée + invités en banquet',
+    roomType: 'BANQUET',
+    outlineShape: 'rectangle',
+    build: (p) => {
+      const guestCount = Math.max(2, (p?.tableCount ?? 10) - 1);
+      const next = composeTemplate(
+        'banquet-honor',
+        'BANQUET',
+        'rectangle',
+        { tableShape: 'round', seatsPerTable: 8, chairType: 'BANQUET', ...p, tableCount: guestCount },
+        'banquet',
+      );
+      const honor: Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'table' }> = {
+        id: makeLayoutId('table'),
+        kind: 'table',
+        name: 'Table d’honneur',
+        shape: 'rectangular',
+        capacity: Math.max(8, p?.seatsPerTable ?? 12),
+        chairType: p?.chairType ?? 'ARMCHAIR',
+        x: 50,
+        y: 18,
+        locked: true,
+      };
+      return refreshBlueprintMetadata({ ...next, furniture: [honor, ...next.furniture] });
+    },
+  },
+  {
+    id: 'classroom',
+    name: 'Salle de classe',
+    description: 'Tables rectangulaires en rangées, allée centrale',
+    roomType: 'BANQUET',
+    outlineShape: 'rectangle',
+    build: (p) => {
+      const next = composeTemplate(
+        'classroom',
+        'BANQUET',
+        'rectangle',
+        { tableCount: 12, tableShape: 'rectangular', seatsPerTable: 6, chairType: 'FOLDING', ...p },
+        'grid',
+      );
+      return refreshBlueprintMetadata({
+        ...next,
+        fixtures: [
+          ...next.fixtures.filter((f) => f.kind !== 'stage'),
+          {
+            id: makeLayoutId('aisle'),
+            kind: 'aisle',
+            x: 48,
+            y: 16,
+            w: 4,
+            h: 74,
+            label: 'Allée centrale',
+          },
+          {
+            id: makeLayoutId('podium'),
+            kind: 'podium',
+            x: 38,
+            y: 4,
+            w: 24,
+            h: 10,
+            label: 'Tableau / pupitre',
+          },
+        ],
+      });
+    },
+  },
+  {
+    id: 'cocktail',
+    name: 'Cocktail debout',
+    description: 'Mange-debout, tabourets, disposition libre',
+    roomType: 'BANQUET',
+    outlineShape: 'rectangle',
+    build: (p) => composeTemplate(
+      'cocktail',
+      'BANQUET',
+      'rectangle',
+      { tableCount: 16, tableShape: 'round', seatsPerTable: 4, chairType: 'STOOL', ...p },
+      'grid',
+    ),
+  },
+  {
+    id: 'boardroom',
+    name: 'Salle de conseil',
+    description: 'Une grande table centrale et fauteuils',
+    roomType: 'CONFERENCE',
+    outlineShape: 'rectangle',
+    build: (p) => {
+      const next = composeTemplate(
+        'boardroom',
+        'BANQUET',
+        'rectangle',
+        { tableShape: 'rectangular', seatsPerTable: 16, chairType: 'ARMCHAIR', ...p, tableCount: 1 },
+      );
+      const table = next.furniture.find((f) => f.kind === 'table');
+      const furniture = table && table.kind === 'table'
+        ? [{ ...table, name: 'Table de conseil', x: 50, y: 52, locked: false }]
+        : next.furniture;
+      return refreshBlueprintMetadata({
+        ...next,
+        roomType: 'CONFERENCE',
+        furniture,
+        fixtures: [
+          {
+            id: makeLayoutId('entrance'),
+            kind: 'entrance',
+            x: 44,
+            y: 88,
+            w: 12,
+            h: 8,
+            label: 'Entrée',
+          },
+        ],
+      });
+    },
   },
   {
     id: 'conference-standard',
     name: 'Conférence standard',
-    description: '6 rangées + podium',
+    description: 'Rangées face au podium + allée',
     roomType: 'CONFERENCE',
     outlineShape: 'rectangle',
-    build: (p) => ensureBlueprintDefaults({ ...generateRoomBlueprint('CONFERENCE', { rowCount: 6, ...p }), templateId: 'conference-standard', roomOutline: defaultRoomOutline('rectangle') }),
+    build: (p) => composeTemplate('conference-standard', 'CONFERENCE', 'rectangle', {
+      rowCount: p?.rowCount ?? p?.tableCount ?? 6,
+      seatsPerRow: p?.seatsPerRow ?? p?.seatsPerTable ?? 10,
+      ...p,
+    }),
+  },
+  {
+    id: 'conference-ushape',
+    name: 'Conférence en U',
+    description: 'Tables rectangulaires ouvertes vers le podium',
+    roomType: 'CONFERENCE',
+    outlineShape: 'rectangle',
+    build: (p) => {
+      const next = composeTemplate(
+        'conference-ushape',
+        'BANQUET',
+        'rectangle',
+        { tableCount: 9, tableShape: 'rectangular', seatsPerTable: 6, chairType: 'ARMCHAIR', ...p },
+        'ushape',
+      );
+      return refreshBlueprintMetadata({
+        ...next,
+        roomType: 'CONFERENCE',
+        fixtures: [
+          {
+            id: makeLayoutId('podium'),
+            kind: 'podium',
+            x: 40,
+            y: 5,
+            w: 20,
+            h: 10,
+            label: 'Podium',
+          },
+        ],
+      });
+    },
   },
   {
     id: 'amphitheater-small',
     name: 'Amphithéâtre compact',
-    description: '3 gradins × 2 rangées',
+    description: 'Gradins en hexagone autour de la scène',
     roomType: 'AMPHITHEATER',
     outlineShape: 'hexagon',
-    build: (p) => ensureBlueprintDefaults({ ...generateRoomBlueprint('AMPHITHEATER', { tierCount: 3, rowsPerTier: 2, ...p }), templateId: 'amphitheater-small', roomOutline: defaultRoomOutline('hexagon') }),
+    build: (p) => composeTemplate('amphitheater-small', 'AMPHITHEATER', 'hexagon', {
+      tierCount: p?.tierCount ?? 3,
+      rowsPerTier: p?.rowsPerTier ?? 2,
+      seatsPerRow: p?.seatsPerRow ?? p?.seatsPerTable ?? 12,
+      ...p,
+    }),
   },
   {
     id: 'tent-garden',
     name: 'Tente de réception',
-    description: 'Tente avec 6 tables',
+    description: 'Tente octogonale avec tables',
     roomType: 'TENT',
     outlineShape: 'octagon',
-    build: (p) => ensureBlueprintDefaults({ ...generateRoomBlueprint('TENT', { tableCount: 6, ...p }), templateId: 'tent-garden', roomOutline: defaultRoomOutline('octagon') }),
+    build: (p) => composeTemplate('tent-garden', 'TENT', 'octagon', { tableCount: 6, tableShape: 'round', ...p }, 'grid'),
+  },
+  {
+    id: 'empty-rectangle',
+    name: 'Salle rectangle vide',
+    description: 'Contour vide à meubler librement',
+    roomType: 'SIMPLE',
+    outlineShape: 'rectangle',
+    build: (p) => emptyRoomTemplate('empty-rectangle', 'rectangle', p),
   },
   {
     id: 'empty-lshape',
     name: 'Salle en L',
-    description: 'Contour vide personnalisable',
+    description: 'Contour en L personnalisable',
     roomType: 'SIMPLE',
     outlineShape: 'lShape',
-    build: () => ensureBlueprintDefaults({
-      version: 1,
-      roomType: 'SIMPLE',
-      templateId: 'empty-lshape',
-      canvas: { widthM: 20, heightM: 15 },
-      roomOutline: defaultRoomOutline('lShape'),
-      fixtures: [],
-      furniture: [],
-      metadata: { totalSeats: 0 },
-    }),
+    build: (p) => emptyRoomTemplate('empty-lshape', 'lShape', p),
   },
 ];
 
-export function applyRoomTemplate(templateId: string, params?: LayoutParams): RoomLayoutBlueprint | null {
+export interface ApplyTemplateOptions {
+  keepStyle?: boolean;
+}
+
+function mergeTemplateStyle(
+  built: RoomLayoutBlueprint,
+  previous: RoomLayoutBlueprint,
+  keepStyle: boolean,
+): RoomLayoutBlueprint {
+  const library = {
+    customThemes: previous.metadata.customThemes,
+    customTemplates: previous.metadata.customTemplates,
+  };
+  if (!keepStyle) {
+    return refreshBlueprintMetadata({
+      ...built,
+      metadata: { ...built.metadata, ...library },
+    });
+  }
+  return refreshBlueprintMetadata({
+    ...built,
+    canvas: previous.canvas ?? built.canvas,
+    roomOutline: built.roomOutline
+      ? {
+          ...built.roomOutline,
+          fill: previous.roomOutline?.fill ?? built.roomOutline.fill,
+          stroke: previous.roomOutline?.stroke ?? built.roomOutline.stroke,
+          strokeWidth: previous.roomOutline?.strokeWidth ?? built.roomOutline.strokeWidth,
+        }
+      : previous.roomOutline,
+    metadata: {
+      ...built.metadata,
+      ...library,
+      roomThemeId: previous.metadata.roomThemeId,
+      floorType: previous.metadata.floorType,
+      floorImageUrl: previous.metadata.floorImageUrl,
+      depthView: previous.metadata.depthView,
+      defaultTableColor: previous.metadata.defaultTableColor,
+    },
+  });
+}
+
+export function applyRoomTemplate(
+  templateId: string,
+  params?: LayoutParams,
+  previous?: RoomLayoutBlueprint,
+  options?: ApplyTemplateOptions,
+): RoomLayoutBlueprint | null {
   const tpl = ROOM_LAYOUT_TEMPLATES.find((t) => t.id === templateId);
   if (!tpl) return null;
-  return refreshBlueprintMetadata(tpl.build(params));
+  const built = refreshBlueprintMetadata(tpl.build(params));
+  if (!previous) return built;
+  return mergeTemplateStyle(built, previous, options?.keepStyle !== false);
+}
+
+export function createSavedRoomTemplate(
+  blueprint: RoomLayoutBlueprint,
+  name: string,
+  description = '',
+): SavedRoomTemplate {
+  const snapshot = JSON.parse(JSON.stringify({
+    ...blueprint,
+    metadata: { ...blueprint.metadata, customTemplates: [] },
+  })) as RoomLayoutBlueprint;
+  return {
+    id: `saved_${Math.random().toString(36).slice(2, 10)}`,
+    name: name.trim() || 'Mon modèle',
+    description: description.trim(),
+    roomType: blueprint.roomType,
+    snapshot,
+  };
+}
+
+export function saveCustomTemplateToBlueprint(
+  blueprint: RoomLayoutBlueprint,
+  template: SavedRoomTemplate,
+): RoomLayoutBlueprint {
+  const existing = blueprint.metadata.customTemplates ?? [];
+  const idx = existing.findIndex((t) => t.id === template.id);
+  const customTemplates = idx >= 0
+    ? existing.map((t, i) => (i === idx ? template : t))
+    : [...existing, template];
+  return {
+    ...blueprint,
+    metadata: { ...blueprint.metadata, customTemplates },
+  };
+}
+
+export function deleteCustomTemplateFromBlueprint(
+  blueprint: RoomLayoutBlueprint,
+  templateId: string,
+): RoomLayoutBlueprint {
+  return {
+    ...blueprint,
+    metadata: {
+      ...blueprint.metadata,
+      customTemplates: (blueprint.metadata.customTemplates ?? []).filter((t) => t.id !== templateId),
+    },
+  };
+}
+
+export function applySavedRoomTemplate(
+  current: RoomLayoutBlueprint,
+  templateId: string,
+  options?: ApplyTemplateOptions,
+): RoomLayoutBlueprint | null {
+  const saved = current.metadata.customTemplates?.find((t) => t.id === templateId);
+  if (!saved) return null;
+  const built = JSON.parse(JSON.stringify(saved.snapshot)) as RoomLayoutBlueprint;
+  built.templateId = saved.id;
+  return mergeTemplateStyle(refreshBlueprintMetadata(built), current, options?.keepStyle !== false);
+}
+
+export function applyTableStyleToAll(
+  blueprint: RoomLayoutBlueprint,
+  sourceId: string,
+  fields: TableStyleField[] = ['shape', 'chairType', 'tableColor'],
+): RoomLayoutBlueprint {
+  const source = blueprint.furniture.find((item) => item.id === sourceId && item.kind === 'table');
+  if (!source || source.kind !== 'table') return blueprint;
+  const furniture = blueprint.furniture.map((item) => {
+    if (item.kind !== 'table' || item.id === sourceId) return item;
+    return {
+      ...item,
+      shape: fields.includes('shape') ? source.shape : item.shape,
+      chairType: fields.includes('chairType') ? source.chairType : item.chairType,
+      tableColor: fields.includes('tableColor') ? source.tableColor : item.tableColor,
+      capacity: fields.includes('capacity') ? source.capacity : item.capacity,
+    };
+  });
+  return refreshBlueprintMetadata({ ...blueprint, furniture });
 }
 
 export const roomOutlineLabels: Record<RoomOutlineShape, string> = {
@@ -378,7 +724,11 @@ export function generateRoomBlueprint(roomType: RoomType, params: LayoutParams =
 
   const widthM = params.canvasWidthM ?? params.tentWidthM ?? blueprint.canvas.widthM;
   const heightM = params.canvasHeightM ?? params.tentLengthM ?? blueprint.canvas.heightM;
-  return { ...blueprint, canvas: { widthM, heightM } };
+  let next = { ...blueprint, canvas: { widthM, heightM } };
+  if (params.arrangePreset) {
+    next = autoArrangeTables(ensureBlueprintDefaults(next), params.arrangePreset);
+  }
+  return next;
 }
 
 function generateSimpleBlueprint(roomType: RoomType): RoomLayoutBlueprint {
@@ -682,6 +1032,13 @@ export const chairTypeLabels: Record<ChairType, string> = {
   WHEELCHAIR: 'Place PMR',
 };
 
+export const tableShapeLabels: Record<TableShape, string> = {
+  round: 'Ronde',
+  rectangular: 'Rectangulaire',
+  square: 'Carrée',
+  oval: 'Ovale',
+};
+
 export const flowerTypeLabels: Record<FlowerType, string> = {
   rose: 'Roses',
   tulipe: 'Tulipes',
@@ -733,9 +1090,6 @@ export function getFixtureClass(kind: string): string {
       return 'bg-slate-100 border-slate-200';
   }
 }
-
-export type TableArrangePreset = 'grid' | 'banquet' | 'ushape' | 'circle';
-export type ArrangeDensity = 'compact' | 'comfortable' | 'ample';
 
 export const tableArrangeLabels: Record<TableArrangePreset, string> = {
   grid: 'Grille',

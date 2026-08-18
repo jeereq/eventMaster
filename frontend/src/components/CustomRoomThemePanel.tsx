@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Trash2, Save } from 'lucide-react';
+import { Copy, Plus, Trash2, Save } from 'lucide-react';
 import {
  createCustomTheme,
  deleteCustomThemeFromBlueprint,
+ getRoomTheme,
  saveCustomThemeToBlueprint,
  type CustomRoomTheme,
  type FloorType,
@@ -20,6 +21,23 @@ interface CustomRoomThemePanelProps {
  activeThemeId?: string;
 }
 
+const emptyDraft = (theme?: RoomTheme): Partial<RoomTheme> => ({
+ name: theme?.isCustom ? `${theme.name} (copie)` : theme ? `${theme.name} perso.` : 'Mon thème',
+ description: theme?.description ?? 'Thème sur mesure',
+ accentColor: theme?.accentColor ?? '#6366f1',
+ defaultTableColor: theme?.defaultTableColor ?? '#ffffff',
+ canvasBackground: typeof theme?.canvasBackground === 'string' && theme.canvasBackground.startsWith('#')
+  ? theme.canvasBackground
+  : '#e2e8f0',
+ defaultFloorType: theme?.defaultFloorType ?? 'parquet',
+ tableBorderColor: theme?.tableBorderColor ?? theme?.accentColor ?? '#6366f1',
+ roomOutline: theme?.roomOutline ?? {
+  fill: 'rgba(248, 250, 252, 0.92)',
+  stroke: theme?.accentColor ?? '#6366f1',
+  strokeWidth: 2,
+ },
+});
+
 export default function CustomRoomThemePanel({
  blueprint,
  onChange,
@@ -28,14 +46,7 @@ export default function CustomRoomThemePanel({
 }: CustomRoomThemePanelProps) {
  const customThemes = (blueprint.metadata.customThemes ?? []) as CustomRoomTheme[];
  const [editing, setEditing] = useState(false);
- const [draft, setDraft] = useState<Partial<RoomTheme>>({
- name: 'Mon thème',
- accentColor: '#6366f1',
- defaultTableColor: '#ffffff',
- canvasBackground: '#e2e8f0',
- defaultFloorType: 'parquet',
- description: 'Thème sur mesure',
- });
+ const [draft, setDraft] = useState<Partial<RoomTheme>>(emptyDraft());
 
  const handleCreate = () => {
  const theme = createCustomTheme(draft as Parameters<typeof createCustomTheme>[0]);
@@ -43,24 +54,38 @@ export default function CustomRoomThemePanel({
  onChange(next);
  onApplyTheme(theme.id);
  setEditing(false);
- setDraft({
- name: 'Mon thème',
- accentColor: '#6366f1',
- defaultTableColor: '#ffffff',
- canvasBackground: '#e2e8f0',
- defaultFloorType: 'parquet',
- description: 'Thème sur mesure',
- });
+ setDraft(emptyDraft());
  };
 
  const handleDelete = (themeId: string) => {
  onChange(deleteCustomThemeFromBlueprint(blueprint, themeId));
  };
 
+ const startFromActive = () => {
+ const theme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
+ setDraft(emptyDraft(theme));
+ setEditing(true);
+ };
+
+ const outlineStroke = draft.roomOutline?.stroke ?? draft.accentColor ?? '#6366f1';
+ const canvasColor = String(draft.canvasBackground ?? '#e2e8f0').startsWith('#')
+  ? String(draft.canvasBackground)
+  : '#e2e8f0';
+
  return (
  <div className="space-y-2 pt-2 border-t border-border">
  <div className="flex items-center justify-between gap-2">
  <p className="text-[10px] font-bold uppercase text-muted">Thèmes personnalisés</p>
+ <div className="flex gap-1">
+ <button
+ type="button"
+ onClick={startFromActive}
+ className="inline-flex items-center gap-1 px-2 py-1 rounded-lg border border-border text-muted text-[10px] font-bold hover:bg-white"
+ title="Reprendre le thème actif"
+ >
+ <Copy className="w-3 h-3" />
+ Dupliquer
+ </button>
  <button
  type="button"
  onClick={() => setEditing((v) => !v)}
@@ -69,6 +94,7 @@ export default function CustomRoomThemePanel({
  <Plus className="w-3 h-3" />
  {editing ? 'Annuler' : 'Créer'}
  </button>
+ </div>
  </div>
 
  {editing && (
@@ -81,6 +107,15 @@ export default function CustomRoomThemePanel({
  className="w-full px-2 py-1.5 rounded-lg border text-xs"
  />
  </label>
+ <label className="block text-[10px] space-y-0.5">
+ <span className="font-semibold text-muted">Description</span>
+ <input
+ value={draft.description ?? ''}
+ onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+ className="w-full px-2 py-1.5 rounded-lg border text-xs"
+ placeholder="Ambiance, usage…"
+ />
+ </label>
  <div className="grid grid-cols-2 gap-2">
  <label className="text-[10px] space-y-0.5">
  <span className="font-semibold text-muted">Couleur accent</span>
@@ -90,11 +125,31 @@ export default function CustomRoomThemePanel({
  <span className="font-semibold text-muted">Tables</span>
  <input type="color" value={draft.defaultTableColor ?? '#ffffff'} onChange={(e) => setDraft({ ...draft, defaultTableColor: e.target.value })} className="w-full h-8 rounded-lg border cursor-pointer" />
  </label>
- </div>
- <label className="block text-[10px] space-y-0.5">
+ <label className="text-[10px] space-y-0.5">
  <span className="font-semibold text-muted">Fond du canvas</span>
- <input type="color" value={String(draft.canvasBackground).startsWith('#') ? draft.canvasBackground : '#e2e8f0'} onChange={(e) => setDraft({ ...draft, canvasBackground: e.target.value })} className="w-full h-8 rounded-lg border cursor-pointer" />
+ <input type="color" value={canvasColor} onChange={(e) => setDraft({ ...draft, canvasBackground: e.target.value })} className="w-full h-8 rounded-lg border cursor-pointer" />
  </label>
+ <label className="text-[10px] space-y-0.5">
+ <span className="font-semibold text-muted">Contour salle</span>
+ <input
+ type="color"
+ value={outlineStroke.startsWith('#') ? outlineStroke : '#6366f1'}
+ onChange={(e) => setDraft({
+  ...draft,
+  roomOutline: {
+   fill: draft.roomOutline?.fill ?? 'rgba(248, 250, 252, 0.92)',
+   stroke: e.target.value,
+   strokeWidth: draft.roomOutline?.strokeWidth ?? 2,
+  },
+ })}
+ className="w-full h-8 rounded-lg border cursor-pointer"
+ />
+ </label>
+ <label className="text-[10px] space-y-0.5">
+ <span className="font-semibold text-muted">Bordure tables</span>
+ <input type="color" value={draft.tableBorderColor ?? '#6366f1'} onChange={(e) => setDraft({ ...draft, tableBorderColor: e.target.value })} className="w-full h-8 rounded-lg border cursor-pointer" />
+ </label>
+ </div>
  <label className="block text-[10px] space-y-0.5">
  <span className="font-semibold text-muted">Type de sol</span>
  <select
