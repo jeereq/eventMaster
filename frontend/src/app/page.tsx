@@ -88,8 +88,8 @@ export default function Home() {
             <p className="text-[15px] sm:text-base text-muted leading-relaxed max-w-2xl">
               EventMaster est la plateforme web pour les organisateurs, les salles, les prestataires
               et les clients en RDC : invitations et RSVP, plan de table 2D, protocole QR le jour J,
-              marketplace (favoris, simulation de budget, packs) et réservation de dates. L’application
-              mobile est en construction — aujourd’hui, tout se fait dans le navigateur.
+              marketplace (favoris, packs), réservation de dates, événements publics et billets en ligne.
+              L’application mobile est en construction — aujourd’hui, tout se fait dans le navigateur.
             </p>
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 pt-1">
@@ -146,7 +146,7 @@ export default function Home() {
               {
                 icon: Mail,
                 title: 'Invitations & RSVP',
-                text: 'Modèles visuels, envoi e-mail ou WhatsApp, portail invité, badge QR et suivi des réponses.',
+                text: 'Privés (liste d’invités) ou publics avec inscription et billets payants en ligne. Badge QR pour chaque participant.',
               },
               {
                 icon: LayoutGrid,

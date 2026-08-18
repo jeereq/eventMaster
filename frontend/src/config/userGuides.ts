@@ -149,7 +149,7 @@ export const USER_GUIDES: UserGuide[] = [
     canDo: [
       'Gérer l\'équipe (managers, protocoles, commerciaux org.)',
       'Créer et configurer les salles 2D',
-      'Créer et gérer tous les événements de l\'organisation',
+      'Créer des événements privés (liste d\'invités) ou publics avec inscription / billets en ligne',
       'Accéder à la facturation, au forfait et aux factures',
       'Personnaliser les modèles d\'invitation et messages invités',
       'Publier des prestations et traiter devis / réservations marketplace',
@@ -185,7 +185,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'create-event',
         title: 'Créer un événement complet',
         content:
-          '1. Allez dans Événements → Créer.\n2. Renseignez titre, date, lieu et associez une salle si disponible.\n3. Suivez le parcours guidé : invités → modèle & invitation → envoi RSVP → réponses (PDF/GPS dès acceptation) → plan de table → protocole → stats.',
+          '1. Allez dans Événements → Créer.\n2. Choisissez Privé (liste d’invités) ou Public (fiche sur /evenements).\n3. Pour un public payant, activez les billets en ligne et le prix en FC.\n4. Renseignez titre, date, lieu ; associez une salle si besoin.\n5. Suivez le parcours : invités (ou acheteurs de billets) → invitation RSVP → plan de table → protocole.',
         links: [{ label: 'Événements', href: '/dashboard/events' }],
       },
       {
@@ -226,7 +226,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Vous pilotez l\'organisation au quotidien : équipe, salles, événements, modèles et marketplace. La facturation reste réservée au propriétaire.',
     canDo: [
       'Gérer l\'équipe et les rôles organisationnels',
-      'Créer salles et événements',
+      'Créer salles et événements (privés ou publics, billets en ligne)',
       'Gérer invités, invitations et modèles',
       'Consulter les factures (sans modifier le forfait)',
       'Publier des prestations et traiter devis / réservations marketplace',

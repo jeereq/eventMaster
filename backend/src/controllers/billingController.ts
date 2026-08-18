@@ -10,6 +10,7 @@ import {
   formatPlanFeaturesResponse,
   getTenantPlanSnapshot,
 } from '../services/planFeaturesService';
+import { fulfillTicketOrder } from '../services/ticketOrderService';
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_mock';
 const stripe = new Stripe(STRIPE_SECRET_KEY, {
@@ -289,6 +290,16 @@ export async function handleStripeWebhook(req: Request, res: Response) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
+        if (session.metadata?.purpose === 'event_ticket' && session.metadata.orderId) {
+          await fulfillTicketOrder(session.metadata.orderId, {
+            id: session.id,
+            payment_intent: typeof session.payment_intent === 'string'
+              ? session.payment_intent
+              : session.payment_intent?.id,
+          });
+          console.log(`[Stripe Webhook] Billet payé commande ${session.metadata.orderId}`);
+          break;
+        }
         const tenantId = session.client_reference_id;
         
         if (tenantId) {

@@ -100,7 +100,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-events': {
     title: 'Événements',
     description:
-      'Parcours guidé de bout en bout : création, invités, modèle & invitation, envoi RSVP, réponses (PDF/GPS dès acceptation), plan de table, protocole jour J et statistiques.',
+      'Parcours guidé : événement privé ou public, invités ou billets en ligne, invitation RSVP, plan de table, protocole jour J.',
     route: '/dashboard/events',
   },
   'nav-rooms': {

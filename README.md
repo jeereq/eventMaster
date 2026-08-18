@@ -21,7 +21,7 @@ L'application est découpée en **trois entités distinctes** :
   - Contexte d’auth et d’organisation (multi-tenant).
 
 - **Mobile (mobile/)** :
-  - React Native + Expo (TypeScript), même API REST.
+  - React Native + Expo (TypeScript), même API REST. 
   - En construction / pas encore déployée sur les stores. Feuille de route : `mobile/PLAN.md`.
 
 ### Documentation
@@ -99,7 +99,7 @@ eventmaster/
 
 - **Types de compte** : organisateur, prestataire / salles, les deux, ou **client marketplace** (sans abo SaaS).
 - **Dashboard** : quotas selon le forfait (Essentials, Particulier, Business / Premium / Enterprise, Salle, Prestataire, Salle & presta).
-- **Événements & invités** : CRUD, import CSV, catégories, plan de table 2D, protocole QR (scan dans le navigateur).
+- **Événements** : **privés** (liste d’invités) ou **publics** (`/evenements`) avec inscription gratuite ou **billets payants** (Stripe ; simulé en local). Invités, import CSV, plan de table 2D, protocole QR.
 - **Invitations & RSVP** : concepteur visuel, e-mail / WhatsApp, portail public, badge QR. PDF / plan / GPS partent **dès acceptation RSVP** (si place assignée, Premium 1+), pas à l’envoi de l’invitation.
 - **Marketplace** :
   - Catalogue public et hub client (`/dashboard/catalogue`) : explorer, **favoris** (grille / liste), **préparer un événement** (budget min. 50 000 FC → 3 packs distincts éco / équilibré / confort), packs sauvegardés.

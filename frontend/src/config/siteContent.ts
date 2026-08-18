@@ -15,12 +15,14 @@ export const FOOTER_FEATURES = [
   'Invitations & RSVP multi-canal',
   'Plans de salle 2D & protocole QR web',
   'Marketplace : favoris, packs budget, réservations',
+  'Événements publics & billets en ligne',
   'Application mobile (en construction)',
   'Espace isolé par organisation',
 ] as const;
 
 export const FOOTER_PRODUCT = [
   { label: 'Modèles', href: '/#modeles' },
+  { label: 'Événements publics', href: '/evenements' },
   { label: 'Marketplace salles & prestas', href: '/marketplace' },
   { label: 'Parcours', href: '/#parcours' },
   { label: 'Tarifs', href: '/#tarifs' },
@@ -62,6 +64,12 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: 'Quand l\'invité reçoit-il son plan de table, PDF et localisation GPS ?',
     answer:
       'L\'invitation initiale contient uniquement le lien RSVP (e-mail ou WhatsApp). Le PDF personnalisé, le plan de table interactif et la localisation GPS WhatsApp sont envoyés automatiquement dès l\'acceptation RSVP, dès qu\'une place est assignée (forfait Premium 1+) — jamais à l\'envoi de l\'invitation.',
+  },
+  {
+    id: 'public-events',
+    question: 'Puis-je organiser un événement public avec billets payants ?',
+    answer:
+      'Oui. Dans Événements, choisissez Public : la fiche apparaît sur /evenements. Inscription gratuite, ou billets payants en ligne (carte via Stripe). Les acheteurs deviennent des invités avec badge QR. Un événement Privé reste sur liste d’invités uniquement (mariage, soirée fermée).',
   },
   {
     id: 'marketplace-venues',

@@ -820,7 +820,7 @@ export const PLATFORM_PILLARS = [
   },
   {
     title: 'RSVP & invitations',
-    description: 'Modèles visuels, diffusion e-mail ou WhatsApp, portail invité avec badge QR et fil d’actualité privé.',
+    description: 'Modèles visuels, diffusion e-mail ou WhatsApp, événements publics avec billets en ligne, portail invité et badge QR.',
     icon: 'mail',
   },
   {

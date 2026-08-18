@@ -18,6 +18,12 @@ import {
   getPublicService,
   createServiceInquiry,
 } from '../controllers/marketplaceController';
+import {
+  listPublicEvents,
+  getPublicEvent,
+  checkoutPublicEvent,
+  getTicketOrderBySession,
+} from '../controllers/publicEventController';
 
 const router = Router();
 
@@ -88,6 +94,10 @@ router.post('/venues/:slug/inquire', optionalAuth, createVenueInquiry);
 router.get('/services', listPublicServices);
 router.get('/services/:slug', optionalAuth, getPublicService);
 router.post('/services/:slug/inquire', optionalAuth, createServiceInquiry);
+router.get('/events', listPublicEvents);
+router.get('/events/:slug', getPublicEvent);
+router.post('/events/:slug/checkout', checkoutPublicEvent);
+router.get('/ticket-orders/session/:sessionId', getTicketOrderBySession);
 
 // POST /api/public/contact
 router.post('/contact', async (req: Request, res: Response) => {

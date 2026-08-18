@@ -11,6 +11,42 @@ import {
 import { blueprintToTablePlan } from '../services/roomLayoutService';
 import { notifyTableAssignmentChanges } from '../services/tableAssignmentNotificationService';
 import { toPrismaJson } from '../utils/prismaJson';
+import { uniqueSlug } from '../utils/slug';
+
+async function eventVisibilityData(
+  title: string,
+  body: Record<string, unknown>,
+  existing?: { id: string; slug: string | null; publishedAt: Date | null; ticketsSold: number; ticketsTotal: number | null } | null,
+) {
+  const isPublic = body.isPublic === true || body.isPublic === 'true';
+  let slug = existing?.slug || null;
+  if (isPublic && !slug) {
+    slug = await uniqueSlug(title || 'evenement', async (s) => {
+      const found = await prisma.event.findFirst({
+        where: { slug: s, ...(existing?.id ? { NOT: { id: existing.id } } : {}) },
+      });
+      return Boolean(found);
+    });
+  }
+  const ticketingEnabled = isPublic && (body.ticketingEnabled === true || body.ticketingEnabled === 'true');
+  const ticketPriceFc = ticketingEnabled
+    ? Math.max(0, Math.round(Number(body.ticketPriceFc) || 0))
+    : 0;
+  const rawTotal = body.ticketsTotal;
+  const ticketsTotal =
+    rawTotal === '' || rawTotal == null || rawTotal === undefined
+      ? null
+      : Math.max(existing?.ticketsSold || 0, Math.round(Number(rawTotal) || 0)) || null;
+
+  return {
+    isPublic,
+    slug,
+    publishedAt: isPublic ? existing?.publishedAt || new Date() : null,
+    ticketingEnabled: isPublic ? ticketingEnabled : false,
+    ticketPriceFc: isPublic ? ticketPriceFc : 0,
+    ticketsTotal: isPublic ? ticketsTotal : existing?.ticketsTotal ?? null,
+  };
+}
 
 // List all events for the current tenant
 export async function getEvents(req: AuthenticatedRequest, res: Response) {
@@ -63,6 +99,8 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
       return res.status(400).json({ error: 'Les champs title, date et location sont requis' });
     }
 
+    const visibility = await eventVisibilityData(title, req.body);
+
     // Check Plan / Quota before creating event (will be integrated in Phase 4, but let's add a placeholder or simple check)
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
@@ -105,6 +143,7 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
         longitude: longitude !== undefined && longitude !== null ? parseFloat(longitude) : null,
         tablePlan: tablePlanData ? toPrismaJson(tablePlanData) : undefined,
         guestGuidelines: guestGuidelines !== undefined ? toPrismaJson(guestGuidelines) : undefined,
+        ...visibility,
       },
       include: { room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } } },
     });
@@ -178,6 +217,11 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
       return res.status(404).json({ error: 'Événement non trouvé ou non autorisé' });
     }
 
+    const visibility =
+      req.body.isPublic !== undefined
+        ? await eventVisibilityData(title || existingEvent.title, req.body, existingEvent)
+        : {};
+
     const updatedEvent = await prisma.event.update({
       where: { id },
       data: {
@@ -191,6 +235,7 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
         tablePlan: tablePlan !== undefined ? tablePlan : existingEvent.tablePlan,
         roomId: roomId !== undefined ? roomId : existingEvent.roomId,
         guestGuidelines: guestGuidelines !== undefined ? toPrismaJson(guestGuidelines) : existingEvent.guestGuidelines ?? undefined,
+        ...visibility,
       },
       include: { room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } } },
     });
@@ -313,5 +358,27 @@ export async function importRoomLayout(req: AuthenticatedRequest, res: Response)
   } catch (error: any) {
     console.error('Erreur importRoomLayout:', error);
     return res.status(500).json({ error: 'Impossible d\'importer le plan de la salle.' });
+  }
+}
+
+export async function listEventTicketOrders(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
+    const eventId = req.params.eventId as string;
+    if (!tenantId || !userId) return res.status(403).json({ error: 'Tenant non identifié' });
+    if (!(await canAccessEvent(userId, tenantId, eventId))) {
+      return res.status(403).json({ error: 'Accès refusé à cet événement.' });
+    }
+    const orders = await prisma.ticketOrder.findMany({
+      where: { eventId, event: { tenantId } },
+      include: { guests: { select: { id: true, email: true, firstName: true, lastName: true, rsvp: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+    return res.json({ orders });
+  } catch (error: any) {
+    console.error('listEventTicketOrders', error);
+    return res.status(500).json({ error: 'Impossible de charger les commandes.' });
   }
 }

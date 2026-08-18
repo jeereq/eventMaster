@@ -208,6 +208,14 @@ model Event {
   longitude         Float?
   tablePlan         Json?        // Added for visual table planning
   guestGuidelines   Json?        // Dress code & practical recommendations for guests
+  /** false = liste d’invités uniquement. true = fiche publique + inscription / billets. */
+  isPublic          Boolean      @default(false)
+  slug              String?      @unique
+  publishedAt       DateTime?
+  ticketingEnabled  Boolean      @default(false)
+  ticketPriceFc     Int          @default(0)
+  ticketsTotal      Int?
+  ticketsSold       Int          @default(0)
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
@@ -218,6 +226,9 @@ model Event {
   staff       EventStaff[]
   marketplaceInquiries MarketplaceInquiry[]
   marketplaceBookings MarketplaceBooking[]
+  ticketOrders TicketOrder[]
+
+  @@index([isPublic, date])
 }
 
 model Guest {
@@ -249,9 +260,31 @@ model Guest {
   comments    EventComment[]
   legalAcceptances LegalAcceptance[]
   protocolNotes GuestProtocolNote[]
+  ticketOrderId String?
+  ticketOrder   TicketOrder? @relation(fields: [ticketOrderId], references: [id], onDelete: SetNull)
 
   @@unique([eventId, email])
   @@index([phone])
+}
+
+model TicketOrder {
+  id                      String    @id @default(uuid())
+  eventId                 String
+  event                   Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  buyerName               String
+  buyerEmail              String
+  buyerPhone              String?
+  quantity                Int       @default(1)
+  amountFc                Int
+  status                  String    @default("PENDING") // PENDING, PAID, CANCELLED
+  stripeCheckoutSessionId String?   @unique
+  stripePaymentIntentId   String?
+  paidAt                  DateTime?
+  createdAt               DateTime  @default(now())
+  guests                  Guest[]
+
+  @@index([eventId, status])
+  @@index([buyerEmail])
 }
 
 model GuestProtocolNote {

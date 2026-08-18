@@ -10,7 +10,7 @@ import {
  ChevronRight, ArrowLeft, Check, Upload, Mail, Send, 
  Sparkles, CheckCircle2, XCircle, AlertCircle, HelpCircle, Loader2,
  Copy, MessageSquare, Share2, Search, Filter, RefreshCw,
- Eye, Utensils, FileSpreadsheet, Download, LayoutGrid, Building2, ScanLine, Shirt
+ Eye, Utensils, FileSpreadsheet, Download, LayoutGrid, Building2, ScanLine, Shirt, Globe, GlobeLock, Ticket
 } from 'lucide-react';
 import TablePlanner from './TablePlanner';
 import EventStaffPanel from './EventStaffPanel';
@@ -59,6 +59,13 @@ interface EventItem {
  latitude?: number;
  longitude?: number;
  roomId?: string | null;
+ isPublic?: boolean;
+ slug?: string | null;
+ publishedAt?: string | null;
+ ticketingEnabled?: boolean;
+ ticketPriceFc?: number;
+ ticketsTotal?: number | null;
+ ticketsSold?: number;
  room?: {
  id: string;
  name: string;
@@ -290,6 +297,10 @@ export default function EventsPage() {
  const [eventReminderFrequency, setEventReminderFrequency] = useState('NONE');
  const [eventLatitude, setEventLatitude] = useState('');
  const [eventLongitude, setEventLongitude] = useState('');
+ const [eventIsPublic, setEventIsPublic] = useState(false);
+ const [eventTicketing, setEventTicketing] = useState(false);
+ const [eventTicketPrice, setEventTicketPrice] = useState('');
+ const [eventTicketsTotal, setEventTicketsTotal] = useState('');
  const [eventRoomId, setEventRoomId] = useState('');
  const [orgRooms, setOrgRooms] = useState<OrgRoomOption[]>([]);
  const [loadingRooms, setLoadingRooms] = useState(false);
@@ -716,6 +727,10 @@ export default function EventsPage() {
  setEventReminderFrequency('NONE');
  setEventLatitude('');
  setEventLongitude('');
+ setEventIsPublic(false);
+ setEventTicketing(false);
+ setEventTicketPrice('');
+ setEventTicketsTotal('');
  setEventRoomId('');
  setEditingEventId(null);
  setEventMapOpen(false);
@@ -789,6 +804,10 @@ export default function EventsPage() {
  latitude: eventLatitude ? parseFloat(eventLatitude) : null,
  longitude: eventLongitude ? parseFloat(eventLongitude) : null,
  roomId: eventRoomId || null,
+ isPublic: eventIsPublic,
+ ticketingEnabled: eventIsPublic && eventTicketing,
+ ticketPriceFc: eventIsPublic && eventTicketing ? Number(eventTicketPrice) || 0 : 0,
+ ticketsTotal: eventIsPublic && eventTicketsTotal ? Number(eventTicketsTotal) : null,
  };
 
  if (editingEventId) {
@@ -828,6 +847,10 @@ export default function EventsPage() {
  setEventReminderFrequency(event.reminderFrequency || 'NONE');
  setEventLatitude(event.latitude !== undefined && event.latitude !== null ? event.latitude.toString() : '');
  setEventLongitude(event.longitude !== undefined && event.longitude !== null ? event.longitude.toString() : '');
+ setEventIsPublic(Boolean(event.isPublic));
+ setEventTicketing(Boolean(event.ticketingEnabled));
+ setEventTicketPrice(event.ticketPriceFc != null && event.ticketPriceFc > 0 ? String(event.ticketPriceFc) : '');
+ setEventTicketsTotal(event.ticketsTotal != null ? String(event.ticketsTotal) : '');
  setEventRoomId(event.roomId || event.room?.id || '');
  setEditingEventId(event.id);
  setEventMapOpen(
@@ -1575,7 +1598,7 @@ export default function EventsPage() {
  description={
  protocolDesk
  ? 'Choisissez l’événement, puis scannez les badges pour confirmer les présences.'
- : "Créez et gérez vos réceptions privées, vos listes d'invités et vos invitations."
+ : "Créez des réceptions privées (liste d’invités) ou publiques (inscription / billets en ligne)."
  }
  breadcrumbs={
  <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: protocolDesk ? 'Protocole' : 'Événements' }]} />
@@ -1679,6 +1702,30 @@ export default function EventsPage() {
  <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-border text-muted">
  {getReminderFrequencyLabel(selectedEvent.reminderFrequency)}
  </span>
+ {selectedEvent.isPublic ? (
+ <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+ <Globe className="w-3.5 h-3.5" />
+ Public
+ {selectedEvent.ticketingEnabled && selectedEvent.ticketPriceFc
+  ? ` · ${selectedEvent.ticketsSold ?? 0} billet${(selectedEvent.ticketsSold ?? 0) > 1 ? 's' : ''}`
+  : ''}
+ </span>
+ ) : (
+ <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-border text-muted">
+ <GlobeLock className="w-3.5 h-3.5" />
+ Privé
+ </span>
+ )}
+ {selectedEvent.isPublic && selectedEvent.slug && (
+ <a
+ href={`/evenements/${selectedEvent.slug}`}
+ target="_blank"
+ rel="noreferrer"
+ className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-border text-primary font-semibold hover:bg-surface-muted"
+ >
+ Page publique
+ </a>
+ )}
  </div>
  </div>
  <div className="flex flex-wrap gap-2 shrink-0">
@@ -1851,9 +1898,15 @@ export default function EventsPage() {
  : undefined
  }
  status={
- eventsViewMode === 'list' && event.room ? (
+ event.isPublic ? (
+ <StatusPill tone="emerald">Public</StatusPill>
+ ) : eventsViewMode === 'list' && event.room ? (
  <StatusPill tone="violet">Salle</StatusPill>
- ) : undefined
+ ) : eventsViewMode === 'list' ? (
+ <StatusPill tone="slate">Privé</StatusPill>
+ ) : (
+ <StatusPill tone="slate">Privé</StatusPill>
+ )
  }
  description={
  eventsViewMode === 'grid' && event.description
@@ -2610,6 +2663,91 @@ export default function EventsPage() {
  leftIcon={<MapPin className="w-4 h-4" />}
  />
  </div>
+ </section>
+
+ <section className="space-y-3 pt-1 border-t border-border">
+ <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted pt-3">Visibilité &amp; billets</h4>
+ <div className="flex flex-wrap gap-1.5">
+ {[
+ { id: false, label: 'Privé — liste d’invités', icon: GlobeLock },
+ { id: true, label: 'Public — inscription ouverte', icon: Globe },
+ ].map((opt) => (
+ <button
+ key={String(opt.id)}
+ type="button"
+ onClick={() => {
+ setEventIsPublic(opt.id);
+ if (!opt.id) setEventTicketing(false);
+ }}
+ className={cn(
+ 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition',
+ eventIsPublic === opt.id
+ ? 'bg-foreground text-background border-foreground'
+ : 'bg-surface text-muted border-border hover:text-foreground',
+ )}
+ >
+ <opt.icon className="w-3.5 h-3.5" />
+ {opt.label}
+ </button>
+ ))}
+ </div>
+ <p className="text-[11px] text-muted leading-relaxed">
+ {eventIsPublic
+ ? 'La fiche sera listée sur /evenements. Les gens s’inscrivent ou achètent un billet ; ils apparaissent ensuite dans Invités.'
+ : 'Seules les personnes que vous ajoutez (ou invitez) ont accès via leur lien RSVP.'}
+ </p>
+ {eventIsPublic && (
+ <div className="space-y-3">
+ <label className="flex items-center gap-2 text-sm">
+ <input
+ type="checkbox"
+ checked={eventTicketing}
+ onChange={(e) => setEventTicketing(e.target.checked)}
+ className="rounded border-border"
+ />
+ <span className="inline-flex items-center gap-1.5 font-medium">
+ <Ticket className="w-4 h-4" />
+ Billets payants en ligne
+ </span>
+ </label>
+ {eventTicketing && (
+ <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+ <Input
+ label="Prix du billet (FC)"
+ type="number"
+ min={0}
+ value={eventTicketPrice}
+ onChange={(e) => setEventTicketPrice(e.target.value)}
+ placeholder="ex. 25000"
+ required
+ />
+ <Input
+ label="Nombre de places (optionnel)"
+ type="number"
+ min={1}
+ value={eventTicketsTotal}
+ onChange={(e) => setEventTicketsTotal(e.target.value)}
+ placeholder="Illimité"
+ />
+ </div>
+ )}
+ {!eventTicketing && (
+ <Input
+ label="Capacité (optionnel)"
+ type="number"
+ min={1}
+ value={eventTicketsTotal}
+ onChange={(e) => setEventTicketsTotal(e.target.value)}
+ placeholder="Illimité"
+ />
+ )}
+ <p className="text-[11px] text-muted">
+ {eventTicketing
+ ? 'Paiement par carte (Stripe). En développement, le paiement est simulé. L’acheteur reçoit le lien RSVP / badge QR.'
+ : 'Inscription gratuite : le visiteur renseigne nom et e-mail, puis reçoit son lien RSVP.'}
+ </p>
+ </div>
+ )}
  </section>
 
  <section className="space-y-3 pt-1 border-t border-border">
