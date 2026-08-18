@@ -118,7 +118,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-marketplace': {
     title: 'Marketplace',
     description:
-      'Publiez vos prestations, suivez les devis, puis confirmez les réservations : accepter → acompte hors plateforme → bloquer la date.',
+      'Publiez salles, métiers ou locations (habits, véhicules, matériel), suivez les devis, puis confirmez les réservations : accepter → acompte hors plateforme → bloquer la date.',
     route: '/dashboard/marketplace',
   },
   'nav-protocol': {
@@ -172,7 +172,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-catalogue': {
     title: 'Marketplace',
     description:
-      'Explorer salles, prestataires et événements (filtres, carte Focus, grille ou liste). Onglets Favoris, Préparer un événement (brief budget) et Mes packs.',
+      'Explorer salles, prestataires (métiers et locations) et événements : filtres, carte Focus, grille ou liste, partage de l’URL. Onglets Favoris, Préparer un événement (brief budget) et Mes packs.',
     route: '/dashboard/catalogue',
   },
   'nav-agenda': {

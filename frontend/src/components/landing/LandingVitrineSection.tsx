@@ -44,9 +44,9 @@ type EntityFilters = CatalogueGeoState & CatalogueEntityExtras;
 const emptyFilters: EntityFilters = { ...EMPTY_CATALOGUE_GEO, ...EMPTY_CATALOGUE_EXTRAS };
 
 function getCategoryLabel(category: string) {
-  if (category === 'private') return 'Privé';
+  if (category === 'private') return 'Célébrations';
   if (category === 'corporate') return 'Professionnel';
-  return 'Cocktail';
+  return 'Soirées';
 }
 
 export default function LandingVitrineSection({
@@ -392,9 +392,9 @@ export default function LandingVitrineSection({
             <div className="flex flex-wrap gap-1.5">
               {[
                 { id: 'all', name: 'Tous' },
-                { id: 'private', name: 'Privé' },
+                { id: 'private', name: 'Célébrations' },
                 { id: 'corporate', name: 'Professionnel' },
-                { id: 'casual', name: 'Cocktail' },
+                { id: 'casual', name: 'Soirées' },
               ].map((c) => (
                 <button
                   key={c.id}

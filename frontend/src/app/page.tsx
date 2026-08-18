@@ -22,14 +22,14 @@ import { Modal, Button, Skeleton } from '@/components/ui';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
   ArrowRight, LayoutGrid, QrCode, Mail, Sparkles,
-  Building2, Users, CalendarCheck, Smartphone,
+  Building2, Users, CalendarCheck, Smartphone, Share2,
 } from 'lucide-react';
 import CelebrateMood from '@/components/CelebrateMood';
 
 function getCategoryLabel(category: string) {
-  if (category === 'private') return 'Privé';
+  if (category === 'private') return 'Célébrations';
   if (category === 'corporate') return 'Professionnel';
-  return 'Cocktail';
+  return 'Soirées';
 }
 
 export default function Home() {
@@ -88,8 +88,10 @@ export default function Home() {
             <p className="text-[15px] sm:text-base text-muted leading-relaxed max-w-2xl">
               EventMaster est la plateforme web pour les organisateurs, les salles, les prestataires
               et les clients en RDC : invitations et RSVP, plan de table 2D, protocole QR le jour J,
-              marketplace (favoris, packs), réservation de dates, événements publics et billets en ligne.
-              L’application mobile est en construction — aujourd’hui, tout se fait dans le navigateur.
+              marketplace (salles, métiers et locations — habits, voitures, motos, matériel),
+              favoris, packs budget, partage d’une recherche ou d’une fiche, réservation de dates,
+              événements publics et billets en ligne. L’application mobile est en construction —
+              aujourd’hui, tout se fait dans le navigateur.
             </p>
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 pt-1">
@@ -165,23 +167,23 @@ export default function Home() {
               },
               {
                 icon: Sparkles,
-                title: 'Prestataires',
-                text: 'Traiteur, photo, DJ, déco… Devis, médias, rayon d’intervention. Packs budget proposés selon le type d’événement.',
+                title: 'Prestataires & locations',
+                text: 'Métiers : traiteur, photo, DJ, déco… Location : habits homme / femme / enfant, voitures, motos et matériel. Devis, photos, rayon d’intervention, packs budget.',
               },
               {
                 icon: CalendarCheck,
                 title: 'Réservations & packs',
-                text: 'Compte client : explorer, favoris, préparer un événement (éco / équilibré / confort) et sauvegarder un pack. Acompte 30 % hors plateforme, commission vendeur 8 %.',
+                text: 'Compte client : explorer (grille, liste, carte), favoris, préparer un événement (éco / équilibré / confort) et sauvegarder un pack. Acompte 30 % hors plateforme, commission vendeur 8 %.',
+              },
+              {
+                icon: Share2,
+                title: 'Partage',
+                text: 'Partagez une recherche (l’URL conserve vos filtres) ou une fiche publique salle, prestataire ou événement — sans compte obligatoire pour le destinataire.',
               },
               {
                 icon: Users,
                 title: 'Équipes & rôles',
-                text: 'Propriétaire, managers, protocole, responsables de salle — chacun voit uniquement son périmètre.',
-              },
-              {
-                icon: Smartphone,
-                title: 'Mobile (bientôt)',
-                text: 'L’app native est en cours de construction. Elle n’est pas encore disponible sur les stores.',
+                text: 'Propriétaire, managers, protocole, responsables de salle, commercial org. — chacun voit uniquement son périmètre.',
               },
             ].map(({ icon: Icon, title, text }) => (
               <li
@@ -208,7 +210,7 @@ export default function Home() {
             <div className="mt-10 flex flex-wrap items-center gap-3">
               <p className="text-xs font-medium text-muted shrink-0">Modèles vitrine</p>
               <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
-                {publicTemplates.slice(0, 6).map((t) => (
+                {publicTemplates.slice(0, 8).map((t) => (
                   <button
                     key={t.id}
                     type="button"

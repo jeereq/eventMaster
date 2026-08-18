@@ -572,7 +572,7 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
                 dashArray: '6 5',
                 fillColor: cssVar('--primary', '#4f46e5'),
                 fillOpacity: 0.08,
-                interactive: false,
+                interactive: false
               }),
             );
           }

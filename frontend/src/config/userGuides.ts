@@ -152,7 +152,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Créer des événements privés (liste d\'invités) ou publics avec inscription / billets en ligne',
       'Accéder à la facturation, au forfait et aux factures',
       'Personnaliser les modèles d\'invitation et messages invités',
-      'Publier des prestations et traiter devis / réservations marketplace',
+      'Publier des salles (plan 2D) et des prestations : métiers ou locations (habits, véhicules, matériel)',
     ],
     cannotDo: [
       'Voir les données d\'autres organisations',
@@ -206,7 +206,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'marketplace-desk',
         title: 'Publier une prestation et traiter les demandes',
         content:
-          '1. Ouvrez Marketplace dans le menu.\n2. Onglet Prestations : créez une fiche (photos, tarif, ville, rayon), passez en grille ou liste, puis publiez.\n3. Onglet Demandes : marquez un devis comme contacté, ou convertissez-le en réservation s’il a une date.\n4. Onglet Réservations : acceptez, marquez l’acompte reçu (versé hors plateforme), puis confirmez pour bloquer la date.\n5. Filtrez par statut, type (salle / presta) et dates.',
+          '1. Ouvrez Marketplace dans le menu.\n2. Onglet Prestations : créez une fiche métier (traiteur, photo, DJ…) ou location (habits homme / femme / enfant, voiture, moto, matériel) avec photos, tarif, ville, rayon ; passez en grille ou liste, puis publiez. Pour une salle : Salles → plan 2D → publier la fiche.\n3. Onglet Demandes : marquez un devis comme contacté, ou convertissez-le en réservation s’il a une date.\n4. Onglet Réservations : acceptez, marquez l’acompte reçu (versé hors plateforme), puis confirmez pour bloquer la date.\n5. Sur une fiche publique, le bouton Partager envoie le lien marketplace (pas l’URL interne du desk).',
         links: [{ label: 'Marketplace', href: '/dashboard/marketplace' }],
       },
     ],
@@ -229,7 +229,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Créer salles et événements (privés ou publics, billets en ligne)',
       'Gérer invités, invitations et modèles',
       'Consulter les factures (sans modifier le forfait)',
-      'Publier des prestations et traiter devis / réservations marketplace',
+      'Publier des salles et des prestations (métiers ou locations) et traiter devis / réservations',
     ],
     cannotDo: [
       'Accéder à la facturation ni changer de forfait',
@@ -276,7 +276,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'marketplace-desk',
         title: 'Gérer prestations, devis et réservations',
         content:
-          '1. Ouvrez Marketplace.\n2. Publiez ou mettez à jour vos prestations (vue grille ou liste, pagination).\n3. Traitez les demandes de devis (contacter, convertir en réservation).\n4. Dans Réservations, suivez l’étape suivante affichée sur chaque carte : accepter, acompte, confirmer.',
+          '1. Ouvrez Marketplace.\n2. Publiez ou mettez à jour vos fiches : métiers ou locations (habits, voitures, motos, matériel), vue grille ou liste.\n3. Traitez les demandes de devis (contacter, convertir en réservation).\n4. Dans Réservations, suivez l’étape suivante affichée sur chaque carte : accepter, acompte, confirmer.\n5. Partagez le lien public d’une fiche depuis la fiche marketplace, pas depuis l’URL interne.',
         links: [{ label: 'Marketplace', href: '/dashboard/marketplace' }],
       },
     ],
@@ -409,13 +409,14 @@ export const USER_GUIDES: UserGuide[] = [
     title: 'Guide Client marketplace',
     badge: 'Client',
     summary:
-      'Vous cherchez une salle, des prestataires ou un événement public, sans créer d’événements. Marketplace (Explorer, Favoris, Préparer, Mes packs), Agenda, billets et réservations sont dans le tableau de bord. Pour organiser une fête ou publier vos offres, changez le type de compte dans Mon compte.',
+      'Vous cherchez une salle, un prestataire (métier ou location) ou un événement public, sans créer d’événements. Marketplace (Explorer, Favoris, Préparer, Mes packs), Agenda, billets et réservations sont dans le tableau de bord. Pour organiser une fête ou publier vos offres, changez le type de compte dans Mon compte.',
     canDo: [
-      'Explorer salles, prestataires et événements (filtres ville, type, prix, carte Focus, grille ou liste)',
+      'Explorer salles, prestataires (métiers et locations : habits, voitures, motos, matériel) et événements (filtres ville, type, prix, carte Focus, grille ou liste)',
       'Ouvrir l’Agenda : événements publics du marketplace, pour s’inscrire ou acheter un billet',
       'Mettre des fiches salles / prestataires en favoris',
       'Préparer un événement avec un brief budget simple (enveloppe, marge en FC, métiers) et obtenir 3 packs',
       'Sauvegarder un brief ou un pack, ou composer un pack depuis les favoris',
+      'Partager une recherche (URL avec filtres) ou le lien public d’une fiche',
       'Demander un devis ou une date, puis suivre les réservations',
       'Retrouver vos billets, les filtrer, passer en grille ou liste, et ouvrir le badge QR',
       'Passer organisateur ou prestataire depuis Mon compte',
@@ -438,7 +439,14 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'explore-favorites',
         title: 'Explorer et enregistrer des favoris',
         content:
-          '1. Ouvrez Marketplace.\n2. Onglet Explorer : filtrez par mot-clé, ville, commune, type (salles / prestataires / événements), prix, places.\n3. Passez en grille, liste, carte ou Focus (plein écran). Les pastilles indiquent Salle, Presta ou Évén.\n4. Cliquez sur le cœur d’une salle ou d’un prestataire.\n5. Onglet Favoris : filtrez salles / prestataires et changez la vue.',
+          '1. Ouvrez Marketplace.\n2. Onglet Explorer : filtrez par mot-clé, ville, commune, type (salles / prestataires / événements), métier ou location (habits, véhicules, matériel), prix, places.\n3. Passez en grille, liste, carte ou Focus (plein écran). Les pastilles indiquent Salle, Presta ou Évén.\n4. Cliquez sur le cœur d’une salle ou d’un prestataire.\n5. Onglet Favoris : filtrez salles / prestataires et changez la vue.\n6. Bouton Partager : copie l’URL actuelle, avec vos filtres.',
+        links: [{ label: 'Marketplace', href: '/dashboard/catalogue' }],
+      },
+      {
+        id: 'share-search',
+        title: 'Partager une recherche ou une fiche',
+        content:
+          '1. Dans Explorer, le bouton Partager copie l’adresse de la page : le destinataire retrouve les mêmes filtres (ville, type, carte…).\n2. Sur une fiche salle, prestataire ou événement, Partager envoie le lien public marketplace — pas une URL interne du tableau de bord.\n3. Aucun compte n’est obligatoire pour ouvrir le lien ; devis, favoris et billets demandent une connexion ou un passage invité.',
         links: [{ label: 'Marketplace', href: '/dashboard/catalogue' }],
       },
       {
@@ -492,6 +500,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Les trois packs d’une recherche évitent de proposer la même salle si le catalogue le permet.',
       'Enregistrez un brief pour relancer la même recherche ; figez une salle puis relancez pour recalculer uniquement les prestataires.',
       'L’Agenda du menu ouvre le marketplace client (événements), pas /marketplace/evenements.',
+      'Partagez une recherche pour envoyer exactement les mêmes filtres ; sur une fiche, le lien public suffit.',
       'La commission vendeur (8 %) est distincte de l’abonnement EventMaster ; vous ne la payez pas en tant que client.',
     ],
   },

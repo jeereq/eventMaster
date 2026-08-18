@@ -76,8 +76,32 @@ export function normalizeLandingCategory(
   raw?: string | null,
 ): 'private' | 'corporate' | 'casual' {
   const v = (raw || 'private').toLowerCase().trim();
-  if (v === 'corporate' || v === 'professionnel' || v === 'pro') return 'corporate';
-  if (v === 'casual' || v === 'cocktail' || v === 'party') return 'casual';
+  if (
+    v === 'corporate' ||
+    v === 'professionnel' ||
+    v === 'pro' ||
+    v === 'gala' ||
+    v === 'conference' ||
+    v === 'conférence' ||
+    v === 'seminar' ||
+    v === 'séminaire' ||
+    v === 'launch' ||
+    v === 'lancement'
+  ) {
+    return 'corporate';
+  }
+  if (
+    v === 'casual' ||
+    v === 'cocktail' ||
+    v === 'party' ||
+    v === 'concert' ||
+    v === 'club' ||
+    v === 'soiree' ||
+    v === 'soirée' ||
+    v === 'afterwork'
+  ) {
+    return 'casual';
+  }
   return 'private';
 }
 

@@ -14,10 +14,10 @@ export const SITE_CONTACT = {
 export const FOOTER_FEATURES = [
   'Invitations & RSVP multi-canal',
   'Plans de salle 2D & protocole QR web',
-  'Marketplace : favoris, packs budget, réservations',
+  'Marketplace : salles, métiers, locations',
+  'Favoris, packs budget, partage & réservations',
   'Événements publics & billets en ligne',
   'Application mobile (en construction)',
-  'Espace isolé par organisation',
 ] as const;
 
 export const FOOTER_PRODUCT = [
@@ -37,7 +37,7 @@ export const FOOTER_RESOURCES = [
 ] as const;
 
 export const FOOTER_BRAND_DESCRIPTION =
-  'Créez votre organisation sur EventMaster pour gérer invitations, RSVP, plans de salle, marketplace et protocole QR sur le web. L’application mobile est en construction et n’est pas encore déployée.';
+  'Créez votre organisation sur EventMaster pour gérer invitations, RSVP, plans de salle, marketplace (salles, prestataires et locations) et protocole QR sur le web. L’application mobile est en construction et n’est pas encore déployée.';
 
 export interface FaqItem {
   id: string;
@@ -50,7 +50,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'what-is-eventmaster',
     question: 'Qu\'est-ce qu\'EventMaster ?',
     answer:
-      'EventMaster est une plateforme SaaS web qui centralise la gestion d\'événements : invitations et RSVP, plans de salle 2D, protocole QR, marketplace (favoris, simulation de budget, packs et réservations), fil d\'actualité et gestion d\'équipe. Un compte client permet de chercher salle et prestataires sans créer d’événements. Chaque organisation dispose de son propre espace isolé. L\'application mobile native est en construction et n\'est pas encore déployée.',
+      'EventMaster est une plateforme SaaS web qui centralise la gestion d\'événements : invitations et RSVP, plans de salle 2D, protocole QR, marketplace (salles, prestataires métiers et locations — habits, voitures, motos, matériel —, favoris, simulation de budget, packs, partage de recherche ou de fiche, réservations), fil d\'actualité et gestion d\'équipe. Un compte client permet de chercher salle et prestataires sans créer d’événements. Chaque organisation dispose de son propre espace isolé. L\'application mobile native est en construction et n\'est pas encore déployée.',
   },
   {
     id: 'mobile-app',
@@ -74,7 +74,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'marketplace-venues',
     question: 'Puis-je trouver une salle ou un prestataire sur EventMaster ?',
     answer:
-      'Oui. Le marketplace liste les salles, les prestations (traiteur, photo, DJ, déco…) et les événements publics, avec photos, vidéos, carte (grille ou liste). Sans compte, vous parcourez le catalogue. Pour un devis, un billet ou une réservation, vous pouvez créer un compte client (gratuit) — les champs sont préremplis — ou continuer en invité. L’acompte (30 %) se verse au professionnel, hors EventMaster.',
+      'Oui. Le marketplace liste les salles (avec plan 2D), les prestations (traiteur, photo, DJ, déco…), les locations (habits homme / femme / enfant, voitures, motos, matériel) et les événements publics, avec photos, carte, grille ou liste. Sans compte, vous parcourez le catalogue. Le bouton Partager copie l’URL de votre recherche (filtres inclus) ou le lien public d’une fiche. Pour un devis, un billet ou une réservation, vous pouvez créer un compte client (gratuit) — les champs sont préremplis — ou continuer en invité. L’acompte (30 %) se verse au professionnel, hors EventMaster.',
   },
   {
     id: 'marketplace-booking',
@@ -86,7 +86,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'client-account',
     question: 'Je cherche seulement une salle ou un prestataire : dois-je payer un abonnement ?',
     answer:
-      'Non. Le compte client n’exige pas de licence SaaS. Après inscription, ouvrez Marketplace dans le tableau de bord : explorer le catalogue, enregistrer des favoris (grille ou liste), préparer un événement selon votre budget et sauvegarder un pack. Pour organiser une fête ou publier vos offres, changez le type de compte dans Mon compte, puis choisissez un forfait.',
+      'Non. Le compte client n’exige pas de licence SaaS. Après inscription, ouvrez Marketplace dans le tableau de bord : explorer le catalogue (salles, métiers, locations), enregistrer des favoris (grille ou liste), partager une recherche ou une fiche, préparer un événement selon votre budget et sauvegarder un pack. Pour organiser une fête ou publier vos offres, changez le type de compte dans Mon compte, puis choisissez un forfait.',
   },
   {
     id: 'event-packs',

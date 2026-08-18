@@ -119,13 +119,13 @@ export default function LandingWorkflowSection() {
             Trouver salle et prestataires selon votre budget
           </h2>
           <p className="text-sm text-muted leading-relaxed">
-            Compte client : pas d’événements à créer. Vous explorez, enregistrez, simulez, puis réservez.
+            Compte client : pas d’événements à créer. Vous explorez (salles, prestations et locations), enregistrez, simulez, partagez, puis réservez.
           </p>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {[
-            { step: 1, title: 'Explorer', description: 'Salles et prestataires filtrés par ville, prix et type d’événement.', icon: LayoutGrid },
-            { step: 2, title: 'Favoris', description: 'Gardez les fiches qui vous plaisent, en grille ou en liste.', icon: Heart },
+            { step: 1, title: 'Explorer', description: 'Salles, métiers et locations (habits, voitures, motos, matériel), filtrés par ville, prix et type. Grille, liste ou carte. Partagez l’URL de votre recherche.', icon: LayoutGrid },
+            { step: 2, title: 'Favoris', description: 'Gardez les fiches qui vous plaisent, en grille ou en liste, puis ouvrez-les ou partagez-les.', icon: Heart },
             { step: 3, title: 'Packs budget', description: 'Indiquez le montant et le type (mariage, gala…). Trois propositions distinctes, à ajuster ou à sauvegarder.', icon: Wallet },
             { step: 4, title: 'Réserver', description: 'Devis ou demande de date. L’acompte (30 %) se verse au professionnel, hors EventMaster.', icon: CalendarCheck },
           ].map((item, index) => {
@@ -163,7 +163,7 @@ export default function LandingWorkflowSection() {
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {[
-            { step: 1, title: 'Publier', description: 'Créez vos fiches (photos, tarif, ville, rayon), en grille ou liste, puis publiez-les.', icon: LayoutGrid },
+            { step: 1, title: 'Publier', description: 'Créez vos fiches (photos, tarif, ville, rayon) : métiers ou locations (habits, véhicules, matériel). Grille ou liste, puis publiez.', icon: LayoutGrid },
             { step: 2, title: 'Devis', description: 'Les demandes arrivent dans Demandes. Contactez le client, puis convertissez si une date est indiquée.', icon: MessageSquare },
             { step: 3, title: 'Acompte', description: 'Acceptez la réservation. Le client verse 30 % hors EventMaster ; vous marquez l’acompte reçu.', icon: Wallet },
             { step: 4, title: 'Confirmer', description: 'Bloquez la date au calendrier. La commission 8 % est due sur les réservations confirmées.', icon: CalendarCheck },

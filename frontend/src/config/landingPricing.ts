@@ -787,12 +787,12 @@ export const ROLE_HIGHLIGHTS = [
   },
   {
     title: 'Prestataire',
-    description: 'Publie ses prestations (traiteur, photo, DJ…) sans limite de fiches dès l’abonnement Prestataire payé. Forfait Prestataire ou Salle & presta.',
+    description: 'Publie métiers (traiteur, photo, DJ…) et locations (habits, voitures, motos, matériel), sans limite de fiches dès l’abonnement Prestataire payé. Forfait Prestataire ou Salle & presta.',
     icon: 'briefcase',
   },
   {
     title: 'Client marketplace',
-    description: 'Cherche une salle ou un prestataire : favoris, simulation de budget (packs économique / équilibré / confort) et suivi des réservations, sans créer d’événement.',
+    description: 'Cherche une salle, un métier ou une location : favoris, partage d’une recherche ou d’une fiche, simulation de budget (packs économique / équilibré / confort) et suivi des réservations, sans créer d’événement.',
     icon: 'heart',
   },
   {
@@ -825,7 +825,7 @@ export const PLATFORM_PILLARS = [
   },
   {
     title: 'Marketplace salles & prestas',
-    description: 'Fiches publiques, favoris, préparation d’événement par budget (packs) et réservation de dates. Commission vendeur 8 %, acompte hors plateforme.',
+    description: 'Salles (plan 2D), métiers et locations (habits, voitures, motos, matériel). Favoris, partage d’une recherche ou d’une fiche, packs budget et réservation de dates. Commission vendeur 8 %, acompte hors plateforme.',
     icon: 'calendar',
   },
   {

@@ -78,7 +78,7 @@ export default function LandingRolesSection() {
               Une plateforme complète
             </h2>
             <p className="text-sm text-muted">
-              De la conception de salle au scan QR, en passant par le marketplace client (favoris, packs budget) et les réservations.
+              De la conception de salle au scan QR, en passant par le marketplace (salles, métiers, locations, favoris, packs, partage) et les réservations.
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
