@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import {
   Building2, Plus, Trash2, Users, UserPlus, CheckCircle2,
   ChevronLeft, ChevronRight, LayoutGrid, Theater, Tent, Presentation, Edit3, Sparkles, Ruler,
-  Globe, GlobeLock, Lock,
+  Globe, GlobeLock, Lock, Eye,
 } from 'lucide-react';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import RoomLayoutEditor from '@/components/RoomLayoutEditor';
@@ -150,6 +150,7 @@ export default function RoomsManagement() {
   const [layoutParams, setLayoutParams] = useState<LayoutParams>(defaultParams.BANQUET);
   const [blueprintDraft, setBlueprintDraft] = useState<RoomLayoutBlueprint | null>(null);
   const [editingRoom, setEditingRoom] = useState<RoomItem | null>(null);
+  const [viewingRoom, setViewingRoom] = useState<RoomItem | null>(null);
   const [editBlueprint, setEditBlueprint] = useState<RoomLayoutBlueprint | null>(null);
   const [editMeta, setEditMeta] = useState({ name: '', floor: '', location: '', description: '' });
   const [savingLayout, setSavingLayout] = useState(false);
@@ -1043,7 +1044,21 @@ export default function RoomsManagement() {
             const metaLine = [room.floor, room.location, room.capacity ? `${room.capacity} places` : null]
               .filter(Boolean)
               .join(' · ') || 'Sans détails';
-            const actions = canManage ? (
+            const actions = (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setViewingRoom(room)}
+                  className={cn(
+                    roomsViewMode === 'list'
+                      ? 'inline-flex items-center'
+                      : 'p-2 text-muted hover:text-primary hover:bg-surface-muted rounded-[var(--radius-button)]',
+                  )}
+                  title="Voir les détails"
+                >
+                  {roomsViewMode === 'list' ? <ListRowAction>Détails</ListRowAction> : <Eye className="w-4 h-4" />}
+                </button>
+                {canManage ? (
               <>
                 {canCatalogPublish && (
                 <button
@@ -1075,7 +1090,9 @@ export default function RoomsManagement() {
                   <Trash2 className="w-4 h-4" />
                 </button>
               </>
-            ) : undefined;
+                ) : null}
+              </>
+            );
 
             return (
               <div key={room.id} className="space-y-2">
@@ -1083,6 +1100,17 @@ export default function RoomsManagement() {
                   id={room.id}
                   title={room.name}
                   layout={roomsViewMode}
+                  onClick={() => setViewingRoom(room)}
+                  cover={
+                    roomsViewMode === 'list' && room.layoutBlueprint ? (
+                      <RoomLayoutPreview
+                        blueprint={room.layoutBlueprint as RoomLayoutBlueprint}
+                        quality="thumb"
+                        showMeta={false}
+                        className="!space-y-0 h-full w-full [&_.em-floor-canvas]:rounded-none [&_.em-floor-canvas]:border-0 [&_.em-floor-canvas]:h-full"
+                      />
+                    ) : undefined
+                  }
                   meta={
                     roomsViewMode === 'list' ? (
                       <span>{metaLine}</span>
@@ -1117,10 +1145,12 @@ export default function RoomsManagement() {
                   actions={actions}
                 >
                   {roomsViewMode === 'grid' && room.layoutBlueprint && (
-                    <div className="max-h-28 overflow-hidden rounded-md border border-border bg-surface-muted [&_.aspect-\[4\/3\]]:aspect-auto [&_.aspect-\[4\/3\]]:h-24">
+                    <div className="max-h-32 overflow-hidden rounded-md border border-border bg-surface-muted [&_.aspect-\[4\/3\]]:aspect-auto [&_.aspect-\[4\/3\]]:h-28">
                       <RoomLayoutPreview
                         blueprint={room.layoutBlueprint as RoomLayoutBlueprint}
-                        className="!space-y-0 [&_>div:first-child]:hidden"
+                        quality="thumb"
+                        showMeta={false}
+                        className="!space-y-0"
                       />
                     </div>
                   )}
@@ -1212,6 +1242,88 @@ export default function RoomsManagement() {
           itemLabel="salles"
         />
       )}
+
+      <Modal
+        open={Boolean(viewingRoom)}
+        onClose={() => setViewingRoom(null)}
+        title={viewingRoom ? viewingRoom.name : 'Détails de la salle'}
+        description={viewingRoom ? [roomTypeLabels[viewingRoom.roomType || 'SIMPLE'], viewingRoom.floor, viewingRoom.location].filter(Boolean).join(' · ') : undefined}
+        size="xl"
+        footer={
+          <div className="flex w-full justify-between gap-2">
+            <Button type="button" variant="secondary" size="sm" onClick={() => setViewingRoom(null)}>
+              Fermer
+            </Button>
+            {canManage && viewingRoom && (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  const room = viewingRoom;
+                  setViewingRoom(null);
+                  openEditLayout(room);
+                }}
+                leftIcon={<Edit3 className="w-4 h-4" />}
+              >
+                Modifier le plan
+              </Button>
+            )}
+          </div>
+        }
+      >
+        {viewingRoom && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2">
+                <p className="text-[10px] font-bold uppercase text-muted">Type</p>
+                <p className="font-semibold text-foreground">{roomTypeLabels[viewingRoom.roomType || 'SIMPLE']}</p>
+              </div>
+              <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2">
+                <p className="text-[10px] font-bold uppercase text-muted">Capacité</p>
+                <p className="font-semibold text-foreground">
+                  {viewingRoom.layoutBlueprint?.metadata?.totalSeats || viewingRoom.capacity || '—'} places
+                </p>
+              </div>
+              <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2">
+                <p className="text-[10px] font-bold uppercase text-muted">Dimensions</p>
+                <p className="font-semibold text-foreground">
+                  {viewingRoom.layoutBlueprint
+                    ? `${viewingRoom.layoutBlueprint.canvas.widthM}×${viewingRoom.layoutBlueprint.canvas.heightM} m`
+                    : '—'}
+                </p>
+              </div>
+              <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2">
+                <p className="text-[10px] font-bold uppercase text-muted">Staff</p>
+                <p className="font-semibold text-foreground">{viewingRoom.staff.length}</p>
+              </div>
+            </div>
+            {viewingRoom.description && (
+              <p className="text-sm text-muted leading-relaxed">{viewingRoom.description}</p>
+            )}
+            <div className="border border-border rounded-[var(--radius-card)] p-3 sm:p-4 bg-surface">
+              <h3 className="text-sm font-semibold mb-2">Rendu de la salle</h3>
+              <RoomLayoutPreview
+                blueprint={viewingRoom.layoutBlueprint}
+                quality="showcase"
+                showDepthControls
+              />
+            </div>
+            {viewingRoom.staff.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted flex items-center gap-1">
+                  <Users className="w-3.5 h-3.5" /> Staff
+                </p>
+                {viewingRoom.staff.map((s) => (
+                  <div key={s.id} className="flex items-center justify-between text-xs bg-surface-muted rounded-[var(--radius-button)] px-2.5 py-1.5">
+                    <span className="font-medium text-foreground">{s.user.name || s.user.email}</span>
+                    <span className="text-[10px] font-semibold uppercase text-primary">{roleLabels[s.staffRole]}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
 
       <Modal
         open={Boolean(editingRoom && editBlueprint)}

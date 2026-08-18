@@ -137,6 +137,8 @@ export interface RoomLayoutBlueprint {
     customThemes?: import('@/lib/roomThemeUtils').CustomRoomTheme[];
     customTemplates?: SavedRoomTemplate[];
     depthView?: boolean;
+    /** 0 = vue à plat, 100 = perspective 2,5D maximale. */
+    depthAmount?: number;
   };
 }
 
@@ -615,6 +617,7 @@ function mergeTemplateStyle(
       floorType: previous.metadata.floorType,
       floorImageUrl: previous.metadata.floorImageUrl,
       depthView: previous.metadata.depthView,
+      depthAmount: previous.metadata.depthAmount,
       defaultTableColor: previous.metadata.defaultTableColor,
     },
   });

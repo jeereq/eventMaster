@@ -133,18 +133,46 @@ export function resolveFloorStyle(
   return getFloorPatternStyle(floorType ?? 'parquet', accentColor);
 }
 
-/** Échelle / luminosité selon la profondeur (haut = fond de salle). */
-export function depthScaleForY(yPct: number, enabled: boolean): number {
-  if (!enabled) return 1;
-  const t = Math.min(1, Math.max(0, yPct / 100));
-  return 0.76 + t * 0.3;
+/** 0 = plat, 100 = perspective 2,5D max. `depthView` historique = 55. */
+export function resolveDepthAmount(meta?: {
+  depthView?: boolean;
+  depthAmount?: number;
+} | null): number {
+  if (typeof meta?.depthAmount === 'number' && !Number.isNaN(meta.depthAmount)) {
+    return Math.max(0, Math.min(100, Math.round(meta.depthAmount)));
+  }
+  return meta?.depthView ? 55 : 0;
 }
 
-export function furnitureDepthStyle(yPct: number, enabled: boolean): React.CSSProperties {
-  if (!enabled) return {};
+export function depthScaleForY(yPct: number, amount: number): number {
+  if (amount <= 0) return 1;
   const t = Math.min(1, Math.max(0, yPct / 100));
+  const strength = amount / 100;
+  const far = 0.58;
+  const near = 1;
+  return 1 - (1 - (far + t * (near - far))) * strength;
+}
+
+export function furnitureDepthStyle(yPct: number, amount: number): React.CSSProperties {
+  if (amount <= 0) return {};
+  const t = Math.min(1, Math.max(0, yPct / 100));
+  const strength = amount / 100;
+  const brightness = 1 - (1 - (0.76 + t * 0.24)) * strength;
+  const shadowY = 2 + t * 16 * strength;
+  const shadowBlur = 6 + t * 22 * strength;
   return {
-    zIndex: Math.round(12 + t * 40),
-    filter: `brightness(${(0.86 + t * 0.16).toFixed(3)})`,
+    zIndex: Math.round(8 + t * 48),
+    filter: `brightness(${brightness.toFixed(3)})`,
+    ['--em-item-shadow' as string]: `0 ${shadowY.toFixed(1)}px ${shadowBlur.toFixed(1)}px rgba(12, 8, 4, ${0.18 + t * 0.28 * strength})`,
+  };
+}
+
+export function depthCanvasVars(amount: number): React.CSSProperties {
+  if (amount <= 0) return {};
+  return {
+    ['--em-depth-perspective' as string]: `${2100 - amount * 7}px`,
+    ['--em-depth-origin' as string]: `${84 + amount * 0.06}%`,
+    ['--em-depth-haze' as string]: String(amount / 100),
+    ['--em-depth-rotate' as string]: `${(amount / 100) * 38}deg`,
   };
 }

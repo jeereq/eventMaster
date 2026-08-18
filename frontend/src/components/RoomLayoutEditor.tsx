@@ -50,7 +50,7 @@ import { prependLayoutAction, LayoutActionEntry } from '@/lib/layoutActionLog';
 import { getSeatCoordinates, getTableVisualStyle } from '@/lib/tablePlanUtils';
 import { readImageFile } from '@/lib/imageCropUtils';
 import { applyRoomTheme, getRoomTheme, listAvailableThemes, RoomThemeId, type FloorType } from '@/lib/roomThemeUtils';
-import { depthScaleForY, floorTypeLabels, furnitureDepthStyle, resolveFloorStyle } from '@/lib/roomFloorUtils';
+import { depthCanvasVars, depthScaleForY, floorTypeLabels, furnitureDepthStyle, resolveDepthAmount, resolveFloorStyle } from '@/lib/roomFloorUtils';
 import CustomRoomThemePanel from '@/components/CustomRoomThemePanel';
 import { cn } from '@/lib/cn';
 
@@ -382,7 +382,7 @@ export default function RoomLayoutEditor({
  const activeTheme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
  const effectiveFloorType = blueprint.metadata.floorType ?? activeTheme.defaultFloorType;
  const availableThemes = listAvailableThemes(blueprint);
- const depthView = Boolean(blueprint.metadata.depthView);
+ const depthAmount = resolveDepthAmount(blueprint.metadata);
 
  const applyArrange = (preset: TableArrangePreset) => {
   const tables = blueprint.furniture.filter((item) => item.kind === 'table' && !item.locked);
@@ -396,11 +396,12 @@ export default function RoomLayoutEditor({
   });
  };
 
- const toggleDepthView = () => {
+ const setDepthAmount = (amount: number) => {
+  const next = Math.max(0, Math.min(100, Math.round(amount)));
   updateBlueprint({
     ...blueprint,
-    metadata: { ...blueprint.metadata, depthView: !depthView },
-  }, { message: depthView ? 'Vue à plat' : 'Vue en profondeur', kind: 'settings' });
+    metadata: { ...blueprint.metadata, depthAmount: next, depthView: next > 0 },
+  }, { message: next <= 0 ? 'Vue à plat' : `Profondeur 2D : ${next}%`, kind: 'settings' });
  };
 
  const outline = blueprint.roomOutline!;
@@ -430,7 +431,7 @@ export default function RoomLayoutEditor({
  {activeTheme.ambientOverlay && (
  <div className="absolute inset-0 pointer-events-none" style={{ background: activeTheme.ambientOverlay, opacity: 0.35 }} />
  )}
- {depthView && (
+ {depthAmount > 0 && (
  <div className="absolute inset-0 pointer-events-none em-floor-depth-haze" />
  )}
  <div
@@ -451,10 +452,10 @@ export default function RoomLayoutEditor({
  className={cn(
  'em-floor-canvas em-floor-canvas--photo relative w-full',
  className,
- depthView && 'em-floor-canvas--depth',
+ depthAmount > 0 && 'em-floor-canvas--depth',
  dragging && 'em-floor-canvas--dragging',
  )}
- style={floorStyle}
+ style={{ ...floorStyle, ...depthCanvasVars(depthAmount) }}
  >
  {renderRoomOutline()}
 
@@ -517,7 +518,12 @@ export default function RoomLayoutEditor({
  isDrag && 'z-40 scale-105 drop-shadow-md',
  !isSel && !isDrag && 'z-20',
  )}
- style={{ left: `${item.x}%`, top: `${item.y}%` }}
+ style={{
+ left: `${item.x}%`,
+ top: `${item.y}%`,
+ transform: isDrag ? undefined : `translate(-50%, -50%) scale(${depthScaleForY(item.y, depthAmount)})`,
+ ...(!isSel && !isDrag ? furnitureDepthStyle(item.y, depthAmount) : {}),
+ }}
  >
  <div
  className={cn(
@@ -540,7 +546,7 @@ export default function RoomLayoutEditor({
  const isDrag = dragging?.kind === 'table' && dragging.id === item.id;
  const tableColor = resolveTableColor(item.tableColor, blueprint.metadata.defaultTableColor);
  const { className: tableClass, style: tableStyle } = getTableVisualStyle(item.shape, isSel, tableColor, item.tableImageUrl);
- const depthScale = depthScaleForY(item.y, depthView);
+ const depthScale = depthScaleForY(item.y, depthAmount);
  return (
  <div
  key={item.id}
@@ -558,7 +564,7 @@ export default function RoomLayoutEditor({
  transform: isDrag
  ? undefined
  : `translate(-50%, -50%) scale(${depthScale})${item.rotation ? ` rotate(${item.rotation}deg)` : ''}`,
- ...(isSel || isDrag ? { zIndex: 50 } : furnitureDepthStyle(item.y, depthView)),
+ ...(isSel || isDrag ? { zIndex: 50 } : furnitureDepthStyle(item.y, depthAmount)),
  }}
  >
  <div
@@ -802,18 +808,23 @@ export default function RoomLayoutEditor({
  </button>
  ))}
  </div>
- <button
- type="button"
- onClick={toggleDepthView}
- className={`w-full inline-flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg border text-[10px] font-bold ${
- depthView
- ? 'bg-primary/10 border-primary/40 text-primary'
- : 'border-border text-muted hover:bg-white'
- }`}
- >
- <Eye className="w-3.5 h-3.5" />
- {depthView ? 'Profondeur activée' : 'Impression de profondeur'}
- </button>
+ <div className="space-y-1.5 pt-1">
+ <label className="flex items-center justify-between gap-2 text-[10px] font-bold text-muted">
+ <span className="inline-flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> Profondeur 2D</span>
+ <span className="tabular-nums">{depthAmount}%</span>
+ </label>
+ <input
+ type="range"
+ min={0}
+ max={100}
+ value={depthAmount}
+ onChange={(e) => setDepthAmount(Number(e.target.value))}
+ className="w-full accent-indigo-600"
+ />
+ <p className="text-[10px] text-muted leading-relaxed">
+ 0 = plan à plat · 100 = perspective 2,5D (avant plus grand, fond plus sombre).
+ </p>
+ </div>
  </div>
  <div className="p-4 bg-surface-muted rounded-xl border space-y-3">
  <p className="text-xs font-bold uppercase text-muted flex items-center gap-1"><Ruler className="w-3.5 h-3.5" /> Dimensions réelles</p>

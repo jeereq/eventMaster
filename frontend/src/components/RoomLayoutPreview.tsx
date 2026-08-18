@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
  RoomLayoutBlueprint,
  getRoomOutlineClipPath,
@@ -8,19 +8,71 @@ import {
  roomTypeLabels,
  ensureBlueprintDefaults,
 } from '@/lib/roomLayoutUtils';
-import { getTableVisualStyle } from '@/lib/tablePlanUtils';
+import { getSeatCoordinates, getTableVisualStyle } from '@/lib/tablePlanUtils';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
-import { depthScaleForY, furnitureDepthStyle, resolveFloorStyle } from '@/lib/roomFloorUtils';
+import {
+ depthCanvasVars,
+ depthScaleForY,
+ furnitureDepthStyle,
+ resolveDepthAmount,
+ resolveFloorStyle,
+} from '@/lib/roomFloorUtils';
 import ChairRenderer from '@/components/ChairRenderer';
 import FixtureRenderer from '@/components/FixtureRenderer';
+import { cn } from '@/lib/cn';
+
+export type RoomPreviewQuality = 'thumb' | 'standard' | 'showcase';
 
 interface RoomLayoutPreviewProps {
  blueprint: RoomLayoutBlueprint | null;
  className?: string;
+ quality?: RoomPreviewQuality;
+ showMeta?: boolean;
+ showDepthControls?: boolean;
 }
 
-export default function RoomLayoutPreview({ blueprint: rawBlueprint, className = '' }: RoomLayoutPreviewProps) {
- if (!rawBlueprint) {
+function DepthSlider({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+ return (
+ <label className="flex items-center gap-2 text-[10px] font-bold text-muted min-w-0">
+ <span className="shrink-0">Profondeur 2D</span>
+ <input
+ type="range"
+ min={0}
+ max={100}
+ value={value}
+ onChange={(e) => onChange(Number(e.target.value))}
+ className="flex-1 min-w-[80px] accent-indigo-600"
+ />
+ <span className="tabular-nums w-9 text-right">{value}%</span>
+ </label>
+ );
+}
+
+export default function RoomLayoutPreview({
+ blueprint: rawBlueprint,
+ className = '',
+ quality = 'standard',
+ showMeta,
+ showDepthControls,
+}: RoomLayoutPreviewProps) {
+ const showHeader = showMeta ?? quality !== 'thumb';
+ const showSlider = showDepthControls ?? quality === 'showcase';
+ const blueprint = rawBlueprint ? ensureBlueprintDefaults(rawBlueprint) : null;
+ const storedDepth = resolveDepthAmount(blueprint?.metadata);
+ const [localDepth, setLocalDepth] = useState(storedDepth || (quality === 'showcase' ? 58 : 0));
+
+ useEffect(() => {
+ const next = resolveDepthAmount(blueprint?.metadata) || (quality === 'showcase' ? 58 : 0);
+ setLocalDepth(next);
+ }, [blueprint?.metadata.depthAmount, blueprint?.metadata.depthView, quality]);
+
+ const canvasClass = useMemo(() => {
+ if (quality === 'thumb') return 'aspect-[4/3] h-full min-h-0';
+ if (quality === 'showcase') return 'aspect-[16/10] min-h-[260px] sm:min-h-[340px]';
+ return 'aspect-[4/3]';
+ }, [quality]);
+
+ if (!blueprint) {
  return (
  <div className={`aspect-[4/3] bg-surface-muted rounded-2xl border border-dashed border-border flex items-center justify-center text-xs text-muted ${className}`}>
  Aperçu indisponible
@@ -28,24 +80,50 @@ export default function RoomLayoutPreview({ blueprint: rawBlueprint, className =
  );
  }
 
- const blueprint = ensureBlueprintDefaults(rawBlueprint);
+ const amount = localDepth;
  const outline = blueprint.roomOutline;
  const clipPath = outline ? getRoomOutlineClipPath(outline.shape) : undefined;
  const theme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
  const floorType = blueprint.metadata.floorType ?? theme.defaultFloorType;
  const floorStyle = resolveFloorStyle(floorType, blueprint.metadata.floorImageUrl, theme.accentColor);
- const depthView = Boolean(blueprint.metadata.depthView);
+ const tilt = quality !== 'thumb' && amount > 6;
+ const rotate = tilt ? (amount / 100) * (quality === 'showcase' ? 38 : 26) : 0;
+ const chairLimit = quality === 'thumb' ? 0 : quality === 'standard' ? 10 : 24;
+ const chairRadius = quality === 'showcase' ? 50 : 36;
 
  return (
- <div className={`space-y-2 ${className}`}>
- <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted">
+ <div className={cn('space-y-2', className)}>
+ {showHeader && (
+ <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wider text-muted">
  <span>{roomTypeLabels[blueprint.roomType]} · {theme.name}</span>
  <span>{blueprint.metadata.totalSeats} places · {blueprint.canvas.widthM}×{blueprint.canvas.heightM} m</span>
  </div>
+ )}
+ {showSlider && (
+ <DepthSlider value={amount} onChange={setLocalDepth} />
+ )}
  <div
- className={`relative aspect-[4/3] border border-border rounded-2xl overflow-hidden em-floor-canvas em-floor-canvas--photo${depthView ? ' em-floor-canvas--depth' : ''}`}
- style={floorStyle}
+ className={cn(
+ 'relative border border-border rounded-2xl overflow-hidden em-floor-canvas em-floor-canvas--photo',
+ amount > 0 && 'em-floor-canvas--depth',
+ canvasClass,
+ )}
+ style={{ ...floorStyle, ...depthCanvasVars(amount) }}
  >
+ {amount > 0 && (
+ <div className="absolute inset-0 pointer-events-none em-floor-depth-haze z-[4]" />
+ )}
+ {tilt && (
+ <>
+ <div className="em-floor-side-fade em-floor-side-fade--left" style={{ opacity: amount / 140 }} />
+ <div className="em-floor-side-fade em-floor-side-fade--right" style={{ opacity: amount / 140 }} />
+ </>
+ )}
+ <div
+ className={cn('absolute inset-0 em-floor-scene', tilt && 'em-floor-scene--tilt')}
+ style={tilt ? { ['--em-depth-rotate' as string]: `${rotate}deg` } : undefined}
+ >
+ {tilt && <div className="em-floor-back-wall" style={{ height: `${10 + amount * 0.12}%`, opacity: 0.35 + amount / 220 }} />}
  {outline && (
  <div
  className="absolute pointer-events-none z-0 overflow-hidden"
@@ -64,12 +142,25 @@ export default function RoomLayoutPreview({ blueprint: rawBlueprint, className =
  {theme.ambientOverlay && (
  <div className="absolute inset-0" style={{ background: theme.ambientOverlay }} />
  )}
- {depthView && <div className="absolute inset-0 pointer-events-none em-floor-depth-haze" />}
  </div>
  )}
 
  {blueprint.fixtures.map((fixture) => (
- <FixtureRenderer key={fixture.id} fixture={fixture} />
+ <div
+ key={fixture.id}
+ className="absolute"
+ style={{
+ left: `${fixture.x}%`,
+ top: `${fixture.y}%`,
+ width: `${fixture.w}%`,
+ height: `${fixture.h}%`,
+ transform: tilt ? `rotateX(${-rotate}deg)` : undefined,
+ transformOrigin: '50% 100%',
+ ...furnitureDepthStyle(fixture.y, amount),
+ }}
+ >
+ <FixtureRenderer fixture={fixture} />
+ </div>
  ))}
 
  {blueprint.furniture.map((item) => {
@@ -86,20 +177,27 @@ export default function RoomLayoutPreview({ blueprint: rawBlueprint, className =
  }
 
  if (item.kind === 'row') {
+ const depthScale = depthScaleForY(item.y, amount);
  return (
  <div
  key={item.id}
  className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
- style={{ left: `${item.x}%`, top: `${item.y}%` }}
+ style={{
+ left: `${item.x}%`,
+ top: `${item.y}%`,
+ transform: `translate(-50%, -50%)${tilt ? ` rotateX(${-rotate}deg)` : ''} scale(${(quality === 'thumb' ? 0.4 : 0.85) * depthScale})`,
+ ...furnitureDepthStyle(item.y, amount),
+ }}
  >
- <div className="px-3 py-1.5 bg-white border border-border rounded-lg shadow-xs min-w-[72px] text-center">
- <p className="text-[8px] font-bold text-foreground truncate max-w-[80px]">{item.label}</p>
- <div className="flex justify-center gap-0.5 mt-1 flex-wrap max-w-[88px]">
- {Array.from({ length: Math.min(item.seatCount, 8) }).map((_, i) => (
- <ChairRenderer key={i} chairType={item.chairType} imageUrl={item.chairImageUrl} size="xs" />
+ <div className="px-3 py-1.5 bg-white/95 border border-border rounded-lg shadow-sm min-w-[72px] text-center">
+ <p className="text-[8px] font-bold text-foreground truncate max-w-[100px]">{item.label}</p>
+ {quality !== 'thumb' && (
+ <div className="flex justify-center gap-0.5 mt-1 flex-wrap max-w-[120px]">
+ {Array.from({ length: Math.min(item.seatCount, quality === 'showcase' ? 16 : 8) }).map((_, i) => (
+ <ChairRenderer key={i} chairType={item.chairType} imageUrl={item.chairImageUrl} size={quality === 'showcase' ? 'sm' : 'xs'} />
  ))}
- {item.seatCount > 8 && <span className="text-[7px] text-muted">+{item.seatCount - 8}</span>}
  </div>
+ )}
  </div>
  </div>
  );
@@ -107,30 +205,60 @@ export default function RoomLayoutPreview({ blueprint: rawBlueprint, className =
 
  const tableColor = resolveTableColor(item.tableColor, blueprint.metadata.defaultTableColor);
  const { className: tableClass, style: tableStyle } = getTableVisualStyle(item.shape, false, tableColor, item.tableImageUrl);
- const depthScale = depthScaleForY(item.y, depthView);
+ const depthScale = depthScaleForY(item.y, amount);
+ const baseScale = quality === 'thumb' ? 0.42 : quality === 'showcase' ? 0.92 : 0.62;
 
  return (
  <div
  key={item.id}
- className="absolute flex flex-col items-center gap-0.5"
+ className="absolute flex flex-col items-center"
  style={{
  left: `${item.x}%`,
  top: `${item.y}%`,
- transform: `translate(-50%, -50%) scale(${0.45 * depthScale})`,
- ...furnitureDepthStyle(item.y, depthView),
+ transform: `translate(-50%, -50%)${tilt ? ` rotateX(${-rotate}deg)` : ''} scale(${baseScale * depthScale})${item.rotation ? ` rotate(${item.rotation}deg)` : ''}`,
+ transformOrigin: '50% 80%',
+ ...furnitureDepthStyle(item.y, amount),
  }}
  >
- <div className={`${tableClass} origin-center flex items-center justify-center`} style={tableStyle} />
- <span className="text-[7px] font-bold text-muted bg-white/90 px-1 rounded">{item.name}</span>
- <div className="flex gap-0.5">
- {Array.from({ length: Math.min(item.capacity, 6) }).map((_, i) => (
- <ChairRenderer key={i} chairType={item.chairType} imageUrl={item.chairImageUrl} size="xs" />
- ))}
+ <div className="relative flex items-center justify-center" style={{ filter: amount > 0 ? 'drop-shadow(var(--em-item-shadow, 0 8px 12px rgba(0,0,0,0.25)))' : undefined }}>
+ <div className={`${tableClass} origin-center flex items-center justify-center`} style={tableStyle}>
+ {quality !== 'thumb' && (
+ <span className="text-[8px] font-bold drop-shadow-[0_1px_1px_rgba(255,255,255,0.85)] px-1 truncate max-w-[72px]">
+ {item.name}
+ </span>
+ )}
  </div>
+ {chairLimit > 0 &&
+ Array.from({ length: Math.min(item.capacity, chairLimit) }).map((_, seatIndex) => {
+ const coords = getSeatCoordinates(item.shape, item.capacity, seatIndex, chairRadius);
+ return (
+ <span
+ key={seatIndex}
+ className="absolute"
+ style={{
+ left: `calc(50% + ${coords.x}px)`,
+ top: `calc(50% + ${coords.y}px)`,
+ transform: 'translate(-50%, -50%)',
+ }}
+ >
+ <ChairRenderer chairType={item.chairType} imageUrl={item.chairImageUrl} size={quality === 'showcase' ? 'sm' : 'xs'} />
+ </span>
+ );
+ })}
+ </div>
+ {quality === 'thumb' && (
+ <span className="text-[6px] font-bold text-muted bg-white/90 px-0.5 rounded mt-0.5">{item.name}</span>
+ )}
  </div>
  );
  })}
  </div>
+ </div>
+ {quality === 'showcase' && (
+ <p className="text-[10px] text-muted leading-relaxed">
+ Rendu <span className="font-semibold text-foreground">2,5D</span> (perspective CSS, profondeur réglable). Un vrai 3D demanderait un moteur 3D, des modèles de mobilier et un éclairage de scène.
+ </p>
+ )}
  </div>
  );
 }

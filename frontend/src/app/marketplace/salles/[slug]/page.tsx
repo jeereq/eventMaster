@@ -122,8 +122,12 @@ export default function MarketplaceVenueDetailPage() {
 
             {venue.layoutPreview ? (
               <div className="border border-border rounded-[var(--radius-card)] p-3.5 sm:p-4 bg-surface">
-                <h2 className="text-sm font-semibold mb-3">Plan 2D</h2>
-                <RoomLayoutPreview blueprint={venue.layoutPreview as RoomLayoutBlueprint} />
+                <h2 className="text-sm font-semibold mb-3">Rendu de la salle</h2>
+                <RoomLayoutPreview
+                  blueprint={venue.layoutPreview as RoomLayoutBlueprint}
+                  quality="showcase"
+                  showDepthControls
+                />
               </div>
             ) : null}
 
