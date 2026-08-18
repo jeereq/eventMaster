@@ -14,7 +14,7 @@ export const SITE_CONTACT = {
 export const FOOTER_FEATURES = [
   'Invitations & RSVP multi-canal',
   'Plans de salle 2D & protocole QR web',
-  'Marketplace salles et prestataires',
+  'Marketplace : favoris, packs budget, réservations',
   'Application mobile (en construction)',
   'Espace isolé par organisation',
 ] as const;
@@ -32,7 +32,7 @@ export const FOOTER_RESOURCES = [
   { label: `Conditions d'utilisation (v${TERMS_VERSION})`, href: '/terms' },
   { label: `Politique de confidentialité (v${PRIVACY_VERSION})`, href: '/privacy' },
   { label: 'Connexion', href: '/login' },
-  { label: 'Créer mon organisation', href: '/register' },
+  { label: 'Compte client (favoris & packs)', href: '/register' },
 ] as const;
 
 export const FOOTER_BRAND_DESCRIPTION =
@@ -49,7 +49,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'what-is-eventmaster',
     question: 'Qu\'est-ce qu\'EventMaster ?',
     answer:
-      'EventMaster est une plateforme SaaS web qui centralise la gestion d\'événements : invitations et RSVP, plans de salle 2D, protocole QR dans le navigateur, marketplace de salles et prestataires (photos, vidéos, réservation de dates), fil d\'actualité, livre d\'or, modèles de messages et gestion d\'équipe. Chaque organisation dispose de son propre espace isolé. L\'application mobile native est en construction et n\'est pas encore déployée.',
+      'EventMaster est une plateforme SaaS web qui centralise la gestion d\'événements : invitations et RSVP, plans de salle 2D, protocole QR, marketplace (favoris, simulation de budget, packs et réservations), fil d\'actualité et gestion d\'équipe. Un compte client permet de chercher salle et prestataires sans créer d’événements. Chaque organisation dispose de son propre espace isolé. L\'application mobile native est en construction et n\'est pas encore déployée.',
   },
   {
     id: 'mobile-app',
@@ -67,13 +67,25 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'marketplace-venues',
     question: 'Puis-je trouver une salle ou un prestataire sur EventMaster ?',
     answer:
-      'Oui. Le marketplace liste les salles et prestations (traiteur, photo, DJ, déco…) que les organisations choisissent de publier, avec photos et vidéos. Vous pouvez demander un devis, ou — connecté avec une organisation — réserver une date. L’acompte (30 %) se verse directement au professionnel, hors EventMaster. À la confirmation, la date est bloquée et une salle peut être rattachée à l’événement. Pour proposer une offre : Salles ou Marketplace dans le tableau de bord.',
+      'Oui. Le marketplace liste les salles et prestations (traiteur, photo, DJ, déco…) publiées, avec photos, vidéos, carte et calendrier. Sans compte, vous parcourez le catalogue public. Avec un compte client, vous mettez des fiches en favoris, préparez un événement selon votre budget (trois packs) et suivez vos réservations dans le tableau de bord. Vous pouvez aussi demander un devis ou une date : l’acompte (30 %) se verse au professionnel, hors EventMaster.',
   },
   {
     id: 'marketplace-booking',
     question: 'Comment fonctionne la réservation et la commission marketplace ?',
     answer:
-      'Le professionnel accepte la demande, l’organisateur verse l’acompte hors plateforme, puis le professionnel marque l’acompte reçu et confirme. EventMaster n’encaisse pas l’acompte. Une commission de 8 % (due par le vendeur) s’applique aux réservations confirmées : elle est indépendante de l’abonnement SaaS et du réseau commercial.',
+      'Le professionnel accepte la demande, l’organisateur (ou le client) verse l’acompte hors plateforme, puis le professionnel marque l’acompte reçu et confirme : la date est alors bloquée. EventMaster n’encaisse pas l’acompte. Une commission de 8 % (due par le vendeur) s’applique aux réservations confirmées, indépendante de l’abonnement SaaS.',
+  },
+  {
+    id: 'client-account',
+    question: 'Je cherche seulement une salle ou un prestataire : dois-je payer un abonnement ?',
+    answer:
+      'Non. Le compte client n’exige pas de licence SaaS. Après inscription, ouvrez Marketplace dans le tableau de bord : explorer le catalogue, enregistrer des favoris (grille ou liste), préparer un événement selon votre budget et sauvegarder un pack. Pour organiser une fête ou publier vos offres, changez le type de compte dans Mon compte, puis choisissez un forfait.',
+  },
+  {
+    id: 'event-packs',
+    question: 'Comment fonctionne la préparation d’événement (packs) ?',
+    answer:
+      'Dans Marketplace → Préparer un événement, indiquez le type (mariage, anniversaire, gala…), le budget, la ville et le nombre d’invités. EventMaster propose trois packs distincts dans l’enveloppe : économique, équilibré et confort. Vous pouvez remplacer une ligne, cocher les métiers voulus, puis sauvegarder le pack. Un pack parfait se compose aussi à la main depuis vos favoris.',
   },
   {
     id: 'free-trial',

@@ -165,6 +165,7 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Facturation & plan', href: '/dashboard/billing' },
       { label: 'Factures', href: '/dashboard/invoices' },
       { label: 'Salles', href: '/dashboard/rooms' },
+      { label: 'Marketplace', href: '/dashboard/marketplace' },
       { label: 'Équipe', href: '/dashboard/team' },
       { label: 'Mon compte', href: '/dashboard/profile' },
     ],
@@ -200,12 +201,20 @@ export const USER_GUIDES: UserGuide[] = [
           '1. Ouvrez Facturation & plan.\n2. Comparez les quotas et fonctionnalités.\n3. Soumettez une demande de changement avec preuve de paiement si requis.\n4. Suivez le statut dans Factures après validation.',
         links: [{ label: 'Facturation & plan', href: '/dashboard/billing' }],
       },
+      {
+        id: 'marketplace-desk',
+        title: 'Publier une prestation et traiter les demandes',
+        content:
+          '1. Ouvrez Marketplace dans le menu.\n2. Onglet Prestations : créez une fiche (photos, tarif, ville, rayon), passez en grille ou liste, puis publiez.\n3. Onglet Demandes : marquez un devis comme contacté, ou convertissez-le en réservation s’il a une date.\n4. Onglet Réservations : acceptez, marquez l’acompte reçu (versé hors plateforme), puis confirmez pour bloquer la date.\n5. Filtrez par statut, type (salle / presta) et dates.',
+        links: [{ label: 'Marketplace', href: '/dashboard/marketplace' }],
+      },
     ],
     tips: [
       'Les quotas (événements, invités, modèles) sont visibles sur le tableau de bord.',
       'Les couleurs de l’organisation (Profil) s’appliquent à toute l’équipe ; l’accent personnel du header ne concerne que cet appareil.',
       'Assignez des protocoles org. pour le scan QR sur tous les événements.',
       'Configurez les salles avant de créer des événements avec plan de table.',
+      'La commission marketplace (8 %) est due par le vendeur, distincte de l’abonnement SaaS.',
     ],
   },
   {
@@ -232,6 +241,7 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Modèles', href: '/dashboard/templates' },
       { label: 'Factures', href: '/dashboard/invoices' },
       { label: 'Salles', href: '/dashboard/rooms' },
+      { label: 'Marketplace', href: '/dashboard/marketplace' },
       { label: 'Équipe', href: '/dashboard/team' },
       { label: 'Mon compte', href: '/dashboard/profile' },
     ],
@@ -259,6 +269,13 @@ export const USER_GUIDES: UserGuide[] = [
         content:
           '1. Ouvrez un événement → onglet Invités.\n2. Ajoutez ou importez la liste.\n3. Assignez les tables depuis le plan de salle.\n4. Envoyez l\'invitation — l\'invité reçoit un lien RSVP personnel.',
         links: [{ label: 'Événements', href: '/dashboard/events' }],
+      },
+      {
+        id: 'marketplace-desk',
+        title: 'Gérer prestations, devis et réservations',
+        content:
+          '1. Ouvrez Marketplace.\n2. Publiez ou mettez à jour vos prestations (vue grille ou liste, pagination).\n3. Traitez les demandes de devis (contacter, convertir en réservation).\n4. Dans Réservations, suivez l’étape suivante affichée sur chaque carte : accepter, acompte, confirmer.',
+        links: [{ label: 'Marketplace', href: '/dashboard/marketplace' }],
       },
     ],
     tips: [
@@ -389,12 +406,14 @@ export const USER_GUIDES: UserGuide[] = [
     title: 'Guide Client marketplace',
     badge: 'Client',
     summary:
-      'Vous réservez des salles et prestataires sans créer d’événements ni d’offres. Pour organiser une fête ou publier vos salles, changez le type de compte dans Mon compte.',
+      'Vous cherchez une salle ou des prestataires sans créer d’événements. Marketplace, favoris, packs budget et réservations sont dans votre tableau de bord. Pour organiser une fête ou publier vos offres, changez le type de compte dans Mon compte.',
     canDo: [
-      'Parcourir le marketplace (salles et prestataires)',
-      'Envoyer une demande de réservation de date',
-      'Suivre vos réservations dans l’espace client',
-      'Mettre à jour votre profil et passer organisateur ou prestataire',
+      'Explorer salles et prestataires dans le Marketplace du tableau de bord',
+      'Mettre des fiches en favoris (filtre salles / prestataires, vue grille ou liste)',
+      'Préparer un événement selon le budget et obtenir trois packs distincts',
+      'Sauvegarder un pack de recherche ou composer un pack parfait depuis les favoris',
+      'Demander un devis ou une date, puis suivre les réservations (filtres statut / dates)',
+      'Passer organisateur ou prestataire depuis Mon compte',
     ],
     cannotDo: [
       'Créer des événements, invitations ou plans de table',
@@ -402,18 +421,33 @@ export const USER_GUIDES: UserGuide[] = [
       'Souscrire un abonnement SaaS tant que le compte reste client',
     ],
     navLinks: [
-      { label: 'Marketplace', href: '/marketplace' },
+      { label: 'Marketplace', href: '/dashboard/catalogue' },
       { label: 'Mes réservations', href: '/dashboard/bookings' },
+      { label: 'Guide utilisateur', href: '/dashboard/guide' },
       { label: 'Mon compte', href: '/dashboard/profile' },
     ],
     workflows: [
       {
+        id: 'explore-favorites',
+        title: 'Explorer et enregistrer des favoris',
+        content:
+          '1. Ouvrez Marketplace (tableau de bord).\n2. Onglet Explorer : filtrez par ville, type, prix.\n3. Cliquez sur le cœur pour enregistrer une salle ou un prestataire.\n4. Onglet Favoris : filtrez salles / prestataires et passez en grille ou liste.',
+        links: [{ label: 'Marketplace', href: '/dashboard/catalogue' }],
+      },
+      {
+        id: 'prepare-event',
+        title: 'Préparer un événement et sauvegarder un pack',
+        content:
+          '1. Onglet Préparer un événement.\n2. Choisissez le type, le budget (min. 50 000 FC), la ville et le nombre d’invités.\n3. Cochez les métiers voulus, lancez la recherche.\n4. Comparez les packs économique, équilibré et confort ; remplacez une ligne si besoin.\n5. Sauvegarder ce pack, ou créez un pack parfait depuis Mes packs + vos favoris.',
+        links: [{ label: 'Marketplace', href: '/dashboard/catalogue?tab=plan' }],
+      },
+      {
         id: 'book-venue',
         title: 'Réserver une salle ou un prestataire',
         content:
-          '1. Ouvrez le Marketplace.\n2. Filtrez par ville, date ou catégorie.\n3. Envoyez une demande de date — le vendeur confirme hors plateforme pour l’acompte.\n4. Suivez le statut dans Mes réservations.',
+          '1. Ouvrez une fiche depuis Explorer, Favoris ou un pack.\n2. Envoyez un devis ou une demande de date.\n3. Versez l’acompte (30 %) directement au professionnel, hors EventMaster, après acceptation.\n4. Suivez le statut dans Mes réservations (filtres par statut, type et dates).',
         links: [
-          { label: 'Marketplace', href: '/marketplace' },
+          { label: 'Marketplace', href: '/dashboard/catalogue' },
           { label: 'Mes réservations', href: '/dashboard/bookings' },
         ],
       },
@@ -427,7 +461,8 @@ export const USER_GUIDES: UserGuide[] = [
     ],
     tips: [
       'Le compte client n’exige pas de licence SaaS.',
-      'La commission vendeur du marketplace est distincte de l’abonnement EventMaster.',
+      'Les trois packs d’une recherche évitent de proposer la même salle si le catalogue le permet.',
+      'La commission vendeur (8 %) est distincte de l’abonnement EventMaster ; vous ne la payez pas en tant que client.',
     ],
   },
   {

@@ -118,7 +118,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-marketplace': {
     title: 'Marketplace',
     description:
-      'Publiez vos prestations (traiteur, photo, DJ…), suivez les demandes et confirmez les réservations de dates.',
+      'Publiez vos prestations, suivez les devis, puis confirmez les réservations : accepter → acompte hors plateforme → bloquer la date.',
     route: '/dashboard/marketplace',
   },
   'nav-protocol': {
@@ -178,7 +178,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-bookings': {
     title: 'Mes réservations',
     description:
-      'Suivez les demandes de dates envoyées aux gestionnaires de salles et aux prestataires.',
+      'Suivez vos demandes de dates : filtrez par statut, type et période. L’acompte (30 %) se verse hors plateforme.',
     route: '/dashboard/bookings',
   },
 };
@@ -199,4 +199,3 @@ export const FINISH_STEP = {
   route: '/dashboard/guide?view=tour',
   target: 'nav-guide',
 } as const;
-""

@@ -791,6 +791,11 @@ export const ROLE_HIGHLIGHTS = [
     icon: 'briefcase',
   },
   {
+    title: 'Client marketplace',
+    description: 'Cherche une salle ou un prestataire : favoris, simulation de budget (packs économique / équilibré / confort) et suivi des réservations, sans créer d’événement.',
+    icon: 'heart',
+  },
+  {
     title: 'Commercial',
     description: 'Crée des organisations parrainées et suit ses commissions (30 % mensuel).',
     icon: 'briefcase',
@@ -820,6 +825,7 @@ export const PLATFORM_PILLARS = [
   },
   {
     title: 'Marketplace salles & prestas',
+    description: 'Fiches publiques, favoris, préparation d’événement par budget (packs) et réservation de dates. Commission vendeur 8 %, acompte hors plateforme.',
     icon: 'calendar',
   },
   {

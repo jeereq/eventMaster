@@ -10,6 +10,9 @@ import {
   FileText,
   LayoutGrid,
   ArrowRight,
+  Heart,
+  Wallet,
+  CalendarCheck,
 } from 'lucide-react';
 
 const STEPS = [
@@ -108,6 +111,45 @@ export default function LandingWorkflowSection() {
               ))}
             </div>
           </div>
+        </div>
+
+        <div className="mt-14 max-w-2xl mb-10 space-y-2">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted">Parcours client marketplace</p>
+          <h2 className="text-2xl font-semibold text-foreground tracking-tight">
+            Trouver salle et prestataires selon votre budget
+          </h2>
+          <p className="text-sm text-muted leading-relaxed">
+            Compte client : pas d’événements à créer. Vous explorez, enregistrez, simulez, puis réservez.
+          </p>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { step: 1, title: 'Explorer', description: 'Salles et prestataires filtrés par ville, prix et type d’événement.', icon: LayoutGrid },
+            { step: 2, title: 'Favoris', description: 'Gardez les fiches qui vous plaisent, en grille ou en liste.', icon: Heart },
+            { step: 3, title: 'Packs budget', description: 'Indiquez le montant et le type (mariage, gala…). Trois propositions distinctes, à ajuster ou à sauvegarder.', icon: Wallet },
+            { step: 4, title: 'Réserver', description: 'Devis ou demande de date. L’acompte (30 %) se verse au professionnel, hors EventMaster.', icon: CalendarCheck },
+          ].map((item, index) => {
+            const Icon = item.icon;
+            return (
+              <div key={item.step} className="relative">
+                {index < 3 && (
+                  <div className="hidden lg:flex absolute top-8 left-[calc(100%-0.25rem)] w-3 z-0 text-border">
+                    <ArrowRight className="w-4 h-4" />
+                  </div>
+                )}
+                <div className="relative z-10 bg-surface border border-border rounded-[var(--radius-card)] p-4 h-full">
+                  <div className="inline-flex items-center justify-center w-9 h-9 rounded-[var(--radius-button)] border border-border bg-surface-muted text-foreground mb-3">
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                    Étape {item.step}
+                  </span>
+                  <h3 className="font-semibold text-foreground text-sm mt-1 mb-1.5">{item.title}</h3>
+                  <p className="text-xs text-muted leading-relaxed">{item.description}</p>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>

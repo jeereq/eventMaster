@@ -1,10 +1,10 @@
 'use client';
 
 import React from 'react';
-import { Shield, ScanLine, Building2, Briefcase, Users, Mail, Lock, TrendingUp, LayoutGrid, Smartphone, CalendarCheck } from 'lucide-react';
+import { Shield, ScanLine, Building2, Briefcase, Users, Mail, Lock, TrendingUp, LayoutGrid, Smartphone, CalendarCheck, Heart } from 'lucide-react';
 import { ROLE_HIGHLIGHTS, PLATFORM_PILLARS } from '@/config/landingPricing';
 
-const roleIcons = { shield: Shield, scan: ScanLine, building: Building2, briefcase: Briefcase };
+const roleIcons = { shield: Shield, scan: ScanLine, building: Building2, briefcase: Briefcase, heart: Heart };
 const pillarIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   layout: LayoutGrid,
   qr: ScanLine,
@@ -28,7 +28,7 @@ export default function LandingRolesSection() {
                 Chaque rôle voit exactement ce qu&apos;il doit gérer
               </h2>
               <p className="text-sm text-muted leading-relaxed">
-                Propriétaire, managers, protocole, responsables de salle et commerciaux — sans mélanger les périmètres.
+                Propriétaire, managers, protocole, salles, prestataires et clients marketplace — sans mélanger les périmètres.
               </p>
               <div className="rounded-[var(--radius-card)] border border-border overflow-hidden text-xs">
                 <div className="grid grid-cols-3 bg-surface-muted border-b border-border font-semibold text-muted uppercase tracking-wider text-[10px]">
@@ -41,6 +41,7 @@ export default function LandingRolesSection() {
                   ['Protocole org.', 'Tous les invités', 'Non'],
                   ['Manager salle', 'Événements de la salle', 'Non'],
                   ['Protocole événement', 'Invités de l\'événement', 'Non'],
+                  ['Client marketplace', 'Favoris & réservations', 'Non'],
                   ['Commercial', 'Parrainage', 'N/A'],
                 ].map(([role, scope, create]) => (
                   <div key={role} className="grid grid-cols-3 border-b border-border last:border-0 bg-surface">
@@ -77,8 +78,7 @@ export default function LandingRolesSection() {
               Une plateforme complète
             </h2>
             <p className="text-sm text-muted">
-              De la conception de salle au scan QR, en passant par le marketplace et les réservations.
-              L’app mobile est en construction, pas encore déployée.
+              De la conception de salle au scan QR, en passant par le marketplace client (favoris, packs budget) et les réservations.
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">

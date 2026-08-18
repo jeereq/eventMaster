@@ -86,10 +86,10 @@ export default function Home() {
             </h1>
 
             <p className="text-[15px] sm:text-base text-muted leading-relaxed max-w-2xl">
-              EventMaster est la plateforme web pour les organisateurs, les salles et les prestataires
-              en RDC : invitations et RSVP, plan de table 2D, protocole QR le jour J, marketplace
-              avec photos et vidéos, puis réservation de dates. L’application mobile est en construction
-              et n’est pas encore déployée — aujourd’hui, tout se fait dans le navigateur.
+              EventMaster est la plateforme web pour les organisateurs, les salles, les prestataires
+              et les clients en RDC : invitations et RSVP, plan de table 2D, protocole QR le jour J,
+              marketplace (favoris, simulation de budget, packs) et réservation de dates. L’application
+              mobile est en construction — aujourd’hui, tout se fait dans le navigateur.
             </p>
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 pt-1">
@@ -161,17 +161,17 @@ export default function Home() {
               {
                 icon: Building2,
                 title: 'Salles du marketplace',
-                text: 'Fiches publiques avec photos, vidéos, carte, tarifs et calendrier des dates déjà réservées.',
+                text: 'Fiches publiques avec photos, vidéos, carte, tarifs et calendrier. Les clients peuvent les mettre en favoris.',
               },
               {
                 icon: Sparkles,
                 title: 'Prestataires',
-                text: 'Traiteur, photo, DJ, déco… Devis, médias, rayon d’intervention et réservation de date.',
+                text: 'Traiteur, photo, DJ, déco… Devis, médias, rayon d’intervention. Packs budget proposés selon le type d’événement.',
               },
               {
                 icon: CalendarCheck,
-                title: 'Réservations',
-                text: 'Demande, acompte hors plateforme (30 %), confirmation qui bloque la date. Commission vendeur 8 %.',
+                title: 'Réservations & packs',
+                text: 'Compte client : explorer, favoris, préparer un événement (éco / équilibré / confort) et sauvegarder un pack. Acompte 30 % hors plateforme, commission vendeur 8 %.',
               },
               {
                 icon: Users,
