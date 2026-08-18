@@ -13,6 +13,12 @@ import {
   updateBooking,
   convertInquiryToBooking,
 } from '../controllers/marketplaceBookingController';
+import {
+  listFavorites,
+  addFavorite,
+  removeFavorite,
+  planEvent,
+} from '../controllers/marketplaceClientController';
 
 const router = Router();
 
@@ -29,5 +35,9 @@ router.post('/inquiries/:id/book', convertInquiryToBooking);
 router.get('/bookings', listBookings);
 router.post('/bookings', createBooking);
 router.patch('/bookings/:id', updateBooking);
+router.get('/favorites', listFavorites);
+router.post('/favorites', addFavorite);
+router.delete('/favorites/:kind/:slug', removeFavorite);
+router.post('/event-plan', planEvent);
 
 export default router;

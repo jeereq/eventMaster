@@ -7,6 +7,7 @@ import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import { listStackClass } from '@/components/ui';
 import { Skeleton } from '@/components/ui/Skeleton';
+import FavoriteHeart from '@/components/FavoriteHeart';
 import { formatDistanceKm, formatQuotaLabel, serviceMobilityLabel, type CatalogueItem, type CatalogueViewMode } from '@/lib/marketplace';
 
 export const CATALOGUE_GRID_COLS = [2, 3, 4, 5] as const;
@@ -47,7 +48,17 @@ function KindBadge({ item }: { item: CatalogueItem }) {
   );
 }
 
-function GridCard({ item, compact }: { item: CatalogueItem; compact?: boolean }) {
+function GridCard({
+  item,
+  compact,
+  favorited,
+  onToggleFavorite,
+}: {
+  item: CatalogueItem;
+  compact?: boolean;
+  favorited?: boolean;
+  onToggleFavorite?: (item: CatalogueItem) => void;
+}) {
   const isService = item.kind === 'service';
   return (
     <Link
@@ -60,8 +71,17 @@ function GridCard({ item, compact }: { item: CatalogueItem; compact?: boolean })
         <div className="absolute top-2.5 left-2.5">
           <KindBadge item={item} />
         </div>
-        {formatDistanceKm(item.distanceKm) ? (
+        {onToggleFavorite ? (
+          <div className="absolute top-2.5 right-2.5 z-10">
+            <FavoriteHeart active={Boolean(favorited)} onToggle={() => onToggleFavorite(item)} />
+          </div>
+        ) : formatDistanceKm(item.distanceKm) ? (
           <span className="absolute top-2.5 right-2.5 rounded-full bg-black/55 text-white text-[10px] font-semibold px-2 py-0.5">
+            {formatDistanceKm(item.distanceKm)}
+          </span>
+        ) : null}
+        {onToggleFavorite && formatDistanceKm(item.distanceKm) ? (
+          <span className="absolute bottom-[3.4rem] right-2.5 rounded-full bg-black/55 text-white text-[10px] font-semibold px-2 py-0.5">
             {formatDistanceKm(item.distanceKm)}
           </span>
         ) : null}
@@ -108,7 +128,15 @@ function GridCard({ item, compact }: { item: CatalogueItem; compact?: boolean })
   );
 }
 
-function ListRow({ item }: { item: CatalogueItem }) {
+function ListRow({
+  item,
+  favorited,
+  onToggleFavorite,
+}: {
+  item: CatalogueItem;
+  favorited?: boolean;
+  onToggleFavorite?: (item: CatalogueItem) => void;
+}) {
   return (
     <Link
       href={item.href}
@@ -136,11 +164,16 @@ function ListRow({ item }: { item: CatalogueItem }) {
           <p className="text-[11px] font-semibold text-primary">{formatDistanceKm(item.distanceKm)}</p>
         ) : null}
       </div>
-      <div className="shrink-0 text-right">
-        <span className="text-sm font-semibold text-foreground">
-          {item.priceFromFc != null ? `Dès ${formatFc(item.priceFromFc)}` : 'Sur devis'}
-        </span>
-        <span className="block text-[11px] text-muted">{item.priceUnitLabel}</span>
+      <div className="shrink-0 flex items-center gap-2">
+        {onToggleFavorite ? (
+          <FavoriteHeart active={Boolean(favorited)} onToggle={() => onToggleFavorite(item)} />
+        ) : null}
+        <div className="text-right">
+          <span className="text-sm font-semibold text-foreground">
+            {item.priceFromFc != null ? `Dès ${formatFc(item.priceFromFc)}` : 'Sur devis'}
+          </span>
+          <span className="block text-[11px] text-muted">{item.priceUnitLabel}</span>
+        </div>
       </div>
     </Link>
   );
@@ -152,12 +185,16 @@ export default function CatalogueResults({
   emptyTitle,
   emptyDescription,
   gridCols = 4,
+  isFavorite,
+  onToggleFavorite,
 }: {
   items: CatalogueItem[];
   mode: Exclude<CatalogueViewMode, 'map' | 'focus'>;
   emptyTitle: string;
   emptyDescription: string;
   gridCols?: CatalogueGridCols;
+  isFavorite?: (item: CatalogueItem) => boolean;
+  onToggleFavorite?: (item: CatalogueItem) => void;
 }) {
   if (items.length === 0) {
     return (
@@ -173,7 +210,12 @@ export default function CatalogueResults({
     return (
       <div className={listStackClass}>
         {items.map((item) => (
-          <ListRow key={item.id} item={item} />
+          <ListRow
+            key={item.id}
+            item={item}
+            favorited={isFavorite?.(item)}
+            onToggleFavorite={onToggleFavorite}
+          />
         ))}
       </div>
     );
@@ -184,7 +226,13 @@ export default function CatalogueResults({
   return (
     <div className={GRID_CLASS[cols]}>
       {items.map((item) => (
-        <GridCard key={item.id} item={item} compact={cols >= 5} />
+        <GridCard
+          key={item.id}
+          item={item}
+          compact={cols >= 5}
+          favorited={isFavorite?.(item)}
+          onToggleFavorite={onToggleFavorite}
+        />
       ))}
     </div>
   );

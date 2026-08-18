@@ -98,6 +98,7 @@ export default function ListingDetailLayout({
   booking,
   preview,
   embedded,
+  heroAction,
 }: {
   backHref: string;
   backLabel: string;
@@ -125,6 +126,7 @@ export default function ListingDetailLayout({
   preview?: boolean;
   /** Dans le dashboard : pas de second `main.page-container`. */
   embedded?: boolean;
+  heroAction?: React.ReactNode;
 }) {
   const router = useRouter();
   const [mobileAction, setMobileAction] = useState<'inquire' | 'book'>('inquire');
@@ -208,6 +210,9 @@ export default function ListingDetailLayout({
                   </div>
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+                {heroAction ? (
+                  <div className="absolute top-3 right-3 z-10">{heroAction}</div>
+                ) : null}
                 <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6 text-white space-y-1">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-white/80">{chip}</p>
                   <h1 className="text-xl sm:text-3xl font-display font-semibold tracking-tight drop-shadow leading-tight">

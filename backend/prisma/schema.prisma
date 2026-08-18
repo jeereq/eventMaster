@@ -189,6 +189,7 @@ model User {
   commercialCommissions CommercialCommission[]
   platformNotifications PlatformNotification[]
   pushDeviceTokens      PushDeviceToken[]
+  listingFavorites      ListingFavorite[]
 }
 
 model Event {
@@ -607,6 +608,19 @@ model ServiceOffering {
 
   @@index([isPublic, category])
   @@index([tenantId])
+}
+
+model ListingFavorite {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /** venue | service */
+  kind      String
+  slug      String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, kind, slug])
+  @@index([userId])
 }
 
 model RoomStaff {

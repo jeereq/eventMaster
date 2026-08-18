@@ -24,12 +24,17 @@ import {
 } from '@/lib/marketplace';
 import { roomTypeLabels, type RoomLayoutBlueprint, type RoomType } from '@/lib/roomLayoutUtils';
 import type { MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
+import MarketplaceInquiryForm from '@/components/MarketplaceInquiryForm';
+import MarketplaceBookingForm from '@/components/MarketplaceBookingForm';
+import FavoriteHeart from '@/components/FavoriteHeart';
+import { useListingFavorites } from '@/lib/listingFavorites';
 import { Building2, MapPin, Navigation, Sparkles, Users } from 'lucide-react';
 
 export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'service' }) {
   const params = useParams();
   const slug = params.slug as string;
-  const { user } = useAuth();
+  const { user, tenant, access } = useAuth();
+  const { isFavorite, toggleFavorite } = useListingFavorites();
   const mapRef = useRef<MarketplaceMapHandle>(null);
   const [venue, setVenue] = useState<PublicVenue | null>(null);
   const [service, setService] = useState<PublicService | null>(null);
@@ -70,11 +75,14 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
   };
 
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const isClient = tenant?.accountKind === 'CLIENT' || access?.level === 'client';
   const defaultBackHref = isSuperAdmin
     ? '/dashboard/admin/catalogue'
-    : kind === 'venue'
-      ? '/dashboard/rooms'
-      : '/dashboard/marketplace';
+    : isClient
+      ? '/dashboard/catalogue'
+      : kind === 'venue'
+        ? '/dashboard/rooms'
+        : '/dashboard/marketplace';
   const [backHref, setBackHref] = useState(defaultBackHref);
 
   useEffect(() => {
@@ -82,13 +90,15 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
   }, [defaultBackHref]);
   const backLabel = backHref.startsWith('/dashboard/admin/catalogue')
     ? 'Catalogue'
-    : backHref.startsWith('/dashboard/rooms')
-      ? 'Salles'
-      : backHref.startsWith('/dashboard/bookings')
-        ? 'Réservations'
-        : backHref.startsWith('/dashboard/marketplace')
-          ? 'Prestations'
-          : 'Retour';
+    : backHref.startsWith('/dashboard/catalogue')
+      ? 'Marketplace'
+      : backHref.startsWith('/dashboard/rooms')
+        ? 'Salles'
+        : backHref.startsWith('/dashboard/bookings')
+          ? 'Réservations'
+          : backHref.startsWith('/dashboard/marketplace')
+            ? 'Prestations'
+            : 'Retour';
 
   const item = venue
     ? withDashboardListingHref(venueToCatalogueItem(venue))
@@ -134,7 +144,14 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
       priceFromFc={(venue?.priceFromFc ?? service?.priceFromFc) ?? null}
       priceUnitLabel={venue?.priceUnitLabel || service?.priceUnitLabel}
       quotaLabel={quotaLabel}
-      preview
+      preview={!isClient}
+      heroAction={isClient && slug ? (
+        <FavoriteHeart
+          active={isFavorite(kind, slug)}
+          onToggle={() => void toggleFavorite(kind, slug)}
+          className="h-10 w-10 bg-white/95"
+        />
+      ) : undefined}
       details={item ? (
         <div className="space-y-5">
           {!isPublic && (
@@ -238,6 +255,56 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
         ) : (
           <p className="text-sm text-muted">Aucune position n’a encore été indiquée pour cette fiche.</p>
         )
+      ) : null}
+      inquiry={isClient && venue ? (
+        <MarketplaceInquiryForm
+          endpoint={`/public/venues/${encodeURIComponent(venue.slug)}/inquire`}
+          successCopy="Demande transmise au propriétaire."
+          eventDate={pickedDate}
+          onEventDateChange={(value) => {
+            setPickedDate(value);
+            setPickedEndDate(value);
+          }}
+        />
+      ) : isClient && service ? (
+        <MarketplaceInquiryForm
+          endpoint={`/public/services/${encodeURIComponent(service.slug)}/inquire`}
+          successCopy="Demande transmise au prestataire."
+          eventDate={pickedDate}
+          onEventDateChange={(value) => {
+            setPickedDate(value);
+            setPickedEndDate(value);
+          }}
+        />
+      ) : null}
+      booking={isClient && venue ? (
+        <MarketplaceBookingForm
+          listingSlug={venue.slug}
+          unavailableDates={venue.unavailableDates}
+          bookedDates={venue.bookedDates}
+          blockedDates={venue.blockedDates}
+          priceFromFc={venue.priceFromFc}
+          priceUnit={venue.priceUnit}
+          eventDate={pickedDate}
+          eventEndDate={pickedEndDate}
+          onEventDateChange={setPickedDate}
+          onEventEndDateChange={setPickedEndDate}
+          showCalendar={false}
+        />
+      ) : isClient && service ? (
+        <MarketplaceBookingForm
+          offeringSlug={service.slug}
+          unavailableDates={service.unavailableDates}
+          bookedDates={service.bookedDates}
+          blockedDates={service.blockedDates}
+          priceFromFc={service.priceFromFc}
+          priceUnit={service.priceUnit}
+          eventDate={pickedDate}
+          eventEndDate={pickedEndDate}
+          onEventDateChange={setPickedDate}
+          onEventEndDateChange={setPickedEndDate}
+          showCalendar={false}
+        />
       ) : null}
     />
   );

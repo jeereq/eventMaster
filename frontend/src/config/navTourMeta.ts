@@ -172,8 +172,8 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-catalogue': {
     title: 'Marketplace',
     description:
-      'Parcourez les salles et prestataires publics, filtrez par lieu et envoyez une demande de date.',
-    route: '/marketplace',
+      'Parcourez les salles et prestataires, mettez-les en favoris et préparez un événement selon votre budget.',
+    route: '/dashboard/catalogue',
   },
   'nav-bookings': {
     title: 'Mes réservations',

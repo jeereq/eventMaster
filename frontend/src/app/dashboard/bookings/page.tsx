@@ -49,7 +49,7 @@ export default function ClientBookingsPage() {
           />
         }
         action={
-          <Link href="/marketplace" className="inline-flex">
+          <Link href="/dashboard/catalogue" className="inline-flex">
             <Button size="sm" leftIcon={<Store className="w-4 h-4" />}>
               Marketplace
             </Button>

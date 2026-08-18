@@ -238,7 +238,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
  useEffect(() => {
  if (loading || !token || !user || !isClientAccount) return;
- const allowed = ['/dashboard/bookings', '/dashboard/profile', '/dashboard/guide', '/dashboard/notifications'].some(
+ const allowed = ['/dashboard/bookings', '/dashboard/profile', '/dashboard/guide', '/dashboard/notifications', '/dashboard/catalogue'].some(
  (p) => pathname === p || pathname.startsWith(`${p}/`),
  );
  if (pathname.startsWith('/dashboard') && !allowed) {
@@ -392,7 +392,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  ? [
  {
  items: [
- { name: 'Marketplace', href: '/marketplace', tourId: 'nav-catalogue', icon: Store, description: 'Salles et prestataires publics' },
+ { name: 'Marketplace', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires, favoris et préparation d’événement' },
  { name: 'Mes réservations', href: '/dashboard/bookings', tourId: 'nav-bookings', icon: CalendarCheck },
  { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
  { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },

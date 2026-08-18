@@ -29,8 +29,9 @@ function useDashboardTitle(): { title: string; subtitle?: string } {
     if (pathname.startsWith('/dashboard/profile')) return { title: 'Mon compte', subtitle: 'Profil et sécurité' };
     if (pathname.startsWith('/dashboard/notifications')) return { title: 'Notifications', subtitle: 'Alertes de votre compte' };
     if (pathname.startsWith('/dashboard/audit')) return { title: 'Journal d’audit', subtitle: 'Actions plateforme' };
-    if (pathname.startsWith('/dashboard/catalogue/salles')) return { title: 'Salle', subtitle: 'Fiche interne' };
-    if (pathname.startsWith('/dashboard/catalogue/prestataires')) return { title: 'Prestation', subtitle: 'Fiche interne' };
+    if (pathname.startsWith('/dashboard/catalogue/salles')) return { title: 'Salle', subtitle: 'Fiche marketplace' };
+    if (pathname.startsWith('/dashboard/catalogue/prestataires')) return { title: 'Prestation', subtitle: 'Fiche marketplace' };
+    if (pathname.startsWith('/dashboard/catalogue')) return { title: 'Marketplace', subtitle: 'Salles, prestataires et préparation' };
     if (pathname.startsWith('/dashboard/admin/catalogue')) return { title: 'Catalogue', subtitle: 'Modération marketplace' };
     if (pathname.startsWith('/dashboard/commercial')) return { title: 'Parrainage', subtitle: 'Commissions plateforme' };
     if (pathname.startsWith('/dashboard/org-commercial')) return { title: 'Réseau commercial', subtitle: 'Parrainage organisation' };

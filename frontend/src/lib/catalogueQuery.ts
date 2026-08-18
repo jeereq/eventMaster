@@ -69,6 +69,7 @@ export function isCatalogueListPath(pathname: string): boolean {
     || pathname === '/dashboard/rooms'
     || pathname === '/dashboard/marketplace'
     || pathname === '/dashboard/bookings'
+    || pathname === '/dashboard/catalogue'
   );
 }
 

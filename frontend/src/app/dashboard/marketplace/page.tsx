@@ -124,7 +124,7 @@ export default function MarketplaceDeskPage() {
 
   useEffect(() => {
     if (access?.level === 'client') {
-      router.replace('/dashboard/bookings');
+      router.replace('/dashboard/catalogue');
     }
   }, [access?.level, router]);
 
