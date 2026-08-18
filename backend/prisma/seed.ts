@@ -18,6 +18,7 @@ import { seedMarketplaceCatalog } from './seed/marketplaceCatalog';
 import { seedAccountsMatrix } from './seed/accountsMatrix';
 import { seedEventsVolume } from './seed/eventsVolume';
 import { seedRoomBlueprint } from './seed/roomBlueprints';
+import { eventPhotos } from './seed/rdcMedia';
 
 const PLAN_SORT_ORDER: Record<PlanTypeKey, number> = {
   FREE: 0,
@@ -436,6 +437,14 @@ async function main() {
       reminderFrequency: 'EVERY_5_DAYS',
       latitude: -4.3014,
       longitude: 15.3048,
+      photos: eventPhotos(1),
+      isPublic: true,
+      slug: 'gala-de-charite-elite-kinshasa',
+      publishedAt: new Date(),
+      ticketingEnabled: true,
+      ticketPriceFc: 150_000,
+      ticketsTotal: 200,
+      ticketsSold: 0,
     },
   });
 
@@ -449,6 +458,7 @@ async function main() {
       reminderFrequency: 'EVERY_3_DAYS',
       latitude: -4.305,
       longitude: 15.302,
+      photos: eventPhotos(2),
     },
   });
 
@@ -462,6 +472,11 @@ async function main() {
       reminderFrequency: 'WEEKLY',
       latitude: -4.3488,
       longitude: 15.3185,
+      photos: eventPhotos(3),
+      isPublic: true,
+      slug: 'soiree-networking-pitch-limete',
+      publishedAt: new Date(),
+      ticketingEnabled: false,
     },
   });
 
@@ -475,6 +490,7 @@ async function main() {
       reminderFrequency: 'WEEKLY',
       latitude: -4.3725,
       longitude: 15.253,
+      photos: eventPhotos(4),
     },
   });
 
@@ -488,6 +504,7 @@ async function main() {
       location: 'Pullman Grand Hôtel, Gombe',
       latitude: -4.3032,
       longitude: 15.2861,
+      photos: eventPhotos(5),
     },
   });
 
@@ -731,6 +748,7 @@ async function main() {
     users: await prisma.user.count(),
     tenants: await prisma.tenant.count(),
     globalTemplates: await prisma.template.count({ where: { tenantId: null } }),
+    landingTemplates: await prisma.template.count({ where: { tenantId: null, showOnLanding: true } }),
     orgTemplates: await prisma.template.count({ where: { tenantId: { not: null } } }),
     events: await prisma.event.count(),
     guests: await prisma.guest.count(),
@@ -753,8 +771,10 @@ async function main() {
   console.log('  Mariage      : claire@mariagereve.cd');
   console.log('  Global Corp  : event@globalcorp.cd');
   console.log('  Nouvelle org.: demo@novaevents.cd  (FREE — bibliothèque modèles)');
-  console.log('  Salles 1–10  : salles1@eventmaster.cd … salles10@eventmaster.cd  (100 salles publiées + plan 2D)');
-  console.log('  Prestas 1–10 : prestas1@eventmaster.cd … prestas10@eventmaster.cd (100 prestataires publiés)');
+  console.log('  Salles 1–40  : salles1@eventmaster.cd … salles40@eventmaster.cd  (520 salles + plan 2D)');
+  console.log('  Prestas 1–32 : prestas1@eventmaster.cd … prestas32@eventmaster.cd (métiers + locations)');
+  console.log('  Protocoles   : protocole.salles1@…5@  · protocole.prestas1@…5@');
+  console.log('  Commerciaux  : commercial.salles1@…5@ · commercial.prestas1@…5@');
   console.log('  Forfaits / rôles :');
   for (const line of matrix.logins) {
     console.log(`    ${line}`);

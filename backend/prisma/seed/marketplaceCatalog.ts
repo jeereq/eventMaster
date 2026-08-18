@@ -1,6 +1,15 @@
 import type { PrismaClient, RoomType, ServiceCategory, VenuePriceUnit } from '@prisma/client';
 import { addDays, licenseKey } from './helpers';
 import { seedRoomBlueprint } from './roomBlueprints';
+import {
+  personPhoto,
+  rdcServicePriceFc,
+  rdcVenuePriceFc,
+  serviceDetails,
+  servicePhotos,
+  venueDetails,
+  venuePhotos,
+} from './rdcMedia';
 
 type CityName = 'Kinshasa' | 'Lubumbashi';
 
@@ -61,30 +70,52 @@ const CITIES: City[] = [
   },
 ];
 
+const VENUE_ORG_COUNT = 40;
+const ROOMS_PER_ORG = 13;
+const SERVICE_ORG_COUNT = 32;
+const OFFERINGS_PER_ORG = 16;
+const STAFF_ORG_LIMIT = 5;
+
 const ROOM_TYPES: RoomType[] = ['BANQUET', 'CONFERENCE', 'AMPHITHEATER', 'TENT', 'CUSTOM'];
-const PRICE_UNITS: VenuePriceUnit[] = ['EVENT', 'DAY', 'HOUR', 'PERSON', 'QUOTA'];
 const SERVICE_CATEGORIES: ServiceCategory[] = [
   'CATERING', 'PHOTOGRAPHY', 'VIDEO', 'DJ', 'DECORATION', 'SECURITY', 'FLORIST', 'TRANSPORT', 'MC', 'OTHER',
   'RENTAL_CLOTHING_MEN', 'RENTAL_CLOTHING_WOMEN', 'RENTAL_CLOTHING_CHILD', 'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT',
 ];
 
-const VENUE_ORGS = [
-  'Palais du Fleuve', 'Halls Prestige Gombe', 'Espaces Binza Events', 'Domaine Texas',
-  'Villa Lumière', 'Salons de la Victoire', 'Terrasses Ngaliema', 'Lofts Limete',
-  'Résidences Karavia', 'Jardins du Cuivre',
+const VENUE_PREFIXES = [
+  'Palais', 'Halls', 'Domaine', 'Villa', 'Salons', 'Terrasses', 'Lofts', 'Jardins', 'Cours', 'Résidences',
+  'Espace', 'Maison', 'Hôtel', 'Patio', 'Rooftop', 'Club', 'Forum', 'Atrium', 'Studio', 'Chapiteaux',
 ];
-
-const SERVICE_ORGS = [
-  'Saveurs de Kin', 'Studio Mwinda', 'Djembé Sound', 'Fleurs du Pool',
-  'Protocole Royal', 'Lens & Light', 'Traiteur Maman Léonie', 'Sécurité Baobab',
-  'Déco Kuba', 'Navettes Hewa Bora', 'Atelier Sape Gombe', 'Auto Prestige Kin',
+const VENUE_SUFFIXES = [
+  'du Fleuve', 'Gombe', 'Binza', 'Texas', 'Lumière', 'Victoire', 'Ngaliema', 'Limete', 'Karavia', 'du Cuivre',
+];
+const SERVICE_PREFIXES = [
+  'Saveurs', 'Studio', 'Djembé', 'Fleurs', 'Protocole', 'Lens', 'Traiteur', 'Sécurité',
+  'Déco', 'Navettes', 'Atelier', 'Auto', 'Sono', 'Chapiteau', 'Costumes', 'Motos',
+];
+const SERVICE_SUFFIXES = [
+  'de Kin', 'Mwinda', 'du Pool', 'Royal', 'Baobab', 'Kuba', 'Hewa Bora', 'Sape Gombe',
+  'Prestige Kin', 'Karavia', 'Lemba', 'Gombe',
 ];
 
 const MANAGERS = [
   'Amina Tshibanda', 'Patrick Kalala', 'Grace Mujinga', 'David Mutombo',
   'Sarah Ngalula', 'Jean-Bosco Ilunga', 'Chantal Mpunga', 'Olivier Kabongo',
-  'Mireille Kasongo', 'Héritier Mbuyi',
+  'Mireille Kasongo', 'Héritier Mbuyi', 'Rachel Lwamba', 'Alain Kapinga',
+  'Fanny Nzuzi', 'Jonathan Mukendi', 'Solange Kalonji', 'Didier Bemba',
 ];
+
+function orgNames(prefixes: string[], suffixes: string[], count: number): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const name = `${prefixes[i % prefixes.length]} ${suffixes[Math.floor(i / prefixes.length) % suffixes.length]}`;
+    out.push(out.includes(name) ? `${name} ${i + 1}` : name);
+  }
+  return out;
+}
+
+const VENUE_ORGS = orgNames(VENUE_PREFIXES, VENUE_SUFFIXES, VENUE_ORG_COUNT);
+const SERVICE_ORGS = orgNames(SERVICE_PREFIXES, SERVICE_SUFFIXES, SERVICE_ORG_COUNT);
 
 const ROOM_LABELS: Record<RoomType, string[]> = {
   SIMPLE: ['Salle polyvalente'],
@@ -149,16 +180,38 @@ function placeFor(index: number): { city: City; commune: Commune; neighborhood: 
   return { city, commune, neighborhood, lat, lng };
 }
 
-function photos(kind: 'salle' | 'presta', index: number): string[] {
-  return [1, 2, 3].map((n) => `https://picsum.photos/seed/em-${kind}-${index}-${n}/1200/800`);
-}
-
 function blockedDates(index: number): string[] {
   const start = new Date();
   start.setDate(start.getDate() + 10 + (index % 12));
   const second = new Date(start);
   second.setDate(start.getDate() + 7);
   return [start.toISOString().slice(0, 10), second.toISOString().slice(0, 10)];
+}
+
+function venuePriceUnit(roomType: RoomType, index: number): VenuePriceUnit {
+  if (roomType === 'CONFERENCE' && index % 6 === 0) return 'HOUR';
+  if (roomType === 'TENT' && index % 2 === 0) return 'DAY';
+  if (index % 13 === 0) return 'QUOTA';
+  return 'EVENT';
+}
+
+function servicePriceUnit(category: ServiceCategory, index: number): VenuePriceUnit {
+  if (category === 'CATERING') return index % 2 === 0 ? 'PERSON' : 'EVENT';
+  if (category === 'RENTAL_CAR' || category === 'RENTAL_MOTO' || category === 'RENTAL_EQUIPMENT') return 'DAY';
+  if (category.startsWith('RENTAL_CLOTHING')) return 'EVENT';
+  if (category === 'DJ' && index % 4 === 0) return 'HOUR';
+  return 'EVENT';
+}
+
+function orgPhone(seed: number): string {
+  return `+24381${String(2000000 + Math.abs(seed)).slice(0, 7)}`;
+}
+
+async function mapInBatches<T>(items: T[], size: number, fn: (item: T, i: number) => Promise<void>) {
+  for (let i = 0; i < items.length; i += size) {
+    const slice = items.slice(i, i + size);
+    await Promise.all(slice.map((item, j) => fn(item, i + j)));
+  }
 }
 
 async function createVendorTenant(
@@ -187,51 +240,101 @@ async function createVendorTenant(
     data: {
       email: opts.email,
       name: opts.managerName,
-      phone: `+24381${String(2000000 + Math.abs(opts.name.length * 97)).slice(0, 7)}`,
+      phone: orgPhone(opts.name.length * 97),
       phoneCountryCode: '+243',
       passwordHash: opts.passwordHash,
       role: 'USER',
       orgRole: 'MANAGER',
       tenantId: tenant.id,
       isEmailVerified: true,
+      avatarUrl: personPhoto(opts.name.length),
     },
   });
   await prisma.tenant.update({ where: { id: tenant.id }, data: { managerId: user.id } });
   return tenant;
 }
 
+async function addOrgRoleUsers(
+  prisma: PrismaClient,
+  opts: { tenantId: string; kind: 'salles' | 'prestas'; orgIndex: number; passwordHash: string },
+) {
+  if (opts.orgIndex >= STAFF_ORG_LIMIT) return;
+  const n = opts.orgIndex + 1;
+  await prisma.user.create({
+    data: {
+      email: `protocole.${opts.kind}${n}@eventmaster.cd`,
+      name: `Protocole ${opts.kind} ${n}`,
+      phone: orgPhone(4100000 + n),
+      phoneCountryCode: '+243',
+      passwordHash: opts.passwordHash,
+      role: 'USER',
+      orgRole: 'PROTOCOL',
+      tenantId: opts.tenantId,
+      isEmailVerified: true,
+      avatarUrl: personPhoto(600 + opts.orgIndex),
+    },
+  });
+  await prisma.user.create({
+    data: {
+      email: `commercial.${opts.kind}${n}@eventmaster.cd`,
+      name: `Commercial ${opts.kind} ${n}`,
+      phone: orgPhone(4200000 + n),
+      phoneCountryCode: '+243',
+      passwordHash: opts.passwordHash,
+      role: 'USER',
+      orgRole: 'COMMERCIAL',
+      tenantId: opts.tenantId,
+      isEmailVerified: true,
+      avatarUrl: personPhoto(700 + opts.orgIndex),
+      referralCode: `EM-${opts.kind.toUpperCase()}${n}`,
+      commissionRate: 0.25,
+      renewalCommissionRate: 0.15,
+    },
+  });
+}
+
 export async function seedMarketplaceCatalog(
   prisma: PrismaClient,
   passwordHash: string,
 ) {
-  console.log('Catalogue public — 100 salles + 100 prestataires…');
+  const venueTotal = VENUE_ORG_COUNT * ROOMS_PER_ORG;
+  const serviceTotal = SERVICE_ORG_COUNT * OFFERINGS_PER_ORG;
+  console.log(`Catalogue public RDC — ${venueTotal} salles + ${serviceTotal} prestataires (métiers & locations)…`);
   const publishedAt = new Date();
 
-  for (let orgIndex = 0; orgIndex < 10; orgIndex++) {
-    const orgPlace = placeFor(orgIndex * 10);
+  for (let orgIndex = 0; orgIndex < VENUE_ORG_COUNT; orgIndex++) {
+    const orgPlace = placeFor(orgIndex * ROOMS_PER_ORG);
     const tenant = await createVendorTenant(prisma, {
       name: VENUE_ORGS[orgIndex],
       email: `salles${orgIndex + 1}@eventmaster.cd`,
-      managerName: MANAGERS[orgIndex],
+      managerName: pick(MANAGERS, orgIndex),
       plan: 'VENUE',
       passwordHash,
       city: orgPlace.city.name,
     });
+    await addOrgRoleUsers(prisma, {
+      tenantId: tenant.id,
+      kind: 'salles',
+      orgIndex,
+      passwordHash,
+    });
 
-    await Promise.all(Array.from({ length: 10 }, async (_, n) => {
-      const index = orgIndex * 10 + n;
+    await mapInBatches(Array.from({ length: ROOMS_PER_ORG }, (_, n) => n), 4, async (n) => {
+      const index = orgIndex * ROOMS_PER_ORG + n;
       const place = placeFor(index);
       const roomType = pick(ROOM_TYPES, index);
       const roomName = `${pick(ROOM_LABELS[roomType], index)} ${n + 1}`;
       const headline = `${tenant.name} — ${roomName}`;
-      const priceUnit = pick(PRICE_UNITS, index);
-      const capacity = 80 + (index % 12) * 40;
+      const priceUnit = venuePriceUnit(roomType, index);
+      const capacity = 60 + (index % 16) * 30;
       const avenue = pick(AVENUES, index);
+      const description = `${roomName} à ${place.neighborhood}, ${place.commune.name} (${place.city.name}). Plan 2D inclus. Idéal mariages, galas, séminaires et soirées privées. Sono, scène et parking.`;
+      const phone = orgPhone(3000000 + index);
       const room = await prisma.organizationRoom.create({
         data: {
           tenantId: tenant.id,
           name: roomName,
-          description: `${roomName} à ${place.commune.name} (${place.city.name}), idéal pour mariages, galas et séminaires. Scène, sono et parking.`,
+          description,
           capacity,
           floor: n % 3 === 0 ? 'RDC' : `Niveau ${n % 3}`,
           location: `${place.neighborhood}, ${place.commune.name}`,
@@ -243,7 +346,7 @@ export async function seedMarketplaceCatalog(
         data: {
           tenantId: tenant.id,
           roomId: room.id,
-          slug: `${slugify(headline)}-${String(index + 1).padStart(3, '0')}`,
+          slug: `${slugify(headline)}-${String(index + 1).padStart(4, '0')}`,
           isPublic: true,
           headline,
           city: place.city.name,
@@ -252,27 +355,44 @@ export async function seedMarketplaceCatalog(
           address: `${12 + (index % 80)} ${avenue}`,
           latitude: place.lat,
           longitude: place.lng,
-          priceFromFc: 180_000 + (index % 25) * 120_000,
+          priceFromFc: rdcVenuePriceFc({
+            roomType,
+            capacity,
+            city: place.city.name,
+            commune: place.commune.name,
+            priceUnit,
+          }),
           priceUnit,
           quotaMin: priceUnit === 'QUOTA' ? 50 : null,
           quotaMax: priceUnit === 'QUOTA' ? capacity : null,
-          photos: photos('salle', index),
+          photos: venuePhotos(index),
+          details: venueDetails({ description, roomType, capacity, phone, index }),
           blockedDates: blockedDates(index),
           publishedAt,
         },
       });
-    }));
+    });
+
+    if ((orgIndex + 1) % 10 === 0) {
+      console.log(`  … ${(orgIndex + 1) * ROOMS_PER_ORG} salles`);
+    }
   }
 
-  for (let orgIndex = 0; orgIndex < 10; orgIndex++) {
-    const orgPlace = placeFor(orgIndex * 10 + 5);
+  for (let orgIndex = 0; orgIndex < SERVICE_ORG_COUNT; orgIndex++) {
+    const orgPlace = placeFor(orgIndex * OFFERINGS_PER_ORG + 5);
     const tenant = await createVendorTenant(prisma, {
       name: SERVICE_ORGS[orgIndex],
       email: `prestas${orgIndex + 1}@eventmaster.cd`,
-      managerName: MANAGERS[(orgIndex + 3) % MANAGERS.length],
+      managerName: pick(MANAGERS, orgIndex + 3),
       plan: 'SERVICE',
       passwordHash,
       city: orgPlace.city.name,
+    });
+    await addOrgRoleUsers(prisma, {
+      tenantId: tenant.id,
+      kind: 'prestas',
+      orgIndex,
+      passwordHash,
     });
     const profile = await prisma.vendorProfile.create({
       data: {
@@ -280,24 +400,26 @@ export async function seedMarketplaceCatalog(
         slug: `${slugify(tenant.name)}-${orgIndex + 1}`,
         displayName: tenant.name,
         city: orgPlace.city.name,
-        bio: `${tenant.name} intervient à ${orgPlace.city.name} et dans les communes voisines pour vos événements privés et corporate.`,
+        bio: `${tenant.name} intervient à ${orgPlace.city.name} et dans les communes voisines : métiers d’événement et locations (habits, véhicules, matériel).`,
       },
     });
 
-    await Promise.all(Array.from({ length: 10 }, async (_, n) => {
-      const index = orgIndex * 10 + n;
+    await mapInBatches(Array.from({ length: OFFERINGS_PER_ORG }, (_, n) => n), 4, async (n) => {
+      const index = orgIndex * OFFERINGS_PER_ORG + n;
       const place = placeFor(index + 17);
-      const category = pick(SERVICE_CATEGORIES, index);
+      const category = pick(SERVICE_CATEGORIES, n);
       const title = `${pick(SERVICE_TITLES[category], index)} — ${tenant.name}`;
-      const priceUnit = pick(['EVENT', 'DAY', 'HOUR', 'PERSON', 'QUOTA'] as VenuePriceUnit[], index + 2);
+      const priceUnit = servicePriceUnit(category, index);
+      const description = `${title}. Prestation à ${place.city.name} (${place.commune.name} / ${place.neighborhood}). Photos, tarif indicatif en FC, matériel selon devis.`;
+      const phone = orgPhone(3500000 + index);
       await prisma.serviceOffering.create({
         data: {
           tenantId: tenant.id,
           vendorProfileId: profile.id,
-          slug: `${slugify(title)}-${String(index + 1).padStart(3, '0')}`,
+          slug: `${slugify(title)}-${String(index + 1).padStart(4, '0')}`,
           category,
           title,
-          description: `${title}. Prestation complète à ${place.city.name} (${place.commune.name} / ${place.neighborhood}), matériel inclus, équipe sur place.`,
+          description,
           city: place.city.name,
           commune: place.commune.name,
           neighborhood: place.neighborhood,
@@ -305,20 +427,34 @@ export async function seedMarketplaceCatalog(
           travels: index % 3 !== 0,
           latitude: place.lat,
           longitude: place.lng,
-          priceFromFc: 45_000 + (index % 20) * 35_000,
+          priceFromFc: rdcServicePriceFc({
+            category,
+            city: place.city.name,
+            commune: place.commune.name,
+            index,
+            priceUnit,
+          }),
           priceUnit,
           quotaMin: priceUnit === 'QUOTA' || priceUnit === 'PERSON' ? 20 : null,
           quotaMax: priceUnit === 'QUOTA' || priceUnit === 'PERSON' ? 300 : null,
-          photos: photos('presta', index),
+          photos: servicePhotos(category, index),
+          details: serviceDetails({ description, category, phone, index }),
           blockedDates: blockedDates(index + 3),
           isPublic: true,
           publishedAt,
         },
       });
-    }));
+    });
+
+    if ((orgIndex + 1) % 8 === 0) {
+      console.log(`  … ${(orgIndex + 1) * OFFERINGS_PER_ORG} prestataires`);
+    }
   }
 
   const venues = await prisma.venueListing.count({ where: { isPublic: true } });
   const services = await prisma.serviceOffering.count({ where: { isPublic: true } });
-  console.log(`  → ${venues} salles publiques, ${services} prestataires publics`);
+  const rentals = await prisma.serviceOffering.count({
+    where: { isPublic: true, category: { in: ['RENTAL_CLOTHING_MEN', 'RENTAL_CLOTHING_WOMEN', 'RENTAL_CLOTHING_CHILD', 'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT'] } },
+  });
+  console.log(`  → ${venues} salles publiques, ${services} prestataires publics (${rentals} locations)`);
 }

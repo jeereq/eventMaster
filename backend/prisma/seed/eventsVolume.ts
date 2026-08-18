@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@prisma/client';
 import { blueprintToTablePlan } from '../../src/services/roomLayoutService';
 import { marketplacePlaceFor, slugify } from './marketplaceCatalog';
+import { eventPhotos, rdcTicketPriceFc } from './rdcMedia';
 import type { OrganizerSeed } from './accountsMatrix';
 
 const TITLES = [
@@ -45,7 +46,7 @@ export async function seedEventsVolume(
     existingEventCount: number;
   },
 ) {
-  const target = 100;
+  const target = 220;
   const toCreate = Math.max(0, target - opts.existingEventCount);
   if (toCreate === 0) return;
 
@@ -58,14 +59,14 @@ export async function seedEventsVolume(
 
   const organizerByPlan = new Map(opts.organizers.map((o) => [o.plan, o]));
   const distribution: Array<{ plan: OrganizerSeed['plan']; count: number }> = [
-    { plan: 'PERSONAL_50', count: 2 },
-    { plan: 'PERSONAL_100', count: 2 },
-    { plan: 'PERSONAL_200', count: 2 },
-    { plan: 'PERSONAL_PLUS', count: 2 },
-    { plan: 'FREE', count: 2 },
-    { plan: 'STANDARD', count: 4 },
-    { plan: 'PREMIUM_1', count: 6 },
-    { plan: 'ENTERPRISE_1', count: 8 },
+    { plan: 'PERSONAL_50', count: 4 },
+    { plan: 'PERSONAL_100', count: 4 },
+    { plan: 'PERSONAL_200', count: 4 },
+    { plan: 'PERSONAL_PLUS', count: 6 },
+    { plan: 'FREE', count: 4 },
+    { plan: 'STANDARD', count: 10 },
+    { plan: 'PREMIUM_1', count: 12 },
+    { plan: 'ENTERPRISE_1', count: 16 },
   ];
 
   const slots: OrganizerSeed[] = [];
@@ -78,8 +79,8 @@ export async function seedEventsVolume(
   while (slots.length < toCreate && agenda) slots.push(agenda);
   const hosts = slots.slice(0, toCreate);
 
-  const globalTemplate = await prisma.template.findFirst({
-    where: { tenantId: null },
+  const globalTemplates = await prisma.template.findMany({
+    where: { tenantId: null, showOnLanding: true },
     select: { id: true },
   });
 
@@ -96,11 +97,11 @@ export async function seedEventsVolume(
     const host = hosts[i];
     const place = marketplacePlaceFor(i + 40);
     const isAgenda = host.tenantId === opts.agendaTenantId;
-    const isPublic = isAgenda && i % 5 !== 4;
+    const isPublic = isAgenda ? i % 5 !== 4 : i % 3 !== 2;
     const paid = isPublic && i % 3 !== 0;
-    const ticketPriceFc = paid ? 8000 + (i % 8) * 2500 : 0;
-    const ticketsTotal = paid ? 60 + (i % 10) * 15 : isPublic ? 120 : null;
     const title = `${pick(TITLES, i)} ${place.city.name} #${i + 1}`;
+    const ticketPriceFc = paid ? rdcTicketPriceFc(title, i) : 0;
+    const ticketsTotal = paid ? 80 + (i % 12) * 20 : isPublic ? 150 : null;
     const slug = isPublic ? `${slugify(title)}-${String(i + 1).padStart(3, '0')}` : null;
     const future = i % 11 !== 0;
     const date = new Date();
@@ -131,12 +132,7 @@ export async function seedEventsVolume(
         ticketPriceFc,
         ticketsTotal,
         ticketsSold: 0,
-        photos: isPublic
-          ? [
-              `https://picsum.photos/seed/em-evt-${i}-a/1200/800`,
-              `https://picsum.photos/seed/em-evt-${i}-b/1200/800`,
-            ]
-          : undefined,
+        photos: isPublic ? eventPhotos(i) : undefined,
         tablePlan: tablePlan ? (tablePlan as object) : undefined,
       },
     });
@@ -160,11 +156,12 @@ export async function seedEventsVolume(
       });
     }
 
-    if (globalTemplate && (isPublic || i % 7 === 0)) {
+    if (globalTemplates.length > 0 && (isPublic || i % 7 === 0)) {
+      const templateId = globalTemplates[i % globalTemplates.length].id;
       await prisma.invitation.create({
         data: {
           eventId: event.id,
-          templateId: globalTemplate.id,
+          templateId,
           subject: `Invitation : ${title}`,
           body: `Bonjour {{firstName}},\n\nVous êtes invité(e) à ${title} le {{date}} à {{location}}.\n\n{{rsvpLink}}`,
           channel: 'EMAIL',
