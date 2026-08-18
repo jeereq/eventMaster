@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useCallback } from 'react';
 import {
- Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler,
+ Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye,
 } from 'lucide-react';
 import ChairRenderer from '@/components/ChairRenderer';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
@@ -19,6 +19,8 @@ import {
  TableShape,
  ROOM_LAYOUT_TEMPLATES,
  applyRoomTemplate,
+ autoArrangeTables,
+ arrangeDensityLabels,
  chairTypeLabels,
  createBlueprintFixture,
  createBlueprintRow,
@@ -32,13 +34,16 @@ import {
  resolveTableColor,
  roomOutlineLabels,
  roomTypeLabels,
+ tableArrangeLabels,
+ type ArrangeDensity,
+ type TableArrangePreset,
 } from '@/lib/roomLayoutUtils';
 import { roomEditorCapabilities, snapLayoutPct } from '@/lib/roomEditorAccess';
 import { prependLayoutAction, LayoutActionEntry } from '@/lib/layoutActionLog';
 import { getSeatCoordinates, getTableVisualStyle } from '@/lib/tablePlanUtils';
 import { readImageFile } from '@/lib/imageCropUtils';
 import { applyRoomTheme, getRoomTheme, listAvailableThemes, RoomThemeId, type FloorType } from '@/lib/roomThemeUtils';
-import { floorTypeLabels, resolveFloorStyle } from '@/lib/roomFloorUtils';
+import { depthScaleForY, floorTypeLabels, furnitureDepthStyle, resolveFloorStyle } from '@/lib/roomFloorUtils';
 import CustomRoomThemePanel from '@/components/CustomRoomThemePanel';
 import { cn } from '@/lib/cn';
 
@@ -74,6 +79,7 @@ export default function RoomLayoutEditor({
  const [isExpanded, setIsExpanded] = useState(false);
  const [actionLog, setActionLog] = useState<LayoutActionEntry[]>([]);
  const [cropTarget, setCropTarget] = useState<CropTarget>(null);
+ const [arrangeDensity, setArrangeDensity] = useState<ArrangeDensity>('comfortable');
 
  const log = useCallback((message: string, kind: LayoutActionEntry['kind'] = 'info') => {
  setActionLog((prev) => prependLayoutAction(prev, message, kind));
@@ -336,6 +342,26 @@ export default function RoomLayoutEditor({
  const activeTheme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
  const effectiveFloorType = blueprint.metadata.floorType ?? activeTheme.defaultFloorType;
  const availableThemes = listAvailableThemes(blueprint);
+ const depthView = Boolean(blueprint.metadata.depthView);
+
+ const applyArrange = (preset: TableArrangePreset) => {
+  const tables = blueprint.furniture.filter((item) => item.kind === 'table' && !item.locked);
+  if (tables.length === 0) {
+    log('Ajoutez des tables (déverrouillées) pour les agencer.', 'info');
+    return;
+  }
+  updateBlueprint(autoArrangeTables(blueprint, preset, arrangeDensity), {
+    message: `Tables agencées — ${tableArrangeLabels[preset]} (${arrangeDensityLabels[arrangeDensity]})`,
+    kind: 'edit',
+  });
+ };
+
+ const toggleDepthView = () => {
+  updateBlueprint({
+    ...blueprint,
+    metadata: { ...blueprint.metadata, depthView: !depthView },
+  }, { message: depthView ? 'Vue à plat' : 'Vue en profondeur', kind: 'settings' });
+ };
 
  const outline = blueprint.roomOutline!;
  const clipPath = getRoomOutlineClipPath(outline.shape);
@@ -364,6 +390,9 @@ export default function RoomLayoutEditor({
  {activeTheme.ambientOverlay && (
  <div className="absolute inset-0 pointer-events-none" style={{ background: activeTheme.ambientOverlay, opacity: 0.35 }} />
  )}
+ {depthView && (
+ <div className="absolute inset-0 pointer-events-none em-floor-depth-haze" />
+ )}
  <div
  className="absolute inset-0 pointer-events-none"
  style={{ boxShadow: 'inset 0 0 0 8px rgba(70,42,16,0.35), inset 0 0 28px rgba(40,20,6,0.18)' }}
@@ -382,6 +411,7 @@ export default function RoomLayoutEditor({
  className={cn(
  'em-floor-canvas em-floor-canvas--photo relative w-full',
  className,
+ depthView && 'em-floor-canvas--depth',
  dragging && 'em-floor-canvas--dragging',
  )}
  style={floorStyle}
@@ -470,6 +500,7 @@ export default function RoomLayoutEditor({
  const isDrag = dragging?.kind === 'table' && dragging.id === item.id;
  const tableColor = resolveTableColor(item.tableColor, blueprint.metadata.defaultTableColor);
  const { className: tableClass, style: tableStyle } = getTableVisualStyle(item.shape, isSel, tableColor, item.tableImageUrl);
+ const depthScale = depthScaleForY(item.y, depthView);
  return (
  <div
  key={item.id}
@@ -486,7 +517,8 @@ export default function RoomLayoutEditor({
  top: `${item.y}%`,
  transform: isDrag
  ? undefined
- : `translate(-50%, -50%)${item.rotation ? ` rotate(${item.rotation}deg)` : ''}`,
+ : `translate(-50%, -50%) scale(${depthScale})${item.rotation ? ` rotate(${item.rotation}deg)` : ''}`,
+ ...(isSel || isDrag ? { zIndex: 50 } : furnitureDepthStyle(item.y, depthView)),
  }}
  >
  <div
@@ -596,7 +628,7 @@ export default function RoomLayoutEditor({
  <>
  <div className="p-4 bg-surface-muted rounded-xl border space-y-3">
  <p className="text-xs font-bold uppercase text-muted flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> Thème de la salle</p>
- <div className="grid grid-cols-2 gap-2">
+ <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
  {availableThemes.map((theme) => (
  <button
  key={theme.id}
@@ -634,7 +666,7 @@ export default function RoomLayoutEditor({
  </div>
  <div className="p-4 bg-surface-muted rounded-xl border space-y-3">
  <p className="text-xs font-bold uppercase text-muted flex items-center gap-1"><Layers className="w-3.5 h-3.5" /> Sol de la salle</p>
- <div className="grid grid-cols-2 gap-2">
+ <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
  {(Object.keys(floorTypeLabels) as FloorType[]).filter((k) => k !== 'custom').map((type) => (
  <button
  key={type}
@@ -684,6 +716,56 @@ export default function RoomLayoutEditor({
  </div>
  </>
  )}
+ <div className="p-4 bg-surface-muted rounded-xl border space-y-3">
+ <p className="text-xs font-bold uppercase text-muted flex items-center gap-1"><LayoutGrid className="w-3.5 h-3.5" /> Agencement auto</p>
+ <p className="text-[10px] text-muted leading-relaxed">
+ Répartit les tables déverrouillées dans la salle, en évitant la scène.
+ </p>
+ <div className="flex flex-wrap gap-1.5">
+ {(Object.keys(arrangeDensityLabels) as ArrangeDensity[]).map((id) => (
+ <button
+ key={id}
+ type="button"
+ onClick={() => setArrangeDensity(id)}
+ className={`px-2 py-1 rounded-md border text-[10px] font-bold ${
+ arrangeDensity === id ? 'bg-primary/10 border-primary/40 text-primary' : 'border-border text-muted hover:bg-white'
+ }`}
+ >
+ {arrangeDensityLabels[id]}
+ </button>
+ ))}
+ </div>
+ <div className="grid grid-cols-2 gap-2">
+ {([
+ ['grid', LayoutGrid, tableArrangeLabels.grid],
+ ['banquet', Columns2, tableArrangeLabels.banquet],
+ ['ushape', BoxSelect, tableArrangeLabels.ushape],
+ ['circle', Circle, tableArrangeLabels.circle],
+ ] as Array<[TableArrangePreset, typeof LayoutGrid, string]>).map(([id, Icon, label]) => (
+ <button
+ key={id}
+ type="button"
+ onClick={() => applyArrange(id)}
+ className="inline-flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg border border-border text-[10px] font-bold text-muted hover:bg-white hover:text-foreground"
+ >
+ <Icon className="w-3.5 h-3.5" />
+ {label}
+ </button>
+ ))}
+ </div>
+ <button
+ type="button"
+ onClick={toggleDepthView}
+ className={`w-full inline-flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg border text-[10px] font-bold ${
+ depthView
+ ? 'bg-primary/10 border-primary/40 text-primary'
+ : 'border-border text-muted hover:bg-white'
+ }`}
+ >
+ <Eye className="w-3.5 h-3.5" />
+ {depthView ? 'Profondeur activée' : 'Impression de profondeur'}
+ </button>
+ </div>
  <div className="p-4 bg-surface-muted rounded-xl border space-y-3">
  <p className="text-xs font-bold uppercase text-muted flex items-center gap-1"><Ruler className="w-3.5 h-3.5" /> Dimensions réelles</p>
  <div className="grid grid-cols-2 gap-2">

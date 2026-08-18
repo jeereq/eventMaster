@@ -9,6 +9,13 @@ export type FloorType =
   | 'herbe'
   | 'beton'
   | 'bois'
+  | 'chevron'
+  | 'damier'
+  | 'terrazzo'
+  | 'pierre'
+  | 'sable'
+  | 'epoxy'
+  | 'brique'
   | 'custom';
 
 export type BuiltInRoomThemeId =
@@ -17,7 +24,13 @@ export type BuiltInRoomThemeId =
   | 'gala'
   | 'garden'
   | 'modern'
-  | 'royal';
+  | 'royal'
+  | 'champagne'
+  | 'soiree'
+  | 'rustique'
+  | 'cotier'
+  | 'fete'
+  | 'loft';
 
 export type RoomThemeId = BuiltInRoomThemeId | `custom_${string}`;
 
@@ -160,6 +173,125 @@ export const ROOM_THEMES: Record<BuiltInRoomThemeId, RoomTheme> = {
     defaultFloorType: 'marbre',
     ambientOverlay: 'linear-gradient(180deg, rgba(237,233,254,0.2) 0%, transparent 50%, rgba(124,58,237,0.05) 100%)',
     tableBorderColor: '#a78bfa',
+  },
+  champagne: {
+    id: 'champagne',
+    name: 'Champagne',
+    description: 'Blush, or pâle et parquet chevron clair.',
+    roomOutline: {
+      fill: 'rgba(255, 247, 237, 0.94)',
+      stroke: '#e8b86a',
+      strokeWidth: 2,
+      innerGlow: 'inset 0 0 50px rgba(251,191,36,0.12)',
+    },
+    defaultTableColor: '#fff7ed',
+    canvasBackground: 'linear-gradient(180deg, #fff7ed 0%, #fed7aa 45%, #fdba74 100%)',
+    canvasPattern: 'radial-gradient(circle at 70% 20%, rgba(251,191,36,0.14) 0%, transparent 42%)',
+    gridColor: 'rgba(180,83,9,0.12)',
+    accentColor: '#c2410c',
+    guestCanvasBg: 'radial-gradient(ellipse at center, rgba(124,45,18,0.55) 0%, rgba(67,20,7,0.88) 100%)',
+    defaultFloorType: 'chevron',
+    ambientOverlay: 'linear-gradient(180deg, rgba(255,247,237,0.18) 0%, transparent 50%)',
+    tableBorderColor: '#e8b86a',
+  },
+  soiree: {
+    id: 'soiree',
+    name: 'Soirée',
+    description: 'Nuit indigo, damier et lumières froides.',
+    roomOutline: {
+      fill: 'rgba(15, 23, 42, 0.95)',
+      stroke: '#38bdf8',
+      strokeWidth: 2,
+      innerGlow: 'inset 0 0 70px rgba(56,189,248,0.08), inset 0 0 30px rgba(0,0,0,0.45)',
+    },
+    defaultTableColor: '#0f172a',
+    canvasBackground: 'radial-gradient(ellipse at 50% 0%, #1e3a5f 0%, #020617 70%)',
+    canvasPattern: 'radial-gradient(circle at 50% 0%, rgba(56,189,248,0.16) 0%, transparent 50%)',
+    gridColor: 'rgba(56,189,248,0.1)',
+    accentColor: '#38bdf8',
+    guestCanvasBg: 'radial-gradient(ellipse at center, rgba(8,47,73,0.8) 0%, #020617 100%)',
+    defaultFloorType: 'damier',
+    ambientOverlay: 'linear-gradient(180deg, rgba(56,189,248,0.08) 0%, transparent 55%)',
+    tableBorderColor: '#7dd3fc',
+  },
+  rustique: {
+    id: 'rustique',
+    name: 'Rustique',
+    description: 'Bois chaud, pierre et nappes lin.',
+    roomOutline: {
+      fill: 'rgba(255, 251, 235, 0.9)',
+      stroke: '#92400e',
+      strokeWidth: 2.5,
+      innerGlow: 'inset 0 0 40px rgba(146,64,14,0.12)',
+    },
+    defaultTableColor: '#fde68a',
+    canvasBackground: 'linear-gradient(180deg, #fef3c7 0%, #fbbf24 40%, #b45309 100%)',
+    canvasPattern: 'radial-gradient(circle at 20% 80%, rgba(120,53,15,0.15) 0%, transparent 40%)',
+    gridColor: 'rgba(146,64,14,0.12)',
+    accentColor: '#b45309',
+    guestCanvasBg: 'radial-gradient(ellipse at center, rgba(69,26,3,0.6) 0%, rgba(28,12,2,0.9) 100%)',
+    defaultFloorType: 'pierre',
+    ambientOverlay: 'linear-gradient(180deg, rgba(255,237,213,0.16) 0%, transparent 55%)',
+    tableBorderColor: '#d97706',
+  },
+  cotier: {
+    id: 'cotier',
+    name: 'Côtier',
+    description: 'Sable, aqua et lumière de bord de mer.',
+    roomOutline: {
+      fill: 'rgba(240, 253, 250, 0.92)',
+      stroke: '#0d9488',
+      strokeWidth: 2,
+      innerGlow: 'inset 0 0 50px rgba(13,148,136,0.1)',
+    },
+    defaultTableColor: '#ecfeff',
+    canvasBackground: 'linear-gradient(180deg, #ecfeff 0%, #99f6e4 40%, #5eead4 100%)',
+    canvasPattern: 'radial-gradient(circle at 80% 10%, rgba(255,255,255,0.35) 0%, transparent 40%)',
+    gridColor: 'rgba(13,148,136,0.12)',
+    accentColor: '#0d9488',
+    guestCanvasBg: 'radial-gradient(ellipse at center, rgba(19,78,74,0.55) 0%, rgba(4,47,46,0.88) 100%)',
+    defaultFloorType: 'sable',
+    ambientOverlay: 'linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 50%)',
+    tableBorderColor: '#5eead4',
+  },
+  fete: {
+    id: 'fete',
+    name: 'Fête',
+    description: 'Vert profond, or et terrazzo festif.',
+    roomOutline: {
+      fill: 'rgba(236, 253, 245, 0.9)',
+      stroke: '#ca8a04',
+      strokeWidth: 2.5,
+      innerGlow: 'inset 0 0 60px rgba(22,163,74,0.1), inset 0 0 30px rgba(202,138,4,0.08)',
+    },
+    defaultTableColor: '#fefce8',
+    canvasBackground: 'radial-gradient(ellipse at 50% 0%, #bbf7d0 0%, #166534 55%, #14532d 100%)',
+    canvasPattern: 'radial-gradient(circle at 30% 20%, rgba(250,204,21,0.16) 0%, transparent 45%)',
+    gridColor: 'rgba(202,138,4,0.14)',
+    accentColor: '#ca8a04',
+    guestCanvasBg: 'radial-gradient(ellipse at center, rgba(20,83,45,0.7) 0%, rgba(5,46,22,0.92) 100%)',
+    defaultFloorType: 'terrazzo',
+    ambientOverlay: 'linear-gradient(180deg, rgba(254,249,195,0.12) 0%, transparent 50%)',
+    tableBorderColor: '#eab308',
+  },
+  loft: {
+    id: 'loft',
+    name: 'Loft',
+    description: 'Brique, résine brillante et acier.',
+    roomOutline: {
+      fill: 'rgba(244, 244, 245, 0.94)',
+      stroke: '#52525b',
+      strokeWidth: 2,
+      innerGlow: 'inset 0 0 40px rgba(82,82,91,0.12)',
+    },
+    defaultTableColor: '#f4f4f5',
+    canvasBackground: 'linear-gradient(135deg, #e4e4e7 0%, #a1a1aa 50%, #71717a 100%)',
+    canvasPattern: 'repeating-linear-gradient(90deg, transparent, transparent 64px, rgba(24,24,27,0.05) 64px, rgba(24,24,27,0.05) 65px)',
+    gridColor: 'rgba(82,82,91,0.12)',
+    accentColor: '#3f3f46',
+    guestCanvasBg: 'linear-gradient(180deg, rgba(39,39,42,0.75) 0%, rgba(9,9,11,0.92) 100%)',
+    defaultFloorType: 'brique',
+    tableBorderColor: '#71717a',
   },
 };
 

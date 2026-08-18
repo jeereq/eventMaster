@@ -106,6 +106,7 @@ export interface RoomLayoutBlueprint {
     floorType?: import('@/lib/roomThemeUtils').FloorType;
     floorImageUrl?: string;
     customThemes?: import('@/lib/roomThemeUtils').CustomRoomTheme[];
+    depthView?: boolean;
   };
 }
 
@@ -731,4 +732,132 @@ export function getFixtureClass(kind: string): string {
     default:
       return 'bg-slate-100 border-slate-200';
   }
+}
+
+export type TableArrangePreset = 'grid' | 'banquet' | 'ushape' | 'circle';
+export type ArrangeDensity = 'compact' | 'comfortable' | 'ample';
+
+export const tableArrangeLabels: Record<TableArrangePreset, string> = {
+  grid: 'Grille',
+  banquet: 'Banquet',
+  ushape: 'En U',
+  circle: 'Cercle',
+};
+
+export const arrangeDensityLabels: Record<ArrangeDensity, string> = {
+  compact: 'Serré',
+  comfortable: 'Confort',
+  ample: 'Aéré',
+};
+
+function densityMargin(density: ArrangeDensity): number {
+  if (density === 'compact') return 7;
+  if (density === 'ample') return 16;
+  return 11;
+}
+
+function usableTableBounds(blueprint: RoomLayoutBlueprint, density: ArrangeDensity) {
+  const o = blueprint.roomOutline ?? defaultRoomOutline();
+  const m = densityMargin(density);
+  let top = o.y + m;
+  let bottom = o.y + o.h - m;
+  let left = o.x + m;
+  let right = o.x + o.w - m;
+  for (const fixture of blueprint.fixtures) {
+    if (fixture.kind === 'stage' || fixture.kind === 'podium' || fixture.kind === 'entrance') {
+      const edge = fixture.y + fixture.h;
+      if (edge < 45) top = Math.max(top, edge + m * 0.6);
+    }
+  }
+  if (right - left < 16) {
+    left = o.x + 6;
+    right = o.x + o.w - 6;
+  }
+  if (bottom - top < 16) {
+    top = o.y + 8;
+    bottom = o.y + o.h - 8;
+  }
+  return { left, right, top, bottom, width: right - left, height: bottom - top };
+}
+
+function arrangePositions(
+  count: number,
+  preset: TableArrangePreset,
+  bounds: ReturnType<typeof usableTableBounds>,
+): Array<{ x: number; y: number }> {
+  if (count <= 0) return [];
+  const { left, right, top, bottom, width, height } = bounds;
+  const cx = (left + right) / 2;
+  const cy = (top + bottom) / 2;
+
+  if (preset === 'circle') {
+    const rx = width * 0.36;
+    const ry = height * 0.34;
+    return Array.from({ length: count }, (_, i) => {
+      const a = (i / count) * Math.PI * 2 - Math.PI / 2;
+      return { x: cx + Math.cos(a) * rx, y: cy + Math.sin(a) * ry };
+    });
+  }
+
+  if (preset === 'ushape') {
+    const side = Math.max(1, Math.ceil(count / 3));
+    const bottomCount = count - side * 2;
+    const positions: Array<{ x: number; y: number }> = [];
+    for (let i = 0; i < side && positions.length < count; i++) {
+      const t = side === 1 ? 0.5 : i / (side - 1);
+      positions.push({ x: left + width * 0.08, y: top + height * (0.12 + t * 0.76) });
+    }
+    const along = Math.max(bottomCount, 0);
+    for (let i = 0; i < along && positions.length < count; i++) {
+      const t = along === 1 ? 0.5 : (i + 1) / (along + 1);
+      positions.push({ x: left + width * t, y: bottom - height * 0.08 });
+    }
+    for (let i = 0; i < side && positions.length < count; i++) {
+      const t = side === 1 ? 0.5 : 1 - i / (side - 1);
+      positions.push({ x: right - width * 0.08, y: top + height * (0.12 + t * 0.76) });
+    }
+    return positions.slice(0, count);
+  }
+
+  if (preset === 'banquet') {
+    const leftCount = Math.ceil(count / 2);
+    const rightCount = count - leftCount;
+    const lx = left + width * 0.28;
+    const rx = left + width * 0.72;
+    const col = (n: number, x: number) =>
+      Array.from({ length: n }, (_, i) => {
+        const t = n === 1 ? 0.5 : (i + 0.5) / n;
+        return { x, y: top + height * (0.08 + t * 0.84) };
+      });
+    return [...col(leftCount, lx), ...col(rightCount, rx)];
+  }
+
+  const cols = Math.max(1, Math.ceil(Math.sqrt(count * (width / Math.max(height, 1)))));
+  const rows = Math.ceil(count / cols);
+  return Array.from({ length: count }, (_, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const x = left + ((col + 0.5) / cols) * width;
+    const y = top + ((row + 0.5) / rows) * height;
+    return { x, y };
+  });
+}
+
+export function autoArrangeTables(
+  blueprint: RoomLayoutBlueprint,
+  preset: TableArrangePreset,
+  density: ArrangeDensity = 'comfortable',
+): RoomLayoutBlueprint {
+  const tables = blueprint.furniture.filter((item): item is Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'table' }> => item.kind === 'table');
+  const movable = tables.filter((item) => !item.locked);
+  if (movable.length === 0) return blueprint;
+  const bounds = usableTableBounds(blueprint, density);
+  const positions = arrangePositions(movable.length, preset, bounds);
+  let cursor = 0;
+  const furniture = blueprint.furniture.map((item) => {
+    if (item.kind !== 'table' || item.locked) return item;
+    const pos = positions[cursor++];
+    return pos ? { ...item, x: Math.round(pos.x * 10) / 10, y: Math.round(pos.y * 10) / 10 } : item;
+  });
+  return refreshBlueprintMetadata({ ...blueprint, furniture });
 }

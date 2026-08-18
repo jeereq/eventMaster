@@ -1005,7 +1005,7 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
     radial-gradient(ellipse at 50% 42%, transparent 42%, rgba(28, 14, 4, 0.28) 100%),
     linear-gradient(118deg, rgba(255, 255, 255, 0.14) 0%, transparent 34%, rgba(40, 20, 6, 0.12) 100%),
     url('/floors/parquet-herringbone.svg');
-  background-size: 100% 100%, 100% 100%, 360px 360px;
+  background-size: 100% 100%, 100% 100%, 88px 88px;
   background-repeat: no-repeat, no-repeat, repeat;
   box-shadow:
     inset 0 0 0 10px color-mix(in srgb, #5c3a18 55%, transparent),
@@ -1039,17 +1039,43 @@ html[data-mood="celebrate"] .em-guest-tab[aria-pressed="true"] {
   opacity: 0.08;
 }
 
+.em-floor-canvas--depth {
+  perspective: 1600px;
+  perspective-origin: 50% 88%;
+}
+
+.em-floor-depth-haze {
+  background:
+    linear-gradient(180deg, rgba(12, 8, 4, 0.34) 0%, transparent 38%, rgba(255, 255, 255, 0.08) 100%),
+    radial-gradient(ellipse at 50% 108%, rgba(0, 0, 0, 0.22), transparent 58%);
+  mix-blend-mode: multiply;
+}
+
 .em-table-realistic {
   position: relative;
   isolation: isolate;
   border: 0;
   box-shadow:
-    0 16px 22px -10px rgba(40, 18, 4, 0.5),
-    0 3px 5px rgba(0, 0, 0, 0.22),
+    0 18px 26px -12px rgba(20, 10, 4, 0.55),
+    0 4px 8px rgba(0, 0, 0, 0.22),
     inset 0 0 0 6px #8a5a28,
     inset 0 0 0 7.5px #5c3a14,
     inset 0 10px 18px rgba(255, 255, 255, 0.38),
     inset 0 -8px 14px rgba(70, 40, 12, 0.16);
+}
+
+.em-table-realistic::before {
+  content: '';
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: -18%;
+  height: 28%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 50%, rgba(20, 10, 4, 0.42), transparent 72%);
+  filter: blur(5px);
+  z-index: -1;
+  pointer-events: none;
 }
 
 .em-table-realistic::after {

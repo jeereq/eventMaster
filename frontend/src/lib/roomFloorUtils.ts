@@ -2,13 +2,20 @@ import type React from 'react';
 import type { FloorType } from '@/lib/roomThemeUtils';
 
 export const floorTypeLabels: Record<FloorType, string> = {
-  parquet: 'Parquet point de Hongrie',
+  parquet: 'Parquet Hongrie',
+  chevron: 'Parquet chevron',
+  bois: 'Lames de chêne',
   carrelage: 'Carrelage pierre',
   marbre: 'Marbre veiné',
+  damier: 'Damier',
+  terrazzo: 'Terrazzo',
+  pierre: 'Dalles de pierre',
   moquette: 'Moquette velours',
   herbe: 'Gazon',
+  sable: 'Sable',
   beton: 'Béton poli',
-  bois: 'Parquet à lames',
+  epoxy: 'Résine brillante',
+  brique: 'Brique',
   custom: 'Image importée',
 };
 
@@ -19,40 +26,66 @@ type FloorAsset = {
 };
 
 const FLOOR_ASSETS: Record<Exclude<FloorType, 'custom'>, FloorAsset> = {
-  parquet: { url: '/floors/parquet-herringbone.svg', size: '360px 360px', fallback: '#c4a06a' },
-  bois: { url: '/floors/parquet-oak.svg', size: '380px 380px', fallback: '#d2b07a' },
-  carrelage: { url: '/floors/tile.svg', size: '220px 220px', fallback: '#e2dcd0' },
-  marbre: { url: '/floors/marble.svg', size: '420px 420px', fallback: '#ebe6dc' },
-  moquette: { url: '/floors/carpet.svg', size: '180px 180px', fallback: '#1a1528' },
-  herbe: { url: '/floors/grass.svg', size: '260px 260px', fallback: '#166534' },
-  beton: { url: '/floors/concrete.svg', size: '320px 320px', fallback: '#8b95a3' },
+  parquet: { url: '/floors/parquet-herringbone.svg', size: '88px 88px', fallback: '#c4a06a' },
+  chevron: { url: '/floors/chevron.svg', size: '72px 44px', fallback: '#c9a06a' },
+  bois: { url: '/floors/parquet-oak.svg', size: '96px 96px', fallback: '#d2b07a' },
+  carrelage: { url: '/floors/tile.svg', size: '56px 56px', fallback: '#e2dcd0' },
+  marbre: { url: '/floors/marble.svg', size: '110px 110px', fallback: '#ebe6dc' },
+  damier: { url: '/floors/damier.svg', size: '36px 36px', fallback: '#1c1917' },
+  terrazzo: { url: '/floors/terrazzo.svg', size: '64px 64px', fallback: '#e8e0d4' },
+  pierre: { url: '/floors/pierre.svg', size: '80px 60px', fallback: '#c8c0b4' },
+  moquette: { url: '/floors/carpet.svg', size: '56px 56px', fallback: '#1a1528' },
+  herbe: { url: '/floors/grass.svg', size: '64px 64px', fallback: '#166534' },
+  sable: { url: '/floors/sable.svg', size: '48px 48px', fallback: '#e8d5a3' },
+  beton: { url: '/floors/concrete.svg', size: '80px 80px', fallback: '#8b95a3' },
+  epoxy: { url: '/floors/epoxy.svg', size: '72px 72px', fallback: '#cbd5e1' },
+  brique: { url: '/floors/brique.svg', size: '64px 32px', fallback: '#b45309' },
 };
 
 function lightingOverlays(floorType: FloorType): { image: string; size: string; repeat: string; blend: string } {
-  if (floorType === 'moquette') {
+  if (floorType === 'moquette' || floorType === 'damier') {
     return {
-      image: 'radial-gradient(ellipse at 50% 38%, rgba(80,60,120,0.18) 0%, transparent 55%), radial-gradient(ellipse at 50% 100%, rgba(0,0,0,0.45) 0%, transparent 70%)',
+      image: [
+        'radial-gradient(ellipse at 50% 38%, rgba(80,60,120,0.16) 0%, transparent 55%)',
+        'linear-gradient(180deg, rgba(0,0,0,0.28) 0%, transparent 38%, rgba(0,0,0,0.18) 100%)',
+      ].join(', '),
       size: '100% 100%, 100% 100%',
       repeat: 'no-repeat, no-repeat',
       blend: 'soft-light, multiply',
     };
   }
-  if (floorType === 'herbe') {
+  if (floorType === 'herbe' || floorType === 'sable') {
     return {
-      image: 'radial-gradient(ellipse at 50% 40%, rgba(255,255,255,0.08) 0%, transparent 50%), radial-gradient(ellipse at 50% 100%, rgba(10,40,10,0.35) 0%, transparent 65%)',
+      image: [
+        'radial-gradient(ellipse at 50% 40%, rgba(255,255,255,0.1) 0%, transparent 50%)',
+        'linear-gradient(180deg, rgba(20,40,10,0.22) 0%, transparent 42%, rgba(10,30,8,0.2) 100%)',
+      ].join(', '),
       size: '100% 100%, 100% 100%',
       repeat: 'no-repeat, no-repeat',
       blend: 'overlay, multiply',
     };
   }
+  if (floorType === 'epoxy' || floorType === 'marbre') {
+    return {
+      image: [
+        'radial-gradient(ellipse at 50% 42%, transparent 40%, rgba(12,16,28,0.28) 100%)',
+        'linear-gradient(118deg, rgba(255,255,255,0.28) 0%, transparent 32%, rgba(20,24,36,0.12) 100%)',
+        'linear-gradient(180deg, rgba(8,12,24,0.18) 0%, transparent 36%, rgba(255,255,255,0.06) 100%)',
+      ].join(', '),
+      size: '100% 100%, 100% 100%, 100% 100%',
+      repeat: 'no-repeat, no-repeat, no-repeat',
+      blend: 'multiply, overlay, soft-light',
+    };
+  }
   return {
     image: [
-      'radial-gradient(ellipse at 50% 42%, transparent 42%, rgba(28,14,4,0.28) 100%)',
-      'linear-gradient(118deg, rgba(255,255,255,0.16) 0%, transparent 34%, rgba(40,20,6,0.14) 100%)',
+      'radial-gradient(ellipse at 50% 42%, transparent 42%, rgba(28,14,4,0.26) 100%)',
+      'linear-gradient(118deg, rgba(255,255,255,0.14) 0%, transparent 34%, rgba(40,20,6,0.12) 100%)',
+      'linear-gradient(180deg, rgba(20,10,4,0.2) 0%, transparent 40%, rgba(255,255,255,0.05) 100%)',
     ].join(', '),
-    size: '100% 100%, 100% 100%',
-    repeat: 'no-repeat, no-repeat',
-    blend: 'multiply, overlay',
+    size: '100% 100%, 100% 100%, 100% 100%',
+    repeat: 'no-repeat, no-repeat, no-repeat',
+    blend: 'multiply, overlay, soft-light',
   };
 }
 
@@ -81,12 +114,29 @@ export function resolveFloorStyle(
       backgroundColor: '#8b6840',
       backgroundImage: [
         'radial-gradient(ellipse at 50% 42%, transparent 48%, rgba(28,14,4,0.26) 100%)',
+        'linear-gradient(180deg, rgba(20,10,4,0.18) 0%, transparent 40%, rgba(255,255,255,0.05) 100%)',
         `url(${floorImageUrl})`,
       ].join(', '),
-      backgroundSize: '100% 100%, cover',
+      backgroundSize: '100% 100%, 100% 100%, cover',
       backgroundPosition: 'center',
       backgroundRepeat: 'no-repeat',
     };
   }
   return getFloorPatternStyle(floorType ?? 'parquet', accentColor);
+}
+
+/** Échelle / luminosité selon la profondeur (haut = fond de salle). */
+export function depthScaleForY(yPct: number, enabled: boolean): number {
+  if (!enabled) return 1;
+  const t = Math.min(1, Math.max(0, yPct / 100));
+  return 0.76 + t * 0.3;
+}
+
+export function furnitureDepthStyle(yPct: number, enabled: boolean): React.CSSProperties {
+  if (!enabled) return {};
+  const t = Math.min(1, Math.max(0, yPct / 100));
+  return {
+    zIndex: Math.round(12 + t * 40),
+    filter: `brightness(${(0.86 + t * 0.16).toFixed(3)})`,
+  };
 }

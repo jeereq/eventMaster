@@ -10,7 +10,7 @@ import {
 } from '@/lib/roomLayoutUtils';
 import { getTableVisualStyle } from '@/lib/tablePlanUtils';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
-import { resolveFloorStyle } from '@/lib/roomFloorUtils';
+import { depthScaleForY, furnitureDepthStyle, resolveFloorStyle } from '@/lib/roomFloorUtils';
 import ChairRenderer from '@/components/ChairRenderer';
 import FixtureRenderer from '@/components/FixtureRenderer';
 
@@ -34,6 +34,7 @@ export default function RoomLayoutPreview({ blueprint: rawBlueprint, className =
  const theme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
  const floorType = blueprint.metadata.floorType ?? theme.defaultFloorType;
  const floorStyle = resolveFloorStyle(floorType, blueprint.metadata.floorImageUrl, theme.accentColor);
+ const depthView = Boolean(blueprint.metadata.depthView);
 
  return (
  <div className={`space-y-2 ${className}`}>
@@ -42,7 +43,7 @@ export default function RoomLayoutPreview({ blueprint: rawBlueprint, className =
  <span>{blueprint.metadata.totalSeats} places · {blueprint.canvas.widthM}×{blueprint.canvas.heightM} m</span>
  </div>
  <div
- className="relative aspect-[4/3] border border-border rounded-2xl overflow-hidden em-floor-canvas em-floor-canvas--photo"
+ className={`relative aspect-[4/3] border border-border rounded-2xl overflow-hidden em-floor-canvas em-floor-canvas--photo${depthView ? ' em-floor-canvas--depth' : ''}`}
  style={floorStyle}
  >
  {outline && (
@@ -63,6 +64,7 @@ export default function RoomLayoutPreview({ blueprint: rawBlueprint, className =
  {theme.ambientOverlay && (
  <div className="absolute inset-0" style={{ background: theme.ambientOverlay }} />
  )}
+ {depthView && <div className="absolute inset-0 pointer-events-none em-floor-depth-haze" />}
  </div>
  )}
 
@@ -105,14 +107,20 @@ export default function RoomLayoutPreview({ blueprint: rawBlueprint, className =
 
  const tableColor = resolveTableColor(item.tableColor, blueprint.metadata.defaultTableColor);
  const { className: tableClass, style: tableStyle } = getTableVisualStyle(item.shape, false, tableColor, item.tableImageUrl);
+ const depthScale = depthScaleForY(item.y, depthView);
 
  return (
  <div
  key={item.id}
- className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5 z-10"
- style={{ left: `${item.x}%`, top: `${item.y}%` }}
+ className="absolute flex flex-col items-center gap-0.5"
+ style={{
+ left: `${item.x}%`,
+ top: `${item.y}%`,
+ transform: `translate(-50%, -50%) scale(${0.45 * depthScale})`,
+ ...furnitureDepthStyle(item.y, depthView),
+ }}
  >
- <div className={`${tableClass} scale-[0.45] origin-center shadow-xs flex items-center justify-center`} style={tableStyle} />
+ <div className={`${tableClass} origin-center flex items-center justify-center`} style={tableStyle} />
  <span className="text-[7px] font-bold text-muted bg-white/90 px-1 rounded">{item.name}</span>
  <div className="flex gap-0.5">
  {Array.from({ length: Math.min(item.capacity, 6) }).map((_, i) => (

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <defs>
+    <filter id="sand">
+      <feTurbulence type="fractalNoise" baseFrequency="1.4" numOctaves="4" stitchTiles="stitch"/>
+      <feColorMatrix values="0 0 0 0 0.82  0 0 0 0 0.7  0 0 0 0 0.42  0 0 0 0.55 0"/>
+    </filter>
+  </defs>
+  <rect width="64" height="64" fill="#e8d5a3"/>
+  <rect width="64" height="64" filter="url(#sand)"/>
+</svg>

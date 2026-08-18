@@ -175,6 +175,7 @@ export default function GuestRoomPlanCanvas({
                 {theme.ambientOverlay && (
                   <div className="absolute inset-0" style={{ background: theme.ambientOverlay }} />
                 )}
+                <div className="absolute inset-0 pointer-events-none em-floor-depth-haze" />
               </div>
             )}
 
