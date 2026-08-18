@@ -321,20 +321,29 @@ export async function listPublicVenues(req: Request, res: Response) {
   }
 }
 
+function canViewUnpublishedListing(req: Request, tenantId: string): boolean {
+  const user = (req as AuthenticatedRequest).user;
+  if (!user) return false;
+  return user.role === 'SUPER_ADMIN' || user.tenantId === tenantId;
+}
+
 export async function getPublicVenue(req: Request, res: Response) {
   try {
     const slug = String(req.params.slug || '').trim();
     if (!slug) return res.status(400).json({ error: 'Slug requis.' });
 
     const listing = await prisma.venueListing.findFirst({
-      where: { slug, isPublic: true },
+      where: { slug },
       include: listingInclude,
     });
     if (!listing) {
       return res.status(404).json({ error: 'Salle introuvable ou non publiée.' });
     }
+    if (!listing.isPublic && !canViewUnpublishedListing(req, listing.tenantId)) {
+      return res.status(404).json({ error: 'Salle introuvable ou non publiée.' });
+    }
 
-    return res.json(toPublicVenue(listing));
+    return res.json({ ...toPublicVenue(listing), isPublic: listing.isPublic });
   } catch (error) {
     console.error('getPublicVenue:', error);
     return res.status(500).json({ error: 'Impossible de charger la salle.' });
@@ -743,11 +752,14 @@ export async function getPublicService(req: Request, res: Response) {
     const slug = String(req.params.slug || '').trim();
     if (!slug) return res.status(400).json({ error: 'Slug requis.' });
     const offering = await prisma.serviceOffering.findFirst({
-      where: { slug, isPublic: true },
+      where: { slug },
       include: offeringInclude,
     });
     if (!offering) return res.status(404).json({ error: 'Prestation introuvable ou non publiée.' });
-    return res.json(toPublicService(offering));
+    if (!offering.isPublic && !canViewUnpublishedListing(req, offering.tenantId)) {
+      return res.status(404).json({ error: 'Prestation introuvable ou non publiée.' });
+    }
+    return res.json({ ...toPublicService(offering), isPublic: offering.isPublic });
   } catch (error) {
     console.error('getPublicService:', error);
     return res.status(500).json({ error: 'Impossible de charger la prestation.' });

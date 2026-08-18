@@ -96,6 +96,7 @@ export default function ListingDetailLayout({
   quotaLabel,
   inquiry,
   booking,
+  preview,
 }: {
   backHref: string;
   backLabel: string;
@@ -118,12 +119,14 @@ export default function ListingDetailLayout({
   priceFromFc: number | null;
   priceUnitLabel?: string | null;
   quotaLabel?: string | null;
-  inquiry: React.ReactNode;
-  booking: React.ReactNode;
+  inquiry?: React.ReactNode;
+  booking?: React.ReactNode;
+  preview?: boolean;
 }) {
   const router = useRouter();
   const [mobileAction, setMobileAction] = useState<'inquire' | 'book'>('inquire');
   const priceLabel = priceFromFc != null ? formatFc(priceFromFc) : 'Sur devis';
+  const showCommerce = !preview && Boolean(inquiry || booking);
 
   const goBack = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -138,7 +141,7 @@ export default function ListingDetailLayout({
       } catch {
         /* ignore */
       }
-      if (stored !== backHref && stored.startsWith('/marketplace')) {
+      if (stored !== backHref && (stored.startsWith('/marketplace') || stored.startsWith('/dashboard'))) {
         router.push(stored);
         return;
       }
@@ -213,9 +216,11 @@ export default function ListingDetailLayout({
                   <p className="text-base font-semibold truncate">{priceLabel}</p>
                   {priceUnitLabel ? <p className="text-[11px] text-muted truncate">{priceUnitLabel}</p> : null}
                 </div>
-                <Button size="sm" className="shrink-0 min-h-10" onClick={() => scrollToContact('inquire')}>
-                  Devis
-                </Button>
+                {showCommerce ? (
+                  <Button size="sm" className="shrink-0 min-h-10" onClick={() => scrollToContact('inquire')}>
+                    Devis
+                  </Button>
+                ) : null}
               </div>
 
               <div className="sticky top-14 z-20 -mx-1 px-1 py-1 bg-background/95 backdrop-blur-md">
@@ -240,6 +245,8 @@ export default function ListingDetailLayout({
             >
               <div className="hidden lg:block">{priceBlock}</div>
 
+              {showCommerce ? (
+                <>
               <div className="lg:hidden flex gap-1 p-1 rounded-lg bg-surface-muted border border-border">
                 <button
                   type="button"
@@ -273,13 +280,19 @@ export default function ListingDetailLayout({
               <div className={cn(mobileAction === 'book' ? 'block' : 'hidden', 'lg:block')}>
                 {booking}
               </div>
+                </>
+              ) : preview ? (
+                <p className="text-xs text-muted leading-relaxed">
+                  Aperçu interne — les demandes de devis et réservations restent sur la fiche publique.
+                </p>
+              ) : null}
             </aside>
           </div>
 
         </>
       )}
 
-      {!error && (
+      {!error && showCommerce && (
         <div
           className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-background/95 backdrop-blur-md"
           style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}

@@ -4,16 +4,24 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  Building2, Clock, CreditCard, ExternalLink, FileText, Loader2, LogIn, Store, Users,
+  Building2, Clock, CreditCard, FileText, Loader2, LogIn, Store, Users,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
-  PageHeader, Breadcrumbs, Alert, EmptyState, Pagination, Input, Button, Badge, Modal, StatusPill,
+  PageHeader, Breadcrumbs, Alert, EmptyState, Pagination, Button, Badge, Modal, StatusPill,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { ACCOUNT_KIND_LABELS, SERVICE_CATEGORIES, SERVICE_CATEGORY_LABELS, type TenantAccountKind } from '@/lib/marketplace';
+import {
+  ACCOUNT_KIND_LABELS, SERVICE_CATEGORIES, SERVICE_CATEGORY_LABELS,
+  catalogueItemToMapMarker, isCatalogueMapView,
+  type CatalogueItem, type CatalogueViewMode, type TenantAccountKind,
+} from '@/lib/marketplace';
 import { formatFc } from '@/config/landingPricing';
+import CatalogueFilterBar, { CatalogueChoicePills, CatalogueFilterField, type CatalogueFilterChip } from '@/components/CatalogueFilterBar';
+import CatalogueResults, { CatalogueResultsSkeleton } from '@/components/CatalogueResults';
+import { useCatalogueView } from '@/components/CatalogueViewToggle';
+import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
 
 const PAGE_SIZE = 20;
 
@@ -34,6 +42,12 @@ interface VenueRow {
   roomName: string;
   city: string | null;
   commune: string | null;
+  neighborhood?: string | null;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  coverUrl?: string | null;
+  photos?: string[];
   priceFromFc: number | null;
   priceUnitLabel: string;
   publishedAt: string | null;
@@ -52,6 +66,12 @@ interface OfferingRow {
   categoryLabel: string;
   city: string | null;
   commune: string | null;
+  neighborhood?: string | null;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  coverUrl?: string | null;
+  photos?: string[];
   priceFromFc: number | null;
   priceUnitLabel: string;
   publishedAt: string | null;
@@ -153,6 +173,45 @@ function place(city: string | null, commune: string | null) {
   return [commune, city].filter(Boolean).join(', ') || 'Lieu non renseigné';
 }
 
+function venueToItem(row: VenueRow): CatalogueItem {
+  return {
+    kind: 'venue',
+    id: `venue:${row.slug}`,
+    slug: row.slug,
+    href: row.href,
+    title: row.headline,
+    orgName: row.tenantName,
+    categoryLabel: 'Salle',
+    location: place(row.city, row.commune),
+    coverUrl: row.coverUrl || null,
+    photos: row.photos || [],
+    priceFromFc: row.priceFromFc,
+    priceUnitLabel: row.priceUnitLabel,
+    latitude: row.latitude ?? null,
+    longitude: row.longitude ?? null,
+    address: row.address || null,
+  };
+}
+
+function offeringToItem(row: OfferingRow): CatalogueItem {
+  return {
+    kind: 'service',
+    id: `service:${row.slug}`,
+    slug: row.slug,
+    href: row.href,
+    title: row.title,
+    orgName: row.tenantName,
+    categoryLabel: row.categoryLabel,
+    location: place(row.city, row.commune),
+    coverUrl: row.coverUrl || null,
+    photos: row.photos || [],
+    priceFromFc: row.priceFromFc,
+    priceUnitLabel: row.priceUnitLabel,
+    latitude: row.latitude ?? null,
+    longitude: row.longitude ?? null,
+  };
+}
+
 export default function AdminCataloguePage() {
   const router = useRouter();
   const { user, loading: authLoading, enterSupportSession } = useAuth();
@@ -162,8 +221,10 @@ export default function AdminCataloguePage() {
   const [q, setQ] = useState('');
   const [visibility, setVisibility] = useState<'all' | 'public' | 'hidden'>('all');
   const [category, setCategory] = useState('');
+  const [city, setCity] = useState('');
   const [inquiryStatus, setInquiryStatus] = useState('');
   const [bookingStatus, setBookingStatus] = useState('');
+  const { mode: view, setView, gridCols, setGridCols } = useCatalogueView('list');
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -210,6 +271,7 @@ export default function AdminCataloguePage() {
       params.set('limit', String(PAGE_SIZE));
       params.set('page', String(page));
       if (q) params.set('q', q);
+      if (city) params.set('city', city);
       if (tab === 'venues' || tab === 'offerings') {
         if (visibility === 'public') params.set('isPublic', '1');
         if (visibility === 'hidden') params.set('isPublic', '0');
@@ -217,6 +279,10 @@ export default function AdminCataloguePage() {
       if (tab === 'offerings' && category) params.set('category', category);
       if (tab === 'inquiries' && inquiryStatus) params.set('status', inquiryStatus);
       if (tab === 'bookings' && bookingStatus) params.set('status', bookingStatus);
+      if ((tab === 'venues' || tab === 'offerings') && isCatalogueMapView(view)) {
+        params.set('limit', '100');
+        params.set('page', '1');
+      }
 
       if (tab === 'venues') setVenues(await api.get(`/admin/catalog/venues?${params}`));
       if (tab === 'offerings') setOfferings(await api.get(`/admin/catalog/offerings?${params}`));
@@ -227,7 +293,7 @@ export default function AdminCataloguePage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.role, tab, page, q, visibility, category, inquiryStatus, bookingStatus]);
+  }, [user?.role, tab, page, q, visibility, category, inquiryStatus, bookingStatus, city, view]);
 
   useEffect(() => {
     void loadOverview();
@@ -300,6 +366,26 @@ export default function AdminCataloguePage() {
           ? inquiries?.total ?? 0
           : bookings?.total ?? 0;
 
+  const catalogItems: CatalogueItem[] =
+    tab === 'venues'
+      ? (venues?.items || []).map(venueToItem)
+      : tab === 'offerings'
+        ? (offerings?.items || []).map(offeringToItem)
+        : [];
+  const catalogMarkers = catalogItems
+    .filter((item) => item.latitude != null && item.longitude != null)
+    .map(catalogueItemToMapMarker);
+  const mapMode = (tab === 'venues' || tab === 'offerings') && isCatalogueMapView(view);
+
+  const listingTab = tab === 'venues' || tab === 'offerings';
+  const chips: CatalogueFilterChip[] = [
+    ...(listingTab && visibility !== 'all' ? [{ id: 'visibility', label: 'Visibilité', value: visibility === 'public' ? 'Publiques' : 'Dépubliées' }] : []),
+    ...(listingTab && city ? [{ id: 'city', label: 'Ville', value: city }] : []),
+    ...(category && tab === 'offerings' ? [{ id: 'category', label: 'Catégorie', value: SERVICE_CATEGORY_LABELS[category as keyof typeof SERVICE_CATEGORY_LABELS] || category }] : []),
+    ...(tab === 'inquiries' && inquiryStatus ? [{ id: 'inquiry', label: 'Statut', value: inquiryStatus === 'NEW' ? 'Nouveau' : 'Contacté' }] : []),
+    ...(tab === 'bookings' && bookingStatus ? [{ id: 'booking', label: 'Statut', value: BOOKING_STATUS_LABELS[bookingStatus] || bookingStatus }] : []),
+  ];
+
   return (
     <div className="space-y-6 w-full">
       <PageHeader
@@ -348,177 +434,167 @@ export default function AdminCataloguePage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <Input
-          label="Recherche"
-          placeholder={tab === 'inquiries' ? 'Nom, e-mail…' : 'Titre, org, ville…'}
-          value={qInput}
-          onChange={(e) => setQInput(e.target.value)}
-        />
-        {(tab === 'venues' || tab === 'offerings') && (
-          <label className="space-y-1.5">
-            <span className="block text-xs font-semibold text-muted">Visibilité</span>
-            <select
-              value={visibility}
-              onChange={(e) => {
-                setVisibility(e.target.value as 'all' | 'public' | 'hidden');
-                setPage(1);
-              }}
-              className="block w-full py-2.5 px-3.5 bg-surface-muted border border-border rounded-xl text-sm text-foreground"
-            >
-              <option value="all">Toutes</option>
-              <option value="public">Publiques</option>
-              <option value="hidden">Dépubliées</option>
-            </select>
-          </label>
-        )}
-        {tab === 'offerings' && (
-          <label className="space-y-1.5">
-            <span className="block text-xs font-semibold text-muted">Catégorie</span>
-            <select
-              value={category}
-              onChange={(e) => {
-                setCategory(e.target.value);
-                setPage(1);
-              }}
-              className="block w-full py-2.5 px-3.5 bg-surface-muted border border-border rounded-xl text-sm text-foreground"
-            >
-              <option value="">Toutes</option>
-              {SERVICE_CATEGORIES.map((id) => (
-                <option key={id} value={id}>
-                  {SERVICE_CATEGORY_LABELS[id]}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {tab === 'inquiries' && (
-          <label className="space-y-1.5">
-            <span className="block text-xs font-semibold text-muted">Statut</span>
-            <select
-              value={inquiryStatus}
-              onChange={(e) => {
-                setInquiryStatus(e.target.value);
-                setPage(1);
-              }}
-              className="block w-full py-2.5 px-3.5 bg-surface-muted border border-border rounded-xl text-sm text-foreground"
-            >
-              <option value="">Tous</option>
-              <option value="NEW">Nouveau</option>
-              <option value="CONTACTED">Contacté</option>
-            </select>
-          </label>
-        )}
-        {tab === 'bookings' && (
-          <label className="space-y-1.5">
-            <span className="block text-xs font-semibold text-muted">Statut</span>
-            <select
-              value={bookingStatus}
-              onChange={(e) => {
-                setBookingStatus(e.target.value);
-                setPage(1);
-              }}
-              className="block w-full py-2.5 px-3.5 bg-surface-muted border border-border rounded-xl text-sm text-foreground"
-            >
-              <option value="">Tous</option>
-              {Object.entries(BOOKING_STATUS_LABELS).map(([id, label]) => (
-                <option key={id} value={id}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-      </div>
+      <CatalogueFilterBar
+        search={qInput}
+        onSearchChange={setQInput}
+        searchPlaceholder={tab === 'inquiries' ? 'Nom, e-mail…' : 'Titre, organisation, ville…'}
+        view={view as CatalogueViewMode}
+        onViewChange={(mode) => {
+          setView(mode);
+          setPage(1);
+        }}
+        hideViewToggle={tab === 'inquiries' || tab === 'bookings'}
+        compactToggle
+        gridCols={gridCols}
+        onGridColsChange={setGridCols}
+        chips={chips}
+        onRemoveChip={(id) => {
+          if (id === 'visibility') setVisibility('all');
+          if (id === 'city') setCity('');
+          if (id === 'category') setCategory('');
+          if (id === 'inquiry') setInquiryStatus('');
+          if (id === 'booking') setBookingStatus('');
+          setPage(1);
+        }}
+        onClearChips={() => {
+          setVisibility('all');
+          setCity('');
+          setCategory('');
+          setInquiryStatus('');
+          setBookingStatus('');
+          setPage(1);
+        }}
+        resultLabel={`${currentTotal} résultat${currentTotal > 1 ? 's' : ''}`}
+        modalTitle="Filtres catalogue"
+        filters={
+          <>
+            {(tab === 'venues' || tab === 'offerings') && (
+              <CatalogueFilterField label="Visibilité">
+                <CatalogueChoicePills
+                  options={[
+                    { id: 'all', label: 'Toutes' },
+                    { id: 'public', label: 'Publiques' },
+                    { id: 'hidden', label: 'Dépubliées' },
+                  ]}
+                  value={visibility}
+                  onChange={(id) => setVisibility((id as 'all' | 'public' | 'hidden') || 'all')}
+                />
+              </CatalogueFilterField>
+            )}
+            {(tab === 'venues' || tab === 'offerings') && (
+              <CatalogueFilterField label="Ville">
+                <CatalogueChoicePills
+                  options={[
+                    { id: 'Kinshasa', label: 'Kinshasa' },
+                    { id: 'Lubumbashi', label: 'Lubumbashi' },
+                  ]}
+                  value={city}
+                  onChange={setCity}
+                />
+              </CatalogueFilterField>
+            )}
+            {tab === 'offerings' && (
+              <CatalogueFilterField label="Catégorie">
+                <CatalogueChoicePills
+                  options={SERVICE_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] }))}
+                  value={category}
+                  onChange={setCategory}
+                />
+              </CatalogueFilterField>
+            )}
+            {tab === 'inquiries' && (
+              <CatalogueFilterField label="Statut">
+                <CatalogueChoicePills
+                  options={[
+                    { id: 'NEW', label: 'Nouveau' },
+                    { id: 'CONTACTED', label: 'Contacté' },
+                  ]}
+                  value={inquiryStatus}
+                  onChange={setInquiryStatus}
+                />
+              </CatalogueFilterField>
+            )}
+            {tab === 'bookings' && (
+              <CatalogueFilterField label="Statut">
+                <CatalogueChoicePills
+                  options={Object.entries(BOOKING_STATUS_LABELS).map(([id, label]) => ({ id, label }))}
+                  value={bookingStatus}
+                  onChange={setBookingStatus}
+                />
+              </CatalogueFilterField>
+            )}
+          </>
+        }
+      />
 
       {loading ? (
-        <div className="flex justify-center py-16">
-          <Loader2 className="w-6 h-6 animate-spin text-primary" />
-        </div>
-      ) : tab === 'venues' && !venues?.items.length ? (
-        <EmptyState icon={<Store className="w-5 h-5" />} title="Aucune salle" description="Les fiches salles apparaîtront ici." />
-      ) : tab === 'offerings' && !offerings?.items.length ? (
-        <EmptyState icon={<Store className="w-5 h-5" />} title="Aucun prestataire" description="Les prestations publiées apparaîtront ici." />
+        (tab === 'venues' || tab === 'offerings') ? (
+          <CatalogueResultsSkeleton mode={mapMode ? 'map' : view === 'list' ? 'list' : 'grid'} count={8} gridCols={gridCols} />
+        ) : (
+          <div className="flex justify-center py-16">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </div>
+        )
+      ) : tab === 'venues' || tab === 'offerings' ? (
+        mapMode ? (
+          catalogMarkers.length === 0 ? (
+            <EmptyState icon={<Store className="w-5 h-5" />} title="Aucune position" description="Aucune fiche géolocalisée ne correspond aux filtres." />
+          ) : (
+            <MarketplaceLocationsMap
+              markers={catalogMarkers}
+              listingSearch
+              navigateOnClick
+              height={480}
+              city={city || null}
+            />
+          )
+        ) : (
+          <div className="space-y-3">
+            <CatalogueResults
+              items={catalogItems}
+              mode={view === 'list' ? 'list' : 'grid'}
+              gridCols={gridCols}
+              emptyTitle={tab === 'venues' ? 'Aucune salle' : 'Aucun prestataire'}
+              emptyDescription={tab === 'venues' ? 'Les fiches salles apparaîtront ici.' : 'Les prestations publiées apparaîtront ici.'}
+            />
+            {catalogItems.length > 0 && (
+              <ul className="divide-y divide-border border border-border rounded-[var(--radius-card)] overflow-hidden bg-surface">
+                {(tab === 'venues' ? venues?.items : offerings?.items)?.map((row) => (
+                  <li key={`mod-${row.id}`} className="px-4 py-2.5 flex flex-wrap items-center gap-2 text-xs">
+                    <Badge variant={row.isPublic ? 'success' : 'default'}>{row.isPublic ? 'Public' : 'Masqué'}</Badge>
+                    <span className="font-medium text-foreground truncate">
+                      {'headline' in row ? row.headline : row.title}
+                    </span>
+                    <button type="button" className="text-primary hover:underline" onClick={() => void openFiche(row.tenantId)}>
+                      {row.tenantName}
+                    </button>
+                    {row.isPublic && (
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        className="ml-auto"
+                        loading={busyId === row.id}
+                        onClick={() => void unpublish(
+                          tab === 'venues' ? 'venues' : 'offerings',
+                          row.id,
+                          'headline' in row ? row.headline : row.title,
+                        )}
+                      >
+                        Dépublier
+                      </Button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )
       ) : tab === 'inquiries' && !inquiries?.items.length ? (
         <EmptyState icon={<FileText className="w-5 h-5" />} title="Aucune demande" description="Les devis marketplace apparaîtront ici." />
       ) : tab === 'bookings' && !bookings?.items.length ? (
         <EmptyState icon={<Clock className="w-5 h-5" />} title="Aucune réservation" description="Les demandes de dates apparaîtront ici." />
       ) : (
         <ul className="divide-y divide-border border border-border rounded-[var(--radius-card)] overflow-hidden bg-surface">
-          {tab === 'venues' &&
-            venues?.items.map((row) => (
-              <li key={row.id} className="px-4 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <Badge variant={row.isPublic ? 'success' : 'default'}>{row.isPublic ? 'Public' : 'Masqué'}</Badge>
-                    <span className="text-[10px] text-muted">{formatWhen(row.publishedAt || row.createdAt)}</span>
-                  </div>
-                  <p className="text-sm font-semibold text-foreground truncate">{row.headline}</p>
-                  <p className="text-xs text-muted truncate">
-                    {place(row.city, row.commune)}
-                    {row.priceFromFc != null ? ` · Dès ${formatFc(row.priceFromFc)} / ${row.priceUnitLabel}` : ''}
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 shrink-0">
-                  <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={() => void openFiche(row.tenantId)}>
-                    {row.tenantName}
-                  </button>
-                  <Link href={row.href} target="_blank" className="inline-flex">
-                    <Button variant="secondary" size="sm" leftIcon={<ExternalLink className="w-3.5 h-3.5" />}>
-                      Fiche
-                    </Button>
-                  </Link>
-                  {row.isPublic && (
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      loading={busyId === row.id}
-                      onClick={() => void unpublish('venues', row.id, row.headline)}
-                    >
-                      Dépublier
-                    </Button>
-                  )}
-                </div>
-              </li>
-            ))}
-
-          {tab === 'offerings' &&
-            offerings?.items.map((row) => (
-              <li key={row.id} className="px-4 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <Badge variant={row.isPublic ? 'success' : 'default'}>{row.isPublic ? 'Public' : 'Masqué'}</Badge>
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">{row.categoryLabel}</span>
-                  </div>
-                  <p className="text-sm font-semibold text-foreground truncate">{row.title}</p>
-                  <p className="text-xs text-muted truncate">
-                    {place(row.city, row.commune)}
-                    {row.priceFromFc != null ? ` · Dès ${formatFc(row.priceFromFc)} / ${row.priceUnitLabel}` : ''}
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 shrink-0">
-                  <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={() => void openFiche(row.tenantId)}>
-                    {row.tenantName}
-                  </button>
-                  <Link href={row.href} target="_blank" className="inline-flex">
-                    <Button variant="secondary" size="sm" leftIcon={<ExternalLink className="w-3.5 h-3.5" />}>
-                      Fiche
-                    </Button>
-                  </Link>
-                  {row.isPublic && (
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      loading={busyId === row.id}
-                      onClick={() => void unpublish('offerings', row.id, row.title)}
-                    >
-                      Dépublier
-                    </Button>
-                  )}
-                </div>
-              </li>
-            ))}
-
           {tab === 'inquiries' &&
             inquiries?.items.map((row) => (
               <li key={row.id} className="px-4 py-4 space-y-1.5">
@@ -543,7 +619,7 @@ export default function AdminCataloguePage() {
                     </button>
                   )}
                   {row.href && (
-                    <Link href={row.href} target="_blank" className="text-xs font-medium text-primary hover:underline">
+                    <Link href={row.href} className="text-xs font-medium text-primary hover:underline">
                       Voir la fiche
                     </Link>
                   )}
@@ -572,8 +648,8 @@ export default function AdminCataloguePage() {
                     {row.vendorName}
                   </button>
                   {row.href && (
-                    <Link href={row.href} target="_blank" className="inline-flex">
-                      <Button variant="secondary" size="sm" leftIcon={<ExternalLink className="w-3.5 h-3.5" />}>
+                    <Link href={row.href} className="inline-flex">
+                      <Button variant="secondary" size="sm">
                         Fiche
                       </Button>
                     </Link>

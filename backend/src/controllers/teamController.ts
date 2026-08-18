@@ -7,7 +7,9 @@ import { assertOrgManagerQuota, assertPlanFeature, PlanFeatureError } from '../s
 import {
   ensureOrgCommercialReferralCode,
   DEFAULT_COMMISSION_RATE,
+  DEFAULT_RENEWAL_COMMISSION_RATE,
   normalizeCommissionRate,
+  resolveCommissionRates,
 } from '../services/commercialService';
 import { setupUserOtpVerification } from './authController';
 import { VerificationMethod } from '../services/otpService';
@@ -22,6 +24,7 @@ const userSelect = {
   orgRole: true,
   referralCode: true,
   commissionRate: true,
+  renewalCommissionRate: true,
   isEmailVerified: true,
   createdAt: true,
 };
@@ -49,23 +52,39 @@ export async function getTeamMembers(req: AuthenticatedRequest, res: Response) {
 
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { managerId: true, defaultOrgCommercialCommissionRate: true },
+      select: {
+        managerId: true,
+        defaultOrgCommercialCommissionRate: true,
+        defaultOrgCommercialRenewalCommissionRate: true,
+      },
     });
 
     return res.json({
-      members: members.map((m) => ({
-        ...m,
-        commissionRate: m.commissionRate ?? tenant?.defaultOrgCommercialCommissionRate ?? DEFAULT_COMMISSION_RATE,
-        isOwner: tenant?.managerId === m.id,
-        orgRoleLabel:
-          tenant?.managerId === m.id
-            ? 'OWNER'
-            : m.orgRole || 'MANAGER',
-      })),
+      members: members.map((m) => {
+        const rates = resolveCommissionRates({
+          first: m.commissionRate,
+          renewal: m.renewalCommissionRate,
+          firstFallback: tenant?.defaultOrgCommercialCommissionRate ?? DEFAULT_COMMISSION_RATE,
+          renewalFallback:
+            tenant?.defaultOrgCommercialRenewalCommissionRate ?? DEFAULT_RENEWAL_COMMISSION_RATE,
+        });
+        return {
+          ...m,
+          commissionRate: rates.first,
+          renewalCommissionRate: rates.renewal,
+          isOwner: tenant?.managerId === m.id,
+          orgRoleLabel:
+            tenant?.managerId === m.id
+              ? 'OWNER'
+              : m.orgRole || 'MANAGER',
+        };
+      }),
       access,
       isManager: access.canManageTeam,
       orgCommercialSettings: {
         defaultCommissionRate: tenant?.defaultOrgCommercialCommissionRate ?? DEFAULT_COMMISSION_RATE,
+        defaultRenewalCommissionRate:
+          tenant?.defaultOrgCommercialRenewalCommissionRate ?? DEFAULT_RENEWAL_COMMISSION_RATE,
       },
     });
   } catch (error: any) {
@@ -88,7 +107,7 @@ export async function createTeamMember(req: AuthenticatedRequest, res: Response)
       return res.status(403).json({ error: 'Seuls le propriétaire et les managers peuvent créer des utilisateurs.' });
     }
 
-    const { name, email, password, phone, phoneCountryCode, nationalNumber, orgRole = 'MANAGER', verificationMethod = 'EMAIL', commissionRate } = req.body;
+    const { name, email, password, phone, phoneCountryCode, nationalNumber, orgRole = 'MANAGER', verificationMethod = 'EMAIL', commissionRate, renewalCommissionRate } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Le nom, l\'e-mail et le mot de passe sont requis.' });
@@ -137,16 +156,22 @@ export async function createTeamMember(req: AuthenticatedRequest, res: Response)
 
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { defaultOrgCommercialCommissionRate: true },
+      select: {
+        defaultOrgCommercialCommissionRate: true,
+        defaultOrgCommercialRenewalCommissionRate: true,
+      },
     });
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const resolvedCommissionRate =
+    const rates =
       orgRole === 'COMMERCIAL'
-        ? normalizeCommissionRate(
-            commissionRate,
-            tenant?.defaultOrgCommercialCommissionRate ?? DEFAULT_COMMISSION_RATE,
-          )
+        ? resolveCommissionRates({
+            first: commissionRate,
+            renewal: renewalCommissionRate,
+            firstFallback: tenant?.defaultOrgCommercialCommissionRate ?? DEFAULT_COMMISSION_RATE,
+            renewalFallback:
+              tenant?.defaultOrgCommercialRenewalCommissionRate ?? DEFAULT_RENEWAL_COMMISSION_RATE,
+          })
         : null;
 
     const newUser = await prisma.user.create({
@@ -159,7 +184,8 @@ export async function createTeamMember(req: AuthenticatedRequest, res: Response)
         role: 'USER',
         orgRole,
         tenantId,
-        commissionRate: resolvedCommissionRate,
+        commissionRate: rates?.first ?? null,
+        renewalCommissionRate: rates?.renewal ?? null,
         isEmailVerified: false,
         verificationMethod: method,
       },
@@ -194,7 +220,8 @@ export async function createTeamMember(req: AuthenticatedRequest, res: Response)
         ...refreshed,
         isOwner: false,
         orgRoleLabel: orgRole,
-        commissionRate: resolvedCommissionRate,
+        commissionRate: rates?.first ?? null,
+        renewalCommissionRate: rates?.renewal ?? null,
       },
     });
   } catch (error: any) {
@@ -257,13 +284,22 @@ export async function updateTeamMember(req: AuthenticatedRequest, res: Response)
       }
     }
 
-    const updateData: { orgRole: typeof orgRole; commissionRate?: number | null } = { orgRole };
+    const updateData: {
+      orgRole: typeof orgRole;
+      commissionRate?: number | null;
+      renewalCommissionRate?: number | null;
+    } = { orgRole };
 
     if (orgRole === 'COMMERCIAL' && member.commissionRate == null) {
       updateData.commissionRate = tenant?.defaultOrgCommercialCommissionRate ?? DEFAULT_COMMISSION_RATE;
     }
+    if (orgRole === 'COMMERCIAL' && member.renewalCommissionRate == null) {
+      updateData.renewalCommissionRate =
+        tenant?.defaultOrgCommercialRenewalCommissionRate ?? DEFAULT_RENEWAL_COMMISSION_RATE;
+    }
     if (orgRole !== 'COMMERCIAL') {
       updateData.commissionRate = null;
+      updateData.renewalCommissionRate = null;
     }
 
     const updated = await prisma.user.update({
@@ -284,7 +320,16 @@ export async function updateTeamMember(req: AuthenticatedRequest, res: Response)
         ...finalUser,
         isOwner: false,
         orgRoleLabel: orgRole,
-        commissionRate: finalUser?.commissionRate ?? tenant?.defaultOrgCommercialCommissionRate ?? DEFAULT_COMMISSION_RATE,
+        ...(() => {
+          const rates = resolveCommissionRates({
+            first: finalUser?.commissionRate,
+            renewal: finalUser?.renewalCommissionRate,
+            firstFallback: tenant?.defaultOrgCommercialCommissionRate ?? DEFAULT_COMMISSION_RATE,
+            renewalFallback:
+              tenant?.defaultOrgCommercialRenewalCommissionRate ?? DEFAULT_RENEWAL_COMMISSION_RATE,
+          });
+          return { commissionRate: rates.first, renewalCommissionRate: rates.renewal };
+        })(),
       },
     });
   } catch (error: any) {
@@ -308,9 +353,9 @@ export async function updateMemberCommissionRate(req: AuthenticatedRequest, res:
       return res.status(403).json({ error: 'Seuls le propriétaire et les managers peuvent modifier les commissions.' });
     }
 
-    const { commissionRate } = req.body;
-    if (commissionRate === undefined) {
-      return res.status(400).json({ error: 'commissionRate est requis.' });
+    const { commissionRate, renewalCommissionRate } = req.body;
+    if (commissionRate === undefined && renewalCommissionRate === undefined) {
+      return res.status(400).json({ error: 'commissionRate ou renewalCommissionRate est requis.' });
     }
 
     const member = await prisma.user.findFirst({
@@ -323,23 +368,32 @@ export async function updateMemberCommissionRate(req: AuthenticatedRequest, res:
 
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { defaultOrgCommercialCommissionRate: true },
+      select: {
+        defaultOrgCommercialCommissionRate: true,
+        defaultOrgCommercialRenewalCommissionRate: true,
+      },
     });
 
-    const rate = normalizeCommissionRate(
-      commissionRate,
-      tenant?.defaultOrgCommercialCommissionRate ?? DEFAULT_COMMISSION_RATE,
-    );
+    const rates = resolveCommissionRates({
+      first: commissionRate ?? member.commissionRate,
+      renewal: renewalCommissionRate ?? member.renewalCommissionRate,
+      firstFallback: tenant?.defaultOrgCommercialCommissionRate ?? DEFAULT_COMMISSION_RATE,
+      renewalFallback:
+        tenant?.defaultOrgCommercialRenewalCommissionRate ?? DEFAULT_RENEWAL_COMMISSION_RATE,
+    });
 
     const updated = await prisma.user.update({
       where: { id: memberId },
-      data: { commissionRate: rate },
+      data: {
+        commissionRate: rates.first,
+        renewalCommissionRate: rates.renewal,
+      },
       select: userSelect,
     });
 
     return res.json({
       message: 'Taux de commission mis à jour.',
-      member: { ...updated, commissionRate: rate },
+      member: { ...updated, commissionRate: rates.first, renewalCommissionRate: rates.renewal },
     });
   } catch (error: any) {
     console.error('Erreur updateMemberCommissionRate:', error);
@@ -370,22 +424,38 @@ export async function updateOrgCommercialSettings(req: AuthenticatedRequest, res
       throw err;
     }
 
-    const { defaultCommissionRate } = req.body;
-    if (defaultCommissionRate === undefined) {
-      return res.status(400).json({ error: 'defaultCommissionRate est requis.' });
+    const { defaultCommissionRate, defaultRenewalCommissionRate } = req.body;
+    if (defaultCommissionRate === undefined && defaultRenewalCommissionRate === undefined) {
+      return res.status(400).json({ error: 'Un taux de commission est requis.' });
     }
 
-    const rate = normalizeCommissionRate(defaultCommissionRate);
+    const data: {
+      defaultOrgCommercialCommissionRate?: number;
+      defaultOrgCommercialRenewalCommissionRate?: number;
+    } = {};
+    if (defaultCommissionRate !== undefined) {
+      data.defaultOrgCommercialCommissionRate = normalizeCommissionRate(defaultCommissionRate);
+    }
+    if (defaultRenewalCommissionRate !== undefined) {
+      data.defaultOrgCommercialRenewalCommissionRate = normalizeCommissionRate(
+        defaultRenewalCommissionRate,
+        DEFAULT_RENEWAL_COMMISSION_RATE,
+      );
+    }
 
     const tenant = await prisma.tenant.update({
       where: { id: tenantId },
-      data: { defaultOrgCommercialCommissionRate: rate },
-      select: { defaultOrgCommercialCommissionRate: true },
+      data,
+      select: {
+        defaultOrgCommercialCommissionRate: true,
+        defaultOrgCommercialRenewalCommissionRate: true,
+      },
     });
 
     return res.json({
-      message: 'Commission par défaut mise à jour.',
+      message: 'Commissions par défaut mises à jour.',
       defaultCommissionRate: tenant.defaultOrgCommercialCommissionRate,
+      defaultRenewalCommissionRate: tenant.defaultOrgCommercialRenewalCommissionRate,
     });
   } catch (error: any) {
     console.error('Erreur updateOrgCommercialSettings:', error);

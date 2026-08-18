@@ -117,7 +117,10 @@ model Tenant {
   referredByCommercial   User? @relation("CommercialReferral", fields: [referredByCommercialId], references: [id], onDelete: SetNull)
   referredByOrgUserId    String?
   referredByOrgUser      User? @relation("OrgCommercialReferral", fields: [referredByOrgUserId], references: [id], onDelete: SetNull)
+  /** Taux 1er paiement des commerciaux org (0.30 = 30 %). */
   defaultOrgCommercialCommissionRate Float @default(0.30)
+  /** Taux des paiements suivants (0.20 = 20 %). */
+  defaultOrgCommercialRenewalCommissionRate Float @default(0.20)
   /** Couleurs de marque org : { primary, accent, sidebar? } */
   branding      Json?
   /** ORGANIZER = SaaS événement (défaut). VENDOR = offre salles/prestas. BOTH = les deux. CLIENT = réserve sans SaaS. */
@@ -168,7 +171,10 @@ model User {
   updatedAt     DateTime   @updatedAt
 
   referralCode   String?    @unique
+  /** Taux au premier paiement (0.30 = 30 % par défaut). */
   commissionRate Float?
+  /** Taux des paiements suivants (0.20 = 20 % par défaut). */
+  renewalCommissionRate Float?
   managedTenants Tenant[]  @relation("TenantManager")
   referredTenants Tenant[] @relation("CommercialReferral")
   orgCommercialReferrals Tenant[] @relation("OrgCommercialReferral")

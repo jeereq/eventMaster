@@ -10,7 +10,7 @@ import {
  Calendar, Users, Mail, CreditCard, LayoutDashboard,
  LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper, User, Sun, Moon, BarChart3,
  Building2, FileText, Key, MessageSquare, ScanLine, Briefcase, Clock, BookOpen,
- PanelLeftClose, PanelLeft, Store, CalendarCheck, Bell, ScrollText,
+ PanelLeftClose, PanelLeft, Store, CalendarCheck, ScrollText,
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import UserLegalGate from '@/components/UserLegalGate';
@@ -68,7 +68,6 @@ const NAV_TOOLTIPS: Record<string, string> = {
  Statistiques: 'RSVP et analyses d’événements',
  Modèles: 'Concepteur d’invitations',
  'Facturation & plan': 'Forfait, quotas et upgrade',
- Notifications: 'Alertes de votre compte',
  'Journal d’audit': 'Actions Super Admin et Commercial',
  Catalogue: 'Fiches, demandes et réservations publiques',
 };
@@ -344,7 +343,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  },
  {
  items: [
- { name: 'Notifications', href: '/dashboard/notifications', tourId: 'nav-notifications', icon: Bell },
  { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
  { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
  ],
@@ -363,7 +361,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  {
  items: [
  { name: 'Parrainage & commissions', href: '/dashboard/commercial', tourId: 'nav-commercial', icon: Briefcase },
- { name: 'Notifications', href: '/dashboard/notifications', tourId: 'nav-notifications', icon: Bell },
  { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
  { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
  ],
@@ -374,7 +371,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  {
  items: [
  { name: 'Réseau commercial', href: '/dashboard/org-commercial', tourId: 'nav-org-commercial', icon: Briefcase },
- { name: 'Notifications', href: '/dashboard/notifications', tourId: 'nav-notifications', icon: Bell },
  { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
  { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
  ],
@@ -386,7 +382,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  items: [
  { name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar },
  { name: 'Protocole', href: '/dashboard/events?mode=protocol', tourId: 'nav-protocol', icon: ScanLine },
- { name: 'Notifications', href: '/dashboard/notifications', tourId: 'nav-notifications', icon: Bell },
  { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
  { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
  ],
@@ -398,7 +393,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  items: [
  { name: 'Marketplace', href: '/marketplace', tourId: 'nav-catalogue', icon: Store, description: 'Salles et prestataires publics' },
  { name: 'Mes réservations', href: '/dashboard/bookings', tourId: 'nav-bookings', icon: CalendarCheck },
- { name: 'Notifications', href: '/dashboard/notifications', tourId: 'nav-notifications', icon: Bell },
  { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
  { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
  ],
@@ -431,7 +425,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  : []),
  ...(access?.canViewBilling ? [{ name: 'Facturation & plan', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }] : []),
  ...(access?.canViewInvoices ? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: FileText }] : []),
- { name: 'Notifications', href: '/dashboard/notifications', tourId: 'nav-notifications', icon: Bell },
  { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
  { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
  ],
@@ -527,7 +520,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  )}
  </div>
  <div className={cn('flex items-center gap-1', sidebarCollapsed && 'flex-col')}>
- {showNotifications && !sidebarCollapsed && <NotificationBell />}
  <Tooltip content={sidebarCollapsed ? 'Agrandir le menu' : 'Réduire le menu'} side="right">
  <button
  type="button"

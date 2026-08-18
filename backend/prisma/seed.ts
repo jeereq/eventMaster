@@ -166,6 +166,7 @@ async function main() {
       isEmailVerified: true,
       referralCode: 'EM-COMM01',
       commissionRate: 0.3,
+      renewalCommissionRate: 0.2,
     },
   });
 

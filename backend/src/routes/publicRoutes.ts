@@ -83,10 +83,10 @@ router.get('/templates', async (_req: Request, res: Response) => {
 });
 
 router.get('/venues', listPublicVenues);
-router.get('/venues/:slug', getPublicVenue);
+router.get('/venues/:slug', optionalAuth, getPublicVenue);
 router.post('/venues/:slug/inquire', optionalAuth, createVenueInquiry);
 router.get('/services', listPublicServices);
-router.get('/services/:slug', getPublicService);
+router.get('/services/:slug', optionalAuth, getPublicService);
 router.post('/services/:slug/inquire', optionalAuth, createServiceInquiry);
 
 // POST /api/public/contact

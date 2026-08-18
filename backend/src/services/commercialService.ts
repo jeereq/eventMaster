@@ -14,6 +14,7 @@ function formatAmountFc(amount: number): string {
 export { formatAmountFc };
 
 export const DEFAULT_COMMISSION_RATE = 0.3;
+export const DEFAULT_RENEWAL_COMMISSION_RATE = 0.2;
 
 export function generateReferralCode(name?: string | null, prefix = 'EM'): string {
   const rolePrefix = prefix === 'ORG' ? 'ORG' : 'EM';
@@ -41,6 +42,25 @@ export function normalizeCommissionRate(rate: unknown, fallback = DEFAULT_COMMIS
   const value = typeof rate === 'number' ? rate : parseFloat(String(rate));
   if (!Number.isFinite(value)) return fallback;
   return Math.min(1, Math.max(0, value));
+}
+
+export function resolveCommissionRates(params: {
+  first?: unknown;
+  renewal?: unknown;
+  firstFallback?: number;
+  renewalFallback?: number;
+}): { first: number; renewal: number } {
+  return {
+    first: normalizeCommissionRate(params.first, params.firstFallback ?? DEFAULT_COMMISSION_RATE),
+    renewal: normalizeCommissionRate(
+      params.renewal,
+      params.renewalFallback ?? DEFAULT_RENEWAL_COMMISSION_RATE,
+    ),
+  };
+}
+
+function isRenewalCommissionSource(source: string): boolean {
+  return /RENEWAL/i.test(source);
 }
 
 async function assignUniqueReferralCode(userId: string, name?: string | null, prefix = 'EM'): Promise<string> {
@@ -89,39 +109,80 @@ export async function ensureOrgCommercialReferralCode(userId: string, tenantId: 
 }
 
 export type ResolvedReferral =
-  | { type: 'platform'; id: string; name: string | null; referralCode: string; commissionRate: number }
-  | { type: 'org'; id: string; name: string | null; referralCode: string; commissionRate: number; parentTenantId: string };
+  | {
+      type: 'platform';
+      id: string;
+      name: string | null;
+      referralCode: string;
+      commissionRate: number;
+      renewalCommissionRate: number;
+    }
+  | {
+      type: 'org';
+      id: string;
+      name: string | null;
+      referralCode: string;
+      commissionRate: number;
+      renewalCommissionRate: number;
+      parentTenantId: string;
+    };
 
 export async function resolveCommercialByReferralCode(referralCode: string): Promise<ResolvedReferral | null> {
   const code = referralCode.trim().toUpperCase();
 
   const platformCommercial = await prisma.user.findFirst({
     where: { referralCode: code, role: 'COMMERCIAL', tenantId: null },
-    select: { id: true, name: true, referralCode: true, commissionRate: true },
+    select: { id: true, name: true, referralCode: true, commissionRate: true, renewalCommissionRate: true },
   });
 
   if (platformCommercial?.referralCode) {
+    const rates = resolveCommissionRates({
+      first: platformCommercial.commissionRate,
+      renewal: platformCommercial.renewalCommissionRate,
+    });
     return {
       type: 'platform',
       id: platformCommercial.id,
       name: platformCommercial.name,
       referralCode: platformCommercial.referralCode,
-      commissionRate: normalizeCommissionRate(platformCommercial.commissionRate),
+      commissionRate: rates.first,
+      renewalCommissionRate: rates.renewal,
     };
   }
 
   const orgCommercial = await prisma.user.findFirst({
     where: { referralCode: code, role: 'USER', orgRole: 'COMMERCIAL' },
-    select: { id: true, name: true, referralCode: true, commissionRate: true, tenantId: true },
+    select: {
+      id: true,
+      name: true,
+      referralCode: true,
+      commissionRate: true,
+      renewalCommissionRate: true,
+      tenantId: true,
+      tenant: {
+        select: {
+          defaultOrgCommercialCommissionRate: true,
+          defaultOrgCommercialRenewalCommissionRate: true,
+        },
+      },
+    },
   });
 
   if (orgCommercial?.referralCode && orgCommercial.tenantId) {
+    const rates = resolveCommissionRates({
+      first: orgCommercial.commissionRate,
+      renewal: orgCommercial.renewalCommissionRate,
+      firstFallback: orgCommercial.tenant?.defaultOrgCommercialCommissionRate ?? DEFAULT_COMMISSION_RATE,
+      renewalFallback:
+        orgCommercial.tenant?.defaultOrgCommercialRenewalCommissionRate ?? DEFAULT_RENEWAL_COMMISSION_RATE,
+    });
     return {
       type: 'org',
       id: orgCommercial.id,
       name: orgCommercial.name,
       referralCode: orgCommercial.referralCode,
-      commissionRate: normalizeCommissionRate(orgCommercial.commissionRate),
+      commissionRate: rates.first,
+      renewalCommissionRate: rates.renewal,
       parentTenantId: orgCommercial.tenantId,
     };
   }
@@ -159,86 +220,100 @@ export async function recordCommercialCommission(params: {
 
   const billingPeriod = getBillingPeriod();
   const results: CommercialCommissionRecord[] = [];
+  const forceRenewal = isRenewalCommissionSource(params.source);
+
+  const upsertCommission = async (opts: {
+    commercialId: string;
+    rates: { first: number; renewal: number };
+    source: string;
+  }) => {
+    const previousCount = await prisma.commercialCommission.count({
+      where: {
+        commercialId: opts.commercialId,
+        tenantId: tenant.id,
+        NOT: { billingPeriod },
+      },
+    });
+    const isFirst = previousCount === 0 && !forceRenewal;
+    const rate = isFirst ? opts.rates.first : opts.rates.renewal;
+    const commissionAmount = Math.round(invoiceAmount * rate);
+    await prisma.commercialCommission.upsert({
+      where: {
+        commercialId_tenantId_billingPeriod: {
+          commercialId: opts.commercialId,
+          tenantId: tenant.id,
+          billingPeriod,
+        },
+      },
+      create: {
+        commercialId: opts.commercialId,
+        tenantId: tenant.id,
+        plan: params.plan,
+        invoiceAmount,
+        commissionRate: rate,
+        commissionAmount,
+        billingPeriod,
+        source: opts.source,
+        platformInvoiceId: params.platformInvoiceId ?? null,
+      },
+      update: {
+        plan: params.plan,
+        invoiceAmount,
+        commissionRate: rate,
+        commissionAmount,
+        source: opts.source,
+        platformInvoiceId: params.platformInvoiceId ?? undefined,
+      },
+    });
+    results.push({ commercialId: opts.commercialId, commissionAmount });
+  };
 
   if (tenant.referredByCommercialId) {
     const commercial = await prisma.user.findUnique({
       where: { id: tenant.referredByCommercialId },
-      select: { id: true, commissionRate: true, role: true },
+      select: { id: true, commissionRate: true, renewalCommissionRate: true, role: true },
     });
 
     if (commercial?.role === 'COMMERCIAL') {
-      const rate = normalizeCommissionRate(commercial.commissionRate);
-      const commissionAmount = Math.round(invoiceAmount * rate);
-      await prisma.commercialCommission.upsert({
-          where: {
-            commercialId_tenantId_billingPeriod: {
-              commercialId: commercial.id,
-              tenantId: tenant.id,
-              billingPeriod,
-            },
-          },
-          create: {
-            commercialId: commercial.id,
-            tenantId: tenant.id,
-            plan: params.plan,
-            invoiceAmount,
-            commissionRate: rate,
-            commissionAmount,
-            billingPeriod,
-            source: params.source,
-            platformInvoiceId: params.platformInvoiceId ?? null,
-          },
-          update: {
-            plan: params.plan,
-            invoiceAmount,
-            commissionRate: rate,
-            commissionAmount,
-            source: params.source,
-            platformInvoiceId: params.platformInvoiceId ?? undefined,
-          },
-        });
-      results.push({ commercialId: commercial.id, commissionAmount });
+      await upsertCommission({
+        commercialId: commercial.id,
+        rates: resolveCommissionRates({
+          first: commercial.commissionRate,
+          renewal: commercial.renewalCommissionRate,
+        }),
+        source: params.source,
+      });
     }
   }
 
   if (tenant.referredByOrgUserId) {
     const orgCommercial = await prisma.user.findFirst({
       where: { id: tenant.referredByOrgUserId, role: 'USER', orgRole: 'COMMERCIAL' },
-      select: { id: true, commissionRate: true },
+      select: {
+        id: true,
+        commissionRate: true,
+        renewalCommissionRate: true,
+        tenant: {
+          select: {
+            defaultOrgCommercialCommissionRate: true,
+            defaultOrgCommercialRenewalCommissionRate: true,
+          },
+        },
+      },
     });
 
     if (orgCommercial) {
-      const rate = normalizeCommissionRate(orgCommercial.commissionRate);
-      const commissionAmount = Math.round(invoiceAmount * rate);
-      await prisma.commercialCommission.upsert({
-          where: {
-            commercialId_tenantId_billingPeriod: {
-              commercialId: orgCommercial.id,
-              tenantId: tenant.id,
-              billingPeriod,
-            },
-          },
-          create: {
-            commercialId: orgCommercial.id,
-            tenantId: tenant.id,
-            plan: params.plan,
-            invoiceAmount,
-            commissionRate: rate,
-            commissionAmount,
-            billingPeriod,
-            source: `${params.source}_ORG`,
-            platformInvoiceId: params.platformInvoiceId ?? null,
-          },
-          update: {
-            plan: params.plan,
-            invoiceAmount,
-            commissionRate: rate,
-            commissionAmount,
-            source: `${params.source}_ORG`,
-            platformInvoiceId: params.platformInvoiceId ?? undefined,
-          },
-        });
-      results.push({ commercialId: orgCommercial.id, commissionAmount });
+      await upsertCommission({
+        commercialId: orgCommercial.id,
+        rates: resolveCommissionRates({
+          first: orgCommercial.commissionRate,
+          renewal: orgCommercial.renewalCommissionRate,
+          firstFallback: orgCommercial.tenant?.defaultOrgCommercialCommissionRate ?? DEFAULT_COMMISSION_RATE,
+          renewalFallback:
+            orgCommercial.tenant?.defaultOrgCommercialRenewalCommissionRate ?? DEFAULT_RENEWAL_COMMISSION_RATE,
+        }),
+        source: `${params.source}_ORG`,
+      });
     }
   }
 

@@ -100,10 +100,13 @@ interface AdminUserItem {
  name: string | null;
  email: string;
  role: 'SUPER_ADMIN' | 'COMMERCIAL' | 'USER';
+ orgRole?: 'MANAGER' | 'PROTOCOL' | 'COMMERCIAL' | null;
  isEmailVerified: boolean;
  tenantId: string | null;
  tenantName: string;
  createdAt: string;
+ commissionRate?: number | null;
+ renewalCommissionRate?: number | null;
 }
 
 interface AdminTemplateItem {
@@ -449,6 +452,16 @@ function DashboardPageContent() {
  const [filterRole, setFilterRole] = useState<string>('ALL');
  const [filterType, setFilterType] = useState<'ALL' | 'GLOBAL' | 'TENANT'>('GLOBAL');
  const [filterRsvp, setFilterRsvp] = useState<string>('ALL');
+ const [filterVerified, setFilterVerified] = useState<string>('ALL');
+ const [filterUserOrg, setFilterUserOrg] = useState<string>('ALL');
+ const [filterOrgRole, setFilterOrgRole] = useState<string>('ALL');
+ const [filterEventWhen, setFilterEventWhen] = useState<string>('ALL');
+ const [filterEventOrg, setFilterEventOrg] = useState<string>('ALL');
+ const [filterEventGps, setFilterEventGps] = useState<string>('ALL');
+ const [filterGuestOrg, setFilterGuestOrg] = useState<string>('ALL');
+ const [filterGuestEvent, setFilterGuestEvent] = useState<string>('ALL');
+ const [filterGuestCategory, setFilterGuestCategory] = useState<string>('ALL');
+ const [filterGuestCheckin, setFilterGuestCheckin] = useState<string>('ALL');
 
  // Pagination states
  const [tenantsPage, setTenantsPage] = useState(1);
@@ -534,6 +547,8 @@ function DashboardPageContent() {
  const [modalRole, setModalRole] = useState<'SUPER_ADMIN' | 'COMMERCIAL' | 'USER'>('USER');
  const [modalIsEmailVerified, setModalIsEmailVerified] = useState(false);
  const [modalUserTenantId, setUserTenantId] = useState('');
+ const [modalCommissionRate, setModalCommissionRate] = useState('30');
+ const [modalRenewalCommissionRate, setModalRenewalCommissionRate] = useState('20');
  const [updatingUser, setUpdatingUser] = useState(false);
 
  // Template CRUD Modals states — édition via concepteur visuel uniquement
@@ -695,7 +710,7 @@ function DashboardPageContent() {
  setEventsPage(1);
  setGuestsPage(1);
  setSubRequestsPage(1);
- }, [searchTerm, filterPlan, filterRole, filterType, filterRsvp]);
+ }, [searchTerm, filterPlan, filterRole, filterType, filterRsvp, filterVerified, filterUserOrg, filterOrgRole, filterEventWhen, filterEventOrg, filterEventGps, filterGuestOrg, filterGuestEvent, filterGuestCategory, filterGuestCheckin]);
 
  // Leaflet Map Initialization Effect for Super Admin Event Modal
  useEffect(() => {
@@ -1115,6 +1130,8 @@ function DashboardPageContent() {
  setModalRole('USER');
  setModalIsEmailVerified(false);
  setUserTenantId('');
+ setModalCommissionRate('30');
+ setModalRenewalCommissionRate('20');
  setIsUserModalOpen(true);
  };
 
@@ -1127,6 +1144,8 @@ function DashboardPageContent() {
  setModalRole(u.role);
  setModalIsEmailVerified(u.isEmailVerified);
  setUserTenantId(u.tenantId || '');
+ setModalCommissionRate(String(Math.round((u.commissionRate ?? 0.3) * 100)));
+ setModalRenewalCommissionRate(String(Math.round((u.renewalCommissionRate ?? 0.2) * 100)));
  setIsUserModalOpen(true);
  };
 
@@ -1151,6 +1170,10 @@ function DashboardPageContent() {
  role: modalRole,
  isEmailVerified: modalIsEmailVerified,
  tenantId: modalUserTenantId || null,
+ ...(modalRole === 'COMMERCIAL' ? {
+ commissionRate: parseFloat(modalCommissionRate) / 100,
+ renewalCommissionRate: parseFloat(modalRenewalCommissionRate) / 100,
+ } : {}),
  });
  } else if (selectedUser) {
  await api.put(`/admin/users/${selectedUser.id}`, {
@@ -1160,6 +1183,10 @@ function DashboardPageContent() {
  role: modalRole,
  isEmailVerified: modalIsEmailVerified,
  tenantId: modalUserTenantId || null,
+ ...(modalRole === 'COMMERCIAL' ? {
+ commissionRate: parseFloat(modalCommissionRate) / 100,
+ renewalCommissionRate: parseFloat(modalRenewalCommissionRate) / 100,
+ } : {}),
  });
  }
  setIsUserModalOpen(false);
@@ -1524,7 +1551,12 @@ function DashboardPageContent() {
  u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
  u.tenantName.toLowerCase().includes(searchTerm.toLowerCase());
  const matchesRole = filterRole === 'ALL' || u.role === filterRole;
- return matchesSearch && matchesRole;
+ const matchesVerified = filterVerified === 'ALL'
+  || (filterVerified === 'verified' && u.isEmailVerified)
+  || (filterVerified === 'unverified' && !u.isEmailVerified);
+ const matchesOrg = filterUserOrg === 'ALL' || u.tenantName === filterUserOrg;
+ const matchesOrgRole = filterOrgRole === 'ALL' || u.orgRole === filterOrgRole;
+ return matchesSearch && matchesRole && matchesVerified && matchesOrg && matchesOrgRole;
  });
 
  // Filter templates
@@ -1538,11 +1570,22 @@ function DashboardPageContent() {
  });
 
  // Filter events
- const filteredEvents = adminEvents.filter(e => 
- e.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+ const filteredEvents = adminEvents.filter(e => {
+ const matchesSearch = e.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
  e.location.toLowerCase().includes(searchTerm.toLowerCase()) || 
- e.tenantName.toLowerCase().includes(searchTerm.toLowerCase())
- );
+ e.tenantName.toLowerCase().includes(searchTerm.toLowerCase());
+ const now = Date.now();
+ const when = new Date(e.date).getTime();
+ const matchesWhen = filterEventWhen === 'ALL'
+  || (filterEventWhen === 'upcoming' && when >= now)
+  || (filterEventWhen === 'past' && when < now);
+ const matchesOrg = filterEventOrg === 'ALL' || e.tenantName === filterEventOrg;
+ const hasGps = Boolean(e.latitude && e.longitude);
+ const matchesGps = filterEventGps === 'ALL'
+  || (filterEventGps === 'yes' && hasGps)
+  || (filterEventGps === 'no' && !hasGps);
+ return matchesSearch && matchesWhen && matchesOrg && matchesGps;
+ });
 
  // Filter guests
  const filteredGuests = adminGuests.filter(g => {
@@ -1553,7 +1596,14 @@ function DashboardPageContent() {
  g.eventTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
  g.tenantName.toLowerCase().includes(searchTerm.toLowerCase());
  const matchesRsvp = filterRsvp === 'ALL' || g.rsvp === filterRsvp;
- return matchesSearch && matchesRsvp;
+ const matchesOrg = filterGuestOrg === 'ALL' || g.tenantName === filterGuestOrg;
+ const matchesEvent = filterGuestEvent === 'ALL' || g.eventTitle === filterGuestEvent;
+ const matchesCategory = filterGuestCategory === 'ALL' || g.category === filterGuestCategory;
+ const checkedIn = Boolean(g.checkedInAt);
+ const matchesCheckin = filterGuestCheckin === 'ALL'
+  || (filterGuestCheckin === 'in' && checkedIn)
+  || (filterGuestCheckin === 'out' && !checkedIn);
+ return matchesSearch && matchesRsvp && matchesOrg && matchesEvent && matchesCategory && matchesCheckin;
  });
 
  const paginatedTenants = paginateItems(filteredTenants, tenantsPage, TENANTS_PER_PAGE);
@@ -1563,6 +1613,12 @@ function DashboardPageContent() {
  const paginatedGuests = paginateItems(filteredGuests, guestsPage, ITEMS_PER_PAGE);
  const paginatedSubRequests = paginateItems(subscriptionRequests, subRequestsPage, SUB_REQUESTS_PER_PAGE);
  const paginatedPlanIds = paginateItems([...PLAN_IDS], plansPage, PLANS_PER_PAGE);
+ const userOrgOptions = [...new Set(users.map((u) => u.tenantName).filter(Boolean))].sort();
+ const eventOrgOptions = [...new Set(adminEvents.map((e) => e.tenantName).filter(Boolean))].sort();
+ const guestOrgOptions = [...new Set(adminGuests.map((g) => g.tenantName).filter(Boolean))].sort();
+ const guestEventOptions = [...new Set(adminGuests.map((g) => g.eventTitle).filter(Boolean))].sort();
+ const guestCategoryOptions = [...new Set(adminGuests.map((g) => g.category).filter(Boolean))].sort();
+ const filterSelectClass = 'bg-surface-muted dark:bg-background border border-border rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition';
 
  const activeLicensesCount = (adminData?.tenants || []).filter((t) => {
  const expired = Boolean(t.licenseExpiresAt && new Date(t.licenseExpiresAt) < new Date());
@@ -1877,15 +1933,28 @@ function DashboardPageContent() {
  {activeTab === 'users' && (
  <div className="flex flex-wrap items-center gap-2">
  <Filter className="w-4.5 h-4.5 text-muted flex-shrink-0" />
- <select
- value={filterRole}
- onChange={(e) => setFilterRole(e.target.value)}
- className="bg-surface-muted dark:bg-background border border-border dark:border-border rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground dark:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
- >
+ <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)} className={filterSelectClass}>
  <option value="ALL">Tous les rôles</option>
- <option value="USER">USER</option>
- <option value="COMMERCIAL">COMMERCIAL</option>
- <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+ <option value="USER">Membre d’organisation</option>
+ <option value="COMMERCIAL">Commercial plateforme</option>
+ <option value="SUPER_ADMIN">Super Admin</option>
+ </select>
+ <select value={filterOrgRole} onChange={(e) => setFilterOrgRole(e.target.value)} className={filterSelectClass}>
+ <option value="ALL">Rôle org.</option>
+ <option value="MANAGER">Manager</option>
+ <option value="PROTOCOL">Protocole</option>
+ <option value="COMMERCIAL">Commercial org.</option>
+ </select>
+ <select value={filterVerified} onChange={(e) => setFilterVerified(e.target.value)} className={filterSelectClass}>
+ <option value="ALL">Vérification</option>
+ <option value="verified">E-mail vérifié</option>
+ <option value="unverified">Non vérifié</option>
+ </select>
+ <select value={filterUserOrg} onChange={(e) => setFilterUserOrg(e.target.value)} className={filterSelectClass}>
+ <option value="ALL">Toutes les organisations</option>
+ {userOrgOptions.map((name) => (
+ <option key={name} value={name}>{name}</option>
+ ))}
  </select>
  <ViewModeToggle
  storageKey="em-view-admin-users"
@@ -1901,6 +1970,23 @@ function DashboardPageContent() {
 
  {activeTab === 'events' && (
  <div className="flex flex-wrap items-center gap-2">
+ <Filter className="w-4.5 h-4.5 text-muted flex-shrink-0" />
+ <select value={filterEventWhen} onChange={(e) => setFilterEventWhen(e.target.value)} className={filterSelectClass}>
+ <option value="ALL">Toutes les dates</option>
+ <option value="upcoming">À venir</option>
+ <option value="past">Passés</option>
+ </select>
+ <select value={filterEventOrg} onChange={(e) => setFilterEventOrg(e.target.value)} className={filterSelectClass}>
+ <option value="ALL">Toutes les organisations</option>
+ {eventOrgOptions.map((name) => (
+ <option key={name} value={name}>{name}</option>
+ ))}
+ </select>
+ <select value={filterEventGps} onChange={(e) => setFilterEventGps(e.target.value)} className={filterSelectClass}>
+ <option value="ALL">Localisation</option>
+ <option value="yes">Avec GPS</option>
+ <option value="no">Sans GPS</option>
+ </select>
  <ViewModeToggle
  storageKey="em-view-admin-events"
  value={adminEventsViewMode}
@@ -1931,15 +2017,34 @@ function DashboardPageContent() {
  {activeTab === 'guests' && (
  <div className="flex flex-wrap items-center gap-2">
  <Filter className="w-4.5 h-4.5 text-muted flex-shrink-0" />
- <select
- value={filterRsvp}
- onChange={(e) => setFilterRsvp(e.target.value)}
- className="bg-surface-muted dark:bg-background border border-border dark:border-border rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground dark:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
- >
- <option value="ALL">Tous les statuts RSVP</option>
- <option value="PENDING">En attente (PENDING)</option>
- <option value="ACCEPTED">Accepté (ACCEPTED)</option>
- <option value="DECLINED">Décliné (DECLINED)</option>
+ <select value={filterRsvp} onChange={(e) => setFilterRsvp(e.target.value)} className={filterSelectClass}>
+ <option value="ALL">Tous les RSVP</option>
+ <option value="PENDING">En attente</option>
+ <option value="ACCEPTED">Accepté</option>
+ <option value="DECLINED">Décliné</option>
+ </select>
+ <select value={filterGuestCheckin} onChange={(e) => setFilterGuestCheckin(e.target.value)} className={filterSelectClass}>
+ <option value="ALL">Présence</option>
+ <option value="in">Enregistrés</option>
+ <option value="out">Non enregistrés</option>
+ </select>
+ <select value={filterGuestCategory} onChange={(e) => setFilterGuestCategory(e.target.value)} className={filterSelectClass}>
+ <option value="ALL">Toutes les catégories</option>
+ {guestCategoryOptions.map((name) => (
+ <option key={name} value={name}>{name}</option>
+ ))}
+ </select>
+ <select value={filterGuestEvent} onChange={(e) => setFilterGuestEvent(e.target.value)} className={filterSelectClass}>
+ <option value="ALL">Tous les événements</option>
+ {guestEventOptions.map((name) => (
+ <option key={name} value={name}>{name}</option>
+ ))}
+ </select>
+ <select value={filterGuestOrg} onChange={(e) => setFilterGuestOrg(e.target.value)} className={filterSelectClass}>
+ <option value="ALL">Toutes les organisations</option>
+ {guestOrgOptions.map((name) => (
+ <option key={name} value={name}>{name}</option>
+ ))}
  </select>
  <ViewModeToggle
  storageKey="em-view-admin-guests"
@@ -4211,6 +4316,34 @@ function DashboardPageContent() {
  <option value="SUPER_ADMIN">SUPER_ADMIN</option>
  </select>
  </div>
+
+ {modalRole === 'COMMERCIAL' && (
+ <div className="grid grid-cols-2 gap-3">
+ <div className="space-y-2">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">1er paiement (%)</label>
+ <input
+ type="number"
+ min={0}
+ max={100}
+ value={modalCommissionRate}
+ onChange={(e) => setModalCommissionRate(e.target.value)}
+ className="w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm"
+ />
+ </div>
+ <div className="space-y-2">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Paiements suivants (%)</label>
+ <input
+ type="number"
+ min={0}
+ max={100}
+ value={modalRenewalCommissionRate}
+ onChange={(e) => setModalRenewalCommissionRate(e.target.value)}
+ className="w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm"
+ />
+ </div>
+ <p className="col-span-2 text-[11px] text-muted">Par défaut : 30 % au premier paiement, puis 20 %.</p>
+ </div>
+ )}
 
  {/* Rattachement Tenant */}
  {modalRole !== 'SUPER_ADMIN' && (

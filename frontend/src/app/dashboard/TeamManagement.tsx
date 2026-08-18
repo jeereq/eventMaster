@@ -25,6 +25,7 @@ interface TeamMember {
   orgRoleLabel: string;
   referralCode?: string | null;
   commissionRate?: number | null;
+  renewalCommissionRate?: number | null;
   isEmailVerified: boolean;
   createdAt: string;
   isOwner: boolean;
@@ -73,6 +74,7 @@ export default function TeamManagement() {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [canManageTeam, setCanManageTeam] = useState(false);
   const [defaultCommissionRate, setDefaultCommissionRate] = useState(0.3);
+  const [defaultRenewalCommissionRate, setDefaultRenewalCommissionRate] = useState(0.2);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -85,9 +87,11 @@ export default function TeamManagement() {
   const [password, setPassword] = useState('');
   const [orgRole, setOrgRole] = useState<'MANAGER' | 'PROTOCOL' | 'COMMERCIAL'>('MANAGER');
   const [commissionRate, setCommissionRate] = useState('30');
+  const [renewalCommissionRate, setRenewalCommissionRate] = useState('20');
   const [verificationMethod, setVerificationMethod] = useState<'EMAIL' | 'WHATSAPP'>('EMAIL');
   const [editingCommissionId, setEditingCommissionId] = useState<string | null>(null);
   const [editCommissionValue, setEditCommissionValue] = useState('');
+  const [editRenewalCommissionValue, setEditRenewalCommissionValue] = useState('');
   const [resendingId, setResendingId] = useState<string | null>(null);
 
   const hasCommercialNetwork = planFeatures?.commercialNetwork === true;
@@ -104,6 +108,9 @@ export default function TeamManagement() {
       setCanManageTeam(Boolean(data.access?.canManageTeam ?? data.isManager));
       if (data.orgCommercialSettings?.defaultCommissionRate != null) {
         setDefaultCommissionRate(data.orgCommercialSettings.defaultCommissionRate);
+      }
+      if (data.orgCommercialSettings?.defaultRenewalCommissionRate != null) {
+        setDefaultRenewalCommissionRate(data.orgCommercialSettings.defaultRenewalCommissionRate);
       }
     } catch (err: any) {
       setError(err.message || 'Impossible de charger l\'équipe.');
@@ -126,6 +133,7 @@ export default function TeamManagement() {
     setPassword('');
     setOrgRole('MANAGER');
     setCommissionRate(String(Math.round(defaultCommissionRate * 100)));
+    setRenewalCommissionRate(String(Math.round(defaultRenewalCommissionRate * 100)));
     setVerificationMethod('EMAIL');
   };
 
@@ -169,6 +177,7 @@ export default function TeamManagement() {
       };
       if (orgRole === 'COMMERCIAL') {
         payload.commissionRate = parseFloat(commissionRate) / 100;
+        payload.renewalCommissionRate = parseFloat(renewalCommissionRate) / 100;
       }
       const data = await api.post('/team', payload);
       setSuccess(data.message || 'Utilisateur créé.');
@@ -195,6 +204,7 @@ export default function TeamManagement() {
     try {
       await api.put(`/team/${memberId}/commission`, {
         commissionRate: parseFloat(editCommissionValue) / 100,
+        renewalCommissionRate: parseFloat(editRenewalCommissionValue) / 100,
       });
       setSuccess('Commission mise à jour.');
       setEditingCommissionId(null);
@@ -280,7 +290,7 @@ export default function TeamManagement() {
           <div className="flex flex-wrap items-end gap-3">
             <div>
               <label className="text-[10px] font-semibold uppercase tracking-wide text-muted block mb-1.5">
-                Nouveaux commerciaux (%)
+                1er paiement (%)
               </label>
               <input
                 type="number"
@@ -291,14 +301,30 @@ export default function TeamManagement() {
                 className="w-24 px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface text-sm"
               />
             </div>
+            <div>
+              <label className="text-[10px] font-semibold uppercase tracking-wide text-muted block mb-1.5">
+                Paiements suivants (%)
+              </label>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={Math.round(defaultRenewalCommissionRate * 100)}
+                onChange={(e) => setDefaultRenewalCommissionRate(parseFloat(e.target.value) / 100 || 0)}
+                className="w-24 px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface text-sm"
+              />
+            </div>
             <Button
               type="button"
               size="sm"
               variant="secondary"
               onClick={async () => {
                 try {
-                  await api.put('/team/commercial-settings', { defaultCommissionRate });
-                  setSuccess('Commission par défaut enregistrée.');
+                  await api.put('/team/commercial-settings', {
+                    defaultCommissionRate,
+                    defaultRenewalCommissionRate,
+                  });
+                  setSuccess('Commissions par défaut enregistrées.');
                   await loadTeam();
                 } catch (err: any) {
                   setError(err.message || 'Erreur lors de la mise à jour.');
@@ -309,7 +335,7 @@ export default function TeamManagement() {
             </Button>
           </div>
           <p className="text-[11px] text-muted">
-            Vous pourrez ensuite ajuster la commission de chaque commercial individuellement.
+            30 % au premier paiement et 20 % ensuite, sauf personnalisation par commercial.
           </p>
         </div>
       )}
@@ -411,14 +437,24 @@ export default function TeamManagement() {
           </div>
 
           {orgRole === 'COMMERCIAL' && (
-            <Input
-              label="Commission (%)"
-              type="number"
-              min={0}
-              max={100}
-              value={commissionRate}
-              onChange={(e) => setCommissionRate(e.target.value)}
-            />
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="1er paiement (%)"
+                type="number"
+                min={0}
+                max={100}
+                value={commissionRate}
+                onChange={(e) => setCommissionRate(e.target.value)}
+              />
+              <Input
+                label="Paiements suivants (%)"
+                type="number"
+                min={0}
+                max={100}
+                value={renewalCommissionRate}
+                onChange={(e) => setRenewalCommissionRate(e.target.value)}
+              />
+            </div>
           )}
 
           {orgRole === 'MANAGER' && managersAtLimit && (
@@ -482,7 +518,18 @@ export default function TeamManagement() {
                           max={100}
                           value={editCommissionValue}
                           onChange={(e) => setEditCommissionValue(e.target.value)}
-                          className="w-20 px-2 py-1 rounded-[var(--radius-button)] border border-border text-xs"
+                          className="w-16 px-2 py-1 rounded-[var(--radius-button)] border border-border text-xs"
+                          title="1er paiement"
+                        />
+                        <span className="text-xs text-muted">puis</span>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={editRenewalCommissionValue}
+                          onChange={(e) => setEditRenewalCommissionValue(e.target.value)}
+                          className="w-16 px-2 py-1 rounded-[var(--radius-button)] border border-border text-xs"
+                          title="Paiements suivants"
                         />
                         <span className="text-xs text-muted">%</span>
                         <Button type="button" size="sm" variant="success" onClick={() => handleSaveCommission(member.id)}>
@@ -498,10 +545,11 @@ export default function TeamManagement() {
                         onClick={() => {
                           setEditingCommissionId(member.id);
                           setEditCommissionValue(String(Math.round((member.commissionRate ?? defaultCommissionRate) * 100)));
+                          setEditRenewalCommissionValue(String(Math.round((member.renewalCommissionRate ?? defaultRenewalCommissionRate) * 100)));
                         }}
                         className="text-[10px] font-semibold px-2 py-1 rounded-md border border-border text-muted hover:bg-surface-muted"
                       >
-                        Commission : {Math.round((member.commissionRate ?? defaultCommissionRate) * 100)} % — Modifier
+                        {Math.round((member.commissionRate ?? defaultCommissionRate) * 100)} % puis {Math.round((member.renewalCommissionRate ?? defaultRenewalCommissionRate) * 100)} % — Modifier
                       </button>
                     )}
                   </div>
@@ -558,7 +606,7 @@ export default function TeamManagement() {
                   }
                   valueMeta={
                     member.orgRole === 'COMMERCIAL'
-                      ? `Comm. ${Math.round((member.commissionRate ?? defaultCommissionRate) * 100)} %`
+                      ? `Comm. ${Math.round((member.commissionRate ?? defaultCommissionRate) * 100)}/${Math.round((member.renewalCommissionRate ?? defaultRenewalCommissionRate) * 100)} %`
                       : undefined
                   }
                   status={

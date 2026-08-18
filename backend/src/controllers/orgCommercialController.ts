@@ -4,7 +4,8 @@ import { prisma } from '../db';
 import {
   ensureOrgCommercialReferralCode,
   DEFAULT_COMMISSION_RATE,
-  normalizeCommissionRate,
+  DEFAULT_RENEWAL_COMMISSION_RATE,
+  resolveCommissionRates,
 } from '../services/commercialService';
 
 export async function getOrgCommercialDashboard(req: AuthenticatedRequest, res: Response) {
@@ -23,7 +24,14 @@ export async function getOrgCommercialDashboard(req: AuthenticatedRequest, res: 
         name: true,
         referralCode: true,
         commissionRate: true,
-        tenant: { select: { name: true, defaultOrgCommercialCommissionRate: true } },
+        renewalCommissionRate: true,
+        tenant: {
+          select: {
+            name: true,
+            defaultOrgCommercialCommissionRate: true,
+            defaultOrgCommercialRenewalCommissionRate: true,
+          },
+        },
       },
     });
 
@@ -32,10 +40,15 @@ export async function getOrgCommercialDashboard(req: AuthenticatedRequest, res: 
     }
 
     const referralCode = await ensureOrgCommercialReferralCode(userId, tenantId);
-    const commissionRate = normalizeCommissionRate(
-      user.commissionRate,
-      user.tenant?.defaultOrgCommercialCommissionRate ?? DEFAULT_COMMISSION_RATE,
-    );
+    const rates = resolveCommissionRates({
+      first: user.commissionRate,
+      renewal: user.renewalCommissionRate,
+      firstFallback: user.tenant?.defaultOrgCommercialCommissionRate ?? DEFAULT_COMMISSION_RATE,
+      renewalFallback:
+        user.tenant?.defaultOrgCommercialRenewalCommissionRate ?? DEFAULT_RENEWAL_COMMISSION_RATE,
+    });
+    const commissionRate = rates.first;
+    const renewalCommissionRate = rates.renewal;
 
     const [organizations, commissions] = await Promise.all([
       prisma.tenant.findMany({
@@ -63,6 +76,7 @@ export async function getOrgCommercialDashboard(req: AuthenticatedRequest, res: 
     return res.json({
       referralCode,
       commissionRate,
+      renewalCommissionRate,
       organizationName: user.tenant?.name,
       stats: {
         organizations: organizations.length,

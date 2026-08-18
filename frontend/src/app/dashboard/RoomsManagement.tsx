@@ -1132,8 +1132,8 @@ export default function RoomsManagement() {
             {listingRoom.venueListing?.isPublic && listingRoom.venueListing.slug && listingTab === 'details' && (
               <p className="text-xs text-muted">
                 Fiche actuelle :{' '}
-                <Link href={`/marketplace/salles/${listingRoom.venueListing.slug}`} className="font-semibold text-primary hover:underline" target="_blank">
-                  /marketplace/salles/{listingRoom.venueListing.slug}
+                <Link href={`/dashboard/catalogue/salles/${listingRoom.venueListing.slug}`} className="font-semibold text-primary hover:underline">
+                  {listingRoom.venueListing.headline || listingRoom.venueListing.slug}
                 </Link>
               </p>
             )}

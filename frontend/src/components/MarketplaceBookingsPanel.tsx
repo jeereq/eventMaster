@@ -178,12 +178,12 @@ export default function MarketplaceBookingsPanel({
                     </Button>
                   )}
                   {item.listingSlug && (
-                    <Link href={`/marketplace/salles/${item.listingSlug}`} className="inline-flex">
+                    <Link href={`/dashboard/catalogue/salles/${item.listingSlug}`} className="inline-flex">
                       <Button size="sm" variant="ghost">Voir la fiche</Button>
                     </Link>
                   )}
                   {item.offeringSlug && (
-                    <Link href={`/marketplace/prestataires/${item.offeringSlug}`} className="inline-flex">
+                    <Link href={`/dashboard/catalogue/prestataires/${item.offeringSlug}`} className="inline-flex">
                       <Button size="sm" variant="ghost">Voir la fiche</Button>
                     </Link>
                   )}

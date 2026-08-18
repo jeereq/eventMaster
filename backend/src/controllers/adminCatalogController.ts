@@ -3,7 +3,7 @@ import { MarketplaceBookingStatus, MarketplaceInquiryStatus } from '@prisma/clie
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { auditReq } from '../services/adminAuditService';
-import { parseServiceCategory, priceUnitLabel, serviceCategoryLabel } from '../utils/publicVenue';
+import { parseServiceCategory, priceUnitLabel, serviceCategoryLabel, parsePhotoUrls, coverFromMedia } from '../utils/publicVenue';
 
 function pager(req: AuthenticatedRequest) {
   const page = Math.max(parseInt(String(req.query.page || '1'), 10) || 1, 1);
@@ -13,6 +13,29 @@ function pager(req: AuthenticatedRequest) {
 
 function searchQ(req: AuthenticatedRequest) {
   return typeof req.query.q === 'string' && req.query.q.trim() ? req.query.q.trim() : undefined;
+}
+
+function cityFilter(req: AuthenticatedRequest) {
+  return typeof req.query.city === 'string' && req.query.city.trim() ? req.query.city.trim() : undefined;
+}
+
+function communeFilter(req: AuthenticatedRequest) {
+  return typeof req.query.commune === 'string' && req.query.commune.trim() ? req.query.commune.trim() : undefined;
+}
+
+function priceRange(req: AuthenticatedRequest): { gte?: number; lte?: number } | undefined {
+  const min = Number.parseInt(String(req.query.minPrice || ''), 10);
+  const max = Number.parseInt(String(req.query.maxPrice || ''), 10);
+  const range: { gte?: number; lte?: number } = {};
+  if (Number.isFinite(min) && min >= 0) range.gte = min;
+  if (Number.isFinite(max) && max >= 0) range.lte = max;
+  return range.gte != null || range.lte != null ? range : undefined;
+}
+
+function listingHref(kind: 'venue' | 'offering', slug: string) {
+  return kind === 'venue'
+    ? `/dashboard/catalogue/salles/${slug}`
+    : `/dashboard/catalogue/prestataires/${slug}`;
 }
 
 function publicFilter(req: AuthenticatedRequest): boolean | undefined {
@@ -92,9 +115,15 @@ export async function listAdminVenues(req: AuthenticatedRequest, res: Response) 
     const { page, pageSize, skip } = pager(req);
     const q = searchQ(req);
     const isPublic = publicFilter(req);
+    const city = cityFilter(req);
+    const commune = communeFilter(req);
+    const price = priceRange(req);
 
     const where = {
       isPublic,
+      ...(city ? { city: { contains: city, mode: 'insensitive' as const } } : {}),
+      ...(commune ? { commune: { contains: commune, mode: 'insensitive' as const } } : {}),
+      ...(price ? { priceFromFc: price } : {}),
       ...(q
         ? {
             OR: [
@@ -124,22 +153,31 @@ export async function listAdminVenues(req: AuthenticatedRequest, res: Response) 
     ]);
 
     return res.json({
-      items: rows.map((row) => ({
-        id: row.id,
-        slug: row.slug,
-        isPublic: row.isPublic,
-        headline: row.headline || row.room.name,
-        roomName: row.room.name,
-        city: row.city,
-        commune: row.commune,
-        priceFromFc: row.priceFromFc,
-        priceUnitLabel: priceUnitLabel(row.priceUnit),
-        publishedAt: row.publishedAt,
-        createdAt: row.createdAt,
-        tenantId: row.tenantId,
-        tenantName: row.tenant.name,
-        href: `/marketplace/salles/${row.slug}`,
-      })),
+      items: rows.map((row) => {
+        const photos = parsePhotoUrls(row.photos);
+        return {
+          id: row.id,
+          slug: row.slug,
+          isPublic: row.isPublic,
+          headline: row.headline || row.room.name,
+          roomName: row.room.name,
+          city: row.city,
+          commune: row.commune,
+          neighborhood: row.neighborhood,
+          address: row.address,
+          latitude: row.latitude,
+          longitude: row.longitude,
+          coverUrl: coverFromMedia(photos),
+          photos,
+          priceFromFc: row.priceFromFc,
+          priceUnitLabel: priceUnitLabel(row.priceUnit),
+          publishedAt: row.publishedAt,
+          createdAt: row.createdAt,
+          tenantId: row.tenantId,
+          tenantName: row.tenant.name,
+          href: listingHref('venue', row.slug),
+        };
+      }),
       total,
       page,
       pageSize,
@@ -161,10 +199,16 @@ export async function listAdminOfferings(req: AuthenticatedRequest, res: Respons
     const q = searchQ(req);
     const isPublic = publicFilter(req);
     const category = parseServiceCategory(req.query.category) || undefined;
+    const city = cityFilter(req);
+    const commune = communeFilter(req);
+    const price = priceRange(req);
 
     const where = {
       isPublic,
       category,
+      ...(city ? { city: { contains: city, mode: 'insensitive' as const } } : {}),
+      ...(commune ? { commune: { contains: commune, mode: 'insensitive' as const } } : {}),
+      ...(price ? { priceFromFc: price } : {}),
       ...(q
         ? {
             OR: [
@@ -190,23 +234,31 @@ export async function listAdminOfferings(req: AuthenticatedRequest, res: Respons
     ]);
 
     return res.json({
-      items: rows.map((row) => ({
-        id: row.id,
-        slug: row.slug,
-        isPublic: row.isPublic,
-        title: row.title,
-        category: row.category,
-        categoryLabel: serviceCategoryLabel(row.category),
-        city: row.city,
-        commune: row.commune,
-        priceFromFc: row.priceFromFc,
-        priceUnitLabel: priceUnitLabel(row.priceUnit),
-        publishedAt: row.publishedAt,
-        createdAt: row.createdAt,
-        tenantId: row.tenantId,
-        tenantName: row.tenant.name,
-        href: `/marketplace/prestataires/${row.slug}`,
-      })),
+      items: rows.map((row) => {
+        const photos = parsePhotoUrls(row.photos);
+        return {
+          id: row.id,
+          slug: row.slug,
+          isPublic: row.isPublic,
+          title: row.title,
+          category: row.category,
+          categoryLabel: serviceCategoryLabel(row.category),
+          city: row.city,
+          commune: row.commune,
+          neighborhood: row.neighborhood,
+          latitude: row.latitude,
+          longitude: row.longitude,
+          coverUrl: coverFromMedia(photos),
+          photos,
+          priceFromFc: row.priceFromFc,
+          priceUnitLabel: priceUnitLabel(row.priceUnit),
+          publishedAt: row.publishedAt,
+          createdAt: row.createdAt,
+          tenantId: row.tenantId,
+          tenantName: row.tenant.name,
+          href: listingHref('offering', row.slug),
+        };
+      }),
       total,
       page,
       pageSize,
@@ -292,7 +344,7 @@ export async function listAdminInquiries(req: AuthenticatedRequest, res: Respons
           vendorTenantId,
           vendorName,
           href: slug
-            ? `/marketplace/${kind === 'offering' ? 'prestataires' : 'salles'}/${slug}`
+            ? listingHref(kind === 'offering' ? 'offering' : 'venue', slug)
             : null,
         };
       }),
@@ -368,7 +420,7 @@ export async function listAdminBookings(req: AuthenticatedRequest, res: Response
           organizerTenantId: row.organizerTenantId,
           organizerName: row.organizerTenant?.name || null,
           href: slug
-            ? `/marketplace/${kind === 'offering' ? 'prestataires' : 'salles'}/${slug}`
+            ? listingHref(kind === 'offering' ? 'offering' : 'venue', slug)
             : null,
         };
       }),

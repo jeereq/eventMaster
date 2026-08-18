@@ -5,7 +5,7 @@ import { prisma } from '../db';
 import {
   ensureCommercialReferralCode,
   recordCommercialCommission,
-  normalizeCommissionRate,
+  resolveCommissionRates,
 } from '../services/commercialService';
 import { setupUserOtpVerification } from './authController';
 import { VerificationMethod } from '../services/otpService';
@@ -20,9 +20,14 @@ export async function getCommercialDashboard(req: AuthenticatedRequest, res: Res
 
     const commercialUser = await prisma.user.findUnique({
       where: { id: req.user.id },
-      select: { commissionRate: true },
+      select: { commissionRate: true, renewalCommissionRate: true },
     });
-    const commissionRate = normalizeCommissionRate(commercialUser?.commissionRate);
+    const rates = resolveCommissionRates({
+      first: commercialUser?.commissionRate,
+      renewal: commercialUser?.renewalCommissionRate,
+    });
+    const commissionRate = rates.first;
+    const renewalCommissionRate = rates.renewal;
 
     const [organizations, commissions] = await Promise.all([
       prisma.tenant.findMany({
@@ -50,6 +55,7 @@ export async function getCommercialDashboard(req: AuthenticatedRequest, res: Res
     return res.json({
       referralCode,
       commissionRate,
+      renewalCommissionRate,
       stats: {
         organizations: organizations.length,
         totalCommission,
@@ -231,12 +237,17 @@ export async function getCommercialReferralInfo(req: AuthenticatedRequest, res: 
     const referralCode = await ensureCommercialReferralCode(req.user.id);
     const commercialUser = await prisma.user.findUnique({
       where: { id: req.user.id },
-      select: { commissionRate: true },
+      select: { commissionRate: true, renewalCommissionRate: true },
+    });
+    const rates = resolveCommissionRates({
+      first: commercialUser?.commissionRate,
+      renewal: commercialUser?.renewalCommissionRate,
     });
     return res.json({
       referralCode,
-      commissionRate: normalizeCommissionRate(commercialUser?.commissionRate),
-      description: '30 % de la facture mensuelle générée par chaque organisation parrainée.',
+      commissionRate: rates.first,
+      renewalCommissionRate: rates.renewal,
+      description: `${Math.round(rates.first * 100)} % au premier paiement, puis ${Math.round(rates.renewal * 100)} % sur les factures suivantes.`,
     });
   } catch (error) {
     console.error('getCommercialReferralInfo:', error);

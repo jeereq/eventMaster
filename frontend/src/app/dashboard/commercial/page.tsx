@@ -9,9 +9,10 @@ import {
 import { Button, PageHeader, SkeletonCommercialView, Pagination, paginateItems } from '@/components/ui';
 import ReferralShareButtons from '@/components/commercial/ReferralShareButtons';
 
-interface CommercialDashboard {
+ interface CommercialDashboard {
  referralCode: string;
  commissionRate: number;
+ renewalCommissionRate?: number;
  stats: {
  organizations: number;
  totalCommission: number;
@@ -162,7 +163,7 @@ export default function CommercialDashboardPage() {
  <div>
  <p className="text-white/80 text-sm font-semibold">Votre code parrainage</p>
  <p className="text-2xl font-black tracking-wider">{data.referralCode}</p>
- <p className="text-white/80 text-xs mt-1">{Math.round(data.commissionRate * 100)} % sur chaque facture mensuelle des org. parrainées. Versement hors plateforme par EventMaster, notifié au Super Admin en début de mois.</p>
+ <p className="text-white/80 text-xs mt-1">{Math.round(data.commissionRate * 100)} % au premier paiement, puis {Math.round((data.renewalCommissionRate ?? 0.2) * 100)} % sur les factures suivantes. Versement hors plateforme par EventMaster, notifié au Super Admin en début de mois.</p>
  </div>
  <ReferralShareButtons referralCode={data.referralCode} />
  </div>

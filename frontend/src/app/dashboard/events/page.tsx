@@ -273,6 +273,8 @@ export default function EventsPage() {
  const [events, setEvents] = useState<EventItem[]>([]);
  const [loading, setLoading] = useState(true);
  const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
+ const [eventSearch, setEventSearch] = useState('');
+ const [eventWhen, setEventWhen] = useState<'ALL' | 'upcoming' | 'past'>('ALL');
  
  // Tabs
  const [activeTab, setActiveTab] = useState<'guests' | 'invitations' | 'tablePlan' | 'feed' | 'staff' | 'protocol' | 'guestInfo'>(
@@ -325,6 +327,7 @@ export default function EventsPage() {
  const [rsvpFilter, setRsvpFilter] = useState<'ALL' | 'ACCEPTED' | 'DECLINED' | 'PENDING'>('ALL');
  const [categoryFilter, setCategoryFilter] = useState('ALL');
  const [dietFilter, setDietFilter] = useState<string>('ALL');
+ const [checkinFilter, setCheckinFilter] = useState<'ALL' | 'in' | 'out'>('ALL');
  const [customFilters, setCustomFilters] = useState<Record<string, string>>({});
  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
  const [selectedGuestDetails, setSelectedGuestDetails] = useState<GuestItem | null>(null);
@@ -402,6 +405,9 @@ export default function EventsPage() {
  const matchesRsvp = rsvpFilter === 'ALL' || g.rsvp === rsvpFilter;
  const matchesCategory = categoryFilter === 'ALL' || (g.category || 'Général') === categoryFilter;
  const matchesDiet = dietFilter === 'ALL' || (g.preferences?.specialMeal || 'none') === dietFilter;
+ const matchesCheckin = checkinFilter === 'ALL'
+  || (checkinFilter === 'in' && Boolean(g.checkedInAt))
+  || (checkinFilter === 'out' && !g.checkedInAt);
  
  let matchesCustom = true;
  Object.entries(customFilters).forEach(([label, value]) => {
@@ -426,12 +432,12 @@ export default function EventsPage() {
  }
  });
  
- return matchesSearch && matchesRsvp && matchesCategory && matchesDiet && matchesCustom;
+ return matchesSearch && matchesRsvp && matchesCategory && matchesDiet && matchesCustom && matchesCheckin;
  });
 
  useEffect(() => {
  setGuestsListPage(1);
- }, [searchQuery, rsvpFilter, categoryFilter, dietFilter, customFilters]);
+ }, [searchQuery, rsvpFilter, categoryFilter, dietFilter, checkinFilter, customFilters]);
 
  useEffect(() => {
  setEventsListPage(1);
@@ -448,7 +454,19 @@ export default function EventsPage() {
  }
  }, [protocolDesk, selectedEvent?.id]);
 
- const paginatedEventsList = paginateItems(events, eventsListPage, EVENTS_PER_PAGE);
+ const filteredEventsList = events.filter((event) => {
+ const q = eventSearch.trim().toLowerCase();
+ const matchesSearch = !q
+  || event.title.toLowerCase().includes(q)
+  || event.location.toLowerCase().includes(q)
+  || (event.room?.name || '').toLowerCase().includes(q);
+ const when = new Date(event.date).getTime();
+ const matchesWhen = eventWhen === 'ALL'
+  || (eventWhen === 'upcoming' && when >= Date.now())
+  || (eventWhen === 'past' && when < Date.now());
+ return matchesSearch && matchesWhen;
+ });
+ const paginatedEventsList = paginateItems(filteredEventsList, eventsListPage, EVENTS_PER_PAGE);
  const paginatedGuestsList = paginateItems(filteredGuests, guestsListPage, GUESTS_PER_PAGE);
 
  const isAllFilteredSelected = filteredGuests.length > 0 && filteredGuests.every(g => selectedGuestIds.includes(g.id));
@@ -1596,6 +1614,29 @@ export default function EventsPage() {
  {events.length === 0 && !protocolDesk && (
  <GettingStartedChecklist hasEvents={false} />
  )}
+ {events.length > 0 && (
+ <div className="flex flex-col sm:flex-row gap-2">
+ <div className="relative flex-1">
+ <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted w-4 h-4" />
+ <input
+ type="text"
+ value={eventSearch}
+ onChange={(e) => { setEventSearch(e.target.value); setEventsListPage(1); }}
+ placeholder="Rechercher un événement, un lieu, une salle..."
+ className="w-full pl-9 pr-3 py-2.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-sm focus:outline-none focus:border-primary"
+ />
+ </div>
+ <select
+ value={eventWhen}
+ onChange={(e) => { setEventWhen(e.target.value as 'ALL' | 'upcoming' | 'past'); setEventsListPage(1); }}
+ className="sm:w-44 px-3 py-2.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-sm font-semibold"
+ >
+ <option value="ALL">Toutes les dates</option>
+ <option value="upcoming">À venir</option>
+ <option value="past">Passés</option>
+ </select>
+ </div>
+ )}
  </>
  ) : (
  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -1730,6 +1771,12 @@ export default function EventsPage() {
  </>
  )}
  </div>
+ ) : filteredEventsList.length === 0 ? (
+ <div className="col-span-full text-center py-14 px-6 bg-surface border border-border rounded-[var(--radius-card)]">
+ <Search className="w-10 h-10 text-muted mx-auto mb-3 opacity-60" />
+ <h3 className="font-semibold text-foreground">Aucun événement ne correspond</h3>
+ <p className="text-sm text-muted mt-1">Modifiez la recherche ou le filtre de dates.</p>
+ </div>
  ) : (
  paginatedEventsList.map((event) => {
  const dateLabel = new Date(event.date).toLocaleDateString('fr-FR', {
@@ -1826,7 +1873,7 @@ export default function EventsPage() {
  <Pagination
  page={eventsListPage}
  pageSize={EVENTS_PER_PAGE}
- total={events.length}
+ total={filteredEventsList.length}
  onPageChange={setEventsListPage}
  itemLabel="événements"
  />
@@ -1982,6 +2029,18 @@ export default function EventsPage() {
 
  <div className="w-full lg:w-44">
  <select
+ value={checkinFilter}
+ onChange={(e) => setCheckinFilter(e.target.value as 'ALL' | 'in' | 'out')}
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
+ >
+ <option value="ALL">Présence jour J</option>
+ <option value="in">Enregistrés</option>
+ <option value="out">Non enregistrés</option>
+ </select>
+ </div>
+
+ <div className="w-full lg:w-44">
+ <select
  value={categoryFilter}
  onChange={(e) => setCategoryFilter(e.target.value)}
  className="w-full px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs focus:outline-none focus:border-primary transition font-semibold text-foreground"
@@ -2008,7 +2067,7 @@ export default function EventsPage() {
  Filtres avancés
  </button>
 
- {(searchQuery || rsvpFilter !== 'ALL' || categoryFilter !== 'ALL' || dietFilter !== 'ALL' || Object.values(customFilters).some(v => v !== 'ALL' && v !== '')) && (
+ {(searchQuery || rsvpFilter !== 'ALL' || categoryFilter !== 'ALL' || dietFilter !== 'ALL' || checkinFilter !== 'ALL' || Object.values(customFilters).some(v => v !== 'ALL' && v !== '')) && (
  <button
  type="button"
  onClick={() => {
@@ -2016,6 +2075,7 @@ export default function EventsPage() {
  setRsvpFilter('ALL');
  setCategoryFilter('ALL');
  setDietFilter('ALL');
+ setCheckinFilter('ALL');
  setCustomFilters({});
  }}
  className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary transition bg-primary/10 hover:bg-primary/15 px-3 py-2 rounded-[var(--radius-button)]"

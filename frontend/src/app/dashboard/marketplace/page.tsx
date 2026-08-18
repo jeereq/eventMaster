@@ -406,7 +406,7 @@ export default function MarketplaceDeskPage() {
                     Modifier
                   </Button>
                   {item.isPublic && (
-                    <Link href={`/marketplace/prestataires/${item.slug}`} className="inline-flex">
+                    <Link href={`/dashboard/catalogue/prestataires/${item.slug}`} className="inline-flex">
                       <Button size="sm" variant="ghost" leftIcon={<Globe className="w-3.5 h-3.5" />}>
                         Voir
                       </Button>

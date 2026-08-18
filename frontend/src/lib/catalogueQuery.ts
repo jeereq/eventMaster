@@ -23,7 +23,7 @@ export function rememberCatalogueReturn(href: string) {
 export function getCatalogueReturn(fallback: string): string {
   try {
     const stored = sessionStorage.getItem(RETURN_KEY);
-    if (stored && stored.startsWith('/marketplace')) return stored;
+    if (stored && (stored.startsWith('/marketplace') || stored.startsWith('/dashboard'))) return stored;
   } catch {
     /* ignore */
   }
@@ -35,6 +35,10 @@ export function isCatalogueListPath(pathname: string): boolean {
     pathname === '/marketplace'
     || pathname === '/marketplace/salles'
     || pathname === '/marketplace/prestataires'
+    || pathname === '/dashboard/admin/catalogue'
+    || pathname === '/dashboard/rooms'
+    || pathname === '/dashboard/marketplace'
+    || pathname.startsWith('/dashboard/catalogue/')
   );
 }
 

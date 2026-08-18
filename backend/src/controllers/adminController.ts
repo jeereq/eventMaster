@@ -8,7 +8,7 @@ import {
   loadSubscriptionPlansFromDb,
   saveSubscriptionPlansToDb,
 } from '../services/subscriptionPlanCatalogService';
-import { ensureCommercialReferralCode, normalizeCommissionRate, DEFAULT_COMMISSION_RATE } from '../services/commercialService';
+import { ensureCommercialReferralCode, resolveCommissionRates } from '../services/commercialService';
 import { isPlatformStaff } from '../middleware/platformAccess';
 import {
   assertCommercialOwnsTenant,
@@ -539,10 +539,13 @@ export async function getAllUsers(req: AuthenticatedRequest, res: Response) {
       name: u.name,
       email: u.email,
       role: u.role,
+      orgRole: u.orgRole,
       tenantId: u.tenantId,
       isEmailVerified: u.isEmailVerified,
       tenantName: u.tenant?.name || 'Aucun (Super Admin)',
       createdAt: u.createdAt,
+      commissionRate: u.commissionRate,
+      renewalCommissionRate: u.renewalCommissionRate,
     })));
   } catch (error: any) {
     console.error('Erreur lors de la récupération des utilisateurs:', error);
@@ -557,7 +560,7 @@ export async function createUser(req: AuthenticatedRequest, res: Response) {
       return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
     }
 
-    const { name, email, password, role, isEmailVerified, tenantId } = req.body;
+    const { name, email, password, role, isEmailVerified, tenantId, commissionRate, renewalCommissionRate } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ error: 'L\'adresse email et le mot de passe sont requis.' });
@@ -583,7 +586,12 @@ export async function createUser(req: AuthenticatedRequest, res: Response) {
         role: resolvedRole,
         isEmailVerified: isEmailVerified !== undefined ? Boolean(isEmailVerified) : false,
         tenantId: resolvedTenantId,
-        commissionRate: resolvedRole === 'COMMERCIAL' ? normalizeCommissionRate(DEFAULT_COMMISSION_RATE) : null,
+        commissionRate: resolvedRole === 'COMMERCIAL'
+          ? resolveCommissionRates({ first: commissionRate, renewal: renewalCommissionRate }).first
+          : null,
+        renewalCommissionRate: resolvedRole === 'COMMERCIAL'
+          ? resolveCommissionRates({ first: commissionRate, renewal: renewalCommissionRate }).renewal
+          : null,
       },
     });
 
@@ -626,7 +634,7 @@ export async function updateUserRoleOrStatus(req: AuthenticatedRequest, res: Res
     }
 
     const id = req.params.id as string;
-    const { name, email, password, role, isEmailVerified, tenantId } = req.body;
+    const { name, email, password, role, isEmailVerified, tenantId, commissionRate, renewalCommissionRate } = req.body;
 
     const updateData: any = {
       name: name !== undefined ? name : undefined,
@@ -637,9 +645,12 @@ export async function updateUserRoleOrStatus(req: AuthenticatedRequest, res: Res
 
     if (role === 'COMMERCIAL') {
       updateData.tenantId = null;
-      if (updateData.commissionRate === undefined) {
-        updateData.commissionRate = normalizeCommissionRate(DEFAULT_COMMISSION_RATE);
-      }
+      const rates = resolveCommissionRates({
+        first: commissionRate,
+        renewal: renewalCommissionRate,
+      });
+      updateData.commissionRate = rates.first;
+      updateData.renewalCommissionRate = rates.renewal;
     } else if (tenantId !== undefined) {
       updateData.tenantId = tenantId || null;
     }
@@ -1014,6 +1025,7 @@ export async function getAllGuests(req: AuthenticatedRequest, res: Response) {
         category: g.category || 'Général',
         rsvp: g.rsvp,
         preferences: g.preferences,
+        checkedInAt: g.checkedInAt,
         createdAt: g.createdAt,
       }))
     );

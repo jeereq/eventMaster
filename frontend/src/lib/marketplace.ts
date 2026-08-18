@@ -46,6 +46,7 @@ export interface PublicVenue {
   unavailableDates?: string[];
   distanceKm?: number | null;
   details?: import('./listingDetails').ListingDetails | null;
+  isPublic?: boolean;
 }
 
 export interface VenueListingDraft {
@@ -134,6 +135,7 @@ export interface PublicService {
   unavailableDates?: string[];
   distanceKm?: number | null;
   details?: import('./listingDetails').ListingDetails | null;
+  isPublic?: boolean;
 }
 
 export interface MarketplaceInquiryItem {
@@ -551,6 +553,21 @@ export interface CatalogueItem {
   quotaMax?: number | null;
   address?: string | null;
   distanceKm?: number | null;
+}
+
+export function dashboardVenueHref(slug: string) {
+  return `/dashboard/catalogue/salles/${slug}`;
+}
+
+export function dashboardServiceHref(slug: string) {
+  return `/dashboard/catalogue/prestataires/${slug}`;
+}
+
+export function withDashboardListingHref(item: CatalogueItem): CatalogueItem {
+  return {
+    ...item,
+    href: item.kind === 'venue' ? dashboardVenueHref(item.slug) : dashboardServiceHref(item.slug),
+  };
 }
 
 export function venueToCatalogueItem(venue: PublicVenue): CatalogueItem {
