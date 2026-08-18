@@ -513,8 +513,8 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
             icon: L.divIcon({
               className: `leaflet-interactive em-map-marker ${markerKindClass(m.kind)}${hasPhoto ? ' has-photo-pin' : ''}`,
               html: listingIconHtml(m.kind, photoUrl, m.title),
-              iconSize: [56, 64],
-              iconAnchor: [28, 62],
+              iconSize: [42, 62],
+              iconAnchor: [21, 60],
             }),
             interactive: true,
             bubblingMouseEvents: false,
