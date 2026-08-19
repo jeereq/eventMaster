@@ -252,7 +252,7 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
   const primary = data.branding?.primary || '#4f46e5';
   const accent = data.branding?.accent || primary;
   const orgName = data.organizationName?.trim() || 'Organisation';
-  const cardMax = canvasStyle.maxWidth || 480;
+  const cardMax = Number.parseInt(String(canvasStyle.maxWidth), 10) || 480;
   const eventDateLabel = data.event.date
     ? new Date(data.event.date).toLocaleDateString('fr-FR', {
         weekday: 'long',
