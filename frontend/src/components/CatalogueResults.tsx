@@ -7,7 +7,7 @@ import { cn } from '@/lib/cn';
 import { listStackClass } from '@/components/ui';
 import { Skeleton } from '@/components/ui/Skeleton';
 import FavoriteHeart from '@/components/FavoriteHeart';
-import { catalogueItemDisplayKind, catalogueKindFilterLabel, catalogueKindLabel, cataloguePriceCaption, formatDistanceKm, formatQuotaLabel, groupCatalogueItemsByDisplayKind, serviceMobilityLabel, type CatalogueItem, type CatalogueViewMode } from '@/lib/marketplace';
+import { catalogueItemDisplayKind, catalogueKindAccent, catalogueKindFilterLabel, catalogueKindLabel, cataloguePriceCaption, formatDistanceKm, formatQuotaLabel, groupCatalogueItemsByDisplayKind, serviceMobilityLabel, type CatalogueDisplayKind, type CatalogueItem, type CatalogueViewMode } from '@/lib/marketplace';
 
 export const CATALOGUE_GRID_COLS = [2, 3, 4, 5] as const;
 export type CatalogueGridCols = (typeof CATALOGUE_GRID_COLS)[number];
@@ -19,33 +19,62 @@ const GRID_CLASS: Record<CatalogueGridCols, string> = {
   5: 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4',
 };
 
+function kindIcon(kind: CatalogueDisplayKind) {
+  if (kind === 'event') return Calendar;
+  if (kind === 'rental') return KeyRound;
+  if (kind === 'service') return Sparkles;
+  return Building2;
+}
+
 function Cover({ item, className }: { item: CatalogueItem; className?: string }) {
+  const displayKind = catalogueItemDisplayKind(item);
+  const accent = catalogueKindAccent(displayKind);
+  const Icon = kindIcon(displayKind);
   if (item.coverUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img src={item.coverUrl} alt="" className={cn('object-cover transition duration-500 group-hover:scale-110', className)} />
     );
   }
-  const displayKind = catalogueItemDisplayKind(item);
-  const Icon = displayKind === 'venue' ? Building2 : displayKind === 'event' ? Calendar : displayKind === 'rental' ? KeyRound : Sparkles;
   return (
-    <div className={cn('flex items-center justify-center bg-surface-muted text-muted', className)}>
-      <Icon className="w-8 h-8" />
+    <div className={cn('flex items-center justify-center', accent.cover, className)}>
+      <Icon className="w-10 h-10" strokeWidth={2.2} />
     </div>
   );
 }
 
-function KindBadge({ item }: { item: CatalogueItem }) {
+function KindMark({ item, size = 'md' }: { item: CatalogueItem; size?: 'sm' | 'md' }) {
   const displayKind = catalogueItemDisplayKind(item);
-  const Icon = displayKind === 'venue' ? Building2 : displayKind === 'event' ? Calendar : displayKind === 'rental' ? KeyRound : Sparkles;
+  const accent = catalogueKindAccent(displayKind);
+  const Icon = kindIcon(displayKind);
+  const box = size === 'sm' ? 'h-7 w-7 rounded-md' : 'h-8 w-8 rounded-lg';
+  const iconSize = size === 'sm' ? 'w-3.5 h-3.5' : 'w-4 h-4';
   return (
-    <span className={cn(
-      'inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-sm px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider shadow-sm',
-      displayKind === 'rental' ? 'text-teal-700' : displayKind === 'service' ? 'text-[color:var(--festive-accent)]' : displayKind === 'event' ? 'text-emerald-700' : 'text-primary',
-    )}>
-      <Icon className="w-3 h-3" />
-      {catalogueKindLabel(displayKind)}
+    <span className="inline-flex items-center gap-1.5 min-w-0">
+      <span className={cn('inline-flex items-center justify-center shrink-0 shadow-sm', box, accent.iconBox)}>
+        <Icon className={iconSize} strokeWidth={2.4} />
+      </span>
+      <span className={cn(
+        'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider shadow-sm',
+        accent.badge,
+      )}>
+        {catalogueKindLabel(displayKind)}
+      </span>
     </span>
+  );
+}
+
+function GroupHeading({ kind, count }: { kind: CatalogueDisplayKind; count: number }) {
+  const Icon = kindIcon(kind);
+  const accent = catalogueKindAccent(kind);
+  return (
+    <h2 className="text-sm font-semibold text-foreground inline-flex items-center gap-2">
+      <span className={cn('inline-flex h-7 w-7 items-center justify-center rounded-lg', accent.iconBox)}>
+        <Icon className="w-3.5 h-3.5" strokeWidth={2.4} />
+      </span>
+      {catalogueKindFilterLabel(kind)}
+      <span className="text-muted font-medium"> · {count}</span>
+    </h2>
   );
 }
 
@@ -60,17 +89,23 @@ function GridCard({
   favorited?: boolean;
   onToggleFavorite?: (item: CatalogueItem) => void;
 }) {
+  const displayKind = catalogueItemDisplayKind(item);
+  const accent = catalogueKindAccent(displayKind);
   const isService = item.kind === 'service';
   return (
     <Link
       href={item.href}
-      className="group relative flex flex-col bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden shadow-[var(--shadow-soft)] hover:border-primary/40 hover:shadow-[0_22px_44px_-24px_rgba(15,23,42,0.5)] hover:-translate-y-0.5 transition duration-200"
+      className={cn(
+        'group relative flex flex-col bg-surface border rounded-[var(--radius-card)] overflow-hidden shadow-[var(--shadow-soft)] hover:shadow-[0_22px_44px_-24px_rgba(15,23,42,0.5)] hover:-translate-y-0.5 transition duration-200',
+        accent.border,
+      )}
     >
+      <span className={cn('absolute inset-x-0 top-0 h-1 z-10', accent.bar)} aria-hidden />
       <div className={cn('relative overflow-hidden bg-surface-muted', compact ? 'aspect-[5/4]' : 'aspect-[4/3]')}>
         <Cover item={item} className="w-full h-full" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
-        <div className="absolute top-2.5 left-2.5">
-          <KindBadge item={item} />
+        <div className="absolute top-2.5 left-2.5 z-[1]">
+          <KindMark item={item} />
         </div>
         {onToggleFavorite && item.kind !== 'event' ? (
           <div className="absolute top-2.5 right-2.5 z-10">
@@ -138,16 +173,28 @@ function ListRow({
   favorited?: boolean;
   onToggleFavorite?: (item: CatalogueItem) => void;
 }) {
+  const displayKind = catalogueItemDisplayKind(item);
+  const accent = catalogueKindAccent(displayKind);
+  const Icon = kindIcon(displayKind);
   return (
     <Link
       href={item.href}
-      className="group flex items-center gap-3 sm:gap-4 bg-surface border border-border rounded-[var(--radius-card)] p-2.5 sm:p-3 hover:border-primary/35 hover:shadow-[var(--shadow-soft)] transition"
+      className={cn(
+        'group flex items-center gap-3 sm:gap-4 bg-surface border rounded-[var(--radius-card)] p-2.5 sm:p-3 hover:shadow-[var(--shadow-soft)] transition',
+        accent.border,
+      )}
     >
-      <div className="w-20 h-16 sm:w-28 sm:h-20 rounded-md overflow-hidden bg-surface-muted shrink-0">
+      <div className="relative w-20 h-16 sm:w-28 sm:h-20 rounded-md overflow-hidden bg-surface-muted shrink-0">
         <Cover item={item} className="w-full h-full" />
+        <span className={cn(
+          'absolute bottom-1 left-1 inline-flex h-6 w-6 items-center justify-center rounded-md shadow-sm',
+          accent.iconBox,
+        )}>
+          <Icon className="w-3.5 h-3.5" strokeWidth={2.4} />
+        </span>
       </div>
       <div className="min-w-0 flex-1 space-y-1">
-        <KindBadge item={item} />
+        <KindMark item={item} size="sm" />
         <h2 className="font-semibold text-sm text-foreground group-hover:text-primary transition truncate">
           {item.title}
         </h2>
@@ -216,12 +263,7 @@ export default function CatalogueResults({
       <div className="space-y-6">
         {groups.map((group) => (
           <section key={group.kind} className="space-y-2">
-            {showHeadings ? (
-              <h2 className="text-sm font-semibold text-foreground">
-                {catalogueKindFilterLabel(group.kind)}
-                <span className="text-muted font-medium"> · {group.items.length}</span>
-              </h2>
-            ) : null}
+            {showHeadings ? <GroupHeading kind={group.kind} count={group.items.length} /> : null}
             <div className={listStackClass}>
               {group.items.map((item) => (
                 <ListRow
@@ -242,12 +284,7 @@ export default function CatalogueResults({
     <div className="space-y-6">
       {groups.map((group) => (
         <section key={group.kind} className="space-y-3">
-          {showHeadings ? (
-            <h2 className="text-sm font-semibold text-foreground">
-              {catalogueKindFilterLabel(group.kind)}
-              <span className="text-muted font-medium"> · {group.items.length}</span>
-            </h2>
-          ) : null}
+          {showHeadings ? <GroupHeading kind={group.kind} count={group.items.length} /> : null}
           <div className={GRID_CLASS[cols]}>
             {group.items.map((item) => (
               <GridCard

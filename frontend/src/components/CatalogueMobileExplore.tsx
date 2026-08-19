@@ -10,7 +10,7 @@ import MarketplaceLocationsMap, {
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatFc } from '@/config/landingPricing';
-import { catalogueItemDisplayKind, catalogueKindLabel, formatDistanceKm, type CatalogueItem } from '@/lib/marketplace';
+import { catalogueItemDisplayKind, catalogueKindAccent, catalogueKindLabel, formatDistanceKm, type CatalogueItem } from '@/lib/marketplace';
 
 type SheetSnap = 'peek' | 'mid' | 'full';
 
@@ -43,6 +43,7 @@ function StoryCard({
   onDirections: () => void;
 }) {
   const displayKind = catalogueItemDisplayKind(item);
+  const accent = catalogueKindAccent(displayKind);
   const Icon = displayKind === 'service' ? Sparkles : displayKind === 'rental' ? KeyRound : displayKind === 'event' ? Calendar : Building2;
   const distance = formatDistanceKm(item.distanceKm);
 
@@ -51,34 +52,29 @@ function StoryCard({
       data-card-id={item.id}
       className={cn(
         'em-snap-card relative overflow-hidden rounded-[var(--radius-card)] border bg-surface shadow-lg transition-transform',
-        selected ? 'border-primary ring-2 ring-primary/40 scale-[1.02]' : 'border-border',
+        selected ? 'ring-2 ring-primary/40 scale-[1.02]' : '',
+        accent.border,
       )}
     >
+      <span className={cn('absolute inset-x-0 top-0 h-1 z-10', accent.bar)} aria-hidden />
       <button type="button" onClick={onSelect} className="block w-full text-left">
         <div className="relative h-[7.5rem] bg-surface-muted">
           {item.coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={item.coverUrl} alt="" className="w-full h-full object-cover" />
           ) : (
-            <div className={cn(
-              'w-full h-full flex items-center justify-center',
-              displayKind === 'service'
-                ? 'bg-[color:var(--festive-accent)]/15 text-[color:var(--festive-accent)]'
-                : displayKind === 'rental'
-                  ? 'bg-cyan-50 text-cyan-800'
-                  : displayKind === 'event'
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : 'bg-primary/10 text-primary',
-            )}>
-              <Icon className="w-8 h-8" />
+            <div className={cn('w-full h-full flex items-center justify-center', accent.cover)}>
+              <Icon className="w-8 h-8" strokeWidth={2.2} />
             </div>
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-          <span className={cn(
-            'absolute top-2.5 left-2.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-white/90 text-foreground',
-          )}>
-            <Icon className="w-3 h-3" />
-            {catalogueKindLabel(displayKind)}
+          <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1.5">
+            <span className={cn('inline-flex h-7 w-7 items-center justify-center rounded-lg shadow-sm', accent.iconBox)}>
+              <Icon className="w-3.5 h-3.5" strokeWidth={2.4} />
+            </span>
+            <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider shadow-sm', accent.badge)}>
+              {catalogueKindLabel(displayKind)}
+            </span>
           </span>
           {distance ? (
             <span className="absolute top-2.5 right-2.5 rounded-full bg-black/55 text-white text-[10px] font-semibold px-2 py-0.5">
@@ -124,6 +120,7 @@ function SheetRow({
   onSelect: () => void;
 }) {
   const displayKind = catalogueItemDisplayKind(item);
+  const accent = catalogueKindAccent(displayKind);
   const Icon = displayKind === 'service' ? Sparkles : displayKind === 'rental' ? KeyRound : displayKind === 'event' ? Calendar : Building2;
 
   return (
@@ -132,30 +129,28 @@ function SheetRow({
       onClick={onSelect}
       className={cn(
         'w-full flex items-center gap-3 rounded-[var(--radius-card)] p-2 text-left border transition',
-        selected ? 'border-primary bg-primary/5' : 'border-transparent bg-surface-muted/60',
+        selected ? 'bg-primary/5' : 'bg-surface-muted/60',
+        accent.border,
       )}
     >
-      <div className="w-[4.5rem] h-14 rounded-md overflow-hidden bg-surface-muted shrink-0">
+      <div className="relative w-[4.5rem] h-14 rounded-md overflow-hidden bg-surface-muted shrink-0">
         {item.coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={item.coverUrl} alt="" className="w-full h-full object-cover" />
         ) : (
-          <div className={cn(
-            'w-full h-full flex items-center justify-center',
-            displayKind === 'service'
-              ? 'text-[color:var(--festive-accent)]'
-              : displayKind === 'rental'
-                ? 'text-cyan-800'
-                : displayKind === 'event'
-                  ? 'text-emerald-700'
-                  : 'text-primary',
-          )}>
-            <Icon className="w-5 h-5" />
+          <div className={cn('w-full h-full flex items-center justify-center', accent.cover)}>
+            <Icon className="w-5 h-5" strokeWidth={2.2} />
           </div>
         )}
+        <span className={cn(
+          'absolute bottom-1 left-1 inline-flex h-5 w-5 items-center justify-center rounded shadow-sm',
+          accent.iconBox,
+        )}>
+          <Icon className="w-3 h-3" strokeWidth={2.4} />
+        </span>
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+        <p className={cn('text-[10px] font-semibold uppercase tracking-wider', displayKind === 'service' ? 'text-[color:var(--festive-accent)]' : displayKind === 'rental' ? 'text-cyan-800' : displayKind === 'event' ? 'text-emerald-700' : 'text-primary')}>
           {catalogueKindLabel(displayKind)}
         </p>
         <p className="text-sm font-semibold text-foreground truncate">{item.title}</p>

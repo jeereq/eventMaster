@@ -10,6 +10,14 @@ type RsvpFieldLike = {
   helpText?: string;
 };
 
+type InvitationElementLike = {
+  id?: string;
+  type?: string;
+  text?: string;
+  rsvpFields?: RsvpFieldLike[];
+  rsvpPlacement?: string;
+};
+
 const MANDATORY_RSVP_KEY_ALIASES: Record<string, string[]> = {
   genre: ['genre', 'gender', 'sexe'],
   allergies: ['allergies', 'allergie', 'allergy'],
@@ -119,7 +127,7 @@ export function overlayRsvpFieldsOnContent(content: unknown, eventForm?: unknown
     };
   }
 
-  const parsed = base as { elements?: Array<{ type?: string; rsvpFields?: RsvpFieldLike[] }> };
+  const parsed = base as { elements?: InvitationElementLike[] };
   const elements = Array.isArray(parsed.elements) ? [...parsed.elements] : [];
   let hasBlock = false;
   const next = elements.map((el) => {
@@ -141,7 +149,7 @@ export function overlayRsvpFieldsOnContent(content: unknown, eventForm?: unknown
 
 export function ensureMandatoryRsvpFieldsOnContent(content: unknown): unknown {
   if (!content || typeof content !== 'object' || Array.isArray(content)) return content;
-  const parsed = content as { elements?: Array<{ type?: string; rsvpFields?: RsvpFieldLike[] }> };
+  const parsed = content as { elements?: InvitationElementLike[] };
   if (!Array.isArray(parsed.elements)) return content;
 
   let touched = false;

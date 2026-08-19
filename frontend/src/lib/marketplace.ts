@@ -788,6 +788,49 @@ export function catalogueKindFilterLabel(kind?: CatalogueKind | 'all' | 'rental'
   return 'Tous';
 }
 
+export function catalogueKindAccent(kind?: CatalogueDisplayKind | string | null): {
+  iconBox: string;
+  badge: string;
+  cover: string;
+  border: string;
+  bar: string;
+} {
+  if (kind === 'service') {
+    return {
+      iconBox: 'bg-[color:var(--festive-accent)] text-white',
+      badge: 'bg-[color:var(--festive-accent)] text-white',
+      cover: 'bg-[color:var(--festive-accent)]/15 text-[color:var(--festive-accent)]',
+      border: 'border-[color:var(--festive-accent)]/35 hover:border-[color:var(--festive-accent)]/70',
+      bar: 'bg-[color:var(--festive-accent)]',
+    };
+  }
+  if (kind === 'rental') {
+    return {
+      iconBox: 'bg-cyan-700 text-white',
+      badge: 'bg-cyan-700 text-white',
+      cover: 'bg-cyan-50 text-cyan-800',
+      border: 'border-cyan-400/60 hover:border-cyan-600',
+      bar: 'bg-cyan-700',
+    };
+  }
+  if (kind === 'event') {
+    return {
+      iconBox: 'bg-emerald-600 text-white',
+      badge: 'bg-emerald-600 text-white',
+      cover: 'bg-emerald-50 text-emerald-700',
+      border: 'border-emerald-400/60 hover:border-emerald-600',
+      bar: 'bg-emerald-600',
+    };
+  }
+  return {
+    iconBox: 'bg-primary text-white',
+    badge: 'bg-primary text-white',
+    cover: 'bg-primary/12 text-primary',
+    border: 'border-primary/30 hover:border-primary/60',
+    bar: 'bg-primary',
+  };
+}
+
 export const CATALOGUE_DISPLAY_KIND_ORDER: CatalogueDisplayKind[] = ['venue', 'service', 'rental', 'event'];
 
 export function groupCatalogueItemsByDisplayKind<T extends Pick<CatalogueItem, 'kind' | 'category'>>(
