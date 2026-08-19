@@ -18,7 +18,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-border bg-surface p-3.5 sm:p-4 space-y-2.5">
+    <section className="rounded-[var(--radius-card)] border border-border bg-surface p-3.5 sm:p-4 space-y-2.5">
       <h2 className="text-sm font-semibold text-foreground inline-flex items-center gap-2">
         <span className="text-primary">{icon}</span>
         {title}
@@ -60,7 +60,7 @@ export default function ListingPublicDetails({
         <Section title={kind === 'venue' ? 'Équipements' : 'Atouts'} icon={<Sparkles className="w-4 h-4" />}>
           <div className="flex flex-wrap gap-1.5">
             {amenities.map((id) => (
-              <span key={id} className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-surface-muted border border-border">
+              <span key={id} className="px-2.5 py-1 rounded-[var(--radius-button)] text-[11px] font-medium bg-surface-muted border border-border">
                 {amenityLabel(id)}
               </span>
             ))}
@@ -71,7 +71,7 @@ export default function ListingPublicDetails({
         <Section title="Types d’événements" icon={<Sparkles className="w-4 h-4" />}>
           <div className="flex flex-wrap gap-1.5">
             {eventTypes.map((id) => (
-              <span key={id} className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-primary/10 text-primary border border-primary/15">
+              <span key={id} className="px-2.5 py-1 rounded-[var(--radius-button)] text-[11px] font-medium bg-primary/10 text-primary border border-primary/15">
                 {eventTypeLabel(id)}
               </span>
             ))}
@@ -81,7 +81,7 @@ export default function ListingPublicDetails({
       {facts.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {facts.map((fact) => (
-            <div key={fact.label} className="rounded-xl border border-border bg-surface-muted/60 px-3 py-2">
+            <div key={fact.label} className="rounded-[var(--radius-card)] border border-border bg-surface-muted/60 px-3 py-2">
               <p className="text-[10px] uppercase tracking-wider text-muted font-semibold">{fact.label}</p>
               <p className="text-sm font-medium text-foreground mt-0.5">{fact.value}</p>
             </div>

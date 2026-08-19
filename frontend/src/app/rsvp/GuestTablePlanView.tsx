@@ -210,7 +210,7 @@ export default function GuestTablePlanView({
             )}
           </div>
           <span
-            className="text-[10px] font-semibold px-2 py-1 rounded-md border shrink-0"
+            className="text-[10px] font-semibold px-2 py-1 rounded-[var(--radius-button)] border shrink-0"
             style={{ color: theme.accentColor, borderColor: `${theme.accentColor}44`, background: `${theme.accentColor}12` }}
           >
             {getTableShapeLabel(tableDetails.shape)}

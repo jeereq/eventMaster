@@ -37,6 +37,7 @@ import { cn } from '@/lib/cn';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { parseStoredPhone } from '@/components/ui/PhoneInput';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
+import { canonicalShareUrl, guestRsvpUrl } from '@/lib/share';
 import {
  getFeatureLockMessage,
  getQuotaActionMessage,
@@ -1669,8 +1670,7 @@ Merci de confirmer votre présence :
  const getRenderedInvitationBody = (guest: GuestItem) => {
  if (!invitations || invitations.length === 0) return null;
  const invitation = invitations[0]; // Use the first invitation
- const FRONTEND_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
- const rsvpLink = `${FRONTEND_URL}/rsvp/${guest.id}`;
+ const rsvpLink = guestRsvpUrl(guest.id);
  
  let body = invitation.body || '';
  body = body.replaceAll('{{firstName}}', guest.firstName || '');
@@ -1693,7 +1693,7 @@ Merci de confirmer votre présence :
  const getWhatsAppShareUrl = (guestName: string, rsvpLink: string, phone?: string | null, customBody?: string | null) => {
  const text = customBody || `Bonjour ${guestName}, vous êtes chaleureusement invité(e) ! Veuillez confirmer votre présence en ouvrant votre invitation personnalisée ici : ${rsvpLink}`;
  if (phone) {
- const cleanPhone = phone.replace(/[^\d+]/g, '');
+ const cleanPhone = phone.replace(/\D/g, '');
  return `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`;
  }
  return `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
@@ -1708,11 +1708,12 @@ Merci de confirmer votre présence :
  return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(rsvpLink)}`;
  };
 
- const getGuestRsvpLink = (guestId: string) => {
- if (typeof window !== 'undefined') {
- return `${window.location.origin}/rsvp/${guestId}`;
- }
- return `http://localhost:3000/rsvp/${guestId}`;
+ const getGuestRsvpLink = (guestId: string) => guestRsvpUrl(guestId);
+
+ const publicRsvpLink = (link?: string | null, guestId?: string) => {
+   if (link) return canonicalShareUrl(link);
+   if (guestId) return guestRsvpUrl(guestId);
+   return canonicalShareUrl();
  };
 
  const getReminderFrequencyLabel = (freq?: string) => {
@@ -3959,7 +3960,7 @@ Merci de confirmer votre présence :
  <div className="flex flex-wrap items-center gap-2">
  {/* Open Link */}
  <a 
- href={res.rsvpLink} 
+ href={publicRsvpLink(res.rsvpLink, res.guestId)} 
  target="_blank" 
  rel="noopener noreferrer"
  className="inline-flex items-center gap-1 text-primary hover:text-primary font-bold transition hover:underline text-xs mr-2"
@@ -3970,7 +3971,7 @@ Merci de confirmer votre présence :
 
  {/* Copy Link */}
  <button
- onClick={() => handleCopyLink(res.guestId || index.toString(), res.rsvpLink)}
+ onClick={() => handleCopyLink(res.guestId || index.toString(), publicRsvpLink(res.rsvpLink, res.guestId))}
  className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition ${
  copiedGuestId === (res.guestId || index.toString())
  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
@@ -3993,7 +3994,7 @@ Merci de confirmer votre présence :
 
  {/* WhatsApp */}
  <a
- href={getWhatsAppShareUrl(res.guestName, res.rsvpLink, res.phone, res.body)}
+ href={getWhatsAppShareUrl(res.guestName, publicRsvpLink(res.rsvpLink, res.guestId), res.phone, res.body)}
  target="_blank"
  rel="noopener noreferrer"
  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition shadow-sm"
@@ -4007,7 +4008,7 @@ Merci de confirmer votre présence :
 
  {/* X (Twitter) */}
  <a
- href={getXShareUrl(res.guestName, res.rsvpLink, res.body)}
+ href={getXShareUrl(res.guestName, publicRsvpLink(res.rsvpLink, res.guestId), res.body)}
  target="_blank"
  rel="noopener noreferrer"
  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-background hover:bg-background text-white rounded-xl text-xs font-bold transition shadow-sm"
@@ -4021,7 +4022,7 @@ Merci de confirmer votre présence :
 
  {/* Instagram */}
  <button
- onClick={() => handleCopyLink(res.guestId || index.toString(), res.rsvpLink)}
+ onClick={() => handleCopyLink(res.guestId || index.toString(), publicRsvpLink(res.rsvpLink, res.guestId))}
  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-tr from-yellow-500 via-red-500 to-purple-600 hover:opacity-90 text-white rounded-xl text-xs font-bold transition shadow-sm"
  title="Copier pour Instagram DM"
  >
@@ -4033,7 +4034,7 @@ Merci de confirmer votre présence :
 
  {/* Facebook */}
  <a
- href={getFacebookShareUrl(res.rsvpLink)}
+ href={getFacebookShareUrl(publicRsvpLink(res.rsvpLink, res.guestId))}
  target="_blank"
  rel="noopener noreferrer"
  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-sm"

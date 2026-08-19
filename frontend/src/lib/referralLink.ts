@@ -1,8 +1,10 @@
+import { appOrigin, canonicalShareUrl } from '@/lib/share';
+
 /** Construit l'URL d'inscription avec code parrainage pré-rempli (?ref=). */
 export function buildReferralRegisterUrl(referralCode: string, origin?: string): string {
-  const base = origin ?? (typeof window !== 'undefined' ? window.location.origin : '');
+  const base = origin ?? appOrigin();
   const code = referralCode.trim().toUpperCase();
-  return `${base}/register?ref=${encodeURIComponent(code)}`;
+  return canonicalShareUrl(`${base}/register?ref=${encodeURIComponent(code)}`);
 }
 
 /** Lit le code depuis ?ref= ou ?referral= (insensible à la casse). */

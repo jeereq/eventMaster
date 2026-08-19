@@ -52,21 +52,23 @@ export function CatalogueGridColsToggle({
   value,
   onChange,
   className,
+  options = [2, 3, 4, 5],
 }: {
   value: CatalogueGridCols;
   onChange: (cols: CatalogueGridCols) => void;
   className?: string;
+  options?: CatalogueGridCols[];
 }) {
   return (
     <div
       className={cn(
-        'inline-flex items-center rounded-full border border-border bg-surface-muted p-0.5',
+        'inline-flex items-center rounded-[var(--radius-button)] border border-border bg-surface-muted p-0.5',
         className,
       )}
       role="group"
       aria-label="Nombre de colonnes"
     >
-      {([2, 3, 4, 5] as const).map((cols) => (
+      {options.map((cols) => (
         <button
           key={cols}
           type="button"
@@ -74,7 +76,7 @@ export function CatalogueGridColsToggle({
           aria-pressed={value === cols}
           title={`${cols} colonnes`}
           className={cn(
-            'min-w-8 px-2 py-1.5 rounded-full text-[11px] font-semibold transition',
+            'min-w-8 px-2 py-1.5 rounded-[var(--radius-button)] text-[11px] font-semibold transition',
             value === cols
               ? 'bg-surface text-primary shadow-sm ring-1 ring-border'
               : 'text-muted hover:text-foreground',

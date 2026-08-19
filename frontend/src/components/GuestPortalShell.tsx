@@ -14,6 +14,7 @@ interface GuestPortalShellProps {
   organizationName?: string;
   children: React.ReactNode;
   tabs?: React.ReactNode;
+  headerRight?: React.ReactNode;
   footer?: React.ReactNode;
   className?: string;
   contentClassName?: string;
@@ -38,6 +39,7 @@ export default function GuestPortalShell({
   organizationName,
   children,
   tabs,
+  headerRight,
   footer,
   className,
   contentClassName,
@@ -88,6 +90,7 @@ export default function GuestPortalShell({
             </div>
           )}
           <div className="flex items-center gap-2 shrink-0">
+            {headerRight}
             {guestId && <GuestPortalHomeLink guestId={guestId} />}
             <Link
               href="/guide/invite"
@@ -140,27 +143,32 @@ export function GuestPortalTabBar({
   onChange: (id: string) => void;
 }) {
   return (
-    <div className="page-container max-w-xl mx-auto px-1.5 py-1.5 grid" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
-      {tabs.map((tab) => {
-        const active = tab.id === activeId;
-        return (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => onChange(tab.id)}
-            aria-pressed={active}
-            className={cn(
-              'flex flex-col items-center justify-center gap-0.5 min-h-[3.25rem] px-1 py-1.5 rounded-[var(--radius-button)] text-[10px] font-semibold transition',
-              active
-                ? 'bg-primary/10 text-primary'
-                : 'text-muted hover:text-foreground hover:bg-surface-muted',
-            )}
-          >
-            {tab.icon}
-            <span className="truncate max-w-full leading-tight">{tab.label}</span>
-          </button>
-        );
-      })}
+    <div className="page-container max-w-xl mx-auto px-2 py-2">
+      <div
+        className="grid rounded-[var(--radius-button)] border border-border bg-surface-muted p-0.5"
+        style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
+      >
+        {tabs.map((tab) => {
+          const active = tab.id === activeId;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => onChange(tab.id)}
+              aria-pressed={active}
+              className={cn(
+                'flex flex-col items-center justify-center gap-0.5 min-h-[3.15rem] px-1 py-1.5 rounded-[var(--radius-button)] text-[10px] font-semibold transition',
+                active
+                  ? 'bg-surface text-primary shadow-sm ring-1 ring-border'
+                  : 'text-muted hover:text-foreground',
+              )}
+            >
+              {tab.icon}
+              <span className="truncate max-w-full leading-tight">{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

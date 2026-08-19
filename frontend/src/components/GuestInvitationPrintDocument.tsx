@@ -14,6 +14,7 @@ import type {
 } from '@/app/rsvp/GuestTablePlanView';
 
 import { getGuestQrImageUrl } from '@/lib/guestQr';
+import { guestRsvpUrl } from '@/lib/share';
 import { applyOrgInvitationThemeIfNeeded } from '@/lib/templateColorThemes';
 
 function buildQrCodeUrl(guestId: string, size = 200): string {
@@ -107,10 +108,7 @@ function rsvpStatusLabel(status: string) {
 }
 
 export default function GuestInvitationPrintDocument({ data }: { data: GuestPrintDocumentData }) {
-  const rsvpLink =
-    typeof window !== 'undefined'
-      ? `${window.location.origin}/rsvp/${data.guestId}`
-      : `${process.env.NEXT_PUBLIC_APP_URL || ''}/rsvp/${data.guestId}`;
+  const rsvpLink = guestRsvpUrl(data.guestId);
 
   const ctx: GuestInvitationContext = {
     firstName: data.firstName,

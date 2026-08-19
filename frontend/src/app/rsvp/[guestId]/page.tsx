@@ -25,6 +25,8 @@ import {
   parseFieldOptions,
   restoreFieldValuesFromPreferences,
 } from '@/lib/rsvpFormFields';
+import ShareButton from '@/components/ShareButton';
+import { guestRsvpUrl } from '@/lib/share';
 import { getGuestQrImageUrl } from '@/lib/guestQr';
 import { applyOrgInvitationThemeIfNeeded } from '@/lib/templateColorThemes';
 
@@ -525,6 +527,14 @@ export default function RsvpPage() {
           eyebrow="Réponse enregistrée"
           guestId={guestId}
           organizationName={guest.organizationName}
+          headerRight={
+            <ShareButton
+              title={`${guest.event.title} · Invitation`}
+              text={`Invitation EventMaster pour ${guest.firstName}.`}
+              url={guestRsvpUrl(guestId)}
+              className="h-8 w-8 !bg-surface border-border"
+            />
+          }
           contentClassName="space-y-5"
         >
           <GuestPortalCard className="text-center space-y-4 py-8">
@@ -571,6 +581,14 @@ export default function RsvpPage() {
           swipeTabIds={[...guestTabIds]}
           activeTabId={activeGuestTab}
           onTabChange={goGuestTab}
+          headerRight={
+            <ShareButton
+              title={`${guest.event.title} · Invitation`}
+              text={`Invitation EventMaster pour ${guest.firstName}.`}
+              url={guestRsvpUrl(guestId)}
+              className="h-8 w-8 !bg-surface border-border"
+            />
+          }
           tabs={
             <GuestPortalTabBar
               tabs={guestTabs}
@@ -583,32 +601,30 @@ export default function RsvpPage() {
             {/* 1. BADGE & INFOS TAB */}
             {activeGuestTab === 'badge' && (
               <div className="space-y-4">
-                <GuestPortalCard className="space-y-2">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-[var(--radius-button)] bg-emerald-50 text-emerald-700 border border-emerald-100 text-[10px] font-semibold uppercase tracking-wider">
-                    Présence confirmée
-                  </span>
-                  <h2 className="text-lg font-semibold leading-snug tracking-tight">
-                    Bonjour {guest.firstName}
-                  </h2>
-                  <p className="text-muted text-xs leading-relaxed">
-                    Présentez votre badge QR à l&apos;entrée le jour J.
-                  </p>
-                </GuestPortalCard>
-
-                <GuestPortalCard className="text-center space-y-4">
-                  <span className="text-xs font-semibold text-muted block">Badge QR</span>
-                  <div className="flex justify-center">
-                    <div className="p-3 bg-surface border border-border rounded-[var(--radius-card)]">
-                      <img
-                        src={getGuestQrImageUrl(guest.id, 180)}
-                        alt="QR Code de confirmation de présence"
-                        className="w-40 h-40"
-                      />
+                <GuestPortalCard className="space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-[var(--radius-button)] bg-emerald-50 text-emerald-700 border border-emerald-100 text-[10px] font-semibold uppercase tracking-wider">
+                        Présence confirmée
+                      </span>
+                      <h2 className="text-lg font-semibold leading-snug tracking-tight">
+                        Bonjour {guest.firstName}
+                      </h2>
+                      <p className="text-muted text-xs leading-relaxed">
+                        Présentez votre badge QR à l&apos;entrée le jour J. Gardez-le à portée de main sur cet écran.
+                      </p>
+                    </div>
+                    <div className="shrink-0 mx-auto sm:mx-0 text-center space-y-2">
+                      <div className="p-2.5 bg-white border border-border rounded-[var(--radius-card)] inline-block">
+                        <img
+                          src={getGuestQrImageUrl(guest.id, 180)}
+                          alt="QR Code de confirmation de présence"
+                          className="w-36 h-36 sm:w-40 sm:h-40"
+                        />
+                      </div>
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Badge QR</p>
                     </div>
                   </div>
-                  <p className="text-[11px] text-muted leading-relaxed max-w-xs mx-auto">
-                    Présentez ce code à l&apos;accueil pour valider votre présence.
-                  </p>
                 </GuestPortalCard>
 
                 <GuestPortalCard className="space-y-4">
@@ -1501,6 +1517,12 @@ export default function RsvpPage() {
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <ShareButton
+              title={`${guest.event.title} · Invitation`}
+              text={`Invitation EventMaster pour ${guest.firstName}.`}
+              url={guestRsvpUrl(guestId)}
+              className="h-8 w-8 !bg-surface border-border"
+            />
             <GuestPortalHomeLink guestId={guestId} variant="light" />
             <Link
               href="/guide/invite"
@@ -2092,7 +2114,7 @@ export default function RsvpPage() {
                     <div className="bg-primary/10 text-primary p-2 rounded-[var(--radius-button)]"><Calendar className="w-5 h-5" /></div>
                     <div className="space-y-0.5">
                       <div className="text-[10px] font-bold text-muted uppercase tracking-widest">Date</div>
-                      <div className="font-extrabold text-foreground text-xs">
+                      <div className="font-semibold text-foreground text-xs">
                         {new Date(guest.event.date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
                       </div>
                     </div>
@@ -2102,7 +2124,7 @@ export default function RsvpPage() {
                     <div className="bg-primary/10 text-primary p-2 rounded-[var(--radius-button)]"><MapPin className="w-5 h-5" /></div>
                     <div className="space-y-0.5">
                       <div className="text-[10px] font-bold text-muted uppercase tracking-widest">Lieu</div>
-                      <div className="font-extrabold text-foreground text-xs truncate max-w-[150px]">{guest.event.location}</div>
+                      <div className="font-semibold text-foreground text-xs truncate max-w-[150px]">{guest.event.location}</div>
                     </div>
                   </div>
                 </div>
@@ -2159,7 +2181,7 @@ export default function RsvpPage() {
                         <select
                           value={specialMeal}
                           onChange={e => setSpecialMeal(e.target.value)}
-                          className="w-full px-3 py-2 border border-border rounded-lg text-sm text-foreground focus:outline-primary"
+                          className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-primary"
                         >
                           <option value="none">Standard</option>
                           <option value="vegetarian">Végétarien</option>
@@ -2175,7 +2197,7 @@ export default function RsvpPage() {
                           type="text"
                           value={allergies}
                           onChange={e => setAllergies(e.target.value)}
-                          className="w-full px-3 py-2 border border-border rounded-lg text-sm text-foreground focus:outline-primary"
+                          className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-primary"
                           placeholder="Ex: Arachides, fruits de mer, lactose..."
                         />
                       </div>
@@ -2191,7 +2213,7 @@ export default function RsvpPage() {
                   <textarea
                     value={additionalNotes}
                     onChange={e => setAdditionalNotes(e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-lg text-sm text-foreground focus:outline-primary"
+                    className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-primary"
                     placeholder="Ex: Je serai accompagné(e) de..."
                     rows={2}
                   />

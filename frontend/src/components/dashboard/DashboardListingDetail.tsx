@@ -165,25 +165,25 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
           )}
           <div className="flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             {venue && formatLocationLine(venue) && (
-              <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-2 min-h-9 rounded-full bg-surface-muted border border-border text-xs text-muted whitespace-nowrap">
+              <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-2 min-h-9 rounded-[var(--radius-button)] bg-surface-muted border border-border text-xs text-muted whitespace-nowrap">
                 <MapPin className="w-3.5 h-3.5" /> {formatLocationLine(venue)}
                 {venue.address ? ` · ${venue.address}` : ''}
               </span>
             )}
             {service && formatLocationLine(service) && (
-              <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-2 min-h-9 rounded-full bg-surface-muted border border-border text-xs text-muted whitespace-nowrap">
+              <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-2 min-h-9 rounded-[var(--radius-button)] bg-surface-muted border border-border text-xs text-muted whitespace-nowrap">
                 <MapPin className="w-3.5 h-3.5" />
                 {formatLocationLine(service)}
                 {` · ${serviceMobilityLabel(service.travels ?? Boolean(service.coverageRadiusKm), service.coverageRadiusKm)}`}
               </span>
             )}
             {venue?.capacity ? (
-              <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-2 min-h-9 rounded-full bg-surface-muted border border-border text-xs text-muted whitespace-nowrap">
+              <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-2 min-h-9 rounded-[var(--radius-button)] bg-surface-muted border border-border text-xs text-muted whitespace-nowrap">
                 <Users className="w-3.5 h-3.5" /> {venue.capacity} places
               </span>
             ) : null}
             {quotaLabel && (
-              <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-2 min-h-9 rounded-full bg-surface-muted border border-border text-xs text-muted whitespace-nowrap">
+              <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-2 min-h-9 rounded-[var(--radius-button)] bg-surface-muted border border-border text-xs text-muted whitespace-nowrap">
                 {quotaLabel}
               </span>
             )}
@@ -191,7 +191,7 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
               <button
                 type="button"
                 onClick={() => startRoute(item.id)}
-                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 min-h-9 rounded-full bg-primary text-white text-xs font-semibold hover:opacity-95"
+                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 min-h-9 rounded-[var(--radius-button)] bg-primary text-white text-xs font-semibold hover:opacity-95"
               >
                 <Navigation className="w-3.5 h-3.5" />
                 Itinéraire
@@ -233,7 +233,7 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
       ) : null}
       map={item ? (
         lat != null && lng != null ? (
-          <div className="rounded-[1.35rem] border border-border overflow-hidden bg-surface shadow-[var(--shadow-soft)]">
+          <div className="rounded-[var(--radius-card)] border border-border overflow-hidden bg-surface shadow-[var(--shadow-soft)]">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 sm:p-4 border-b border-border">
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-foreground">Carte</p>

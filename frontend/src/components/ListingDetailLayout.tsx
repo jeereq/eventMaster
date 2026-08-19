@@ -10,7 +10,7 @@ import { isVideoUrl, mediaPosterUrl } from '@/lib/marketplace';
 import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import { ArrowLeft, Play } from 'lucide-react';
 import ShareButton from '@/components/ShareButton';
-import { listingShareTitle } from '@/lib/share';
+import { listingPublicUrl, listingShareTitle } from '@/lib/share';
 
 function ListingMediaGallery({
   photos,
@@ -26,7 +26,7 @@ function ListingMediaGallery({
   const current = photos[photoIndex];
   return (
     <div className="space-y-3">
-      <div className="aspect-[5/4] sm:aspect-[16/9] rounded-2xl sm:rounded-[var(--radius-card)] overflow-hidden bg-black/80 border border-border">
+      <div className="aspect-[5/4] sm:aspect-[16/9] rounded-[var(--radius-card)] overflow-hidden bg-black/80 border border-border">
         {current ? (
           isVideoUrl(current) ? (
             <video
@@ -55,7 +55,7 @@ function ListingMediaGallery({
               type="button"
               onClick={() => onPhotoIndex(i)}
               className={cn(
-                'relative snap-start shrink-0 w-[4.75rem] sm:w-[5.5rem] aspect-[4/3] rounded-lg overflow-hidden border bg-surface-muted',
+                'relative snap-start shrink-0 w-[4.75rem] sm:w-[5.5rem] aspect-[4/3] rounded-[var(--radius-button)] overflow-hidden border bg-surface-muted',
                 i === photoIndex ? 'border-primary ring-2 ring-primary/30' : 'border-border',
               )}
             >
@@ -106,6 +106,7 @@ export default function ListingDetailLayout({
   hideBooking = false,
   priceCaption,
   shareUrl,
+  shareSlug,
   shareKind = 'venue',
 }: {
   backHref: string;
@@ -140,10 +141,12 @@ export default function ListingDetailLayout({
   hideBooking?: boolean;
   priceCaption?: string;
   shareUrl?: string;
+  shareSlug?: string;
   shareKind?: 'venue' | 'service' | 'event' | 'rental';
 }) {
   const router = useRouter();
   const [mobileAction, setMobileAction] = useState<'inquire' | 'book'>('inquire');
+  const shareHref = shareUrl || (shareSlug ? listingPublicUrl(shareKind, shareSlug) : undefined);
   const priceLabel = priceCaption ?? (priceFromFc != null ? formatFc(priceFromFc) : 'Sur devis');
   const showCommerce = !preview && Boolean(inquiry || booking);
   const showBooking = Boolean(booking) && !hideBooking;
@@ -211,7 +214,7 @@ export default function ListingDetailLayout({
         <>
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 lg:gap-8 items-start">
             <div className="lg:col-span-3 space-y-4 sm:space-y-5 min-w-0">
-              <div className="relative aspect-[5/4] sm:aspect-[16/9] rounded-2xl sm:rounded-[1.5rem] overflow-hidden bg-black/80 border border-border shadow-[var(--shadow-soft)]">
+              <div className="relative aspect-[5/4] sm:aspect-[16/9] rounded-[var(--radius-card)] overflow-hidden bg-black/80 border border-border shadow-[var(--shadow-soft)]">
                 {heroUrl ? (
                   isVideoUrl(heroUrl) ? (
                     <video src={heroUrl} poster={mediaPosterUrl(heroUrl)} className="w-full h-full object-cover" muted playsInline />
@@ -232,21 +235,22 @@ export default function ListingDetailLayout({
                       <ShareButton
                         title={listingShareTitle(shareKind, title)}
                         text={subtitle ? `${chip ? `${chip} · ` : ''}${subtitle}` : chip}
-                        url={shareUrl}
+                        url={shareHref}
+                        variant="icon"
                       />
                     ) : null}
                   </div>
                 ) : null}
                 <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6 text-white space-y-1">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-white/80">{chip}</p>
-                  <h1 className="text-xl sm:text-3xl font-display font-semibold tracking-tight drop-shadow leading-tight">
+                  <h1 className="text-xl sm:text-3xl font-semibold tracking-tight drop-shadow leading-tight">
                     {title}
                   </h1>
                   <p className="text-sm text-white/85 truncate">{subtitle}</p>
                 </div>
               </div>
 
-              <div className="lg:hidden flex items-center justify-between gap-3 rounded-2xl border border-border bg-surface p-3.5">
+              <div className="lg:hidden flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface p-3.5">
                 <div className="min-w-0">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">À partir de</p>
                   <p className="text-base font-semibold truncate">{priceLabel}</p>
@@ -284,12 +288,12 @@ export default function ListingDetailLayout({
               {showCommerce ? (
                 <>
               {showBooking ? (
-              <div className="lg:hidden flex gap-1 p-1 rounded-lg bg-surface-muted border border-border">
+              <div className="lg:hidden flex gap-1 p-1 rounded-[var(--radius-button)] bg-surface-muted border border-border">
                 <button
                   type="button"
                   onClick={() => setMobileAction('inquire')}
                   className={cn(
-                    'flex-1 min-h-11 px-3 rounded-md text-xs font-semibold transition',
+                    'flex-1 min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-semibold transition',
                     mobileAction === 'inquire'
                       ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
                       : 'text-muted',
@@ -301,7 +305,7 @@ export default function ListingDetailLayout({
                   type="button"
                   onClick={() => setMobileAction('book')}
                   className={cn(
-                    'flex-1 min-h-11 px-3 rounded-md text-xs font-semibold transition',
+                    'flex-1 min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-semibold transition',
                     mobileAction === 'book'
                       ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
                       : 'text-muted',

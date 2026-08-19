@@ -122,6 +122,9 @@ export default function CatalogueFilterBar({
   compactToggle = false,
   gridCols,
   onGridColsChange,
+  gridColOptions,
+  shareUrl,
+  shareTitle,
 }: {
   search: string;
   onSearchChange: (value: string) => void;
@@ -143,6 +146,9 @@ export default function CatalogueFilterBar({
   compactToggle?: boolean;
   gridCols?: CatalogueGridCols;
   onGridColsChange?: (cols: CatalogueGridCols) => void;
+  gridColOptions?: CatalogueGridCols[];
+  shareUrl?: string;
+  shareTitle?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -322,9 +328,10 @@ export default function CatalogueFilterBar({
           )}
           <ShareButton
             variant="fab"
-            title="Recherche EventMaster"
+            title={shareTitle || 'Recherche EventMaster'}
             text="Salles, prestataires, locations et événements filtrés sur EventMaster."
             label="Partager la recherche"
+            url={shareUrl}
           />
         </div>
         {!hideViewToggle ? (
@@ -341,6 +348,7 @@ export default function CatalogueFilterBar({
             <CatalogueGridColsToggle
               value={gridCols}
               onChange={onGridColsChange}
+              options={gridColOptions}
               className="bg-surface/90 backdrop-blur-xl border-white/25 dark:border-white/10 shadow-lg"
             />
           </div>
@@ -381,9 +389,10 @@ export default function CatalogueFilterBar({
           )}
           <ShareButton
             variant="button"
-            title="Recherche EventMaster"
+            title={shareTitle || 'Recherche EventMaster'}
             text="Salles, prestataires, locations et événements filtrés sur EventMaster."
             label="Partager"
+            url={shareUrl}
           />
           {!hideViewToggle ? (
             <CatalogueViewToggle
@@ -394,7 +403,7 @@ export default function CatalogueFilterBar({
             />
           ) : null}
           {view === 'grid' && gridCols && onGridColsChange ? (
-            <CatalogueGridColsToggle value={gridCols} onChange={onGridColsChange} />
+            <CatalogueGridColsToggle value={gridCols} onChange={onGridColsChange} options={gridColOptions} />
           ) : null}
         </div>
       </div>

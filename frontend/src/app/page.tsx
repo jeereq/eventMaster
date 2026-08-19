@@ -128,7 +128,7 @@ export default function Home() {
                 href="#parcours"
                 className="inline-flex items-center justify-center gap-1.5 px-1 py-2 text-sm font-semibold text-foreground/80 hover:text-primary transition"
               >
-                Voir le parcours
+                Parcours par rôle
                 <ArrowRight className="w-3.5 h-3.5" />
               </a>
             </div>

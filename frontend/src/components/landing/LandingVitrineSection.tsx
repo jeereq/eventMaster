@@ -38,6 +38,8 @@ import {
   type LandingTemplate,
 } from '@/config/landingTemplates';
 import { ArrowRight, Building2, Calendar, FileText, KeyRound, Sparkles } from 'lucide-react';
+import { useCatalogueView, CatalogueGridColsToggle, type CatalogueGridCols } from '@/components/CatalogueViewToggle';
+import { marketplaceSectionUrl } from '@/lib/share';
 
 type VitrineTab = 'venues' | 'services' | 'rentals' | 'events' | 'templates';
 type EntityFilters = CatalogueGeoState & CatalogueEntityExtras;
@@ -73,6 +75,8 @@ export default function LandingVitrineSection({
   const [templateCategory, setTemplateCategory] = useState('all');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePageSize('landing-vitrine', 8);
+  const { gridCols, setGridCols } = useCatalogueView();
+  const vitrineCols: CatalogueGridCols = gridCols === 5 ? 4 : gridCols === 2 || gridCols === 3 || gridCols === 4 ? gridCols : 3;
 
   const entity = tab === 'venues' ? 'venue' : tab === 'services' ? 'service' : tab === 'rentals' ? 'rental' : tab === 'events' ? 'event' : 'all';
 
@@ -221,6 +225,19 @@ export default function LandingVitrineSection({
       view="grid"
       onViewChange={() => undefined}
       hideViewToggle
+      gridCols={vitrineCols}
+      onGridColsChange={(cols) => setGridCols(cols === 5 ? 4 : cols)}
+      gridColOptions={[2, 3, 4]}
+      shareUrl={marketplaceSectionUrl(tab === 'venues' ? 'venues' : tab === 'services' ? 'services' : tab === 'rentals' ? 'rentals' : 'events', query)}
+      shareTitle={
+        tab === 'venues'
+          ? 'Salles EventMaster'
+          : tab === 'services'
+            ? 'Prestataires EventMaster'
+            : tab === 'rentals'
+              ? 'Locations EventMaster'
+              : 'Événements EventMaster'
+      }
       resultLabel={!loadingCatalog
         ? tab === 'venues'
           ? `${venueItems.length} salle${venueItems.length > 1 ? 's' : ''}`
@@ -302,7 +319,7 @@ export default function LandingVitrineSection({
               type="button"
               onClick={() => selectTab(id, hash)}
               className={cn(
-                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition',
+                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-medium transition',
                 tab === id
                   ? 'bg-foreground text-background'
                   : 'bg-background text-muted hover:text-foreground border border-border',
@@ -318,12 +335,13 @@ export default function LandingVitrineSection({
           <div id="salles" className="space-y-4 scroll-mt-20">
             {catalogFilters}
             {loadingCatalog ? (
-              <CatalogueResultsSkeleton mode="grid" count={pageSize} />
+              <CatalogueResultsSkeleton mode="grid" count={pageSize} gridCols={vitrineCols} />
             ) : (
               <>
                 <CatalogueResults
                   items={pagedVenues}
                   mode="grid"
+                  gridCols={vitrineCols}
                   emptyTitle="Aucune salle publiée"
                   emptyDescription="Les salles enregistrées sur EventMaster apparaîtront ici."
                 />
@@ -344,12 +362,13 @@ export default function LandingVitrineSection({
           <div id="prestataires" className="space-y-4 scroll-mt-20">
             {catalogFilters}
             {loadingCatalog ? (
-              <CatalogueResultsSkeleton mode="grid" count={pageSize} />
+              <CatalogueResultsSkeleton mode="grid" count={pageSize} gridCols={vitrineCols} />
             ) : (
               <>
                 <CatalogueResults
                   items={pagedServices}
                   mode="grid"
+                  gridCols={vitrineCols}
                   emptyTitle="Aucun prestataire publié"
                   emptyDescription="Les prestataires enregistrés sur EventMaster apparaîtront ici."
                 />
@@ -370,12 +389,13 @@ export default function LandingVitrineSection({
           <div id="locations" className="space-y-4 scroll-mt-20">
             {catalogFilters}
             {loadingCatalog ? (
-              <CatalogueResultsSkeleton mode="grid" count={pageSize} />
+              <CatalogueResultsSkeleton mode="grid" count={pageSize} gridCols={vitrineCols} />
             ) : (
               <>
                 <CatalogueResults
                   items={pagedRentals}
                   mode="grid"
+                  gridCols={vitrineCols}
                   emptyTitle="Aucune location publiée"
                   emptyDescription="Les locations d’habits, véhicules et matériel apparaîtront ici."
                 />
@@ -396,12 +416,13 @@ export default function LandingVitrineSection({
           <div id="evenements" className="space-y-4 scroll-mt-20">
             {catalogFilters}
             {loadingCatalog ? (
-              <CatalogueResultsSkeleton mode="grid" count={pageSize} />
+              <CatalogueResultsSkeleton mode="grid" count={pageSize} gridCols={vitrineCols} />
             ) : (
               <>
                 <CatalogueResults
                   items={pagedEvents}
                   mode="grid"
+                  gridCols={vitrineCols}
                   emptyTitle="Aucun événement public"
                   emptyDescription="Les événements publiés sur EventMaster apparaîtront ici."
                 />
@@ -432,27 +453,37 @@ export default function LandingVitrineSection({
                 Gérer la vitrine (Super Admin)
               </Link>
             )}
-            <div className="flex flex-wrap gap-1.5">
-              {[
-                { id: 'all', name: 'Tous' },
-                { id: 'private', name: 'Célébrations' },
-                { id: 'corporate', name: 'Professionnel' },
-                { id: 'casual', name: 'Soirées' },
-              ].map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => setTemplateCategory(c.id)}
-                  className={cn(
-                    'px-3 py-1.5 rounded-md text-xs font-medium transition',
-                    templateCategory === c.id
-                      ? 'bg-foreground text-background'
-                      : 'bg-background text-muted hover:text-foreground border border-border',
-                  )}
-                >
-                  {c.name}
-                </button>
-              ))}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap gap-1.5 flex-1">
+                {[
+                  { id: 'all', name: 'Tous' },
+                  { id: 'private', name: 'Célébrations' },
+                  { id: 'corporate', name: 'Professionnel' },
+                  { id: 'casual', name: 'Soirées' },
+                ].map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setTemplateCategory(c.id)}
+                    className={cn(
+                      'px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-medium transition',
+                      templateCategory === c.id
+                        ? 'bg-foreground text-background'
+                        : 'bg-background text-muted hover:text-foreground border border-border',
+                    )}
+                  >
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-semibold text-muted hidden sm:inline">Colonnes</span>
+                <CatalogueGridColsToggle
+                  value={vitrineCols}
+                  onChange={(cols) => setGridCols(cols === 5 ? 4 : cols)}
+                  options={[2, 3, 4]}
+                />
+              </div>
             </div>
 
             {loadingTemplates ? (
@@ -467,7 +498,11 @@ export default function LandingVitrineSection({
               <p className="text-sm text-muted py-8">Aucun modèle dans cette catégorie.</p>
             ) : (
               <>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className={cn(
+                  vitrineCols === 2 && 'grid grid-cols-1 sm:grid-cols-2 gap-4',
+                  vitrineCols === 3 && 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4',
+                  vitrineCols === 4 && 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4',
+                )}>
                   {pagedTemplates.map((t) => (
                     <article
                       key={t.id}

@@ -15,8 +15,8 @@ export type CatalogueGridCols = (typeof CATALOGUE_GRID_COLS)[number];
 const GRID_CLASS: Record<CatalogueGridCols, string> = {
   2: 'grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5',
   3: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4',
-  4: 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4',
-  5: 'grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3',
+  4: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4',
+  5: 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4',
 };
 
 function Cover({ item, className }: { item: CatalogueItem; className?: string }) {

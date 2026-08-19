@@ -9,6 +9,8 @@ import {
   Clock, ArrowRight,
 } from 'lucide-react';
 import GuestPortalShell, { GuestPortalCard } from '@/components/GuestPortalShell';
+import ShareButton from '@/components/ShareButton';
+import { guestRsvpUrl } from '@/lib/share';
 import { cn } from '@/lib/cn';
 
 interface GuestInvitationItem {
@@ -173,6 +175,14 @@ export default function GuestHomePage() {
       title={`Bonjour ${data.guest.firstName}`}
       eyebrow="Espace invité"
       organizationName={current?.organizationName}
+      headerRight={
+        <ShareButton
+          title="Mes invitations EventMaster"
+          text="Retrouvez vos invitations et votre badge QR."
+          url={guestRsvpUrl(guestId)}
+          className="h-8 w-8 !bg-surface border-border"
+        />
+      }
       contentClassName="space-y-6"
     >
       <p className="text-sm text-muted -mt-3">

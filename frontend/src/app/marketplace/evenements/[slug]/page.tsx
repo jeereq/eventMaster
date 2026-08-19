@@ -97,6 +97,7 @@ function MarketplaceEventDetailInner() {
         title={event?.title || ''}
         subtitle={event?.location || ''}
         shareKind="event"
+        shareSlug={event?.slug}
         photos={photos}
         photoIndex={photoIndex}
         onPhotoIndex={setPhotoIndex}
@@ -110,17 +111,17 @@ function MarketplaceEventDetailInner() {
         details={event ? (
           <div className="space-y-5">
             <div className="flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-              <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-2 min-h-9 rounded-full bg-surface-muted border border-border text-xs text-muted whitespace-nowrap">
+              <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-2 min-h-9 rounded-[var(--radius-button)] bg-surface-muted border border-border text-xs text-muted whitespace-nowrap">
                 <Calendar className="w-3.5 h-3.5" />
                 {new Date(event.date).toLocaleString('fr-FR', { dateStyle: 'full', timeStyle: 'short' })}
               </span>
               {event.location ? (
-                <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-2 min-h-9 rounded-full bg-surface-muted border border-border text-xs text-muted whitespace-nowrap">
+                <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-2 min-h-9 rounded-[var(--radius-button)] bg-surface-muted border border-border text-xs text-muted whitespace-nowrap">
                   <MapPin className="w-3.5 h-3.5" /> {event.location}
                 </span>
               ) : null}
               {event.ticketsRemaining != null ? (
-                <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-2 min-h-9 rounded-full bg-surface-muted border border-border text-xs text-muted whitespace-nowrap">
+                <span className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-2 min-h-9 rounded-[var(--radius-button)] bg-surface-muted border border-border text-xs text-muted whitespace-nowrap">
                   {event.soldOut ? 'Complet' : `${event.ticketsRemaining} place${event.ticketsRemaining > 1 ? 's' : ''}`}
                 </span>
               ) : null}
@@ -128,7 +129,7 @@ function MarketplaceEventDetailInner() {
                 <button
                   type="button"
                   onClick={() => startRoute(item.id)}
-                  className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 min-h-9 rounded-full bg-primary text-white text-xs font-semibold hover:opacity-95"
+                  className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 min-h-9 rounded-[var(--radius-button)] bg-primary text-white text-xs font-semibold hover:opacity-95"
                 >
                   <Navigation className="w-3.5 h-3.5" />
                   Itinéraire
@@ -160,7 +161,7 @@ function MarketplaceEventDetailInner() {
         ) : null}
         map={event && item ? (
           event.latitude != null && event.longitude != null ? (
-            <div className="rounded-[1.35rem] border border-border overflow-hidden bg-surface shadow-[var(--shadow-soft)]">
+            <div className="rounded-[var(--radius-card)] border border-border overflow-hidden bg-surface shadow-[var(--shadow-soft)]">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 sm:p-4 border-b border-border">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-foreground">Mode itinéraire</p>

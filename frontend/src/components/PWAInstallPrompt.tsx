@@ -100,7 +100,7 @@ export default function PWAInstallPrompt({
 
   const wrapperClass =
     variant === 'guest'
-      ? 'bg-primary text-white border-primary/40'
+      ? 'bg-surface text-foreground border-border'
       : 'bg-primary text-white border-primary/40';
 
   return (
@@ -112,24 +112,26 @@ export default function PWAInstallPrompt({
       <button
         type="button"
         onClick={dismiss}
-        className="absolute top-3 right-3 p-1 rounded-full hover:bg-white/10 transition"
+        className={`absolute top-3 right-3 p-1 rounded-[var(--radius-button)] transition ${
+          variant === 'guest' ? 'hover:bg-surface-muted text-muted' : 'rounded-full hover:bg-white/10'
+        }`}
         aria-label="Fermer"
       >
         <X className="w-4 h-4" />
       </button>
 
       <div className="flex items-start gap-3 pr-6">
-        <div className="p-2 rounded-[var(--radius-button)] bg-white/15 shrink-0">
+        <div className={`p-2 rounded-[var(--radius-button)] shrink-0 ${variant === 'guest' ? 'bg-primary/10 text-primary' : 'bg-white/15'}`}>
           <Smartphone className="w-5 h-5" />
         </div>
         <div className="space-y-2">
-          <p className="font-bold text-sm leading-tight">Installez EventMaster sur votre appareil</p>
-          <p className="text-xs opacity-90 leading-relaxed">
+          <p className="font-semibold text-sm leading-tight">Installez EventMaster sur votre appareil</p>
+          <p className={`text-xs leading-relaxed ${variant === 'guest' ? 'text-muted' : 'opacity-90'}`}>
             Accédez plus rapidement à vos invitations, badge et fil d&apos;actualité depuis votre écran d&apos;accueil.
           </p>
 
           {showIosHelp ? (
-            <div className="text-[11px] bg-white/10 rounded-[var(--radius-card)] p-3 space-y-1.5">
+            <div className={`text-[11px] rounded-[var(--radius-card)] p-3 space-y-1.5 ${variant === 'guest' ? 'bg-surface-muted border border-border' : 'bg-white/10'}`}>
               <p className="font-semibold flex items-center gap-1.5">
                 <Share className="w-3.5 h-3.5" />
                 Sur iPhone / iPad
@@ -140,7 +142,9 @@ export default function PWAInstallPrompt({
             <button
               type="button"
               onClick={handleInstall}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-[var(--radius-button)] bg-white text-primary text-xs font-bold hover:bg-surface-muted transition"
+              className={`inline-flex items-center gap-2 px-3 py-2 rounded-[var(--radius-button)] text-xs font-semibold hover:opacity-95 transition ${
+                variant === 'guest' ? 'bg-primary text-white' : 'bg-white text-primary font-bold hover:bg-surface-muted'
+              }`}
             >
               <Download className="w-3.5 h-3.5" />
               Installer l&apos;application
