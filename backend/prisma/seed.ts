@@ -793,8 +793,8 @@ async function main() {
   console.log('  Nouvelle org.: demo@novaevents.cd  (FREE — bibliothèque modèles)');
   console.log('  Salles Kinshasa : salles.kin1@eventmaster.cd … salles.kin20@  (5 salles/org, forfait VENUE)');
   console.log('  Salles L’shi    : salles.lshi1@eventmaster.cd … salles.lshi20@');
-  console.log('  Métiers 1–10    : prestas1@eventmaster.cd … prestas10@');
-  console.log('  Locations 1–10  : locations1@eventmaster.cd … locations10@');
+  console.log('  Métiers 1–10    : prestas1@eventmaster.cd … prestas10@  (savoir-faire, l’équipe se déplace)');
+  console.log('  Locations 1–10  : locations1@eventmaster.cd … locations10@  (biens à louer, caution / restitution)');
   console.log('  Protocoles      : protocole.salles.kin1@…5@ · protocole.prestas1@…5@ · protocole.locations1@…5@');
   console.log('  Commerciaux org : commercial.salles.kin1@…5@ · commercial.prestas1@…5@');
   console.log('  Forfaits / rôles :');

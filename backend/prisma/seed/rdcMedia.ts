@@ -235,34 +235,55 @@ export function serviceDetails(opts: {
   index: number;
 }) {
   const rental = opts.category.startsWith('RENTAL_');
+  const clothing = opts.category.startsWith('RENTAL_CLOTHING');
+  const car = opts.category === 'RENTAL_CAR';
+  const moto = opts.category === 'RENTAL_MOTO';
   const amenities = rental
-    ? opts.category === 'RENTAL_CAR'
-      ? ['driver', 'fuel', 'delivery']
-      : opts.category === 'RENTAL_MOTO'
+    ? car
+      ? ['fuel', 'childSeat', 'delivery']
+      : moto
         ? ['helmet', 'delivery']
-        : opts.category.startsWith('RENTAL_CLOTHING')
-          ? ['sizes', 'fitting', 'trial']
+        : clothing
+          ? ['sizes', 'fitting']
           : ['delivery', 'install', 'gear']
-    : ['assistant', 'backup'];
+    : opts.category === 'DJ' || opts.category === 'PHOTOGRAPHY' || opts.category === 'VIDEO'
+      ? ['assistant', 'backup', 'gear']
+      : opts.category === 'TRANSPORT'
+        ? ['assistant', 'backup']
+        : ['assistant', 'backup', 'install'];
   return {
     description: opts.description,
     amenities,
     eventTypes: ['wedding', 'birthday', 'corporate', 'gala', 'private'],
     contactPhone: opts.phone,
     contactWhatsapp: opts.phone,
-    included: rental ? 'Remise sur place ou livraison selon le devis.' : 'Équipe et matériel de base inclus.',
+    included: rental
+      ? 'Le bien uniquement. Essayage ou remise en boutique. Caution. Aucun métier (DJ, chauffeur, photographe) n’est inclus.'
+      : 'L’équipe et son savoir-faire. Matériel de travail de base. Ce n’est pas une location d’objet à restituer.',
     languages: 'Français, lingala',
     minNoticeHours: String(12 + (opts.index % 4) * 12),
-    teamSize: String(2 + (opts.index % 6)),
+    teamSize: rental ? '1' : String(2 + (opts.index % 6)),
     experienceYears: String(3 + (opts.index % 12)),
-    cancellation: 'Acompte 30 % à la confirmation.',
-    extraFees: rental ? 'Caution selon le devis, restituée après contrôle.' : 'Heures supplémentaires sur devis.',
+    cancellation: rental
+      ? 'Caution bloquée à la remise. Annulation J-2 : 30 % conservés.'
+      : 'Acompte 30 % à la confirmation. Annulation moins de 48 h : acompte conservé.',
+    extraFees: rental
+      ? 'Caution selon le devis, restituée après contrôle de l’état.'
+      : 'Heures supplémentaires de l’équipe sur devis.',
     depositPercent: '30',
-    houseRules: rental ? 'Restitution à l’heure convenue, état d’origine.' : 'Annulation moins de 48 h : acompte conservé.',
-    accessNotes: rental ? 'Livraison dans la ville indiquée, hors communes éloignées sur devis.' : 'Installation sur site à convenir.',
+    houseRules: rental
+      ? 'Restitution à l’heure convenue, état d’origine. Pas de sous-location.'
+      : 'L’équipe arrive et repart avec son matériel de métier.',
+    accessNotes: rental
+      ? car || moto
+        ? 'Retrait au parc. Livraison du véhicule possible sans chauffeur.'
+        : clothing
+          ? 'Essayage en boutique, pas de déplacement de styliste.'
+          : 'Livraison / installation du matériel, sans opérateur métier (pas de DJ).'
+      : 'L’équipe se déplace sur le lieu de l’événement.',
     openingHours: '08:00',
-    closingHours: '20:00',
-    parking: rental && (opts.category === 'RENTAL_CAR' || opts.category === 'RENTAL_MOTO'),
-    instagram: `@presta${opts.index + 1}`,
+    closingHours: rental ? '18:00' : '22:00',
+    parking: car || moto,
+    instagram: rental ? `@location${opts.index + 1}` : `@metier${opts.index + 1}`,
   };
 }

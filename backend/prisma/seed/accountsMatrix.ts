@@ -1,6 +1,8 @@
 import type { PlanType, PrismaClient, TenantAccountKind } from '@prisma/client';
 import { addDays, licenseKey } from './helpers';
 import { seedRoomBlueprint } from './roomBlueprints';
+import { rdcServicePriceFc, serviceDetails, servicePhotos } from './rdcMedia';
+import { slugify } from './marketplaceCatalog';
 
 export type OrganizerSeed = {
   tenantId: string;
@@ -30,7 +32,7 @@ const PLAN_LOGINS: Array<{
   { email: 'plan.ent2@eventmaster.cd', name: 'Carine Enterprise 2', orgName: 'Enterprise Two', plan: 'ENTERPRISE_2', accountKind: 'ORGANIZER', days: 365 },
   { email: 'plan.ent3@eventmaster.cd', name: 'Serge Agenda', orgName: 'Studio Agenda', plan: 'ENTERPRISE_3', accountKind: 'ORGANIZER', days: 365 },
   { email: 'plan.salle@eventmaster.cd', name: 'Hélène Salles', orgName: 'Hôtels & Halls Démo', plan: 'VENUE', accountKind: 'VENDOR', days: 365 },
-  { email: 'plan.presta@eventmaster.cd', name: 'Yann Prestataire', orgName: 'Studio Presta Démo', plan: 'SERVICE', accountKind: 'VENDOR', days: 365 },
+  { email: 'plan.presta@eventmaster.cd', name: 'Yann Prestataire', orgName: 'Yann — Métiers & Locations', plan: 'SERVICE', accountKind: 'VENDOR', days: 365 },
   { email: 'plan.mixte@eventmaster.cd', name: 'Rita Mixte', orgName: 'Salle & Presta Mixte', plan: 'CATALOG', accountKind: 'BOTH', days: 365 },
 ];
 
@@ -159,13 +161,70 @@ export async function seedAccountsMatrix(
     }
 
     if (row.plan === 'SERVICE') {
-      await prisma.vendorProfile.create({
+      const profile = await prisma.vendorProfile.create({
         data: {
           tenantId: tenant.id,
-          slug: 'studio-presta-demo',
+          slug: 'yann-metiers-locations-demo',
           displayName: row.orgName,
           city: 'Kinshasa',
-          bio: 'Compte démo Prestataire (forfait SERVICE).',
+          bio: 'Forfait Prestataire : deux catalogues distincts — métiers (DJ, photo, traiteur, chauffeur) et locations (habits, véhicules, sono sans DJ). Un même compte, pas le même type de fiche.',
+        },
+      });
+      const publishedAt = new Date();
+      await prisma.serviceOffering.create({
+        data: {
+          tenantId: tenant.id,
+          vendorProfileId: profile.id,
+          slug: slugify('Metier DJ animateur demo Yann'),
+          category: 'DJ',
+          title: 'Métier — DJ animateur (démo)',
+          description: 'Métier — une personne anime votre soirée. Ce n’est pas une location de sono.',
+          city: 'Kinshasa',
+          commune: 'Gombe',
+          neighborhood: 'Gombe',
+          coverageRadiusKm: 15,
+          travels: true,
+          latitude: -4.305,
+          longitude: 15.313,
+          priceFromFc: rdcServicePriceFc({ category: 'DJ', city: 'Kinshasa', commune: 'Gombe', index: 1, priceUnit: 'EVENT' }),
+          priceUnit: 'EVENT',
+          photos: servicePhotos('DJ', 1),
+          details: serviceDetails({
+            description: 'Métier — DJ animateur. L’équipe se déplace.',
+            category: 'DJ',
+            phone: '+243810000001',
+            index: 1,
+          }),
+          isPublic: true,
+          publishedAt,
+        },
+      });
+      await prisma.serviceOffering.create({
+        data: {
+          tenantId: tenant.id,
+          vendorProfileId: profile.id,
+          slug: slugify('Location sono sans DJ demo Yann'),
+          category: 'RENTAL_EQUIPMENT',
+          title: 'Location — sono + éclairage sans DJ (démo)',
+          description: 'Location d’un bien — vous récupérez la sono. Aucun DJ n’est inclus.',
+          city: 'Kinshasa',
+          commune: 'Gombe',
+          neighborhood: 'Gombe',
+          coverageRadiusKm: 10,
+          travels: true,
+          latitude: -4.307,
+          longitude: 15.316,
+          priceFromFc: rdcServicePriceFc({ category: 'RENTAL_EQUIPMENT', city: 'Kinshasa', commune: 'Gombe', index: 2, priceUnit: 'DAY' }),
+          priceUnit: 'DAY',
+          photos: servicePhotos('RENTAL_EQUIPMENT', 2),
+          details: serviceDetails({
+            description: 'Location sono sans opérateur.',
+            category: 'RENTAL_EQUIPMENT',
+            phone: '+243810000001',
+            index: 2,
+          }),
+          isPublic: true,
+          publishedAt,
         },
       });
     }

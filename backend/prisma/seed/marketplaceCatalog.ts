@@ -94,11 +94,13 @@ const VENUE_PREFIXES = [
   'Palais', 'Halls', 'Domaine', 'Villa', 'Salons', 'Terrasses', 'Lofts', 'Jardins', 'Cours', 'Résidences',
   'Espace', 'Maison', 'Hôtel', 'Patio', 'Rooftop', 'Club', 'Forum', 'Atrium', 'Studio', 'Chapiteaux',
 ];
-const SERVICE_PREFIXES = [
-  'Saveurs', 'Studio', 'Djembé', 'Fleurs', 'Protocole', 'Lens', 'Traiteur', 'Sécurité', 'Déco', 'Navettes',
+const TRADE_PREFIXES = [
+  'Brigade Traiteur', 'Studio Photo', 'Ciné Event', 'DJ Animateur', 'Atelier Déco',
+  'Agents Sécurité', 'Fleuriste Cérémonie', 'Chauffeurs Navette', 'Maîtres de cérémonie', 'Planners Jour J',
 ];
 const RENTAL_PREFIXES = [
-  'Atelier', 'Auto', 'Sono', 'Chapiteau', 'Costumes', 'Motos', 'Galerie', 'Flotte', 'Dressing', 'Park',
+  'Dressing Location', 'Flotte Auto Loc', 'Parc Motos Loc', 'Sono Location', 'Chapiteaux Loc',
+  'Costumes Location', 'Galerie Habits Loc', 'Matériel Event Loc', 'Park Véhicules Loc', 'Depot Location',
 ];
 
 const MANAGERS = [
@@ -118,24 +120,35 @@ const ROOM_LABELS: Record<RoomType, string[]> = {
   CUSTOM: ['Loft événementiel', 'Rooftop', 'Cour intérieure'],
 };
 
-const SERVICE_TITLES: Record<string, string[]> = {
-  CATERING: ['Buffet cocktail', 'Menu mariage 3 services', 'Coffee break entreprise', 'Grillade événementielle'],
-  PHOTOGRAPHY: ['Reportage mariage', 'Portrait corporate', 'Couverture gala', 'Studio + drone'],
-  VIDEO: ['Film de cérémonie', 'Aftermovie événement', 'Captation live', 'Clip institutionnel'],
-  DJ: ['DJ mariage', 'Sono + éclairage', 'Animation soirée', 'Set live & karaoke'],
-  DECORATION: ['Scénographie mariage', 'Arche florale', 'Décor gala', 'Backdrop photo'],
-  SECURITY: ['Agent d’accueil', 'Dispositif VIP', 'Contrôle accès', 'Sécurité parking'],
-  FLORIST: ['Bouquet de mariée', 'Centres de table', 'Décor église', 'Composition tropicale'],
-  TRANSPORT: ['Navette invités', 'Cortège mariage', 'Minibus VIP', 'Transfert aéroport'],
-  MC: ['Maître de cérémonie', 'Animation protocole', 'Présentation gala', 'Host bilingue'],
-  OTHER: ['Coordination jour J', 'Photobooth', 'Générateur de secours', 'Wedding planner'],
-  RENTAL_CLOTHING_MEN: ['Costume mariage', 'Smoking gala', 'Tenue traditionnelle homme', 'Costume témoin'],
-  RENTAL_CLOTHING_WOMEN: ['Robe de soirée', 'Robe de mariée', 'Tenue traditionnelle femme', 'Cocktail gala'],
-  RENTAL_CLOTHING_CHILD: ['Costume cortège', 'Robe demoiselle d’honneur', 'Tenue baptême', 'Habits cérémonie enfant'],
-  RENTAL_CAR: ['Berline mariage', '4x4 cortège', 'Limousine gala', 'Voiture avec chauffeur'],
-  RENTAL_MOTO: ['Moto cortège', 'Scooter staff', 'Moto avec casques', 'Deux-roues événement'],
-  RENTAL_EQUIPMENT: ['Chapiteau + chaises', 'Tables banquet', 'Sono mobile', 'Groupe électrogène'],
+const TRADE_TITLES: Record<string, string[]> = {
+  CATERING: ['Équipe traiteur — buffet cocktail', 'Chef et brigade — menu mariage', 'Traiteur coffee break entreprise', 'Brigade grillade événementielle'],
+  PHOTOGRAPHY: ['Photographe — reportage mariage', 'Photographe — portraits corporate', 'Photographe — couverture de gala', 'Photographe + assistant drone'],
+  VIDEO: ['Vidéaste — film de cérémonie', 'Vidéaste — aftermovie', 'Vidéaste — captation live', 'Vidéaste — clip institutionnel'],
+  DJ: ['DJ animateur mariage (la personne, pas la sono en location)', 'DJ — animation soirée', 'DJ — set live et karaoke', 'DJ — maître de piste'],
+  DECORATION: ['Décorateur — scénographie mariage', 'Décorateur — arche et backdrop', 'Décorateur — gala', 'Équipe déco jour J'],
+  SECURITY: ['Agents de sécurité — accueil', 'Dispositif VIP (équipe)', 'Agents — contrôle d’accès', 'Agents — parking'],
+  FLORIST: ['Fleuriste — bouquet de mariée', 'Fleuriste — centres de table', 'Fleuriste — décor église', 'Fleuriste — composition tropicale'],
+  TRANSPORT: ['Chauffeur — navette invités', 'Chauffeur — cortège mariage', 'Chauffeur — minibus VIP', 'Chauffeur — transfert aéroport'],
+  MC: ['Maître de cérémonie', 'Animateur protocole (personne)', 'Présentateur de gala', 'Host bilingue'],
+  OTHER: ['Wedding planner — coordination jour J', 'Coordinateur événement', 'Hôte d’accueil', 'Régisseur plateau'],
 };
+
+const RENTAL_TITLES: Record<string, string[]> = {
+  RENTAL_CLOTHING_MEN: ['Location costume mariage (sans tailleur)', 'Location smoking gala', 'Location tenue traditionnelle homme', 'Location costume témoin'],
+  RENTAL_CLOTHING_WOMEN: ['Location robe de soirée (essayage en boutique)', 'Location robe de mariée', 'Location tenue traditionnelle femme', 'Location cocktail gala'],
+  RENTAL_CLOTHING_CHILD: ['Location costume cortège enfant', 'Location robe demoiselle d’honneur', 'Location tenue baptême', 'Location habits cérémonie enfant'],
+  RENTAL_CAR: ['Location berline sans chauffeur', 'Location 4x4 à conduire soi-même', 'Location limousine sans chauffeur', 'Location monospace familial'],
+  RENTAL_MOTO: ['Location moto (casques inclus, sans pilote)', 'Location scooter staff', 'Location moto cortège à conduire', 'Location deux-roues événement'],
+  RENTAL_EQUIPMENT: ['Location sono + éclairage (sans DJ)', 'Location chapiteau et chaises', 'Location groupe électrogène', 'Location tables banquet'],
+};
+
+function offeringCopy(kind: 'prestas' | 'locations', title: string, place: { city: City; commune: Commune; neighborhood: string }) {
+  const where = `${place.neighborhood}, ${place.commune.name} (${place.city.name})`;
+  if (kind === 'locations') {
+    return `Location d’un bien — ${title}. Retrait ou dépôt à ${where}. Caution selon devis, restitution à l’heure convenue. Ce n’est pas un métier : pas d’animateur, de photographe ni de chauffeur inclus.`;
+  }
+  return `Métier — ${title}. Une personne / une équipe intervient à ${where}. Vous payez le savoir-faire, pas un objet à rendre.`;
+}
 
 const AVENUES = [
   'avenue de la Libération', 'boulevard du 30 Juin', 'avenue Tombalbaye',
@@ -389,13 +402,17 @@ async function seedOfferings(
     prefixes: string[];
   },
 ) {
-  const label = opts.kind === 'locations' ? 'Locations' : 'Prestataires métiers';
+  const isRental = opts.kind === 'locations';
+  const label = isRental ? 'Locations (biens à louer)' : 'Métiers (savoir-faire)';
   console.log(`  ${label} — ${opts.orgCount * opts.perOrg} fiches publiques…`);
   const publishedAt = new Date();
 
   for (let orgIndex = 0; orgIndex < opts.orgCount; orgIndex++) {
     const city = CITIES[orgIndex % 2];
-    const orgName = `${pick(opts.prefixes, orgIndex)} ${city.name} ${orgIndex + 1}`;
+    const brand = pick(opts.prefixes, orgIndex);
+    const orgName = isRental
+      ? `Locations ${brand} ${city.name} ${orgIndex + 1}`
+      : `Métiers ${brand} ${city.name} ${orgIndex + 1}`;
     const tenant = await createVendorTenant(prisma, {
       name: orgName,
       email: `${opts.kind}${orgIndex + 1}@eventmaster.cd`,
@@ -413,13 +430,12 @@ async function seedOfferings(
     const profile = await prisma.vendorProfile.create({
       data: {
         tenantId: tenant.id,
-        slug: `${slugify(tenant.name)}-${opts.kind}-${orgIndex + 1}`,
+        slug: `${isRental ? 'locations' : 'metiers'}-${slugify(brand)}-${orgIndex + 1}`,
         displayName: tenant.name,
         city: orgPlace.city.name,
-        bio:
-          opts.kind === 'locations'
-            ? `${tenant.name} loue habits, véhicules et matériel à ${orgPlace.city.name}.`
-            : `${tenant.name} intervient à ${orgPlace.city.name} : métiers d’événement (traiteur, photo, DJ, déco…).`,
+        bio: isRental
+          ? `${tenant.name} loue des biens (habits, véhicules, matériel) à ${orgPlace.city.name}. Pas d’équipe métier : vous récupérez l’objet, vous le rendez.`
+          : `${tenant.name} envoie des professionnels à ${orgPlace.city.name} (traiteur, photo, DJ, chauffeur…). Vous payez la personne, pas un objet en location.`,
       },
     });
 
@@ -427,23 +443,28 @@ async function seedOfferings(
       const index = orgIndex * opts.perOrg + n;
       const place = placeInCity(CITIES[index % 2], index + 11);
       const category = pick(opts.categories, n);
-      const title = `${pick(SERVICE_TITLES[category], index)} — ${tenant.name}`;
+      const titles = (isRental ? RENTAL_TITLES : TRADE_TITLES)[category] || TRADE_TITLES.OTHER;
+      const title = `${pick(titles, index)} — ${brand}`;
       const priceUnit = servicePriceUnit(category, index);
-      const description = `${title}. Prestation à ${place.city.name} (${place.commune.name} / ${place.neighborhood}). Photos, tarif indicatif en FC, matériel selon devis.`;
-      const phone = orgPhone(3500000 + index + (opts.kind === 'locations' ? 80000 : 0));
+      const description = offeringCopy(opts.kind, title, place);
+      const phone = orgPhone(3500000 + index + (isRental ? 80000 : 0));
+      const travels = isRental
+        ? category === 'RENTAL_EQUIPMENT' && index % 2 === 0
+        : true;
+      const coverageRadiusKm = travels ? (isRental ? 10 : 8 + (index % 6) * 4) : null;
       await prisma.serviceOffering.create({
         data: {
           tenantId: tenant.id,
           vendorProfileId: profile.id,
-          slug: `${slugify(title)}-${opts.kind.slice(0, 3)}-${String(index + 1).padStart(3, '0')}`,
+          slug: `${slugify(title)}-${isRental ? 'loc' : 'met'}-${String(index + 1).padStart(3, '0')}`,
           category,
           title,
           description,
           city: place.city.name,
           commune: place.commune.name,
           neighborhood: place.neighborhood,
-          coverageRadiusKm: index % 3 === 0 ? null : 8 + (index % 6) * 4,
-          travels: index % 3 !== 0,
+          coverageRadiusKm,
+          travels,
           latitude: place.lat,
           longitude: place.lng,
           priceFromFc: rdcServicePriceFc({
@@ -479,7 +500,7 @@ export async function seedMarketplaceCatalog(
     orgCount: TRADE_ORG_COUNT,
     perOrg: TRADE_PER_ORG,
     categories: TRADE_CATEGORIES,
-    prefixes: SERVICE_PREFIXES,
+    prefixes: TRADE_PREFIXES,
   });
   await seedOfferings(prisma, passwordHash, {
     kind: 'locations',
