@@ -7,6 +7,7 @@ import { formatInvoiceForApi } from '../services/invoiceService';
 import { auditReq, serializeAuditLog } from '../services/adminAuditService';
 import { serviceGroupPrismaFilter } from '../utils/publicVenue';
 import { MarketplaceBookingStatus } from '@prisma/client';
+import { previousPeriodPlatformPayoutSummary } from '../services/commercialPayoutService';
 
 const IMPERSONATE_EXPIRES_SECONDS = 2 * 60 * 60;
 
@@ -57,6 +58,7 @@ export async function getOpsOverview(req: AuthenticatedRequest, res: Response) {
       recentOrgs,
       recentOrgsCount,
       recentAudit,
+      saasPayoutsDue,
     ] = await Promise.all([
       prisma.subscriptionRequest.count({ where: { status: 'PENDING' } }),
       prisma.tenant.count({ where: licenseExpiringWhere }),
@@ -88,6 +90,7 @@ export async function getOpsOverview(req: AuthenticatedRequest, res: Response) {
         orderBy: { createdAt: 'desc' },
         take: 15,
       }),
+      previousPeriodPlatformPayoutSummary(),
     ]);
 
     return res.json({
@@ -96,7 +99,9 @@ export async function getOpsOverview(req: AuthenticatedRequest, res: Response) {
         licensesExpiring: licensesExpiringCount,
         unpaidInvoices: unpaidCount,
         recentOrgs: recentOrgsCount,
+        saasPayoutsDue: saasPayoutsDue.count,
       },
+      saasPayoutsDue,
       licensesExpiring: licensesExpiring.map((t) => tenantSummary(t)),
       unpaidInvoices: unpaidInvoices.map((inv) => formatInvoiceForApi(inv)),
       recentOrgs: recentOrgs.map((t) => tenantSummary(t)),

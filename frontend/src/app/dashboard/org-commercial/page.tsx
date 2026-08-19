@@ -35,6 +35,8 @@ import ReferralShareButtons from '@/components/commercial/ReferralShareButtons';
  commissionAmount: number;
  commissionRate?: number;
  plan: string;
+ paidAt?: string | null;
+ payoutProofUrl?: string | null;
  tenant: { name: string };
  }>;
 }
@@ -187,7 +189,15 @@ export default function OrgCommercialPage() {
  <p className="font-semibold text-sm text-foreground dark:text-foreground">{c.tenant.name}</p>
  <p className="font-bold text-emerald-600 text-sm shrink-0">{c.commissionAmount.toLocaleString('fr-FR')} FC</p>
  </div>
- <p className="text-xs text-muted">{c.billingPeriod}</p>
+ <p className="text-xs text-muted">
+ {c.billingPeriod}{c.paidAt ? ' · versé' : ' · dû'}
+ {c.payoutProofUrl ? (
+ <>
+ {' · '}
+ <a href={c.payoutProofUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">Preuve</a>
+ </>
+ ) : null}
+ </p>
  <p className="text-xs text-muted">
  Facture : {c.invoiceAmount.toLocaleString('fr-FR')} FC
  {c.commissionRate != null && ` (${Math.round(c.commissionRate * 100)} %)`}
@@ -203,6 +213,7 @@ export default function OrgCommercialPage() {
  <th>Organisation</th>
  <th>Facture</th>
  <th>Commission</th>
+ <th>Statut</th>
  </tr>
  </thead>
  <tbody>
@@ -216,6 +227,15 @@ export default function OrgCommercialPage() {
  {c.commissionRate != null && (
  <span className="text-muted font-normal ml-1">({Math.round(c.commissionRate * 100)} %)</span>
  )}
+ </td>
+ <td className="text-xs text-muted">
+ {c.paidAt ? 'Versé' : 'Dû'}
+ {c.payoutProofUrl ? (
+ <>
+ {' · '}
+ <a href={c.payoutProofUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">Preuve</a>
+ </>
+ ) : null}
  </td>
  </tr>
  ))}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -63,7 +64,7 @@ const ROLE_OPTIONS = [
 ];
 
 export default function TeamManagement() {
-  const { user, tenant, planQuota, planFeatures } = useAuth();
+  const { user, tenant, planQuota, planFeatures, access } = useAuth();
   const {
     mode: teamViewMode,
     setViewMode: setTeamViewMode,
@@ -342,6 +343,15 @@ export default function TeamManagement() {
           </div>
           <p className="text-[11px] text-muted">
             30 % au premier paiement et 20 % ensuite, sauf personnalisation par commercial.
+            {access?.canViewBilling && (
+              <>
+                {' '}
+                <Link href="/dashboard/billing/payouts" className="text-primary hover:underline font-semibold">
+                  Verser les commissions dues
+                </Link>
+                {' '}(hors plateforme, avec preuve).
+              </>
+            )}
           </p>
         </div>
       )}

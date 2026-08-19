@@ -142,8 +142,14 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-billing': {
     title: 'Facturation & plan',
     description:
-      'Consultez votre forfait actuel, les quotas consommés et disponibles. Soumettez une demande de changement de plan avec preuve de paiement si nécessaire.',
+      'Comparez les forfaits, suivez les quotas et demandez un changement d’abonnement. L’acompte et les commissions marketplace restent hors plateforme.',
     route: '/dashboard/billing',
+  },
+  'nav-org-payouts': {
+    title: 'Versements commerciaux',
+    description:
+      'File des commissions dues à vos commerciaux org. Votre organisation verse hors plateforme, puis le propriétaire joint une preuve. Distinct des versements EventMaster (Super Admin).',
+    route: '/dashboard/billing/payouts',
   },
   'nav-notifications': {
     title: 'Notifications',

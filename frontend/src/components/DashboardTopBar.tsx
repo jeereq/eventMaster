@@ -20,6 +20,7 @@ function useDashboardTitle(): { title: string; subtitle?: string } {
     if (pathname.startsWith('/dashboard/events')) return { title: 'Événements', subtitle: 'Organisation & invités' };
     if (pathname.startsWith('/dashboard/templates')) return { title: 'Modèles', subtitle: 'Invitations visuelles' };
     if (pathname.startsWith('/dashboard/analytics')) return { title: 'Analyses', subtitle: 'Statistiques RSVP' };
+    if (pathname.startsWith('/dashboard/billing/payouts')) return { title: 'Versements commerciaux', subtitle: 'Commissions de votre réseau' };
     if (pathname.startsWith('/dashboard/billing')) return { title: 'Facturation', subtitle: 'Forfait & quotas' };
     if (pathname.startsWith('/dashboard/invoices')) return { title: 'Factures', subtitle: 'Historique' };
     if (pathname.startsWith('/dashboard/rooms')) return { title: 'Salles', subtitle: 'Plans 2D & publication' };

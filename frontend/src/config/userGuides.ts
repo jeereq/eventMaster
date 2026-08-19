@@ -136,6 +136,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Vérifiez les licences expirées sur l’Accueil avant d’approuver un renouvellement.',
       'Les taux marketplace et commerciaux se règlent dans Réglages (pas dans le code). Les réservations déjà confirmées gardent leur taux d’origine.',
       'EventMaster ne verse que les commerciaux plateforme. Distinct du {commissionPercent} % marketplace (Catalogue).',
+      'Accueil : pastille Versements du mois précédent ; alerte J+3 si encore dû après la fenêtre de notification.',
       'Le mode maintenance bloque tout le monde sauf le Super Admin.',
     ],
   },
@@ -198,7 +199,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Gérer l\'équipe (managers, protocoles, commerciaux org.)',
       'Créer et configurer les salles 2D',
       'Créer des événements privés (liste d\'invités) ou publics avec inscription / billets en ligne',
-      'Accéder à la facturation, au forfait et aux factures',
+      'Accéder à la facturation, au forfait, aux factures et aux versements des commerciaux org.',
       'Personnaliser les modèles d\'invitation et messages invités',
       'Publier des salles (plan 2D) et des prestations : métiers ou locations (habits, véhicules, matériel)',
     ],
@@ -212,6 +213,7 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Statistiques', href: '/dashboard/analytics' },
       { label: 'Modèles', href: '/dashboard/templates' },
       { label: 'Facturation & plan', href: '/dashboard/billing' },
+      { label: 'Versements commerciaux', href: '/dashboard/billing/payouts' },
       { label: 'Factures', href: '/dashboard/invoices' },
       { label: 'Salles', href: '/dashboard/rooms' },
       { label: 'Marketplace', href: '/dashboard/marketplace' },
@@ -251,6 +253,16 @@ export const USER_GUIDES: UserGuide[] = [
         links: [{ label: 'Facturation & plan', href: '/dashboard/billing' }],
       },
       {
+        id: 'org-payouts',
+        title: 'Verser les commissions de vos commerciaux',
+        content:
+          '1. Effectuez le virement hors plateforme (Mobile Money / banque) vers le commercial org.\n2. Ouvrez Versements commerciaux (Facturation) ou le lien depuis Équipe.\n3. Filtrez la période, ouvrez le dossier dû.\n4. Joignez une preuve (URL ou photo) et un motif (≥ 8 caractères).\n5. Marquez versée — le commercial est notifié. EventMaster ne paie pas ces commissions.',
+        links: [
+          { label: 'Versements commerciaux', href: '/dashboard/billing/payouts' },
+          { label: 'Équipe', href: '/dashboard/team' },
+        ],
+      },
+      {
         id: 'marketplace-desk',
         title: 'Publier une prestation et traiter les demandes',
         content:
@@ -265,6 +277,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Configurez les salles avant de créer des événements avec plan de table.',
       'La commission marketplace ({commissionPercent} %) est due par le vendeur, distincte de l’abonnement SaaS.',
       'Le paiement annuel (−10 %) s’applique aussi aux forfaits Particulier (période de base = trimestre).',
+      'Les commissions de vos commerciaux org. se versent hors plateforme (Facturation → Versements), avec preuve.',
     ],
   },
   {
@@ -389,7 +402,7 @@ export const USER_GUIDES: UserGuide[] = [
     canDo: [
       'Consulter votre code de parrainage et statistiques',
       'Suivre les organisations parrainées via votre espace dédié',
-      'Recevoir des commissions sur les souscriptions validées',
+      'Recevoir des commissions sur les souscriptions validées (dû / versé + preuve)',
     ],
     cannotDo: [
       'Créer des événements ou gérer des invités',
@@ -409,6 +422,7 @@ export const USER_GUIDES: UserGuide[] = [
     tips: [
       'Le code doit être saisi à l\'inscription pour lier le parrainage.',
       'Les commissions dépendent du taux configuré par le propriétaire.',
+      'Le versement est fait par votre organisation, hors plateforme. Une preuve apparaît une fois que le propriétaire a marqué le dossier.',
       'Contactez le manager org. en cas de litige sur une commission.',
     ],
   },

@@ -204,6 +204,21 @@ export default function BillingPage() {
       {error && <Alert variant="error">{error}</Alert>}
       {successMsg && <Alert variant="success">{successMsg}</Alert>}
 
+      <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-foreground">Versements de vos commerciaux</p>
+          <p className="text-xs text-muted mt-1">
+            Votre organisation verse hors plateforme, puis vous joignez une preuve. Distinct d’EventMaster.
+          </p>
+        </div>
+        <Link
+          href="/dashboard/billing/payouts"
+          className="text-sm font-semibold text-primary hover:underline shrink-0"
+        >
+          Ouvrir la file →
+        </Link>
+      </div>
+
       {(!billing || billing.plan === 'FREE') && (
         <Alert variant="info">
           Aucun abonnement payant n&apos;est actif. Les forfaits ci-dessous correspondent à votre type de compte

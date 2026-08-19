@@ -323,6 +323,14 @@ export function isPlatformCommercialAccount(user: { role: string; tenantId?: str
   return user.role === 'COMMERCIAL' && !user.tenantId;
 }
 
+export function isOrgCommercialAccount(user: {
+  role: string;
+  orgRole?: string | null;
+  tenantId?: string | null;
+}) {
+  return user.role === 'USER' && user.orgRole === 'COMMERCIAL' && Boolean(user.tenantId);
+}
+
 export const MIN_PAYOUT_REASON = 8;
 
 export type PlatformPayoutRow = {
@@ -340,19 +348,22 @@ export type PlatformPayoutRow = {
   paidAt: Date | null;
   payoutProofUrl: string | null;
   payoutNote: string | null;
-  payer: 'eventmaster';
+  payer: 'eventmaster' | 'organization';
 };
 
 function payoutKey(commercialId: string, period: string) {
   return `${commercialId}::${period}`;
 }
 
-export async function listPlatformSaaSPayouts(params: {
+async function fetchAndAggregatePayouts(params: {
+  commercialWhere: { role: 'COMMERCIAL' | 'USER'; tenantId: string | null; orgRole?: 'COMMERCIAL' };
   period?: string;
-  settlement?: 'due' | 'paid' | 'all';
   q?: string;
+  settlement?: 'due' | 'paid' | 'all';
   page?: number;
   pageSize?: number;
+  payer: 'eventmaster' | 'organization';
+  accept: (user: { role: string; tenantId?: string | null; orgRole?: string | null }) => boolean;
 }) {
   const settlement = params.settlement || 'due';
   const page = Math.max(params.page || 1, 1);
@@ -362,7 +373,7 @@ export async function listPlatformSaaSPayouts(params: {
   const commissions = await prisma.commercialCommission.findMany({
     where: {
       ...(params.period ? { billingPeriod: params.period } : {}),
-      commercial: { role: 'COMMERCIAL', tenantId: null },
+      commercial: params.commercialWhere,
       ...(q
         ? {
             OR: [
@@ -376,7 +387,7 @@ export async function listPlatformSaaSPayouts(params: {
     },
     include: {
       commercial: {
-        select: { id: true, name: true, email: true, referralCode: true, role: true, tenantId: true },
+        select: { id: true, name: true, email: true, referralCode: true, role: true, tenantId: true, orgRole: true },
       },
       tenant: { select: { name: true } },
     },
@@ -386,7 +397,7 @@ export async function listPlatformSaaSPayouts(params: {
 
   const map = new Map<string, PlatformPayoutRow>();
   for (const row of commissions) {
-    if (!isPlatformCommercialAccount(row.commercial)) continue;
+    if (!params.accept(row.commercial)) continue;
     const key = payoutKey(row.commercialId, row.billingPeriod);
     const current = map.get(key) || {
       commercialId: row.commercialId,
@@ -403,7 +414,7 @@ export async function listPlatformSaaSPayouts(params: {
       paidAt: null as Date | null,
       payoutProofUrl: null as string | null,
       payoutNote: null as string | null,
-      payer: 'eventmaster' as const,
+      payer: params.payer,
     };
     current.totalInvoiceAmount += row.invoiceAmount;
     current.totalCommission += row.commissionAmount;
@@ -446,6 +457,37 @@ export async function listPlatformSaaSPayouts(params: {
   };
 }
 
+export async function listPlatformSaaSPayouts(params: {
+  period?: string;
+  settlement?: 'due' | 'paid' | 'all';
+  q?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  return fetchAndAggregatePayouts({
+    ...params,
+    commercialWhere: { role: 'COMMERCIAL', tenantId: null },
+    payer: 'eventmaster',
+    accept: isPlatformCommercialAccount,
+  });
+}
+
+export async function listOrgSaaSPayouts(params: {
+  payerTenantId: string;
+  period?: string;
+  settlement?: 'due' | 'paid' | 'all';
+  q?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  return fetchAndAggregatePayouts({
+    ...params,
+    commercialWhere: { role: 'USER', tenantId: params.payerTenantId, orgRole: 'COMMERCIAL' },
+    payer: 'organization',
+    accept: isOrgCommercialAccount,
+  });
+}
+
 export async function unsettlePlatformPeriodPayout(params: {
   commercialId: string;
   period: string;
@@ -473,6 +515,124 @@ export async function unsettlePlatformPeriodPayout(params: {
   });
 
   return { updated: result.count };
+}
+
+export async function markOrgPeriodPaid(params: {
+  commercialId: string;
+  period: string;
+  paidByUserId: string;
+  payerTenantId: string;
+  proofUrl?: string | null;
+  note?: string | null;
+}) {
+  const commercial = await prisma.user.findUnique({
+    where: { id: params.commercialId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      role: true,
+      orgRole: true,
+      tenantId: true,
+    },
+  });
+  if (!commercial || !isOrgCommercialAccount(commercial)) {
+    return { updated: 0, error: 'NOT_ORG' as const };
+  }
+  if (commercial.tenantId !== params.payerTenantId) {
+    return { updated: 0, error: 'WRONG_TENANT' as const };
+  }
+
+  const now = new Date();
+  const result = await prisma.commercialCommission.updateMany({
+    where: {
+      commercialId: params.commercialId,
+      billingPeriod: params.period,
+      paidAt: null,
+    },
+    data: {
+      paidAt: now,
+      paidByUserId: params.paidByUserId,
+      payoutProofUrl: params.proofUrl || null,
+      payoutNote: params.note || null,
+    },
+  });
+
+  if (result.count === 0) {
+    return { updated: 0 };
+  }
+
+  const rows = await listMonthlyPayouts(params.period);
+  const row = rows.find((item) => item.commercialId === params.commercialId);
+  const amount = formatAmountFc(row?.paidCommission || 0);
+  const periodLabel = formatBillingPeriodLabel(params.period);
+  const href = `${FRONTEND_URL}/dashboard/org-commercial`;
+
+  await createPlatformNotification({
+    userId: commercial.id,
+    type: MONTHLY_PAYOUT_PAID_TYPE,
+    title: `Versement effectué — ${periodLabel}`,
+    message: `${amount} marqué comme versé par votre organisation (hors plateforme).`,
+    metadata: { period: params.period, href, proofUrl: params.proofUrl || null },
+  });
+
+  const text = `Bonjour${commercial.name ? ` ${commercial.name}` : ''},\n\nVotre commission ${periodLabel} (${amount}) a été marquée comme versée par votre organisation, hors plateforme.${params.proofUrl ? `\nRéférence : ${params.proofUrl}` : ''}\n\nSuivi : ${href}\n\n— EventMaster`;
+  await sendRealEmail(commercial.email, `EventMaster — Versement ${periodLabel} effectué`, text);
+  if (commercial.phone) {
+    await sendRealWhatsApp(
+      commercial.phone,
+      `EventMaster — Versement ${periodLabel} effectué : ${amount} (hors plateforme, par votre organisation).`,
+    );
+  }
+
+  return { updated: result.count };
+}
+
+export async function unsettleOrgPeriodPayout(params: {
+  commercialId: string;
+  period: string;
+  payerTenantId: string;
+}) {
+  const commercial = await prisma.user.findUnique({
+    where: { id: params.commercialId },
+    select: { role: true, orgRole: true, tenantId: true },
+  });
+  if (!commercial || !isOrgCommercialAccount(commercial)) {
+    return { updated: 0, error: 'NOT_ORG' as const };
+  }
+  if (commercial.tenantId !== params.payerTenantId) {
+    return { updated: 0, error: 'WRONG_TENANT' as const };
+  }
+
+  const result = await prisma.commercialCommission.updateMany({
+    where: {
+      commercialId: params.commercialId,
+      billingPeriod: params.period,
+      paidAt: { not: null },
+    },
+    data: {
+      paidAt: null,
+      paidByUserId: null,
+      payoutProofUrl: null,
+      payoutNote: null,
+    },
+  });
+
+  return { updated: result.count };
+}
+
+export async function previousPeriodPlatformPayoutSummary(now = new Date()) {
+  const period = previousBillingPeriod(now);
+  const rows = await listMonthlyPayouts(period);
+  const due = rows.filter((row) => row.kind === 'platform' && row.unpaidCommission > 0);
+  return {
+    period,
+    periodLabel: formatBillingPeriodLabel(period),
+    count: due.length,
+    amountFc: due.reduce((sum, row) => sum + row.unpaidCommission, 0),
+    overdue: now.getDate() > 3 && due.length > 0,
+  };
 }
 
 export function shouldAutoNotifyMonthlyPayouts(now = new Date()) {

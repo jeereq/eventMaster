@@ -10,6 +10,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Alert, Button, Modal, StatusPill } from '@/components/ui';
 import { ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
 import { cn } from '@/lib/cn';
+import { formatFc } from '@/config/landingPricing';
 
 interface TenantRow {
   id: string;
@@ -49,6 +50,14 @@ interface OpsOverview {
     licensesExpiring: number;
     unpaidInvoices: number;
     recentOrgs: number;
+    saasPayoutsDue?: number;
+  };
+  saasPayoutsDue?: {
+    period: string;
+    periodLabel: string;
+    count: number;
+    amountFc: number;
+    overdue: boolean;
   };
   licensesExpiring: TenantRow[];
   unpaidInvoices: InvoiceRow[];
@@ -212,7 +221,18 @@ export default function AdminOpsHome() {
     <div className="space-y-8">
       {error && <Alert variant="error">{error}</Alert>}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden">
+      {data?.saasPayoutsDue && data.saasPayoutsDue.count > 0 && (
+        <Alert variant={data.saasPayoutsDue.overdue ? 'warning' : 'info'} title={data.saasPayoutsDue.overdue ? 'Versements J+3' : 'Versements du mois précédent'}>
+          {data.saasPayoutsDue.count} commercial(aux) plateforme — {formatFc(data.saasPayoutsDue.amountFc)} dû pour {data.saasPayoutsDue.periodLabel}
+          {data.saasPayoutsDue.overdue ? ' (fenêtre J1–J3 dépassée).' : '.'}
+          {' '}
+          <Link href={`/dashboard/admin/payouts?period=${encodeURIComponent(data.saasPayoutsDue.period)}`} className="font-semibold underline">
+            Ouvrir la file
+          </Link>
+        </Alert>
+      )}
+
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden">
         {[
           {
             label: 'Demandes',
@@ -238,11 +258,23 @@ export default function AdminOpsHome() {
             hint: 'Créées ces 7 derniers jours',
             href: '/dashboard?tab=tenants',
           },
+          {
+            label: 'Versements',
+            value: data?.saasPayoutsDue?.count ?? 0,
+            hint: data?.saasPayoutsDue?.overdue
+              ? `J+3 — ${data.saasPayoutsDue.periodLabel}`
+              : `Mois précédent (${data?.saasPayoutsDue?.period || '—'})`,
+            href: `/dashboard/admin/payouts?period=${encodeURIComponent(data?.saasPayoutsDue?.period || '')}`,
+            warn: Boolean(data?.saasPayoutsDue?.overdue),
+          },
         ].map((stat) => (
           <Link
             key={stat.label}
             href={stat.href}
-            className="bg-surface px-4 py-4 hover:bg-surface-muted transition"
+            className={cn(
+              'bg-surface px-4 py-4 hover:bg-surface-muted transition',
+              'warn' in stat && stat.warn ? 'bg-amber-50 dark:bg-amber-950/30' : '',
+            )}
           >
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">{stat.label}</p>
             <p className="text-2xl font-semibold text-foreground tracking-tight mt-1">{stat.value}</p>

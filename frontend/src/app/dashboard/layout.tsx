@@ -49,6 +49,7 @@ function navItemIsActive(pathname: string, search: string, item: NavItem, curren
  const query = qIndex >= 0 ? item.href.slice(qIndex + 1) : '';
  const pathMatch = pathname === path || (path !== '/dashboard' && pathname.startsWith(path));
  if (!pathMatch) return false;
+ if (item.href === '/dashboard/billing' && pathname.startsWith('/dashboard/billing/')) return false;
  if (query) {
   const want = new URLSearchParams(query);
   const have = new URLSearchParams(search);
@@ -93,6 +94,7 @@ const NAV_TOOLTIPS: Record<string, string> = {
  Statistiques: 'RSVP et analyses d’événements',
  Modèles: 'Concepteur d’invitations',
  'Facturation & plan': 'Forfait, quotas et upgrade',
+ 'Versements commerciaux': 'Commissions de vos commerciaux org., hors plateforme',
  'Journal d’audit': 'Actions Super Admin et Commercial',
  Catalogue: 'Fiches, demandes et réservations publiques',
 };
@@ -450,6 +452,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  ? [{ name: 'Modèles', href: '/dashboard/templates', tourId: 'nav-templates', icon: Mail }]
  : []),
  ...(access?.canViewBilling ? [{ name: 'Facturation & plan', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }] : []),
+ ...(access?.canViewBilling ? [{ name: 'Versements commerciaux', href: '/dashboard/billing/payouts', tourId: 'nav-org-payouts', icon: Wallet }] : []),
  ...(access?.canViewInvoices ? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: FileText }] : []),
  { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
  { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
