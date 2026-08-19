@@ -21,6 +21,7 @@ const ACTION_LABELS: Record<string, string> = {
   SUBSCRIPTION_APPROVE: 'Abonnement approuvé',
   SUBSCRIPTION_REJECT: 'Abonnement rejeté',
   CATALOG_UNPUBLISH: 'Dépublication catalogue',
+  CATALOG_PUBLISH: 'Republication catalogue',
   CATALOG_COMMISSION_SETTLE: 'Commission marketplace encaissée',
   CATALOG_COMMISSION_UNSETTLE: 'Commission marketplace remise due',
 };

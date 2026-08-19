@@ -10,7 +10,7 @@ import {
  PlusCircle, AlertCircle, Award, CheckCircle, Shield,
  Building2, Activity, TrendingUp, Clock, Trash2, Edit2, Key,
  CalendarDays, Globe, Search, Filter, Check, X, FileText, Plus, Loader2, Copy, Eye,
- BarChart3, PieChart, ChevronLeft, ChevronRight, CheckSquare, Sparkles, MapPin, Download, MessageSquare, History, Briefcase, Wallet, LogIn
+ BarChart3, PieChart, ChevronLeft, ChevronRight, CheckSquare, Sparkles, MapPin, Download, MessageSquare, History, Briefcase, Wallet, LogIn, Ticket
 } from 'lucide-react';
 import GuestMessageTemplatesPanel from './GuestMessageTemplatesPanel';
 import { cn } from '@/lib/cn';
@@ -24,7 +24,7 @@ import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { parseStoredPhone } from '@/components/ui/PhoneInput';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
 import { useViewPreferencesOptional } from '@/context/ViewPreferencesContext';
-import { PLAN_IDS, planAudienceLabel, isB2cPlanId, durationDaysForPlan, durationPresetsForPlan, ANNUAL_DISCOUNT_PERCENT, type PlanId } from '@/config/landingPricing';
+import { PLAN_IDS, planAudienceLabel, isB2cPlanId, durationDaysForPlan, durationPresetsForPlan, ANNUAL_DISCOUNT_PERCENT, formatFc, type PlanId } from '@/config/landingPricing';
 import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
 import { getTemplateElementSummary } from '@/lib/landingTemplateAdapter';
@@ -172,7 +172,7 @@ interface RevenueReport {
  }>;
 }
 
-type AnalyticsSection = 'overview' | 'plans' | 'organisations' | 'revenus' | 'modeles' | 'utilisateurs' | 'evenements';
+type AnalyticsSection = 'overview' | 'plans' | 'organisations' | 'revenus' | 'modeles' | 'utilisateurs' | 'evenements' | 'invites';
 
 const ANALYTICS_SECTIONS: Array<{ id: AnalyticsSection; label: string }> = [
  { id: 'overview', label: 'Vue d\'ensemble' },
@@ -182,7 +182,38 @@ const ANALYTICS_SECTIONS: Array<{ id: AnalyticsSection; label: string }> = [
  { id: 'modeles', label: 'Modèles' },
  { id: 'utilisateurs', label: 'Utilisateurs' },
  { id: 'evenements', label: 'Événements' },
+ { id: 'invites', label: 'Invités' },
 ];
+
+interface PlatformInsights {
+ events: {
+  total: number;
+  publicCount: number;
+  privateCount: number;
+  ticketingEnabled: number;
+  ticketsSold: number;
+  gpsCount: number;
+ };
+ tickets: { paidOrders: number; gmvFc: number };
+ guests: {
+  total: number;
+  pending: number;
+  accepted: number;
+  declined: number;
+  invitations: number;
+  pdfDelivered: number;
+  pdfMissing: number;
+  checkedIn: number;
+  seatVerified: number;
+ };
+ marketplace: {
+  favorites: number;
+  packs: number;
+  gmvVenueFc: number;
+  gmvTradeFc: number;
+  gmvRentalFc: number;
+ };
+}
 
 type AdminTabId =
  | 'overview' | 'tenants' | 'users' | 'templates' | 'message-templates' | 'events'
@@ -216,15 +247,15 @@ const ADMIN_TAB_META: Record<AdminTabId, { title: string; description: string; t
  },
  events: {
  title: 'Événements (supervision)',
- description: 'Vue transversale de tous les événements créés par les organisations.',
+ description: 'Vue transversale : privé / public, billets, GPS et organisations.',
  },
  guests: {
  title: 'Invités (supervision)',
- description: 'Liste globale des invités et export CSV pour audit ou support.',
+ description: 'Liste globale, funnel RSVP, PDF non livré et présence jour J.',
  },
  analytics: {
  title: 'Analyses & statistiques',
- description: 'Adoption des forfaits, revenus, activité organisations et modèles.',
+ description: 'Adoption des forfaits, GMV marketplace, événements publics, billets et funnel RSVP.',
  },
  settings: {
  title: 'Réglages plateforme',
@@ -460,10 +491,14 @@ function DashboardPageContent() {
  const [filterEventWhen, setFilterEventWhen] = useState<string>('ALL');
  const [filterEventOrg, setFilterEventOrg] = useState<string>('ALL');
  const [filterEventGps, setFilterEventGps] = useState<string>('ALL');
+ const [filterEventVisibility, setFilterEventVisibility] = useState<string>('ALL');
+ const [filterEventTicketing, setFilterEventTicketing] = useState<string>('ALL');
  const [filterGuestOrg, setFilterGuestOrg] = useState<string>('ALL');
  const [filterGuestEvent, setFilterGuestEvent] = useState<string>('ALL');
  const [filterGuestCategory, setFilterGuestCategory] = useState<string>('ALL');
  const [filterGuestCheckin, setFilterGuestCheckin] = useState<string>('ALL');
+ const [filterGuestPdf, setFilterGuestPdf] = useState<string>('ALL');
+ const [platformInsights, setPlatformInsights] = useState<PlatformInsights | null>(null);
 
  // Pagination states
  const [tenantsPage, setTenantsPage] = useState(1);
@@ -697,6 +732,9 @@ function DashboardPageContent() {
  loadUsers();
  loadTemplates();
  loadAdminEvents();
+ api.get('/admin/insights')
+  .then((data) => setPlatformInsights(data))
+  .catch(console.error);
  }
  }, [activeTab, user, revenuePeriod]);
 
@@ -714,7 +752,7 @@ function DashboardPageContent() {
  setEventsPage(1);
  setGuestsPage(1);
  setSubRequestsPage(1);
- }, [searchTerm, filterPlan, filterAccountKind, filterRole, filterType, filterRsvp, filterVerified, filterUserOrg, filterOrgRole, filterEventWhen, filterEventOrg, filterEventGps, filterGuestOrg, filterGuestEvent, filterGuestCategory, filterGuestCheckin]);
+ }, [searchTerm, filterPlan, filterAccountKind, filterRole, filterType, filterRsvp, filterVerified, filterUserOrg, filterOrgRole, filterEventWhen, filterEventOrg, filterEventGps, filterEventVisibility, filterEventTicketing, filterGuestOrg, filterGuestEvent, filterGuestCategory, filterGuestCheckin, filterGuestPdf]);
 
  // Leaflet Map Initialization Effect for Super Admin Event Modal
  useEffect(() => {
@@ -1589,7 +1627,13 @@ function DashboardPageContent() {
  const matchesGps = filterEventGps === 'ALL'
   || (filterEventGps === 'yes' && hasGps)
   || (filterEventGps === 'no' && !hasGps);
- return matchesSearch && matchesWhen && matchesOrg && matchesGps;
+ const matchesVisibility = filterEventVisibility === 'ALL'
+  || (filterEventVisibility === 'public' && Boolean(e.isPublic))
+  || (filterEventVisibility === 'private' && !e.isPublic);
+ const matchesTicketing = filterEventTicketing === 'ALL'
+  || (filterEventTicketing === 'yes' && Boolean(e.ticketingEnabled))
+  || (filterEventTicketing === 'no' && !e.ticketingEnabled);
+ return matchesSearch && matchesWhen && matchesOrg && matchesGps && matchesVisibility && matchesTicketing;
  });
 
  // Filter guests
@@ -1608,7 +1652,11 @@ function DashboardPageContent() {
  const matchesCheckin = filterGuestCheckin === 'ALL'
   || (filterGuestCheckin === 'in' && checkedIn)
   || (filterGuestCheckin === 'out' && !checkedIn);
- return matchesSearch && matchesRsvp && matchesOrg && matchesEvent && matchesCategory && matchesCheckin;
+ const hasPdf = Boolean(g.seatingInvitationPdfUrl);
+ const matchesPdf = filterGuestPdf === 'ALL'
+  || (filterGuestPdf === 'delivered' && hasPdf)
+  || (filterGuestPdf === 'missing' && g.rsvp === 'ACCEPTED' && !hasPdf);
+ return matchesSearch && matchesRsvp && matchesOrg && matchesEvent && matchesCategory && matchesCheckin && matchesPdf;
  });
 
  const paginatedTenants = paginateItems(filteredTenants, tenantsPage, tenantsPageSize);
@@ -2002,6 +2050,16 @@ function DashboardPageContent() {
  <option value="yes">Avec GPS</option>
  <option value="no">Sans GPS</option>
  </select>
+ <select value={filterEventVisibility} onChange={(e) => setFilterEventVisibility(e.target.value)} className={filterSelectClass}>
+ <option value="ALL">Visibilité</option>
+ <option value="public">Publics</option>
+ <option value="private">Privés</option>
+ </select>
+ <select value={filterEventTicketing} onChange={(e) => setFilterEventTicketing(e.target.value)} className={filterSelectClass}>
+ <option value="ALL">Billets</option>
+ <option value="yes">Billetterie</option>
+ <option value="no">Sans billets</option>
+ </select>
  <ViewModeToggle
  storageKey="em-view-admin-events"
  value={adminEventsViewMode}
@@ -2042,6 +2100,11 @@ function DashboardPageContent() {
  <option value="ALL">Présence</option>
  <option value="in">Enregistrés</option>
  <option value="out">Non enregistrés</option>
+ </select>
+ <select value={filterGuestPdf} onChange={(e) => setFilterGuestPdf(e.target.value)} className={filterSelectClass}>
+ <option value="ALL">PDF invitation</option>
+ <option value="delivered">PDF livré</option>
+ <option value="missing">PDF non livré</option>
  </select>
  <select value={filterGuestCategory} onChange={(e) => setFilterGuestCategory(e.target.value)} className={filterSelectClass}>
  <option value="ALL">Toutes les catégories</option>
@@ -2472,6 +2535,12 @@ function DashboardPageContent() {
  const invitesChip = (
  <StatusPill tone="emerald">{e.invitationCount} invitations</StatusPill>
  );
+ const visibilityChip = (
+ <StatusPill tone={e.isPublic ? 'primary' : 'slate'}>{e.isPublic ? 'Public' : 'Privé'}</StatusPill>
+ );
+ const ticketsChip = e.ticketingEnabled ? (
+ <StatusPill tone="amber">{e.ticketsSold || 0} billets</StatusPill>
+ ) : null;
  const actions = (
  <>
  {adminEventsViewMode === 'list' ? (
@@ -2535,6 +2604,8 @@ function DashboardPageContent() {
  <p className="truncate text-xs text-muted">{e.location || 'Sans lieu'}</p>
  <p className="text-[11px] text-muted">{dateLabel}</p>
  <div className="flex flex-wrap items-center gap-1.5">
+ {visibilityChip}
+ {ticketsChip}
  {guestsChip}
  {invitesChip}
  </div>
@@ -2588,6 +2659,12 @@ function DashboardPageContent() {
  g.rsvp === 'ACCEPTED' ? 'Accepté' : g.rsvp === 'DECLINED' ? 'Décliné' : 'En attente';
  const rsvpChip = <StatusPill tone={rsvpTone}>{rsvpLabel}</StatusPill>;
  const categoryChip = <StatusPill tone="slate">{g.category || 'Général'}</StatusPill>;
+ const pdfChip = g.rsvp === 'ACCEPTED' ? (
+ <StatusPill tone={g.seatingInvitationPdfUrl ? 'emerald' : 'rose'}>
+ {g.seatingInvitationPdfUrl ? 'PDF livré' : 'PDF manquant'}
+ </StatusPill>
+ ) : null;
+ const checkinChip = g.checkedInAt ? <StatusPill tone="primary">Présent</StatusPill> : null;
  const actions = (
  <>
  {guestsViewMode === 'list' ? (
@@ -2651,14 +2728,16 @@ function DashboardPageContent() {
  <div className="flex flex-wrap gap-1.5">
  {rsvpChip}
  {categoryChip}
-              </div>
+ {pdfChip}
+ {checkinChip}
+ </div>
  <p className="truncate text-xs font-medium">{g.eventTitle}</p>
  <p className="truncate text-[11px] text-muted">{g.tenantName}</p>
             </div>
  )
  }
  status={guestsViewMode === 'list' ? rsvpChip : undefined}
- aside={guestsViewMode === 'list' ? categoryChip : undefined}
+ aside={guestsViewMode === 'list' ? (pdfChip || categoryChip) : undefined}
  actions={actions}
  />
  );
@@ -3546,6 +3625,49 @@ function DashboardPageContent() {
  </div>
  </div>
  </div>
+
+ {platformInsights && (
+ <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <div className="p-3 bg-primary/10 text-primary rounded-xl">
+ <Globe className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.events.publicCount}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Événements publics</span>
+ </div>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <div className="p-3 bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 rounded-xl">
+ <Ticket className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{formatFc(platformInsights.tickets.gmvFc)}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">GMV billets</span>
+ </div>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-xl">
+ <CheckCircle className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.guests.accepted}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">RSVP acceptés</span>
+ </div>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <div className="p-3 bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400 rounded-xl">
+ <Wallet className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">
+ {formatFc((platformInsights.marketplace.gmvVenueFc || 0) + (platformInsights.marketplace.gmvTradeFc || 0) + (platformInsights.marketplace.gmvRentalFc || 0))}
+ </span>
+ <span className="text-xs text-muted dark:text-muted font-bold">GMV marketplace</span>
+ </div>
+ </div>
+ </div>
+ )}
  </div>
  )}
 
@@ -3912,10 +4034,15 @@ function DashboardPageContent() {
  </h3>
  <div className="space-y-3">
  {[
- { label: 'Total des événements', value: adminEvents.length },
- { label: 'Avec localisation GPS', value: adminEvents.filter(e => e.latitude && e.longitude).length },
- { label: 'Rappels quotidiens', value: adminEvents.filter(e => e.reminderFrequency === 'DAILY').length },
- { label: 'Rappels hebdomadaires', value: adminEvents.filter(e => e.reminderFrequency === 'WEEKLY').length },
+ { label: 'Total des événements', value: platformInsights?.events.total ?? adminEvents.length },
+ { label: 'Publics', value: platformInsights?.events.publicCount ?? adminEvents.filter((e) => e.isPublic).length },
+ { label: 'Privés', value: platformInsights?.events.privateCount ?? adminEvents.filter((e) => !e.isPublic).length },
+ { label: 'Avec billetterie', value: platformInsights?.events.ticketingEnabled ?? adminEvents.filter((e) => e.ticketingEnabled).length },
+ { label: 'Billets vendus', value: platformInsights?.events.ticketsSold ?? adminEvents.reduce((sum, e) => sum + (e.ticketsSold || 0), 0) },
+ { label: 'GMV billets', value: formatFc(platformInsights?.tickets.gmvFc ?? 0) },
+ { label: 'Avec localisation GPS', value: platformInsights?.events.gpsCount ?? adminEvents.filter((e) => e.latitude && e.longitude).length },
+ { label: 'Rappels quotidiens', value: adminEvents.filter((e) => e.reminderFrequency === 'DAILY').length },
+ { label: 'Rappels hebdomadaires', value: adminEvents.filter((e) => e.reminderFrequency === 'WEEKLY').length },
  ].map((row) => (
  <div key={row.label} className="flex justify-between text-sm">
  <span className="text-muted dark:text-muted font-medium">{row.label}</span>
@@ -3934,7 +4061,12 @@ function DashboardPageContent() {
  <div key={e.id} className="py-2.5 flex items-center justify-between gap-2 first:pt-0 last:pb-0">
  <div className="min-w-0">
  <p className="font-semibold text-foreground dark:text-foreground truncate text-sm">{e.title}</p>
- <p className="text-xs text-muted truncate">{e.tenantName} · {e.location || 'Lieu non défini'}</p>
+ <p className="text-xs text-muted truncate">
+ {e.tenantName} · {e.isPublic ? 'Public' : 'Privé'}
+ {e.ticketingEnabled ? ` · ${e.ticketsSold || 0} billets` : ''}
+ {' · '}
+ {e.location || 'Lieu non défini'}
+ </p>
  </div>
  <span className="text-xs text-muted dark:text-muted shrink-0">{new Date(e.date).toLocaleDateString('fr-FR')}</span>
  </div>
@@ -3943,6 +4075,74 @@ function DashboardPageContent() {
  <p className="text-sm text-muted dark:text-muted text-center py-6">Aucun événement.</p>
  )}
  </div>
+ </div>
+ </div>
+ )}
+
+ {activeAnalyticsSection === 'invites' && (
+ <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+ <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
+ <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
+ <Users className="w-5 h-5 text-primary" />
+ Funnel RSVP
+ </h3>
+ <div className="space-y-3">
+ {[
+ { label: 'Invités', value: platformInsights?.guests.total ?? 0 },
+ { label: 'Invitations envoyées', value: platformInsights?.guests.invitations ?? 0 },
+ { label: 'En attente', value: platformInsights?.guests.pending ?? 0 },
+ { label: 'Acceptés', value: platformInsights?.guests.accepted ?? 0 },
+ { label: 'Déclinés', value: platformInsights?.guests.declined ?? 0 },
+ { label: 'PDF livrés', value: platformInsights?.guests.pdfDelivered ?? 0 },
+ { label: 'PDF non livrés (acceptés)', value: platformInsights?.guests.pdfMissing ?? 0 },
+ { label: 'Check-in (scan web)', value: platformInsights?.guests.checkedIn ?? 0 },
+ { label: 'Place vérifiée', value: platformInsights?.guests.seatVerified ?? 0 },
+ ].map((row) => (
+ <div key={row.label} className="flex justify-between text-sm">
+ <span className="text-muted dark:text-muted font-medium">{row.label}</span>
+ <span className="font-bold text-foreground dark:text-foreground">{row.value}</span>
+ </div>
+ ))}
+ </div>
+ <p className="text-xs text-muted pt-2">
+ Le PDF et le plan de table partent après RSVP accepté et place assignée (Premium 1+). Filtrez « PDF non livré » dans Invités pour le support.
+ </p>
+ <Button
+ type="button"
+ size="sm"
+ variant="secondary"
+ onClick={() => router.replace('/dashboard?tab=guests')}
+ >
+ Ouvrir la file invités
+ </Button>
+ </div>
+ <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
+ <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
+ <Wallet className="w-5 h-5 text-emerald-600" />
+ Marketplace & packs
+ </h3>
+ <div className="space-y-3">
+ {[
+ { label: 'Favoris catalogue', value: platformInsights?.marketplace.favorites ?? 0 },
+ { label: 'Packs enregistrés', value: platformInsights?.marketplace.packs ?? 0 },
+ { label: 'GMV salles', value: formatFc(platformInsights?.marketplace.gmvVenueFc ?? 0) },
+ { label: 'GMV métiers', value: formatFc(platformInsights?.marketplace.gmvTradeFc ?? 0) },
+ { label: 'GMV locations', value: formatFc(platformInsights?.marketplace.gmvRentalFc ?? 0) },
+ ].map((row) => (
+ <div key={row.label} className="flex justify-between text-sm">
+ <span className="text-muted dark:text-muted font-medium">{row.label}</span>
+ <span className="font-bold text-foreground dark:text-foreground">{row.value}</span>
+ </div>
+ ))}
+ </div>
+ <Button
+ type="button"
+ size="sm"
+ variant="secondary"
+ onClick={() => router.push('/dashboard/admin/catalogue')}
+ >
+ Ouvrir le catalogue
+ </Button>
  </div>
  </div>
  )}

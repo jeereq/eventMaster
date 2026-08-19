@@ -44,10 +44,10 @@ export const USER_GUIDES: UserGuide[] = [
       'Traiter la file du jour : demandes d’abonnement, licences J-7, factures ouvertes',
       'Créer et modifier les organisations, forfaits et durées (trimestre 90 j, mois, annuel 365 j −10 %)',
       'Ouvrir l’espace d’une organisation (impersonation support, bandeau visible)',
-      'Modérer le catalogue : salles, métiers, locations, devis, réservations',
-      'Suivre et encaisser les commissions marketplace 8 % (CSV)',
+      'Modérer le catalogue : salles, métiers, locations ; dépublier / republier avec motif',
+      'Suivre packs, favoris, GMV salles / métiers / locations et commissions 8 %',
       'Publier des modèles globaux sur la landing, éditer les messages invités',
-      'Consulter les analyses SaaS, le journal d’audit et les réglages plateforme',
+      'Consulter les analyses SaaS, le funnel RSVP / PDF / scan, le journal d’audit et les réglages',
     ],
     cannotDo: [
       'Organiser un événement comme un membre interne sans passer par l’impersonation',
@@ -92,7 +92,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'moderate-catalog',
         title: 'Modérer le marketplace et les commissions 8 %',
         content:
-          '1. Ouvrez Catalogue.\n2. Filtrez salles, métiers ou locations ; dépubliez une fiche hors charte.\n3. Onglet Commissions 8 % : réservations confirmées, montant dû par vendeur.\n4. Marquez payée après versement hors plateforme, ou exportez le CSV.',
+          '1. Ouvrez Catalogue.\n2. Filtrez salles, métiers ou locations. Dépublier exige un motif (journalisé) ; Republier remet la fiche en vitrine.\n3. Les compteurs GMV distinguent salles, métiers et locations ; favoris et packs mesurent l’usage de « Préparer un événement ».\n4. Onglet Commissions 8 % : marquez payée après versement hors plateforme, ou exportez le CSV.',
         links: [{ label: 'Catalogue', href: '/dashboard/admin/catalogue' }],
       },
       {
@@ -109,12 +109,14 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'review-analytics',
         title: 'Consulter les statistiques plateforme',
         content:
-          '1. Ouvrez Analyses & stats.\n2. Parcourez les sous-onglets : vue d\'ensemble, plans, organisations, revenus, modèles, utilisateurs, événements.\n3. Exportez le rapport revenus SaaS en CSV ou PDF. Les commissions marketplace 8 % sont dans Catalogue, pas dans ce rapport.',
+          '1. Ouvrez Analyses & stats.\n2. Vue d’ensemble : licences, événements publics, GMV billets et marketplace.\n3. Événements : privé / public / billetterie. Invités : funnel RSVP, PDF livrés / manquants, check-in web.\n4. Exportez le rapport revenus SaaS en CSV ou PDF. Les commissions marketplace 8 % restent dans Catalogue.',
         links: [{ label: 'Analyses & stats', href: '/dashboard?tab=analytics&section=overview' }],
       },
     ],
     tips: [
       'Filtrez les organisations par type : Client (sans licence), Organisateur, Salle / presta, Mixte.',
+      'Sur Invités, le filtre « PDF non livré » cible les RSVP acceptés sans seatingInvitationPdfUrl.',
+      'Un motif de dépublication apparaît dans le journal d’audit (CATALOG_UNPUBLISH).',
       'Les modèles d\'organisation ne doivent jamais avoir showOnLanding — seuls les modèles globaux sont publics.',
       'Vérifiez les licences expirées sur l’Accueil avant d’approuver un renouvellement.',
       'Le mode maintenance bloque tout le monde sauf le Super Admin.',
