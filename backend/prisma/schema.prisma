@@ -328,6 +328,8 @@ model CommercialCommission {
   platformInvoice   PlatformInvoice? @relation(fields: [platformInvoiceId], references: [id], onDelete: SetNull)
   paidAt           DateTime?
   paidByUserId     String?
+  payoutProofUrl   String?
+  payoutNote       String?
   createdAt        DateTime @default(now())
 
   @@unique([commercialId, tenantId, billingPeriod])

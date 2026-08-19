@@ -32,6 +32,8 @@ import AdminDetailsModal from '@/components/admin/AdminDetailsModal';
 import AdminOpsHome from '@/components/admin/AdminOpsHome';
 import { ACCOUNT_KIND_FILTER_LABELS, type TenantAccountKind } from '@/lib/marketplace';
 import { unwrapAdminList, adminListParams } from '@/lib/adminList';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { commercialPercent, renewalPercent } from '@/lib/platformRates';
 
 function isPlatformStaff(role?: string) {
  return role === 'SUPER_ADMIN' || role === 'COMMERCIAL';
@@ -314,6 +316,9 @@ interface TenantSubscriptionHistoryEntry {
 
 function DashboardPageContent() {
  const { user, tenant, access, planQuota, enterSupportSession } = useAuth();
+ const { site } = usePlatformSite();
+ const commercialPct = commercialPercent(site);
+ const renewalPct = renewalPercent(site);
  const viewPrefs = useViewPreferencesOptional();
  const widgets = viewPrefs?.prefs.widgets;
  const {
@@ -501,7 +506,6 @@ function DashboardPageContent() {
  });
  const [loadingRevenueReport, setLoadingRevenueReport] = useState(false);
  const [notifyingPayouts, setNotifyingPayouts] = useState(false);
- const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
  const [usersLoading, setUsersLoading] = useState(false);
  const [templatesLoading, setTemplatesLoading] = useState(false);
  const [adminEventsLoading, setAdminEventsLoading] = useState(false);
@@ -1100,20 +1104,6 @@ function DashboardPageContent() {
  setError(err.message || 'Impossible d\'envoyer les notifications de versement.');
  } finally {
  setNotifyingPayouts(false);
- }
- };
-
- const markRevenuePayoutPaid = async (commercialId: string) => {
- setMarkingPaidId(commercialId);
- setError('');
- try {
- const data = await api.post('/admin/reports/revenue/mark-paid', { commercialId, period: revenuePeriod });
- await loadRevenueReport(revenuePeriod);
- alert(data.message || 'Versement marqué.');
- } catch (err: any) {
- setError(err.message || 'Impossible de marquer le versement.');
- } finally {
- setMarkingPaidId(null);
  }
  };
 
@@ -3960,6 +3950,12 @@ function DashboardPageContent() {
  {notifyingPayouts ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
  Notifier les versements
  </button>
+ <Link
+ href={`/dashboard/admin/payouts?period=${encodeURIComponent(revenuePeriod)}`}
+ className="px-4 py-2 border border-border text-foreground text-xs font-bold rounded-xl hover:bg-surface-muted transition"
+ >
+ File versements
+ </Link>
               </div>
  </div>
 
@@ -3977,11 +3973,13 @@ function DashboardPageContent() {
  <span className="text-xs text-primary">{revenueReport.summary.invoiceCount} facture(s)</span>
  </div>
  <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
- <span className="text-xs font-bold text-amber-600 uppercase">Commissions (30 %)</span>
+ <span className="text-xs font-bold text-amber-600 uppercase">Commissions SaaS</span>
  <p className="text-xl font-extrabold text-amber-900 mt-1">{revenueReport.summary.totalCommissionsFormatted}</p>
  {revenueReport.summary.unpaidCommissionsFormatted ? (
- <span className="text-xs text-amber-700">Dû : {revenueReport.summary.unpaidCommissionsFormatted}</span>
- ) : null}
+ <span className="text-xs text-amber-700">Dû : {revenueReport.summary.unpaidCommissionsFormatted} · {commercialPct}/{renewalPct} %</span>
+ ) : (
+ <span className="text-xs text-amber-700">{commercialPct} % puis {renewalPct} %</span>
+ )}
  </div>
  <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4">
  <span className="text-xs font-bold text-emerald-600 uppercase">Revenu net plateforme</span>
@@ -4028,16 +4026,16 @@ function DashboardPageContent() {
  CA parrainé : {c.totalInvoiceAmount.toLocaleString('fr-FR')} FC · {c.entries.length} org.
  {(c.unpaidCommission ?? 0) > 0 ? ` · Dû ${c.unpaidCommission!.toLocaleString('fr-FR')} FC` : ' · Versé'}
  </p>
- {(c.unpaidCommission ?? 0) > 0 && (
- <button
- type="button"
- onClick={() => markRevenuePayoutPaid(c.commercialId)}
- disabled={markingPaidId === c.commercialId}
- className="mt-2 text-xs font-semibold text-primary hover:underline disabled:opacity-60"
+ {c.kind === 'platform' && (c.unpaidCommission ?? 0) > 0 ? (
+ <Link
+ href={`/dashboard/admin/payouts?period=${encodeURIComponent(revenuePeriod)}&q=${encodeURIComponent(c.email)}`}
+ className="mt-2 inline-block text-xs font-semibold text-primary hover:underline"
  >
- {markingPaidId === c.commercialId ? 'Marquage…' : 'Marquer versé'}
- </button>
- )}
+ Verser (preuve + motif)
+ </Link>
+ ) : c.kind === 'org' && (c.unpaidCommission ?? 0) > 0 ? (
+ <p className="mt-2 text-[11px] text-muted">À verser par l’organisation parrainante, hors EventMaster.</p>
+ ) : null}
  </div>
  ))}
  </div>

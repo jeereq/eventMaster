@@ -73,6 +73,12 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
       'Historique des factures plateforme générées après validation d\'abonnement, paiement ou renouvellement. Consultez montants, périodes et statuts.',
     route: '/dashboard?tab=invoices',
   },
+  'nav-payouts': {
+    title: 'Versements SaaS',
+    description:
+      'File des commissions des commerciaux plateforme : EventMaster verse hors plateforme, puis le Super Admin joint une preuve et un motif. Distinct du 8 % marketplace (Catalogue).',
+    route: '/dashboard/admin/payouts',
+  },
   'nav-settings': {
     title: 'Configurations',
     description:

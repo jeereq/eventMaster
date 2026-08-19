@@ -7,6 +7,7 @@ import {
   parseBillingPeriod,
 } from '../services/revenueReportService';
 import {
+  MIN_PAYOUT_REASON,
   markCommercialPeriodPaid,
   notifyMonthlyCommissionPayouts,
 } from '../services/commercialPayoutService';
@@ -83,15 +84,29 @@ export async function markRevenuePayoutPaid(req: AuthenticatedRequest, res: Resp
 
     const commercialId = String(req.body?.commercialId || '');
     const period = parseBillingPeriod(req.body?.period as string | undefined);
+    const proofUrl = typeof req.body?.proofUrl === 'string' ? req.body.proofUrl.trim() : '';
+    const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
     if (!commercialId) {
       return res.status(400).json({ error: 'commercialId requis.' });
+    }
+    if (reason.length < MIN_PAYOUT_REASON || proofUrl.length < MIN_PAYOUT_REASON) {
+      return res.status(400).json({
+        error: 'Utilisez la file Versements SaaS : motif et preuve (8 caractères min.) sont obligatoires.',
+      });
     }
 
     const result = await markCommercialPeriodPaid({
       commercialId,
       period,
       paidByUserId: req.user.id,
+      proofUrl,
+      note: reason,
     });
+    if (result.error === 'NOT_PLATFORM') {
+      return res.status(403).json({
+        error: 'EventMaster ne verse que les commerciaux plateforme. Utilisez la file Versements SaaS. Les commerciaux org. sont payés par l’organisation parrainante.',
+      });
+    }
     if (result.updated === 0) {
       return res.status(404).json({ error: 'Aucune commission due pour ce commercial sur cette période.' });
     }

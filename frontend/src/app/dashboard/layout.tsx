@@ -10,7 +10,7 @@ import {
  Calendar, Users, Mail, CreditCard, LayoutDashboard,
  LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper, User, Sun, Moon, BarChart3,
  Building2, FileText, Key, MessageSquare, ScanLine, Briefcase, Clock, BookOpen,
- PanelLeftClose, PanelLeft, Store, CalendarCheck, ScrollText, Ticket,
+ PanelLeftClose, PanelLeft, Store, CalendarCheck, ScrollText, Ticket, Wallet,
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import UserLegalGate from '@/components/UserLegalGate';
@@ -76,6 +76,7 @@ const NAV_TOOLTIPS: Record<string, string> = {
  'Demandes abonnement': 'Approuver ou refuser les forfaits',
  'Forfaits & tarifs': 'Configurer les plans SaaS',
  Factures: 'Historique et détail des factures',
+ 'Versements SaaS': 'Commissions commerciaux plateforme, hors EventMaster',
  'Réglages plateforme': 'Intégrations e-mail, WhatsApp…',
  'Guide utilisateur': 'Documentation et visite guidée',
  'Mon compte': 'Profil et sécurité du compte',
@@ -359,6 +360,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  { name: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests', tab: 'subscription-requests', tourId: 'nav-subscription-requests', icon: Clock },
  { name: 'Forfaits & tarifs', href: '/dashboard?tab=subscription-plans', tab: 'subscription-plans', tourId: 'nav-subscription-plans', icon: CreditCard },
  { name: 'Factures', href: '/dashboard?tab=invoices', tab: 'invoices', tourId: 'nav-invoices', icon: FileText },
+ { name: 'Versements SaaS', href: '/dashboard/admin/payouts', tourId: 'nav-payouts', icon: Wallet },
  { name: 'Journal d’audit', href: '/dashboard/audit', tourId: 'nav-audit', icon: ScrollText },
  { name: 'Réglages plateforme', href: '/dashboard?tab=settings', tab: 'settings', tourId: 'nav-settings', icon: Key },
  ],

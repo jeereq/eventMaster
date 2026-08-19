@@ -38,6 +38,8 @@ import ReferralShareButtons from '@/components/commercial/ReferralShareButtons';
  commissionAmount: number;
  plan: string;
  paidAt?: string | null;
+ payoutProofUrl?: string | null;
+ commissionRate?: number;
  tenant: { name: string };
  }>;
 }
@@ -362,8 +364,16 @@ export default function CommercialDashboardPage() {
  <p className="font-semibold text-sm text-foreground dark:text-foreground">{c.tenant.name}</p>
  <p className="font-bold text-emerald-600 text-sm shrink-0">{c.commissionAmount.toLocaleString('fr-FR')} FC</p>
  </div>
- <p className="text-xs text-muted">{c.billingPeriod}{c.paidAt ? ' · versé' : ' · dû'}</p>
- <p className="text-xs text-muted">Facture : {c.invoiceAmount.toLocaleString('fr-FR')} FC ({Math.round(data.commissionRate * 100)} %)</p>
+ <p className="text-xs text-muted">
+ {c.billingPeriod}{c.paidAt ? ' · versé' : ' · dû'}
+ {c.payoutProofUrl ? (
+ <>
+ {' · '}
+ <a href={c.payoutProofUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">Preuve</a>
+ </>
+ ) : null}
+ </p>
+ <p className="text-xs text-muted">Facture : {c.invoiceAmount.toLocaleString('fr-FR')} FC ({Math.round((c.commissionRate ?? data.commissionRate) * 100)} %)</p>
  </div>
  ))}
  </div>
@@ -374,7 +384,7 @@ export default function CommercialDashboardPage() {
  <th>Période</th>
  <th>Organisation</th>
  <th>Facture</th>
- <th>Commission ({Math.round(data.commissionRate * 100)} %)</th>
+ <th>Commission</th>
  <th>Statut</th>
  </tr>
  </thead>
@@ -385,7 +395,15 @@ export default function CommercialDashboardPage() {
  <td>{c.tenant.name}</td>
  <td>{c.invoiceAmount.toLocaleString('fr-FR')} FC</td>
  <td className="font-bold text-emerald-600">{c.commissionAmount.toLocaleString('fr-FR')} FC</td>
- <td className="text-xs text-muted">{c.paidAt ? 'Versé' : 'Dû'}</td>
+ <td className="text-xs text-muted">
+ {c.paidAt ? 'Versé' : 'Dû'}
+ {c.payoutProofUrl ? (
+ <>
+ {' · '}
+ <a href={c.payoutProofUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">Preuve</a>
+ </>
+ ) : null}
+ </td>
  </tr>
  ))}
  </tbody>

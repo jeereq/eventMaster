@@ -48,6 +48,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Suivre packs, favoris, GMV salles / métiers / locations et commissions {commissionPercent} %',
       'Publier des modèles globaux sur la landing, éditer les messages invités',
       'Consulter les analyses SaaS, le funnel RSVP / PDF / scan, le journal d’audit et les réglages',
+      'Verser les commissions des commerciaux plateforme hors EventMaster (preuve + motif), via Versements SaaS',
       'Ajuster commission marketplace, acompte et taux commerciaux (Réglages)',
     ],
     cannotDo: [
@@ -62,6 +63,7 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Catalogue', href: '/dashboard/admin/catalogue' },
       { label: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests' },
       { label: 'Forfaits', href: '/dashboard?tab=subscription-plans' },
+      { label: 'Versements SaaS', href: '/dashboard/admin/payouts' },
       { label: 'Journal d’audit', href: '/dashboard/audit' },
       { label: 'Analyses', href: '/dashboard?tab=analytics&section=overview' },
       { label: 'Concepteur visuel', href: '/dashboard/templates' },
@@ -115,6 +117,16 @@ export const USER_GUIDES: UserGuide[] = [
           '1. Ouvrez Analyses & stats.\n2. Vue d’ensemble : licences, événements publics, GMV billets et marketplace (agrégats, sans tout charger).\n3. Événements / Invités : pages dédiées paginées (public / privé / billets, PDF livré / manquant, check-in).\n4. Exportez le rapport revenus SaaS en CSV ou PDF. Les commissions marketplace {commissionPercent} % restent dans Catalogue.',
         links: [{ label: 'Analyses & stats', href: '/dashboard?tab=analytics&section=overview' }],
       },
+      {
+        id: 'saas-payouts',
+        title: 'Verser une commission commerciale SaaS',
+        content:
+          '1. Effectuez le virement hors plateforme (Mobile Money / banque).\n2. Ouvrez Versements SaaS (ou Analyses → File versements).\n3. Filtrez la période, ouvrez le dossier dû.\n4. Joignez une preuve (URL ou photo de reçu) et un motif (≥ 8 caractères).\n5. Marquez versée — le commercial est notifié, l’action est journalisée. Les commerciaux org. sont payés par l’organisation parrainante, pas ici.',
+        links: [
+          { label: 'Versements SaaS', href: '/dashboard/admin/payouts' },
+          { label: 'Analyses revenus', href: '/dashboard?tab=analytics&section=revenus' },
+        ],
+      },
     ],
     tips: [
       'Filtrez les organisations par type : Client (sans licence), Organisateur, Salle / presta, Mixte.',
@@ -123,6 +135,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Les modèles d\'organisation ne doivent jamais avoir showOnLanding — seuls les modèles globaux sont publics.',
       'Vérifiez les licences expirées sur l’Accueil avant d’approuver un renouvellement.',
       'Les taux marketplace et commerciaux se règlent dans Réglages (pas dans le code). Les réservations déjà confirmées gardent leur taux d’origine.',
+      'EventMaster ne verse que les commerciaux plateforme. Distinct du {commissionPercent} % marketplace (Catalogue).',
       'Le mode maintenance bloque tout le monde sauf le Super Admin.',
     ],
   },
@@ -135,8 +148,8 @@ export const USER_GUIDES: UserGuide[] = [
     canDo: [
       'Consulter les organisations que vous avez parrainées',
       'Traiter les demandes d\'abonnement (approbation selon vos droits)',
-      'Consulter les factures plateforme et vos commissions',
-      'Recevoir des notifications in-app lors d\'approbations',
+      'Consulter les factures plateforme et vos commissions (dû / versé + preuve)',
+      'Recevoir des notifications in-app lors d\'approbations et de versements',
     ],
     cannotDo: [
       'Modifier les forfaits ou la configuration globale de la plateforme',
@@ -161,7 +174,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'check-commissions',
         title: 'Consulter vos commissions',
         content:
-          '1. Accédez à Parrainage & commissions pour la vue dédiée.\n2. Consultez aussi l\'onglet Factures pour le détail des montants et périodes.\n3. Les commissions sont calculées sur les factures validées selon votre taux contractuel.',
+          '1. Accédez à Parrainage & commissions pour la vue dédiée.\n2. Consultez aussi l\'onglet Factures pour le détail des montants et périodes.\n3. Les commissions sont calculées sur les factures validées (premier paiement / renouvellement selon votre taux).\n4. EventMaster verse hors plateforme ; une preuve apparaît sur la ligne une fois que le Super Admin a marqué le versement.',
         links: [
           { label: 'Parrainage & commissions', href: '/dashboard/commercial' },
           { label: 'Factures', href: '/dashboard?tab=invoices' },
@@ -171,7 +184,8 @@ export const USER_GUIDES: UserGuide[] = [
     tips: [
       'La cloche de notification en haut du menu signale les nouvelles approbations.',
       'Communiquez le code de parrainage aux organisations avant leur inscription.',
-      'En cas de rejet, contactez le super admin avec la preuve de paiement corrigée.',
+      'En cas de rejet d’abonnement, contactez le super admin avec la preuve de paiement corrigée.',
+      'Le versement de vos commissions SaaS est hors plateforme (Mobile Money / banque). La preuve est jointe par le Super Admin.',
     ],
   },
   {

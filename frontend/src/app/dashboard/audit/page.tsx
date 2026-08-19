@@ -24,6 +24,8 @@ const ACTION_LABELS: Record<string, string> = {
   CATALOG_PUBLISH: 'Republication catalogue',
   CATALOG_COMMISSION_SETTLE: 'Commission marketplace encaissée',
   CATALOG_COMMISSION_UNSETTLE: 'Commission marketplace remise due',
+  SAAS_PAYOUT_SETTLE: 'Versement SaaS commercial',
+  SAAS_PAYOUT_UNSETTLE: 'Versement SaaS remis dû',
 };
 
 interface AuditLogRow {

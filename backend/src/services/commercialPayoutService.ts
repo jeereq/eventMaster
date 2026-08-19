@@ -263,7 +263,17 @@ export async function markCommercialPeriodPaid(params: {
   commercialId: string;
   period: string;
   paidByUserId: string;
+  proofUrl?: string | null;
+  note?: string | null;
 }) {
+  const commercial = await prisma.user.findUnique({
+    where: { id: params.commercialId },
+    select: { id: true, name: true, email: true, phone: true, role: true, tenantId: true },
+  });
+  if (!commercial || !isPlatformCommercialAccount(commercial)) {
+    return { updated: 0, error: 'NOT_PLATFORM' as const };
+  }
+
   const now = new Date();
   const result = await prisma.commercialCommission.updateMany({
     where: {
@@ -274,6 +284,8 @@ export async function markCommercialPeriodPaid(params: {
     data: {
       paidAt: now,
       paidByUserId: params.paidByUserId,
+      payoutProofUrl: params.proofUrl || null,
+      payoutNote: params.note || null,
     },
   });
 
@@ -281,37 +293,184 @@ export async function markCommercialPeriodPaid(params: {
     return { updated: 0 };
   }
 
+  const rows = await listMonthlyPayouts(params.period);
+  const row = rows.find((item) => item.commercialId === params.commercialId);
+  const amount = formatAmountFc(row?.paidCommission || 0);
+  const periodLabel = formatBillingPeriodLabel(params.period);
+  const href = `${FRONTEND_URL}/dashboard/commercial`;
+
+  await createPlatformNotification({
+    userId: commercial.id,
+    type: MONTHLY_PAYOUT_PAID_TYPE,
+    title: `Versement effectué — ${periodLabel}`,
+    message: `${amount} marqué comme versé par EventMaster (hors plateforme).`,
+    metadata: { period: params.period, href, proofUrl: params.proofUrl || null },
+  });
+
+  const text = `Bonjour${commercial.name ? ` ${commercial.name}` : ''},\n\nVotre commission ${periodLabel} (${amount}) a été marquée comme versée par EventMaster, hors plateforme.${params.proofUrl ? `\nRéférence : ${params.proofUrl}` : ''}\n\nSuivi : ${href}\n\n— EventMaster`;
+  await sendRealEmail(commercial.email, `EventMaster — Versement ${periodLabel} effectué`, text);
+  if (commercial.phone) {
+    await sendRealWhatsApp(
+      commercial.phone,
+      `EventMaster — Versement ${periodLabel} effectué : ${amount} (hors plateforme).`,
+    );
+  }
+
+  return { updated: result.count };
+}
+
+export function isPlatformCommercialAccount(user: { role: string; tenantId?: string | null }) {
+  return user.role === 'COMMERCIAL' && !user.tenantId;
+}
+
+export const MIN_PAYOUT_REASON = 8;
+
+export type PlatformPayoutRow = {
+  commercialId: string;
+  name: string | null;
+  email: string;
+  referralCode: string | null;
+  period: string;
+  orgCount: number;
+  orgNames: string[];
+  totalInvoiceAmount: number;
+  totalCommission: number;
+  unpaidCommission: number;
+  paidCommission: number;
+  paidAt: Date | null;
+  payoutProofUrl: string | null;
+  payoutNote: string | null;
+  payer: 'eventmaster';
+};
+
+function payoutKey(commercialId: string, period: string) {
+  return `${commercialId}::${period}`;
+}
+
+export async function listPlatformSaaSPayouts(params: {
+  period?: string;
+  settlement?: 'due' | 'paid' | 'all';
+  q?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  const settlement = params.settlement || 'due';
+  const page = Math.max(params.page || 1, 1);
+  const pageSize = Math.min(Math.max(params.pageSize || 20, 1), 100);
+  const q = params.q?.trim();
+
+  const commissions = await prisma.commercialCommission.findMany({
+    where: {
+      ...(params.period ? { billingPeriod: params.period } : {}),
+      commercial: { role: 'COMMERCIAL', tenantId: null },
+      ...(q
+        ? {
+            OR: [
+              { commercial: { name: { contains: q, mode: 'insensitive' } } },
+              { commercial: { email: { contains: q, mode: 'insensitive' } } },
+              { commercial: { referralCode: { contains: q, mode: 'insensitive' } } },
+              { tenant: { name: { contains: q, mode: 'insensitive' } } },
+            ],
+          }
+        : {}),
+    },
+    include: {
+      commercial: {
+        select: { id: true, name: true, email: true, referralCode: true, role: true, tenantId: true },
+      },
+      tenant: { select: { name: true } },
+    },
+    orderBy: [{ billingPeriod: 'desc' }, { createdAt: 'desc' }],
+    take: 5000,
+  });
+
+  const map = new Map<string, PlatformPayoutRow>();
+  for (const row of commissions) {
+    if (!isPlatformCommercialAccount(row.commercial)) continue;
+    const key = payoutKey(row.commercialId, row.billingPeriod);
+    const current = map.get(key) || {
+      commercialId: row.commercialId,
+      name: row.commercial.name,
+      email: row.commercial.email,
+      referralCode: row.commercial.referralCode,
+      period: row.billingPeriod,
+      orgCount: 0,
+      orgNames: [] as string[],
+      totalInvoiceAmount: 0,
+      totalCommission: 0,
+      unpaidCommission: 0,
+      paidCommission: 0,
+      paidAt: null as Date | null,
+      payoutProofUrl: null as string | null,
+      payoutNote: null as string | null,
+      payer: 'eventmaster' as const,
+    };
+    current.totalInvoiceAmount += row.invoiceAmount;
+    current.totalCommission += row.commissionAmount;
+    current.orgCount += 1;
+    if (!current.orgNames.includes(row.tenant.name)) current.orgNames.push(row.tenant.name);
+    if (row.paidAt) {
+      current.paidCommission += row.commissionAmount;
+      if (!current.paidAt || row.paidAt > current.paidAt) current.paidAt = row.paidAt;
+      current.payoutProofUrl = row.payoutProofUrl || current.payoutProofUrl;
+      current.payoutNote = row.payoutNote || current.payoutNote;
+    } else {
+      current.unpaidCommission += row.commissionAmount;
+    }
+    map.set(key, current);
+  }
+
+  let items = Array.from(map.values());
+  if (settlement === 'due') items = items.filter((row) => row.unpaidCommission > 0);
+  else if (settlement === 'paid') items = items.filter((row) => row.unpaidCommission === 0 && row.paidCommission > 0);
+
+  items.sort((a, b) => b.unpaidCommission - a.unpaidCommission || b.totalCommission - a.totalCommission || b.period.localeCompare(a.period));
+
+  const dueItems = Array.from(map.values()).filter((row) => row.unpaidCommission > 0);
+  const paidItems = Array.from(map.values()).filter((row) => row.unpaidCommission === 0 && row.paidCommission > 0);
+  const total = items.length;
+  const paged = items.slice((page - 1) * pageSize, page * pageSize);
+
+  return {
+    items: paged,
+    total,
+    page,
+    pageSize,
+    hasMore: page * pageSize < total,
+    sums: {
+      dueCount: dueItems.length,
+      dueFc: dueItems.reduce((s, r) => s + r.unpaidCommission, 0),
+      paidCount: paidItems.length,
+      paidFc: paidItems.reduce((s, r) => s + r.paidCommission, 0),
+    },
+  };
+}
+
+export async function unsettlePlatformPeriodPayout(params: {
+  commercialId: string;
+  period: string;
+}) {
   const commercial = await prisma.user.findUnique({
     where: { id: params.commercialId },
-    select: { id: true, name: true, email: true, phone: true, role: true, tenantId: true },
+    select: { role: true, tenantId: true },
   });
-  if (commercial) {
-    const rows = await listMonthlyPayouts(params.period);
-    const row = rows.find((item) => item.commercialId === params.commercialId);
-    const amount = formatAmountFc(row?.paidCommission || 0);
-    const periodLabel = formatBillingPeriodLabel(params.period);
-    const href =
-      commercial.role === 'COMMERCIAL' && !commercial.tenantId
-        ? `${FRONTEND_URL}/dashboard/commercial`
-        : `${FRONTEND_URL}/dashboard/org-commercial`;
-
-    await createPlatformNotification({
-      userId: commercial.id,
-      type: MONTHLY_PAYOUT_PAID_TYPE,
-      title: `Versement effectué — ${periodLabel}`,
-      message: `${amount} marqué comme versé par EventMaster.`,
-      metadata: { period: params.period, href },
-    });
-
-    const text = `Bonjour${commercial.name ? ` ${commercial.name}` : ''},\n\nVotre commission ${periodLabel} (${amount}) a été marquée comme versée.\n\n— EventMaster`;
-    await sendRealEmail(commercial.email, `EventMaster — Versement ${periodLabel} effectué`, text);
-    if (commercial.phone) {
-      await sendRealWhatsApp(
-        commercial.phone,
-        `EventMaster — Versement ${periodLabel} effectué : ${amount}.`,
-      );
-    }
+  if (!commercial || !isPlatformCommercialAccount(commercial)) {
+    return { updated: 0, error: 'NOT_PLATFORM' as const };
   }
+
+  const result = await prisma.commercialCommission.updateMany({
+    where: {
+      commercialId: params.commercialId,
+      billingPeriod: params.period,
+      paidAt: { not: null },
+    },
+    data: {
+      paidAt: null,
+      paidByUserId: null,
+      payoutProofUrl: null,
+      payoutNote: null,
+    },
+  });
 
   return { updated: result.count };
 }

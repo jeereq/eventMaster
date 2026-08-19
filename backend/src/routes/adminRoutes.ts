@@ -40,6 +40,7 @@ import {
   rejectSubscriptionRequest 
 } from '../controllers/subscriptionController';
 import { getRevenueReport, exportRevenueReport, notifyRevenuePayouts, markRevenuePayoutPaid } from '../controllers/revenueReportController';
+import { listAdminSaasPayouts, settleAdminSaasPayout } from '../controllers/saasPayoutController';
 import { getInvoiceDetail, downloadInvoicePdf, sendInvoiceByEmail } from '../controllers/invoiceController';
 import {
   getOpsOverview,
@@ -86,6 +87,8 @@ router.get('/reports/revenue', getRevenueReport);
 router.get('/reports/revenue/export', exportRevenueReport);
 router.post('/reports/revenue/notify-payouts', notifyRevenuePayouts);
 router.post('/reports/revenue/mark-paid', markRevenuePayoutPaid);
+router.get('/payouts', listAdminSaasPayouts);
+router.patch('/payouts', settleAdminSaasPayout);
 
 router.get('/ops-overview', getOpsOverview);
 router.get('/insights', getPlatformInsights);

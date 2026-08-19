@@ -148,6 +148,7 @@ export function buildNavProductTour(
         { tourId: 'nav-subscription-requests' },
         { tourId: 'nav-subscription-plans' },
         { tourId: 'nav-invoices' },
+        { tourId: 'nav-payouts' },
         { tourId: 'nav-audit' },
         { tourId: 'nav-settings' },
         { tourId: 'nav-guide' },
