@@ -30,7 +30,7 @@ import {
  normalizeGuestGuidelines,
  applyInvitationGuidelineVariables,
 } from '@/lib/guestGuidelines';
-import { PageHeader, Button, ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, Breadcrumbs, Modal, Input, Pagination, paginateItems, PhoneInput, usePageSize } from '@/components/ui';
+import { PageHeader, Button, ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, Breadcrumbs, Modal, Input, Pagination, paginateItems, PhoneInput, usePageSize, coverFromPhotos } from '@/components/ui';
 import CatalogueFilterBar, { CatalogueChoicePills, CatalogueFilterField, type CatalogueFilterChip } from '@/components/CatalogueFilterBar';
 import { EVENT_ENTRY_OPTIONS } from '@/lib/catalogueEntityFilters';
 import { cn } from '@/lib/cn';
@@ -2053,16 +2053,7 @@ Merci de confirmer votre présence :
  );
  const actions = (
  <>
- {eventsViewMode === 'grid' ? (
- <button
- type="button"
- onClick={() => router.push(eventDashboardHref(event.id, { protocol: protocolDesk }))}
- className="inline-flex items-center gap-1 rounded-lg bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-primary/15 transition"
- >
- {protocolDesk ? 'Accueillir' : 'Gérer'}
- <ChevronRight className="w-3.5 h-3.5" />
- </button>
- ) : (
+ {eventsViewMode === 'list' && (
  <button
  type="button"
  onClick={() => router.push(eventDashboardHref(event.id, { protocol: protocolDesk }))}
@@ -2091,6 +2082,17 @@ Merci de confirmer votre présence :
  id={event.id}
  title={event.title}
  layout={eventsViewMode}
+ icon={<Calendar className="w-4 h-4" />}
+ coverUrl={coverFromPhotos(event.photos)}
+ overlayMeta={dateLabel}
+ badge={
+ event.isPublic ? (
+ <StatusPill tone="emerald">Public</StatusPill>
+ ) : (
+ <StatusPill tone="slate">Privé</StatusPill>
+ )
+ }
+ ctaLabel={protocolDesk ? 'Accueillir' : 'Gérer'}
  meta={
  eventsViewMode === 'list'
  ? event.location
@@ -2101,17 +2103,6 @@ Merci de confirmer votre présence :
  eventsViewMode === 'list' && event.room
  ? event.room.name
  : undefined
- }
- status={
- event.isPublic ? (
- <StatusPill tone="emerald">Public</StatusPill>
- ) : eventsViewMode === 'list' && event.room ? (
- <StatusPill tone="violet">Salle</StatusPill>
- ) : eventsViewMode === 'list' ? (
- <StatusPill tone="slate">Privé</StatusPill>
- ) : (
- <StatusPill tone="slate">Privé</StatusPill>
- )
  }
  description={
  eventsViewMode === 'grid' && event.description
@@ -2598,7 +2589,7 @@ Merci de confirmer votre présence :
  className={cn(
  'absolute z-10 flex items-center justify-center',
  guestsViewMode === 'grid'
- ? 'top-2 left-2 h-7 w-7 rounded-lg bg-surface/90 border border-border shadow-sm'
+ ? 'top-2.5 right-2.5 h-7 w-7 rounded-lg bg-white/95 border border-white/80 shadow-sm'
  : 'left-3 top-1/2 -translate-y-1/2 h-7 w-7 rounded-lg bg-surface/95 border border-border shadow-sm',
  )}
  onClick={(e) => e.stopPropagation()}
@@ -2617,6 +2608,8 @@ Merci de confirmer votre présence :
  title={`${g.firstName} ${g.lastName}`}
  layout={guestsViewMode}
  icon={<Users className="w-4 h-4" />}
+ badge={rsvpChip}
+ ctaLabel="Fiche invité"
  onClick={() => setSelectedGuestDetails(g)}
  meta={
  guestsViewMode === 'list' ? (

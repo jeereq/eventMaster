@@ -48,7 +48,7 @@ function readStoredColumns(key: string, fallback: GridColumns): GridColumns {
 export function gridColsClass(columns: GridColumns): string {
   switch (columns) {
     case 2:
-      return 'grid grid-cols-1 sm:grid-cols-2 gap-4';
+      return 'grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5';
     case 4:
       return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4';
     case 3:

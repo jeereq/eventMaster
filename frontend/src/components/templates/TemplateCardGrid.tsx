@@ -92,8 +92,8 @@ function TemplatePreviewThumb({
   );
 
   const shellClass = cn(
-    'relative bg-surface-muted border border-border-subtle rounded-2xl p-3 flex items-center justify-center overflow-hidden',
-    compact ? 'min-h-[120px] w-28 shrink-0' : 'w-full min-h-[200px]',
+    'relative bg-surface-muted overflow-hidden flex items-center justify-center',
+    compact ? 'min-h-[120px] w-28 shrink-0 rounded-md p-2' : 'w-full aspect-[4/3] rounded-none p-3',
   );
 
   if (onViewDetails) {
@@ -280,6 +280,12 @@ export default function TemplateCardGrid({
               id={t.id}
               title={t.name}
               layout="list"
+              icon={<Globe className="w-4 h-4" />}
+              badge={
+                global ? <StatusPill tone="sky">Global</StatusPill> : (
+                  <StatusPill tone="slate">{orgLabel}</StatusPill>
+                )
+              }
               meta={
                 <span>
                   {new Date(t.createdAt).toLocaleDateString('fr-FR', {
@@ -291,15 +297,7 @@ export default function TemplateCardGrid({
                   {summary}
                 </span>
               }
-              status={
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {global ? <StatusPill tone="sky">Global</StatusPill> : null}
-                  {t.showOnLanding ? <StatusPill tone="emerald">Landing</StatusPill> : null}
-                  {!global && (t.tenantName || t.tenant?.name) ? (
-                    <StatusPill tone="slate">{t.tenantName || t.tenant?.name}</StatusPill>
-                  ) : null}
-                </div>
-              }
+              aside={t.showOnLanding ? <StatusPill tone="emerald">Landing</StatusPill> : undefined}
               onClick={onViewDetails ? () => onViewDetails(t) : undefined}
               actions={actions}
             />
@@ -309,11 +307,25 @@ export default function TemplateCardGrid({
         return (
           <article
             key={t.id}
-            className="bg-surface border border-border rounded-[var(--radius-card)] p-5 shadow-sm hover:shadow-md transition flex flex-col gap-4"
+            className="group flex flex-col bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden shadow-[var(--shadow-soft)] hover:border-primary/40 hover:shadow-[0_22px_44px_-24px_rgba(15,23,42,0.5)] hover:-translate-y-0.5 transition duration-200"
           >
             <TemplatePreviewThumb t={t} onViewDetails={onViewDetails} />
-            <div className="space-y-2 min-w-0 flex-1">
-              <h3 className="text-base font-bold text-foreground tracking-tight line-clamp-1">{t.name}</h3>
+            <div className="p-3 space-y-2 flex-1 flex flex-col min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">
+                  {global ? 'Bibliothèque' : 'Organisation'}
+                </span>
+                {onViewDetails && (
+                  <button
+                    type="button"
+                    onClick={() => onViewDetails(t)}
+                    className="text-[11px] font-semibold text-primary inline-flex items-center gap-1 hover:underline"
+                  >
+                    Aperçu <Eye className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+              <h3 className="text-sm font-semibold text-foreground tracking-tight line-clamp-1">{t.name}</h3>
               <p className="text-xs text-muted">
                 Créé le {new Date(t.createdAt).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
               </p>
@@ -321,8 +333,8 @@ export default function TemplateCardGrid({
                 {summary}
               </p>
               {badges}
+              {actions}
             </div>
-            {actions}
           </article>
         );
       })}

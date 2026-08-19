@@ -28,16 +28,12 @@ export function SkeletonPageHeader({ className }: { className?: string }) {
 
 export function SkeletonProjectCard() {
   return (
-    <div className="overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface">
-      <Skeleton className="h-14 w-full rounded-none" />
-      <div className="p-4 space-y-3">
-        <Skeleton className="h-4 w-3/4" />
-        <Skeleton className="h-3 w-1/2" />
+    <div className="overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-soft)]">
+      <Skeleton className="aspect-[4/3] w-full rounded-none" />
+      <div className="p-3 space-y-2">
         <Skeleton className="h-3 w-2/3" />
-        <div className="flex justify-between pt-2">
-          <Skeleton className="h-7 w-20 rounded-lg" />
-          <Skeleton className="h-7 w-7 rounded-lg" />
-        </div>
+        <Skeleton className="h-3 w-1/2" />
+        <Skeleton className="h-6 w-24 rounded-full" />
       </div>
     </div>
   );
@@ -45,9 +41,10 @@ export function SkeletonProjectCard() {
 
 export function SkeletonListRow() {
   return (
-    <div className="flex items-center gap-3 sm:gap-4 rounded-[var(--radius-card)] border border-border bg-surface px-3.5 py-3 sm:px-4">
-      <Skeleton className="h-10 w-10 rounded-xl shrink-0" />
+    <div className="flex items-center gap-3 sm:gap-4 rounded-[var(--radius-card)] border border-border bg-surface p-2.5 sm:p-3">
+      <Skeleton className="w-20 h-16 sm:w-28 sm:h-20 rounded-md shrink-0" />
       <div className="flex-1 space-y-1.5 min-w-0">
+        <Skeleton className="h-4 w-16 rounded-full" />
         <Skeleton className="h-3.5 w-2/5" />
         <Skeleton className="h-3 w-1/3" />
       </div>
@@ -55,7 +52,6 @@ export function SkeletonListRow() {
         <Skeleton className="h-3.5 w-16" />
         <Skeleton className="h-3 w-12" />
       </div>
-      <Skeleton className="hidden md:block h-6 w-20 rounded-full shrink-0" />
       <Skeleton className="h-4 w-4 rounded shrink-0" />
     </div>
   );

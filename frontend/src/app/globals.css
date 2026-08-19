@@ -962,11 +962,11 @@ html[data-mood="celebrate"] .font-display {
   font-size: 0.75rem;
 }
 
-/* Liste empilée (ProjectCard list) */
+/* Liste empilée (ProjectCard list — même rythme que la vitrine landing) */
 .em-list-stack {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.625rem;
 }
 
 /* Canvas plan de table / salle — parquet réaliste + lumière rasante */

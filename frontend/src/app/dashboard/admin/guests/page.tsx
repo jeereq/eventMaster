@@ -288,6 +288,9 @@ export default function AdminGuestsPage() {
                 title={`${g.lastName} ${g.firstName}`}
                 layout={viewMode}
                 icon={<Users className="w-4 h-4" />}
+                badge={rsvpChip}
+                overlayMeta={g.eventTitle}
+                ctaLabel="Fiche invité"
                 onClick={() => setDetails(g)}
                 meta={
                   viewMode === 'list' ? (

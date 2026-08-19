@@ -605,6 +605,14 @@ export default function TeamManagement() {
                   id={member.id}
                   title={member.name || 'Sans nom'}
                   layout="list"
+                  icon={<Users className="w-4 h-4" />}
+                  badge={
+                    member.isOwner ? (
+                      <StatusPill tone="amber">Propriétaire</StatusPill>
+                    ) : (
+                      <StatusPill tone={roleTone as 'amber' | 'violet' | 'primary'}>{roleLabel}</StatusPill>
+                    )
+                  }
                   meta={
                     <span className="inline-flex flex-wrap items-center gap-2">
                       <span className="inline-flex items-center gap-1"><Mail className="w-3 h-3" />{member.email}</span>
@@ -623,15 +631,10 @@ export default function TeamManagement() {
                       ? `Comm. ${Math.round((member.commissionRate ?? defaultCommissionRate) * 100)}/${Math.round((member.renewalCommissionRate ?? defaultRenewalCommissionRate) * 100)} %`
                       : undefined
                   }
-                  status={
-                    <div className="flex items-center gap-1.5">
-                      <StatusPill tone={roleTone as 'amber' | 'violet' | 'primary'}>
-                        {roleLabel}
-                      </StatusPill>
-                      {!member.isEmailVerified && !member.isOwner && (
-                        <StatusPill tone="amber">OTP</StatusPill>
-                      )}
-                    </div>
+                  aside={
+                    !member.isEmailVerified && !member.isOwner ? (
+                      <StatusPill tone="amber">OTP</StatusPill>
+                    ) : undefined
                   }
                   actions={
                     canManageTeam && !member.isOwner ? (
@@ -654,52 +657,42 @@ export default function TeamManagement() {
             }
 
             return (
-            <div
+            <ProjectCard
               key={member.id}
-              className="flex flex-col gap-3 p-4 bg-surface border border-border rounded-[var(--radius-card)] em-soft-hover"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-semibold text-sm text-foreground truncate">
-                    {member.name || 'Sans nom'}
-                  </span>
-                  {member.isOwner ? (
-                    <Badge variant="warning" className="inline-flex items-center gap-1">
-                      <Crown className="w-3 h-3" /> Propriétaire
-                    </Badge>
-                  ) : (
-                    <>
-                      <StatusPill tone={roleTone as 'amber' | 'violet' | 'primary'}>
-                        {roleLabel}
-                      </StatusPill>
-                      {!member.isEmailVerified && (
-                        <Badge variant="warning">En attente OTP</Badge>
-                      )}
-                    </>
-                  )}
-                </div>
-                <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-muted">
-                  <span className="inline-flex items-center gap-1"><Mail className="w-3 h-3" />{member.email}</span>
+              id={member.id}
+              title={member.name || 'Sans nom'}
+              layout="grid"
+              icon={<Users className="w-4 h-4" />}
+              badge={
+                member.isOwner ? (
+                  <StatusPill tone="amber">Propriétaire</StatusPill>
+                ) : (
+                  <StatusPill tone={roleTone as 'amber' | 'violet' | 'primary'}>{roleLabel}</StatusPill>
+                )
+              }
+              overlayMeta={member.email}
+              hideCta
+              meta={
+                <div className="flex flex-wrap items-center gap-2 text-xs">
                   {member.phone && <span className="inline-flex items-center gap-1"><Phone className="w-3 h-3" />{member.phone}</span>}
-                  {member.orgRole === 'COMMERCIAL' && member.referralCode && (
-                    <span className="inline-flex items-center gap-1 font-mono text-foreground/80">
-                      <Copy className="w-3 h-3" />{member.referralCode}
-                    </span>
-                  )}
+                  {!member.isEmailVerified && !member.isOwner && <StatusPill tone="amber">OTP</StatusPill>}
                 </div>
-                <div className="mt-2.5 space-y-2">{managementExtras}</div>
-              </div>
-              {canManageTeam && !member.isOwner && (
-                <button
-                  type="button"
-                  onClick={() => handleDelete(member)}
-                  className="p-2 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-[var(--radius-button)] transition flex-shrink-0 self-start"
-                  title="Retirer de l'organisation"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )}
-            </div>
+              }
+              actions={
+                canManageTeam && !member.isOwner ? (
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(member)}
+                    className="p-2 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-[var(--radius-button)] transition"
+                    title="Retirer de l'organisation"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                ) : undefined
+              }
+            >
+              <div className="space-y-2">{managementExtras}</div>
+            </ProjectCard>
             );
           })}
         </div>

@@ -2318,6 +2318,10 @@ function DashboardPageContent() {
  id={t.id}
  title={t.name}
  layout={tenantsViewMode}
+ icon={<Building2 className="w-4 h-4" />}
+ badge={planChip}
+ overlayMeta={t.managerName || t.managerEmail || 'Sans gérant'}
+ ctaLabel="Voir l’organisation"
  onClick={() => handleOpenDetailsModal('tenant', t)}
  meta={
  tenantsViewMode === 'list' ? (
@@ -2350,15 +2354,14 @@ function DashboardPageContent() {
  ? `Inscrite le ${new Date(t.createdAt).toLocaleDateString('fr-FR')}`
  : undefined
  }
- status={
+ aside={
  tenantsViewMode === 'list' ? (
  <span className="inline-flex flex-wrap items-center gap-1">
- {planChip}
  {kindChip}
+ {licenseChip}
  </span>
  ) : undefined
  }
- aside={tenantsViewMode === 'list' ? licenseChip : undefined}
  description={
  tenantsViewMode === 'grid'
  ? `Inscrite le ${new Date(t.createdAt).toLocaleDateString('fr-FR')}`
@@ -2462,6 +2465,9 @@ function DashboardPageContent() {
  title={u.name || 'Sans nom'}
  layout={usersViewMode}
  icon={<Users className="w-4 h-4" />}
+ badge={roleChip}
+ overlayMeta={u.email}
+ ctaLabel="Voir le profil"
  onClick={() => handleOpenDetailsModal('user', u)}
  meta={
  usersViewMode === 'list' ? (
@@ -2667,6 +2673,9 @@ function DashboardPageContent() {
  title={e.title}
  layout={adminEventsViewMode}
  icon={<Calendar className="w-4 h-4" />}
+ badge={visibilityChip}
+ overlayMeta={dateLabel}
+ ctaLabel="Voir l’événement"
  onClick={() => handleOpenDetailsModal('event', e)}
  meta={
  adminEventsViewMode === 'list' ? (
@@ -2791,6 +2800,9 @@ function DashboardPageContent() {
  title={`${g.lastName} ${g.firstName}`}
  layout={guestsViewMode}
  icon={<Users className="w-4 h-4" />}
+ badge={rsvpChip}
+ overlayMeta={g.eventTitle}
+ ctaLabel="Fiche invité"
  onClick={() => handleOpenDetailsModal('guest', g)}
  meta={
  guestsViewMode === 'list' ? (
@@ -5152,6 +5164,9 @@ function DashboardPageContent() {
  id={event.id}
  title={event.title}
  layout={homeEventsMode}
+ icon={<Calendar className="w-4 h-4" />}
+ overlayMeta={dateLabel}
+ ctaLabel="Ouvrir"
  meta={
  homeEventsMode === 'list' ? (
  <span className="flex items-center gap-1 truncate">
@@ -5160,32 +5175,26 @@ function DashboardPageContent() {
  </span>
  ) : (
  <div className="space-y-0.5">
- <span className="font-medium text-primary">{dateLabel}</span>
  <span className="flex items-center gap-1 truncate">
  <MapPin className="w-3 h-3 shrink-0 opacity-70" />
  {event.location}
  </span>
-                  </div>
+ </div>
  )
  }
  value={homeEventsMode === 'list' ? dateLabel : undefined}
  description={homeEventsMode === 'grid' ? event.description : undefined}
  onClick={() => router.push(`/dashboard/events/${event.id}`)}
  actions={
-                  <Link 
-                    href={`/dashboard/events/${event.id}`}
+ homeEventsMode === 'list' ? (
+ <Link
+ href={`/dashboard/events/${event.id}`}
  className="inline-flex items-center"
  onClick={(e) => e.stopPropagation()}
  >
- {homeEventsMode === 'list' ? (
  <ListRowAction />
- ) : (
- <span className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-primary hover:bg-surface-muted transition">
- Ouvrir
- <ChevronRight className="w-3.5 h-3.5" />
- </span>
- )}
-                  </Link>
+ </Link>
+ ) : undefined
  }
  />
  );

@@ -1101,9 +1101,12 @@ export default function RoomsManagement() {
                   id={room.id}
                   title={room.name}
                   layout={roomsViewMode}
+                  icon={<Building2 className="w-4 h-4" />}
+                  overlayMeta={roomTypeLabels[room.roomType || 'SIMPLE']}
+                  ctaLabel="Ouvrir la salle"
                   onClick={() => setViewingRoom(room)}
                   cover={
-                    roomsViewMode === 'list' && room.layoutBlueprint ? (
+                    room.layoutBlueprint ? (
                       <RoomLayoutPreview
                         blueprint={room.layoutBlueprint as RoomLayoutBlueprint}
                         quality="thumb"
@@ -1145,16 +1148,6 @@ export default function RoomsManagement() {
                   description={roomsViewMode === 'grid' ? room.description : undefined}
                   actions={actions}
                 >
-                  {roomsViewMode === 'grid' && room.layoutBlueprint && (
-                    <div className="max-h-32 overflow-hidden rounded-md border border-border bg-surface-muted [&_.aspect-\[4\/3\]]:aspect-auto [&_.aspect-\[4\/3\]]:h-28">
-                      <RoomLayoutPreview
-                        blueprint={room.layoutBlueprint as RoomLayoutBlueprint}
-                        quality="thumb"
-                        showMeta={false}
-                        className="!space-y-0"
-                      />
-                    </div>
-                  )}
                   <div className="space-y-1.5">
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-muted flex items-center gap-1">
                       <Users className="w-3.5 h-3.5" /> Staff ({room.staff.length})

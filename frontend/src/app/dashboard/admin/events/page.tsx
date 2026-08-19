@@ -247,6 +247,9 @@ export default function AdminEventsPage() {
                 title={e.title}
                 layout={viewMode}
                 icon={<Calendar className="w-4 h-4" />}
+                badge={visibilityChip}
+                overlayMeta={dateLabel}
+                ctaLabel="Voir l’événement"
                 onClick={() => setDetails(e)}
                 meta={
                   viewMode === 'list' ? (
