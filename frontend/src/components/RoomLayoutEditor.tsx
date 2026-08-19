@@ -608,6 +608,8 @@ export default function RoomLayoutEditor({
  )}
  </FloorDepthFrame>
  );
+
+ const renderChairImageUpload = (id: string, currentUrl?: string) => (
  <label className="block text-xs space-y-1">
  <span className="font-semibold text-muted flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> Image de chaise (optionnel)</span>
  <input
