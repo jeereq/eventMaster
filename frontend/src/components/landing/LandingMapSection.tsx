@@ -12,17 +12,12 @@ import {
   appendCatalogueGeoParams,
   catalogueGeoChips,
   catalogueItemDisplayKind,
-  catalogueItemMatchesGeo,
   catalogueItemToMapMarker,
   catalogueKindHint,
   catalogueKindLabel,
   cataloguePriceCaption,
   clearCatalogueGeoChip,
-  eventToCatalogueItem,
   resolveCatalogueGeo,
-  serviceToCatalogueItem,
-  venueToCatalogueItem,
-  withCatalogueDistance,
   type CatalogueGeoState,
   type PublicEventCard,
   type PublicService,
@@ -32,11 +27,12 @@ import {
   EMPTY_CATALOGUE_EXTRAS,
   appendCatalogueEntityParams,
   catalogueEntityExtraChips,
-  catalogueItemMatchesExtras,
   clearCatalogueExtraChip,
+  composeCatalogueFeed,
   mergeGeoAndExtras,
   type CatalogueEntityExtras,
 } from '@/lib/catalogueEntityFilters';
+import { fetchPublicServicesForCatalogue } from '@/lib/catalogueFetch';
 
 type MapFilters = CatalogueGeoState & CatalogueEntityExtras;
 
@@ -70,13 +66,13 @@ export default function LandingMapSection() {
       const loadVenues = filters.kind === 'all' || filters.kind === 'venue';
       const loadServices = filters.kind === 'all' || filters.kind === 'service' || filters.kind === 'rental';
       const loadEvents = filters.kind === 'all' || filters.kind === 'event';
-      const [venuesData, servicesData, eventsData] = await Promise.all([
+      const [venuesData, services, eventsData] = await Promise.all([
         loadVenues ? api.get(`/public/venues${venueParams.toString() ? `?${venueParams}` : ''}`).catch(() => ({ venues: [] })) : Promise.resolve({ venues: [] }),
-        loadServices ? api.get(`/public/services${serviceParams.toString() ? `?${serviceParams}` : ''}`).catch(() => ({ services: [] })) : Promise.resolve({ services: [] }),
+        loadServices ? fetchPublicServicesForCatalogue(serviceParams, filters.kind) : Promise.resolve([] as PublicService[]),
         loadEvents ? api.get(`/public/events${eventParams.toString() ? `?${eventParams}` : ''}`).catch(() => ({ events: [] })) : Promise.resolve({ events: [] }),
       ]);
       setVenues(venuesData.venues || []);
-      setServices(servicesData.services || []);
+      setServices(services);
       setEvents(eventsData.events || []);
     } finally {
       setLoading(false);
@@ -88,18 +84,10 @@ export default function LandingMapSection() {
     return () => window.clearTimeout(timer);
   }, [query, applied, load]);
 
-  const items = useMemo(() => {
-    const mapped = [
-      ...venues.map(venueToCatalogueItem),
-      ...services.map(serviceToCatalogueItem),
-      ...events
-        .map(eventToCatalogueItem)
-        .filter((item): item is NonNullable<typeof item> => Boolean(item)),
-    ]
-      .map((item) => withCatalogueDistance(item, applied.lat, applied.lng))
-      .filter((item) => catalogueItemMatchesGeo(item, applied) && catalogueItemMatchesExtras(item, applied));
-    return mapped;
-  }, [venues, services, events, applied]);
+  const items = useMemo(
+    () => composeCatalogueFeed(venues, services, events, applied),
+    [venues, services, events, applied],
+  );
 
   const markers = useMemo(
     () =>

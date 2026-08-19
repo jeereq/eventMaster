@@ -135,10 +135,17 @@ function publicWithDistance<T extends { latitude?: number | null; longitude?: nu
   if (geo) {
     filtered.sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0));
   }
-  return filtered.map(({ row, distanceKm }) => ({
-    ...toPublic(row),
-    distanceKm: distanceKm != null ? Math.round(distanceKm * 10) / 10 : null,
-  }));
+  return filtered.flatMap(({ row, distanceKm }) => {
+    try {
+      return [{
+        ...toPublic(row),
+        distanceKm: distanceKm != null ? Math.round(distanceKm * 10) / 10 : null,
+      }];
+    } catch (error) {
+      console.error('publicWithDistance: fiche ignorée', error);
+      return [];
+    }
+  });
 }
 
 function readStreetQuery(req: Request) {
@@ -308,7 +315,7 @@ export async function listPublicVenues(req: Request, res: Response) {
       },
       include: listingInclude,
       orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
-      take: availability ? 200 : 80,
+      take: availability ? 240 : 160,
     });
 
     const geo = readGeoQuery(req);
@@ -696,50 +703,60 @@ export async function listPublicServices(req: Request, res: Response) {
     const mobility = typeof req.query.mobility === 'string' ? req.query.mobility.trim() : '';
     const travelsFilter = mobility === 'travels' ? true : mobility === 'on_site' ? false : null;
 
-    const offerings = await prisma.serviceOffering.findMany({
-      where: {
-        isPublic: true,
-        ...allowedCityPrismaFilter(city),
-        ...(commune ? { commune: { contains: commune, mode: 'insensitive' } } : {}),
-        ...(neighborhood ? { neighborhood: { contains: neighborhood, mode: 'insensitive' } } : {}),
-        ...(category ? { category } : serviceGroupPrismaFilter(group)),
-        ...(wantUnit ? { priceUnit: wantUnit } : {}),
-        ...(priceRange ? { priceFromFc: priceRange } : {}),
-        ...(travelsFilter == null ? {} : { travels: travelsFilter }),
-        ...((street || q)
-          ? {
-              AND: [
-                ...(street
-                  ? [{
-                      OR: [
-                        { neighborhood: { contains: street, mode: 'insensitive' as const } },
-                        { commune: { contains: street, mode: 'insensitive' as const } },
-                        { city: { contains: street, mode: 'insensitive' as const } },
-                        { title: { contains: street, mode: 'insensitive' as const } },
-                        { description: { contains: street, mode: 'insensitive' as const } },
-                      ],
-                    }]
-                  : []),
-                ...(q
-                  ? [{
-                      OR: [
-                        { title: { contains: q, mode: 'insensitive' as const } },
-                        { description: { contains: q, mode: 'insensitive' as const } },
-                        { city: { contains: q, mode: 'insensitive' as const } },
-                        { commune: { contains: q, mode: 'insensitive' as const } },
-                        { neighborhood: { contains: q, mode: 'insensitive' as const } },
-                        { vendorProfile: { displayName: { contains: q, mode: 'insensitive' as const } } },
-                      ],
-                    }]
-                  : []),
-              ],
-            }
-          : {}),
-      },
+    const where = {
+      isPublic: true,
+      ...allowedCityPrismaFilter(city),
+      ...(commune ? { commune: { contains: commune, mode: 'insensitive' } } : {}),
+      ...(neighborhood ? { neighborhood: { contains: neighborhood, mode: 'insensitive' } } : {}),
+      ...(category ? { category } : serviceGroupPrismaFilter(group)),
+      ...(wantUnit ? { priceUnit: wantUnit } : {}),
+      ...(priceRange ? { priceFromFc: priceRange } : {}),
+      ...(travelsFilter == null ? {} : { travels: travelsFilter }),
+      ...((street || q)
+        ? {
+            AND: [
+              ...(street
+                ? [{
+                    OR: [
+                      { neighborhood: { contains: street, mode: 'insensitive' as const } },
+                      { commune: { contains: street, mode: 'insensitive' as const } },
+                      { city: { contains: street, mode: 'insensitive' as const } },
+                      { title: { contains: street, mode: 'insensitive' as const } },
+                      { description: { contains: street, mode: 'insensitive' as const } },
+                    ],
+                  }]
+                : []),
+              ...(q
+                ? [{
+                    OR: [
+                      { title: { contains: q, mode: 'insensitive' as const } },
+                      { description: { contains: q, mode: 'insensitive' as const } },
+                      { city: { contains: q, mode: 'insensitive' as const } },
+                      { commune: { contains: q, mode: 'insensitive' as const } },
+                      { neighborhood: { contains: q, mode: 'insensitive' as const } },
+                      { vendorProfile: { displayName: { contains: q, mode: 'insensitive' as const } } },
+                    ],
+                  }]
+                : []),
+            ],
+          }
+        : {}),
+    };
+
+    const findOfferings = (extraWhere: object, take: number) => prisma.serviceOffering.findMany({
+      where: { ...where, ...extraWhere },
       include: offeringInclude,
       orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
-      take: availability ? 200 : 80,
+      take,
     });
+
+    const take = availability ? 200 : 80;
+    const offerings = !category && !group
+      ? (await Promise.all([
+          findOfferings(serviceGroupPrismaFilter('trade'), availability ? 100 : 50),
+          findOfferings(serviceGroupPrismaFilter('rental'), availability ? 100 : 50),
+        ])).flat()
+      : await findOfferings({}, take);
 
     const geo = readGeoQuery(req);
     const services = publicWithDistance(filterByAvailability(offerings, availability), geo, toPublicService);

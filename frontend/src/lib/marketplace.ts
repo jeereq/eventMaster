@@ -860,6 +860,25 @@ export function groupCatalogueItemsByDisplayKind<T extends Pick<CatalogueItem, '
     .filter((group) => group.items.length > 0);
 }
 
+/** Alterne salles / métiers / locations / événements pour qu’une page du hub ne montre pas un seul type. */
+export function mixCatalogueByDisplayKind<T extends Pick<CatalogueItem, 'kind' | 'category'> & { distanceKm?: number | null }>(
+  items: T[],
+): T[] {
+  const groups = groupCatalogueItemsByDisplayKind(items).map((group) => ({
+    ...group,
+    items: sortCatalogueByDistance(group.items),
+  }));
+  const max = Math.max(0, ...groups.map((group) => group.items.length));
+  const mixed: T[] = [];
+  for (let i = 0; i < max; i += 1) {
+    for (const group of groups) {
+      const item = group.items[i];
+      if (item) mixed.push(item);
+    }
+  }
+  return mixed;
+}
+
 export function cataloguePriceCaption(item: Pick<CatalogueItem, 'kind' | 'priceFromFc' | 'priceUnitLabel'>): string {
   if (item.kind === 'event') {
     if (item.priceFromFc != null && item.priceFromFc > 0) return formatFc(item.priceFromFc);
@@ -1040,8 +1059,10 @@ export function catalogueItemMatchesGeo(item: CatalogueItem, filters: CatalogueG
   if (filters.maxPrice.trim() && Number.isFinite(maxP) && (item.priceFromFc == null || item.priceFromFc > maxP)) return false;
   const minC = Number(filters.minCapacity);
   const maxC = Number(filters.maxCapacity);
-  if (filters.minCapacity.trim() && Number.isFinite(minC) && (item.capacity == null || item.capacity < minC)) return false;
-  if (filters.maxCapacity.trim() && Number.isFinite(maxC) && (item.capacity == null || item.capacity > maxC)) return false;
+  if (item.kind === 'venue' || item.kind === 'event') {
+    if (filters.minCapacity.trim() && Number.isFinite(minC) && (item.capacity == null || item.capacity < minC)) return false;
+    if (filters.maxCapacity.trim() && Number.isFinite(maxC) && (item.capacity == null || item.capacity > maxC)) return false;
+  }
   if (filters.proximity && filters.lat != null && filters.lng != null) {
     if (item.latitude == null || item.longitude == null) return false;
     if (haversineKm(filters.lat, filters.lng, item.latitude, item.longitude) > filters.radiusKm) return false;

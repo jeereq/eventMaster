@@ -27,15 +27,9 @@ import {
   EMPTY_CATALOGUE_GEO,
   appendCatalogueGeoParams,
   catalogueGeoChips,
-  catalogueItemMatchesGeo,
   catalogueItemToMapMarker,
   clearCatalogueGeoChip,
-  eventToCatalogueItem,
   resolveCatalogueGeo,
-  serviceToCatalogueItem,
-  sortCatalogueByDistance,
-  venueToCatalogueItem,
-  withCatalogueDistance,
   withDashboardListingHref,
   type CatalogueGeoState,
   type CatalogueItem,
@@ -50,14 +44,15 @@ import {
   KIND_FILTER_OPTIONS,
   appendCatalogueEntityParams,
   catalogueEntityExtraChips,
-  catalogueItemMatchesExtras,
   clearCatalogueExtraChip,
+  composeCatalogueFeed,
   mergeCatalogueExtras,
   mergeGeoAndExtras,
   splitCatalogueExtras,
   type CatalogueEntityExtras,
   type CatalogueKind,
 } from '@/lib/catalogueEntityFilters';
+import { fetchPublicServicesForCatalogue } from '@/lib/catalogueFetch';
 import { useCatalogueQueryState, useRememberListReturn } from '@/lib/catalogueQuery';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { favoriteToCatalogueItem, useListingFavorites } from '@/lib/listingFavorites';
@@ -181,18 +176,17 @@ function ClientMarketplaceInner() {
       appendCatalogueGeoParams(eventParams, filters);
       appendCatalogueEntityParams(eventParams, filters, 'event');
       const venueQs = venueParams.toString() ? `?${venueParams}` : '';
-      const serviceQs = serviceParams.toString() ? `?${serviceParams}` : '';
       const eventQs = eventParams.toString() ? `?${eventParams}` : '';
       const loadVenues = filters.kind === 'all' || filters.kind === 'venue';
       const loadServices = filters.kind === 'all' || filters.kind === 'service' || filters.kind === 'rental';
       const loadEvents = filters.kind === 'all' || filters.kind === 'event';
-      const [venuesData, servicesData, eventsData] = await Promise.all([
+      const [venuesData, services, eventsData] = await Promise.all([
         loadVenues ? api.get(`/public/venues${venueQs}`).catch(() => ({ venues: [] })) : Promise.resolve({ venues: [] }),
-        loadServices ? api.get(`/public/services${serviceQs}`).catch(() => ({ services: [] })) : Promise.resolve({ services: [] }),
+        loadServices ? fetchPublicServicesForCatalogue(serviceParams, filters.kind) : Promise.resolve([] as PublicService[]),
         loadEvents ? api.get(`/public/events${eventQs}`).catch(() => ({ events: [] })) : Promise.resolve({ events: [] }),
       ]);
       setVenues(venuesData.venues || []);
-      setServices(servicesData.services || []);
+      setServices(services);
       setEvents(eventsData.events || []);
     } finally {
       setLoading(false);
@@ -247,22 +241,11 @@ function ClientMarketplaceInner() {
   }, [tab, loadSavedPacks, loadSavedBriefs]);
 
   const items = useMemo(
-    () => sortCatalogueByDistance([
-      ...venues.map((venue) => withDashboardListingHref(venueToCatalogueItem(venue))),
-      ...services.map((service) => withDashboardListingHref(serviceToCatalogueItem(service))),
-      ...events
-        .map(eventToCatalogueItem)
-        .filter((item): item is NonNullable<typeof item> => Boolean(item))
-        .map((item) => withCatalogueDistance(item, applied.lat, applied.lng))
-        .filter((item) => catalogueItemMatchesGeo(item, applied) && catalogueItemMatchesExtras(item, applied)),
-    ]),
+    () => composeCatalogueFeed(venues, services, events, applied, withDashboardListingHref),
     [venues, services, events, applied],
   );
 
-  const visible = useMemo(
-    () => items.filter((item) => catalogueItemMatchesExtras(item, applied)),
-    [items, applied],
-  );
+  const visible = items;
 
   const favoriteItems = useMemo(
     () => favoriteRows.map(favoriteToCatalogueItem),

@@ -33,6 +33,7 @@ import {
   mergeGeoAndExtras,
   type CatalogueEntityExtras,
 } from '@/lib/catalogueEntityFilters';
+import { fetchPublicServicesForCatalogue } from '@/lib/catalogueFetch';
 import {
   buildLandingTemplateGroups,
   type LandingTemplate,
@@ -95,15 +96,15 @@ export default function LandingVitrineSection({
       appendCatalogueGeoParams(serviceParams, filters);
       appendCatalogueGeoParams(eventParams, filters);
       appendCatalogueEntityParams(venueParams, { ...filters, kind: 'venue' }, 'venue');
-      appendCatalogueEntityParams(serviceParams, { ...filters, kind: 'service' }, 'service');
+      appendCatalogueEntityParams(serviceParams, filters, 'service');
       appendCatalogueEntityParams(eventParams, { ...filters, kind: 'event' }, 'event');
-      const [venuesData, servicesData, eventsData] = await Promise.all([
+      const [venuesData, services, eventsData] = await Promise.all([
         api.get(`/public/venues?${venueParams.toString()}`).catch(() => ({ venues: [] })),
-        api.get(`/public/services?${serviceParams.toString()}`).catch(() => ({ services: [] })),
+        fetchPublicServicesForCatalogue(serviceParams, 'all'),
         api.get(`/public/events?${eventParams.toString()}`).catch(() => ({ events: [] })),
       ]);
       setVenues(venuesData.venues || []);
-      setServices(servicesData.services || []);
+      setServices(services);
       setEvents(eventsData.events || []);
     } finally {
       setLoadingCatalog(false);

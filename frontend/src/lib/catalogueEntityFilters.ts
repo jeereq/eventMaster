@@ -4,9 +4,18 @@ import {
   SERVICE_CATEGORIES,
   SERVICE_CATEGORY_LABELS,
   SERVICE_MOBILITY_OPTIONS,
+  catalogueItemMatchesGeo,
+  eventToCatalogueItem,
   isServiceRentalCategory,
+  mixCatalogueByDisplayKind,
+  serviceToCatalogueItem,
+  venueToCatalogueItem,
+  withCatalogueDistance,
   type CatalogueGeoState,
   type CatalogueItem,
+  type PublicEventCard,
+  type PublicService,
+  type PublicVenue,
   type ServiceMobility,
 } from '@/lib/marketplace';
 
@@ -181,6 +190,39 @@ export function appendCatalogueEntityParams(
     if (extras.mobility) params.set('mobility', extras.mobility);
   }
   if (target === 'event' && extras.entry) params.set('entry', extras.entry);
+}
+
+/** Hub mixte : deux requêtes pour ne pas n’avoir que les 80 locations les plus récentes. */
+export function publicServiceQueryVariants(
+  params: URLSearchParams,
+  kind: CatalogueKind,
+): URLSearchParams[] {
+  if (kind === 'service' || kind === 'rental') return [new URLSearchParams(params)];
+  const trade = new URLSearchParams(params);
+  trade.set('group', 'trade');
+  const rental = new URLSearchParams(params);
+  rental.set('group', 'rental');
+  return [trade, rental];
+}
+
+export function composeCatalogueFeed(
+  venues: PublicVenue[],
+  services: PublicService[],
+  events: PublicEventCard[],
+  filters: CatalogueGeoState & CatalogueEntityExtras,
+  mapItem?: (item: CatalogueItem) => CatalogueItem,
+): CatalogueItem[] {
+  const mapped = [
+    ...venues.map(venueToCatalogueItem),
+    ...services.map(serviceToCatalogueItem),
+    ...events
+      .map(eventToCatalogueItem)
+      .filter((item): item is CatalogueItem => Boolean(item)),
+  ]
+    .map((item) => (mapItem ? mapItem(item) : item))
+    .map((item) => withCatalogueDistance(item, filters.lat, filters.lng))
+    .filter((item) => catalogueItemMatchesGeo(item, filters) && catalogueItemMatchesExtras(item, filters));
+  return mixCatalogueByDisplayKind(mapped);
 }
 
 export function catalogueItemMatchesExtras(item: CatalogueItem, extras: CatalogueEntityExtras): boolean {
