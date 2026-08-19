@@ -121,6 +121,8 @@ export default function CatalogueFilterBar({
   hideViewToggle = false,
   compactToggle = false,
   hideMap = false,
+  hideShare = false,
+  actions,
   gridCols,
   onGridColsChange,
   gridColOptions,
@@ -146,6 +148,9 @@ export default function CatalogueFilterBar({
   hideViewToggle?: boolean;
   compactToggle?: boolean;
   hideMap?: boolean;
+  hideShare?: boolean;
+  /** Actions à droite (ex. ViewModeToggle dashboard), à côté de Filtres. */
+  actions?: React.ReactNode;
   gridCols?: CatalogueGridCols;
   onGridColsChange?: (cols: CatalogueGridCols) => void;
   gridColOptions?: CatalogueGridCols[];
@@ -328,6 +333,7 @@ export default function CatalogueFilterBar({
               ) : null}
             </button>
           )}
+          {!hideShare ? (
           <ShareButton
             variant="fab"
             title={shareTitle || 'Recherche EventMaster'}
@@ -335,6 +341,7 @@ export default function CatalogueFilterBar({
             label="Partager la recherche"
             url={shareUrl}
           />
+          ) : null}
         </div>
         {!hideViewToggle ? (
             <CatalogueViewToggle
@@ -390,6 +397,7 @@ export default function CatalogueFilterBar({
               ) : null}
             </Button>
           )}
+          {!hideShare ? (
           <ShareButton
             variant="button"
             title={shareTitle || 'Recherche EventMaster'}
@@ -397,6 +405,8 @@ export default function CatalogueFilterBar({
             label="Partager"
             url={shareUrl}
           />
+          ) : null}
+          {actions}
           {!hideViewToggle ? (
             <CatalogueViewToggle
               value={view}

@@ -16,6 +16,7 @@ import {
   listStackClass,
   usePageSize,
   useViewMode,
+  ViewModeToggle,
 } from '@/components/ui';
 import CatalogueFilterBar, {
   CatalogueChoicePills,
@@ -218,11 +219,17 @@ export default function MarketplaceBookingsPanel({
         onViewChange={(next) => {
           if (next === 'grid' || next === 'list') setViewMode(next);
         }}
-        compactToggle
-        hideMap
-        gridCols={columns}
-        onGridColsChange={(cols) => setGridColumns(cols === 5 ? 4 : cols)}
-        gridColOptions={[2, 3, 4]}
+        hideViewToggle
+        hideShare
+        actions={
+          <ViewModeToggle
+            storageKey={organizerView ? 'em-view-organizer-bookings' : 'em-view-vendor-bookings'}
+            value={mode}
+            onChange={setViewMode}
+            columns={columns}
+            onColumnsChange={setGridColumns}
+          />
+        }
         chips={chips}
         onRemoveChip={(id) => {
           if (id === 'filter') setFilter('');
