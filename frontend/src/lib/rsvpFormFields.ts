@@ -141,7 +141,9 @@ const MANDATORY_RSVP_KEY_ALIASES: Record<string, string[]> = {
 };
 
 /** Champs RSVP imposés sur tous les modèles (formulaire invité). */
-export const MANDATORY_RSVP_FIELD_PRESETS: Array<Omit<RsvpField, 'id'> & { id: string }> = [
+export const MANDATORY_RSVP_FIELD_PRESETS: Array<
+  Omit<RsvpField, 'id' | 'analyticsKey'> & { id: string; analyticsKey: string }
+> = [
   {
     id: 'mandatory_genre',
     type: 'radio',
@@ -339,8 +341,10 @@ export function isMandatoryRsvpField(field: Pick<RsvpField, 'analyticsKey' | 'id
   return isMandatoryRsvpAnalyticsKey(slugifyAnalyticsKey(field.label || ''));
 }
 
-function fieldMatchesMandatoryKey(field: RsvpField, canonicalKey: string): boolean {
-  const aliases = MANDATORY_RSVP_KEY_ALIASES[canonicalKey] || [canonicalKey];
+function fieldMatchesMandatoryKey(field: RsvpField, canonicalKey?: string | null): boolean {
+  const key = (canonicalKey || '').trim();
+  if (!key) return false;
+  const aliases = MANDATORY_RSVP_KEY_ALIASES[key] || [key];
   const candidates = [
     field.analyticsKey,
     slugifyAnalyticsKey(field.label || ''),
