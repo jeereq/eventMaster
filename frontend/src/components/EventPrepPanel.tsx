@@ -492,141 +492,141 @@ export default function EventPrepPanel({
       ) : null}
 
       <section className="rounded-2xl border border-border bg-surface p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-primary" />
-            <h3 className="text-sm font-bold text-foreground">Salle marketplace</h3>
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">1 choix</span>
-          </div>
+        <div className="flex items-center gap-2">
+          <Building2 className="w-4 h-4 text-primary" />
+          <h3 className="text-sm font-bold text-foreground">Salle marketplace</h3>
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">1 choix</span>
+        </div>
 
-          {prep.venue ? (
-            <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3">
-              <Cover src={prep.venue.coverUrl} fallback={<Building2 className="w-4 h-4" />} />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-foreground truncate">{prep.venue.name}</p>
-                <p className="text-xs text-muted truncate">
-                  {[prep.venue.orgName, prep.venue.city, prep.venue.capacity ? `${prep.venue.capacity} places` : null]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </p>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  <Link
-                    href={dashboardVenueHref(prep.venue.slug)}
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
-                  >
-                    Fiche
-                    <ExternalLink className="w-3 h-3" />
-                  </Link>
+        {prep.venue ? (
+          <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3">
+            <Cover src={prep.venue.coverUrl} fallback={<Building2 className="w-4 h-4" />} />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-foreground truncate">{prep.venue.name}</p>
+              <p className="text-xs text-muted truncate">
+                {[prep.venue.orgName, prep.venue.city, prep.venue.capacity ? `${prep.venue.capacity} places` : null]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </p>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <Link
+                  href={dashboardVenueHref(prep.venue.slug)}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                >
+                  Fiche
+                  <ExternalLink className="w-3 h-3" />
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setInquire({ kind: 'venue', slug: prep.venue!.slug, title: prep.venue!.name })}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                >
+                  <Send className="w-3 h-3" />
+                  Demander un devis
+                </button>
+                {prep.venue.address && prep.venue.address !== eventLocation ? (
                   <button
                     type="button"
-                    onClick={() => setInquire({ kind: 'venue', slug: prep.venue!.slug, title: prep.venue!.name })}
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                    onClick={() => void persist(prep, { location: prep.venue?.address || undefined })}
+                    className="text-[11px] font-semibold text-muted hover:text-foreground"
                   >
-                    <Send className="w-3 h-3" />
-                    Demander un devis
+                    Utiliser comme lieu
                   </button>
-                  {prep.venue.address && prep.venue.address !== eventLocation ? (
-                    <button
-                      type="button"
-                      onClick={() => void persist(prep, { location: prep.venue?.address || undefined })}
-                      className="text-[11px] font-semibold text-muted hover:text-foreground"
-                    >
-                      Utiliser comme lieu
-                    </button>
-                  ) : null}
-                </div>
+                ) : null}
               </div>
-              <button
-                type="button"
-                onClick={() => void persist({ ...prep, venue: null })}
-                className="p-1.5 text-muted hover:text-rose-600 rounded-lg"
-                title="Retirer"
-              >
-                <X className="w-4 h-4" />
-              </button>
             </div>
-          ) : (
-            <Input
-              value={venueQ}
-              onChange={(e) => setVenueQ(e.target.value)}
-              placeholder="Nom, ville, quartier…"
-              leftIcon={<Search className="w-4 h-4" />}
-            />
-          )}
-
-          {!prep.venue && (searchingVenues || venueResults.length > 0 || venueQ.trim()) ? (
-            <ul className="space-y-1.5 max-h-72 overflow-y-auto">
-              {searchingVenues ? (
-                <li className="text-xs text-muted px-1 py-2">Recherche des salles…</li>
-              ) : venueResults.length === 0 ? (
-                <li className="text-xs text-muted px-1 py-2">Aucune salle publique pour cette recherche.</li>
-              ) : (
-                venueResults.map((venue) => (
-                  <li key={venue.slug}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void persist({ ...prep, venue: venueFromPublic(venue) });
-                        setVenueQ('');
-                        setVenueResults([]);
-                      }}
-                      className="w-full flex items-center gap-3 rounded-xl border border-border px-2.5 py-2 text-left hover:border-primary/40 hover:bg-primary/5 transition"
-                    >
-                      <Cover src={venue.coverUrl} fallback={<Building2 className="w-4 h-4" />} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold truncate">{venue.name || venue.headline}</p>
-                        <p className="text-[11px] text-muted truncate">
-                          {[venue.orgName, venue.city, venue.capacity ? `${venue.capacity} places` : null]
-                            .filter(Boolean)
-                            .join(' · ')}
-                        </p>
-                      </div>
-                      {venue.priceFromFc != null ? (
-                        <span className="text-[11px] font-semibold shrink-0">{formatFc(venue.priceFromFc)}</span>
-                      ) : null}
-                    </button>
-                  </li>
-                ))
-              )}
-            </ul>
-          ) : null}
-        </section>
-
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-          <VendorLane
-            title="Métiers"
-            hint="Traiteur, photo, DJ, décor… le savoir-faire."
-            icon={<Store className="w-4 h-4 text-primary" />}
-            group="trade"
-            categories={SERVICE_TRADE_CATEGORIES}
-            placeholder="Traiteur, DJ, photo…"
-            emptySelected="Aucun métier retenu pour le moment."
-            emptySearch="Aucun métier public pour cette recherche."
-            searchingLabel="Recherche des métiers…"
-            selected={splitEventPrepVendors(prep.vendors).trades}
-            allSelected={prep.vendors}
-            dateKey={dateKey}
-            onAdd={(service) => void persist({ ...prep, vendors: [...prep.vendors, vendorFromPublic(service)] })}
-            onRemove={(slug) => void persist({ ...prep, vendors: prep.vendors.filter((item) => item.slug !== slug) })}
-            onInquire={(vendor) => setInquire({ kind: 'service', slug: vendor.slug, title: vendor.title, category: vendor.category })}
+            <button
+              type="button"
+              onClick={() => void persist({ ...prep, venue: null })}
+              className="p-1.5 text-muted hover:text-rose-600 rounded-lg"
+              title="Retirer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <Input
+            value={venueQ}
+            onChange={(e) => setVenueQ(e.target.value)}
+            placeholder="Nom, ville, quartier…"
+            leftIcon={<Search className="w-4 h-4" />}
           />
-          <VendorLane
-            title="Locations"
-            hint="Habits, voiture, moto, matériel — le bien loué, pas le métier."
-            icon={<KeyRound className="w-4 h-4 text-primary" />}
-            group="rental"
-            categories={SERVICE_RENTAL_CATEGORIES}
-            placeholder="Habits, voiture, sono…"
-            emptySelected="Aucune location retenue pour le moment."
-            emptySearch="Aucune location publique pour cette recherche."
-            searchingLabel="Recherche des locations…"
-            selected={splitEventPrepVendors(prep.vendors).rentals}
-            allSelected={prep.vendors}
-            dateKey={dateKey}
-            onAdd={(service) => void persist({ ...prep, vendors: [...prep.vendors, vendorFromPublic(service)] })}
-            onRemove={(slug) => void persist({ ...prep, vendors: prep.vendors.filter((item) => item.slug !== slug) })}
-            onInquire={(vendor) => setInquire({ kind: 'service', slug: vendor.slug, title: vendor.title, category: vendor.category })}
-          />
-        </div>
+        )}
+
+        {!prep.venue && (searchingVenues || venueResults.length > 0 || venueQ.trim()) ? (
+          <ul className="space-y-1.5 max-h-72 overflow-y-auto">
+            {searchingVenues ? (
+              <li className="text-xs text-muted px-1 py-2">Recherche des salles…</li>
+            ) : venueResults.length === 0 ? (
+              <li className="text-xs text-muted px-1 py-2">Aucune salle publique pour cette recherche.</li>
+            ) : (
+              venueResults.map((venue) => (
+                <li key={venue.slug}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void persist({ ...prep, venue: venueFromPublic(venue) });
+                      setVenueQ('');
+                      setVenueResults([]);
+                    }}
+                    className="w-full flex items-center gap-3 rounded-xl border border-border px-2.5 py-2 text-left hover:border-primary/40 hover:bg-primary/5 transition"
+                  >
+                    <Cover src={venue.coverUrl} fallback={<Building2 className="w-4 h-4" />} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold truncate">{venue.name || venue.headline}</p>
+                      <p className="text-[11px] text-muted truncate">
+                        {[venue.orgName, venue.city, venue.capacity ? `${venue.capacity} places` : null]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </p>
+                    </div>
+                    {venue.priceFromFc != null ? (
+                      <span className="text-[11px] font-semibold shrink-0">{formatFc(venue.priceFromFc)}</span>
+                    ) : null}
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        ) : null}
+      </section>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <VendorLane
+          title="Métiers"
+          hint="Traiteur, photo, DJ, décor… le savoir-faire."
+          icon={<Store className="w-4 h-4 text-primary" />}
+          group="trade"
+          categories={SERVICE_TRADE_CATEGORIES}
+          placeholder="Traiteur, DJ, photo…"
+          emptySelected="Aucun métier retenu pour le moment."
+          emptySearch="Aucun métier public pour cette recherche."
+          searchingLabel="Recherche des métiers…"
+          selected={splitEventPrepVendors(prep.vendors).trades}
+          allSelected={prep.vendors}
+          dateKey={dateKey}
+          onAdd={(service) => void persist({ ...prep, vendors: [...prep.vendors, vendorFromPublic(service)] })}
+          onRemove={(slug) => void persist({ ...prep, vendors: prep.vendors.filter((item) => item.slug !== slug) })}
+          onInquire={(vendor) => setInquire({ kind: 'service', slug: vendor.slug, title: vendor.title, category: vendor.category })}
+        />
+        <VendorLane
+          title="Locations"
+          hint="Habits, voiture, moto, matériel — le bien loué, pas le métier."
+          icon={<KeyRound className="w-4 h-4 text-primary" />}
+          group="rental"
+          categories={SERVICE_RENTAL_CATEGORIES}
+          placeholder="Habits, voiture, sono…"
+          emptySelected="Aucune location retenue pour le moment."
+          emptySearch="Aucune location publique pour cette recherche."
+          searchingLabel="Recherche des locations…"
+          selected={splitEventPrepVendors(prep.vendors).rentals}
+          allSelected={prep.vendors}
+          dateKey={dateKey}
+          onAdd={(service) => void persist({ ...prep, vendors: [...prep.vendors, vendorFromPublic(service)] })}
+          onRemove={(slug) => void persist({ ...prep, vendors: prep.vendors.filter((item) => item.slug !== slug) })}
+          onInquire={(vendor) => setInquire({ kind: 'service', slug: vendor.slug, title: vendor.title, category: vendor.category })}
+        />
+      </div>
 
       <div className="rounded-2xl border border-border bg-surface p-4 space-y-2">
         <label className="text-xs font-bold uppercase tracking-wider text-muted" htmlFor="event-prep-notes">
