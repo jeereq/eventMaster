@@ -864,28 +864,64 @@ export async function getAllTemplates(req: AuthenticatedRequest, res: Response) 
       return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
     }
 
-    const templates = await prisma.template.findMany({
-      include: {
-        tenant: {
-          select: {
-            name: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
+    const { page, pageSize, skip } = adminPager(req);
+    const q = adminSearch(req);
+    const type = adminQueryString(req, 'type');
+    const landing = adminQueryString(req, 'landing');
+
+    const where: Record<string, unknown> = {
+      ...(type === 'GLOBAL' ? { tenantId: null } : {}),
+      ...(type === 'TENANT' ? { tenantId: { not: null } } : {}),
+      ...(landing === 'yes' ? { showOnLanding: true } : {}),
+      ...(landing === 'no' ? { showOnLanding: false } : {}),
+    };
+    if (q) {
+      prismaAnd(where, {
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { tenant: { name: { contains: q, mode: 'insensitive' } } },
+        ],
+      });
+    }
+
+    const [templates, total, allCount, globalCount, tenantCount, landingCount] = await Promise.all([
+      prisma.template.findMany({
+        where,
+        include: { tenant: { select: { name: true } } },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+      }),
+      prisma.template.count({ where }),
+      prisma.template.count(),
+      prisma.template.count({ where: { tenantId: null } }),
+      prisma.template.count({ where: { tenantId: { not: null } } }),
+      prisma.template.count({ where: { tenantId: null, showOnLanding: true } }),
+    ]);
+
+    return res.json({
+      ...listPayload(
+        templates.map((t) => ({
+          id: t.id,
+          name: t.name,
+          content: t.content,
+          isGlobal: t.tenantId === null,
+          showOnLanding: t.showOnLanding,
+          tenantId: t.tenantId,
+          tenantName: t.tenant?.name || 'Global (Tous)',
+          createdAt: t.createdAt,
+        })),
+        total,
+        page,
+        pageSize,
+      ),
+      counts: {
+        total: allCount,
+        global: globalCount,
+        tenant: tenantCount,
+        landing: landingCount,
       },
     });
-
-    return res.json(templates.map(t => ({
-      id: t.id,
-      name: t.name,
-      content: t.content,
-      isGlobal: t.tenantId === null,
-      showOnLanding: t.showOnLanding,
-      tenantName: t.tenant?.name || 'Global (Tous)',
-      createdAt: t.createdAt,
-    })));
   } catch (error: any) {
     console.error('Erreur lors de la récupération des modèles:', error);
     return res.status(500).json({ error: 'Erreur lors de la récupération des modèles' });

@@ -123,8 +123,16 @@ interface AdminTemplateItem {
  content: any;
  isGlobal: boolean;
  showOnLanding: boolean;
+ tenantId?: string | null;
  tenantName: string;
  createdAt: string;
+}
+
+interface TemplateCounts {
+ total: number;
+ global: number;
+ tenant: number;
+ landing: number;
 }
 
 interface RevenueReport {
@@ -372,6 +380,9 @@ function DashboardPageContent() {
  const [tenantsLoading, setTenantsLoading] = useState(false);
  const [tenantOptions, setTenantOptions] = useState<AdminTenantItem[]>([]);
  const [usersTotal, setUsersTotal] = useState(0);
+ const [templatesTotal, setTemplatesTotal] = useState(0);
+ const [templateCounts, setTemplateCounts] = useState<TemplateCounts>({ total: 0, global: 0, tenant: 0, landing: 0 });
+ const [landingTemplates, setLandingTemplates] = useState<AdminTemplateItem[]>([]);
  const [deferredSearch, setDeferredSearch] = useState('');
  const [recentUsers, setRecentUsers] = useState<AdminUserItem[]>([]);
  const [recentEvents, setRecentEvents] = useState<any[]>([]);
@@ -717,7 +728,7 @@ function DashboardPageContent() {
  if (user?.role === 'SUPER_ADMIN' && activeTab === 'templates') {
  loadTemplates();
  }
- }, [activeTab, user]);
+ }, [activeTab, user, templatesPage, templatesPageSize, deferredSearch, filterType]);
 
  // Load events when events tab is active
  useEffect(() => {
@@ -770,7 +781,6 @@ function DashboardPageContent() {
  useEffect(() => {
  if (user?.role === 'SUPER_ADMIN' && activeTab === 'analytics') {
  loadRevenueReport(revenuePeriod);
- loadTemplates();
  api.get('/admin/insights')
   .then((data) => setPlatformInsights(data))
   .catch(console.error);
@@ -782,6 +792,13 @@ function DashboardPageContent() {
   .catch(console.error);
  api.get(`/admin/tenants?${adminListParams({ sort: 'events', limit: 5 })}`)
   .then((data) => setTopTenants(unwrapAdminList<AdminTenantItem>(data).items))
+  .catch(console.error);
+ api.get(`/admin/templates?${adminListParams({ type: 'GLOBAL', landing: 'yes', limit: 20 })}`)
+  .then((data) => {
+    const list = unwrapAdminList<AdminTemplateItem>(data);
+    setLandingTemplates(list.items);
+    if (data?.counts) setTemplateCounts(data.counts);
+  })
   .catch(console.error);
  }
  }, [activeTab, user, revenuePeriod]);
@@ -967,8 +984,17 @@ function DashboardPageContent() {
  const loadTemplates = async () => {
  setTemplatesLoading(true);
  try {
- const data = await api.get('/admin/templates');
- setTemplates(data);
+ const qs = adminListParams({
+ page: templatesPage,
+ limit: templatesPageSize,
+ q: deferredSearch,
+ type: filterType,
+ });
+ const data = await api.get(`/admin/templates?${qs}`);
+ const list = unwrapAdminList<AdminTemplateItem>(data);
+ setTemplates(list.items);
+ setTemplatesTotal(list.total);
+ if (data?.counts) setTemplateCounts(data.counts);
  } catch (err: any) {
  console.error('Error loading templates:', err);
  setError('Impossible de charger la liste des modèles.');
@@ -1160,7 +1186,7 @@ function DashboardPageContent() {
  setIsTenantModalOpen(true);
  };
 
- const handleOpenEditTenantModal = (t: AdminStats['tenants'][0]) => {
+ const handleOpenEditTenantModal = (t: AdminTenantItem) => {
  setTenantModalMode('edit');
  setSelectedTenant(t);
  setTenantName(t.name);
@@ -1676,14 +1702,7 @@ function DashboardPageContent() {
  const filteredUsers = users;
 
  // Filter templates
- const filteredTemplates = templates.filter(t => {
- const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
- t.tenantName.toLowerCase().includes(searchTerm.toLowerCase());
- const matchesType = filterType === 'ALL' || 
- (filterType === 'GLOBAL' && t.isGlobal) || 
- (filterType === 'TENANT' && !t.isGlobal);
- return matchesSearch && matchesType;
- });
+ const filteredTemplates = templates;
 
  // Filter events
  const filteredEvents = adminEvents.filter(e => {
@@ -1734,7 +1753,7 @@ function DashboardPageContent() {
 
  const paginatedTenants = filteredTenants;
  const paginatedUsers = filteredUsers;
- const paginatedTemplates = paginateItems(filteredTemplates, templatesPage, templatesPageSize);
+ const paginatedTemplates = filteredTemplates;
  const paginatedEvents = paginateItems(filteredEvents, eventsPage, eventsPageSize);
  const paginatedGuests = paginateItems(filteredGuests, guestsPage, guestsPageSize);
  const paginatedSubRequests = paginateItems(subscriptionRequests, subRequestsPage, subRequestsPageSize);
@@ -2514,19 +2533,19 @@ function DashboardPageContent() {
  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
  <div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
  <p className="text-[10px] font-bold text-primary uppercase tracking-wider">Modèles globaux</p>
- <p className="text-2xl font-extrabold text-primary mt-1">{templates.filter((t) => t.isGlobal).length}</p>
+ <p className="text-2xl font-extrabold text-primary mt-1">{templateCounts.global}</p>
  </div>
  <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 rounded-xl p-4">
  <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Sur la landing</p>
- <p className="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1">{templates.filter((t) => t.isGlobal && t.showOnLanding).length}</p>
+ <p className="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1">{templateCounts.landing}</p>
  </div>
  <div className="bg-surface-muted dark:bg-background/50 border border-border dark:border-border rounded-xl p-4">
  <p className="text-[10px] font-bold text-muted dark:text-muted uppercase tracking-wider">Organisations</p>
- <p className="text-2xl font-extrabold text-foreground dark:text-foreground mt-1">{templates.filter((t) => !t.isGlobal).length}</p>
+ <p className="text-2xl font-extrabold text-foreground dark:text-foreground mt-1">{templateCounts.tenant}</p>
  </div>
  <div className="bg-surface-muted dark:bg-background/50 border border-border dark:border-border rounded-xl p-4">
  <p className="text-[10px] font-bold text-muted dark:text-muted uppercase tracking-wider">Affichés (filtre)</p>
- <p className="text-2xl font-extrabold text-foreground dark:text-foreground mt-1">{filteredTemplates.length}</p>
+ <p className="text-2xl font-extrabold text-foreground dark:text-foreground mt-1">{templatesTotal}</p>
  </div>
  </div>
 
@@ -2567,7 +2586,7 @@ function DashboardPageContent() {
  <Pagination
  page={templatesPage}
  pageSize={templatesPageSize}
- total={filteredTemplates.length}
+ total={templatesTotal}
  onPageChange={setTemplatesPage}
  onPageSizeChange={setTemplatesPageSize}
  itemLabel="modèles"
@@ -4071,10 +4090,10 @@ function DashboardPageContent() {
  </h3>
  <div className="space-y-3">
  {[
- { label: 'Total des modèles', value: templates.length, color: 'text-foreground dark:text-foreground' },
- { label: 'Modèles globaux (publics)', value: templates.filter(t => t.isGlobal).length, color: 'text-primary' },
- { label: 'Modèles d\'organisations', value: templates.filter(t => !t.isGlobal).length, color: 'text-foreground dark:text-foreground' },
- { label: 'Affichés sur la landing page', value: templates.filter(t => t.showOnLanding).length, color: 'text-emerald-600 dark:text-emerald-400' },
+ { label: 'Total des modèles', value: templateCounts.total, color: 'text-foreground dark:text-foreground' },
+ { label: 'Modèles globaux (publics)', value: templateCounts.global, color: 'text-primary' },
+ { label: 'Modèles d\'organisations', value: templateCounts.tenant, color: 'text-foreground dark:text-foreground' },
+ { label: 'Affichés sur la landing page', value: templateCounts.landing, color: 'text-emerald-600 dark:text-emerald-400' },
  ].map((row) => (
  <div key={row.label} className="flex justify-between text-sm">
  <span className="text-muted dark:text-muted font-medium">{row.label}</span>
@@ -4096,13 +4115,13 @@ function DashboardPageContent() {
  <Globe className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
  Modèles visibles sur la landing
  </h3>
- {templates.filter(t => t.isGlobal && t.showOnLanding).length === 0 ? (
+ {landingTemplates.length === 0 ? (
  <p className="text-sm text-muted dark:text-muted py-4 text-center">
  Aucun modèle global activé pour la landing. Activez « Sur la Landing Page » depuis l&apos;onglet Modèles.
  </p>
  ) : (
  <div className="divide-y divide-border dark:divide-border max-h-64 overflow-y-auto">
- {templates.filter(t => t.isGlobal && t.showOnLanding).map((t) => (
+ {landingTemplates.map((t) => (
  <div key={t.id} className="py-3 flex items-center gap-3 first:pt-0 last:pb-0">
  <TemplatePreviewThumb content={t.content} name={t.name} />
  <div className="min-w-0 flex-1">
