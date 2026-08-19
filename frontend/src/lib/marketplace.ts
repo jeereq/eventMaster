@@ -308,6 +308,11 @@ export interface MarketplaceInquiryItem {
   hasBooking?: boolean;
   bookingId?: string | null;
   bookingStatus?: MarketplaceBookingStatus | null;
+  vendorName?: string | null;
+  listingSlug?: string | null;
+  offeringSlug?: string | null;
+  offeringCategory?: string | null;
+  viewerRole?: 'vendor' | 'organizer';
 }
 
 export type MarketplaceBookingStatus =
@@ -424,13 +429,21 @@ export function bookingNextStep(
 }
 
 export function inquiryNextStep(item: MarketplaceInquiryItem): { title: string; detail: string } {
+  const asOrganizer = item.viewerRole === 'organizer';
   if (item.hasBooking) {
-    return { title: 'Déjà convertie', detail: 'Une réservation existe déjà pour cette demande.' };
+    return asOrganizer
+      ? { title: 'Réservation créée', detail: 'Suivez l’acompte et la confirmation dans l’onglet Réservations.' }
+      : { title: 'Déjà convertie', detail: 'Une réservation existe déjà pour cette demande.' };
   }
   if (item.status === 'NEW') {
-    return item.eventDate
-      ? { title: 'Nouveau devis', detail: 'Contactez le client, puis convertissez en réservation si la date convient.' }
-      : { title: 'Nouveau devis', detail: 'Contactez le client, puis marquez la demande comme contactée.' };
+    return asOrganizer
+      ? { title: 'Envoyée', detail: 'Le professionnel n’a pas encore répondu. Vous pouvez le relancer depuis la fiche.' }
+      : item.eventDate
+        ? { title: 'Nouveau devis', detail: 'Contactez le client, puis convertissez en réservation si la date convient.' }
+        : { title: 'Nouveau devis', detail: 'Contactez le client, puis marquez la demande comme contactée.' };
+  }
+  if (asOrganizer) {
+    return { title: 'Prise en charge', detail: 'Le professionnel vous a contacté. Convenez du tarif et d’une date, puis réservez si besoin.' };
   }
   return item.eventDate
     ? { title: 'Prêt à réserver', detail: 'Convertissez cette demande en réservation pour suivre l’acompte et bloquer la date.' }

@@ -20,7 +20,7 @@ import SubscriptionApprovalModal, { type SubscriptionApprovalRequest } from '@/c
 import SubscriptionRequestListPanel, { type AdminSubscriptionRequestItem } from '@/components/SubscriptionRequestListPanel';
 import BillingDiscountFields, { getBillingPricingFromFields } from '@/components/BillingDiscountFields';
 import type { QuotaSnapshot } from '@/lib/quotaDisplay';
-import { PageHeader, Alert, Button, ProjectCard, ListRowAction, StatusPill, SkeletonDashboardHome, SkeletonTabContent, ViewModeToggle, useViewMode, listStackClass, Breadcrumbs, Pagination, paginateItems, PhoneInput, usePageSize } from '@/components/ui';
+import { PageHeader, Alert, Button, ProjectCard, ListRowAction, StatusPill, SkeletonDashboardHome, SkeletonTabContent, ViewModeToggle, useViewMode, listStackClass, Breadcrumbs, Pagination, paginateItems, PhoneInput, usePageSize, Card } from '@/components/ui';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { parseStoredPhone } from '@/components/ui/PhoneInput';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
@@ -5051,6 +5051,32 @@ function DashboardPageContent() {
  preferServices={(planQuota?.limits.maxRooms ?? 1) <= 0}
  />
  )}
+
+ {user?.role === 'USER' && tenant?.accountKind !== 'VENDOR' && (planQuota == null || (planQuota.limits.maxEvents ?? 0) > 0) ? (
+ <Card>
+ <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+ <div className="space-y-1">
+ <h3 className="text-base font-semibold tracking-tight">Devis, réservations et packs</h3>
+ <p className="text-sm text-muted">Retrouvez les demandes envoyées aux salles et prestataires, vos dates, packs et favoris.</p>
+ </div>
+ <Button size="sm" onClick={() => router.push('/dashboard/bookings')}>Ouvrir</Button>
+ </div>
+ <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
+ <Link href="/dashboard/bookings?tab=quotes" className="rounded-[var(--radius-card)] border border-border px-3 py-2.5 hover:border-primary/40 hover:bg-primary/5 transition">
+ <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Devis</p>
+ <p className="text-sm font-semibold mt-0.5">Demandes envoyées</p>
+ </Link>
+ <Link href="/dashboard/bookings?tab=bookings" className="rounded-[var(--radius-card)] border border-border px-3 py-2.5 hover:border-primary/40 hover:bg-primary/5 transition">
+ <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Réservations</p>
+ <p className="text-sm font-semibold mt-0.5">Dates et acomptes</p>
+ </Link>
+ <Link href="/dashboard/bookings?tab=packs" className="rounded-[var(--radius-card)] border border-border px-3 py-2.5 hover:border-primary/40 hover:bg-primary/5 transition">
+ <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Packs & favoris</p>
+ <p className="text-sm font-semibold mt-0.5">Mix salle / métiers / locations</p>
+ </Link>
+ </div>
+ </Card>
+ ) : null}
 
  {showStats && (
  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

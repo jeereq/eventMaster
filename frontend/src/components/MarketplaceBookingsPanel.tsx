@@ -218,7 +218,9 @@ export default function MarketplaceBookingsPanel({
           title={bookings.length ? 'Aucune réservation pour ces filtres' : 'Aucune réservation'}
           description={bookings.length
             ? 'Changez le statut, le type ou les dates pour élargir la recherche.'
-            : 'Les demandes de date (salles, prestations et locations) apparaîtront ici.'}
+            : organizerView
+              ? 'Les demandes de dates envoyées aux salles, métiers et locations apparaîtront ici.'
+              : 'Les demandes de date (salles, prestations et locations) apparaîtront ici.'}
         />
       ) : (
         <>

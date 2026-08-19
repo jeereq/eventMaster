@@ -84,11 +84,12 @@ const NAV_TOOLTIPS: Record<string, string> = {
  Salles: 'Plans 2D, publication et disponibilités',
  Équipe: 'Managers, protocole et commerciaux',
  Marketplace: 'Prestations, locations et réservations reçues',
+ 'Devis & réservations': 'Devis envoyés, réservations, packs et favoris',
  'Parrainage & commissions': 'Code parrainage et gains',
  'Réseau commercial': 'Organisations que vous parrainez',
  Protocole: 'Scan QR et accueil invités',
  'Tableau de bord': 'Vue d’ensemble et quotas',
- 'Mes réservations': 'Demandes de dates envoyées',
+ 'Mes réservations': 'Devis, réservations, packs et favoris',
  Agenda: 'Événements publics du marketplace',
  'Mes billets': 'Inscriptions, filtres et badge QR',
  Statistiques: 'RSVP et analyses d’événements',
@@ -420,7 +421,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  { name: 'Marketplace', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires, locations, favoris et préparation d’événement' },
  { name: 'Agenda', href: '/dashboard/catalogue?kind=event', tourId: 'nav-agenda', icon: Calendar, description: 'Événements publics du marketplace — inscriptions et billets' },
  { name: 'Mes billets', href: '/dashboard/tickets', tourId: 'nav-tickets', icon: Ticket, description: 'Inscriptions, filtres, vue grille/liste et badges QR' },
- { name: 'Mes réservations', href: '/dashboard/bookings', tourId: 'nav-bookings', icon: CalendarCheck },
+ { name: 'Devis & réservations', href: '/dashboard/bookings', tourId: 'nav-bookings', icon: CalendarCheck },
  { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
  { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
  ],
@@ -432,6 +433,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  { name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard },
  ...(workspace.showEvents
  ? [{ name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar }]
+ : []),
+ ...(workspace.showEvents
+ ? [{ name: 'Devis & réservations', href: '/dashboard/bookings', tourId: 'nav-bookings', icon: CalendarCheck }]
  : []),
  ...(workspace.showRooms
  ? [{ name: 'Salles', href: '/dashboard/rooms', tourId: 'nav-rooms', icon: Building2 }]

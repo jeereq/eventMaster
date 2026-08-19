@@ -68,6 +68,7 @@ export function buildOrgNavTourIds(
 ): Array<{ tourId: string; route?: string }> {
   const tabs: Array<{ tourId: string; route?: string }> = [{ tourId: 'nav-dashboard' }];
   if (!workspace || workspace.showEvents) tabs.push({ tourId: 'nav-events' });
+  if (!workspace || workspace.showEvents) tabs.push({ tourId: 'nav-bookings' });
   if (workspace?.showRooms) tabs.push({ tourId: 'nav-rooms' });
   if (workspace?.showTeam) tabs.push({ tourId: 'nav-team' });
   if (workspace?.showMarketplace) tabs.push({ tourId: 'nav-marketplace' });

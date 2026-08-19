@@ -194,9 +194,9 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
     route: '/dashboard/catalogue?kind=event',
   },
   'nav-bookings': {
-    title: 'Mes réservations',
+    title: 'Devis & réservations',
     description:
-      'Suivez vos demandes de dates : filtrez par statut, type et période. L’acompte ({depositPercent} %) se verse hors plateforme.',
+      'Vos demandes de devis envoyées, les réservations de dates, vos packs budget et vos favoris. L’acompte ({depositPercent} %) se verse hors plateforme.',
     route: '/dashboard/bookings',
   },
   'nav-tickets': {

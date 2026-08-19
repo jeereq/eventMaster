@@ -1096,19 +1096,49 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
     const tenantId = req.user?.tenantId;
     const userId = req.user?.id;
     if (!tenantId || !userId) return res.status(403).json({ error: 'Organisation non identifiée.' });
-    const access = await resolveOrgAccess(userId, tenantId);
-    if (!access.canManageRooms) return res.status(403).json({ error: 'Accès refusé.' });
+    const role = req.query.role === 'organizer' ? 'organizer' : 'vendor';
+
+    if (role === 'vendor') {
+      const access = await resolveOrgAccess(userId, tenantId);
+      if (!access.canManageRooms) return res.status(403).json({ error: 'Accès refusé.' });
+    }
+
+    const sender = role === 'organizer'
+      ? await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
+      : null;
+    const senderEmail = sender?.email?.trim().toLowerCase() || '';
 
     const inquiries = await prisma.marketplaceInquiry.findMany({
-      where: {
-        OR: [
-          { listing: { tenantId } },
-          { offering: { tenantId } },
-        ],
-      },
+      where: role === 'organizer'
+        ? {
+            OR: [
+              { fromTenantId: tenantId },
+              ...(senderEmail ? [{ fromEmail: senderEmail }] : []),
+            ],
+          }
+        : {
+            OR: [
+              { listing: { tenantId } },
+              { offering: { tenantId } },
+            ],
+          },
       include: {
-        listing: { select: { slug: true, headline: true, room: { select: { name: true } } } },
-        offering: { select: { slug: true, title: true, category: true } },
+        listing: {
+          select: {
+            slug: true,
+            headline: true,
+            room: { select: { name: true } },
+            tenant: { select: { name: true } },
+          },
+        },
+        offering: {
+          select: {
+            slug: true,
+            title: true,
+            category: true,
+            tenant: { select: { name: true } },
+          },
+        },
         event: { select: { id: true, title: true, date: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -1146,6 +1176,11 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
           hasBooking: Boolean(booking),
           bookingId: booking?.id || null,
           bookingStatus: booking?.status || null,
+          vendorName: item.offering?.tenant.name || item.listing?.tenant.name || null,
+          listingSlug: item.listing?.slug || null,
+          offeringSlug: item.offering?.slug || null,
+          offeringCategory: item.offering?.category || null,
+          viewerRole: role,
         };
       }),
     });

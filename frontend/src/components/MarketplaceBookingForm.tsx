@@ -46,7 +46,7 @@ export default function MarketplaceBookingForm({
   onEventEndDateChange?: (value: string) => void;
   showCalendar?: boolean;
 }) {
-  const { token, loading, tenant, access } = useAuth();
+  const { token, loading, tenant } = useAuth();
   const { site } = usePlatformSite();
   const depositPct = depositPercent(site);
   const pathname = usePathname();
@@ -77,8 +77,7 @@ export default function MarketplaceBookingForm({
       })
     : null;
   const loggedIn = Boolean(token && tenant?.id);
-  const isClient = access?.level === 'client' || tenant?.accountKind === 'CLIENT';
-  const bookingsHref = isClient ? '/dashboard/bookings' : '/dashboard/marketplace';
+  const bookingsHref = '/dashboard/bookings';
   const periodLabel = selectedDate ? formatBookingPeriod(selectedDate, selectedEnd) : '';
 
   const handleBook = async (e: React.FormEvent) => {
@@ -222,8 +221,8 @@ export default function MarketplaceBookingForm({
         </Button>
         <p className="text-[11px] text-muted">
           Suivi dans{' '}
-          <Link href={bookingsHref} className="font-semibold text-primary hover:underline">
-            {isClient ? 'Mes réservations' : 'Marketplace → Réservations'}
+          <Link href={`${bookingsHref}?tab=bookings`} className="font-semibold text-primary hover:underline">
+            Devis & réservations
           </Link>
           .
         </p>

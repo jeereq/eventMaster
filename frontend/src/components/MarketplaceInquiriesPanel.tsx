@@ -2,8 +2,14 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Button, EmptyState, Input, Pagination, paginateItems, StatusPill, usePageSize } from '@/components/ui';
-import { inquiryNextStep, type MarketplaceInquiryItem } from '@/lib/marketplace';
+import {
+  dashboardServiceHref,
+  dashboardVenueHref,
+  inquiryNextStep,
+  type MarketplaceInquiryItem,
+} from '@/lib/marketplace';
 import { CalendarCheck, CheckCircle2, Inbox, Mail, Phone } from 'lucide-react';
+import Link from 'next/link';
 
 function Chip({
   active,
@@ -32,11 +38,13 @@ export default function MarketplaceInquiriesPanel({
   onMarkContacted,
   onConvert,
   error,
+  organizerView = false,
 }: {
   inquiries: MarketplaceInquiryItem[];
-  onMarkContacted: (id: string) => Promise<void> | void;
-  onConvert: (id: string) => Promise<void> | void;
+  onMarkContacted?: (id: string) => Promise<void> | void;
+  onConvert?: (id: string) => Promise<void> | void;
   error?: string;
+  organizerView?: boolean;
 }) {
   const [status, setStatus] = useState<'all' | 'NEW' | 'CONTACTED'>('all');
   const [kind, setKind] = useState<'all' | 'venue' | 'service' | 'rental'>('all');
@@ -79,8 +87,19 @@ export default function MarketplaceInquiriesPanel({
     return (
       <EmptyState
         icon={<Inbox className="w-5 h-5" />}
-        title="Aucune demande"
-        description="Les devis salles, métiers et locations arriveront ici."
+        title={organizerView ? 'Aucun devis envoyé' : 'Aucune demande'}
+        description={
+          organizerView
+            ? 'Parcourez salles, métiers et locations, puis envoyez une demande depuis la fiche.'
+            : 'Les devis salles, métiers et locations arriveront ici.'
+        }
+        action={
+          organizerView ? (
+            <Link href="/dashboard/catalogue">
+              <Button size="sm">Parcourir le marketplace</Button>
+            </Link>
+          ) : undefined
+        }
       />
     );
   }
@@ -119,8 +138,13 @@ export default function MarketplaceInquiriesPanel({
         <>
           <div className="space-y-3">
             {paginateItems(visible, page, pageSize).map((item) => {
-              const next = inquiryNextStep(item);
+              const next = inquiryNextStep({ ...item, viewerRole: organizerView ? 'organizer' : item.viewerRole || 'vendor' });
               const busy = busyId === item.id;
+              const listingHref = item.listingSlug
+                ? dashboardVenueHref(item.listingSlug)
+                : item.offeringSlug
+                  ? dashboardServiceHref(item.offeringSlug, item.offeringCategory)
+                  : null;
               return (
                 <article
                   key={item.id}
@@ -129,9 +153,18 @@ export default function MarketplaceInquiriesPanel({
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">
-                        {item.kind === 'venue' ? 'Salle' : item.kind === 'rental' ? 'Location' : 'Métier'} · {item.title}
+                        {item.kind === 'venue' ? 'Salle' : item.kind === 'rental' ? 'Location' : 'Métier'}
+                        {item.vendorName && organizerView ? ` · ${item.vendorName}` : ''}
                       </p>
-                      <h3 className="font-semibold text-sm mt-0.5">{item.fromName}</h3>
+                      <h3 className="font-semibold text-sm mt-0.5">
+                        {organizerView ? item.title : item.fromName}
+                      </h3>
+                      {organizerView ? (
+                        <p className="text-xs text-muted mt-0.5">
+                          Envoyé le {new Date(item.createdAt).toLocaleDateString('fr-FR')}
+                          {item.event?.title ? ` · événement ${item.event.title}` : ''}
+                        </p>
+                      ) : (
                       <p className="text-xs text-muted mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                         <a href={`mailto:${item.fromEmail}`} className="inline-flex items-center gap-1 font-medium text-primary hover:underline">
                           <Mail className="w-3 h-3" />
@@ -144,9 +177,10 @@ export default function MarketplaceInquiriesPanel({
                           </a>
                         ) : null}
                       </p>
+                      )}
                     </div>
-                    <StatusPill tone={item.status === 'NEW' ? 'amber' : 'emerald'}>
-                      {item.status === 'NEW' ? 'Nouveau' : 'Contacté'}
+                    <StatusPill tone={item.hasBooking ? 'emerald' : item.status === 'NEW' ? 'amber' : 'sky'}>
+                      {item.hasBooking ? 'Réservée' : organizerView ? (item.status === 'NEW' ? 'Envoyée' : 'Prise en charge') : (item.status === 'NEW' ? 'Nouveau' : 'Contacté')}
                     </StatusPill>
                   </div>
 
@@ -160,14 +194,21 @@ export default function MarketplaceInquiriesPanel({
                     {item.guestCount ? ` · ${item.guestCount} invités` : ''}
                   </p>
 
-                  <div className="rounded-lg border border-border bg-surface-muted/70 px-3 py-2">
+                  <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/70 px-3 py-2">
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Prochaine étape</p>
                     <p className="text-sm font-semibold text-foreground mt-0.5">{next.title}</p>
                     <p className="text-xs text-muted mt-0.5 leading-relaxed">{next.detail}</p>
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-                    {item.status === 'NEW' && (
+                    {listingHref ? (
+                      <Link href={listingHref} className="inline-flex">
+                        <Button size="sm" variant={organizerView ? 'primary' : 'secondary'}>
+                          Voir la fiche
+                        </Button>
+                      </Link>
+                    ) : null}
+                    {!organizerView && item.status === 'NEW' && onMarkContacted ? (
                       <Button
                         size="sm"
                         variant={item.eventDate && !item.hasBooking ? 'secondary' : 'primary'}
@@ -177,8 +218,8 @@ export default function MarketplaceInquiriesPanel({
                       >
                         Marquer comme contacté
                       </Button>
-                    )}
-                    {item.eventDate && !item.hasBooking && (
+                    ) : null}
+                    {!organizerView && item.eventDate && !item.hasBooking && onConvert ? (
                       <Button
                         size="sm"
                         loading={busy}
@@ -187,7 +228,7 @@ export default function MarketplaceInquiriesPanel({
                       >
                         Convertir en réservation
                       </Button>
-                    )}
+                    ) : null}
                     {item.hasBooking && <StatusPill tone="slate">Déjà réservée</StatusPill>}
                   </div>
                 </article>

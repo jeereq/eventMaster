@@ -109,7 +109,11 @@ export default function MarketplaceInquiryForm({
           </p>
           {token && user && (
             <p className="text-[11px] text-muted">
-              Connecté en tant que {user.name || user.email}.
+              Connecté en tant que {user.name || user.email}. Après envoi, suivez la demande dans{' '}
+              <Link href="/dashboard/bookings?tab=quotes" className="font-semibold text-primary hover:underline">
+                Devis & réservations
+              </Link>
+              .
             </p>
           )}
           {!token && (
