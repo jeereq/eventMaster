@@ -145,7 +145,7 @@ export function resolveDepthAmount(meta?: {
 }
 
 /** Vue invité : conserver le réglage org, sinon une profondeur lisible par défaut. */
-export const GUEST_PLAN_DEFAULT_DEPTH = 48;
+export const GUEST_PLAN_DEFAULT_DEPTH = 58;
 
 export function resolveGuestDepthAmount(meta?: {
   depthView?: boolean;
@@ -159,31 +159,41 @@ export function depthScaleForY(yPct: number, amount: number): number {
   if (amount <= 0) return 1;
   const t = Math.min(1, Math.max(0, yPct / 100));
   const strength = amount / 100;
-  const far = 0.58;
-  const near = 1;
+  const far = 0.52;
+  const near = 1.06;
   return 1 - (1 - (far + t * (near - far))) * strength;
+}
+
+export function depthRotateDeg(amount: number, maxDeg = 42): number {
+  if (amount <= 0) return 0;
+  return (amount / 100) * maxDeg;
 }
 
 export function furnitureDepthStyle(yPct: number, amount: number): React.CSSProperties {
   if (amount <= 0) return {};
   const t = Math.min(1, Math.max(0, yPct / 100));
   const strength = amount / 100;
-  const brightness = 1 - (1 - (0.76 + t * 0.24)) * strength;
-  const shadowY = 2 + t * 16 * strength;
-  const shadowBlur = 6 + t * 22 * strength;
+  const brightness = 1 - (1 - (0.72 + t * 0.28)) * strength;
+  const shadowY = 3 + t * 20 * strength;
+  const shadowBlur = 8 + t * 28 * strength;
+  const z = 6 + t * 36 * strength;
   return {
-    zIndex: Math.round(8 + t * 48),
+    zIndex: Math.round(8 + t * 52),
     filter: `brightness(${brightness.toFixed(3)})`,
-    ['--em-item-shadow' as string]: `0 ${shadowY.toFixed(1)}px ${shadowBlur.toFixed(1)}px rgba(12, 8, 4, ${0.18 + t * 0.28 * strength})`,
+    ['--em-item-shadow' as string]: `0 ${shadowY.toFixed(1)}px ${shadowBlur.toFixed(1)}px rgba(8, 5, 2, ${0.22 + t * 0.34 * strength})`,
+    ['--em-item-z' as string]: `${z.toFixed(1)}px`,
   };
 }
 
 export function depthCanvasVars(amount: number): React.CSSProperties {
   if (amount <= 0) return {};
+  const rotate = depthRotateDeg(amount);
   return {
-    ['--em-depth-perspective' as string]: `${2100 - amount * 7}px`,
-    ['--em-depth-origin' as string]: `${84 + amount * 0.06}%`,
+    ['--em-depth-perspective' as string]: `${2200 - amount * 9}px`,
+    ['--em-depth-origin' as string]: `${90 + amount * 0.05}%`,
     ['--em-depth-haze' as string]: String(amount / 100),
-    ['--em-depth-rotate' as string]: `${(amount / 100) * 38}deg`,
+    ['--em-depth-rotate' as string]: `${rotate}deg`,
+    ['--em-depth-wall' as string]: `${12 + amount * 0.16}%`,
+    ['--em-depth-scene-scale' as string]: String(1.08 + (amount / 100) * 0.14),
   };
 }

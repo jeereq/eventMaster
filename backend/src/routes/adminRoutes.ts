@@ -41,7 +41,7 @@ import {
 } from '../controllers/subscriptionController';
 import { getRevenueReport, exportRevenueReport, notifyRevenuePayouts, markRevenuePayoutPaid } from '../controllers/revenueReportController';
 import { listAdminSaasPayouts, settleAdminSaasPayout } from '../controllers/saasPayoutController';
-import { getInvoiceDetail, downloadInvoicePdf, sendInvoiceByEmail } from '../controllers/invoiceController';
+import { getInvoiceDetail, downloadInvoicePdf, sendInvoiceByEmail, markAdminInvoicePaid } from '../controllers/invoiceController';
 import {
   getOpsOverview,
   getPlatformInsights,
@@ -74,6 +74,7 @@ router.get('/invoices', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), getAdminInvo
 router.get('/invoices/:id', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), getInvoiceDetail);
 router.get('/invoices/:id/pdf', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), downloadInvoicePdf);
 router.post('/invoices/:id/send', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), sendInvoiceByEmail);
+router.patch('/invoices/:id/paid', requireRole(['SUPER_ADMIN']), markAdminInvoicePaid);
 router.get('/subscriptions/requests', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), getAdminSubscriptionRequests);
 router.post('/subscriptions/requests/:id/approve', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), approveSubscriptionRequest);
 router.post('/subscriptions/requests/:id/reject', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), rejectSubscriptionRequest);

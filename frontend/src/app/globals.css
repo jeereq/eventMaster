@@ -1016,54 +1016,71 @@ html[data-mood="celebrate"] .font-display {
 
 .em-floor-canvas--depth {
   perspective: var(--em-depth-perspective, 1600px);
-  perspective-origin: 50% var(--em-depth-origin, 88%);
+  perspective-origin: 50% var(--em-depth-origin, 92%);
+  overflow: hidden;
 }
 
 .em-floor-scene {
   transform-style: preserve-3d;
-  transform-origin: 50% 94%;
+  transform-origin: 50% 100%;
 }
 
 .em-floor-scene--tilt {
-  transform: rotateX(var(--em-depth-rotate, 0deg));
+  transform: rotateX(var(--em-depth-rotate, 0deg)) scale(var(--em-depth-scene-scale, 1.12));
+  box-shadow:
+    0 40px 70px -24px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.em-floor-ceiling {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 26%;
+  pointer-events: none;
+  z-index: 6;
+  background: linear-gradient(180deg, rgba(4, 3, 2, 0.78) 0%, rgba(12, 8, 5, 0.22) 55%, transparent 100%);
 }
 
 .em-floor-back-wall {
   position: absolute;
-  left: 3%;
-  right: 3%;
+  left: 4%;
+  right: 4%;
   top: 0;
-  height: 14%;
+  height: var(--em-depth-wall, 16%);
   pointer-events: none;
+  z-index: 3;
   background:
-    linear-gradient(180deg, rgba(18, 10, 4, 0.62) 0%, rgba(40, 24, 10, 0.12) 100%);
-  box-shadow: inset 0 -12px 24px rgba(0, 0, 0, 0.18);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    linear-gradient(180deg, rgba(10, 6, 3, 0.88) 0%, rgba(42, 26, 12, 0.28) 70%, transparent 100%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 2px, transparent 2px 28px);
+  box-shadow: inset 0 -18px 28px rgba(0, 0, 0, 0.28);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .em-floor-side-fade {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 12%;
+  width: 16%;
   pointer-events: none;
   z-index: 5;
 }
 
 .em-floor-side-fade--left {
   left: 0;
-  background: linear-gradient(90deg, rgba(8, 6, 4, 0.35), transparent);
+  background: linear-gradient(90deg, rgba(6, 4, 3, 0.55), transparent);
 }
 
 .em-floor-side-fade--right {
   right: 0;
-  background: linear-gradient(270deg, rgba(8, 6, 4, 0.35), transparent);
+  background: linear-gradient(270deg, rgba(6, 4, 3, 0.55), transparent);
 }
 
 .em-floor-depth-haze {
   background:
-    linear-gradient(180deg, rgba(12, 8, 4, calc(0.42 * var(--em-depth-haze, 1))) 0%, transparent 38%, rgba(255, 255, 255, calc(0.08 * var(--em-depth-haze, 1))) 100%),
-    radial-gradient(ellipse at 50% 108%, rgba(0, 0, 0, calc(0.28 * var(--em-depth-haze, 1))), transparent 58%);
+    linear-gradient(180deg, rgba(8, 5, 3, calc(0.5 * var(--em-depth-haze, 1))) 0%, transparent 32%, rgba(255, 255, 220, calc(0.06 * var(--em-depth-haze, 1))) 100%),
+    radial-gradient(ellipse at 50% 118%, rgba(0, 0, 0, calc(0.42 * var(--em-depth-haze, 1))), transparent 55%);
   mix-blend-mode: multiply;
 }
 

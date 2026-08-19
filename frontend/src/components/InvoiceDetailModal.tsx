@@ -58,6 +58,8 @@ interface InvoiceDetailModalProps {
   apiPrefix: 'billing' | 'admin';
   isOpen: boolean;
   onClose: () => void;
+  allowMarkPaid?: boolean;
+  onUpdated?: (invoice: InvoiceDetail) => void;
 }
 
 export default function InvoiceDetailModal({
@@ -65,6 +67,8 @@ export default function InvoiceDetailModal({
   apiPrefix,
   isOpen,
   onClose,
+  allowMarkPaid = false,
+  onUpdated,
 }: InvoiceDetailModalProps) {
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -73,6 +77,8 @@ export default function InvoiceDetailModal({
   const [sending, setSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState('');
   const [downloading, setDownloading] = useState(false);
+  const [paidReason, setPaidReason] = useState('');
+  const [markingPaid, setMarkingPaid] = useState(false);
 
   const basePath = `/${apiPrefix}/invoices`;
 
@@ -82,6 +88,7 @@ export default function InvoiceDetailModal({
       setError('');
       setShareEmail('');
       setSendSuccess('');
+      setPaidReason('');
       return;
     }
 
@@ -103,6 +110,27 @@ export default function InvoiceDetailModal({
       setError(err.message || 'Erreur lors du téléchargement.');
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const handleMarkPaid = async () => {
+    if (!invoice) return;
+    if (paidReason.trim().length < 8) {
+      setError('Motif obligatoire (8 caractères min.).');
+      return;
+    }
+    setMarkingPaid(true);
+    setError('');
+    try {
+      const result = await api.patch(`/admin/invoices/${invoice.id}/paid`, { reason: paidReason.trim() });
+      setInvoice(result.invoice);
+      setSendSuccess(result.message || 'Facture marquée payée.');
+      setPaidReason('');
+      onUpdated?.(result.invoice);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Impossible de marquer la facture payée.');
+    } finally {
+      setMarkingPaid(false);
     }
   };
 
@@ -254,6 +282,32 @@ export default function InvoiceDetailModal({
                   </p>
                 </div>
               </div>
+
+              {allowMarkPaid && invoice.status !== 'PAID' && (
+                <div className="border border-amber-200 dark:border-amber-900/40 bg-amber-50/80 dark:bg-amber-950/20 rounded-xl p-4 space-y-2">
+                  <p className="text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
+                    Déclarer payée
+                  </p>
+                  <p className="text-[11px] text-muted">
+                    Après virement hors plateforme (preuve déjà vérifiée ou reçue). Distinct des versements commerciaux.
+                  </p>
+                  <textarea
+                    value={paidReason}
+                    onChange={(e) => setPaidReason(e.target.value)}
+                    rows={2}
+                    placeholder="Ex. Preuve Airtel Money du 19 août, reçu n°…"
+                    className="w-full bg-surface border border-border rounded-xl px-3 py-2 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleMarkPaid()}
+                    disabled={markingPaid}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition disabled:opacity-50"
+                  >
+                    {markingPaid ? 'Enregistrement…' : 'Marquer la facture payée'}
+                  </button>
+                </div>
+              )}
 
               {invoice.recipientEmails && invoice.recipientEmails.length > 0 && (
                 <div className="text-xs text-muted">

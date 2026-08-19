@@ -605,6 +605,44 @@ export async function findInvoiceById(invoiceId: string) {
   });
 }
 
+export async function markInvoicePaid(params: {
+  invoiceId: string;
+  paidByUserId: string;
+  reason: string;
+}) {
+  const invoice = await findInvoiceById(params.invoiceId);
+  if (!invoice) return { error: 'NOT_FOUND' as const };
+  if (invoice.status === 'PAID') return { error: 'ALREADY_PAID' as const };
+
+  const details =
+    invoice.details && typeof invoice.details === 'object' && !Array.isArray(invoice.details)
+      ? (invoice.details as Record<string, unknown>)
+      : {};
+
+  const updated = await prisma.platformInvoice.update({
+    where: { id: invoice.id },
+    data: {
+      status: 'PAID',
+      details: {
+        ...details,
+        paidAt: new Date().toISOString(),
+        paidByUserId: params.paidByUserId,
+        paidReason: params.reason.slice(0, 500),
+      },
+    },
+    include: {
+      tenant: { select: { name: true } },
+      commercialCommissions: {
+        include: {
+          commercial: { select: { name: true, email: true } },
+        },
+      },
+    },
+  });
+
+  return { invoice: updated };
+}
+
 function getInvoicePlanName(invoice: InvoiceWithTenant): string {
   const details = invoice.details as { planName?: string } | null;
   return details?.planName ?? getPlanLimits(invoice.plan as PlanType).name;

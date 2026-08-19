@@ -73,7 +73,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'approve-subscription',
         title: 'Valider une demande d\'abonnement',
         content:
-          '1. Ouvrez Demandes abonnement.\n2. Vérifiez le forfait et la durée : trimestre 90 j (Particulier) ou mois (Business / marketplace), annuel 365 j avec −10 %.\n3. Approuvez ou rejetez — une facture est générée en cas d\'approbation.\n4. Le commercial parrainé est notifié si applicable.',
+          '1. Ouvrez Demandes abonnement.\n2. Vérifiez le forfait et la durée : trimestre 90 j (Particulier) ou mois (Business / marketplace), annuel 365 j avec −10 %.\n3. Vérifiez la preuve de paiement hors plateforme.\n4. Approuvez — la licence s’active et une facture est générée au statut Payée.\n5. Pour une facture déjà émise « Envoyée » (renouvellement, ancien dossier) : Factures → détail → Marquer payée (motif ≥ 8 caractères).',
         links: [{ label: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests' }],
       },
       {

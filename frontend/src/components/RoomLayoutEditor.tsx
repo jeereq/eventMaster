@@ -50,7 +50,8 @@ import { prependLayoutAction, LayoutActionEntry } from '@/lib/layoutActionLog';
 import { getSeatCoordinates, getTableVisualStyle } from '@/lib/tablePlanUtils';
 import { readImageFile } from '@/lib/imageCropUtils';
 import { applyRoomTheme, getRoomTheme, listAvailableThemes, RoomThemeId, type FloorType } from '@/lib/roomThemeUtils';
-import { depthCanvasVars, depthScaleForY, floorTypeLabels, furnitureDepthStyle, resolveDepthAmount, resolveFloorStyle } from '@/lib/roomFloorUtils';
+import { depthScaleForY, floorTypeLabels, furnitureDepthStyle, resolveDepthAmount, resolveFloorStyle } from '@/lib/roomFloorUtils';
+import FloorDepthFrame from '@/components/FloorDepthFrame';
 import CustomRoomThemePanel from '@/components/CustomRoomThemePanel';
 import { cn } from '@/lib/cn';
 
@@ -411,6 +412,7 @@ export default function RoomLayoutEditor({
  blueprint.metadata.floorImageUrl,
  activeTheme.accentColor,
  );
+ const liveDepth = dragging ? 0 : depthAmount;
 
  const renderRoomOutline = () => {
  return (
@@ -443,19 +445,15 @@ export default function RoomLayoutEditor({
  };
 
  const renderCanvas = (className: string) => (
- <div
+ <FloorDepthFrame
  ref={canvasRef}
+ amount={liveDepth}
+ floorStyle={floorStyle}
  onMouseMove={handleMouseMove}
  onMouseUp={handleMouseUp}
  onMouseLeave={handleMouseUp}
  onClick={() => setSelected(null)}
- className={cn(
- 'em-floor-canvas em-floor-canvas--photo relative w-full',
- className,
- depthAmount > 0 && 'em-floor-canvas--depth',
- dragging && 'em-floor-canvas--dragging',
- )}
- style={{ ...floorStyle, ...depthCanvasVars(depthAmount) }}
+ className={cn('w-full', className, dragging && 'em-floor-canvas--dragging')}
  >
  {renderRoomOutline()}
 
@@ -478,6 +476,9 @@ export default function RoomLayoutEditor({
  top: `${fixture.y}%`,
  width: `${fixture.w}%`,
  height: `${fixture.h}%`,
+ transform: isDrag ? undefined : `scale(${depthScaleForY(fixture.y, liveDepth)})`,
+ transformOrigin: '50% 100%',
+ ...(!isSel && !isDrag ? furnitureDepthStyle(fixture.y, liveDepth) : {}),
  }}
  >
  <FixtureRenderer fixture={fixture} fill showLabel={fixture.kind !== 'flower'} />
@@ -521,8 +522,8 @@ export default function RoomLayoutEditor({
  style={{
  left: `${item.x}%`,
  top: `${item.y}%`,
- transform: isDrag ? undefined : `translate(-50%, -50%) scale(${depthScaleForY(item.y, depthAmount)})`,
- ...(!isSel && !isDrag ? furnitureDepthStyle(item.y, depthAmount) : {}),
+ transform: isDrag ? undefined : `translate(-50%, -50%) scale(${depthScaleForY(item.y, liveDepth)})`,
+ ...(!isSel && !isDrag ? furnitureDepthStyle(item.y, liveDepth) : {}),
  }}
  >
  <div
@@ -546,7 +547,7 @@ export default function RoomLayoutEditor({
  const isDrag = dragging?.kind === 'table' && dragging.id === item.id;
  const tableColor = resolveTableColor(item.tableColor, blueprint.metadata.defaultTableColor);
  const { className: tableClass, style: tableStyle } = getTableVisualStyle(item.shape, isSel, tableColor, item.tableImageUrl);
- const depthScale = depthScaleForY(item.y, depthAmount);
+ const depthScale = depthScaleForY(item.y, liveDepth);
  return (
  <div
  key={item.id}
@@ -564,7 +565,7 @@ export default function RoomLayoutEditor({
  transform: isDrag
  ? undefined
  : `translate(-50%, -50%) scale(${depthScale})${item.rotation ? ` rotate(${item.rotation}deg)` : ''}`,
- ...(isSel || isDrag ? { zIndex: 50 } : furnitureDepthStyle(item.y, depthAmount)),
+ ...(isSel || isDrag ? { zIndex: 50 } : furnitureDepthStyle(item.y, liveDepth)),
  }}
  >
  <div
@@ -605,10 +606,8 @@ export default function RoomLayoutEditor({
  <p className="text-xs text-muted mt-1">Choisissez un modèle ou ajoutez des éléments</p>
  </div>
  )}
- </div>
+ </FloorDepthFrame>
  );
-
- const renderChairImageUpload = (id: string, currentUrl?: string) => (
  <label className="block text-xs space-y-1">
  <span className="font-semibold text-muted flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> Image de chaise (optionnel)</span>
  <input
@@ -822,7 +821,7 @@ export default function RoomLayoutEditor({
  className="w-full accent-indigo-600"
  />
  <p className="text-[10px] text-muted leading-relaxed">
- 0 = plan à plat · 100 = perspective 2,5D (avant plus grand, fond plus sombre).
+ 0 = plan à plat · 100 = salle en perspective (le sol recule, le fond est plus petit). Le plan se remet à plat pendant un glisser-déposer.
  </p>
  </div>
  </div>

@@ -11,12 +11,12 @@ import {
 import { getSeatCoordinates, getTableVisualStyle } from '@/lib/tablePlanUtils';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
 import {
- depthCanvasVars,
  depthScaleForY,
  furnitureDepthStyle,
  resolveDepthAmount,
  resolveFloorStyle,
 } from '@/lib/roomFloorUtils';
+import FloorDepthFrame from '@/components/FloorDepthFrame';
 import ChairRenderer from '@/components/ChairRenderer';
 import FixtureRenderer from '@/components/FixtureRenderer';
 import { cn } from '@/lib/cn';
@@ -86,8 +86,6 @@ export default function RoomLayoutPreview({
  const theme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
  const floorType = blueprint.metadata.floorType ?? theme.defaultFloorType;
  const floorStyle = resolveFloorStyle(floorType, blueprint.metadata.floorImageUrl, theme.accentColor);
- const tilt = quality !== 'thumb' && amount > 6;
- const rotate = tilt ? (amount / 100) * (quality === 'showcase' ? 38 : 26) : 0;
  const chairLimit = quality === 'thumb' ? 0 : quality === 'standard' ? 10 : 24;
  const chairRadius = quality === 'showcase' ? 50 : 36;
 
@@ -102,28 +100,12 @@ export default function RoomLayoutPreview({
  {showSlider && (
  <DepthSlider value={amount} onChange={setLocalDepth} />
  )}
- <div
- className={cn(
- 'relative border border-border rounded-2xl overflow-hidden em-floor-canvas em-floor-canvas--photo',
- amount > 0 && 'em-floor-canvas--depth',
- canvasClass,
- )}
- style={{ ...floorStyle, ...depthCanvasVars(amount) }}
+ <FloorDepthFrame
+ amount={quality === 'thumb' ? 0 : amount}
+ floorStyle={floorStyle}
+ maxTilt={quality === 'showcase' ? 44 : 36}
+ className={cn(canvasClass, 'rounded-2xl border border-border overflow-hidden')}
  >
- {amount > 0 && (
- <div className="absolute inset-0 pointer-events-none em-floor-depth-haze z-[4]" />
- )}
- {tilt && (
- <>
- <div className="em-floor-side-fade em-floor-side-fade--left" style={{ opacity: amount / 140 }} />
- <div className="em-floor-side-fade em-floor-side-fade--right" style={{ opacity: amount / 140 }} />
- </>
- )}
- <div
- className={cn('absolute inset-0 em-floor-scene', tilt && 'em-floor-scene--tilt')}
- style={tilt ? { ['--em-depth-rotate' as string]: `${rotate}deg` } : undefined}
- >
- {tilt && <div className="em-floor-back-wall" style={{ height: `${10 + amount * 0.12}%`, opacity: 0.35 + amount / 220 }} />}
  {outline && (
  <div
  className="absolute pointer-events-none z-0 overflow-hidden"
@@ -154,9 +136,10 @@ export default function RoomLayoutPreview({
  top: `${fixture.y}%`,
  width: `${fixture.w}%`,
  height: `${fixture.h}%`,
- transform: tilt ? `rotateX(${-rotate}deg)` : undefined,
+ transform: `scale(${depthScaleForY(fixture.y, amount)})`,
  transformOrigin: '50% 100%',
  ...furnitureDepthStyle(fixture.y, amount),
+ filter: amount > 0 ? 'drop-shadow(var(--em-item-shadow, 0 8px 12px rgba(0,0,0,0.25)))' : undefined,
  }}
  >
  <FixtureRenderer fixture={fixture} />
@@ -185,7 +168,7 @@ export default function RoomLayoutPreview({
  style={{
  left: `${item.x}%`,
  top: `${item.y}%`,
- transform: `translate(-50%, -50%)${tilt ? ` rotateX(${-rotate}deg)` : ''} scale(${(quality === 'thumb' ? 0.4 : 0.85) * depthScale})`,
+ transform: `translate(-50%, -50%) scale(${(quality === 'thumb' ? 0.4 : 0.85) * depthScale})`,
  ...furnitureDepthStyle(item.y, amount),
  }}
  >
@@ -215,7 +198,7 @@ export default function RoomLayoutPreview({
  style={{
  left: `${item.x}%`,
  top: `${item.y}%`,
- transform: `translate(-50%, -50%)${tilt ? ` rotateX(${-rotate}deg)` : ''} scale(${baseScale * depthScale})${item.rotation ? ` rotate(${item.rotation}deg)` : ''}`,
+ transform: `translate(-50%, -50%) scale(${baseScale * depthScale})${item.rotation ? ` rotate(${item.rotation}deg)` : ''}`,
  transformOrigin: '50% 80%',
  ...furnitureDepthStyle(item.y, amount),
  }}
@@ -252,11 +235,10 @@ export default function RoomLayoutPreview({
  </div>
  );
  })}
- </div>
- </div>
+ </FloorDepthFrame>
  {quality === 'showcase' && (
  <p className="text-[10px] text-muted leading-relaxed">
- Rendu <span className="font-semibold text-foreground">2,5D</span> (perspective CSS, profondeur réglable). Un vrai 3D demanderait un moteur 3D, des modèles de mobilier et un éclairage de scène.
+ Rendu <span className="font-semibold text-foreground">2,5D</span> : le sol recule en perspective. Réglez la profondeur ; un moteur 3D n’est pas nécessaire.
  </p>
  )}
  </div>

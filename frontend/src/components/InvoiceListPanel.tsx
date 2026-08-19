@@ -37,6 +37,8 @@ export default function InvoiceListPanel({
   apiPrefix = 'billing',
   layout = 'list',
   gridClassName = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4',
+  allowMarkPaid = false,
+  onInvoiceUpdated,
 }: {
   invoices: PlatformInvoiceItem[];
   showOrganization?: boolean;
@@ -45,6 +47,8 @@ export default function InvoiceListPanel({
   apiPrefix?: 'billing' | 'admin';
   layout?: ProjectCardLayout;
   gridClassName?: string;
+  allowMarkPaid?: boolean;
+  onInvoiceUpdated?: (invoice: PlatformInvoiceItem) => void;
 }) {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -165,6 +169,8 @@ export default function InvoiceListPanel({
         apiPrefix={apiPrefix}
         isOpen={Boolean(selectedInvoiceId)}
         onClose={() => setSelectedInvoiceId(null)}
+        allowMarkPaid={allowMarkPaid}
+        onUpdated={onInvoiceUpdated}
       />
     </>
   );

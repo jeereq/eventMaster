@@ -3669,6 +3669,10 @@ function DashboardPageContent() {
  showOrganization
  showCommissions
  apiPrefix="admin"
+ allowMarkPaid={user?.role === 'SUPER_ADMIN'}
+ onInvoiceUpdated={(inv) => {
+ setAdminInvoices((prev) => prev.map((row) => (row.id === inv.id ? { ...row, ...inv } : row)));
+ }}
  layout={invoicesViewMode}
  gridClassName={invoicesGridClass}
  emptyMessage="Aucune facture générée. Les factures apparaissent ici dès qu'une demande d'abonnement est approuvée."

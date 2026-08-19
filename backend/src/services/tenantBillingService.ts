@@ -108,6 +108,7 @@ export async function issueTenantPlanInvoice(params: {
     periodEnd,
     includeManagers: true,
     subscriptionRequestId: params.subscriptionRequestId,
+    status: 'PAID',
   });
 
   const commissionRecords = await recordCommercialCommission({

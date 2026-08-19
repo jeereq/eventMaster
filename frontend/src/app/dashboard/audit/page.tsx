@@ -28,6 +28,7 @@ const ACTION_LABELS: Record<string, string> = {
   SAAS_PAYOUT_UNSETTLE: 'Versement SaaS remis dû',
   ORG_PAYOUT_SETTLE: 'Versement commercial org.',
   ORG_PAYOUT_UNSETTLE: 'Versement org. remis dû',
+  INVOICE_MARK_PAID: 'Facture déclarée payée',
 };
 
 interface AuditLogRow {

@@ -3,14 +3,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { getRoomOutlineClipPath } from '@/lib/roomLayoutUtils';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
-import { cn } from '@/lib/cn';
 import {
   resolveFloorStyle,
   resolveGuestDepthAmount,
-  depthCanvasVars,
   depthScaleForY,
   furnitureDepthStyle,
 } from '@/lib/roomFloorUtils';
+import FloorDepthFrame from '@/components/FloorDepthFrame';
 import { getTableVisualStyle } from '@/lib/tablePlanUtils';
 import {
   computeFitZoom,
@@ -100,7 +99,6 @@ export default function GuestRoomPlanCanvas({
     depthAmount: typeof depthAmount === 'number' ? depthAmount : undefined,
     depthView: Boolean(depthView),
   });
-  const rotate = (amount / 100) * 28;
   const outline = roomOutline;
   const clipPath = outline ? getRoomOutlineClipPath(outline.shape) : undefined;
 
@@ -162,38 +160,18 @@ export default function GuestRoomPlanCanvas({
             position: 'relative',
           }}
         >
-          <div
-            className={cn(
-              'em-floor-canvas em-floor-canvas--photo',
-              amount > 0 && 'em-floor-canvas--depth',
-            )}
+          <FloorDepthFrame
+            amount={amount}
+            floorStyle={floorStyle}
+            maxTilt={36}
+            className="overflow-hidden"
             style={{
               width: GUEST_PLAN_LOGICAL_W,
               height: GUEST_PLAN_LOGICAL_H,
               transform: `scale(${zoom})`,
               transformOrigin: 'top left',
-              position: 'relative',
-              ...floorStyle,
-              ...depthCanvasVars(amount),
             }}
           >
-            {amount > 0 && (
-              <>
-                <div className="absolute inset-0 pointer-events-none em-floor-depth-haze z-[4]" />
-                <div className="em-floor-side-fade em-floor-side-fade--left" style={{ opacity: amount / 140 }} />
-                <div className="em-floor-side-fade em-floor-side-fade--right" style={{ opacity: amount / 140 }} />
-              </>
-            )}
-            <div
-              className={cn('absolute inset-0 em-floor-scene', amount > 0 && 'em-floor-scene--tilt')}
-              style={amount > 0 ? { ['--em-depth-rotate' as string]: `${rotate}deg` } : undefined}
-            >
-            {amount > 0 && (
-              <div
-                className="em-floor-back-wall"
-                style={{ height: `${10 + amount * 0.12}%`, opacity: 0.35 + amount / 220 }}
-              />
-            )}
             {outline && (
               <div
                 className="absolute pointer-events-none z-0 overflow-hidden"
@@ -212,7 +190,6 @@ export default function GuestRoomPlanCanvas({
                 {theme.ambientOverlay && (
                   <div className="absolute inset-0" style={{ background: theme.ambientOverlay }} />
                 )}
-                {amount > 0 && <div className="absolute inset-0 pointer-events-none em-floor-depth-haze" />}
               </div>
             )}
 
@@ -228,7 +205,7 @@ export default function GuestRoomPlanCanvas({
                     top: pos.y,
                     width: size.w,
                     height: size.h,
-                    transform: amount > 0 ? `rotateX(${-rotate}deg)` : undefined,
+                    transform: `scale(${depthScaleForY(fixture.y, amount)})`,
                     transformOrigin: '50% 100%',
                     ...furnitureDepthStyle(fixture.y, amount),
                   }}
@@ -270,6 +247,7 @@ export default function GuestRoomPlanCanvas({
                     transform: `translate(-50%, -50%) scale(${depthScale})`,
                     width: markerSize + 8,
                     ...furnitureDepthStyle(pos.y, amount),
+                    filter: amount > 0 ? 'drop-shadow(var(--em-item-shadow, 0 8px 12px rgba(0,0,0,0.25)))' : undefined,
                   }}
                 >
                   {isSelected && (
@@ -282,7 +260,7 @@ export default function GuestRoomPlanCanvas({
                   <button
                     type="button"
                     onClick={() => setSelectedTableId(isSelected ? null : table.id)}
-                    className={`flex items-center justify-center shrink-0 transition-all shadow-md overflow-hidden ${
+                    className={`flex items-center justify-center shrink-0 transition-all overflow-hidden ${
  tableVisual.className
  } ${
  isGuest
@@ -313,8 +291,7 @@ export default function GuestRoomPlanCanvas({
                 </div>
               );
             })}
-            </div>
-          </div>
+          </FloorDepthFrame>
         </div>
       </div>
 
