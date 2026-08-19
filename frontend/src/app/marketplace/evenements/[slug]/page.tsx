@@ -97,7 +97,7 @@ function MarketplaceEventDetailInner() {
         title={event?.title || ''}
         subtitle={event?.location || ''}
         shareKind="event"
-        shareSlug={event?.slug}
+        shareSlug={event?.slug ?? undefined}
         photos={photos}
         photoIndex={photoIndex}
         onPhotoIndex={setPhotoIndex}
