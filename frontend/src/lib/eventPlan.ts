@@ -172,6 +172,28 @@ export function writeStoredBrief(brief: EventPlanBrief) {
   }
 }
 
+/** Préremplit le brief catalogue à partir d’un événement (date, ville, invités). */
+export function seedBriefFromEvent(opts: {
+  eventDate?: string | null;
+  location?: string | null;
+  guestCount?: number | null;
+}) {
+  const current = readStoredBrief();
+  const dateKey = String(opts.eventDate || '').slice(0, 10);
+  const raw = String(opts.location || '').toLowerCase();
+  const city = raw.includes('lubumbashi')
+    ? 'Lubumbashi'
+    : raw.includes('kinshasa')
+      ? 'Kinshasa'
+      : current.city;
+  writeStoredBrief({
+    ...current,
+    ...(dateKey ? { eventDate: dateKey } : {}),
+    ...(city ? { city } : {}),
+    ...(opts.guestCount && opts.guestCount > 0 ? { guestCount: opts.guestCount } : {}),
+  });
+}
+
 export function briefWithEventType(brief: EventPlanBrief, eventType: ListingEventTypeId): EventPlanBrief {
   const slots = defaultSlotPriorities(eventType);
   return {

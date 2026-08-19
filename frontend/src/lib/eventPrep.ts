@@ -116,3 +116,64 @@ export function eventPrepSummary(prep: EventPrep): string | null {
 export function hasEventPrepSelection(prep: EventPrep): boolean {
   return Boolean(prep.venue || prep.vendors.length > 0 || prep.notes);
 }
+
+export function eventDateKey(value?: string | null): string {
+  return String(value || '').slice(0, 10);
+}
+
+export function eventPrepFromSavedPack(
+  pack: {
+    name?: string | null;
+    venue: {
+      slug: string;
+      title: string;
+      orgName?: string | null;
+      location?: string | null;
+      coverUrl?: string | null;
+      estimatedFc?: number;
+      capacity?: number | null;
+    } | null;
+    services: Array<{
+      slug: string;
+      title: string;
+      orgName?: string | null;
+      location?: string | null;
+      coverUrl?: string | null;
+      estimatedFc?: number;
+      categoryLabel?: string;
+      href?: string;
+    }>;
+  },
+  current: EventPrep,
+): EventPrep {
+  const venue = pack.venue
+    ? {
+        slug: pack.venue.slug,
+        name: pack.venue.title,
+        city: pack.venue.location || null,
+        coverUrl: pack.venue.coverUrl || null,
+        orgName: pack.venue.orgName || null,
+        priceFromFc: pack.venue.estimatedFc ?? null,
+        capacity: pack.venue.capacity ?? null,
+      }
+    : current.venue;
+  const seen = new Set<string>();
+  const vendors: EventPrepVendor[] = [];
+  for (const item of pack.services) {
+    if (!item.slug || seen.has(item.slug)) continue;
+    seen.add(item.slug);
+    vendors.push({
+      slug: item.slug,
+      title: item.title,
+      category: item.href?.includes('/locations/') ? 'RENTAL_EQUIPMENT' : '',
+      categoryLabel: item.categoryLabel || null,
+      city: item.location || null,
+      coverUrl: item.coverUrl || null,
+      orgName: item.orgName || null,
+      priceFromFc: item.estimatedFc ?? null,
+    });
+  }
+  const noteLine = pack.name ? `Pack appliqué : ${pack.name}` : '';
+  const notes = [current.notes, noteLine].filter(Boolean).join('\n').slice(0, 2000);
+  return { venue, vendors: vendors.length ? vendors : current.vendors, notes };
+}

@@ -2466,6 +2466,9 @@ Merci de confirmer votre présence :
  eventId={selectedEvent.id}
  value={selectedEvent.eventPrep}
  eventLocation={selectedEvent.location}
+ eventDate={selectedEvent.date}
+ eventTitle={selectedEvent.title}
+ guestCount={guests.length}
  orgRooms={orgRooms}
  currentRoomId={selectedEvent.roomId}
  onSaved={(updated) => {

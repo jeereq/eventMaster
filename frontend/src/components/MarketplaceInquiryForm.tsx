@@ -16,11 +16,15 @@ export default function MarketplaceInquiryForm({
   successCopy = 'Demande envoyée.',
   eventDate,
   onEventDateChange,
+  defaultGuestCount,
+  defaultMessage,
 }: {
   endpoint: string;
   successCopy?: string;
   eventDate?: string;
   onEventDateChange?: (value: string) => void;
+  defaultGuestCount?: number | string;
+  defaultMessage?: string;
 }) {
   const pathname = usePathname();
   const { user, token, loading: authLoading } = useAuth();
@@ -29,17 +33,19 @@ export default function MarketplaceInquiryForm({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [internalDate, setInternalDate] = useState('');
+  const [internalDate, setInternalDate] = useState(eventDate || '');
   const [eventEndDate, setEventEndDate] = useState('');
   const [eventTime, setEventTime] = useState('');
   const [eventType, setEventType] = useState('');
   const [budget, setBudget] = useState('');
-  const [guestCount, setGuestCount] = useState('');
-  const [message, setMessage] = useState('');
+  const [guestCount, setGuestCount] = useState(
+    defaultGuestCount != null && String(defaultGuestCount) ? String(defaultGuestCount) : '',
+  );
+  const [message, setMessage] = useState(defaultMessage || '');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState('');
   const [formError, setFormError] = useState('');
-  const selectedDate = eventDate ?? internalDate;
+  const selectedDate = onEventDateChange ? (eventDate ?? internalDate) : internalDate;
   const setSelectedDate = onEventDateChange ?? setInternalDate;
   const showAuthChoice = !authLoading && !token && !guestCheckout;
 

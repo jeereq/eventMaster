@@ -3,18 +3,20 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
+  Bookmark,
   Building2,
   Check,
   ExternalLink,
   Loader2,
   MapPin,
   Search,
+  Send,
   Sparkles,
   Store,
   X,
 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Button, Input } from '@/components/ui';
+import { Button, Input, Modal } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import {
@@ -28,11 +30,15 @@ import {
 } from '@/lib/marketplace';
 import {
   emptyEventPrep,
+  eventDateKey,
+  eventPrepFromSavedPack,
   parseEventPrep,
   type EventPrep,
   type EventPrepVendor,
   type EventPrepVenue,
 } from '@/lib/eventPrep';
+import { seedBriefFromEvent, type SavedEventPack } from '@/lib/eventPlan';
+import MarketplaceInquiryForm from '@/components/MarketplaceInquiryForm';
 
 type OrgRoomOption = {
   id: string;
@@ -85,6 +91,9 @@ export default function EventPrepPanel({
   eventId,
   value,
   eventLocation,
+  eventDate,
+  eventTitle,
+  guestCount = 0,
   orgRooms,
   currentRoomId,
   onSaved,
@@ -92,6 +101,9 @@ export default function EventPrepPanel({
   eventId: string;
   value: unknown;
   eventLocation?: string;
+  eventDate?: string;
+  eventTitle?: string;
+  guestCount?: number;
   orgRooms: OrgRoomOption[];
   currentRoomId?: string | null;
   onSaved: (event: { eventPrep?: unknown; roomId?: string | null; location?: string }) => void;
@@ -106,8 +118,11 @@ export default function EventPrepPanel({
   const [vendorResults, setVendorResults] = useState<PublicService[]>([]);
   const [searchingVenues, setSearchingVenues] = useState(false);
   const [searchingVendors, setSearchingVendors] = useState(false);
+  const [savedPacks, setSavedPacks] = useState<SavedEventPack[]>([]);
+  const [inquire, setInquire] = useState<{ kind: 'venue' | 'service'; slug: string; title: string; category?: string } | null>(null);
   const persistSeq = useRef(0);
   const notesTimer = useRef<number | null>(null);
+  const dateKey = eventDateKey(eventDate);
 
   useEffect(() => {
     setPrep(parseEventPrep(value));
@@ -144,6 +159,21 @@ export default function EventPrepPanel({
   );
 
   useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = (await api.get('/marketplace/event-packs')) as { packs?: SavedEventPack[] };
+        if (!cancelled) setSavedPacks(Array.isArray(data.packs) ? data.packs : []);
+      } catch {
+        if (!cancelled) setSavedPacks([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     const q = venueQ.trim();
     if (!q) {
       setVenueResults([]);
@@ -152,7 +182,12 @@ export default function EventPrepPanel({
     const handle = window.setTimeout(async () => {
       setSearchingVenues(true);
       try {
-        const data = (await api.get(`/public/venues?q=${encodeURIComponent(q)}`)) as { venues?: PublicVenue[] };
+        const params = new URLSearchParams({ q });
+        if (dateKey) {
+          params.set('availableFrom', dateKey);
+          params.set('availableTo', dateKey);
+        }
+        const data = (await api.get(`/public/venues?${params.toString()}`)) as { venues?: PublicVenue[] };
         setVenueResults(Array.isArray(data.venues) ? data.venues.slice(0, 8) : []);
       } catch {
         setVenueResults([]);
@@ -161,7 +196,7 @@ export default function EventPrepPanel({
       }
     }, 280);
     return () => window.clearTimeout(handle);
-  }, [venueQ]);
+  }, [venueQ, dateKey]);
 
   useEffect(() => {
     const q = vendorQ.trim();
@@ -176,6 +211,10 @@ export default function EventPrepPanel({
         const params = new URLSearchParams();
         if (q) params.set('q', q);
         if (category) params.set('category', category);
+        if (dateKey) {
+          params.set('availableFrom', dateKey);
+          params.set('availableTo', dateKey);
+        }
         const data = (await api.get(`/public/services?${params.toString()}`)) as { services?: PublicService[] };
         setVendorResults(Array.isArray(data.services) ? data.services.slice(0, 8) : []);
       } catch {
@@ -185,7 +224,7 @@ export default function EventPrepPanel({
       }
     }, 280);
     return () => window.clearTimeout(handle);
-  }, [vendorQ, vendorCategory]);
+  }, [vendorQ, vendorCategory, dateKey]);
 
   const onNotesChange = (notes: string) => {
     const next = { ...prep, notes: notes.slice(0, 2000) };
@@ -207,6 +246,7 @@ export default function EventPrepPanel({
           <h2 className="text-lg font-semibold text-foreground tracking-tight">Préparation</h2>
           <p className="text-sm text-muted">
             Recherchez une salle et des prestataires au même endroit. Rien n’est obligatoire : le parcours invitations continue sans ça.
+            {dateKey ? ` Les recherches tiennent compte de la date (${new Date(`${dateKey}T12:00:00`).toLocaleDateString('fr-FR')}).` : ''}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -220,6 +260,13 @@ export default function EventPrepPanel({
           )}
           <Link
             href="/dashboard/catalogue?hub=plan"
+            onClick={() =>
+              seedBriefFromEvent({
+                eventDate,
+                location: eventLocation,
+                guestCount,
+              })
+            }
             className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-[var(--radius-button)] border border-border hover:border-primary/40 hover:bg-primary/5 transition"
           >
             <Sparkles className="w-3.5 h-3.5" />
@@ -230,6 +277,35 @@ export default function EventPrepPanel({
 
       {error ? (
         <p className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</p>
+      ) : null}
+
+      {savedPacks.length > 0 ? (
+        <div className="rounded-2xl border border-border bg-surface p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Bookmark className="w-4 h-4 text-primary" />
+            <h3 className="text-sm font-bold text-foreground">Packs enregistrés</h3>
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">optionnel</span>
+          </div>
+          <p className="text-xs text-muted">Appliquez un pack déjà simulé : salle et prestataires se remplissent ici, sans réserver.</p>
+          <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {savedPacks.slice(0, 6).map((pack) => (
+              <li key={pack.id}>
+                <button
+                  type="button"
+                  onClick={() => void persist(eventPrepFromSavedPack(pack, prep))}
+                  className="w-full text-left rounded-xl border border-border px-3 py-2.5 hover:border-primary/40 hover:bg-primary/5 transition"
+                >
+                  <p className="text-sm font-semibold truncate">{pack.name}</p>
+                  <p className="text-[11px] text-muted truncate">
+                    {formatFc(pack.totalFc)}
+                    {pack.venue ? ` · ${pack.venue.title}` : ''}
+                    {pack.services.length ? ` · ${pack.services.length} presta${pack.services.length > 1 ? 's' : ''}` : ''}
+                  </p>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
 
       {orgRooms.length > 0 ? (
@@ -281,9 +357,17 @@ export default function EventPrepPanel({
                     href={dashboardVenueHref(prep.venue.slug)}
                     className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
                   >
-                    Fiche et devis
+                    Fiche
                     <ExternalLink className="w-3 h-3" />
                   </Link>
+                  <button
+                    type="button"
+                    onClick={() => setInquire({ kind: 'venue', slug: prep.venue!.slug, title: prep.venue!.name })}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                  >
+                    <Send className="w-3 h-3" />
+                    Demander un devis
+                  </button>
                   {prep.venue.address && prep.venue.address !== eventLocation ? (
                     <button
                       type="button"
@@ -396,10 +480,18 @@ export default function EventPrepPanel({
                   <Link
                     href={dashboardServiceHref(vendor.slug, vendor.category)}
                     className="text-muted hover:text-primary"
-                    title="Fiche et devis"
+                    title="Fiche"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                   </Link>
+                  <button
+                    type="button"
+                    onClick={() => setInquire({ kind: 'service', slug: vendor.slug, title: vendor.title, category: vendor.category })}
+                    className="text-muted hover:text-primary"
+                    title="Demander un devis"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                  </button>
                   <button
                     type="button"
                     onClick={() =>
@@ -480,7 +572,7 @@ export default function EventPrepPanel({
       {prep.venue || prep.vendors.length > 0 ? (
         <p className="text-xs text-muted flex items-start gap-1.5">
           <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-          Les fiches restent des pistes : ouvrez-les pour demander un devis. Rien n’est réservé automatiquement.
+          Les fiches restent des pistes : demandez un devis depuis ici. Rien n’est réservé automatiquement.
         </p>
       ) : null}
 
@@ -494,6 +586,32 @@ export default function EventPrepPanel({
           Vider la préparation
         </Button>
       )}
+
+      <Modal
+        open={Boolean(inquire)}
+        onClose={() => setInquire(null)}
+        title={inquire ? `Devis — ${inquire.title}` : 'Demander un devis'}
+        description="Le professionnel reçoit votre message. Aucune réservation n’est créée."
+        size="md"
+      >
+        {inquire ? (
+          <MarketplaceInquiryForm
+            key={`${inquire.kind}:${inquire.slug}`}
+            endpoint={
+              inquire.kind === 'venue'
+                ? `/public/venues/${encodeURIComponent(inquire.slug)}/inquire`
+                : `/public/services/${encodeURIComponent(inquire.slug)}/inquire`
+            }
+            eventDate={dateKey || undefined}
+            defaultGuestCount={guestCount > 0 ? guestCount : undefined}
+            defaultMessage={
+              eventTitle
+                ? `Demande pour l’événement « ${eventTitle} ».`
+                : undefined
+            }
+          />
+        ) : null}
+      </Modal>
     </div>
   );
 }
