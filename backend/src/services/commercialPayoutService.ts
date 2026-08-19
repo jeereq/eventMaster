@@ -360,6 +360,7 @@ async function fetchAndAggregatePayouts(params: {
   period?: string;
   q?: string;
   settlement?: 'due' | 'paid' | 'all';
+  proof?: 'yes' | 'no' | 'all';
   page?: number;
   pageSize?: number;
   payer: 'eventmaster' | 'organization';
@@ -435,6 +436,10 @@ async function fetchAndAggregatePayouts(params: {
   if (settlement === 'due') items = items.filter((row) => row.unpaidCommission > 0);
   else if (settlement === 'paid') items = items.filter((row) => row.unpaidCommission === 0 && row.paidCommission > 0);
 
+  const proof = params.proof || 'all';
+  if (proof === 'yes') items = items.filter((row) => Boolean(row.payoutProofUrl));
+  else if (proof === 'no') items = items.filter((row) => !row.payoutProofUrl);
+
   items.sort((a, b) => b.unpaidCommission - a.unpaidCommission || b.totalCommission - a.totalCommission || b.period.localeCompare(a.period));
 
   const dueItems = Array.from(map.values()).filter((row) => row.unpaidCommission > 0);
@@ -460,6 +465,7 @@ async function fetchAndAggregatePayouts(params: {
 export async function listPlatformSaaSPayouts(params: {
   period?: string;
   settlement?: 'due' | 'paid' | 'all';
+  proof?: 'yes' | 'no' | 'all';
   q?: string;
   page?: number;
   pageSize?: number;
@@ -476,6 +482,7 @@ export async function listOrgSaaSPayouts(params: {
   payerTenantId: string;
   period?: string;
   settlement?: 'due' | 'paid' | 'all';
+  proof?: 'yes' | 'no' | 'all';
   q?: string;
   page?: number;
   pageSize?: number;

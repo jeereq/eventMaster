@@ -138,6 +138,14 @@ export async function getAdminSubscriptionRequests(req: AuthenticatedRequest, re
         tenant: {
           select: tenantCommercialSelect,
         },
+        platformInvoice: {
+          select: {
+            id: true,
+            invoiceNumber: true,
+            amount: true,
+            status: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });

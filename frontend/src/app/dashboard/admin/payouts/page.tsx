@@ -3,12 +3,18 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Download, Loader2, Wallet } from 'lucide-react';
+import { Download, Loader2, Wallet, Eye } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
-  PageHeader, Breadcrumbs, Alert, EmptyState, Pagination, Button, Badge, Modal, usePageSize,
+  PageHeader, Breadcrumbs, Alert, EmptyState, Pagination, Button, Modal, usePageSize,
+  ViewModeToggle, useViewMode, ProjectCard, StatusPill, listStackClass,
 } from '@/components/ui';
+import CatalogueFilterBar, {
+  CatalogueChoicePills,
+  CatalogueFilterField,
+  type CatalogueFilterChip,
+} from '@/components/CatalogueFilterBar';
 import { formatFc } from '@/config/landingPricing';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { commercialPercent, renewalPercent } from '@/lib/platformRates';
@@ -57,10 +63,18 @@ export default function AdminSaasPayoutsPage() {
 
   const [period, setPeriod] = useState(previousPeriod());
   const [settlement, setSettlement] = useState<'due' | 'paid' | 'all'>('due');
+  const [proof, setProof] = useState<'all' | 'yes' | 'no'>('all');
   const [qInput, setQInput] = useState('');
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePageSize('admin-saas-payouts', 20);
+  const {
+    mode: layout,
+    setViewMode,
+    columns,
+    setGridColumns,
+    gridClassName,
+  } = useViewMode('em-view-admin-payouts', 'list', 3);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [data, setData] = useState<PayoutsResponse | null>(null);
@@ -104,6 +118,7 @@ export default function AdminSaasPayoutsPage() {
       params.set('page', String(page));
       params.set('limit', String(pageSize));
       params.set('settlement', settlement);
+      if (proof !== 'all') params.set('proof', proof);
       if (period) params.set('period', period);
       if (q) params.set('q', q);
       setData(await api.get(`/admin/payouts?${params}`));
@@ -112,7 +127,7 @@ export default function AdminSaasPayoutsPage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.role, page, pageSize, settlement, period, q]);
+  }, [user?.role, page, pageSize, settlement, period, q, proof]);
 
   useEffect(() => {
     void load();
@@ -123,6 +138,7 @@ export default function AdminSaasPayoutsPage() {
     params.set('export', 'csv');
     params.set('settlement', settlement);
     params.set('limit', '100');
+    if (proof !== 'all') params.set('proof', proof);
     if (period) params.set('period', period);
     if (q) params.set('q', q);
     await api.download(`/admin/payouts?${params}`, 'versements-saas.csv');
@@ -184,8 +200,17 @@ export default function AdminSaasPayoutsPage() {
     );
   }
 
-  const filterClass =
-    'bg-surface-muted border border-border rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground';
+  const chips: CatalogueFilterChip[] = [
+    ...(settlement !== 'all'
+      ? [{ id: 'settlement', label: 'Statut', value: settlement === 'due' ? 'Dues' : 'Versées' }]
+      : []),
+    ...(proof !== 'all'
+      ? [{ id: 'proof', label: 'Preuve', value: proof === 'yes' ? 'Avec preuve' : 'Sans preuve' }]
+      : []),
+    ...(period
+      ? [{ id: 'period', label: 'Période', value: period }]
+      : []),
+  ];
 
   return (
     <div className="space-y-6 w-full">
@@ -201,9 +226,20 @@ export default function AdminSaasPayoutsPage() {
           />
         }
         action={
-          <Button type="button" size="sm" variant="secondary" onClick={() => void exportCsv()} leftIcon={<Download className="w-4 h-4" />}>
-            Exporter CSV
-          </Button>
+          <div className="flex items-center gap-2">
+            <ViewModeToggle
+              storageKey="em-view-admin-payouts"
+              value={layout}
+              onChange={setViewMode}
+              columns={columns}
+              onColumnsChange={setGridColumns}
+              defaultMode="list"
+              defaultColumns={3}
+            />
+            <Button type="button" size="sm" variant="secondary" onClick={() => void exportCsv()} leftIcon={<Download className="w-4 h-4" />}>
+              Exporter CSV
+            </Button>
+          </div>
         }
       />
 
@@ -230,30 +266,81 @@ export default function AdminSaasPayoutsPage() {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3">
-        <input
-          type="search"
-          value={qInput}
-          onChange={(e) => setQInput(e.target.value)}
-          placeholder="Commercial, e-mail, code, organisation…"
-          className="flex-1 bg-surface-muted border border-border rounded-xl px-3.5 py-2.5 text-sm text-foreground"
-        />
-        <input
-          type="month"
-          value={period}
-          onChange={(e) => { setPeriod(e.target.value); setPage(1); }}
-          className={filterClass}
-        />
-        <select
-          value={settlement}
-          onChange={(e) => { setSettlement(e.target.value as 'due' | 'paid' | 'all'); setPage(1); }}
-          className={filterClass}
-        >
-          <option value="due">Dues</option>
-          <option value="paid">Versées</option>
-          <option value="all">Toutes</option>
-        </select>
-      </div>
+      <CatalogueFilterBar
+        search={qInput}
+        onSearchChange={setQInput}
+        searchPlaceholder="Commercial, e-mail, code, organisation…"
+        view={layout}
+        onViewChange={(mode) => {
+          if (mode === 'grid' || mode === 'list') setViewMode(mode);
+        }}
+        hideViewToggle
+        chips={chips}
+        onRemoveChip={(id) => {
+          if (id === 'settlement') { setSettlement('all'); setPage(1); }
+          if (id === 'proof') { setProof('all'); setPage(1); }
+          if (id === 'period') { setPeriod(''); setPage(1); }
+        }}
+        onClearChips={() => {
+          setQInput('');
+          setQ('');
+          setSettlement('all');
+          setProof('all');
+          setPeriod('');
+          setPage(1);
+        }}
+        resultLabel={`${data?.total ?? 0} dossier${(data?.total ?? 0) > 1 ? 's' : ''}`}
+        modalTitle="Filtrer les versements"
+        filters={
+          <>
+            <CatalogueFilterField label="Statut">
+              <CatalogueChoicePills
+                options={[
+                  { id: 'due', label: 'Dues' },
+                  { id: 'paid', label: 'Versées' },
+                  { id: 'all', label: 'Toutes' },
+                ]}
+                value={settlement}
+                onChange={(id) => {
+                  setSettlement((id === 'paid' || id === 'all' || id === 'due' ? id : 'due') as 'due' | 'paid' | 'all');
+                  setPage(1);
+                }}
+              />
+            </CatalogueFilterField>
+            <CatalogueFilterField label="Preuve">
+              <CatalogueChoicePills
+                options={[
+                  { id: 'all', label: 'Toutes' },
+                  { id: 'yes', label: 'Avec preuve' },
+                  { id: 'no', label: 'Sans preuve' },
+                ]}
+                value={proof}
+                onChange={(id) => {
+                  setProof(id === 'yes' || id === 'no' ? id : 'all');
+                  setPage(1);
+                }}
+              />
+            </CatalogueFilterField>
+            <CatalogueFilterField label="Période" hint="Laissez vide pour toutes les périodes.">
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="month"
+                  value={period}
+                  onChange={(e) => { setPeriod(e.target.value); setPage(1); }}
+                  className="bg-surface-muted border border-border rounded-xl px-3 py-2 text-sm font-semibold text-foreground"
+                />
+                <button
+                  type="button"
+                  onClick={() => { setPeriod(''); setPage(1); }}
+                  className="text-xs font-semibold text-primary hover:underline"
+                >
+                  Toutes
+                </button>
+              </div>
+            </CatalogueFilterField>
+          </>
+        }
+      />
 
       {loading ? (
         <div className="flex justify-center py-16">
@@ -266,45 +353,85 @@ export default function AdminSaasPayoutsPage() {
           description="Aucune commission plateforme pour ces filtres. Les commerciaux org. n’apparaissent pas dans cette file."
         />
       ) : (
-        <ul className="bg-surface border border-border rounded-[var(--radius-card)] divide-y divide-border">
+        <div className={layout === 'grid' ? gridClassName : listStackClass}>
           {data.items.map((row) => {
             const key = `${row.commercialId}:${row.period}`;
             const due = row.unpaidCommission > 0;
+            const statusChip = <StatusPill tone={due ? 'amber' : 'emerald'}>{due ? 'Due' : 'Versée'}</StatusPill>;
+            const amountChip = (
+              <StatusPill tone="primary">
+                {formatFc(due ? row.unpaidCommission : row.totalCommission)}
+              </StatusPill>
+            );
+            const settleBtn = (
+              <Button
+                size="sm"
+                variant={due ? 'primary' : 'secondary'}
+                loading={busyKey === key}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openSettle(row, due);
+                }}
+              >
+                {due ? 'Marquer versée' : 'Remettre due'}
+              </Button>
+            );
             return (
-              <li key={key} className="px-4 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <Badge variant={due ? 'warning' : 'success'}>{due ? 'Due' : 'Versée'}</Badge>
-                    <span className="text-[10px] text-muted">{row.period}</span>
-                    <span className="text-[10px] text-muted">EventMaster</span>
-                  </div>
-                  <p className="text-sm font-semibold text-foreground truncate">{row.name || row.email}</p>
-                  <p className="text-xs text-muted truncate">
-                    {row.email}
-                    {row.referralCode ? ` · ${row.referralCode}` : ''}
-                    {' · '}
-                    {row.orgCount} org. · {formatFc(row.totalCommission)}
-                    {due ? ` dont ${formatFc(row.unpaidCommission)} dû` : ''}
-                  </p>
-                  <p className="text-[11px] text-muted truncate">{row.orgNames.join(', ')}</p>
-                  {row.payoutProofUrl && (
-                    <a href={row.payoutProofUrl} target="_blank" rel="noreferrer" className="text-[11px] text-primary hover:underline truncate block">
-                      Preuve
-                    </a>
-                  )}
-                </div>
-                <Button
-                  size="sm"
-                  variant={due ? 'primary' : 'secondary'}
-                  loading={busyKey === key}
-                  onClick={() => openSettle(row, due)}
-                >
-                  {due ? 'Marquer versée' : 'Remettre due'}
-                </Button>
-              </li>
+              <ProjectCard
+                key={key}
+                id={key}
+                title={row.name || row.email}
+                layout={layout}
+                icon={<Wallet className="w-4 h-4" />}
+                onClick={() => openSettle(row, due)}
+                status={layout === 'list' ? statusChip : undefined}
+                aside={layout === 'list' ? amountChip : undefined}
+                actions={layout === 'list' ? settleBtn : (
+                  <span className="inline-flex items-center gap-1">
+                    {row.payoutProofUrl && (
+                      <a
+                        href={row.payoutProofUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="p-1.5 text-muted hover:text-foreground"
+                        title="Preuve"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </a>
+                    )}
+                    {settleBtn}
+                  </span>
+                )}
+                meta={
+                  layout === 'list' ? (
+                    <span className="truncate">
+                      {row.email}
+                      {row.referralCode ? ` · ${row.referralCode}` : ''}
+                      {' · '}
+                      {row.period}
+                      {' · '}
+                      {row.orgCount} org.
+                      {row.payoutProofUrl ? ' · preuve' : ''}
+                    </span>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <div className="flex flex-wrap gap-1.5">
+                        {statusChip}
+                        {amountChip}
+                      </div>
+                      <p className="text-xs truncate">{row.email}</p>
+                      <p className="text-[11px] text-muted truncate">
+                        {row.period} · {row.orgCount} org. · {formatFc(row.totalCommission)}
+                      </p>
+                      <p className="text-[11px] text-muted truncate">{row.orgNames.join(', ')}</p>
+                    </div>
+                  )
+                }
+              />
             );
           })}
-        </ul>
+        </div>
       )}
 
       <Pagination

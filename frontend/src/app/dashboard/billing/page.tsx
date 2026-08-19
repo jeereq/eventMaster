@@ -469,6 +469,7 @@ export default function BillingPage() {
         </div>
         <InvoiceListPanel
           invoices={invoices.slice(0, 5)}
+          showFilters={false}
           emptyMessage="Les factures apparaissent ici après approbation de votre demande d'abonnement."
         />
       </div>

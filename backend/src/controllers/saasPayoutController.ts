@@ -42,11 +42,13 @@ export async function listAdminSaasPayouts(req: AuthenticatedRequest, res: Respo
     const settlement =
       settlementRaw === 'paid' || settlementRaw === 'all' || settlementRaw === 'due' ? settlementRaw : 'due';
     const q = typeof req.query.q === 'string' && req.query.q.trim() ? req.query.q.trim() : undefined;
+    const proofRaw = typeof req.query.proof === 'string' ? req.query.proof.trim() : 'all';
+    const proof = proofRaw === 'yes' || proofRaw === 'no' ? proofRaw : 'all';
     const page = Math.max(parseInt(String(req.query.page || '1'), 10) || 1, 1);
     const pageSize = Math.min(Math.max(parseInt(String(req.query.limit || '20'), 10) || 20, 1), 100);
 
     if (req.query.export === 'csv') {
-      const full = await listPlatformSaaSPayouts({ period, settlement, q, page: 1, pageSize: 5000 });
+      const full = await listPlatformSaaSPayouts({ period, settlement, proof, q, page: 1, pageSize: 5000 });
       const header = [
         'Période',
         'Commercial',
@@ -85,7 +87,7 @@ export async function listAdminSaasPayouts(req: AuthenticatedRequest, res: Respo
       return res.send(csv);
     }
 
-    const result = await listPlatformSaaSPayouts({ period, settlement, q, page, pageSize });
+    const result = await listPlatformSaaSPayouts({ period, settlement, proof, q, page, pageSize });
 
     return res.json({
       ...result,

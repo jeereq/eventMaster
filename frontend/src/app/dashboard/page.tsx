@@ -17,6 +17,7 @@ import { cn } from '@/lib/cn';
 import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/InvoiceListPanel';
 import QuotaUsagePanel from '@/components/QuotaUsagePanel';
 import SubscriptionApprovalModal, { type SubscriptionApprovalRequest } from '@/components/SubscriptionApprovalModal';
+import SubscriptionRequestListPanel, { type AdminSubscriptionRequestItem } from '@/components/SubscriptionRequestListPanel';
 import BillingDiscountFields, { getBillingPricingFromFields } from '@/components/BillingDiscountFields';
 import type { QuotaSnapshot } from '@/lib/quotaDisplay';
 import { PageHeader, Alert, Button, ProjectCard, ListRowAction, StatusPill, SkeletonDashboardHome, SkeletonTabContent, ViewModeToggle, useViewMode, listStackClass, Breadcrumbs, Pagination, paginateItems, PhoneInput, usePageSize } from '@/components/ui';
@@ -358,13 +359,6 @@ function DashboardPageContent() {
  gridClassName: guestsGridClass,
  } = useViewMode('em-view-admin-guests', 'grid', 3);
  const {
- mode: subRequestsViewMode,
- setViewMode: setSubRequestsViewMode,
- columns: subRequestsColumns,
- setGridColumns: setSubRequestsColumns,
- gridClassName: subRequestsGridClass,
- } = useViewMode('em-view-admin-sub-requests', 'grid', 2);
- const {
  mode: plansViewMode,
  setViewMode: setPlansViewMode,
  columns: plansColumns,
@@ -546,7 +540,6 @@ function DashboardPageContent() {
  const [templatesPage, setTemplatesPage] = useState(1);
  const [eventsPage, setEventsPage] = useState(1);
  const [guestsPage, setGuestsPage] = useState(1);
- const [subRequestsPage, setSubRequestsPage] = useState(1);
  const [homeEventsPage, setHomeEventsPage] = useState(1);
  const [plansPage, setPlansPage] = useState(1);
  const [tenantsPageSize, setTenantsPageSize] = usePageSize('admin-tenants', 8);
@@ -554,7 +547,6 @@ function DashboardPageContent() {
  const [templatesPageSize, setTemplatesPageSize] = usePageSize('admin-templates', 8);
  const [eventsPageSize, setEventsPageSize] = usePageSize('admin-events', 8);
  const [guestsPageSize, setGuestsPageSize] = usePageSize('admin-guests', 8);
- const [subRequestsPageSize, setSubRequestsPageSize] = usePageSize('admin-sub-requests', 8);
  const [homeEventsPageSize, setHomeEventsPageSize] = usePageSize('home-events', 6);
  const [plansPageSize, setPlansPageSize] = usePageSize('admin-plans', 4);
 
@@ -821,7 +813,6 @@ function DashboardPageContent() {
  setTemplatesPage(1);
  setEventsPage(1);
  setGuestsPage(1);
- setSubRequestsPage(1);
  }, [searchTerm, filterPlan, filterAccountKind, filterRole, filterType, filterRsvp, filterVerified, filterUserOrg, filterOrgRole, filterEventWhen, filterEventOrg, filterEventGps, filterEventVisibility, filterEventTicketing, filterGuestOrg, filterGuestEvent, filterGuestCategory, filterGuestCheckin, filterGuestPdf]);
 
  // Leaflet Map Initialization Effect for Super Admin Event Modal
@@ -1751,7 +1742,6 @@ function DashboardPageContent() {
  const paginatedTemplates = filteredTemplates;
  const paginatedEvents = paginateItems(filteredEvents, eventsPage, eventsPageSize);
  const paginatedGuests = paginateItems(filteredGuests, guestsPage, guestsPageSize);
- const paginatedSubRequests = paginateItems(subscriptionRequests, subRequestsPage, subRequestsPageSize);
  const paginatedPlanIds = paginateItems([...PLAN_IDS], plansPage, plansPageSize);
  const userOrgOptions = tenantOptions.map((t) => t.name).filter(Boolean).sort();
  const eventOrgOptions = [...new Set(adminEvents.map((e) => e.tenantName).filter(Boolean))].sort();
@@ -3196,147 +3186,20 @@ function DashboardPageContent() {
  {/* Demandes d'abonnement */}
  {activeTab === 'subscription-requests' && (
  <div className="space-y-6 animate-in fade-in duration-200">
- <div className="bg-white dark:bg-background rounded-2xl border border-border dark:border-border shadow-sm p-6 space-y-4">
- <div className="flex flex-wrap items-center justify-between gap-3">
- <h4 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2">
- <Clock className="w-5 h-5 text-primary" />
- Demandes reçues ({subscriptionRequests.length})
- </h4>
- <ViewModeToggle
- storageKey="em-view-admin-sub-requests"
- value={subRequestsViewMode}
- onChange={setSubRequestsViewMode}
- columns={subRequestsColumns}
- onColumnsChange={setSubRequestsColumns}
- defaultMode="grid"
- defaultColumns={2}
- />
- </div>
-
- {subRequestsLoading ? (
- <SkeletonTabContent mode={subRequestsViewMode === 'list' ? 'list' : 'grid'} count={6} columns={2} />
- ) : subscriptionRequests.length === 0 ? (
- <div className="text-center py-8 bg-surface-muted rounded-xl border border-border p-6">
- <p className="text-muted text-xs font-medium">Aucune demande d&apos;abonnement soumise pour le moment.</p>
- </div>
- ) : (
- <>
- <div className={subRequestsViewMode === 'grid' ? subRequestsGridClass : listStackClass}>
- {paginatedSubRequests.map((req) => {
- const statusTone =
- req.status === 'APPROVED' ? 'emerald' : req.status === 'REJECTED' ? 'rose' : 'amber';
- const statusLabel =
- req.status === 'APPROVED' ? 'Approuvée' : req.status === 'REJECTED' ? 'Rejetée' : 'En attente';
- const statusChip = <StatusPill tone={statusTone}>{statusLabel}</StatusPill>;
- const planChip = (
- <StatusPill tone="primary">
- {(req.tenant?.plan || 'FREE')} → {req.requestedPlan}
- </StatusPill>
- );
- const commercial =
- req.tenant?.referredByCommercial?.name ||
- (req.tenant?.referredByOrgUser?.orgRole === 'COMMERCIAL'
- ? req.tenant.referredByOrgUser.name
- : null);
- const actions =
- req.status === 'PENDING' ? (
- <>
- <button
- type="button"
- onClick={(e) => {
- e.preventDefault();
- e.stopPropagation();
+ <div className="bg-white dark:bg-background rounded-2xl border border-border dark:border-border shadow-sm p-6">
+ <SubscriptionRequestListPanel
+ requests={subscriptionRequests as AdminSubscriptionRequestItem[]}
+ loading={subRequestsLoading}
+ onApprove={(req) =>
  setApprovalModalRequest({
  id: req.id,
  requestedPlan: req.requestedPlan,
  durationDays: req.durationDays,
  tenant: req.tenant,
- });
- }}
- className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-lg transition"
- >
- Approuver
- </button>
- <button
- type="button"
- onClick={(e) => {
- e.preventDefault();
- e.stopPropagation();
- handleRejectSubscription(req.id);
- }}
- className="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold rounded-lg transition"
- >
- Rejeter
- </button>
- </>
- ) : (
- <span className="text-[11px] text-muted italic">Traitée</span>
- );
-
- return (
- <ProjectCard
- key={req.id}
- id={req.id}
- title={req.tenant?.name || 'Organisation inconnue'}
- layout={subRequestsViewMode}
- icon={<CreditCard className="w-4 h-4" />}
- meta={
- subRequestsViewMode === 'list' ? (
- <span className="truncate">
- {req.durationDays} j
- {' · '}
- {new Date(req.createdAt).toLocaleDateString('fr-FR', {
- day: 'numeric',
- month: 'short',
- year: 'numeric',
- })}
- {commercial ? ` · ${commercial}` : ''}
- {req.proofOfPayment ? ` · ${req.proofOfPayment}` : ''}
- </span>
- ) : (
- <div className="space-y-1.5">
- <div className="flex flex-wrap gap-1.5">
- {statusChip}
- {planChip}
- </div>
- <p className="text-xs font-semibold">{req.durationDays} jours</p>
- {req.proofOfPayment && (
- <p className="text-[11px] text-muted italic truncate" title={req.proofOfPayment}>
- &quot;{req.proofOfPayment}&quot;
- </p>
- )}
- {commercial && (
- <p className="text-[11px] text-primary font-medium truncate">{commercial}</p>
- )}
- <p className="text-[11px] text-muted">
- {new Date(req.createdAt).toLocaleDateString('fr-FR', {
- day: 'numeric',
- month: 'short',
- year: 'numeric',
- hour: '2-digit',
- minute: '2-digit',
- })}
- </p>
- </div>
- )
+ })
  }
- status={subRequestsViewMode === 'list' ? statusChip : undefined}
- aside={subRequestsViewMode === 'list' ? planChip : undefined}
- actions={actions}
+ onReject={(id) => void handleRejectSubscription(id)}
  />
- );
- })}
- </div>
- <Pagination
- page={subRequestsPage}
- pageSize={subRequestsPageSize}
- total={subscriptionRequests.length}
- onPageChange={setSubRequestsPage}
- onPageSizeChange={setSubRequestsPageSize}
- itemLabel="demandes"
- />
- </>
- )}
  </div>
  </div>
  )}
