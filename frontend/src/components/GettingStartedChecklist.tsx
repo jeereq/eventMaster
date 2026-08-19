@@ -49,6 +49,16 @@ function writeFlow(next: PersistedFlow) {
 
 type MarkKey = 'guestsDone' | 'inviteDone' | 'templateDone' | 'guideDone';
 
+type ChecklistStep = {
+  id: string;
+  title: string;
+  description: string;
+  href: string;
+  done: boolean;
+  markOnClick?: MarkKey;
+  disabled?: boolean;
+};
+
 /**
  * Parcours guidé type Asana : étapes claires, progression visible, dismissible.
  */
@@ -72,7 +82,7 @@ export default function GettingStartedChecklist({
     setReady(true);
   }, []);
 
-  const steps = useMemo(() => {
+  const steps = useMemo((): ChecklistStep[] => {
     if (variant === 'vendor') {
       const startWithService = preferServices || (hasServices && !hasRooms);
       return [
