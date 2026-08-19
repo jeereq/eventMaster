@@ -288,6 +288,32 @@ function SendAudienceStats({
  );
 }
 
+function fillInvitationPreviewVars(
+ body: string,
+ event: { title: string; description?: string | null; location: string; date: string; guestGuidelines?: GuestGuidelines | null },
+ orgName: string,
+): string {
+ const formattedDate = new Date(event.date).toLocaleDateString('fr-FR', {
+  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
+ });
+ const text = body
+  .replaceAll('{{firstName}}', 'Marie')
+  .replaceAll('{{lastName}}', 'Kabeya')
+  .replaceAll('{{rsvpLink}}', 'https://…/rsvp/exemple')
+  .replaceAll('{{title}}', event.title || '')
+  .replaceAll('{{description}}', event.description || '')
+  .replaceAll('{{location}}', event.location || '')
+  .replaceAll('{{date}}', formattedDate)
+  .replaceAll('{{orgName}}', orgName);
+ return applyInvitationGuidelineVariables(text, event.guestGuidelines ?? null);
+}
+
+const BROADCAST_WIZARD_STEPS = [
+ { id: 1, label: 'Destinataires' },
+ { id: 2, label: 'Aperçu' },
+ { id: 3, label: 'Envoi' },
+] as const;
+
 const MESSAGE_TEMPLATES = [
  {
  id: 'wedding',
@@ -486,6 +512,7 @@ export default function EventsPage() {
  const [lastBroadcastInviteId, setLastBroadcastInviteId] = useState<string | null>(null);
  const [broadcastingInviteId, setBroadcastingInviteId] = useState<string | null>(null);
  const [broadcastConfirmInviteId, setBroadcastConfirmInviteId] = useState<string | null>(null);
+ const [broadcastWizardStep, setBroadcastWizardStep] = useState<1 | 2 | 3>(1);
  const [copiedGuestId, setCopiedGuestId] = useState<string | null>(null);
  const [sharingGuest, setSharingGuest] = useState<GuestItem | null>(null);
  const [isBulkSending, setIsBulkSending] = useState(false);
@@ -672,6 +699,20 @@ export default function EventsPage() {
  /* ignore */
  }
  }, [guests.length]);
+
+ useEffect(() => {
+ const sent = guests.some((g) => g.preferences?.invitationSentAt);
+ if (!sent) return;
+ try {
+ const raw = localStorage.getItem('em-getting-started');
+ const flow = raw ? JSON.parse(raw) : {};
+ if (!flow.inviteDone) {
+ localStorage.setItem('em-getting-started', JSON.stringify({ ...flow, inviteDone: true }));
+ }
+ } catch {
+ /* ignore */
+ }
+ }, [guests]);
 
  const refreshGuests = useCallback(async () => {
  if (!selectedEvent) return;
@@ -2862,7 +2903,10 @@ Merci de confirmer votre présence :
  </div>
  <div className="flex gap-2 pt-4 border-t border-border-subtle">
  <button 
- onClick={() => setBroadcastConfirmInviteId(invite.id)}
+ onClick={() => {
+ setBroadcastWizardStep(1);
+ setBroadcastConfirmInviteId(invite.id);
+ }}
  disabled={broadcastingInviteId !== null}
  className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl text-xs transition shadow-md shadow-primary/10 disabled:bg-primary/50 disabled:cursor-not-allowed"
  >
@@ -2920,6 +2964,12 @@ Merci de confirmer votre présence :
 
  {activeTab === 'tablePlan' && (
  <div className="space-y-4">
+ <div className="space-y-1">
+ <h2 className="text-lg font-semibold text-foreground tracking-tight">Plan de table</h2>
+ <p className="text-sm text-muted">
+ Vous pouvez placer dès maintenant, même avant les réponses. Le PDF, le plan et le GPS partent quand la personne dit oui — si une place est assignée.
+ </p>
+ </div>
  {seatNotificationsLocked && (
  <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
  <p className="font-semibold">Notifications PDF / GPS non incluses</p>
@@ -3880,49 +3930,129 @@ Merci de confirmer votre présence :
 
  <Modal
  open={Boolean(broadcastConfirmInviteId)}
- onClose={() => setBroadcastConfirmInviteId(null)}
- title="Envoyer les invitations ?"
- description="Le premier message contient uniquement le lien RSVP. Le PDF de table part après confirmation, si une place est attribuée."
+ onClose={() => {
+  setBroadcastConfirmInviteId(null);
+  setBroadcastWizardStep(1);
+ }}
+ title={
+  broadcastWizardStep === 1
+   ? 'Qui va recevoir ?'
+   : broadcastWizardStep === 2
+    ? 'Aperçu du message'
+    : 'Envoyer les invitations ?'
+ }
+ description={
+  broadcastWizardStep === 1
+   ? 'Vérifiez les contacts avant d’envoyer. Le PDF de table part après confirmation, pas maintenant.'
+   : broadcastWizardStep === 2
+    ? 'Voici ce que Marie Kabeya verrait. Rien n’est encore parti.'
+    : 'Dernière étape : le lien RSVP part à tous les destinataires prêts.'
+ }
  size="md"
  footer={
-  <div className="flex w-full justify-end gap-2">
-   <Button type="button" variant="secondary" size="sm" onClick={() => setBroadcastConfirmInviteId(null)}>
-    Annuler
-   </Button>
+  <div className="flex w-full justify-between gap-2">
    <Button
     type="button"
+    variant="secondary"
     size="sm"
-    disabled={!broadcastAudience || broadcastAudience.reachable === 0 || broadcastingInviteId !== null}
-    loading={broadcastingInviteId === broadcastConfirmInviteId}
     onClick={() => {
-     const inviteId = broadcastConfirmInviteId;
-     if (!inviteId) return;
-     setBroadcastConfirmInviteId(null);
-     void handleSimulateBroadcast(inviteId);
+     if (broadcastWizardStep === 1) {
+      setBroadcastConfirmInviteId(null);
+      setBroadcastWizardStep(1);
+      return;
+     }
+     setBroadcastWizardStep((step) => (step === 3 ? 2 : 1));
     }}
    >
-    Envoyer à tous
+    {broadcastWizardStep === 1 ? 'Annuler' : 'Retour'}
    </Button>
+   {broadcastWizardStep < 3 ? (
+    <Button
+     type="button"
+     size="sm"
+     disabled={broadcastWizardStep === 1 && (!broadcastAudience || broadcastAudience.reachable === 0)}
+     onClick={() => setBroadcastWizardStep((step) => (step === 1 ? 2 : 3))}
+    >
+     Suivant
+    </Button>
+   ) : (
+    <Button
+     type="button"
+     size="sm"
+     disabled={!broadcastAudience || broadcastAudience.reachable === 0 || broadcastingInviteId !== null}
+     loading={broadcastingInviteId === broadcastConfirmInviteId}
+     onClick={() => {
+      const inviteId = broadcastConfirmInviteId;
+      if (!inviteId) return;
+      setBroadcastConfirmInviteId(null);
+      setBroadcastWizardStep(1);
+      void handleSimulateBroadcast(inviteId);
+     }}
+    >
+     Envoyer à tous
+    </Button>
+   )}
   </div>
  }
  >
-  <div className="space-y-3">
-   <p className="text-sm text-muted">
-    Canal : <span className="font-semibold text-foreground">{getChannelLabel(broadcastConfirmInvite?.channel || 'EMAIL')}</span>
-    {broadcastConfirmInvite?.subject ? ` · ${broadcastConfirmInvite.subject}` : ''}
-   </p>
-   {broadcastAudience ? <SendAudienceStats stats={broadcastAudience} /> : null}
-   {broadcastAudience && broadcastAudience.reachable === 0 ? (
-    <p className="text-xs text-rose-600 font-medium">
-     {broadcastAudience.total === 0
-      ? 'Ajoutez des invités avant d’envoyer.'
-      : 'Aucun invité n’a le contact nécessaire pour ce canal.'}
-    </p>
+  <div className="space-y-4">
+   <div className="flex items-center gap-2">
+    {BROADCAST_WIZARD_STEPS.map((step) => (
+     <div key={step.id} className="flex-1 space-y-1">
+      <div className={cn('h-1 rounded-full', broadcastWizardStep >= step.id ? 'bg-primary' : 'bg-surface-muted')} />
+      <p className={cn('text-[10px] font-semibold uppercase tracking-wider', broadcastWizardStep === step.id ? 'text-primary' : 'text-muted')}>
+       {step.id}. {step.label}
+      </p>
+     </div>
+    ))}
+   </div>
+
+   {broadcastWizardStep === 1 ? (
+    <div className="space-y-3">
+     <p className="text-sm text-muted">
+      Canal : <span className="font-semibold text-foreground">{getChannelLabel(broadcastConfirmInvite?.channel || 'EMAIL')}</span>
+      {broadcastConfirmInvite?.subject ? ` · ${broadcastConfirmInvite.subject}` : ''}
+     </p>
+     {broadcastAudience ? <SendAudienceStats stats={broadcastAudience} /> : null}
+     {broadcastAudience && broadcastAudience.reachable === 0 ? (
+      <p className="text-xs text-rose-600 font-medium">
+       {broadcastAudience.total === 0
+        ? 'Ajoutez des invités avant d’envoyer.'
+        : 'Aucun invité n’a le contact nécessaire pour ce canal.'}
+      </p>
+     ) : null}
+     {broadcastAudience && broadcastAudience.alreadySent > 0 ? (
+      <p className="text-xs text-amber-800">
+       Les personnes déjà invitées recevront le message à nouveau.
+      </p>
+     ) : null}
+    </div>
    ) : null}
-   {broadcastAudience && broadcastAudience.alreadySent > 0 ? (
-    <p className="text-xs text-amber-800">
-     Les personnes déjà invitées recevront le message à nouveau.
-    </p>
+
+   {broadcastWizardStep === 2 && selectedEvent && broadcastConfirmInvite ? (
+    <InvitationMessagePreview
+     subject={broadcastConfirmInvite.subject.replaceAll('{{title}}', selectedEvent.title)}
+     body={fillInvitationPreviewVars(
+      broadcastConfirmInvite.body,
+      selectedEvent,
+      tenant?.name || 'Organisation',
+     )}
+     channel={broadcastConfirmInvite.channel || 'EMAIL'}
+     orgName={tenant?.name || 'Organisation'}
+     primary={tenant?.branding?.primary}
+     accent={tenant?.branding?.accent}
+    />
+   ) : null}
+
+   {broadcastWizardStep === 3 ? (
+    <div className="space-y-2 rounded-xl border border-border bg-surface-muted/50 px-4 py-3">
+     <p className="text-sm text-foreground">
+      <span className="font-semibold">{broadcastAudience?.reachable ?? 0}</span> destinataire{(broadcastAudience?.reachable ?? 0) > 1 ? 's' : ''} prêt{(broadcastAudience?.reachable ?? 0) > 1 ? 's' : ''} · {getChannelLabel(broadcastConfirmInvite?.channel || 'EMAIL')}
+     </p>
+     <p className="text-xs text-muted">
+      Lien RSVP seulement. Le PDF de table part après confirmation, si une place est attribuée.
+     </p>
+    </div>
    ) : null}
   </div>
  </Modal>
@@ -3940,23 +4070,27 @@ Merci de confirmer votre présence :
  </button>
  </div>
  <form onSubmit={handleCreateInvitation} className="space-y-4">
+ <p className="text-xs text-muted leading-relaxed">
+ Trois choses distinctes : la <span className="font-semibold text-foreground">page RSVP</span> (ce que l’invité voit), le <span className="font-semibold text-foreground">canal</span> (e-mail ou WhatsApp), puis le <span className="font-semibold text-foreground">texte du message</span>.
+ </p>
  <div className="grid grid-cols-2 gap-4">
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Modèle de design</label>
- <p className="text-[11px] text-muted">Page RSVP que l’invité voit. Pas le texte du message.</p>
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Page RSVP</label>
+ <p className="text-[11px] text-muted">Apparence du formulaire que l’invité ouvre. Ce n’est pas le texte du message.</p>
  <select 
  value={selectedTemplateId}
  onChange={(e) => setSelectedTemplateId(e.target.value)}
  className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
  >
- <option value="">-- Aucun modèle visuel --</option>
+ <option value="">-- Aucune page personnalisée --</option>
  {templates.map(t => (
  <option key={t.id} value={t.id}>{t.name}</option>
  ))}
  </select>
  </div>
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Canal de diffusion</label>
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Canal</label>
+ <p className="text-[11px] text-muted">Où envoyer le lien RSVP.</p>
  <select 
  value={inviteChannel}
  onChange={(e) => setInviteChannel(e.target.value)}
@@ -3969,13 +4103,13 @@ Merci de confirmer votre présence :
  </div>
  </div>
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Modèles de message prédéfinis (Optionnel)</label>
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Texte d’exemple (optionnel)</label>
  <select 
  onChange={(e) => handleSelectMessageTemplate(e.target.value)}
  defaultValue=""
  className="w-full px-4 py-2.5 bg-primary/10 border border-primary/20 text-primary rounded-xl text-sm font-semibold focus:outline-none focus:border-primary transition"
  >
- <option value="">-- Choisir un modèle de message pour pré-remplir --</option>
+ <option value="">-- Pré-remplir le message --</option>
  {MESSAGE_TEMPLATES.map(mt => (
  <option key={mt.id} value={mt.id}>{mt.name}</option>
  ))}
@@ -4010,21 +4144,7 @@ Merci de confirmer votre présence :
  {selectedEvent && (
  <InvitationMessagePreview
   subject={inviteSubject.replaceAll('{{title}}', selectedEvent.title)}
-  body={(() => {
-   const formattedDate = new Date(selectedEvent.date).toLocaleDateString('fr-FR', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
-   });
-   let text = inviteBody
-    .replaceAll('{{firstName}}', 'Marie')
-    .replaceAll('{{lastName}}', 'Kabeya')
-    .replaceAll('{{rsvpLink}}', 'https://…/rsvp/exemple')
-    .replaceAll('{{title}}', selectedEvent.title || '')
-    .replaceAll('{{description}}', selectedEvent.description || '')
-    .replaceAll('{{location}}', selectedEvent.location || '')
-    .replaceAll('{{date}}', formattedDate)
-    .replaceAll('{{orgName}}', tenant?.name || 'Organisation');
-   return applyInvitationGuidelineVariables(text, selectedEvent.guestGuidelines);
-  })()}
+  body={fillInvitationPreviewVars(inviteBody, selectedEvent, tenant?.name || 'Organisation')}
   channel={inviteChannel}
   orgName={tenant?.name || 'Organisation'}
   primary={tenant?.branding?.primary}

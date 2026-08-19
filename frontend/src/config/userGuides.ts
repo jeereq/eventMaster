@@ -318,7 +318,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'event-lifecycle',
         title: 'Parcours complet d\'un événement',
         content:
-          '1. Créez l\'événement et associez une salle 2D.\n2. Onglet Infos invités : dress code, avantages (parking, cadeaux, extras) et notes.\n3. Importez ou ajoutez la liste d\'invités.\n4. Choisissez un modèle et rédigez l\'invitation.\n5. Lancez la diffusion du lien RSVP.\n6. Suivez les réponses RSVP — dès acceptation, PDF / plan / GPS partent si la place est assignée (Premium+).\n7. Placez les invités sur le plan de table — les confirmés reçoivent le placement complet.\n8. Onglet Feed : publiez photos et annonces ; les invités like et commentent.\n9. Jour J : mode Protocole pour l\'accueil (scan QR).\n10. Analysez les statistiques de participation.',
+          '1. Créez l\'événement (titre, date, lieu suffisent).\n2. Ajoutez les invités — e-mail ou WhatsApp, un contact suffit.\n3. Rédigez et envoyez l\'invitation (lien RSVP seulement, pas de PDF).\n4. Suivez les réponses. Vous pouvez placer dès maintenant ; le PDF part au « oui » si une place est assignée (Premium+).\n5. Jour J : mode Protocole pour l\'accueil (scan QR).',
         links: [
           { label: 'Événements', href: '/dashboard/events' },
           { label: 'Statistiques', href: '/dashboard/analytics' },
@@ -335,7 +335,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'invite-guests',
         title: 'Inviter et placer des invités',
         content:
-          '1. Ouvrez un événement → onglet Infos invités : dress code et avantages.\n2. Onglet Invités : ajoutez ou importez la liste.\n3. Assignez les tables depuis le plan de salle.\n4. Envoyez l\'invitation — l\'invité reçoit un lien RSVP personnel.\n5. Onglet Feed : publiez une annonce ; l\'invité like et commente depuis Actualités.',
+          '1. Onglet Invités : ajoutez ou importez la liste (e-mail ou WhatsApp).\n2. Onglet Invitations : rédigez le message, vérifiez l’aperçu, envoyez le lien RSVP.\n3. Plan de table : vous pouvez placer dès maintenant ; le PDF part quand la personne dit oui.\n4. Jour J : Protocole pour le scan QR.',
         links: [{ label: 'Événements', href: '/dashboard/events' }],
       },
       {

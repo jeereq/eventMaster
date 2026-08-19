@@ -12,12 +12,15 @@ type PersistedFlow = {
   guestsDone?: boolean;
   guestInfoDone?: boolean;
   feedDone?: boolean;
+  inviteDone?: boolean;
   templateDone?: boolean;
   guideDone?: boolean;
 };
 
 export type GettingStartedProps = {
   hasEvents: boolean;
+  hasGuests?: boolean;
+  hasInvitations?: boolean;
   hasTemplates?: boolean;
   firstEventId?: string | null;
   className?: string;
@@ -44,11 +47,15 @@ function writeFlow(next: PersistedFlow) {
   }
 }
 
+type MarkKey = 'guestsDone' | 'inviteDone' | 'templateDone' | 'guideDone';
+
 /**
  * Parcours guidé type Asana : étapes claires, progression visible, dismissible.
  */
 export default function GettingStartedChecklist({
   hasEvents,
+  hasGuests = false,
+  hasInvitations = false,
   hasTemplates = false,
   firstEventId,
   className,
@@ -97,54 +104,33 @@ export default function GettingStartedChecklist({
     const guestsHref = firstEventId
       ? `/dashboard/events/${firstEventId}`
       : '/dashboard/events';
-    const guestInfoHref = firstEventId
-      ? `/dashboard/events/${firstEventId}?tab=guestInfo`
-      : '/dashboard/events';
-    const feedHref = firstEventId
-      ? `/dashboard/events/${firstEventId}?tab=feed`
+    const inviteHref = firstEventId
+      ? `/dashboard/events/${firstEventId}?tab=invitations`
       : '/dashboard/events';
     return [
       {
         id: 'event',
         title: 'Créer un événement',
-        description: 'Date, lieu et infos de base.',
+        description: 'Titre, date et lieu suffisent pour commencer.',
         href: '/dashboard/events',
         done: hasEvents,
       },
       {
-        id: 'guestInfo',
-        title: 'Renseigner dress code et avantages',
-        description: 'Tenue, parking, cadeaux — visibles sur le RSVP.',
-        href: guestInfoHref,
-        done: Boolean(flow.guestInfoDone) && hasEvents,
-        markOnClick: 'guestInfoDone' as const,
-        disabled: !hasEvents,
-      },
-      {
         id: 'guests',
         title: 'Ajouter des invités',
-        description: 'Import CSV ou saisie manuelle.',
+        description: 'E-mail ou WhatsApp — un contact suffit.',
         href: guestsHref,
-        done: Boolean(flow.guestsDone) && hasEvents,
+        done: (hasGuests || Boolean(flow.guestsDone)) && hasEvents,
         markOnClick: 'guestsDone' as const,
         disabled: !hasEvents,
       },
       {
-        id: 'feed',
-        title: 'Publier sur le fil',
-        description: 'Annonces et photos ; les invités like et commentent.',
-        href: feedHref,
-        done: Boolean(flow.feedDone) && hasEvents,
-        markOnClick: 'feedDone' as const,
+        id: 'invite',
+        title: 'Envoyer les invitations',
+        description: 'Rédigez le message, puis diffusez le lien RSVP.',
+        href: inviteHref,
+        done: (hasInvitations || Boolean(flow.inviteDone)) && hasEvents,
         disabled: !hasEvents,
-      },
-      {
-        id: 'template',
-        title: 'Choisir un modèle d’invitation',
-        description: 'Bibliothèque ou création custom.',
-        href: '/dashboard/templates',
-        done: hasTemplates || Boolean(flow.templateDone),
-        markOnClick: 'templateDone' as const,
       },
       {
         id: 'guide',
@@ -155,7 +141,7 @@ export default function GettingStartedChecklist({
         markOnClick: 'guideDone' as const,
       },
     ];
-  }, [variant, hasRooms, hasServices, preferServices, hasEvents, hasTemplates, firstEventId, flow.guestsDone, flow.guestInfoDone, flow.feedDone, flow.templateDone, flow.guideDone]);
+  }, [variant, hasRooms, hasServices, preferServices, hasEvents, hasGuests, hasInvitations, firstEventId, flow.guestsDone, flow.inviteDone, flow.guideDone]);
 
   const doneCount = steps.filter((s) => s.done).length;
   const allDone = doneCount === steps.length;
@@ -170,7 +156,7 @@ export default function GettingStartedChecklist({
     writeFlow(next);
   };
 
-  const onStepClick = (mark?: 'guestsDone' | 'guestInfoDone' | 'feedDone' | 'templateDone' | 'guideDone') => {
+  const onStepClick = (mark?: MarkKey) => {
     if (!mark) return;
     const next = { ...flow, [mark]: true };
     setFlow(next);

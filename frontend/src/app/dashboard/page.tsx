@@ -5025,6 +5025,7 @@ function DashboardPageContent() {
  {user?.role === 'USER' && (
  <GettingStartedChecklist
  hasEvents={events.length > 0}
+ hasGuests={(planQuota?.usage.guests ?? 0) > 0}
  firstEventId={events[0]?.id}
  variant={tenant?.accountKind === 'VENDOR' || (planQuota != null && (planQuota.limits.maxEvents ?? 0) <= 0) ? 'vendor' : 'organizer'}
  hasRooms={(planQuota?.usage.rooms ?? 0) > 0}
