@@ -9,7 +9,7 @@ import * as XLSX from 'xlsx';
 import { 
  Calendar, MapPin, Users, PlusCircle, Trash2, Edit3, 
  ChevronRight, ArrowLeft, Check, Upload, Mail, Send, 
- Sparkles, CheckCircle2, XCircle, AlertCircle, HelpCircle, Loader2,
+ Sparkles, CheckCircle2, XCircle, AlertCircle, Loader2,
  Copy, MessageSquare, Share2, Search, Filter, RefreshCw,
  Eye, Utensils, FileSpreadsheet, Download, LayoutGrid, Building2, ScanLine, Shirt, Globe, GlobeLock, Ticket, LayoutTemplate
 } from 'lucide-react';
@@ -191,6 +191,96 @@ function getChannelLabel(channel: string) {
  default:
  return channel;
  }
+}
+
+const GUEST_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function guestHasValidEmail(guest: GuestItem): boolean {
+ return GUEST_EMAIL_RE.test(String(guest.email || '').trim());
+}
+
+function guestHasPhone(guest: GuestItem): boolean {
+ const stored = guest.phone
+  || (guest.preferences && typeof guest.preferences === 'object'
+   ? guest.preferences.phone || guest.preferences.telephone
+   : '')
+  || '';
+ if (String(stored).replace(/\D/g, '').length >= 7) return true;
+ return /^\+?[0-9\s\-()]{7,20}$/.test(String(guest.email || '').trim());
+}
+
+function channelNeedsEmail(channel: string): boolean {
+ return channel === 'EMAIL' || channel === 'EMAIL_AND_WHATSAPP' || channel === 'EMAIL_AND_SMS' || channel === 'ALL_CHANNELS';
+}
+
+function channelNeedsWhatsApp(channel: string): boolean {
+ return channel === 'WHATSAPP' || channel === 'EMAIL_AND_WHATSAPP' || channel === 'EMAIL_AND_SMS' || channel === 'ALL_CHANNELS' || channel === 'SMS';
+}
+
+function summarizeSendAudience(guestList: GuestItem[], channel: string) {
+ const needEmail = channelNeedsEmail(channel);
+ const needWhatsApp = channelNeedsWhatsApp(channel);
+ let alreadySent = 0;
+ let missingEmail = 0;
+ let missingPhone = 0;
+ let reachable = 0;
+
+ for (const guest of guestList) {
+  if (guest.preferences?.invitationSentAt) alreadySent += 1;
+  const okEmail = !needEmail || guestHasValidEmail(guest);
+  const okPhone = !needWhatsApp || guestHasPhone(guest);
+  if (needEmail && !guestHasValidEmail(guest)) missingEmail += 1;
+  if (needWhatsApp && !guestHasPhone(guest)) missingPhone += 1;
+  if (okEmail && okPhone) reachable += 1;
+  else if (needEmail && needWhatsApp && (guestHasValidEmail(guest) || guestHasPhone(guest))) {
+   reachable += 1;
+  }
+ }
+
+ return {
+  total: guestList.length,
+  alreadySent,
+  missingEmail,
+  missingPhone,
+  reachable,
+ };
+}
+
+function SendAudienceStats({
+ stats,
+}: {
+ stats: ReturnType<typeof summarizeSendAudience>;
+}) {
+ return (
+  <div className="grid grid-cols-2 gap-2 text-xs">
+   <div className="rounded-xl border border-border bg-surface-muted/60 px-3 py-2">
+    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Destinataires</p>
+    <p className="text-sm font-bold text-foreground mt-0.5">{stats.total}</p>
+   </div>
+   <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2">
+    <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">Prêts à recevoir</p>
+    <p className="text-sm font-bold text-emerald-800 mt-0.5">{stats.reachable}</p>
+   </div>
+   {stats.alreadySent > 0 && (
+    <div className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2">
+     <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700">Déjà invités</p>
+     <p className="text-sm font-bold text-amber-800 mt-0.5">{stats.alreadySent} — seront renvoyés</p>
+    </div>
+   )}
+   {stats.missingEmail > 0 && (
+    <div className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2">
+     <p className="text-[10px] font-semibold uppercase tracking-wider text-rose-700">Sans e-mail</p>
+     <p className="text-sm font-bold text-rose-800 mt-0.5">{stats.missingEmail}</p>
+    </div>
+   )}
+   {stats.missingPhone > 0 && (
+    <div className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2">
+     <p className="text-[10px] font-semibold uppercase tracking-wider text-rose-700">Sans WhatsApp</p>
+     <p className="text-sm font-bold text-rose-800 mt-0.5">{stats.missingPhone}</p>
+    </div>
+   )}
+  </div>
+ );
 }
 
 const MESSAGE_TEMPLATES = [
@@ -388,6 +478,7 @@ export default function EventsPage() {
  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
  const [lastBroadcastInviteId, setLastBroadcastInviteId] = useState<string | null>(null);
  const [broadcastingInviteId, setBroadcastingInviteId] = useState<string | null>(null);
+ const [broadcastConfirmInviteId, setBroadcastConfirmInviteId] = useState<string | null>(null);
  const [copiedGuestId, setCopiedGuestId] = useState<string | null>(null);
  const [sharingGuest, setSharingGuest] = useState<GuestItem | null>(null);
  const [isBulkSending, setIsBulkSending] = useState(false);
@@ -519,6 +610,19 @@ export default function EventsPage() {
  feedPostCount: selectedEvent?.feedPostCount ?? 0,
  }),
  [guests, invitations, selectedEvent?.tablePlan, selectedEvent?.date, selectedEvent?.guestGuidelines, selectedEvent?.feedPostCount, guestGuidelines, isProtocolOnly],
+ );
+
+ const broadcastConfirmInvite = invitations.find((invite) => invite.id === broadcastConfirmInviteId) || null;
+ const broadcastAudience = useMemo(
+ () => (broadcastConfirmInvite ? summarizeSendAudience(guests, broadcastConfirmInvite.channel) : null),
+ [broadcastConfirmInvite, guests],
+ );
+ const bulkAudience = useMemo(
+ () => summarizeSendAudience(
+ guests.filter((guest) => selectedGuestIds.includes(guest.id)),
+ bulkSelectedChannel,
+ ),
+ [guests, selectedGuestIds, bulkSelectedChannel],
  );
 
  const handleWorkflowNavigate = useCallback((tab: EventWorkflowTab) => {
@@ -2206,10 +2310,11 @@ Merci de confirmer votre présence :
  <button 
  onClick={() => {
  if (invitations.length === 0) {
- alert("Veuillez d'abord configurer une invitation dans l'onglet 'Invitations & Diffusion'.");
+ alert("Configurez d'abord une invitation dans l'onglet Invitations.");
  return;
  }
  setBulkSelectedInviteId(invitations[0]?.id || '');
+ setBulkSelectedChannel(invitations[0]?.channel || 'EMAIL');
  setShowBulkInviteModal(true);
  }}
  className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-[var(--radius-button)] text-sm transition"
@@ -2662,8 +2767,8 @@ Merci de confirmer votre présence :
  <div className="space-y-6">
  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
  <div>
- <h2 className="text-xl font-bold text-foreground">Invitations Configurer</h2>
- <p className="text-muted text-sm mt-0.5">Associez un modèle visuel d'invitation à votre événement et rédigez le message de diffusion.</p>
+ <h2 className="text-xl font-bold text-foreground">Invitations</h2>
+ <p className="text-muted text-sm mt-0.5">Rédigez le message, choisissez e-mail ou WhatsApp, puis envoyez le lien RSVP. Le PDF de table part après confirmation.</p>
  </div>
  <button 
  onClick={() => {
@@ -2711,19 +2816,19 @@ Merci de confirmer votre présence :
  </div>
  <div className="flex gap-2 pt-4 border-t border-border-subtle">
  <button 
- onClick={() => handleSimulateBroadcast(invite.id)}
+ onClick={() => setBroadcastConfirmInviteId(invite.id)}
  disabled={broadcastingInviteId !== null}
  className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl text-xs transition shadow-md shadow-primary/10 disabled:bg-primary/50 disabled:cursor-not-allowed"
  >
  {broadcastingInviteId === invite.id ? (
  <>
  <Loader2 className="w-3.5 h-3.5 animate-spin" />
- Génération en cours...
+ Envoi en cours...
  </>
  ) : (
  <>
  <Send className="w-3.5 h-3.5" />
- Générer les invitations & Liens RSVP
+ Envoyer les invitations
  </>
  )}
  </button>
@@ -3625,7 +3730,7 @@ Merci de confirmer votre présence :
  <form onSubmit={handleBulkSendInvitation} className="space-y-4">
  <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl">
  <p className="text-xs text-primary font-semibold leading-relaxed">
- Vous vous apprêtez à envoyer une invitation personnalisée à <strong className="text-primary font-extrabold">{selectedGuestIds.length} invités</strong> sélectionnés.
+ Envoi à <strong className="text-primary font-extrabold">{selectedGuestIds.length} invité{selectedGuestIds.length > 1 ? 's' : ''}</strong> — lien RSVP uniquement, pas le PDF de table.
  </p>
  </div>
 
@@ -3633,7 +3738,12 @@ Merci de confirmer votre présence :
  <label className="text-xs font-bold text-muted uppercase tracking-wider">Sélectionner l'invitation précise</label>
  <select 
  value={bulkSelectedInviteId}
- onChange={(e) => setBulkSelectedInviteId(e.target.value)}
+ onChange={(e) => {
+ const id = e.target.value;
+ setBulkSelectedInviteId(id);
+ const invite = invitations.find((item) => item.id === id);
+ if (invite?.channel) setBulkSelectedChannel(invite.channel);
+ }}
  className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
  required
  >
@@ -3653,12 +3763,16 @@ Merci de confirmer votre présence :
  >
  <option value="EMAIL">E-mail uniquement</option>
  <option value="WHATSAPP">WhatsApp uniquement</option>
- <option value="EMAIL_AND_WHATSAPP">E-mail ET WhatsApp (Simultané)</option>
- <option value="X">X / Twitter (Partage direct)</option>
- <option value="INSTAGRAM">Instagram (Copie de lien DM)</option>
- <option value="FACEBOOK">Facebook (Copie de lien Messenger)</option>
+ <option value="EMAIL_AND_WHATSAPP">E-mail et WhatsApp</option>
  </select>
  </div>
+
+ <SendAudienceStats stats={bulkAudience} />
+ {bulkAudience.reachable === 0 && (
+  <p className="text-xs text-rose-600 font-medium">
+   Aucun invité n’a le contact nécessaire pour ce canal.
+  </p>
+ )}
 
  <div className="pt-4 flex gap-3 border-t border-border">
  <button 
@@ -3671,7 +3785,7 @@ Merci de confirmer votre présence :
  </button>
  <button 
  type="submit"
- disabled={isBulkSending}
+ disabled={isBulkSending || bulkAudience.reachable === 0}
  className="flex-1 py-2.5 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/10 flex items-center justify-center gap-1.5 disabled:bg-primary/50 disabled:cursor-not-allowed"
  >
  {isBulkSending ? (
@@ -3682,7 +3796,7 @@ Merci de confirmer votre présence :
  ) : (
  <>
  <Send className="w-4 h-4" />
- Générer & Envoyer
+ Envoyer
  </>
  )}
  </button>
@@ -3691,6 +3805,55 @@ Merci de confirmer votre présence :
  </div>
  </div>
  )}
+
+ <Modal
+ open={Boolean(broadcastConfirmInviteId)}
+ onClose={() => setBroadcastConfirmInviteId(null)}
+ title="Envoyer les invitations ?"
+ description="Le premier message contient uniquement le lien RSVP. Le PDF de table part après confirmation, si une place est attribuée."
+ size="md"
+ footer={
+  <div className="flex w-full justify-end gap-2">
+   <Button type="button" variant="secondary" size="sm" onClick={() => setBroadcastConfirmInviteId(null)}>
+    Annuler
+   </Button>
+   <Button
+    type="button"
+    size="sm"
+    disabled={!broadcastAudience || broadcastAudience.reachable === 0 || broadcastingInviteId !== null}
+    loading={broadcastingInviteId === broadcastConfirmInviteId}
+    onClick={() => {
+     const inviteId = broadcastConfirmInviteId;
+     if (!inviteId) return;
+     setBroadcastConfirmInviteId(null);
+     void handleSimulateBroadcast(inviteId);
+    }}
+   >
+    Envoyer à tous
+   </Button>
+  </div>
+ }
+ >
+  <div className="space-y-3">
+   <p className="text-sm text-muted">
+    Canal : <span className="font-semibold text-foreground">{getChannelLabel(broadcastConfirmInvite?.channel || 'EMAIL')}</span>
+    {broadcastConfirmInvite?.subject ? ` · ${broadcastConfirmInvite.subject}` : ''}
+   </p>
+   {broadcastAudience ? <SendAudienceStats stats={broadcastAudience} /> : null}
+   {broadcastAudience && broadcastAudience.reachable === 0 ? (
+    <p className="text-xs text-rose-600 font-medium">
+     {broadcastAudience.total === 0
+      ? 'Ajoutez des invités avant d’envoyer.'
+      : 'Aucun invité n’a le contact nécessaire pour ce canal.'}
+    </p>
+   ) : null}
+   {broadcastAudience && broadcastAudience.alreadySent > 0 ? (
+    <p className="text-xs text-amber-800">
+     Les personnes déjà invitées recevront le message à nouveau.
+    </p>
+   ) : null}
+  </div>
+ </Modal>
 
  {/* Invitation Configuration Modal */}
  {showInviteModal && (
@@ -3708,6 +3871,7 @@ Merci de confirmer votre présence :
  <div className="grid grid-cols-2 gap-4">
  <div className="space-y-1.5">
  <label className="text-xs font-bold text-muted uppercase tracking-wider">Modèle de design</label>
+ <p className="text-[11px] text-muted">Page RSVP que l’invité voit. Pas le texte du message.</p>
  <select 
  value={selectedTemplateId}
  onChange={(e) => setSelectedTemplateId(e.target.value)}
@@ -3729,7 +3893,6 @@ Merci de confirmer votre présence :
  <option value="EMAIL">E-mail</option>
  <option value="WHATSAPP">WhatsApp</option>
  <option value="EMAIL_AND_WHATSAPP">E-mail et WhatsApp</option>
- <option value="LINK">Lien unique (Simulation)</option>
  </select>
  </div>
  </div>
@@ -3758,13 +3921,12 @@ Merci de confirmer votre présence :
  />
  </div>
  <div className="space-y-1.5">
- <div className="flex justify-between items-center">
+ <div className="flex justify-between items-center gap-3">
  <label className="text-xs font-bold text-muted uppercase tracking-wider">Corps du message</label>
- <span className="text-[10px] text-primary font-bold uppercase tracking-wider flex flex-wrap items-center gap-x-2 gap-y-0.5">
- <HelpCircle className="w-3.5 h-3.5" /> 
- <span>Variables: {'{{firstName}}'}, {'{{lastName}}'}, {'{{rsvpLink}}'}, {'{{title}}'}, {'{{date}}'}, {'{{location}}'}, {'{{description}}'}, {'{{dressCode}}'}, {'{{recommendations}}'}, {'{{guestGuidelines}}'}, {'{{tableName}}'}, {'{{seatNumber}}'}, {'{{tableMates}}'}, {'{{tableMatesInline}}'}</span>
- </span>
  </div>
+ <p className="text-[11px] text-muted leading-relaxed">
+ Variables utilisables : {'{{firstName}}'}, {'{{lastName}}'}, {'{{rsvpLink}}'}, {'{{title}}'}, {'{{date}}'}, {'{{location}}'}, {'{{description}}'}, {'{{orgName}}'}, {'{{dressCode}}'}, {'{{guestGuidelines}}'}. La table et le siège s’ajoutent après confirmation RSVP, pas ici.
+ </p>
  <textarea 
  value={inviteBody}
  onChange={(e) => setInviteBody(e.target.value)}
