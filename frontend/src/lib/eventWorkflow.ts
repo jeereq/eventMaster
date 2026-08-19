@@ -1,15 +1,23 @@
 import type { TablePlanTable } from '@/lib/tablePlanUtils';
+import {
+  type GuestGuidelines,
+  hasGuestGuidelinesContent,
+  summarizeGuestGuidelines,
+} from '@/lib/guestGuidelines';
 
 export type EventWorkflowTab =
   | 'guests'
   | 'invitations'
   | 'tablePlan'
   | 'guestInfo'
+  | 'feed'
   | 'protocol'
   | 'analytics';
 
 export type EventWorkflowStepId =
   | 'event'
+  | 'guestInfo'
+  | 'feed'
   | 'guests'
   | 'invitation'
   | 'send'
@@ -18,6 +26,8 @@ export type EventWorkflowStepId =
   | 'tableNotify'
   | 'protocol'
   | 'analytics';
+
+const OPTIONAL_WORKFLOW_IDS = new Set<EventWorkflowStepId>(['feed', 'analytics']);
 
 export type EventWorkflowStepStatus = 'complete' | 'current' | 'upcoming' | 'skipped';
 
@@ -97,9 +107,10 @@ function countCheckedIn(guests: EventWorkflowGuest[]): number {
 
 function resolveStatuses(
   steps: Omit<EventWorkflowStep, 'status'>[],
+  skipIncompleteIds: ReadonlySet<EventWorkflowStepId> = OPTIONAL_WORKFLOW_IDS,
 ): EventWorkflowStep[] {
   const firstIncomplete = steps.findIndex((s) => {
-    if (s.id === 'analytics') return false;
+    if (skipIncompleteIds.has(s.id)) return false;
     return !s.detail?.startsWith('✓');
   });
 
@@ -127,8 +138,10 @@ export function computeEventWorkflowState(input: {
   tablePlan?: TablePlanMeta | null;
   eventDate?: string;
   isProtocolOnly?: boolean;
+  guestGuidelines?: GuestGuidelines | null;
+  feedPostCount?: number;
 }): EventWorkflowState {
-  const { guests, invitations, tablePlan, eventDate, isProtocolOnly } = input;
+  const { guests, invitations, tablePlan, eventDate, isProtocolOnly, guestGuidelines, feedPostCount = 0 } = input;
 
   const guestCount = guests.length;
   const assignedCount = countAssignedGuests(tablePlan ?? undefined);
@@ -171,12 +184,38 @@ export function computeEventWorkflowState(input: {
     };
   }
 
+  const guidelinesFilled = hasGuestGuidelinesContent(guestGuidelines);
+  const guidelinesSummary = summarizeGuestGuidelines(guestGuidelines);
+  const skipIncomplete = new Set<EventWorkflowStepId>(OPTIONAL_WORKFLOW_IDS);
+  if (!guidelinesFilled && guestCount > 0) {
+    skipIncomplete.add('guestInfo');
+  }
+
   const rawSteps: Omit<EventWorkflowStep, 'status'>[] = [
     {
       id: 'event',
       title: 'Événement',
       description: 'Titre, date, lieu et salle associée.',
       detail: '✓ Événement créé',
+    },
+    {
+      id: 'guestInfo',
+      title: 'Infos invités',
+      description: 'Dress code, avantages, parking, horaires et notes pratiques.',
+      tab: 'guestInfo',
+      detail: guidelinesFilled
+        ? `✓ ${guidelinesSummary}`
+        : 'Dress code, avantages, horaires…',
+    },
+    {
+      id: 'feed',
+      title: 'Fil d’actualité',
+      description: 'Publiez photos et annonces ; les invités like et commentent.',
+      tab: 'feed',
+      detail:
+        feedPostCount > 0
+          ? `✓ ${feedPostCount} publication(s)`
+          : 'Annonces, photos, commentaires',
     },
     {
       id: 'guests',
@@ -265,7 +304,7 @@ export function computeEventWorkflowState(input: {
     },
   ];
 
-  const steps = resolveStatuses(rawSteps);
+  const steps = resolveStatuses(rawSteps, skipIncomplete);
   const completedCount = steps.filter((s) => s.status === 'complete').length;
 
   return {
@@ -285,5 +324,5 @@ export function computeEventListProgress(input: {
   let score = 1;
   if ((input.guestCount ?? 0) > 0) score += 1;
   if ((input.invitationCount ?? 0) > 0 && input.hasTemplate) score += 1;
-  return Math.round((score / 9) * 100);
+  return Math.round((score / 11) * 100);
 }

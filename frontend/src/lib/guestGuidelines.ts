@@ -9,6 +9,7 @@ export type DressCodePresetId =
   | 'custom';
 
 export type RecommendationType =
+  | 'perks'
   | 'parking'
   | 'gifts'
   | 'cash_gift'
@@ -97,6 +98,10 @@ export const RECOMMENDATION_PRESETS: Record<
   RecommendationType,
   { label: string; defaultContent: string }
 > = {
+  perks: {
+    label: 'Avantages & extras',
+    defaultContent: 'Welcome drink, open bar, goodies ou animation live — précisez ce que les invités peuvent attendre.',
+  },
   parking: {
     label: 'Parking & accès',
     defaultContent: 'Parking disponible sur place. Accès par l\'entrée principale.',
@@ -237,12 +242,29 @@ export function formatGuestGuidelinesBlock(guidelines: GuestGuidelines): string 
   return parts.join('\n\n');
 }
 
+export function hasGuestGuidelinesContent(guidelines: GuestGuidelines | null | undefined): boolean {
+  const g = normalizeGuestGuidelines(guidelines);
+  if (g.dressCode.enabled && formatDressCodeText(g)) return true;
+  if (g.recommendations.some((r) => r.enabled && r.content.trim())) return true;
+  if (g.additionalNotes?.trim()) return true;
+  return false;
+}
+
+export function summarizeGuestGuidelines(guidelines: GuestGuidelines | null | undefined): string {
+  const g = normalizeGuestGuidelines(guidelines);
+  const bits: string[] = [];
+  if (g.dressCode.enabled && formatDressCodeText(g)) {
+    bits.push(getDressCodeShortLabel(g) || 'Tenue');
+  }
+  const recCount = g.recommendations.filter((r) => r.enabled && r.content.trim()).length;
+  if (recCount > 0) bits.push(`${recCount} reco.`);
+  if (g.additionalNotes?.trim()) bits.push('notes');
+  return bits.join(' · ');
+}
+
 export function hasVisibleGuestGuidelines(guidelines: GuestGuidelines | null | undefined): boolean {
   if (!guidelines || !guidelines.showOnRsvp) return false;
-  if (guidelines.dressCode.enabled && formatDressCodeText(guidelines)) return true;
-  if (guidelines.recommendations.some((r) => r.enabled && r.content.trim())) return true;
-  if (guidelines.additionalNotes?.trim()) return true;
-  return false;
+  return hasGuestGuidelinesContent(guidelines);
 }
 
 export function createRecommendation(type: RecommendationType): GuestGuidelinesRecommendation {

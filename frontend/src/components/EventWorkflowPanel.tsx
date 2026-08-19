@@ -107,7 +107,7 @@ export default function EventWorkflowPanel({
             <span className="text-xs font-bold text-primary">{workflow.progressPercent}%</span>
           </div>
 
-          <div className="hidden lg:grid lg:grid-cols-9 gap-2 pt-3">
+          <div className="hidden lg:grid gap-2 pt-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
             {workflow.steps.map((step, index) => (
               <WorkflowStepCard
                 key={step.id}

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   Mail, MessageSquare, QrCode, ScanLine, MapPin, FileText, LayoutGrid,
   ArrowRight, ArrowLeft, Heart, Wallet, CalendarCheck, Building2, Briefcase, Users,
-  Shield, Share2, CheckCircle2, ChevronRight,
+  Shield, Share2, CheckCircle2, ChevronRight, Shirt, Rss,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui';
@@ -39,12 +39,12 @@ const JOURNEYS: Journey[] = [
     label: 'Organisateur',
     eyebrow: 'Parcours organisation',
     title: 'Créer un événement jusqu’au jour J',
-    intro: 'Un workspace : invitations, RSVP, plan de table, protocole web et suivi.',
+    intro: 'Un workspace : infos invités, invitations, RSVP, plan de table, fil d’actualité, protocole web et suivi.',
     cta: { href: '/register', label: 'Lancer mon premier événement' },
     results: [
+      { icon: Shirt, label: 'Dress code' },
       { icon: Mail, label: 'Lien RSVP' },
-      { icon: LayoutGrid, label: 'Plan 2D' },
-      { icon: ScanLine, label: 'Check-in QR' },
+      { icon: Rss, label: 'Fil invités' },
     ],
     steps: [
       {
@@ -53,6 +53,13 @@ const JOURNEYS: Journey[] = [
         detail: 'Renseignez titre, date, lieu et GPS. Choisissez Privé pour un mariage ou une soirée fermée, Public pour une fiche marketplace avec inscription ou billets payants. Associer une salle importe automatiquement le plan 2D.',
         outcome: 'Événement créé, prêt à recevoir des invités ou des acheteurs de billets.',
         icon: CalendarCheck,
+      },
+      {
+        title: 'Infos invités',
+        description: 'Dress code, avantages (parking, cadeaux, extras) et notes pratiques, visibles sur le RSVP.',
+        detail: 'Dans Infos invités : activez le code vestimentaire, ajoutez parking, horaires, cadeaux ou extras (welcome drink, open bar). Ces infos s’affichent sur le portail de l’invité et peuvent être insérées dans l’invitation.',
+        outcome: 'Les invités savent comment s’habiller et ce qui les attend.',
+        icon: Shirt,
       },
       {
         title: 'Inviter',
@@ -69,6 +76,13 @@ const JOURNEYS: Journey[] = [
         icon: LayoutGrid,
       },
       {
+        title: 'Fil d’actualité',
+        description: 'Publiez photos et annonces. Les invités like, commentent et déposent un livre d’or.',
+        detail: 'Onglet Feed : publiez texte et médias, répondez aux commentaires, aimez les posts. Sur un événement public, une publication peut aussi paraître sur la fiche marketplace. Les invités voient le fil dans Actualités et partagent photos / messages dans le livre d’or.',
+        outcome: 'Annonces en direct et souvenirs collectés.',
+        icon: Rss,
+      },
+      {
         title: 'Accueillir',
         description: 'Le protocole scanne les badges dans le navigateur. Check-in et validation du siège.',
         detail: 'Mode Protocole : caméra du téléphone ou de la tablette dans le navigateur — l’app native n’est pas encore déployée. Présence enregistrée, siège validé, no-shows visibles.',
@@ -82,12 +96,12 @@ const JOURNEYS: Journey[] = [
     label: 'Invité',
     eyebrow: 'Parcours invité',
     title: 'De l’invitation à la table',
-    intro: 'Aucun compte requis. Placement, PDF et GPS uniquement après RSVP accepté.',
+    intro: 'Aucun compte requis. Infos pratiques, placement, PDF et GPS uniquement après RSVP accepté.',
     cta: { href: '/guide/invite', label: 'Voir l’aide invité' },
     results: [
+      { icon: Shirt, label: 'Dress code' },
       { icon: FileText, label: 'PDF avec placement' },
-      { icon: LayoutGrid, label: 'Plan de table' },
-      { icon: MapPin, label: 'Localisation GPS' },
+      { icon: Rss, label: 'Fil & livre d’or' },
     ],
     steps: [
       {
@@ -100,8 +114,8 @@ const JOURNEYS: Journey[] = [
       {
         title: 'Réponse RSVP',
         description: 'Vous confirmez, renseignez vos préférences et recevez votre badge QR.',
-        detail: 'Acceptez ou déclinez, indiquez menu, accompagnant ou champs demandés par l’organisateur. Le badge QR apparaît dès l’acceptation.',
-        outcome: 'Présence confirmée et badge QR prêt.',
+        detail: 'Acceptez ou déclinez, indiquez menu, accompagnant ou champs demandés par l’organisateur. Le badge QR apparaît dès l’acceptation. Dress code, avantages et notes pratiques s’affichent sur le portail.',
+        outcome: 'Présence confirmée, badge QR et infos pratiques.',
         icon: MessageSquare,
       },
       {
@@ -110,6 +124,13 @@ const JOURNEYS: Journey[] = [
         detail: 'Si l’organisateur est en Premium 1+ et qu’une place est déjà attribuée, PDF, plan et GPS partent tout de suite. Sinon, ils arrivent dès que le siège est assigné.',
         outcome: 'Vous savez où vous asseoir avant d’arriver.',
         icon: QrCode,
+      },
+      {
+        title: 'Fil & souvenirs',
+        description: 'Onglet Actualités : like et commentaires. Livre d’or : vos messages et photos.',
+        detail: 'Consultez les annonces de l’organisateur, aimez et commentez. Dans le livre d’or, déposez un mot et des photos — l’organisateur les voit dans son fil.',
+        outcome: 'Vous restez informé et participez aux souvenirs.',
+        icon: Heart,
       },
       {
         title: 'Check-in',

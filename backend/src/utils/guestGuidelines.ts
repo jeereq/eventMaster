@@ -9,6 +9,7 @@ export type DressCodePresetId =
   | 'custom';
 
 export type RecommendationType =
+  | 'perks'
   | 'parking'
   | 'gifts'
   | 'cash_gift'
@@ -59,6 +60,7 @@ const DRESS_CODE_PRESETS: Record<
 };
 
 const RECOMMENDATION_LABELS: Record<RecommendationType, string> = {
+  perks: 'Avantages & extras',
   parking: 'Parking & accès',
   gifts: 'Cadeaux',
   cash_gift: 'Enveloppe / Cotisation',

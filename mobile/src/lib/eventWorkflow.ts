@@ -3,11 +3,14 @@ export type EventWorkflowTab =
   | 'invitations'
   | 'tablePlan'
   | 'guestInfo'
+  | 'feed'
   | 'protocol'
   | 'analytics';
 
 export type EventWorkflowStepId =
   | 'event'
+  | 'guestInfo'
+  | 'feed'
   | 'guests'
   | 'invitation'
   | 'send'
@@ -96,9 +99,12 @@ function countCheckedIn(guests: EventWorkflowGuest[]): number {
   return guests.filter((g) => g.checkedInAt).length;
 }
 
-function resolveStatuses(steps: Omit<EventWorkflowStep, 'status'>[]): EventWorkflowStep[] {
+function resolveStatuses(
+  steps: Omit<EventWorkflowStep, 'status'>[],
+  skipIncompleteIds: ReadonlySet<EventWorkflowStepId> = new Set(['feed', 'analytics']),
+): EventWorkflowStep[] {
   const firstIncomplete = steps.findIndex((s) => {
-    if (s.id === 'analytics') return false;
+    if (skipIncompleteIds.has(s.id)) return false;
     return !s.detail?.startsWith('✓');
   });
 
@@ -126,8 +132,10 @@ export function computeEventWorkflowState(input: {
   tablePlan?: TablePlanMeta | null;
   eventDate?: string;
   isProtocolOnly?: boolean;
+  hasGuestInfo?: boolean;
+  feedPostCount?: number;
 }): EventWorkflowState {
-  const { guests, invitations, tablePlan, eventDate, isProtocolOnly } = input;
+  const { guests, invitations, tablePlan, eventDate, isProtocolOnly, hasGuestInfo, feedPostCount = 0 } = input;
 
   const guestCount = guests.length;
   const assignedCount = countAssignedGuests(tablePlan ?? undefined);
@@ -167,8 +175,25 @@ export function computeEventWorkflowState(input: {
     };
   }
 
+  const skipIncomplete = new Set<EventWorkflowStepId>(['feed', 'analytics']);
+  if (!hasGuestInfo && guestCount > 0) skipIncomplete.add('guestInfo');
+
   const rawSteps: Omit<EventWorkflowStep, 'status'>[] = [
     { id: 'event', title: 'Événement', description: 'Créé', detail: '✓ Événement créé' },
+    {
+      id: 'guestInfo',
+      title: 'Infos invités',
+      description: 'Dress code et avantages',
+      tab: 'guestInfo',
+      detail: hasGuestInfo ? '✓ Infos renseignées' : 'Dress code, avantages…',
+    },
+    {
+      id: 'feed',
+      title: 'Fil',
+      description: 'Annonces et photos',
+      tab: 'feed',
+      detail: feedPostCount > 0 ? `✓ ${feedPostCount} publication(s)` : 'Annonces, photos',
+    },
     {
       id: 'guests',
       title: 'Invités',
@@ -255,7 +280,7 @@ export function computeEventWorkflowState(input: {
     },
   ];
 
-  const steps = resolveStatuses(rawSteps);
+  const steps = resolveStatuses(rawSteps, skipIncomplete);
   const completedCount = steps.filter((s) => s.status === 'complete').length;
 
   return {

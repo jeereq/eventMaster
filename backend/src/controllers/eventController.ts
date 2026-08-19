@@ -14,6 +14,11 @@ import { toPrismaJson } from '../utils/prismaJson';
 import { uniqueSlug } from '../utils/slug';
 import { parsePhotoUrls } from '../utils/publicVenue';
 
+function serializeEvent<T extends { _count?: { posts: number } }>(event: T) {
+  const { _count, ...rest } = event;
+  return { ...rest, feedPostCount: _count?.posts ?? 0 };
+}
+
 async function eventVisibilityData(
   title: string,
   body: Record<string, unknown>,
@@ -68,12 +73,13 @@ export async function getEvents(req: AuthenticatedRequest, res: Response) {
       where,
       include: {
         room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } },
+        _count: { select: { posts: true } },
       },
       orderBy: { date: 'asc' },
     });
 
     const access = await resolveOrgAccess(userId, tenantId);
-    return res.json({ events, access });
+    return res.json({ events: events.map(serializeEvent), access });
   } catch (error: any) {
     console.error('Erreur lors de la récupération des événements:', error);
     return res.status(500).json({ error: 'Erreur lors de la récupération des événements' });
@@ -147,7 +153,10 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
         photos: toPrismaJson(parsePhotoUrls(req.body.photos)),
         ...visibility,
       },
-      include: { room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } } },
+      include: {
+        room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } },
+        _count: { select: { posts: true } },
+      },
     });
 
     if (tenant?.accountKind === 'VENDOR') {
@@ -157,7 +166,7 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
       });
     }
 
-    return res.status(201).json(event);
+    return res.status(201).json(serializeEvent(event));
   } catch (error: any) {
     console.error('Erreur lors de la création de l\'événement:', error);
     return res.status(500).json({ error: 'Erreur lors de la création de l\'événement' });
@@ -181,14 +190,17 @@ export async function getEventById(req: AuthenticatedRequest, res: Response) {
 
     const event = await prisma.event.findFirst({
       where: { id, tenantId },
-      include: { room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } } },
+      include: {
+        room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } },
+        _count: { select: { posts: true } },
+      },
     });
 
     if (!event) {
       return res.status(404).json({ error: 'Événement non trouvé' });
     }
 
-    return res.json(event);
+    return res.json(serializeEvent(event));
   } catch (error: any) {
     console.error('Erreur lors de la récupération de l\'événement:', error);
     return res.status(500).json({ error: 'Erreur lors de la récupération de l\'événement' });
@@ -240,7 +252,10 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
         ...(req.body.photos !== undefined ? { photos: toPrismaJson(parsePhotoUrls(req.body.photos)) } : {}),
         ...visibility,
       },
-      include: { room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } } },
+      include: {
+        room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } },
+        _count: { select: { posts: true } },
+      },
     });
 
     let assignmentNotifications = null;
@@ -261,13 +276,16 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
         eventForResponse = await prisma.event.update({
           where: { id },
           data: { tablePlan: planWithMeta },
-          include: { room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } } },
+          include: {
+            room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } },
+            _count: { select: { posts: true } },
+          },
         });
       }
     }
 
     return res.json({
-      ...eventForResponse,
+      ...serializeEvent(eventForResponse),
       assignmentNotifications,
     });
   } catch (error: any) {

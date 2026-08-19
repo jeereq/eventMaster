@@ -20,6 +20,7 @@ import {
   fetchEventInvitations,
 } from '../../../src/lib/eventsApi';
 import { computeEventWorkflowState } from '../../../src/lib/eventWorkflow';
+import { hasGuestGuidelinesContent } from '../../../src/lib/guestGuidelines';
 import { computeRsvpStats } from '../../../src/types/event';
 import type { EventGuest, EventInvitation, EventItem } from '../../../src/types/event';
 import { colors } from '../../../src/theme/colors';
@@ -80,6 +81,8 @@ export default function EventDetailScreen() {
         tablePlan: event?.tablePlan ?? null,
         eventDate: event?.date,
         isProtocolOnly: access?.isProtocolOnly,
+        hasGuestInfo: hasGuestGuidelinesContent(event?.guestGuidelines),
+        feedPostCount: event?.feedPostCount ?? 0,
       }),
     [guests, invitations, event, access],
   );

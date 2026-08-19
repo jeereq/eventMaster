@@ -1,4 +1,5 @@
 import type { OrgAccess } from './auth';
+import type { GuestGuidelines } from '../lib/guestGuidelines';
 
 export interface EventRoom {
   id: string;
@@ -19,6 +20,8 @@ export interface EventItem {
     placementNotifiedAt?: string;
     notifiedAt?: string;
   } | null;
+  guestGuidelines?: GuestGuidelines | null;
+  feedPostCount?: number;
 }
 
 export interface EventsListResponse {

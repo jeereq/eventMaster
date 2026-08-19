@@ -199,6 +199,8 @@ export const USER_GUIDES: UserGuide[] = [
       'Gérer l\'équipe (managers, protocoles, commerciaux org.)',
       'Créer et configurer les salles 2D',
       'Créer des événements privés (liste d\'invités) ou publics avec inscription / billets en ligne',
+      'Renseigner dress code, avantages et notes pratiques pour les invités',
+      'Publier sur le fil d’actualité, répondre aux commentaires et consulter le livre d’or',
       'Accéder à la facturation, au forfait, aux factures et aux versements des commerciaux org.',
       'Personnaliser les modèles d\'invitation et messages invités',
       'Publier des salles (plan 2D) et des prestations : métiers ou locations (habits, véhicules, matériel)',
@@ -225,7 +227,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'event-lifecycle',
         title: 'Parcours complet d\'un événement',
         content:
-          '1. Créez l\'événement (titre, date, lieu, salle).\n2. Ajoutez ou importez vos invités.\n3. Configurez un modèle visuel et une invitation (e-mail / WhatsApp).\n4. Diffusez l\'invitation : les invités reçoivent le lien RSVP.\n5. Les invités confirment ou déclinent via leur lien personnel — dès acceptation, PDF / plan / GPS partent (si place assignée et forfait Premium+).\n6. Organisez le plan de table 2D et assignez les places — les invités déjà confirmés reçoivent alors le placement complet.\n7. Le jour J, utilisez le mode Protocole (scan QR) pour confirmer la présence à l\'entrée.\n8. Consultez les statistiques RSVP et participation.',
+          '1. Créez l\'événement (titre, date, lieu, salle).\n2. Onglet Infos invités : dress code, avantages (parking, cadeaux, extras), horaires et notes — visibles sur le RSVP.\n3. Ajoutez ou importez vos invités.\n4. Configurez un modèle visuel et une invitation (e-mail / WhatsApp).\n5. Diffusez l\'invitation : les invités reçoivent le lien RSVP.\n6. Les invités confirment ou déclinent via leur lien personnel — dès acceptation, PDF / plan / GPS partent (si place assignée et forfait Premium+).\n7. Organisez le plan de table 2D et assignez les places — les invités déjà confirmés reçoivent alors le placement complet.\n8. Onglet Feed : publiez photos et annonces ; les invités like et commentent ; le livre d’or collecte leurs messages.\n9. Le jour J, utilisez le mode Protocole (scan QR) pour confirmer la présence à l\'entrée.\n10. Consultez les statistiques RSVP et participation.',
         links: [
           { label: 'Événements', href: '/dashboard/events' },
           { label: 'Statistiques', href: '/dashboard/analytics' },
@@ -235,7 +237,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'create-event',
         title: 'Créer un événement complet',
         content:
-          '1. Allez dans Événements → Créer.\n2. Choisissez Privé (liste d’invités) ou Public (fiche sur le marketplace : grille, liste et carte).\n3. Ajoutez une galerie (photos / vidéos) : elle sert de couverture marketplace et de fiche publique.\n4. Pour un public payant, activez les billets en ligne et le prix en FC.\n5. Renseignez titre, date, lieu et GPS ; associez une salle (importe le plan 2D) et un modèle de formulaire RSVP si besoin.\n6. Sur le fil d’actualité, publiez une annonce sur la fiche publique si l’événement est ouvert.\n7. Suivez le parcours : invités (ou acheteurs de billets) → invitation RSVP → plan de table → protocole.',
+          '1. Allez dans Événements → Créer.\n2. Choisissez Privé (liste d’invités) ou Public (fiche sur le marketplace : grille, liste et carte).\n3. Ajoutez une galerie (photos / vidéos) : elle sert de couverture marketplace et de fiche publique.\n4. Pour un public payant, activez les billets en ligne et le prix en FC.\n5. Renseignez titre, date, lieu et GPS ; associez une salle (importe le plan 2D) et un modèle de formulaire RSVP si besoin.\n6. Dans Infos invités : dress code, avantages (parking, cadeaux, extras) et notes — visibles sur le RSVP.\n7. Sur le fil d’actualité, publiez une annonce ; les invités like et commentent. Sur un événement public, cochez « publier aussi sur la fiche marketplace ».\n8. Suivez le parcours : invités (ou acheteurs de billets) → invitation RSVP → plan de table → protocole.',
         links: [{ label: 'Événements', href: '/dashboard/events' }],
       },
       {
@@ -289,6 +291,8 @@ export const USER_GUIDES: UserGuide[] = [
     canDo: [
       'Gérer l\'équipe et les rôles organisationnels',
       'Créer salles et événements (privés ou publics, billets en ligne)',
+      'Renseigner dress code, avantages et notes pratiques pour les invités',
+      'Publier sur le fil d’actualité et suivre le livre d’or',
       'Gérer invités, invitations et modèles',
       'Consulter les factures (sans modifier le forfait)',
       'Publier des salles et des prestations (métiers ou locations) et traiter devis / réservations',
@@ -314,7 +318,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'event-lifecycle',
         title: 'Parcours complet d\'un événement',
         content:
-          '1. Créez l\'événement et associez une salle 2D.\n2. Importez ou ajoutez la liste d\'invités.\n3. Choisissez un modèle et rédigez l\'invitation.\n4. Lancez la diffusion du lien RSVP.\n5. Suivez les réponses RSVP — dès acceptation, PDF / plan / GPS partent si la place est assignée (Premium+).\n6. Placez les invités sur le plan de table — les confirmés reçoivent le placement complet.\n7. Jour J : mode Protocole pour l\'accueil (scan QR).\n8. Analysez les statistiques de participation.',
+          '1. Créez l\'événement et associez une salle 2D.\n2. Onglet Infos invités : dress code, avantages (parking, cadeaux, extras) et notes.\n3. Importez ou ajoutez la liste d\'invités.\n4. Choisissez un modèle et rédigez l\'invitation.\n5. Lancez la diffusion du lien RSVP.\n6. Suivez les réponses RSVP — dès acceptation, PDF / plan / GPS partent si la place est assignée (Premium+).\n7. Placez les invités sur le plan de table — les confirmés reçoivent le placement complet.\n8. Onglet Feed : publiez photos et annonces ; les invités like et commentent.\n9. Jour J : mode Protocole pour l\'accueil (scan QR).\n10. Analysez les statistiques de participation.',
         links: [
           { label: 'Événements', href: '/dashboard/events' },
           { label: 'Statistiques', href: '/dashboard/analytics' },
@@ -331,7 +335,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'invite-guests',
         title: 'Inviter et placer des invités',
         content:
-          '1. Ouvrez un événement → onglet Invités.\n2. Ajoutez ou importez la liste.\n3. Assignez les tables depuis le plan de salle.\n4. Envoyez l\'invitation — l\'invité reçoit un lien RSVP personnel.',
+          '1. Ouvrez un événement → onglet Infos invités : dress code et avantages.\n2. Onglet Invités : ajoutez ou importez la liste.\n3. Assignez les tables depuis le plan de salle.\n4. Envoyez l\'invitation — l\'invité reçoit un lien RSVP personnel.\n5. Onglet Feed : publiez une annonce ; l\'invité like et commente depuis Actualités.',
         links: [{ label: 'Événements', href: '/dashboard/events' }],
       },
       {
@@ -433,7 +437,7 @@ export const USER_GUIDES: UserGuide[] = [
     summary:
       'Vous êtes assigné à une ou plusieurs salles ou événements précis. Vos droits dépendent de votre affectation : Manager (gestion) ou Protocole (accueil).',
     canDo: [
-      'Manager événement : gérer invités et contenu sur vos événements/salles assignés',
+      'Manager événement : gérer invités, infos pratiques (dress code) et fil d’actualité sur vos événements/salles assignés',
       'Protocole événement : scan QR dans le navigateur et suivi invités sur vos événements assignés',
       'Consulter le plan de salle des événements de votre périmètre',
     ],
@@ -594,13 +598,19 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'confirm-rsvp',
         title: 'Confirmer votre présence',
         content:
-          '1. Ouvrez le lien reçu dans votre invitation.\n2. Acceptez les conditions d\'utilisation si demandé.\n3. Consultez les détails de l\'événement.\n4. Choisissez Accepter ou Décliner et remplissez les champs demandés (menu, plus-one…).',
+          '1. Ouvrez le lien reçu dans votre invitation.\n2. Acceptez les conditions d\'utilisation si demandé.\n3. Consultez les détails : date, lieu, dress code, avantages et notes pratiques.\n4. Choisissez Accepter ou Décliner et remplissez les champs demandés (menu, plus-one…).',
       },
       {
         id: 'view-seating',
         title: 'Consulter votre placement',
         content:
           '1. Après avoir accepté l\'invitation, votre badge QR et votre placement (si déjà assigné) sont disponibles.\n2. Vous recevez aussi le PDF et le GPS par e-mail ou WhatsApp (selon le forfait).\n3. Présentez le QR à l\'accueil le jour J pour valider votre entrée.',
+      },
+      {
+        id: 'event-feed',
+        title: 'Participer au fil et au livre d\'or',
+        content:
+          '1. Après avoir accepté l\'invitation, ouvrez l\'onglet Actualités.\n2. Consultez les photos et annonces de l\'organisateur, aimez et commentez.\n3. Onglet Livre d\'or : laissez un message et des photos — l\'organisateur les voit dans son fil.\n4. Le jour J, le fil reste le canal des annonces en direct.',
       },
       {
         id: 'event-day',

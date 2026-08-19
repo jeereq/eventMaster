@@ -55,6 +55,7 @@ interface GuestShare {
 interface EventFeedManagerProps {
   eventId: string;
   canPublishOnListing?: boolean;
+  onPostsChange?: (count: number) => void;
 }
 
 function formatRelativeDate(dateStr: string) {
@@ -80,7 +81,7 @@ function getInitials(firstName: string, lastName: string) {
   return `${firstName[0] || ''}${lastName[0] || ''}`.toUpperCase();
 }
 
-export default function EventFeedManager({ eventId, canPublishOnListing = false }: EventFeedManagerProps) {
+export default function EventFeedManager({ eventId, canPublishOnListing = false, onPostsChange }: EventFeedManagerProps) {
   const { user } = useAuth();
   const [activeSubTab, setActiveSubTab] = useState<'feed' | 'shares'>('feed');
   const [posts, setPosts] = useState<Post[]>([]);
@@ -113,6 +114,7 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false 
     try {
       const data = await api.get(`/events/${eventId}/feed`);
       setPosts(data);
+      onPostsChange?.(Array.isArray(data) ? data.length : 0);
     } catch (err) {
       console.error('Error loading event feed:', err);
     } finally {
@@ -273,6 +275,7 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false 
         publishedOnListing: canPublishOnListing && publishOnListing,
       });
       setPosts([{ ...newPost, comments: [], likes: [] }, ...posts]);
+      onPostsChange?.(posts.length + 1);
       setPostContent('');
       setPostMediaFiles([]);
       setPublishOnListing(false);
@@ -289,6 +292,7 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false 
     try {
       await api.delete(`/events/${eventId}/feed/${postId}`);
       setPosts(posts.filter(p => p.id !== postId));
+      onPostsChange?.(Math.max(0, posts.length - 1));
     } catch (err) {
       console.error('Error deleting post:', err);
       alert('Erreur lors de la suppression.');
@@ -319,6 +323,18 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false 
     } catch (err) {
       console.error('Error deleting share:', err);
       alert('Erreur lors de la suppression.');
+    }
+  };
+
+  const handleToggleLike = async (postId: string) => {
+    if (!user?.id) return;
+    try {
+      const response = await api.post(`/events/${eventId}/feed/${postId}/like`, {
+        userId: user.id,
+      });
+      setPosts(posts.map((p) => (p.id === postId ? { ...p, likes: response.likes } : p)));
+    } catch (err) {
+      console.error('Error toggling like:', err);
     }
   };
 
@@ -387,7 +403,7 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false 
             Interactions & Fil d&apos;actualité
           </h2>
           <p className="text-sm text-muted max-w-xl">
-            Publiez des photos et annonces, consultez le livre d&apos;or et suivez les interactions.
+            Publiez des photos et annonces. Les invités like, commentent et déposent des messages dans le livre d&apos;or.
           </p>
         </div>
 
@@ -687,10 +703,18 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false 
 
                     {/* Engagement bar */}
                     <div className="px-4 py-2.5 mt-2 flex items-center gap-4 border-b border-border text-xs text-muted">
-                      <span className="inline-flex items-center gap-1.5">
-                        <Heart className="w-3.5 h-3.5 text-primary" />
+                      <button
+                        type="button"
+                        onClick={() => handleToggleLike(post.id)}
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 transition ${
+                          post.likes?.includes(`user_${user?.id}`)
+                            ? 'text-pink-600 bg-pink-50'
+                            : 'hover:text-foreground hover:bg-surface-muted'
+                        }`}
+                      >
+                        <Heart className={`w-3.5 h-3.5 ${post.likes?.includes(`user_${user?.id}`) ? 'fill-current' : 'text-primary'}`} />
                         <span className="tabular-nums text-foreground font-medium">{likesCount}</span> J&apos;aime
-                      </span>
+                      </button>
                       <span className="inline-flex items-center gap-1.5">
                         <MessageCircle className="w-3.5 h-3.5" />
                         <span className="tabular-nums text-foreground font-medium">{post.comments.length}</span>

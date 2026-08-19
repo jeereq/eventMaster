@@ -85,6 +85,7 @@ interface EventItem {
  } | null;
  tablePlan?: any;
  guestGuidelines?: GuestGuidelines | null;
+ feedPostCount?: number;
  tenant?: { name: string };
 }
 
@@ -514,8 +515,10 @@ export default function EventsPage() {
  tablePlan: selectedEvent?.tablePlan,
  eventDate: selectedEvent?.date,
  isProtocolOnly,
+ guestGuidelines: selectedEvent?.guestGuidelines ?? guestGuidelines,
+ feedPostCount: selectedEvent?.feedPostCount ?? 0,
  }),
- [guests, invitations, selectedEvent?.tablePlan, selectedEvent?.date, isProtocolOnly],
+ [guests, invitations, selectedEvent?.tablePlan, selectedEvent?.date, selectedEvent?.guestGuidelines, selectedEvent?.feedPostCount, guestGuidelines, isProtocolOnly],
  );
 
  const handleWorkflowNavigate = useCallback((tab: EventWorkflowTab) => {
@@ -755,6 +758,7 @@ export default function EventsPage() {
  setEditingEventId(null);
  setEventMapOpen(false);
  setSearchError('');
+ setGuestGuidelines(defaultGuestGuidelines());
  };
 
  const openCreateEventModal = () => {
@@ -893,6 +897,7 @@ Merci de confirmer votre présence :
  ticketPriceFc: eventIsPublic && eventTicketing ? Number(eventTicketPrice) || 0 : 0,
  ticketsTotal: eventIsPublic && eventTicketsTotal ? Number(eventTicketsTotal) : null,
  photos: eventPhotos,
+ guestGuidelines,
  };
 
  if (editingEventId) {
@@ -965,6 +970,7 @@ Merci de confirmer votre présence :
  setEventTicketsTotal(event.ticketsTotal != null ? String(event.ticketsTotal) : '');
  setEventPhotos(Array.isArray(event.photos) ? event.photos.filter((u): u is string => typeof u === 'string') : []);
  setEventRoomId(event.roomId || event.room?.id || '');
+ setGuestGuidelines(normalizeGuestGuidelines(event.guestGuidelines));
  setEditingEventId(event.id);
  setEventMapOpen(
  event.latitude !== undefined && event.latitude !== null &&
@@ -2147,12 +2153,12 @@ Merci de confirmer votre présence :
  <div className="inline-flex flex-wrap gap-0.5 p-0.5 bg-surface-muted border border-border rounded-[var(--radius-button)] max-w-full overflow-x-auto">
  {([
  !isProtocolOnly && { id: 'guests' as const, label: `Invités (${guests.length})`, icon: Users },
+ !isProtocolOnly && { id: 'guestInfo' as const, label: 'Infos invités', icon: Shirt },
+ !isProtocolOnly && { id: 'feed' as const, label: 'Feed', icon: MessageSquare },
  { id: 'protocol' as const, label: 'Protocole', icon: ScanLine },
  !isProtocolOnly && { id: 'invitations' as const, label: `Invitations (${invitations.length})`, icon: Mail },
  !isProtocolOnly && { id: 'tablePlan' as const, label: 'Plan de table', icon: LayoutGrid },
- !isProtocolOnly && { id: 'guestInfo' as const, label: 'Infos invités', icon: Shirt },
  !isProtocolOnly && { id: 'staff' as const, label: 'Équipe', icon: Users },
- !isProtocolOnly && { id: 'feed' as const, label: 'Feed', icon: MessageSquare },
  ].filter(Boolean) as Array<{ id: typeof activeTab; label: string; icon: React.ComponentType<{ className?: string }> }>).map(({ id, label, icon: Icon }) => {
  const locked = id === 'protocol' && protocolLocked;
  return (
@@ -2757,7 +2763,7 @@ Merci de confirmer votre présence :
  <div className="space-y-4 animate-fade-in">
  <div className="space-y-1">
  <h2 className="text-lg font-semibold text-foreground tracking-tight">Infos invités</h2>
- <p className="text-sm text-muted">Code vestimentaire et recommandations visibles sur le portail RSVP.</p>
+ <p className="text-sm text-muted">Dress code, avantages (parking, cadeaux, extras) et notes visibles sur le portail RSVP et dans l’invitation.</p>
  </div>
  <EventGuestGuidelinesEditor
  value={guestGuidelines}
@@ -2806,6 +2812,10 @@ Merci de confirmer votre présence :
  key={`feed_${selectedEvent.id}`}
  eventId={selectedEvent.id}
  canPublishOnListing={Boolean(selectedEvent.isPublic)}
+ onPostsChange={(count) => {
+ setSelectedEvent((prev) => (prev ? { ...prev, feedPostCount: count } : prev));
+ setEvents((prev) => prev.map((e) => (e.id === selectedEvent.id ? { ...e, feedPostCount: count } : e)));
+ }}
  />
  )}
  </div>
@@ -2853,7 +2863,7 @@ Merci de confirmer votre présence :
  <textarea
  value={eventDesc}
  onChange={(e) => setEventDescription(e.target.value)}
- placeholder="Optionnel — ambiance, dress code, précisions…"
+ placeholder="Optionnel — ambiance, précisions générales…"
  rows={2}
  className="w-full px-3.5 py-2.5 bg-surface-muted dark:bg-background border border-border dark:border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary resize-none"
  />
@@ -2968,6 +2978,18 @@ Merci de confirmer votre présence :
  <p className="text-[11px] text-muted leading-relaxed">
  Photos et vidéos affichées sur la fiche publique, le marketplace et la carte si l’événement est public.
  </p>
+ </section>
+
+ <section className="space-y-3 pt-1 border-t border-border">
+ <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted pt-3">Infos invités</h4>
+ <p className="text-[11px] text-muted leading-relaxed">
+ Dress code, avantages (parking, cadeaux, extras) et notes pratiques. Ils apparaissent sur le portail RSVP et peuvent être insérés dans l’invitation. Vous pourrez affiner dans l’onglet Infos invités.
+ </p>
+ <EventGuestGuidelinesEditor
+ value={guestGuidelines}
+ onChange={setGuestGuidelines}
+ compact
+ />
  </section>
 
  <section className="space-y-3 pt-1 border-t border-border">

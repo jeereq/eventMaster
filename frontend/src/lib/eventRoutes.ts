@@ -1,20 +1,20 @@
 export type EventWorkspaceTab =
   | 'guests'
+  | 'guestInfo'
+  | 'feed'
   | 'invitations'
   | 'tablePlan'
-  | 'feed'
   | 'staff'
-  | 'protocol'
-  | 'guestInfo';
+  | 'protocol';
 
 export const EVENT_WORKSPACE_TABS: EventWorkspaceTab[] = [
   'guests',
+  'guestInfo',
+  'feed',
   'invitations',
   'tablePlan',
-  'feed',
   'staff',
   'protocol',
-  'guestInfo',
 ];
 
 export function isEventWorkspaceTab(value: string | null | undefined): value is EventWorkspaceTab {

@@ -21,8 +21,10 @@ import GuestGuidelinesView from '@/components/GuestGuidelinesView';
 interface EventGuestGuidelinesEditorProps {
   value: GuestGuidelines;
   onChange: (value: GuestGuidelines) => void;
-  onSave: () => void;
+  onSave?: () => void;
   saving?: boolean;
+  /** Sans aperçu ni bouton Enregistrer (formulaire de création / édition). */
+  compact?: boolean;
 }
 
 export default function EventGuestGuidelinesEditor({
@@ -30,6 +32,7 @@ export default function EventGuestGuidelinesEditor({
   onChange,
   onSave,
   saving = false,
+  compact = false,
 }: EventGuestGuidelinesEditorProps) {
   const guidelines = normalizeGuestGuidelines(value);
 
@@ -90,7 +93,7 @@ export default function EventGuestGuidelinesEditor({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className={compact ? 'space-y-5' : 'grid grid-cols-1 lg:grid-cols-2 gap-6'}>
       <div className="space-y-5">
         {/* Dress code */}
         <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 space-y-4">
@@ -192,7 +195,10 @@ export default function EventGuestGuidelinesEditor({
 
         {/* Recommendations */}
         <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 space-y-4">
-          <h3 className="text-sm font-semibold text-foreground">Recommandations pratiques</h3>
+          <h3 className="text-sm font-semibold text-foreground">Avantages & recommandations</h3>
+          <p className="text-[11px] text-muted leading-relaxed">
+            Parking, cadeaux, horaires, extras (welcome drink, open bar…) — visibles par les invités sur le RSVP.
+          </p>
 
           <div className="flex flex-wrap gap-1.5">
             {(Object.keys(RECOMMENDATION_PRESETS) as RecommendationType[]).filter((t) => t !== 'custom').map((type) => (
@@ -284,6 +290,7 @@ export default function EventGuestGuidelinesEditor({
               Inclure dans les variables d&apos;invitation
             </label>
           </div>
+          {!compact && onSave && (
           <button
             type="button"
             onClick={onSave}
@@ -292,10 +299,12 @@ export default function EventGuestGuidelinesEditor({
           >
             {saving ? <span>Enregistrement…</span> : <><Save className="w-4 h-4" /> Enregistrer les infos invités</>}
           </button>
+          )}
         </div>
       </div>
 
       {/* Preview */}
+      {!compact && (
       <div className="space-y-3">
         <p className="text-xs font-semibold uppercase text-muted flex items-center gap-1.5">
           <Eye className="w-3.5 h-3.5" /> Aperçu invité
@@ -314,6 +323,7 @@ export default function EventGuestGuidelinesEditor({
           Variables invitation : {'{{dressCode}}'}, {'{{dressCodeShort}}'}, {'{{recommendations}}'}, {'{{guestNotes}}'}, {'{{guestGuidelines}}'}
         </p>
       </div>
+      )}
     </div>
   );
 }

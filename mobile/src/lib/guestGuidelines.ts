@@ -1,4 +1,5 @@
 export type RecommendationType =
+  | 'perks'
   | 'parking'
   | 'gifts'
   | 'cash_gift'
@@ -47,6 +48,7 @@ const DRESS_CODE_LABELS: Record<string, string> = {
 
 const RECOMMENDATION_LABELS: Record<string, string> = {
   parking: 'Parking & accès',
+  perks: 'Avantages & extras',
   gifts: 'Cadeaux',
   cash_gift: 'Enveloppe / Cotisation',
   weather: 'Météo / Saison',
@@ -100,12 +102,17 @@ export function formatDressCodeText(guidelines: GuestGuidelines): string {
   return parts.filter(Boolean).join(' · ');
 }
 
+export function hasGuestGuidelinesContent(guidelines: GuestGuidelines | null | undefined): boolean {
+  const g = normalizeGuestGuidelines(guidelines);
+  if (g.dressCode.enabled && formatDressCodeText(g)) return true;
+  if (g.recommendations.some((r) => r.enabled && r.content.trim())) return true;
+  if (g.additionalNotes?.trim()) return true;
+  return false;
+}
+
 export function hasVisibleGuestGuidelines(guidelines: GuestGuidelines | null | undefined): boolean {
   if (!guidelines || !guidelines.showOnRsvp) return false;
-  if (guidelines.dressCode.enabled && formatDressCodeText(guidelines)) return true;
-  if (guidelines.recommendations.some((r) => r.enabled && r.content.trim())) return true;
-  if (guidelines.additionalNotes?.trim()) return true;
-  return false;
+  return hasGuestGuidelinesContent(guidelines);
 }
 
 export function getVisibleRecommendations(guidelines: GuestGuidelines) {

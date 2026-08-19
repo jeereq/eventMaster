@@ -927,7 +927,7 @@ export default function RsvpPage() {
                 <div className="space-y-1">
                   <h3 className="font-semibold text-foreground text-sm">Actualités</h3>
                   <p className="text-muted text-xs">
-                    Découvrez les publications en direct des organisateurs et commentez-les.
+                    Publications de l&apos;organisateur : photos, annonces. Aimez et commentez. Le livre d&apos;or sert à vos messages et photos personnels.
                   </p>
                 </div>
 
@@ -943,7 +943,7 @@ export default function RsvpPage() {
                     </div>
                     <h4 className="font-semibold text-foreground text-sm">Aucune publication</h4>
                     <p className="text-muted text-xs">
-                      Les publications en direct des organisateurs apparaîtront ici très bientôt !
+                      Les publications de l&apos;organisateur apparaîtront ici. Vous pourrez aimer et commenter.
                     </p>
                   </div>
                 ) : (

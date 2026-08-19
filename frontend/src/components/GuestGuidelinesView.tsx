@@ -2,7 +2,7 @@
 
 import React from 'react';
 import {
-  Shirt, Car, Gift, CloudSun, Clock, Baby, Camera, Bus, Accessibility, Info, Wallet,
+  Shirt, Car, Gift, CloudSun, Clock, Baby, Camera, Bus, Accessibility, Info, Wallet, Sparkles,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -16,6 +16,7 @@ import {
 import { cn } from '@/lib/cn';
 
 const RECOMMENDATION_ICONS: Record<RecommendationType, LucideIcon> = {
+  perks: Sparkles,
   parking: Car,
   gifts: Gift,
   cash_gift: Wallet,
