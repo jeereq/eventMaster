@@ -26,7 +26,7 @@ import {
   toDateKey,
 } from '../utils/marketplaceDates';
 import { parseListingDetails } from '../utils/listingDetails';
-import { RoomType, ServiceCategory, TenantAccountKind, MarketplaceBookingStatus, VenuePriceUnit } from '@prisma/client';
+import { Prisma, RoomType, ServiceCategory, TenantAccountKind, MarketplaceBookingStatus, VenuePriceUnit } from '@prisma/client';
 import { PlanFeatureError, assertServiceQuota, assertVenueCatalogPublish } from '../services/planFeaturesService';
 import { notifyTenantOperators } from '../services/platformNotificationService';
 import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
@@ -703,11 +703,11 @@ export async function listPublicServices(req: Request, res: Response) {
     const mobility = typeof req.query.mobility === 'string' ? req.query.mobility.trim() : '';
     const travelsFilter = mobility === 'travels' ? true : mobility === 'on_site' ? false : null;
 
-    const where = {
+    const where: Prisma.ServiceOfferingWhereInput = {
       isPublic: true,
       ...allowedCityPrismaFilter(city),
-      ...(commune ? { commune: { contains: commune, mode: 'insensitive' } } : {}),
-      ...(neighborhood ? { neighborhood: { contains: neighborhood, mode: 'insensitive' } } : {}),
+      ...(commune ? { commune: { contains: commune, mode: 'insensitive' as const } } : {}),
+      ...(neighborhood ? { neighborhood: { contains: neighborhood, mode: 'insensitive' as const } } : {}),
       ...(category ? { category } : serviceGroupPrismaFilter(group)),
       ...(wantUnit ? { priceUnit: wantUnit } : {}),
       ...(priceRange ? { priceFromFc: priceRange } : {}),
@@ -743,8 +743,8 @@ export async function listPublicServices(req: Request, res: Response) {
         : {}),
     };
 
-    const findOfferings = (extraWhere: object, take: number) => prisma.serviceOffering.findMany({
-      where: { ...where, ...extraWhere },
+    const findOfferings = (extraWhere: Prisma.ServiceOfferingWhereInput, take: number) => prisma.serviceOffering.findMany({
+      where: { AND: [where, extraWhere] },
       include: offeringInclude,
       orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
       take,
