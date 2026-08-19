@@ -120,6 +120,7 @@ export default function CatalogueFilterBar({
   variant = 'card',
   hideViewToggle = false,
   compactToggle = false,
+  hideMap = false,
   gridCols,
   onGridColsChange,
   gridColOptions,
@@ -144,6 +145,7 @@ export default function CatalogueFilterBar({
   variant?: 'card' | 'float';
   hideViewToggle?: boolean;
   compactToggle?: boolean;
+  hideMap?: boolean;
   gridCols?: CatalogueGridCols;
   onGridColsChange?: (cols: CatalogueGridCols) => void;
   gridColOptions?: CatalogueGridCols[];
@@ -335,12 +337,13 @@ export default function CatalogueFilterBar({
           />
         </div>
         {!hideViewToggle ? (
-          <CatalogueViewToggle
-            value={view}
-            onChange={onViewChange}
-            compact={compactToggle}
-            className="w-full justify-between bg-surface/90 backdrop-blur-xl border-white/25 dark:border-white/10 shadow-lg"
-          />
+            <CatalogueViewToggle
+              value={view}
+              onChange={onViewChange}
+              compact={compactToggle}
+              hideMap={hideMap}
+              className="w-full justify-between bg-surface/90 backdrop-blur-xl border-white/25 dark:border-white/10 shadow-lg"
+            />
         ) : null}
         {view === 'grid' && gridCols && onGridColsChange ? (
           <div className="flex items-center gap-2">
@@ -399,6 +402,7 @@ export default function CatalogueFilterBar({
               value={view}
               onChange={onViewChange}
               compact={compactToggle}
+              hideMap={hideMap}
               className="flex-1 sm:flex-none justify-between sm:justify-start"
             />
           ) : null}
