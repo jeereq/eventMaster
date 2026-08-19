@@ -4,6 +4,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { parsePhotoUrls, coverFromMedia, priceUnitLabel, serviceCategoryLabel, isServiceRentalCategory } from '../utils/publicVenue';
 import { buildEventPlanProposals } from '../services/eventPlannerService';
 import { parseEventPlanInput, serializeBriefPayload } from '../services/eventPlanBrief';
+import { simulateEventPlanAi } from '../services/eventPlanAiService';
 
 function parseKind(value: unknown): 'venue' | 'service' | null {
   return value === 'venue' || value === 'service' ? value : null;
@@ -175,6 +176,23 @@ export async function planEvent(req: AuthenticatedRequest, res: Response) {
     }
     console.error('planEvent:', error);
     return res.status(500).json({ error: 'Impossible de préparer la proposition.' });
+  }
+}
+
+export async function planEventAi(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!req.user) return res.status(401).json({ error: 'Non authentifié.' });
+    const result = await simulateEventPlanAi(
+      req.user.id,
+      req.body && typeof req.body === 'object' ? req.body as Record<string, unknown> : {},
+    );
+    return res.json(result);
+  } catch (error: any) {
+    if (error?.status) {
+      return res.status(error.status).json({ error: error.message });
+    }
+    console.error('planEventAi:', error);
+    return res.status(500).json({ error: 'Impossible de lancer la simulation IA.' });
   }
 }
 

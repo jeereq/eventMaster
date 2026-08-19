@@ -63,6 +63,7 @@ import {
   readStoredBrief,
   snapshotPlanItems,
   writeStoredBrief,
+  eventPlanAiToPackage,
   type EventPlanBrief,
   type EventPlanLock,
   type PlanItem,
@@ -74,6 +75,7 @@ import {
 import EventPlanBriefForm from '@/components/EventPlanBriefForm';
 import EventPlanPacks from '@/components/EventPlanPacks';
 import EventSavedPacks from '@/components/EventSavedPacks';
+import EventPrepAiSimulator from '@/components/EventPrepAiSimulator';
 import CatalogueViewToggle from '@/components/CatalogueViewToggle';
 
 type HubTab = 'explore' | 'favorites' | 'plan' | 'packs';
@@ -664,6 +666,21 @@ function ClientMarketplaceInner() {
 
       {tab === 'plan' ? (
         <div className="space-y-5">
+          <EventPrepAiSimulator
+            defaults={{
+              eventType: brief.eventType,
+              city: brief.city,
+              commune: brief.commune,
+              guestCount: brief.guestCount,
+              eventDate: brief.eventDate,
+              budgetMaxFc: brief.budgetMaxFc,
+            }}
+            applyLabel="Voir comme pack à enregistrer"
+            onApply={(result) => {
+              setPackages([eventPlanAiToPackage(result, brief.budgetMaxFc)]);
+              setPlanError('');
+            }}
+          />
           <EventPlanBriefForm
             brief={brief}
             onChange={(next) => {

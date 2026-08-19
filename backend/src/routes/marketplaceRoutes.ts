@@ -18,6 +18,7 @@ import {
   addFavorite,
   removeFavorite,
   planEvent,
+  planEventAi,
   listSavedPacks,
   createSavedPack,
   deleteSavedPack,
@@ -46,6 +47,7 @@ router.get('/favorites', listFavorites);
 router.post('/favorites', addFavorite);
 router.delete('/favorites/:kind/:slug', removeFavorite);
 router.post('/event-plan', planEvent);
+router.post('/event-plan-ai', planEventAi);
 router.get('/event-packs', listSavedPacks);
 router.post('/event-packs', createSavedPack);
 router.delete('/event-packs/:id', deleteSavedPack);

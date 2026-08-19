@@ -137,6 +137,23 @@ export function hasEventPrepSelection(prep: EventPrep): boolean {
   return Boolean(prep.venue || prep.vendors.length > 0 || prep.notes);
 }
 
+export function eventPrepEstimateFc(prep: EventPrep): {
+  total: number;
+  priced: number;
+  totalItems: number;
+} {
+  const prices = [
+    prep.venue?.priceFromFc ?? null,
+    ...prep.vendors.map((vendor) => vendor.priceFromFc ?? null),
+  ];
+  const priced = prices.filter((value): value is number => value != null && Number.isFinite(value) && value > 0);
+  return {
+    total: priced.reduce((sum, value) => sum + value, 0),
+    priced: priced.length,
+    totalItems: (prep.venue ? 1 : 0) + prep.vendors.length,
+  };
+}
+
 export function eventDateKey(value?: string | null): string {
   return String(value || '').slice(0, 10);
 }
@@ -161,6 +178,7 @@ export function eventPrepFromSavedPack(
       coverUrl?: string | null;
       estimatedFc?: number;
       categoryLabel?: string;
+      category?: string;
       href?: string;
     }>;
   },
@@ -185,7 +203,7 @@ export function eventPrepFromSavedPack(
     vendors.push({
       slug: item.slug,
       title: item.title,
-      category: item.href?.includes('/locations/') ? 'RENTAL_EQUIPMENT' : '',
+      category: item.category || (item.href?.includes('/locations/') ? 'RENTAL_EQUIPMENT' : ''),
       categoryLabel: item.categoryLabel || null,
       city: item.location || null,
       coverUrl: item.coverUrl || null,
@@ -196,4 +214,45 @@ export function eventPrepFromSavedPack(
   const noteLine = pack.name ? `Pack appliqué : ${pack.name}` : '';
   const notes = [current.notes, noteLine].filter(Boolean).join('\n').slice(0, 2000);
   return { venue, vendors: vendors.length ? vendors : current.vendors, notes };
+}
+
+export function eventPrepFromAiRecommendation(
+  result: {
+    summary?: string;
+    venue: {
+      slug: string;
+      title: string;
+      orgName?: string | null;
+      location?: string | null;
+      coverUrl?: string | null;
+      estimatedFc?: number;
+      capacity?: number | null;
+    } | null;
+    services: Array<{
+      slug: string;
+      title: string;
+      orgName?: string | null;
+      location?: string | null;
+      coverUrl?: string | null;
+      estimatedFc?: number;
+      categoryLabel?: string;
+      category?: string;
+      href?: string;
+    }>;
+  },
+  current: EventPrep,
+): EventPrep {
+  return eventPrepFromSavedPack(
+    {
+      name: result.summary || 'Simulation IA',
+      venue: result.venue,
+      services: result.services.map((item) => ({
+        ...item,
+        href: item.category?.startsWith('RENTAL_') || item.href?.includes('/locations/')
+          ? `/dashboard/catalogue/locations/${item.slug}`
+          : item.href,
+      })),
+    },
+    current,
+  );
 }

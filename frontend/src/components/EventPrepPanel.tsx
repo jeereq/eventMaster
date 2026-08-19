@@ -33,6 +33,7 @@ import { communesForCity, normalizeRdcCity } from '@/lib/rdcCities';
 import {
   emptyEventPrep,
   eventDateKey,
+  eventPrepFromAiRecommendation,
   eventPrepFromSavedPack,
   parseEventPrep,
   splitEventPrepVendors,
@@ -42,6 +43,7 @@ import {
 } from '@/lib/eventPrep';
 import { seedBriefFromEvent, type SavedEventPack } from '@/lib/eventPlan';
 import EventPrepListingModal, { type EventPrepPreviewTarget } from '@/components/EventPrepListingModal';
+import EventPrepAiSimulator from '@/components/EventPrepAiSimulator';
 
 type OrgRoomOption = {
   id: string;
@@ -626,6 +628,18 @@ export default function EventPrepPanel({
       {error ? (
         <p className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</p>
       ) : null}
+
+      <EventPrepAiSimulator
+        defaults={{
+          city: defaultCity,
+          guestCount,
+          eventDate: dateKey,
+          eventTitle,
+          keepVenueSlug: prep.venue?.slug,
+          keepServiceSlugs: prep.vendors.map((item) => item.slug),
+        }}
+        onApply={(result) => void persist(eventPrepFromAiRecommendation(result, prep))}
+      />
 
       {prep.venue || prep.vendors.length > 0 ? (
         <div className="rounded-2xl border border-border bg-surface p-3 space-y-2">

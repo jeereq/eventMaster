@@ -369,3 +369,37 @@ export type EventPlanResult = {
   packages: PlanPackage[];
   catalog: { venues: number; services: number };
 };
+
+export type EventPlanAiItem = PlanItem;
+
+export type EventPlanAiResult = {
+  summary: string;
+  rationale: string;
+  warnings: string[];
+  estimatedTotalFc: number;
+  catalog: { venues: number; trades: number; rentals: number };
+  venue: PlanItem | null;
+  services: PlanItem[];
+};
+
+export function eventPlanAiToPackage(result: EventPlanAiResult, budgetMaxFc = 0): PlanPackage {
+  const items = [
+    ...(result.venue ? [result.venue] : []),
+    ...result.services,
+  ];
+  return {
+    id: 'ai',
+    label: 'Proposition IA',
+    blurb: result.summary,
+    totalFc: result.estimatedTotalFc,
+    leftoverFc: Math.max(0, budgetMaxFc - result.estimatedTotalFc),
+    overBudget: budgetMaxFc > 0 && result.estimatedTotalFc > budgetMaxFc,
+    complete: items.length > 0,
+    venue: result.venue,
+    services: result.services,
+    items,
+    notes: [result.rationale, ...result.warnings].filter(Boolean),
+    filledCount: items.length,
+    requiredCount: items.length,
+  };
+}
