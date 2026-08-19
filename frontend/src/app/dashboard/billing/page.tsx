@@ -31,6 +31,7 @@ import {
 
 interface BillingStatus {
   plan: PlanId;
+  billingCycle?: BillingCycle;
   usage: { events: number; guests: number; templates: number; rooms: number; services: number; orgManagers: number };
   limits: {
     maxEvents: number;
@@ -113,6 +114,9 @@ export default function BillingPage() {
       ]);
       setBilling(billingData);
       setDynamicPlans(plansData || billingData.plans || null);
+      if (billingData?.billingCycle === 'annual' || billingData?.billingCycle === 'monthly') {
+        setBillingCycle(billingData.billingCycle);
+      }
       if (requestsData) setRequests(requestsData);
       setInvoices(invoicesData.invoices || []);
     } catch (err: any) {
@@ -245,6 +249,11 @@ export default function BillingPage() {
                   <ShieldCheck className="w-3.5 h-3.5" />
                   {billing.plan === 'FREE' ? 'Sans abonnement payant' : 'Actif'}
                 </span>
+                {billing.plan !== 'FREE' && billing.billingCycle === 'annual' && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary">
+                    Cycle annuel
+                  </span>
+                )}
               </div>
             </div>
           </div>

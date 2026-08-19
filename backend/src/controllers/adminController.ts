@@ -3,7 +3,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { PlanType, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { getPlansConfiguration, PAID_PLAN_KEYS, accountKindForPlanAssignment, normalizePlanKey, resolveDurationDaysForPlan } from '../config/plansConfig';
+import { getPlansConfiguration, PAID_PLAN_KEYS, accountKindForPlanAssignment, normalizePlanKey, resolveDurationDaysForPlan, billingCycleFromDurationDays } from '../config/plansConfig';
 import {
   loadSubscriptionPlansFromDb,
   saveSubscriptionPlansToDb,
@@ -198,6 +198,7 @@ export async function listAdminTenants(req: AuthenticatedRequest, res: Response)
           eventsCount: t._count.events,
           usersCount: t._count.users,
           accountKind: t.accountKind,
+          billingCycle: t.billingCycle,
         })),
         total,
         page,
@@ -478,6 +479,12 @@ export async function updateTenantPlanOrLicense(req: AuthenticatedRequest, res: 
         licenseKey: licenseKey !== undefined ? licenseKey : undefined,
         licenseExpiryWarningFor:
           billingPayload?.extendLicense || billingPayload?.issueInvoice ? null : undefined,
+        billingCycle:
+          newPlanKey === 'FREE'
+            ? 'PERIOD'
+            : billingPayload?.extendLicense || billingPayload?.issueInvoice
+              ? billingCycleFromDurationDays(durationDays)
+              : undefined,
       },
     });
 

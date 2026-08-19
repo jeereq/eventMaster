@@ -1,7 +1,7 @@
 import { prisma } from '../db';
 import { createAndSendInvoice, getTenantOwner, sendLicenseExpiryWarning } from './invoiceService';
 import { notifyCommercialsOnSubscriptionApproval, recordCommercialCommission } from './commercialService';
-import { resolveDurationDaysForPlan } from '../config/plansConfig';
+import { resolveRenewalTerms } from './tenantBillingService';
 
 function startOfDay(date: Date): Date {
   const d = new Date(date);
@@ -35,6 +35,7 @@ export async function processSubscriptionExpiryTasks() {
         id: true,
         name: true,
         plan: true,
+        billingCycle: true,
         licenseExpiresAt: true,
         licenseExpiryWarningFor: true,
       },
@@ -43,6 +44,7 @@ export async function processSubscriptionExpiryTasks() {
     for (const tenant of tenants) {
       const expiresAt = tenant.licenseExpiresAt!;
       const remaining = daysUntil(expiresAt, now);
+      const renewal = resolveRenewalTerms(tenant.plan, tenant.billingCycle);
 
       // J-7 : avertir le propriétaire une seule fois par date d'expiration
       if (remaining === 7 && !isSameExpiryDate(tenant.licenseExpiryWarningFor, expiresAt)) {
@@ -56,6 +58,7 @@ export async function processSubscriptionExpiryTasks() {
             ownerEmail: owner.email,
             ownerName: owner.name,
             ownerPhone: owner.phone,
+            durationDays: renewal.durationDays,
           });
           await prisma.tenant.update({
             where: { id: tenant.id },
@@ -65,7 +68,7 @@ export async function processSubscriptionExpiryTasks() {
         }
       }
 
-      // Jour J : facture de renouvellement
+      // Jour J : facture de renouvellement (même cycle que la période en cours)
       if (remaining === 0) {
         const existing = await prisma.platformInvoice.findFirst({
           where: {
@@ -76,9 +79,8 @@ export async function processSubscriptionExpiryTasks() {
         });
 
         if (!existing) {
-          const durationDays = resolveDurationDaysForPlan(tenant.plan);
           const periodStart = new Date(expiresAt);
-          periodStart.setDate(periodStart.getDate() - durationDays);
+          periodStart.setDate(periodStart.getDate() - renewal.durationDays);
 
           const invoice = await createAndSendInvoice({
             tenantId: tenant.id,
@@ -86,7 +88,11 @@ export async function processSubscriptionExpiryTasks() {
             type: 'RENEWAL',
             periodStart,
             periodEnd: expiresAt,
-            durationDays,
+            durationDays: renewal.durationDays,
+            amount: renewal.finalAmount,
+            baseAmount: renewal.baseAmount,
+            discountPercent: renewal.discountPercent,
+            discountAmount: renewal.discountAmount,
             includeManagers: true,
           });
 
@@ -105,11 +111,11 @@ export async function processSubscriptionExpiryTasks() {
               tenantId: tenant.id,
               tenantName: tenant.name,
               plan: tenant.plan,
-              durationDays,
-              baseAmount: invoice.amount,
-              finalAmount: invoice.amount,
-              discountPercent: 0,
-              discountAmount: 0,
+              durationDays: renewal.durationDays,
+              baseAmount: renewal.baseAmount,
+              finalAmount: renewal.finalAmount,
+              discountPercent: renewal.discountPercent,
+              discountAmount: renewal.discountAmount,
               invoiceNumber: invoice.invoiceNumber,
               event: 'LICENSE_RENEWAL',
               commissionsByUserId,

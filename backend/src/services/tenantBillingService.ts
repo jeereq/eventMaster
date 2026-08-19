@@ -4,7 +4,7 @@ import {
   createAndSendInvoice,
   getPlanAmount,
 } from './invoiceService';
-import { getPlanLimits, resolveDurationDaysForPlan, resolveDefaultPromoApprovedAmount } from '../config/plansConfig';
+import { getPlanLimits, resolveDurationDaysForPlan, resolveDefaultPromoApprovedAmount, YEAR_DURATION_DAYS, ANNUAL_DISCOUNT_PERCENT, type TenantBillingCycleKey } from '../config/plansConfig';
 import { notifyCommercialsOnSubscriptionApproval, recordCommercialCommission } from './commercialService';
 import type { CommercialBillingEvent } from './platformNotificationService';
 
@@ -148,6 +148,15 @@ export async function issueTenantPlanInvoice(params: {
     invoice,
     commercialNotified: commercialNotification.notified,
   };
+}
+
+export function resolveRenewalTerms(plan: PlanType, billingCycle?: TenantBillingCycleKey | null) {
+  const durationDays =
+    billingCycle === 'ANNUAL' ? YEAR_DURATION_DAYS : resolveDurationDaysForPlan(plan);
+  const discountPercent = billingCycle === 'ANNUAL' ? ANNUAL_DISCOUNT_PERCENT : 0;
+  const baseAmount = getPlanAmount(plan, durationDays);
+  const pricing = computeApprovedAmount(baseAmount, { discountPercent });
+  return { durationDays, ...pricing };
 }
 
 export function computeExtendedExpiry(

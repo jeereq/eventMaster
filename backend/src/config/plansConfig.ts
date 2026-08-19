@@ -647,3 +647,17 @@ export function resolveDefaultPromoApprovedAmount(
   }
   return Math.max(0, Math.round(promoPeriodFc));
 }
+
+export type TenantBillingCycleKey = 'PERIOD' | 'ANNUAL';
+
+export function billingCycleFromDurationDays(durationDays?: number | null): TenantBillingCycleKey {
+  return isAnnualDurationDays(durationDays) ? 'ANNUAL' : 'PERIOD';
+}
+
+export function durationDaysFromBillingCycle(
+  planKey: string,
+  billingCycle?: TenantBillingCycleKey | null,
+): number {
+  if (billingCycle === 'ANNUAL') return YEAR_DURATION_DAYS;
+  return resolveDurationDaysForPlan(planKey);
+}

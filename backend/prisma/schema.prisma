@@ -69,6 +69,12 @@ enum TenantAccountKind {
   CLIENT
 }
 
+/** Période de base (mois ou trimestre) vs annuel 365 j. */
+enum TenantBillingCycle {
+  PERIOD
+  ANNUAL
+}
+
 enum VenuePriceUnit {
   EVENT
   DAY
@@ -131,6 +137,8 @@ model Tenant {
   branding      Json?
   /** ORGANIZER = SaaS événement (défaut). VENDOR = offre salles/prestas. BOTH = les deux. CLIENT = réserve sans SaaS. */
   accountKind   TenantAccountKind @default(ORGANIZER)
+  /** Cycle facturé : période de base ou annuel (reprise au renouvellement auto). */
+  billingCycle  TenantBillingCycle @default(PERIOD)
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 

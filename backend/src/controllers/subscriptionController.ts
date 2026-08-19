@@ -8,7 +8,7 @@ import {
   commercialReferredTenantFilter,
   isPlatformCommercial,
 } from '../services/platformCommercialScope';
-import { getPlansConfiguration, getPlanLimits, PAID_PLAN_KEYS, isPlanAllowedForAccountKind, planAudienceMismatchMessage, resolveDurationDaysForPlan, resolveDefaultPromoApprovedAmount } from '../config/plansConfig';
+import { getPlansConfiguration, getPlanLimits, PAID_PLAN_KEYS, isPlanAllowedForAccountKind, planAudienceMismatchMessage, resolveDurationDaysForPlan, resolveDefaultPromoApprovedAmount, billingCycleFromDurationDays } from '../config/plansConfig';
 import { issueTenantPlanInvoice, computeExtendedExpiry } from '../services/tenantBillingService';
 import { computeApprovedAmount, getPlanAmount } from '../services/invoiceService';
 import { auditReq } from '../services/adminAuditService';
@@ -286,6 +286,7 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
           licenseExpiresAt: expiryDate,
           licenseKey: newLicenseKey,
           licenseExpiryWarningFor: null,
+          billingCycle: billingCycleFromDurationDays(durationDays),
         },
       }),
     ]);

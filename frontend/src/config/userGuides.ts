@@ -276,7 +276,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Assignez des protocoles org. pour le scan QR web (navigateur) sur tous les événements.',
       'Configurez les salles avant de créer des événements avec plan de table.',
       'La commission marketplace ({commissionPercent} %) est due par le vendeur, distincte de l’abonnement SaaS.',
-      'Le paiement annuel facture 12 mois (ou 4 trimestres Particulier) d’un coup, avec −10 % sur ce total.',
+      'Le paiement annuel facture 12 mois (ou 4 trimestres Particulier) d’un coup, avec −10 % sur ce total. Le cycle est mémorisé : le rappel J-7 et la facture de renouvellement auto reprennent l’annuel.',
       'Les commissions de vos commerciaux org. se versent hors plateforme (Facturation → Versements), avec preuve.',
     ],
   },

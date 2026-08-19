@@ -1,7 +1,7 @@
 import { InvoiceType, PlanType } from '@prisma/client';
 import PDFDocument from 'pdfkit';
 import { prisma } from '../db';
-import { getPlanLimits, getEffectiveMonthlyPriceFc, getPlanBaseAmount, periodAmountToInvoiceBase } from '../config/plansConfig';
+import { getPlanLimits, getEffectiveMonthlyPriceFc, getPlanBaseAmount, periodAmountToInvoiceBase, ANNUAL_DISCOUNT_PERCENT, isAnnualDurationDays } from '../config/plansConfig';
 import { parsePlanPrice, getBillingPeriod } from './commercialService';
 import { sendRealEmail, sendRealWhatsApp } from './notificationService';
 import { notifyTenantOperators, notifyPlatformStaff } from './platformNotificationService';
@@ -394,9 +394,16 @@ export async function sendLicenseExpiryWarning(params: {
   ownerEmail: string;
   ownerName?: string | null;
   ownerPhone?: string | null;
+  durationDays?: number | null;
 }) {
   const planDef = getPlanLimits(params.plan);
-  const amount = getPlanAmount(params.plan);
+  const durationDays = params.durationDays ?? undefined;
+  const amount = getPlanAmount(params.plan, durationDays);
+  const discountPercent = isAnnualDurationDays(durationDays) ? ANNUAL_DISCOUNT_PERCENT : 0;
+  const payable =
+    discountPercent > 0
+      ? computeApprovedAmount(amount, { discountPercent }).finalAmount
+      : amount;
   const expiryStr = formatFrenchDate(params.expiresAt);
 
   const subject = 'EventMaster - Votre abonnement expire dans 7 jours';
@@ -408,7 +415,7 @@ export async function sendLicenseExpiryWarning(params: {
     `Bonjour${params.ownerName ? ` ${normalizeInvoiceText(params.ownerName)}` : ''},`,
     '',
     `L'abonnement de l'organisation « ${normalizeInvoiceText(params.tenantName)} » (forfait ${normalizeInvoiceText(planDef.name)}) expire le ${expiryStr}.`,
-    `Montant du renouvellement : ${formatAmountFc(amount)}.`,
+    `Montant du renouvellement : ${formatAmountFc(payable)}.`,
     '',
     'Connectez-vous a EventMaster pour soumettre une demande de renouvellement ou mettre a jour votre paiement.',
   ].join('\n');
@@ -421,7 +428,7 @@ export async function sendLicenseExpiryWarning(params: {
     <h2 style="margin:0 0 16px;color:#b45309;">Rappel - expiration dans 7 jours</h2>
     <p>Bonjour${safeName ? ` ${safeName}` : ''},</p>
     <p>L'abonnement de <strong>${safeTenant}</strong> (forfait <strong>${safePlan}</strong>) expire le <strong>${escapeHtml(expiryStr)}</strong>.</p>
-    <p>Montant estime du renouvellement : <strong style="color:#4f46e5;">${escapeHtml(formatAmountFc(amount))}</strong>.</p>
+    <p>Montant estime du renouvellement : <strong style="color:#4f46e5;">${escapeHtml(formatAmountFc(payable))}</strong>.</p>
     <p style="color:#64748b;font-size:14px;">Connectez-vous a EventMaster, section Facturation, pour renouveler avant la date limite.</p>
   </div>
 </body>
@@ -438,7 +445,7 @@ export async function sendLicenseExpiryWarning(params: {
       '',
       `Bonjour${params.ownerName ? ` ${normalizeInvoiceText(params.ownerName)}` : ''},`,
       `L'organisation « ${normalizeInvoiceText(params.tenantName)} » (${normalizeInvoiceText(planDef.name)}) expire le ${expiryStr}.`,
-      `Renouvellement estime : ${formatAmountFc(amount)}.`,
+      `Renouvellement estime : ${formatAmountFc(payable)}.`,
       'Connectez-vous a EventMaster, section Facturation, pour renouveler.',
     ].join('\n');
 

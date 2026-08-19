@@ -100,6 +100,7 @@ export async function getBillingStatus(req: AuthenticatedRequest, res: Response)
       },
       planDetails,
       plans: limits,
+      billingCycle: tenant.billingCycle === 'ANNUAL' ? 'annual' : 'monthly',
     });
   } catch (error: any) {
     console.error('Erreur lors de la récupération du statut de facturation:', error);

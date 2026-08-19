@@ -9,6 +9,7 @@ import {
   periodAmountToInvoiceBase,
 } from '../src/config/plansConfig';
 import { computeApprovedAmount } from '../src/services/invoiceService';
+import { resolveRenewalTerms } from '../src/services/tenantBillingService';
 
 function assertEqual(actual: number, expected: number, label: string) {
   if (actual !== expected) {
@@ -43,6 +44,18 @@ function main() {
 
   const monthly = computeApprovedAmount(30000, { discountPercent: 0 });
   assertEqual(monthly.finalAmount, 30000, 'Mois Business inchangé');
+
+  console.log('\n--- Renouvellement auto (cycle mémorisé) ---\n');
+
+  const annualRenewal = resolveRenewalTerms('STANDARD', 'ANNUAL');
+  assertEqual(annualRenewal.durationDays, 365, 'Renouvellement annuel : 365 j');
+  assertEqual(annualRenewal.finalAmount, 324000, 'Renouvellement annuel Business : 324 000');
+  const periodRenewal = resolveRenewalTerms('STANDARD', 'PERIOD');
+  assertEqual(periodRenewal.durationDays, 30, 'Renouvellement période : 30 j');
+  assertEqual(periodRenewal.finalAmount, 30000, 'Renouvellement période Business : 30 000');
+  const b2cAnnual = resolveRenewalTerms('PERSONAL_100', 'ANNUAL');
+  assertEqual(b2cAnnual.durationDays, 365, 'Renouvellement annuel Particulier : 365 j');
+  assertEqual(b2cAnnual.finalAmount, 324000, 'Renouvellement annuel Particulier 100 : 324 000');
 
   console.log('\n--- Promo annuelle (min promo × N vs catalogue × N × 0,90) ---\n');
 

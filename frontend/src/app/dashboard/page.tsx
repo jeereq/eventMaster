@@ -89,6 +89,7 @@ interface AdminTenantItem {
  eventsCount: number;
  usersCount: number;
  accountKind?: string;
+ billingCycle?: 'PERIOD' | 'ANNUAL';
 }
 
 interface AdminStats {
@@ -1186,9 +1187,12 @@ function DashboardPageContent() {
  setModalLicenseKey(t.licenseKey || '');
  setModalIssueInvoice(false);
  setModalExtendLicense(false);
- setModalBillingDurationDays(String(durationDaysForPlan(t.plan)));
+ setModalBillingDurationDays(
+   String(durationDaysForPlan(t.plan, t.billingCycle === 'ANNUAL' ? 'annual' : 'monthly')),
+ );
  setModalBillingAction('AUTO');
- setModalDiscountPercent('0');
+ setModalDiscountMode('percent');
+ setModalDiscountPercent(t.billingCycle === 'ANNUAL' ? String(ANNUAL_DISCOUNT_PERCENT) : '0');
  setModalApprovedAmount('');
  setIsTenantModalOpen(true);
  };
