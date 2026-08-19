@@ -634,7 +634,7 @@ function ClientMarketplaceInner() {
                 {([
                   ['all', 'Tous'],
                   ['venue', 'Salles'],
-                  ['service', 'Prestataires'],
+                  ['service', 'Métiers'],
                   ['rental', 'Locations'],
                 ] as const).map(([id, label]) => (
                   <button

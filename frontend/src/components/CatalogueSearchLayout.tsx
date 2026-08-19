@@ -235,7 +235,7 @@ export default function CatalogueSearchLayout({
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-[color:var(--festive-accent)]" />
-                  Prestataires
+                  Métiers
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-sm bg-cyan-700" />
@@ -245,7 +245,7 @@ export default function CatalogueSearchLayout({
                   <span className="w-2.5 h-2.5 rounded-sm bg-emerald-600" />
                   Événements
                 </span>
-                <span>Bâtiment = salle, étoile = prestataire, clé = location, calendrier = événement.</span>
+                <span>Bâtiment = salle, étoile = métier, clé = location, calendrier = événement. Sur la carte, cliquez un calque pour l’afficher ou le masquer.</span>
               </div>
             )}
             {loading && markers.length === 0 ? (

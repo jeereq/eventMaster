@@ -199,7 +199,7 @@ export default function MarketplaceBookingsPanel({
           {([
             ['all', 'Tous'],
             ['venue', 'Salles'],
-            ['service', 'Prestataires'],
+            ['service', 'Métiers'],
             ['rental', 'Locations'],
           ] as const).map(([id, label]) => (
             <Chip key={id} active={kind === id} onClick={() => setKind(id)}>{label}</Chip>

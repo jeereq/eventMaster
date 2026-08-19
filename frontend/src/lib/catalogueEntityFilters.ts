@@ -45,7 +45,7 @@ export const EVENT_ENTRY_OPTIONS = [
 export const KIND_FILTER_OPTIONS = [
   { id: 'all', label: 'Tous' },
   { id: 'venue', label: 'Salles' },
-  { id: 'service', label: 'Prestataires' },
+  { id: 'service', label: 'Métiers' },
   { id: 'rental', label: 'Locations' },
   { id: 'event', label: 'Événements' },
 ];
@@ -89,7 +89,7 @@ export function catalogueEntityExtraChips(extras: CatalogueEntityExtras): Array<
       value: extras.kind === 'venue'
         ? 'Salles'
         : extras.kind === 'service'
-          ? 'Prestataires'
+          ? 'Métiers'
           : extras.kind === 'rental'
             ? 'Locations'
             : 'Événements',

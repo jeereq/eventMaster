@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Building2, Calendar, MapPin, Sparkles } from 'lucide-react';
+import { ArrowRight, Building2, Calendar, KeyRound, MapPin, Sparkles } from 'lucide-react';
 import { api } from '@/lib/api';
 import MarketplaceLocationsMap, { type MarketplaceMapMarker } from '@/components/MarketplaceLocationsMap';
 import { Button, Skeleton } from '@/components/ui';
@@ -11,6 +11,7 @@ import {
   EMPTY_CATALOGUE_GEO,
   appendCatalogueGeoParams,
   catalogueGeoChips,
+  catalogueItemDisplayKind,
   catalogueItemMatchesGeo,
   catalogueItemToMapMarker,
   catalogueKindLabel,
@@ -201,8 +202,8 @@ export default function LandingMapSection() {
               {selectedItem ? (
                 <>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted inline-flex items-center gap-1.5">
-                    {selectedItem.kind === 'venue' ? <Building2 className="w-3.5 h-3.5" /> : selectedItem.kind === 'event' ? <Calendar className="w-3.5 h-3.5" /> : <Sparkles className="w-3.5 h-3.5" />}
-                    {catalogueKindLabel(selectedItem.kind)}
+                    {catalogueItemDisplayKind(selectedItem) === 'venue' ? <Building2 className="w-3.5 h-3.5" /> : catalogueItemDisplayKind(selectedItem) === 'event' ? <Calendar className="w-3.5 h-3.5" /> : catalogueItemDisplayKind(selectedItem) === 'rental' ? <KeyRound className="w-3.5 h-3.5" /> : <Sparkles className="w-3.5 h-3.5" />}
+                    {catalogueKindLabel(catalogueItemDisplayKind(selectedItem))}
                   </p>
                   <h3 className="text-sm font-semibold text-foreground leading-snug">{selectedItem.title}</h3>
                   {selectedItem.location ? (

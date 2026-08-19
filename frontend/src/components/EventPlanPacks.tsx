@@ -8,6 +8,7 @@ import { cn } from '@/lib/cn';
 import FavoriteHeart from '@/components/FavoriteHeart';
 import { Button } from '@/components/ui';
 import type { PlanItem, PlanMissingSlot, PlanPackage } from '@/lib/eventPlan';
+import { isServiceRentalCategory } from '@/lib/marketplace';
 
 function PackItemRow({
   item,
@@ -43,7 +44,7 @@ function PackItemRow({
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[10px] uppercase tracking-wider text-muted">
-            {item.kind === 'venue' ? 'Salle' : item.categoryLabel || 'Prestataire'}
+            {item.kind === 'venue' ? 'Salle' : item.categoryLabel || (isServiceRentalCategory(item.category) ? 'Location' : 'Métier')}
             {item.favorite ? ' · favori' : ''}
             {item.match === 'exact' ? ' · adapté' : ''}
           </p>

@@ -104,11 +104,31 @@ export function parseEventPrep(raw: unknown): EventPrep {
   };
 }
 
+export function isEventPrepRental(vendor: Pick<EventPrepVendor, 'category'>): boolean {
+  return vendor.category.startsWith('RENTAL_');
+}
+
+export function splitEventPrepVendors(vendors: EventPrepVendor[]): {
+  trades: EventPrepVendor[];
+  rentals: EventPrepVendor[];
+} {
+  const trades: EventPrepVendor[] = [];
+  const rentals: EventPrepVendor[] = [];
+  for (const vendor of vendors) {
+    if (isEventPrepRental(vendor)) rentals.push(vendor);
+    else trades.push(vendor);
+  }
+  return { trades, rentals };
+}
+
 export function eventPrepSummary(prep: EventPrep): string | null {
   const parts: string[] = [];
   if (prep.venue) parts.push(prep.venue.name);
-  if (prep.vendors.length === 1) parts.push(prep.vendors[0].title);
-  else if (prep.vendors.length > 1) parts.push(`${prep.vendors.length} prestataires`);
+  const { trades, rentals } = splitEventPrepVendors(prep.vendors);
+  if (trades.length === 1) parts.push(trades[0].title);
+  else if (trades.length > 1) parts.push(`${trades.length} métiers`);
+  if (rentals.length === 1) parts.push(rentals[0].title);
+  else if (rentals.length > 1) parts.push(`${rentals.length} locations`);
   if (parts.length === 0) return null;
   return parts.join(' · ');
 }

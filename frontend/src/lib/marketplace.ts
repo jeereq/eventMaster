@@ -294,7 +294,7 @@ export interface PublicService {
 
 export interface MarketplaceInquiryItem {
   id: string;
-  kind: 'venue' | 'service';
+  kind: 'venue' | 'service' | 'rental';
   title: string;
   fromName: string;
   fromEmail: string;
@@ -775,17 +775,30 @@ export function catalogueItemDisplayKind(item: Pick<CatalogueItem, 'kind' | 'cat
 
 export function catalogueKindLabel(kind?: CatalogueDisplayKind | string | null): string {
   if (kind === 'rental') return 'Location';
-  if (kind === 'service') return 'Prestataire';
+  if (kind === 'service') return 'Métier';
   if (kind === 'event') return 'Événement';
   return 'Salle';
 }
 
 export function catalogueKindFilterLabel(kind?: CatalogueKind | 'all' | 'rental' | string | null): string {
   if (kind === 'venue') return 'Salles';
-  if (kind === 'service') return 'Prestataires';
+  if (kind === 'service') return 'Métiers';
   if (kind === 'rental') return 'Locations';
   if (kind === 'event') return 'Événements';
   return 'Tous';
+}
+
+export const CATALOGUE_DISPLAY_KIND_ORDER: CatalogueDisplayKind[] = ['venue', 'service', 'rental', 'event'];
+
+export function groupCatalogueItemsByDisplayKind<T extends Pick<CatalogueItem, 'kind' | 'category'>>(
+  items: T[],
+): Array<{ kind: CatalogueDisplayKind; items: T[] }> {
+  return CATALOGUE_DISPLAY_KIND_ORDER
+    .map((kind) => ({
+      kind,
+      items: items.filter((item) => catalogueItemDisplayKind(item) === kind),
+    }))
+    .filter((group) => group.items.length > 0);
 }
 
 export function cataloguePriceCaption(item: Pick<CatalogueItem, 'kind' | 'priceFromFc' | 'priceUnitLabel'>): string {

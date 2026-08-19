@@ -13,6 +13,7 @@ import {
   parseServiceCategory,
   parseServiceGroup,
   serviceGroupPrismaFilter,
+  isServiceRentalCategory,
   priceUnitLabel,
   sanitizeLayoutBlueprint,
   serviceCategoryLabel,
@@ -1112,7 +1113,9 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
         const booking = bookingByInquiry.get(item.id);
         return {
           id: item.id,
-          kind: item.offeringId ? 'service' : 'venue',
+          kind: item.offeringId
+            ? (isServiceRentalCategory(item.offering?.category) ? 'rental' : 'service')
+            : 'venue',
           title: item.offering?.title || item.listing?.headline || item.listing?.room.name || 'Demande',
           fromName: item.fromName,
           fromEmail: item.fromEmail,

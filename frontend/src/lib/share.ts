@@ -153,7 +153,7 @@ export function listingPublicUrl(
 
 export function listingShareTitle(kind: 'venue' | 'service' | 'event' | 'rental', name: string): string {
   const prefix =
-    kind === 'venue' ? 'Salle' : kind === 'rental' ? 'Location' : kind === 'service' ? 'Prestataire' : 'Événement';
+    kind === 'venue' ? 'Salle' : kind === 'rental' ? 'Location' : kind === 'service' ? 'Métier' : 'Événement';
   return `${name} · ${prefix} EventMaster`;
 }
 

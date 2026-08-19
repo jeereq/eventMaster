@@ -691,7 +691,7 @@ export function CatalogueEntityFilterFields({
           : kind === 'rental'
             ? 'N’affiche que les locations libres sur toute la période.'
             : kind === 'service'
-            ? 'N’affiche que les prestataires libres sur toute la période.'
+            ? 'N’affiche que les métiers (prestataires) libres sur toute la période.'
             : undefined}
         capacityHint={kind === 'event' ? 'Places / billets restants.' : undefined}
       />
@@ -707,7 +707,7 @@ export function CatalogueEntityFilterFields({
       {showOffering ? (
         <>
           {showTrade ? (
-          <CatalogueFilterField label={kind === 'service' ? 'Métier' : 'Prestations'} hint={kind === 'all' ? 'S’applique uniquement aux prestataires métiers.' : undefined}>
+          <CatalogueFilterField label={kind === 'service' ? 'Métier' : 'Métiers'} hint={kind === 'all' ? 'S’applique uniquement aux métiers (pas aux locations).' : undefined}>
                 <CatalogueChoicePills
                   options={SERVICE_TRADE_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] }))}
                   value={extras.category}

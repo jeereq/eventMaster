@@ -39,7 +39,7 @@ export default function MarketplaceInquiriesPanel({
   error?: string;
 }) {
   const [status, setStatus] = useState<'all' | 'NEW' | 'CONTACTED'>('all');
-  const [kind, setKind] = useState<'all' | 'venue' | 'service'>('all');
+  const [kind, setKind] = useState<'all' | 'venue' | 'service' | 'rental'>('all');
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePageSize('marketplace-desk-inquiries', 8);
@@ -80,7 +80,7 @@ export default function MarketplaceInquiriesPanel({
       <EmptyState
         icon={<Inbox className="w-5 h-5" />}
         title="Aucune demande"
-        description="Les devis salles et prestataires arriveront ici."
+        description="Les devis salles, métiers et locations arriveront ici."
       />
     );
   }
@@ -101,9 +101,10 @@ export default function MarketplaceInquiriesPanel({
           <Chip active={status === 'CONTACTED'} onClick={() => setStatus('CONTACTED')}>Contactées</Chip>
         </div>
         <div className="flex flex-wrap gap-1.5">
-          <Chip active={kind === 'all'} onClick={() => setKind('all')}>Salles et prestataires</Chip>
+          <Chip active={kind === 'all'} onClick={() => setKind('all')}>Tous</Chip>
           <Chip active={kind === 'venue'} onClick={() => setKind('venue')}>Salles</Chip>
-          <Chip active={kind === 'service'} onClick={() => setKind('service')}>Prestataires</Chip>
+          <Chip active={kind === 'service'} onClick={() => setKind('service')}>Métiers</Chip>
+          <Chip active={kind === 'rental'} onClick={() => setKind('rental')}>Locations</Chip>
         </div>
         <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Nom, e-mail, titre, message…" />
       </div>
@@ -128,7 +129,7 @@ export default function MarketplaceInquiriesPanel({
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">
-                        {item.kind === 'venue' ? 'Salle' : 'Prestation'} · {item.title}
+                        {item.kind === 'venue' ? 'Salle' : item.kind === 'rental' ? 'Location' : 'Métier'} · {item.title}
                       </p>
                       <h3 className="font-semibold text-sm mt-0.5">{item.fromName}</h3>
                       <p className="text-xs text-muted mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">

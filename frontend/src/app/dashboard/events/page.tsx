@@ -2383,11 +2383,11 @@ Merci de confirmer votre présence :
  {!isProtocolOnly && activeTab !== 'prep' && (
  <div className="rounded-2xl border border-dashed border-primary/25 bg-primary/5 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
  <div className="min-w-0">
- <p className="text-sm font-semibold text-foreground">Préparation salle & prestataires — optionnel</p>
+ <p className="text-sm font-semibold text-foreground">Préparation salle, métiers & locations — optionnel</p>
  <p className="text-xs text-muted mt-0.5">
  {prepSummary
  ? `Pistes retenues : ${prepSummary}`
- : 'Recherchez une salle et des prestataires ici, sans bloquer les invitations.'}
+ : 'Recherchez une salle, des métiers et des locations ici, sans bloquer les invitations.'}
  </p>
  </div>
  <button

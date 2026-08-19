@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
+import React, { useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Building2, Calendar, KeyRound, Loader2, MapPin, Navigation, Search, Sparkles, Users, Volume2, VolumeX, X } from 'lucide-react';
@@ -12,7 +12,7 @@ import {
   type DrivingRoute,
 } from '@/lib/osrm';
 import { findRdcCity, cityForPoint, leafletMaxBounds, nominatimViewbox, pointInAllowedRdcCities, pointInBounds } from '@/lib/rdcCities';
-import { formatDistanceKm, haversineKm, isVideoUrl, catalogueKindLabel } from '@/lib/marketplace';
+import { formatDistanceKm, haversineKm, isVideoUrl, catalogueKindFilterLabel, catalogueKindLabel } from '@/lib/marketplace';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
@@ -189,6 +189,21 @@ function MarkerPhotoGallery({
   );
 }
 
+const MAP_KIND_ORDER: MarketplaceMapKind[] = ['venue', 'service', 'rental', 'event'];
+
+function groupMapMarkersByKind<T extends { kind?: MarketplaceMapKind | string | null }>(items: T[]) {
+  return MAP_KIND_ORDER
+    .map((kind) => ({ kind, items: items.filter((item) => (item.kind || 'venue') === kind) }))
+    .filter((group) => group.items.length > 0);
+}
+
+function markerKindIcon(kind?: MarketplaceMapKind) {
+  if (kind === 'service') return Sparkles;
+  if (kind === 'rental') return KeyRound;
+  if (kind === 'event') return Calendar;
+  return Building2;
+}
+
 function MarkerPreviewCard({
   marker,
   pinned,
@@ -212,10 +227,12 @@ function MarkerPreviewCard({
   onCancelNavigation?: () => void;
   searchCenter?: { lat: number; lng: number } | null;
 }) {
-  const isService = marker.kind === 'service';
-  const isEvent = marker.kind === 'event';
-  const KindIcon = isEvent ? Calendar : isService ? Sparkles : Building2;
-  const kindLabel = catalogueKindLabel(marker.kind);
+  const kind = marker.kind || 'venue';
+  const isService = kind === 'service';
+  const isRental = kind === 'rental';
+  const isEvent = kind === 'event';
+  const KindIcon = markerKindIcon(kind);
+  const kindLabel = catalogueKindLabel(kind);
   const distance = formatDistanceKm(
     marker.distanceKm
     ?? (searchCenter ? haversineKm(searchCenter.lat, searchCenter.lng, marker.lat, marker.lng) : null),
@@ -243,6 +260,8 @@ function MarkerPreviewCard({
             'h-16 w-full flex items-center justify-center',
             isEvent
               ? 'bg-emerald-50 text-emerald-700'
+              : isRental
+                ? 'bg-cyan-50 text-cyan-800'
               : isService
                 ? 'bg-[color:var(--festive-accent)]/12 text-[color:var(--festive-accent)]'
                 : 'bg-primary/10 text-primary',
@@ -257,6 +276,8 @@ function MarkerPreviewCard({
             'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider border border-border',
             isEvent
               ? 'text-emerald-700'
+              : isRental
+                ? 'text-cyan-800'
               : isService
                 ? 'text-[color:var(--festive-accent)]'
                 : 'text-primary',
@@ -414,6 +435,7 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
   const [voiceOn, setVoiceOn] = useState(true);
   const voiceOnRef = useRef(true);
   const lastSpokenRef = useRef('');
+  const [hiddenKinds, setHiddenKinds] = useState<Set<MarketplaceMapKind>>(new Set());
 
   useEffect(() => {
     const enabled = readRouteVoiceEnabled();
@@ -459,10 +481,12 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
     pinnedRef.current = false;
     setPinned(false);
     setHovered(null);
+    setHiddenKinds(new Set());
   }, [markersKey]);
 
   const listingMatches = listingSearch
     ? markers.filter((m) => {
+        if (hiddenKinds.has(m.kind || 'venue')) return false;
         const q = query.trim().toLowerCase();
         if (q.length < 1) return false;
         return [m.title, m.subtitle, m.orgName, m.location, catalogueKindLabel(m.kind)]
@@ -470,8 +494,13 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
           .join(' ')
           .toLowerCase()
           .includes(q);
-      }).slice(0, 8)
+      }).slice(0, 12)
     : [];
+  const listingMatchGroups = groupMapMarkersByKind(listingMatches);
+  const presentKinds = useMemo(
+    () => MAP_KIND_ORDER.filter((kind) => markers.some((marker) => (marker.kind || 'venue') === kind)),
+    [markers],
+  );
 
   const applyBasemap = (L: any, map: any, nextTheme: 'light' | 'dark') => {
     const spec = leafletBasemap(nextTheme);
@@ -526,7 +555,7 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
             interactive: true,
             bubblingMouseEvents: false,
             keyboard: true,
-            zIndexOffset: m.kind === 'event' ? 30 : m.kind === 'service' ? 20 : 10,
+            zIndexOffset: m.kind === 'event' ? 40 : m.kind === 'rental' ? 30 : m.kind === 'service' ? 20 : 10,
             riseOnHover: true,
           });
 
@@ -730,6 +759,20 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
       radiusLayerRef.current = circle;
     }
   }, [hovered, pinned, mapReady, selectedId]);
+
+  useEffect(() => {
+    markersById.current.forEach((layer, id) => {
+      const data = markersRef.current.find((item) => item.id === id);
+      const kind = data?.kind || 'venue';
+      const el = layer.getElement?.() as HTMLElement | undefined;
+      if (!el) return;
+      el.style.display = hiddenKinds.has(kind) ? 'none' : '';
+    });
+    if (hovered && hiddenKinds.has(hovered.kind || 'venue')) {
+      hidePreview(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hiddenKinds, mapReady, markersKey]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => mapRef.current?.invalidateSize(), 80);
@@ -1004,7 +1047,9 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
         }}
         placeholder={
           listingSearch
-            ? 'Rechercher une salle, un prestataire, une location ou un événement…'
+            ? presentKinds.length <= 1
+              ? `Rechercher ${catalogueKindFilterLabel(presentKinds[0] || 'all').toLowerCase()}…`
+              : 'Rechercher salles, métiers, locations ou événements…'
             : 'Chercher un lieu sur la carte…'
         }
         className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-border bg-surface text-sm shadow-[var(--shadow-soft)]"
@@ -1014,39 +1059,53 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
         <ul className="absolute z-20 mt-1 w-full max-h-56 overflow-auto rounded-xl border border-border bg-surface shadow-[var(--shadow-soft)]">
           {listingMatches.length === 0 ? (
             <li className="px-3 py-2.5 text-xs text-muted">
-              Aucune salle, prestation, location ni événement EventMaster ne correspond.
+              Aucune fiche EventMaster ne correspond.
             </li>
           ) : (
-            listingMatches.map((place) => (
-              <li key={place.id}>
-                <button
-                  type="button"
-                  className="w-full text-left px-3 py-2 text-xs hover:bg-surface-muted flex items-start gap-2"
-                  onClick={() => focusListing(place.id)}
-                >
-                  <span className={cn(
-                    'mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-md shrink-0',
-                    place.kind === 'service'
-                      ? 'bg-[color:var(--festive-accent)]/15 text-[color:var(--festive-accent)]'
-                      : place.kind === 'rental'
-                        ? 'bg-cyan-50 text-cyan-800'
-                      : place.kind === 'event'
-                        ? 'bg-emerald-50 text-emerald-700'
-                        : 'bg-primary/10 text-primary',
-                  )}>
-                    {place.kind === 'service' ? <Sparkles className="w-3.5 h-3.5" /> : place.kind === 'rental' ? <KeyRound className="w-3.5 h-3.5" /> : place.kind === 'event' ? <Calendar className="w-3.5 h-3.5" /> : <Building2 className="w-3.5 h-3.5" />}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="font-semibold text-foreground">{place.title}</span>
-                    <span className="block text-muted">
-                      {catalogueKindLabel(place.kind)}
-                      {place.categoryLabel ? ` · ${place.categoryLabel}` : ''}
-                      {formatDistanceKm(place.distanceKm) ? ` · ${formatDistanceKm(place.distanceKm)}` : ''}
-                      {place.coverageRadiusKm ? ` · se déplace ${place.coverageRadiusKm} km` : ''}
-                      {place.kind === 'service' && place.travels === false ? ' · sur place' : ''}
-                    </span>
-                  </span>
-                </button>
+            listingMatchGroups.map((group) => (
+              <li key={group.kind} className="border-t border-border first:border-t-0">
+                {listingMatchGroups.length > 1 ? (
+                  <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted">
+                    {catalogueKindFilterLabel(group.kind)}
+                  </p>
+                ) : null}
+                <ul>
+                  {group.items.map((place) => {
+                    const KindIcon = markerKindIcon(place.kind);
+                    return (
+                      <li key={place.id}>
+                        <button
+                          type="button"
+                          className="w-full text-left px-3 py-2 text-xs hover:bg-surface-muted flex items-start gap-2"
+                          onClick={() => focusListing(place.id)}
+                        >
+                          <span className={cn(
+                            'mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-md shrink-0',
+                            place.kind === 'service'
+                              ? 'bg-[color:var(--festive-accent)]/15 text-[color:var(--festive-accent)]'
+                              : place.kind === 'rental'
+                                ? 'bg-cyan-50 text-cyan-800'
+                              : place.kind === 'event'
+                                ? 'bg-emerald-50 text-emerald-700'
+                                : 'bg-primary/10 text-primary',
+                          )}>
+                            <KindIcon className="w-3.5 h-3.5" />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="font-semibold text-foreground">{place.title}</span>
+                            <span className="block text-muted">
+                              {catalogueKindLabel(place.kind)}
+                              {place.categoryLabel ? ` · ${place.categoryLabel}` : ''}
+                              {formatDistanceKm(place.distanceKm) ? ` · ${formatDistanceKm(place.distanceKm)}` : ''}
+                              {place.coverageRadiusKm ? ` · se déplace ${place.coverageRadiusKm} km` : ''}
+                              {place.kind === 'service' && place.travels === false ? ' · sur place' : ''}
+                            </span>
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
               </li>
             ))
           )}
@@ -1084,25 +1143,46 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
             'absolute z-[1100] pointer-events-none',
             fillViewport ? 'bottom-3 left-3' : 'top-3 right-3',
           )}>
-            <div className="rounded-xl border border-border bg-surface/95 shadow-[var(--shadow-soft)] px-2.5 py-2 space-y-1.5 text-[11px] text-foreground">
-              <p className="inline-flex items-center gap-1.5">
-                <span className="em-map-legend-venue" aria-hidden />
-                Salle
-              </p>
-              <p className="inline-flex items-center gap-1.5">
-                <span className="em-map-legend-service" aria-hidden />
-                Prestataire
-              </p>
-              <p className="inline-flex items-center gap-1.5">
-                <span className="em-map-legend-rental" aria-hidden />
-                Location
-              </p>
-              <p className="inline-flex items-center gap-1.5">
-                <span className="em-map-legend-event" aria-hidden />
-                Événement
-              </p>
+            <div className="rounded-xl border border-border bg-surface/95 shadow-[var(--shadow-soft)] px-2.5 py-2 space-y-1 text-[11px] text-foreground pointer-events-auto">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Calques</p>
+              {(presentKinds.length ? presentKinds : MAP_KIND_ORDER).map((kind) => {
+                const hidden = hiddenKinds.has(kind);
+                return (
+                  <button
+                    key={kind}
+                    type="button"
+                    onClick={() => {
+                      setHiddenKinds((current) => {
+                        const next = new Set(current);
+                        if (next.has(kind)) next.delete(kind);
+                        else next.add(kind);
+                        return next;
+                      });
+                    }}
+                    className={cn(
+                      'flex w-full items-center gap-1.5 rounded-md px-0.5 py-0.5 text-left hover:bg-surface-muted',
+                      hidden && 'opacity-40 line-through',
+                    )}
+                    aria-pressed={!hidden}
+                  >
+                    <span
+                      className={
+                        kind === 'venue'
+                          ? 'em-map-legend-venue'
+                          : kind === 'service'
+                            ? 'em-map-legend-service'
+                            : kind === 'rental'
+                              ? 'em-map-legend-rental'
+                              : 'em-map-legend-event'
+                      }
+                      aria-hidden
+                    />
+                    {catalogueKindFilterLabel(kind)}
+                  </button>
+                );
+              })}
               {searchCenter ? (
-                <p className="inline-flex items-center gap-1.5">
+                <p className="inline-flex items-center gap-1.5 pt-0.5">
                   <span className="em-map-legend-here" aria-hidden />
                   {searchOriginLabel || 'Point de recherche'}
                   {radiusKm > 0 ? ` · ${radiusKm} km` : ''}

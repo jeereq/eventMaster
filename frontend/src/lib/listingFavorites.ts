@@ -35,7 +35,7 @@ export function favoriteToCatalogueItem(row: FavoriteListing): CatalogueItem {
     href: row.href,
     title: row.title,
     orgName: row.orgName,
-    categoryLabel: row.categoryLabel || (row.kind === 'venue' ? 'Salle' : isServiceRentalCategory(row.category) ? 'Location' : 'Prestataire'),
+    categoryLabel: row.categoryLabel || (row.kind === 'venue' ? 'Salle' : isServiceRentalCategory(row.category) ? 'Location' : 'Métier'),
     location: row.location,
     coverUrl: row.coverUrl,
     priceFromFc: row.priceFromFc,

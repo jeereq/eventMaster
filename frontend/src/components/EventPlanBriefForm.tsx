@@ -7,7 +7,7 @@ import { cn } from '@/lib/cn';
 import { formatFc } from '@/config/landingPricing';
 import { communesForCity, normalizeRdcCity } from '@/lib/rdcCities';
 import { LISTING_EVENT_TYPES, VENUE_AMENITIES, eventTypeLabel, type ListingEventTypeId } from '@/lib/listingDetails';
-import { SERVICE_CATEGORIES, SERVICE_CATEGORY_LABELS, type ServiceCategory } from '@/lib/marketplace';
+import { SERVICE_CATEGORY_LABELS, SERVICE_RENTAL_CATEGORIES, SERVICE_TRADE_CATEGORIES, type ServiceCategory } from '@/lib/marketplace';
 import {
   briefMarginFc,
   briefSpendableFc,
@@ -91,6 +91,7 @@ export default function EventPlanBriefForm({
   const [advanced, setAdvanced] = useState(false);
   const [showUseCase, setShowUseCase] = useState(false);
   const [showAllTrades, setShowAllTrades] = useState(false);
+  const [showAllRentals, setShowAllRentals] = useState(false);
   const [briefName, setBriefName] = useState('');
   const [saving, setSaving] = useState(false);
   const communes = communesForCity(brief.city);
@@ -99,10 +100,14 @@ export default function EventPlanBriefForm({
   const spendable = briefSpendableFc(brief);
   const reserved = briefMarginFc(brief);
   const allocated = rows.reduce((sum, row) => sum + row.amountFc, 0);
-  const suggested = SERVICE_CATEGORIES.filter(
+  const suggestedTrades = SERVICE_TRADE_CATEGORIES.filter(
     (category) => brief.slots[category] === 'required' || brief.slots[category] === 'optional',
   );
-  const visibleCategories = showAllTrades ? SERVICE_CATEGORIES : suggested.length ? suggested : SERVICE_CATEGORIES;
+  const suggestedRentals = SERVICE_RENTAL_CATEGORIES.filter(
+    (category) => brief.slots[category] === 'required' || brief.slots[category] === 'optional',
+  );
+  const visibleTrades = showAllTrades ? SERVICE_TRADE_CATEGORIES : suggestedTrades.length ? suggestedTrades : SERVICE_TRADE_CATEGORIES;
+  const visibleRentals = showAllRentals ? SERVICE_RENTAL_CATEGORIES : suggestedRentals.length ? suggestedRentals : SERVICE_RENTAL_CATEGORIES;
 
   const patch = (partial: Partial<EventPlanBrief>) => onChange({ ...brief, ...partial });
 
@@ -136,10 +141,10 @@ export default function EventPlanBriefForm({
       <div className="space-y-2">
         <h2 className="text-sm font-semibold text-foreground">Brief budget</h2>
         <p className="text-sm text-muted leading-relaxed">
-          Vous décrivez l’événement et l’enveloppe. EventMaster cherche ensuite <strong className="font-semibold text-foreground">3 packs</strong> (économique, équilibré, confort) dans ce budget : salle et prestataires déjà combinés, sans dépasser le maximum.
+          Vous décrivez l’événement et l’enveloppe. EventMaster cherche ensuite <strong className="font-semibold text-foreground">3 packs</strong> (économique, équilibré, confort) dans ce budget : salle, métiers et locations déjà combinés, sans dépasser le maximum.
         </p>
         <p className="text-xs text-muted leading-relaxed">
-          Vous pouvez tout laisser par défaut et lancer la recherche, ou préciser ville, date, métiers et répartition. Rien n’est réservé : vous comparez, sauvegardez, puis contactez les professionnels.
+          Vous pouvez tout laisser par défaut et lancer la recherche, ou préciser ville, date, métiers, locations et répartition. Rien n’est réservé : vous comparez, sauvegardez, puis contactez les professionnels.
         </p>
       </div>
 
@@ -177,7 +182,7 @@ export default function EventPlanBriefForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <FieldSelect
           label="Type d’événement"
-          hint="Préremplit les métiers (mariage = traiteur, photo, DJ…)."
+          hint="Préremplit les métiers et locations (mariage = traiteur, photo, DJ, habits…)."
           value={brief.eventType}
           onChange={(value) => onChange(briefWithEventType(brief, value as ListingEventTypeId))}
         >
@@ -211,7 +216,7 @@ export default function EventPlanBriefForm({
         </FieldSelect>
         <FieldSelect
           label="Ville"
-          hint="Limite la recherche aux salles et prestataires de cette ville."
+          hint="Limite la recherche aux salles, métiers et locations de cette ville."
           value={brief.city}
           onChange={(value) => patch({ city: normalizeRdcCity(value) || '', commune: '' })}
         >
@@ -275,7 +280,7 @@ export default function EventPlanBriefForm({
           {([
             ['yes', 'Obligatoire', 'Chaque pack contient une salle.'],
             ['if_fits', 'Si ça rentre', 'Salle ajoutée seulement s’il reste du budget.'],
-            ['no', 'Sans salle', 'Uniquement des prestataires (vous avez déjà un lieu).'],
+            ['no', 'Sans salle', 'Uniquement métiers et locations (vous avez déjà un lieu).'],
           ] as Array<[IncludeVenue, string, string]>).map(([id, label, hint]) => (
             <button
               key={id}
@@ -294,12 +299,12 @@ export default function EventPlanBriefForm({
       </div>
 
       <div className="space-y-2">
-        <p className="text-xs font-semibold text-muted">Prestations</p>
+        <p className="text-xs font-semibold text-muted">Métiers</p>
         <p className="text-[11px] text-muted leading-relaxed">
-          Un clic fait tourner le métier : <strong className="text-foreground">obligatoire</strong> (le pack doit le proposer) → <strong className="text-foreground">si ça rentre</strong> (ajouté s’il reste du budget) → <strong className="text-foreground">exclu</strong> (ignoré).
+          Traiteur, photo, DJ… Un clic fait tourner : <strong className="text-foreground">obligatoire</strong> → <strong className="text-foreground">si ça rentre</strong> → <strong className="text-foreground">exclu</strong>.
         </p>
         <div className="flex flex-wrap gap-1.5">
-          {visibleCategories.map((category) => {
+          {visibleTrades.map((category) => {
             const priority = brief.slots[category] || 'excluded';
             return (
               <button
@@ -320,13 +325,51 @@ export default function EventPlanBriefForm({
             );
           })}
         </div>
-        {suggested.length < SERVICE_CATEGORIES.length ? (
+        {suggestedTrades.length < SERVICE_TRADE_CATEGORIES.length ? (
           <button
             type="button"
             className="text-[11px] font-semibold text-primary"
             onClick={() => setShowAllTrades((value) => !value)}
           >
             {showAllTrades ? 'Masquer les autres métiers' : 'Afficher tous les métiers'}
+          </button>
+        ) : null}
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-muted">Locations</p>
+        <p className="text-[11px] text-muted leading-relaxed">
+          Habits, véhicules, matériel. Même logique, séparée des métiers.
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {visibleRentals.map((category) => {
+            const priority = brief.slots[category] || 'excluded';
+            return (
+              <button
+                key={category}
+                type="button"
+                onClick={() => setSlot(category)}
+                title={SLOT_HINT[priority]}
+                className={cn(
+                  'px-2.5 py-1 rounded-full text-[11px] font-semibold border transition',
+                  priority === 'required' && 'bg-primary text-white border-primary',
+                  priority === 'optional' && 'bg-primary/10 text-primary border-primary/40',
+                  priority === 'excluded' && 'bg-surface text-muted border-border line-through decoration-muted/70',
+                )}
+              >
+                {SERVICE_CATEGORY_LABELS[category]}
+                <span className="opacity-70"> · {SLOT_SHORT[priority]}</span>
+              </button>
+            );
+          })}
+        </div>
+        {suggestedRentals.length < SERVICE_RENTAL_CATEGORIES.length ? (
+          <button
+            type="button"
+            className="text-[11px] font-semibold text-primary"
+            onClick={() => setShowAllRentals((value) => !value)}
+          >
+            {showAllRentals ? 'Masquer les autres locations' : 'Afficher toutes les locations'}
           </button>
         ) : null}
       </div>
@@ -415,7 +458,7 @@ export default function EventPlanBriefForm({
                 value={brief.missingStrategy}
                 onChange={(value) => patch({ missingStrategy: value as MissingStrategy })}
               >
-                <option value="reallocate">Réallouer le poste aux autres métiers</option>
+                <option value="reallocate">Réallouer le poste aux autres lignes</option>
                 <option value="gap">Laisser un trou explicite</option>
                 <option value="widen_city">Élargir la ville / commune</option>
               </FieldSelect>

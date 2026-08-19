@@ -7,6 +7,7 @@ import {
   Building2,
   Check,
   ExternalLink,
+  KeyRound,
   Loader2,
   MapPin,
   Search,
@@ -22,8 +23,9 @@ import { cn } from '@/lib/cn';
 import {
   dashboardServiceHref,
   dashboardVenueHref,
-  SERVICE_CATEGORIES,
   SERVICE_CATEGORY_LABELS,
+  SERVICE_RENTAL_CATEGORIES,
+  SERVICE_TRADE_CATEGORIES,
   type PublicService,
   type PublicVenue,
   type ServiceCategory,
@@ -33,6 +35,7 @@ import {
   eventDateKey,
   eventPrepFromSavedPack,
   parseEventPrep,
+  splitEventPrepVendors,
   type EventPrep,
   type EventPrepVendor,
   type EventPrepVenue,
@@ -74,6 +77,192 @@ function vendorFromPublic(service: PublicService): EventPrepVendor {
   };
 }
 
+function VendorLane({
+  title,
+  hint,
+  icon,
+  group,
+  categories,
+  placeholder,
+  emptySelected,
+  emptySearch,
+  searchingLabel,
+  selected,
+  allSelected,
+  dateKey,
+  onAdd,
+  onRemove,
+  onInquire,
+}: {
+  title: string;
+  hint: string;
+  icon: React.ReactNode;
+  group: 'trade' | 'rental';
+  categories: ServiceCategory[];
+  placeholder: string;
+  emptySelected: string;
+  emptySearch: string;
+  searchingLabel: string;
+  selected: EventPrepVendor[];
+  allSelected: EventPrepVendor[];
+  dateKey: string;
+  onAdd: (service: PublicService) => void;
+  onRemove: (slug: string) => void;
+  onInquire: (vendor: EventPrepVendor) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const [category, setCategory] = useState('');
+  const [results, setResults] = useState<PublicService[]>([]);
+  const [searching, setSearching] = useState(false);
+  const Icon = group === 'rental' ? KeyRound : Store;
+
+  useEffect(() => {
+    const q = query.trim();
+    const cat = category.trim();
+    if (!q && !cat) {
+      setResults([]);
+      return;
+    }
+    const handle = window.setTimeout(async () => {
+      setSearching(true);
+      try {
+        const params = new URLSearchParams({ group });
+        if (q) params.set('q', q);
+        if (cat) params.set('category', cat);
+        if (dateKey) {
+          params.set('availableFrom', dateKey);
+          params.set('availableTo', dateKey);
+        }
+        const data = (await api.get(`/public/services?${params.toString()}`)) as { services?: PublicService[] };
+        setResults(Array.isArray(data.services) ? data.services.slice(0, 8) : []);
+      } catch {
+        setResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 280);
+    return () => window.clearTimeout(handle);
+  }, [query, category, dateKey, group]);
+
+  return (
+    <section className="rounded-2xl border border-border bg-surface p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        {icon}
+        <h3 className="text-sm font-bold text-foreground">{title}</h3>
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">plusieurs</span>
+      </div>
+      <p className="text-xs text-muted">{hint}</p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={placeholder}
+          leftIcon={<Search className="w-4 h-4" />}
+        />
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+        >
+          <option value="">{group === 'rental' ? 'Tous les types' : 'Tous les métiers'}</option>
+          {categories.map((item) => (
+            <option key={item} value={item}>
+              {SERVICE_CATEGORY_LABELS[item]}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {selected.length > 0 ? (
+        <ul className="space-y-1.5">
+          {selected.map((vendor) => (
+            <li
+              key={vendor.slug}
+              className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50/50 px-2.5 py-2"
+            >
+              <Cover src={vendor.coverUrl} fallback={<Icon className="w-4 h-4" />} />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold truncate">{vendor.title}</p>
+                <p className="text-[11px] text-muted truncate">
+                  {[vendor.categoryLabel, vendor.orgName, vendor.city].filter(Boolean).join(' · ')}
+                </p>
+              </div>
+              <Link
+                href={dashboardServiceHref(vendor.slug, vendor.category)}
+                className="text-muted hover:text-primary"
+                title="Fiche"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Link>
+              <button
+                type="button"
+                onClick={() => onInquire(vendor)}
+                className="text-muted hover:text-primary"
+                title="Demander un devis"
+              >
+                <Send className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onRemove(vendor.slug)}
+                className="p-1 text-muted hover:text-rose-600"
+                title="Retirer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-xs text-muted">{emptySelected}</p>
+      )}
+
+      {searching || results.length > 0 || query.trim() || category ? (
+        <ul className="space-y-1.5 max-h-72 overflow-y-auto">
+          {searching ? (
+            <li className="text-xs text-muted px-1 py-2">{searchingLabel}</li>
+          ) : results.length === 0 ? (
+            <li className="text-xs text-muted px-1 py-2">{emptySearch}</li>
+          ) : (
+            results.map((service) => {
+              const already = allSelected.some((item) => item.slug === service.slug);
+              return (
+                <li key={service.slug}>
+                  <button
+                    type="button"
+                    disabled={already}
+                    onClick={() => onAdd(service)}
+                    className={cn(
+                      'w-full flex items-center gap-3 rounded-xl border px-2.5 py-2 text-left transition',
+                      already
+                        ? 'border-emerald-200 bg-emerald-50/70 cursor-default'
+                        : 'border-border hover:border-primary/40 hover:bg-primary/5',
+                    )}
+                  >
+                    <Cover src={service.coverUrl} fallback={<Icon className="w-4 h-4" />} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold truncate">{service.title}</p>
+                      <p className="text-[11px] text-muted truncate">
+                        {[service.categoryLabel, service.orgName, service.city].filter(Boolean).join(' · ')}
+                      </p>
+                    </div>
+                    {already ? (
+                      <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                    ) : service.priceFromFc != null ? (
+                      <span className="text-[11px] font-semibold shrink-0">{formatFc(service.priceFromFc)}</span>
+                    ) : null}
+                  </button>
+                </li>
+              );
+            })
+          )}
+        </ul>
+      ) : null}
+    </section>
+  );
+}
+
 function Cover({ src, fallback }: { src?: string | null; fallback: React.ReactNode }) {
   return (
     <div className="w-12 h-12 rounded-lg overflow-hidden bg-surface-muted shrink-0">
@@ -112,12 +301,8 @@ export default function EventPrepPanel({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [venueQ, setVenueQ] = useState('');
-  const [vendorQ, setVendorQ] = useState('');
-  const [vendorCategory, setVendorCategory] = useState('');
   const [venueResults, setVenueResults] = useState<PublicVenue[]>([]);
-  const [vendorResults, setVendorResults] = useState<PublicService[]>([]);
   const [searchingVenues, setSearchingVenues] = useState(false);
-  const [searchingVendors, setSearchingVendors] = useState(false);
   const [savedPacks, setSavedPacks] = useState<SavedEventPack[]>([]);
   const [inquire, setInquire] = useState<{ kind: 'venue' | 'service'; slug: string; title: string; category?: string } | null>(null);
   const persistSeq = useRef(0);
@@ -198,34 +383,6 @@ export default function EventPrepPanel({
     return () => window.clearTimeout(handle);
   }, [venueQ, dateKey]);
 
-  useEffect(() => {
-    const q = vendorQ.trim();
-    const category = vendorCategory.trim();
-    if (!q && !category) {
-      setVendorResults([]);
-      return;
-    }
-    const handle = window.setTimeout(async () => {
-      setSearchingVendors(true);
-      try {
-        const params = new URLSearchParams();
-        if (q) params.set('q', q);
-        if (category) params.set('category', category);
-        if (dateKey) {
-          params.set('availableFrom', dateKey);
-          params.set('availableTo', dateKey);
-        }
-        const data = (await api.get(`/public/services?${params.toString()}`)) as { services?: PublicService[] };
-        setVendorResults(Array.isArray(data.services) ? data.services.slice(0, 8) : []);
-      } catch {
-        setVendorResults([]);
-      } finally {
-        setSearchingVendors(false);
-      }
-    }, 280);
-    return () => window.clearTimeout(handle);
-  }, [vendorQ, vendorCategory, dateKey]);
-
   const onNotesChange = (notes: string) => {
     const next = { ...prep, notes: notes.slice(0, 2000) };
     setPrep(next);
@@ -245,7 +402,7 @@ export default function EventPrepPanel({
         <div className="space-y-1">
           <h2 className="text-lg font-semibold text-foreground tracking-tight">Préparation</h2>
           <p className="text-sm text-muted">
-            Recherchez une salle et des prestataires au même endroit. Rien n’est obligatoire : le parcours invitations continue sans ça.
+            Recherchez une salle, des métiers et des locations au même endroit. Rien n’est obligatoire : le parcours invitations continue sans ça.
             {dateKey ? ` Les recherches tiennent compte de la date (${new Date(`${dateKey}T12:00:00`).toLocaleDateString('fr-FR')}).` : ''}
           </p>
         </div>
@@ -286,7 +443,7 @@ export default function EventPrepPanel({
             <h3 className="text-sm font-bold text-foreground">Packs enregistrés</h3>
             <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">optionnel</span>
           </div>
-          <p className="text-xs text-muted">Appliquez un pack déjà simulé : salle et prestataires se remplissent ici, sans réserver.</p>
+          <p className="text-xs text-muted">Appliquez un pack déjà simulé : salle, métiers et locations se remplissent ici, sans réserver.</p>
           <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {savedPacks.slice(0, 6).map((pack) => (
               <li key={pack.id}>
@@ -299,7 +456,7 @@ export default function EventPrepPanel({
                   <p className="text-[11px] text-muted truncate">
                     {formatFc(pack.totalFc)}
                     {pack.venue ? ` · ${pack.venue.title}` : ''}
-                    {pack.services.length ? ` · ${pack.services.length} presta${pack.services.length > 1 ? 's' : ''}` : ''}
+                    {pack.services.length ? ` · ${pack.services.length} fiche${pack.services.length > 1 ? 's' : ''}` : ''}
                   </p>
                 </button>
               </li>
@@ -334,8 +491,7 @@ export default function EventPrepPanel({
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <section className="rounded-2xl border border-border bg-surface p-4 space-y-3">
+      <section className="rounded-2xl border border-border bg-surface p-4 space-y-3">
           <div className="flex items-center gap-2">
             <Building2 className="w-4 h-4 text-primary" />
             <h3 className="text-sm font-bold text-foreground">Salle marketplace</h3>
@@ -435,125 +591,42 @@ export default function EventPrepPanel({
           ) : null}
         </section>
 
-        <section className="rounded-2xl border border-border bg-surface p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <Store className="w-4 h-4 text-primary" />
-            <h3 className="text-sm font-bold text-foreground">Prestataires</h3>
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">plusieurs</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <Input
-              value={vendorQ}
-              onChange={(e) => setVendorQ(e.target.value)}
-              placeholder="Traiteur, DJ, photo…"
-              leftIcon={<Search className="w-4 h-4" />}
-            />
-            <select
-              value={vendorCategory}
-              onChange={(e) => setVendorCategory(e.target.value)}
-              className="rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-            >
-              <option value="">Tous les métiers</option>
-              {SERVICE_CATEGORIES.map((category: ServiceCategory) => (
-                <option key={category} value={category}>
-                  {SERVICE_CATEGORY_LABELS[category]}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {prep.vendors.length > 0 ? (
-            <ul className="space-y-1.5">
-              {prep.vendors.map((vendor) => (
-                <li
-                  key={vendor.slug}
-                  className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50/50 px-2.5 py-2"
-                >
-                  <Cover src={vendor.coverUrl} fallback={<Store className="w-4 h-4" />} />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold truncate">{vendor.title}</p>
-                    <p className="text-[11px] text-muted truncate">
-                      {[vendor.categoryLabel, vendor.orgName, vendor.city].filter(Boolean).join(' · ')}
-                    </p>
-                  </div>
-                  <Link
-                    href={dashboardServiceHref(vendor.slug, vendor.category)}
-                    className="text-muted hover:text-primary"
-                    title="Fiche"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => setInquire({ kind: 'service', slug: vendor.slug, title: vendor.title, category: vendor.category })}
-                    className="text-muted hover:text-primary"
-                    title="Demander un devis"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      void persist({ ...prep, vendors: prep.vendors.filter((item) => item.slug !== vendor.slug) })
-                    }
-                    className="p-1 text-muted hover:text-rose-600"
-                    title="Retirer"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-xs text-muted">Aucun prestataire retenu pour le moment.</p>
-          )}
-
-          {searchingVendors || vendorResults.length > 0 || vendorQ.trim() || vendorCategory ? (
-            <ul className="space-y-1.5 max-h-72 overflow-y-auto">
-              {searchingVendors ? (
-                <li className="text-xs text-muted px-1 py-2">Recherche des prestataires…</li>
-              ) : vendorResults.length === 0 ? (
-                <li className="text-xs text-muted px-1 py-2">Aucun prestataire public pour cette recherche.</li>
-              ) : (
-                vendorResults.map((service) => {
-                  const selected = prep.vendors.some((item) => item.slug === service.slug);
-                  return (
-                    <li key={service.slug}>
-                      <button
-                        type="button"
-                        disabled={selected}
-                        onClick={() => {
-                          void persist({ ...prep, vendors: [...prep.vendors, vendorFromPublic(service)] });
-                        }}
-                        className={cn(
-                          'w-full flex items-center gap-3 rounded-xl border px-2.5 py-2 text-left transition',
-                          selected
-                            ? 'border-emerald-200 bg-emerald-50/70 cursor-default'
-                            : 'border-border hover:border-primary/40 hover:bg-primary/5',
-                        )}
-                      >
-                        <Cover src={service.coverUrl} fallback={<Store className="w-4 h-4" />} />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold truncate">{service.title}</p>
-                          <p className="text-[11px] text-muted truncate">
-                            {[service.categoryLabel, service.orgName, service.city].filter(Boolean).join(' · ')}
-                          </p>
-                        </div>
-                        {selected ? (
-                          <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                        ) : service.priceFromFc != null ? (
-                          <span className="text-[11px] font-semibold shrink-0">{formatFc(service.priceFromFc)}</span>
-                        ) : null}
-                      </button>
-                    </li>
-                  );
-                })
-              )}
-            </ul>
-          ) : null}
-        </section>
-      </div>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <VendorLane
+            title="Métiers"
+            hint="Traiteur, photo, DJ, décor… le savoir-faire."
+            icon={<Store className="w-4 h-4 text-primary" />}
+            group="trade"
+            categories={SERVICE_TRADE_CATEGORIES}
+            placeholder="Traiteur, DJ, photo…"
+            emptySelected="Aucun métier retenu pour le moment."
+            emptySearch="Aucun métier public pour cette recherche."
+            searchingLabel="Recherche des métiers…"
+            selected={splitEventPrepVendors(prep.vendors).trades}
+            allSelected={prep.vendors}
+            dateKey={dateKey}
+            onAdd={(service) => void persist({ ...prep, vendors: [...prep.vendors, vendorFromPublic(service)] })}
+            onRemove={(slug) => void persist({ ...prep, vendors: prep.vendors.filter((item) => item.slug !== slug) })}
+            onInquire={(vendor) => setInquire({ kind: 'service', slug: vendor.slug, title: vendor.title, category: vendor.category })}
+          />
+          <VendorLane
+            title="Locations"
+            hint="Habits, voiture, moto, matériel — le bien loué, pas le métier."
+            icon={<KeyRound className="w-4 h-4 text-primary" />}
+            group="rental"
+            categories={SERVICE_RENTAL_CATEGORIES}
+            placeholder="Habits, voiture, sono…"
+            emptySelected="Aucune location retenue pour le moment."
+            emptySearch="Aucune location publique pour cette recherche."
+            searchingLabel="Recherche des locations…"
+            selected={splitEventPrepVendors(prep.vendors).rentals}
+            allSelected={prep.vendors}
+            dateKey={dateKey}
+            onAdd={(service) => void persist({ ...prep, vendors: [...prep.vendors, vendorFromPublic(service)] })}
+            onRemove={(slug) => void persist({ ...prep, vendors: prep.vendors.filter((item) => item.slug !== slug) })}
+            onInquire={(vendor) => setInquire({ kind: 'service', slug: vendor.slug, title: vendor.title, category: vendor.category })}
+          />
+        </div>
 
       <div className="rounded-2xl border border-border bg-surface p-4 space-y-2">
         <label className="text-xs font-bold uppercase tracking-wider text-muted" htmlFor="event-prep-notes">

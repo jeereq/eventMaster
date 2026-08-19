@@ -9,6 +9,7 @@ import { cn } from '@/lib/cn';
 import { LISTING_EVENT_TYPES, eventTypeLabel, type ListingEventTypeId } from '@/lib/listingDetails';
 import type { SavedEventPack, SavedPackItem } from '@/lib/eventPlan';
 import type { FavoriteListing } from '@/lib/listingFavorites';
+import { isServiceRentalCategory } from '@/lib/marketplace';
 
 function favoriteToPackItem(row: FavoriteListing): SavedPackItem {
   return {
@@ -187,7 +188,7 @@ export default function EventSavedPacks({
         open={open}
         onClose={() => setOpen(false)}
         title="Créer un pack parfait"
-        description="Choisissez une salle et des prestataires parmi vos favoris."
+        description="Choisissez une salle, des métiers et des locations parmi vos favoris."
         footer={
           <>
             <Button variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
@@ -213,42 +214,53 @@ export default function EventSavedPacks({
           </label>
           {error ? <Alert variant="error">{error}</Alert> : null}
           {favorites.length === 0 ? (
-            <p className="text-sm text-muted">Ajoutez d’abord des salles ou prestataires en favoris.</p>
+            <p className="text-sm text-muted">Ajoutez d’abord des salles, métiers ou locations en favoris.</p>
           ) : (
-            <ul className="space-y-2 max-h-72 overflow-y-auto">
-              {favorites.map((row) => {
-                const key = `${row.kind}:${row.slug}`;
-                const checked = selected.has(key);
-                return (
-                  <li key={key}>
-                    <button
-                      type="button"
-                      onClick={() => toggle(row)}
-                      className={cn(
-                        'w-full text-left flex items-center gap-3 rounded-xl border p-2.5',
-                        checked ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30',
-                      )}
-                    >
-                      <span className={cn(
-                        'w-4 h-4 rounded border flex items-center justify-center text-[10px]',
-                        checked ? 'bg-primary border-primary text-white' : 'border-border',
-                      )}>
-                        {checked ? '✓' : ''}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[10px] uppercase tracking-wider text-muted">
-                          {row.kind === 'venue' ? 'Salle' : row.categoryLabel || 'Prestataire'}
-                        </p>
-                        <p className="text-sm font-semibold truncate">{row.title}</p>
-                      </div>
-                      <span className="text-xs text-muted shrink-0">
-                        {row.priceFromFc != null ? formatFc(row.priceFromFc) : 'Sur devis'}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+            <div className="space-y-3 max-h-72 overflow-y-auto">
+              {([
+                ['Salles', favorites.filter((row) => row.kind === 'venue')],
+                ['Métiers', favorites.filter((row) => row.kind === 'service' && !isServiceRentalCategory(row.category))],
+                ['Locations', favorites.filter((row) => row.kind === 'service' && isServiceRentalCategory(row.category))],
+              ] as Array<[string, FavoriteListing[]]>).filter(([, rows]) => rows.length > 0).map(([label, rows]) => (
+                  <div key={label} className="space-y-1.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">{label}</p>
+                    <ul className="space-y-2">
+                      {rows.map((row) => {
+                        const key = `${row.kind}:${row.slug}`;
+                        const checked = selected.has(key);
+                        return (
+                          <li key={key}>
+                            <button
+                              type="button"
+                              onClick={() => toggle(row)}
+                              className={cn(
+                                'w-full text-left flex items-center gap-3 rounded-xl border p-2.5',
+                                checked ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30',
+                              )}
+                            >
+                              <span className={cn(
+                                'w-4 h-4 rounded border flex items-center justify-center text-[10px]',
+                                checked ? 'bg-primary border-primary text-white' : 'border-border',
+                              )}>
+                                {checked ? '✓' : ''}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[10px] uppercase tracking-wider text-muted">
+                                  {row.kind === 'venue' ? 'Salle' : row.categoryLabel || (isServiceRentalCategory(row.category) ? 'Location' : 'Métier')}
+                                </p>
+                                <p className="text-sm font-semibold truncate">{row.title}</p>
+                              </div>
+                              <span className="text-xs text-muted shrink-0">
+                                {row.priceFromFc != null ? formatFc(row.priceFromFc) : 'Sur devis'}
+                              </span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+              ))}
+            </div>
           )}
           {selectedItems.length > 0 ? (
             <p className="text-xs text-muted">

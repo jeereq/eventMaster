@@ -7,7 +7,7 @@ import { cn } from '@/lib/cn';
 import { listStackClass } from '@/components/ui';
 import { Skeleton } from '@/components/ui/Skeleton';
 import FavoriteHeart from '@/components/FavoriteHeart';
-import { catalogueItemDisplayKind, catalogueKindLabel, cataloguePriceCaption, formatDistanceKm, formatQuotaLabel, serviceMobilityLabel, type CatalogueItem, type CatalogueViewMode } from '@/lib/marketplace';
+import { catalogueItemDisplayKind, catalogueKindFilterLabel, catalogueKindLabel, cataloguePriceCaption, formatDistanceKm, formatQuotaLabel, groupCatalogueItemsByDisplayKind, serviceMobilityLabel, type CatalogueItem, type CatalogueViewMode } from '@/lib/marketplace';
 
 export const CATALOGUE_GRID_COLS = [2, 3, 4, 5] as const;
 export type CatalogueGridCols = (typeof CATALOGUE_GRID_COLS)[number];
@@ -207,33 +207,59 @@ export default function CatalogueResults({
     );
   }
 
+  const groups = groupCatalogueItemsByDisplayKind(items);
+  const showHeadings = groups.length > 1;
+  const cols = CATALOGUE_GRID_COLS.includes(gridCols as CatalogueGridCols) ? gridCols : 4;
+
   if (mode === 'list') {
     return (
-      <div className={listStackClass}>
-        {items.map((item) => (
-          <ListRow
-            key={item.id}
-            item={item}
-            favorited={isFavorite?.(item)}
-            onToggleFavorite={onToggleFavorite}
-          />
+      <div className="space-y-6">
+        {groups.map((group) => (
+          <section key={group.kind} className="space-y-2">
+            {showHeadings ? (
+              <h2 className="text-sm font-semibold text-foreground">
+                {catalogueKindFilterLabel(group.kind)}
+                <span className="text-muted font-medium"> · {group.items.length}</span>
+              </h2>
+            ) : null}
+            <div className={listStackClass}>
+              {group.items.map((item) => (
+                <ListRow
+                  key={item.id}
+                  item={item}
+                  favorited={isFavorite?.(item)}
+                  onToggleFavorite={onToggleFavorite}
+                />
+              ))}
+            </div>
+          </section>
         ))}
       </div>
     );
   }
 
-  const cols = CATALOGUE_GRID_COLS.includes(gridCols as CatalogueGridCols) ? gridCols : 4;
-
   return (
-    <div className={GRID_CLASS[cols]}>
-      {items.map((item) => (
-        <GridCard
-          key={item.id}
-          item={item}
-          compact={cols >= 5}
-          favorited={isFavorite?.(item)}
-          onToggleFavorite={onToggleFavorite}
-        />
+    <div className="space-y-6">
+      {groups.map((group) => (
+        <section key={group.kind} className="space-y-3">
+          {showHeadings ? (
+            <h2 className="text-sm font-semibold text-foreground">
+              {catalogueKindFilterLabel(group.kind)}
+              <span className="text-muted font-medium"> · {group.items.length}</span>
+            </h2>
+          ) : null}
+          <div className={GRID_CLASS[cols]}>
+            {group.items.map((item) => (
+              <GridCard
+                key={item.id}
+                item={item}
+                compact={cols >= 5}
+                favorited={isFavorite?.(item)}
+                onToggleFavorite={onToggleFavorite}
+              />
+            ))}
+          </div>
+        </section>
       ))}
     </div>
   );

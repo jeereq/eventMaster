@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Building2, ChevronUp, LayoutGrid, Locate, Navigation, Sparkles, X } from 'lucide-react';
+import { Building2, Calendar, KeyRound, ChevronUp, LayoutGrid, Locate, Navigation, Sparkles, X } from 'lucide-react';
 import MarketplaceLocationsMap, {
   type MarketplaceMapHandle,
   type MarketplaceMapMarker,
@@ -10,7 +10,7 @@ import MarketplaceLocationsMap, {
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatFc } from '@/config/landingPricing';
-import { formatDistanceKm, type CatalogueItem } from '@/lib/marketplace';
+import { catalogueItemDisplayKind, catalogueKindLabel, formatDistanceKm, type CatalogueItem } from '@/lib/marketplace';
 
 type SheetSnap = 'peek' | 'mid' | 'full';
 
@@ -42,8 +42,8 @@ function StoryCard({
   onSelect: () => void;
   onDirections: () => void;
 }) {
-  const isService = item.kind === 'service';
-  const Icon = isService ? Sparkles : Building2;
+  const displayKind = catalogueItemDisplayKind(item);
+  const Icon = displayKind === 'service' ? Sparkles : displayKind === 'rental' ? KeyRound : displayKind === 'event' ? Calendar : Building2;
   const distance = formatDistanceKm(item.distanceKm);
 
   return (
@@ -62,7 +62,13 @@ function StoryCard({
           ) : (
             <div className={cn(
               'w-full h-full flex items-center justify-center',
-              isService ? 'bg-[color:var(--festive-accent)]/15 text-[color:var(--festive-accent)]' : 'bg-primary/10 text-primary',
+              displayKind === 'service'
+                ? 'bg-[color:var(--festive-accent)]/15 text-[color:var(--festive-accent)]'
+                : displayKind === 'rental'
+                  ? 'bg-cyan-50 text-cyan-800'
+                  : displayKind === 'event'
+                    ? 'bg-emerald-50 text-emerald-700'
+                    : 'bg-primary/10 text-primary',
             )}>
               <Icon className="w-8 h-8" />
             </div>
@@ -72,7 +78,7 @@ function StoryCard({
             'absolute top-2.5 left-2.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-white/90 text-foreground',
           )}>
             <Icon className="w-3 h-3" />
-            {isService ? 'Prestataire' : 'Salle'}
+            {catalogueKindLabel(displayKind)}
           </span>
           {distance ? (
             <span className="absolute top-2.5 right-2.5 rounded-full bg-black/55 text-white text-[10px] font-semibold px-2 py-0.5">
@@ -117,8 +123,8 @@ function SheetRow({
   selected: boolean;
   onSelect: () => void;
 }) {
-  const isService = item.kind === 'service';
-  const Icon = isService ? Sparkles : Building2;
+  const displayKind = catalogueItemDisplayKind(item);
+  const Icon = displayKind === 'service' ? Sparkles : displayKind === 'rental' ? KeyRound : displayKind === 'event' ? Calendar : Building2;
 
   return (
     <button
@@ -136,7 +142,13 @@ function SheetRow({
         ) : (
           <div className={cn(
             'w-full h-full flex items-center justify-center',
-            isService ? 'text-[color:var(--festive-accent)]' : 'text-primary',
+            displayKind === 'service'
+              ? 'text-[color:var(--festive-accent)]'
+              : displayKind === 'rental'
+                ? 'text-cyan-800'
+                : displayKind === 'event'
+                  ? 'text-emerald-700'
+                  : 'text-primary',
           )}>
             <Icon className="w-5 h-5" />
           </div>
@@ -144,7 +156,7 @@ function SheetRow({
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
-          {isService ? 'Prestataire' : 'Salle'}
+          {catalogueKindLabel(displayKind)}
         </p>
         <p className="text-sm font-semibold text-foreground truncate">{item.title}</p>
         <p className="text-[11px] text-muted truncate">
