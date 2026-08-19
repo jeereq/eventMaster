@@ -228,24 +228,28 @@ export default function CatalogueSearchLayout({
         {mapMode ? (
           <div className="relative isolate space-y-3">
             {showKindLegend && (
-              <div className="flex flex-wrap items-center gap-4 text-xs text-muted">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted">
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-primary" />
+                  <span className="w-2.5 h-2.5 rounded-[3px] bg-primary" />
                   Salles
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-[color:var(--festive-accent)]" />
                   Métiers
+                  <span className="hidden sm:inline text-[11px]">(la personne)</span>
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-sm bg-cyan-700" />
+                  <span className="w-2 h-2 rotate-45 rounded-[1px] bg-cyan-700" />
                   Locations
+                  <span className="hidden sm:inline text-[11px]">(le bien)</span>
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-sm bg-emerald-600" />
                   Événements
                 </span>
-                <span>Bâtiment = salle, étoile = métier, clé = location, calendrier = événement. Sur la carte, cliquez un calque pour l’afficher ou le masquer.</span>
+                <span className="w-full sm:w-auto text-[11px] leading-relaxed">
+                  Cercle orange = métier (DJ, photo, traiteur). Losange cyan = location (habits, véhicule, sono).
+                </span>
               </div>
             )}
             {loading && markers.length === 0 ? (

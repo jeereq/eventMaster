@@ -14,6 +14,7 @@ import {
   catalogueItemDisplayKind,
   catalogueItemMatchesGeo,
   catalogueItemToMapMarker,
+  catalogueKindHint,
   catalogueKindLabel,
   cataloguePriceCaption,
   clearCatalogueGeoChip,
@@ -205,6 +206,9 @@ export default function LandingMapSection() {
                     {catalogueItemDisplayKind(selectedItem) === 'venue' ? <Building2 className="w-3.5 h-3.5" /> : catalogueItemDisplayKind(selectedItem) === 'event' ? <Calendar className="w-3.5 h-3.5" /> : catalogueItemDisplayKind(selectedItem) === 'rental' ? <KeyRound className="w-3.5 h-3.5" /> : <Sparkles className="w-3.5 h-3.5" />}
                     {catalogueKindLabel(catalogueItemDisplayKind(selectedItem))}
                   </p>
+                  {catalogueKindHint(catalogueItemDisplayKind(selectedItem)) ? (
+                    <p className="text-[11px] text-muted -mt-2">{catalogueKindHint(catalogueItemDisplayKind(selectedItem))}</p>
+                  ) : null}
                   <h3 className="text-sm font-semibold text-foreground leading-snug">{selectedItem.title}</h3>
                   {selectedItem.location ? (
                     <p className="text-xs text-muted">{selectedItem.location}</p>
@@ -226,7 +230,7 @@ export default function LandingMapSection() {
                 </>
               ) : (
                 <p className="text-sm text-muted leading-relaxed">
-                  Touchez un pin pour sélectionner une salle, un prestataire ou un événement, puis ouvrez la fiche.
+                  Touchez un pin pour sélectionner une salle, un métier, une location ou un événement, puis ouvrez la fiche.
                 </p>
               )}
             </aside>

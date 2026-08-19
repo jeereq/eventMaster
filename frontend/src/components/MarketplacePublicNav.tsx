@@ -14,7 +14,7 @@ export default function MarketplacePublicNav({
   const items = [
     { id: 'hub' as const, href: '/marketplace', label: 'Marketplace', icon: Store },
     { id: 'venues' as const, href: '/marketplace/salles', label: 'Salles', icon: Building2 },
-    { id: 'services' as const, href: '/marketplace/prestataires', label: 'Prestataires', icon: Sparkles },
+    { id: 'services' as const, href: '/marketplace/prestataires', label: 'Métiers', icon: Sparkles },
     { id: 'rentals' as const, href: '/marketplace/locations', label: 'Locations', icon: KeyRound },
     { id: 'events' as const, href: '/marketplace/evenements', label: 'Événements', icon: Calendar },
   ];

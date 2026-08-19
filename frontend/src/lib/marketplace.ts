@@ -788,6 +788,22 @@ export function catalogueKindFilterLabel(kind?: CatalogueKind | 'all' | 'rental'
   return 'Tous';
 }
 
+/** Pastille courte sur un pin (jamais « Presta », trop ambigu avec les locations). */
+export function catalogueKindChipLabel(kind?: CatalogueDisplayKind | string | null): string {
+  if (kind === 'rental') return 'Location';
+  if (kind === 'service') return 'Métier';
+  if (kind === 'event') return 'Évén.';
+  return 'Salle';
+}
+
+export function catalogueKindHint(kind?: CatalogueDisplayKind | string | null): string {
+  if (kind === 'service') return 'La personne — DJ, photo, traiteur…';
+  if (kind === 'rental') return 'Le bien — habits, véhicule, matériel…';
+  if (kind === 'venue') return 'Le lieu de l’événement';
+  if (kind === 'event') return 'Fête, concert, gala…';
+  return '';
+}
+
 export function catalogueKindAccent(kind?: CatalogueDisplayKind | string | null): {
   iconBox: string;
   badge: string;

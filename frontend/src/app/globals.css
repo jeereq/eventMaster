@@ -526,6 +526,24 @@ html[data-mood="celebrate"] .font-display {
   border-radius: 999px;
 }
 
+.em-map-marker-photo-pin.is-rental .em-map-marker-photo-wrap {
+  transform: rotate(45deg);
+}
+
+.em-map-marker-photo-pin.is-rental .em-map-marker-photo-frame {
+  border-radius: 4px;
+}
+
+.em-map-marker-photo-pin.is-rental .em-map-marker-photo {
+  transform: rotate(-45deg) scale(1.28);
+  border-radius: 0;
+}
+
+.em-map-marker-photo-pin.is-rental .em-map-marker-photo-badge {
+  transform: rotate(-45deg);
+  border-radius: 3px;
+}
+
 .em-map-marker-photo-badge {
   position: absolute;
   right: 1px;
@@ -556,7 +574,8 @@ html[data-mood="celebrate"] .font-display {
 
 .em-map-marker-photo-pin.is-rental .em-map-marker-photo-badge {
   background: #0e7490;
-  border-radius: 4px;
+  border-radius: 3px;
+  transform: rotate(-45deg);
 }
 
 .em-map-marker-photo-pin.is-event .em-map-marker-photo-badge {
@@ -586,6 +605,11 @@ html[data-mood="celebrate"] .font-display {
 .em-map-marker-photo-pin.is-service .em-map-marker-photo-pointer,
 .em-map-marker-inner.is-service .em-map-marker-tail {
   margin-top: -6px;
+}
+
+.em-map-marker-photo-pin.is-rental .em-map-marker-photo-pointer,
+.em-map-marker-inner.is-rental .em-map-marker-tail {
+  margin-top: -2px;
 }
 
 .em-map-marker-arrow {
@@ -620,12 +644,12 @@ html[data-mood="celebrate"] .font-display {
 
 .em-map-marker-chip {
   flex-shrink: 0;
-  max-width: 48px;
+  max-width: 64px;
   padding: 2px 6px;
   border-radius: 999px;
   font-size: 8px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
   line-height: 1.2;
   text-align: center;
@@ -702,7 +726,12 @@ html[data-mood="celebrate"] .font-display {
 
 .em-map-marker-rental .em-map-marker-head {
   background: #0e7490;
-  border-radius: 4px;
+  border-radius: 5px;
+  transform: rotate(45deg);
+}
+
+.em-map-marker-rental .em-map-marker-head svg {
+  transform: rotate(-45deg);
 }
 
 .em-map-marker-event .em-map-marker-head {
@@ -823,8 +852,11 @@ html[data-mood="celebrate"] .font-display {
 }
 
 .em-map-legend-rental {
+  width: 10px;
+  height: 10px;
   background: #0e7490;
-  border-radius: 4px;
+  border-radius: 2px;
+  transform: rotate(45deg);
 }
 
 .em-map-legend-event {
