@@ -20,6 +20,14 @@ export interface PublicSiteConfig {
   allowRegistration: boolean;
   brandPrimary: string;
   brandAccent: string;
+  marketplaceCommissionRate: number;
+  marketplaceDepositRate: number;
+  marketplaceCommissionPercent: number;
+  marketplaceDepositPercent: number;
+  commercialFirstCommissionRate: number;
+  commercialRenewalCommissionRate: number;
+  commercialFirstCommissionPercent: number;
+  commercialRenewalCommissionPercent: number;
 }
 
 export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
@@ -39,6 +47,14 @@ export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
   allowRegistration: true,
   brandPrimary: '',
   brandAccent: '',
+  marketplaceCommissionRate: 0.08,
+  marketplaceDepositRate: 0.3,
+  marketplaceCommissionPercent: 8,
+  marketplaceDepositPercent: 30,
+  commercialFirstCommissionRate: 0.3,
+  commercialRenewalCommissionRate: 0.2,
+  commercialFirstCommissionPercent: 30,
+  commercialRenewalCommissionPercent: 20,
 };
 
 interface PlatformSiteContextValue {

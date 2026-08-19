@@ -259,7 +259,7 @@ const ADMIN_TAB_META: Record<AdminTabId, { title: string; description: string; t
  },
  settings: {
  title: 'Réglages plateforme',
- description: 'Identité, contact public, maintenance, inscriptions, UltraMsg et SendGrid — appliqués au site et à l’API.',
+ description: 'Identité, contact public, taux marketplace, maintenance, inscriptions, UltraMsg et SendGrid — appliqués au site et à l’API.',
  tip: 'Après sauvegarde, landing, contact, footer et inscriptions se mettent à jour immédiatement. Les forfaits sont dans l’onglet dédié.',
  },
  'subscription-requests': {
@@ -2859,6 +2859,69 @@ function DashboardPageContent() {
  />
  </div>
  )}
+ </div>
+
+ <div className="bg-surface-muted border border-border rounded-[var(--radius-card)] p-5 space-y-4">
+ <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 border-b border-border pb-3">
+ <Wallet className="w-4 h-4 text-primary" />
+ Taux marketplace & commerciaux
+ </h3>
+ <p className="text-xs text-muted -mt-2">
+ Ces taux alimentent les nouvelles réservations, la landing, la FAQ et les commissions commerciales plateforme.
+ Les réservations déjà confirmées conservent le taux enregistré à l’époque.
+ </p>
+ <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Commission vendeur marketplace (%)</label>
+ <input
+ type="number"
+ min={1}
+ max={50}
+ step={0.5}
+ value={Math.round((Number(adminSettings.marketplaceCommissionRate ?? 0.08) * 1000)) / 10}
+ onChange={(e) => setAdminSettings({ ...adminSettings, marketplaceCommissionRate: (Number(e.target.value) || 0) / 100 })}
+ className="w-full px-4 py-2.5 bg-white dark:bg-background border border-border dark:border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-medium"
+ />
+ <p className="text-[11px] text-muted">Due par le vendeur sur les réservations confirmées. Défaut 8 %.</p>
+ </div>
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Acompte hors plateforme (%)</label>
+ <input
+ type="number"
+ min={5}
+ max={90}
+ step={1}
+ value={Math.round((Number(adminSettings.marketplaceDepositRate ?? 0.3) * 1000)) / 10}
+ onChange={(e) => setAdminSettings({ ...adminSettings, marketplaceDepositRate: (Number(e.target.value) || 0) / 100 })}
+ className="w-full px-4 py-2.5 bg-white dark:bg-background border border-border dark:border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-medium"
+ />
+ <p className="text-[11px] text-muted">Versé au professionnel, hors EventMaster. Défaut 30 %.</p>
+ </div>
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Commission commerciale — 1er paiement (%)</label>
+ <input
+ type="number"
+ min={0}
+ max={100}
+ step={1}
+ value={Math.round((Number(adminSettings.commercialFirstCommissionRate ?? 0.3) * 1000)) / 10}
+ onChange={(e) => setAdminSettings({ ...adminSettings, commercialFirstCommissionRate: (Number(e.target.value) || 0) / 100 })}
+ className="w-full px-4 py-2.5 bg-white dark:bg-background border border-border dark:border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-medium"
+ />
+ </div>
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Commission commerciale — suivants (%)</label>
+ <input
+ type="number"
+ min={0}
+ max={100}
+ step={1}
+ value={Math.round((Number(adminSettings.commercialRenewalCommissionRate ?? 0.2) * 1000)) / 10}
+ onChange={(e) => setAdminSettings({ ...adminSettings, commercialRenewalCommissionRate: (Number(e.target.value) || 0) / 100 })}
+ className="w-full px-4 py-2.5 bg-white dark:bg-background border border-border dark:border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-medium"
+ />
+ </div>
+ </div>
  </div>
 
  {/* Section Contact public */}

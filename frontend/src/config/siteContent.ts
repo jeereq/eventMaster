@@ -74,13 +74,13 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'marketplace-venues',
     question: 'Puis-je trouver une salle ou un prestataire sur EventMaster ?',
     answer:
-      'Oui. Le marketplace liste les salles (plan 2D), les métiers (traiteur, photo, DJ, déco…), les locations (habits homme / femme / enfant, voitures, motos, matériel) et les événements publics. Sans compte, vous parcourez. Le bouton Partager copie l’URL de recherche (filtres inclus) ou le lien public de la fiche — jamais une URL interne du tableau de bord. Pour un devis, un billet ou une réservation : compte client gratuit ou passage invité. L’acompte (30 %) se verse au professionnel, hors EventMaster.',
+      'Oui. Le marketplace liste les salles (plan 2D), les métiers (traiteur, photo, DJ, déco…), les locations (habits homme / femme / enfant, voitures, motos, matériel) et les événements publics. Sans compte, vous parcourez. Le bouton Partager copie l’URL de recherche (filtres inclus) ou le lien public de la fiche — jamais une URL interne du tableau de bord. Pour un devis, un billet ou une réservation : compte client gratuit ou passage invité. L’acompte ({depositPercent} %) se verse au professionnel, hors EventMaster.',
   },
   {
     id: 'marketplace-booking',
     question: 'Comment fonctionne la réservation et la commission marketplace ?',
     answer:
-      'Le professionnel accepte la demande, l’organisateur (ou le client) verse l’acompte hors plateforme, puis le professionnel marque l’acompte reçu et confirme : la date est bloquée. EventMaster n’encaisse pas l’acompte. Une commission de 8 % (due par le vendeur) s’applique aux réservations confirmées, indépendante de l’abonnement SaaS.',
+      'Le professionnel accepte la demande, l’organisateur (ou le client) verse l’acompte hors plateforme, puis le professionnel marque l’acompte reçu et confirme : la date est bloquée. EventMaster n’encaisse pas l’acompte. Une commission de {commissionPercent} % (due par le vendeur) s’applique aux réservations confirmées, indépendante de l’abonnement SaaS.',
   },
   {
     id: 'client-account',

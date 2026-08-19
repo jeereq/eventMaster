@@ -1277,6 +1277,22 @@ export async function updateAdminSettings(req: AuthenticatedRequest, res: Respon
       metadata: {
         keys: Object.keys(otherSettings || {}),
         plansUpdated: Boolean(incomingPlans),
+        marketplaceCommissionRate: {
+          from: current.marketplaceCommissionRate,
+          to: updatedSettings.marketplaceCommissionRate,
+        },
+        marketplaceDepositRate: {
+          from: current.marketplaceDepositRate,
+          to: updatedSettings.marketplaceDepositRate,
+        },
+        commercialFirstCommissionRate: {
+          from: current.commercialFirstCommissionRate,
+          to: updatedSettings.commercialFirstCommissionRate,
+        },
+        commercialRenewalCommissionRate: {
+          from: current.commercialRenewalCommissionRate,
+          to: updatedSettings.commercialRenewalCommissionRate,
+        },
       },
     });
 

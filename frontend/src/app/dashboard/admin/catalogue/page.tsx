@@ -31,6 +31,8 @@ import {
   type TenantAccountKind,
 } from '@/lib/marketplace';
 import { formatFc } from '@/config/landingPricing';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { commissionPercent, depositPercent } from '@/lib/platformRates';
 import {
   EMPTY_CATALOGUE_EXTRAS,
   appendCatalogueEntityParams,
@@ -274,6 +276,9 @@ export default function AdminCataloguePage() {
   useRememberListReturn();
   const router = useRouter();
   const { user, loading: authLoading, enterSupportSession } = useAuth();
+  const { site } = usePlatformSite();
+  const commissionPct = commissionPercent(site);
+  const depositPct = depositPercent(site);
   const [tab, setTab] = useState<CatalogTab>('venues');
   const [overview, setOverview] = useState<Overview | null>(null);
   const [qInput, setQInput] = useState('');
@@ -476,7 +481,7 @@ export default function AdminCataloguePage() {
     { id: 'rentals', label: 'Locations', count: overview?.rentals?.total },
     { id: 'inquiries', label: 'Demandes', count: overview?.inquiries.total },
     { id: 'bookings', label: 'Réservations', count: overview?.bookings.total },
-    { id: 'commissions', label: 'Commissions 8 %', count: overview?.commissions?.dueCount },
+    { id: 'commissions', label: `Commissions ${commissionPct} %`, count: overview?.commissions?.dueCount },
   ];
 
   const currentTotal =
@@ -518,7 +523,7 @@ export default function AdminCataloguePage() {
     <div className="space-y-6 w-full">
       <PageHeader
         title="Catalogue"
-        description="Modération des fiches (motif + audit), devis, réservations, GMV et commissions vendeur 8 %."
+        description={`Modération des fiches (motif + audit), devis, réservations, GMV et commissions vendeur ${commissionPct} %.`}
         breadcrumbs={
           <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard?tab=overview' }, { label: 'Catalogue' }]} />
         }
@@ -690,7 +695,7 @@ export default function AdminCataloguePage() {
           <p className="text-sm text-muted">
             {settlement === 'paid' ? 'Encaissé' : settlement === 'all' ? 'Total filtré' : 'Dû'} :{' '}
             <span className="font-semibold text-foreground">{formatFc(commissions?.sumCommissionFc ?? 0)}</span>
-            {' · '}commission 8 % sur réservations confirmées, versée hors plateforme.
+            {' · '}commission {commissionPct} % (acompte {depositPct} %) sur réservations confirmées, versée hors plateforme.
           </p>
           <Button
             type="button"
@@ -796,7 +801,7 @@ export default function AdminCataloguePage() {
         <EmptyState
           icon={<Wallet className="w-5 h-5" />}
           title={settlement === 'paid' ? 'Aucune commission encaissée' : 'Aucune commission due'}
-          description="Les commissions 8 % des réservations confirmées apparaissent ici."
+          description={`Les commissions ${commissionPct} % des réservations confirmées apparaissent ici.`}
         />
       ) : (
         <ul className="divide-y divide-border border border-border rounded-[var(--radius-card)] overflow-hidden bg-surface">
@@ -876,7 +881,7 @@ export default function AdminCataloguePage() {
                   </div>
                   <p className="text-sm font-semibold text-foreground truncate">{row.title}</p>
                   <p className="text-xs text-muted">
-                    {formatFc(row.commissionFc)} (8 %) sur {formatFc(row.amountFc)}
+                    {formatFc(row.commissionFc)} ({Math.round((row.commissionRate || 0) * 100)} %) sur {formatFc(row.amountFc)}
                     {row.organizerName ? ` · ${row.organizerName}` : ''}
                   </p>
                 </div>

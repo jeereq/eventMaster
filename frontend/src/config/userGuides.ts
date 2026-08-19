@@ -45,9 +45,10 @@ export const USER_GUIDES: UserGuide[] = [
       'Créer et modifier les organisations, forfaits et durées (trimestre 90 j, mois, annuel 365 j −10 %)',
       'Ouvrir l’espace d’une organisation (impersonation support, bandeau visible)',
       'Modérer le catalogue : salles, métiers, locations ; dépublier / republier avec motif',
-      'Suivre packs, favoris, GMV salles / métiers / locations et commissions 8 %',
+      'Suivre packs, favoris, GMV salles / métiers / locations et commissions {commissionPercent} %',
       'Publier des modèles globaux sur la landing, éditer les messages invités',
       'Consulter les analyses SaaS, le funnel RSVP / PDF / scan, le journal d’audit et les réglages',
+      'Ajuster commission marketplace, acompte et taux commerciaux (Réglages)',
     ],
     cannotDo: [
       'Organiser un événement comme un membre interne sans passer par l’impersonation',
@@ -90,9 +91,9 @@ export const USER_GUIDES: UserGuide[] = [
       },
       {
         id: 'moderate-catalog',
-        title: 'Modérer le marketplace et les commissions 8 %',
+        title: 'Modérer le marketplace et les commissions {commissionPercent} %',
         content:
-          '1. Ouvrez Catalogue.\n2. Filtrez salles, métiers ou locations. Dépublier exige un motif (journalisé) ; Republier remet la fiche en vitrine.\n3. Les compteurs GMV distinguent salles, métiers et locations ; favoris et packs mesurent l’usage de « Préparer un événement ».\n4. Onglet Commissions 8 % : marquez payée après versement hors plateforme, ou exportez le CSV.',
+          '1. Ouvrez Catalogue.\n2. Filtrez salles, métiers ou locations. Dépublier exige un motif (journalisé) ; Republier remet la fiche en vitrine.\n3. Les compteurs GMV distinguent salles, métiers et locations ; favoris et packs mesurent l’usage de « Préparer un événement ».\n4. Onglet Commissions {commissionPercent} % : marquez payée après versement hors plateforme, ou exportez le CSV.',
         links: [{ label: 'Catalogue', href: '/dashboard/admin/catalogue' }],
       },
       {
@@ -109,7 +110,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'review-analytics',
         title: 'Consulter les statistiques plateforme',
         content:
-          '1. Ouvrez Analyses & stats.\n2. Vue d’ensemble : licences, événements publics, GMV billets et marketplace.\n3. Événements : privé / public / billetterie. Invités : funnel RSVP, PDF livrés / manquants, check-in web.\n4. Exportez le rapport revenus SaaS en CSV ou PDF. Les commissions marketplace 8 % restent dans Catalogue.',
+          '1. Ouvrez Analyses & stats.\n2. Vue d’ensemble : licences, événements publics, GMV billets et marketplace.\n3. Événements : privé / public / billetterie. Invités : funnel RSVP, PDF livrés / manquants, check-in web.\n4. Exportez le rapport revenus SaaS en CSV ou PDF. Les commissions marketplace {commissionPercent} % restent dans Catalogue.',
         links: [{ label: 'Analyses & stats', href: '/dashboard?tab=analytics&section=overview' }],
       },
     ],
@@ -119,6 +120,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Un motif de dépublication apparaît dans le journal d’audit (CATALOG_UNPUBLISH).',
       'Les modèles d\'organisation ne doivent jamais avoir showOnLanding — seuls les modèles globaux sont publics.',
       'Vérifiez les licences expirées sur l’Accueil avant d’approuver un renouvellement.',
+      'Les taux marketplace et commerciaux se règlent dans Réglages (pas dans le code). Les réservations déjà confirmées gardent leur taux d’origine.',
       'Le mode maintenance bloque tout le monde sauf le Super Admin.',
     ],
   },
@@ -245,7 +247,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Les couleurs de l’organisation (Profil) s’appliquent à toute l’équipe ; l’accent personnel du header ne concerne que cet appareil.',
       'Assignez des protocoles org. pour le scan QR web (navigateur) sur tous les événements.',
       'Configurez les salles avant de créer des événements avec plan de table.',
-      'La commission marketplace (8 %) est due par le vendeur, distincte de l’abonnement SaaS.',
+      'La commission marketplace ({commissionPercent} %) est due par le vendeur, distincte de l’abonnement SaaS.',
       'Le paiement annuel (−10 %) s’applique aussi aux forfaits Particulier (période de base = trimestre).',
     ],
   },
@@ -315,7 +317,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Respectez le quota de managers org. selon votre forfait.',
       'Déléguez le protocole aux membres Protocole pour le jour J.',
       'Utilisez les modèles globaux comme base dans le concepteur visuel.',
-      'La commission marketplace (8 %) est due par le vendeur, distincte de l’abonnement SaaS.',
+      'La commission marketplace ({commissionPercent} %) est due par le vendeur, distincte de l’abonnement SaaS.',
     ],
   },
   {
@@ -503,7 +505,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'book-venue',
         title: 'Réserver une salle ou un prestataire',
         content:
-          '1. Ouvrez une fiche depuis Explorer, Favoris, l’Agenda ou un pack.\n2. Envoyez un devis ou une demande de date.\n3. Versez l’acompte (30 %) directement au professionnel, hors EventMaster, après acceptation.\n4. Suivez le statut dans Mes réservations (filtres par statut, type et dates).',
+          '1. Ouvrez une fiche depuis Explorer, Favoris, l’Agenda ou un pack.\n2. Envoyez un devis ou une demande de date.\n3. Versez l’acompte ({depositPercent} %) directement au professionnel, hors EventMaster, après acceptation.\n4. Suivez le statut dans Mes réservations (filtres par statut, type et dates).',
         links: [
           { label: 'Marketplace', href: '/dashboard/catalogue' },
           { label: 'Mes réservations', href: '/dashboard/bookings' },
@@ -534,7 +536,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Enregistrez un brief pour relancer la même recherche ; figez une salle puis relancez pour recalculer uniquement les prestataires.',
       'L’Agenda du menu ouvre le marketplace client (événements), pas /marketplace/evenements.',
       'Partagez une recherche pour envoyer exactement les mêmes filtres ; sur une fiche, le lien public suffit.',
-      'La commission vendeur (8 %) est distincte de l’abonnement EventMaster ; vous ne la payez pas en tant que client.',
+      'La commission vendeur ({commissionPercent} %) est distincte de l’abonnement EventMaster ; vous ne la payez pas en tant que client.',
     ],
   },
   {

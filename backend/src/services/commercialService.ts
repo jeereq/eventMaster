@@ -6,6 +6,8 @@ import {
   createCommercialBillingNotification,
   type CommercialBillingEvent,
 } from './platformNotificationService';
+import { loadPlatformSettings } from './platformSettingsService';
+import { parseRateInput } from '../utils/ratePercent';
 
 function formatAmountFc(amount: number): string {
   return `${amount.toLocaleString('fr-FR')} FC`;
@@ -15,6 +17,27 @@ export { formatAmountFc };
 
 export const DEFAULT_COMMISSION_RATE = 0.3;
 export const DEFAULT_RENEWAL_COMMISSION_RATE = 0.2;
+
+export function defaultFirstCommissionRate(): number {
+  try {
+    return parseRateInput(loadPlatformSettings().commercialFirstCommissionRate, DEFAULT_COMMISSION_RATE, 0, 1);
+  } catch {
+    return DEFAULT_COMMISSION_RATE;
+  }
+}
+
+export function defaultRenewalCommissionRate(): number {
+  try {
+    return parseRateInput(
+      loadPlatformSettings().commercialRenewalCommissionRate,
+      DEFAULT_RENEWAL_COMMISSION_RATE,
+      0,
+      1,
+    );
+  } catch {
+    return DEFAULT_RENEWAL_COMMISSION_RATE;
+  }
+}
 
 export function generateReferralCode(name?: string | null, prefix = 'EM'): string {
   const rolePrefix = prefix === 'ORG' ? 'ORG' : 'EM';
@@ -51,10 +74,10 @@ export function resolveCommissionRates(params: {
   renewalFallback?: number;
 }): { first: number; renewal: number } {
   return {
-    first: normalizeCommissionRate(params.first, params.firstFallback ?? DEFAULT_COMMISSION_RATE),
+    first: normalizeCommissionRate(params.first, params.firstFallback ?? defaultFirstCommissionRate()),
     renewal: normalizeCommissionRate(
       params.renewal,
-      params.renewalFallback ?? DEFAULT_RENEWAL_COMMISSION_RATE,
+      params.renewalFallback ?? defaultRenewalCommissionRate(),
     ),
   };
 }

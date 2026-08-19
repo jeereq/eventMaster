@@ -16,6 +16,8 @@ import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import { Lock } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { clientLoginHref, clientRegisterHref } from '@/lib/safeAppPath';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { depositPercent } from '@/lib/platformRates';
 
 export default function MarketplaceBookingForm({
   listingSlug,
@@ -45,6 +47,8 @@ export default function MarketplaceBookingForm({
   showCalendar?: boolean;
 }) {
   const { token, loading, tenant, access } = useAuth();
+  const { site } = usePlatformSite();
+  const depositPct = depositPercent(site);
   const pathname = usePathname();
   const nextPath = pathname || '/marketplace';
   const [internalDate, setInternalDate] = useState('');
@@ -67,7 +71,10 @@ export default function MarketplaceBookingForm({
   const rangeKeys = selectedDate ? eachDateKey(selectedDate, selectedEnd || selectedDate) : [];
   const dateTaken = rangeKeys.some((key) => blocked.has(key));
   const amounts = priceFromFc != null
-    ? previewMarketplaceAmounts(priceFromFc, Math.max(1, rangeKeys.length), priceUnit)
+    ? previewMarketplaceAmounts(priceFromFc, Math.max(1, rangeKeys.length), priceUnit, {
+        commissionRate: site.marketplaceCommissionRate,
+        depositRate: site.marketplaceDepositRate,
+      })
     : null;
   const loggedIn = Boolean(token && tenant?.id);
   const isClient = access?.level === 'client' || tenant?.accountKind === 'CLIENT';
@@ -143,7 +150,7 @@ export default function MarketplaceBookingForm({
         <div className="border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface space-y-3">
           <h2 className="text-sm font-semibold text-foreground">Réserver</h2>
           <p className="text-xs text-muted leading-relaxed">
-            Créez un compte client (gratuit) pour demander une date ou une période. L’acompte (30 %) se verse hors
+            Créez un compte client (gratuit) pour demander une date ou une période. L’acompte ({depositPct} %) se verse hors
             plateforme au professionnel ; EventMaster n’encaisse pas ce paiement.
           </p>
           <div className="flex flex-wrap gap-2">
@@ -165,7 +172,7 @@ export default function MarketplaceBookingForm({
       <div className="border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface space-y-3">
         <h2 className="text-sm font-semibold text-foreground">Réserver une date ou une période</h2>
         <p className="text-xs text-muted leading-relaxed">
-          Cliquez un jour libre, puis éventuellement le dernier jour. Demande → acceptation → acompte 30 % hors
+          Cliquez un jour libre, puis éventuellement le dernier jour. Demande → acceptation → acompte {depositPct} % hors
           plateforme → confirmation.
         </p>
         {formError && <Alert variant="error">{formError}</Alert>}
@@ -204,7 +211,7 @@ export default function MarketplaceBookingForm({
             {priceUnit === 'DAY' && rangeKeys.length > 1 ? (
               <p className="text-muted">{formatFc(priceFromFc || 0)} / jour × {rangeKeys.length} jours</p>
             ) : null}
-            <p>Acompte 30 % à verser au professionnel : <strong>{formatFc(amounts.depositFc)}</strong></p>
+            <p>Acompte {depositPct} % à verser au professionnel : <strong>{formatFc(amounts.depositFc)}</strong></p>
             <p className="text-muted inline-flex items-center gap-1">
               <Lock className="w-3 h-3" /> Pas de paiement carte sur EventMaster.
             </p>

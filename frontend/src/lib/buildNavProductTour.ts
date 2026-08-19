@@ -4,6 +4,7 @@ import { FINISH_STEP, NAV_TOUR_META, WELCOME_STEP } from '@/config/navTourMeta';
 import type { ProductTourStep } from '@/config/productTours';
 import { getWorkspaceModules, type WorkspaceModules } from '@/lib/planAccess';
 import { LANDING_PLANS } from '@/config/landingPricing';
+import { interpolateRates } from '@/lib/platformRates';
 
 function tabStep(tourId: string, routeOverride?: string): ProductTourStep | null {
   const meta = NAV_TOUR_META[tourId];
@@ -11,7 +12,7 @@ function tabStep(tourId: string, routeOverride?: string): ProductTourStep | null
   return {
     id: tourId,
     title: meta.title,
-    description: meta.description,
+    description: interpolateRates(meta.description),
     route: routeOverride ?? meta.route,
     target: tourId,
   };

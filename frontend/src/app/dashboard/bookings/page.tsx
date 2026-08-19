@@ -9,10 +9,13 @@ import type { MarketplaceBookingItem } from '@/lib/marketplace';
 import MarketplaceBookingsPanel from '@/components/MarketplaceBookingsPanel';
 import { useRememberListReturn } from '@/lib/catalogueQuery';
 import { Loader2, Store } from 'lucide-react';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { depositPercent } from '@/lib/platformRates';
 
 export default function ClientBookingsPage() {
   useRememberListReturn();
   const { access, tenant } = useAuth();
+  const { site } = usePlatformSite();
   const [bookings, setBookings] = useState<MarketplaceBookingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -39,7 +42,7 @@ export default function ClientBookingsPage() {
     <div className="space-y-6 w-full">
       <PageHeader
         title="Mes réservations"
-        description="Demandes de dates envoyées aux salles, prestataires et locations. L’acompte (30 %) se verse hors plateforme."
+        description={`Demandes de dates envoyées aux salles, prestataires et locations. L’acompte (${depositPercent(site)} %) se verse hors plateforme.`}
         breadcrumbs={
           <Breadcrumbs
             items={[

@@ -33,6 +33,8 @@ import {
   type VenuePriceUnit,
 } from '@/lib/marketplace';
 import { EMPTY_LISTING_DETAILS, parseListingDetails, type ListingDetails } from '@/lib/listingDetails';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { commissionPercent } from '@/lib/platformRates';
 import ListingDetailsFields from '@/components/ListingDetailsFields';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
@@ -80,6 +82,7 @@ const fieldClass =
 export default function MarketplaceDeskPage() {
   useRememberListReturn();
   const { access, refreshProfile, planQuota, tenant } = useAuth();
+  const { site } = usePlatformSite();
   const router = useRouter();
   const canManage = Boolean(access?.canManageRooms);
   const [tab, setTab] = useState<DeskTab>('services');
@@ -370,7 +373,7 @@ export default function MarketplaceDeskPage() {
     <div className="space-y-6">
       <PageHeader
         title="Marketplace"
-        description="Prestations, locations, devis, réservations de dates. Acompte hors plateforme · commission vendeur 8 % (≠ abo SaaS)."
+        description={`Prestations, locations, devis, réservations de dates. Acompte hors plateforme · commission vendeur ${commissionPercent(site)} % (≠ abo SaaS).`}
         breadcrumbs={
           <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Marketplace' }]} />
         }

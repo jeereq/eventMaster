@@ -21,6 +21,8 @@ import {
 } from '@/lib/marketplace';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import { CalendarCheck, CheckCircle2, XCircle } from 'lucide-react';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { commissionPercent, depositPercent } from '@/lib/platformRates';
 
 function toneFor(status: MarketplaceBookingStatus): 'amber' | 'emerald' | 'slate' | 'rose' {
   if (status === 'CONFIRMED' || status === 'COMPLETED') return 'emerald';
@@ -95,6 +97,9 @@ export default function MarketplaceBookingsPanel({
   onChanged: () => Promise<void> | void;
   organizerView?: boolean;
 }) {
+  const { site } = usePlatformSite();
+  const commissionPct = commissionPercent(site);
+  const depositPct = depositPercent(site);
   const [filter, setFilter] = useState<'all' | 'received' | 'sent'>(organizerView ? 'sent' : 'all');
   const [status, setStatus] = useState<'all' | MarketplaceBookingStatus>('all');
   const [kind, setKind] = useState<'all' | 'venue' | 'service' | 'rental'>('all');
@@ -158,8 +163,8 @@ export default function MarketplaceBookingsPanel({
         <p className="font-semibold text-foreground">Commission marketplace due</p>
         <p className="text-lg font-semibold mt-1">{formatFc(commissionDueFc)}</p>
         <p className="text-xs text-muted mt-1 leading-relaxed">
-          8 % sur les réservations confirmées dont vous êtes le vendeur. Distincte de l’abonnement SaaS.
-          L’acompte (30 %) se verse hors plateforme.
+          {commissionPct} % sur les réservations confirmées dont vous êtes le vendeur. Distincte de l’abonnement SaaS.
+          L’acompte ({depositPct} %) se verse hors plateforme.
         </p>
       </div>
       )}
@@ -222,7 +227,7 @@ export default function MarketplaceBookingsPanel({
             const isVendor = item.viewerRole === 'vendor';
             const busy = busyId === item.id;
             const amountDraft = acceptAmount[item.id] ?? String(item.amountFc);
-            const next = bookingNextStep(item);
+            const next = bookingNextStep(item, depositPct);
             const listingHref = item.listingSlug
               ? `/dashboard/catalogue/salles/${item.listingSlug}`
               : item.offeringSlug

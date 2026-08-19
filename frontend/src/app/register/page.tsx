@@ -11,6 +11,7 @@ import { AuthSplitLayout, MethodToggle } from '@/components/AuthSplitLayout';
 import { Button, Alert, Input, Card, PhoneInput } from '@/components/ui';
 import { parseReferralFromSearchParams } from '@/lib/referralLink';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { interpolateRates } from '@/lib/platformRates';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { ACCOUNT_KIND_DESCRIPTIONS, ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
 import { safeAppPath, isClientReturnPath } from '@/lib/safeAppPath';
@@ -19,14 +20,18 @@ const FEATURES = [
  { icon: Calendar, title: 'Invitations & RSVP', desc: 'Le premier message n’envoie que le lien RSVP. PDF, plan et GPS après acceptation (Premium 1+).' },
  { icon: Table, title: 'Plan de table 2D', desc: 'Placement glisser-déposer. Liez la salle à l’événement pour importer le plan.' },
  { icon: MessageSquare, title: 'Protocole QR web', desc: 'Scan du badge dans le navigateur le jour J. L’app native n’est pas encore déployée.' },
- { icon: Sparkles, title: 'Marketplace & packs', desc: 'Salles, métiers, locations. Favoris, 3 packs budget, acompte 30 % hors plateforme.' },
+ { icon: Sparkles, title: 'Marketplace & packs', desc: 'Salles, métiers, locations. Favoris, 3 packs budget, acompte {depositPercent} % hors plateforme.' },
 ];
+
+function featuresForSite(site?: Parameters<typeof interpolateRates>[1]) {
+  return FEATURES.map((item) => ({ ...item, desc: interpolateRates(item.desc, site) }));
+}
 
 export default function RegisterPage() {
  return (
  <Suspense
  fallback={
- <AuthSplitLayout badge="Inscription" title="Chargement…" description="" features={FEATURES} backHref="/" backLabel="Retour au site">
+ <AuthSplitLayout badge="Inscription" title="Chargement…" description="" features={featuresForSite()} backHref="/" backLabel="Retour au site">
  <Card padding="lg" className="shadow-xl animate-pulse h-96">
  <span className="sr-only">Chargement du formulaire d&apos;inscription</span>
  </Card>
@@ -134,7 +139,7 @@ function RegisterPageContent() {
  ? `Rejoignez ${site.platformName} : devis, réservations et badges QR dans votre tableau de bord. Vous pouvez aussi continuer en invité sans compte.`
  : `Rejoignez ${site.platformName} : organisez un événement, publiez une offre, ou réservez une salle sans espace SaaS.`
  }
- features={FEATURES}
+ features={featuresForSite(site)}
  backHref="/"
  backLabel="Retour au site"
  >

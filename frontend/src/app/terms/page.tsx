@@ -1,5 +1,6 @@
 import { LegalPageShell, Section } from '@/components/LegalPageShell';
 import LegalSupportEmail from '@/components/LegalSupportEmail';
+import TermsMarketplaceRates from '@/components/TermsMarketplaceRates';
 import { TERMS_VERSION } from '@/config/legalConfig';
 
 export const metadata = {
@@ -151,25 +152,10 @@ export default function TermsPage() {
  </p>
  <p>
  EventMaster se réserve le droit de modifier les tarifs et caractéristiques des plans avec un préavis raisonnable
- pour les abonnements actifs. La facturation annuelle (organisations et marketplace) peut bénéficier d&apos;une
- réduction selon les conditions affichées sur la plateforme. Les forfaits Particulier ne proposent pas d&apos;option annuelle.
+ pour les abonnements actifs. La facturation annuelle (organisations, marketplace et Particulier) peut bénéficier
+ d&apos;une réduction selon les conditions affichées sur la plateforme.
  </p>
- <p>
- <strong>6.1 Marketplace et réservations.</strong> Les organisations éligibles peuvent publier des salles ou
- prestations sur le marketplace. Les réservations de dates suivent le parcours : demande, acceptation,
- acompte de 30 % versé directement au professionnel <strong>hors plateforme</strong>, puis confirmation
- (blocage de la date). EventMaster n&apos;encaisse pas cet acompte et n&apos;est pas partie au contrat de
- prestation entre organisateur et professionnel.
- </p>
- <p>
- Une commission marketplace de <strong>8 %</strong> (due par le vendeur) s&apos;applique aux réservations
- confirmées. Elle est distincte de l&apos;abonnement SaaS et du réseau commercial.
- </p>
- <p>
- <strong>6.2 Réseau commercial.</strong> Selon le forfait (notamment Business Enterprise 2 et 3), un réseau
- commercial peut être activé avec des commissions de <strong>30 %</strong> sur la facturation d&apos;abonnement
- des organisations parrainées, selon les règles affichées dans l&apos;espace commercial.
- </p>
+ <TermsMarketplaceRates />
  </Section>
 
  <Section title="7. Propriété intellectuelle">

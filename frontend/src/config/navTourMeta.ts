@@ -154,7 +154,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-catalog-admin': {
     title: 'Catalogue',
     description:
-      'Modération des fiches salles, métiers et locations, devis, réservations, et file des commissions vendeur 8 %.',
+      'Modération des fiches salles, métiers et locations, devis, réservations, et file des commissions vendeur {commissionPercent} %.',
     route: '/dashboard/admin/catalogue',
   },
   'nav-guide': {
@@ -184,7 +184,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-bookings': {
     title: 'Mes réservations',
     description:
-      'Suivez vos demandes de dates : filtrez par statut, type et période. L’acompte (30 %) se verse hors plateforme.',
+      'Suivez vos demandes de dates : filtrez par statut, type et période. L’acompte ({depositPercent} %) se verse hors plateforme.',
     route: '/dashboard/bookings',
   },
   'nav-tickets': {

@@ -818,7 +818,7 @@ export const ROLE_HIGHLIGHTS = [
   },
   {
     title: 'Commercial',
-    description: 'Crée des organisations parrainées et suit ses commissions (30 % mensuel).',
+    description: 'Crée des organisations parrainées et suit ses commissions ({commercialPercent} % mensuel).',
     icon: 'briefcase',
   },
 ];
@@ -846,7 +846,7 @@ export const PLATFORM_PILLARS = [
   },
   {
     title: 'Marketplace salles & prestas',
-    description: 'Salles avec plan 2D, métiers (traiteur, photo, DJ…) et locations (habits, voitures, motos, matériel). Favoris, packs éco / équilibré / confort, partage d’URL. Acompte 30 % hors plateforme · commission vendeur 8 %.',
+    description: 'Salles avec plan 2D, métiers (traiteur, photo, DJ…) et locations (habits, voitures, motos, matériel). Favoris, packs éco / équilibré / confort, partage d’URL. Acompte {depositPercent} % hors plateforme · commission vendeur {commissionPercent} %.',
     icon: 'calendar',
   },
   {
@@ -861,7 +861,7 @@ export const PLATFORM_PILLARS = [
   },
   {
     title: 'Réseau commercial',
-    description: 'Code de parrainage, création d’organisations et commissions (30 % sur la facturation de période).',
+    description: 'Code de parrainage, création d’organisations et commissions ({commercialPercent} % sur la facturation de période).',
     icon: 'trending',
   },
 ];

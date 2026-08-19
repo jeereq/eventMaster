@@ -3,6 +3,8 @@
 import React from 'react';
 import { Shield, ScanLine, Building2, Briefcase, Users, Mail, Lock, TrendingUp, LayoutGrid, Smartphone, CalendarCheck, Heart } from 'lucide-react';
 import { ROLE_HIGHLIGHTS, PLATFORM_PILLARS } from '@/config/landingPricing';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { interpolateRates } from '@/lib/platformRates';
 
 const roleIcons = { shield: Shield, scan: ScanLine, building: Building2, briefcase: Briefcase, heart: Heart };
 const pillarIcons: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -17,6 +19,7 @@ const pillarIcons: Record<string, React.ComponentType<{ className?: string }>> =
 };
 
 export default function LandingRolesSection() {
+  const { site } = usePlatformSite();
   return (
     <>
       <section className="py-16 sm:py-20 bg-background border-t border-border">
@@ -62,7 +65,7 @@ export default function LandingRolesSection() {
                       <Icon className="w-4 h-4" />
                     </div>
                     <h3 className="font-semibold text-foreground text-sm mb-1">{role.title}</h3>
-                    <p className="text-xs text-muted leading-relaxed">{role.description}</p>
+                    <p className="text-xs text-muted leading-relaxed">{interpolateRates(role.description, site)}</p>
                   </div>
                 );
               })}
@@ -88,7 +91,7 @@ export default function LandingRolesSection() {
                 <div key={pillar.title} className="bg-background p-5 rounded-[var(--radius-card)] border border-border">
                   <Icon className="w-5 h-5 text-foreground mb-3" />
                   <h3 className="font-semibold text-foreground text-sm mb-1.5">{pillar.title}</h3>
-                  <p className="text-xs text-muted leading-relaxed">{pillar.description}</p>
+                  <p className="text-xs text-muted leading-relaxed">{interpolateRates(pillar.description, site)}</p>
                 </div>
               );
             })}

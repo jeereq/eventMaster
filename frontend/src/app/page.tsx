@@ -20,6 +20,7 @@ import SiteHeader from '@/components/SiteHeader';
 import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
 import { Modal, Button, Skeleton } from '@/components/ui';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { commissionPercent, depositPercent } from '@/lib/platformRates';
 import {
   ArrowRight, LayoutGrid, QrCode, Mail, Sparkles,
   Building2, Users, CalendarCheck, Smartphone, Share2,
@@ -171,7 +172,7 @@ export default function Home() {
               {
                 icon: CalendarCheck,
                 title: 'Réservations & packs',
-                text: 'Compte client sans licence SaaS : explorer, favoris, 3 packs (éco / équilibré / confort). Acompte 30 % versé au pro, hors plateforme. Commission vendeur 8 %.',
+                text: `Compte client sans licence SaaS : explorer, favoris, 3 packs (éco / équilibré / confort). Acompte ${depositPercent(site)} % versé au pro, hors plateforme. Commission vendeur ${commissionPercent(site)} %.`,
               },
               {
                 icon: Share2,

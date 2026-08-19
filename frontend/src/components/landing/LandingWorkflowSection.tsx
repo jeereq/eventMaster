@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useId, useState } from 'react';
+import React, { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Mail, MessageSquare, QrCode, ScanLine, MapPin, FileText, LayoutGrid,
@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { interpolateRates } from '@/lib/platformRates';
 
 type JourneyId = 'organizer' | 'guest' | 'client' | 'venue' | 'vendor' | 'protocol' | 'commercial';
 
@@ -154,8 +156,8 @@ const JOURNEYS: Journey[] = [
       },
       {
         title: 'Réserver',
-        description: 'Devis ou demande de date. Acompte 30 % versé au professionnel, hors EventMaster.',
-        detail: 'Après acceptation, versez l’acompte directement au pro. EventMaster n’encaisse pas. Le vendeur paie 8 % de commission sur les réservations confirmées — pas vous.',
+        description: 'Devis ou demande de date. Acompte {depositPercent} % versé au professionnel, hors EventMaster.',
+        detail: 'Après acceptation, versez l’acompte directement au pro. EventMaster n’encaisse pas. Le vendeur paie {commissionPercent} % de commission sur les réservations confirmées — pas vous.',
         outcome: 'Date bloquée une fois l’acompte marqué et confirmé.',
         icon: CalendarCheck,
       },
@@ -209,7 +211,7 @@ const JOURNEYS: Journey[] = [
     label: 'Prestataire',
     eyebrow: 'Parcours prestataire',
     title: 'De la demande à la date bloquée',
-    intro: 'Métiers ou locations. Acompte 30 % hors plateforme ; commission vendeur 8 %.',
+    intro: 'Métiers ou locations. Acompte {depositPercent} % hors plateforme ; commission vendeur {commissionPercent} %.',
     cta: { href: '/register?kind=VENDOR', label: 'Publier mes offres' },
     results: [
       { icon: Briefcase, label: 'Fiches illimitées' },
@@ -233,14 +235,14 @@ const JOURNEYS: Journey[] = [
       },
       {
         title: 'Acompte',
-        description: 'Acceptez. Le client verse 30 % hors EventMaster ; vous marquez l’acompte reçu.',
+        description: 'Acceptez. Le client verse {depositPercent} % hors EventMaster ; vous marquez l’acompte reçu.',
         detail: 'EventMaster n’encaisse pas. Vous confirmez seulement après réception réelle de l’acompte.',
         outcome: 'Acompte tracé, sans intermédiaire de paiement.',
         icon: Wallet,
       },
       {
         title: 'Confirmer',
-        description: 'Bloquez la date. La commission 8 % est due sur les réservations confirmées.',
+        description: 'Bloquez la date. La commission {commissionPercent} % est due sur les réservations confirmées.',
         detail: 'La commission vendeur est distincte de l’abonnement SaaS. Elle s’applique aux réservations confirmées.',
         outcome: 'Date bloquée, commission due.',
         icon: CalendarCheck,
@@ -295,7 +297,7 @@ const JOURNEYS: Journey[] = [
     label: 'Commercial',
     eyebrow: 'Parcours réseau commercial',
     title: 'Parrainer et suivre les commissions',
-    intro: 'Code de parrainage, création d’organisations et commissions (30 % sur la facturation de période).',
+    intro: 'Code de parrainage, création d’organisations et commissions ({commercialPercent} % sur la facturation de période).',
     cta: { href: '/contact', label: 'Activer mon parrainage' },
     results: [
       { icon: Share2, label: 'Code / lien' },
@@ -320,7 +322,7 @@ const JOURNEYS: Journey[] = [
       {
         title: 'Suivre',
         description: 'Licences, renouvellements et commissions dans le tableau de bord.',
-        detail: 'Les commissions se calculent sur les factures validées, selon le taux contractuel (souvent 30 % sur la période facturée).',
+        detail: 'Les commissions se calculent sur les factures validées, selon le taux contractuel (souvent {commercialPercent} % sur la période facturée).',
         outcome: 'Pipeline et montants visibles.',
         icon: Wallet,
       },
@@ -336,11 +338,26 @@ const JOURNEYS: Journey[] = [
 ];
 
 export default function LandingWorkflowSection() {
+  const { site } = usePlatformSite();
   const [activeId, setActiveId] = useState<JourneyId>('organizer');
   const [stepIndex, setStepIndex] = useState(0);
   const tabsId = useId();
 
-  const journey = JOURNEYS.find((item) => item.id === activeId) || JOURNEYS[0];
+  const journeys = useMemo(
+    () =>
+      JOURNEYS.map((item) => ({
+        ...item,
+        intro: interpolateRates(item.intro, site),
+        steps: item.steps.map((step) => ({
+          ...step,
+          description: interpolateRates(step.description, site),
+          detail: interpolateRates(step.detail, site),
+        })),
+      })),
+    [site],
+  );
+
+  const journey = journeys.find((item) => item.id === activeId) || journeys[0];
   const step = journey.steps[stepIndex] ?? journey.steps[0];
   const StepIcon = step.icon;
   const progress = ((stepIndex + 1) / journey.steps.length) * 100;

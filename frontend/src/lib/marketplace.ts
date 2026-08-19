@@ -394,7 +394,10 @@ export function bookingPipelineIndex(item: MarketplaceBookingItem): number {
   return 0;
 }
 
-export function bookingNextStep(item: MarketplaceBookingItem): { title: string; detail: string } {
+export function bookingNextStep(
+  item: MarketplaceBookingItem,
+  depositPct = Math.round(MARKETPLACE_DEPOSIT_RATE * 100),
+): { title: string; detail: string } {
   const isVendor = item.viewerRole === 'vendor';
   if (item.status === 'CANCELLED') {
     return { title: 'Annulée', detail: 'Aucune action requise.' };
@@ -412,8 +415,8 @@ export function bookingNextStep(item: MarketplaceBookingItem): { title: string; 
   }
   if (item.status === 'ACCEPTED' && !item.depositMarkedAt) {
     return isVendor
-      ? { title: 'Acompte à marquer', detail: 'Quand les 30 % sont versés hors plateforme, marquez l’acompte reçu.' }
-      : { title: 'Acompte à verser', detail: `Versez ${Math.round(MARKETPLACE_DEPOSIT_RATE * 100)} % au professionnel hors EventMaster.` };
+      ? { title: 'Acompte à marquer', detail: `Quand les ${depositPct} % sont versés hors plateforme, marquez l’acompte reçu.` }
+      : { title: 'Acompte à verser', detail: `Versez ${depositPct} % au professionnel hors EventMaster.` };
   }
   return isVendor
     ? { title: 'À confirmer', detail: 'Confirmez pour bloquer la date au calendrier.' }
@@ -481,13 +484,20 @@ export function formatBookingPeriod(start?: string | null, end?: string | null) 
   return `du ${formatDateKeyFr(from)} au ${formatDateKeyFr(to)}`;
 }
 
-export function previewMarketplaceAmounts(amountFc: number, dayCount = 1, priceUnit?: string | null) {
+export function previewMarketplaceAmounts(
+  amountFc: number,
+  dayCount = 1,
+  priceUnit?: string | null,
+  rates?: { commissionRate?: number; depositRate?: number },
+) {
   const days = Math.max(1, dayCount);
   const amount = Math.max(0, Math.round(priceUnit === 'DAY' ? amountFc * days : amountFc));
+  const depositRate = rates?.depositRate ?? MARKETPLACE_DEPOSIT_RATE;
+  const commissionRate = rates?.commissionRate ?? MARKETPLACE_COMMISSION_RATE;
   return {
     amountFc: amount,
-    depositFc: Math.round(amount * MARKETPLACE_DEPOSIT_RATE),
-    commissionFc: Math.round(amount * MARKETPLACE_COMMISSION_RATE),
+    depositFc: Math.round(amount * depositRate),
+    commissionFc: Math.round(amount * commissionRate),
   };
 }
 

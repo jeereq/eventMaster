@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { parseRateInput, rateToPercent } from '../utils/ratePercent';
 
 const settingsFilePath = path.join(__dirname, '..', 'config', 'settings.json');
 
@@ -26,6 +27,14 @@ export interface PlatformSettings {
   twilioAccountSid: string;
   twilioAuthToken: string;
   twilioPhoneNumber: string;
+  /** Commission vendeur marketplace (0.08 = 8 %). */
+  marketplaceCommissionRate: number;
+  /** Acompte organisateur hors plateforme (0.3 = 30 %). */
+  marketplaceDepositRate: number;
+  /** Commission commerciale plateforme au premier paiement (0.3 = 30 %). */
+  commercialFirstCommissionRate: number;
+  /** Commission commerciale plateforme sur les paiements suivants (0.2 = 20 %). */
+  commercialRenewalCommissionRate: number;
 }
 
 /** Champs exposés publiquement (sans secrets). */
@@ -45,6 +54,14 @@ export interface PublicSiteConfig {
   allowRegistration: boolean;
   brandPrimary: string;
   brandAccent: string;
+  marketplaceCommissionRate: number;
+  marketplaceDepositRate: number;
+  marketplaceCommissionPercent: number;
+  marketplaceDepositPercent: number;
+  commercialFirstCommissionRate: number;
+  commercialRenewalCommissionRate: number;
+  commercialFirstCommissionPercent: number;
+  commercialRenewalCommissionPercent: number;
 }
 
 export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
@@ -71,6 +88,10 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || '',
   twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || '',
   twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER || '',
+  marketplaceCommissionRate: 0.08,
+  marketplaceDepositRate: 0.3,
+  commercialFirstCommissionRate: 0.3,
+  commercialRenewalCommissionRate: 0.2,
 };
 
 function ensureSettingsDir() {
@@ -90,12 +111,23 @@ export function loadPlatformSettings(): PlatformSettings {
     if (fs.existsSync(settingsFilePath)) {
       const raw = JSON.parse(fs.readFileSync(settingsFilePath, 'utf-8')) as Partial<PlatformSettings>;
       const { plans: _ignored, ...rest } = raw as Partial<PlatformSettings> & { plans?: unknown };
-      return { ...DEFAULT_PLATFORM_SETTINGS, ...rest };
+      const merged = { ...DEFAULT_PLATFORM_SETTINGS, ...rest };
+      return normalizeStoredRates(merged);
     }
   } catch (error) {
     console.warn('[PlatformSettings] Impossible de lire settings.json:', error);
   }
   return { ...DEFAULT_PLATFORM_SETTINGS };
+}
+
+function normalizeStoredRates(settings: PlatformSettings): PlatformSettings {
+  return {
+    ...settings,
+    marketplaceCommissionRate: parseRateInput(settings.marketplaceCommissionRate, 0.08, 0.01, 0.5),
+    marketplaceDepositRate: parseRateInput(settings.marketplaceDepositRate, 0.3, 0.05, 0.9),
+    commercialFirstCommissionRate: parseRateInput(settings.commercialFirstCommissionRate, 0.3, 0, 1),
+    commercialRenewalCommissionRate: parseRateInput(settings.commercialRenewalCommissionRate, 0.2, 0, 1),
+  };
 }
 
 export function savePlatformSettings(
@@ -112,6 +144,11 @@ export function savePlatformSettings(
       (next as unknown as Record<string, unknown>)[key] = rest[key];
     }
   }
+
+  next.marketplaceCommissionRate = parseRateInput(next.marketplaceCommissionRate, 0.08, 0.01, 0.5);
+  next.marketplaceDepositRate = parseRateInput(next.marketplaceDepositRate, 0.3, 0.05, 0.9);
+  next.commercialFirstCommissionRate = parseRateInput(next.commercialFirstCommissionRate, 0.3, 0, 1);
+  next.commercialRenewalCommissionRate = parseRateInput(next.commercialRenewalCommissionRate, 0.2, 0, 1);
 
   fs.writeFileSync(settingsFilePath, JSON.stringify(next, null, 2), 'utf-8');
   return next;
@@ -134,6 +171,20 @@ export function getPublicSiteConfig(settings = loadPlatformSettings()): PublicSi
     allowRegistration: settings.allowRegistration !== false,
     brandPrimary: settings.brandPrimary || '',
     brandAccent: settings.brandAccent || '',
+    marketplaceCommissionRate: parseRateInput(settings.marketplaceCommissionRate, 0.08, 0.01, 0.5),
+    marketplaceDepositRate: parseRateInput(settings.marketplaceDepositRate, 0.3, 0.05, 0.9),
+    marketplaceCommissionPercent: rateToPercent(
+      parseRateInput(settings.marketplaceCommissionRate, 0.08, 0.01, 0.5),
+    ),
+    marketplaceDepositPercent: rateToPercent(parseRateInput(settings.marketplaceDepositRate, 0.3, 0.05, 0.9)),
+    commercialFirstCommissionRate: parseRateInput(settings.commercialFirstCommissionRate, 0.3, 0, 1),
+    commercialRenewalCommissionRate: parseRateInput(settings.commercialRenewalCommissionRate, 0.2, 0, 1),
+    commercialFirstCommissionPercent: rateToPercent(
+      parseRateInput(settings.commercialFirstCommissionRate, 0.3, 0, 1),
+    ),
+    commercialRenewalCommissionPercent: rateToPercent(
+      parseRateInput(settings.commercialRenewalCommissionRate, 0.2, 0, 1),
+    ),
   };
 }
 
