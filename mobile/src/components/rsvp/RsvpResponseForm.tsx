@@ -18,22 +18,11 @@ interface Props {
   onSubmit: (rsvp: RsvpStatus, preferences: ReturnType<typeof buildRsvpPreferencesPayload>) => Promise<void>;
 }
 
-const MEAL_OPTIONS = [
-  { value: 'none', label: 'Standard' },
-  { value: 'vegetarian', label: 'Végétarien' },
-  { value: 'vegan', label: 'Vegan' },
-  { value: 'halal', label: 'Halal' },
-  { value: 'kosher', label: 'Kosher' },
-  { value: 'gluten_free', label: 'Sans gluten' },
-];
-
 export function RsvpResponseForm({ guest, rsvpFields, onSubmit }: Props) {
   const prefs = guest.preferences;
   const [rsvpStatus, setRsvpStatus] = useState<RsvpStatus>(
     guest.rsvp === 'DECLINED' ? 'DECLINED' : 'ACCEPTED',
   );
-  const [allergies, setAllergies] = useState(prefs?.allergies ?? '');
-  const [specialMeal, setSpecialMeal] = useState(prefs?.specialMeal ?? 'none');
   const [notes, setNotes] = useState(prefs?.notes ?? '');
   const [fieldValues, setFieldValues] = useState<Record<string, unknown>>(() =>
     restoreFieldValuesFromPreferences(rsvpFields, prefs),
@@ -50,12 +39,14 @@ export function RsvpResponseForm({ guest, rsvpFields, onSubmit }: Props) {
       return;
     }
 
-    for (const field of rsvpFields) {
-      if (!field.required) continue;
-      const val = fieldValues[field.id];
-      if (val === undefined || val === null || val === '') {
-        setError(`Le champ « ${field.label} » est obligatoire.`);
-        return;
+    if (rsvpStatus === 'ACCEPTED') {
+      for (const field of rsvpFields) {
+        if (!field.required) continue;
+        const val = fieldValues[field.id];
+        if (val === undefined || val === null || val === '') {
+          setError(`Le champ « ${field.label} » est obligatoire.`);
+          return;
+        }
       }
     }
 
@@ -63,8 +54,8 @@ export function RsvpResponseForm({ guest, rsvpFields, onSubmit }: Props) {
     setLoading(true);
     try {
       const preferences = buildRsvpPreferencesPayload({
-        allergies,
-        specialMeal,
+        allergies: '',
+        specialMeal: 'none',
         notes,
         rsvpFields,
         fieldValues,
@@ -121,31 +112,7 @@ export function RsvpResponseForm({ guest, rsvpFields, onSubmit }: Props) {
 
       {rsvpStatus === 'ACCEPTED' ? (
         <View style={styles.fields}>
-          <Input
-            label="Allergies alimentaires"
-            value={allergies}
-            onChangeText={setAllergies}
-            placeholder="Ex. arachides, fruits de mer…"
-          />
-
-          <View style={styles.mealBlock}>
-            <Text style={styles.mealLabel}>Régime / menu</Text>
-            <View style={styles.mealGrid}>
-              {MEAL_OPTIONS.map((opt) => (
-                <Pressable
-                  key={opt.value}
-                  onPress={() => setSpecialMeal(opt.value)}
-                  style={[styles.mealChip, specialMeal === opt.value && styles.mealChipActive]}
-                >
-                  <Text
-                    style={[styles.mealChipText, specialMeal === opt.value && styles.mealChipTextActive]}
-                  >
-                    {opt.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
+          {customFieldsBlock}
 
           <Input
             label="Notes pour l'organisateur"
@@ -156,8 +123,6 @@ export function RsvpResponseForm({ guest, rsvpFields, onSubmit }: Props) {
             numberOfLines={3}
             style={styles.textarea}
           />
-
-          {customFieldsBlock}
         </View>
       ) : null}
 

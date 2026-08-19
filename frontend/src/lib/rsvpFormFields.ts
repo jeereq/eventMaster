@@ -130,20 +130,63 @@ export function specialMealLabel(value?: string | null): string {
   return SPECIAL_MEAL_OPTIONS.find((o) => o.value === (value || 'none'))?.label || 'Standard';
 }
 
+/** Clés toujours présentes et obligatoires sur toute invitation. */
+export const MANDATORY_RSVP_FIELD_KEYS = ['genre', 'allergies', 'boissons', 'type_menu'] as const;
+
+const MANDATORY_RSVP_KEY_ALIASES: Record<string, string[]> = {
+  genre: ['genre', 'gender', 'sexe'],
+  allergies: ['allergies', 'allergie', 'allergy'],
+  boissons: ['boissons', 'boisson', 'drinks', 'drink'],
+  type_menu: ['type_menu', 'type_de_menu', 'special_meal', 'regime'],
+};
+
+/** Champs RSVP imposés sur tous les modèles (formulaire invité). */
+export const MANDATORY_RSVP_FIELD_PRESETS: Array<Omit<RsvpField, 'id'> & { id: string }> = [
+  {
+    id: 'mandatory_genre',
+    type: 'radio',
+    label: 'Genre',
+    options: 'Femme, Homme, Autre',
+    required: true,
+    analyticsKey: 'genre',
+    category: 'demographic',
+  },
+  {
+    id: 'mandatory_allergies',
+    type: 'text',
+    label: 'Allergies',
+    required: true,
+    analyticsKey: 'allergies',
+    category: 'preference',
+    placeholder: 'Aucune si pas d’allergie',
+    helpText: 'Indiquez vos allergies alimentaires, ou « Aucune ».',
+  },
+  {
+    id: 'mandatory_boissons',
+    type: 'select',
+    label: 'Boissons',
+    options: 'Eau, Jus, Soft, Vin, Bière, Sans alcool',
+    required: true,
+    analyticsKey: 'boissons',
+    category: 'preference',
+  },
+  {
+    id: 'mandatory_type_menu',
+    type: 'select',
+    label: 'Type de menu',
+    options: 'Standard, Végétarien, Végétalien (vegan), Halal, Casher',
+    required: true,
+    analyticsKey: 'type_menu',
+    category: 'preference',
+    helpText: 'Régime ou type de plat prévu pour vous.',
+  },
+];
+
 /**
- * Champs RSVP recommandés pour le reporting (stats + export).
- * Allergies / régime standard sont déjà collectés hors bloc custom sur le portail.
+ * Champs RSVP optionnels pour le reporting (stats + export).
+ * Les 4 champs obligatoires (genre, allergies, boissons, type de menu) sont ailleurs.
  */
 export const REPORTING_RSVP_FIELD_PRESETS: Array<Omit<RsvpField, 'id'> & { id?: string }> = [
-  {
-    type: 'select',
-    label: 'Choix du menu',
-    options: 'Poulet, Poisson, Végétarien, Autre',
-    required: true,
-    analyticsKey: 'choix_menu',
-    category: 'preference',
-    helpText: 'Utilisé dans les statistiques de participation et l’export CSV.',
-  },
   {
     type: 'yes_no',
     label: 'Accompagné d’un plus-one',
@@ -161,19 +204,81 @@ export const REPORTING_RSVP_FIELD_PRESETS: Array<Omit<RsvpField, 'id'> & { id?: 
   },
 ];
 
+export function isMandatoryRsvpAnalyticsKey(key?: string | null): boolean {
+  const normalized = (key || '').trim().toLowerCase();
+  if (!normalized) return false;
+  return Object.values(MANDATORY_RSVP_KEY_ALIASES).some((aliases) => aliases.includes(normalized));
+}
+
+export function isMandatoryRsvpField(field: Pick<RsvpField, 'analyticsKey' | 'id' | 'label'>): boolean {
+  if (isMandatoryRsvpAnalyticsKey(field.analyticsKey)) return true;
+  if (field.id && MANDATORY_RSVP_FIELD_PRESETS.some((p) => p.id === field.id)) return true;
+  return isMandatoryRsvpAnalyticsKey(slugifyAnalyticsKey(field.label || ''));
+}
+
+function fieldMatchesMandatoryKey(field: RsvpField, canonicalKey: string): boolean {
+  const aliases = MANDATORY_RSVP_KEY_ALIASES[canonicalKey] || [canonicalKey];
+  const candidates = [
+    field.analyticsKey,
+    slugifyAnalyticsKey(field.label || ''),
+    field.id,
+  ]
+    .filter(Boolean)
+    .map((value) => String(value).toLowerCase());
+  return candidates.some((value) => aliases.includes(value));
+}
+
+export function createMandatoryRsvpFields(): RsvpField[] {
+  return MANDATORY_RSVP_FIELD_PRESETS.map((preset) => normalizeRsvpField({ ...preset, required: true }));
+}
+
+/** Ajoute les 4 champs obligatoires s’ils manquent et les verrouille en requis. */
+export function ensureMandatoryRsvpFields(fields: RsvpField[] | null | undefined): RsvpField[] {
+  const normalized = (fields || []).map((f) => normalizeRsvpField(f));
+  const missing: RsvpField[] = [];
+
+  MANDATORY_RSVP_FIELD_PRESETS.forEach((preset) => {
+    const existing = normalized.find((field) => fieldMatchesMandatoryKey(field, preset.analyticsKey));
+    if (existing) {
+      existing.required = true;
+      if (!existing.analyticsKey) existing.analyticsKey = preset.analyticsKey;
+      return;
+    }
+    missing.push(
+      normalizeRsvpField({
+        ...preset,
+        id: preset.id,
+        required: true,
+      }),
+    );
+  });
+
+  return [...missing, ...normalized];
+}
+
+export function ensureMandatoryRsvpFieldsOnElements<T extends { type?: string; rsvpFields?: RsvpField[] }>(
+  elements: T[] | null | undefined,
+): T[] {
+  return (elements || []).map((el) => {
+    if (el.type !== 'rsvp-block') return el;
+    return { ...el, rsvpFields: ensureMandatoryRsvpFields(el.rsvpFields) };
+  });
+}
+
 export function createDefaultReportingRsvpFields(): RsvpField[] {
   const stamp = Date.now();
-  return REPORTING_RSVP_FIELD_PRESETS.map((preset, index) =>
+  const extras = REPORTING_RSVP_FIELD_PRESETS.map((preset, index) =>
     normalizeRsvpField({
       ...preset,
       id: preset.id || `rf_${stamp}_${index}`,
     }),
   );
+  return ensureMandatoryRsvpFields(extras);
 }
 
 /** Ajoute les presets reporting manquants (par analyticsKey) sans dupliquer. */
 export function ensureReportingRsvpFields(fields: RsvpField[]): RsvpField[] {
-  const normalized = fields.map((f) => normalizeRsvpField(f));
+  const normalized = ensureMandatoryRsvpFields(fields);
   const existingKeys = new Set(
     normalized.map((f) => (f.analyticsKey || slugifyAnalyticsKey(f.label)).toLowerCase()),
   );
@@ -254,6 +359,18 @@ function coerceFieldValue(type: RsvpFieldType, rawValue: unknown): string | numb
   return String(rawValue ?? '');
 }
 
+function mealValueFromLabel(raw: string): string {
+  const value = raw.trim();
+  if (SPECIAL_MEAL_OPTIONS.some((o) => o.value === value)) return value;
+  const n = value.toLowerCase();
+  if (n.includes('vegan') || n.includes('végétalien') || n.includes('vegetalien')) return 'vegan';
+  if (n.includes('végétarien') || n.includes('vegetarien') || n.includes('vegetarian')) return 'vegetarian';
+  if (n.includes('halal')) return 'halal';
+  if (n.includes('casher') || n.includes('kosher')) return 'kosher';
+  if (n.includes('standard') || n === 'none' || n === 'aucun') return 'none';
+  return 'none';
+}
+
 export function buildRsvpPreferencesPayload(params: {
   allergies: string;
   specialMeal: string;
@@ -282,9 +399,12 @@ export function buildRsvpPreferencesPayload(params: {
     });
   }
 
+  const allergiesFromField = customFields.allergies ?? customFields.allergie;
+  const menuFromField = customFields.type_menu ?? customFields.special_meal ?? customFields.regime;
+
   return {
-    allergies: params.allergies,
-    specialMeal: params.specialMeal,
+    allergies: String(allergiesFromField ?? params.allergies ?? '').trim(),
+    specialMeal: mealValueFromLabel(String(menuFromField ?? params.specialMeal ?? 'none')),
     notes: params.notes,
     customFields,
     rsvpFormData,
@@ -319,7 +439,25 @@ export function restoreFieldValuesFromPreferences(
     }
   }
 
+  hydrateMandatoryFromPreferences(values, rsvpFields, preferences);
   return values;
+}
+
+function hydrateMandatoryFromPreferences(
+  values: Record<string, string | number | boolean>,
+  rsvpFields: RsvpField[],
+  preferences: GuestRsvpPreferences,
+) {
+  for (const field of rsvpFields.map(normalizeRsvpField)) {
+    if (values[field.id] !== undefined) continue;
+    const key = (field.analyticsKey || '').toLowerCase();
+    if (key === 'allergies' || key === 'allergie') {
+      if (preferences.allergies) values[field.id] = preferences.allergies;
+    }
+    if (key === 'type_menu' || key === 'special_meal' || key === 'regime') {
+      if (preferences.specialMeal) values[field.id] = specialMealLabel(preferences.specialMeal);
+    }
+  }
 }
 
 export function getCustomFieldValue(
@@ -365,34 +503,39 @@ export interface ExtractedRsvpField {
 
 export function extractRsvpFieldsFromTemplateContent(content: unknown): ExtractedRsvpField[] {
   const fields: ExtractedRsvpField[] = [];
-  if (!content || typeof content !== 'object') return fields;
+  const toExtracted = (f: RsvpField): ExtractedRsvpField => ({
+    id: f.id,
+    label: f.label,
+    type: f.type,
+    analyticsKey: f.analyticsKey!,
+    category: f.category,
+    options: parseFieldOptions(f.options),
+  });
+
+  if (!content) return createMandatoryRsvpFields().map(toExtracted);
 
   let contentObj = content as { elements?: Array<{ type?: string; rsvpFields?: RsvpField[] }> };
   if (typeof content === 'string') {
     try {
       contentObj = JSON.parse(content);
     } catch {
-      return fields;
+      return createMandatoryRsvpFields().map(toExtracted);
     }
   }
 
   contentObj.elements?.forEach((el) => {
-    if (el.type === 'rsvp-block' && el.rsvpFields) {
-      el.rsvpFields.forEach((raw) => {
-        const f = normalizeRsvpField(raw);
+    if (el.type === 'rsvp-block') {
+      ensureMandatoryRsvpFields(el.rsvpFields).forEach((f) => {
         if (!fields.some((existing) => existing.analyticsKey === f.analyticsKey)) {
-          fields.push({
-            id: f.id,
-            label: f.label,
-            type: f.type,
-            analyticsKey: f.analyticsKey!,
-            category: f.category,
-            options: parseFieldOptions(f.options),
-          });
+          fields.push(toExtracted(f));
         }
       });
     }
   });
+
+  if (fields.length === 0) {
+    return createMandatoryRsvpFields().map(toExtracted);
+  }
 
   return fields;
 }

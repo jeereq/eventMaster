@@ -22,6 +22,7 @@ import {
   wrapBrandedWhatsApp,
 } from '../utils/brandedMessaging';
 import { escapeHtml, resolveBranding } from '../utils/brandingUtils';
+import { ensureMandatoryRsvpFieldsOnContent } from '../utils/mandatoryRsvpFields';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -367,6 +368,20 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
     const eventForClient = placementAccessible
       ? eventWithoutTenant
       : { ...eventWithoutTenant, latitude: null, longitude: null };
+
+    if (eventForClient && typeof eventForClient === 'object' && Array.isArray((eventForClient as { invitations?: unknown[] }).invitations)) {
+      (eventForClient as { invitations: Array<{ template?: { content?: unknown } | null }> }).invitations =
+        (eventForClient as { invitations: Array<{ template?: { content?: unknown } | null }> }).invitations.map((inv) => {
+          if (!inv?.template) return inv;
+          return {
+            ...inv,
+            template: {
+              ...inv.template,
+              content: ensureMandatoryRsvpFieldsOnContent(inv.template.content),
+            },
+          };
+        });
+    }
 
     return res.json({
       ...guestWithoutEvent,

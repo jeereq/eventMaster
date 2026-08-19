@@ -21,6 +21,9 @@ import {
 import {
   type RsvpField,
   buildRsvpPreferencesPayload,
+  ensureMandatoryRsvpFields,
+  ensureMandatoryRsvpFieldsOnElements,
+  createMandatoryRsvpFields,
   getCanvasStyle,
   parseFieldOptions,
   restoreFieldValuesFromPreferences,
@@ -209,14 +212,12 @@ export default function RsvpPage() {
           setAdditionalNotes(data.preferences.notes || '');
           const templateContent = data.event?.invitations?.[0]?.template?.content;
           const elements = templateContent?.elements || [];
-          const rsvpFields = elements
-            .filter((el: { type?: string }) => el.type === 'rsvp-block')
-            .flatMap((el: { rsvpFields?: RsvpField[] }) => el.rsvpFields || []);
-          setCustomFieldValues(
-            rsvpFields.length > 0
-              ? restoreFieldValuesFromPreferences(rsvpFields, data.preferences)
-              : data.preferences.customFields || {}
+          const rsvpFields = ensureMandatoryRsvpFields(
+            elements
+              .filter((el: { type?: string }) => el.type === 'rsvp-block')
+              .flatMap((el: { rsvpFields?: RsvpField[] }) => el.rsvpFields || []),
           );
+          setCustomFieldValues(restoreFieldValuesFromPreferences(rsvpFields, data.preferences));
         }
       } catch (err: any) {
         console.error('Error fetching RSVP details:', err);
@@ -397,9 +398,23 @@ export default function RsvpPage() {
 
     try {
       const templateContent = guest?.event?.invitations?.[0]?.template?.content;
-      const rsvpFields = (templateContent?.elements || [])
-        .filter((el: { type?: string }) => el.type === 'rsvp-block')
-        .flatMap((el: { rsvpFields?: RsvpField[] }) => el.rsvpFields || []);
+      const rsvpFields = ensureMandatoryRsvpFields(
+        (templateContent?.elements || [])
+          .filter((el: { type?: string }) => el.type === 'rsvp-block')
+          .flatMap((el: { rsvpFields?: RsvpField[] }) => el.rsvpFields || []),
+      );
+
+      if (rsvpStatus === 'ACCEPTED') {
+        for (const field of rsvpFields) {
+          if (!field.required) continue;
+          const val = customFieldValues[field.id];
+          if (val === undefined || val === null || val === '') {
+            setError(`Le champ « ${field.label} » est obligatoire.`);
+            setSubmitting(false);
+            return;
+          }
+        }
+      }
 
       const preferences = buildRsvpPreferencesPayload({
         allergies,
@@ -1198,7 +1213,7 @@ export default function RsvpPage() {
   const floralType = global.floralType || 'roses';
   const floralDensity = global.floralDensity !== undefined ? global.floralDensity : 40;
   const canvasStyle = getCanvasStyle(global);
-  const templateElements = themedInvitation.elements;
+  const templateElements = ensureMandatoryRsvpFieldsOnElements(themedInvitation.elements);
   const inlineTemplateElements = templateElements.filter(
     (el) => el.type !== 'rsvp-block' || el.rsvpPlacement !== 'outside',
   );
@@ -1407,7 +1422,7 @@ export default function RsvpPage() {
         {rsvpStatus === 'ACCEPTED' && (
           <div className="space-y-4 border-t border-border/60 pt-4 text-left">
             {/* Custom Fields */}
-            {el.rsvpFields && el.rsvpFields.map((field: RsvpField) => (
+            {ensureMandatoryRsvpFields(el.rsvpFields || []).map((field: RsvpField) => (
               <div key={field.id} className="space-y-1.5">
                 {field.type !== 'checkbox' && (
                   <label className="block text-xs font-bold text-muted uppercase tracking-wider">
@@ -1423,32 +1438,6 @@ export default function RsvpPage() {
 
             {/* Standard Fields */}
             <div className="space-y-4 border-t border-border pt-4">
-              <div>
-                <label className="block text-xs font-bold text-muted uppercase mb-1">Type de Menu</label>
-                <select
-                  value={specialMeal}
-                  onChange={e => setSpecialMeal(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-xl text-sm text-foreground focus:outline-primary bg-surface"
-                >
-                  <option value="none">Standard</option>
-                  <option value="vegetarian">Végétarien</option>
-                  <option value="vegan">Végétalien (Vegan)</option>
-                  <option value="halal">Halal</option>
-                  <option value="kosher">Casher</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-muted uppercase mb-1">Allergies éventuelles</label>
-                <input
-                  type="text"
-                  value={allergies}
-                  onChange={e => setAllergies(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-xl text-sm text-foreground focus:outline-primary bg-surface"
-                  placeholder="Ex: Arachides, fruits de mer..."
-                />
-              </div>
-
               <div>
                 <label className="block text-xs font-bold text-muted uppercase mb-1">Message à l'organisateur</label>
                 <textarea
@@ -2172,35 +2161,23 @@ export default function RsvpPage() {
                   <div className="p-5 border border-border rounded-[var(--radius-card)] bg-surface space-y-4 text-sm">
                     <div className="flex items-center gap-2 font-bold text-foreground border-b border-border pb-3">
                       <Utensils className="w-5 h-5 text-primary" />
-                      <h4>Préférences de repas & Notes</h4>
+                      <h4>Informations obligatoires</h4>
                     </div>
 
                     <div className="space-y-3">
-                      <div>
-                        <label className="block text-xs font-bold text-muted uppercase mb-1">Type de Menu</label>
-                        <select
-                          value={specialMeal}
-                          onChange={e => setSpecialMeal(e.target.value)}
-                          className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-primary"
-                        >
-                          <option value="none">Standard</option>
-                          <option value="vegetarian">Végétarien</option>
-                          <option value="vegan">Végétalien (Vegan)</option>
-                          <option value="halal">Halal</option>
-                          <option value="kosher">Casher</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-muted uppercase mb-1">Allergies éventuelles</label>
-                        <input
-                          type="text"
-                          value={allergies}
-                          onChange={e => setAllergies(e.target.value)}
-                          className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-primary"
-                          placeholder="Ex: Arachides, fruits de mer, lactose..."
-                        />
-                      </div>
+                      {createMandatoryRsvpFields().map((field) => (
+                        <div key={field.id} className="space-y-1.5">
+                          {field.type !== 'checkbox' && (
+                            <label className="block text-xs font-bold text-muted uppercase tracking-wider">
+                              {field.label} <span className="text-rose-500">*</span>
+                            </label>
+                          )}
+                          {field.helpText && (
+                            <p className="text-[10px] text-muted">{field.helpText}</p>
+                          )}
+                          {renderRsvpFieldInput(field)}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}

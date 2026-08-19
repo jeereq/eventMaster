@@ -1,4 +1,5 @@
 import type { PlanType } from '@prisma/client';
+import { ensureMandatoryRsvpFieldsOnContent } from '../../src/utils/mandatoryRsvpFields';
 
 export const SEED_PASSWORD = 'password123';
 
@@ -25,7 +26,7 @@ export function buildTemplateContent(
   elements: TemplateElement[],
   global: Record<string, unknown> = {},
 ) {
-  return {
+  return ensureMandatoryRsvpFieldsOnContent({
     customDesign: true,
     elements,
     global: {
@@ -43,7 +44,7 @@ export function buildTemplateContent(
       landingCategory: 'private',
       ...global,
     },
-  };
+  });
 }
 
 export { GLOBAL_CATALOG_TEMPLATES } from './invitationTemplates';

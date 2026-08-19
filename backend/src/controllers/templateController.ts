@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { getPlanLimitsForTenant } from '../config/plansConfig';
 import { assertPlanFeature } from '../services/planFeaturesService';
+import { ensureMandatoryRsvpFieldsOnContent } from '../utils/mandatoryRsvpFields';
 
 function isCustomTemplateContent(content: unknown): boolean {
   if (!content || typeof content !== 'object') return false;
@@ -70,6 +71,7 @@ export async function getTemplates(req: AuthenticatedRequest, res: Response) {
       const isOwned = Boolean(tenantId && t.tenantId === tenantId);
       return {
         ...t,
+        content: ensureMandatoryRsvpFieldsOnContent(t.content),
         isGlobal,
         isOwned,
         canEdit: isSuperAdmin || isOwned,
@@ -129,7 +131,7 @@ export async function createTemplate(req: AuthenticatedRequest, res: Response) {
       data: {
         tenantId: finalTenantId,
         name,
-        content: content || {},
+        content: ensureMandatoryRsvpFieldsOnContent(content || {}) as object,
         showOnLanding: isSuperAdmin && !finalTenantId ? Boolean(showOnLanding) : false,
       },
     });
@@ -170,6 +172,7 @@ export async function getTemplateById(req: AuthenticatedRequest, res: Response) 
 
     return res.json({
       ...template,
+      content: ensureMandatoryRsvpFieldsOnContent(template.content),
       isGlobal,
       isOwned,
       canEdit: isSuperAdmin || isOwned,
@@ -216,7 +219,9 @@ export async function updateTemplate(req: AuthenticatedRequest, res: Response) {
 
     const updateData: Record<string, unknown> = {
       name: name !== undefined ? name : existingTemplate.name,
-      content: content !== undefined ? content : (existingTemplate.content as any),
+      content: content !== undefined
+        ? ensureMandatoryRsvpFieldsOnContent(content)
+        : ensureMandatoryRsvpFieldsOnContent(existingTemplate.content),
     };
 
     if (isSuperAdmin && targetTenantId !== undefined) {
@@ -323,7 +328,7 @@ export async function duplicateTemplate(req: AuthenticatedRequest, res: Response
       data: {
         tenantId: finalTenantId,
         name: copyName,
-        content: source.content as object,
+        content: ensureMandatoryRsvpFieldsOnContent(source.content) as object,
         showOnLanding: false,
       },
     });

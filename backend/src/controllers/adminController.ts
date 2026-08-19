@@ -16,6 +16,7 @@ import {
   isPlatformCommercial,
 } from '../services/platformCommercialScope';
 import { formatInvoiceForApi } from '../services/invoiceService';
+import { ensureMandatoryRsvpFieldsOnContent } from '../utils/mandatoryRsvpFields';
 import {
   computeExtendedExpiry,
   issueTenantPlanInvoice,
@@ -911,7 +912,7 @@ export async function getAllTemplates(req: AuthenticatedRequest, res: Response) 
         templates.map((t) => ({
           id: t.id,
           name: t.name,
-          content: t.content,
+          content: ensureMandatoryRsvpFieldsOnContent(t.content),
           isGlobal: t.tenantId === null,
           showOnLanding: t.showOnLanding,
           tenantId: t.tenantId,
@@ -951,7 +952,7 @@ export async function createGlobalTemplate(req: AuthenticatedRequest, res: Respo
     const template = await prisma.template.create({
       data: {
         name,
-        content,
+        content: ensureMandatoryRsvpFieldsOnContent(content) as object,
         showOnLanding: showOnLanding !== undefined ? Boolean(showOnLanding) : false,
         tenantId: null, // Null means it is a global template
       },

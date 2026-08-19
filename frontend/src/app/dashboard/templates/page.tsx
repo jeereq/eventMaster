@@ -31,6 +31,9 @@ import {
  createDefaultRsvpField,
  createDefaultReportingRsvpFields,
  ensureReportingRsvpFields,
+ ensureMandatoryRsvpFields,
+ ensureMandatoryRsvpFieldsOnElements,
+ isMandatoryRsvpField,
  validateRsvpFieldsForReporting,
  getCanvasStyle,
  slugifyAnalyticsKey,
@@ -381,7 +384,7 @@ export default function TemplatesPage() {
  setStudioOrigin(origin);
  setEditingTemplateId(t.id);
  setTemplateName(t.name);
- setCanvasElements(t.content?.elements || []);
+ setCanvasElements(ensureMandatoryRsvpFieldsOnElements(t.content?.elements || []));
  setSelectedTenantId(t.tenantId || '');
  
  // Load global styles
@@ -520,7 +523,7 @@ export default function TemplatesPage() {
  setElImageStyle(el.imageStyle || 'rounded');
  setElButtonStyle(el.buttonStyle || 'filled');
  setElButtonLink(el.buttonLink || '');
- setElRsvpFields(el.rsvpFields || []);
+ setElRsvpFields(ensureMandatoryRsvpFields(el.rsvpFields || []));
  setElRsvpPlacement(el.rsvpPlacement || 'inline');
  }
  };
@@ -992,6 +995,10 @@ export default function TemplatesPage() {
  };
 
  const handleUpdateRsvpField = (fieldId: string, key: keyof RsvpField, value: any) => {
+ const field = elRsvpFields.find((f) => f.id === fieldId);
+ if (field && isMandatoryRsvpField(field) && (key === 'analyticsKey' || key === 'required' || key === 'type')) {
+ return;
+ }
  const updatedFields = elRsvpFields.map(f => {
  if (f.id === fieldId) {
  const updated = { ...f, [key]: value };
@@ -1014,6 +1021,8 @@ export default function TemplatesPage() {
  };
 
  const handleDeleteRsvpField = (fieldId: string) => {
+ const field = elRsvpFields.find((f) => f.id === fieldId);
+ if (field && isMandatoryRsvpField(field)) return;
  const updatedFields = elRsvpFields.filter(f => f.id !== fieldId);
  handlePropertyChange('rsvpFields', updatedFields);
  };
@@ -1210,7 +1219,7 @@ export default function TemplatesPage() {
  ...(importedPalette ? { palette: importedPalette } : {}),
  ...(importedWithOcr ? { importedFromMockup: true, importedWithOcr } : {}),
  },
- elements: canvasElements 
+ elements: ensureMandatoryRsvpFieldsOnElements(canvasElements), 
  },
  targetTenantId: user?.role === 'SUPER_ADMIN' ? (selectedTenantId || null) : undefined,
  };
@@ -2914,8 +2923,7 @@ export default function TemplatesPage() {
  </div>
 
  <p className="text-[10px] text-muted leading-relaxed bg-surface-muted border border-border rounded-lg px-2.5 py-2">
- Chaque champ doit avoir une <strong className="text-foreground">clé analytique</strong> unique
- (exports CSV / stats). Les allergies et le régime standard sont déjà collectés sur le portail invité.
+ Genre, allergies, boissons et type de menu sont <strong className="text-foreground">obligatoires</strong> sur toutes les invitations. Vous pouvez ajouter d’autres champs ; chaque champ doit avoir une clé analytique unique.
  </p>
 
  {validateRsvpFieldsForReporting(elRsvpFields).length > 0 && (
@@ -2927,6 +2935,11 @@ export default function TemplatesPage() {
  <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
  {elRsvpFields.map((field, index) => (
  <div key={field.id} className="p-3 bg-surface-muted border border-border rounded-xl space-y-2.5 relative">
+ {isMandatoryRsvpField(field) ? (
+ <span className="absolute top-2 right-2 text-[9px] font-bold uppercase tracking-wide text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+ Obligatoire
+ </span>
+ ) : (
  <button 
  type="button"
  onClick={() => handleDeleteRsvpField(field.id)}
@@ -2935,6 +2948,7 @@ export default function TemplatesPage() {
  >
  <Trash className="w-3.5 h-3.5" />
  </button>
+ )}
 
  <div className="text-[10px] font-bold text-muted">Champ #{index + 1}</div>
 
@@ -2955,7 +2969,8 @@ export default function TemplatesPage() {
  <select 
  value={field.type}
  onChange={(e) => handleUpdateRsvpField(field.id, 'type', e.target.value)}
- className="w-full px-2 py-1 bg-surface border border-border rounded-lg text-xs focus:outline-none focus:border-primary transition"
+ disabled={isMandatoryRsvpField(field)}
+ className="w-full px-2 py-1 bg-surface border border-border rounded-lg text-xs focus:outline-none focus:border-primary transition disabled:opacity-60"
  >
  {Object.entries(RSVP_FIELD_TYPE_LABELS).map(([value, label]) => (
  <option key={value} value={value}>{label}</option>
@@ -2986,9 +3001,10 @@ export default function TemplatesPage() {
  onChange={(e) => handleUpdateRsvpField(field.id, 'analyticsKey', slugifyAnalyticsKey(e.target.value))}
  placeholder="ex. choix_menu"
  required
+ disabled={isMandatoryRsvpField(field)}
  className={`w-full px-2.5 py-1 bg-surface border rounded-lg text-xs font-mono focus:outline-none focus:border-primary transition ${
  field.analyticsKey?.trim() ? 'border-border' : 'border-rose-300'
- }`}
+ } ${isMandatoryRsvpField(field) ? 'opacity-60 cursor-not-allowed' : ''}`}
  />
  <p className="text-[9px] text-muted">Obligatoire pour exports CSV et graphiques reporting.</p>
  </div>
@@ -3007,9 +3023,10 @@ export default function TemplatesPage() {
  <label className="flex items-center gap-1.5 cursor-pointer text-xs text-muted font-semibold select-none">
  <input 
  type="checkbox" 
- checked={field.required}
+ checked={field.required || isMandatoryRsvpField(field)}
  onChange={(e) => handleUpdateRsvpField(field.id, 'required', e.target.checked)}
- className="rounded text-primary focus:ring-primary"
+ disabled={isMandatoryRsvpField(field)}
+ className="rounded text-primary focus:ring-primary disabled:opacity-60"
  />
  Requis (invité)
  </label>

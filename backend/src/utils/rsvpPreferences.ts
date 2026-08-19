@@ -31,5 +31,28 @@ export function normalizeGuestPreferences(preferences: unknown): object {
   }
 
   prefs.customFields = customFields;
+
+  const allergies = customFields.allergies ?? customFields.allergie ?? prefs.allergies;
+  if (allergies !== undefined && allergies !== null && String(allergies).trim()) {
+    prefs.allergies = String(allergies).trim();
+  }
+  const menu = customFields.type_menu ?? customFields.special_meal ?? customFields.regime ?? prefs.specialMeal;
+  if (menu !== undefined && menu !== null && String(menu).trim()) {
+    prefs.specialMeal = mealValueFromLabel(String(menu));
+  }
+
   return prefs;
+}
+
+function mealValueFromLabel(raw: string): string {
+  const value = raw.trim();
+  const known = ['none', 'vegetarian', 'vegan', 'halal', 'kosher'];
+  if (known.includes(value)) return value;
+  const n = value.toLowerCase();
+  if (n.includes('vegan') || n.includes('végétalien') || n.includes('vegetalien')) return 'vegan';
+  if (n.includes('végétarien') || n.includes('vegetarien') || n.includes('vegetarian')) return 'vegetarian';
+  if (n.includes('halal')) return 'halal';
+  if (n.includes('casher') || n.includes('kosher')) return 'kosher';
+  if (n.includes('standard') || n === 'none' || n === 'aucun') return 'none';
+  return 'none';
 }
