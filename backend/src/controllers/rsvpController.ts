@@ -545,10 +545,10 @@ export async function submitRsvp(req: Request, res: Response) {
       (async () => {
         try {
           // 1. Send Email if valid email address
-          const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guest.email.trim());
-          if (isEmail) {
-            console.log(`[RSVP Controller] Sending confirmation email with QR Code to ${guest.email}...`);
-            await sendRealEmail(guest.email, subject, textBody, htmlBody);
+          const destEmail = extractGuestEmail(guest);
+          if (destEmail) {
+            console.log(`[RSVP Controller] Sending confirmation email with QR Code to ${destEmail}...`);
+            await sendRealEmail(destEmail, subject, textBody, htmlBody);
           }
 
           // 2. WhatsApp avec image QR

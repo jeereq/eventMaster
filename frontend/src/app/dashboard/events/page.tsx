@@ -48,6 +48,13 @@ import {
 import PlanLimitCallout from '@/components/PlanLimitCallout';
 import { eventDashboardHref, eventsListHref, isEventWorkspaceTab } from '@/lib/eventRoutes';
 import {
+ displayGuestEmail,
+ isPlaceholderGuestEmail,
+ isRealGuestEmail,
+ resolveGuestFormEmail,
+} from '@/lib/guestContact';
+import InvitationMessagePreview from '@/components/InvitationMessagePreview';
+import {
  extractRsvpFieldsFromTemplateContent,
  supplementFieldsFromGuestPreferences,
  getCustomFieldValue,
@@ -193,10 +200,8 @@ function getChannelLabel(channel: string) {
  }
 }
 
-const GUEST_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 function guestHasValidEmail(guest: GuestItem): boolean {
- return GUEST_EMAIL_RE.test(String(guest.email || '').trim());
+ return isRealGuestEmail(guest.email);
 }
 
 function guestHasPhone(guest: GuestItem): boolean {
@@ -206,7 +211,7 @@ function guestHasPhone(guest: GuestItem): boolean {
    : '')
   || '';
  if (String(stored).replace(/\D/g, '').length >= 7) return true;
- return /^\+?[0-9\s\-()]{7,20}$/.test(String(guest.email || '').trim());
+ return /^\+?[0-9\s\-()]{7,20}$/.test(String(guest.email || '').trim()) && !isPlaceholderGuestEmail(guest.email);
 }
 
 function channelNeedsEmail(channel: string): boolean {
@@ -1257,10 +1262,18 @@ Merci de confirmer votre présence :
 
  try {
  const e164 = composeE164(guestPhoneCountryCode, guestPhoneNational) || undefined;
+ const resolvedEmail = resolveGuestFormEmail(guestEmail, e164);
+ if (!resolvedEmail) {
+  setError(guestEmail.trim()
+   ? 'Adresse e-mail invalide. Laissez vide si vous n’avez que le WhatsApp.'
+   : 'Indiquez un e-mail ou un numéro WhatsApp.');
+  setSavingGuest(false);
+  return;
+ }
  const payload = {
  firstName: guestFirstName,
  lastName: guestLastName,
- email: guestEmail,
+ email: isRealGuestEmail(guestEmail) ? guestEmail.trim() : '',
  category: guestCategory,
  rsvp: guestRsvp,
  phone: e164,
@@ -1306,7 +1319,7 @@ Merci de confirmer votre présence :
  setEditingGuestId(guest.id);
  setGuestFirstName(guest.firstName);
  setGuestLastName(guest.lastName);
- setGuestEmail(guest.email);
+ setGuestEmail(isPlaceholderGuestEmail(guest.email) ? '' : guest.email);
  setGuestCategory(guest.category || 'Famille');
 
  let notes = '';
@@ -1359,7 +1372,7 @@ Merci de confirmer votre présence :
  return [
  g.firstName,
  g.lastName,
- g.email,
+ displayGuestEmail(g.email),
  phone,
  g.category || "Général",
  g.rsvp === "ACCEPTED" ? "Accepté" : g.rsvp === "DECLINED" ? "Décliné" : "En attente",
@@ -1409,13 +1422,15 @@ Merci de confirmer votre présence :
  return;
  }
  const cols = line.split(',').map(c => c.trim());
- if (cols.length >= 3 && cols[2].includes('@')) {
+ const phone = cols[4] || '';
+ const email = cols[2] || '';
+ if (cols[0] && cols[1] && (email.includes('@') || phone.replace(/\D/g, '').length >= 7)) {
  guestsToImport.push({
  firstName: cols[0],
  lastName: cols[1],
- email: cols[2],
+ email: email.includes('@') ? email : '',
  category: cols[3] || 'Général',
- phone: cols[4] || '',
+ phone,
  specialMeal: cols[5] || 'none',
  allergies: cols[6] || '',
  notes: cols[7] || '',
@@ -1519,16 +1534,17 @@ Merci de confirmer votre présence :
  const email = row[finalEmailIdx]?.toString().trim() || '';
  const firstName = row[finalFirstNameIdx]?.toString().trim() || '';
  const lastName = row[finalLastNameIdx]?.toString().trim() || '';
+ const phone = row[finalPhoneIdx]?.toString().trim() || '';
 
- // Skip rows without minimum required info
- if (!email && !firstName && !lastName) continue;
+ if (!firstName || !lastName) continue;
+ if (!email.includes('@') && phone.replace(/\D/g, '').length < 7) continue;
 
  guestsList.push({
- firstName: firstName || 'Invité',
- lastName: lastName || `N°${i}`,
- email: email || `invite.${i}@simulation.com`,
+ firstName,
+ lastName,
+ email: email.includes('@') ? email : '',
  category: row[finalCategoryIdx]?.toString().trim() || 'Général',
- phone: row[finalPhoneIdx]?.toString().trim() || '',
+ phone,
  specialMeal: normalizeMeal(row[finalMealIdx]?.toString() || ''),
  allergies: row[finalAllergiesIdx]?.toString().trim() || '',
  notes: row[finalNotesIdx]?.toString().trim() || '',
@@ -2247,12 +2263,12 @@ Merci de confirmer votre présence :
  {/* Tabs */}
  <div className="inline-flex flex-wrap gap-0.5 p-0.5 bg-surface-muted border border-border rounded-[var(--radius-button)] max-w-full overflow-x-auto">
  {([
- !isProtocolOnly && { id: 'guests' as const, label: `Invités (${guests.length})`, icon: Users },
  !isProtocolOnly && { id: 'guestInfo' as const, label: 'Infos invités', icon: Shirt },
- !isProtocolOnly && { id: 'feed' as const, label: 'Feed', icon: MessageSquare },
- { id: 'protocol' as const, label: 'Protocole', icon: ScanLine },
+ !isProtocolOnly && { id: 'guests' as const, label: `Invités (${guests.length})`, icon: Users },
  !isProtocolOnly && { id: 'invitations' as const, label: `Invitations (${invitations.length})`, icon: Mail },
  !isProtocolOnly && { id: 'tablePlan' as const, label: 'Plan de table', icon: LayoutGrid },
+ !isProtocolOnly && { id: 'feed' as const, label: 'Feed', icon: MessageSquare },
+ { id: 'protocol' as const, label: 'Protocole', icon: ScanLine },
  !isProtocolOnly && { id: 'staff' as const, label: 'Équipe', icon: Users },
  ].filter(Boolean) as Array<{ id: typeof activeTab; label: string; icon: React.ComponentType<{ className?: string }> }>).map(({ id, label, icon: Icon }) => {
  const locked = id === 'protocol' && protocolLocked;
@@ -2718,10 +2734,10 @@ Merci de confirmer votre présence :
  onClick={() => setSelectedGuestDetails(g)}
  meta={
  guestsViewMode === 'list' ? (
- <span className="truncate">{g.email}</span>
+ <span className="truncate">{displayGuestEmail(g.email) || g.phone || 'WhatsApp / e-mail manquant'}</span>
  ) : (
  <div className="space-y-1.5">
- <p className="truncate text-xs">{g.email}</p>
+ <p className="truncate text-xs">{displayGuestEmail(g.email) || g.phone || 'Sans e-mail'}</p>
  <div className="flex flex-wrap gap-1.5">
  {rsvpChip}
  {categoryChip}
@@ -3350,15 +3366,15 @@ Merci de confirmer votre présence :
  </div>
  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Email</label>
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Email (optionnel)</label>
  <input 
  type="email" 
  value={guestEmail}
  onChange={(e) => setGuestEmail(e.target.value)}
  placeholder="ex. jean.kabeya@gmail.com"
  className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
- required
  />
+ <p className="text-[11px] text-muted">E-mail ou WhatsApp : au moins un des deux.</p>
  </div>
  <PhoneInput
  label="Téléphone (WhatsApp)"
@@ -3858,7 +3874,7 @@ Merci de confirmer votre présence :
  {/* Invitation Configuration Modal */}
  {showInviteModal && (
  <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
- <div className="bg-white rounded-3xl border border-border shadow-2xl w-full max-w-lg p-6 space-y-6">
+ <div className="bg-white rounded-3xl border border-border shadow-2xl w-full max-w-2xl p-6 space-y-6 max-h-[92vh] overflow-y-auto">
  <div className="flex items-center justify-between border-b border-border-subtle pb-4">
  <h3 className="text-lg font-bold text-foreground">
  {editingInviteId ? "Modifier l'invitation" : "Configurer une invitation"}
@@ -3935,6 +3951,30 @@ Merci de confirmer votre présence :
  required
  />
  </div>
+ {selectedEvent && (
+ <InvitationMessagePreview
+  subject={inviteSubject.replaceAll('{{title}}', selectedEvent.title)}
+  body={(() => {
+   const formattedDate = new Date(selectedEvent.date).toLocaleDateString('fr-FR', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
+   });
+   let text = inviteBody
+    .replaceAll('{{firstName}}', 'Marie')
+    .replaceAll('{{lastName}}', 'Kabeya')
+    .replaceAll('{{rsvpLink}}', 'https://…/rsvp/exemple')
+    .replaceAll('{{title}}', selectedEvent.title || '')
+    .replaceAll('{{description}}', selectedEvent.description || '')
+    .replaceAll('{{location}}', selectedEvent.location || '')
+    .replaceAll('{{date}}', formattedDate)
+    .replaceAll('{{orgName}}', tenant?.name || 'Organisation');
+   return applyInvitationGuidelineVariables(text, selectedEvent.guestGuidelines);
+  })()}
+  channel={inviteChannel}
+  orgName={tenant?.name || 'Organisation'}
+  primary={tenant?.branding?.primary}
+  accent={tenant?.branding?.accent}
+ />
+ )}
  <div className="pt-4 flex gap-3 border-t border-border-subtle">
  <button 
  type="button"
@@ -4398,7 +4438,7 @@ Merci de confirmer votre présence :
  </div>
  <div className="col-span-2">
  <div className="text-[10px] font-semibold text-muted uppercase tracking-wider">E-mail</div>
- <div className="font-semibold text-foreground text-sm mt-0.5 truncate">{selectedGuestDetails.email}</div>
+ <div className="font-semibold text-foreground text-sm mt-0.5 truncate">{displayGuestEmail(selectedGuestDetails.email) || selectedGuestDetails.phone || '—'}</div>
  </div>
  {(selectedGuestDetails.preferences?.phone || selectedGuestDetails.preferences?.telephone) && (
  <div className="col-span-2">

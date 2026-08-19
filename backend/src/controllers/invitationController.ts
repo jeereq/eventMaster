@@ -14,6 +14,7 @@ import {
   wrapBrandedWhatsApp,
 } from '../utils/brandedMessaging';
 import { escapeHtml } from '../utils/brandingUtils';
+import { extractGuestEmail } from '../utils/guestIdentity';
 async function verifyEventAccess(
   userId: string,
   tenantId: string,
@@ -200,8 +201,8 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
         let sendResult: any = { success: true, simulated: true };
 
         if (chan === 'EMAIL') {
-          const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(guest.email || '').trim());
-          if (!isEmail) {
+          const destEmail = extractGuestEmail(guest);
+          if (!destEmail) {
             sendResult = {
               success: false,
               simulated: false,
@@ -236,7 +237,7 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
             footerNote: 'Merci de répondre avant la date de l’événement. Dès confirmation, votre plan de table, invitation PDF et localisation GPS vous sont envoyés si votre place est déjà assignée.',
           });
           sendResult = await sendRealEmail(
-            guest.email,
+            destEmail,
             subject,
             body,
             htmlBody,

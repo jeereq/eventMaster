@@ -8,6 +8,7 @@ import {
   canAccessEvent,
 } from '../services/permissionsService';
 import { resolvePhoneFields } from '../utils/phone';
+import { resolveGuestContactEmail } from '../utils/guestIdentity';
 
 function resolveGuestPhoneFields(body: any, preferences: any): {
   phone: string | null;
@@ -68,8 +69,8 @@ export async function createGuest(req: AuthenticatedRequest, res: Response) {
       return res.status(403).json({ error: 'Vous n\'avez pas la permission de gérer les invités.' });
     }
 
-    if (!firstName || !lastName || !email) {
-      return res.status(400).json({ error: 'Les champs firstName, lastName et email sont requis' });
+    if (!firstName || !lastName) {
+      return res.status(400).json({ error: 'Le prénom et le nom sont requis.' });
     }
 
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
@@ -84,13 +85,6 @@ export async function createGuest(req: AuthenticatedRequest, res: Response) {
       }
     }
 
-    const existingGuest = await prisma.guest.findUnique({
-      where: { eventId_email: { eventId, email } },
-    });
-    if (existingGuest) {
-      return res.status(400).json({ error: 'Un invité avec cet email existe déjà pour cet événement' });
-    }
-
     const guestPreferences = { ...(preferences || {}) };
     const { phone: normalizedPhone, phoneCountryCode } = resolveGuestPhoneFields(
       req.body,
@@ -100,12 +94,24 @@ export async function createGuest(req: AuthenticatedRequest, res: Response) {
       guestPreferences.phone = normalizedPhone;
     }
 
+    const contact = resolveGuestContactEmail({ email, phone: normalizedPhone });
+    if ('error' in contact) {
+      return res.status(400).json({ error: contact.error });
+    }
+
+    const existingGuest = await prisma.guest.findUnique({
+      where: { eventId_email: { eventId, email: contact.email } },
+    });
+    if (existingGuest) {
+      return res.status(400).json({ error: 'Un invité avec cet e-mail ou ce WhatsApp existe déjà pour cet événement' });
+    }
+
     const guest = await prisma.guest.create({
       data: {
         eventId,
         firstName,
         lastName,
-        email,
+        email: contact.email,
         phone: normalizedPhone,
         phoneCountryCode,
         category: category || 'Général',
@@ -163,12 +169,28 @@ export async function updateGuest(req: AuthenticatedRequest, res: Response) {
       }
     }
 
+    const nextEmail = email !== undefined
+      ? resolveGuestContactEmail({ email, phone: normalizedPhone })
+      : { email: existingGuest.email };
+    if ('error' in nextEmail) {
+      return res.status(400).json({ error: nextEmail.error });
+    }
+
+    if (nextEmail.email !== existingGuest.email) {
+      const clash = await prisma.guest.findUnique({
+        where: { eventId_email: { eventId, email: nextEmail.email } },
+      });
+      if (clash && clash.id !== id) {
+        return res.status(400).json({ error: 'Un invité avec cet e-mail ou ce WhatsApp existe déjà pour cet événement' });
+      }
+    }
+
     const updatedGuest = await prisma.guest.update({
       where: { id },
       data: {
         firstName: firstName !== undefined ? firstName : existingGuest.firstName,
         lastName: lastName !== undefined ? lastName : existingGuest.lastName,
-        email: email !== undefined ? email : existingGuest.email,
+        email: nextEmail.email,
         phone: normalizedPhone,
         phoneCountryCode,
         category: category !== undefined ? category : existingGuest.category,
@@ -247,8 +269,8 @@ export async function importGuests(req: AuthenticatedRequest, res: Response) {
     const errors: string[] = [];
 
     for (const g of guests) {
-      if (!g.firstName || !g.lastName || !g.email) {
-        errors.push(`Champs requis manquants pour l'invité: ${JSON.stringify(g)}`);
+      if (!g.firstName || !g.lastName) {
+        errors.push(`Prénom et nom requis pour l'invité: ${JSON.stringify(g)}`);
         continue;
       }
 
@@ -259,9 +281,15 @@ export async function importGuests(req: AuthenticatedRequest, res: Response) {
       const { phone: normalizedPhone, phoneCountryCode } = resolveGuestPhoneFields(g, guestPrefs);
       if (normalizedPhone) guestPrefs.phone = normalizedPhone;
 
+      const contact = resolveGuestContactEmail({ email: g.email, phone: normalizedPhone || g.phone });
+      if ('error' in contact) {
+        errors.push(`${g.firstName || ''} ${g.lastName || ''}: ${contact.error}`);
+        continue;
+      }
+
       try {
         await prisma.guest.upsert({
-          where: { eventId_email: { eventId, email: g.email } },
+          where: { eventId_email: { eventId, email: contact.email } },
           update: {
             firstName: g.firstName,
             lastName: g.lastName,
@@ -274,7 +302,7 @@ export async function importGuests(req: AuthenticatedRequest, res: Response) {
             eventId,
             firstName: g.firstName,
             lastName: g.lastName,
-            email: g.email,
+            email: contact.email,
             phone: normalizedPhone,
             phoneCountryCode,
             category: g.category || 'Général',
@@ -283,7 +311,7 @@ export async function importGuests(req: AuthenticatedRequest, res: Response) {
         });
         importedCount++;
       } catch (err: any) {
-        errors.push(`Erreur pour ${g.email}: ${err.message}`);
+        errors.push(`Erreur pour ${g.firstName} ${g.lastName}: ${err.message}`);
       }
     }
 
