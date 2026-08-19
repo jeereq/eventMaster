@@ -1,13 +1,13 @@
 import { prisma } from '../db';
 import { sendRealEmail, sendRealWhatsApp } from './notificationService';
 import { resolveDeliveryChannels } from '../utils/notificationChannels';
-import { renderGuestMessage, polishWhatsAppBody, applyTemplateVariables } from './messageTemplateService';
-import { applyInvitationGuidelineVariables } from '../utils/guestGuidelines';
+import { renderGuestMessage, applyTemplateVariables } from './messageTemplateService';
+import { applyInvitationGuidelineVariables, guestGuidelinesInvitationText } from '../utils/guestGuidelines';
 import {
   brandedEventDetailsHtml,
   loadOrgBrand,
-  withOrgSignoff,
   wrapBrandedEmail,
+  wrapBrandedWhatsApp,
 } from '../utils/brandedMessaging';
 import { escapeHtml } from '../utils/brandingUtils';
 import fs from 'fs';
@@ -182,7 +182,9 @@ export async function processReminders() {
           customPart = applyInvitationGuidelineVariables(customPart, event.guestGuidelines);
           body = `${body}\n\n---\n\n${customPart}`;
         }
-        body = polishWhatsAppBody(withOrgSignoff(body, orgBrand.orgName));
+        body = wrapBrandedWhatsApp(body, orgBrand.orgName, {
+          guidelinesBlock: guestGuidelinesInvitationText(event.guestGuidelines),
+        });
 
         const channel = latestInvitation.channel || 'EMAIL';
         const channelsToSend = resolveDeliveryChannels(channel);

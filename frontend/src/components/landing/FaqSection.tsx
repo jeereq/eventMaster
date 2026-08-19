@@ -19,7 +19,7 @@ interface FaqSectionProps {
 export default function FaqSection({
   id = 'faq',
   title = 'Questions fréquentes',
-  subtitle = 'Forfaits (y compris annuel −10 % Particulier), protocole QR web, marketplace et support.',
+  subtitle = 'Forfaits, invitations, accueil le jour J, marketplace et support.',
   showContactLink = true,
   className = '',
 }: FaqSectionProps) {

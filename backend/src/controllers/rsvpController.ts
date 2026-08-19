@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { normalizeGuestPreferences } from '../utils/rsvpPreferences';
 import { prisma } from '../db';
 import { sendRealEmail, sendRealWhatsApp, sendRealWhatsAppImage } from '../services/notificationService';
-import { renderGuestMessage, polishWhatsAppBody } from '../services/messageTemplateService';
+import { renderGuestMessage } from '../services/messageTemplateService';
 import { findGuestsByIdentity } from '../services/legalService';
 import { extractGuestEmail, extractGuestPhone } from '../utils/guestIdentity';
 import { findGuestSeatInTablePlan } from '../services/commercialService';
@@ -10,7 +10,7 @@ import {
   generateAndStoreGuestInvitationPdf,
 } from '../services/seatingInvitationStorageService';
 import { getTableMateGuestIds } from '../utils/tablePlanAssignment';
-import { normalizeGuestGuidelines, formatDressCodeText } from '../utils/guestGuidelines';
+import { normalizeGuestGuidelines, formatDressCodeText, guestGuidelinesInvitationText } from '../utils/guestGuidelines';
 import { canGuestAccessPlacement } from '../utils/guestPlacementAccess';
 import { deliverGuestPlacementIfEligible } from '../services/guestPlacementDeliveryService';
 import { buildGuestQrImageUrl, generateQrPngBuffer } from '../utils/qrCode';
@@ -18,8 +18,8 @@ import {
   brandedEventDetailsHtml,
   loadOrgBrand,
   orgBrandFromTenant,
-  withOrgSignoff,
   wrapBrandedEmail,
+  wrapBrandedWhatsApp,
 } from '../utils/brandedMessaging';
 import { escapeHtml, resolveBranding } from '../utils/brandingUtils';
 
@@ -136,7 +136,7 @@ async function notifyOrganizerOfRsvp(params: {
     dashboardUrl,
     orgName: orgBrand.orgName,
   });
-  const ownerWhatsappBody = polishWhatsAppBody(withOrgSignoff(ownerWhatsappRendered.body, orgBrand.orgName));
+  const ownerWhatsappBody = wrapBrandedWhatsApp(ownerWhatsappRendered.body, orgBrand.orgName);
 
   const organizerPhone = getUserPhone(organizer);
   const results: string[] = [];
@@ -537,7 +537,9 @@ export async function submitRsvp(req: Request, res: Response) {
         location: guest.event.location || 'Non défini',
         orgName: orgBrand.orgName,
       });
-      const whatsappCaption = polishWhatsAppBody(withOrgSignoff(whatsappRendered.body, orgBrand.orgName));
+      const whatsappCaption = wrapBrandedWhatsApp(whatsappRendered.body, orgBrand.orgName, {
+        guidelinesBlock: guestGuidelinesInvitationText(guest.event.guestGuidelines),
+      });
 
       // Run sending in the background to avoid blocking the user response
       (async () => {

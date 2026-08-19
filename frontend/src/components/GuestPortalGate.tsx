@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, usePathname } from 'next/navigation';
 import { api } from '@/lib/api';
 import { Loader2 } from 'lucide-react';
 import LegalAcceptanceModal from '@/components/LegalAcceptanceModal';
@@ -22,7 +22,9 @@ interface GuestLegalStatus {
 
 export default function GuestPortalGate({ children }: { children: React.ReactNode }) {
   const params = useParams();
+  const pathname = usePathname();
   const guestId = params.guestId as string;
+  const isPrint = Boolean(pathname?.endsWith('/print'));
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -65,7 +67,7 @@ export default function GuestPortalGate({ children }: { children: React.ReactNod
     }
   };
 
-  if (loading) {
+  if (loading && !isPrint) {
     return (
       <div className="min-h-screen em-guest-page flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -73,7 +75,7 @@ export default function GuestPortalGate({ children }: { children: React.ReactNod
     );
   }
 
-  const requiresAcceptance = legalStatus?.requiresAcceptance ?? true;
+  const requiresAcceptance = !isPrint && (legalStatus?.requiresAcceptance ?? true);
 
   return (
     <>
@@ -93,7 +95,7 @@ export default function GuestPortalGate({ children }: { children: React.ReactNod
 
       {!requiresAcceptance && children}
 
-      {!requiresAcceptance && (
+      {!isPrint && !requiresAcceptance && (
         <PWAInstallPrompt storageKey={`pwa_install_guest_${guestId}`} variant="guest" />
       )}
     </>

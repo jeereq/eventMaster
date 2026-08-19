@@ -39,7 +39,7 @@ const JOURNEYS: Journey[] = [
     label: 'Organisateur',
     eyebrow: 'Parcours organisation',
     title: 'Créer un événement jusqu’au jour J',
-    intro: 'Un workspace : infos invités, invitations, RSVP, plan de table, fil d’actualité, protocole web et suivi.',
+    intro: 'Infos invités, invitations, réponses, plan de table, fil d’actualité et accueil — dans le même espace.',
     cta: { href: '/register', label: 'Lancer mon premier événement' },
     results: [
       { icon: Shirt, label: 'Dress code' },
@@ -49,28 +49,28 @@ const JOURNEYS: Journey[] = [
     steps: [
       {
         title: 'Créer l’événement',
-        description: 'Privé (liste) ou public (fiche marketplace et billets). Liez une salle pour importer le plan 2D.',
+        description: 'Privé (liste) ou public (fiche et billets). Liez une salle pour importer le plan.',
         detail: 'Renseignez titre, date, lieu et GPS. Choisissez Privé pour un mariage ou une soirée fermée, Public pour une fiche marketplace avec inscription ou billets payants. Associer une salle importe automatiquement le plan 2D.',
         outcome: 'Événement créé, prêt à recevoir des invités ou des acheteurs de billets.',
         icon: CalendarCheck,
       },
       {
         title: 'Infos invités',
-        description: 'Dress code, avantages (parking, cadeaux, extras) et notes pratiques, visibles sur le RSVP.',
+        description: 'Dress code, parking, cadeaux — visibles quand l’invité ouvre son lien.',
         detail: 'Dans Infos invités : activez le code vestimentaire, ajoutez parking, horaires, cadeaux ou extras (welcome drink, open bar). Ces infos s’affichent sur le portail de l’invité et peuvent être insérées dans l’invitation.',
         outcome: 'Les invités savent comment s’habiller et ce qui les attend.',
         icon: Shirt,
       },
       {
         title: 'Inviter',
-        description: 'Diffusez e-mail ou WhatsApp. Le premier message contient uniquement le lien RSVP.',
+        description: 'E-mail ou WhatsApp. Le premier message contient seulement le lien pour répondre.',
         detail: 'Chaque invité a un lien personnel. Pas de PDF, ni de plan, ni de GPS à ce stade. Les acheteurs de billets publics deviennent des invités avec le même portail.',
         outcome: 'Invitations parties — les réponses arrivent dans le tableau RSVP.',
         icon: Mail,
       },
       {
         title: 'Placer',
-        description: 'Plan 2D, tables et sièges. PDF, plan et GPS partent après RSVP accepté + place (Premium 1+).',
+        description: 'Glissez les invités sur les sièges. PDF et GPS partent après le « oui » + une place (Premium 1+).',
         detail: 'Glissez les invités sur les sièges. Dès qu’un invité a accepté et qu’une place est assignée, le PDF, le plan interactif et le pin GPS partent automatiquement (forfait Premium 1+).',
         outcome: 'Chaque confirmé connaît sa table avant le jour J.',
         icon: LayoutGrid,
@@ -84,7 +84,7 @@ const JOURNEYS: Journey[] = [
       },
       {
         title: 'Accueillir',
-        description: 'Le protocole scanne les badges dans le navigateur. Check-in et validation du siège.',
+        description: 'Scannez les badges à l’entrée, depuis le téléphone. Présence et siège validés.',
         detail: 'Mode Protocole : caméra du téléphone ou de la tablette dans le navigateur — l’app native n’est pas encore déployée. Présence enregistrée, siège validé, no-shows visibles.',
         outcome: 'Entrée contrôlée, présence en temps réel.',
         icon: ScanLine,
@@ -96,7 +96,7 @@ const JOURNEYS: Journey[] = [
     label: 'Invité',
     eyebrow: 'Parcours invité',
     title: 'De l’invitation à la table',
-    intro: 'Aucun compte requis. Infos pratiques, placement, PDF et GPS uniquement après RSVP accepté.',
+    intro: 'Pas de compte à créer. Infos, place et PDF seulement après votre « oui ».',
     cta: { href: '/guide/invite', label: 'Voir l’aide invité' },
     results: [
       { icon: Shirt, label: 'Dress code' },
@@ -146,7 +146,7 @@ const JOURNEYS: Journey[] = [
     label: 'Client',
     eyebrow: 'Parcours client marketplace',
     title: 'Trouver salle et prestataires selon votre budget',
-    intro: 'Pas d’abonnement SaaS. Vous explorez, enregistrez, simulez, partagez, puis réservez.',
+    intro: 'Pas d’abonnement. Vous cherchez, comparez, puis réservez.',
     cta: { href: '/register?kind=CLIENT', label: 'Trouver salle et prestas' },
     results: [
       { icon: Heart, label: 'Favoris' },
@@ -189,7 +189,7 @@ const JOURNEYS: Journey[] = [
     label: 'Salle',
     eyebrow: 'Parcours gestionnaire de salle',
     title: 'Publier le lieu et recevoir des dates',
-    intro: 'Forfait Salle : fiches publiques, plan 2D, calendrier, devis et réservations.',
+    intro: 'Publiez le lieu, recevez des dates, gérez le calendrier.',
     cta: { href: '/register?kind=VENDOR', label: 'Mettre ma salle en ligne' },
     results: [
       { icon: Building2, label: 'Fiche publique' },
@@ -275,7 +275,7 @@ const JOURNEYS: Journey[] = [
     label: 'Protocole',
     eyebrow: 'Parcours accueil jour J',
     title: 'Scanner, confirmer, placer',
-    intro: 'Scan QR dans le navigateur. L’app native caméra est en construction, pas déployée.',
+    intro: 'Scan du badge à l’entrée, depuis le navigateur. Pas d’app à installer.',
     cta: { href: '/login', label: 'Ouvrir le scan jour J' },
     results: [
       { icon: ScanLine, label: 'Scan navigateur' },
@@ -318,7 +318,7 @@ const JOURNEYS: Journey[] = [
     label: 'Commercial',
     eyebrow: 'Parcours réseau commercial',
     title: 'Parrainer et suivre les commissions',
-    intro: 'Code de parrainage, création d’organisations et commissions ({commercialPercent} % sur la facturation de période).',
+    intro: 'Parrainez, suivez les organisations et vos commissions ({commercialPercent} %).',
     cta: { href: '/contact', label: 'Activer mon parrainage' },
     results: [
       { icon: Share2, label: 'Code / lien' },
@@ -419,10 +419,10 @@ export default function LandingWorkflowSection() {
         <div className="max-w-2xl space-y-2">
           <p className="text-xs font-medium uppercase tracking-wider text-muted">Parcours par rôle</p>
           <h2 className="text-2xl font-semibold text-foreground tracking-tight">
-            Cliquez une étape — voyez ce qui se passe
+            Choisissez votre rôle, suivez les étapes
           </h2>
           <p className="text-sm text-muted leading-relaxed">
-            Organisateur, invité, client, salle, prestataire, protocole ou commercial. Choisissez un profil, puis parcourez le fil.
+            Organisateur, invité, client, salle, prestataire, accueil ou commercial.
           </p>
         </div>
 

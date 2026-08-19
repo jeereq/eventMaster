@@ -12,12 +12,12 @@ export const SITE_CONTACT = {
 } as const;
 
 export const FOOTER_FEATURES = [
-  'Invitations RSVP (lien d’abord, PDF ensuite)',
-  'Plans de salle 2D & protocole QR web',
+  'Invitations et réponses (lien d’abord, PDF ensuite)',
+  'Plan de table et accueil QR le jour J',
   'Marketplace : salles, métiers, locations',
-  'Favoris, packs budget, partage & réservations',
-  'Événements publics & billets en ligne',
-  'Application mobile (en construction)',
+  'Favoris, packs budget et réservations',
+  'Événements publics et billets',
+  'Application mobile (bientôt)',
 ] as const;
 
 export const FOOTER_PRODUCT = [
@@ -37,7 +37,7 @@ export const FOOTER_RESOURCES = [
 ] as const;
 
 export const FOOTER_BRAND_DESCRIPTION =
-  'EventMaster centralise invitations RSVP, plans de salle 2D, marketplace (salles, métiers, locations) et protocole QR dans le navigateur. L’application mobile est en construction et n’est pas encore déployée.';
+  'Invitez vos proches, placez-les à table et accueillez-les le jour J — plus un marketplace pour salles et prestataires. Tout se fait dans le navigateur. L’app mobile arrive bientôt.';
 
 export interface FaqItem {
   id: string;
@@ -50,55 +50,55 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'what-is-eventmaster',
     question: 'Qu\'est-ce qu\'EventMaster ?',
     answer:
-      'EventMaster est un SaaS web d’événements : invitations et RSVP, plans de salle 2D, protocole QR dans le navigateur, marketplace (salles, métiers et locations — habits, voitures, motos, matériel), favoris, packs budget, partage de recherche ou de fiche, réservations et billets en ligne. Un compte client cherche salle et prestataires sans créer d’événements. Chaque organisation a son espace isolé. L’app iOS/Android est en construction, pas encore sur les stores.',
+      'Un outil pour organiser un événement de bout en bout : invitations, réponses, plan de table, accueil QR le jour J, et un marketplace pour trouver (ou publier) salles et prestataires. Pas besoin d’app : tout marche dans le navigateur, y compris sur téléphone.',
   },
   {
     id: 'mobile-app',
     question: 'Existe-t-il une application mobile ?',
     answer:
-      'Pas encore. L’app native iOS et Android est en construction : elle n’est pas sur l’App Store ni Google Play. En attendant, RSVP, protocole QR, tableau de bord, marketplace et réservations fonctionnent dans le navigateur — y compris sur téléphone. L’édition avancée (modèles, plan de table) reste sur le web.',
+      'Pas encore. En attendant, RSVP, scan QR, tableau de bord et marketplace fonctionnent dans le navigateur — y compris sur téléphone.',
   },
   {
     id: 'placement-delivery',
     question: 'Quand l\'invité reçoit-il son plan de table, PDF et localisation GPS ?',
     answer:
-      'L’invitation initiale (e-mail ou WhatsApp) contient uniquement le lien RSVP. Le PDF personnalisé, le plan de table interactif et le pin GPS WhatsApp partent automatiquement dès que l’invité accepte ET qu’une place est assignée — jamais à l’envoi de l’invitation. Cette livraison automatique est disponible à partir de Premium 1.',
+      'Le premier message (e-mail ou WhatsApp) contient seulement le lien pour répondre. Le PDF, le plan de table et le pin GPS partent dès que l’invité dit oui ET qu’une place lui est attribuée — pas avant. Automatique à partir de Premium 1.',
   },
   {
     id: 'public-events',
     question: 'Puis-je organiser un événement public avec billets payants ?',
     answer:
-      'Oui. Dans Événements, choisissez Public : la fiche apparaît sur le marketplace (grille, liste, carte), avec galerie et GPS. Inscription gratuite, ou billets payants en ligne (carte via Stripe). Les acheteurs deviennent des invités avec badge QR. Un événement Privé reste sur liste d’invités uniquement.',
+      'Oui. Choisissez Public à la création : la fiche apparaît sur le marketplace. Inscription gratuite, ou billets payants. Un événement Privé reste sur liste d’invités uniquement.',
   },
   {
     id: 'marketplace-venues',
     question: 'Puis-je trouver une salle ou un prestataire sur EventMaster ?',
     answer:
-      'Oui. Le marketplace liste les salles (plan 2D), les métiers (traiteur, photo, DJ, déco…), les locations (habits homme / femme / enfant, voitures, motos, matériel) et les événements publics. Sans compte, vous parcourez. Le bouton Partager copie l’URL de recherche (filtres inclus) ou le lien public de la fiche — jamais une URL interne du tableau de bord. Pour un devis, un billet ou une réservation : compte client gratuit ou passage invité. L’acompte ({depositPercent} %) se verse au professionnel, hors EventMaster.',
+      'Oui. Parcourez salles, métiers et locations sans compte. Pour un devis ou une réservation, créez un compte client gratuit. L’acompte ({depositPercent} %) se verse directement au professionnel, pas via EventMaster.',
   },
   {
     id: 'marketplace-booking',
     question: 'Comment fonctionne la réservation et la commission marketplace ?',
     answer:
-      'Le professionnel accepte la demande, l’organisateur (ou le client) verse l’acompte hors plateforme, puis le professionnel marque l’acompte reçu et confirme : la date est bloquée. EventMaster n’encaisse pas l’acompte. Une commission de {commissionPercent} % (due par le vendeur) s’applique aux réservations confirmées, indépendante de l’abonnement SaaS.',
+      'Le professionnel accepte, vous versez l’acompte hors plateforme, il confirme : la date est bloquée. EventMaster n’encaisse pas l’acompte. Une commission de {commissionPercent} % (due par le vendeur) s’applique aux réservations confirmées.',
   },
   {
     id: 'client-account',
     question: 'Je cherche seulement une salle ou un prestataire : dois-je payer un abonnement ?',
     answer:
-      'Non. Le compte client n’exige pas de licence SaaS. Après inscription, Marketplace dans le tableau de bord : explorer (salles, métiers, locations), favoris, partager une recherche ou une fiche, préparer un événement selon le budget et sauvegarder un pack. Pour organiser une fête ou publier vos offres, changez le type de compte dans Mon compte, puis choisissez un forfait.',
+      'Non. Le compte client est gratuit : explorer, favoris, packs budget, devis. Pour organiser une fête ou publier vos offres, changez le type de compte puis choisissez un forfait.',
   },
   {
     id: 'event-packs',
     question: 'Comment fonctionne la préparation d’événement (packs) ?',
     answer:
-      'Dans Marketplace → Préparer un événement, indiquez le type (mariage, anniversaire, gala…), le budget en FC, la ville et le nombre d’invités. EventMaster propose trois packs distincts dans l’enveloppe : économique, équilibré et confort. Vous pouvez remplacer une ligne, cocher les métiers, figer une salle puis relancer. Un pack se compose aussi à la main depuis les favoris. Rien n’est réservé tant que vous n’envoyez pas de devis.',
+      'Indiquez le type d’événement, le budget, la ville et le nombre d’invités. Vous obtenez trois packs (éco, équilibré, confort) à ajuster. Rien n’est réservé tant que vous n’envoyez pas de devis.',
   },
   {
     id: 'free-trial',
     question: 'Puis-je essayer gratuitement ?',
     answer:
-      'Oui. Le forfait Essentials (gratuit, sans carte) permet de créer une organisation, jusqu’à 3 événements et 50 invités, avec RSVP et portail invité — ou de tester 1 salle simple et 1 prestation marketplace. Ensuite : Particulier, Business, Premium, Enterprise, Salle, Prestataire ou Salle & presta selon votre type de compte.',
+      'Oui. Le forfait gratuit (Essentials) permet de créer une organisation, jusqu’à 3 événements et 50 invités — sans carte. Ensuite, vous passez au forfait qui correspond : particulier, organisation, salle ou prestataire.',
   },
   {
     id: 'plans-quotas',
@@ -128,7 +128,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'protocol-qr',
     question: 'Comment fonctionne le protocole QR ?',
     answer:
-      'Chaque invité qui accepte reçoit un badge QR unique sur son portail RSVP. Le personnel protocole scanne le code à l’entrée dans le navigateur (caméra du téléphone ou de la tablette — pas d’app native). EventMaster enregistre la présence et peut valider le siège. PDF, plan et GPS partent déjà à l’acceptation RSVP si une place est assignée (Premium 1+). Le scan est disponible à partir du forfait Business. L’app native avec caméra n’est pas encore déployée.',
+      'Chaque invité qui dit oui reçoit un badge QR. Le jour J, vous le scannez à l’entrée depuis le navigateur du téléphone. Présence enregistrée, siège validé. Pas d’app à installer. Disponible à partir du forfait Business.',
   },
   {
     id: 'roles',

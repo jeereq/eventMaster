@@ -249,109 +249,166 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
   const neighborNames =
     data.tableDetails?.neighbors?.map((n) => `${n.firstName} ${n.lastName}`.trim()) ?? [];
 
+  const primary = data.branding?.primary || '#4f46e5';
+  const accent = data.branding?.accent || primary;
+  const orgName = data.organizationName?.trim() || 'Organisation';
+  const cardMax = canvasStyle.maxWidth || 480;
+  const eventDateLabel = data.event.date
+    ? new Date(data.event.date).toLocaleDateString('fr-FR', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : '';
+
+  const brandVars = {
+    ['--primary' as string]: primary,
+    ['--primary-hover' as string]: primary,
+    ['--color-primary' as string]: primary,
+    ['--brand-accent' as string]: accent,
+    WebkitPrintColorAdjust: 'exact' as const,
+    printColorAdjust: 'exact' as const,
+  };
+
   return (
-    <div className="min-h-screen bg-surface print:bg-surface" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+    <div className="min-h-screen" style={{ background: '#f8fafc', ...brandVars }}>
       <link href={PRINT_FONTS} rel="stylesheet" />
 
-      <div className="mx-auto py-8 px-4 flex flex-col items-center gap-6" style={{ maxWidth: canvasStyle.maxWidth || 520 }}>
-        <div
-          className="w-full relative overflow-hidden flex flex-col shadow-none border border-border rounded-3xl"
+      <div className="mx-auto py-8 px-4 flex flex-col items-center gap-5" style={{ maxWidth: cardMax + 32 }}>
+        <article
+          className="w-full overflow-hidden border shadow-sm"
           style={{
-            ...backgroundStyle,
-            minHeight: canvasStyle.minHeight || 640,
-            maxWidth: canvasStyle.maxWidth || 480,
+            maxWidth: cardMax,
+            borderRadius: 24,
+            borderColor: '#e2e8f0',
+            background: '#ffffff',
           }}
         >
-          {!hasTemplate && (
-            <div className="h-2 bg-gradient-to-r from-primary to-primary/80" />
-          )}
+          <header
+            className="px-8 py-8 text-center text-white"
+            style={{ background: `linear-gradient(135deg, ${primary} 0%, ${accent} 100%)` }}
+          >
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/85">{orgName}</p>
+            <p className="mt-2 text-[22px] font-extrabold tracking-tight">Votre invitation</p>
+            <p className="mt-1.5 text-sm font-medium text-white/90">{data.event.title}</p>
+          </header>
 
-          {frameType === 'double-border' && (
-            <>
-              <div className="absolute inset-3 border border-amber-500/20 rounded-2xl pointer-events-none" />
-              <div className="absolute inset-4 border border-amber-500/10 rounded-2xl pointer-events-none" />
-            </>
-          )}
-
-          {frameType === 'gold-border' && (
-            <div className="absolute inset-3 border border-amber-500/30 rounded-2xl pointer-events-none" />
-          )}
-
-          <div className="p-8 space-y-6 relative z-10 flex-1">
-            {hasTemplate ? (
-              <div
-                className={
-                  global.layoutMode === 'free'
-                    ? 'relative min-h-[240px] w-full'
-                    : 'flex flex-wrap -mx-2'
-                }
-              >
-                {elements.map((el, index) => {
-                  const isFree = global.layoutMode === 'free' || el.positionMode === 'absolute';
-                  return (
-                    <div
-                      key={el.id}
-                      className={isFree ? '' : widthClass(el.width)}
-                      style={
-                        isFree
-                          ? {
-                              position: 'absolute',
-                              left: `${el.xPct ?? 8}%`,
-                              top: `${el.yPct ?? 8}%`,
-                              width: `${el.wPct ?? 84}%`,
-                              zIndex: el.zIndex ?? index + 1,
-                            }
-                          : undefined
-                      }
-                    >
-                      {renderElement(el)}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center space-y-4" style={{ fontFamily: '"Cormorant Garamond", serif' }}>
-                <p className="text-sm uppercase tracking-widest text-primary font-bold">Invitation</p>
-                <h1 className="text-3xl font-bold text-foreground">{data.event.title}</h1>
-                <p className="text-muted whitespace-pre-line">{data.event.description || ''}</p>
-                <p className="text-foreground font-semibold">
-                  {new Date(data.event.date).toLocaleDateString('fr-FR', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </p>
-                <p className="text-muted">{data.event.location}</p>
-                <p className="text-lg text-foreground">
-                  Cher/Chère {data.firstName} {data.lastName},
-                </p>
-              </div>
+          <div
+            className="w-full relative overflow-hidden flex flex-col"
+            style={{
+              ...backgroundStyle,
+              minHeight: hasTemplate ? canvasStyle.minHeight || 640 : undefined,
+            }}
+          >
+            {frameType === 'double-border' && (
+              <>
+                <div className="absolute inset-3 border border-amber-500/20 rounded-2xl pointer-events-none" />
+                <div className="absolute inset-4 border border-amber-500/10 rounded-2xl pointer-events-none" />
+              </>
             )}
+
+            {frameType === 'gold-border' && (
+              <div className="absolute inset-3 border border-amber-500/30 rounded-2xl pointer-events-none" />
+            )}
+
+            <div className="p-8 space-y-6 relative z-10 flex-1">
+              {hasTemplate ? (
+                <div
+                  className={
+                    global.layoutMode === 'free'
+                      ? 'relative min-h-[240px] w-full'
+                      : 'flex flex-wrap -mx-2'
+                  }
+                >
+                  {elements.map((el, index) => {
+                    const isFree = global.layoutMode === 'free' || el.positionMode === 'absolute';
+                    return (
+                      <div
+                        key={el.id}
+                        className={isFree ? '' : widthClass(el.width)}
+                        style={
+                          isFree
+                            ? {
+                                position: 'absolute',
+                                left: `${el.xPct ?? 8}%`,
+                                top: `${el.yPct ?? 8}%`,
+                                width: `${el.wPct ?? 84}%`,
+                                zIndex: el.zIndex ?? index + 1,
+                              }
+                            : undefined
+                        }
+                      >
+                        {renderElement(el)}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="space-y-4 text-left">
+                  <p className="text-[17px] font-bold text-foreground">Bonjour {data.firstName},</p>
+                  <p className="text-sm text-muted leading-relaxed">
+                    Voici votre invitation. Conservez ce document pour le jour J.
+                  </p>
+                  {data.event.description ? (
+                    <p className="text-sm text-foreground/80 whitespace-pre-line leading-relaxed">
+                      {data.event.description}
+                    </p>
+                  ) : null}
+                  <div
+                    className="rounded-2xl border px-4 py-3.5 space-y-1.5 text-sm"
+                    style={{ background: '#f8fafc', borderColor: '#e2e8f0' }}
+                  >
+                    {eventDateLabel ? (
+                      <p className="text-foreground">
+                        <span className="font-semibold" style={{ color: primary }}>Date</span>
+                        {'  ·  '}
+                        {eventDateLabel}
+                      </p>
+                    ) : null}
+                    {data.event.location ? (
+                      <p className="text-foreground">
+                        <span className="font-semibold" style={{ color: primary }}>Lieu</span>
+                        {'  ·  '}
+                        {data.event.location}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        </article>
 
         {rsvpBlock && outsideRsvp && (
-          <div className="w-full" style={{ maxWidth: canvasStyle.maxWidth || 480 }}>
+          <div className="w-full" style={{ maxWidth: cardMax }}>
             {renderRsvpBlock(rsvpBlock)}
           </div>
         )}
 
         {data.tableDetails && (
           <div
-            className="w-full rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-6 space-y-3"
-            style={{ maxWidth: canvasStyle.maxWidth || 480 }}
+            className="w-full rounded-2xl border p-6 space-y-2 text-center"
+            style={{
+              maxWidth: cardMax,
+              background: `linear-gradient(180deg, color-mix(in srgb, ${primary} 12%, #fff), color-mix(in srgb, ${primary} 5%, #fff))`,
+              borderColor: `color-mix(in srgb, ${primary} 28%, #e2e8f0)`,
+            }}
           >
-            <p className="text-xs font-bold uppercase tracking-wider text-primary">Votre placement</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: primary }}>
+              Votre place
+            </p>
             <p className="text-2xl font-black text-foreground">{data.tableDetails.tableName}</p>
             {typeof data.tableDetails.seatIndex === 'number' && (
-              <p className="text-primary font-semibold">Siège n°{data.tableDetails.seatIndex + 1}</p>
+              <p className="font-semibold" style={{ color: primary }}>
+                Siège n°{data.tableDetails.seatIndex + 1}
+              </p>
             )}
             {data.tableDetails.neighbors && data.tableDetails.neighbors.length > 0 && (
-              <div className="text-sm text-foreground space-y-1 pt-2 border-t border-primary/20">
-                <p className="font-bold text-primary">À votre table :</p>
+              <div className="text-sm text-foreground space-y-1 pt-3 border-t text-left" style={{ borderColor: `color-mix(in srgb, ${primary} 20%, #e2e8f0)` }}>
+                <p className="font-bold text-center" style={{ color: primary }}>À votre table</p>
                 {data.tableDetails.neighbors.map((n, i) => (
                   <p key={i}>• {n.firstName} {n.lastName}</p>
                 ))}
@@ -362,11 +419,13 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
 
         {data.tablePlanOverview && data.tablePlanOverview.length > 0 && (
           <div
-            className="w-full rounded-2xl border border-border bg-surface overflow-hidden"
-            style={{ maxWidth: canvasStyle.maxWidth || 480 }}
+            className="w-full rounded-2xl border bg-white overflow-hidden"
+            style={{ maxWidth: cardMax, borderColor: '#e2e8f0' }}
           >
-            <div className="px-5 py-3 border-b border-border bg-surface-muted">
-              <p className="text-xs font-bold uppercase tracking-wider text-primary">Plan de la salle</p>
+            <div className="px-5 py-3 border-b" style={{ background: '#f8fafc', borderColor: '#e2e8f0' }}>
+              <p className="text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: primary }}>
+                Plan de la salle
+              </p>
               <p className="text-[10px] text-muted mt-0.5">Votre table est mise en évidence</p>
             </div>
             <GuestRoomPlanCanvas
@@ -389,14 +448,14 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
 
         {showQr && (
           <div
-            className="w-full rounded-2xl border border-primary/30 bg-surface p-6 text-center space-y-3"
-            style={{ maxWidth: canvasStyle.maxWidth || 480 }}
+            className="w-full rounded-2xl border bg-white p-6 text-center space-y-3"
+            style={{ maxWidth: cardMax, borderColor: '#e2e8f0' }}
           >
-            <p className="text-xs font-bold uppercase tracking-wider text-primary">
-              Badge QR — confirmation de présence
+            <p className="text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: primary }}>
+              Badge QR
             </p>
             <div className="flex justify-center">
-              <div className="p-3 bg-surface rounded-2xl border border-border shadow-sm">
+              <div className="p-3 bg-white rounded-2xl border shadow-sm" style={{ borderColor: '#e2e8f0' }}>
                 <img
                   src={buildQrCodeUrl(data.guestId, 180)}
                   alt="QR Code de confirmation de présence"
@@ -407,19 +466,23 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
               </div>
             </div>
             <p className="text-[11px] text-muted leading-relaxed max-w-xs mx-auto">
-              Présentez ce QR code à l&apos;entrée de l&apos;événement pour valider votre présence.
+              Présentez ce code à l&apos;entrée pour valider votre présence.
             </p>
           </div>
         )}
 
         {data.event.guestGuidelines && (
-          <div className="w-full" style={{ maxWidth: canvasStyle.maxWidth || 480 }}>
-            <GuestGuidelinesView guidelines={data.event.guestGuidelines} variant="light" />
+          <div className="w-full" style={{ maxWidth: cardMax }}>
+            <GuestGuidelinesView
+              guidelines={data.event.guestGuidelines}
+              variant="light"
+              accentColor={primary}
+            />
           </div>
         )}
 
         <div className="text-center text-[10px] text-muted pb-4">
-          Document généré pour {data.firstName} {data.lastName} — EventMaster
+          Pour {data.firstName} {data.lastName} — envoyé par {orgName}
         </div>
       </div>
     </div>

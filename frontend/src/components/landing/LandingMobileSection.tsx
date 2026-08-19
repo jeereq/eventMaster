@@ -47,13 +47,11 @@ export default function LandingMobileSection() {
               Application mobile · en construction
             </p>
             <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight leading-snug">
-              L’app iOS & Android n’est pas encore déployée
+              L’app arrive. En attendant, tout marche déjà.
             </h2>
             <p className="text-sm text-background/65 leading-relaxed max-w-lg">
-              Nous construisons une application native pour le protocole et le RSVP. Elle n’est
-              pas disponible sur l’App Store ni Google Play pour le moment. En attendant, tout
-              le produit actuel — invitations, plan de salle, marketplace, réservations et scan QR —
-              fonctionne dans le navigateur, y compris sur téléphone.
+              Invitations, plan de table, marketplace et scan QR fonctionnent dans le navigateur —
+              y compris sur téléphone. L’app iOS et Android n’est pas encore sur les stores.
             </p>
 
             <div className="grid sm:grid-cols-2 gap-3">

@@ -3,14 +3,15 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { sendRealEmail, sendRealWhatsApp } from '../services/notificationService';
 import { resolveDeliveryChannels } from '../utils/notificationChannels';
-import { renderGuestMessage, polishWhatsAppBody, applyTemplateVariables } from '../services/messageTemplateService';
-import { applyInvitationGuidelineVariables } from '../utils/guestGuidelines';
+import { renderGuestMessage, applyTemplateVariables } from '../services/messageTemplateService';
+import { applyInvitationGuidelineVariables, guestGuidelinesInvitationText } from '../utils/guestGuidelines';
 import { canManageEvent, canAccessEvent } from '../services/permissionsService';
 import {
   brandedEventDetailsHtml,
   loadOrgBrand,
   withOrgSignoff,
   wrapBrandedEmail,
+  wrapBrandedWhatsApp,
 } from '../utils/brandedMessaging';
 import { escapeHtml } from '../utils/brandingUtils';
 async function verifyEventAccess(
@@ -186,6 +187,10 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
 
       subject = applyInvitationGuidelineVariables(subject, event.guestGuidelines);
       body = withOrgSignoff(applyInvitationGuidelineVariables(body, event.guestGuidelines), orgBrand.orgName);
+      const guidelinesText = guestGuidelinesInvitationText(event.guestGuidelines);
+      const guidelinesAlreadyInBody = Boolean(
+        guidelinesText && body.includes(guidelinesText.slice(0, Math.min(24, guidelinesText.length))),
+      );
 
       // Canaux : e-mail et WhatsApp uniquement (SMS / alias legacy convertis)
       const channelsToSend = resolveDeliveryChannels(activeChannel);
@@ -218,6 +223,14 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
                 { label: 'Date', value: formattedDate },
                 { label: 'Lieu', value: event.location || 'Non spécifié' },
               ])}
+              ${
+                guidelinesText && !guidelinesAlreadyInBody
+                  ? `<div style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:18px;padding:18px;margin:0 0 8px;">
+                      <p style="margin:0 0 8px;font-size:12px;font-weight:800;color:${orgBrand.branding.primary};text-transform:uppercase;letter-spacing:0.05em;">Infos pratiques</p>
+                      <p style="margin:0;font-size:14px;color:#475569;white-space:pre-line;line-height:1.6;">${escapeHtml(guidelinesText)}</p>
+                    </div>`
+                  : ''
+              }
             `,
             cta: { href: `${FRONTEND_URL}/rsvp/${guest.id}`, label: 'Confirmer ma présence (RSVP)' },
             footerNote: 'Merci de répondre avant la date de l’événement. Dès confirmation, votre plan de table, invitation PDF et localisation GPS vous sont envoyés si votre place est déjà assignée.',
@@ -246,9 +259,9 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
             let whatsappBody = body.trim()
               ? applyTemplateVariables(body, templateVars)
               : (await renderGuestMessage('INVITATION_WHATSAPP', templateVars)).body;
-            whatsappBody = withOrgSignoff(whatsappBody, orgBrand.orgName);
-
-            whatsappBody = polishWhatsAppBody(whatsappBody);
+            whatsappBody = wrapBrandedWhatsApp(whatsappBody, orgBrand.orgName, {
+              guidelinesBlock: guidelinesText,
+            });
             sendResult = await sendRealWhatsApp(phone, whatsappBody);
           } else {
             console.warn(`[Invitation Controller] Guest ${guest.firstName} ${guest.lastName} has no valid phone number for WhatsApp sending.`);

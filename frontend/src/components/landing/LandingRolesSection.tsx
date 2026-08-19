@@ -28,10 +28,10 @@ export default function LandingRolesSection() {
             <div className="space-y-5">
               <p className="text-xs font-medium uppercase tracking-wider text-muted">Équipes & permissions</p>
               <h2 className="text-2xl font-semibold text-foreground tracking-tight">
-                Chaque rôle voit exactement ce qu&apos;il doit gérer
+                Chacun voit seulement ce qu&apos;il gère
               </h2>
               <p className="text-sm text-muted leading-relaxed">
-                Propriétaire, managers, protocole, salles, prestataires et clients marketplace — chacun a un périmètre, sans mélange.
+                Organisateur, accueil, salle, prestataire ou client : pas de mélange.
               </p>
               <div className="rounded-[var(--radius-card)] border border-border overflow-hidden text-xs">
                 <div className="grid grid-cols-3 bg-surface-muted border-b border-border font-semibold text-muted uppercase tracking-wider text-[10px]">
@@ -78,10 +78,10 @@ export default function LandingRolesSection() {
         <div className="page-container">
           <div className="max-w-2xl mb-10 space-y-2">
             <h2 className="text-2xl font-semibold text-foreground tracking-tight">
-              Une plateforme complète
+              Tout ce qu’il faut, au même endroit
             </h2>
             <p className="text-sm text-muted">
-              Du plan 2D au scan QR web, en passant par le marketplace (salles, métiers, locations, favoris, packs, partage) et les réservations.
+              Invitations, plan de table, accueil le jour J, et un marketplace pour salles et prestataires.
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">

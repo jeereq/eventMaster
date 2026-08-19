@@ -139,7 +139,7 @@ function formatRecommendationsText(guidelines: GuestGuidelines): string {
     .join('\n');
 }
 
-function formatGuestGuidelinesBlock(guidelines: GuestGuidelines): string {
+export function formatGuestGuidelinesBlock(guidelines: GuestGuidelines): string {
   if (!guidelines.showOnInvitation) return '';
   const parts: string[] = [];
   const dress = formatDressCodeText(guidelines);
@@ -148,6 +148,11 @@ function formatGuestGuidelinesBlock(guidelines: GuestGuidelines): string {
   if (recs) parts.push(recs);
   if (guidelines.additionalNotes?.trim()) parts.push(guidelines.additionalNotes.trim());
   return parts.join('\n\n');
+}
+
+/** Bloc infos invités prêt pour WhatsApp / e-mail, ou chaîne vide. */
+export function guestGuidelinesInvitationText(raw: unknown): string {
+  return formatGuestGuidelinesBlock(normalizeGuestGuidelines(raw));
 }
 
 export function applyInvitationGuidelineVariables(

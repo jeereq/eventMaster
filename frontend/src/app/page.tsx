@@ -20,7 +20,7 @@ import SiteHeader from '@/components/SiteHeader';
 import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
 import { Modal, Button, Skeleton } from '@/components/ui';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
-import { commissionPercent, depositPercent } from '@/lib/platformRates';
+import { depositPercent } from '@/lib/platformRates';
 import {
   ArrowRight, LayoutGrid, QrCode, Mail, Sparkles,
   Building2, Users, CalendarCheck, Smartphone, Share2,
@@ -83,14 +83,12 @@ export default function Home() {
             </div>
 
             <h1 className="font-display text-[2.15rem] sm:text-5xl lg:text-[3.2rem] font-semibold tracking-tight text-foreground leading-[1.12]">
-              Du premier invité au scan QR — un seul espace
+              Invitez, placez, accueillez — depuis le navigateur
             </h1>
 
             <p className="text-[15px] sm:text-base text-muted leading-relaxed max-w-2xl">
-              EventMaster est le SaaS web pour organiser, publier et accueillir en RDC.
-              Invitations RSVP, plan de table 2D, protocole QR dans le navigateur,
-              marketplace (salles, métiers, locations), packs budget et billets en ligne.
-              L’app iOS/Android n’est pas encore déployée : tout se fait déjà sur le web, y compris au téléphone.
+              Envoyez les invitations, suivez les réponses, placez vos invités et scannez les badges le jour J.
+              Tout se fait déjà sur le web, y compris au téléphone. L’app iOS et Android arrive bientôt.
             </p>
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 pt-1">
@@ -127,7 +125,7 @@ export default function Home() {
                 href="#parcours"
                 className="inline-flex items-center justify-center gap-1.5 px-1 py-2 text-sm font-semibold text-foreground/80 hover:text-primary transition"
               >
-                Quel parcours est le mien ?
+                C’est pour qui ?
                 <ArrowRight className="w-3.5 h-3.5" />
               </a>
             </div>
@@ -135,9 +133,8 @@ export default function Home() {
             <div className="inline-flex items-start gap-2.5 rounded-[var(--radius-card)] border border-border bg-surface/90 px-3.5 py-2.5 text-xs text-muted max-w-xl">
               <Smartphone className="w-4 h-4 shrink-0 mt-0.5 text-foreground" />
               <p>
-                <span className="font-semibold text-foreground">App iOS &amp; Android : en construction.</span>
-                {' '}Elle n’est pas déployée pour l’instant. Le protocole QR, le RSVP et le tableau de bord
-                fonctionnent déjà sur le web, y compris depuis un téléphone.
+                <span className="font-semibold text-foreground">Pas d’app à installer pour l’instant.</span>
+                {' '}Le RSVP, le scan QR et le tableau de bord marchent déjà dans le navigateur de votre téléphone.
               </p>
             </div>
           </div>
@@ -147,42 +144,42 @@ export default function Home() {
               {
                 icon: Mail,
                 title: 'Invitations & RSVP',
-                text: 'Privé (liste) ou public (fiche marketplace + billets). Le premier message n’envoie que le lien RSVP. Badge QR dès l’acceptation.',
+                text: 'Chaque invité reçoit un lien. Il répond, vous suivez. Le badge QR arrive dès qu’il dit oui.',
               },
               {
                 icon: LayoutGrid,
-                title: 'Salles & plan 2D',
-                text: 'Banquet, conférence, tente. Glissez tables et sièges, liez la salle à l’événement. Publiez le lieu sur le marketplace si votre forfait le permet.',
+                title: 'Salles & plan de table',
+                text: 'Dessinez la salle, glissez les sièges. Vos confirmés savent où s’asseoir avant d’arriver.',
               },
               {
                 icon: QrCode,
-                title: 'Protocole jour J',
-                text: 'Scan du badge dans le navigateur (pas d’app native). Check-in et validation du siège. PDF, plan et GPS : après RSVP accepté + place (Premium 1+).',
+                title: 'Accueil le jour J',
+                text: 'Scannez le badge à l’entrée, depuis le téléphone. Présence et siège validés tout de suite.',
               },
               {
                 icon: Building2,
-                title: 'Salles du marketplace',
-                text: 'Fiches publiques : photos, vidéos, GPS, tarifs, calendrier et plan 2D. Les clients filtrent, favorisent et demandent un devis.',
+                title: 'Trouver une salle',
+                text: 'Photos, tarifs, plan et calendrier. Filtrez, comparez, demandez un devis.',
               },
               {
                 icon: Sparkles,
                 title: 'Prestataires & locations',
-                text: 'Métiers (traiteur, photo, DJ, déco) et locations (habits H/F/enfant, voitures, motos, matériel). Devis, rayon, photos — fiches illimitées dès Prestataire payé.',
+                text: 'Traiteur, photo, DJ, habits, voitures… Publiez vos offres ou trouvez le bon pro.',
               },
               {
                 icon: CalendarCheck,
-                title: 'Réservations & packs',
-                text: `Compte client sans licence SaaS : explorer, favoris, 3 packs (éco / équilibré / confort). Acompte ${depositPercent(site)} % versé au pro, hors plateforme. Commission vendeur ${commissionPercent(site)} %.`,
+                title: 'Réservations & budget',
+                text: `Trois packs selon votre enveloppe. Acompte ${depositPercent(site)} % versé au pro, hors plateforme.`,
               },
               {
                 icon: Share2,
                 title: 'Partage public',
-                text: 'L’URL de recherche conserve les filtres. Une fiche se partage via son lien marketplace — jamais une URL interne du tableau de bord.',
+                text: 'Copiez le lien d’une salle ou d’une recherche. Le destinataire voit la même chose.',
               },
               {
                 icon: Users,
-                title: 'Équipes & rôles',
-                text: 'Propriétaire, managers, protocole, responsables de salle, commercial org. Chaque rôle ne voit que son périmètre.',
+                title: 'Équipe & rôles',
+                text: 'Organisateur, protocole, salle, commercial : chacun voit seulement ce qu’il gère.',
               },
             ].map(({ icon: Icon, title, text }) => (
               <li
@@ -250,8 +247,8 @@ export default function Home() {
       <FaqSection />
 
       <PublicCtaBand
-        title="Passez du brief au jour J"
-        description="Ouvrez un espace organisation, publiez une salle, ou cherchez prestataires et locations — sans attendre l’app mobile."
+        title="Prêt à lancer votre événement ?"
+        description="Créez votre espace, publiez une salle, ou cherchez un prestataire — tout de suite, dans le navigateur."
         actions={
           user ? (
             <Link href="/dashboard">

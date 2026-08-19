@@ -48,6 +48,50 @@ export function withOrgSignoff(body: string, orgName: string): string {
     .trim();
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * WhatsApp n’accepte pas les couleurs HTML : l’identité passe par le nom d’org,
+ * un bandeau texte, et les infos pratiques (tenue / thème) si elles manquent.
+ */
+export function wrapBrandedWhatsApp(
+  body: string,
+  orgName: string,
+  extras?: { guidelinesBlock?: string | null },
+): string {
+  const name = orgName.trim() || 'Organisation';
+  let text = withOrgSignoff(body, name)
+    .replace(/\r\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  const guidelines = extras?.guidelinesBlock?.trim() || '';
+  if (guidelines) {
+    const alreadyPresent =
+      text.includes(guidelines.slice(0, Math.min(28, guidelines.length))) ||
+      /tenue\s*:/i.test(text);
+    if (!alreadyPresent) {
+      const signoff = `— ${name}`;
+      if (text.endsWith(signoff)) {
+        text = `${text.slice(0, -signoff.length).trim()}\n\n${guidelines}\n\n${signoff}`;
+      } else {
+        text = `${text}\n\n${guidelines}`;
+      }
+    }
+  }
+
+  const firstLine = text.split('\n')[0]?.trim() || '';
+  const orgLine = new RegExp(`^\\*?${escapeRegExp(name)}\\*?$`, 'i');
+  const alreadyHasHeader = orgLine.test(firstLine) || firstLine.startsWith(`✨ *${name}*`);
+  if (!alreadyHasHeader) {
+    text = `*${name}*\n━━━━━━━━━━\n\n${text}`;
+  }
+
+  return text.replace(/\n{3,}/g, '\n\n').trim();
+}
+
 export function wrapBrandedEmail(opts: {
   branding: ResolvedBranding;
   orgName: string;

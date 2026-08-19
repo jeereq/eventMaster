@@ -7,13 +7,13 @@ import {
 import { generateAndStoreSeatingInvitationPdf } from './seatingInvitationStorageService';
 import { extractGuestEmail, extractGuestPhone } from '../utils/guestIdentity';
 import { resolveDeliveryChannels } from '../utils/notificationChannels';
-import { applyInvitationGuidelineVariables } from '../utils/guestGuidelines';
+import { applyInvitationGuidelineVariables, guestGuidelinesInvitationText } from '../utils/guestGuidelines';
 import { prisma } from '../db';
 import {
   brandedEventDetailsHtml,
   loadOrgBrand,
-  withOrgSignoff,
   wrapBrandedEmail,
+  wrapBrandedWhatsApp,
 } from '../utils/brandedMessaging';
 import { escapeHtml } from '../utils/brandingUtils';
 
@@ -254,7 +254,7 @@ export async function notifyGuestTableAssignment(params: {
       : `Votre invitation PDF est jointe à cet e-mail${storedPdfUrl ? ' et disponible en ligne.' : '.'}`,
   });
 
-  const whatsappBody = withOrgSignoff(
+  const whatsappBody = wrapBrandedWhatsApp(
     (isAnnouncement
       ? [
           `Bonjour ${guest.firstName} 👋`,
@@ -293,6 +293,7 @@ export async function notifyGuestTableAssignment(params: {
       .filter((line) => line !== '')
       .join('\n'),
     orgBrand.orgName,
+    { guidelinesBlock: guestGuidelinesInvitationText(event.guestGuidelines) },
   );
 
   const channelsToSend = resolveDeliveryChannels(invitation?.channel);

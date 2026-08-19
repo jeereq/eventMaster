@@ -853,75 +853,75 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
 export const ROLE_HIGHLIGHTS = [
   {
     title: 'Manager organisation',
-    description: "Pilote l'ensemble : équipe, salles, événements et modèles.",
+    description: 'Pilote l’équipe, les événements et les modèles.',
     icon: 'shield',
   },
   {
     title: 'Protocole',
-    description: 'Scan QR dans le navigateur (caméra web, pas l’app native), confirmation de présence et validation du siège. L’app iOS/Android est en construction.',
+    description: 'Scanne les badges à l’entrée, depuis le téléphone. Présence et siège validés.',
     icon: 'scan',
   },
   {
     title: 'Gestionnaire de salle',
-    description: 'Publie ses lieux sur le marketplace, gère les réservations et le plan 2D. Forfait Salle ou Salle & presta — distinct du manager salle employé d’une organisation.',
+    description: 'Publie le lieu, gère les dates et le plan de table.',
     icon: 'building',
   },
   {
     title: 'Prestataire',
-    description: 'Publie métiers (traiteur, photo, DJ…) et locations (habits, voitures, motos, matériel), sans limite de fiches dès l’abonnement Prestataire payé. Forfait Prestataire ou Salle & presta.',
+    description: 'Publie métiers et locations. Les demandes arrivent dans votre espace.',
     icon: 'briefcase',
   },
   {
     title: 'Client marketplace',
-    description: 'Cherche une salle, un métier ou une location : favoris, partage d’une recherche ou d’une fiche, simulation de budget (packs économique / équilibré / confort) et suivi des réservations, sans créer d’événement.',
+    description: 'Cherche une salle ou un pro, compare, demande un devis — sans organiser d’événement.',
     icon: 'heart',
   },
   {
     title: 'Commercial',
-    description: 'Crée des organisations parrainées et suit ses commissions ({commercialPercent} % mensuel).',
+    description: 'Parraine des organisations et suit ses commissions ({commercialPercent} %).',
     icon: 'briefcase',
   },
 ];
 
 export const PLATFORM_PILLARS = [
   {
-    title: 'Salles 2D & plans de table',
-    description: 'Banquet, conférence, amphithéâtre, tente. Tables, sièges, scènes et thèmes. Placement glisser-déposer ; le plan s’importe sur l’événement lié.',
+    title: 'Salles & plans de table',
+    description: 'Dessinez la salle, glissez tables et sièges. Le plan suit l’événement.',
     icon: 'layout',
   },
   {
-    title: 'Protocole QR (web)',
-    description: 'Scan du badge dans le navigateur (téléphone ou tablette), check-in et validation du siège. L’app native caméra n’est pas encore déployée.',
+    title: 'Accueil QR',
+    description: 'Scannez le badge à l’entrée, depuis le navigateur du téléphone.',
     icon: 'qr',
   },
   {
     title: 'Application mobile',
-    description: 'iOS et Android en construction, hors stores. RSVP, protocole et tableau de bord fonctionnent déjà dans le navigateur mobile.',
+    description: 'iOS et Android bientôt. En attendant, tout marche déjà dans le navigateur.',
     icon: 'smartphone',
   },
   {
     title: 'Invitations & RSVP',
-    description: 'E-mail ou WhatsApp : le premier message contient uniquement le lien RSVP. PDF, plan de table et GPS partent après acceptation et place assignée (Premium 1+).',
+    description: 'Un lien par invité. PDF, plan et GPS après confirmation et place attribuée.',
     icon: 'mail',
   },
   {
-    title: 'Marketplace salles & prestas',
-    description: 'Salles avec plan 2D, métiers (traiteur, photo, DJ…) et locations (habits, voitures, motos, matériel). Favoris, packs éco / équilibré / confort, partage d’URL. Acompte {depositPercent} % hors plateforme · commission vendeur {commissionPercent} %.',
+    title: 'Marketplace',
+    description: 'Salles, métiers, locations. Acompte {depositPercent} % hors plateforme · commission vendeur {commissionPercent} %.',
     icon: 'calendar',
   },
   {
-    title: 'Rôles granulaires',
-    description: 'Propriétaire, manager org., protocole, managers salle/événement, commercial org. — chacun ne voit que son périmètre.',
+    title: 'Rôles clairs',
+    description: 'Chacun voit seulement ce qu’il gère : organisation, accueil, salle ou parrainage.',
     icon: 'users',
   },
   {
-    title: 'Multi-tenant sécurisé',
-    description: 'Isolation par organisation, OTP e-mail ou WhatsApp, acceptation légale et licences SaaS. Le compte client n’exige pas d’abonnement.',
+    title: 'Espaces séparés',
+    description: 'Chaque organisation a son espace. Le compte client n’exige pas d’abonnement.',
     icon: 'lock',
   },
   {
     title: 'Réseau commercial',
-    description: 'Code de parrainage, création d’organisations et commissions ({commercialPercent} % sur la facturation de période).',
+    description: 'Code de parrainage et commissions ({commercialPercent} % sur la période facturée).',
     icon: 'trending',
   },
 ];
