@@ -11,7 +11,8 @@ import {
  ChevronRight, ArrowLeft, Check, Upload, Mail, Send, 
  Sparkles, CheckCircle2, XCircle, AlertCircle, Loader2,
  Copy, MessageSquare, Share2, Search, Filter, RefreshCw,
- Eye, Utensils, FileSpreadsheet, Download, LayoutGrid, Building2, ScanLine, Shirt, Globe, GlobeLock, Ticket, LayoutTemplate
+ ClipboardList, Eye, Utensils, FileSpreadsheet, Download, LayoutGrid,
+ Building2, ScanLine, Shirt, Globe, GlobeLock, Ticket, LayoutTemplate,
 } from 'lucide-react';
 import TablePlanner from './TablePlanner';
 import EventStaffPanel from './EventStaffPanel';
@@ -31,7 +32,7 @@ import {
  applyInvitationGuidelineVariables,
  formatGuestGuidelinesBlock,
 } from '@/lib/guestGuidelines';
-import { PageHeader, Button, ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, Breadcrumbs, Modal, Input, Pagination, paginateItems, PhoneInput, usePageSize, coverFromPhotos } from '@/components/ui';
+import { PageHeader, Button, ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, Breadcrumbs, Modal, Input, Pagination, paginateItems, PhoneInput, usePageSize, coverFromPhotos, Card, CardHeader, EmptyState } from '@/components/ui';
 import CatalogueFilterBar, { CatalogueChoicePills, CatalogueFilterField, type CatalogueFilterChip } from '@/components/CatalogueFilterBar';
 import { EVENT_ENTRY_OPTIONS } from '@/lib/catalogueEntityFilters';
 import { cn } from '@/lib/cn';
@@ -2945,14 +2946,14 @@ Merci de confirmer votre présence :
 
  {/* Tab Content: Invitations */}
  {activeTab === 'invitations' && (
- <div className="space-y-6">
- <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
- <div>
- <h2 className="text-xl font-bold text-foreground">Invitations</h2>
- <p className="text-muted text-sm mt-0.5">Rédigez le message, choisissez e-mail ou WhatsApp, puis envoyez le lien RSVP. Le PDF de table part après confirmation.</p>
+ <div className="space-y-4 animate-fade-in">
+ <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+ <div className="space-y-1">
+ <h2 className="text-lg font-semibold text-foreground tracking-tight">Invitations</h2>
+ <p className="text-sm text-muted">Rédigez le message, choisissez e-mail ou WhatsApp, puis envoyez le lien RSVP. Le PDF de table part après confirmation.</p>
  </div>
- <div className="flex flex-col items-stretch sm:items-end gap-1.5">
- <button 
+ <div className="flex flex-col items-stretch sm:items-end gap-1.5 shrink-0">
+ <Button
  onClick={() => {
  if (invitations[0]) {
  handleEditInvitationClick(invitations[0]);
@@ -2960,111 +2961,109 @@ Merci de confirmer votre présence :
  openNewInvitationModal();
  }
  }}
- className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/10"
+ leftIcon={invitations[0] ? <Edit3 className="w-4 h-4" /> : <PlusCircle className="w-4 h-4" />}
  >
- {invitations[0] ? <Edit3 className="w-4 h-4" /> : <PlusCircle className="w-4 h-4" />}
  {invitations[0] ? 'Modifier le message' : 'Configurer une invitation'}
- </button>
+ </Button>
  {invitations.length > 0 ? (
- <button
- type="button"
- onClick={openNewInvitationModal}
- className="text-xs font-medium text-muted hover:text-foreground hover:underline self-center sm:self-end"
- >
+ <Button variant="ghost" size="sm" onClick={openNewInvitationModal}>
  Ajouter une autre invitation
- </button>
+ </Button>
  ) : null}
  </div>
  </div>
 
- <div className="rounded-3xl border border-border bg-white p-5 sm:p-6 space-y-4">
- <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
- <div>
- <h3 className="text-base font-bold text-foreground">Formulaire RSVP</h3>
- <p className="text-sm text-muted mt-0.5">
- Types de champs toujours présents : genre, allergies, boissons, type de menu. Choisissez les valeurs prédéfinies ou personnalisez-les pour cet événement.
- </p>
- </div>
- <Button
- onClick={handleSaveEventRsvpForm}
- disabled={savingRsvpForm}
- >
- {savingRsvpForm ? 'Enregistrement…' : 'Enregistrer le formulaire'}
+ <Card>
+ <CardHeader
+ title={
+ <span className="inline-flex items-center gap-2">
+ <ClipboardList className="w-4 h-4 text-primary" />
+ Formulaire RSVP
+ </span>
+ }
+ description="Types toujours présents : genre, allergies, boissons, menu. Valeurs prédéfinies ou personnalisées pour cet événement."
+ action={
+ <Button size="sm" onClick={handleSaveEventRsvpForm} loading={savingRsvpForm} disabled={savingRsvpForm}>
+ Enregistrer le formulaire
  </Button>
- </div>
+ }
+ />
  <RsvpFieldTypeEditor fields={eventRsvpFields} onChange={setEventRsvpFields} />
- </div>
+ </Card>
 
- {/* Invitations List */}
- <div className="grid md:grid-cols-2 gap-6">
  {invitations.length === 0 ? (
- <div className="col-span-full text-center py-16 bg-white border border-border rounded-3xl">
- <Mail className="w-12 h-12 text-muted mx-auto mb-4" />
- <h3 className="font-bold text-foreground">Aucune invitation configurée</h3>
- <p className="text-sm text-muted mt-1 max-w-xs mx-auto">Créez une invitation pour pouvoir envoyer des liens RSVP personnalisés à vos invités.</p>
- </div>
+ <EmptyState
+ icon={<Mail className="w-5 h-5" />}
+ title="Aucune invitation configurée"
+ description="Créez une invitation pour envoyer des liens RSVP personnalisés à vos invités."
+ action={
+ <Button onClick={openNewInvitationModal} leftIcon={<PlusCircle className="w-4 h-4" />}>
+ Configurer une invitation
+ </Button>
+ }
+ />
  ) : (
- invitations.map((invite) => (
- <div key={invite.id} className="bg-white border border-border rounded-3xl p-6 shadow-sm space-y-4 flex flex-col justify-between">
+ <div className="grid md:grid-cols-2 gap-4">
+ {invitations.map((invite) => (
+ <Card key={invite.id} interactive className="flex flex-col justify-between gap-4">
  <div className="space-y-3">
- <div className="flex items-center justify-between">
- <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold border ${
- invite.channel === 'EMAIL' ? 'bg-primary/10 border-primary/20 text-primary' :
- invite.channel === 'WHATSAPP' || invite.channel === 'SMS' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
- invite.channel === 'EMAIL_AND_WHATSAPP' || invite.channel === 'EMAIL_AND_SMS' || invite.channel === 'ALL_CHANNELS' ? 'bg-primary/10 border-primary/20 text-primary' :
- 'bg-surface-muted border-border-subtle text-foreground'
- }`}>
- Canal: {getChannelLabel(invite.channel)}
- </span>
- <span className="text-xs text-muted font-semibold">
- Modèle: {invite.template?.name || 'Aucun'}
+ <div className="flex items-center justify-between gap-2">
+ <StatusPill
+ tone={
+ invite.channel === 'WHATSAPP' || invite.channel === 'SMS'
+ ? 'emerald'
+ : invite.channel === 'EMAIL_AND_WHATSAPP' || invite.channel === 'EMAIL_AND_SMS' || invite.channel === 'ALL_CHANNELS'
+ ? 'sky'
+ : 'primary'
+ }
+ >
+ {getChannelLabel(invite.channel)}
+ </StatusPill>
+ <span className="text-[11px] font-semibold uppercase tracking-wider text-muted truncate">
+ {invite.template?.name || 'Sans modèle'}
  </span>
  </div>
- <h3 className="font-bold text-foreground text-base line-clamp-1">{invite.subject}</h3>
+ <h3 className="text-base font-semibold text-foreground tracking-tight line-clamp-1">{invite.subject}</h3>
  <p className="text-sm text-muted line-clamp-3 leading-relaxed whitespace-pre-line">{invite.body}</p>
  </div>
- <div className="flex gap-2 pt-4 border-t border-border-subtle">
- <button 
+ <div className="flex gap-2 pt-3 border-t border-border">
+ <Button
+ className="flex-1"
+ size="sm"
+ disabled={broadcastingInviteId !== null}
+ loading={broadcastingInviteId === invite.id}
+ leftIcon={broadcastingInviteId === invite.id ? undefined : <Send className="w-3.5 h-3.5" />}
  onClick={() => {
  setBroadcastWizardStep(1);
  setBroadcastConfirmInviteId(invite.id);
  }}
- disabled={broadcastingInviteId !== null}
- className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl text-xs transition shadow-md shadow-primary/10 disabled:bg-primary/50 disabled:cursor-not-allowed"
  >
- {broadcastingInviteId === invite.id ? (
- <>
- <Loader2 className="w-3.5 h-3.5 animate-spin" />
- Envoi en cours...
- </>
- ) : (
- <>
- <Send className="w-3.5 h-3.5" />
- Envoyer les invitations
- </>
- )}
- </button>
- <button 
+ {broadcastingInviteId === invite.id ? 'Envoi en cours…' : 'Envoyer les invitations'}
+ </Button>
+ <Button
+ variant="ghost"
+ size="sm"
  onClick={() => handleEditInvitationClick(invite)}
  disabled={broadcastingInviteId !== null}
- className="p-2 text-muted hover:text-primary hover:bg-primary/10 rounded-xl transition disabled:opacity-50"
  title="Modifier l'invitation"
  >
  <Edit3 className="w-4 h-4" />
- </button>
- <button 
+ </Button>
+ <Button
+ variant="ghost"
+ size="sm"
  onClick={() => handleDeleteInvitation(invite.id)}
  disabled={broadcastingInviteId !== null}
- className="p-2 text-muted hover:text-rose-600 hover:bg-rose-50 rounded-xl transition disabled:opacity-50"
  title="Supprimer l'invitation"
+ className="hover:text-rose-600"
  >
  <Trash2 className="w-4 h-4" />
- </button>
+ </Button>
  </div>
+ </Card>
+ ))}
  </div>
- ))
  )}
- </div>
  </div>
  )}
 

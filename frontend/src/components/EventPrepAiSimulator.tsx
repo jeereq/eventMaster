@@ -80,10 +80,10 @@ export default function EventPrepAiSimulator({
   };
 
   return (
-    <section className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-surface p-4 space-y-3">
+    <section className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1 min-w-0">
-          <h3 className="text-sm font-bold text-foreground inline-flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-foreground tracking-tight inline-flex items-center gap-2">
             <Wand2 className="w-4 h-4 text-primary" />
             Simulation IA
           </h3>
@@ -105,7 +105,7 @@ export default function EventPrepAiSimulator({
               onChange={(e) => setPrompt(e.target.value)}
               rows={3}
               placeholder="Ex. mariage 120 personnes à Gombe, ambiance chic, besoin traiteur + DJ + habits…"
-              className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm resize-y min-h-[4.5rem]"
+              className="w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm resize-y min-h-[4.5rem]"
             />
           </label>
 
@@ -116,7 +116,7 @@ export default function EventPrepAiSimulator({
                 type="button"
                 onClick={() => setEventType(item.id)}
                 className={cn(
-                  'px-2.5 py-1 rounded-full text-[11px] font-semibold border transition',
+                  'px-2.5 py-1 rounded-[var(--radius-button)] text-[11px] font-semibold border transition',
                   eventType === item.id ? 'bg-primary text-white border-primary' : 'border-border text-muted hover:text-foreground',
                 )}
               >
@@ -134,7 +134,7 @@ export default function EventPrepAiSimulator({
                   setCity(e.target.value);
                   setCommune('');
                 }}
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm"
               >
                 <option value="">Kinshasa & Lubumbashi</option>
                 <option value="Kinshasa">Kinshasa</option>
@@ -146,7 +146,7 @@ export default function EventPrepAiSimulator({
               <select
                 value={commune}
                 onChange={(e) => setCommune(e.target.value)}
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm"
               >
                 <option value="">Toutes</option>
                 {communes.map((item) => (
@@ -208,7 +208,7 @@ export default function EventPrepAiSimulator({
           </Button>
 
           {result ? (
-            <div className="rounded-xl border border-border bg-surface p-3 space-y-3">
+            <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/40 p-3 space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-foreground">{result.summary}</p>
@@ -294,7 +294,7 @@ function AiPickRow({
   price: number;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-border px-2.5 py-2">
+    <div className="flex items-center gap-3 rounded-[var(--radius-button)] border border-border px-2.5 py-2">
       <div className="w-11 h-11 rounded-lg overflow-hidden bg-surface-muted shrink-0">
         {cover ? (
           // eslint-disable-next-line @next/next/no-img-element

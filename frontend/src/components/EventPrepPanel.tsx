@@ -6,7 +6,9 @@ import {
   Bookmark,
   Building2,
   Check,
+  ChevronDown,
   Eye,
+  Filter,
   KeyRound,
   Loader2,
   MapPin,
@@ -15,7 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Button, Input } from '@/components/ui';
+import { Button, Card, CardHeader, EmptyState, Input } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import {
@@ -33,6 +35,7 @@ import { communesForCity, normalizeRdcCity } from '@/lib/rdcCities';
 import {
   emptyEventPrep,
   eventDateKey,
+  eventPrepEstimateFc,
   eventPrepFromAiRecommendation,
   eventPrepFromSavedPack,
   parseEventPrep,
@@ -53,6 +56,24 @@ type OrgRoomOption = {
 };
 
 type PrepLaneId = 'venue' | 'trade' | 'rental';
+
+const LANE_TONE: Record<PrepLaneId, { selected: string; icon: string; check: string }> = {
+  venue: {
+    selected: 'border-primary/30 bg-primary/5',
+    icon: 'text-primary',
+    check: 'text-primary',
+  },
+  trade: {
+    selected: 'border-[color:color-mix(in_srgb,var(--festive-accent)_35%,var(--border))] bg-[var(--festive-accent-soft)]',
+    icon: 'text-[color:var(--festive-accent)]',
+    check: 'text-[color:var(--festive-accent)]',
+  },
+  rental: {
+    selected: 'border-cyan-700/25 bg-cyan-700/5',
+    icon: 'text-cyan-700 dark:text-cyan-400',
+    check: 'text-cyan-700 dark:text-cyan-400',
+  },
+};
 
 function inferPrepCity(location?: string): string {
   const raw = String(location || '').toLowerCase();
@@ -92,7 +113,7 @@ function vendorFromPublic(service: PublicService): EventPrepVendor {
 
 function Cover({ src, fallback }: { src?: string | null; fallback: React.ReactNode }) {
   return (
-    <div className="w-12 h-12 rounded-lg overflow-hidden bg-surface-muted shrink-0">
+    <div className="w-12 h-12 rounded-[var(--radius-card)] overflow-hidden bg-surface-muted shrink-0">
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt="" className="w-full h-full object-cover" />
@@ -120,7 +141,7 @@ function FilterSelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+        className="w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm"
       >
         {children}
       </select>
@@ -149,7 +170,7 @@ function FilterPills({
             type="button"
             onClick={() => onChange(option.id)}
             className={cn(
-              'px-2.5 py-1 rounded-full text-[11px] font-semibold border transition',
+              'px-2.5 py-1 rounded-[var(--radius-button)] text-[11px] font-semibold border transition',
               value === option.id
                 ? 'bg-primary text-white border-primary'
                 : 'border-border text-muted hover:text-foreground hover:border-primary/40',
@@ -197,6 +218,7 @@ function PrepLane({
   const [venues, setVenues] = useState<PublicVenue[]>([]);
   const [services, setServices] = useState<PublicService[]>([]);
   const [searching, setSearching] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     setCity(defaultCity);
@@ -262,8 +284,8 @@ function PrepLane({
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-        <div className="sm:col-span-2 lg:col-span-4">
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex-1 min-w-0">
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -277,19 +299,35 @@ function PrepLane({
             leftIcon={<Search className="w-4 h-4" />}
           />
         </div>
-        <FilterPills
-          label="Ville"
-          value={city}
-          onChange={(next) => {
-            setCity(next);
-            setCommune('');
-          }}
-          options={[
-            { id: '', label: 'Toutes' },
-            { id: 'Kinshasa', label: 'Kinshasa' },
-            { id: 'Lubumbashi', label: 'Lubumbashi' },
-          ]}
-        />
+        <Button
+          type="button"
+          size="sm"
+          variant={showFilters ? 'secondary' : 'ghost'}
+          leftIcon={<Filter className="w-3.5 h-3.5" />}
+          onClick={() => setShowFilters((value) => !value)}
+          className="shrink-0 self-start sm:self-auto"
+        >
+          Filtres
+          <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', showFilters && 'rotate-180')} />
+        </Button>
+      </div>
+
+      <FilterPills
+        label="Ville"
+        value={city}
+        onChange={(next) => {
+          setCity(next);
+          setCommune('');
+        }}
+        options={[
+          { id: '', label: 'Toutes' },
+          { id: 'Kinshasa', label: 'Kinshasa' },
+          { id: 'Lubumbashi', label: 'Lubumbashi' },
+        ]}
+      />
+
+      {showFilters ? (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 rounded-[var(--radius-card)] border border-border bg-surface-muted/40 p-3">
         <FilterSelect
           label="Commune"
           value={commune}
@@ -345,6 +383,7 @@ function PrepLane({
           </>
         )}
       </div>
+      ) : null}
 
       <div className="flex items-center justify-between gap-2">
         <p className="text-[11px] text-muted">
@@ -367,13 +406,20 @@ function PrepLane({
             Chargement du marketplace…
           </li>
         ) : (isVenue ? venues : services).length === 0 ? (
-          <li className="text-xs text-muted px-1 py-3">{emptySearch}</li>
+          <li>
+            <EmptyState
+              className="py-8"
+              title={emptySearch}
+              description="Élargissez la ville ou réinitialisez les filtres."
+            />
+          </li>
         ) : isVenue ? (
           venues.map((venue) => {
             const already = selectedSlugs.includes(venue.slug);
             return (
               <li key={venue.slug}>
                 <ResultRow
+                  tone={lane}
                   cover={venue.coverUrl}
                   icon={<Icon className="w-4 h-4" />}
                   title={venue.name || venue.headline}
@@ -392,6 +438,7 @@ function PrepLane({
             return (
               <li key={service.slug}>
                 <ResultRow
+                  tone={lane}
                   cover={service.coverUrl}
                   icon={<Icon className="w-4 h-4" />}
                   title={service.title}
@@ -411,6 +458,7 @@ function PrepLane({
 }
 
 function ResultRow({
+  tone,
   cover,
   icon,
   title,
@@ -420,6 +468,7 @@ function ResultRow({
   onDetails,
   onRetain,
 }: {
+  tone: PrepLaneId;
   cover?: string | null;
   icon: React.ReactNode;
   title: string;
@@ -432,8 +481,8 @@ function ResultRow({
   return (
     <div
       className={cn(
-        'flex items-center gap-3 rounded-xl border px-2.5 py-2',
-        already ? 'border-emerald-200 bg-emerald-50/70' : 'border-border bg-surface',
+        'flex items-center gap-3 rounded-[var(--radius-card)] border px-2.5 py-2',
+        already ? LANE_TONE[tone].selected : 'border-border bg-surface',
       )}
     >
       <Cover src={cover} fallback={icon} />
@@ -442,14 +491,14 @@ function ResultRow({
         <p className="text-[11px] text-muted truncate">{meta.filter(Boolean).join(' · ')}</p>
       </button>
       {already ? (
-        <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+        <Check className={cn('w-4 h-4 shrink-0', LANE_TONE[tone].check)} />
       ) : price != null ? (
         <span className="text-[11px] font-semibold shrink-0 hidden sm:inline">{formatFc(price)}</span>
       ) : null}
       <button
         type="button"
         onClick={onDetails}
-        className="p-1.5 rounded-lg text-muted hover:text-primary hover:bg-primary/5"
+        className="p-1.5 rounded-[var(--radius-button)] text-muted hover:text-primary hover:bg-primary/5"
         title="Voir les détails"
       >
         <Eye className="w-4 h-4" />
@@ -588,6 +637,7 @@ export default function EventPrepPanel({
     { id: 'trade', label: 'Métiers', count: trades.length, icon: Sparkles, hint: 'Le savoir-faire' },
     { id: 'rental', label: 'Locations', count: rentals.length, icon: KeyRound, hint: 'Le bien loué' },
   ];
+  const estimate = eventPrepEstimateFc(prep);
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -626,7 +676,7 @@ export default function EventPrepPanel({
       </div>
 
       {error ? (
-        <p className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</p>
+        <p className="text-sm text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-[var(--radius-card)] px-4 py-3">{error}</p>
       ) : null}
 
       <EventPrepAiSimulator
@@ -641,85 +691,140 @@ export default function EventPrepPanel({
         onApply={(result) => void persist(eventPrepFromAiRecommendation(result, prep))}
       />
 
-      {prep.venue || prep.vendors.length > 0 ? (
-        <div className="rounded-2xl border border-border bg-surface p-3 space-y-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Retenus pour cet événement</p>
-          <div className="flex flex-wrap gap-1.5">
+      <Card>
+        <CardHeader
+          title="Retenus pour cet événement"
+          description={
+            estimate.totalItems === 0
+              ? 'Parcourez le catalogue ci-dessous et retenez une salle, des métiers et des locations.'
+              : estimate.priced > 0
+                ? `À partir de ${formatFc(estimate.total)} · ${estimate.totalItems} fiche${estimate.totalItems > 1 ? 's' : ''}`
+                : `${estimate.totalItems} fiche${estimate.totalItems > 1 ? 's' : ''} retenue${estimate.totalItems > 1 ? 's' : ''}`
+          }
+          action={
+            (prep.venue || prep.vendors.length > 0 || prep.notes) ? (
+              <Button type="button" variant="ghost" size="sm" onClick={() => void persist(emptyEventPrep())}>
+                Tout vider
+              </Button>
+            ) : null
+          }
+        />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <RetainedColumn
+            tone="venue"
+            label="Salle"
+            icon={<Building2 className="w-3.5 h-3.5" />}
+            empty="Aucune salle retenue"
+            onBrowse={() => setLane('venue')}
+          >
             {prep.venue ? (
-              <button
-                type="button"
-                onClick={() => {
+              <SelectedCard
+                tone="venue"
+                cover={prep.venue.coverUrl}
+                icon={<Building2 className="w-4 h-4" />}
+                title={prep.venue.name}
+                meta={[prep.venue.orgName, prep.venue.city, prep.venue.capacity ? `${prep.venue.capacity} places` : null]}
+                price={prep.venue.priceFromFc}
+                onDetails={() => {
                   setLane('venue');
                   setPreview({ kind: 'venue', slug: prep.venue!.slug });
                 }}
-                className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-2.5 py-1 text-[11px] font-semibold"
-              >
-                <Building2 className="w-3 h-3" />
-                {prep.venue.name}
-              </button>
+                onRemove={() => void persist({ ...prep, venue: null })}
+              />
             ) : null}
+          </RetainedColumn>
+          <RetainedColumn
+            tone="trade"
+            label="Métiers"
+            icon={<Sparkles className="w-3.5 h-3.5" />}
+            empty="Aucun métier retenu"
+            onBrowse={() => setLane('trade')}
+          >
             {trades.map((vendor) => (
-              <button
+              <SelectedCard
                 key={vendor.slug}
-                type="button"
-                onClick={() => {
+                tone="trade"
+                cover={vendor.coverUrl}
+                icon={<Sparkles className="w-4 h-4" />}
+                title={vendor.title}
+                meta={[vendor.categoryLabel, vendor.orgName, vendor.city]}
+                price={vendor.priceFromFc}
+                onDetails={() => {
                   setLane('trade');
                   setPreview({ kind: 'service', slug: vendor.slug });
                 }}
-                className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold"
-              >
-                <Sparkles className="w-3 h-3" />
-                {vendor.title}
-              </button>
+                onRemove={() => removeVendor(vendor.slug)}
+              />
             ))}
+          </RetainedColumn>
+          <RetainedColumn
+            tone="rental"
+            label="Locations"
+            icon={<KeyRound className="w-3.5 h-3.5" />}
+            empty="Aucune location retenue"
+            onBrowse={() => setLane('rental')}
+          >
             {rentals.map((vendor) => (
-              <button
+              <SelectedCard
                 key={vendor.slug}
-                type="button"
-                onClick={() => {
+                tone="rental"
+                cover={vendor.coverUrl}
+                icon={<KeyRound className="w-4 h-4" />}
+                title={vendor.title}
+                meta={[vendor.categoryLabel, vendor.orgName, vendor.city]}
+                price={vendor.priceFromFc}
+                onDetails={() => {
                   setLane('rental');
                   setPreview({ kind: 'service', slug: vendor.slug });
                 }}
-                className="inline-flex items-center gap-1.5 rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold"
-              >
-                <KeyRound className="w-3 h-3" />
-                {vendor.title}
-              </button>
+                onRemove={() => removeVendor(vendor.slug)}
+              />
             ))}
-          </div>
+          </RetainedColumn>
         </div>
-      ) : null}
+        {prep.venue || prep.vendors.length > 0 ? (
+          <p className="text-xs text-muted flex items-start gap-1.5 mt-3">
+            <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+            Pistes uniquement : ouvrez une fiche, retenez, puis demandez un devis. Rien n’est réservé automatiquement.
+          </p>
+        ) : null}
+      </Card>
 
       {savedPacks.length > 0 ? (
-        <div className="rounded-2xl border border-border bg-surface p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <Bookmark className="w-4 h-4 text-primary" />
-            <h3 className="text-sm font-bold text-foreground">Packs enregistrés</h3>
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">optionnel</span>
+        <details className="group bg-surface border border-border rounded-[var(--radius-card)]">
+          <summary className="cursor-pointer list-none flex items-center justify-between gap-3 px-5 py-3.5 [&::-webkit-details-marker]:hidden">
+            <span className="inline-flex items-center gap-2 text-sm font-semibold text-foreground tracking-tight">
+              <Bookmark className="w-4 h-4 text-primary" />
+              Packs enregistrés
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">{savedPacks.length}</span>
+            </span>
+            <ChevronDown className="w-4 h-4 text-muted transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="px-5 pb-4 space-y-2">
+            <p className="text-xs text-muted">Appliquez un pack déjà simulé : salle, métiers et locations se remplissent ici, sans réserver.</p>
+            <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {savedPacks.slice(0, 6).map((pack) => (
+                <li key={pack.id}>
+                  <button
+                    type="button"
+                    onClick={() => void persist(eventPrepFromSavedPack(pack, prep))}
+                    className="w-full text-left rounded-[var(--radius-card)] border border-border px-3 py-2.5 hover:border-primary/40 hover:bg-primary/5 transition"
+                  >
+                    <p className="text-sm font-semibold truncate">{pack.name}</p>
+                    <p className="text-[11px] text-muted truncate">
+                      {formatFc(pack.totalFc)}
+                      {pack.venue ? ` · ${pack.venue.title}` : ''}
+                      {pack.services.length ? ` · ${pack.services.length} fiche${pack.services.length > 1 ? 's' : ''}` : ''}
+                    </p>
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
-          <p className="text-xs text-muted">Appliquez un pack déjà simulé : salle, métiers et locations se remplissent ici, sans réserver.</p>
-          <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {savedPacks.slice(0, 6).map((pack) => (
-              <li key={pack.id}>
-                <button
-                  type="button"
-                  onClick={() => void persist(eventPrepFromSavedPack(pack, prep))}
-                  className="w-full text-left rounded-xl border border-border px-3 py-2.5 hover:border-primary/40 hover:bg-primary/5 transition"
-                >
-                  <p className="text-sm font-semibold truncate">{pack.name}</p>
-                  <p className="text-[11px] text-muted truncate">
-                    {formatFc(pack.totalFc)}
-                    {pack.venue ? ` · ${pack.venue.title}` : ''}
-                    {pack.services.length ? ` · ${pack.services.length} fiche${pack.services.length > 1 ? 's' : ''}` : ''}
-                  </p>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
+        </details>
       ) : null}
 
-      <div className="rounded-2xl border border-border bg-surface overflow-hidden">
+      <Card padding="none">
         <div className="flex flex-wrap gap-1 p-2 border-b border-border bg-surface-muted/50">
           {tabs.map((tab) => {
             const TabIcon = tab.icon;
@@ -730,11 +835,11 @@ export default function EventPrepPanel({
                 type="button"
                 onClick={() => setLane(tab.id)}
                 className={cn(
-                  'inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition',
+                  'inline-flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-button)] text-sm font-semibold transition',
                   active ? 'bg-surface text-foreground shadow-sm border border-border' : 'text-muted hover:text-foreground',
                 )}
               >
-                <TabIcon className="w-4 h-4" />
+                <TabIcon className={cn('w-4 h-4', active ? LANE_TONE[tab.id].icon : '')} />
                 {tab.label}
                 <span className={cn(
                   'min-w-5 h-5 px-1 rounded-full text-[10px] inline-flex items-center justify-center',
@@ -752,8 +857,8 @@ export default function EventPrepPanel({
 
           <div className={lane === 'venue' ? 'space-y-4' : 'hidden'}>
             {orgRooms.length > 0 ? (
-              <div className="rounded-xl border border-border bg-surface-muted/40 p-3 space-y-2">
-                <p className="text-xs font-bold uppercase tracking-wider text-muted">Salle de l’organisation</p>
+              <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/40 p-3 space-y-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Salle de l’organisation</p>
                 <p className="text-xs text-muted">Liez une de vos salles pour importer le plan 2D. Indépendant du choix marketplace.</p>
                 <select
                   value={currentRoomId || ''}
@@ -761,7 +866,7 @@ export default function EventPrepPanel({
                     const roomId = e.target.value || null;
                     void persist(prep, { roomId });
                   }}
-                  className="w-full sm:max-w-md rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                  className="w-full sm:max-w-md rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm"
                 >
                   <option value="">Aucune salle liée</option>
                   {orgRooms.map((room) => (
@@ -773,17 +878,6 @@ export default function EventPrepPanel({
                   ))}
                 </select>
               </div>
-            ) : null}
-
-            {prep.venue ? (
-              <SelectedCard
-                cover={prep.venue.coverUrl}
-                icon={<Building2 className="w-4 h-4" />}
-                title={prep.venue.name}
-                meta={[prep.venue.orgName, prep.venue.city, prep.venue.capacity ? `${prep.venue.capacity} places` : null]}
-                onDetails={() => setPreview({ kind: 'venue', slug: prep.venue!.slug })}
-                onRemove={() => void persist({ ...prep, venue: null })}
-              />
             ) : null}
 
             <PrepLane
@@ -799,22 +893,6 @@ export default function EventPrepPanel({
           </div>
 
           <div className={lane === 'trade' ? 'space-y-4' : 'hidden'}>
-            {trades.length > 0 ? (
-              <ul className="space-y-1.5">
-                {trades.map((vendor) => (
-                  <li key={vendor.slug}>
-                    <SelectedCard
-                      cover={vendor.coverUrl}
-                      icon={<Sparkles className="w-4 h-4" />}
-                      title={vendor.title}
-                      meta={[vendor.categoryLabel, vendor.orgName, vendor.city]}
-                      onDetails={() => setPreview({ kind: 'service', slug: vendor.slug })}
-                      onRemove={() => removeVendor(vendor.slug)}
-                    />
-                  </li>
-                ))}
-              </ul>
-            ) : null}
             <PrepLane
               lane="trade"
               dateKey={dateKey}
@@ -828,22 +906,6 @@ export default function EventPrepPanel({
           </div>
 
           <div className={lane === 'rental' ? 'space-y-4' : 'hidden'}>
-            {rentals.length > 0 ? (
-              <ul className="space-y-1.5">
-                {rentals.map((vendor) => (
-                  <li key={vendor.slug}>
-                    <SelectedCard
-                      cover={vendor.coverUrl}
-                      icon={<KeyRound className="w-4 h-4" />}
-                      title={vendor.title}
-                      meta={[vendor.categoryLabel, vendor.orgName, vendor.city]}
-                      onDetails={() => setPreview({ kind: 'service', slug: vendor.slug })}
-                      onRemove={() => removeVendor(vendor.slug)}
-                    />
-                  </li>
-                ))}
-              </ul>
-            ) : null}
             <PrepLane
               lane="rental"
               dateKey={dateKey}
@@ -856,10 +918,10 @@ export default function EventPrepPanel({
             />
           </div>
         </div>
-      </div>
+      </Card>
 
-      <div className="rounded-2xl border border-border bg-surface p-4 space-y-2">
-        <label className="text-xs font-bold uppercase tracking-wider text-muted" htmlFor="event-prep-notes">
+      <Card>
+        <label className="text-[10px] font-semibold uppercase tracking-wider text-muted" htmlFor="event-prep-notes">
           Notes de préparation
         </label>
         <textarea
@@ -868,27 +930,9 @@ export default function EventPrepPanel({
           onChange={(e) => onNotesChange(e.target.value)}
           rows={3}
           placeholder="Budget visé, horaires, contraintes logistiques… (optionnel)"
-          className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm resize-y min-h-[4.5rem]"
+          className="mt-2 w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm resize-y min-h-[4.5rem]"
         />
-      </div>
-
-      {prep.venue || prep.vendors.length > 0 ? (
-        <p className="text-xs text-muted flex items-start gap-1.5">
-          <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-          Les fiches restent des pistes. Ouvrez les détails, retenez, puis demandez un devis. Rien n’est réservé automatiquement.
-        </p>
-      ) : null}
-
-      {(prep.venue || prep.vendors.length > 0 || prep.notes) && (
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={() => void persist(emptyEventPrep())}
-        >
-          Vider la préparation
-        </Button>
-      )}
+      </Card>
 
       <EventPrepListingModal
         target={preview}
@@ -909,40 +953,78 @@ export default function EventPrepPanel({
   );
 }
 
+function RetainedColumn({
+  tone,
+  label,
+  icon,
+  empty,
+  onBrowse,
+  children,
+}: {
+  tone: PrepLaneId;
+  label: string;
+  icon: React.ReactNode;
+  empty: string;
+  onBrowse: () => void;
+  children: React.ReactNode;
+}) {
+  const items = React.Children.toArray(children).filter(Boolean);
+  return (
+    <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/30 p-3 space-y-2 min-h-[7.5rem]">
+      <p className={cn('text-[10px] font-semibold uppercase tracking-wider inline-flex items-center gap-1.5', LANE_TONE[tone].icon)}>
+        {icon}
+        {label}
+        <span className="text-muted font-semibold">· {items.length}</span>
+      </p>
+      {items.length > 0 ? (
+        <div className="space-y-1.5">{children}</div>
+      ) : (
+        <button
+          type="button"
+          onClick={onBrowse}
+          className="w-full text-left text-xs text-muted hover:text-foreground rounded-[var(--radius-button)] border border-dashed border-border px-3 py-4 transition"
+        >
+          {empty}
+          <span className="block mt-0.5 font-semibold text-primary">Parcourir</span>
+        </button>
+      )}
+    </div>
+  );
+}
+
 function SelectedCard({
+  tone,
   cover,
   icon,
   title,
   meta,
+  price,
   onDetails,
   onRemove,
 }: {
+  tone: PrepLaneId;
   cover?: string | null;
   icon: React.ReactNode;
   title: string;
   meta: Array<string | null | undefined>;
+  price?: number | null;
   onDetails: () => void;
   onRemove: () => void;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50/60 px-2.5 py-2">
+    <div className={cn('flex items-center gap-2.5 rounded-[var(--radius-card)] border px-2 py-1.5', LANE_TONE[tone].selected)}>
       <Cover src={cover} fallback={icon} />
       <button type="button" onClick={onDetails} className="min-w-0 flex-1 text-left">
         <p className="text-sm font-semibold truncate">{title}</p>
-        <p className="text-[11px] text-muted truncate">{meta.filter(Boolean).join(' · ')}</p>
-      </button>
-      <button
-        type="button"
-        onClick={onDetails}
-        className="p-1.5 rounded-lg text-muted hover:text-primary"
-        title="Voir les détails"
-      >
-        <Eye className="w-4 h-4" />
+        <p className="text-[11px] text-muted truncate">
+          {meta.filter(Boolean).join(' · ')}
+          {price != null ? ` · ${formatFc(price)}` : ''}
+        </p>
       </button>
       <button
         type="button"
         onClick={onRemove}
-        className="p-1.5 rounded-lg text-muted hover:text-rose-600"
+        className="p-1.5 rounded-[var(--radius-button)] text-muted hover:text-rose-600"
         title="Retirer"
       >
         <X className="w-4 h-4" />
