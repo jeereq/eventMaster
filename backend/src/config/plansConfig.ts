@@ -40,6 +40,7 @@ export interface PlanDefinition {
   maxServices: number;
   maxOrgManagers: number;
   customTemplates: boolean;
+  customRsvpFields: boolean;
   mockupOcr: boolean;
   protocolQr: boolean;
   seatNotifications: boolean;
@@ -109,9 +110,16 @@ export function annualMonthlyEquivalent(monthlyFc: number): string {
 }
 
 function organizerPlan(
-  rest: Omit<PlanDefinition, 'maxServices'> & { maxServices?: number },
+  rest: Omit<PlanDefinition, 'maxServices' | 'customRsvpFields'> & {
+    maxServices?: number;
+    customRsvpFields?: boolean;
+  },
 ): PlanDefinition {
-  return { ...rest, maxServices: rest.maxServices ?? 0 };
+  return {
+    ...rest,
+    maxServices: rest.maxServices ?? 0,
+    customRsvpFields: rest.customRsvpFields ?? true,
+  };
 }
 
 function personalPlan(
@@ -126,6 +134,7 @@ function personalPlan(
     maxServices: 0,
     maxOrgManagers: 1,
     customTemplates: true,
+    customRsvpFields: true,
     mockupOcr: true,
     protocolQr: true,
     seatNotifications: true,
@@ -341,6 +350,7 @@ export function getDefaultPlans(): PlansConfiguration {
       roomEditorLevel: 'complete',
       commercialNetwork: false,
       supportLevel: 'email',
+      customRsvpFields: true,
     },
     SERVICE: {
       name: 'Prestataire',
@@ -364,6 +374,7 @@ export function getDefaultPlans(): PlansConfiguration {
       roomEditorLevel: 'basic',
       commercialNetwork: false,
       supportLevel: 'email',
+      customRsvpFields: false,
     },
     CATALOG: {
       name: 'Salle & presta',
@@ -387,6 +398,7 @@ export function getDefaultPlans(): PlansConfiguration {
       roomEditorLevel: 'complete',
       commercialNetwork: false,
       supportLevel: 'email',
+      customRsvpFields: true,
     },
   };
 }
@@ -410,6 +422,7 @@ export function mergePlan(base: PlanDefinition, override?: Partial<PlanDefinitio
     maxServices: override.maxServices ?? base.maxServices,
     maxOrgManagers: override.maxOrgManagers ?? base.maxOrgManagers,
     customTemplates: override.customTemplates ?? base.customTemplates,
+    customRsvpFields: override.customRsvpFields ?? base.customRsvpFields ?? true,
     mockupOcr: override.mockupOcr ?? base.mockupOcr,
     protocolQr: override.protocolQr ?? base.protocolQr,
     seatNotifications: override.seatNotifications ?? base.seatNotifications,
@@ -472,6 +485,7 @@ export function applyAccountKindToPlan(
       maxRooms: 0,
       maxServices: 0,
       maxOrgManagers: 0,
+      customRsvpFields: false,
     };
   }
   if (kind === 'VENDOR') {
@@ -481,6 +495,7 @@ export function applyAccountKindToPlan(
       maxEvents: 0,
       maxGuests: 0,
       maxTemplates: 0,
+      customRsvpFields: false,
       ...(isFree
         ? { description: 'Essai catalogue : 1 salle et 1 prestation, sans organisation d’événements.' }
         : {}),

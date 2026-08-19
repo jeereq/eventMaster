@@ -249,7 +249,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     ctaVariant: 'outline',
     tier: 'essentials',
     audience: 'B2B',
-    highlights: ['3 événements · 50 invités', 'RSVP & portail invité', '1 salle simple · 1 prestation'],
+    highlights: ['3 événements · 50 invités', 'RSVP personnalisable', '1 salle simple · 1 prestation'],
   },
   {
     id: 'PERSONAL_50',
@@ -758,6 +758,23 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
   {
     category: 'Invités',
     label: 'Portail RSVP + badge QR',
+    values: {
+      FREE: true,
+      ...b2cSame(true),
+      STANDARD: true,
+      PREMIUM_1: true,
+      PREMIUM_2: true,
+      ENTERPRISE_1: true,
+      ENTERPRISE_2: true,
+      ENTERPRISE_3: true,
+      VENUE: true,
+      SERVICE: false,
+      CATALOG: true,
+    },
+  },
+  {
+    category: 'Invités',
+    label: 'Champs RSVP personnalisables (genre, allergies, boissons, menu)',
     values: {
       FREE: true,
       ...b2cSame(true),

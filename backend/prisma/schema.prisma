@@ -224,6 +224,8 @@ model Event {
   longitude         Float?
   tablePlan         Json?        // Added for visual table planning
   guestGuidelines   Json?        // Dress code & practical recommendations for guests
+  /** Champs RSVP de l’événement (types + valeurs prédéfinies ou perso). */
+  rsvpForm          Json?
   /** false = liste d’invités uniquement. true = fiche publique + inscription / billets. */
   isPublic          Boolean      @default(false)
   slug              String?      @unique
@@ -816,6 +818,7 @@ model SubscriptionPlan {
   seatNotifications   Boolean  @default(false)
   roomThemesFixtures  Boolean  @default(false)
   adminReports        Boolean  @default(false)
+  customRsvpFields    Boolean  @default(true)
   roomEditorLevel     String   @default("basic")
   commercialNetwork   Boolean  @default(false)
   supportLevel        String   @default("community")

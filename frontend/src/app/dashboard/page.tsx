@@ -3454,7 +3454,8 @@ function DashboardPageContent() {
  </div>
  </div>
 
- <div className="flex items-center gap-2 pt-5">
+ <div className="flex flex-wrap items-center gap-4 pt-5">
+ <div className="flex items-center gap-2">
  <input
  type="checkbox"
  id={`custom-templates-${planKey}`}
@@ -3469,6 +3470,23 @@ function DashboardPageContent() {
  <label htmlFor={`custom-templates-${planKey}`} className="text-[10px] font-bold text-muted uppercase tracking-wider cursor-pointer">
  Modèles Perso.
  </label>
+ </div>
+ <div className="flex items-center gap-2">
+ <input
+ type="checkbox"
+ id={`custom-rsvp-${planKey}`}
+ checked={plan.customRsvpFields !== false}
+ onChange={(e) => {
+ const updatedPlans = { ...adminSettings.plans };
+ updatedPlans[planKey] = { ...plan, customRsvpFields: e.target.checked };
+ setAdminSettings({ ...adminSettings, plans: updatedPlans });
+ }}
+ className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
+ />
+ <label htmlFor={`custom-rsvp-${planKey}`} className="text-[10px] font-bold text-muted uppercase tracking-wider cursor-pointer">
+ Champs RSVP
+ </label>
+ </div>
  </div>
  </div>
  </div>

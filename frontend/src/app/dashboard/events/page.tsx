@@ -29,6 +29,7 @@ import {
  defaultGuestGuidelines,
  normalizeGuestGuidelines,
  applyInvitationGuidelineVariables,
+ formatGuestGuidelinesBlock,
 } from '@/lib/guestGuidelines';
 import { PageHeader, Button, ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, Breadcrumbs, Modal, Input, Pagination, paginateItems, PhoneInput, usePageSize, coverFromPhotos } from '@/components/ui';
 import CatalogueFilterBar, { CatalogueChoicePills, CatalogueFilterField, type CatalogueFilterChip } from '@/components/CatalogueFilterBar';
@@ -63,7 +64,11 @@ import {
  listGuestCustomFieldDetails,
  SPECIAL_MEAL_OPTIONS,
  specialMealLabel,
+ parseEventRsvpForm,
+ createMandatoryRsvpFields,
+ type RsvpField,
 } from '@/lib/rsvpFormFields';
+import RsvpFieldTypeEditor from '@/components/RsvpFieldTypeEditor';
 
 interface EventItem {
  id: string;
@@ -93,6 +98,7 @@ interface EventItem {
  } | null;
  tablePlan?: any;
  guestGuidelines?: GuestGuidelines | null;
+ rsvpForm?: { fields?: unknown } | unknown[] | null;
  feedPostCount?: number;
  tenant?: { name: string };
 }
@@ -152,6 +158,7 @@ interface BroadcastResultItem {
  rsvpLink: string;
  subject?: string;
  body?: string;
+ whatsappBody?: string;
  channel: string;
  status: 'SENT' | 'SENT_SIMULATED' | 'FAILED' | string;
  simulated?: boolean;
@@ -295,18 +302,25 @@ function fillInvitationPreviewVars(
  event: { title: string; description?: string | null; location: string; date: string; guestGuidelines?: GuestGuidelines | null },
  orgName: string,
 ): string {
- const formattedDate = new Date(event.date).toLocaleDateString('fr-FR', {
+ const parsedDate = new Date(event.date);
+ const formattedDate = Number.isNaN(parsedDate.getTime())
+  ? (event.date || '')
+  : parsedDate.toLocaleDateString('fr-FR', {
   weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
  });
- const text = body
-  .replaceAll('{{firstName}}', 'Marie')
-  .replaceAll('{{lastName}}', 'Kabeya')
-  .replaceAll('{{rsvpLink}}', 'https://…/rsvp/exemple')
-  .replaceAll('{{title}}', event.title || '')
-  .replaceAll('{{description}}', event.description || '')
-  .replaceAll('{{location}}', event.location || '')
-  .replaceAll('{{date}}', formattedDate)
-  .replaceAll('{{orgName}}', orgName);
+ const vars: Record<string, string> = {
+  firstName: 'Marie',
+  lastName: 'Kabeya',
+  rsvpLink: 'https://eventmaster.cd/rsvp/exemple',
+  title: event.title || '',
+  description: event.description || '',
+  location: event.location || '',
+  date: formattedDate,
+  orgName,
+ };
+ const text = (body || '').replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, key: string) => (
+  Object.prototype.hasOwnProperty.call(vars, key) ? vars[key] : `{{${key}}}`
+ ));
  return applyInvitationGuidelineVariables(text, event.guestGuidelines ?? null);
 }
 
@@ -451,6 +465,8 @@ export default function EventsPage() {
  const [importingLayout, setImportingLayout] = useState(false);
  const [guestGuidelines, setGuestGuidelines] = useState<GuestGuidelines>(defaultGuestGuidelines());
  const [savingGuidelines, setSavingGuidelines] = useState(false);
+ const [eventRsvpFields, setEventRsvpFields] = useState<RsvpField[]>(() => createMandatoryRsvpFields());
+ const [savingRsvpForm, setSavingRsvpForm] = useState(false);
 
  const [eventExtrasOpen, setEventExtrasOpen] = useState(false);
 
@@ -1233,6 +1249,7 @@ Merci de confirmer votre présence :
  const handleManageEvent = async (event: EventItem) => {
  setSelectedEvent(event);
  setGuestGuidelines(normalizeGuestGuidelines(event.guestGuidelines));
+ setEventRsvpFields(parseEventRsvpForm(event.rsvpForm).length ? parseEventRsvpForm(event.rsvpForm) : createMandatoryRsvpFields());
  setLoading(true);
  setError('');
  setSuccess('');
@@ -1307,6 +1324,26 @@ Merci de confirmer votre présence :
  setError(err.message || 'Erreur lors de l\'enregistrement des infos invités.');
  } finally {
  setSavingGuidelines(false);
+ }
+ };
+
+ const handleSaveEventRsvpForm = async () => {
+ if (!selectedEvent) return;
+ setSavingRsvpForm(true);
+ setError('');
+ try {
+ const fields = parseEventRsvpForm(eventRsvpFields);
+ const updatedEvent = await api.put(`/events/${selectedEvent.id}`, {
+ rsvpForm: { fields },
+ });
+ setSelectedEvent((prev) => (prev ? { ...prev, ...updatedEvent } : prev));
+ setEvents((prev) => prev.map((e) => (e.id === selectedEvent.id ? { ...e, ...updatedEvent } : e)));
+ setEventRsvpFields(fields);
+ setSuccess('Formulaire RSVP enregistré.');
+ } catch (err: any) {
+ setError(err.message || 'Erreur lors de l\'enregistrement du formulaire RSVP.');
+ } finally {
+ setSavingRsvpForm(false);
  }
  };
 
@@ -2888,6 +2925,24 @@ Merci de confirmer votre présence :
  </div>
  </div>
 
+ <div className="rounded-3xl border border-border bg-white p-5 sm:p-6 space-y-4">
+ <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+ <div>
+ <h3 className="text-base font-bold text-foreground">Formulaire RSVP</h3>
+ <p className="text-sm text-muted mt-0.5">
+ Types de champs toujours présents : genre, allergies, boissons, type de menu. Choisissez les valeurs prédéfinies ou personnalisez-les pour cet événement.
+ </p>
+ </div>
+ <Button
+ onClick={handleSaveEventRsvpForm}
+ disabled={savingRsvpForm}
+ >
+ {savingRsvpForm ? 'Enregistrement…' : 'Enregistrer le formulaire'}
+ </Button>
+ </div>
+ <RsvpFieldTypeEditor fields={eventRsvpFields} onChange={setEventRsvpFields} />
+ </div>
+
  {/* Invitations List */}
  <div className="grid md:grid-cols-2 gap-6">
  {invitations.length === 0 ? (
@@ -4061,6 +4116,7 @@ Merci de confirmer votre présence :
      orgName={tenant?.name || 'Organisation'}
      primary={tenant?.branding?.primary}
      accent={tenant?.branding?.accent}
+     guidelinesBlock={formatGuestGuidelinesBlock(normalizeGuestGuidelines(selectedEvent.guestGuidelines))}
     />
    ) : null}
 
@@ -4206,6 +4262,7 @@ Merci de confirmer votre présence :
   orgName={tenant?.name || 'Organisation'}
   primary={tenant?.branding?.primary}
   accent={tenant?.branding?.accent}
+  guidelinesBlock={formatGuestGuidelinesBlock(normalizeGuestGuidelines(selectedEvent.guestGuidelines))}
  />
  )}
  <div className="pt-4 flex gap-3 border-t border-border-subtle">
@@ -4434,7 +4491,7 @@ Merci de confirmer votre présence :
 
  {/* WhatsApp */}
  <a
- href={getWhatsAppShareUrl(res.guestName, publicRsvpLink(res.rsvpLink, res.guestId), res.phone, res.body)}
+ href={getWhatsAppShareUrl(res.guestName, publicRsvpLink(res.rsvpLink, res.guestId), res.phone, res.whatsappBody || res.body)}
  target="_blank"
  rel="noopener noreferrer"
  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition shadow-sm"

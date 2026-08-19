@@ -2,20 +2,80 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/cn';
+import { wrapBrandedWhatsApp } from '@/lib/whatsappTone';
 
 type PreviewTab = 'email' | 'whatsapp';
 
-function wrapWhatsAppPreview(body: string, orgName: string): string {
-  const name = orgName.trim() || 'Organisation';
-  let text = body.replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
-  const firstLine = text.split('\n')[0]?.trim() || '';
-  if (firstLine !== `*${name}*` && !firstLine.startsWith(`✨ *${name}*`)) {
-    text = `*${name}*\n━━━━━━━━━━\n\n${text}`;
+type WhatsAppToken =
+  | { type: 'text'; value: string }
+  | { type: 'bold' | 'italic' | 'strike'; value: string }
+  | { type: 'link'; value: string };
+
+function tokenizeWhatsApp(text: string): WhatsAppToken[] {
+  const tokens: WhatsAppToken[] = [];
+  const pattern =
+    /(\*[^*\n]+\*|_[^_\n]+_|~[^~\n]+~|https?:\/\/[^\s]+)/g;
+  let last = 0;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(text))) {
+    if (match.index > last) {
+      tokens.push({ type: 'text', value: text.slice(last, match.index) });
+    }
+    const chunk = match[0];
+    if (chunk.startsWith('http')) {
+      tokens.push({ type: 'link', value: chunk });
+    } else if (chunk.startsWith('*')) {
+      tokens.push({ type: 'bold', value: chunk.slice(1, -1) });
+    } else if (chunk.startsWith('_')) {
+      tokens.push({ type: 'italic', value: chunk.slice(1, -1) });
+    } else {
+      tokens.push({ type: 'strike', value: chunk.slice(1, -1) });
+    }
+    last = match.index + chunk.length;
   }
-  if (!text.includes(`— ${name}`)) {
-    text = `${text}\n\n— ${name}`;
+  if (last < text.length) {
+    tokens.push({ type: 'text', value: text.slice(last) });
   }
-  return text;
+  return tokens;
+}
+
+function WhatsAppFormattedText({ text }: { text: string }) {
+  const tokens = useMemo(() => tokenizeWhatsApp(text), [text]);
+  return (
+    <span className="whitespace-pre-wrap break-words">
+      {tokens.map((token, index) => {
+        if (token.type === 'bold') {
+          return (
+            <strong key={index} className="font-semibold">
+              {token.value}
+            </strong>
+          );
+        }
+        if (token.type === 'italic') {
+          return (
+            <em key={index} className="italic">
+              {token.value}
+            </em>
+          );
+        }
+        if (token.type === 'strike') {
+          return (
+            <s key={index} className="text-slate-500">
+              {token.value}
+            </s>
+          );
+        }
+        if (token.type === 'link') {
+          return (
+            <span key={index} className="text-[#027eb5] underline break-all">
+              {token.value}
+            </span>
+          );
+        }
+        return <React.Fragment key={index}>{token.value}</React.Fragment>;
+      })}
+    </span>
+  );
 }
 
 export default function InvitationMessagePreview({
@@ -26,6 +86,7 @@ export default function InvitationMessagePreview({
   orgName,
   primary = '#4f46e5',
   accent = '#6366f1',
+  guidelinesBlock,
 }: {
   subject: string;
   body: string;
@@ -34,6 +95,7 @@ export default function InvitationMessagePreview({
   orgName: string;
   primary?: string;
   accent?: string;
+  guidelinesBlock?: string | null;
 }) {
   const showEmail = channel !== 'WHATSAPP';
   const showWhatsApp = channel !== 'EMAIL';
@@ -45,8 +107,11 @@ export default function InvitationMessagePreview({
   }, [channel, showEmail, showWhatsApp, tab]);
 
   const whatsappText = useMemo(
-    () => wrapWhatsAppPreview((whatsappBody || body).trim(), orgName),
-    [body, whatsappBody, orgName],
+    () =>
+      wrapBrandedWhatsApp((whatsappBody || body).trim(), orgName, {
+        guidelinesBlock,
+      }),
+    [body, whatsappBody, orgName, guidelinesBlock],
   );
   const alreadyGreets = /^(bonjour|cher|chère|salut)\b/i.test(body.trim());
 
@@ -109,9 +174,28 @@ export default function InvitationMessagePreview({
           </div>
         </div>
       ) : (
-        <div className="rounded-2xl border border-border bg-[#efeae2] p-3">
-          <div className="max-w-[92%] ml-auto rounded-2xl rounded-tr-sm bg-[#d9fdd3] px-3 py-2.5 text-[13px] text-slate-800 whitespace-pre-wrap leading-relaxed shadow-sm">
-            {whatsappText || 'Le message WhatsApp apparaîtra ici.'}
+        <div className="rounded-2xl border border-border overflow-hidden bg-[#0b141a]">
+          <div className="bg-[#075e54] px-3 py-2.5 text-white">
+            <p className="text-[10px] uppercase tracking-wider text-white/70">WhatsApp</p>
+            <p className="text-sm font-semibold truncate">{orgName || 'Organisation'}</p>
+          </div>
+          <div
+            className="p-3 min-h-[160px]"
+            style={{
+              backgroundColor: '#efeae2',
+              backgroundImage:
+                'radial-gradient(rgba(0,0,0,0.04) 0.6px, transparent 0.6px)',
+              backgroundSize: '10px 10px',
+            }}
+          >
+            <div className="max-w-[92%] rounded-xl rounded-tl-sm bg-white px-3 py-2 text-[13px] text-slate-800 leading-relaxed shadow-sm">
+              {whatsappText ? (
+                <WhatsAppFormattedText text={whatsappText} />
+              ) : (
+                <span className="text-muted">Le message WhatsApp apparaîtra ici.</span>
+              )}
+            </div>
+            <p className="text-[10px] text-slate-500 mt-2">Aperçu tel que l’invité le reçoit.</p>
           </div>
         </div>
       )}

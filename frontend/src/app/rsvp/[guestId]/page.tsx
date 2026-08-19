@@ -23,7 +23,7 @@ import {
   buildRsvpPreferencesPayload,
   ensureMandatoryRsvpFields,
   ensureMandatoryRsvpFieldsOnElements,
-  createMandatoryRsvpFields,
+  parseEventRsvpForm,
   getCanvasStyle,
   parseFieldOptions,
   restoreFieldValuesFromPreferences,
@@ -101,6 +101,7 @@ interface GuestRsvpData {
     latitude?: number;
     longitude?: number;
     guestGuidelines?: GuestGuidelines | null;
+    rsvpForm?: unknown;
     invitations?: Array<{
       template?: {
         id: string;
@@ -2165,7 +2166,7 @@ export default function RsvpPage() {
                     </div>
 
                     <div className="space-y-3">
-                      {createMandatoryRsvpFields().map((field) => (
+                      {parseEventRsvpForm(guest.event.rsvpForm).map((field) => (
                         <div key={field.id} className="space-y-1.5">
                           {field.type !== 'checkbox' && (
                             <label className="block text-xs font-bold text-muted uppercase tracking-wider">

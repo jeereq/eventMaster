@@ -221,6 +221,9 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
       whatsappText = applyInvitationGuidelineVariables(whatsappText, event.guestGuidelines);
 
       const guidelinesText = guestGuidelinesInvitationText(event.guestGuidelines);
+      const brandedWhatsApp = wrapBrandedWhatsApp(whatsappText, orgBrand.orgName, {
+        guidelinesBlock: guidelinesText,
+      });
       const guidelinesAlreadyInBody = Boolean(
         guidelinesText && body.includes(guidelinesText.slice(0, Math.min(24, guidelinesText.length))),
       );
@@ -278,9 +281,7 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
         } else if (chan === 'WHATSAPP') {
           const phone = getGuestPhone(guest);
           if (phone) {
-            const whatsappBody = wrapBrandedWhatsApp(whatsappText, orgBrand.orgName, {
-              guidelinesBlock: guidelinesText,
-            });
+            const whatsappBody = brandedWhatsApp;
             sendResult = await sendRealWhatsApp(phone, whatsappBody);
           } else {
             console.warn(`[Invitation Controller] Guest ${guest.firstName} ${guest.lastName} has no valid phone number for WhatsApp sending.`);
@@ -332,6 +333,7 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
         guestEmail: guest.email,
         subject,
         body,
+        whatsappBody: brandedWhatsApp,
         rsvpUrl: rsvpLink,
         invitationPdfUrl: null,
         status,
@@ -397,6 +399,7 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
           rsvpLink: inv.rsvpUrl,
           subject: inv.subject,
           body: inv.body,
+          whatsappBody: inv.whatsappBody,
           channel: inv.channel,
           status: inv.status,
           simulated: inv.simulated,

@@ -20,14 +20,13 @@ import {
 } from 'lucide-react';
 import { PageHeader, Alert, Button, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, paginateItems, usePageSize } from '@/components/ui';
 import PlanLimitCallout from '@/components/PlanLimitCallout';
+import RsvpFieldTypeEditor from '@/components/RsvpFieldTypeEditor';
 import { getFeatureLockMessage, getQuotaActionMessage } from '@/lib/planAccess';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
 import {
  type RsvpField,
  type CanvasSizePreset,
  CANVAS_SIZE_PRESETS,
- RSVP_FIELD_CATEGORIES,
- RSVP_FIELD_TYPE_LABELS,
  createDefaultRsvpField,
  createDefaultReportingRsvpFields,
  ensureReportingRsvpFields,
@@ -996,7 +995,7 @@ export default function TemplatesPage() {
 
  const handleUpdateRsvpField = (fieldId: string, key: keyof RsvpField, value: any) => {
  const field = elRsvpFields.find((f) => f.id === fieldId);
- if (field && isMandatoryRsvpField(field) && (key === 'analyticsKey' || key === 'required' || key === 'type')) {
+ if (field && isMandatoryRsvpField(field) && (key === 'analyticsKey' || key === 'required')) {
  return;
  }
  const updatedFields = elRsvpFields.map(f => {
@@ -2923,7 +2922,7 @@ export default function TemplatesPage() {
  </div>
 
  <p className="text-[10px] text-muted leading-relaxed bg-surface-muted border border-border rounded-lg px-2.5 py-2">
- Genre, allergies, boissons et type de menu sont <strong className="text-foreground">obligatoires</strong> sur toutes les invitations. Vous pouvez ajouter d’autres champs ; chaque champ doit avoir une clé analytique unique.
+ Genre, allergies, boissons et type de menu sont toujours présents. Vous pouvez changer le libellé, l’affichage (liste / boutons) et les valeurs — prédéfinies ou personnalisées.
  </p>
 
  {validateRsvpFieldsForReporting(elRsvpFields).length > 0 && (
@@ -2932,133 +2931,11 @@ export default function TemplatesPage() {
  </p>
  )}
 
- <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
- {elRsvpFields.map((field, index) => (
- <div key={field.id} className="p-3 bg-surface-muted border border-border rounded-xl space-y-2.5 relative">
- {isMandatoryRsvpField(field) ? (
- <span className="absolute top-2 right-2 text-[9px] font-bold uppercase tracking-wide text-primary bg-primary/10 px-1.5 py-0.5 rounded">
- Obligatoire
- </span>
- ) : (
- <button 
- type="button"
- onClick={() => handleDeleteRsvpField(field.id)}
- className="absolute top-2 right-2 text-muted hover:text-rose-600 transition"
- title="Supprimer ce champ"
- >
- <Trash className="w-3.5 h-3.5" />
- </button>
- )}
-
- <div className="text-[10px] font-bold text-muted">Champ #{index + 1}</div>
-
- <div className="space-y-1">
- <label className="text-[10px] font-bold text-muted uppercase">Libellé / Question</label>
- <input 
- type="text" 
- value={field.label}
- onChange={(e) => handleUpdateRsvpField(field.id, 'label', e.target.value)}
- className="w-full px-2.5 py-1 bg-surface border border-border rounded-lg text-xs focus:outline-none focus:border-primary transition"
- required
+ <div className="max-h-80 overflow-y-auto pr-1">
+ <RsvpFieldTypeEditor
+ fields={elRsvpFields}
+ onChange={(next) => handlePropertyChange('rsvpFields', next)}
  />
- </div>
-
- <div className="grid grid-cols-2 gap-2">
- <div className="space-y-1">
- <label className="text-[10px] font-bold text-muted uppercase">Type</label>
- <select 
- value={field.type}
- onChange={(e) => handleUpdateRsvpField(field.id, 'type', e.target.value)}
- disabled={isMandatoryRsvpField(field)}
- className="w-full px-2 py-1 bg-surface border border-border rounded-lg text-xs focus:outline-none focus:border-primary transition disabled:opacity-60"
- >
- {Object.entries(RSVP_FIELD_TYPE_LABELS).map(([value, label]) => (
- <option key={value} value={value}>{label}</option>
- ))}
- </select>
- </div>
- <div className="space-y-1">
- <label className="text-[10px] font-bold text-muted uppercase">Catégorie analyse</label>
- <select
- value={field.category || 'custom'}
- onChange={(e) => handleUpdateRsvpField(field.id, 'category', e.target.value)}
- className="w-full px-2 py-1 bg-surface border border-border rounded-lg text-xs focus:outline-none focus:border-primary transition"
- >
- {RSVP_FIELD_CATEGORIES.map((cat) => (
- <option key={cat.id} value={cat.id}>{cat.label}</option>
- ))}
- </select>
- </div>
- </div>
-
- <div className="space-y-1">
- <label className="text-[10px] font-bold text-muted uppercase">
- Clé analytique <span className="text-rose-500">*</span>
- </label>
- <input
- type="text"
- value={field.analyticsKey || ''}
- onChange={(e) => handleUpdateRsvpField(field.id, 'analyticsKey', slugifyAnalyticsKey(e.target.value))}
- placeholder="ex. choix_menu"
- required
- disabled={isMandatoryRsvpField(field)}
- className={`w-full px-2.5 py-1 bg-surface border rounded-lg text-xs font-mono focus:outline-none focus:border-primary transition ${
- field.analyticsKey?.trim() ? 'border-border' : 'border-rose-300'
- } ${isMandatoryRsvpField(field) ? 'opacity-60 cursor-not-allowed' : ''}`}
- />
- <p className="text-[9px] text-muted">Obligatoire pour exports CSV et graphiques reporting.</p>
- </div>
-
- <div className="grid grid-cols-2 gap-2">
- <div className="space-y-1">
- <label className="text-[10px] font-bold text-muted uppercase">Placeholder</label>
- <input
- type="text"
- value={field.placeholder || ''}
- onChange={(e) => handleUpdateRsvpField(field.id, 'placeholder', e.target.value)}
- className="w-full px-2.5 py-1 bg-surface border border-border rounded-lg text-xs focus:outline-none focus:border-primary transition"
- />
- </div>
- <div className="flex items-end pb-1.5">
- <label className="flex items-center gap-1.5 cursor-pointer text-xs text-muted font-semibold select-none">
- <input 
- type="checkbox" 
- checked={field.required || isMandatoryRsvpField(field)}
- onChange={(e) => handleUpdateRsvpField(field.id, 'required', e.target.checked)}
- disabled={isMandatoryRsvpField(field)}
- className="rounded text-primary focus:ring-primary disabled:opacity-60"
- />
- Requis (invité)
- </label>
- </div>
- </div>
-
- <div className="space-y-1">
- <label className="text-[10px] font-bold text-muted uppercase">Texte d&apos;aide (optionnel)</label>
- <input
- type="text"
- value={field.helpText || ''}
- onChange={(e) => handleUpdateRsvpField(field.id, 'helpText', e.target.value)}
- placeholder="Ex. : Indiquez vos restrictions alimentaires"
- className="w-full px-2.5 py-1 bg-surface border border-border rounded-lg text-xs focus:outline-none focus:border-primary transition"
- />
- </div>
-
- {(field.type === 'select' || field.type === 'radio') && (
- <div className="space-y-1">
- <label className="text-[10px] font-bold text-muted uppercase">Options (séparées par virgules)</label>
- <input 
- type="text" 
- value={field.options || ''}
- onChange={(e) => handleUpdateRsvpField(field.id, 'options', e.target.value)}
- placeholder="Option 1, Option 2, Option 3"
- className="w-full px-2.5 py-1 bg-surface border border-border rounded-lg text-xs focus:outline-none focus:border-primary transition"
- required
- />
- </div>
- )}
- </div>
- ))}
  </div>
  </div>
  )}

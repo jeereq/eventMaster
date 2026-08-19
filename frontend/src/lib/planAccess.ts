@@ -69,6 +69,7 @@ export function getFeatureLockMessage(
     protocolQr: 'Le protocole QR n’est pas inclus dans votre forfait',
     seatNotifications: 'Les notifications PDF / GPS de placement ne sont pas incluses dans votre forfait',
     customTemplates: 'Les modèles personnalisés ne sont pas inclus dans votre forfait',
+    customRsvpFields: 'Les champs RSVP personnalisables ne sont pas inclus dans votre forfait',
     mockupOcr: 'L’import OCR n’est pas inclus dans votre forfait',
     roomThemesFixtures: 'Thèmes et fixtures de salle non inclus dans votre forfait',
     commercialNetwork: 'Le réseau commercial n’est pas inclus dans votre forfait',

@@ -22,7 +22,7 @@ import {
   wrapBrandedWhatsApp,
 } from '../utils/brandedMessaging';
 import { escapeHtml, resolveBranding } from '../utils/brandingUtils';
-import { ensureMandatoryRsvpFieldsOnContent } from '../utils/mandatoryRsvpFields';
+import { ensureMandatoryRsvpFieldsOnContent, overlayRsvpFieldsOnContent } from '../utils/mandatoryRsvpFields';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -190,6 +190,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
             longitude: true,
             tablePlan: true,
             guestGuidelines: true,
+            rsvpForm: true,
             room: {
               select: {
                 layoutBlueprint: true,
@@ -377,7 +378,10 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
             ...inv,
             template: {
               ...inv.template,
-              content: ensureMandatoryRsvpFieldsOnContent(inv.template.content),
+              content: overlayRsvpFieldsOnContent(
+                ensureMandatoryRsvpFieldsOnContent(inv.template.content),
+                (guestEvent as { rsvpForm?: unknown }).rsvpForm,
+              ),
             },
           };
         });

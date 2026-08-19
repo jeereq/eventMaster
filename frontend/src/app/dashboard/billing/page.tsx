@@ -46,6 +46,7 @@ interface BillingStatus {
     protocolQr: boolean;
     seatNotifications: boolean;
     customTemplates: boolean;
+    customRsvpFields?: boolean;
     mockupOcr: boolean;
     roomThemesFixtures: boolean;
     commercialNetwork: boolean;
@@ -59,6 +60,7 @@ const CAPABILITY_LABELS: Array<{ key: keyof NonNullable<BillingStatus['capabilit
   { key: 'protocolQr', label: 'Protocole QR & confirmation de présence' },
   { key: 'seatNotifications', label: 'Notifications de siège' },
   { key: 'customTemplates', label: 'Modèles personnalisés' },
+  { key: 'customRsvpFields', label: 'Champs RSVP personnalisables' },
   { key: 'mockupOcr', label: 'OCR import maquette' },
   { key: 'roomThemesFixtures', label: 'Thèmes & fixtures salles' },
   { key: 'commercialNetwork', label: 'Réseau commercial (30 %)' },

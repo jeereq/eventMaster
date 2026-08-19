@@ -182,6 +182,129 @@ export const MANDATORY_RSVP_FIELD_PRESETS: Array<Omit<RsvpField, 'id'> & { id: s
   },
 ];
 
+export type MandatoryRsvpKind = 'genre' | 'allergies' | 'boissons' | 'type_menu';
+
+export type RsvpFieldKindCatalogEntry = {
+  kind: MandatoryRsvpKind;
+  analyticsKey: string;
+  label: string;
+  defaultType: RsvpFieldType;
+  allowedTypes: RsvpFieldType[];
+  predefinedOptions?: string;
+  placeholder?: string;
+  helpText?: string;
+  category: RsvpFieldCategory;
+};
+
+/** Types de champs RSVP imposés : valeurs prédéfinies ou personnalisées par l’organisateur. */
+export const RSVP_FIELD_KIND_CATALOG: RsvpFieldKindCatalogEntry[] = [
+  {
+    kind: 'genre',
+    analyticsKey: 'genre',
+    label: 'Genre',
+    defaultType: 'radio',
+    allowedTypes: ['radio', 'select'],
+    predefinedOptions: 'Femme, Homme, Autre',
+    category: 'demographic',
+  },
+  {
+    kind: 'allergies',
+    analyticsKey: 'allergies',
+    label: 'Allergies',
+    defaultType: 'text',
+    allowedTypes: ['text', 'textarea', 'select'],
+    predefinedOptions: 'Aucune, Arachides, Gluten, Lactose, Fruits de mer, Œufs, Soja, Autre',
+    placeholder: 'Aucune si pas d’allergie',
+    helpText: 'Indiquez vos allergies alimentaires, ou « Aucune ».',
+    category: 'preference',
+  },
+  {
+    kind: 'boissons',
+    analyticsKey: 'boissons',
+    label: 'Boissons',
+    defaultType: 'select',
+    allowedTypes: ['select', 'radio'],
+    predefinedOptions: 'Eau, Jus, Soft, Vin, Bière, Sans alcool',
+    category: 'preference',
+  },
+  {
+    kind: 'type_menu',
+    analyticsKey: 'type_menu',
+    label: 'Type de menu',
+    defaultType: 'select',
+    allowedTypes: ['select', 'radio'],
+    predefinedOptions: 'Standard, Végétarien, Végétalien (vegan), Halal, Casher',
+    helpText: 'Régime ou type de plat prévu pour vous.',
+    category: 'preference',
+  },
+];
+
+function normalizeOptionList(options?: string): string {
+  return (options || '')
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join(', ')
+    .toLowerCase();
+}
+
+export function getMandatoryRsvpKind(field: Pick<RsvpField, 'analyticsKey' | 'id' | 'label'>): MandatoryRsvpKind | null {
+  for (const entry of RSVP_FIELD_KIND_CATALOG) {
+    if (fieldMatchesMandatoryKey(field as RsvpField, entry.analyticsKey)) return entry.kind;
+  }
+  return null;
+}
+
+export function getRsvpFieldKindEntry(field: Pick<RsvpField, 'analyticsKey' | 'id' | 'label'>): RsvpFieldKindCatalogEntry | null {
+  const kind = getMandatoryRsvpKind(field);
+  return kind ? RSVP_FIELD_KIND_CATALOG.find((entry) => entry.kind === kind) || null : null;
+}
+
+export function isAllowedWidgetForKind(kind: MandatoryRsvpKind, type: RsvpFieldType): boolean {
+  const entry = RSVP_FIELD_KIND_CATALOG.find((item) => item.kind === kind);
+  return Boolean(entry?.allowedTypes.includes(type));
+}
+
+export function usesPredefinedRsvpOptions(field: RsvpField): boolean {
+  const entry = getRsvpFieldKindEntry(field);
+  if (!entry?.predefinedOptions) return false;
+  if (field.type !== 'select' && field.type !== 'radio') return false;
+  return normalizeOptionList(field.options) === normalizeOptionList(entry.predefinedOptions);
+}
+
+export function applyRsvpKindPreset(field: RsvpField, mode: 'predefined' | 'custom' = 'predefined'): RsvpField {
+  const entry = getRsvpFieldKindEntry(field);
+  if (!entry) return field;
+  const nextType = isAllowedWidgetForKind(entry.kind, field.type) ? field.type : entry.defaultType;
+  const needsOptions = nextType === 'select' || nextType === 'radio';
+  return normalizeRsvpField({
+    ...field,
+    type: nextType,
+    analyticsKey: entry.analyticsKey,
+    required: true,
+    category: entry.category,
+    placeholder: field.placeholder || entry.placeholder,
+    helpText: field.helpText || entry.helpText,
+    options: needsOptions
+      ? (mode === 'predefined' ? entry.predefinedOptions : (field.options || entry.predefinedOptions))
+      : undefined,
+  });
+}
+
+export function parseEventRsvpForm(raw: unknown): RsvpField[] {
+  if (!raw) return [];
+  const list = Array.isArray(raw)
+    ? raw
+    : (raw && typeof raw === 'object' && Array.isArray((raw as { fields?: unknown }).fields)
+      ? (raw as { fields: unknown[] }).fields
+      : []);
+  return ensureMandatoryRsvpFields(
+    list.filter((item): item is Partial<RsvpField> & { id: string; label: string } =>
+      Boolean(item && typeof item === 'object' && 'id' in item && 'label' in item),
+    ),
+  );
+}
+
 /**
  * Champs RSVP optionnels pour le reporting (stats + export).
  * Les 4 champs obligatoires (genre, allergies, boissons, type de menu) sont ailleurs.

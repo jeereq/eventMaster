@@ -5,6 +5,7 @@ export type PlanFeatureKey =
   | 'protocolQr'
   | 'seatNotifications'
   | 'customTemplates'
+  | 'customRsvpFields'
   | 'mockupOcr'
   | 'roomThemesFixtures'
   | 'commercialNetwork'
@@ -186,6 +187,7 @@ export function formatPlanFeaturesResponse(snapshot: TenantPlanSnapshot) {
       protocolQr: f.protocolQr,
       seatNotifications: f.seatNotifications,
       customTemplates: f.customTemplates,
+      customRsvpFields: f.customRsvpFields,
       mockupOcr: f.mockupOcr,
       roomThemesFixtures: f.roomThemesFixtures,
       commercialNetwork: f.commercialNetwork,
