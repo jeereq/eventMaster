@@ -612,6 +612,8 @@ model MarketplaceBooking {
   depositFc          Int
   commissionRate     Float                     @default(0.08)
   commissionFc       Int
+  commissionSettledAt DateTime?
+  commissionSettledBy String?
   status             MarketplaceBookingStatus  @default(REQUESTED)
   depositMarkedAt    DateTime?
   notes              String?

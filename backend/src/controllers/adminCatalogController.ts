@@ -91,6 +91,7 @@ const BOOKING_STATUSES: MarketplaceBookingStatus[] = [
   'CANCELLED',
   'COMPLETED',
 ];
+const BILLABLE_BOOKING_STATUSES: MarketplaceBookingStatus[] = ['CONFIRMED', 'COMPLETED'];
 
 function parseInquiryStatus(value: unknown): MarketplaceInquiryStatus | undefined {
   if (typeof value === 'string' && INQUIRY_STATUSES.includes(value as MarketplaceInquiryStatus)) {
@@ -112,6 +113,8 @@ export async function getCatalogOverview(req: AuthenticatedRequest, res: Respons
       return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
     }
 
+    const billableWhere = { status: { in: BILLABLE_BOOKING_STATUSES } };
+
     const [
       venuesTotal,
       venuesPublic,
@@ -125,6 +128,13 @@ export async function getCatalogOverview(req: AuthenticatedRequest, res: Respons
       inquiriesNew,
       bookingsTotal,
       bookingsRequested,
+      commissionDue,
+      commissionPaid,
+      favoritesTotal,
+      packsTotal,
+      gmvVenue,
+      gmvTrade,
+      gmvRental,
     ] = await Promise.all([
       prisma.venueListing.count(),
       prisma.venueListing.count({ where: { isPublic: true } }),
@@ -138,6 +148,33 @@ export async function getCatalogOverview(req: AuthenticatedRequest, res: Respons
       prisma.marketplaceInquiry.count({ where: { status: 'NEW' } }),
       prisma.marketplaceBooking.count(),
       prisma.marketplaceBooking.count({ where: { status: 'REQUESTED' } }),
+      prisma.marketplaceBooking.aggregate({
+        where: { status: { in: BILLABLE_BOOKING_STATUSES }, commissionSettledAt: null },
+        _count: { _all: true },
+        _sum: { commissionFc: true },
+      }),
+      prisma.marketplaceBooking.aggregate({
+        where: { status: { in: BILLABLE_BOOKING_STATUSES }, commissionSettledAt: { not: null } },
+        _count: { _all: true },
+        _sum: { commissionFc: true },
+      }),
+      prisma.listingFavorite.count(),
+      prisma.savedEventPack.count(),
+      prisma.marketplaceBooking.aggregate({
+        where: { ...billableWhere, listingId: { not: null } },
+        _count: { _all: true },
+        _sum: { amountFc: true, commissionFc: true },
+      }),
+      prisma.marketplaceBooking.aggregate({
+        where: { ...billableWhere, offering: serviceGroupPrismaFilter('trade') },
+        _count: { _all: true },
+        _sum: { amountFc: true, commissionFc: true },
+      }),
+      prisma.marketplaceBooking.aggregate({
+        where: { ...billableWhere, offering: serviceGroupPrismaFilter('rental') },
+        _count: { _all: true },
+        _sum: { amountFc: true, commissionFc: true },
+      }),
     ]);
 
     return res.json({
@@ -147,6 +184,27 @@ export async function getCatalogOverview(req: AuthenticatedRequest, res: Respons
       rentals: { total: rentalsTotal, publicCount: rentalsPublic },
       inquiries: { total: inquiriesTotal, newCount: inquiriesNew },
       bookings: { total: bookingsTotal, requestedCount: bookingsRequested },
+      commissions: {
+        dueCount: commissionDue._count._all,
+        dueFc: commissionDue._sum.commissionFc || 0,
+        paidCount: commissionPaid._count._all,
+        paidFc: commissionPaid._sum.commissionFc || 0,
+      },
+      engagement: {
+        favorites: favoritesTotal,
+        packs: packsTotal,
+      },
+      gmv: {
+        venueFc: gmvVenue._sum.amountFc || 0,
+        venueCount: gmvVenue._count._all,
+        tradeFc: gmvTrade._sum.amountFc || 0,
+        tradeCount: gmvTrade._count._all,
+        rentalFc: gmvRental._sum.amountFc || 0,
+        rentalCount: gmvRental._count._all,
+        venueCommissionFc: gmvVenue._sum.commissionFc || 0,
+        tradeCommissionFc: gmvTrade._sum.commissionFc || 0,
+        rentalCommissionFc: gmvRental._sum.commissionFc || 0,
+      },
     });
   } catch (error) {
     console.error('Erreur catalog overview admin:', error);
@@ -523,38 +581,342 @@ export async function listAdminBookings(req: AuthenticatedRequest, res: Response
   }
 }
 
-export async function unpublishVenueListing(req: AuthenticatedRequest, res: Response) {
+function csvEscape(value: string | number | null | undefined): string {
+  const raw = value == null ? '' : String(value);
+  if (/[",\n]/.test(raw)) return `"${raw.replace(/"/g, '""')}"`;
+  return raw;
+}
+
+function mapCommissionRow(row: {
+  id: string;
+  offeringId: string | null;
+  listingId: string | null;
+  status: MarketplaceBookingStatus;
+  eventDate: Date;
+  amountFc: number;
+  commissionFc: number;
+  commissionRate: number;
+  commissionSettledAt: Date | null;
+  createdAt: Date;
+  vendorTenantId: string;
+  vendorTenant: { name: string };
+  organizerTenant: { name: string } | null;
+  listing: { slug: string; headline: string; room: { name: string } } | null;
+  offering: { slug: string; title: string; category: string } | null;
+}) {
+  const kind = row.offeringId ? 'offering' : 'venue';
+  const slug = row.offering?.slug || row.listing?.slug;
+  const title = row.offering?.title || row.listing?.headline || row.listing?.room.name || 'Réservation';
+  return {
+    id: row.id,
+    kind,
+    title,
+    status: row.status,
+    eventDate: row.eventDate,
+    amountFc: row.amountFc,
+    commissionRate: row.commissionRate,
+    commissionFc: row.commissionFc,
+    commissionSettledAt: row.commissionSettledAt,
+    createdAt: row.createdAt,
+    vendorTenantId: row.vendorTenantId,
+    vendorName: row.vendorTenant.name,
+    organizerName: row.organizerTenant?.name || null,
+    href: slug ? listingHref(kind === 'offering' ? 'offering' : 'venue', slug, row.offering?.category) : null,
+  };
+}
+
+export async function listAdminCommissions(req: AuthenticatedRequest, res: Response) {
   try {
     if (req.user?.role !== 'SUPER_ADMIN') {
       return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
     }
 
-    const id = req.params.id as string;
-    const listing = await prisma.venueListing.findUnique({
-      where: { id },
-      include: { room: { select: { name: true } }, tenant: { select: { name: true } } },
-    });
-    if (!listing) return res.status(404).json({ error: 'Fiche salle introuvable.' });
+    const q = searchQ(req);
+    const settlementRaw = typeof req.query.settlement === 'string' ? req.query.settlement.trim() : 'due';
+    const settlementFilter =
+      settlementRaw === 'paid'
+        ? { commissionSettledAt: { not: null } }
+        : settlementRaw === 'all'
+          ? {}
+          : { commissionSettledAt: null };
 
-    const updated = await prisma.venueListing.update({
+    const where = {
+      status: { in: BILLABLE_BOOKING_STATUSES },
+      ...settlementFilter,
+      ...(q
+        ? {
+            OR: [
+              { vendorTenant: { name: { contains: q, mode: 'insensitive' as const } } },
+              { organizerTenant: { name: { contains: q, mode: 'insensitive' as const } } },
+              { listing: { headline: { contains: q, mode: 'insensitive' as const } } },
+              { offering: { title: { contains: q, mode: 'insensitive' as const } } },
+            ],
+          }
+        : {}),
+    };
+
+    const include = {
+      listing: { select: { slug: true, headline: true, room: { select: { name: true } } } },
+      offering: { select: { slug: true, title: true, category: true } },
+      vendorTenant: { select: { id: true, name: true } },
+      organizerTenant: { select: { id: true, name: true } },
+    } as const;
+
+    if (req.query.export === 'csv') {
+      const rows = await prisma.marketplaceBooking.findMany({
+        where,
+        include,
+        orderBy: { eventDate: 'desc' },
+        take: 5000,
+      });
+      const header = [
+        'Date événement',
+        'Vendeur',
+        'Fiche',
+        'Organisateur',
+        'Montant FC',
+        'Commission FC',
+        'Taux',
+        'Statut résa',
+        'Encaissement',
+        'Date encaissement',
+      ].join(',');
+      const lines = rows.map((row) => {
+        const mapped = mapCommissionRow(row);
+        return [
+          csvEscape(mapped.eventDate.toISOString().slice(0, 10)),
+          csvEscape(mapped.vendorName),
+          csvEscape(mapped.title),
+          csvEscape(mapped.organizerName),
+          mapped.amountFc,
+          mapped.commissionFc,
+          mapped.commissionRate,
+          csvEscape(mapped.status),
+          mapped.commissionSettledAt ? 'payée' : 'due',
+          csvEscape(mapped.commissionSettledAt ? mapped.commissionSettledAt.toISOString().slice(0, 10) : ''),
+        ].join(',');
+      });
+      const csv = `\uFEFF${header}\n${lines.join('\n')}`;
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="commissions-marketplace.csv"');
+      return res.send(csv);
+    }
+
+    const { page, pageSize, skip } = pager(req);
+    const [rows, total, sums] = await Promise.all([
+      prisma.marketplaceBooking.findMany({
+        where,
+        include,
+        orderBy: [{ commissionSettledAt: 'asc' }, { eventDate: 'desc' }],
+        skip,
+        take: pageSize,
+      }),
+      prisma.marketplaceBooking.count({ where }),
+      prisma.marketplaceBooking.aggregate({
+        where,
+        _sum: { commissionFc: true, amountFc: true },
+      }),
+    ]);
+
+    return res.json({
+      items: rows.map(mapCommissionRow),
+      total,
+      page,
+      pageSize,
+      hasMore: page * pageSize < total,
+      sumCommissionFc: sums._sum.commissionFc || 0,
+      sumAmountFc: sums._sum.amountFc || 0,
+    });
+  } catch (error) {
+    console.error('Erreur catalog commissions admin:', error);
+    return res.status(500).json({ error: 'Impossible de charger les commissions marketplace.' });
+  }
+}
+
+export async function settleMarketplaceCommission(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (req.user?.role !== 'SUPER_ADMIN' || !req.user.id) {
+      return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+    }
+
+    const id = String(req.params.id || '');
+    const settled = req.body?.settled !== false;
+    const booking = await prisma.marketplaceBooking.findUnique({
       where: { id },
-      data: { isPublic: false },
+      include: { vendorTenant: { select: { name: true } } },
+    });
+    if (!booking) {
+      return res.status(404).json({ error: 'Réservation introuvable.' });
+    }
+    if (!BILLABLE_BOOKING_STATUSES.includes(booking.status)) {
+      return res.status(400).json({ error: 'La commission n’est due qu’après confirmation de la réservation.' });
+    }
+
+    const updated = await prisma.marketplaceBooking.update({
+      where: { id },
+      data: {
+        commissionSettledAt: settled ? new Date() : null,
+        commissionSettledBy: settled ? req.user.id : null,
+      },
     });
 
     await auditReq(req, {
-      action: 'CATALOG_UNPUBLISH',
-      targetType: 'venueListing',
-      targetId: listing.id,
-      tenantId: listing.tenantId,
-      summary: `Dépublication de la salle « ${listing.headline || listing.room.name} » (${listing.tenant.name})`,
-      metadata: { slug: listing.slug },
+      action: settled ? 'CATALOG_COMMISSION_SETTLE' : 'CATALOG_COMMISSION_UNSETTLE',
+      targetType: 'marketplace_booking',
+      targetId: booking.id,
+      tenantId: booking.vendorTenantId,
+      summary: settled
+        ? `Commission marketplace ${booking.commissionFc} FC encaissée — ${booking.vendorTenant.name}`
+        : `Commission marketplace ${booking.commissionFc} FC marquée due — ${booking.vendorTenant.name}`,
+      metadata: { commissionFc: booking.commissionFc, settled },
     });
 
     return res.json({
       id: updated.id,
-      isPublic: updated.isPublic,
-      message: 'Fiche salle dépubliée.',
+      commissionSettledAt: updated.commissionSettledAt,
+      commissionFc: updated.commissionFc,
     });
+  } catch (error) {
+    console.error('Erreur encaissement commission marketplace:', error);
+    return res.status(500).json({ error: 'Impossible de mettre à jour l’encaissement.' });
+  }
+}
+
+const MIN_UNPUBLISH_REASON = 8;
+
+function parseVisibilityReason(req: AuthenticatedRequest): string {
+  const raw = req.body && typeof req.body === 'object' ? (req.body as { reason?: unknown }).reason : undefined;
+  return typeof raw === 'string' ? raw.trim().slice(0, 500) : '';
+}
+
+function parseIsPublicFlag(req: AuthenticatedRequest): boolean | undefined {
+  const raw = req.body && typeof req.body === 'object' ? (req.body as { isPublic?: unknown }).isPublic : undefined;
+  if (typeof raw === 'boolean') return raw;
+  if (raw === 'true' || raw === '1') return true;
+  if (raw === 'false' || raw === '0') return false;
+  return undefined;
+}
+
+async function setVenueListingPublic(req: AuthenticatedRequest, res: Response, isPublic: boolean) {
+  if (req.user?.role !== 'SUPER_ADMIN') {
+    return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+  }
+
+  const reason = parseVisibilityReason(req);
+  if (!isPublic && reason.length < MIN_UNPUBLISH_REASON) {
+    return res.status(400).json({
+      error: `Motif obligatoire (${MIN_UNPUBLISH_REASON} caractères min.) pour dépublier une fiche.`,
+    });
+  }
+
+  const id = req.params.id as string;
+  const listing = await prisma.venueListing.findUnique({
+    where: { id },
+    include: { room: { select: { name: true } }, tenant: { select: { name: true } } },
+  });
+  if (!listing) return res.status(404).json({ error: 'Fiche salle introuvable.' });
+
+  const updated = await prisma.venueListing.update({
+    where: { id },
+    data: {
+      isPublic,
+      publishedAt: isPublic ? listing.publishedAt || new Date() : listing.publishedAt,
+    },
+  });
+
+  const label = listing.headline || listing.room.name;
+  await auditReq(req, {
+    action: isPublic ? 'CATALOG_PUBLISH' : 'CATALOG_UNPUBLISH',
+    targetType: 'venueListing',
+    targetId: listing.id,
+    tenantId: listing.tenantId,
+    summary: isPublic
+      ? `Republication de la salle « ${label} » (${listing.tenant.name})`
+      : `Dépublication de la salle « ${label} » (${listing.tenant.name})`,
+    metadata: { slug: listing.slug, reason: reason || null, isPublic },
+  });
+
+  return res.json({
+    id: updated.id,
+    isPublic: updated.isPublic,
+    message: isPublic ? 'Fiche salle republicée.' : 'Fiche salle dépubliée.',
+  });
+}
+
+async function setServiceOfferingPublic(req: AuthenticatedRequest, res: Response, isPublic: boolean) {
+  if (req.user?.role !== 'SUPER_ADMIN') {
+    return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+  }
+
+  const reason = parseVisibilityReason(req);
+  if (!isPublic && reason.length < MIN_UNPUBLISH_REASON) {
+    return res.status(400).json({
+      error: `Motif obligatoire (${MIN_UNPUBLISH_REASON} caractères min.) pour dépublier une fiche.`,
+    });
+  }
+
+  const id = req.params.id as string;
+  const offering = await prisma.serviceOffering.findUnique({
+    where: { id },
+    include: { tenant: { select: { name: true } } },
+  });
+  if (!offering) return res.status(404).json({ error: 'Prestation introuvable.' });
+
+  const updated = await prisma.serviceOffering.update({
+    where: { id },
+    data: {
+      isPublic,
+      publishedAt: isPublic ? offering.publishedAt || new Date() : offering.publishedAt,
+    },
+  });
+
+  await auditReq(req, {
+    action: isPublic ? 'CATALOG_PUBLISH' : 'CATALOG_UNPUBLISH',
+    targetType: 'serviceOffering',
+    targetId: offering.id,
+    tenantId: offering.tenantId,
+    summary: isPublic
+      ? `Republication de la prestation « ${offering.title} » (${offering.tenant.name})`
+      : `Dépublication de la prestation « ${offering.title} » (${offering.tenant.name})`,
+    metadata: { slug: offering.slug, reason: reason || null, isPublic },
+  });
+
+  return res.json({
+    id: updated.id,
+    isPublic: updated.isPublic,
+    message: isPublic ? 'Prestation republicée.' : 'Prestation dépubliée.',
+  });
+}
+
+export async function setVenueListingVisibility(req: AuthenticatedRequest, res: Response) {
+  try {
+    const isPublic = parseIsPublicFlag(req);
+    if (isPublic === undefined) {
+      return res.status(400).json({ error: 'Indiquez isPublic (true ou false).' });
+    }
+    return await setVenueListingPublic(req, res, isPublic);
+  } catch (error) {
+    console.error('Erreur visibilité salle admin:', error);
+    return res.status(500).json({ error: 'Impossible de mettre à jour la visibilité.' });
+  }
+}
+
+export async function setServiceOfferingVisibility(req: AuthenticatedRequest, res: Response) {
+  try {
+    const isPublic = parseIsPublicFlag(req);
+    if (isPublic === undefined) {
+      return res.status(400).json({ error: 'Indiquez isPublic (true ou false).' });
+    }
+    return await setServiceOfferingPublic(req, res, isPublic);
+  } catch (error) {
+    console.error('Erreur visibilité prestation admin:', error);
+    return res.status(500).json({ error: 'Impossible de mettre à jour la visibilité.' });
+  }
+}
+
+export async function unpublishVenueListing(req: AuthenticatedRequest, res: Response) {
+  try {
+    return await setVenueListingPublic(req, res, false);
   } catch (error) {
     console.error('Erreur unpublish venue admin:', error);
     return res.status(500).json({ error: 'Impossible de dépublier la fiche.' });
@@ -563,36 +925,7 @@ export async function unpublishVenueListing(req: AuthenticatedRequest, res: Resp
 
 export async function unpublishServiceOffering(req: AuthenticatedRequest, res: Response) {
   try {
-    if (req.user?.role !== 'SUPER_ADMIN') {
-      return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
-    }
-
-    const id = req.params.id as string;
-    const offering = await prisma.serviceOffering.findUnique({
-      where: { id },
-      include: { tenant: { select: { name: true } } },
-    });
-    if (!offering) return res.status(404).json({ error: 'Prestation introuvable.' });
-
-    const updated = await prisma.serviceOffering.update({
-      where: { id },
-      data: { isPublic: false },
-    });
-
-    await auditReq(req, {
-      action: 'CATALOG_UNPUBLISH',
-      targetType: 'serviceOffering',
-      targetId: offering.id,
-      tenantId: offering.tenantId,
-      summary: `Dépublication de la prestation « ${offering.title} » (${offering.tenant.name})`,
-      metadata: { slug: offering.slug },
-    });
-
-    return res.json({
-      id: updated.id,
-      isPublic: updated.isPublic,
-      message: 'Prestation dépubliée.',
-    });
+    return await setServiceOfferingPublic(req, res, false);
   } catch (error) {
     console.error('Erreur unpublish offering admin:', error);
     return res.status(500).json({ error: 'Impossible de dépublier la prestation.' });

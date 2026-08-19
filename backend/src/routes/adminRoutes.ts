@@ -42,6 +42,7 @@ import { getRevenueReport, exportRevenueReport, notifyRevenuePayouts, markRevenu
 import { getInvoiceDetail, downloadInvoicePdf, sendInvoiceByEmail } from '../controllers/invoiceController';
 import {
   getOpsOverview,
+  getPlatformInsights,
   getAuditLogs,
   getTenantOps,
   impersonateTenant,
@@ -52,6 +53,10 @@ import {
   listAdminOfferings,
   listAdminInquiries,
   listAdminBookings,
+  listAdminCommissions,
+  settleMarketplaceCommission,
+  setVenueListingVisibility,
+  setServiceOfferingVisibility,
   unpublishVenueListing,
   unpublishServiceOffering,
 } from '../controllers/adminCatalogController';
@@ -81,6 +86,7 @@ router.post('/reports/revenue/notify-payouts', notifyRevenuePayouts);
 router.post('/reports/revenue/mark-paid', markRevenuePayoutPaid);
 
 router.get('/ops-overview', getOpsOverview);
+router.get('/insights', getPlatformInsights);
 router.get('/audit-logs', getAuditLogs);
 router.get('/tenants/:id/ops', getTenantOps);
 router.post('/tenants/:id/impersonate', impersonateTenant);
@@ -90,6 +96,10 @@ router.get('/catalog/venues', listAdminVenues);
 router.get('/catalog/offerings', listAdminOfferings);
 router.get('/catalog/inquiries', listAdminInquiries);
 router.get('/catalog/bookings', listAdminBookings);
+router.get('/catalog/commissions', listAdminCommissions);
+router.patch('/catalog/bookings/:id/commission', settleMarketplaceCommission);
+router.patch('/catalog/venues/:id/visibility', setVenueListingVisibility);
+router.patch('/catalog/offerings/:id/visibility', setServiceOfferingVisibility);
 router.patch('/catalog/venues/:id/unpublish', unpublishVenueListing);
 router.patch('/catalog/offerings/:id/unpublish', unpublishServiceOffering);
 

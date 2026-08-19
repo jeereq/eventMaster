@@ -5,6 +5,8 @@ import { formatTenantResponse } from '../utils/tenantAccess';
 import { resolveOrgAccess } from '../services/permissionsService';
 import { formatInvoiceForApi } from '../services/invoiceService';
 import { auditReq, serializeAuditLog } from '../services/adminAuditService';
+import { serviceGroupPrismaFilter } from '../utils/publicVenue';
+import { MarketplaceBookingStatus } from '@prisma/client';
 
 const IMPERSONATE_EXPIRES_SECONDS = 2 * 60 * 60;
 
@@ -103,6 +105,115 @@ export async function getOpsOverview(req: AuthenticatedRequest, res: Response) {
   } catch (error) {
     console.error('Erreur ops-overview admin:', error);
     return res.status(500).json({ error: 'Impossible de charger l’accueil opérationnel.' });
+  }
+}
+
+export async function getPlatformInsights(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (req.user?.role !== 'SUPER_ADMIN') {
+      return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+    }
+
+    const billableWhere = { status: { in: ['CONFIRMED', 'COMPLETED'] as MarketplaceBookingStatus[] } };
+
+    const [
+      eventsTotal,
+      eventsPublic,
+      eventsTicketing,
+      eventsGps,
+      ticketsSoldSum,
+      paidTickets,
+      invitations,
+      rsvpGroups,
+      acceptedWithPdf,
+      acceptedWithoutPdf,
+      checkedIn,
+      seatVerified,
+      favorites,
+      packs,
+      gmvVenue,
+      gmvTrade,
+      gmvRental,
+    ] = await Promise.all([
+      prisma.event.count(),
+      prisma.event.count({ where: { isPublic: true } }),
+      prisma.event.count({ where: { ticketingEnabled: true } }),
+      prisma.event.count({ where: { latitude: { not: null }, longitude: { not: null } } }),
+      prisma.event.aggregate({ _sum: { ticketsSold: true } }),
+      prisma.ticketOrder.aggregate({
+        where: { status: 'PAID' },
+        _count: { _all: true },
+        _sum: { amountFc: true },
+      }),
+      prisma.invitation.count(),
+      prisma.guest.groupBy({ by: ['rsvp'], _count: { _all: true } }),
+      prisma.guest.count({ where: { rsvp: 'ACCEPTED', seatingInvitationPdfUrl: { not: null } } }),
+      prisma.guest.count({ where: { rsvp: 'ACCEPTED', seatingInvitationPdfUrl: null } }),
+      prisma.guest.count({ where: { checkedInAt: { not: null } } }),
+      prisma.guest.count({ where: { seatVerified: true } }),
+      prisma.listingFavorite.count(),
+      prisma.savedEventPack.count(),
+      prisma.marketplaceBooking.aggregate({
+        where: { ...billableWhere, listingId: { not: null } },
+        _count: { _all: true },
+        _sum: { amountFc: true },
+      }),
+      prisma.marketplaceBooking.aggregate({
+        where: { ...billableWhere, offering: serviceGroupPrismaFilter('trade') },
+        _count: { _all: true },
+        _sum: { amountFc: true },
+      }),
+      prisma.marketplaceBooking.aggregate({
+        where: { ...billableWhere, offering: serviceGroupPrismaFilter('rental') },
+        _count: { _all: true },
+        _sum: { amountFc: true },
+      }),
+    ]);
+
+    const rsvpCount = (status: string) => rsvpGroups.find((row) => row.rsvp === status)?._count._all || 0;
+    const guestsTotal = rsvpGroups.reduce((sum, row) => sum + row._count._all, 0);
+    const accepted = rsvpCount('ACCEPTED');
+    const pending = rsvpCount('PENDING');
+    const declined = rsvpCount('DECLINED');
+
+    return res.json({
+      events: {
+        total: eventsTotal,
+        publicCount: eventsPublic,
+        privateCount: eventsTotal - eventsPublic,
+        ticketingEnabled: eventsTicketing,
+        ticketsSold: ticketsSoldSum._sum.ticketsSold || 0,
+        gpsCount: eventsGps,
+      },
+      tickets: {
+        paidOrders: paidTickets._count._all,
+        gmvFc: paidTickets._sum.amountFc || 0,
+      },
+      guests: {
+        total: guestsTotal,
+        pending,
+        accepted,
+        declined,
+        invitations,
+        pdfDelivered: acceptedWithPdf,
+        pdfMissing: acceptedWithoutPdf,
+        checkedIn,
+        seatVerified,
+      },
+      marketplace: {
+        favorites,
+        packs,
+        gmvVenueFc: gmvVenue._sum.amountFc || 0,
+        gmvTradeFc: gmvTrade._sum.amountFc || 0,
+        gmvRentalFc: gmvRental._sum.amountFc || 0,
+        bookingsVenue: gmvVenue._count._all,
+        bookingsTrade: gmvTrade._count._all,
+        bookingsRental: gmvRental._count._all,
+      },
+    });
+  } catch (error) {
+    console.error('Erreur insights admin:', error);
+    return res.status(500).json({ error: 'Impossible de charger les analyses plateforme.' });
   }
 }
 

@@ -61,6 +61,26 @@ export function durationDaysForPlan(id: string, cycle: BillingCycle = 'monthly')
   return MONTH_BILLING_DAYS;
 }
 
+export interface DurationPreset {
+  days: number;
+  label: string;
+  annual?: boolean;
+}
+
+export function durationPresetsForPlan(id: string): DurationPreset[] {
+  if (id === 'FREE') return [];
+  if (isB2cPlanId(id)) {
+    return [
+      { days: B2C_BILLING_DAYS, label: 'Trimestre (90 j)' },
+      { days: YEAR_BILLING_DAYS, label: 'Annuel (365 j)', annual: true },
+    ];
+  }
+  return [
+    { days: MONTH_BILLING_DAYS, label: 'Mois (30 j)' },
+    { days: YEAR_BILLING_DAYS, label: 'Annuel (365 j)', annual: true },
+  ];
+}
+
 export function planPricePeriodSuffix(id: string): string {
   if (id === 'FREE') return '';
   return isB2cPlanId(id) ? '/ trimestre' : '/ mois';

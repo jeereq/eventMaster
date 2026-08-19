@@ -24,12 +24,13 @@ import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { parseStoredPhone } from '@/components/ui/PhoneInput';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
 import { useViewPreferencesOptional } from '@/context/ViewPreferencesContext';
-import { PLAN_IDS, planAudienceLabel, isB2cPlanId, type PlanId } from '@/config/landingPricing';
+import { PLAN_IDS, planAudienceLabel, isB2cPlanId, durationDaysForPlan, durationPresetsForPlan, ANNUAL_DISCOUNT_PERCENT, type PlanId } from '@/config/landingPricing';
 import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
 import { getTemplateElementSummary } from '@/lib/landingTemplateAdapter';
 import AdminDetailsModal from '@/components/admin/AdminDetailsModal';
 import AdminOpsHome from '@/components/admin/AdminOpsHome';
+import { ACCOUNT_KIND_FILTER_LABELS, type TenantAccountKind } from '@/lib/marketplace';
 
 function isPlatformStaff(role?: string) {
  return role === 'SUPER_ADMIN' || role === 'COMMERCIAL';
@@ -449,6 +450,7 @@ function DashboardPageContent() {
  const [savingSettings, setSavingSettings] = useState(false);
  const [searchTerm, setSearchTerm] = useState('');
  const [filterPlan, setFilterPlan] = useState<string>('ALL');
+ const [filterAccountKind, setFilterAccountKind] = useState<string>('ALL');
  const [filterRole, setFilterRole] = useState<string>('ALL');
  const [filterType, setFilterType] = useState<'ALL' | 'GLOBAL' | 'TENANT'>('GLOBAL');
  const [filterRsvp, setFilterRsvp] = useState<string>('ALL');
@@ -712,7 +714,7 @@ function DashboardPageContent() {
  setEventsPage(1);
  setGuestsPage(1);
  setSubRequestsPage(1);
- }, [searchTerm, filterPlan, filterRole, filterType, filterRsvp, filterVerified, filterUserOrg, filterOrgRole, filterEventWhen, filterEventOrg, filterEventGps, filterGuestOrg, filterGuestEvent, filterGuestCategory, filterGuestCheckin]);
+ }, [searchTerm, filterPlan, filterAccountKind, filterRole, filterType, filterRsvp, filterVerified, filterUserOrg, filterOrgRole, filterEventWhen, filterEventOrg, filterEventGps, filterGuestOrg, filterGuestEvent, filterGuestCategory, filterGuestCheckin]);
 
  // Leaflet Map Initialization Effect for Super Admin Event Modal
  useEffect(() => {
@@ -1020,7 +1022,7 @@ function DashboardPageContent() {
  setModalLicenseKey('');
  setModalIssueInvoice(false);
  setModalExtendLicense(true);
- setModalBillingDurationDays('30');
+ setModalBillingDurationDays(String(durationDaysForPlan('FREE')));
  setModalBillingAction('AUTO');
  setModalDiscountPercent('0');
  setModalApprovedAmount('');
@@ -1037,7 +1039,7 @@ function DashboardPageContent() {
  setModalLicenseKey(t.licenseKey || '');
  setModalIssueInvoice(false);
  setModalExtendLicense(false);
- setModalBillingDurationDays('30');
+ setModalBillingDurationDays(String(durationDaysForPlan(t.plan)));
  setModalBillingAction('AUTO');
  setModalDiscountPercent('0');
  setModalApprovedAmount('');
@@ -1080,7 +1082,7 @@ function DashboardPageContent() {
  payload.billing = {
  issueInvoice: true,
  action: modalBillingAction === 'AUTO' ? undefined : modalBillingAction,
- durationDays: parseInt(modalBillingDurationDays, 10) || 30,
+ durationDays: parseInt(modalBillingDurationDays, 10) || durationDaysForPlan(modalPlan),
  extendLicense: modalExtendLicense,
  discountPercent: pricing.discountPercent,
  approvedAmount: pricing.approvedAmount,
@@ -1544,7 +1546,8 @@ function DashboardPageContent() {
  t.managerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
  t.managerEmail.toLowerCase().includes(searchTerm.toLowerCase());
  const matchesPlan = filterPlan === 'ALL' || t.plan === filterPlan;
- return matchesSearch && matchesPlan;
+ const matchesKind = filterAccountKind === 'ALL' || t.accountKind === filterAccountKind;
+ return matchesSearch && matchesPlan && matchesKind;
  }) || [];
 
  // Filter users
@@ -1920,6 +1923,16 @@ function DashboardPageContent() {
  <option key={p} value={p}>{p}</option>
  ))}
  </select>
+ <select
+ value={filterAccountKind}
+ onChange={(e) => setFilterAccountKind(e.target.value)}
+ className="bg-surface-muted dark:bg-background border border-border dark:border-border rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground dark:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
+ >
+ <option value="ALL">Tous les types</option>
+ {(Object.keys(ACCOUNT_KIND_FILTER_LABELS) as TenantAccountKind[]).map((kind) => (
+ <option key={kind} value={kind}>{ACCOUNT_KIND_FILTER_LABELS[kind]}</option>
+ ))}
+ </select>
  <ViewModeToggle
  storageKey="em-view-admin-tenants"
  value={tenantsViewMode}
@@ -2088,6 +2101,11 @@ function DashboardPageContent() {
  {t.plan}
  </StatusPill>
  );
+ const kindChip = t.accountKind ? (
+ <StatusPill tone={t.accountKind === 'CLIENT' ? 'slate' : 'primary'}>
+ {ACCOUNT_KIND_FILTER_LABELS[t.accountKind as TenantAccountKind] || t.accountKind}
+ </StatusPill>
+ ) : null;
  const licenseChip = (
  <StatusPill
  tone={t.licenseActive && !licenseExpired ? 'emerald' : 'rose'}
@@ -2170,6 +2188,7 @@ function DashboardPageContent() {
  <div className="space-y-1">
  <div className="flex flex-wrap items-center gap-1.5">
  {planChip}
+ {kindChip}
  {licenseChip}
  </div>
  <p className="truncate">
@@ -2189,7 +2208,14 @@ function DashboardPageContent() {
  ? `Inscrite le ${new Date(t.createdAt).toLocaleDateString('fr-FR')}`
  : undefined
  }
- status={tenantsViewMode === 'list' ? planChip : undefined}
+ status={
+ tenantsViewMode === 'list' ? (
+ <span className="inline-flex flex-wrap items-center gap-1">
+ {planChip}
+ {kindChip}
+ </span>
+ ) : undefined
+ }
  aside={tenantsViewMode === 'list' ? licenseChip : undefined}
  description={
  tenantsViewMode === 'grid'
@@ -4098,7 +4124,12 @@ function DashboardPageContent() {
  <label className="text-xs font-bold text-muted uppercase tracking-wider">Forfait d'Abonnement</label>
  <select
  value={modalPlan}
- onChange={(e) => setModalPlan(e.target.value as any)}
+ onChange={(e) => {
+ const next = e.target.value as PlanId;
+ setModalPlan(next);
+ setModalBillingDurationDays(String(durationDaysForPlan(next)));
+ setModalDiscountPercent('0');
+ }}
  className="w-full bg-surface-muted border border-border rounded-xl px-3.5 py-2.5 text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
  >
  {PLAN_IDS.map((p) => (
@@ -4192,6 +4223,29 @@ function DashboardPageContent() {
  <div className="grid grid-cols-2 gap-3">
  <div className="space-y-2">
  <label className="text-xs font-bold text-muted uppercase tracking-wider">Durée (jours)</label>
+ <div className="flex flex-wrap gap-1.5 mb-1">
+ {durationPresetsForPlan(modalPlan).map((preset) => {
+ const selected = Number(modalBillingDurationDays) === preset.days;
+ return (
+ <button
+ key={preset.days}
+ type="button"
+ onClick={() => {
+ setModalBillingDurationDays(String(preset.days));
+ setModalDiscountPercent(preset.annual ? String(ANNUAL_DISCOUNT_PERCENT) : '0');
+ }}
+ className={`px-2.5 py-1 rounded-md text-[11px] font-semibold border transition ${
+ selected
+ ? 'bg-primary text-white border-primary'
+ : 'bg-white text-muted border-border hover:text-foreground'
+ }`}
+ >
+ {preset.label}
+ {preset.annual ? ` · −${ANNUAL_DISCOUNT_PERCENT} %` : ''}
+ </button>
+ );
+ })}
+ </div>
  <input
  type="number"
  min={1}
@@ -4199,6 +4253,14 @@ function DashboardPageContent() {
  onChange={(e) => setModalBillingDurationDays(e.target.value)}
  className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-white"
  />
+ {Number(modalBillingDurationDays) === 365 && (
+ <p className="text-[11px] text-emerald-700 font-medium">
+ Paiement annuel : −{ANNUAL_DISCOUNT_PERCENT} % prérempli (y compris Particulier).
+ </p>
+ )}
+ {isB2cPlanId(modalPlan) && Number(modalBillingDurationDays) === 90 && (
+ <p className="text-[11px] text-muted">Période de base Particulier : trimestre 90 jours.</p>
+ )}
  </div>
  <div className="flex items-end pb-1">
  <label className="flex items-center gap-2 text-xs font-semibold text-muted cursor-pointer">

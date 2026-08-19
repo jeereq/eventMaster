@@ -864,6 +864,11 @@ export async function getAllEvents(req: AuthenticatedRequest, res: Response) {
       reminderFrequency: e.reminderFrequency,
       latitude: e.latitude,
       longitude: e.longitude,
+      isPublic: e.isPublic,
+      ticketingEnabled: e.ticketingEnabled,
+      ticketPriceFc: e.ticketPriceFc,
+      ticketsSold: e.ticketsSold,
+      ticketsTotal: e.ticketsTotal,
       tenantId: e.tenantId,
       tenantName: e.tenant?.name || 'Inconnu',
       guestCount: e._count.guests,
@@ -1026,6 +1031,8 @@ export async function getAllGuests(req: AuthenticatedRequest, res: Response) {
         rsvp: g.rsvp,
         preferences: g.preferences,
         checkedInAt: g.checkedInAt,
+        seatVerified: g.seatVerified,
+        seatingInvitationPdfUrl: g.seatingInvitationPdfUrl,
         createdAt: g.createdAt,
       }))
     );

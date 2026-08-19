@@ -39,25 +39,28 @@ export const USER_GUIDES: UserGuide[] = [
     title: 'Guide Super Administrateur',
     badge: 'Plateforme',
     summary:
-      'Vous administrez l\'ensemble de la plateforme EventMaster : organisations, utilisateurs, modèles globaux, forfaits, facturation et statistiques.',
+      'Vous pilotez EventMaster : organisations et licences, marketplace, vitrine, facturation, audit et impersonation support.',
     canDo: [
-      'Créer et gérer toutes les organisations et leurs licences',
-      'Valider ou rejeter les demandes d\'abonnement',
-      'Publier des modèles globaux sur la landing page publique',
-      'Consulter les statistiques globales (organisations, événements, revenus)',
-      'Configurer les forfaits, tarifs et messages invités par défaut',
+      'Traiter la file du jour : demandes d’abonnement, licences J-7, factures ouvertes',
+      'Créer et modifier les organisations, forfaits et durées (trimestre 90 j, mois, annuel 365 j −10 %)',
+      'Ouvrir l’espace d’une organisation (impersonation support, bandeau visible)',
+      'Modérer le catalogue : salles, métiers, locations, devis, réservations',
+      'Suivre et encaisser les commissions marketplace 8 % (CSV)',
+      'Publier des modèles globaux sur la landing, éditer les messages invités',
+      'Consulter les analyses SaaS, le journal d’audit et les réglages plateforme',
     ],
     cannotDo: [
-      'Accéder aux données privées d\'une organisation comme un membre interne (vous supervisez, vous n\'organisez pas)',
-      'Créer des événements au nom d\'une organisation sans passer par leur espace',
+      'Organiser un événement comme un membre interne sans passer par l’impersonation',
+      'Modifier les données privées d’une org hors session support (vous supervisez)',
     ],
     navLinks: [
+      { label: 'Accueil', href: '/dashboard?tab=overview' },
       { label: 'Organisations', href: '/dashboard?tab=tenants' },
-      { label: 'Utilisateurs', href: '/dashboard?tab=users' },
-      { label: 'Modèles globaux', href: '/dashboard?tab=templates' },
-      { label: 'Analyses & stats', href: '/dashboard?tab=analytics&section=overview' },
+      { label: 'Catalogue', href: '/dashboard/admin/catalogue' },
       { label: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests' },
       { label: 'Forfaits', href: '/dashboard?tab=subscription-plans' },
+      { label: 'Journal d’audit', href: '/dashboard/audit' },
+      { label: 'Analyses', href: '/dashboard?tab=analytics&section=overview' },
       { label: 'Concepteur visuel', href: '/dashboard/templates' },
     ],
     workflows: [
@@ -65,8 +68,32 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'approve-subscription',
         title: 'Valider une demande d\'abonnement',
         content:
-          '1. Ouvrez Demandes abonnement.\n2. Consultez la preuve de paiement et le forfait demandé.\n3. Approuvez ou rejetez — une facture est générée automatiquement en cas d\'approbation.\n4. Le commercial parrainé reçoit une notification in-app si applicable.',
+          '1. Ouvrez Demandes abonnement.\n2. Vérifiez le forfait et la durée : trimestre 90 j (Particulier) ou mois (Business / marketplace), annuel 365 j avec −10 %.\n3. Approuvez ou rejetez — une facture est générée en cas d\'approbation.\n4. Le commercial parrainé est notifié si applicable.',
         links: [{ label: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests' }],
+      },
+      {
+        id: 'license-duration',
+        title: 'Prolonger une licence (période de base ou annuel)',
+        content:
+          '1. Organisations → Modifier.\n2. Activez Facturation.\n3. Choisissez Trimestre/Mois ou Annuel (365 j, −10 % y compris Particulier).\n4. Cochez Prolonger la licence, puis Enregistrer.',
+        links: [{ label: 'Organisations', href: '/dashboard?tab=tenants' }],
+      },
+      {
+        id: 'impersonate-org',
+        title: 'Ouvrir l’espace d’une organisation',
+        content:
+          '1. Dans Organisations ou Catalogue, cliquez sur Ouvrir l’espace.\n2. Un bandeau « session support » s’affiche.\n3. Vous voyez le workspace comme le gérant — sans mot de passe client.\n4. Quittez la session depuis le bandeau. L’action est journalisée dans l’audit.',
+        links: [
+          { label: 'Organisations', href: '/dashboard?tab=tenants' },
+          { label: 'Journal d’audit', href: '/dashboard/audit' },
+        ],
+      },
+      {
+        id: 'moderate-catalog',
+        title: 'Modérer le marketplace et les commissions 8 %',
+        content:
+          '1. Ouvrez Catalogue.\n2. Filtrez salles, métiers ou locations ; dépubliez une fiche hors charte.\n3. Onglet Commissions 8 % : réservations confirmées, montant dû par vendeur.\n4. Marquez payée après versement hors plateforme, ou exportez le CSV.',
+        links: [{ label: 'Catalogue', href: '/dashboard/admin/catalogue' }],
       },
       {
         id: 'publish-landing-template',
@@ -82,14 +109,15 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'review-analytics',
         title: 'Consulter les statistiques plateforme',
         content:
-          '1. Ouvrez Analyses & stats.\n2. Parcourez les sous-onglets : vue d\'ensemble, plans, organisations, revenus, modèles, utilisateurs, événements.\n3. Exportez le rapport revenus en CSV ou PDF si nécessaire.',
+          '1. Ouvrez Analyses & stats.\n2. Parcourez les sous-onglets : vue d\'ensemble, plans, organisations, revenus, modèles, utilisateurs, événements.\n3. Exportez le rapport revenus SaaS en CSV ou PDF. Les commissions marketplace 8 % sont dans Catalogue, pas dans ce rapport.',
         links: [{ label: 'Analyses & stats', href: '/dashboard?tab=analytics&section=overview' }],
       },
     ],
     tips: [
-      'Filtrez les modèles globaux par défaut dans l\'onglet Modèles pour voir rapidement ceux visibles sur la landing.',
+      'Filtrez les organisations par type : Client (sans licence), Organisateur, Salle / presta, Mixte.',
       'Les modèles d\'organisation ne doivent jamais avoir showOnLanding — seuls les modèles globaux sont publics.',
-      'Vérifiez les licences expirées dans Organisations avant d\'approuver un renouvellement.',
+      'Vérifiez les licences expirées sur l’Accueil avant d’approuver un renouvellement.',
+      'Le mode maintenance bloque tout le monde sauf le Super Admin.',
     ],
   },
   {

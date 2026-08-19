@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { Percent, UserCheck, Loader2, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
-import { LANDING_PLANS } from '@/config/landingPricing';
+import { LANDING_PLANS, ANNUAL_DISCOUNT_PERCENT } from '@/config/landingPricing';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 
@@ -81,12 +81,16 @@ export default function SubscriptionApprovalModal({
       setDiscountMode('amount');
       setApprovedAmount(String(activePromo.price));
       setDiscountPercent('0');
+    } else if (request.durationDays === 365) {
+      setDiscountMode('percent');
+      setDiscountPercent(String(ANNUAL_DISCOUNT_PERCENT));
+      setApprovedAmount('');
     } else {
       setDiscountMode('percent');
       setDiscountPercent('0');
       setApprovedAmount('');
     }
-  }, [request?.id, activePromo?.price]);
+  }, [request?.id, request?.durationDays, activePromo?.price]);
 
   const pricing = useMemo(() => {
     if (!request) return { discountAmount: 0, finalAmount: 0, discountPercent: 0 };
@@ -205,6 +209,7 @@ export default function SubscriptionApprovalModal({
               Forfait demandé :{' '}
               <span className="font-semibold text-primary">{request.requestedPlan}</span> ·{' '}
               {request.durationDays} jours
+              {request.durationDays === 365 ? ` · annuel −${ANNUAL_DISCOUNT_PERCENT} %` : ''}
             </p>
             <p className="text-muted">
               Prix catalogue :{' '}

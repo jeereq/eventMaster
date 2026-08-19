@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  Building2, Clock, CreditCard, FileText, Loader2, LogIn, Store, Users,
+  Building2, Clock, CreditCard, FileText, Loader2, LogIn, Store, Users, Wallet, Download,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -43,7 +43,7 @@ import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
 import { useRememberListReturn } from '@/lib/catalogueQuery';
 
-type CatalogTab = 'venues' | 'offerings' | 'rentals' | 'inquiries' | 'bookings';
+type CatalogTab = 'venues' | 'offerings' | 'rentals' | 'inquiries' | 'bookings' | 'commissions';
 
 interface Overview {
   venues: { total: number; publicCount: number };
@@ -52,6 +52,16 @@ interface Overview {
   rentals?: { total: number; publicCount: number };
   inquiries: { total: number; newCount: number };
   bookings: { total: number; requestedCount: number };
+  commissions?: { dueCount: number; dueFc: number; paidCount: number; paidFc: number };
+  engagement?: { favorites: number; packs: number };
+  gmv?: {
+    venueFc: number;
+    venueCount: number;
+    tradeFc: number;
+    tradeCount: number;
+    rentalFc: number;
+    rentalCount: number;
+  };
 }
 
 interface VenueRow {
@@ -137,6 +147,23 @@ interface BookingRow {
   vendorTenantId: string;
   vendorName: string;
   organizerTenantId: string | null;
+  organizerName: string | null;
+  href: string | null;
+}
+
+interface CommissionRow {
+  id: string;
+  kind: 'venue' | 'offering';
+  title: string;
+  status: string;
+  eventDate: string;
+  amountFc: number;
+  commissionRate: number;
+  commissionFc: number;
+  commissionSettledAt: string | null;
+  createdAt: string;
+  vendorTenantId: string;
+  vendorName: string;
   organizerName: string | null;
   href: string | null;
 }
@@ -256,6 +283,7 @@ export default function AdminCataloguePage() {
   const [extras, setExtras] = useState<CatalogueEntityExtras>({ ...EMPTY_CATALOGUE_EXTRAS });
   const [inquiryStatus, setInquiryStatus] = useState('');
   const [bookingStatus, setBookingStatus] = useState('');
+  const [settlement, setSettlement] = useState<'due' | 'paid' | 'all'>('due');
   const { mode: view, setView, gridCols, setGridCols } = useCatalogueView('list');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePageSize('admin-catalogue', 20);
@@ -265,7 +293,16 @@ export default function AdminCataloguePage() {
   const [offerings, setOfferings] = useState<ListResponse<OfferingRow> | null>(null);
   const [inquiries, setInquiries] = useState<ListResponse<InquiryRow> | null>(null);
   const [bookings, setBookings] = useState<ListResponse<BookingRow> | null>(null);
+  const [commissions, setCommissions] = useState<(ListResponse<CommissionRow> & { sumCommissionFc?: number }) | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [moderation, setModeration] = useState<{
+    kind: 'venues' | 'offerings';
+    id: string;
+    label: string;
+    publish: boolean;
+  } | null>(null);
+  const [moderationReason, setModerationReason] = useState('');
 
   const [ficheOpen, setFicheOpen] = useState(false);
   const [fiche, setFiche] = useState<TenantOps | null>(null);
@@ -316,6 +353,7 @@ export default function AdminCataloguePage() {
       }
       if (tab === 'inquiries' && inquiryStatus) params.set('status', inquiryStatus);
       if (tab === 'bookings' && bookingStatus) params.set('status', bookingStatus);
+      if (tab === 'commissions') params.set('settlement', settlement);
       if ((tab === 'venues' || tab === 'offerings' || tab === 'rentals') && isCatalogueMapView(view)) {
         params.set('limit', '100');
         params.set('page', '1');
@@ -325,12 +363,13 @@ export default function AdminCataloguePage() {
       if (tab === 'offerings' || tab === 'rentals') setOfferings(await api.get(`/admin/catalog/offerings?${params}`));
       if (tab === 'inquiries') setInquiries(await api.get(`/admin/catalog/inquiries?${params}`));
       if (tab === 'bookings') setBookings(await api.get(`/admin/catalog/bookings?${params}`));
+      if (tab === 'commissions') setCommissions(await api.get(`/admin/catalog/commissions?${params}`));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossible de charger le catalogue.');
     } finally {
       setLoading(false);
     }
-  }, [user?.role, tab, page, pageSize, q, visibility, extras, inquiryStatus, bookingStatus, geo, view]);
+  }, [user?.role, tab, page, pageSize, q, visibility, extras, inquiryStatus, bookingStatus, settlement, geo, view]);
 
   useEffect(() => {
     void loadOverview();
@@ -365,17 +404,61 @@ export default function AdminCataloguePage() {
     }
   };
 
-  const unpublish = async (kind: 'venues' | 'offerings', id: string, label: string) => {
-    if (!window.confirm(`Dépublier « ${label} » du marketplace public ?`)) return;
+  const openModeration = (kind: 'venues' | 'offerings', id: string, label: string, publish: boolean) => {
+    setModeration({ kind, id, label, publish });
+    setModerationReason('');
+    setError('');
+  };
+
+  const submitModeration = async () => {
+    if (!moderation) return;
+    if (!moderation.publish && moderationReason.trim().length < 8) {
+      setError('Indiquez un motif d’au moins 8 caractères pour dépublier.');
+      return;
+    }
+    setBusyId(moderation.id);
+    setError('');
+    try {
+      await api.patch(`/admin/catalog/${moderation.kind}/${moderation.id}/visibility`, {
+        isPublic: moderation.publish,
+        reason: moderationReason.trim() || undefined,
+      });
+      setModeration(null);
+      setModerationReason('');
+      await Promise.all([load(), loadOverview()]);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Impossible de mettre à jour la visibilité.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const settleCommission = async (id: string, settled: boolean, vendorName: string) => {
     setBusyId(id);
     setError('');
     try {
-      await api.patch(`/admin/catalog/${kind}/${id}/unpublish`, {});
+      await api.patch(`/admin/catalog/bookings/${id}/commission`, { settled });
       await Promise.all([load(), loadOverview()]);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Impossible de dépublier.');
+      setError(err instanceof Error ? err.message : `Impossible de ${settled ? 'encaisser' : 'remettre due'} la commission de ${vendorName}.`);
     } finally {
       setBusyId(null);
+    }
+  };
+
+  const exportCommissions = async () => {
+    setExporting(true);
+    setError('');
+    try {
+      const params = new URLSearchParams();
+      if (q) params.set('q', q);
+      params.set('settlement', settlement);
+      params.set('export', 'csv');
+      await api.download(`/admin/catalog/commissions?${params}`, 'commissions-marketplace.csv');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Impossible d’exporter les commissions.');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -393,6 +476,7 @@ export default function AdminCataloguePage() {
     { id: 'rentals', label: 'Locations', count: overview?.rentals?.total },
     { id: 'inquiries', label: 'Demandes', count: overview?.inquiries.total },
     { id: 'bookings', label: 'Réservations', count: overview?.bookings.total },
+    { id: 'commissions', label: 'Commissions 8 %', count: overview?.commissions?.dueCount },
   ];
 
   const currentTotal =
@@ -402,7 +486,9 @@ export default function AdminCataloguePage() {
         ? offerings?.total ?? 0
         : tab === 'inquiries'
           ? inquiries?.total ?? 0
-          : bookings?.total ?? 0;
+          : tab === 'commissions'
+            ? commissions?.total ?? 0
+            : bookings?.total ?? 0;
 
   const catalogItems: CatalogueItem[] =
     tab === 'venues'
@@ -425,13 +511,14 @@ export default function AdminCataloguePage() {
     ...(listingTab ? catalogueGeoChips(geo, catalogueEntityExtraChips(listingExtras)) : []),
     ...(tab === 'inquiries' && inquiryStatus ? [{ id: 'inquiry', label: 'Statut', value: inquiryStatus === 'NEW' ? 'Nouveau' : 'Contacté' }] : []),
     ...(tab === 'bookings' && bookingStatus ? [{ id: 'booking', label: 'Statut', value: BOOKING_STATUS_LABELS[bookingStatus] || bookingStatus }] : []),
+    ...(tab === 'commissions' && settlement !== 'due' ? [{ id: 'settlement', label: 'Encaissement', value: settlement === 'paid' ? 'Payées' : 'Toutes' }] : []),
   ];
 
   return (
     <div className="space-y-6 w-full">
       <PageHeader
         title="Catalogue"
-        description="Modération des fiches publiques, demandes de devis et réservations marketplace."
+        description="Modération des fiches (motif + audit), devis, réservations, GMV et commissions vendeur 8 %."
         breadcrumbs={
           <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard?tab=overview' }, { label: 'Catalogue' }]} />
         }
@@ -439,13 +526,29 @@ export default function AdminCataloguePage() {
 
       {error && <Alert variant="error">{error}</Alert>}
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden">
         {[
           { label: 'Salles publiques', value: overview?.venues.publicCount ?? 0 },
           { label: 'Prestataires publics', value: overview?.trades?.publicCount ?? overview?.offerings.publicCount ?? 0 },
           { label: 'Locations publiques', value: overview?.rentals?.publicCount ?? 0 },
           { label: 'Devis nouveaux', value: overview?.inquiries.newCount ?? 0 },
           { label: 'Réservations demandées', value: overview?.bookings.requestedCount ?? 0 },
+          { label: 'Commissions dues', value: formatFc(overview?.commissions?.dueFc ?? 0) },
+        ].map((card) => (
+          <div key={card.label} className="bg-surface px-4 py-3">
+            <div className="text-lg font-semibold text-foreground">{card.value}</div>
+            <div className="text-[10px] uppercase tracking-wider text-muted">{card.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden">
+        {[
+          { label: 'Favoris', value: overview?.engagement?.favorites ?? 0 },
+          { label: 'Packs enregistrés', value: overview?.engagement?.packs ?? 0 },
+          { label: 'GMV salles', value: formatFc(overview?.gmv?.venueFc ?? 0) },
+          { label: 'GMV métiers', value: formatFc(overview?.gmv?.tradeFc ?? 0) },
+          { label: 'GMV locations', value: formatFc(overview?.gmv?.rentalFc ?? 0) },
         ].map((card) => (
           <div key={card.label} className="bg-surface px-4 py-3">
             <div className="text-lg font-semibold text-foreground">{card.value}</div>
@@ -488,7 +591,7 @@ export default function AdminCataloguePage() {
           setView(mode);
           setPage(1);
         }}
-        hideViewToggle={tab === 'inquiries' || tab === 'bookings'}
+        hideViewToggle={tab === 'inquiries' || tab === 'bookings' || tab === 'commissions'}
         compactToggle
         gridCols={gridCols}
         onGridColsChange={setGridCols}
@@ -497,6 +600,7 @@ export default function AdminCataloguePage() {
           if (id === 'visibility') setVisibility('all');
           else if (id === 'inquiry') setInquiryStatus('');
           else if (id === 'booking') setBookingStatus('');
+          else if (id === 'settlement') setSettlement('due');
           else {
             setGeo((prev) => clearCatalogueGeoChip(prev, id));
             setExtras((prev) => clearCatalogueExtraChip(prev, id));
@@ -509,6 +613,7 @@ export default function AdminCataloguePage() {
           setExtras({ ...EMPTY_CATALOGUE_EXTRAS });
           setInquiryStatus('');
           setBookingStatus('');
+          setSettlement('due');
           setPage(1);
         }}
         resultLabel={`${currentTotal} résultat${currentTotal > 1 ? 's' : ''}`}
@@ -563,9 +668,43 @@ export default function AdminCataloguePage() {
                 />
               </CatalogueFilterField>
             )}
+            {tab === 'commissions' && (
+              <CatalogueFilterField label="Encaissement">
+                <CatalogueChoicePills
+                  options={[
+                    { id: 'due', label: 'Dues' },
+                    { id: 'paid', label: 'Payées' },
+                    { id: 'all', label: 'Toutes' },
+                  ]}
+                  value={settlement}
+                  onChange={(id) => { setSettlement((id as 'due' | 'paid' | 'all') || 'due'); setPage(1); }}
+                />
+              </CatalogueFilterField>
+            )}
           </>
         }
       />
+
+      {tab === 'commissions' && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <p className="text-sm text-muted">
+            {settlement === 'paid' ? 'Encaissé' : settlement === 'all' ? 'Total filtré' : 'Dû'} :{' '}
+            <span className="font-semibold text-foreground">{formatFc(commissions?.sumCommissionFc ?? 0)}</span>
+            {' · '}commission 8 % sur réservations confirmées, versée hors plateforme.
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="sm:ml-auto"
+            loading={exporting}
+            leftIcon={<Download className="w-3.5 h-3.5" />}
+            onClick={() => void exportCommissions()}
+          >
+            Exporter CSV
+          </Button>
+        </div>
+      )}
 
       {loading ? (
         (tab === 'venues' || tab === 'offerings' || tab === 'rentals') ? (
@@ -612,19 +751,35 @@ export default function AdminCataloguePage() {
                     <button type="button" className="text-primary hover:underline" onClick={() => void openFiche(row.tenantId)}>
                       {row.tenantName}
                     </button>
-                    {row.isPublic && (
+                    {row.isPublic ? (
                       <Button
                         variant="danger"
                         size="sm"
                         className="ml-auto"
                         loading={busyId === row.id}
-                        onClick={() => void unpublish(
+                        onClick={() => openModeration(
                           tab === 'venues' ? 'venues' : 'offerings',
                           row.id,
                           'headline' in row ? row.headline : row.title,
+                          false,
                         )}
                       >
                         Dépublier
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="ml-auto"
+                        loading={busyId === row.id}
+                        onClick={() => openModeration(
+                          tab === 'venues' ? 'venues' : 'offerings',
+                          row.id,
+                          'headline' in row ? row.headline : row.title,
+                          true,
+                        )}
+                      >
+                        Republier
                       </Button>
                     )}
                   </li>
@@ -637,6 +792,12 @@ export default function AdminCataloguePage() {
         <EmptyState icon={<FileText className="w-5 h-5" />} title="Aucune demande" description="Les devis marketplace apparaîtront ici." />
       ) : tab === 'bookings' && !bookings?.items.length ? (
         <EmptyState icon={<Clock className="w-5 h-5" />} title="Aucune réservation" description="Les demandes de dates apparaîtront ici." />
+      ) : tab === 'commissions' && !commissions?.items.length ? (
+        <EmptyState
+          icon={<Wallet className="w-5 h-5" />}
+          title={settlement === 'paid' ? 'Aucune commission encaissée' : 'Aucune commission due'}
+          description="Les commissions 8 % des réservations confirmées apparaissent ici."
+        />
       ) : (
         <ul className="divide-y divide-border border border-border rounded-[var(--radius-card)] overflow-hidden bg-surface">
           {tab === 'inquiries' &&
@@ -698,6 +859,39 @@ export default function AdminCataloguePage() {
                       </Button>
                     </Link>
                   )}
+                </div>
+              </li>
+            ))}
+
+          {tab === 'commissions' &&
+            commissions?.items.map((row) => (
+              <li key={row.id} className="px-4 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <Badge variant={row.commissionSettledAt ? 'success' : 'warning'}>
+                      {row.commissionSettledAt ? 'Payée' : 'Due'}
+                    </Badge>
+                    <span className="text-[10px] text-muted">{formatDate(row.eventDate)}</span>
+                    <span className="text-[10px] text-muted">{BOOKING_STATUS_LABELS[row.status] || row.status}</span>
+                  </div>
+                  <p className="text-sm font-semibold text-foreground truncate">{row.title}</p>
+                  <p className="text-xs text-muted">
+                    {formatFc(row.commissionFc)} (8 %) sur {formatFc(row.amountFc)}
+                    {row.organizerName ? ` · ${row.organizerName}` : ''}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={() => void openFiche(row.vendorTenantId)}>
+                    {row.vendorName}
+                  </button>
+                  <Button
+                    size="sm"
+                    variant={row.commissionSettledAt ? 'secondary' : 'primary'}
+                    loading={busyId === row.id}
+                    onClick={() => void settleCommission(row.id, !row.commissionSettledAt, row.vendorName)}
+                  >
+                    {row.commissionSettledAt ? 'Remettre due' : 'Marquer payée'}
+                  </Button>
                 </div>
               </li>
             ))}
@@ -780,6 +974,65 @@ export default function AdminCataloguePage() {
             </p>
           </div>
         )}
+      </Modal>
+
+      <Modal
+        open={Boolean(moderation)}
+        onClose={() => {
+          setModeration(null);
+          setModerationReason('');
+        }}
+        title={moderation?.publish ? 'Republier la fiche' : 'Dépublier la fiche'}
+        description={
+          moderation
+            ? moderation.publish
+              ? `« ${moderation.label} » redevient visible sur le marketplace public.`
+              : `« ${moderation.label} » disparaît du marketplace. Le motif est journalisé.`
+            : undefined
+        }
+        size="sm"
+        footer={
+          <div className="flex w-full justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setModeration(null);
+                setModerationReason('');
+              }}
+            >
+              Annuler
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={moderation?.publish ? 'primary' : 'danger'}
+              loading={Boolean(moderation && busyId === moderation.id)}
+              disabled={!moderation?.publish && moderationReason.trim().length < 8}
+              onClick={() => void submitModeration()}
+            >
+              {moderation?.publish ? 'Republier' : 'Dépublier'}
+            </Button>
+          </div>
+        }
+      >
+        <label className="block space-y-1.5">
+          <span className="text-xs font-medium text-muted">
+            {moderation?.publish ? 'Commentaire (optionnel)' : 'Motif (obligatoire)'}
+          </span>
+          <textarea
+            value={moderationReason}
+            onChange={(e) => setModerationReason(e.target.value)}
+            rows={4}
+            maxLength={500}
+            placeholder={moderation?.publish ? 'Ex. fiche corrigée par le vendeur' : 'Ex. photos hors charte, prix incohérent…'}
+            className="w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/25"
+          />
+          {!moderation?.publish && (
+            <span className="text-[11px] text-muted">{moderationReason.trim().length}/8 caractères min.</span>
+          )}
+        </label>
       </Modal>
     </div>
   );

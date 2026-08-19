@@ -75,6 +75,13 @@ export const ACCOUNT_KIND_LABELS: Record<TenantAccountKind, string> = {
   CLIENT: 'Je cherche une salle ou un prestataire',
 };
 
+export const ACCOUNT_KIND_FILTER_LABELS: Record<TenantAccountKind, string> = {
+  ORGANIZER: 'Organisateur',
+  VENDOR: 'Salle / presta',
+  BOTH: 'Mixte',
+  CLIENT: 'Client',
+};
+
 export const ACCOUNT_KIND_DESCRIPTIONS: Record<TenantAccountKind, string> = {
   ORGANIZER: 'Créez des événements, invitations et plans de table.',
   VENDOR: 'Publiez vos salles ou prestations. Forfaits Salle, Prestataire ou Salle & presta.',
