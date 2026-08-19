@@ -584,9 +584,9 @@ export function isB2cPlanKey(planKey: string): boolean {
   return B2C_PLAN_KEYS.includes(normalized);
 }
 
-/** Durée de licence / facture : trimestre pour le B2C, mois (ou valeur demandée) sinon. */
+/** Durée de licence / facture : trimestre B2C, mois sinon — ou durée demandée (ex. annuel 365 j, −10 %). */
 export function resolveDurationDaysForPlan(planKey: string, requested?: number | null): number {
-  if (isB2cPlanKey(planKey)) return QUARTER_DURATION_DAYS;
   if (requested != null && Number.isFinite(requested) && requested > 0) return requested;
+  if (isB2cPlanKey(planKey)) return QUARTER_DURATION_DAYS;
   return MONTH_DURATION_DAYS;
 }

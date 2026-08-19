@@ -22,7 +22,6 @@ import {
   ANNUAL_DISCOUNT_PERCENT,
   getPlanDisplayPrice,
   durationDaysForPlan,
-  isB2cPlanId,
   planPricePeriodSuffix,
   CURRENCY_NAME,
   type BillingCycle,
@@ -152,7 +151,7 @@ export default function BillingPage() {
         displayName: db?.name?.replace('Plan ', '') || plan.ms365Name,
         price: getPlanDisplayPrice(
           plan,
-          isB2cPlanId(plan.id) ? 'monthly' : billingCycle,
+          billingCycle,
           db?.price,
           db?.monthlyPriceFc,
         ),
@@ -176,7 +175,7 @@ export default function BillingPage() {
         durationDays: durationDaysForPlan(plan, billingCycle),
       });
       setSuccessMsg(
-        `Demande ${plan} soumise (${durationDaysForPlan(plan, billingCycle) === 90 ? '90 jours / trimestre' : billingCycle === 'annual' ? '12 mois' : '30 jours'}${isB2cPlanId(plan) ? '' : billingCycle === 'annual' ? `, −${ANNUAL_DISCOUNT_PERCENT} %` : ''}). Facture SendGrid après validation.`,
+        `Demande ${plan} soumise (${durationDaysForPlan(plan, billingCycle) === 90 ? '90 jours / trimestre' : billingCycle === 'annual' ? '12 mois' : '30 jours'}${billingCycle === 'annual' ? `, −${ANNUAL_DISCOUNT_PERCENT} %` : ''}). Facture SendGrid après validation.`,
       );
       await loadBillingStatus();
     } catch (err: any) {
@@ -198,7 +197,7 @@ export default function BillingPage() {
           Forfait de {tenant?.name || 'votre organisation'}
         </h1>
         <p className="text-muted text-sm">
-          Forfaits adaptés à votre type de compte · tarifs en {CURRENCY_NAME} (FC) · réduction annuelle {ANNUAL_DISCOUNT_PERCENT} %
+          Forfaits adaptés à votre type de compte · tarifs en {CURRENCY_NAME} (FC) · annuel −{ANNUAL_DISCOUNT_PERCENT} % (y compris Particulier)
         </p>
       </div>
 
@@ -274,7 +273,7 @@ export default function BillingPage() {
         </div>
       )}
 
-      <div className="flex justify-center">
+      <div className="flex flex-col items-center gap-2">
         <div className="inline-flex p-1 bg-surface-muted rounded-full">
           {(['monthly', 'annual'] as BillingCycle[]).map((cycle) => (
             <button
@@ -285,10 +284,16 @@ export default function BillingPage() {
  billingCycle === cycle ? 'bg-surface shadow-sm' : 'text-muted'
  }`}
             >
-              {cycle === 'monthly' ? 'Mensuel' : `Annuel (−${ANNUAL_DISCOUNT_PERCENT} %)`}
+              {cycle === 'monthly' ? 'Période de base' : `Annuel (−${ANNUAL_DISCOUNT_PERCENT} %)`}
             </button>
           ))}
         </div>
+        <p className="text-xs text-muted text-center max-w-lg">
+          Période de base : mois (organisations et marketplace) ou trimestre 90 jours (particuliers).
+          {billingCycle === 'annual'
+            ? ` L’annuel (365 jours) applique −${ANNUAL_DISCOUNT_PERCENT} % à tous les forfaits payants, y compris Particulier.`
+            : ` L’annuel offre −${ANNUAL_DISCOUNT_PERCENT} % aussi pour les forfaits Particulier.`}
+        </p>
       </div>
 
       {visibleTiers.map(({ label, ids }) => (
@@ -321,6 +326,11 @@ export default function BillingPage() {
                     <div className="mt-4 mb-4">
                       <span className="text-3xl font-extrabold">{plan.price}</span>
                       {plan.id !== 'FREE' && <span className="text-sm text-muted ml-1">{planPricePeriodSuffix(plan.id)}</span>}
+                      {billingCycle === 'annual' && plan.id !== 'FREE' && (
+                        <p className="text-[10px] text-emerald-600 font-semibold mt-1">
+                          Facturé 12 mois · −{ANNUAL_DISCOUNT_PERCENT} % vs période de base
+                        </p>
+                      )}
                     </div>
                     <ul className="space-y-1.5 text-xs text-muted flex-1 border-t border-border pt-3">
                       {plan.highlights.map((h) => (

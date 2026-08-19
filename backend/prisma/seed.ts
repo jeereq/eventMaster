@@ -13,6 +13,7 @@ import {
   GLOBAL_CATALOG_TEMPLATES,
   licenseKey,
   PLAN_AMOUNTS,
+  seedGuestGuidelines,
 } from './seed/helpers';
 import { seedMarketplaceCatalog } from './seed/marketplaceCatalog';
 import { seedAccountsMatrix } from './seed/accountsMatrix';
@@ -445,6 +446,7 @@ async function main() {
       ticketPriceFc: 150_000,
       ticketsTotal: 200,
       ticketsSold: 0,
+      guestGuidelines: seedGuestGuidelines(1),
     },
   });
 
@@ -459,6 +461,7 @@ async function main() {
       latitude: -4.305,
       longitude: 15.302,
       photos: eventPhotos(2),
+      guestGuidelines: seedGuestGuidelines(2),
     },
   });
 
@@ -477,6 +480,7 @@ async function main() {
       slug: 'soiree-networking-pitch-limete',
       publishedAt: new Date(),
       ticketingEnabled: false,
+      guestGuidelines: seedGuestGuidelines(3),
     },
   });
 
@@ -491,6 +495,7 @@ async function main() {
       latitude: -4.3725,
       longitude: 15.253,
       photos: eventPhotos(4),
+      guestGuidelines: seedGuestGuidelines(4),
     },
   });
 
@@ -505,6 +510,7 @@ async function main() {
       latitude: -4.3032,
       longitude: 15.2861,
       photos: eventPhotos(5),
+      guestGuidelines: seedGuestGuidelines(5),
     },
   });
 
@@ -756,7 +762,21 @@ async function main() {
     invoices: await prisma.platformInvoice.count(),
     rooms: await prisma.organizationRoom.count(),
     venueListings: await prisma.venueListing.count({ where: { isPublic: true } }),
+    venuesKinshasa: await prisma.venueListing.count({ where: { isPublic: true, city: 'Kinshasa' } }),
+    venuesLubumbashi: await prisma.venueListing.count({ where: { isPublic: true, city: 'Lubumbashi' } }),
     serviceOfferings: await prisma.serviceOffering.count({ where: { isPublic: true } }),
+    tradeServices: await prisma.serviceOffering.count({
+      where: {
+        isPublic: true,
+        category: { in: ['CATERING', 'PHOTOGRAPHY', 'VIDEO', 'DJ', 'DECORATION', 'SECURITY', 'FLORIST', 'TRANSPORT', 'MC', 'OTHER'] },
+      },
+    }),
+    rentalServices: await prisma.serviceOffering.count({
+      where: {
+        isPublic: true,
+        category: { in: ['RENTAL_CLOTHING_MEN', 'RENTAL_CLOTHING_WOMEN', 'RENTAL_CLOTHING_CHILD', 'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT'] },
+      },
+    }),
     ticketOrders: await prisma.ticketOrder.count({ where: { status: 'PAID' } }),
     publicEvents: await prisma.event.count({ where: { isPublic: true } }),
   };
@@ -771,10 +791,12 @@ async function main() {
   console.log('  Mariage      : claire@mariagereve.cd');
   console.log('  Global Corp  : event@globalcorp.cd');
   console.log('  Nouvelle org.: demo@novaevents.cd  (FREE — bibliothèque modèles)');
-  console.log('  Salles 1–40  : salles1@eventmaster.cd … salles40@eventmaster.cd  (520 salles + plan 2D)');
-  console.log('  Prestas 1–32 : prestas1@eventmaster.cd … prestas32@eventmaster.cd (métiers + locations)');
-  console.log('  Protocoles   : protocole.salles1@…5@  · protocole.prestas1@…5@');
-  console.log('  Commerciaux  : commercial.salles1@…5@ · commercial.prestas1@…5@');
+  console.log('  Salles Kinshasa : salles.kin1@eventmaster.cd … salles.kin20@  (5 salles/org, forfait VENUE)');
+  console.log('  Salles L’shi    : salles.lshi1@eventmaster.cd … salles.lshi20@');
+  console.log('  Métiers 1–10    : prestas1@eventmaster.cd … prestas10@');
+  console.log('  Locations 1–10  : locations1@eventmaster.cd … locations10@');
+  console.log('  Protocoles      : protocole.salles.kin1@…5@ · protocole.prestas1@…5@ · protocole.locations1@…5@');
+  console.log('  Commerciaux org : commercial.salles.kin1@…5@ · commercial.prestas1@…5@');
   console.log('  Forfaits / rôles :');
   for (const line of matrix.logins) {
     console.log(`    ${line}`);

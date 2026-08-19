@@ -16,10 +16,10 @@ import { ACCOUNT_KIND_DESCRIPTIONS, ACCOUNT_KIND_LABELS, type TenantAccountKind 
 import { safeAppPath, isClientReturnPath } from '@/lib/safeAppPath';
 
 const FEATURES = [
- { icon: Calendar, title: "Gestion d'événements & RSVP", desc: 'Invitations par e-mail ou WhatsApp, suivi des réponses en temps réel.' },
- { icon: Table, title: 'Planificateur de table', desc: 'Placement intuitif par glisser-déposer sur un plan 2D.' },
- { icon: MessageSquare, title: "Fil d'actualité & livre d'or", desc: 'Photos, vidéos et commentaires dans un espace privé.' },
- { icon: Sparkles, title: 'Statistiques & analyses', desc: 'Régimes alimentaires, réponses et exports en un clic.' },
+ { icon: Calendar, title: 'Invitations & RSVP', desc: 'Le premier message n’envoie que le lien RSVP. PDF, plan et GPS après acceptation (Premium 1+).' },
+ { icon: Table, title: 'Plan de table 2D', desc: 'Placement glisser-déposer. Liez la salle à l’événement pour importer le plan.' },
+ { icon: MessageSquare, title: 'Protocole QR web', desc: 'Scan du badge dans le navigateur le jour J. L’app native n’est pas encore déployée.' },
+ { icon: Sparkles, title: 'Marketplace & packs', desc: 'Salles, métiers, locations. Favoris, 3 packs budget, acompte 30 % hors plateforme.' },
 ];
 
 export default function RegisterPage() {

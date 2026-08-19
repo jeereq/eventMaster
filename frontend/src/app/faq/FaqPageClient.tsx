@@ -10,7 +10,7 @@ export default function FaqPageClient() {
       <PublicPageHero
         chip="FAQ"
         title="Questions fréquentes"
-        description="Forfaits, sécurité, protocole QR et facturation."
+        description="Forfaits (annuel −10 % y compris Particulier), protocole QR web, marketplace et facturation."
       />
 
       <main className="flex-1">
@@ -22,12 +22,12 @@ export default function FaqPageClient() {
         />
 
         <PublicCtaBand
-          title="Pas trouvé votre réponse ?"
-          description="Notre équipe répond aux questions commerciales, techniques et de facturation."
+          title="Toujours une question ?"
+          description="On vous répond sur les forfaits, le protocole QR, le marketplace et la facturation."
           primaryHref="/contact"
-          primaryLabel="Nous contacter"
+          primaryLabel="Écrire au support"
           secondaryHref="/register"
-          secondaryLabel="Créer mon organisation"
+          secondaryLabel="Lancer mon premier événement"
         />
       </main>
     </PublicPageShell>

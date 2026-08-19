@@ -533,7 +533,7 @@ export default function LandingVitrineSection({
                       </div>
                       <div className="border-t border-border pt-3 mt-4">
                         <Link href="/register" className="text-xs font-medium text-foreground hover:underline">
-                          Créer mon organisation →
+                          Utiliser ce modèle →
                         </Link>
                       </div>
                     </article>

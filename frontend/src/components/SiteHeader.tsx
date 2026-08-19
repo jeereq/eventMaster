@@ -107,7 +107,7 @@ export default function SiteHeader({
                 </Link>
                 {site.allowRegistration ? (
                   <Link href="/register">
-                    <Button size="sm">Créer un compte</Button>
+                    <Button size="sm">Démarrer maintenant</Button>
                   </Link>
                 ) : null}
               </>
@@ -181,7 +181,7 @@ export default function SiteHeader({
                 {site.allowRegistration ? (
                   <Link href="/register" onClick={() => setMobileMenuOpen(false)}>
                     <Button size="sm" fullWidth>
-                      Créer un compte
+                      Démarrer maintenant
                     </Button>
                   </Link>
                 ) : null}

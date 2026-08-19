@@ -12,7 +12,7 @@ import {
   Lightbulb,
   ExternalLink,
   Search,
-  Sparkles,
+  Play,
 } from 'lucide-react';
 import { getUserGuide, type UserGuideId } from '@/config/userGuides';
 import { cn } from '@/lib/cn';
@@ -75,7 +75,7 @@ export default function UserGuideView({ guideId, showHeader = true, onStartTour 
               <p className="text-sm text-muted leading-relaxed max-w-2xl">{guide.summary}</p>
             </div>
             {onStartTour && (
-              <Button size="sm" onClick={onStartTour} leftIcon={<Sparkles className="w-3.5 h-3.5" />}>
+              <Button size="sm" onClick={onStartTour} leftIcon={<Play className="w-3.5 h-3.5" />}>
                 Lancer la visite
               </Button>
             )}
@@ -84,30 +84,30 @@ export default function UserGuideView({ guideId, showHeader = true, onStartTour 
       )}
 
       <div className="grid lg:grid-cols-2 gap-3">
-        <div className="bg-emerald-50/80 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3">
-          <h3 className="text-sm font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4" />
+        <div className="bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3">
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-primary" />
             Ce que vous pouvez faire
           </h3>
           <ul className="space-y-2">
             {guide.canDo.map((item) => (
               <li key={item} className="text-sm text-foreground/80 flex gap-2 leading-relaxed">
-                <span className="text-emerald-500 shrink-0 mt-1.5 w-1 h-1 rounded-full bg-emerald-500" />
+                <span className="text-primary shrink-0 mt-1.5 w-1 h-1 rounded-full bg-primary" />
                 {item}
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="bg-rose-50/80 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/40 rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3">
-          <h3 className="text-sm font-semibold text-rose-800 dark:text-rose-300 flex items-center gap-2">
-            <XCircle className="w-4 h-4" />
+        <div className="bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3">
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <XCircle className="w-4 h-4 text-muted" />
             Limites de votre rôle
           </h3>
           <ul className="space-y-2">
             {guide.cannotDo.map((item) => (
               <li key={item} className="text-sm text-foreground/80 flex gap-2 leading-relaxed">
-                <span className="text-rose-400 shrink-0 mt-1.5 w-1 h-1 rounded-full bg-rose-400" />
+                <span className="text-muted shrink-0 mt-1.5 w-1 h-1 rounded-full bg-muted" />
                 {item}
               </li>
             ))}
@@ -227,15 +227,15 @@ export default function UserGuideView({ guideId, showHeader = true, onStartTour 
         )}
       </div>
 
-      <div className="bg-amber-50/80 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/40 rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3">
-        <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-300 flex items-center gap-2">
-          <Lightbulb className="w-4 h-4" />
+      <div className="bg-surface-muted border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3">
+        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+          <Lightbulb className="w-4 h-4 text-primary" />
           Astuces & dépannage
         </h3>
         <ul className="space-y-2.5">
           {guide.tips.map((tip) => (
             <li key={tip} className="text-sm text-foreground/80 flex gap-2.5 leading-relaxed">
-              <Lightbulb className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+              <Lightbulb className="w-4 h-4 text-muted shrink-0 mt-0.5" />
               {tip}
             </li>
           ))}

@@ -297,12 +297,12 @@ export default function ContactPage() {
         />
 
         <PublicCtaBand
-          title="Créez votre organisation pour démarrer"
-          description="Un compte organisation pour centraliser invitations, plan de table et protocole QR."
+          title="Prêt à lancer votre prochain événement ?"
+          description="Ouvrez un espace organisation, ou comparez les forfaits avant de vous décider."
           primaryHref="/register"
-          primaryLabel="Créer mon organisation"
+          primaryLabel="Lancer mon premier événement"
           secondaryHref="/#tarifs"
-          secondaryLabel="Voir les tarifs"
+          secondaryLabel="Comparer les forfaits"
         />
       </main>
     </PublicPageShell>

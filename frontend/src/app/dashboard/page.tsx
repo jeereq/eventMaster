@@ -3128,7 +3128,7 @@ function DashboardPageContent() {
  {planAudienceLabel(plan.audience || planKey)}
  </span>
  <span className="text-xs bg-primary/10 text-primary font-bold px-2.5 py-0.5 rounded-full">
- {planKey === 'FREE' ? 'Gratuit' : isB2cPlanId(planKey) ? 'Trimestriel' : 'Mensuel'}
+ {planKey === 'FREE' ? 'Gratuit' : isB2cPlanId(planKey) ? 'Trimestriel · annuel −10 %' : 'Mensuel · annuel −10 %'}
  </span>
  </div>
  </div>
@@ -3165,7 +3165,7 @@ function DashboardPageContent() {
 
  <div className="space-y-1">
  <label className="text-[10px] font-bold text-muted uppercase tracking-wider">
- {isB2cPlanId(planKey) ? 'Prix trimestriel (90 jours)' : 'Prix mensuel'}
+ {isB2cPlanId(planKey) ? 'Prix trimestriel (90 j) — annuel −10 %' : 'Prix mensuel — annuel −10 %'}
  </label>
  <input
  type="text"

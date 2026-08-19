@@ -28,7 +28,7 @@ export default function LandingRolesSection() {
                 Chaque rôle voit exactement ce qu&apos;il doit gérer
               </h2>
               <p className="text-sm text-muted leading-relaxed">
-                Propriétaire, managers, protocole, salles, prestataires et clients marketplace — sans mélanger les périmètres.
+                Propriétaire, managers, protocole, salles, prestataires et clients marketplace — chacun a un périmètre, sans mélange.
               </p>
               <div className="rounded-[var(--radius-card)] border border-border overflow-hidden text-xs">
                 <div className="grid grid-cols-3 bg-surface-muted border-b border-border font-semibold text-muted uppercase tracking-wider text-[10px]">
@@ -78,7 +78,7 @@ export default function LandingRolesSection() {
               Une plateforme complète
             </h2>
             <p className="text-sm text-muted">
-              De la conception de salle au scan QR, en passant par le marketplace (salles, métiers, locations, favoris, packs, partage) et les réservations.
+              Du plan 2D au scan QR web, en passant par le marketplace (salles, métiers, locations, favoris, packs, partage) et les réservations.
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">

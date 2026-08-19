@@ -230,7 +230,7 @@ export const GLOBAL_CATALOG_TEMPLATES: Array<{
   },
   {
     name: 'Défilé de mode — Noir',
-    showOnLanding: true,
+    showOnLanding: false,
     global: { bgColor: '#0a0a0a', bgType: 'color', floralColor: '#f5f5f4', landingCategory: 'party', landingDescription: 'Fashion show et sape.' },
     elements: [
       { id: 'g1', type: 'text', text: 'FASHION SHOW', color: '#a8a29e', fontSize: '11px', align: 'center', letterSpacing: '0.3em' },
@@ -241,7 +241,7 @@ export const GLOBAL_CATALOG_TEMPLATES: Array<{
   },
   {
     name: 'Salon du mariage — Rose',
-    showOnLanding: true,
+    showOnLanding: false,
     global: { bgColor: '#fff1f2', floralColor: '#db2777', landingCategory: 'wedding', landingDescription: 'Salon exposants mariage.' },
     elements: [
       { id: 'g1', type: 'text', text: 'SALON DU MARIAGE', color: '#db2777', fontSize: '11px', align: 'center', letterSpacing: '0.16em' },
@@ -252,7 +252,7 @@ export const GLOBAL_CATALOG_TEMPLATES: Array<{
   },
   {
     name: 'Masterclass — Cobalt',
-    showOnLanding: true,
+    showOnLanding: false,
     global: { bgColor: '#eff6ff', floralColor: '#1d4ed8', landingCategory: 'seminar', landingDescription: 'Atelier expert, places limitées.' },
     elements: [
       { id: 'g1', type: 'text', text: 'MASTERCLASS', color: '#1d4ed8', fontSize: '11px', align: 'center', letterSpacing: '0.2em' },
@@ -263,7 +263,7 @@ export const GLOBAL_CATALOG_TEMPLATES: Array<{
   },
   {
     name: 'Soirée dansante — Tropique',
-    showOnLanding: true,
+    showOnLanding: false,
     global: { bgColor: '#042f2e', bgType: 'color', floralColor: '#2dd4bf', landingCategory: 'party', landingDescription: 'Bal et rumba congolaise.' },
     elements: [
       { id: 'g1', type: 'text', text: 'RUMBA NIGHT', color: '#5eead4', fontSize: '11px', align: 'center', letterSpacing: '0.22em' },

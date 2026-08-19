@@ -61,3 +61,44 @@ export const PLAN_AMOUNTS: Partial<Record<PlanType, number>> = {
   SERVICE: 9900,
   CATALOG: 19900,
 };
+
+export function seedGuestGuidelines(index: number) {
+  const presets = ['cocktail', 'black_tie', 'smart_casual', 'traditional', 'outdoor'] as const;
+  const preset = presets[index % presets.length];
+  return {
+    dressCode: {
+      enabled: true,
+      presetId: preset,
+      examples:
+        preset === 'traditional'
+          ? ['Pagne chic', 'Boubou', 'Dashiki']
+          : preset === 'black_tie'
+            ? ['Smoking', 'Robe longue']
+            : ['Robe cocktail', 'Costume'],
+    },
+    recommendations: [
+      {
+        id: `rec-park-${index}`,
+        type: 'parking',
+        enabled: true,
+        content: 'Parking disponible sur place. Accès par l’entrée principale.',
+      },
+      {
+        id: `rec-sched-${index}`,
+        type: 'schedule',
+        enabled: true,
+        content: 'Accueil 30 minutes avant. Conservez votre badge QR pour l’entrée.',
+      },
+      {
+        id: `rec-photo-${index}`,
+        type: 'photos',
+        enabled: index % 2 === 0,
+        content: 'Photographe officiel. Merci de limiter les flashes pendant la cérémonie.',
+      },
+    ],
+    additionalNotes: 'Présentez-vous à l’accueil avec votre invitation numérique.',
+    showOnRsvp: true,
+    showOnInvitation: true,
+  };
+}
+

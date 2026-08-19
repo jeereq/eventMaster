@@ -96,7 +96,7 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
  const promoActive = Boolean(db?.promoActive && db?.promoMonthlyPriceFc != null && plan.id !== 'FREE');
  const catalogPrice = getPlanDisplayPrice(
  plan,
- isB2cPlanId(plan.id) ? 'monthly' : billing,
+ billing,
  db?.price,
  db?.monthlyPriceFc,
  );
@@ -105,13 +105,13 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
  (db?.promoMonthlyPriceFc != null ? `${db.promoMonthlyPriceFc.toLocaleString('fr-FR')} FC` : undefined);
  const promoPriceLabel =
  promoActive && promoPriceStr
- ? getPlanDisplayPrice(plan, isB2cPlanId(plan.id) ? 'monthly' : billing, promoPriceStr)
+ ? getPlanDisplayPrice(plan, billing, promoPriceStr)
  : null;
 
  const catalogFc = resolvePlanMonthlyFc(plan, db);
  const promoFc = db?.promoMonthlyPriceFc ?? (promoPriceStr ? parsePriceFc(promoPriceStr) : 0);
  const promoSavingsPercent =
- promoActive && (billing === 'monthly' || isB2cPlanId(plan.id))
+ promoActive && billing === 'monthly'
  ? computePromoSavingsPercent(catalogFc, promoFc)
  : null;
 
@@ -152,7 +152,7 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
       {
         label: 'Particuliers (B2C)',
         ids: [...B2C_PLAN_IDS],
-        description: 'Organisation complète, facturation trimestrielle (90 jours), sans publication marketplace',
+        description: 'Organisation complète, trimestre 90 jours ou annuel −10 %, sans publication marketplace',
       },
     ]
   : audience === 'VENDOR'
@@ -207,9 +207,9 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
  Organisations, particuliers, salles et prestataires
  </h2>
  <p className="text-sm text-muted leading-relaxed">
- Les forfaits Business sont destinés aux organisateurs. Les forfaits Particulier (B2C) se règlent par trimestre (90 jours), selon le palier d’invités (50, 100, 200 ou plus de 200), avec des salles de plan de table — pas un marketplace public.
- Les forfaits Salle, Prestataire (prestations illimitées dès l’abonnement payé) et Salle & presta sont pensés pour publier sur le marketplace — pas pour remplacer un abonnement d’organisation.
- Facturation annuelle (B2B et marketplace) avec {ANNUAL_DISCOUNT_PERCENT} % de réduction.
+ Organisations (Business) : facturation au mois. Particuliers : palier d’invités (50, 100, 200 ou +200), trimestre 90 jours, salles de plan de table — pas de publication marketplace.
+ Salle, Prestataire et Salle & presta : publication de fiches, pas un abonnement d’agence.
+ Sur tous les forfaits payants, y compris Particulier, le paiement annuel (365 jours) applique −{ANNUAL_DISCOUNT_PERCENT} %.
  </p>
  </div>
 
@@ -263,12 +263,6 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
  Salles & prestataires
  </button>
  </div>
- {audience === 'B2C' ? (
- <p className="text-xs text-muted">
- Facturation trimestrielle (90 jours) — le prix affiché est le montant du trimestre.
- </p>
- ) : (
- <>
  <div className="inline-flex items-center p-0.5 rounded-[var(--radius-button)] bg-surface-muted border border-border">
  <button
  type="button"
@@ -279,7 +273,7 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
  : 'text-muted hover:text-foreground'
  }`}
  >
- Mensuel
+ {audience === 'B2C' ? 'Trimestriel' : 'Mensuel'}
  </button>
  <button
  type="button"
@@ -298,11 +292,13 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
  </div>
  <p className="text-xs text-muted">
  {billing === 'annual'
- ? `Équivalent mensuel avec ${ANNUAL_DISCOUNT_PERCENT} % de réduction`
+ ? audience === 'B2C'
+ ? `Équivalent trimestriel avec ${ANNUAL_DISCOUNT_PERCENT} % de réduction (facturé 365 jours)`
+ : `Équivalent mensuel avec ${ANNUAL_DISCOUNT_PERCENT} % de réduction`
+ : audience === 'B2C'
+ ? 'Prix du trimestre (90 jours). Annuel : −10 % pour 365 jours.'
  : 'Activation après demande validée par la plateforme'}
  </p>
- </>
- )}
  </div>
 
  {tiers.map(({ label, ids, description }) => (
@@ -402,9 +398,9 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
  )}
  </div>
  <p className="text-[11px] text-muted mt-1.5">{plan.monthlyNote}</p>
- {billing === 'annual' && plan.id !== 'FREE' && !isB2cPlanId(plan.id) && (
+ {billing === 'annual' && plan.id !== 'FREE' && (
  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold mt-1">
- Facturé annuellement · {ANNUAL_DISCOUNT_PERCENT} % d&apos;économie vs mensuel
+ Facturé 12 mois · {ANNUAL_DISCOUNT_PERCENT} % d&apos;économie vs {isB2cPlanId(plan.id) ? 'trimestre' : 'mois'}
  </p>
  )}
  </div>

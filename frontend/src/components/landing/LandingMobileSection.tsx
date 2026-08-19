@@ -68,7 +68,7 @@ export default function LandingMobileSection() {
 
             <Link href="/register">
               <Button size="lg" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                Continuer sur le web
+                Lancer mon événement sur le web
               </Button>
             </Link>
           </div>

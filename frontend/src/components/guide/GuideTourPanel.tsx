@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { Play, RotateCcw, ListOrdered, LayoutGrid, Sparkles } from 'lucide-react';
+import { Play, RotateCcw, ListOrdered, LayoutGrid } from 'lucide-react';
 import { useTour } from '@/context/TourContext';
 import { useAuth } from '@/context/AuthContext';
 import { getProductTour } from '@/config/productTours';
@@ -50,7 +50,7 @@ export default function GuideTourPanel({ guideId }: GuideTourPanelProps) {
       <div className="p-5 sm:p-6 rounded-[var(--radius-card)] border border-primary/20 bg-primary/5 space-y-4">
         <div className="space-y-1.5">
           <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
-            <Sparkles className="w-3.5 h-3.5" />
+            <Play className="w-3.5 h-3.5" />
             Visite interactive
           </span>
           <h2 className="text-lg font-semibold text-foreground">{heading}</h2>

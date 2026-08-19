@@ -224,6 +224,7 @@ export function venueDetails(opts: {
     extraFees: 'Groupe électrogène de secours sur devis.',
     depositPercent: '30',
     accessNotes: 'Accès véhicules jusqu’à l’entrée principale.',
+    instagram: `@salle${opts.index + 1}`,
   };
 }
 
@@ -255,6 +256,13 @@ export function serviceDetails(opts: {
     teamSize: String(2 + (opts.index % 6)),
     experienceYears: String(3 + (opts.index % 12)),
     cancellation: 'Acompte 30 % à la confirmation.',
+    extraFees: rental ? 'Caution selon le devis, restituée après contrôle.' : 'Heures supplémentaires sur devis.',
     depositPercent: '30',
+    houseRules: rental ? 'Restitution à l’heure convenue, état d’origine.' : 'Annulation moins de 48 h : acompte conservé.',
+    accessNotes: rental ? 'Livraison dans la ville indiquée, hors communes éloignées sur devis.' : 'Installation sur site à convenir.',
+    openingHours: '08:00',
+    closingHours: '20:00',
+    parking: rental && (opts.category === 'RENTAL_CAR' || opts.category === 'RENTAL_MOTO'),
+    instagram: `@presta${opts.index + 1}`,
   };
 }

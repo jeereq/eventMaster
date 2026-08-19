@@ -199,7 +199,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'upgrade-plan',
         title: 'Changer de forfait',
         content:
-          '1. Ouvrez Facturation & plan.\n2. Comparez les quotas et fonctionnalités.\n3. Soumettez une demande de changement avec preuve de paiement si requis.\n4. Suivez le statut dans Factures après validation.',
+          '1. Ouvrez Facturation & plan.\n2. Comparez les quotas. Choisissez la période de base (mois, ou trimestre 90 j pour un forfait Particulier) ou l’annuel (365 j, −10 % sur tous les forfaits payants, y compris Particulier).\n3. Soumettez une demande de changement avec preuve de paiement si requis.\n4. Suivez le statut dans Factures après validation.',
         links: [{ label: 'Facturation & plan', href: '/dashboard/billing' }],
       },
       {
@@ -213,9 +213,10 @@ export const USER_GUIDES: UserGuide[] = [
     tips: [
       'Les quotas (événements, invités, modèles) sont visibles sur le tableau de bord.',
       'Les couleurs de l’organisation (Profil) s’appliquent à toute l’équipe ; l’accent personnel du header ne concerne que cet appareil.',
-      'Assignez des protocoles org. pour le scan QR sur tous les événements.',
+      'Assignez des protocoles org. pour le scan QR web (navigateur) sur tous les événements.',
       'Configurez les salles avant de créer des événements avec plan de table.',
       'La commission marketplace (8 %) est due par le vendeur, distincte de l’abonnement SaaS.',
+      'Le paiement annuel (−10 %) s’applique aussi aux forfaits Particulier (période de base = trimestre).',
     ],
   },
   {
@@ -292,12 +293,12 @@ export const USER_GUIDES: UserGuide[] = [
     title: 'Guide Protocole organisation',
     badge: 'Organisation',
     summary:
-      'Vous gérez l\'accueil et le contrôle des invités sur tous les événements de l\'organisation : scan QR et confirmation de présence à l\'entrée.',
+      'Vous gérez l\'accueil et le contrôle des invités sur tous les événements de l\'organisation : scan QR dans le navigateur et confirmation de présence à l\'entrée.',
     canDo: [
       'Accéder au mode Protocole sur tous les événements',
-      'Scanner les QR codes invités avec la caméra',
+      'Scanner les QR codes invités avec la caméra du navigateur (téléphone ou tablette)',
       'Consulter et mettre à jour le statut RSVP des invités',
-      'Confirmer la présence le jour J',
+      'Confirmer la présence le jour J et valider le siège',
     ],
     cannotDo: [
       'Créer des événements ou des salles',
@@ -313,7 +314,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'protocol-scan',
         title: 'Accueillir un invité (scan QR)',
         content:
-          '1. Ouvrez Mode Protocole ou sélectionnez un événement.\n2. Activez la caméra pour scanner le QR de l\'invité (ou recherchez par nom).\n3. Vérifiez que le RSVP est « Confirmé » — sinon orientez l\'invité vers son lien.\n4. Confirmez la présence pour valider l\'entrée.',
+          '1. Ouvrez Mode Protocole ou sélectionnez un événement.\n2. Dans le navigateur, autorisez la caméra pour scanner le QR de l\'invité (ou recherchez par nom). L’app native n’est pas encore déployée.\n3. Vérifiez que le RSVP est « Confirmé » — sinon orientez l\'invité vers son lien.\n4. Confirmez la présence pour valider l\'entrée, puis le siège si prévu.',
         links: [{ label: 'Mode Protocole', href: '/dashboard/events?mode=protocol' }],
       },
       {
@@ -325,9 +326,10 @@ export const USER_GUIDES: UserGuide[] = [
       },
     ],
     tips: [
-      'Testez le scan en conditions réelles avant l\'événement.',
+      'Testez le scan dans le navigateur en conditions réelles avant l\'événement (lumière, connexion).',
       'Assurez une connexion stable pour la synchronisation en direct.',
       'Les invités sans QR peuvent être recherchés manuellement dans la liste.',
+      'L’application iOS/Android n’est pas encore disponible : le scan se fait sur le web.',
     ],
   },
   {
@@ -370,7 +372,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Vous êtes assigné à une ou plusieurs salles ou événements précis. Vos droits dépendent de votre affectation : Manager (gestion) ou Protocole (accueil).',
     canDo: [
       'Manager événement : gérer invités et contenu sur vos événements/salles assignés',
-      'Protocole événement : scan QR et suivi invités sur vos événements assignés',
+      'Protocole événement : scan QR dans le navigateur et suivi invités sur vos événements assignés',
       'Consulter le plan de salle des événements de votre périmètre',
     ],
     cannotDo: [
@@ -394,13 +396,14 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'staff-day-of',
         title: 'Jour J — protocole sur un événement assigné',
         content:
-          '1. Sélectionnez l\'événement dans votre liste.\n2. Passez en mode Protocole.\n3. Scannez les QR ou recherchez les invités.\n4. Signalez les no-shows au manager de l\'événement.',
+          '1. Sélectionnez l\'événement dans votre liste.\n2. Passez en mode Protocole.\n3. Scannez les QR dans le navigateur (caméra web) ou recherchez les invités.\n4. Signalez les no-shows au manager de l\'événement.',
         links: [{ label: 'Mode Protocole', href: '/dashboard/events?mode=protocol' }],
       },
     ],
     tips: [
       'Votre rôle exact (manager vs protocole) est défini par l\'affectation salle/événement.',
       'Sans événement visible, demandez une assignation à votre responsable.',
+      'Le scan QR se fait dans le navigateur ; l’app native n’est pas encore déployée.',
       'Le tableau de bord global peut être limité — concentrez-vous sur Événements.',
     ],
   },
@@ -541,7 +544,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'event-day',
         title: 'Le jour de l\'événement',
         content:
-          '1. Présentez votre QR code (portail ou message de confirmation) à l\'accueil.\n2. Le protocole scanne votre code pour valider votre entrée.\n3. Consultez le fil d\'actualité pour les annonces en direct.',
+          '1. Présentez votre QR code (portail ou message de confirmation) à l\'accueil.\n2. Le protocole scanne votre code dans le navigateur (téléphone ou tablette — pas d’app native pour l’instant).\n3. Consultez le fil d\'actualité pour les annonces en direct.',
       },
     ],
     tips: [

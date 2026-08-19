@@ -56,8 +56,9 @@ export function isB2cPlanId(id: string): boolean {
 }
 
 export function durationDaysForPlan(id: string, cycle: BillingCycle = 'monthly'): number {
+  if (cycle === 'annual') return YEAR_BILLING_DAYS;
   if (isB2cPlanId(id)) return B2C_BILLING_DAYS;
-  return cycle === 'annual' ? YEAR_BILLING_DAYS : MONTH_BILLING_DAYS;
+  return MONTH_BILLING_DAYS;
 }
 
 export function planPricePeriodSuffix(id: string): string {
@@ -163,7 +164,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tagline: 'Découverte : tester EventMaster (organisation ou 1 salle / 1 prestation).',
     monthlyPriceFc: 0,
     monthlyNote: 'Gratuit, sans carte bancaire',
-    cta: 'Commencer gratuitement',
+    cta: 'Essayer sans carte',
     ctaHref: '/register',
     ctaVariant: 'outline',
     tier: 'essentials',
@@ -176,7 +177,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tagline: 'Mariage, anniversaire, fête privée jusqu’à 50 invités — sans marketplace.',
     monthlyPriceFc: 60000,
     monthlyNote: 'par particulier / trimestre',
-    cta: 'Choisir 50 invités',
+    cta: 'Organiser jusqu’à 50 invités',
     ctaHref: '/register?kind=ORGANIZER',
     ctaVariant: 'primary',
     tier: 'personal',
@@ -190,7 +191,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tagline: 'Fête privée jusqu’à 100 invités : organisation complète, sans marketplace.',
     monthlyPriceFc: 90000,
     monthlyNote: 'par particulier / trimestre',
-    cta: 'Choisir 100 invités',
+    cta: 'Organiser jusqu’à 100 invités',
     ctaHref: '/register?kind=ORGANIZER',
     ctaVariant: 'primary',
     tier: 'personal',
@@ -204,7 +205,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tagline: 'Fête privée jusqu’à 200 invités : organisation complète, sans marketplace.',
     monthlyPriceFc: 120000,
     monthlyNote: 'par particulier / trimestre',
-    cta: 'Choisir 200 invités',
+    cta: 'Organiser jusqu’à 200 invités',
     ctaHref: '/register?kind=ORGANIZER',
     ctaVariant: 'primary',
     tier: 'personal',
@@ -219,7 +220,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tagline: 'Grande fête privée : plus de 200 invités, quota invités illimité, sans marketplace.',
     monthlyPriceFc: 180000,
     monthlyNote: 'par particulier / trimestre',
-    cta: 'Choisir +200 invités',
+    cta: 'Organiser plus de 200 invités',
     ctaHref: '/register?kind=ORGANIZER',
     ctaVariant: 'primary',
     tier: 'personal',
@@ -233,7 +234,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tagline: 'B2B — plusieurs réceptions par an avec protocole QR et salles standard.',
     monthlyPriceFc: 30000,
     monthlyNote: 'par organisation / mois',
-    cta: 'Essayer Business',
+    cta: 'Passer en Business',
     ctaHref: '/register',
     ctaVariant: 'primary',
     tier: 'business',
@@ -246,7 +247,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tagline: 'B2B — éditeur visuel, import maquette et formulaires RSVP analytiques.',
     monthlyPriceFc: 55000,
     monthlyNote: 'par organisation / mois',
-    cta: 'Choisir Premium 1',
+    cta: 'Débloquer Premium 1',
     ctaHref: '/register',
     ctaVariant: 'primary',
     tier: 'premium',
@@ -259,7 +260,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tagline: 'B2B — OCR maquette, protocole complet et notifications siège.',
     monthlyPriceFc: 85000,
     monthlyNote: 'par organisation / mois',
-    cta: 'Choisir Premium 2',
+    cta: 'Prendre le plus demandé',
     ctaHref: '/register',
     ctaVariant: 'primary',
     tier: 'premium',
@@ -274,7 +275,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tagline: 'B2B — volume élevé, rapports exportables et support prioritaire.',
     monthlyPriceFc: 350000,
     monthlyNote: 'par organisation / mois',
-    cta: 'Choisir Enterprise 1',
+    cta: 'Gérer un gros volume',
     ctaHref: '/register',
     ctaVariant: 'primary',
     tier: 'enterprise',
@@ -287,7 +288,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tagline: 'B2B — réseau commercial intégré avec commissions 30 % sur facturation.',
     monthlyPriceFc: 525000,
     monthlyNote: 'par organisation / mois',
-    cta: 'Choisir Enterprise 2',
+    cta: 'Activer le réseau commercial',
     ctaHref: '/register',
     ctaVariant: 'primary',
     tier: 'enterprise',
@@ -300,7 +301,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tagline: 'B2B — illimité, multi-agences, SLA 24/7 et onboarding dédié.',
     monthlyPriceFc: 700000,
     monthlyNote: 'par organisation / mois',
-    cta: 'Contacter les ventes',
+    cta: 'Parler à un conseiller',
     ctaHref: '/contact',
     ctaVariant: 'contact',
     tier: 'enterprise',
@@ -314,7 +315,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tagline: 'Gestionnaire de salles : jusqu’à 5 lieux, éditeur 2D complet et protocole QR.',
     monthlyPriceFc: 14900,
     monthlyNote: 'par gestionnaire de salles / mois',
-    cta: 'Choisir Salle',
+    cta: 'Mettre mes salles en ligne',
     ctaHref: '/register?kind=VENDOR',
     ctaVariant: 'primary',
     tier: 'venue',
@@ -329,7 +330,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tagline: 'Fiches services illimitées, photos / vidéos, rayon et calendrier de disponibilité.',
     monthlyPriceFc: 9900,
     monthlyNote: 'par prestataire / mois',
-    cta: 'Choisir Prestataire',
+    cta: 'Publier mes prestations',
     ctaHref: '/register?kind=VENDOR',
     ctaVariant: 'primary',
     tier: 'service',
@@ -343,7 +344,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     tagline: 'Les deux : 5 salles (éditeur complet) et 5 prestations — pack moins cher que Salle + Prestataire.',
     monthlyPriceFc: 19900,
     monthlyNote: 'par offre mixte / mois',
-    cta: 'Choisir Salle & presta',
+    cta: 'Vendre salles et prestas',
     ctaHref: '/register?kind=BOTH',
     ctaVariant: 'primary',
     tier: 'catalog',
@@ -777,7 +778,7 @@ export const ROLE_HIGHLIGHTS = [
   },
   {
     title: 'Protocole',
-    description: 'Scan QR dans le navigateur le jour J, confirmation de présence et validation du siège. L’app native caméra est en construction, pas encore déployée.',
+    description: 'Scan QR dans le navigateur (caméra web, pas l’app native), confirmation de présence et validation du siège. L’app iOS/Android est en construction.',
     icon: 'scan',
   },
   {
@@ -805,42 +806,42 @@ export const ROLE_HIGHLIGHTS = [
 export const PLATFORM_PILLARS = [
   {
     title: 'Salles 2D & plans de table',
-    description: 'Modèles banquet, conférence, amphithéâtre. Colonnes, scènes, fleurs, thèmes visuels et placement drag-and-drop.',
+    description: 'Banquet, conférence, amphithéâtre, tente. Tables, sièges, scènes et thèmes. Placement glisser-déposer ; le plan s’importe sur l’événement lié.',
     icon: 'layout',
   },
   {
-    title: 'Protocole intelligent',
-    description: 'Scan QR dans le navigateur, confirmation de présence et validation du siège. PDF, plan et GPS partent dès l’acceptation RSVP (Premium 1+).',
+    title: 'Protocole QR (web)',
+    description: 'Scan du badge dans le navigateur (téléphone ou tablette), check-in et validation du siège. L’app native caméra n’est pas encore déployée.',
     icon: 'qr',
   },
   {
     title: 'Application mobile',
-    description: 'iOS & Android en construction — pas encore déployée. En attendant, le web couvre RSVP, protocole et tableau de bord, y compris sur téléphone.',
+    description: 'iOS et Android en construction, hors stores. RSVP, protocole et tableau de bord fonctionnent déjà dans le navigateur mobile.',
     icon: 'smartphone',
   },
   {
-    title: 'RSVP & invitations',
-    description: 'Modèles visuels, diffusion e-mail ou WhatsApp, événements publics avec billets en ligne, portail invité et badge QR.',
+    title: 'Invitations & RSVP',
+    description: 'E-mail ou WhatsApp : le premier message contient uniquement le lien RSVP. PDF, plan de table et GPS partent après acceptation et place assignée (Premium 1+).',
     icon: 'mail',
   },
   {
     title: 'Marketplace salles & prestas',
-    description: 'Salles (plan 2D), métiers et locations (habits, voitures, motos, matériel). Favoris, partage d’une recherche ou d’une fiche, packs budget et réservation de dates. Commission vendeur 8 %, acompte hors plateforme.',
+    description: 'Salles avec plan 2D, métiers (traiteur, photo, DJ…) et locations (habits, voitures, motos, matériel). Favoris, packs éco / équilibré / confort, partage d’URL. Acompte 30 % hors plateforme · commission vendeur 8 %.',
     icon: 'calendar',
   },
   {
     title: 'Rôles granulaires',
-    description: 'Propriétaire, manager org., protocole, managers salle/événement — chacun voit uniquement ce qu\'il doit gérer.',
+    description: 'Propriétaire, manager org., protocole, managers salle/événement, commercial org. — chacun ne voit que son périmètre.',
     icon: 'users',
   },
   {
     title: 'Multi-tenant sécurisé',
-    description: 'Isolation stricte par organisation, OTP e-mail/WhatsApp, acceptation légale et licences SaaS.',
+    description: 'Isolation par organisation, OTP e-mail ou WhatsApp, acceptation légale et licences SaaS. Le compte client n’exige pas d’abonnement.',
     icon: 'lock',
   },
   {
     title: 'Réseau commercial',
-    description: 'Code parrainage, création d\'organisations et suivi des commissions sur facturation mensuelle.',
+    description: 'Code de parrainage, création d’organisations et commissions (30 % sur la facturation de période).',
     icon: 'trending',
   },
 ];
@@ -909,7 +910,7 @@ export function getPlanDisplayPrice(
     price: dbPrice,
     monthlyPriceFc: dbMonthlyFc,
   });
-  if (cycle === 'monthly' || isB2cPlanId(plan.id)) return formatFc(monthlyFc);
+  if (cycle === 'monthly') return formatFc(monthlyFc);
   return annualMonthlyEquivalent(monthlyFc);
 }
 

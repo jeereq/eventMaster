@@ -82,45 +82,43 @@ export default function Home() {
             </div>
 
             <h1 className="font-display text-[2.15rem] sm:text-5xl lg:text-[3.2rem] font-semibold tracking-tight text-foreground leading-[1.12]">
-              Organiser, publier et accueillir — tout le cycle de l’événement
+              Du premier invité au scan QR — un seul espace
             </h1>
 
             <p className="text-[15px] sm:text-base text-muted leading-relaxed max-w-2xl">
-              EventMaster est la plateforme web pour les organisateurs, les salles, les prestataires
-              et les clients en RDC : invitations et RSVP, plan de table 2D, protocole QR le jour J,
-              marketplace (salles, métiers et locations — habits, voitures, motos, matériel),
-              favoris, packs budget, partage d’une recherche ou d’une fiche, réservation de dates,
-              événements publics et billets en ligne. L’application mobile est en construction —
-              aujourd’hui, tout se fait dans le navigateur.
+              EventMaster est le SaaS web pour organiser, publier et accueillir en RDC.
+              Invitations RSVP, plan de table 2D, protocole QR dans le navigateur,
+              marketplace (salles, métiers, locations), packs budget et billets en ligne.
+              L’app iOS/Android n’est pas encore déployée : tout se fait déjà sur le web, y compris au téléphone.
             </p>
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 pt-1">
               {user ? (
                 <Link href="/dashboard">
                   <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                    Accéder au tableau de bord
+                    Reprendre là où j’en étais
                   </Button>
                 </Link>
               ) : site.allowRegistration ? (
                 <>
                   <Link href="/register">
                     <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                      Créer mon organisation
+                      Lancer mon premier événement
                     </Button>
                   </Link>
                   <Link href="/login">
-                    <Button size="lg" variant="secondary">Se connecter</Button>
+                    <Button size="lg" variant="secondary">J’ai déjà un compte</Button>
                   </Link>
                 </>
               ) : (
                 <>
                   <Link href="/login">
                     <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                      Se connecter
+                      Accéder à mon espace
                     </Button>
                   </Link>
                   <Link href="/contact">
-                    <Button size="lg" variant="secondary">Nous contacter</Button>
+                    <Button size="lg" variant="secondary">Parler à l’équipe</Button>
                   </Link>
                 </>
               )}
@@ -128,7 +126,7 @@ export default function Home() {
                 href="#parcours"
                 className="inline-flex items-center justify-center gap-1.5 px-1 py-2 text-sm font-semibold text-foreground/80 hover:text-primary transition"
               >
-                Parcours par rôle
+                Quel parcours est le mien ?
                 <ArrowRight className="w-3.5 h-3.5" />
               </a>
             </div>
@@ -148,42 +146,42 @@ export default function Home() {
               {
                 icon: Mail,
                 title: 'Invitations & RSVP',
-                text: 'Privés (liste d’invités) ou publics avec inscription et billets payants en ligne. Badge QR pour chaque participant.',
+                text: 'Privé (liste) ou public (fiche marketplace + billets). Le premier message n’envoie que le lien RSVP. Badge QR dès l’acceptation.',
               },
               {
                 icon: LayoutGrid,
                 title: 'Salles & plan 2D',
-                text: 'Banquet, conférence, tente… Placement des invités, thèmes, et publication de la salle sur le marketplace.',
+                text: 'Banquet, conférence, tente. Glissez tables et sièges, liez la salle à l’événement. Publiez le lieu sur le marketplace si votre forfait le permet.',
               },
               {
                 icon: QrCode,
                 title: 'Protocole jour J',
-                text: 'Scan du badge QR dans le navigateur, check-in, validation du siège. PDF, plan et GPS dès le RSVP accepté.',
+                text: 'Scan du badge dans le navigateur (pas d’app native). Check-in et validation du siège. PDF, plan et GPS : après RSVP accepté + place (Premium 1+).',
               },
               {
                 icon: Building2,
                 title: 'Salles du marketplace',
-                text: 'Fiches publiques avec photos, vidéos, carte, tarifs et calendrier. Les clients peuvent les mettre en favoris.',
+                text: 'Fiches publiques : photos, vidéos, GPS, tarifs, calendrier et plan 2D. Les clients filtrent, favorisent et demandent un devis.',
               },
               {
                 icon: Sparkles,
                 title: 'Prestataires & locations',
-                text: 'Métiers : traiteur, photo, DJ, déco… Location : habits homme / femme / enfant, voitures, motos et matériel. Devis, photos, rayon d’intervention, packs budget.',
+                text: 'Métiers (traiteur, photo, DJ, déco) et locations (habits H/F/enfant, voitures, motos, matériel). Devis, rayon, photos — fiches illimitées dès Prestataire payé.',
               },
               {
                 icon: CalendarCheck,
                 title: 'Réservations & packs',
-                text: 'Compte client : explorer (grille, liste, carte), favoris, préparer un événement (éco / équilibré / confort) et sauvegarder un pack. Acompte 30 % hors plateforme, commission vendeur 8 %.',
+                text: 'Compte client sans licence SaaS : explorer, favoris, 3 packs (éco / équilibré / confort). Acompte 30 % versé au pro, hors plateforme. Commission vendeur 8 %.',
               },
               {
                 icon: Share2,
-                title: 'Partage',
-                text: 'Partagez une recherche (l’URL conserve vos filtres) ou une fiche publique salle, prestataire ou événement — sans compte obligatoire pour le destinataire.',
+                title: 'Partage public',
+                text: 'L’URL de recherche conserve les filtres. Une fiche se partage via son lien marketplace — jamais une URL interne du tableau de bord.',
               },
               {
                 icon: Users,
                 title: 'Équipes & rôles',
-                text: 'Propriétaire, managers, protocole, responsables de salle, commercial org. — chacun voit uniquement son périmètre.',
+                text: 'Propriétaire, managers, protocole, responsables de salle, commercial org. Chaque rôle ne voit que son périmètre.',
               },
             ].map(({ icon: Icon, title, text }) => (
               <li
@@ -251,13 +249,13 @@ export default function Home() {
       <FaqSection />
 
       <PublicCtaBand
-        title="Créez votre organisation pour démarrer"
-        description="Un compte organisation pour invitations, RSVP, plan de salle, marketplace et protocole QR — sur le web, dès maintenant."
+        title="Passez du brief au jour J"
+        description="Ouvrez un espace organisation, publiez une salle, ou cherchez prestataires et locations — sans attendre l’app mobile."
         actions={
           user ? (
             <Link href="/dashboard">
               <Button size="lg" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                Tableau de bord
+                Ouvrir mon espace
               </Button>
             </Link>
           ) : (
@@ -265,17 +263,17 @@ export default function Home() {
               {site.allowRegistration && (
                 <Link href="/register">
                   <Button size="lg" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                    Créer mon organisation
+                    Créer mon espace maintenant
                   </Button>
                 </Link>
               )}
-              <Link href="/contact">
+              <Link href="/marketplace">
                 <Button
                   size="lg"
                   variant="ghost"
                   className="text-background/80 hover:text-background hover:bg-background/10 border border-background/20"
                 >
-                  Nous contacter
+                  Explorer le marketplace
                 </Button>
               </Link>
             </>
@@ -297,7 +295,7 @@ export default function Home() {
               Fermer
             </Button>
             <Link href="/register">
-              <Button size="sm">Créer mon organisation</Button>
+              <Button size="sm">Utiliser ce modèle</Button>
             </Link>
           </div>
         }

@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import { blueprintToTablePlan } from '../../src/services/roomLayoutService';
+import { seedGuestGuidelines } from './helpers';
 import { marketplacePlaceFor, slugify } from './marketplaceCatalog';
 import { eventPhotos, rdcTicketPriceFc } from './rdcMedia';
 import type { OrganizerSeed } from './accountsMatrix';
@@ -46,9 +47,12 @@ export async function seedEventsVolume(
     existingEventCount: number;
   },
 ) {
-  const target = 220;
+  const target = 100;
   const toCreate = Math.max(0, target - opts.existingEventCount);
-  if (toCreate === 0) return;
+  if (toCreate === 0) {
+    console.log(`Événements volume — déjà ${opts.existingEventCount} (cible ${target}).`);
+    return;
+  }
 
   console.log(`Événements volume — ${toCreate} fiches (total visé ${target})…`);
 
@@ -59,14 +63,16 @@ export async function seedEventsVolume(
 
   const organizerByPlan = new Map(opts.organizers.map((o) => [o.plan, o]));
   const distribution: Array<{ plan: OrganizerSeed['plan']; count: number }> = [
-    { plan: 'PERSONAL_50', count: 4 },
-    { plan: 'PERSONAL_100', count: 4 },
-    { plan: 'PERSONAL_200', count: 4 },
-    { plan: 'PERSONAL_PLUS', count: 6 },
-    { plan: 'FREE', count: 4 },
-    { plan: 'STANDARD', count: 10 },
-    { plan: 'PREMIUM_1', count: 12 },
-    { plan: 'ENTERPRISE_1', count: 16 },
+    { plan: 'PERSONAL_50', count: 2 },
+    { plan: 'PERSONAL_100', count: 2 },
+    { plan: 'PERSONAL_200', count: 2 },
+    { plan: 'PERSONAL_PLUS', count: 4 },
+    { plan: 'FREE', count: 2 },
+    { plan: 'STANDARD', count: 6 },
+    { plan: 'PREMIUM_1', count: 8 },
+    { plan: 'PREMIUM_2', count: 6 },
+    { plan: 'ENTERPRISE_1', count: 10 },
+    { plan: 'ENTERPRISE_2', count: 8 },
   ];
 
   const slots: OrganizerSeed[] = [];
@@ -114,14 +120,21 @@ export async function seedEventsVolume(
       ? blueprintToTablePlan(room.layoutBlueprint as Parameters<typeof blueprintToTablePlan>[0])
       : undefined;
 
+    const location = room?.location || `${place.neighborhood}, ${place.commune.name}, ${place.city.name}`;
     const event = await prisma.event.create({
       data: {
         tenantId: host.tenantId,
         roomId: room?.id ?? null,
         title,
-        description: `${title} — ${place.commune.name}, ${place.neighborhood}. ${paid ? 'Billets en ligne.' : isPublic ? 'Entrée libre, inscription en ligne.' : 'Événement privé sur liste d’invités.'}`,
+        description: `${title} — ${place.commune.name}, ${place.neighborhood}. ${
+          paid
+            ? 'Billets en ligne, places limitées.'
+            : isPublic
+              ? 'Entrée libre, inscription en ligne obligatoire.'
+              : 'Événement privé sur liste d’invités.'
+        } Accueil 30 minutes avant. Badge QR à présenter à l’entrée.`,
         date,
-        location: room?.location || `${place.neighborhood}, ${place.commune.name}, ${place.city.name}`,
+        location,
         reminderFrequency: i % 2 === 0 ? 'WEEKLY' : 'EVERY_5_DAYS',
         latitude: place.lat,
         longitude: place.lng,
@@ -132,7 +145,8 @@ export async function seedEventsVolume(
         ticketPriceFc,
         ticketsTotal,
         ticketsSold: 0,
-        photos: isPublic ? eventPhotos(i) : undefined,
+        photos: eventPhotos(i),
+        guestGuidelines: seedGuestGuidelines(i),
         tablePlan: tablePlan ? (tablePlan as object) : undefined,
       },
     });
@@ -163,7 +177,7 @@ export async function seedEventsVolume(
           eventId: event.id,
           templateId,
           subject: `Invitation : ${title}`,
-          body: `Bonjour {{firstName}},\n\nVous êtes invité(e) à ${title} le {{date}} à {{location}}.\n\n{{rsvpLink}}`,
+          body: `Bonjour {{firstName}},\n\nVous êtes invité(e) à ${title} le {{date}} à {{location}}.\n\nTenue : {{dressCode}}\n\n{{rsvpLink}}`,
           channel: 'EMAIL',
         },
       });
