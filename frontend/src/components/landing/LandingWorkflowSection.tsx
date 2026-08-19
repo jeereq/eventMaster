@@ -70,8 +70,8 @@ const JOURNEYS: Journey[] = [
       },
       {
         title: 'Placer',
-        description: 'Glissez les invités sur les sièges. PDF et GPS partent après le « oui » + une place (Premium 1+).',
-        detail: 'Glissez les invités sur les sièges. Dès qu’un invité a accepté et qu’une place est assignée, le PDF, le plan interactif et le pin GPS partent automatiquement (forfait Premium 1+).',
+        description: 'Glissez les invités sur les sièges. PDF et GPS partent après le « oui » et une place assignée.',
+        detail: 'Glissez les invités sur les sièges. Dès qu’un invité a accepté et qu’une place est assignée, le PDF, le plan interactif et le pin GPS partent automatiquement.',
         outcome: 'Chaque confirmé connaît sa table avant le jour J.',
         icon: LayoutGrid,
       },
@@ -121,7 +121,7 @@ const JOURNEYS: Journey[] = [
       {
         title: 'Livraison',
         description: 'PDF, plan de table et pin GPS envoyés automatiquement dès confirmation et place assignée.',
-        detail: 'Si l’organisateur est en Premium 1+ et qu’une place est déjà attribuée, PDF, plan et GPS partent tout de suite. Sinon, ils arrivent dès que le siège est assigné.',
+        detail: 'Si une place est déjà attribuée, PDF, plan et GPS partent tout de suite. Sinon, ils arrivent dès que le siège est assigné.',
         outcome: 'Vous savez où vous asseoir avant d’arriver.',
         icon: QrCode,
       },

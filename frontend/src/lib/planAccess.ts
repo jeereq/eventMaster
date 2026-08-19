@@ -137,16 +137,16 @@ export const QUOTA_GUIDES: Record<QuotaKind, PlanLimitGuide> = {
 export const FEATURE_GUIDES: Partial<Record<keyof PlanCapabilities, PlanLimitGuide>> = {
   protocolQr: {
     title: 'Protocole QR non inclus',
-    what: 'Le scan des badges et la confirmation de présence le jour J nécessitent un forfait avec protocole.',
+    what: 'Le scan des badges et la confirmation de présence le jour J nécessitent un forfait avec événements.',
     why: 'C’est un module d’accueil (QR, check-in, notes) distinct de la simple liste d’invités.',
-    how: 'Activez-le en passant à un forfait Business / Premium depuis Facturation.',
+    how: 'Choisissez un forfait qui inclut la gestion d’événements (Essentials, Particulier ou Business).',
     href: '/dashboard/billing',
   },
   seatNotifications: {
     title: 'Notifications de placement',
     what: 'L’envoi automatique du PDF de table, du siège et du GPS n’est pas dans votre offre actuelle.',
-    why: 'Ces envois (email / WhatsApp) sont facturés dans les forfaits payants.',
-    how: 'Passez à un forfait payant pour notifier les invités dès qu’un siège leur est attribué.',
+    why: 'Ces envois (e-mail / WhatsApp) accompagnent le flux invitations dès qu’un forfait inclut les événements.',
+    how: 'Choisissez un forfait qui inclut la gestion d’événements (Essentials, Particulier ou Business).',
     href: '/dashboard/billing',
   },
   customTemplates: {

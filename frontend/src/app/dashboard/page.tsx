@@ -4159,7 +4159,7 @@ function DashboardPageContent() {
  ))}
  </div>
  <p className="text-xs text-muted pt-2">
- Le PDF et le plan de table partent après RSVP accepté et place assignée (Premium 1+). Filtrez « PDF non livré » dans Invités pour le support.
+ Le PDF et le plan de table partent après RSVP accepté et place assignée. Filtrez « PDF non livré » dans Invités pour le support.
  </p>
  <Button
  type="button"

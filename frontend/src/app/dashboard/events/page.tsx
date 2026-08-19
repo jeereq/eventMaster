@@ -47,7 +47,9 @@ import {
  isPlanFeatureLocked,
 } from '@/lib/planAccess';
 import PlanLimitCallout from '@/components/PlanLimitCallout';
-import { eventDashboardHref, eventsListHref, isEventWorkspaceTab } from '@/lib/eventRoutes';
+import { eventDashboardHref, eventsListHref, isEventWorkspaceTab, type EventWorkspaceTab } from '@/lib/eventRoutes';
+import EventPrepPanel from '@/components/EventPrepPanel';
+import { eventPrepSummary, parseEventPrep } from '@/lib/eventPrep';
 import {
  displayGuestEmail,
  isPlaceholderGuestEmail,
@@ -99,6 +101,7 @@ interface EventItem {
  tablePlan?: any;
  guestGuidelines?: GuestGuidelines | null;
  rsvpForm?: { fields?: unknown } | unknown[] | null;
+ eventPrep?: unknown;
  feedPostCount?: number;
  tenant?: { name: string };
 }
@@ -437,7 +440,7 @@ export default function EventsPage() {
  const [eventEntry, setEventEntry] = useState<'' | 'paid' | 'free'>('');
  
  // Tabs
- const [activeTab, setActiveTab] = useState<'guests' | 'invitations' | 'tablePlan' | 'feed' | 'staff' | 'protocol' | 'guestInfo'>(
+ const [activeTab, setActiveTab] = useState<EventWorkspaceTab>(
  isProtocolOnly ? 'protocol' : 'guests',
  );
 
@@ -665,6 +668,11 @@ export default function EventsPage() {
  [guests, invitations, selectedEvent?.tablePlan, selectedEvent?.date, selectedEvent?.guestGuidelines, selectedEvent?.feedPostCount, guestGuidelines, isProtocolOnly],
  );
 
+ const prepSummary = useMemo(
+ () => eventPrepSummary(parseEventPrep(selectedEvent?.eventPrep)),
+ [selectedEvent?.eventPrep],
+ );
+
  const broadcastConfirmInvite = invitations.find((invite) => invite.id === broadcastConfirmInviteId) || null;
  const broadcastAudience = useMemo(
  () => (broadcastConfirmInvite ? summarizeSendAudience(guests, broadcastConfirmInvite.channel) : null),
@@ -679,7 +687,7 @@ export default function EventsPage() {
  );
 
  const handleWorkflowNavigate = useCallback((tab: EventWorkflowTab) => {
- if (tab === 'analytics') return;
+ if (!isEventWorkspaceTab(tab)) return;
  setActiveTab(tab);
  if (eventIdFromRoute) {
  router.replace(eventDashboardHref(eventIdFromRoute, { tab, protocol: protocolDesk }), { scroll: false });
@@ -1186,11 +1194,10 @@ Merci de confirmer votre présence :
  setEvents(events.map(e => e.id === selectedEvent.id ? updatedEvent : e));
  const notified = updatedEvent.assignmentNotifications?.notified ?? 0;
  const skippedReason = updatedEvent.assignmentNotifications?.skippedReason as string | undefined;
- const isFreePlan = tenant?.plan === 'FREE' || skippedReason === 'forfait';
 
- if (isFreePlan) {
+ if (skippedReason === 'forfait') {
  setSuccess(
- 'Plan de table enregistré. Les notifications de placement aux invités nécessitent un forfait payant.',
+ 'Plan de table enregistré. Les notifications de placement ne sont pas incluses dans votre forfait actuel.',
  );
  } else if (notified > 0) {
  if (planFeatures?.seatNotifications) {
@@ -1199,7 +1206,7 @@ Merci de confirmer votre présence :
  );
  } else {
  setSuccess(
- `Plan enregistré. ${notified} invité${notified > 1 ? 's' : ''} notifié${notified > 1 ? 's' : ''} (table, siège et voisins). Le PDF et le GPS à la confirmation RSVP nécessitent Premium ou supérieur.`,
+ `Plan enregistré. ${notified} invité${notified > 1 ? 's' : ''} notifié${notified > 1 ? 's' : ''} (table, siège et voisins).`,
  );
  }
  } else {
@@ -2373,9 +2380,36 @@ Merci de confirmer votre présence :
  compact={isProtocolOnly}
  />
 
+ {!isProtocolOnly && activeTab !== 'prep' && (
+ <div className="rounded-2xl border border-dashed border-primary/25 bg-primary/5 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+ <div className="min-w-0">
+ <p className="text-sm font-semibold text-foreground">Préparation salle & prestataires — optionnel</p>
+ <p className="text-xs text-muted mt-0.5">
+ {prepSummary
+ ? `Pistes retenues : ${prepSummary}`
+ : 'Recherchez une salle et des prestataires ici, sans bloquer les invitations.'}
+ </p>
+ </div>
+ <button
+ type="button"
+ onClick={() => {
+ setActiveTab('prep');
+ if (eventIdFromRoute) {
+ router.replace(eventDashboardHref(eventIdFromRoute, { tab: 'prep', protocol: protocolDesk }), { scroll: false });
+ }
+ }}
+ className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold rounded-[var(--radius-button)] bg-primary text-white hover:bg-primary-hover shrink-0"
+ >
+ <Sparkles className="w-3.5 h-3.5" />
+ Ouvrir
+ </button>
+ </div>
+ )}
+
  {/* Tabs */}
  <div className="inline-flex flex-wrap gap-0.5 p-0.5 bg-surface-muted border border-border rounded-[var(--radius-button)] max-w-full overflow-x-auto">
  {([
+ !isProtocolOnly && { id: 'prep' as const, label: 'Préparation', icon: Sparkles },
  !isProtocolOnly && { id: 'guestInfo' as const, label: 'Infos invités', icon: Shirt },
  !isProtocolOnly && { id: 'guests' as const, label: `Invités (${guests.length})`, icon: Users },
  !isProtocolOnly && { id: 'invitations' as const, label: `Invitations (${invitations.length})`, icon: Mail },
@@ -2383,7 +2417,7 @@ Merci de confirmer votre présence :
  !isProtocolOnly && { id: 'feed' as const, label: 'Feed', icon: MessageSquare },
  { id: 'protocol' as const, label: 'Protocole', icon: ScanLine },
  !isProtocolOnly && { id: 'staff' as const, label: 'Équipe', icon: Users },
- ].filter(Boolean) as Array<{ id: typeof activeTab; label: string; icon: React.ComponentType<{ className?: string }> }>).map(({ id, label, icon: Icon }) => {
+ ].filter(Boolean) as Array<{ id: EventWorkspaceTab; label: string; icon: React.ComponentType<{ className?: string }> }>).map(({ id, label, icon: Icon }) => {
  const locked = id === 'protocol' && protocolLocked;
  return (
  <button
@@ -2424,6 +2458,21 @@ Merci de confirmer votre présence :
  <GuestProtocolPanel eventId={selectedEvent.id} />
  )}
  </>
+ )}
+
+ {activeTab === 'prep' && selectedEvent && !isProtocolOnly && (
+ <EventPrepPanel
+ key={selectedEvent.id}
+ eventId={selectedEvent.id}
+ value={selectedEvent.eventPrep}
+ eventLocation={selectedEvent.location}
+ orgRooms={orgRooms}
+ currentRoomId={selectedEvent.roomId}
+ onSaved={(updated) => {
+ setSelectedEvent((prev) => (prev ? { ...prev, ...updated } : prev));
+ setEvents((prev) => prev.map((e) => (e.id === selectedEvent.id ? { ...e, ...updated } : e)));
+ }}
+ />
  )}
 
  {/* Tab Content: Guests */}
@@ -3045,7 +3094,7 @@ Merci de confirmer votre présence :
  <p className="font-semibold">Notifications PDF / GPS non incluses</p>
  <p className="text-xs mt-1 text-amber-800">
  Vous pouvez placer les invités. L’envoi automatique du PDF, du plan et du GPS dès acceptation RSVP
- nécessite Premium 1 ou supérieur (forfait actuel : {tenant?.plan || 'FREE'}).
+ n’est pas dans votre forfait actuel ({tenant?.plan || 'FREE'}).
  </p>
  <Link href="/dashboard/billing" className="inline-block mt-2 text-xs font-bold text-primary hover:underline">
  Voir les forfaits →

@@ -226,6 +226,8 @@ model Event {
   guestGuidelines   Json?        // Dress code & practical recommendations for guests
   /** Champs RSVP de l’événement (types + valeurs prédéfinies ou perso). */
   rsvpForm          Json?
+  /** Préparation optionnelle : salle marketplace + prestataires (non bloquant). */
+  eventPrep         Json?
   /** false = liste d’invités uniquement. true = fiche publique + inscription / billets. */
   isPublic          Boolean      @default(false)
   slug              String?      @unique

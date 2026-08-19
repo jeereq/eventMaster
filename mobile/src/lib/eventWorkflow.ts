@@ -74,10 +74,6 @@ export function countAssignedGuests(tablePlan: TablePlanMeta | null | undefined)
   return assigned.size;
 }
 
-function hasInvitationTemplate(invitations: EventWorkflowInvitation[]): boolean {
-  return invitations.some((inv) => inv.template?.id || inv.templateId);
-}
-
 function countInvitationSent(guests: EventWorkflowGuest[]): number {
   return guests.filter((g) => g.preferences?.invitationSentAt).length;
 }
@@ -132,7 +128,7 @@ export function computeEventWorkflowState(input: {
   const rsvpCount = countRsvpResponses(guests);
   const checkedInCount = countCheckedIn(guests);
   const placementDeliveredCount = countPlacementDelivered(guests);
-  const hasInviteConfig = invitations.length > 0 && hasInvitationTemplate(invitations);
+  const hasInviteConfig = invitations.length > 0;
   const eventPassed = eventDate ? new Date(eventDate).getTime() < Date.now() : false;
 
   if (isProtocolOnly) {
@@ -165,9 +161,7 @@ export function computeEventWorkflowState(input: {
         ? 'Prêt à envoyer'
         : hasInviteConfig
           ? 'Ajoutez des invités'
-          : invitations.length > 0
-            ? 'Associez un modèle'
-            : 'Rédigez et envoyez';
+          : 'Rédigez et envoyez';
 
   const tablePlanDetail =
     assignedCount > 0

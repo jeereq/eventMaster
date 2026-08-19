@@ -241,7 +241,7 @@ export const LANDING_PLANS: LandingPlan[] = [
   {
     id: 'FREE',
     ms365Name: 'Essentials',
-    tagline: 'Découverte : tester EventMaster (organisation ou 1 salle / 1 prestation).',
+    tagline: 'Découverte : tester EventMaster — flux invitations complet, ou 1 salle / 1 prestation.',
     monthlyPriceFc: 0,
     monthlyNote: 'Gratuit, sans carte bancaire',
     cta: 'Essayer sans carte',
@@ -249,7 +249,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     ctaVariant: 'outline',
     tier: 'essentials',
     audience: 'B2B',
-    highlights: ['3 événements · 50 invités', 'RSVP personnalisable', '1 salle simple · 1 prestation'],
+    highlights: ['3 événements · 50 invités', 'Invitations, RSVP, QR, PDF/GPS', '1 salle simple · 1 prestation'],
   },
   {
     id: 'PERSONAL_50',
@@ -311,7 +311,7 @@ export const LANDING_PLANS: LandingPlan[] = [
   {
     id: 'STANDARD',
     ms365Name: 'Business',
-    tagline: 'B2B — plusieurs réceptions par an avec protocole QR et salles standard.',
+    tagline: 'B2B — plusieurs réceptions par an : invitations, protocole QR et PDF/GPS dès RSVP.',
     monthlyPriceFc: 30000,
     monthlyNote: 'par organisation / mois',
     cta: 'Passer en Business',
@@ -319,7 +319,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     ctaVariant: 'primary',
     tier: 'business',
     audience: 'B2B',
-    highlights: ['8 événements · 150 invités', 'Protocole QR web', '3 salles · thèmes & fixtures'],
+    highlights: ['8 événements · 150 invités', 'Protocole QR · PDF/GPS dès RSVP', '3 salles · thèmes & fixtures'],
   },
   {
     id: 'PREMIUM_1',
@@ -669,7 +669,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     category: 'Protocole',
     label: 'Scan QR caméra (confirmation de présence)',
     values: {
-      FREE: false,
+      FREE: true,
       ...b2cSame(true),
       STANDARD: true,
       PREMIUM_1: true,
@@ -686,9 +686,9 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     category: 'Protocole',
     label: 'Notification placement invité (WA / e-mail)',
     values: {
-      FREE: false,
+      FREE: true,
       ...b2cSame(true),
-      STANDARD: false,
+      STANDARD: true,
       PREMIUM_1: true,
       PREMIUM_2: true,
       ENTERPRISE_1: true,
@@ -703,14 +703,17 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     category: 'Protocole',
     label: 'Livraison PDF + GPS dès acceptation RSVP',
     values: {
-      FREE: false,
+      FREE: true,
       ...b2cSame(true),
-      STANDARD: false,
+      STANDARD: true,
       PREMIUM_1: true,
       PREMIUM_2: true,
       ENTERPRISE_1: true,
       ENTERPRISE_2: true,
       ENTERPRISE_3: true,
+      VENUE: true,
+      SERVICE: false,
+      CATALOG: true,
     },
   },
   {

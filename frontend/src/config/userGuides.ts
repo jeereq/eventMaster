@@ -227,7 +227,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'event-lifecycle',
         title: 'Parcours complet d\'un événement',
         content:
-          '1. Créez l\'événement (titre, date, lieu, salle).\n2. Onglet Infos invités : dress code, avantages (parking, cadeaux, extras), horaires et notes — visibles sur le RSVP.\n3. Ajoutez ou importez vos invités.\n4. Configurez un modèle visuel et une invitation (e-mail / WhatsApp).\n5. Diffusez l\'invitation : les invités reçoivent le lien RSVP.\n6. Les invités confirment ou déclinent via leur lien personnel — dès acceptation, PDF / plan / GPS partent (si place assignée et forfait Premium+).\n7. Organisez le plan de table 2D et assignez les places — les invités déjà confirmés reçoivent alors le placement complet.\n8. Onglet Feed : publiez photos et annonces ; les invités like et commentent ; le livre d’or collecte leurs messages.\n9. Le jour J, utilisez le mode Protocole (scan QR) pour confirmer la présence à l\'entrée.\n10. Consultez les statistiques RSVP et participation.',
+          '1. Créez l\'événement (titre, date, lieu, salle).\n2. (Optionnel) onglet Préparation : recherchez une salle marketplace et des prestataires, ou composez un pack — rien n’est obligatoire.\n3. Onglet Infos invités : dress code, avantages (parking, cadeaux, extras), horaires et notes — visibles sur le RSVP.\n4. Ajoutez ou importez vos invités.\n5. Rédigez l’invitation (e-mail / WhatsApp). Un modèle visuel de la bibliothèque est un plus, pas une obligation.\n6. Diffusez l’invitation : les invités reçoivent le lien RSVP.\n7. Les invités confirment ou déclinent via leur lien personnel — dès acceptation, PDF / plan / GPS partent si une place est assignée.\n8. Organisez le plan de table 2D et assignez les places — les invités déjà confirmés reçoivent alors le placement complet.\n9. Onglet Feed : publiez photos et annonces ; les invités like et commentent ; le livre d’or collecte leurs messages.\n10. Le jour J, utilisez le mode Protocole (scan QR) pour confirmer la présence à l\'entrée.\n11. Consultez les statistiques RSVP et participation.',
         links: [
           { label: 'Événements', href: '/dashboard/events' },
           { label: 'Statistiques', href: '/dashboard/analytics' },
@@ -318,7 +318,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'event-lifecycle',
         title: 'Parcours complet d\'un événement',
         content:
-          '1. Créez l\'événement (titre, date, lieu suffisent).\n2. Ajoutez les invités — e-mail ou WhatsApp, un contact suffit.\n3. Rédigez et envoyez l\'invitation (lien RSVP seulement, pas de PDF).\n4. Suivez les réponses. Vous pouvez placer dès maintenant ; le PDF part au « oui » si une place est assignée (Premium+).\n5. Jour J : mode Protocole pour l\'accueil (scan QR).',
+          '1. Créez l\'événement (titre, date, lieu suffisent).\n2. (Optionnel) onglet Préparation : salle et prestataires, sans obligation.\n3. Ajoutez les invités — e-mail ou WhatsApp, un contact suffit.\n4. Rédigez et envoyez l\'invitation (lien RSVP).\n5. Suivez les réponses. Vous pouvez placer dès maintenant ; le PDF part au « oui » si une place est assignée.\n6. Jour J : mode Protocole pour l\'accueil (scan QR).',
         links: [
           { label: 'Événements', href: '/dashboard/events' },
           { label: 'Statistiques', href: '/dashboard/analytics' },

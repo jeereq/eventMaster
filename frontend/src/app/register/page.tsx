@@ -17,7 +17,7 @@ import { ACCOUNT_KIND_DESCRIPTIONS, ACCOUNT_KIND_LABELS, type TenantAccountKind 
 import { safeAppPath, isClientReturnPath } from '@/lib/safeAppPath';
 
 const FEATURES = [
- { icon: Calendar, title: 'Invitations & RSVP', desc: 'Le premier message n’envoie que le lien RSVP. PDF, plan et GPS après acceptation (Premium 1+).' },
+ { icon: Calendar, title: 'Invitations & RSVP', desc: 'Le premier message n’envoie que le lien RSVP. PDF, plan et GPS après acceptation et place assignée.' },
  { icon: Table, title: 'Plan de table 2D', desc: 'Placement glisser-déposer. Liez la salle à l’événement pour importer le plan.' },
  { icon: MessageSquare, title: 'Protocole QR web', desc: 'Scan du badge dans le navigateur le jour J. L’app native n’est pas encore déployée.' },
  { icon: Sparkles, title: 'Marketplace & packs', desc: 'Salles, métiers, locations. Favoris, 3 packs budget, acompte {depositPercent} % hors plateforme.' },

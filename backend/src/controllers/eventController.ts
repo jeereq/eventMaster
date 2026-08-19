@@ -214,7 +214,7 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
     const tenantId = req.user?.tenantId;
     const userId = req.user?.id;
     const id = req.params.id as string;
-    const { title, description, date, location, reminderFrequency, latitude, longitude, tablePlan, roomId, guestGuidelines, rsvpForm, notifyTableAssignments } = req.body;
+    const { title, description, date, location, reminderFrequency, latitude, longitude, tablePlan, roomId, guestGuidelines, rsvpForm, eventPrep } = req.body;
 
     if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
@@ -251,6 +251,7 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
         roomId: roomId !== undefined ? roomId : existingEvent.roomId,
         guestGuidelines: guestGuidelines !== undefined ? toPrismaJson(guestGuidelines) : existingEvent.guestGuidelines ?? undefined,
         rsvpForm: rsvpForm !== undefined ? toPrismaJson(rsvpForm) : existingEvent.rsvpForm ?? undefined,
+        eventPrep: eventPrep !== undefined ? toPrismaJson(eventPrep) : existingEvent.eventPrep ?? undefined,
         ...(req.body.photos !== undefined ? { photos: toPrismaJson(parsePhotoUrls(req.body.photos)) } : {}),
         ...visibility,
       },

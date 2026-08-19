@@ -8,6 +8,7 @@ export type EventWorkflowTab =
   | 'guestInfo'
   | 'feed'
   | 'protocol'
+  | 'prep'
   | 'analytics';
 
 export type EventWorkflowStepId =
@@ -74,10 +75,6 @@ export function countAssignedGuests(tablePlan: TablePlanMeta | null | undefined)
   return assigned.size;
 }
 
-function hasInvitationTemplate(invitations: EventWorkflowInvitation[]): boolean {
-  return invitations.some((inv) => inv.template?.id || inv.templateId);
-}
-
 function countInvitationSent(guests: EventWorkflowGuest[]): number {
   return guests.filter((g) => g.preferences?.invitationSentAt).length;
 }
@@ -132,8 +129,7 @@ export function computeEventWorkflowState(input: {
   const rsvpCount = countRsvpResponses(guests);
   const checkedInCount = countCheckedIn(guests);
   const placementDeliveredCount = countPlacementDelivered(guests);
-  const hasTemplate = hasInvitationTemplate(invitations);
-  const hasInviteConfig = invitations.length > 0 && hasTemplate;
+  const hasInviteConfig = invitations.length > 0;
 
   const eventPassed = eventDate ? new Date(eventDate).getTime() < Date.now() : false;
 
@@ -167,9 +163,7 @@ export function computeEventWorkflowState(input: {
         ? 'Prêt à envoyer le lien RSVP'
         : hasInviteConfig
           ? 'Ajoutez des invités puis envoyez'
-          : invitations.length > 0
-            ? 'Associez un modèle visuel'
-            : 'Rédigez et envoyez le message';
+          : 'Rédigez et envoyez le message';
 
   const tablePlanDetail =
     assignedCount > 0
@@ -184,7 +178,7 @@ export function computeEventWorkflowState(input: {
     {
       id: 'event',
       title: 'Événement',
-      description: 'Titre, date, lieu et salle associée.',
+      description: 'Titre, date, lieu. Salle et prestataires restent optionnels.',
       detail: '✓ Événement créé',
     },
     {
@@ -253,6 +247,6 @@ export function computeEventListProgress(input: {
 }): number {
   let score = 1;
   if ((input.guestCount ?? 0) > 0) score += 1;
-  if ((input.invitationCount ?? 0) > 0 && input.hasTemplate) score += 1;
+  if ((input.invitationCount ?? 0) > 0) score += 1;
   return Math.round((score / 3) * 100);
 }

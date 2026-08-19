@@ -39,7 +39,7 @@ export async function notifyTableAssignmentChanges(params: {
   const { eventId, tenantId, oldPlan, newPlan } = params;
 
   const snapshot = await getTenantPlanSnapshot(tenantId);
-  if (!snapshot || snapshot.plan === 'FREE') {
+  if (!snapshot) {
     return { notified: 0, skipped: 0, results: [], skippedReason: 'forfait' };
   }
 
