@@ -300,11 +300,12 @@ export function parseEventRsvpForm(raw: unknown): RsvpField[] {
     : (raw && typeof raw === 'object' && Array.isArray((raw as { fields?: unknown }).fields)
       ? (raw as { fields: unknown[] }).fields
       : []);
-  return ensureMandatoryRsvpFields(
-    list.filter((item): item is Partial<RsvpField> & { id: string; label: string } =>
+  const fields = list
+    .filter((item): item is Partial<RsvpField> & { id: string; label: string } =>
       Boolean(item && typeof item === 'object' && 'id' in item && 'label' in item),
-    ),
-  );
+    )
+    .map((item) => normalizeRsvpField(item));
+  return ensureMandatoryRsvpFields(fields);
 }
 
 /**
