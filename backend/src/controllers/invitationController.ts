@@ -12,6 +12,7 @@ import {
   withOrgSignoff,
   wrapBrandedEmail,
   wrapBrandedWhatsApp,
+  messageAlreadyGreets,
 } from '../utils/brandedMessaging';
 import { escapeHtml } from '../utils/brandingUtils';
 import { extractGuestEmail } from '../utils/guestIdentity';
@@ -216,7 +217,7 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
             title: event.title,
             eyebrow: 'Invitation personnalisée',
             innerHtml: `
-              <p style="font-size:16px;font-weight:700;color:#1e1b4b;margin:0 0 15px;">Bonjour ${escapeHtml(guest.firstName)},</p>
+              ${messageAlreadyGreets(body) ? '' : `<p style="font-size:16px;font-weight:700;color:#1e1b4b;margin:0 0 15px;">Bonjour ${escapeHtml(guest.firstName)},</p>`}
               <div style="font-size:15px;line-height:1.7;color:#475569;margin-bottom:28px;white-space:pre-line;">
                 ${escapeHtml(body.replace(`${FRONTEND_URL}/rsvp/${guest.id}`, '')).replace(/\n/g, '<br/>')}
               </div>

@@ -52,6 +52,10 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+export function messageAlreadyGreets(body: string): boolean {
+  return /^(bonjour|bonsoir|cher|chère|salut)\b/i.test(body.replace(/^\s+/, '').trim());
+}
+
 /**
  * WhatsApp n’accepte pas les couleurs HTML : l’identité passe par le nom d’org,
  * un bandeau texte, et les infos pratiques (tenue / thème) si elles manquent.

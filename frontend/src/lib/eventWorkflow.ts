@@ -1,9 +1,5 @@
 import type { TablePlanTable } from '@/lib/tablePlanUtils';
-import {
-  type GuestGuidelines,
-  hasGuestGuidelinesContent,
-  summarizeGuestGuidelines,
-} from '@/lib/guestGuidelines';
+import { type GuestGuidelines } from '@/lib/guestGuidelines';
 
 export type EventWorkflowTab =
   | 'guests'
@@ -16,18 +12,11 @@ export type EventWorkflowTab =
 
 export type EventWorkflowStepId =
   | 'event'
-  | 'guestInfo'
-  | 'feed'
   | 'guests'
   | 'invitation'
-  | 'send'
   | 'rsvp'
   | 'tablePlan'
-  | 'tableNotify'
-  | 'protocol'
-  | 'analytics';
-
-const OPTIONAL_WORKFLOW_IDS = new Set<EventWorkflowStepId>(['feed', 'analytics']);
+  | 'protocol';
 
 export type EventWorkflowStepStatus = 'complete' | 'current' | 'upcoming' | 'skipped';
 
@@ -105,14 +94,8 @@ function countCheckedIn(guests: EventWorkflowGuest[]): number {
   return guests.filter((g) => g.checkedInAt).length;
 }
 
-function resolveStatuses(
-  steps: Omit<EventWorkflowStep, 'status'>[],
-  skipIncompleteIds: ReadonlySet<EventWorkflowStepId> = OPTIONAL_WORKFLOW_IDS,
-): EventWorkflowStep[] {
-  const firstIncomplete = steps.findIndex((s) => {
-    if (skipIncompleteIds.has(s.id)) return false;
-    return !s.detail?.startsWith('✓');
-  });
+function resolveStatuses(steps: Omit<EventWorkflowStep, 'status'>[]): EventWorkflowStep[] {
+  const firstIncomplete = steps.findIndex((s) => !s.detail?.startsWith('✓'));
 
   return steps.map((step, index) => {
     const isComplete = step.detail?.startsWith('✓') ?? false;
@@ -141,7 +124,7 @@ export function computeEventWorkflowState(input: {
   guestGuidelines?: GuestGuidelines | null;
   feedPostCount?: number;
 }): EventWorkflowState {
-  const { guests, invitations, tablePlan, eventDate, isProtocolOnly, guestGuidelines, feedPostCount = 0 } = input;
+  const { guests, invitations, tablePlan, eventDate, isProtocolOnly } = input;
 
   const guestCount = guests.length;
   const assignedCount = countAssignedGuests(tablePlan ?? undefined);
@@ -163,13 +146,6 @@ export function computeEventWorkflowState(input: {
         tab: 'protocol',
         detail: checkedInCount > 0 ? `✓ ${checkedInCount} invité(s) enregistré(s)` : `${guestCount} invité(s) à accueillir`,
       },
-      {
-        id: 'analytics',
-        title: 'Statistiques',
-        description: 'Taux RSVP, réponses et activité de l\'événement.',
-        href: '/dashboard/analytics',
-        detail: guestCount > 0 ? '✓ Consultable' : 'Après ajout d\'invités',
-      },
     ];
 
     const steps = resolveStatuses(protocolSteps);
@@ -184,12 +160,25 @@ export function computeEventWorkflowState(input: {
     };
   }
 
-  const guidelinesFilled = hasGuestGuidelinesContent(guestGuidelines);
-  const guidelinesSummary = summarizeGuestGuidelines(guestGuidelines);
-  const skipIncomplete = new Set<EventWorkflowStepId>(OPTIONAL_WORKFLOW_IDS);
-  if (!guidelinesFilled && guestCount > 0) {
-    skipIncomplete.add('guestInfo');
-  }
+  const invitationDetail =
+    sentCount > 0
+      ? `✓ ${sentCount} envoi(s)`
+      : hasInviteConfig && guestCount > 0
+        ? 'Prêt à envoyer le lien RSVP'
+        : hasInviteConfig
+          ? 'Ajoutez des invités puis envoyez'
+          : invitations.length > 0
+            ? 'Associez un modèle visuel'
+            : 'Rédigez et envoyez le message';
+
+  const tablePlanDetail =
+    assignedCount > 0
+      ? placementDeliveredCount > 0
+        ? `✓ ${assignedCount} place(s) · ${placementDeliveredCount} notifié(s)`
+        : `✓ ${assignedCount} place(s) assignée(s)`
+      : guestCount > 0
+        ? 'Placez les invités — le PDF part à l’acceptation'
+        : 'Ajoutez des invités d\'abord';
 
   const rawSteps: Omit<EventWorkflowStep, 'status'>[] = [
     {
@@ -197,25 +186,6 @@ export function computeEventWorkflowState(input: {
       title: 'Événement',
       description: 'Titre, date, lieu et salle associée.',
       detail: '✓ Événement créé',
-    },
-    {
-      id: 'guestInfo',
-      title: 'Infos invités',
-      description: 'Dress code, avantages, parking, horaires et notes pratiques.',
-      tab: 'guestInfo',
-      detail: guidelinesFilled
-        ? `✓ ${guidelinesSummary}`
-        : 'Dress code, avantages, horaires…',
-    },
-    {
-      id: 'feed',
-      title: 'Fil d’actualité',
-      description: 'Publiez photos et annonces ; les invités like et commentent.',
-      tab: 'feed',
-      detail:
-        feedPostCount > 0
-          ? `✓ ${feedPostCount} publication(s)`
-          : 'Annonces, photos, commentaires',
     },
     {
       id: 'guests',
@@ -226,26 +196,10 @@ export function computeEventWorkflowState(input: {
     },
     {
       id: 'invitation',
-      title: 'Modèle & invitation',
-      description: 'Choisissez un modèle visuel et rédigez le message.',
+      title: 'Invitation',
+      description: 'Rédigez le message et envoyez le lien RSVP.',
       tab: 'invitations',
-      detail: hasInviteConfig
-        ? `✓ ${invitations.length} invitation(s) configurée(s)`
-        : invitations.length > 0
-          ? 'Associez un modèle visuel'
-          : 'Créez une invitation',
-    },
-    {
-      id: 'send',
-      title: 'Envoi invitation',
-      description: 'Diffusez le lien RSVP (sans placement — livré dès acceptation).',
-      tab: 'invitations',
-      detail:
-        sentCount > 0
-          ? `✓ ${sentCount} envoi(s)`
-          : hasInviteConfig && guestCount > 0
-            ? 'Lancez la diffusion'
-            : 'Configurez d\'abord invités et invitation',
+      detail: invitationDetail,
     },
     {
       id: 'rsvp',
@@ -262,26 +216,9 @@ export function computeEventWorkflowState(input: {
     {
       id: 'tablePlan',
       title: 'Plan de table',
-      description: 'Placez les invités sur le plan 2D de la salle.',
+      description: 'Placez les invités ; le PDF et le GPS partent à l’acceptation RSVP.',
       tab: 'tablePlan',
-      detail:
-        assignedCount > 0
-          ? `✓ ${assignedCount} place(s) assignée(s)`
-          : guestCount > 0
-            ? 'Organisez le placement'
-            : 'Ajoutez des invités d\'abord',
-    },
-    {
-      id: 'tableNotify',
-      title: 'Notification placement',
-      description: 'PDF, plan et GPS envoyés dès acceptation RSVP (si place assignée).',
-      tab: 'tablePlan',
-      detail:
-        placementDeliveredCount > 0
-          ? `✓ ${placementDeliveredCount} placement(s) envoyé(s)`
-          : assignedCount > 0
-            ? 'Dès acceptation RSVP (si forfait Premium+)'
-            : 'Assignez des places d\'abord',
+      detail: tablePlanDetail,
     },
     {
       id: 'protocol',
@@ -295,16 +232,9 @@ export function computeEventWorkflowState(input: {
             ? 'Prêt pour l\'accueil'
             : 'Le jour de l\'événement',
     },
-    {
-      id: 'analytics',
-      title: 'Statistiques',
-      description: 'Suivez les taux RSVP, menus et participation.',
-      href: '/dashboard/analytics',
-      detail: guestCount > 0 ? '✓ Tableaux disponibles' : 'Après ajout d\'invités',
-    },
   ];
 
-  const steps = resolveStatuses(rawSteps, skipIncomplete);
+  const steps = resolveStatuses(rawSteps);
   const completedCount = steps.filter((s) => s.status === 'complete').length;
 
   return {
@@ -324,5 +254,5 @@ export function computeEventListProgress(input: {
   let score = 1;
   if ((input.guestCount ?? 0) > 0) score += 1;
   if ((input.invitationCount ?? 0) > 0 && input.hasTemplate) score += 1;
-  return Math.round((score / 11) * 100);
+  return Math.round((score / 3) * 100);
 }

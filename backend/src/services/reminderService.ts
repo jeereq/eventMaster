@@ -8,6 +8,7 @@ import {
   loadOrgBrand,
   wrapBrandedEmail,
   wrapBrandedWhatsApp,
+  messageAlreadyGreets,
 } from '../utils/brandedMessaging';
 import { escapeHtml } from '../utils/brandingUtils';
 import fs from 'fs';
@@ -182,6 +183,7 @@ export async function processReminders() {
           customPart = applyInvitationGuidelineVariables(customPart, event.guestGuidelines);
           body = `${body}\n\n---\n\n${customPart}`;
         }
+        const alreadyGreets = messageAlreadyGreets(body);
         body = wrapBrandedWhatsApp(body, orgBrand.orgName, {
           guidelinesBlock: guestGuidelinesInvitationText(event.guestGuidelines),
         });
@@ -199,7 +201,7 @@ export async function processReminders() {
               eyebrow: 'Réponse RSVP en attente',
               headerEmoji: '🔔',
               innerHtml: `
-                <p style="font-size:16px;font-weight:700;color:#1e1b4b;margin:0 0 15px;">Bonjour ${escapeHtml(guest.firstName || '')},</p>
+                ${alreadyGreets ? '' : `<p style="font-size:16px;font-weight:700;color:#1e1b4b;margin:0 0 15px;">Bonjour ${escapeHtml(guest.firstName || '')},</p>`}
                 <div style="font-size:15px;line-height:1.7;color:#475569;margin-bottom:28px;">${plainBody}</div>
                 ${brandedEventDetailsHtml(orgBrand.branding, [
                   { label: 'Date', value: formattedDate },

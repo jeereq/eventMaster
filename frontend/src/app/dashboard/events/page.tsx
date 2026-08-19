@@ -7,7 +7,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import * as XLSX from 'xlsx';
 import { 
- Calendar, MapPin, Users, PlusCircle, Trash2, Edit3, 
+ Calendar, MapPin, Users, PlusCircle, Trash2, Edit3, ChevronDown,
  ChevronRight, ArrowLeft, Check, Upload, Mail, Send, 
  Sparkles, CheckCircle2, XCircle, AlertCircle, Loader2,
  Copy, MessageSquare, Share2, Search, Filter, RefreshCw,
@@ -424,6 +424,8 @@ export default function EventsPage() {
  const [guestGuidelines, setGuestGuidelines] = useState<GuestGuidelines>(defaultGuestGuidelines());
  const [savingGuidelines, setSavingGuidelines] = useState(false);
 
+ const [eventExtrasOpen, setEventExtrasOpen] = useState(false);
+
  // Map Picker States & Refs
  const [eventMapOpen, setEventMapOpen] = useState(false);
  const [searchingLocation, setSearchingLocation] = useState(false);
@@ -644,7 +646,14 @@ export default function EventsPage() {
  if (guests.length === 0) setShowGuestModal(true);
  break;
  case 'invitation':
- if (invitations.length === 0) setShowInviteModal(true);
+ if (invitations.length === 0) {
+ setEditingInviteId(null);
+ setInviteSubject('');
+ setInviteBody('');
+ setSelectedTemplateId('');
+ setInviteChannel('EMAIL');
+ setShowInviteModal(true);
+ }
  break;
  default:
  break;
@@ -868,6 +877,7 @@ export default function EventsPage() {
  setEventMapOpen(false);
  setSearchError('');
  setGuestGuidelines(defaultGuestGuidelines());
+ setEventExtrasOpen(false);
  };
 
  const openCreateEventModal = () => {
@@ -1086,6 +1096,7 @@ Merci de confirmer votre présence :
  event.longitude !== undefined && event.longitude !== null,
  );
  setSearchError('');
+ setEventExtrasOpen(true);
  setShowEventModal(true);
  };
 
@@ -1675,6 +1686,15 @@ Merci de confirmer votre présence :
  setInviteBody(invite.body);
  setSelectedTemplateId(invite.template?.id || '');
  setInviteChannel(invite.channel || 'EMAIL');
+ setShowInviteModal(true);
+ };
+
+ const openNewInvitationModal = () => {
+ setEditingInviteId(null);
+ setInviteSubject('');
+ setInviteBody('');
+ setSelectedTemplateId('');
+ setInviteChannel('EMAIL');
  setShowInviteModal(true);
  };
 
@@ -2786,20 +2806,30 @@ Merci de confirmer votre présence :
  <h2 className="text-xl font-bold text-foreground">Invitations</h2>
  <p className="text-muted text-sm mt-0.5">Rédigez le message, choisissez e-mail ou WhatsApp, puis envoyez le lien RSVP. Le PDF de table part après confirmation.</p>
  </div>
+ <div className="flex flex-col items-stretch sm:items-end gap-1.5">
  <button 
  onClick={() => {
- setEditingInviteId(null);
- setInviteSubject('');
- setInviteBody('');
- setSelectedTemplateId('');
- setInviteChannel('EMAIL');
- setShowInviteModal(true);
+ if (invitations[0]) {
+ handleEditInvitationClick(invitations[0]);
+ } else {
+ openNewInvitationModal();
+ }
  }}
  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/10"
  >
- <PlusCircle className="w-4 h-4" />
- Configurer une invitation
+ {invitations[0] ? <Edit3 className="w-4 h-4" /> : <PlusCircle className="w-4 h-4" />}
+ {invitations[0] ? 'Modifier le message' : 'Configurer une invitation'}
  </button>
+ {invitations.length > 0 ? (
+ <button
+ type="button"
+ onClick={openNewInvitationModal}
+ className="text-xs font-medium text-muted hover:text-foreground hover:underline self-center sm:self-end"
+ >
+ Ajouter une autre invitation
+ </button>
+ ) : null}
+ </div>
  </div>
 
  {/* Invitations List */}
@@ -3086,8 +3116,32 @@ Merci de confirmer votre présence :
  )}
  </section>
 
- <section className="space-y-3 pt-1 border-t border-border">
- <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted pt-3">Galerie</h4>
+ <div className="pt-1 border-t border-border">
+ <button
+ type="button"
+ onClick={() => setEventExtrasOpen((v) => !v)}
+ className="w-full flex items-center justify-between py-3 text-left"
+ >
+ <div>
+ <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted">Plus d’options</h4>
+ <p className="text-xs text-muted mt-0.5">
+ Galerie, infos invités, salle, rappels et modèle RSVP
+ </p>
+ </div>
+ <span className={cn(
+ 'inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md border border-border',
+ eventExtrasOpen ? 'bg-foreground text-background border-transparent' : 'text-muted',
+ )}>
+ {eventExtrasOpen ? 'Masquer' : 'Afficher'}
+ <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', eventExtrasOpen && 'rotate-180')} />
+ </span>
+ </button>
+ </div>
+
+ {eventExtrasOpen && (
+ <>
+ <section className="space-y-3">
+ <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted">Galerie</h4>
  <MarketplaceMediaField urls={eventPhotos} onChange={setEventPhotos} />
  <p className="text-[11px] text-muted leading-relaxed">
  Photos et vidéos affichées sur la fiche publique, le marketplace et la carte si l’événement est public.
@@ -3229,6 +3283,8 @@ Merci de confirmer votre présence :
  </label>
  )}
  </section>
+ </>
+ )}
 
  <section className="pt-1 border-t border-border">
  <button
