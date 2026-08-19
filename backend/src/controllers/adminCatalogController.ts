@@ -601,7 +601,7 @@ function mapCommissionRow(row: {
   vendorTenantId: string;
   vendorTenant: { name: string };
   organizerTenant: { name: string } | null;
-  listing: { slug: string; headline: string; room: { name: string } } | null;
+  listing: { slug: string; headline: string | null; room: { name: string } } | null;
   offering: { slug: string; title: string; category: string } | null;
 }) {
   const kind = row.offeringId ? 'offering' : 'venue';
