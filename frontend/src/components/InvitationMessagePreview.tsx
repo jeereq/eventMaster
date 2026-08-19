@@ -21,6 +21,7 @@ function wrapWhatsAppPreview(body: string, orgName: string): string {
 export default function InvitationMessagePreview({
   subject,
   body,
+  whatsappBody,
   channel,
   orgName,
   primary = '#4f46e5',
@@ -28,6 +29,7 @@ export default function InvitationMessagePreview({
 }: {
   subject: string;
   body: string;
+  whatsappBody?: string;
   channel: string;
   orgName: string;
   primary?: string;
@@ -42,7 +44,10 @@ export default function InvitationMessagePreview({
     if (tab === 'whatsapp' && !showWhatsApp) setTab('email');
   }, [channel, showEmail, showWhatsApp, tab]);
 
-  const whatsappText = useMemo(() => wrapWhatsAppPreview(body, orgName), [body, orgName]);
+  const whatsappText = useMemo(
+    () => wrapWhatsAppPreview((whatsappBody || body).trim(), orgName),
+    [body, whatsappBody, orgName],
+  );
   const alreadyGreets = /^(bonjour|cher|chère|salut)\b/i.test(body.trim());
 
   return (

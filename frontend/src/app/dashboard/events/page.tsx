@@ -54,6 +54,7 @@ import {
  resolveGuestFormEmail,
 } from '@/lib/guestContact';
 import InvitationMessagePreview from '@/components/InvitationMessagePreview';
+import { resolveWhatsAppInvitationBody, toWhatsAppTone } from '@/lib/whatsappTone';
 import {
  extractRsvpFieldsFromTemplateContent,
  supplementFieldsFromGuestPreferences,
@@ -130,6 +131,7 @@ interface InvitationItem {
  id: string;
  subject: string;
  body: string;
+ whatsappBody?: string | null;
  channel: string;
  template?: { id: string; name: string } | null;
 }
@@ -500,6 +502,7 @@ export default function EventsPage() {
  const [selectedTemplateId, setSelectedTemplateId] = useState('');
  const [inviteSubject, setInviteSubject] = useState('');
  const [inviteBody, setInviteBody] = useState('');
+ const [inviteWhatsAppBody, setInviteWhatsAppBody] = useState('');
  const [inviteChannel, setInviteChannel] = useState('EMAIL');
  const [editingInviteId, setEditingInviteId] = useState<string | null>(null);
  const [savingInvite, setSavingInvite] = useState(false);
@@ -677,6 +680,7 @@ export default function EventsPage() {
  setEditingInviteId(null);
  setInviteSubject('');
  setInviteBody('');
+ setInviteWhatsAppBody('');
  setSelectedTemplateId('');
  setInviteChannel('EMAIL');
  setShowInviteModal(true);
@@ -950,6 +954,7 @@ Merci de confirmer votre présence :
  subject: first?.subject || `Invitation : ${title}`,
  body: first?.body || defaultRsvpInviteBody(title),
  channel: first?.channel || 'EMAIL',
+ whatsappBody: first?.whatsappBody || undefined,
  };
  if (first?.id) {
  await api.put(`/events/${eventId}/invitations/${first.id}`, payload);
@@ -1695,7 +1700,8 @@ Merci de confirmer votre présence :
  const payload = {
  templateId: selectedTemplateId || null,
  subject: inviteSubject,
- body: inviteBody,
+ body: channelNeedsEmail(inviteChannel) ? inviteBody : (inviteBody.trim() || inviteWhatsAppBody),
+ whatsappBody: channelNeedsWhatsApp(inviteChannel) ? (inviteWhatsAppBody.trim() || null) : null,
  channel: inviteChannel,
  };
 
@@ -1711,6 +1717,7 @@ Merci de confirmer votre présence :
 
  setInviteSubject('');
  setInviteBody('');
+ setInviteWhatsAppBody('');
  setSelectedTemplateId('');
  setEditingInviteId(null);
  setShowInviteModal(false);
@@ -1725,6 +1732,7 @@ Merci de confirmer votre présence :
  setEditingInviteId(invite.id);
  setInviteSubject(invite.subject);
  setInviteBody(invite.body);
+ setInviteWhatsAppBody(invite.whatsappBody || '');
  setSelectedTemplateId(invite.template?.id || '');
  setInviteChannel(invite.channel || 'EMAIL');
  setShowInviteModal(true);
@@ -1734,6 +1742,7 @@ Merci de confirmer votre présence :
  setEditingInviteId(null);
  setInviteSubject('');
  setInviteBody('');
+ setInviteWhatsAppBody('');
  setSelectedTemplateId('');
  setInviteChannel('EMAIL');
  setShowInviteModal(true);
@@ -1744,6 +1753,9 @@ Merci de confirmer votre présence :
  if (template) {
  setInviteSubject(template.subject);
  setInviteBody(template.body);
+ if (channelNeedsWhatsApp(inviteChannel)) {
+ setInviteWhatsAppBody(toWhatsAppTone(template.body));
+ }
  }
  };
 
@@ -1844,12 +1856,15 @@ Merci de confirmer votre présence :
  setTimeout(() => setCopiedGuestId(null), 2000);
  };
 
- const getRenderedInvitationBody = (guest: GuestItem) => {
+ const getRenderedInvitationBody = (guest: GuestItem, forWhatsApp = false) => {
  if (!invitations || invitations.length === 0) return null;
- const invitation = invitations[0]; // Use the first invitation
+ const invitation = invitations[0];
+ const source = forWhatsApp
+  ? resolveWhatsAppInvitationBody(invitation.body || '', invitation.whatsappBody)
+  : (invitation.body || '');
  const rsvpLink = guestRsvpUrl(guest.id);
  
- let body = invitation.body || '';
+ let body = source;
  body = body.replaceAll('{{firstName}}', guest.firstName || '');
  body = body.replaceAll('{{lastName}}', guest.lastName || '');
  body = body.replaceAll('{{rsvpLink}}', rsvpLink);
@@ -4037,6 +4052,11 @@ Merci de confirmer votre présence :
       selectedEvent,
       tenant?.name || 'Organisation',
      )}
+     whatsappBody={fillInvitationPreviewVars(
+      resolveWhatsAppInvitationBody(broadcastConfirmInvite.body, broadcastConfirmInvite.whatsappBody),
+      selectedEvent,
+      tenant?.name || 'Organisation',
+     )}
      channel={broadcastConfirmInvite.channel || 'EMAIL'}
      orgName={tenant?.name || 'Organisation'}
      primary={tenant?.branding?.primary}
@@ -4093,7 +4113,13 @@ Merci de confirmer votre présence :
  <p className="text-[11px] text-muted">Où envoyer le lien RSVP.</p>
  <select 
  value={inviteChannel}
- onChange={(e) => setInviteChannel(e.target.value)}
+ onChange={(e) => {
+  const next = e.target.value;
+  setInviteChannel(next);
+  if (channelNeedsWhatsApp(next) && !inviteWhatsAppBody.trim() && inviteBody.trim()) {
+   setInviteWhatsAppBody(toWhatsAppTone(inviteBody));
+  }
+ }}
  className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
  >
  <option value="EMAIL">E-mail</option>
@@ -4116,7 +4142,9 @@ Merci de confirmer votre présence :
  </select>
  </div>
  <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Objet du message</label>
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">
+  {channelNeedsEmail(inviteChannel) ? 'Objet e-mail' : 'Objet (référence)'}
+ </label>
  <input 
  type="text" 
  value={inviteSubject}
@@ -4126,13 +4154,12 @@ Merci de confirmer votre présence :
  required
  />
  </div>
- <div className="space-y-1.5">
- <div className="flex justify-between items-center gap-3">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Corps du message</label>
- </div>
  <p className="text-[11px] text-muted leading-relaxed">
  Variables utilisables : {'{{firstName}}'}, {'{{lastName}}'}, {'{{rsvpLink}}'}, {'{{title}}'}, {'{{date}}'}, {'{{location}}'}, {'{{description}}'}, {'{{orgName}}'}, {'{{dressCode}}'}, {'{{guestGuidelines}}'}. La table et le siège s’ajoutent après confirmation RSVP, pas ici.
  </p>
+ {channelNeedsEmail(inviteChannel) ? (
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Texte e-mail</label>
  <textarea 
  value={inviteBody}
  onChange={(e) => setInviteBody(e.target.value)}
@@ -4141,10 +4168,40 @@ Merci de confirmer votre présence :
  required
  />
  </div>
+ ) : null}
+ {channelNeedsWhatsApp(inviteChannel) ? (
+ <div className="space-y-1.5">
+ <div className="flex items-center justify-between gap-2">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Texte WhatsApp</label>
+ {channelNeedsEmail(inviteChannel) && inviteBody.trim() ? (
+  <button
+   type="button"
+   onClick={() => setInviteWhatsAppBody(toWhatsAppTone(inviteBody))}
+   className="text-[11px] font-semibold text-primary hover:underline"
+  >
+   Adapter depuis l’e-mail
+  </button>
+ ) : null}
+ </div>
+ <p className="text-[11px] text-muted">Plus court, tutoiement possible. Le *gras* fonctionne ici.</p>
+ <textarea 
+ value={inviteWhatsAppBody}
+ onChange={(e) => setInviteWhatsAppBody(e.target.value)}
+ placeholder="Bonjour {{firstName}},&#10;&#10;Tu es invité(e) à {{title}}.&#10;&#10;Confirme ici :&#10;{{rsvpLink}}"
+ className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition h-32 resize-none"
+ required={!channelNeedsEmail(inviteChannel)}
+ />
+ </div>
+ ) : null}
  {selectedEvent && (
  <InvitationMessagePreview
   subject={inviteSubject.replaceAll('{{title}}', selectedEvent.title)}
   body={fillInvitationPreviewVars(inviteBody, selectedEvent, tenant?.name || 'Organisation')}
+  whatsappBody={fillInvitationPreviewVars(
+   resolveWhatsAppInvitationBody(inviteBody, inviteWhatsAppBody),
+   selectedEvent,
+   tenant?.name || 'Organisation',
+  )}
   channel={inviteChannel}
   orgName={tenant?.name || 'Organisation'}
   primary={tenant?.branding?.primary}
@@ -4500,7 +4557,7 @@ Merci de confirmer votre présence :
 
  {/* WhatsApp */}
  <a
- href={getWhatsAppShareUrl(`${sharingGuest.firstName} ${sharingGuest.lastName}`, getGuestRsvpLink(sharingGuest.id), sharingGuest.preferences && typeof sharingGuest.preferences === 'object' ? (sharingGuest.preferences as any).phone : null, getRenderedInvitationBody(sharingGuest))}
+ href={getWhatsAppShareUrl(`${sharingGuest.firstName} ${sharingGuest.lastName}`, getGuestRsvpLink(sharingGuest.id), sharingGuest.preferences && typeof sharingGuest.preferences === 'object' ? (sharingGuest.preferences as any).phone : null, getRenderedInvitationBody(sharingGuest, true))}
  target="_blank"
  rel="noopener noreferrer"
  className="flex items-center justify-center gap-2 p-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition shadow-sm"

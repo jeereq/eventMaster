@@ -3,7 +3,6 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { sendRealEmail, sendRealWhatsApp } from '../services/notificationService';
 import { resolveDeliveryChannels } from '../utils/notificationChannels';
-import { renderGuestMessage, applyTemplateVariables } from '../services/messageTemplateService';
 import { applyInvitationGuidelineVariables, guestGuidelinesInvitationText } from '../utils/guestGuidelines';
 import { canManageEvent, canAccessEvent } from '../services/permissionsService';
 import {
@@ -16,6 +15,31 @@ import {
 } from '../utils/brandedMessaging';
 import { escapeHtml } from '../utils/brandingUtils';
 import { extractGuestEmail } from '../utils/guestIdentity';
+import { resolveWhatsAppInvitationBody } from '../utils/whatsappTone';
+
+function applyInvitePlaceholders(
+  text: string,
+  vars: {
+    firstName: string;
+    lastName: string;
+    rsvpLink: string;
+    title: string;
+    description: string;
+    location: string;
+    date: string;
+    orgName: string;
+  },
+): string {
+  return text
+    .replaceAll('{{firstName}}', vars.firstName)
+    .replaceAll('{{lastName}}', vars.lastName)
+    .replaceAll('{{rsvpLink}}', vars.rsvpLink)
+    .replaceAll('{{title}}', vars.title)
+    .replaceAll('{{description}}', vars.description)
+    .replaceAll('{{location}}', vars.location)
+    .replaceAll('{{date}}', vars.date)
+    .replaceAll('{{orgName}}', vars.orgName);
+}
 async function verifyEventAccess(
   userId: string,
   tenantId: string,
@@ -73,7 +97,7 @@ export async function createInvitation(req: AuthenticatedRequest, res: Response)
   try {
     const tenantId = req.user?.tenantId;
     const eventId = req.params.eventId as string;
-    const { templateId, subject, body, channel } = req.body;
+    const { templateId, subject, body, whatsappBody, channel } = req.body;
 
     const userId = req.user?.id;
     if (!tenantId || !userId) {
@@ -84,8 +108,17 @@ export async function createInvitation(req: AuthenticatedRequest, res: Response)
       return res.status(403).json({ error: 'Événement non trouvé ou non autorisé' });
     }
 
-    if (!subject || !body || !channel) {
-      return res.status(400).json({ error: 'Les champs subject, body et channel sont requis' });
+    const emailBody = typeof body === 'string' ? body.trim() : '';
+    const waBody = typeof whatsappBody === 'string' ? whatsappBody.trim() : '';
+    if (!subject || !channel) {
+      return res.status(400).json({ error: 'Les champs subject et channel sont requis' });
+    }
+    if (channel === 'WHATSAPP') {
+      if (!waBody && !emailBody) {
+        return res.status(400).json({ error: 'Le texte WhatsApp est requis' });
+      }
+    } else if (!emailBody) {
+      return res.status(400).json({ error: 'Le texte e-mail est requis' });
     }
 
     const invitation = await prisma.invitation.create({
@@ -93,8 +126,9 @@ export async function createInvitation(req: AuthenticatedRequest, res: Response)
         eventId,
         templateId: templateId || null,
         subject,
-        body,
-        channel, // EMAIL, LINK, QR
+        body: emailBody || waBody,
+        whatsappBody: waBody || null,
+        channel,
       },
     });
 
@@ -165,30 +199,27 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
     // Send and generate RSVP links
     const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
     const sentInvitations = await Promise.all(guests.map(async (guest) => {
-      // Dynamic variables replacement
-      let subject = invitation.subject || '';
-      subject = subject
-        .replaceAll('{{firstName}}', guest.firstName || '')
-        .replaceAll('{{lastName}}', guest.lastName || '')
-        .replaceAll('{{title}}', event.title || '')
-        .replaceAll('{{description}}', event.description || '')
-        .replaceAll('{{location}}', event.location || '')
-        .replaceAll('{{date}}', formattedDate)
-        .replaceAll('{{orgName}}', orgBrand.orgName);
-      
-      let body = invitation.body || '';
-      body = body
-        .replaceAll('{{firstName}}', guest.firstName || '')
-        .replaceAll('{{lastName}}', guest.lastName || '')
-        .replaceAll('{{rsvpLink}}', `${FRONTEND_URL}/rsvp/${guest.id}`)
-        .replaceAll('{{title}}', event.title || '')
-        .replaceAll('{{description}}', event.description || '')
-        .replaceAll('{{location}}', event.location || '')
-        .replaceAll('{{date}}', formattedDate)
-        .replaceAll('{{orgName}}', orgBrand.orgName);
+    const rsvpLink = `${FRONTEND_URL}/rsvp/${guest.id}`;
+      const vars = {
+        firstName: guest.firstName || '',
+        lastName: guest.lastName || '',
+        rsvpLink,
+        title: event.title || '',
+        description: event.description || '',
+        location: event.location || '',
+        date: formattedDate,
+        orgName: orgBrand.orgName,
+      };
 
+      let subject = applyInvitePlaceholders(invitation.subject || '', vars);
+      let body = applyInvitePlaceholders(invitation.body || '', vars);
       subject = applyInvitationGuidelineVariables(subject, event.guestGuidelines);
       body = withOrgSignoff(applyInvitationGuidelineVariables(body, event.guestGuidelines), orgBrand.orgName);
+
+      const waSource = resolveWhatsAppInvitationBody(invitation.body || '', invitation.whatsappBody);
+      let whatsappText = applyInvitePlaceholders(waSource, vars);
+      whatsappText = applyInvitationGuidelineVariables(whatsappText, event.guestGuidelines);
+
       const guidelinesText = guestGuidelinesInvitationText(event.guestGuidelines);
       const guidelinesAlreadyInBody = Boolean(
         guidelinesText && body.includes(guidelinesText.slice(0, Math.min(24, guidelinesText.length))),
@@ -219,7 +250,7 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
             innerHtml: `
               ${messageAlreadyGreets(body) ? '' : `<p style="font-size:16px;font-weight:700;color:#1e1b4b;margin:0 0 15px;">Bonjour ${escapeHtml(guest.firstName)},</p>`}
               <div style="font-size:15px;line-height:1.7;color:#475569;margin-bottom:28px;white-space:pre-line;">
-                ${escapeHtml(body.replace(`${FRONTEND_URL}/rsvp/${guest.id}`, '')).replace(/\n/g, '<br/>')}
+                ${escapeHtml(body.replace(rsvpLink, '')).replace(/\n/g, '<br/>')}
               </div>
               ${brandedEventDetailsHtml(orgBrand.branding, [
                 { label: 'Date', value: formattedDate },
@@ -234,7 +265,7 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
                   : ''
               }
             `,
-            cta: { href: `${FRONTEND_URL}/rsvp/${guest.id}`, label: 'Confirmer ma présence (RSVP)' },
+            cta: { href: rsvpLink, label: 'Confirmer ma présence (RSVP)' },
             footerNote: 'Merci de répondre avant la date de l’événement. Dès confirmation, votre plan de table, invitation PDF et localisation GPS vous sont envoyés si votre place est déjà assignée.',
           });
           sendResult = await sendRealEmail(
@@ -247,21 +278,7 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
         } else if (chan === 'WHATSAPP') {
           const phone = getGuestPhone(guest);
           if (phone) {
-            const templateVars = {
-              firstName: guest.firstName || '',
-              lastName: guest.lastName || '',
-              rsvpLink: `${FRONTEND_URL}/rsvp/${guest.id}`,
-              title: event.title || '',
-              description: event.description || '',
-              location: event.location || '',
-              date: formattedDate,
-              orgName: orgBrand.orgName,
-            };
-
-            let whatsappBody = body.trim()
-              ? applyTemplateVariables(body, templateVars)
-              : (await renderGuestMessage('INVITATION_WHATSAPP', templateVars)).body;
-            whatsappBody = wrapBrandedWhatsApp(whatsappBody, orgBrand.orgName, {
+            const whatsappBody = wrapBrandedWhatsApp(whatsappText, orgBrand.orgName, {
               guidelinesBlock: guidelinesText,
             });
             sendResult = await sendRealWhatsApp(phone, whatsappBody);
@@ -315,7 +332,7 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
         guestEmail: guest.email,
         subject,
         body,
-        rsvpUrl: `${FRONTEND_URL}/rsvp/${guest.id}`,
+        rsvpUrl: rsvpLink,
         invitationPdfUrl: null,
         status,
         channel: channelsToSend.join(', '),
@@ -400,7 +417,7 @@ export async function updateInvitation(req: AuthenticatedRequest, res: Response)
     const tenantId = req.user?.tenantId;
     const eventId = req.params.eventId as string;
     const id = req.params.id as string;
-    const { templateId, subject, body, channel } = req.body;
+    const { templateId, subject, body, whatsappBody, channel } = req.body;
 
     const userId = req.user?.id;
     if (!tenantId || !userId) {
@@ -425,6 +442,7 @@ export async function updateInvitation(req: AuthenticatedRequest, res: Response)
         templateId: templateId !== undefined ? (templateId || null) : existingInvitation.templateId,
         subject: subject !== undefined ? subject : existingInvitation.subject,
         body: body !== undefined ? body : existingInvitation.body,
+        whatsappBody: whatsappBody !== undefined ? (whatsappBody?.trim() || null) : existingInvitation.whatsappBody,
         channel: channel !== undefined ? channel : existingInvitation.channel,
       },
       include: { template: true },
