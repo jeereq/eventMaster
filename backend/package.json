@@ -15,6 +15,7 @@
     "migrate:template-images": "ts-node -P tsconfig.scripts.json scripts/migrateTemplateImagesToCloudinary.ts",
     "migrate:template-images:dry": "ts-node -P tsconfig.scripts.json scripts/migrateTemplateImagesToCloudinary.ts --dry-run",
     "verify:subscription-approval": "ts-node -P tsconfig.scripts.json scripts/verifySubscriptionApproval.ts",
+    "verify:annual-billing": "ts-node -P tsconfig.scripts.json scripts/verifyAnnualBilling.ts",
     "generate:platform-pdf": "ts-node -P tsconfig.scripts.json scripts/generatePlatformPdf.ts",
     "generate:flows-pdf": "ts-node -P tsconfig.scripts.json scripts/generateFlowsPdf.ts"
   },

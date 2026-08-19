@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { Percent, UserCheck, Loader2, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
-import { LANDING_PLANS, ANNUAL_DISCOUNT_PERCENT } from '@/config/landingPricing';
+import { LANDING_PLANS, ANNUAL_DISCOUNT_PERCENT, getPlanBaseAmountFc, annualPeriodCountForPlan, annualPromoPayableFromPeriod, invoiceCatalogLabel, isAnnualDurationDays } from '@/config/landingPricing';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 
@@ -64,9 +64,17 @@ export default function SubscriptionApprovalModal({
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const baseAmount = useMemo(
+  const periodFc = useMemo(
     () => (request ? getPlanPriceFc(request.requestedPlan, catalogPrices) : 0),
     [request, catalogPrices],
+  );
+
+  const baseAmount = useMemo(
+    () =>
+      request
+        ? getPlanBaseAmountFc(periodFc, request.requestedPlan, request.durationDays)
+        : 0,
+    [request, periodFc],
   );
 
   const activePromo = request ? promoByPlan?.[request.requestedPlan] : undefined;
@@ -77,11 +85,15 @@ export default function SubscriptionApprovalModal({
     if (!request) return;
     setFeedback(null);
     setSubmitting(false);
+    const period = getPlanPriceFc(request.requestedPlan, catalogPrices);
     if (activePromo?.price != null) {
       setDiscountMode('amount');
-      setApprovedAmount(String(activePromo.price));
+      const payable = isAnnualDurationDays(request.durationDays)
+        ? annualPromoPayableFromPeriod(period, activePromo.price, request.requestedPlan)
+        : activePromo.price;
+      setApprovedAmount(String(payable));
       setDiscountPercent('0');
-    } else if (request.durationDays === 365) {
+    } else if (isAnnualDurationDays(request.durationDays)) {
       setDiscountMode('percent');
       setDiscountPercent(String(ANNUAL_DISCOUNT_PERCENT));
       setApprovedAmount('');
@@ -90,7 +102,7 @@ export default function SubscriptionApprovalModal({
       setDiscountPercent('0');
       setApprovedAmount('');
     }
-  }, [request?.id, request?.durationDays, activePromo?.price]);
+  }, [request?.id, request?.durationDays, request?.requestedPlan, activePromo?.price, catalogPrices]);
 
   const pricing = useMemo(() => {
     if (!request) return { discountAmount: 0, finalAmount: 0, discountPercent: 0 };
@@ -209,15 +221,20 @@ export default function SubscriptionApprovalModal({
               Forfait demandé :{' '}
               <span className="font-semibold text-primary">{request.requestedPlan}</span> ·{' '}
               {request.durationDays} jours
-              {request.durationDays === 365 ? ` · annuel −${ANNUAL_DISCOUNT_PERCENT} %` : ''}
+              {isAnnualDurationDays(request.durationDays)
+                ? ` · annuel −${ANNUAL_DISCOUNT_PERCENT} % sur ${invoiceCatalogLabel(request.requestedPlan, request.durationDays)}`
+                : ''}
             </p>
             <p className="text-muted">
-              Prix catalogue :{' '}
+              Prix catalogue ({invoiceCatalogLabel(request.requestedPlan, request.durationDays)}) :{' '}
               <span className="font-bold">{baseAmount.toLocaleString('fr-FR')} FC</span>
             </p>
             {activePromo && (
               <p className="text-amber-700 dark:text-amber-400 text-xs font-semibold">
-                Promotion « {activePromo.label || 'active'} » : {activePromo.price.toLocaleString('fr-FR')} FC pré-rempli
+                Promotion « {activePromo.label || 'active'} » :{' '}
+                {isAnnualDurationDays(request.durationDays)
+                  ? `${annualPromoPayableFromPeriod(periodFc, activePromo.price, request.requestedPlan).toLocaleString('fr-FR')} FC (min. promo × ${annualPeriodCountForPlan(request.requestedPlan)} vs annuel −${ANNUAL_DISCOUNT_PERCENT} %)`
+                  : `${activePromo.price.toLocaleString('fr-FR')} FC pré-rempli`}
               </p>
             )}
           </div>

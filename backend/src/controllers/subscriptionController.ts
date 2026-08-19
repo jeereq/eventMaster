@@ -8,7 +8,7 @@ import {
   commercialReferredTenantFilter,
   isPlatformCommercial,
 } from '../services/platformCommercialScope';
-import { getPlansConfiguration, getPlanLimits, PAID_PLAN_KEYS, isPlanAllowedForAccountKind, planAudienceMismatchMessage, resolveDurationDaysForPlan } from '../config/plansConfig';
+import { getPlansConfiguration, getPlanLimits, PAID_PLAN_KEYS, isPlanAllowedForAccountKind, planAudienceMismatchMessage, resolveDurationDaysForPlan, resolveDefaultPromoApprovedAmount } from '../config/plansConfig';
 import { issueTenantPlanInvoice, computeExtendedExpiry } from '../services/tenantBillingService';
 import { computeApprovedAmount, getPlanAmount } from '../services/invoiceService';
 import { auditReq } from '../services/adminAuditService';
@@ -211,7 +211,8 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
       }
     }
 
-    const baseAmount = getPlanAmount(request.requestedPlan);
+    const durationDays = resolveDurationDaysForPlan(request.requestedPlan, request.durationDays);
+    const baseAmount = getPlanAmount(request.requestedPlan, durationDays);
     const planDef = getPlanLimits(request.requestedPlan);
     let resolvedApproved = parsedApproved;
     let resolvedDiscount = parsedDiscount;
@@ -221,7 +222,11 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
       resolvedApproved !== undefined;
 
     if (!hasExplicitDiscount && planDef.promoActive && planDef.promoMonthlyPriceFc != null) {
-      resolvedApproved = planDef.promoMonthlyPriceFc;
+      resolvedApproved = resolveDefaultPromoApprovedAmount(
+        request.requestedPlan,
+        durationDays,
+        planDef.promoMonthlyPriceFc,
+      );
     }
 
     const pricing = computeApprovedAmount(baseAmount, {
@@ -235,8 +240,6 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
       tenantBefore.licenseActive &&
       tenantBefore.licenseExpiresAt &&
       tenantBefore.plan === request.requestedPlan;
-
-    const durationDays = resolveDurationDaysForPlan(request.requestedPlan, request.durationDays);
 
     const expiryDate = isSamePlanRenewal
       ? computeExtendedExpiry(tenantBefore.licenseExpiresAt, durationDays)

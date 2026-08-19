@@ -1217,6 +1217,7 @@ function DashboardPageContent() {
  modalDiscountPercent,
  modalApprovedAmount,
  planCatalogPrices?.[modalPlan],
+ parseInt(modalBillingDurationDays, 10) || durationDaysForPlan(modalPlan),
  );
  const payload: Record<string, unknown> = {
  name: modalTenantName,
@@ -4588,7 +4589,9 @@ function DashboardPageContent() {
  type="button"
  onClick={() => {
  setModalBillingDurationDays(String(preset.days));
+ setModalDiscountMode('percent');
  setModalDiscountPercent(preset.annual ? String(ANNUAL_DISCOUNT_PERCENT) : '0');
+ setModalApprovedAmount('');
  }}
  className={`px-2.5 py-1 rounded-md text-[11px] font-semibold border transition ${
  selected
@@ -4611,7 +4614,7 @@ function DashboardPageContent() {
  />
  {Number(modalBillingDurationDays) === 365 && (
  <p className="text-[11px] text-emerald-700 font-medium">
- Paiement annuel : −{ANNUAL_DISCOUNT_PERCENT} % prérempli (y compris Particulier).
+ Paiement annuel : catalogue {isB2cPlanId(modalPlan) ? '4 trimestres' : '12 mois'} puis −{ANNUAL_DISCOUNT_PERCENT} % prérempli.
  </p>
  )}
  {isB2cPlanId(modalPlan) && Number(modalBillingDurationDays) === 90 && (
@@ -4633,6 +4636,7 @@ function DashboardPageContent() {
  <BillingDiscountFields
  planId={modalPlan}
  catalogPriceFc={planCatalogPrices?.[modalPlan]}
+ durationDays={parseInt(modalBillingDurationDays, 10) || durationDaysForPlan(modalPlan)}
  discountMode={modalDiscountMode}
  onDiscountModeChange={setModalDiscountMode}
  discountPercent={modalDiscountPercent}

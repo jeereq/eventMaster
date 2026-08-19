@@ -23,6 +23,7 @@ import {
   getPlanDisplayPrice,
   durationDaysForPlan,
   planPricePeriodSuffix,
+  isB2cPlanId,
   CURRENCY_NAME,
   type BillingCycle,
   type PlanId,
@@ -306,8 +307,8 @@ export default function BillingPage() {
         <p className="text-xs text-muted text-center max-w-lg">
           Période de base : mois (organisations et marketplace) ou trimestre 90 jours (particuliers).
           {billingCycle === 'annual'
-            ? ` L’annuel (365 jours) applique −${ANNUAL_DISCOUNT_PERCENT} % à tous les forfaits payants, y compris Particulier.`
-            : ` L’annuel offre −${ANNUAL_DISCOUNT_PERCENT} % aussi pour les forfaits Particulier.`}
+            ? ` L’annuel facture 12 mois (ou 4 trimestres) d’un coup, avec −${ANNUAL_DISCOUNT_PERCENT} % sur ce total.`
+            : ` L’annuel facture 12 mois ou 4 trimestres d’un coup, avec −${ANNUAL_DISCOUNT_PERCENT} %.`}
         </p>
       </div>
 
@@ -340,11 +341,16 @@ export default function BillingPage() {
                     <p className="text-xs text-muted mt-1">{plan.description}</p>
                     <div className="mt-4 mb-4">
                       <span className="text-3xl font-extrabold">{plan.price}</span>
-                      {plan.id !== 'FREE' && <span className="text-sm text-muted ml-1">{planPricePeriodSuffix(plan.id)}</span>}
+                      {plan.id !== 'FREE' && <span className="text-sm text-muted ml-1">{planPricePeriodSuffix(plan.id, billingCycle)}</span>}
                       {billingCycle === 'annual' && plan.id !== 'FREE' && (
-                        <p className="text-[10px] text-emerald-600 font-semibold mt-1">
-                          Facturé 12 mois · −{ANNUAL_DISCOUNT_PERCENT} % vs période de base
-                        </p>
+                        <>
+                          <p className="text-[10px] text-muted mt-1">
+                            {isB2cPlanId(plan.id) ? 'Soit le trimestre déjà réduit' : 'Soit le mois déjà réduit'}
+                          </p>
+                          <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">
+                            Facturé {isB2cPlanId(plan.id) ? '4 trimestres' : '12 mois'} d’un coup · −{ANNUAL_DISCOUNT_PERCENT} % vs période de base
+                          </p>
+                        </>
                       )}
                     </div>
                     <ul className="space-y-1.5 text-xs text-muted flex-1 border-t border-border pt-3">

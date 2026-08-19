@@ -1,7 +1,9 @@
 export type BillingCycle = 'monthly' | 'annual';
 
-/** Réduction facturation annuelle (équivalent mensuel affiché). */
+/** Réduction appliquée au total annuel (12 mois B2B / 4 trimestres B2C). */
 export const ANNUAL_DISCOUNT_PERCENT = 10;
+export const ANNUAL_PERIOD_COUNT_B2C = 4;
+export const ANNUAL_PERIOD_COUNT_DEFAULT = 12;
 
 export type PlanAudience = 'B2B' | 'B2C' | 'VENUE' | 'SERVICE' | 'CATALOG';
 
@@ -61,6 +63,58 @@ export function durationDaysForPlan(id: string, cycle: BillingCycle = 'monthly')
   return MONTH_BILLING_DAYS;
 }
 
+export function isAnnualDurationDays(durationDays?: number | null): boolean {
+  return durationDays != null && Number.isFinite(durationDays) && durationDays >= YEAR_BILLING_DAYS;
+}
+
+/** 4 trimestres (Particulier) ou 12 mois (B2B / marketplace). */
+export function annualPeriodCountForPlan(id: string): number {
+  return isB2cPlanId(id) ? ANNUAL_PERIOD_COUNT_B2C : ANNUAL_PERIOD_COUNT_DEFAULT;
+}
+
+export function periodAmountToInvoiceBase(
+  periodFc: number,
+  planId: string,
+  durationDays?: number | null,
+): number {
+  const period = Math.max(0, Math.round(periodFc));
+  if (period <= 0) return 0;
+  if (isAnnualDurationDays(durationDays)) {
+    return period * annualPeriodCountForPlan(planId);
+  }
+  return period;
+}
+
+export function annualPayableFromPeriod(periodFc: number, planId: string): number {
+  const base = periodAmountToInvoiceBase(periodFc, planId, YEAR_BILLING_DAYS);
+  return Math.round(base * (1 - ANNUAL_DISCOUNT_PERCENT / 100));
+}
+
+export function annualPromoPayableFromPeriod(
+  catalogPeriodFc: number,
+  promoPeriodFc: number,
+  planId: string,
+): number {
+  const catalogAnnual = annualPayableFromPeriod(catalogPeriodFc, planId);
+  const promoAnnual = Math.round(Math.max(0, promoPeriodFc) * annualPeriodCountForPlan(planId));
+  return Math.min(promoAnnual, catalogAnnual);
+}
+
+export function invoiceCatalogLabel(planId: string, durationDays?: number | null): string {
+  if (!isAnnualDurationDays(durationDays)) {
+    return isB2cPlanId(planId) ? '1 trimestre' : '1 mois';
+  }
+  return isB2cPlanId(planId) ? '4 trimestres' : '12 mois';
+}
+
+export function getPlanBaseAmountFc(
+  periodFc: number,
+  planId: string,
+  durationDays?: number | null,
+): number {
+  return periodAmountToInvoiceBase(periodFc, planId, durationDays);
+}
+
 export interface DurationPreset {
   days: number;
   label: string;
@@ -81,8 +135,9 @@ export function durationPresetsForPlan(id: string): DurationPreset[] {
   ];
 }
 
-export function planPricePeriodSuffix(id: string): string {
+export function planPricePeriodSuffix(id: string, cycle: BillingCycle = 'monthly'): string {
   if (id === 'FREE') return '';
+  if (cycle === 'annual') return '/ an';
   return isB2cPlanId(id) ? '/ trimestre' : '/ mois';
 }
 
@@ -153,6 +208,11 @@ export function ensureFcPrice(price?: string | null, fallbackFc?: number): strin
 export function annualMonthlyEquivalent(monthlyFc: number): string {
   if (monthlyFc <= 0) return formatFc(0);
   return formatFc(Math.round(monthlyFc * (1 - ANNUAL_DISCOUNT_PERCENT / 100)));
+}
+
+export function annualEquivalentNote(planId: string, periodFc: number): string {
+  const eq = annualMonthlyEquivalent(periodFc);
+  return isB2cPlanId(planId) ? `Soit ${eq} / trimestre` : `Soit ${eq} / mois`;
 }
 
 export interface PlanFeatureRow {
@@ -924,14 +984,23 @@ export function getPlanDisplayPrice(
   cycle: BillingCycle,
   dbPrice?: string | null,
   dbMonthlyFc?: number | null,
+  promoPeriodFc?: number | null,
 ): string {
   if (plan.id === 'FREE') return formatFc(0);
   const monthlyFc = resolvePlanMonthlyFc(plan, {
     price: dbPrice,
     monthlyPriceFc: dbMonthlyFc,
   });
-  if (cycle === 'monthly') return formatFc(monthlyFc);
-  return annualMonthlyEquivalent(monthlyFc);
+  if (cycle === 'monthly') {
+    if (promoPeriodFc != null && Number.isFinite(promoPeriodFc) && promoPeriodFc >= 0) {
+      return formatFc(promoPeriodFc);
+    }
+    return formatFc(monthlyFc);
+  }
+  if (promoPeriodFc != null && Number.isFinite(promoPeriodFc) && promoPeriodFc >= 0) {
+    return formatFc(annualPromoPayableFromPeriod(monthlyFc, promoPeriodFc, plan.id));
+  }
+  return formatFc(annualPayableFromPeriod(monthlyFc, plan.id));
 }
 
 export function planTierLabel(tier: LandingPlan['tier']): string {

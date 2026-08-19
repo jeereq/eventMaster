@@ -73,7 +73,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'approve-subscription',
         title: 'Valider une demande d\'abonnement',
         content:
-          '1. Ouvrez Demandes abonnement.\n2. Vérifiez le forfait et la durée : trimestre 90 j (Particulier) ou mois (Business / marketplace), annuel 365 j avec −10 %.\n3. Vérifiez la preuve de paiement hors plateforme.\n4. Approuvez — la licence s’active et une facture est générée au statut Payée.\n5. Pour une facture déjà émise « Envoyée » (renouvellement, ancien dossier) : Factures → détail → Marquer payée (motif ≥ 8 caractères).',
+          '1. Ouvrez Demandes abonnement.\n2. Vérifiez le forfait et la durée : trimestre 90 j (Particulier) ou mois (Business / marketplace), annuel 365 j facturé 12 mois ou 4 trimestres avec −10 %.\n3. Vérifiez la preuve de paiement hors plateforme.\n4. Approuvez — la licence s’active et une facture est générée au statut Payée.\n5. Pour une facture déjà émise « Envoyée » (renouvellement, ancien dossier) : Factures → détail → Marquer payée (motif ≥ 8 caractères).',
         links: [{ label: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests' }],
       },
       {
@@ -249,7 +249,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'upgrade-plan',
         title: 'Changer de forfait',
         content:
-          '1. Ouvrez Facturation & plan.\n2. Comparez les quotas. Choisissez la période de base (mois, ou trimestre 90 j pour un forfait Particulier) ou l’annuel (365 j, −10 % sur tous les forfaits payants, y compris Particulier).\n3. Soumettez une demande de changement avec preuve de paiement si requis.\n4. Suivez le statut dans Factures après validation.',
+          '1. Ouvrez Facturation & plan.\n2. Comparez les quotas. Choisissez la période de base (mois, ou trimestre 90 j pour un forfait Particulier) ou l’annuel (12 mois ou 4 trimestres d’un coup, −10 %).\n3. Soumettez une demande de changement avec preuve de paiement si requis.\n4. Suivez le statut dans Factures après validation.',
         links: [{ label: 'Facturation & plan', href: '/dashboard/billing' }],
       },
       {
@@ -276,7 +276,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Assignez des protocoles org. pour le scan QR web (navigateur) sur tous les événements.',
       'Configurez les salles avant de créer des événements avec plan de table.',
       'La commission marketplace ({commissionPercent} %) est due par le vendeur, distincte de l’abonnement SaaS.',
-      'Le paiement annuel (−10 %) s’applique aussi aux forfaits Particulier (période de base = trimestre).',
+      'Le paiement annuel facture 12 mois (ou 4 trimestres Particulier) d’un coup, avec −10 % sur ce total.',
       'Les commissions de vos commerciaux org. se versent hors plateforme (Facturation → Versements), avec preuve.',
     ],
   },

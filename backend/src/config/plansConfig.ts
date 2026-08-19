@@ -1,5 +1,7 @@
-/** Réduction appliquée à la facturation annuelle (équivalent mensuel affiché). */
+/** Réduction appliquée au total annuel (12 mois B2B / 4 trimestres B2C). */
 export const ANNUAL_DISCOUNT_PERCENT = 10;
+export const ANNUAL_PERIOD_COUNT_B2C = 4;
+export const ANNUAL_PERIOD_COUNT_DEFAULT = 12;
 
 export type PlanAudience = 'B2B' | 'B2C' | 'VENUE' | 'SERVICE' | 'CATALOG';
 
@@ -100,6 +102,7 @@ export function formatPlanPriceFc(amount: number): string {
   return `${amount.toLocaleString('fr-FR')} FC`;
 }
 
+/** Équivalent d’une période déjà réduit (affichage secondaire). */
 export function annualMonthlyEquivalent(monthlyFc: number): string {
   const discounted = Math.round(monthlyFc * (1 - ANNUAL_DISCOUNT_PERCENT / 100));
   return formatPlanPriceFc(discounted);
@@ -589,4 +592,58 @@ export function resolveDurationDaysForPlan(planKey: string, requested?: number |
   if (requested != null && Number.isFinite(requested) && requested > 0) return requested;
   if (isB2cPlanKey(planKey)) return QUARTER_DURATION_DAYS;
   return MONTH_DURATION_DAYS;
+}
+
+export function isAnnualDurationDays(durationDays?: number | null): boolean {
+  return durationDays != null && Number.isFinite(durationDays) && durationDays >= YEAR_DURATION_DAYS;
+}
+
+/** 4 trimestres (Particulier) ou 12 mois (B2B / marketplace). */
+export function annualPeriodCountForPlanKey(planKey: string): number {
+  return isB2cPlanKey(planKey) ? ANNUAL_PERIOD_COUNT_B2C : ANNUAL_PERIOD_COUNT_DEFAULT;
+}
+
+/** Prix catalogue d’une facture : 1 période, ou N périodes si annuel (avant −10 %). */
+export function periodAmountToInvoiceBase(
+  periodFc: number,
+  planKey: string,
+  durationDays?: number | null,
+): number {
+  const period = Math.max(0, Math.round(periodFc));
+  if (period <= 0) return 0;
+  if (isAnnualDurationDays(durationDays)) {
+    return period * annualPeriodCountForPlanKey(planKey);
+  }
+  return period;
+}
+
+export function annualPayableFromPeriod(periodFc: number, planKey: string): number {
+  const base = periodAmountToInvoiceBase(periodFc, planKey, YEAR_DURATION_DAYS);
+  return Math.round(base * (1 - ANNUAL_DISCOUNT_PERCENT / 100));
+}
+
+export function annualPromoPayableFromPeriod(
+  catalogPeriodFc: number,
+  promoPeriodFc: number,
+  planKey: string,
+): number {
+  const catalogAnnual = annualPayableFromPeriod(catalogPeriodFc, planKey);
+  const promoAnnual = Math.round(Math.max(0, promoPeriodFc) * annualPeriodCountForPlanKey(planKey));
+  return Math.min(promoAnnual, catalogAnnual);
+}
+
+export function getPlanBaseAmount(planKey: string, durationDays?: number | null): number {
+  if (normalizePlanKey(planKey) === 'FREE') return 0;
+  return periodAmountToInvoiceBase(getCatalogMonthlyPriceFc(planKey), planKey, durationDays);
+}
+
+export function resolveDefaultPromoApprovedAmount(
+  planKey: string,
+  durationDays: number | null | undefined,
+  promoPeriodFc: number,
+): number {
+  if (isAnnualDurationDays(durationDays)) {
+    return annualPromoPayableFromPeriod(getCatalogMonthlyPriceFc(planKey), promoPeriodFc, planKey);
+  }
+  return Math.max(0, Math.round(promoPeriodFc));
 }

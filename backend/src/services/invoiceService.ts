@@ -1,7 +1,7 @@
 import { InvoiceType, PlanType } from '@prisma/client';
 import PDFDocument from 'pdfkit';
 import { prisma } from '../db';
-import { getPlanLimits, getCatalogMonthlyPriceFc, getEffectiveMonthlyPriceFc } from '../config/plansConfig';
+import { getPlanLimits, getEffectiveMonthlyPriceFc, getPlanBaseAmount, periodAmountToInvoiceBase } from '../config/plansConfig';
 import { parsePlanPrice, getBillingPeriod } from './commercialService';
 import { sendRealEmail, sendRealWhatsApp } from './notificationService';
 import { notifyTenantOperators, notifyPlatformStaff } from './platformNotificationService';
@@ -17,14 +17,14 @@ import {
 
 export { formatAmountFc };
 
-export function getPlanAmount(plan: PlanType): number {
+export function getPlanAmount(plan: PlanType, durationDays?: number | null): number {
   if (plan === 'FREE') return 0;
-  return getCatalogMonthlyPriceFc(plan);
+  return getPlanBaseAmount(plan, durationDays);
 }
 
-export function getEffectivePlanAmount(plan: PlanType): number {
+export function getEffectivePlanAmount(plan: PlanType, durationDays?: number | null): number {
   if (plan === 'FREE') return 0;
-  return getEffectiveMonthlyPriceFc(plan);
+  return periodAmountToInvoiceBase(getEffectiveMonthlyPriceFc(plan), plan, durationDays);
 }
 
 export function computeApprovedAmount(
@@ -285,7 +285,7 @@ export async function createAndSendInvoice(params: {
     throw new Error('Organisation introuvable.');
   }
 
-  const amount = params.amount ?? getPlanAmount(params.plan);
+  const amount = params.amount ?? getPlanAmount(params.plan, params.durationDays);
   if (amount <= 0 && params.plan !== 'FREE') {
     console.warn(`[Invoice Service] Montant nul pour le plan ${params.plan}, facture ignorée.`);
   }

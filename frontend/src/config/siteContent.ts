@@ -104,13 +104,13 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'plans-quotas',
     question: 'Comment fonctionnent les forfaits et les quotas ?',
     answer:
-      'Chaque organisation souscrit un seul forfait. Les particuliers choisissent un palier d’invités (50, 100, 200 ou +200) : période de base = trimestre (90 jours). Les organisateurs B2B ont Essentials (gratuit), Business, Premium et Enterprise (mois). Les gestionnaires de salles et prestataires ont Salle, Prestataire (fiches illimitées dès l’abonnement payé) ou Salle & presta. Le tableau de bord affiche vos quotas. Le paiement annuel (365 jours) bénéficie de −10 % sur tous les forfaits payants, y compris Particulier.',
+      'Chaque organisation souscrit un seul forfait. Les particuliers choisissent un palier d’invités (50, 100, 200 ou +200) : période de base = trimestre (90 jours). Les organisateurs B2B ont Essentials (gratuit), Business, Premium et Enterprise (mois). Les gestionnaires de salles et prestataires ont Salle, Prestataire (fiches illimitées dès l’abonnement payé) ou Salle & presta. Le tableau de bord affiche vos quotas. Le paiement annuel facture 12 mois (ou 4 trimestres pour Particulier) d’un coup, avec −10 % sur ce total.',
   },
   {
     id: 'b2c-annual',
     question: 'Les forfaits Particulier ont-ils une réduction annuelle ?',
     answer:
-      'Oui. La période de base d’un forfait Particulier est le trimestre (90 jours). Si vous choisissez le paiement annuel (365 jours), vous bénéficiez de 10 % de réduction, comme les forfaits organisations et marketplace. Le prix affiché en mode annuel est l’équivalent trimestriel déjà réduit.',
+      'Oui. La période de base d’un forfait Particulier est le trimestre (90 jours). Le paiement annuel facture 4 trimestres d’un coup, avec 10 % de réduction sur ce total — comme les forfaits organisations et marketplace (12 mois). Le prix affiché en mode annuel est le montant à payer pour l’année, pas l’équivalent d’un trimestre.',
   },
   {
     id: 'data-responsibility',

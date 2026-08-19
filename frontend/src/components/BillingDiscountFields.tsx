@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Percent } from 'lucide-react';
-import { LANDING_PLANS, type PlanId } from '@/config/landingPricing';
+import { LANDING_PLANS, getPlanBaseAmountFc, invoiceCatalogLabel, type PlanId } from '@/config/landingPricing';
 
 interface BillingDiscountFieldsProps {
   planId: string;
   catalogPriceFc?: number;
+  durationDays?: number | null;
   discountMode: 'percent' | 'amount';
   onDiscountModeChange: (mode: 'percent' | 'amount') => void;
   discountPercent: string;
@@ -23,6 +24,7 @@ function getPlanPriceFc(planId: string): number {
 export default function BillingDiscountFields({
   planId,
   catalogPriceFc,
+  durationDays,
   discountMode,
   onDiscountModeChange,
   discountPercent,
@@ -32,8 +34,8 @@ export default function BillingDiscountFields({
   compact = false,
 }: BillingDiscountFieldsProps) {
   const baseAmount = useMemo(
-    () => catalogPriceFc ?? getPlanPriceFc(planId),
-    [planId, catalogPriceFc],
+    () => getPlanBaseAmountFc(catalogPriceFc ?? getPlanPriceFc(planId), planId, durationDays),
+    [planId, catalogPriceFc, durationDays],
   );
 
   const pricing = useMemo(() => {
@@ -109,7 +111,8 @@ export default function BillingDiscountFields({
       )}
       <div className="bg-surface-muted rounded-[var(--radius-card)] p-3 text-xs space-y-1 border border-border">
         <p className="text-muted">
-          Catalogue : <span className="font-bold text-foreground">{baseAmount.toLocaleString('fr-FR')} FC</span>
+          Catalogue ({invoiceCatalogLabel(planId, durationDays)}) :{' '}
+          <span className="font-bold text-foreground">{baseAmount.toLocaleString('fr-FR')} FC</span>
         </p>
         {pricing.discountAmount > 0 && (
           <p className="text-emerald-600 font-semibold">
@@ -130,8 +133,9 @@ export function getBillingPricingFromFields(
   discountPercent: string,
   approvedAmount: string,
   catalogPriceFc?: number,
+  durationDays?: number | null,
 ) {
-  const baseAmount = catalogPriceFc ?? getPlanPriceFc(planId);
+  const baseAmount = getPlanBaseAmountFc(catalogPriceFc ?? getPlanPriceFc(planId), planId, durationDays);
   if (discountMode === 'amount' && approvedAmount !== '') {
     const final = Math.max(0, Math.round(parseFloat(approvedAmount) || 0));
     const discountAmount = Math.max(0, baseAmount - final);

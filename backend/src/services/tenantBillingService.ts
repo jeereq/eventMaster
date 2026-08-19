@@ -4,7 +4,7 @@ import {
   createAndSendInvoice,
   getPlanAmount,
 } from './invoiceService';
-import { getPlanLimits, resolveDurationDaysForPlan } from '../config/plansConfig';
+import { getPlanLimits, resolveDurationDaysForPlan, resolveDefaultPromoApprovedAmount } from '../config/plansConfig';
 import { notifyCommercialsOnSubscriptionApproval, recordCommercialCommission } from './commercialService';
 import type { CommercialBillingEvent } from './platformNotificationService';
 
@@ -75,7 +75,7 @@ export async function issueTenantPlanInvoice(params: {
       return d;
     })();
 
-  const baseAmount = getPlanAmount(params.plan);
+  const baseAmount = getPlanAmount(params.plan, durationDays);
   const planDef = getPlanLimits(params.plan);
   let approvedAmount = params.billing.approvedAmount;
   let discountPercent = params.billing.discountPercent;
@@ -85,7 +85,11 @@ export async function issueTenantPlanInvoice(params: {
     approvedAmount !== undefined;
 
   if (!hasExplicitDiscount && planDef.promoActive && planDef.promoMonthlyPriceFc != null) {
-    approvedAmount = planDef.promoMonthlyPriceFc;
+    approvedAmount = resolveDefaultPromoApprovedAmount(
+      params.plan,
+      durationDays,
+      planDef.promoMonthlyPriceFc,
+    );
   }
 
   const pricing = computeApprovedAmount(baseAmount, {
