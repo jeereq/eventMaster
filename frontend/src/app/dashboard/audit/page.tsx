@@ -90,9 +90,9 @@ export default function AuditPage() {
   useEffect(() => {
     if (user?.role !== 'SUPER_ADMIN') return;
     api
-      .get('/admin/stats')
+      .get(`/admin/tenants?${new URLSearchParams({ limit: '100', sort: 'name' })}`)
       .then((res) => {
-        const rows = Array.isArray(res?.tenants) ? res.tenants : [];
+        const rows = Array.isArray(res?.items) ? res.items : Array.isArray(res?.tenants) ? res.tenants : [];
         setTenants(rows.map((t: { id: string; name: string }) => ({ id: t.id, name: t.name })));
       })
       .catch(() => {

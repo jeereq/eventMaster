@@ -57,6 +57,8 @@ export const USER_GUIDES: UserGuide[] = [
     navLinks: [
       { label: 'Accueil', href: '/dashboard?tab=overview' },
       { label: 'Organisations', href: '/dashboard?tab=tenants' },
+      { label: 'Événements', href: '/dashboard/admin/events' },
+      { label: 'Invités', href: '/dashboard/admin/guests' },
       { label: 'Catalogue', href: '/dashboard/admin/catalogue' },
       { label: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests' },
       { label: 'Forfaits', href: '/dashboard?tab=subscription-plans' },
@@ -110,13 +112,13 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'review-analytics',
         title: 'Consulter les statistiques plateforme',
         content:
-          '1. Ouvrez Analyses & stats.\n2. Vue d’ensemble : licences, événements publics, GMV billets et marketplace.\n3. Événements : privé / public / billetterie. Invités : funnel RSVP, PDF livrés / manquants, check-in web.\n4. Exportez le rapport revenus SaaS en CSV ou PDF. Les commissions marketplace {commissionPercent} % restent dans Catalogue.',
+          '1. Ouvrez Analyses & stats.\n2. Vue d’ensemble : licences, événements publics, GMV billets et marketplace (agrégats, sans tout charger).\n3. Événements / Invités : pages dédiées paginées (public / privé / billets, PDF livré / manquant, check-in).\n4. Exportez le rapport revenus SaaS en CSV ou PDF. Les commissions marketplace {commissionPercent} % restent dans Catalogue.',
         links: [{ label: 'Analyses & stats', href: '/dashboard?tab=analytics&section=overview' }],
       },
     ],
     tips: [
       'Filtrez les organisations par type : Client (sans licence), Organisateur, Salle / presta, Mixte.',
-      'Sur Invités, le filtre « PDF non livré » cible les RSVP acceptés sans seatingInvitationPdfUrl.',
+      'Sur Invités (/dashboard/admin/guests), le filtre « PDF non livré » cible les RSVP acceptés sans seatingInvitationPdfUrl. L’export CSV porte sur 100 résultats filtrés.',
       'Un motif de dépublication apparaît dans le journal d’audit (CATALOG_UNPUBLISH).',
       'Les modèles d\'organisation ne doivent jamais avoir showOnLanding — seuls les modèles globaux sont publics.',
       'Vérifiez les licences expirées sur l’Accueil avant d’approuver un renouvellement.',

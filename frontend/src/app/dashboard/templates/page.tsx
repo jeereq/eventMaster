@@ -262,10 +262,9 @@ export default function TemplatesPage() {
  const loadTenants = async () => {
  if (user?.role === 'SUPER_ADMIN') {
  try {
- const data = await api.get('/admin/stats');
- if (data && data.tenants) {
- setTenants(data.tenants);
- }
+ const data = await api.get('/admin/tenants?limit=100&sort=name');
+ const rows = Array.isArray(data?.items) ? data.items : [];
+ setTenants(rows.map((t: { id: string; name: string }) => ({ id: t.id, name: t.name })));
  } catch (err) {
  console.error('Erreur lors du chargement des organisations:', err);
  }

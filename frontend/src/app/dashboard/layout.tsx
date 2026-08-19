@@ -340,8 +340,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  { name: 'Accueil', href: '/dashboard?tab=overview', tab: 'overview', tourId: 'nav-overview', icon: LayoutDashboard, description: 'File du jour : demandes, licences, factures' },
  { name: 'Organisations', href: '/dashboard?tab=tenants', tab: 'tenants', tourId: 'nav-tenants', icon: Building2 },
  { name: 'Utilisateurs', href: '/dashboard?tab=users', tab: 'users', tourId: 'nav-users', icon: Users },
- { name: 'Événements', href: '/dashboard?tab=events', tab: 'events', tourId: 'nav-events-admin', icon: Calendar },
- { name: 'Invités', href: '/dashboard?tab=guests', tab: 'guests', tourId: 'nav-guests', icon: Users },
+ { name: 'Événements', href: '/dashboard/admin/events', tourId: 'nav-events-admin', icon: Calendar },
+ { name: 'Invités', href: '/dashboard/admin/guests', tourId: 'nav-guests', icon: Users },
  ],
  },
  {

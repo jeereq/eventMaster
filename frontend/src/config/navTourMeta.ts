@@ -28,14 +28,14 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-events-admin': {
     title: 'Événements (supervision)',
     description:
-      'Vue transversale de tous les événements créés sur la plateforme, toutes organisations confondues. Supervisez dates, lieux et volumes d\'activité.',
-    route: '/dashboard?tab=events',
+      'Vue transversale de tous les événements créés sur la plateforme, toutes organisations confondues. Supervisez dates, lieux, public / privé et billets. Pagination serveur.',
+    route: '/dashboard/admin/events',
   },
   'nav-guests': {
     title: 'Invités (supervision)',
     description:
-      'Liste globale des invités enregistrés. Recherchez par nom, e-mail, événement ou organisation. Exportez ou modifiez un invité si nécessaire.',
-    route: '/dashboard?tab=guests',
+      'Liste globale des invités. Filtrez RSVP, PDF livré / manquant et présence. Détail, impersonation et suppression — sans création depuis cette file.',
+    route: '/dashboard/admin/guests',
   },
   'nav-templates': {
     title: 'Modèles globaux',

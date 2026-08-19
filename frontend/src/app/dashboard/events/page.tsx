@@ -565,17 +565,7 @@ export default function EventsPage() {
  const loadEvents = async () => {
  try {
  if (user?.role === 'SUPER_ADMIN') {
- const data = await api.get('/admin/stats');
- // Extract all events from all tenants
- const allEvents: EventItem[] = [];
- data.tenants.forEach((t: any) => {
- // We can call a custom endpoint or map from the stats if we had events list,
- // but since stats only has count, let's fetch events if we can.
- // Wait, the backend /events endpoint for SUPER_ADMIN will return "Tenant non identifié" because req.user.tenantId is null.
- // Let's handle this gracefully.
- });
- // For Super Admin, they shouldn't manage individual events directly from this page,
- // or we can show a message. Let's make sure they are redirected or shown an admin view.
+ setEvents([]);
  } else {
  const data = await api.get('/events');
  setEvents(Array.isArray(data) ? data : data.events || []);

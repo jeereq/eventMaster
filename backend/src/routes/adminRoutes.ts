@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { 
   getSystemStats, 
+  listAdminTenants,
   createTenant,
   updateTenantPlanOrLicense, 
   deleteTenant, 
@@ -67,6 +68,7 @@ router.use(requireAuth);
 
 // Personnel plateforme (Super Admin + Commercial sans organisation)
 router.get('/stats', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), getSystemStats);
+router.get('/tenants', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), listAdminTenants);
 router.get('/invoices', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), getAdminInvoices);
 router.get('/invoices/:id', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), getInvoiceDetail);
 router.get('/invoices/:id/pdf', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), downloadInvoicePdf);

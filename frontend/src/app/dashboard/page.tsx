@@ -31,6 +31,7 @@ import { getTemplateElementSummary } from '@/lib/landingTemplateAdapter';
 import AdminDetailsModal from '@/components/admin/AdminDetailsModal';
 import AdminOpsHome from '@/components/admin/AdminOpsHome';
 import { ACCOUNT_KIND_FILTER_LABELS, type TenantAccountKind } from '@/lib/marketplace';
+import { unwrapAdminList, adminListParams } from '@/lib/adminList';
 
 function isPlatformStaff(role?: string) {
  return role === 'SUPER_ADMIN' || role === 'COMMERCIAL';
@@ -73,14 +74,7 @@ interface EventItem {
   location: string;
 }
 
-interface AdminStats {
- stats: {
- tenants: number;
- users: number;
- events: number;
- guests: number;
- };
- tenants: Array<{
+interface AdminTenantItem {
  id: string;
  name: string;
  plan: PlanId;
@@ -93,7 +87,20 @@ interface AdminStats {
  eventsCount: number;
  usersCount: number;
  accountKind?: string;
- }>;
+}
+
+interface AdminStats {
+ stats: {
+ tenants: number;
+ users: number;
+ events: number;
+ guests: number;
+ verifiedUsers?: number;
+ licensesActive?: number;
+ };
+ planCounts?: Record<string, number>;
+ accountKindCounts?: Record<string, number>;
+ userRoleCounts?: Record<string, number>;
 }
 
 interface AdminUserItem {
@@ -360,6 +367,15 @@ function DashboardPageContent() {
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [events, setEvents] = useState<EventItem[]>([]);
  const [adminData, setAdminData] = useState<AdminStats | null>(null);
+ const [adminTenants, setAdminTenants] = useState<AdminTenantItem[]>([]);
+ const [adminTenantsTotal, setAdminTenantsTotal] = useState(0);
+ const [tenantsLoading, setTenantsLoading] = useState(false);
+ const [tenantOptions, setTenantOptions] = useState<AdminTenantItem[]>([]);
+ const [usersTotal, setUsersTotal] = useState(0);
+ const [deferredSearch, setDeferredSearch] = useState('');
+ const [recentUsers, setRecentUsers] = useState<AdminUserItem[]>([]);
+ const [recentEvents, setRecentEvents] = useState<any[]>([]);
+ const [topTenants, setTopTenants] = useState<AdminTenantItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -391,12 +407,20 @@ function DashboardPageContent() {
  >('overview');
 
  useEffect(() => {
+ if (tabParam === 'events') {
+ router.replace('/dashboard/admin/events');
+ return;
+ }
+ if (tabParam === 'guests') {
+ router.replace('/dashboard/admin/guests');
+ return;
+ }
  if (isPlatformStaff(user?.role) && (tabParam || user?.role === 'SUPER_ADMIN')) {
  const legacySubscriptions = tabParam === 'subscriptions' ? 'subscription-requests' : tabParam;
  const allowedTabs = user?.role === 'COMMERCIAL'
  ? ['tenants', 'subscription-requests', 'invoices']
  : [
- 'overview', 'tenants', 'users', 'templates', 'message-templates', 'events', 'analytics', 'guests', 'settings',
+ 'overview', 'tenants', 'users', 'templates', 'message-templates', 'analytics', 'settings',
  'subscription-requests', 'subscription-plans', 'invoices',
  ];
  if (legacySubscriptions && allowedTabs.includes(legacySubscriptions)) {
@@ -405,7 +429,7 @@ function DashboardPageContent() {
  setActiveTab('overview');
  }
  }
- }, [tabParam, user]);
+ }, [tabParam, user, router]);
 
  useEffect(() => {
  if (searchParams.get('saved') !== '1' || tabParam !== 'templates') return;
@@ -560,7 +584,7 @@ function DashboardPageContent() {
  // Tenant CRUD Modals states
  const [isCreateTenantModalOpen, setIsTenantModalOpen] = useState(false);
  const [tenantModalMode, setTenantModalMode] = useState<'create' | 'edit'>('create');
- const [selectedTenant, setSelectedTenant] = useState<AdminStats['tenants'][0] | null>(null);
+ const [selectedTenant, setSelectedTenant] = useState<AdminTenantItem | null>(null);
  const [openingWorkspaceId, setOpeningWorkspaceId] = useState<string | null>(null);
  const [modalTenantName, setTenantName] = useState('');
  const [modalPlan, setModalPlan] = useState<PlanId>('FREE');
@@ -664,12 +688,29 @@ function DashboardPageContent() {
  }
  }, [user, tenant?.id, access?.canViewBilling]);
 
+ useEffect(() => {
+ const t = window.setTimeout(() => setDeferredSearch(searchTerm.trim()), 350);
+ return () => window.clearTimeout(t);
+ }, [searchTerm]);
+
  // Load users when users tab is active
  useEffect(() => {
  if (user?.role === 'SUPER_ADMIN' && activeTab === 'users') {
  loadUsers();
  }
- }, [activeTab, user]);
+ }, [activeTab, user, usersPage, usersPageSize, deferredSearch, filterRole, filterOrgRole, filterVerified, filterUserOrg]);
+
+ useEffect(() => {
+ if (isPlatformStaff(user?.role) && (activeTab === 'users' || activeTab === 'tenants' || isUserModalOpen)) {
+ loadTenantOptions();
+ }
+ }, [activeTab, user, isUserModalOpen]);
+
+ useEffect(() => {
+ if (isPlatformStaff(user?.role) && activeTab === 'tenants') {
+ loadAdminTenants();
+ }
+ }, [activeTab, user, tenantsPage, tenantsPageSize, deferredSearch, filterPlan, filterAccountKind]);
 
  // Load templates when templates tab is active
  useEffect(() => {
@@ -729,11 +770,18 @@ function DashboardPageContent() {
  useEffect(() => {
  if (user?.role === 'SUPER_ADMIN' && activeTab === 'analytics') {
  loadRevenueReport(revenuePeriod);
- loadUsers();
  loadTemplates();
- loadAdminEvents();
  api.get('/admin/insights')
   .then((data) => setPlatformInsights(data))
+  .catch(console.error);
+ api.get(`/admin/users?${adminListParams({ limit: 8 })}`)
+  .then((data) => setRecentUsers(unwrapAdminList<AdminUserItem>(data).items))
+  .catch(console.error);
+ api.get(`/admin/events?${adminListParams({ limit: 8 })}`)
+  .then((data) => setRecentEvents(unwrapAdminList(data).items))
+  .catch(console.error);
+ api.get(`/admin/tenants?${adminListParams({ sort: 'events', limit: 5 })}`)
+  .then((data) => setTopTenants(unwrapAdminList<AdminTenantItem>(data).items))
   .catch(console.error);
  }
  }, [activeTab, user, revenuePeriod]);
@@ -861,11 +909,53 @@ function DashboardPageContent() {
  };
  }, [isEventModalOpen]);
 
+ const loadTenantOptions = async () => {
+ try {
+ const data = await api.get(`/admin/tenants?${adminListParams({ limit: 100, sort: 'name' })}`);
+ setTenantOptions(unwrapAdminList<AdminTenantItem>(data).items);
+ } catch {
+ /* liste pour filtres / modales */
+ }
+ };
+
+ const loadAdminTenants = async () => {
+ setTenantsLoading(true);
+ try {
+ const qs = adminListParams({
+ page: tenantsPage,
+ limit: tenantsPageSize,
+ q: deferredSearch,
+ plan: filterPlan,
+ accountKind: filterAccountKind,
+ });
+ const data = await api.get(`/admin/tenants?${qs}`);
+ const list = unwrapAdminList<AdminTenantItem>(data);
+ setAdminTenants(list.items);
+ setAdminTenantsTotal(list.total);
+ } catch (err: any) {
+ console.error('Error loading tenants:', err);
+ setError('Impossible de charger la liste des organisations.');
+ } finally {
+ setTenantsLoading(false);
+ }
+ };
+
  const loadUsers = async () => {
  setUsersLoading(true);
  try {
- const data = await api.get('/admin/users');
- setUsers(data);
+ const qs = adminListParams({
+ page: usersPage,
+ limit: usersPageSize,
+ q: deferredSearch,
+ role: filterRole,
+ orgRole: filterOrgRole,
+ verified: filterVerified,
+ org: filterUserOrg,
+ });
+ const data = await api.get(`/admin/users?${qs}`);
+ const list = unwrapAdminList<AdminUserItem>(data);
+ setUsers(list.items);
+ setUsersTotal(list.total);
  } catch (err: any) {
  console.error('Error loading users:', err);
  setError('Impossible de charger la liste des utilisateurs.');
@@ -891,7 +981,7 @@ function DashboardPageContent() {
  setAdminEventsLoading(true);
  try {
  const data = await api.get('/admin/events');
- setAdminEvents(data);
+ setAdminEvents(unwrapAdminList(data).items);
  } catch (err: any) {
  console.error('Error loading admin events:', err);
  setError('Impossible de charger la liste des événements.');
@@ -904,7 +994,7 @@ function DashboardPageContent() {
  setAdminGuestsLoading(true);
  try {
  const data = await api.get('/admin/guests');
- setAdminGuests(data);
+ setAdminGuests(unwrapAdminList(data).items);
  } catch (err: any) {
  console.error('Error loading admin guests:', err);
  setError('Impossible de charger la liste des invités.');
@@ -1044,6 +1134,9 @@ function DashboardPageContent() {
  try {
  const data = await api.get('/admin/stats');
  setAdminData(data);
+ if (isPlatformStaff(user?.role) && activeTab === 'tenants') {
+ await loadAdminTenants();
+ }
  } catch (err) {
  console.error('Error refreshing stats:', err);
  }
@@ -1579,28 +1672,8 @@ function DashboardPageContent() {
  const isCommercialPlatform = user?.role === 'COMMERCIAL';
  const pendingSubscriptionCount = subscriptionRequests.filter((r) => r.status === 'PENDING').length;
  // Filter tenants
- const filteredTenants = adminData?.tenants.filter(t => {
- const matchesSearch = t.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
- t.managerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
- t.managerEmail.toLowerCase().includes(searchTerm.toLowerCase());
- const matchesPlan = filterPlan === 'ALL' || t.plan === filterPlan;
- const matchesKind = filterAccountKind === 'ALL' || t.accountKind === filterAccountKind;
- return matchesSearch && matchesPlan && matchesKind;
- }) || [];
-
- // Filter users
- const filteredUsers = users.filter(u => {
- const matchesSearch = (u.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
- u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
- u.tenantName.toLowerCase().includes(searchTerm.toLowerCase());
- const matchesRole = filterRole === 'ALL' || u.role === filterRole;
- const matchesVerified = filterVerified === 'ALL'
-  || (filterVerified === 'verified' && u.isEmailVerified)
-  || (filterVerified === 'unverified' && !u.isEmailVerified);
- const matchesOrg = filterUserOrg === 'ALL' || u.tenantName === filterUserOrg;
- const matchesOrgRole = filterOrgRole === 'ALL' || u.orgRole === filterOrgRole;
- return matchesSearch && matchesRole && matchesVerified && matchesOrg && matchesOrgRole;
- });
+ const filteredTenants = adminTenants;
+ const filteredUsers = users;
 
  // Filter templates
  const filteredTemplates = templates.filter(t => {
@@ -1659,25 +1732,25 @@ function DashboardPageContent() {
  return matchesSearch && matchesRsvp && matchesOrg && matchesEvent && matchesCategory && matchesCheckin && matchesPdf;
  });
 
- const paginatedTenants = paginateItems(filteredTenants, tenantsPage, tenantsPageSize);
- const paginatedUsers = paginateItems(filteredUsers, usersPage, usersPageSize);
+ const paginatedTenants = filteredTenants;
+ const paginatedUsers = filteredUsers;
  const paginatedTemplates = paginateItems(filteredTemplates, templatesPage, templatesPageSize);
  const paginatedEvents = paginateItems(filteredEvents, eventsPage, eventsPageSize);
  const paginatedGuests = paginateItems(filteredGuests, guestsPage, guestsPageSize);
  const paginatedSubRequests = paginateItems(subscriptionRequests, subRequestsPage, subRequestsPageSize);
  const paginatedPlanIds = paginateItems([...PLAN_IDS], plansPage, plansPageSize);
- const userOrgOptions = [...new Set(users.map((u) => u.tenantName).filter(Boolean))].sort();
+ const userOrgOptions = tenantOptions.map((t) => t.name).filter(Boolean).sort();
  const eventOrgOptions = [...new Set(adminEvents.map((e) => e.tenantName).filter(Boolean))].sort();
  const guestOrgOptions = [...new Set(adminGuests.map((g) => g.tenantName).filter(Boolean))].sort();
  const guestEventOptions = [...new Set(adminGuests.map((g) => g.eventTitle).filter(Boolean))].sort();
  const guestCategoryOptions = [...new Set(adminGuests.map((g) => g.category).filter(Boolean))].sort();
  const filterSelectClass = 'bg-surface-muted dark:bg-background border border-border rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition';
 
- const activeLicensesCount = (adminData?.tenants || []).filter((t) => {
- const expired = Boolean(t.licenseExpiresAt && new Date(t.licenseExpiresAt) < new Date());
- return t.licenseActive && !expired;
- }).length;
- const paidPlansCount = (adminData?.tenants || []).filter((t) => t.plan !== 'FREE').length;
+ const activeLicensesCount = adminData?.stats.licensesActive ?? 0;
+ const paidPlansCount = Object.entries(adminData?.planCounts || {}).reduce(
+ (sum, [plan, count]) => (plan === 'FREE' ? sum : sum + count),
+ 0,
+ );
 
  const tabMeta = ADMIN_TAB_META[activeTab as AdminTabId] || ADMIN_TAB_META.tenants;
  const commercialOverrides: Partial<Record<AdminTabId, { description: string }>> = {
@@ -2143,7 +2216,9 @@ function DashboardPageContent() {
  {/* Tenants Tab */}
  {activeTab === 'tenants' && (
  <div className="space-y-4">
- {filteredTenants.length === 0 ? (
+ {tenantsLoading ? (
+ <SkeletonTabContent mode={tenantsViewMode === 'list' ? 'list' : 'grid'} count={6} columns={3} />
+ ) : filteredTenants.length === 0 ? (
  <p className="text-center text-muted text-sm py-10">Aucune organisation trouvée.</p>
  ) : (
  <div
@@ -2302,7 +2377,7 @@ function DashboardPageContent() {
  <Pagination
  page={tenantsPage}
  pageSize={tenantsPageSize}
- total={filteredTenants.length}
+ total={adminTenantsTotal}
  onPageChange={setTenantsPage}
  onPageSizeChange={setTenantsPageSize}
  itemLabel="organisations"
@@ -2418,7 +2493,7 @@ function DashboardPageContent() {
  <Pagination
  page={usersPage}
  pageSize={usersPageSize}
- total={filteredUsers.length}
+ total={usersTotal}
  onPageChange={setUsersPage}
  onPageSizeChange={setUsersPageSize}
  itemLabel="utilisateurs"
@@ -3645,8 +3720,8 @@ function DashboardPageContent() {
  </div>
  <div>
  <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">
- {adminData?.tenants.length
- ? (adminData.tenants.reduce((acc, t) => acc + t.usersCount, 0) / adminData.tenants.length).toFixed(1)
+ {adminData?.stats.tenants
+ ? ((adminData.stats.users || 0) / adminData.stats.tenants).toFixed(1)
  : '0'}
  </span>
  <span className="text-xs text-muted dark:text-muted font-bold">Membres / Organisation</span>
@@ -3658,8 +3733,8 @@ function DashboardPageContent() {
  </div>
  <div>
  <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">
- {adminData?.tenants.length
- ? (adminData.tenants.reduce((acc, t) => acc + t.eventsCount, 0) / adminData.tenants.length).toFixed(1)
+ {adminData?.stats.tenants
+ ? ((adminData.stats.events || 0) / adminData.stats.tenants).toFixed(1)
  : '0'}
  </span>
  <span className="text-xs text-muted dark:text-muted font-bold">Événements / Organisation</span>
@@ -3671,7 +3746,7 @@ function DashboardPageContent() {
  </div>
  <div>
  <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">
- {adminData?.tenants.filter(t => t.licenseActive && (!t.licenseExpiresAt || new Date(t.licenseExpiresAt) > new Date())).length || 0}
+ {adminData?.stats.licensesActive ?? 0}
  </span>
  <span className="text-xs text-muted dark:text-muted font-bold">Licences actives</span>
  </div>
@@ -3682,7 +3757,9 @@ function DashboardPageContent() {
  </div>
  <div>
  <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">
- {users.length ? `${Math.round((users.filter(u => u.isEmailVerified).length / users.length) * 100)}%` : '0%'}
+ {adminData?.stats.users
+ ? `${Math.round(((adminData.stats.verifiedUsers || 0) / adminData.stats.users) * 100)}%`
+ : '0%'}
  </span>
  <span className="text-xs text-muted dark:text-muted font-bold">Utilisateurs vérifiés</span>
  </div>
@@ -3743,8 +3820,8 @@ function DashboardPageContent() {
  
  <div className="space-y-4">
  {PLAN_IDS.map((plan) => {
- const count = adminData?.tenants.filter(t => t.plan === plan).length || 0;
- const total = adminData?.tenants.length || 1;
+ const count = adminData?.planCounts?.[plan] || 0;
+ const total = adminData?.stats.tenants || 1;
  const pct = Math.round((count / total) * 100);
  
  return (
@@ -3774,13 +3851,13 @@ function DashboardPageContent() {
  <div className="grid grid-cols-2 gap-4">
  <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 text-center">
  <span className="block text-2xl font-extrabold text-emerald-700">
- {adminData?.tenants.filter(t => t.licenseActive && (!t.licenseExpiresAt || new Date(t.licenseExpiresAt) > new Date())).length || 0}
+ {adminData?.stats.licensesActive ?? 0}
  </span>
  <span className="text-xs text-emerald-600 font-bold">Valides / Actives</span>
  </div>
  <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-center">
  <span className="block text-2xl font-extrabold text-rose-700">
- {adminData?.tenants.filter(t => !t.licenseActive || (t.licenseExpiresAt && new Date(t.licenseExpiresAt) < new Date())).length || 0}
+ {Math.max(0, (adminData?.stats.tenants || 0) - (adminData?.stats.licensesActive || 0))}
  </span>
  <span className="text-xs text-rose-600 font-bold">Inactives / Expirées</span>
  </div>
@@ -3797,10 +3874,7 @@ function DashboardPageContent() {
  </h3>
  
  <div className="divide-y divide-border">
- {(adminData?.tenants || [])
- .slice()
- .sort((a, b) => b.eventsCount - a.eventsCount)
- .slice(0, 5)
+ {topTenants
  .map((t, idx) => (
  <div key={t.id} className="py-3 flex items-center justify-between first:pt-0 last:pb-0">
  <div className="flex items-center gap-3">
@@ -3818,7 +3892,7 @@ function DashboardPageContent() {
  </div>
  </div>
  ))}
- {(!adminData?.tenants || adminData.tenants.length === 0) && (
+ {topTenants.length === 0 && (
  <p className="text-sm text-muted text-center py-8">Aucune donnée disponible.</p>
  )}
  </div>
@@ -4052,11 +4126,11 @@ function DashboardPageContent() {
  </h3>
  <div className="space-y-3">
  {[
- { label: 'Total', value: users.length, color: 'text-foreground dark:text-foreground' },
- { label: 'Super administrateurs', value: users.filter(u => u.role === 'SUPER_ADMIN').length, color: 'text-rose-600 dark:text-rose-400' },
- { label: 'Commerciaux', value: users.filter(u => u.role === 'COMMERCIAL').length, color: 'text-amber-600 dark:text-amber-400' },
- { label: 'Utilisateurs standards', value: users.filter(u => u.role === 'USER').length, color: 'text-foreground dark:text-foreground' },
- { label: 'E-mails vérifiés', value: users.filter(u => u.isEmailVerified).length, color: 'text-emerald-600 dark:text-emerald-400' },
+ { label: 'Total', value: adminData?.stats.users ?? 0, color: 'text-foreground dark:text-foreground' },
+ { label: 'Super administrateurs', value: adminData?.userRoleCounts?.SUPER_ADMIN ?? 0, color: 'text-rose-600 dark:text-rose-400' },
+ { label: 'Commerciaux', value: adminData?.userRoleCounts?.COMMERCIAL ?? 0, color: 'text-amber-600 dark:text-amber-400' },
+ { label: 'Utilisateurs standards', value: adminData?.userRoleCounts?.USER ?? 0, color: 'text-foreground dark:text-foreground' },
+ { label: 'E-mails vérifiés', value: adminData?.stats.verifiedUsers ?? 0, color: 'text-emerald-600 dark:text-emerald-400' },
  ].map((row) => (
  <div key={row.label} className="flex justify-between text-sm">
  <span className="text-muted dark:text-muted font-medium">{row.label}</span>
@@ -4071,7 +4145,7 @@ function DashboardPageContent() {
  Inscriptions récentes
  </h3>
  <div className="divide-y divide-border dark:divide-border max-h-64 overflow-y-auto">
- {users.slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 8).map((u) => (
+ {recentUsers.map((u) => (
  <div key={u.id} className="py-2.5 flex items-center justify-between gap-2 first:pt-0 last:pb-0">
  <div className="min-w-0">
  <p className="font-semibold text-foreground dark:text-foreground truncate text-sm">{u.name || u.email}</p>
@@ -4080,7 +4154,7 @@ function DashboardPageContent() {
  <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-surface-muted dark:bg-surface-muted text-muted dark:text-muted shrink-0">{u.role}</span>
  </div>
  ))}
- {users.length === 0 && (
+ {recentUsers.length === 0 && (
  <p className="text-sm text-muted dark:text-muted text-center py-6">Aucun utilisateur.</p>
  )}
  </div>
@@ -4097,15 +4171,13 @@ function DashboardPageContent() {
  </h3>
  <div className="space-y-3">
  {[
- { label: 'Total des événements', value: platformInsights?.events.total ?? adminEvents.length },
- { label: 'Publics', value: platformInsights?.events.publicCount ?? adminEvents.filter((e) => e.isPublic).length },
- { label: 'Privés', value: platformInsights?.events.privateCount ?? adminEvents.filter((e) => !e.isPublic).length },
- { label: 'Avec billetterie', value: platformInsights?.events.ticketingEnabled ?? adminEvents.filter((e) => e.ticketingEnabled).length },
- { label: 'Billets vendus', value: platformInsights?.events.ticketsSold ?? adminEvents.reduce((sum, e) => sum + (e.ticketsSold || 0), 0) },
+ { label: 'Total des événements', value: platformInsights?.events.total ?? 0 },
+ { label: 'Publics', value: platformInsights?.events.publicCount ?? 0 },
+ { label: 'Privés', value: platformInsights?.events.privateCount ?? 0 },
+ { label: 'Avec billetterie', value: platformInsights?.events.ticketingEnabled ?? 0 },
+ { label: 'Billets vendus', value: platformInsights?.events.ticketsSold ?? 0 },
  { label: 'GMV billets', value: formatFc(platformInsights?.tickets.gmvFc ?? 0) },
- { label: 'Avec localisation GPS', value: platformInsights?.events.gpsCount ?? adminEvents.filter((e) => e.latitude && e.longitude).length },
- { label: 'Rappels quotidiens', value: adminEvents.filter((e) => e.reminderFrequency === 'DAILY').length },
- { label: 'Rappels hebdomadaires', value: adminEvents.filter((e) => e.reminderFrequency === 'WEEKLY').length },
+ { label: 'Avec localisation GPS', value: platformInsights?.events.gpsCount ?? 0 },
  ].map((row) => (
  <div key={row.label} className="flex justify-between text-sm">
  <span className="text-muted dark:text-muted font-medium">{row.label}</span>
@@ -4120,7 +4192,7 @@ function DashboardPageContent() {
  Événements récents
  </h3>
  <div className="divide-y divide-border dark:divide-border max-h-64 overflow-y-auto">
- {adminEvents.slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 8).map((e) => (
+ {recentEvents.map((e) => (
  <div key={e.id} className="py-2.5 flex items-center justify-between gap-2 first:pt-0 last:pb-0">
  <div className="min-w-0">
  <p className="font-semibold text-foreground dark:text-foreground truncate text-sm">{e.title}</p>
@@ -4134,7 +4206,7 @@ function DashboardPageContent() {
  <span className="text-xs text-muted dark:text-muted shrink-0">{new Date(e.date).toLocaleDateString('fr-FR')}</span>
  </div>
  ))}
- {adminEvents.length === 0 && (
+ {recentEvents.length === 0 && (
  <p className="text-sm text-muted dark:text-muted text-center py-6">Aucun événement.</p>
  )}
  </div>
@@ -4174,7 +4246,7 @@ function DashboardPageContent() {
  type="button"
  size="sm"
  variant="secondary"
- onClick={() => router.replace('/dashboard?tab=guests')}
+ onClick={() => router.replace('/dashboard/admin/guests')}
  >
  Ouvrir la file invités
  </Button>
@@ -4689,7 +4761,7 @@ function DashboardPageContent() {
  className="w-full bg-surface-muted border border-border rounded-xl px-3.5 py-2.5 text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
  >
  <option value="">Aucun rattachement</option>
- {adminData?.tenants.map(t => (
+ {tenantOptions.map(t => (
  <option key={t.id} value={t.id}>{t.name}</option>
  ))}
  </select>
@@ -4762,7 +4834,7 @@ function DashboardPageContent() {
  required
  >
  <option value="">Sélectionner une organisation</option>
- {adminData?.tenants?.map((t: any) => (
+ {tenantOptions.map((t) => (
  <option key={t.id} value={t.id}>{t.name}</option>
  ))}
  </select>

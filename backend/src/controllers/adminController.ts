@@ -30,6 +30,7 @@ import {
   DEFAULT_PLATFORM_SETTINGS,
 } from '../services/platformSettingsService';
 import { auditReq } from '../services/adminAuditService';
+import { adminPager, adminQueryString, adminSearch, listPayload, prismaAnd } from '../utils/adminPager';
 
 // Get global system statistics and list of all tenants (Super Admin only)
 export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
@@ -40,8 +41,19 @@ export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
 
     const commercialId = isPlatformCommercial(req.user?.role) ? req.user?.id : undefined;
     const tenantWhere = commercialId ? commercialReferredTenantFilter(commercialId) : {};
+    const now = new Date();
 
-    const [tenantCount, userCount, eventCount, guestCount] = await Promise.all([
+    const [
+      tenantCount,
+      userCount,
+      eventCount,
+      guestCount,
+      verifiedUsers,
+      licensesActive,
+      planGroups,
+      kindGroups,
+      roleGroups,
+    ] = await Promise.all([
       prisma.tenant.count({ where: tenantWhere }),
       commercialId
         ? prisma.user.count({ where: { tenant: tenantWhere } })
@@ -52,28 +64,44 @@ export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
       commercialId
         ? prisma.guest.count({ where: { event: { tenant: tenantWhere } } })
         : prisma.guest.count(),
+      commercialId
+        ? prisma.user.count({ where: { isEmailVerified: true, tenant: tenantWhere } })
+        : prisma.user.count({ where: { isEmailVerified: true } }),
+      prisma.tenant.count({
+        where: {
+          ...tenantWhere,
+          licenseActive: true,
+          OR: [{ licenseExpiresAt: null }, { licenseExpiresAt: { gt: now } }],
+        },
+      }),
+      prisma.tenant.groupBy({
+        by: ['plan'],
+        where: tenantWhere,
+        _count: { _all: true },
+      }),
+      prisma.tenant.groupBy({
+        by: ['accountKind'],
+        where: tenantWhere,
+        _count: { _all: true },
+      }),
+      commercialId
+        ? prisma.user.groupBy({
+            by: ['role'],
+            where: { tenant: tenantWhere },
+            _count: { _all: true },
+          })
+        : prisma.user.groupBy({
+            by: ['role'],
+            _count: { _all: true },
+          }),
     ]);
 
-    const tenants = await prisma.tenant.findMany({
-      where: tenantWhere,
-      include: {
-        manager: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
-        _count: {
-          select: {
-            events: true,
-            users: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    const planCounts: Record<string, number> = {};
+    for (const row of planGroups) planCounts[row.plan] = row._count._all;
+    const accountKindCounts: Record<string, number> = {};
+    for (const row of kindGroups) accountKindCounts[row.accountKind] = row._count._all;
+    const userRoleCounts: Record<string, number> = {};
+    for (const row of roleGroups) userRoleCounts[row.role] = row._count._all;
 
     return res.json({
       stats: {
@@ -81,25 +109,104 @@ export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
         users: userCount,
         events: eventCount,
         guests: guestCount,
+        verifiedUsers,
+        licensesActive,
       },
-      tenants: tenants.map(t => ({
-        id: t.id,
-        name: t.name,
-        plan: t.plan,
-        licenseActive: t.licenseActive,
-        licenseExpiresAt: t.licenseExpiresAt,
-        licenseKey: t.licenseKey,
-        createdAt: t.createdAt,
-        managerName: t.manager?.name || 'Aucun',
-        managerEmail: t.manager?.email || 'Aucun',
-        eventsCount: t._count.events,
-        usersCount: t._count.users,
-        accountKind: t.accountKind,
-      })),
+      planCounts,
+      accountKindCounts,
+      userRoleCounts,
     });
   } catch (error: any) {
     console.error('Erreur lors de la récupération des stats admin:', error);
     return res.status(500).json({ error: 'Erreur lors de la récupération des statistiques globales' });
+  }
+}
+
+export async function listAdminTenants(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!isPlatformStaff(req.user?.role)) {
+      return res.status(403).json({ error: 'Accès refusé. Privilèges plateforme requis.' });
+    }
+
+    const commercialId = isPlatformCommercial(req.user?.role) ? req.user?.id : undefined;
+    const { page, pageSize, skip } = adminPager(req);
+    const q = adminSearch(req);
+    const plan = adminQueryString(req, 'plan');
+    const accountKind = adminQueryString(req, 'accountKind');
+    const license = adminQueryString(req, 'license');
+    const sort = adminQueryString(req, 'sort') || 'createdAt';
+    const now = new Date();
+
+    const where: Record<string, unknown> = {
+      ...(commercialId ? commercialReferredTenantFilter(commercialId) : {}),
+      ...(plan ? { plan: plan as PlanType } : {}),
+      ...(accountKind ? { accountKind } : {}),
+    };
+
+    if (license === 'active') {
+      where.licenseActive = true;
+      prismaAnd(where, { OR: [{ licenseExpiresAt: null }, { licenseExpiresAt: { gt: now } }] });
+    } else if (license === 'expired') {
+      where.licenseExpiresAt = { lte: now };
+    } else if (license === 'inactive') {
+      where.licenseActive = false;
+    }
+
+    if (q) {
+      prismaAnd(where, {
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { manager: { name: { contains: q, mode: 'insensitive' } } },
+          { manager: { email: { contains: q, mode: 'insensitive' } } },
+        ],
+      });
+    }
+
+    const orderBy =
+      sort === 'events'
+        ? { events: { _count: 'desc' as const } }
+        : sort === 'name'
+          ? { name: 'asc' as const }
+          : { createdAt: 'desc' as const };
+
+    const [rows, total] = await Promise.all([
+      prisma.tenant.findMany({
+        where,
+        include: {
+          manager: { select: { name: true, email: true } },
+          _count: { select: { events: true, users: true } },
+        },
+        orderBy,
+        skip,
+        take: pageSize,
+      }),
+      prisma.tenant.count({ where }),
+    ]);
+
+    return res.json(
+      listPayload(
+        rows.map((t) => ({
+          id: t.id,
+          name: t.name,
+          plan: t.plan,
+          licenseActive: t.licenseActive,
+          licenseExpiresAt: t.licenseExpiresAt,
+          licenseKey: t.licenseKey,
+          createdAt: t.createdAt,
+          managerName: t.manager?.name || 'Aucun',
+          managerEmail: t.manager?.email || 'Aucun',
+          eventsCount: t._count.events,
+          usersCount: t._count.users,
+          accountKind: t.accountKind,
+        })),
+        total,
+        page,
+        pageSize,
+      ),
+    );
+  } catch (error) {
+    console.error('Erreur liste organisations admin:', error);
+    return res.status(500).json({ error: 'Impossible de charger les organisations.' });
   }
 }
 
@@ -521,32 +628,61 @@ export async function getAllUsers(req: AuthenticatedRequest, res: Response) {
       return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
     }
 
-    const users = await prisma.user.findMany({
-      include: {
-        tenant: {
-          select: {
-            name: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    const { page, pageSize, skip } = adminPager(req);
+    const q = adminSearch(req);
+    const role = adminQueryString(req, 'role');
+    const orgRole = adminQueryString(req, 'orgRole');
+    const verified = adminQueryString(req, 'verified');
+    const tenantName = adminQueryString(req, 'org');
 
-    return res.json(users.map(u => ({
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      role: u.role,
-      orgRole: u.orgRole,
-      tenantId: u.tenantId,
-      isEmailVerified: u.isEmailVerified,
-      tenantName: u.tenant?.name || 'Aucun (Super Admin)',
-      createdAt: u.createdAt,
-      commissionRate: u.commissionRate,
-      renewalCommissionRate: u.renewalCommissionRate,
-    })));
+    const where: Record<string, unknown> = {
+      ...(role ? { role: role as Role } : {}),
+      ...(orgRole ? { orgRole } : {}),
+      ...(verified === 'verified' ? { isEmailVerified: true } : {}),
+      ...(verified === 'unverified' ? { isEmailVerified: false } : {}),
+      ...(tenantName ? { tenant: { name: tenantName } } : {}),
+    };
+    if (q) {
+      prismaAnd(where, {
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { email: { contains: q, mode: 'insensitive' } },
+          { tenant: { name: { contains: q, mode: 'insensitive' } } },
+        ],
+      });
+    }
+
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        include: { tenant: { select: { name: true } } },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+      }),
+      prisma.user.count({ where }),
+    ]);
+
+    return res.json(
+      listPayload(
+        users.map((u) => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          role: u.role,
+          orgRole: u.orgRole,
+          tenantId: u.tenantId,
+          isEmailVerified: u.isEmailVerified,
+          tenantName: u.tenant?.name || 'Aucun (Super Admin)',
+          createdAt: u.createdAt,
+          commissionRate: u.commissionRate,
+          renewalCommissionRate: u.renewalCommissionRate,
+        })),
+        total,
+        page,
+        pageSize,
+      ),
+    );
   } catch (error: any) {
     console.error('Erreur lors de la récupération des utilisateurs:', error);
     return res.status(500).json({ error: 'Erreur lors de la récupération des utilisateurs' });
@@ -836,45 +972,79 @@ export async function getAllEvents(req: AuthenticatedRequest, res: Response) {
       return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
     }
 
-    const events = await prisma.event.findMany({
-      include: {
-        tenant: {
-          select: {
-            name: true,
-          },
-        },
-        _count: {
-          select: {
-            guests: true,
-            invitations: true,
-          },
-        },
-      },
-      orderBy: {
-        date: 'desc',
-      },
-    });
+    const { page, pageSize, skip } = adminPager(req);
+    const q = adminSearch(req);
+    const visibility = adminQueryString(req, 'visibility');
+    const ticketing = adminQueryString(req, 'ticketing');
+    const gps = adminQueryString(req, 'gps');
+    const when = adminQueryString(req, 'when');
+    const tenantName = adminQueryString(req, 'org');
+    const now = new Date();
 
-    return res.json(events.map(e => ({
-      id: e.id,
-      title: e.title,
-      description: e.description,
-      date: e.date,
-      location: e.location,
-      reminderFrequency: e.reminderFrequency,
-      latitude: e.latitude,
-      longitude: e.longitude,
-      isPublic: e.isPublic,
-      ticketingEnabled: e.ticketingEnabled,
-      ticketPriceFc: e.ticketPriceFc,
-      ticketsSold: e.ticketsSold,
-      ticketsTotal: e.ticketsTotal,
-      tenantId: e.tenantId,
-      tenantName: e.tenant?.name || 'Inconnu',
-      guestCount: e._count.guests,
-      invitationCount: e._count.invitations,
-      createdAt: e.createdAt,
-    })));
+    const where: Record<string, unknown> = {
+      ...(visibility === 'public' ? { isPublic: true } : {}),
+      ...(visibility === 'private' ? { isPublic: false } : {}),
+      ...(ticketing === 'yes' ? { ticketingEnabled: true } : {}),
+      ...(ticketing === 'no' ? { ticketingEnabled: false } : {}),
+      ...(gps === 'yes' ? { latitude: { not: null }, longitude: { not: null } } : {}),
+      ...(when === 'upcoming' ? { date: { gte: now } } : {}),
+      ...(when === 'past' ? { date: { lt: now } } : {}),
+      ...(tenantName ? { tenant: { name: tenantName } } : {}),
+    };
+    if (gps === 'no') {
+      prismaAnd(where, { OR: [{ latitude: null }, { longitude: null }] });
+    }
+    if (q) {
+      prismaAnd(where, {
+        OR: [
+          { title: { contains: q, mode: 'insensitive' } },
+          { location: { contains: q, mode: 'insensitive' } },
+          { tenant: { name: { contains: q, mode: 'insensitive' } } },
+        ],
+      });
+    }
+
+    const [events, total] = await Promise.all([
+      prisma.event.findMany({
+        where,
+        include: {
+          tenant: { select: { name: true } },
+          _count: { select: { guests: true, invitations: true } },
+        },
+        orderBy: { date: 'desc' },
+        skip,
+        take: pageSize,
+      }),
+      prisma.event.count({ where }),
+    ]);
+
+    return res.json(
+      listPayload(
+        events.map((e) => ({
+          id: e.id,
+          title: e.title,
+          description: e.description,
+          date: e.date,
+          location: e.location,
+          reminderFrequency: e.reminderFrequency,
+          latitude: e.latitude,
+          longitude: e.longitude,
+          isPublic: e.isPublic,
+          ticketingEnabled: e.ticketingEnabled,
+          ticketPriceFc: e.ticketPriceFc,
+          ticketsSold: e.ticketsSold,
+          ticketsTotal: e.ticketsTotal,
+          tenantId: e.tenantId,
+          tenantName: e.tenant?.name || 'Inconnu',
+          guestCount: e._count.guests,
+          invitationCount: e._count.invitations,
+          createdAt: e.createdAt,
+        })),
+        total,
+        page,
+        pageSize,
+      ),
+    );
   } catch (error: any) {
     console.error('Erreur lors de la récupération de tous les événements:', error);
     return res.status(500).json({ error: 'Erreur lors de la récupération de tous les événements' });
@@ -998,43 +1168,88 @@ export async function getAllGuests(req: AuthenticatedRequest, res: Response) {
       return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
     }
 
-    const guests = await prisma.guest.findMany({
-      include: {
-        event: {
-          select: {
-            title: true,
-            tenant: {
-              select: {
-                name: true,
-              },
+    const { page, pageSize, skip } = adminPager(req);
+    const q = adminSearch(req);
+    const rsvp = adminQueryString(req, 'rsvp');
+    const checkin = adminQueryString(req, 'checkin');
+    const pdf = adminQueryString(req, 'pdf');
+    const category = adminQueryString(req, 'category');
+    const tenantName = adminQueryString(req, 'org');
+    const eventTitle = adminQueryString(req, 'event');
+
+    const where: Record<string, unknown> = {
+      ...(rsvp ? { rsvp } : {}),
+      ...(checkin === 'in' ? { checkedInAt: { not: null } } : {}),
+      ...(checkin === 'out' ? { checkedInAt: null } : {}),
+      ...(pdf === 'delivered' ? { seatingInvitationPdfUrl: { not: null } } : {}),
+      ...(pdf === 'missing' ? { rsvp: 'ACCEPTED', seatingInvitationPdfUrl: null } : {}),
+      ...(category ? { category } : {}),
+      ...(tenantName || eventTitle
+        ? {
+            event: {
+              ...(eventTitle ? { title: eventTitle } : {}),
+              ...(tenantName ? { tenant: { name: tenantName } } : {}),
+            },
+          }
+        : {}),
+    };
+    if (q) {
+      prismaAnd(where, {
+        OR: [
+          { firstName: { contains: q, mode: 'insensitive' } },
+          { lastName: { contains: q, mode: 'insensitive' } },
+          { email: { contains: q, mode: 'insensitive' } },
+          { category: { contains: q, mode: 'insensitive' } },
+          { event: { title: { contains: q, mode: 'insensitive' } } },
+          { event: { tenant: { name: { contains: q, mode: 'insensitive' } } } },
+        ],
+      });
+    }
+
+    const [guests, total] = await Promise.all([
+      prisma.guest.findMany({
+        where,
+        include: {
+          event: {
+            select: {
+              title: true,
+              tenantId: true,
+              tenant: { select: { name: true } },
             },
           },
         },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+      }),
+      prisma.guest.count({ where }),
+    ]);
 
     return res.json(
-      guests.map((g) => ({
-        id: g.id,
-        eventId: g.eventId,
-        eventTitle: g.event?.title || 'Événement inconnu',
-        tenantName: g.event?.tenant?.name || 'Organisation inconnue',
-        firstName: g.firstName,
-        lastName: g.lastName,
-        email: g.email,
-        phone: g.phone,
-        phoneCountryCode: g.phoneCountryCode,
-        category: g.category || 'Général',
-        rsvp: g.rsvp,
-        preferences: g.preferences,
-        checkedInAt: g.checkedInAt,
-        seatVerified: g.seatVerified,
-        seatingInvitationPdfUrl: g.seatingInvitationPdfUrl,
-        createdAt: g.createdAt,
-      }))
+      listPayload(
+        guests.map((g) => ({
+          id: g.id,
+          eventId: g.eventId,
+          eventTitle: g.event?.title || 'Événement inconnu',
+          tenantId: g.event?.tenantId || null,
+          tenantName: g.event?.tenant?.name || 'Organisation inconnue',
+          firstName: g.firstName,
+          lastName: g.lastName,
+          email: g.email,
+          phone: g.phone,
+          phoneCountryCode: g.phoneCountryCode,
+          category: g.category || 'Général',
+          rsvp: g.rsvp,
+          preferences: g.preferences,
+          checkedInAt: g.checkedInAt,
+          seatVerified: g.seatVerified,
+          seatingInvitationPdfUrl: g.seatingInvitationPdfUrl,
+          createdAt: g.createdAt,
+        })),
+        total,
+        page,
+        pageSize,
+      ),
     );
   } catch (error: any) {
     console.error('Erreur lors de la récupération de tous les invités:', error);
