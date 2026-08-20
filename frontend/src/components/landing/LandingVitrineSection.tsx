@@ -40,6 +40,7 @@ import {
 } from '@/config/landingTemplates';
 import { ArrowRight, Building2, Calendar, FileText, KeyRound, Sparkles } from 'lucide-react';
 import { useCatalogueGridCols, CatalogueGridColsToggle, type CatalogueGridCols } from '@/components/CatalogueViewToggle';
+import { marketplaceSectionUrl } from '@/lib/share';
 import { useLandingReveal } from '@/components/landing/useLandingReveal';
 
 type VitrineTab = 'venues' | 'services' | 'rentals' | 'events' | 'templates';
