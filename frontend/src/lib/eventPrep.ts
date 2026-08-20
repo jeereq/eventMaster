@@ -121,6 +121,28 @@ export function splitEventPrepVendors(vendors: EventPrepVendor[]): {
   return { trades, rentals };
 }
 
+export type EventPrepVendorGroup = {
+  orgName: string;
+  venue: EventPrepVenue | null;
+  vendors: EventPrepVendor[];
+};
+
+export function groupEventPrepByVendor(prep: EventPrep): EventPrepVendorGroup[] {
+  const map = new Map<string, EventPrepVendorGroup>();
+  const keyOf = (name?: string | null) => (name || '').trim() || 'Sans enseigne';
+  if (prep.venue) {
+    const key = keyOf(prep.venue.orgName);
+    map.set(key, { orgName: key, venue: prep.venue, vendors: [] });
+  }
+  for (const vendor of prep.vendors) {
+    const key = keyOf(vendor.orgName);
+    const existing = map.get(key);
+    if (existing) existing.vendors.push(vendor);
+    else map.set(key, { orgName: key, venue: null, vendors: [vendor] });
+  }
+  return [...map.values()];
+}
+
 export function eventPrepSummary(prep: EventPrep): string | null {
   const parts: string[] = [];
   if (prep.venue) parts.push(prep.venue.name);

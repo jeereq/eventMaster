@@ -236,10 +236,34 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
     const amounts = billedMarketplaceAmount(price, listing?.priceUnit ?? offering?.priceUnit, range.dayCount);
     const parsedGuests = Number.parseInt(String(guestCount || ''), 10);
 
+    const inquiryCandidates = await prisma.marketplaceInquiry.findMany({
+      where: {
+        fromTenantId: tenantId,
+        ...(listing ? { listingId: listing.id } : { offeringId: offering!.id }),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 15,
+      select: { id: true, eventId: true },
+    });
+    const takenInquiries = inquiryCandidates.length
+      ? await prisma.marketplaceBooking.findMany({
+          where: { inquiryId: { in: inquiryCandidates.map((row) => row.id) } },
+          select: { inquiryId: true },
+        })
+      : [];
+    const takenInquiryIds = new Set(takenInquiries.map((row) => row.inquiryId).filter(Boolean));
+    const openInquiries = inquiryCandidates.filter((row) => !takenInquiryIds.has(row.id));
+    const linkedInquiryId =
+      (linkedEventId ? openInquiries.find((row) => row.eventId === linkedEventId)?.id : null)
+      || openInquiries.find((row) => !row.eventId)?.id
+      || (!linkedEventId ? openInquiries[0]?.id : null)
+      || null;
+
     const booking = await prisma.marketplaceBooking.create({
       data: {
         listingId: listing?.id || null,
         offeringId: offering?.id || null,
+        inquiryId: linkedInquiryId,
         vendorTenantId,
         organizerTenantId: tenantId,
         organizerUserId: userId,

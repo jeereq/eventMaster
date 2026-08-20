@@ -33,6 +33,7 @@ export default function MarketplaceBookingForm({
   onEventEndDateChange,
   showCalendar = true,
   eventId,
+  onSent,
 }: {
   listingSlug?: string;
   offeringSlug?: string;
@@ -47,6 +48,7 @@ export default function MarketplaceBookingForm({
   onEventEndDateChange?: (value: string) => void;
   showCalendar?: boolean;
   eventId?: string;
+  onSent?: () => void;
 }) {
   const { token, loading, tenant } = useAuth();
   const { site } = usePlatformSite();
@@ -113,6 +115,7 @@ export default function MarketplaceBookingForm({
       });
       setSent(data.message || 'Demande de réservation envoyée.');
       setNotes('');
+      onSent?.();
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : 'Réservation impossible.');
     } finally {
@@ -226,7 +229,7 @@ export default function MarketplaceBookingForm({
         </Button>
         <p className="text-[11px] text-muted">
           Suivi dans{' '}
-          <Link href={`${bookingsHref}?tab=bookings`} className="font-semibold text-primary hover:underline">
+          <Link href={bookingsHref} className="font-semibold text-primary hover:underline">
             Devis & réservations
           </Link>
           .

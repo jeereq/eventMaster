@@ -2,20 +2,23 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Building2, ExternalLink, KeyRound, Loader2, MapPin, Sparkles, Users } from 'lucide-react';
+import { Building2, CalendarCheck, ExternalLink, KeyRound, Loader2, MapPin, Sparkles, Users } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Button, Modal } from '@/components/ui';
+import { Button, Modal, StatusPill } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import ListingPublicDetails from '@/components/ListingPublicDetails';
 import MarketplaceInquiryForm from '@/components/MarketplaceInquiryForm';
+import MarketplaceBookingForm from '@/components/MarketplaceBookingForm';
 import {
   dashboardServiceHref,
   dashboardVenueHref,
   formatLocationLine,
   formatQuotaLabel,
   isServiceRentalCategory,
+  prepListingCanBook,
   serviceMobilityLabel,
+  type PrepListingPipeline,
   type PublicService,
   type PublicVenue,
 } from '@/lib/marketplace';
@@ -25,6 +28,8 @@ export type EventPrepPreviewTarget = {
   kind: 'venue' | 'service';
   slug: string;
 };
+
+export type EventPrepListingView = 'details' | 'inquire' | 'book';
 
 function photosOf(listing: PublicVenue | PublicService): string[] {
   const urls = [...(listing.photos || [])];
@@ -44,10 +49,13 @@ export default function EventPrepListingModal({
   guestCount,
   eventTitle,
   eventId,
+  initialView = 'details',
+  pipeline,
   onClose,
   onRetainVenue,
   onRetainService,
   onRemove,
+  onPipelineChange,
 }: {
   target: EventPrepPreviewTarget | null;
   selected: boolean;
@@ -55,12 +63,15 @@ export default function EventPrepListingModal({
   guestCount?: number;
   eventTitle?: string;
   eventId?: string;
+  initialView?: EventPrepListingView;
+  pipeline?: PrepListingPipeline | null;
   onClose: () => void;
   onRetainVenue: (venue: PublicVenue) => void;
   onRetainService: (service: PublicService) => void;
   onRemove: () => void;
+  onPipelineChange?: () => void;
 }) {
-  const [view, setView] = useState<'details' | 'inquire'>('details');
+  const [view, setView] = useState<EventPrepListingView>('details');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [venue, setVenue] = useState<PublicVenue | null>(null);
@@ -79,7 +90,7 @@ export default function EventPrepListingModal({
     let cancelled = false;
     setLoading(true);
     setError('');
-    setView('details');
+    setView(initialView);
     setPhotoIndex(0);
     (async () => {
       try {
@@ -109,7 +120,7 @@ export default function EventPrepListingModal({
     return () => {
       cancelled = true;
     };
-  }, [target]);
+  }, [target, initialView]);
 
   const listing = venue || service;
   const rental = Boolean(service && isServiceRentalCategory(service.category));
@@ -127,6 +138,16 @@ export default function EventPrepListingModal({
     : service
       ? dashboardServiceHref(service.slug, service.category)
       : '#';
+  const canBook = prepListingCanBook(listing?.priceFromFc, pipeline);
+  const followHref = eventId
+    ? `/dashboard/bookings?tab=bookings&event=${encodeURIComponent(eventId)}`
+    : '/dashboard/bookings?tab=bookings';
+
+  useEffect(() => {
+    if (view === 'book' && listing && listing.priceFromFc == null) {
+      setView('inquire');
+    }
+  }, [view, listing]);
 
   const facts = [
     venue?.capacity ? `${venue.capacity} places` : null,
@@ -143,17 +164,27 @@ export default function EventPrepListingModal({
       : 'Sur devis',
   ].filter(Boolean) as string[];
 
+  const modalTitle =
+    view === 'inquire' ? `Devis — ${title}` : view === 'book' ? `Réserver — ${title}` : title;
+  const modalDescription =
+    view === 'inquire'
+      ? 'Le professionnel reçoit votre message. Aucune réservation n’est créée.'
+      : view === 'book'
+        ? 'Demande de date avec acompte hors plateforme. Le professionnel doit encore accepter.'
+        : `${kindLabel}${listing?.orgName ? ` · ${listing.orgName}` : ''}`;
+
+  const retainListing = () => {
+    if (venue) onRetainVenue(venue);
+    else if (service) onRetainService(service);
+  };
+
   return (
     <Modal
       open={Boolean(target)}
       onClose={onClose}
       size="lg"
-      title={view === 'inquire' ? `Devis — ${title}` : title}
-      description={
-        view === 'inquire'
-          ? 'Le professionnel reçoit votre message. Aucune réservation n’est créée.'
-          : `${kindLabel}${listing?.orgName ? ` · ${listing.orgName}` : ''}`
-      }
+      title={modalTitle}
+      description={modalDescription}
       footer={
         listing && view === 'details' ? (
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 w-full">
@@ -162,20 +193,26 @@ export default function EventPrepListingModal({
                 Retirer de la préparation
               </Button>
             ) : (
-              <Button
-                onClick={() => {
-                  if (venue) onRetainVenue(venue);
-                  else if (service) onRetainService(service);
-                }}
-              >
-                Retenir pour l’événement
-              </Button>
+              <Button onClick={retainListing}>Retenir pour l’événement</Button>
             )}
-            <Button variant="secondary" onClick={() => setView('inquire')}>
-              Demander un devis
-            </Button>
+            {pipeline?.stage === 'booking' ? (
+              <Link href={followHref} className="inline-flex">
+                <Button variant="secondary">Suivre la réservation</Button>
+              </Link>
+            ) : (
+              <>
+                <Button variant="secondary" onClick={() => setView('inquire')}>
+                  {pipeline?.stage === 'inquiry' ? 'Nouveau devis' : 'Demander un devis'}
+                </Button>
+                {canBook ? (
+                  <Button leftIcon={<CalendarCheck className="w-3.5 h-3.5" />} onClick={() => setView('book')}>
+                    Réserver
+                  </Button>
+                ) : null}
+              </>
+            )}
           </div>
-        ) : view === 'inquire' ? (
+        ) : view === 'inquire' || view === 'book' ? (
           <Button variant="ghost" onClick={() => setView('details')}>
             Retour à la fiche
           </Button>
@@ -184,7 +221,7 @@ export default function EventPrepListingModal({
     >
       {view === 'inquire' && target ? (
         <MarketplaceInquiryForm
-          key={`${target.kind}:${target.slug}`}
+          key={`${target.kind}:${target.slug}:inquire`}
           endpoint={
             target.kind === 'venue'
               ? `/public/venues/${encodeURIComponent(target.slug)}/inquire`
@@ -194,6 +231,27 @@ export default function EventPrepListingModal({
           defaultGuestCount={guestCount && guestCount > 0 ? guestCount : undefined}
           defaultMessage={eventTitle ? `Demande pour l’événement « ${eventTitle} ».` : undefined}
           eventId={eventId}
+          onSent={() => {
+            if (!selected) retainListing();
+            onPipelineChange?.();
+          }}
+        />
+      ) : view === 'book' && target && listing ? (
+        <MarketplaceBookingForm
+          key={`${target.kind}:${target.slug}:book`}
+          listingSlug={venue?.slug}
+          offeringSlug={service?.slug}
+          unavailableDates={listing.unavailableDates}
+          bookedDates={listing.bookedDates}
+          blockedDates={listing.blockedDates}
+          priceFromFc={listing.priceFromFc}
+          priceUnit={listing.priceUnit}
+          eventDate={dateKey || undefined}
+          eventId={eventId}
+          onSent={() => {
+            if (!selected) retainListing();
+            onPipelineChange?.();
+          }}
         />
       ) : loading ? (
         <p className="text-sm text-muted inline-flex items-center gap-2 py-8 justify-center w-full">
@@ -204,6 +262,17 @@ export default function EventPrepListingModal({
         <p className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</p>
       ) : listing ? (
         <div className="space-y-4">
+          {pipeline && pipeline.stage !== 'none' ? (
+            <div className="flex items-center justify-between gap-2 rounded-xl border border-border bg-surface-muted/50 px-3 py-2">
+              <StatusPill tone={pipeline.tone}>{pipeline.label}</StatusPill>
+              {pipeline.stage === 'booking' ? (
+                <Link href={followHref} className="text-xs font-semibold text-primary hover:underline">
+                  Ouvrir le suivi
+                </Link>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="relative overflow-hidden rounded-2xl bg-surface-muted aspect-[16/9]">
             {photos[photoIndex] ? (
               // eslint-disable-next-line @next/next/no-img-element

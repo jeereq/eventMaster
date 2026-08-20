@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { getCatalogueReturn } from '@/lib/catalogueQuery';
@@ -34,6 +34,7 @@ import { Building2, MapPin, Navigation, Sparkles, Users } from 'lucide-react';
 
 export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'service' }) {
   const params = useParams();
+  const searchParams = useSearchParams();
   const slug = params.slug as string;
   const { user, tenant, access } = useAuth();
   const { isFavorite, toggleFavorite } = useListingFavorites();
@@ -78,6 +79,8 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
 
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const isClient = tenant?.accountKind === 'CLIENT' || access?.level === 'client';
+  const canTransact = Boolean(tenant?.id) && !isSuperAdmin;
+  const linkedEventId = searchParams.get('event') || undefined;
   const defaultBackHref = isSuperAdmin
     ? '/dashboard/admin/catalogue'
     : isClient
@@ -266,7 +269,7 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
           <p className="text-sm text-muted">Aucune position n’a encore été indiquée pour cette fiche.</p>
         )
       ) : null}
-      inquiry={isClient && venue ? (
+      inquiry={canTransact && venue ? (
         <MarketplaceInquiryForm
           endpoint={`/public/venues/${encodeURIComponent(venue.slug)}/inquire`}
           successCopy="Demande transmise au propriétaire."
@@ -275,8 +278,9 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
             setPickedDate(value);
             setPickedEndDate(value);
           }}
+          eventId={linkedEventId}
         />
-      ) : isClient && service ? (
+      ) : canTransact && service ? (
         <MarketplaceInquiryForm
           endpoint={`/public/services/${encodeURIComponent(service.slug)}/inquire`}
           successCopy="Demande transmise au prestataire."
@@ -285,9 +289,10 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
             setPickedDate(value);
             setPickedEndDate(value);
           }}
+          eventId={linkedEventId}
         />
       ) : null}
-      booking={isClient && venue ? (
+      booking={canTransact && venue ? (
         <MarketplaceBookingForm
           listingSlug={venue.slug}
           unavailableDates={venue.unavailableDates}
@@ -300,8 +305,9 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
           onEventDateChange={setPickedDate}
           onEventEndDateChange={setPickedEndDate}
           showCalendar={false}
+          eventId={linkedEventId}
         />
-      ) : isClient && service ? (
+      ) : canTransact && service ? (
         <MarketplaceBookingForm
           offeringSlug={service.slug}
           unavailableDates={service.unavailableDates}
@@ -314,6 +320,7 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
           onEventDateChange={setPickedDate}
           onEventEndDateChange={setPickedEndDate}
           showCalendar={false}
+          eventId={linkedEventId}
         />
       ) : null}
     />

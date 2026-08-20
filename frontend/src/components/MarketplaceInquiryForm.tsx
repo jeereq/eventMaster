@@ -19,6 +19,7 @@ export default function MarketplaceInquiryForm({
   defaultGuestCount,
   defaultMessage,
   eventId,
+  onSent,
 }: {
   endpoint: string;
   successCopy?: string;
@@ -27,6 +28,7 @@ export default function MarketplaceInquiryForm({
   defaultGuestCount?: number | string;
   defaultMessage?: string;
   eventId?: string;
+  onSent?: () => void;
 }) {
   const pathname = usePathname();
   const { user, token, loading: authLoading } = useAuth();
@@ -88,6 +90,7 @@ export default function MarketplaceInquiryForm({
       });
       setSent(data.message || successCopy);
       setMessage('');
+      onSent?.();
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : 'Envoi impossible.');
     } finally {

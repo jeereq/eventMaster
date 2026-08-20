@@ -2,9 +2,11 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Bookmark,
   Building2,
+  CalendarCheck,
   Check,
   ChevronDown,
   Eye,
@@ -18,7 +20,7 @@ import {
   X,
 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Button, Card, CardHeader, EmptyState, Input } from '@/components/ui';
+import { Button, Card, CardHeader, EmptyState, Input, StatusPill } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import {
@@ -27,6 +29,11 @@ import {
   SERVICE_RENTAL_CATEGORIES,
   SERVICE_TRADE_CATEGORIES,
   formatLocationLine,
+  matchPrepListingPipeline,
+  prepListingCanBook,
+  type MarketplaceBookingItem,
+  type MarketplaceInquiryItem,
+  type PrepListingPipeline,
   type PublicService,
   type PublicVenue,
   type ServiceMobility,
@@ -39,6 +46,7 @@ import {
   eventPrepEstimateFc,
   eventPrepFromAiRecommendation,
   eventPrepFromSavedPack,
+  groupEventPrepByVendor,
   parseEventPrep,
   splitEventPrepVendors,
   type EventPrep,
@@ -46,7 +54,10 @@ import {
   type EventPrepVenue,
 } from '@/lib/eventPrep';
 import { seedBriefFromEvent, type SavedEventPack } from '@/lib/eventPlan';
-import EventPrepListingModal, { type EventPrepPreviewTarget } from '@/components/EventPrepListingModal';
+import EventPrepListingModal, {
+  type EventPrepListingView,
+  type EventPrepPreviewTarget,
+} from '@/components/EventPrepListingModal';
 import EventPrepAiSimulator from '@/components/EventPrepAiSimulator';
 
 type OrgRoomOption = {
@@ -537,19 +548,72 @@ export default function EventPrepPanel({
   const [error, setError] = useState('');
   const [lane, setLane] = useState<PrepLaneId>('venue');
   const [preview, setPreview] = useState<EventPrepPreviewTarget | null>(null);
+  const [previewView, setPreviewView] = useState<EventPrepListingView>('details');
   const [savedPacks, setSavedPacks] = useState<SavedEventPack[]>([]);
+  const [inquiries, setInquiries] = useState<MarketplaceInquiryItem[]>([]);
+  const [bookings, setBookings] = useState<MarketplaceBookingItem[]>([]);
   const persistSeq = useRef(0);
   const notesTimer = useRef<number | null>(null);
   const dateKey = eventDateKey(eventDate);
   const defaultCity = inferPrepCity(eventLocation);
   const { trades, rentals } = splitEventPrepVendors(prep.vendors);
+  const vendorGroups = useMemo(() => groupEventPrepByVendor(prep), [prep]);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const pipelineFor = useCallback(
+    (slug: string, kind: 'venue' | 'service') => matchPrepListingPipeline(slug, kind, inquiries, bookings),
+    [inquiries, bookings],
+  );
+
+  const openPreview = (target: EventPrepPreviewTarget, view: EventPrepListingView = 'details') => {
+    setPreviewView(view);
+    setPreview(target);
+  };
 
   useEffect(() => {
     setPrep(parseEventPrep(value));
     setLane('venue');
     setPreview(null);
+    setPreviewView('details');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
+
+  const reloadPipeline = useCallback(async () => {
+    try {
+      const [inq, book] = await Promise.all([
+        api.get('/marketplace/inquiries?role=organizer') as Promise<{ inquiries?: MarketplaceInquiryItem[] }>,
+        api.get('/marketplace/bookings?role=organizer') as Promise<{ bookings?: MarketplaceBookingItem[] }>,
+      ]);
+      setInquiries((inq.inquiries || []).filter((item) => item.event?.id === eventId));
+      setBookings((book.bookings || []).filter((item) => item.event?.id === eventId));
+    } catch {
+      setInquiries([]);
+      setBookings([]);
+    }
+  }, [eventId]);
+
+  useEffect(() => {
+    void reloadPipeline();
+  }, [reloadPipeline]);
+
+  useEffect(() => {
+    const listing = searchParams.get('listing');
+    const offer = searchParams.get('offer');
+    const action = searchParams.get('action');
+    if (!listing && !offer) return;
+    openPreview(
+      listing ? { kind: 'venue', slug: listing } : { kind: 'service', slug: offer! },
+      action === 'book' || action === 'inquire' ? action : 'details',
+    );
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete('listing');
+    next.delete('offer');
+    next.delete('action');
+    if (!next.get('tab')) next.set('tab', 'prep');
+    router.replace(`?${next.toString()}`, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventId, searchParams]);
 
   const persist = useCallback(
     async (next: EventPrep, extra?: { roomId?: string | null; location?: string }) => {
@@ -646,7 +710,7 @@ export default function EventPrepPanel({
         <div className="space-y-1">
           <h2 className="text-lg font-semibold text-foreground tracking-tight">Préparation</h2>
           <p className="text-sm text-muted">
-            Filtrez salles, métiers et locations, ouvrez la fiche, retenez, puis demandez un devis rattaché à cet événement.
+            Filtrez salles, métiers et locations, retenez, demandez un devis, puis réservez si un tarif est publié.
             {dateKey ? ` Date : ${new Date(`${dateKey}T12:00:00`).toLocaleDateString('fr-FR')}.` : ''}
           </p>
         </div>
@@ -733,9 +797,14 @@ export default function EventPrepPanel({
                 title={prep.venue.name}
                 meta={[prep.venue.orgName, prep.venue.city, prep.venue.capacity ? `${prep.venue.capacity} places` : null]}
                 price={prep.venue.priceFromFc}
+                pipeline={pipelineFor(prep.venue.slug, 'venue')}
                 onDetails={() => {
                   setLane('venue');
-                  setPreview({ kind: 'venue', slug: prep.venue!.slug });
+                  openPreview({ kind: 'venue', slug: prep.venue!.slug });
+                }}
+                onBook={() => {
+                  setLane('venue');
+                  openPreview({ kind: 'venue', slug: prep.venue!.slug }, 'book');
                 }}
                 onRemove={() => void persist({ ...prep, venue: null })}
               />
@@ -757,9 +826,14 @@ export default function EventPrepPanel({
                 title={vendor.title}
                 meta={[vendor.categoryLabel, vendor.orgName, vendor.city]}
                 price={vendor.priceFromFc}
+                pipeline={pipelineFor(vendor.slug, 'service')}
                 onDetails={() => {
                   setLane('trade');
-                  setPreview({ kind: 'service', slug: vendor.slug });
+                  openPreview({ kind: 'service', slug: vendor.slug });
+                }}
+                onBook={() => {
+                  setLane('trade');
+                  openPreview({ kind: 'service', slug: vendor.slug }, 'book');
                 }}
                 onRemove={() => removeVendor(vendor.slug)}
               />
@@ -781,19 +855,81 @@ export default function EventPrepPanel({
                 title={vendor.title}
                 meta={[vendor.categoryLabel, vendor.orgName, vendor.city]}
                 price={vendor.priceFromFc}
+                pipeline={pipelineFor(vendor.slug, 'service')}
                 onDetails={() => {
                   setLane('rental');
-                  setPreview({ kind: 'service', slug: vendor.slug });
+                  openPreview({ kind: 'service', slug: vendor.slug });
+                }}
+                onBook={() => {
+                  setLane('rental');
+                  openPreview({ kind: 'service', slug: vendor.slug }, 'book');
                 }}
                 onRemove={() => removeVendor(vendor.slug)}
               />
             ))}
           </RetainedColumn>
         </div>
+        {vendorGroups.some((group) => (group.venue ? 1 : 0) + group.vendors.length > 1) || vendorGroups.length > 1 ? (
+          <div className="mt-4 space-y-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Par prestataire</p>
+            <ul className="space-y-2">
+              {vendorGroups.map((group) => {
+                const offers = [
+                  ...(group.venue
+                    ? [{
+                        key: `venue:${group.venue.slug}`,
+                        kind: 'venue' as const,
+                        lane: 'venue' as PrepLaneId,
+                        slug: group.venue.slug,
+                        title: group.venue.name,
+                        price: group.venue.priceFromFc,
+                      }]
+                    : []),
+                  ...group.vendors.map((vendor) => ({
+                    key: vendor.slug,
+                    kind: 'service' as const,
+                    lane: (vendor.category.startsWith('RENTAL_') ? 'rental' : 'trade') as PrepLaneId,
+                    slug: vendor.slug,
+                    title: vendor.title,
+                    price: vendor.priceFromFc,
+                  })),
+                ];
+                return (
+                  <li key={group.orgName} className="rounded-[var(--radius-card)] border border-border px-3 py-2 space-y-1.5">
+                    <p className="text-sm font-semibold truncate">{group.orgName}</p>
+                    {offers.map((offer) => {
+                      const pipeline = pipelineFor(offer.slug, offer.kind);
+                      return (
+                        <button
+                          key={offer.key}
+                          type="button"
+                          onClick={() => {
+                            setLane(offer.lane);
+                            openPreview({ kind: offer.kind, slug: offer.slug });
+                          }}
+                          className="w-full flex items-center justify-between gap-2 text-left text-xs hover:text-primary"
+                        >
+                          <span className="truncate">{offer.title}</span>
+                          {pipeline.stage !== 'none' ? (
+                            <StatusPill tone={pipeline.tone} className="shrink-0">{pipeline.label}</StatusPill>
+                          ) : offer.price != null ? (
+                            <span className="text-muted shrink-0">{formatFc(offer.price)}</span>
+                          ) : (
+                            <span className="text-muted shrink-0">Sur devis</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : null}
         {prep.venue || prep.vendors.length > 0 ? (
           <p className="text-xs text-muted flex items-start gap-1.5 mt-3">
             <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-            Pistes uniquement : ouvrez une fiche, retenez, puis demandez un devis. Rien n’est réservé automatiquement.
+            Retenir ne bloque pas la date. Demandez un devis, puis réservez quand un tarif est publié.
           </p>
         ) : null}
       </Card>
@@ -894,7 +1030,7 @@ export default function EventPrepPanel({
               guestCount={guestCount}
               defaultCity={defaultCity}
               selectedSlugs={prep.venue ? [prep.venue.slug] : []}
-              onOpen={setPreview}
+              onOpen={(target) => openPreview(target)}
               onRetainVenue={retainVenue}
               onRetainService={retainService}
             />
@@ -907,7 +1043,7 @@ export default function EventPrepPanel({
               guestCount={guestCount}
               defaultCity={defaultCity}
               selectedSlugs={prep.vendors.map((item) => item.slug)}
-              onOpen={setPreview}
+              onOpen={(target) => openPreview(target)}
               onRetainVenue={retainVenue}
               onRetainService={retainService}
             />
@@ -920,7 +1056,7 @@ export default function EventPrepPanel({
               guestCount={guestCount}
               defaultCity={defaultCity}
               selectedSlugs={prep.vendors.map((item) => item.slug)}
-              onOpen={setPreview}
+              onOpen={(target) => openPreview(target)}
               onRetainVenue={retainVenue}
               onRetainService={retainService}
             />
@@ -949,7 +1085,12 @@ export default function EventPrepPanel({
         guestCount={guestCount}
         eventTitle={eventTitle}
         eventId={eventId}
-        onClose={() => setPreview(null)}
+        initialView={previewView}
+        pipeline={preview ? pipelineFor(preview.slug, preview.kind) : null}
+        onClose={() => {
+          setPreview(null);
+          setPreviewView('details');
+        }}
         onRetainVenue={retainVenue}
         onRetainService={retainService}
         onRemove={() => {
@@ -957,6 +1098,7 @@ export default function EventPrepPanel({
           if (preview.kind === 'venue') void persist({ ...prep, venue: null });
           else removeVendor(preview.slug);
         }}
+        onPipelineChange={() => void reloadPipeline()}
       />
     </div>
   );
@@ -1008,7 +1150,9 @@ function SelectedCard({
   title,
   meta,
   price,
+  pipeline,
   onDetails,
+  onBook,
   onRemove,
 }: {
   tone: PrepLaneId;
@@ -1017,9 +1161,12 @@ function SelectedCard({
   title: string;
   meta: Array<string | null | undefined>;
   price?: number | null;
+  pipeline?: PrepListingPipeline;
   onDetails: () => void;
+  onBook?: () => void;
   onRemove: () => void;
 }) {
+  const canBook = onBook && prepListingCanBook(price, pipeline);
   return (
     <div className={cn('flex items-center gap-2.5 rounded-[var(--radius-card)] border px-2 py-1.5', LANE_TONE[tone].selected)}>
       <Cover src={cover} fallback={icon} />
@@ -1029,7 +1176,20 @@ function SelectedCard({
           {meta.filter(Boolean).join(' · ')}
           {price != null ? ` · ${formatFc(price)}` : ''}
         </p>
+        {pipeline && pipeline.stage !== 'none' ? (
+          <StatusPill tone={pipeline.tone} className="mt-1">{pipeline.label}</StatusPill>
+        ) : null}
       </button>
+      {canBook ? (
+        <button
+          type="button"
+          onClick={onBook}
+          className="p-1.5 rounded-[var(--radius-button)] text-muted hover:text-primary hover:bg-primary/5"
+          title="Réserver"
+        >
+          <CalendarCheck className="w-4 h-4" />
+        </button>
+      ) : null}
       <button
         type="button"
         onClick={onRemove}

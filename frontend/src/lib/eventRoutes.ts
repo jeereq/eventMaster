@@ -25,11 +25,20 @@ export function isEventWorkspaceTab(value: string | null | undefined): value is 
 
 export function eventDashboardHref(
   eventId: string,
-  opts?: { tab?: EventWorkspaceTab; protocol?: boolean },
+  opts?: {
+    tab?: EventWorkspaceTab;
+    protocol?: boolean;
+    listing?: string | null;
+    offer?: string | null;
+    action?: 'book' | 'inquire';
+  },
 ): string {
   const params = new URLSearchParams();
   if (opts?.protocol) params.set('mode', 'protocol');
   if (opts?.tab) params.set('tab', opts.tab);
+  if (opts?.listing) params.set('listing', opts.listing);
+  if (opts?.offer) params.set('offer', opts.offer);
+  if (opts?.action) params.set('action', opts.action);
   const q = params.toString();
   return `/dashboard/events/${eventId}${q ? `?${q}` : ''}`;
 }

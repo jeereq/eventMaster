@@ -260,9 +260,28 @@ export default function MarketplaceInquiriesPanel({
                       </Link>
                     ) : (
                       <Link href={listingHref} className="inline-flex">
-                        <Button size="sm" variant={organizerView ? 'primary' : 'secondary'}>Voir la fiche</Button>
+                        <Button size="sm" variant={organizerView && !item.hasBooking ? 'secondary' : organizerView ? 'primary' : 'secondary'}>Voir la fiche</Button>
                       </Link>
                     )
+                  ) : null}
+                  {organizerView && !item.hasBooking && (item.listingSlug || item.offeringSlug) ? (
+                    <Link
+                      href={
+                        item.event?.id
+                          ? eventDashboardHref(item.event.id, {
+                              tab: 'prep',
+                              listing: item.listingSlug,
+                              offer: item.offeringSlug,
+                              action: 'book',
+                            })
+                          : listingHref || '#'
+                      }
+                      className="inline-flex"
+                    >
+                      <Button size="sm" leftIcon={<CalendarCheck className="w-3.5 h-3.5" />}>
+                        Réserver
+                      </Button>
+                    </Link>
                   ) : null}
                   {organizerView && item.event?.id ? (
                     <Link href={eventDashboardHref(item.event.id, { tab: 'prep' })} className="inline-flex">

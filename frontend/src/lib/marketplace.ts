@@ -437,17 +437,80 @@ export function inquiryNextStep(item: MarketplaceInquiryItem): { title: string; 
   }
   if (item.status === 'NEW') {
     return asOrganizer
-      ? { title: 'Envoyée', detail: 'Le professionnel n’a pas encore répondu. Vous pouvez le relancer depuis la fiche.' }
+      ? { title: 'Envoyée', detail: 'Le professionnel n’a pas encore répondu. Vous pouvez déjà réserver si un tarif est publié.' }
       : item.eventDate
         ? { title: 'Nouveau devis', detail: 'Contactez le client, puis convertissez en réservation si la date convient.' }
         : { title: 'Nouveau devis', detail: 'Contactez le client, puis marquez la demande comme contactée.' };
   }
   if (asOrganizer) {
-    return { title: 'Prise en charge', detail: 'Le professionnel vous a contacté. Convenez du tarif et d’une date, puis réservez si besoin.' };
+    return { title: 'Prise en charge', detail: 'Le professionnel vous a contacté. Réservez depuis l’événement si un tarif est publié.' };
   }
   return item.eventDate
     ? { title: 'Prêt à réserver', detail: 'Convertissez cette demande en réservation pour suivre l’acompte et bloquer la date.' }
     : { title: 'Contacté', detail: 'Pas de date indiquée : convenez d’un jour avant de créer une réservation.' };
+}
+
+export type PrepListingPipeline = {
+  stage: 'none' | 'inquiry' | 'booking';
+  label: string;
+  tone: 'slate' | 'amber' | 'sky' | 'emerald' | 'rose';
+  inquiry: MarketplaceInquiryItem | null;
+  booking: MarketplaceBookingItem | null;
+};
+
+export function listingMatchesPrepSlug(
+  item: { listingSlug?: string | null; offeringSlug?: string | null },
+  slug: string,
+  kind: 'venue' | 'service',
+): boolean {
+  return kind === 'venue' ? item.listingSlug === slug : item.offeringSlug === slug;
+}
+
+export function matchPrepListingPipeline(
+  slug: string,
+  kind: 'venue' | 'service',
+  inquiries: MarketplaceInquiryItem[],
+  bookings: MarketplaceBookingItem[],
+): PrepListingPipeline {
+  const relatedBookings = bookings.filter((item) => listingMatchesPrepSlug(item, slug, kind));
+  const booking =
+    relatedBookings.find((item) => item.status !== 'CANCELLED')
+    || relatedBookings[0]
+    || null;
+  const inquiry = inquiries.find((item) => listingMatchesPrepSlug(item, slug, kind)) || null;
+
+  if (booking && booking.status !== 'CANCELLED') {
+    if (booking.status === 'REQUESTED') {
+      return { stage: 'booking', label: 'Réservation demandée', tone: 'amber', inquiry, booking };
+    }
+    if (booking.status === 'ACCEPTED' && !booking.depositMarkedAt) {
+      return { stage: 'booking', label: 'Acompte à verser', tone: 'sky', inquiry, booking };
+    }
+    if (booking.status === 'ACCEPTED') {
+      return { stage: 'booking', label: 'Acompte marqué', tone: 'sky', inquiry, booking };
+    }
+    if (booking.status === 'COMPLETED') {
+      return { stage: 'booking', label: 'Terminée', tone: 'emerald', inquiry, booking };
+    }
+    return { stage: 'booking', label: 'Confirmée', tone: 'emerald', inquiry, booking };
+  }
+
+  if (inquiry) {
+    return {
+      stage: 'inquiry',
+      label: inquiry.status === 'CONTACTED' ? 'Devis pris en charge' : 'Devis envoyé',
+      tone: inquiry.status === 'CONTACTED' ? 'sky' : 'amber',
+      inquiry,
+      booking: null,
+    };
+  }
+
+  return { stage: 'none', label: 'Pas de devis', tone: 'slate', inquiry: null, booking: null };
+}
+
+export function prepListingCanBook(priceFromFc?: number | null, pipeline?: PrepListingPipeline | null): boolean {
+  if (priceFromFc == null || !Number.isFinite(priceFromFc) || priceFromFc < 0) return false;
+  return pipeline?.stage !== 'booking';
 }
 
 export function parseBlockedDates(input: unknown): string[] {
