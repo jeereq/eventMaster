@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { ClipboardList } from 'lucide-react';
 import { api } from '@/lib/api';
 import { eventDashboardHref } from '@/lib/eventRoutes';
-import type { EventTaskItem } from '@/lib/eventTasks';
+import { taskDueLabel, taskDueState, type EventTaskItem } from '@/lib/eventTasks';
+import { StatusPill } from '@/components/ui';
 
 export default function EventTaskInbox({ protocol }: { protocol?: boolean }) {
   const [tasks, setTasks] = useState<EventTaskItem[]>([]);
@@ -42,7 +43,17 @@ export default function EventTaskInbox({ protocol }: { protocol?: boolean }) {
               className="flex items-center justify-between gap-2 text-sm hover:text-primary"
             >
               <span className="truncate">{task.title}</span>
-              <span className="text-[11px] text-muted shrink-0 truncate max-w-[40%]">{task.event.title}</span>
+              <span className="flex items-center gap-1.5 shrink-0">
+                {taskDueState(task.dueAt, task.status) !== 'none' ? (
+                  <StatusPill
+                    tone={taskDueState(task.dueAt, task.status) === 'overdue' ? 'rose' : 'amber'}
+                    className="hidden sm:inline-flex"
+                  >
+                    {taskDueLabel(task.dueAt, task.status)}
+                  </StatusPill>
+                ) : null}
+                <span className="text-[11px] text-muted truncate max-w-[10rem]">{task.event.title}</span>
+              </span>
             </Link>
           </li>
         ))}

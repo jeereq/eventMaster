@@ -139,6 +139,11 @@ export async function getPlatformInsights(req: AuthenticatedRequest, res: Respon
       gmvVenue,
       gmvTrade,
       gmvRental,
+      openTasks,
+      overdueTasks,
+      doneTasks,
+      protocolUsers,
+      managerUsers,
     ] = await Promise.all([
       prisma.event.count(),
       prisma.event.count({ where: { isPublic: true } }),
@@ -173,6 +178,11 @@ export async function getPlatformInsights(req: AuthenticatedRequest, res: Respon
         _count: { _all: true },
         _sum: { amountFc: true },
       }),
+      prisma.eventTask.count({ where: { status: 'OPEN' } }),
+      prisma.eventTask.count({ where: { status: 'OPEN', dueAt: { lt: new Date() } } }),
+      prisma.eventTask.count({ where: { status: 'DONE' } }),
+      prisma.user.count({ where: { role: 'USER', orgRole: 'PROTOCOL' } }),
+      prisma.user.count({ where: { role: 'USER', orgRole: 'MANAGER' } }),
     ]);
 
     const rsvpCount = (status: string) => rsvpGroups.find((row) => row.rsvp === status)?._count._all || 0;
@@ -214,6 +224,15 @@ export async function getPlatformInsights(req: AuthenticatedRequest, res: Respon
         bookingsVenue: gmvVenue._count._all,
         bookingsTrade: gmvTrade._count._all,
         bookingsRental: gmvRental._count._all,
+      },
+      tasks: {
+        open: openTasks,
+        overdue: overdueTasks,
+        done: doneTasks,
+      },
+      team: {
+        protocolUsers,
+        managerUsers,
       },
     });
   } catch (error) {

@@ -136,7 +136,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-analytics-org': {
     title: 'Statistiques',
     description:
-      'Statistiques de votre organisation : taux de réponse RSVP, répartition des invités, activité par événement et indicateurs de participation.',
+      'Statistiques de votre organisation : RSVP, check-in, tâches ouvertes et indicateurs par événement.',
     route: '/dashboard/analytics',
   },
   'nav-billing': {

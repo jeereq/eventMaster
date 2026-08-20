@@ -279,7 +279,7 @@ export function getWorkspaceModules(opts: {
     showRooms,
     showMarketplace,
     showTemplates: showEvents && maxTemplates > 0 && !protocolOnly,
-    showAnalytics: showEvents && !protocolOnly,
+    showAnalytics: showEvents,
     showProtocol:
       showEvents &&
       Boolean(opts.access?.canProtocolAllEvents || opts.access?.level === 'staff') &&

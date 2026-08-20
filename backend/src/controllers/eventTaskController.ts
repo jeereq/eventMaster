@@ -384,6 +384,7 @@ export async function updateEventTask(req: AuthenticatedRequest, res: Response) 
       dueAt?: Date | null;
       assigneeId?: string | null;
       completedAt?: Date | null;
+      dueRemindedAt?: Date | null;
     } = {};
 
     if (canManage) {
@@ -401,6 +402,7 @@ export async function updateEventTask(req: AuthenticatedRequest, res: Response) 
           const dueAt = new Date(String(req.body.dueAt));
           if (Number.isNaN(dueAt.getTime())) return res.status(400).json({ error: 'Date d’échéance invalide.' });
           data.dueAt = dueAt;
+          data.dueRemindedAt = null;
         }
       }
       if (req.body?.assigneeId !== undefined) {
@@ -423,6 +425,7 @@ export async function updateEventTask(req: AuthenticatedRequest, res: Response) 
       }
       data.status = status;
       data.completedAt = status === 'DONE' ? new Date() : null;
+      if (status === 'OPEN') data.dueRemindedAt = null;
     }
 
     if (Object.keys(data).length === 0) {

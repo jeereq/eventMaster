@@ -1,0 +1,1 @@
+ALTER TABLE "EventTask" ADD COLUMN IF NOT EXISTS "dueRemindedAt" TIMESTAMP(3);

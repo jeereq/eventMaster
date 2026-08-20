@@ -9,6 +9,7 @@ import {
   updateEventTask,
   deleteEventTask,
 } from '../controllers/eventTaskController';
+import { getWorkspaceStats } from '../controllers/eventStatsController';
 import { getGuests, createGuest, updateGuest, deleteGuest, importGuests } from '../controllers/guestController';
 import {
   scanGuest,
@@ -32,6 +33,7 @@ router.use(requireActiveLicense);
 router.get('/', getEvents);
 router.post('/', createEvent);
 router.get('/tasks/inbox', listMyEventTasks);
+router.get('/workspace-stats', getWorkspaceStats);
 router.get('/:id', getEventById);
 router.put('/:id', updateEvent);
 router.post('/:id/import-room-layout', importRoomLayout);

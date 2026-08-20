@@ -10,7 +10,7 @@ import {
  PlusCircle, AlertCircle, Award, CheckCircle, Shield,
  Building2, Activity, TrendingUp, Clock, Trash2, Edit2, Key,
  CalendarDays, Globe, Search, Filter, Check, X, FileText, Plus, Loader2, Copy, Eye,
- BarChart3, PieChart, ChevronLeft, ChevronRight, CheckSquare, Sparkles, MapPin, Download, MessageSquare, History, Briefcase, Wallet, LogIn, Ticket
+ BarChart3, PieChart, ChevronLeft, ChevronRight, CheckSquare, Sparkles, MapPin, Download, MessageSquare, History, Briefcase, Wallet, LogIn, Ticket, ClipboardList, ScanLine
 } from 'lucide-react';
 import GuestMessageTemplatesPanel from './GuestMessageTemplatesPanel';
 import { cn } from '@/lib/cn';
@@ -101,10 +101,15 @@ interface AdminStats {
  guests: number;
  verifiedUsers?: number;
  licensesActive?: number;
+ checkedIn?: number;
+ openTasks?: number;
+ overdueTasks?: number;
+ upcomingEvents?: number;
  };
  planCounts?: Record<string, number>;
  accountKindCounts?: Record<string, number>;
  userRoleCounts?: Record<string, number>;
+ orgRoleCounts?: Record<string, number>;
 }
 
 interface AdminUserItem {
@@ -191,7 +196,7 @@ interface RevenueReport {
  }>;
 }
 
-type AnalyticsSection = 'overview' | 'plans' | 'organisations' | 'revenus' | 'modeles' | 'utilisateurs' | 'evenements' | 'invites';
+type AnalyticsSection = 'overview' | 'plans' | 'organisations' | 'revenus' | 'modeles' | 'utilisateurs' | 'evenements' | 'invites' | 'taches';
 
 const ANALYTICS_SECTIONS: Array<{ id: AnalyticsSection; label: string }> = [
  { id: 'overview', label: 'Vue d\'ensemble' },
@@ -202,6 +207,7 @@ const ANALYTICS_SECTIONS: Array<{ id: AnalyticsSection; label: string }> = [
  { id: 'utilisateurs', label: 'Utilisateurs' },
  { id: 'evenements', label: 'Événements' },
  { id: 'invites', label: 'Invités' },
+ { id: 'taches', label: 'Tâches & équipe' },
 ];
 
 interface PlatformInsights {
@@ -232,6 +238,8 @@ interface PlatformInsights {
   gmvTradeFc: number;
   gmvRentalFc: number;
  };
+ tasks?: { open: number; overdue: number; done: number };
+ team?: { protocolUsers: number; managerUsers: number };
 }
 
 type AdminTabId =
@@ -274,7 +282,7 @@ const ADMIN_TAB_META: Record<AdminTabId, { title: string; description: string; t
  },
  analytics: {
  title: 'Analyses & statistiques',
- description: 'Adoption des forfaits, GMV marketplace, événements publics, billets et funnel RSVP.',
+ description: 'Adoption des forfaits, check-in, tâches, événements publics, billets et funnel RSVP.',
  },
  settings: {
  title: 'Réglages plateforme',
@@ -3677,6 +3685,45 @@ function DashboardPageContent() {
  </div>
  </div>
 
+ <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-xl">
+ <ScanLine className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{adminData?.stats.checkedIn ?? 0}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Check-in (scan)</span>
+ </div>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <div className="p-3 bg-primary/10 text-primary rounded-xl">
+ <Calendar className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{adminData?.stats.upcomingEvents ?? 0}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Événements à venir</span>
+ </div>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <div className="p-3 bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 rounded-xl">
+ <ClipboardList className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{adminData?.stats.openTasks ?? 0}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Tâches ouvertes</span>
+ </div>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <div className="p-3 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-xl">
+ <AlertCircle className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{adminData?.stats.overdueTasks ?? 0}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Tâches en retard</span>
+ </div>
+ </div>
+ </div>
+
  {platformInsights && (
  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
  <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
@@ -3715,6 +3762,47 @@ function DashboardPageContent() {
  {formatFc((platformInsights.marketplace.gmvVenueFc || 0) + (platformInsights.marketplace.gmvTradeFc || 0) + (platformInsights.marketplace.gmvRentalFc || 0))}
  </span>
  <span className="text-xs text-muted dark:text-muted font-bold">GMV marketplace</span>
+ </div>
+ </div>
+ </div>
+ )}
+
+ {platformInsights && (
+ <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-xl">
+ <ScanLine className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.guests.checkedIn}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Invités scannés</span>
+ </div>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <div className="p-3 bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 rounded-xl">
+ <ClipboardList className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.tasks?.open ?? 0}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Tâches ouvertes</span>
+ </div>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <div className="p-3 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-xl">
+ <AlertCircle className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.tasks?.overdue ?? 0}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Tâches en retard</span>
+ </div>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <div className="p-3 bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400 rounded-xl">
+ <Users className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.team?.protocolUsers ?? 0}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Comptes protocole</span>
  </div>
  </div>
  </div>
@@ -4050,6 +4138,9 @@ function DashboardPageContent() {
  { label: 'Commerciaux', value: adminData?.userRoleCounts?.COMMERCIAL ?? 0, color: 'text-amber-600 dark:text-amber-400' },
  { label: 'Utilisateurs standards', value: adminData?.userRoleCounts?.USER ?? 0, color: 'text-foreground dark:text-foreground' },
  { label: 'E-mails vérifiés', value: adminData?.stats.verifiedUsers ?? 0, color: 'text-emerald-600 dark:text-emerald-400' },
+ { label: 'Managers d’organisation', value: adminData?.orgRoleCounts?.MANAGER ?? 0, color: 'text-primary' },
+ { label: 'Protocole', value: adminData?.orgRoleCounts?.PROTOCOL ?? 0, color: 'text-sky-600 dark:text-sky-400' },
+ { label: 'Commerciaux org.', value: adminData?.orgRoleCounts?.COMMERCIAL ?? 0, color: 'text-amber-600 dark:text-amber-400' },
  ].map((row) => (
  <div key={row.label} className="flex justify-between text-sm">
  <span className="text-muted dark:text-muted font-medium">{row.label}</span>
@@ -4097,6 +4188,9 @@ function DashboardPageContent() {
  { label: 'Billets vendus', value: platformInsights?.events.ticketsSold ?? 0 },
  { label: 'GMV billets', value: formatFc(platformInsights?.tickets.gmvFc ?? 0) },
  { label: 'Avec localisation GPS', value: platformInsights?.events.gpsCount ?? 0 },
+ { label: 'À venir', value: adminData?.stats.upcomingEvents ?? 0 },
+ { label: 'Tâches ouvertes', value: platformInsights?.tasks?.open ?? adminData?.stats.openTasks ?? 0 },
+ { label: 'Tâches en retard', value: platformInsights?.tasks?.overdue ?? adminData?.stats.overdueTasks ?? 0 },
  ].map((row) => (
  <div key={row.label} className="flex justify-between text-sm">
  <span className="text-muted dark:text-muted font-medium">{row.label}</span>
@@ -4197,6 +4291,53 @@ function DashboardPageContent() {
  >
  Ouvrir le catalogue
  </Button>
+ </div>
+ </div>
+ )}
+
+ {activeAnalyticsSection === 'taches' && (
+ <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+ <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
+ <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
+ <ClipboardList className="w-5 h-5 text-primary" />
+ Tâches événements
+ </h3>
+ <div className="space-y-3">
+ {[
+ { label: 'Ouvertes', value: platformInsights?.tasks?.open ?? adminData?.stats.openTasks ?? 0 },
+ { label: 'En retard', value: platformInsights?.tasks?.overdue ?? adminData?.stats.overdueTasks ?? 0 },
+ { label: 'Terminées', value: platformInsights?.tasks?.done ?? 0 },
+ { label: 'Check-in (scan)', value: platformInsights?.guests.checkedIn ?? adminData?.stats.checkedIn ?? 0 },
+ { label: 'Événements à venir', value: adminData?.stats.upcomingEvents ?? 0 },
+ ].map((row) => (
+ <div key={row.label} className="flex justify-between text-sm">
+ <span className="text-muted dark:text-muted font-medium">{row.label}</span>
+ <span className="font-bold text-foreground dark:text-foreground">{row.value}</span>
+ </div>
+ ))}
+ </div>
+ <p className="text-xs text-muted pt-2">
+ Les rappels d’échéance partent automatiquement la veille / le jour J, puis en cas de retard.
+ </p>
+ </div>
+ <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
+ <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
+ <ScanLine className="w-5 h-5 text-sky-600" />
+ Équipe organisations
+ </h3>
+ <div className="space-y-3">
+ {[
+ { label: 'Managers', value: platformInsights?.team?.managerUsers ?? adminData?.orgRoleCounts?.MANAGER ?? 0 },
+ { label: 'Protocole', value: platformInsights?.team?.protocolUsers ?? adminData?.orgRoleCounts?.PROTOCOL ?? 0 },
+ { label: 'Commerciaux org.', value: adminData?.orgRoleCounts?.COMMERCIAL ?? 0 },
+ { label: 'Sans rôle org.', value: adminData?.orgRoleCounts?.NONE ?? 0 },
+ ].map((row) => (
+ <div key={row.label} className="flex justify-between text-sm">
+ <span className="text-muted dark:text-muted font-medium">{row.label}</span>
+ <span className="font-bold text-foreground dark:text-foreground">{row.value}</span>
+ </div>
+ ))}
+ </div>
  </div>
  </div>
  )}

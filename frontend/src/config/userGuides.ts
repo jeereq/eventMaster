@@ -364,6 +364,8 @@ export const USER_GUIDES: UserGuide[] = [
       'Scanner les QR codes invités avec la caméra du navigateur (téléphone ou tablette)',
       'Consulter et mettre à jour le statut RSVP des invités',
       'Confirmer la présence le jour J et valider le siège',
+      'Consulter les statistiques d’accueil (check-in, tâches du jour)',
+      'Cocher les tâches qui vous sont assignées',
     ],
     cannotDo: [
       'Créer des événements ou des salles',
@@ -373,6 +375,7 @@ export const USER_GUIDES: UserGuide[] = [
     navLinks: [
       { label: 'Événements', href: '/dashboard/events' },
       { label: 'Mode Protocole', href: '/dashboard/events?mode=protocol' },
+      { label: 'Statistiques', href: '/dashboard/analytics' },
     ],
     workflows: [
       {
@@ -440,6 +443,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Manager événement : gérer invités, infos pratiques (dress code) et fil d’actualité sur vos événements/salles assignés',
       'Protocole événement : scan QR dans le navigateur et suivi invités sur vos événements assignés',
       'Consulter le plan de salle des événements de votre périmètre',
+      'Consulter les statistiques de vos événements (RSVP, check-in, tâches)',
     ],
     cannotDo: [
       'Créer de nouveaux événements ou salles (sauf si promoteur manager org.)',
@@ -449,6 +453,7 @@ export const USER_GUIDES: UserGuide[] = [
     navLinks: [
       { label: 'Événements', href: '/dashboard/events' },
       { label: 'Protocole', href: '/dashboard/events?mode=protocol' },
+      { label: 'Statistiques', href: '/dashboard/analytics' },
     ],
     workflows: [
       {

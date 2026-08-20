@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { PageHeader, Alert, EmptyState, Button, SkeletonAnalyticsView, SkeletonStatsRow, Breadcrumbs } from '@/components/ui';
+import WorkspaceStatsOverview, { type WorkspaceStats } from '@/components/WorkspaceStatsOverview';
 // skeletons imported below
 import {
  extractRsvpFieldsFromTemplateContent,
@@ -36,6 +37,7 @@ interface GuestItem {
  phone?: string;
  category: string;
  rsvp: 'ACCEPTED' | 'DECLINED' | 'PENDING';
+ checkedInAt?: string | null;
  preferences?: {
  specialMeal?: string;
  allergies?: string;
@@ -59,8 +61,10 @@ interface InvitationItem {
 }
 
 export default function AnalyticsPage() {
- const { user, planFeatures } = useAuth();
+ const { user, planFeatures, access } = useAuth();
  const canExportReports = user?.role === 'SUPER_ADMIN' || planFeatures?.adminReports === true;
+ const protocolView = Boolean(access?.isProtocolOnly);
+ const [workspace, setWorkspace] = useState<WorkspaceStats | null>(null);
  const [events, setEvents] = useState<EventItem[]>([]);
  const [selectedEventId, setSelectedEventId] = useState<string>('');
  const [guests, setGuests] = useState<GuestItem[]>([]);
@@ -75,9 +79,13 @@ export default function AnalyticsPage() {
  const loadEvents = async () => {
  try {
  setError('');
- const data = await api.get('/events');
+ const [data, stats] = await Promise.all([
+ api.get('/events'),
+ api.get('/events/workspace-stats').catch(() => null),
+ ]);
  const eventsList = Array.isArray(data) ? data : data.events || [];
  setEvents(eventsList);
+ if (stats && stats.events) setWorkspace(stats as WorkspaceStats);
  if (eventsList.length > 0) {
  setSelectedEventId(eventsList[0].id);
  }
@@ -135,10 +143,14 @@ export default function AnalyticsPage() {
  }, [selectedEventId]);
 
  const handleRefresh = async () => {
- if (!selectedEventId) return;
  setRefreshing(true);
- await loadStatsForEvent(selectedEventId);
+ try {
+ const stats = await api.get('/events/workspace-stats').catch(() => null);
+ if (stats && stats.events) setWorkspace(stats as WorkspaceStats);
+ if (selectedEventId) await loadStatsForEvent(selectedEventId);
+ } finally {
  setRefreshing(false);
+ }
  };
 
  const selectedEvent = events.find(e => e.id === selectedEventId);
@@ -151,8 +163,9 @@ export default function AnalyticsPage() {
 
  const acceptedPct = totalGuests > 0 ? Math.round((acceptedCount / totalGuests) * 100) : 0;
  const declinedPct = totalGuests > 0 ? Math.round((declinedCount / totalGuests) * 100) : 0;
- const pendingPct = totalGuests > 0 ? Math.round((pendingCount / totalGuests) * 100) : 0;
  const responseRate = totalGuests > 0 ? Math.round(((acceptedCount + declinedCount) / totalGuests) * 100) : 0;
+ const checkedInCount = guests.filter((g) => Boolean(g.checkedInAt)).length;
+ const checkInPct = acceptedCount > 0 ? Math.round((checkedInCount / acceptedCount) * 100) : 0;
 
  const uniqueCategories = Array.from(new Set(guests.map(g => g.category || 'Général')));
 
@@ -222,8 +235,12 @@ export default function AnalyticsPage() {
  return (
  <div className="space-y-8 w-full">
  <PageHeader
- title="Statistiques des événements"
- description="Analyse approfondie des réponses RSVP, préférences de repas et questions personnalisées."
+ title={protocolView ? 'Statistiques protocole' : 'Statistiques des événements'}
+ description={
+ protocolView
+ ? 'Check-in, tâches du jour J et prochains accueils. Le détail RSVP reste disponible par événement.'
+ : 'Vue organisation : événements, RSVP, check-in et tâches. Choisissez un événement pour le détail invités.'
+ }
  breadcrumbs={
  <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Statistiques' }]} />
  }
@@ -254,6 +271,8 @@ export default function AnalyticsPage() {
 
  {error && <Alert variant="error">{error}</Alert>}
 
+ {workspace ? <WorkspaceStatsOverview stats={workspace} protocol={protocolView} /> : null}
+
  {events.length === 0 ? (
  <EmptyState
  icon={<Calendar className="w-7 h-7" />}
@@ -274,6 +293,10 @@ export default function AnalyticsPage() {
  </div>
  ) : (
  <div className="space-y-8">
+ <div>
+ <h2 className="text-sm font-bold uppercase tracking-wider text-muted mb-4">
+ {protocolView ? 'Accueil' : 'RSVP'} — {selectedEvent?.title || 'événement'}
+ </h2>
  {/* Quick Stats Cards */}
  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
  <div className="bg-white dark:bg-background p-5 rounded-2xl border border-border dark:border-border shadow-xs flex flex-col justify-between">
@@ -305,6 +328,24 @@ export default function AnalyticsPage() {
  <div className="flex items-baseline justify-between mt-3">
  <span className="text-3xl font-black text-primary dark:text-primary">{responseRate}%</span>
  <span className="text-xs bg-primary/10 dark:bg-primary/10 text-primary dark:text-primary px-2 py-0.5 rounded-md font-bold">En attente: {pendingCount}</span>
+ </div>
+ </div>
+ </div>
+
+ <div className="grid grid-cols-2 gap-4 sm:gap-6 mt-4">
+ <div className="bg-white dark:bg-background p-5 rounded-2xl border border-border dark:border-border shadow-xs flex flex-col justify-between">
+ <span className="text-xs font-bold text-muted uppercase tracking-wider block">Check-in (scannés)</span>
+ <div className="flex items-baseline justify-between mt-3">
+ <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400">{checkedInCount}</span>
+ <span className="text-xs bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-md font-bold">{checkInPct}%</span>
+ </div>
+ </div>
+ <div className="bg-white dark:bg-background p-5 rounded-2xl border border-border dark:border-border shadow-xs flex flex-col justify-between">
+ <span className="text-xs font-bold text-muted uppercase tracking-wider block">Reste à scanner</span>
+ <div className="flex items-baseline justify-between mt-3">
+ <span className="text-3xl font-black text-amber-600 dark:text-amber-400">{Math.max(0, acceptedCount - checkedInCount)}</span>
+ <span className="text-xs bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-md font-bold">Attendus: {acceptedCount}</span>
+ </div>
  </div>
  </div>
  </div>

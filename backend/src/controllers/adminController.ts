@@ -54,6 +54,11 @@ export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
       planGroups,
       kindGroups,
       roleGroups,
+      orgRoleGroups,
+      checkedIn,
+      openTasks,
+      overdueTasks,
+      upcomingEvents,
     ] = await Promise.all([
       prisma.tenant.count({ where: tenantWhere }),
       commercialId
@@ -95,6 +100,27 @@ export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
             by: ['role'],
             _count: { _all: true },
           }),
+      prisma.user.groupBy({
+        by: ['orgRole'],
+        where: commercialId
+          ? { role: 'USER', tenant: tenantWhere }
+          : { role: 'USER' },
+        _count: { _all: true },
+      }),
+      commercialId
+        ? prisma.guest.count({ where: { checkedInAt: { not: null }, event: { tenant: tenantWhere } } })
+        : prisma.guest.count({ where: { checkedInAt: { not: null } } }),
+      commercialId
+        ? prisma.eventTask.count({ where: { status: 'OPEN', event: { tenant: tenantWhere } } })
+        : prisma.eventTask.count({ where: { status: 'OPEN' } }),
+      commercialId
+        ? prisma.eventTask.count({
+            where: { status: 'OPEN', dueAt: { lt: now }, event: { tenant: tenantWhere } },
+          })
+        : prisma.eventTask.count({ where: { status: 'OPEN', dueAt: { lt: now } } }),
+      commercialId
+        ? prisma.event.count({ where: { date: { gte: now }, tenant: tenantWhere } })
+        : prisma.event.count({ where: { date: { gte: now } } }),
     ]);
 
     const planCounts: Record<string, number> = {};
@@ -103,6 +129,8 @@ export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
     for (const row of kindGroups) accountKindCounts[row.accountKind] = row._count._all;
     const userRoleCounts: Record<string, number> = {};
     for (const row of roleGroups) userRoleCounts[row.role] = row._count._all;
+    const orgRoleCounts: Record<string, number> = {};
+    for (const row of orgRoleGroups) orgRoleCounts[row.orgRole || 'NONE'] = row._count._all;
 
     return res.json({
       stats: {
@@ -112,10 +140,15 @@ export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
         guests: guestCount,
         verifiedUsers,
         licensesActive,
+        checkedIn,
+        openTasks,
+        overdueTasks,
+        upcomingEvents,
       },
       planCounts,
       accountKindCounts,
       userRoleCounts,
+      orgRoleCounts,
     });
   } catch (error: any) {
     console.error('Erreur lors de la récupération des stats admin:', error);

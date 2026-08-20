@@ -775,6 +775,7 @@ model EventTask {
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
   completedAt  DateTime?
+  dueRemindedAt DateTime?
 
   @@unique([eventId, sourceKey])
   @@index([eventId, status])

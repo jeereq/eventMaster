@@ -7,15 +7,12 @@ import { Alert, Button, EmptyState, Input, StatusPill } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
   EVENT_TASK_STATUS_LABELS,
+  taskDueLabel,
+  taskDueState,
   type EventTaskAssigneeOption,
   type EventTaskItem,
   type EventTaskStatus,
 } from '@/lib/eventTasks';
-
-function dueLabel(value?: string | null) {
-  if (!value) return null;
-  return new Date(value).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-}
 
 function statusTone(status: EventTaskStatus): 'amber' | 'emerald' | 'slate' {
   if (status === 'DONE') return 'emerald';
@@ -33,6 +30,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
   const [filter, setFilter] = useState<'open' | 'all'>('open');
   const [title, setTitle] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
+  const [dueAt, setDueAt] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -85,10 +83,12 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
       const data = (await api.post(`/events/${eventId}/tasks`, {
         title: title.trim(),
         assigneeId: assigneeId || undefined,
+        dueAt: dueAt || undefined,
       })) as { task?: EventTaskItem };
       if (data.task) setTasks((prev) => [...prev, data.task!]);
       setTitle('');
       setAssigneeId('');
+      setDueAt('');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossible de créer la tâche.');
     } finally {
@@ -196,6 +196,8 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
           {visible.map((task) => {
             const done = task.status === 'DONE';
             const canToggle = task.mine || canManage || !task.assignee;
+            const due = taskDueState(task.dueAt, task.status);
+            const dueText = taskDueLabel(task.dueAt, task.status);
             return (
               <li
                 key={task.id}
@@ -223,8 +225,10 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
                   {task.notes ? <p className="text-xs text-muted">{task.notes}</p> : null}
                   <div className="flex flex-wrap items-center gap-1.5">
                     <StatusPill tone={statusTone(task.status)}>{EVENT_TASK_STATUS_LABELS[task.status]}</StatusPill>
-                    {dueLabel(task.dueAt) ? (
-                      <span className="text-[11px] text-muted">{dueLabel(task.dueAt)}</span>
+                    {dueText ? (
+                      <StatusPill tone={due === 'overdue' ? 'rose' : due === 'today' ? 'amber' : 'slate'}>
+                        {dueText}
+                      </StatusPill>
                     ) : null}
                     {task.mine ? <StatusPill tone="sky">Moi</StatusPill> : null}
                     {canManage ? (
@@ -295,10 +299,20 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
                 </option>
               ))}
             </select>
+            <input
+              type="date"
+              value={dueAt}
+              onChange={(e) => setDueAt(e.target.value)}
+              className="px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+              title="Échéance — un rappel est envoyé la veille et le jour J"
+            />
             <Button type="submit" loading={saving} disabled={!title.trim()}>
               Ajouter
             </Button>
           </div>
+          <p className="text-[11px] text-muted">
+            Avec une échéance, l’assigné (ou le créateur) reçoit un rappel in-app et WhatsApp la veille / le jour J, puis en cas de retard.
+          </p>
         </form>
       ) : null}
     </div>

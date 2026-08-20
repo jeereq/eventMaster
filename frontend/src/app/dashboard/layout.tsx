@@ -92,7 +92,7 @@ const NAV_TOOLTIPS: Record<string, string> = {
  'Mes réservations': 'Devis, réservations, packs et favoris',
  Agenda: 'Événements publics du marketplace',
  'Mes billets': 'Inscriptions, filtres et badge QR',
- Statistiques: 'RSVP et analyses d’événements',
+ Statistiques: 'RSVP, check-in, tâches et analyses d’événements',
  Modèles: 'Concepteur d’invitations',
  'Facturation & plan': 'Forfait, quotas et upgrade',
  'Versements commerciaux': 'Commissions de vos commerciaux org., hors plateforme',
@@ -409,6 +409,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  items: [
  { name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar },
  { name: 'Protocole', href: '/dashboard/events?mode=protocol', tourId: 'nav-protocol', icon: ScanLine },
+ { name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3 },
  { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
  { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
  ],

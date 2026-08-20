@@ -12,6 +12,7 @@ import {
 } from '../utils/brandedMessaging';
 import { escapeHtml } from '../utils/brandingUtils';
 import { resolveWhatsAppInvitationBody } from '../utils/whatsappTone';
+import { processTaskDueReminders } from './taskDueReminderService';
 import fs from 'fs';
 import path from 'path';
 
@@ -252,10 +253,12 @@ export function startReminderWorker() {
   // Run on startup (after 10 seconds to let server bind)
   setTimeout(() => {
     processReminders();
+    void processTaskDueReminders();
   }, 10000);
 
   // Run every hour
   setInterval(() => {
     processReminders();
+    void processTaskDueReminders();
   }, 60 * 60 * 1000);
 }
