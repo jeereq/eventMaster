@@ -18,6 +18,7 @@ import MarketplaceBookingsPanel from '@/components/MarketplaceBookingsPanel';
 import MarketplaceInquiriesPanel from '@/components/MarketplaceInquiriesPanel';
 import { useRememberListReturn } from '@/lib/catalogueQuery';
 import { Bookmark, Heart, Inbox, Loader2, Store } from 'lucide-react';
+import GettingStartedChecklist from '@/components/GettingStartedChecklist';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { depositPercent } from '@/lib/platformRates';
 import { CatalogueChoicePills } from '@/components/CatalogueFilterBar';
@@ -144,6 +145,8 @@ function OrganizerDemandesPage() {
           </Link>
         }
       />
+
+      {isClient ? <GettingStartedChecklist variant="client" hasEvents={false} /> : null}
 
       {error && <Alert variant="error">{error}</Alert>}
 

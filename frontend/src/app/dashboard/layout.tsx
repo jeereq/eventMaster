@@ -26,6 +26,7 @@ import { Tooltip } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { TourProvider } from '@/context/TourContext';
 import ProductTourOverlay from '@/components/guide/ProductTourOverlay';
+import FirstLoginTourHost from '@/components/guide/FirstLoginTourHost';
 
 interface NavItem {
  name: string;
@@ -335,7 +336,10 @@ function SidebarNav({
  <Link
  href={item.href}
  data-tour={item.tourId}
- onClick={() => setMobileMenuOpen(false)}
+ onClick={() => {
+  if (document.body.dataset.emTour === '1') return;
+  setMobileMenuOpen(false);
+ }}
  aria-current={isActive ? 'page' : undefined}
  title={collapsed ? item.name : undefined}
  className={cn(
@@ -392,6 +396,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  } catch {
  /* ignore */
  }
+ }, []);
+
+ useEffect(() => {
+  const onTourVisibility = (event: Event) => {
+   const active = Boolean((event as CustomEvent<{ active?: boolean }>).detail?.active);
+   if (!active) {
+    try {
+     if (localStorage.getItem('em-sidebar-collapsed') === '1') setSidebarCollapsed(true);
+    } catch {
+     /* ignore */
+    }
+    return;
+   }
+   setSidebarCollapsed(false);
+   if (typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches) {
+    setMobileMenuOpen(true);
+   }
+  };
+  window.addEventListener('em-tour-visibility', onTourVisibility);
+  return () => window.removeEventListener('em-tour-visibility', onTourVisibility);
  }, []);
 
  const toggleSidebarCollapsed = () => {
@@ -533,7 +557,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  type="button"
  aria-label="Fermer le menu"
  className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden animate-fade-in"
- onClick={() => setMobileMenuOpen(false)}
+ onClick={() => {
+  if (document.body.dataset.emTour === '1') return;
+  setMobileMenuOpen(false);
+ }}
  />
  )}
 
@@ -699,7 +726,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  <Link
  href="/dashboard/profile"
  data-tour="nav-profile"
- onClick={() => setMobileMenuOpen(false)}
+ onClick={() => {
+  if (document.body.dataset.emTour === '1') return;
+  setMobileMenuOpen(false);
+ }}
  className={cn(
  'flex w-full items-center rounded-[var(--radius-button)] hover:bg-surface-muted transition group',
  sidebarCollapsed ? 'justify-center p-2' : 'gap-3 p-2',
@@ -748,7 +778,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  <main id="main-content" className="flex-1 min-w-0 overflow-y-auto bg-background flex flex-col">
  <DashboardTopBar />
  <div className="page-container py-5 sm:py-6 lg:py-8 flex-1 em-dashboard-content">
- <UserLegalGate>{children}</UserLegalGate>
+ <UserLegalGate>
+  {children}
+  <FirstLoginTourHost />
+ </UserLegalGate>
  </div>
  </main>
  <ViewCustomizerEdgeHandle />

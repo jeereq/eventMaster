@@ -101,6 +101,8 @@ export function getTourSpaceLabel(opts: {
 export interface NavTourOptions {
   workspace?: WorkspaceModules | null;
   planName?: string | null;
+  /** `first-login` : parcours court après OTP. `nav` (défaut) : tous les onglets. */
+  variant?: 'nav' | 'first-login';
 }
 
 export function buildNavTourOptions(input: {
@@ -124,6 +126,91 @@ export function buildNavTourOptions(input: {
       planName: landingName,
     }),
   };
+}
+
+function firstLoginHome(guideId: UserGuideId, access?: OrgAccess | null): string {
+  if (guideId === 'client') return '/dashboard/catalogue';
+  if (guideId === 'org_protocol' || access?.isProtocolOnly) return '/dashboard/events?mode=protocol';
+  if (guideId === 'org_commercial') return '/dashboard/org-commercial';
+  if (guideId === 'commercial_platform') return '/dashboard?tab=tenants';
+  if (guideId === 'super_admin') return '/dashboard?tab=overview';
+  return '/dashboard';
+}
+
+function firstLoginFinish(home: string, nextHint: string): ProductTourStep {
+  return {
+    id: 'first-finish',
+    title: 'Vous êtes lancé',
+    description: `${nextHint} Relancez la visite complète à tout moment depuis Guide utilisateur.`,
+    route: home,
+    target: 'nav-guide',
+  };
+}
+
+/** Parcours court après la première connexion — 4 à 6 étapes, pas tout le menu. */
+export function buildFirstLoginTour(
+  guideId: UserGuideId,
+  access?: OrgAccess | null,
+  opts?: NavTourOptions,
+): ProductTourStep[] {
+  if (guideId === 'guest') return [];
+  const home = firstLoginHome(guideId, access);
+  const workspace = opts?.workspace;
+  const steps: ProductTourStep[] = [];
+
+  const push = (tourId: string, route?: string) => pushTab(steps, tourId, route);
+
+  switch (guideId) {
+    case 'client':
+      push('nav-catalogue');
+      push('nav-bookings');
+      push('nav-tickets');
+      steps.push(
+        firstLoginFinish(home, 'Ensuite : ouvrez une fiche, enregistrez un favori ou demandez un devis.'),
+      );
+      return steps;
+
+    case 'org_protocol':
+      push('nav-protocol');
+      push('nav-events');
+      steps.push(firstLoginFinish(home, 'Ensuite : ouvrez un événement le jour J et testez le scan QR.'));
+      return steps;
+
+    case 'org_commercial':
+      push('nav-org-commercial');
+      steps.push(firstLoginFinish(home, 'Ensuite : partagez votre lien de parrainage.'));
+      return steps;
+
+    case 'commercial_platform':
+      push('nav-tenants');
+      push('nav-subscription-requests');
+      push('nav-commercial');
+      steps.push(firstLoginFinish(home, 'Ensuite : suivez une organisation ou une demande d’abonnement.'));
+      return steps;
+
+    case 'super_admin':
+      push('nav-overview');
+      push('nav-tenants');
+      steps.push(firstLoginFinish(home, 'Ensuite : traitez la file du jour.'));
+      return steps;
+
+    default: {
+      push('nav-dashboard', home);
+      if (!workspace || workspace.showEvents) {
+        push('nav-events');
+        push('nav-bookings');
+      } else {
+        if (workspace.showRooms) push('nav-rooms');
+        if (workspace.showMarketplace) push('nav-marketplace');
+        if (access?.canViewBilling) push('nav-billing');
+      }
+      const nextHint = workspace && !workspace.showEvents
+        ? 'Ensuite : publiez une fiche salle ou prestation, puis choisissez un forfait marketplace.'
+        : 'Ensuite : créez votre premier événement, puis ajoutez un invité.';
+      steps.push(firstLoginFinish(home, nextHint));
+      return steps;
+    }
+  }
 }
 
 /** Ordre des onglets par profil — aligné sur dashboard/layout.tsx */
@@ -207,5 +294,6 @@ export function getProductTour(
   access?: OrgAccess | null,
   opts?: NavTourOptions,
 ): ProductTourStep[] {
+  if (opts?.variant === 'first-login') return buildFirstLoginTour(guideId, access, opts);
   return buildNavProductTour(guideId, access, opts);
 }

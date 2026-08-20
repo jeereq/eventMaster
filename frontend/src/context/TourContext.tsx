@@ -13,7 +13,7 @@ interface TourContextValue {
   stepIndex: number;
   currentStep: ProductTourStep | null;
   startTour: (guideId: UserGuideId, access?: OrgAccess | null, opts?: NavTourOptions) => void;
-  stopTour: () => void;
+  stopTour: (reason?: 'done' | 'abort') => void;
   nextStep: () => void;
   prevStep: () => void;
   targetRect: DOMRect | null;
@@ -53,7 +53,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
 
   const currentStep = steps[stepIndex] ?? null;
 
-  const stopTour = useCallback(() => {
+  const stopTour = useCallback((reason: 'done' | 'abort' = 'abort') => {
     setIsActive(false);
     setSteps([]);
     setStepIndex(0);
@@ -62,6 +62,9 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     document.querySelectorAll('[data-tour-active]').forEach((el) => {
       el.removeAttribute('data-tour-active');
     });
+    delete document.body.dataset.emTour;
+    window.dispatchEvent(new CustomEvent('em-tour-stopped', { detail: { reason } }));
+    window.dispatchEvent(new CustomEvent('em-tour-visibility', { detail: { active: false } }));
   }, []);
 
   const startTour = useCallback(
@@ -96,7 +99,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
 
   const nextStep = useCallback(() => {
     if (stepIndex >= steps.length - 1) {
-      stopTour();
+      stopTour('done');
       return;
     }
     goToStep(stepIndex + 1);
@@ -156,6 +159,15 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       window.clearTimeout(timer);
     };
   }, [isActive, currentStep, currentPath, router, stopTour]);
+
+  useEffect(() => {
+    if (!isActive) return;
+    document.body.dataset.emTour = '1';
+    window.dispatchEvent(new CustomEvent('em-tour-visibility', { detail: { active: true } }));
+    return () => {
+      delete document.body.dataset.emTour;
+    };
+  }, [isActive, stepIndex]);
 
   useEffect(() => {
     if (!isActive) return;

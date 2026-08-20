@@ -7,6 +7,7 @@ import type { PlanId } from '@/config/landingPricing';
 import { applyBrandToDocument, clearBrandFromDocument, type TenantBranding } from '@/lib/brandTheme';
 import type { TenantAccountKind } from '@/lib/marketplace';
 import { safeAppPath } from '@/lib/safeAppPath';
+import { appendFirstTourQuery } from '@/lib/firstLoginTour';
 
 export interface OrgAccess {
   level: 'owner' | 'manager' | 'protocol' | 'commercial' | 'staff' | 'client' | 'none';
@@ -329,7 +330,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSupportSession(false);
       localStorage.removeItem(SUPPORT_BACKUP_KEY);
       setLoading(false);
-      router.push(safeAppPath(options?.next) || postAuthPath(data.user?.role, data.access ?? null));
+      const dest = safeAppPath(options?.next) || postAuthPath(data.user?.role, data.access ?? null);
+      router.push(safeAppPath(options?.next) ? dest : appendFirstTourQuery(dest));
     } catch (error) {
       setLoading(false);
       throw error;

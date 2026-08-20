@@ -5,7 +5,9 @@ import Link from 'next/link';
 import { CheckCircle2, Circle, ChevronRight, Sparkles, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
-const STORAGE_KEY = 'em-getting-started';
+import { GETTING_STARTED_CHANGED_EVENT, GETTING_STARTED_STORAGE_KEY } from '@/lib/firstLoginTour';
+
+const STORAGE_KEY = GETTING_STARTED_STORAGE_KEY;
 
 type PersistedFlow = {
   dismissed?: boolean;
@@ -24,7 +26,7 @@ export type GettingStartedProps = {
   hasTemplates?: boolean;
   firstEventId?: string | null;
   className?: string;
-  variant?: 'organizer' | 'vendor';
+  variant?: 'organizer' | 'vendor' | 'client';
   hasRooms?: boolean;
   hasServices?: boolean;
   preferServices?: boolean;
@@ -80,12 +82,55 @@ export default function GettingStartedChecklist({
   useEffect(() => {
     setFlow(readFlow());
     setReady(true);
+    const sync = () => setFlow(readFlow());
+    window.addEventListener(GETTING_STARTED_CHANGED_EVENT, sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener(GETTING_STARTED_CHANGED_EVENT, sync);
+      window.removeEventListener('storage', sync);
+    };
   }, []);
 
   const steps = useMemo((): ChecklistStep[] => {
+    if (variant === 'client') {
+      return [
+        {
+          id: 'guide',
+          title: 'Faire la visite guidée',
+          description: '1 minute pour découvrir le marketplace, les devis et les billets.',
+          href: '/dashboard/guide?view=tour&start=1',
+          done: Boolean(flow.guideDone),
+          markOnClick: 'guideDone' as const,
+        },
+        {
+          id: 'explore',
+          title: 'Explorer salles et prestataires',
+          description: 'Filtrez, ouvrez une fiche, ajoutez un favori.',
+          href: '/dashboard/catalogue',
+          done: Boolean(flow.templateDone),
+          markOnClick: 'templateDone' as const,
+        },
+        {
+          id: 'quote',
+          title: 'Demander un devis',
+          description: 'Composez un pack ou envoyez une demande depuis une fiche.',
+          href: '/dashboard/bookings',
+          done: Boolean(flow.inviteDone),
+          markOnClick: 'inviteDone' as const,
+        },
+      ];
+    }
     if (variant === 'vendor') {
       const startWithService = preferServices || (hasServices && !hasRooms);
       return [
+        {
+          id: 'guide',
+          title: 'Faire la visite guidée',
+          description: '1 minute pour découvrir l’espace prestataire.',
+          href: '/dashboard/guide?view=tour&start=1',
+          done: Boolean(flow.guideDone),
+          markOnClick: 'guideDone' as const,
+        },
         {
           id: 'offer',
           title: startWithService ? 'Publier une prestation' : 'Publier une salle',
@@ -101,14 +146,6 @@ export default function GettingStartedChecklist({
           done: Boolean(flow.templateDone),
           markOnClick: 'templateDone' as const,
         },
-        {
-          id: 'guide',
-          title: 'Faire la visite guidée',
-          description: '2 minutes pour découvrir l’espace.',
-          href: '/dashboard/guide?view=tour&start=1',
-          done: Boolean(flow.guideDone),
-          markOnClick: 'guideDone' as const,
-        },
       ];
     }
     const guestsHref = firstEventId
@@ -118,6 +155,14 @@ export default function GettingStartedChecklist({
       ? `/dashboard/events/${firstEventId}?tab=invitations`
       : '/dashboard/events';
     return [
+      {
+        id: 'guide',
+        title: 'Faire la visite guidée',
+        description: '1 minute pour découvrir le menu et votre première action.',
+        href: '/dashboard/guide?view=tour&start=1',
+        done: Boolean(flow.guideDone),
+        markOnClick: 'guideDone' as const,
+      },
       {
         id: 'event',
         title: 'Créer un événement',
@@ -142,16 +187,8 @@ export default function GettingStartedChecklist({
         done: (hasInvitations || Boolean(flow.inviteDone)) && hasEvents,
         disabled: !hasEvents,
       },
-      {
-        id: 'guide',
-        title: 'Faire la visite guidée',
-        description: '2 minutes pour découvrir l’espace.',
-        href: '/dashboard/guide?view=tour&start=1',
-        done: Boolean(flow.guideDone),
-        markOnClick: 'guideDone' as const,
-      },
     ];
-  }, [variant, hasRooms, hasServices, preferServices, hasEvents, hasGuests, hasInvitations, firstEventId, flow.guestsDone, flow.inviteDone, flow.guideDone]);
+  }, [variant, hasRooms, hasServices, preferServices, hasEvents, hasGuests, hasInvitations, firstEventId, flow.guestsDone, flow.inviteDone, flow.guideDone, flow.templateDone]);
 
   const doneCount = steps.filter((s) => s.done).length;
   const allDone = doneCount === steps.length;

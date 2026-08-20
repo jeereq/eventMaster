@@ -5186,7 +5186,13 @@ function DashboardPageContent() {
  hasEvents={events.length > 0}
  hasGuests={(planQuota?.usage.guests ?? 0) > 0}
  firstEventId={events[0]?.id}
- variant={tenant?.accountKind === 'VENDOR' || (planQuota != null && (planQuota.limits.maxEvents ?? 0) <= 0) ? 'vendor' : 'organizer'}
+ variant={
+  tenant?.accountKind === 'CLIENT' || access?.level === 'client'
+   ? 'client'
+   : tenant?.accountKind === 'VENDOR' || (planQuota != null && (planQuota.limits.maxEvents ?? 0) <= 0)
+    ? 'vendor'
+    : 'organizer'
+ }
  hasRooms={(planQuota?.usage.rooms ?? 0) > 0}
  hasServices={(planQuota?.usage.services ?? 0) > 0}
  preferServices={(planQuota?.limits.maxRooms ?? 1) <= 0}
