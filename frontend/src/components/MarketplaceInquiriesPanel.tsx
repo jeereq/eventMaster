@@ -124,7 +124,12 @@ export default function MarketplaceInquiriesPanel({
         }]
       : []),
     ...(kind && kind !== 'all'
-      ? [{ id: 'kind', label: 'Type', value: KIND_OPTIONS.find((item) => item.id === kind)?.label || kind, tone: kind === 'venue' ? 'venue' : kind === 'service' ? 'service' : 'neutral' as const }]
+      ? [{
+          id: 'kind',
+          label: 'Type',
+          value: KIND_OPTIONS.find((item) => item.id === kind)?.label || kind,
+          tone: (kind === 'venue' ? 'venue' : kind === 'service' ? 'service' : 'neutral') as CatalogueFilterChip['tone'],
+        }]
       : []),
   ];
 
