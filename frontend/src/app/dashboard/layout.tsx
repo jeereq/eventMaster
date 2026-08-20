@@ -3,8 +3,8 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
-import { getWorkspaceModules } from '@/lib/planAccess';
+import { useAuth, type OrgAccess } from '@/context/AuthContext';
+import { getWorkspaceModules, type WorkspaceModules } from '@/lib/planAccess';
 import { useTheme } from '@/context/ThemeContext';
 import {
  Calendar, Users, Mail, CreditCard, LayoutDashboard,
@@ -110,6 +110,176 @@ function withNavTips(sections: NavSection[]): NavSection[] {
  }));
 }
 
+function navSection(label: string | undefined, items: NavItem[]): NavSection | null {
+ return items.length ? { label, items } : null;
+}
+
+function buildNavSections(...sections: Array<NavSection | null>): NavSection[] {
+ return sections.filter((section): section is NavSection => Boolean(section?.items.length));
+}
+
+function buildDashboardNav(opts: {
+ role?: string;
+ access?: OrgAccess | null;
+ workspace: WorkspaceModules;
+ accountKind?: string | null;
+ isClientAccount: boolean;
+}): NavSection[] {
+ const { role, access, workspace, accountKind, isClientAccount } = opts;
+ const vendorOnly = accountKind === 'VENDOR';
+
+ if (role === 'SUPER_ADMIN') {
+  return buildNavSections(
+   navSection('Pilotage', [
+    { name: 'Accueil', href: '/dashboard?tab=overview', tab: 'overview', tourId: 'nav-overview', icon: LayoutDashboard },
+    { name: 'Analyses', href: '/dashboard?tab=analytics&section=overview', tab: 'analytics', tourId: 'nav-analytics', icon: BarChart3 },
+    { name: 'Journal d’audit', href: '/dashboard/audit', tourId: 'nav-audit', icon: ScrollText },
+   ]),
+   navSection('Organisations', [
+    { name: 'Organisations', href: '/dashboard?tab=tenants', tab: 'tenants', tourId: 'nav-tenants', icon: Building2 },
+    { name: 'Utilisateurs', href: '/dashboard?tab=users', tab: 'users', tourId: 'nav-users', icon: Users },
+    { name: 'Événements', href: '/dashboard/admin/events', tourId: 'nav-events-admin', icon: Calendar },
+    { name: 'Invités', href: '/dashboard/admin/guests', tourId: 'nav-guests', icon: Users },
+   ]),
+   navSection('Contenu & vitrine', [
+    { name: 'Modèles invitation', href: '/dashboard?tab=templates', tab: 'templates', tourId: 'nav-templates', icon: FileText },
+    { name: 'Messages automatiques', href: '/dashboard?tab=message-templates', tab: 'message-templates', tourId: 'nav-message-templates', icon: MessageSquare },
+    { name: 'Catalogue', href: '/dashboard/admin/catalogue', tourId: 'nav-catalog-admin', icon: Store },
+   ]),
+   navSection('Facturation', [
+    { name: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests', tab: 'subscription-requests', tourId: 'nav-subscription-requests', icon: Clock },
+    { name: 'Forfaits & tarifs', href: '/dashboard?tab=subscription-plans', tab: 'subscription-plans', tourId: 'nav-subscription-plans', icon: CreditCard },
+    { name: 'Factures', href: '/dashboard?tab=invoices', tab: 'invoices', tourId: 'nav-invoices', icon: FileText },
+    { name: 'Versements SaaS', href: '/dashboard/admin/payouts', tourId: 'nav-payouts', icon: Wallet },
+   ]),
+   navSection('Système', [
+    { name: 'Réglages plateforme', href: '/dashboard?tab=settings', tab: 'settings', tourId: 'nav-settings', icon: Key },
+   ]),
+   navSection('Compte', [
+    { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
+    { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
+   ]),
+  );
+ }
+
+ if (role === 'COMMERCIAL') {
+  return buildNavSections(
+   navSection('Portefeuille', [
+    { name: 'Organisations', href: '/dashboard?tab=tenants', tab: 'tenants', tourId: 'nav-tenants', icon: Building2 },
+    { name: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests', tab: 'subscription-requests', tourId: 'nav-subscription-requests', icon: Clock },
+    { name: 'Factures', href: '/dashboard?tab=invoices', tab: 'invoices', tourId: 'nav-invoices', icon: FileText },
+   ]),
+   navSection('Gains', [
+    { name: 'Parrainage & commissions', href: '/dashboard/commercial', tourId: 'nav-commercial', icon: Briefcase },
+   ]),
+   navSection('Compte', [
+    { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
+    { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
+   ]),
+  );
+ }
+
+ if (access?.level === 'commercial') {
+  return buildNavSections(
+   navSection('Réseau', [
+    { name: 'Réseau commercial', href: '/dashboard/org-commercial', tourId: 'nav-org-commercial', icon: Briefcase },
+   ]),
+   navSection('Compte', [
+    { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
+    { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
+   ]),
+  );
+ }
+
+ if (access?.isProtocolOnly) {
+  return buildNavSections(
+   navSection('Jour J', [
+    { name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar },
+    { name: 'Protocole', href: '/dashboard/events?mode=protocol', tourId: 'nav-protocol', icon: ScanLine },
+   ]),
+   navSection('Suivi', [
+    { name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3 },
+   ]),
+   navSection('Compte', [
+    { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
+    { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
+   ]),
+  );
+ }
+
+ if (isClientAccount) {
+  return buildNavSections(
+   navSection('Découvrir', [
+    { name: 'Marketplace', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires, locations, favoris et préparation d’événement' },
+    { name: 'Agenda', href: '/dashboard/catalogue?kind=event', tourId: 'nav-agenda', icon: Calendar, description: 'Événements publics du marketplace — inscriptions et billets' },
+   ]),
+   navSection('Mes activités', [
+    { name: 'Mes billets', href: '/dashboard/tickets', tourId: 'nav-tickets', icon: Ticket, description: 'Inscriptions, filtres, vue grille/liste et badges QR' },
+    { name: 'Devis & réservations', href: '/dashboard/bookings', tourId: 'nav-bookings', icon: CalendarCheck },
+   ]),
+   navSection('Compte', [
+    { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
+    { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
+   ]),
+  );
+ }
+
+ const eventItems: NavItem[] = [
+  ...(workspace.showEvents
+   ? [{ name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar }]
+   : []),
+  ...(workspace.showProtocol
+   ? [{ name: 'Protocole', href: '/dashboard/events?mode=protocol', tourId: 'nav-protocol', icon: ScanLine }]
+   : []),
+  ...(workspace.showAnalytics
+   ? [{ name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3 }]
+   : []),
+  ...(workspace.showTemplates
+   ? [{ name: 'Modèles', href: '/dashboard/templates', tourId: 'nav-templates', icon: Mail }]
+   : []),
+ ];
+
+ const marketItems: NavItem[] = [
+  ...(workspace.showEvents
+   ? [{ name: 'Devis & réservations', href: '/dashboard/bookings', tourId: 'nav-bookings', icon: CalendarCheck }]
+   : []),
+  ...(workspace.showMarketplace
+   ? [{ name: 'Marketplace', href: '/dashboard/marketplace', tourId: 'nav-marketplace', icon: Store }]
+   : []),
+  ...(workspace.showRooms
+   ? [{ name: 'Salles', href: '/dashboard/rooms', tourId: 'nav-rooms', icon: Building2 }]
+   : []),
+ ];
+
+ const billingItems: NavItem[] = [
+  ...(access?.canViewBilling
+   ? [{ name: 'Facturation & plan', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }]
+   : []),
+  ...(access?.canViewBilling
+   ? [{ name: 'Versements commerciaux', href: '/dashboard/billing/payouts', tourId: 'nav-org-payouts', icon: Wallet }]
+   : []),
+  ...(access?.canViewInvoices
+   ? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: FileText }]
+   : []),
+ ];
+
+ return buildNavSections(
+  navSection('Accueil', [
+   { name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard },
+  ]),
+  navSection('Événements', eventItems),
+  navSection(vendorOnly ? 'Offre' : 'Marketplace', marketItems),
+  navSection('Organisation', workspace.showTeam
+   ? [{ name: 'Équipe', href: '/dashboard/team', tourId: 'nav-team', icon: Users }]
+   : []),
+  navSection('Facturation', billingItems),
+  navSection('Compte', [
+   { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
+   { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
+  ]),
+ );
+}
+
 function SidebarNav({
  sections,
  pathname,
@@ -128,7 +298,7 @@ function SidebarNav({
 
  return (
  <nav className={cn('space-y-4', collapsed && 'space-y-2.5')} aria-label="Navigation principale">
- {sections.map((section, sectionIdx) => (
+ {sections.filter((section) => section.items.length > 0).map((section, sectionIdx) => (
  <div key={section.label ?? sectionIdx}>
  {section.label && !collapsed && (
  <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted">
@@ -336,134 +506,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  );
  }
 
- const navSections: NavSection[] = user?.role === 'SUPER_ADMIN'
- ? [
- {
- label: 'Plateforme',
- items: [
- { name: 'Accueil', href: '/dashboard?tab=overview', tab: 'overview', tourId: 'nav-overview', icon: LayoutDashboard, description: 'File du jour : demandes, licences, factures' },
- { name: 'Organisations', href: '/dashboard?tab=tenants', tab: 'tenants', tourId: 'nav-tenants', icon: Building2 },
- { name: 'Utilisateurs', href: '/dashboard?tab=users', tab: 'users', tourId: 'nav-users', icon: Users },
- { name: 'Événements', href: '/dashboard/admin/events', tourId: 'nav-events-admin', icon: Calendar },
- { name: 'Invités', href: '/dashboard/admin/guests', tourId: 'nav-guests', icon: Users },
- ],
- },
- {
- label: 'Contenu & vitrine',
- items: [
- { name: 'Modèles invitation', href: '/dashboard?tab=templates', tab: 'templates', tourId: 'nav-templates', icon: FileText },
- { name: 'Messages automatiques', href: '/dashboard?tab=message-templates', tab: 'message-templates', tourId: 'nav-message-templates', icon: MessageSquare },
- { name: 'Catalogue', href: '/dashboard/admin/catalogue', tourId: 'nav-catalog-admin', icon: Store },
- ],
- },
- {
- label: 'Billing & système',
- items: [
- { name: 'Analyses', href: '/dashboard?tab=analytics&section=overview', tab: 'analytics', tourId: 'nav-analytics', icon: BarChart3 },
- { name: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests', tab: 'subscription-requests', tourId: 'nav-subscription-requests', icon: Clock },
- { name: 'Forfaits & tarifs', href: '/dashboard?tab=subscription-plans', tab: 'subscription-plans', tourId: 'nav-subscription-plans', icon: CreditCard },
- { name: 'Factures', href: '/dashboard?tab=invoices', tab: 'invoices', tourId: 'nav-invoices', icon: FileText },
- { name: 'Versements SaaS', href: '/dashboard/admin/payouts', tourId: 'nav-payouts', icon: Wallet },
- { name: 'Journal d’audit', href: '/dashboard/audit', tourId: 'nav-audit', icon: ScrollText },
- { name: 'Réglages plateforme', href: '/dashboard?tab=settings', tab: 'settings', tourId: 'nav-settings', icon: Key },
- ],
- },
- {
- items: [
- { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
- { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
- ],
- },
- ]
- : user?.role === 'COMMERCIAL'
- ? [
- {
- label: 'Plateforme',
- items: [
- { name: 'Organisations', href: '/dashboard?tab=tenants', tab: 'tenants', tourId: 'nav-tenants', icon: Building2 },
- { name: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests', tab: 'subscription-requests', tourId: 'nav-subscription-requests', icon: Clock },
- { name: 'Factures', href: '/dashboard?tab=invoices', tab: 'invoices', tourId: 'nav-invoices', icon: FileText },
- ],
- },
- {
- items: [
- { name: 'Parrainage & commissions', href: '/dashboard/commercial', tourId: 'nav-commercial', icon: Briefcase },
- { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
- { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
- ],
- },
- ]
- : access?.level === 'commercial'
- ? [
- {
- items: [
- { name: 'Réseau commercial', href: '/dashboard/org-commercial', tourId: 'nav-org-commercial', icon: Briefcase },
- { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
- { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
- ],
- },
- ]
- : access?.isProtocolOnly
- ? [
- {
- items: [
- { name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar },
- { name: 'Protocole', href: '/dashboard/events?mode=protocol', tourId: 'nav-protocol', icon: ScanLine },
- { name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3 },
- { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
- { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
- ],
- },
- ]
- : isClientAccount
- ? [
- {
- items: [
- { name: 'Marketplace', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires, locations, favoris et préparation d’événement' },
- { name: 'Agenda', href: '/dashboard/catalogue?kind=event', tourId: 'nav-agenda', icon: Calendar, description: 'Événements publics du marketplace — inscriptions et billets' },
- { name: 'Mes billets', href: '/dashboard/tickets', tourId: 'nav-tickets', icon: Ticket, description: 'Inscriptions, filtres, vue grille/liste et badges QR' },
- { name: 'Devis & réservations', href: '/dashboard/bookings', tourId: 'nav-bookings', icon: CalendarCheck },
- { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
- { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
- ],
- },
- ]
- : [
- {
- items: [
- { name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard },
- ...(workspace.showEvents
- ? [{ name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar }]
- : []),
- ...(workspace.showEvents
- ? [{ name: 'Devis & réservations', href: '/dashboard/bookings', tourId: 'nav-bookings', icon: CalendarCheck }]
- : []),
- ...(workspace.showRooms
- ? [{ name: 'Salles', href: '/dashboard/rooms', tourId: 'nav-rooms', icon: Building2 }]
- : []),
- ...(workspace.showTeam
- ? [{ name: 'Équipe', href: '/dashboard/team', tourId: 'nav-team', icon: Users }]
- : []),
- ...(workspace.showMarketplace
- ? [{ name: 'Marketplace', href: '/dashboard/marketplace', tourId: 'nav-marketplace', icon: Store }]
- : []),
- ...(workspace.showProtocol
- ? [{ name: 'Protocole', href: '/dashboard/events?mode=protocol', tourId: 'nav-protocol', icon: ScanLine }]
- : []),
- ...(workspace.showAnalytics
- ? [{ name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3 }]
- : []),
- ...(workspace.showTemplates
- ? [{ name: 'Modèles', href: '/dashboard/templates', tourId: 'nav-templates', icon: Mail }]
- : []),
- ...(access?.canViewBilling ? [{ name: 'Facturation & plan', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }] : []),
- ...(access?.canViewBilling ? [{ name: 'Versements commerciaux', href: '/dashboard/billing/payouts', tourId: 'nav-org-payouts', icon: Wallet }] : []),
- ...(access?.canViewInvoices ? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: FileText }] : []),
- { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
- { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
- ],
- },
- ];
+ const navSections: NavSection[] = buildDashboardNav({
+  role: user?.role,
+  access,
+  workspace,
+  accountKind: tenant?.accountKind,
+  isClientAccount,
+ });
 
  const showNotifications = Boolean(user);
 
