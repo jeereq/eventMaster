@@ -41,9 +41,25 @@ export const NOTIFICATION_FAMILIES = {
 
 export type NotificationFamily = keyof typeof NOTIFICATION_FAMILIES;
 
+export const NOTIFICATION_PREF_FAMILIES = ['billing', 'commissions', 'catalog'] as const;
+export type NotificationPrefFamily = (typeof NOTIFICATION_PREF_FAMILIES)[number];
+
+export type NotificationChannel = 'IN_APP' | 'EMAIL' | 'WHATSAPP' | 'PUSH';
+
 export function typesForFamily(family?: string | null): string[] | undefined {
   if (!family) return undefined;
   const key = family as NotificationFamily;
   const types = NOTIFICATION_FAMILIES[key];
   return types ? [...types] : undefined;
+}
+
+export function familyForType(type: string): NotificationPrefFamily | 'account' {
+  if ((NOTIFICATION_FAMILIES.billing as readonly string[]).includes(type)) return 'billing';
+  if ((NOTIFICATION_FAMILIES.commissions as readonly string[]).includes(type)) return 'commissions';
+  if ((NOTIFICATION_FAMILIES.catalog as readonly string[]).includes(type)) return 'catalog';
+  return 'account';
+}
+
+export function isNotificationPrefFamily(value: string): value is NotificationPrefFamily {
+  return (NOTIFICATION_PREF_FAMILIES as readonly string[]).includes(value);
 }

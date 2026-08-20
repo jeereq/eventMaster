@@ -1,7 +1,6 @@
 import { PlanType } from '@prisma/client';
 import { prisma } from '../db';
 import { getPlanLimits } from '../config/plansConfig';
-import { sendRealEmail, sendRealWhatsApp } from './notificationService';
 import {
   createCommercialBillingNotification,
   type CommercialBillingEvent,
@@ -409,60 +408,10 @@ export async function notifyCommercialsOnSubscriptionApproval(params: {
     return { notified: [] };
   }
 
-  const planName = getPlanLimits(params.plan).name;
-  const discountLine =
-    params.discountAmount > 0
-      ? `\nRéduction accordée : − ${formatAmountFc(params.discountAmount)} (${params.discountPercent} %)\nMontant facturé : ${formatAmountFc(params.finalAmount)}`
-      : `\nMontant facturé : ${formatAmountFc(params.finalAmount)}`;
-
   const event = params.event ?? 'SUBSCRIPTION_APPROVAL';
   const notified: string[] = [];
 
   for (const contact of contacts) {
-    const roleLabel = contact.kind === 'platform' ? 'commercial plateforme' : 'commercial organisation';
-    const subject = `EventMaster — Abonnement approuvé pour ${params.tenantName}`;
-    const text = [
-      `Bonjour${contact.name ? ` ${contact.name}` : ''},`,
-      '',
-      `L'abonnement de l'organisation « ${params.tenantName} » vient d'être approuvé.`,
-      '',
-      `Forfait : ${planName} (${params.plan})`,
-      `Durée : ${params.durationDays} jours`,
-      `Prix catalogue : ${formatAmountFc(params.baseAmount)}`,
-      discountLine.trim(),
-      params.invoiceNumber ? `Facture : ${params.invoiceNumber}` : '',
-      '',
-      `Votre commission sera calculée sur le montant facturé (${formatAmountFc(params.finalAmount)}).`,
-      '',
-      '— EventMaster',
-    ]
-      .filter(Boolean)
-      .join('\n');
-
-    const html = `
-      <p>Bonjour${contact.name ? ` ${contact.name}` : ''},</p>
-      <p>L'abonnement de l'organisation <strong>${params.tenantName}</strong> vient d'être approuvé.</p>
-      <ul>
-        <li>Forfait : <strong>${planName}</strong> (${params.plan})</li>
-        <li>Durée : ${params.durationDays} jours</li>
-        <li>Prix catalogue : ${formatAmountFc(params.baseAmount)}</li>
-        ${params.discountAmount > 0 ? `<li>Réduction accordée : <strong style="color:#059669">− ${formatAmountFc(params.discountAmount)} (${params.discountPercent} %)</strong></li>` : ''}
-        <li>Montant facturé : <strong>${formatAmountFc(params.finalAmount)}</strong></li>
-        ${params.invoiceNumber ? `<li>Facture : ${params.invoiceNumber}</li>` : ''}
-      </ul>
-      <p style="color:#64748b;font-size:13px;">En tant que ${roleLabel}, votre commission sera calculée sur le montant facturé.</p>
-    `;
-
-    const emailResult = await sendRealEmail(contact.email, subject, text, html);
-    if (emailResult.success) {
-      notified.push(contact.email);
-    }
-
-    if (contact.phone) {
-      const waBody = `EventMaster — Abonnement approuvé pour ${params.tenantName} (${planName}). Montant facturé : ${formatAmountFc(params.finalAmount)}.${params.discountAmount > 0 ? ` Réduction : ${params.discountPercent}%.` : ''} Votre commission sera mise à jour.`;
-      await sendRealWhatsApp(contact.phone, waBody);
-    }
-
     try {
       await createCommercialBillingNotification({
         userId: contact.id,
@@ -478,8 +427,9 @@ export async function notifyCommercialsOnSubscriptionApproval(params: {
         invoiceNumber: params.invoiceNumber,
         commissionAmount: params.commissionsByUserId?.[contact.id],
       });
+      notified.push(contact.email);
     } catch (err) {
-      console.error('[notifyCommercialsOnSubscriptionApproval] notification in-app:', err);
+      console.error('[notifyCommercialsOnSubscriptionApproval] notification:', err);
     }
   }
 

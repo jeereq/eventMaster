@@ -15,9 +15,10 @@ export const PLATFORM_NOTIFICATION_TYPE = {
 } as const;
 
 export type NotificationFamily = 'billing' | 'commissions' | 'catalog' | 'all';
+export type NotificationPrefFamily = Exclude<NotificationFamily, 'all'>;
 
-export const NOTIFICATION_FAMILY_LABELS: Record<Exclude<NotificationFamily, 'all'>, string> = {
-  billing: 'Billing',
+export const NOTIFICATION_FAMILY_LABELS: Record<NotificationPrefFamily, string> = {
+  billing: 'Facturation',
   commissions: 'Commissions',
   catalog: 'Catalogue',
 };
@@ -53,7 +54,7 @@ export function notificationFamily(type: string): Exclude<NotificationFamily, 'a
 
 export function notificationFamilyLabel(type: string): string {
   const family = notificationFamily(type);
-  if (family === 'billing') return 'Billing';
+  if (family === 'billing') return 'Facturation';
   if (family === 'commissions') return 'Commissions';
   if (family === 'catalog') return 'Catalogue';
   return 'Compte';

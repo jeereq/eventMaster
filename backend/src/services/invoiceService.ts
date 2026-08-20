@@ -3,7 +3,7 @@ import PDFDocument from 'pdfkit';
 import { prisma } from '../db';
 import { getPlanLimits, getEffectiveMonthlyPriceFc, getPlanBaseAmount, periodAmountToInvoiceBase, ANNUAL_DISCOUNT_PERCENT, isAnnualDurationDays } from '../config/plansConfig';
 import { parsePlanPrice, getBillingPeriod } from './commercialService';
-import { sendRealEmail, sendRealWhatsApp } from './notificationService';
+import { sendRealEmail } from './notificationService';
 import { notifyTenantOperators, notifyPlatformStaff } from './platformNotificationService';
 import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
 import {
@@ -381,6 +381,7 @@ export async function createAndSendInvoice(params: {
       invoiceNumber,
       href: `${frontendUrl}/dashboard/invoices`,
     },
+    channels: ['IN_APP', 'PUSH', 'WHATSAPP'],
   });
 
   return invoice;
@@ -408,12 +409,10 @@ export async function sendLicenseExpiryWarning(params: {
 
   const subject = 'EventMaster - Votre abonnement expire dans 7 jours';
   const safeTenant = escapeHtml(normalizeInvoiceText(params.tenantName));
-  const safeName = params.ownerName ? escapeHtml(normalizeInvoiceText(params.ownerName)) : '';
   const safePlan = escapeHtml(normalizeInvoiceText(planDef.name));
+  const operatorMessage = `« ${params.tenantName} » (${planDef.name}) expire le ${expiryStr}. Renouvelez depuis Facturation.`;
 
   const text = [
-    `Bonjour${params.ownerName ? ` ${normalizeInvoiceText(params.ownerName)}` : ''},`,
-    '',
     `L'abonnement de l'organisation « ${normalizeInvoiceText(params.tenantName)} » (forfait ${normalizeInvoiceText(planDef.name)}) expire le ${expiryStr}.`,
     `Montant du renouvellement : ${formatAmountFc(payable)}.`,
     '',
@@ -426,7 +425,6 @@ export async function sendLicenseExpiryWarning(params: {
 <body style="font-family:Segoe UI,Arial,sans-serif;background:#f8fafc;margin:0;padding:24px;">
   <div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:24px;">
     <h2 style="margin:0 0 16px;color:#b45309;">Rappel - expiration dans 7 jours</h2>
-    <p>Bonjour${safeName ? ` ${safeName}` : ''},</p>
     <p>L'abonnement de <strong>${safeTenant}</strong> (forfait <strong>${safePlan}</strong>) expire le <strong>${escapeHtml(expiryStr)}</strong>.</p>
     <p>Montant estime du renouvellement : <strong style="color:#4f46e5;">${escapeHtml(formatAmountFc(payable))}</strong>.</p>
     <p style="color:#64748b;font-size:14px;">Connectez-vous a EventMaster, section Facturation, pour renouveler avant la date limite.</p>
@@ -434,40 +432,27 @@ export async function sendLicenseExpiryWarning(params: {
 </body>
 </html>`;
 
-  const emailResult = await sendRealEmail(params.ownerEmail, subject, text, html);
-  if (!emailResult.success) {
-    console.error(`[Invoice Service] Échec e-mail rappel J-7 à ${params.ownerEmail}: ${emailResult.error}`);
-  }
-
-  if (params.ownerPhone?.trim()) {
-    const waBody = [
-      'EventMaster - Rappel abonnement',
-      '',
-      `Bonjour${params.ownerName ? ` ${normalizeInvoiceText(params.ownerName)}` : ''},`,
-      `L'organisation « ${normalizeInvoiceText(params.tenantName)} » (${normalizeInvoiceText(planDef.name)}) expire le ${expiryStr}.`,
-      `Renouvellement estime : ${formatAmountFc(payable)}.`,
-      'Connectez-vous a EventMaster, section Facturation, pour renouveler.',
-    ].join('\n');
-
-    const waResult = await sendRealWhatsApp(params.ownerPhone, waBody);
-    if (waResult.success && !waResult.simulated) {
-      console.log(`[Invoice Service] Rappel J-7 WhatsApp envoyé à ${params.ownerPhone}`);
-    } else if (!waResult.success) {
-      console.error(`[Invoice Service] Échec WhatsApp rappel J-7: ${waResult.error}`);
-    }
-  }
+  const waBody = [
+    'EventMaster - Rappel abonnement',
+    '',
+    `L'organisation « ${normalizeInvoiceText(params.tenantName)} » (${normalizeInvoiceText(planDef.name)}) expire le ${expiryStr}.`,
+    `Renouvellement estime : ${formatAmountFc(payable)}.`,
+    'Connectez-vous a EventMaster, section Facturation, pour renouveler.',
+  ].join('\n');
 
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
   const expiryIso = params.expiresAt.toISOString().slice(0, 10);
   void notifyTenantOperators(params.tenantId, {
     type: PLATFORM_NOTIFICATION_TYPE.LICENSE_EXPIRING,
     title: 'Licence : expiration dans 7 jours',
-    message: `« ${params.tenantName} » (${planDef.name}) expire le ${expiryStr}. Renouvelez depuis Facturation.`,
+    message: operatorMessage,
     metadata: {
       tenantId: params.tenantId,
       expiresAt: expiryIso,
       href: `${frontendUrl}/dashboard/billing`,
     },
+    email: { subject, text, html },
+    whatsapp: waBody,
   });
   void notifyPlatformStaff({
     type: PLATFORM_NOTIFICATION_TYPE.LICENSE_EXPIRING,

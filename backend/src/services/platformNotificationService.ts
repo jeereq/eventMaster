@@ -1,8 +1,18 @@
 import { PlanType, Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import { getPlanLimits } from '../config/plansConfig';
+import { familyForType, typesForFamily, type NotificationChannel } from '../config/platformNotificationTypes';
 import { sendExpoPushToUser } from './expoPushService';
-import { typesForFamily } from '../config/platformNotificationTypes';
+import { sendRealEmail, sendRealWhatsApp } from './notificationService';
+import { allowedChannels, resolveChannelPreference } from './notificationPreferenceService';
+import {
+  FAMILY_LABEL_FR,
+  formatOperatorWhatsApp,
+  renderOperatorNotificationEmail,
+  renderOperatorWhatsApp,
+  resolveNotificationHref,
+  userWhatsAppNumber,
+} from '../utils/notificationTemplates';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -17,6 +27,22 @@ export type CommercialBillingEvent =
   | 'ADMIN_PLAN_CHANGE'
   | 'LICENSE_RENEWAL';
 
+export type NotifyEmailOverride = {
+  subject?: string;
+  text?: string;
+  html?: string;
+};
+
+export type PlatformNotifyParams = {
+  type: string;
+  title: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+  channels?: NotificationChannel[];
+  email?: NotifyEmailOverride;
+  whatsapp?: string;
+};
+
 function titleForEvent(event: CommercialBillingEvent, tenantName: string): string {
   switch (event) {
     case 'ADMIN_RENEWAL':
@@ -28,6 +54,113 @@ function titleForEvent(event: CommercialBillingEvent, tenantName: string): strin
     case 'SUBSCRIPTION_APPROVAL':
     default:
       return `Abonnement activé — ${tenantName}`;
+  }
+}
+
+async function logDelivery(params: {
+  notificationId: string;
+  channel: 'EMAIL' | 'WHATSAPP' | 'PUSH';
+  status: 'SENT' | 'FAILED' | 'SIMULATED';
+  providerId?: string;
+  error?: string;
+}) {
+  try {
+    await prisma.notificationDelivery.create({
+      data: {
+        notificationId: params.notificationId,
+        channel: params.channel,
+        status: params.status,
+        providerId: params.providerId || null,
+        error: params.error ? params.error.slice(0, 500) : null,
+      },
+    });
+  } catch (err) {
+    console.error('[platformNotification] journal livraison:', err);
+  }
+}
+
+async function fanOutChannels(
+  notification: { id: string; userId: string; type: string; title: string; message: string; metadata: Prisma.JsonValue },
+  extras: Pick<PlatformNotifyParams, 'channels' | 'email' | 'whatsapp'>,
+) {
+  const user = await prisma.user.findUnique({
+    where: { id: notification.userId },
+    select: { email: true, name: true, phone: true, phoneCountryCode: true },
+  });
+  if (!user) return;
+
+  const pref = await resolveChannelPreference(notification.userId, notification.type);
+  const channels = allowedChannels(pref, extras.channels);
+  const metadata = (notification.metadata as Record<string, unknown> | null) ?? null;
+  const href = resolveNotificationHref(metadata);
+
+  if (channels.has('PUSH')) {
+    try {
+      const result = await sendExpoPushToUser(notification.userId, {
+        title: notification.title,
+        body: notification.message,
+        data: {
+          notificationId: notification.id,
+          type: notification.type,
+          ...(metadata || {}),
+        },
+      });
+      if (result.sent > 0) {
+        await logDelivery({
+          notificationId: notification.id,
+          channel: 'PUSH',
+          status: 'SENT',
+          providerId: `${result.sent} device(s)`,
+        });
+      }
+    } catch (err) {
+      await logDelivery({
+        notificationId: notification.id,
+        channel: 'PUSH',
+        status: 'FAILED',
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  if (channels.has('EMAIL') && user.email) {
+    const family = familyForType(notification.type);
+    const rendered = renderOperatorNotificationEmail({
+      title: notification.title,
+      message: notification.message,
+      href,
+      familyLabel: FAMILY_LABEL_FR[family] || 'Compte',
+    });
+    const subject = extras.email?.subject || rendered.subject;
+    const text = extras.email?.text || rendered.text;
+    const html = extras.email?.html || rendered.html;
+    const result = await sendRealEmail(user.email, subject, text, html);
+    await logDelivery({
+      notificationId: notification.id,
+      channel: 'EMAIL',
+      status: result.simulated ? 'SIMULATED' : result.success ? 'SENT' : 'FAILED',
+      providerId: result.messageId,
+      error: result.error,
+    });
+  }
+
+  const waTo = userWhatsAppNumber(user);
+  if (channels.has('WHATSAPP') && waTo) {
+    const body = extras.whatsapp?.trim()
+      ? formatOperatorWhatsApp(extras.whatsapp)
+      : renderOperatorWhatsApp({
+          title: notification.title,
+          message: notification.message,
+          href,
+        });
+    const result = await sendRealWhatsApp(waTo, body);
+    await logDelivery({
+      notificationId: notification.id,
+      channel: 'WHATSAPP',
+      status: result.simulated ? 'SIMULATED' : result.success ? 'SENT' : 'FAILED',
+      providerId: result.messageSid,
+      error: result.error,
+    });
   }
 }
 
@@ -64,46 +197,29 @@ export async function createCommercialBillingNotification(params: {
     .filter(Boolean)
     .join(' ');
 
-  return prisma.platformNotification.create({
-    data: {
-      userId: params.userId,
-      type: params.event,
-      title: titleForEvent(params.event, params.tenantName),
-      message,
-      metadata: {
-        tenantId: params.tenantId,
-        tenantName: params.tenantName,
-        plan: params.plan,
-        finalAmount: params.finalAmount,
-        baseAmount: params.baseAmount,
-        discountPercent: params.discountPercent,
-        discountAmount: params.discountAmount,
-        invoiceNumber: params.invoiceNumber ?? null,
-        commissionAmount: params.commissionAmount ?? null,
-        href: `${FRONTEND_URL}/dashboard/notifications`,
-      },
+  return createPlatformNotification({
+    userId: params.userId,
+    type: params.event,
+    title: titleForEvent(params.event, params.tenantName),
+    message,
+    metadata: {
+      tenantId: params.tenantId,
+      tenantName: params.tenantName,
+      plan: params.plan,
+      finalAmount: params.finalAmount,
+      baseAmount: params.baseAmount,
+      discountPercent: params.discountPercent,
+      discountAmount: params.discountAmount,
+      invoiceNumber: params.invoiceNumber ?? null,
+      commissionAmount: params.commissionAmount ?? null,
+      href: `${FRONTEND_URL}/dashboard/notifications`,
     },
-  }).then(async (notification) => {
-    void sendExpoPushToUser(params.userId, {
-      title: notification.title,
-      body: notification.message,
-      data: {
-        notificationId: notification.id,
-        type: notification.type,
-        ...(notification.metadata as Record<string, unknown> | null),
-      },
-    });
-    return notification;
   });
 }
 
 export async function createPlatformNotification(params: {
   userId: string;
-  type: string;
-  title: string;
-  message: string;
-  metadata?: Record<string, unknown>;
-}) {
+} & PlatformNotifyParams) {
   const notification = await prisma.platformNotification.create({
     data: {
       userId: params.userId,
@@ -113,14 +229,12 @@ export async function createPlatformNotification(params: {
       metadata: (params.metadata as Prisma.InputJsonValue | undefined) ?? undefined,
     },
   });
-  void sendExpoPushToUser(params.userId, {
-    title: notification.title,
-    body: notification.message,
-    data: {
-      notificationId: notification.id,
-      type: notification.type,
-      ...(notification.metadata as Record<string, unknown> | null),
-    },
+  void fanOutChannels(notification, {
+    channels: params.channels,
+    email: params.email,
+    whatsapp: params.whatsapp,
+  }).catch((err) => {
+    console.error('[platformNotification] fan-out:', err);
   });
   return notification;
 }
@@ -179,35 +293,27 @@ export async function getUserNotifications(
 
 export async function notifyUsers(
   userIds: Array<string | null | undefined>,
-  params: { type: string; title: string; message: string; metadata?: Record<string, unknown> },
+  params: PlatformNotifyParams,
 ) {
   const unique = [...new Set(userIds.filter((id): id is string => Boolean(id)))];
   await Promise.all(unique.map((userId) => createPlatformNotification({ userId, ...params })));
 }
 
-export async function notifyPlatformStaff(params: {
-  type: string;
-  title: string;
-  message: string;
-  metadata?: Record<string, unknown>;
-  includeCommercials?: boolean;
-}) {
+export async function notifyPlatformStaff(params: PlatformNotifyParams & { includeCommercials?: boolean }) {
+  const { includeCommercials, ...notifyParams } = params;
   const users = await prisma.user.findMany({
-    where: params.includeCommercials
+    where: includeCommercials
       ? { OR: [{ role: 'SUPER_ADMIN' }, { role: 'COMMERCIAL', tenantId: null }] }
       : { role: 'SUPER_ADMIN' },
     select: { id: true },
   });
   await notifyUsers(
     users.map((u) => u.id),
-    params,
+    notifyParams,
   );
 }
 
-export async function notifyTenantOperators(
-  tenantId: string,
-  params: { type: string; title: string; message: string; metadata?: Record<string, unknown> },
-) {
+export async function notifyTenantOperators(tenantId: string, params: PlatformNotifyParams) {
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
     select: {

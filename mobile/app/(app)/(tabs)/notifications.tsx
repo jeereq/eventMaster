@@ -5,14 +5,19 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from 'react-native';
 import { router } from 'expo-router';
 import {
+  fetchNotificationPreferences,
   fetchNotifications,
   markAllNotificationsRead,
   markNotificationRead,
+  saveNotificationPreferences,
+  type NotificationPrefFamily,
+  type NotificationPreferences,
 } from '../../../src/lib/eventsApi';
 import { resolveNotificationRoute } from '../../../src/lib/deepLinks';
 import { setBadgeCount } from '../../../src/lib/pushNotifications';
@@ -20,17 +25,30 @@ import type { PlatformNotification } from '../../../src/types/event';
 import { Button } from '../../../src/components/ui/Button';
 import { useTheme } from '../../../src/theme/ThemeContext';
 
+const FAMILY_LABELS: Record<NotificationPrefFamily, string> = {
+  billing: 'Facturation',
+  commissions: 'Commissions',
+  catalog: 'Catalogue',
+};
+
+const FAMILIES: NotificationPrefFamily[] = ['billing', 'commissions', 'catalog'];
+
 export default function NotificationsTab() {
   const { colors } = useTheme();
   const [items, setItems] = useState<PlatformNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [prefs, setPrefs] = useState<NotificationPreferences | null>(null);
 
   const load = useCallback(async () => {
-    const res = await fetchNotifications();
+    const [res, nextPrefs] = await Promise.all([
+      fetchNotifications(),
+      fetchNotificationPreferences().catch(() => null),
+    ]);
     setItems(res.items);
     setUnreadCount(res.unreadCount);
+    if (nextPrefs) setPrefs(nextPrefs);
     await setBadgeCount(res.unreadCount);
   }, []);
 
@@ -63,6 +81,29 @@ export default function NotificationsTab() {
   const handleReadAll = async () => {
     await markAllNotificationsRead();
     await load();
+  };
+
+  const togglePref = async (
+    family: NotificationPrefFamily,
+    channel: 'email' | 'whatsapp' | 'push',
+    value: boolean,
+  ) => {
+    if (!prefs) return;
+    if (channel === 'whatsapp' && !prefs.hasPhone) return;
+    const next = {
+      ...prefs,
+      families: {
+        ...prefs.families,
+        [family]: { ...prefs.families[family], [channel]: value },
+      },
+    };
+    setPrefs(next);
+    try {
+      const saved = await saveNotificationPreferences(next.families);
+      setPrefs(saved);
+    } catch {
+      await load();
+    }
   };
 
   const styles = useMemo(
@@ -123,6 +164,34 @@ export default function NotificationsTab() {
           color: colors.textMuted,
           marginTop: 4,
         },
+        prefsTitle: {
+          fontSize: 14,
+          fontWeight: '800',
+          color: colors.text,
+        },
+        prefsHint: {
+          fontSize: 12,
+          color: colors.textMuted,
+          lineHeight: 18,
+        },
+        familyBlock: {
+          marginTop: 10,
+          gap: 8,
+        },
+        familyLabel: {
+          fontSize: 12,
+          fontWeight: '700',
+          color: colors.text,
+        },
+        switchRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        },
+        switchLabel: {
+          fontSize: 13,
+          color: colors.textMuted,
+        },
       }),
     [colors],
   );
@@ -142,6 +211,45 @@ export default function NotificationsTab() {
     >
       {unreadCount > 0 ? (
         <Button title={`Tout marquer comme lu (${unreadCount})`} onPress={handleReadAll} variant="secondary" />
+      ) : null}
+
+      {prefs ? (
+        <View style={styles.card}>
+          <Text style={styles.prefsTitle}>Canaux d'alerte</Text>
+          <Text style={styles.prefsHint}>
+            L'inbox reste active. WhatsApp nécessite un numéro sur le profil.
+          </Text>
+          {FAMILIES.map((family) => (
+            <View key={family} style={styles.familyBlock}>
+              <Text style={styles.familyLabel}>{FAMILY_LABELS[family]}</Text>
+              <View style={styles.switchRow}>
+                <Text style={styles.switchLabel}>E-mail</Text>
+                <Switch
+                  value={prefs.families[family].email}
+                  onValueChange={(value) => void togglePref(family, 'email', value)}
+                  trackColor={{ true: colors.primary }}
+                />
+              </View>
+              <View style={styles.switchRow}>
+                <Text style={styles.switchLabel}>WhatsApp</Text>
+                <Switch
+                  value={prefs.families[family].whatsapp}
+                  disabled={!prefs.hasPhone}
+                  onValueChange={(value) => void togglePref(family, 'whatsapp', value)}
+                  trackColor={{ true: colors.primary }}
+                />
+              </View>
+              <View style={styles.switchRow}>
+                <Text style={styles.switchLabel}>Push</Text>
+                <Switch
+                  value={prefs.families[family].push}
+                  onValueChange={(value) => void togglePref(family, 'push', value)}
+                  trackColor={{ true: colors.primary }}
+                />
+              </View>
+            </View>
+          ))}
+        </View>
       ) : null}
 
       {items.length === 0 ? (

@@ -3,7 +3,6 @@ import { MarketplaceBookingStatus } from '@prisma/client';
 import { prisma } from '../db';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { resolveOrgAccess } from '../services/permissionsService';
-import { sendRealEmail } from '../services/notificationService';
 import { notifyTenantOperators, notifyUsers } from '../services/platformNotificationService';
 import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
 import { getPlanLimitsForTenant } from '../config/plansConfig';
@@ -103,13 +102,6 @@ async function notifyBookingStatus(booking: {
       metadata: { bookingId: booking.id, href: `${FRONTEND_URL}/dashboard/bookings` },
     });
   }
-}
-
-async function ownerEmail(tenantId: string, managerId: string | null) {
-  const user = managerId
-    ? await prisma.user.findUnique({ where: { id: managerId }, select: { email: true } })
-    : await prisma.user.findFirst({ where: { tenantId }, select: { email: true }, orderBy: { createdAt: 'asc' } });
-  return user?.email;
 }
 
 async function isRangeTaken(params: {
@@ -263,24 +255,19 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
 
     const title = offering?.title || listing?.headline || listing?.room.name || 'Offre';
     const period = formatRangeLabel(range.from, range.to);
-    const vendorMail = await ownerEmail(vendorTenantId, listing?.tenant.managerId || offering?.tenant.managerId || null);
-    if (vendorMail) {
-      await sendRealEmail(
-        vendorMail,
-        `[EventMaster] Demande de réservation — ${title}`,
-        `Nouvelle réservation ${period} pour « ${title} ». Montant ${amounts.amountFc} FC, acompte ${amounts.depositFc} FC.`,
-        `<p>Nouvelle réservation <strong>${period}</strong> pour <strong>${title}</strong>.</p><p>Montant : ${amounts.amountFc} FC · Acompte : ${amounts.depositFc} FC · Commission plateforme : ${amounts.commissionFc} FC (8 %).</p><p><a href="${FRONTEND_URL}/dashboard/marketplace">Ouvrir Marketplace</a></p>`,
-      );
-    }
+    const vendorHref = `${FRONTEND_URL}/dashboard/marketplace`;
+    const organizerHref = `${FRONTEND_URL}/dashboard/bookings`;
+    const vendorMessage = `Demande ${period}. Montant ${amounts.amountFc} FC, acompte ${amounts.depositFc} FC.`;
 
     void notifyTenantOperators(vendorTenantId, {
       type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING,
       title: `Réservation — ${title}`,
-      message: `Demande ${period}. Montant ${amounts.amountFc} FC.`,
+      message: vendorMessage,
       metadata: {
         bookingId: booking.id,
-        href: `${FRONTEND_URL}/dashboard/marketplace`,
+        href: vendorHref,
       },
+      whatsapp: `Nouvelle réservation ${period} pour « ${title} ». Montant ${amounts.amountFc} FC, acompte ${amounts.depositFc} FC.`,
     });
     void notifyUsers([userId], {
       type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING,
@@ -288,7 +275,7 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
       message: `Votre réservation ${period} a été transmise.`,
       metadata: {
         bookingId: booking.id,
-        href: `${FRONTEND_URL}/dashboard/bookings`,
+        href: organizerHref,
       },
     });
 

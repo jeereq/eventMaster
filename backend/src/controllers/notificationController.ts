@@ -6,6 +6,12 @@ import {
   markNotificationRead,
 } from '../services/platformNotificationService';
 import {
+  getNotificationPreferences,
+  saveNotificationPreferences,
+  type ChannelPreference,
+} from '../services/notificationPreferenceService';
+import { isNotificationPrefFamily, type NotificationPrefFamily } from '../config/platformNotificationTypes';
+import {
   removePushDeviceToken,
   upsertPushDeviceToken,
 } from '../services/pushDeviceTokenService';
@@ -87,6 +93,49 @@ export async function registerPushToken(req: AuthenticatedRequest, res: Response
   } catch (error: any) {
     console.error('[registerPushToken]', error);
     return res.status(500).json({ error: 'Impossible d\'enregistrer le token push.' });
+  }
+}
+
+export async function getPreferences(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Non authentifié.' });
+    }
+    const prefs = await getNotificationPreferences(req.user.id);
+    return res.json(prefs);
+  } catch (error: unknown) {
+    console.error('[getPreferences]', error);
+    return res.status(500).json({ error: 'Impossible de charger les préférences.' });
+  }
+}
+
+export async function updatePreferences(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Non authentifié.' });
+    }
+
+    const raw = req.body?.families;
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+      return res.status(400).json({ error: 'families est requis.' });
+    }
+
+    const input: Partial<Record<NotificationPrefFamily, Partial<ChannelPreference>>> = {};
+    for (const [family, value] of Object.entries(raw as Record<string, unknown>)) {
+      if (!isNotificationPrefFamily(family) || !value || typeof value !== 'object') continue;
+      const row = value as Record<string, unknown>;
+      input[family] = {
+        ...(typeof row.email === 'boolean' ? { email: row.email } : {}),
+        ...(typeof row.whatsapp === 'boolean' ? { whatsapp: row.whatsapp } : {}),
+        ...(typeof row.push === 'boolean' ? { push: row.push } : {}),
+      };
+    }
+
+    const prefs = await saveNotificationPreferences(req.user.id, input);
+    return res.json(prefs);
+  } catch (error: unknown) {
+    console.error('[updatePreferences]', error);
+    return res.status(500).json({ error: 'Impossible d’enregistrer les préférences.' });
   }
 }
 

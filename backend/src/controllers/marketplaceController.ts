@@ -4,6 +4,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { resolveOrgAccess } from '../services/permissionsService';
 import { sendRealEmail } from '../services/notificationService';
 import { uniqueSlug } from '../utils/slug';
+import { buildInquiryOperatorNotify } from '../utils/marketplaceNotifyCopy';
 import {
   parsePhotoUrls,
   isVideoUrl,
@@ -405,50 +406,15 @@ export async function createVenueInquiry(req: AuthenticatedRequest, res: Respons
       },
     });
 
-    const manager = listing.tenant.managerId
-      ? await prisma.user.findUnique({
-          where: { id: listing.tenant.managerId },
-          select: { email: true, name: true },
-        })
-      : await prisma.user.findFirst({
-          where: { tenantId: listing.tenant.id },
-          select: { email: true, name: true },
-          orderBy: { createdAt: 'asc' },
-        });
-
     const listingUrl = `${FRONTEND_URL}/marketplace/salles/${listing.slug}`;
-    const ownerEmail = manager?.email;
-    if (ownerEmail) {
-      const subject = `[EventMaster] Demande de devis — ${listing.room.name}`;
-      const text = [
-        `Nouvelle demande pour « ${listing.room.name} » (${listing.tenant.name}).`,
-        '',
-        `Nom : ${inquiry.fromName}`,
-        `E-mail : ${inquiry.fromEmail}`,
-        inquiry.fromPhone ? `Téléphone : ${inquiry.fromPhone}` : null,
-        inquiry.eventDate ? `Date souhaitée : ${inquiry.eventDate.toLocaleDateString('fr-FR')}` : null,
-        inquiry.guestCount ? `Invités estimés : ${inquiry.guestCount}` : null,
-        '',
-        inquiry.message,
-        '',
-        `Fiche : ${listingUrl}`,
-      ]
-        .filter(Boolean)
-        .join('\n');
-      const html = `
-        <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-radius:16px;">
-          <h2 style="margin-top:0;">Demande de devis — ${listing.room.name}</h2>
-          <p><strong>Nom :</strong> ${inquiry.fromName}</p>
-          <p><strong>E-mail :</strong> <a href="mailto:${inquiry.fromEmail}">${inquiry.fromEmail}</a></p>
-          ${inquiry.fromPhone ? `<p><strong>Téléphone :</strong> ${inquiry.fromPhone}</p>` : ''}
-          ${inquiry.eventDate ? `<p><strong>Date :</strong> ${inquiry.eventDate.toLocaleDateString('fr-FR')}</p>` : ''}
-          ${inquiry.guestCount ? `<p><strong>Invités :</strong> ${inquiry.guestCount}</p>` : ''}
-          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-top:16px;white-space:pre-line;">${inquiry.message}</div>
-          <p style="margin-top:16px;"><a href="${listingUrl}">Voir la fiche salle</a></p>
-        </div>
-      `;
-      await sendRealEmail(ownerEmail, subject, text, html);
-    }
+    const dashboardHref = `${FRONTEND_URL}/dashboard/marketplace`;
+    const operatorCopy = buildInquiryOperatorNotify({
+      subjectTitle: listing.room.name,
+      ownerOrgName: listing.tenant.name,
+      publicUrl: listingUrl,
+      dashboardHref,
+      inquiry,
+    });
 
     void notifyTenantOperators(listing.tenant.id, {
       type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
@@ -457,8 +423,10 @@ export async function createVenueInquiry(req: AuthenticatedRequest, res: Respons
       metadata: {
         listingId: listing.id,
         inquiryId: inquiry.id,
-        href: `${FRONTEND_URL}/dashboard/rooms`,
+        href: dashboardHref,
       },
+      email: operatorCopy.email,
+      whatsapp: operatorCopy.whatsapp,
     });
 
     await sendRealEmail(
@@ -788,11 +756,13 @@ export async function getPublicService(req: Request, res: Response) {
 }
 
 async function notifyInquiry(params: {
-  ownerEmail: string | undefined;
   ownerOrgName: string;
   subjectTitle: string;
   publicUrl: string;
+  dashboardHref: string;
+  vendorTenantId: string;
   inquiry: {
+    id: string;
     fromName: string;
     fromEmail: string;
     fromPhone: string | null;
@@ -800,56 +770,34 @@ async function notifyInquiry(params: {
     guestCount: number | null;
     message: string;
   };
+  offeringId?: string;
 }) {
   const { inquiry } = params;
-  if (params.ownerEmail) {
-    const subject = `[EventMaster] Demande de devis — ${params.subjectTitle}`;
-    const text = [
-      `Nouvelle demande pour « ${params.subjectTitle} » (${params.ownerOrgName}).`,
-      '',
-      `Nom : ${inquiry.fromName}`,
-      `E-mail : ${inquiry.fromEmail}`,
-      inquiry.fromPhone ? `Téléphone : ${inquiry.fromPhone}` : null,
-      inquiry.eventDate ? `Date souhaitée : ${inquiry.eventDate.toLocaleDateString('fr-FR')}` : null,
-      inquiry.guestCount ? `Invités estimés : ${inquiry.guestCount}` : null,
-      '',
-      inquiry.message,
-      '',
-      `Fiche : ${params.publicUrl}`,
-    ]
-      .filter(Boolean)
-      .join('\n');
-    const html = `
-      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;border:1px solid #e2e8f0;border-radius:16px;">
-        <h2 style="margin-top:0;">Demande de devis — ${params.subjectTitle}</h2>
-        <p><strong>Nom :</strong> ${inquiry.fromName}</p>
-        <p><strong>E-mail :</strong> <a href="mailto:${inquiry.fromEmail}">${inquiry.fromEmail}</a></p>
-        ${inquiry.fromPhone ? `<p><strong>Téléphone :</strong> ${inquiry.fromPhone}</p>` : ''}
-        ${inquiry.eventDate ? `<p><strong>Date :</strong> ${inquiry.eventDate.toLocaleDateString('fr-FR')}</p>` : ''}
-        ${inquiry.guestCount ? `<p><strong>Invités :</strong> ${inquiry.guestCount}</p>` : ''}
-        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-top:16px;white-space:pre-line;">${inquiry.message}</div>
-        <p style="margin-top:16px;"><a href="${params.publicUrl}">Voir la fiche</a></p>
-      </div>
-    `;
-    await sendRealEmail(params.ownerEmail, subject, text, html);
-  }
+  const operatorCopy = buildInquiryOperatorNotify({
+    subjectTitle: params.subjectTitle,
+    ownerOrgName: params.ownerOrgName,
+    publicUrl: params.publicUrl,
+    dashboardHref: params.dashboardHref,
+    inquiry,
+  });
+  void notifyTenantOperators(params.vendorTenantId, {
+    type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
+    title: `Devis — ${params.subjectTitle}`,
+    message: `${inquiry.fromName} a demandé un devis pour votre prestation.`,
+    metadata: {
+      offeringId: params.offeringId,
+      inquiryId: inquiry.id,
+      href: params.dashboardHref,
+    },
+    email: operatorCopy.email,
+    whatsapp: operatorCopy.whatsapp,
+  });
   await sendRealEmail(
     inquiry.fromEmail,
     `Votre demande — ${params.subjectTitle}`,
     `Nous avons transmis votre demande pour « ${params.subjectTitle} » à ${params.ownerOrgName}. Ils vous recontacteront directement.`,
     `<p>Nous avons transmis votre demande pour <strong>${params.subjectTitle}</strong> à ${params.ownerOrgName}.</p><p>Ils vous recontacteront directement.</p>`,
   );
-}
-
-async function resolveOwnerEmail(tenant: { id: string; managerId: string | null }) {
-  const manager = tenant.managerId
-    ? await prisma.user.findUnique({ where: { id: tenant.managerId }, select: { email: true } })
-    : await prisma.user.findFirst({
-        where: { tenantId: tenant.id },
-        select: { email: true },
-        orderBy: { createdAt: 'asc' },
-      });
-  return manager?.email;
 }
 
 export async function createServiceInquiry(req: AuthenticatedRequest, res: Response) {
@@ -901,22 +849,13 @@ export async function createServiceInquiry(req: AuthenticatedRequest, res: Respo
     });
 
     await notifyInquiry({
-      ownerEmail: await resolveOwnerEmail(offering.tenant),
       ownerOrgName: offering.tenant.name,
       subjectTitle: offering.title,
       publicUrl: `${FRONTEND_URL}/marketplace/prestataires/${offering.slug}`,
+      dashboardHref: `${FRONTEND_URL}/dashboard/marketplace`,
+      vendorTenantId: offering.tenant.id,
+      offeringId: offering.id,
       inquiry,
-    });
-
-    void notifyTenantOperators(offering.tenant.id, {
-      type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
-      title: `Devis — ${offering.title}`,
-      message: `${inquiry.fromName} a demandé un devis pour votre prestation.`,
-      metadata: {
-        offeringId: offering.id,
-        inquiryId: inquiry.id,
-        href: `${FRONTEND_URL}/dashboard/marketplace`,
-      },
     });
 
     return res.status(201).json({

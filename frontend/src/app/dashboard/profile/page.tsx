@@ -283,8 +283,15 @@ function ProfilePageContent() {
                     national={phoneNational}
                     onCountryCodeChange={setPhoneCountryCode}
                     onNationalChange={setPhoneNational}
-                    hint="Indicatif pays + numéro national (sans le 0)."
+                    hint="Indicatif pays + numéro national (sans le 0). Requis pour les alertes WhatsApp."
                   />
+                  <p className="text-[11px] text-muted">
+                    Canaux e-mail / WhatsApp / push :{' '}
+                    <Link href="/dashboard/notifications" className="text-primary font-medium hover:underline">
+                      Notifications
+                    </Link>
+                    .
+                  </p>
                   {user?.role === 'USER' && tenant && (
                     <>
                     <Input

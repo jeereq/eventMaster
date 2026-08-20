@@ -202,6 +202,7 @@ model User {
   protocolNotes  GuestProtocolNote[]
   commercialCommissions CommercialCommission[]
   platformNotifications PlatformNotification[]
+  notificationPreferences NotificationPreference[]
   pushDeviceTokens      PushDeviceToken[]
   listingFavorites      ListingFavorite[]
   savedEventPacks       SavedEventPack[]
@@ -759,9 +760,39 @@ model PlatformNotification {
   readAt    DateTime?
   metadata  Json?
   createdAt DateTime  @default(now())
+  deliveries NotificationDelivery[]
 
   @@index([userId, readAt])
   @@index([userId, createdAt])
+}
+
+/** Préférences d’alerte par famille (billing, commissions, catalog, account). In-app toujours actif. */
+model NotificationPreference {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family    String
+  email     Boolean  @default(true)
+  whatsapp  Boolean  @default(false)
+  push      Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, family])
+  @@index([userId])
+}
+
+model NotificationDelivery {
+  id             String   @id @default(uuid())
+  notificationId String
+  notification   PlatformNotification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  channel        String
+  status         String
+  providerId     String?
+  error          String?
+  createdAt      DateTime @default(now())
+
+  @@index([notificationId])
+  @@index([channel, createdAt])
 }
 
 model PushDeviceToken {

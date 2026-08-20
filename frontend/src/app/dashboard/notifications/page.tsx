@@ -6,6 +6,7 @@ import { Bell, Check, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { PageHeader, Breadcrumbs, Button, EmptyState, Pagination, Alert, usePageSize } from '@/components/ui';
+import NotificationPreferencesCard from '@/components/NotificationPreferencesCard';
 import { cn } from '@/lib/cn';
 import {
   notificationFamilyLabel,
@@ -155,6 +156,17 @@ export default function NotificationsPage() {
 
       {error && <Alert variant="error">{error}</Alert>}
 
+      <details className="group">
+        <summary className="cursor-pointer text-sm font-medium text-muted hover:text-foreground list-none flex items-center gap-2 py-1">
+          <span className="text-xs uppercase tracking-wider">Canaux e-mail, WhatsApp, push</span>
+          <span className="text-[11px] text-muted group-open:hidden">Afficher</span>
+          <span className="text-[11px] text-muted hidden group-open:inline">Masquer</span>
+        </summary>
+        <div className="mt-3">
+          <NotificationPreferencesCard />
+        </div>
+      </details>
+
       <div className="flex flex-wrap items-center gap-2">
         {(['all', 'billing', 'commissions', 'catalog'] as NotificationFamily[]).map((id) => (
           <button
@@ -171,7 +183,7 @@ export default function NotificationsPage() {
                 : 'text-muted border-transparent hover:text-foreground',
             )}
           >
-            {id === 'all' ? 'Toutes' : id === 'billing' ? 'Billing' : id === 'commissions' ? 'Commissions' : 'Catalogue'}
+            {id === 'all' ? 'Toutes' : id === 'billing' ? 'Facturation' : id === 'commissions' ? 'Commissions' : 'Catalogue'}
           </button>
         ))}
         <label className="ml-auto flex items-center gap-2 text-xs font-medium text-muted">

@@ -1,6 +1,5 @@
 import { prisma } from '../db';
 import { getBillingPeriod, formatAmountFc } from './commercialService';
-import { sendRealEmail, sendRealWhatsApp } from './notificationService';
 import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
 import {
   createPlatformNotification,
@@ -124,14 +123,6 @@ async function notifyOneCommercial(row: MonthlyPayoutRow, period: string, force:
     <p><a href="${href}">Ouvrir le suivi des commissions</a></p>
   `;
 
-  const emailResult = await sendRealEmail(row.email, subject, text, html);
-  if (row.phone) {
-    await sendRealWhatsApp(
-      row.phone,
-      `EventMaster — Commission ${periodLabel} : ${amount} à verser par ${payer}. ${row.orgCount} org. facturée(s).`,
-    );
-  }
-
   await createPlatformNotification({
     userId: row.commercialId,
     type: MONTHLY_PAYOUT_TYPE,
@@ -143,9 +134,11 @@ async function notifyOneCommercial(row: MonthlyPayoutRow, period: string, force:
       orgCount: row.orgCount,
       href,
     },
+    email: { subject, text, html },
+    whatsapp: `EventMaster — Commission ${periodLabel} : ${amount} à verser par ${payer}. ${row.orgCount} org. facturée(s).`,
   });
 
-  return { emailed: emailResult.success, skipped: false };
+  return { emailed: true, skipped: false };
 }
 
 async function notifySuperAdmins(rows: MonthlyPayoutRow[], period: string, force: boolean) {
@@ -205,15 +198,6 @@ async function notifySuperAdmins(rows: MonthlyPayoutRow[], period: string, force
       <p><a href="${href}">Ouvrir Revenus &amp; commissions</a></p>
     `;
 
-    const emailResult = await sendRealEmail(admin.email, subject, text, html);
-    if (emailResult.success) notified.push(admin.email);
-    if (admin.phone) {
-      await sendRealWhatsApp(
-        admin.phone,
-        `EventMaster — Versements commerciaux ${periodLabel} : ${formatAmountFc(unpaid)} dus (${dueRows.length} commercial${dueRows.length > 1 ? 'aux' : ''}). ${href}`,
-      );
-    }
-
     await createPlatformNotification({
       userId: admin.id,
       type: MONTHLY_PAYOUT_TYPE,
@@ -226,7 +210,10 @@ async function notifySuperAdmins(rows: MonthlyPayoutRow[], period: string, force
         commercialCount: dueRows.length,
         href,
       },
+      email: { subject, text, html },
+      whatsapp: `EventMaster — Versements commerciaux ${periodLabel} : ${formatAmountFc(unpaid)} dus (${dueRows.length} commercial${dueRows.length > 1 ? 'aux' : ''}). ${href}`,
     });
+    notified.push(admin.email);
   }
 
   return { notified };
@@ -299,22 +286,17 @@ export async function markCommercialPeriodPaid(params: {
   const periodLabel = formatBillingPeriodLabel(params.period);
   const href = `${FRONTEND_URL}/dashboard/commercial`;
 
+  const text = `Bonjour${commercial.name ? ` ${commercial.name}` : ''},\n\nVotre commission ${periodLabel} (${amount}) a été marquée comme versée par EventMaster, hors plateforme.${params.proofUrl ? `\nRéférence : ${params.proofUrl}` : ''}\n\nSuivi : ${href}\n\n— EventMaster`;
+
   await createPlatformNotification({
     userId: commercial.id,
     type: MONTHLY_PAYOUT_PAID_TYPE,
     title: `Versement effectué — ${periodLabel}`,
     message: `${amount} marqué comme versé par EventMaster (hors plateforme).`,
     metadata: { period: params.period, href, proofUrl: params.proofUrl || null },
+    email: { subject: `EventMaster — Versement ${periodLabel} effectué`, text },
+    whatsapp: `EventMaster — Versement ${periodLabel} effectué : ${amount} (hors plateforme).`,
   });
-
-  const text = `Bonjour${commercial.name ? ` ${commercial.name}` : ''},\n\nVotre commission ${periodLabel} (${amount}) a été marquée comme versée par EventMaster, hors plateforme.${params.proofUrl ? `\nRéférence : ${params.proofUrl}` : ''}\n\nSuivi : ${href}\n\n— EventMaster`;
-  await sendRealEmail(commercial.email, `EventMaster — Versement ${periodLabel} effectué`, text);
-  if (commercial.phone) {
-    await sendRealWhatsApp(
-      commercial.phone,
-      `EventMaster — Versement ${periodLabel} effectué : ${amount} (hors plateforme).`,
-    );
-  }
 
   return { updated: result.count };
 }
@@ -576,22 +558,17 @@ export async function markOrgPeriodPaid(params: {
   const periodLabel = formatBillingPeriodLabel(params.period);
   const href = `${FRONTEND_URL}/dashboard/org-commercial`;
 
+  const text = `Bonjour${commercial.name ? ` ${commercial.name}` : ''},\n\nVotre commission ${periodLabel} (${amount}) a été marquée comme versée par votre organisation, hors plateforme.${params.proofUrl ? `\nRéférence : ${params.proofUrl}` : ''}\n\nSuivi : ${href}\n\n— EventMaster`;
+
   await createPlatformNotification({
     userId: commercial.id,
     type: MONTHLY_PAYOUT_PAID_TYPE,
     title: `Versement effectué — ${periodLabel}`,
     message: `${amount} marqué comme versé par votre organisation (hors plateforme).`,
     metadata: { period: params.period, href, proofUrl: params.proofUrl || null },
+    email: { subject: `EventMaster — Versement ${periodLabel} effectué`, text },
+    whatsapp: `EventMaster — Versement ${periodLabel} effectué : ${amount} (hors plateforme, par votre organisation).`,
   });
-
-  const text = `Bonjour${commercial.name ? ` ${commercial.name}` : ''},\n\nVotre commission ${periodLabel} (${amount}) a été marquée comme versée par votre organisation, hors plateforme.${params.proofUrl ? `\nRéférence : ${params.proofUrl}` : ''}\n\nSuivi : ${href}\n\n— EventMaster`;
-  await sendRealEmail(commercial.email, `EventMaster — Versement ${periodLabel} effectué`, text);
-  if (commercial.phone) {
-    await sendRealWhatsApp(
-      commercial.phone,
-      `EventMaster — Versement ${periodLabel} effectué : ${amount} (hors plateforme, par votre organisation).`,
-    );
-  }
 
   return { updated: result.count };
 }
