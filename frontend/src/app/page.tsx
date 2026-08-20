@@ -10,6 +10,8 @@ import LandingPricingSection from '@/components/landing/LandingPricingSection';
 import LandingWorkflowSection from '@/components/landing/LandingWorkflowSection';
 import LandingProfileGate from '@/components/landing/LandingProfileGate';
 import FaqSection from '@/components/landing/FaqSection';
+import LandingProductOverview from '@/components/landing/LandingProductOverview';
+import LandingModelsSection from '@/components/landing/LandingModelsSection';
 import LandingVitrineSection from '@/components/landing/LandingVitrineSection';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import PublicCtaBand from '@/components/PublicCtaBand';
@@ -117,7 +119,11 @@ export default function Home() {
               Créez l’événement, invitez, accueillez — ou trouvez une salle. Tout se fait dans le navigateur, y compris au téléphone.
             </p>
 
-            <ol className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-muted" aria-label="Trois clics">
+            <ol
+              key={profileId}
+              className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-muted animate-fade-in"
+              aria-label="Trois clics"
+            >
               {profile.clicks.map((label, index) => (
                 <li key={`${profile.id}-${label}`} className="inline-flex items-center gap-2">
                   <span className="text-[11px] font-semibold tabular-nums text-foreground/70">{index + 1}.</span>
@@ -195,6 +201,14 @@ export default function Home() {
       </section>
 
       <LandingWorkflowSection profileId={profileId} onProfileChange={(id) => selectProfile(id, false)} />
+
+      <LandingProductOverview />
+
+      <LandingModelsSection
+        templates={publicTemplates}
+        loading={loadingPublicTemplates}
+        onPreview={setModalTemplate}
+      />
 
       <LandingVitrineSection
         publicTemplates={publicTemplates}

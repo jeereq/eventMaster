@@ -157,6 +157,38 @@ h1, h2, h3, h4 {
   animation: slide-up 0.22s ease-out;
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  .em-reveal {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.45s ease, transform 0.45s ease;
+  }
+  .em-reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+  .em-stagger > * {
+    opacity: 0;
+    animation: slide-up 0.4s ease-out forwards;
+  }
+  .em-stagger > *:nth-child(1) { animation-delay: 0.04s; }
+  .em-stagger > *:nth-child(2) { animation-delay: 0.1s; }
+  .em-stagger > *:nth-child(3) { animation-delay: 0.16s; }
+  .em-stagger > *:nth-child(4) { animation-delay: 0.22s; }
+  .em-stagger > *:nth-child(5) { animation-delay: 0.28s; }
+  .em-stagger > *:nth-child(6) { animation-delay: 0.34s; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .em-reveal,
+  .em-stagger > * {
+    opacity: 1;
+    transform: none;
+    animation: none;
+    transition: none;
+  }
+}
+
 .font-display {
   font-family: var(--font-fraunces), var(--font-inter), Georgia, serif;
   letter-spacing: -0.025em;

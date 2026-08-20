@@ -20,7 +20,7 @@ export default function LandingProfileGate({
         <p className="text-sm text-muted">Un clic. Le parcours, les tarifs et les questions s’adaptent.</p>
       </div>
 
-      <ul id="profils" className="em-landing-hero-grid" role="list">
+              <ul id="profils" className="em-landing-hero-grid em-stagger" role="list">
         {LANDING_PROFILES.map((profile) => {
           const Icon = profile.icon;
           const selected = selectedId === profile.id;
@@ -31,7 +31,7 @@ export default function LandingProfileGate({
                 onClick={() => onSelect(profile.id)}
                 aria-pressed={selected}
                 className={cn(
-                  'w-full h-full text-left rounded-[var(--radius-card)] border bg-surface p-4 shadow-[var(--shadow-soft)] transition',
+                  'w-full h-full text-left rounded-[var(--radius-card)] border bg-surface p-4 shadow-[var(--shadow-soft)] em-soft-hover transition',
                   selected
                     ? 'border-foreground/20'
                     : 'border-border hover:border-foreground/15',

@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import {
- Calendar, Mail, Lock, User, Building, PartyPopper, Phone, MessageSquare, Table, Sparkles, UserCheck,
+ Calendar, Mail, Lock, User, Building, PartyPopper, Phone, MessageSquare, UserCheck,
+ ScanLine, LayoutGrid, Wallet, CalendarCheck, Store,
 } from 'lucide-react';
 import { AuthSplitLayout, MethodToggle } from '@/components/AuthSplitLayout';
 import { Button, Alert, Input, Card, PhoneInput } from '@/components/ui';
@@ -16,22 +17,75 @@ import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { ACCOUNT_KIND_DESCRIPTIONS, ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
 import { safeAppPath, isClientReturnPath } from '@/lib/safeAppPath';
 
-const FEATURES = [
- { icon: Calendar, title: 'Invitations & RSVP', desc: 'Le premier message n’envoie que le lien RSVP. PDF, plan et GPS après acceptation et place assignée.' },
- { icon: Table, title: 'Plan de table 2D', desc: 'Placement glisser-déposer. Liez la salle à l’événement pour importer le plan.' },
- { icon: MessageSquare, title: 'Protocole QR web', desc: 'Scan du badge dans le navigateur le jour J. L’app native n’est pas encore déployée.' },
- { icon: Sparkles, title: 'Marketplace & packs', desc: 'Salles, métiers, locations. Favoris, 3 packs budget, acompte {depositPercent} % hors plateforme.' },
-];
+import { LANDING_SLOGAN } from '@/lib/landingProfiles';
 
-function featuresForSite(site?: Parameters<typeof interpolateRates>[1]) {
-  return FEATURES.map((item) => ({ ...item, desc: interpolateRates(item.desc, site) }));
+const SIGNUP_FLOWS: Record<
+  TenantAccountKind,
+  {
+    title: string;
+    description: string;
+    features: Array<{
+      step: number;
+      icon: typeof Calendar;
+      title: string;
+      desc: string;
+    }>;
+  }
+> = {
+  ORGANIZER: {
+    title: LANDING_SLOGAN.full,
+    description:
+      'Créez l’événement, invitez, accueillez. Modèles d’invitation, plan de table et scan QR — dans le même espace.',
+    features: [
+      { step: 1, icon: Calendar, title: 'Créer', desc: 'Titre, date, lieu. Un modèle d’invitation si vous voulez.' },
+      { step: 2, icon: Mail, title: 'Inviter', desc: 'Un lien par personne. Ils répondent. Vous suivez.' },
+      { step: 3, icon: ScanLine, title: 'Accueillir', desc: 'Scan du badge QR à l’entrée, depuis le téléphone.' },
+    ],
+  },
+  CLIENT: {
+    title: 'Trouvez salle et prestas en deux-trois clics.',
+    description:
+      'Compte gratuit. Cherchez, composez un pack, demandez un devis. L’acompte ({depositPercent} %) se verse au professionnel, hors EventMaster.',
+    features: [
+      { step: 1, icon: LayoutGrid, title: 'Chercher', desc: 'Salles, métiers, locations. Filtrez par ville et prix.' },
+      { step: 2, icon: Wallet, title: 'Composer', desc: 'Un pack selon votre budget. Rien n’est réservé tant que vous n’envoyez pas le devis.' },
+      { step: 3, icon: CalendarCheck, title: 'Demander un devis', desc: 'Après acceptation, l’acompte ({depositPercent} %) se verse au pro, hors plateforme.' },
+    ],
+  },
+  VENDOR: {
+    title: 'Publiez vos offres en deux-trois clics.',
+    description:
+      'Une fiche, les demandes arrivent, vous bloquez la date. Commission vendeur {commissionPercent} % sur les réservations confirmées.',
+    features: [
+      { step: 1, icon: Store, title: 'Publier', desc: 'Photos, tarif, ville. Salle, métier ou location.' },
+      { step: 2, icon: MessageSquare, title: 'Répondre', desc: 'Les devis arrivent dans votre desk. Contactez, puis convertissez.' },
+      { step: 3, icon: CalendarCheck, title: 'Bloquer la date', desc: 'Acompte hors EventMaster. Vous confirmez : la date est prise.' },
+    ],
+  },
+  BOTH: {
+    title: LANDING_SLOGAN.full,
+    description:
+      'Organisez une fête et publiez vos offres, dans le même compte. Un forfait à la fois.',
+    features: [
+      { step: 1, icon: Calendar, title: 'Créer ou publier', desc: 'Un événement, ou une fiche salle / presta.' },
+      { step: 2, icon: Mail, title: 'Inviter et répondre', desc: 'Liens RSVP côté fête. Devis côté offres.' },
+      { step: 3, icon: ScanLine, title: 'Jour J', desc: 'Scan QR, dates bloquées. Tout dans le navigateur.' },
+    ],
+  },
+};
+
+function featuresForKind(kind: TenantAccountKind, site?: Parameters<typeof interpolateRates>[1]) {
+  return SIGNUP_FLOWS[kind].features.map((item) => ({
+    ...item,
+    desc: interpolateRates(item.desc, site),
+  }));
 }
 
 export default function RegisterPage() {
  return (
  <Suspense
  fallback={
- <AuthSplitLayout badge="Inscription" title="Chargement…" description="" features={featuresForSite()} backHref="/" backLabel="Retour au site">
+ <AuthSplitLayout badge="Inscription" title="Chargement…" description="" features={featuresForKind('ORGANIZER')} backHref="/" backLabel="Retour au site">
  <Card padding="lg" className="shadow-xl animate-pulse h-96">
  <span className="sr-only">Chargement du formulaire d&apos;inscription</span>
  </Card>
@@ -130,16 +184,14 @@ function RegisterPageContent() {
  }
  };
 
+ const panel = SIGNUP_FLOWS[isClientFlow ? 'CLIENT' : accountKind];
+
  return (
  <AuthSplitLayout
  badge="Inscription"
- title={isClientFlow ? 'Créez un compte pour vos devis et billets.' : 'Créez votre compte en quelques secondes.'}
- description={
- isClientFlow
- ? `Rejoignez ${site.platformName} : devis, réservations et badges QR dans votre tableau de bord. Vous pouvez aussi continuer en invité sans compte.`
- : `Rejoignez ${site.platformName} : organisez un événement, publiez une offre, ou réservez une salle sans espace SaaS.`
- }
- features={featuresForSite(site)}
+ title={panel.title}
+ description={interpolateRates(panel.description, site)}
+ features={featuresForKind(isClientFlow ? 'CLIENT' : accountKind, site)}
  backHref="/"
  backLabel="Retour au site"
  >

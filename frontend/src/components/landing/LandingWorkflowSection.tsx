@@ -12,6 +12,7 @@ import {
   getLandingProfile,
   type LandingProfileId,
 } from '@/lib/landingProfiles';
+import { useLandingReveal } from '@/components/landing/useLandingReveal';
 
 export default function LandingWorkflowSection({
   profileId,
@@ -21,6 +22,7 @@ export default function LandingWorkflowSection({
   onProfileChange: (id: LandingProfileId) => void;
 }) {
   const { site } = usePlatformSite();
+  const revealRef = useLandingReveal<HTMLElement>();
   const [stepIndex, setStepIndex] = useState(0);
   const tabsId = useId();
   const source = getLandingProfile(profileId);
@@ -73,7 +75,11 @@ export default function LandingWorkflowSection({
   };
 
   return (
-    <section id="parcours" className="py-16 sm:py-20 bg-background border-t border-border scroll-mt-16">
+    <section
+      ref={revealRef}
+      id="parcours"
+      className="em-reveal py-16 sm:py-20 bg-background border-t border-border scroll-mt-16"
+    >
       <div className="page-container space-y-8">
         <div className="max-w-2xl space-y-2">
           <p className="text-xs font-medium uppercase tracking-wider text-muted">

@@ -84,10 +84,10 @@ export const ACCOUNT_KIND_FILTER_LABELS: Record<TenantAccountKind, string> = {
 };
 
 export const ACCOUNT_KIND_DESCRIPTIONS: Record<TenantAccountKind, string> = {
-  ORGANIZER: 'Créez des événements, invitations et plans de table.',
-  VENDOR: 'Publiez vos salles ou prestations. Forfaits Salle, Prestataire ou Salle & presta.',
-  BOTH: 'Organisez et publiez : un seul forfait à la fois (Particulier, Business, ou Salle / Prestataire / mixte).',
-  CLIENT: 'Réservez sans espace événement. Vous pourrez upgrader plus tard.',
+  ORGANIZER: 'Créer, inviter, accueillir. Modèles, plan de table, QR.',
+  VENDOR: 'Publier une fiche, recevoir des devis, bloquer les dates.',
+  BOTH: 'Organiser et publier, dans le même compte.',
+  CLIENT: 'Chercher, composer un pack, demander un devis. Gratuit.',
 };
 
 export function isClientAccount(kind?: TenantAccountKind | string | null) {

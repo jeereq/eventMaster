@@ -40,7 +40,7 @@ import {
 } from '@/config/landingTemplates';
 import { ArrowRight, Building2, Calendar, FileText, KeyRound, Sparkles } from 'lucide-react';
 import { useCatalogueGridCols, CatalogueGridColsToggle, type CatalogueGridCols } from '@/components/CatalogueViewToggle';
-import { marketplaceSectionUrl } from '@/lib/share';
+import { useLandingReveal } from '@/components/landing/useLandingReveal';
 
 type VitrineTab = 'venues' | 'services' | 'rentals' | 'events' | 'templates';
 type EntityFilters = CatalogueGeoState & CatalogueEntityExtras;
@@ -64,6 +64,7 @@ export default function LandingVitrineSection({
   isSuperAdmin: boolean;
   onPreviewTemplate: (template: LandingTemplate) => void;
 }) {
+  const revealRef = useLandingReveal<HTMLElement>();
   const [tab, setTab] = useState<VitrineTab>('venues');
   const [venues, setVenues] = useState<PublicVenue[]>([]);
   const [services, setServices] = useState<PublicService[]>([]);
@@ -294,9 +295,8 @@ export default function LandingVitrineSection({
   );
 
   return (
-    <section className="py-14 sm:py-16 border-t border-border bg-surface">
+    <section ref={revealRef} className="em-reveal py-14 sm:py-16 border-t border-border bg-surface">
       <div id="catalogue" className="scroll-mt-16" />
-      <div id="modeles" className="scroll-mt-16" />
       <div className="page-container space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
           <div className="max-w-xl space-y-2">
@@ -443,7 +443,7 @@ export default function LandingVitrineSection({
         )}
 
         {tab === 'templates' && (
-          <div id="modeles" className="space-y-4 scroll-mt-20">
+          <div className="space-y-4 scroll-mt-20">
             <div className="text-sm text-muted leading-relaxed">
               {loadingTemplates ? (
                 <Skeleton className="h-4 w-72 max-w-full" />

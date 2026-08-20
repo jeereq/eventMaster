@@ -12,6 +12,7 @@ interface AuthFeature {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   desc: string;
+  step?: number;
 }
 
 interface AuthSplitLayoutProps {
@@ -81,22 +82,26 @@ export function AuthSplitLayout({
           </div>
 
           {features.length > 0 && (
-            <div className="space-y-2.5">
-              {features.map((feat) => (
-                <div
-                  key={feat.title}
-                  className="flex gap-3.5 items-start bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.07] hover:border-white/15 p-3.5 rounded-[var(--radius-card)] transition duration-150"
-                >
-                  <div className="bg-primary/25 text-white p-2 rounded-[var(--radius-button)] shrink-0">
-                    <feat.icon className="w-4.5 h-4.5" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm text-white">{feat.title}</h3>
-                    <p className="text-xs text-white/55 leading-relaxed mt-0.5">{feat.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <ol className="space-y-2.5">
+              {features.map((feat, index) => {
+                const step = feat.step ?? index + 1;
+                return (
+                  <li
+                    key={feat.title}
+                    className="flex gap-3.5 items-start bg-white/[0.04] border border-white/[0.08] p-3.5 rounded-[var(--radius-card)]"
+                    style={{ animationDelay: `${index * 70}ms` }}
+                  >
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-button)] border border-white/20 text-xs font-semibold tabular-nums text-white/90">
+                      {step}
+                    </span>
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-sm text-white">{feat.title}</h3>
+                      <p className="text-xs text-white/55 leading-relaxed mt-0.5">{feat.desc}</p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
           )}
         </div>
 
