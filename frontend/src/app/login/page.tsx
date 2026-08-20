@@ -82,7 +82,7 @@ function LoginPageContent() {
       title={isClientFlow ? 'Connectez-vous pour retrouver vos demandes et billets.' : 'Organisez des événements privés inoubliables.'}
       description={
         isClientFlow
-          ? 'Après connexion, vous revenez à la fiche. Le devis et l’inscription invité restent possibles sans compte.'
+          ? 'Après connexion, vous revenez à la fiche. Un compte est requis pour envoyer un devis.'
           : 'EventMaster simplifie chaque étape de l’organisation de vos mariages, anniversaires, conférences et soirées privées.'
       }
       features={isClientFlow ? CLIENT_FEATURES : FEATURES}

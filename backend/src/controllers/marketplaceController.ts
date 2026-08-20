@@ -40,6 +40,27 @@ import {
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
+async function resolveInquirer(req: AuthenticatedRequest) {
+  if (!req.user?.id) return null;
+  return prisma.user.findUnique({
+    where: { id: req.user.id },
+    select: { name: true, email: true, phone: true },
+  });
+}
+
+function inquiryIdentity(
+  account: { name: string | null; email: string; phone: string | null },
+  body: { name?: unknown; phone?: unknown },
+) {
+  const fromName = String(body.name || account.name || '').trim().slice(0, 120) || account.email;
+  const fromPhone = body.phone ? String(body.phone).trim().slice(0, 40) : account.phone;
+  return {
+    fromName,
+    fromEmail: account.email.trim().toLowerCase(),
+    fromPhone: fromPhone || null,
+  };
+}
+
 async function resolveLinkedEventId(req: AuthenticatedRequest, eventId: unknown): Promise<string | null> {
   if (!eventId || !req.user?.tenantId) return null;
   const event = await prisma.event.findFirst({
@@ -373,11 +394,16 @@ export async function getPublicVenue(req: Request, res: Response) {
 
 export async function createVenueInquiry(req: AuthenticatedRequest, res: Response) {
   try {
-    const slug = String(req.params.slug || '').trim();
-    const { name, email, phone, eventDate, guestCount, message, eventId } = req.body || {};
+    const account = await resolveInquirer(req);
+    if (!account?.email) {
+      return res.status(401).json({ error: 'Connectez-vous pour envoyer un devis.' });
+    }
 
-    if (!name?.trim() || !email?.trim() || !message?.trim()) {
-      return res.status(400).json({ error: 'Nom, e-mail et message sont requis.' });
+    const slug = String(req.params.slug || '').trim();
+    const { name, phone, eventDate, guestCount, message, eventId } = req.body || {};
+
+    if (!message?.trim()) {
+      return res.status(400).json({ error: 'Le message est requis.' });
     }
 
     const listing = await prisma.venueListing.findFirst({
@@ -391,10 +417,10 @@ export async function createVenueInquiry(req: AuthenticatedRequest, res: Respons
       return res.status(404).json({ error: 'Salle introuvable ou non publiée.' });
     }
 
-    const fromEmail = String(email).trim().toLowerCase();
+    const identity = inquiryIdentity(account, { name, phone });
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const recent = await prisma.marketplaceInquiry.count({
-      where: { listingId: listing.id, fromEmail, createdAt: { gte: since } },
+      where: { listingId: listing.id, fromEmail: identity.fromEmail, createdAt: { gte: since } },
     });
     if (recent >= 3) {
       return res.status(429).json({ error: 'Trop de demandes aujourd’hui pour cette salle. Réessayez demain.' });
@@ -407,9 +433,9 @@ export async function createVenueInquiry(req: AuthenticatedRequest, res: Respons
     const inquiry = await prisma.marketplaceInquiry.create({
       data: {
         listingId: listing.id,
-        fromName: String(name).trim().slice(0, 120),
-        fromEmail,
-        fromPhone: phone ? String(phone).trim().slice(0, 40) : null,
+        fromName: identity.fromName,
+        fromEmail: identity.fromEmail,
+        fromPhone: identity.fromPhone,
         eventDate: parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : null,
         guestCount: Number.isFinite(parsedGuests) && parsedGuests > 0 ? parsedGuests : null,
         message: String(message).trim().slice(0, 4000),
@@ -442,7 +468,7 @@ export async function createVenueInquiry(req: AuthenticatedRequest, res: Respons
     });
 
     await sendRealEmail(
-      fromEmail,
+      inquiry.fromEmail,
       `Votre demande — ${listing.room.name}`,
       `Nous avons transmis votre demande pour « ${listing.room.name} » à ${listing.tenant.name}. Ils vous recontacteront directement.`,
       `<p>Nous avons transmis votre demande pour <strong>${listing.room.name}</strong> à ${listing.tenant.name}.</p><p>Ils vous recontacteront directement.</p>`,
@@ -835,10 +861,15 @@ async function notifyInquiry(params: {
 
 export async function createServiceInquiry(req: AuthenticatedRequest, res: Response) {
   try {
+    const account = await resolveInquirer(req);
+    if (!account?.email) {
+      return res.status(401).json({ error: 'Connectez-vous pour envoyer un devis.' });
+    }
+
     const slug = String(req.params.slug || '').trim();
-    const { name, email, phone, eventDate, guestCount, message, eventId } = req.body || {};
-    if (!name?.trim() || !email?.trim() || !message?.trim()) {
-      return res.status(400).json({ error: 'Nom, e-mail et message sont requis.' });
+    const { name, phone, eventDate, guestCount, message, eventId } = req.body || {};
+    if (!message?.trim()) {
+      return res.status(400).json({ error: 'Le message est requis.' });
     }
 
     const offering = await prisma.serviceOffering.findFirst({
@@ -847,10 +878,10 @@ export async function createServiceInquiry(req: AuthenticatedRequest, res: Respo
     });
     if (!offering) return res.status(404).json({ error: 'Prestation introuvable ou non publiée.' });
 
-    const fromEmail = String(email).trim().toLowerCase();
+    const identity = inquiryIdentity(account, { name, phone });
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const recent = await prisma.marketplaceInquiry.count({
-      where: { offeringId: offering.id, fromEmail, createdAt: { gte: since } },
+      where: { offeringId: offering.id, fromEmail: identity.fromEmail, createdAt: { gte: since } },
     });
     if (recent >= 3) {
       return res.status(429).json({ error: 'Trop de demandes aujourd’hui pour ce prestataire. Réessayez demain.' });
@@ -863,9 +894,9 @@ export async function createServiceInquiry(req: AuthenticatedRequest, res: Respo
     const inquiry = await prisma.marketplaceInquiry.create({
       data: {
         offeringId: offering.id,
-        fromName: String(name).trim().slice(0, 120),
-        fromEmail,
-        fromPhone: phone ? String(phone).trim().slice(0, 40) : null,
+        fromName: identity.fromName,
+        fromEmail: identity.fromEmail,
+        fromPhone: identity.fromPhone,
         eventDate: parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : null,
         guestCount: Number.isFinite(parsedGuests) && parsedGuests > 0 ? parsedGuests : null,
         message: String(message).trim().slice(0, 4000),

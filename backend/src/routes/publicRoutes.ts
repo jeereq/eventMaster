@@ -9,7 +9,7 @@ import {
   getContactDestinations,
   loadPlatformSettings,
 } from '../services/platformSettingsService';
-import { optionalAuth } from '../middleware/auth';
+import { optionalAuth, requireAuth } from '../middleware/auth';
 import {
   listPublicVenues,
   getPublicVenue,
@@ -91,10 +91,10 @@ router.get('/templates', async (_req: Request, res: Response) => {
 
 router.get('/venues', listPublicVenues);
 router.get('/venues/:slug', optionalAuth, getPublicVenue);
-router.post('/venues/:slug/inquire', optionalAuth, createVenueInquiry);
+router.post('/venues/:slug/inquire', requireAuth, createVenueInquiry);
 router.get('/services', listPublicServices);
 router.get('/services/:slug', optionalAuth, getPublicService);
-router.post('/services/:slug/inquire', optionalAuth, createServiceInquiry);
+router.post('/services/:slug/inquire', requireAuth, createServiceInquiry);
 router.get('/vendors/:slug', getPublicVendor);
 router.get('/events', listPublicEvents);
 router.get('/events/:slug', getPublicEvent);

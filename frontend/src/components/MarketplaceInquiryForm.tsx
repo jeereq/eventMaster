@@ -8,7 +8,6 @@ import { useAuth } from '@/context/AuthContext';
 import { Alert, Button, Input } from '@/components/ui';
 import { LISTING_EVENT_TYPES } from '@/lib/listingDetails';
 import ClientAuthChoice from '@/components/ClientAuthChoice';
-import { clientLoginHref, clientRegisterHref } from '@/lib/safeAppPath';
 import { Calendar, Send } from 'lucide-react';
 
 export default function MarketplaceInquiryForm({
@@ -33,7 +32,6 @@ export default function MarketplaceInquiryForm({
   const pathname = usePathname();
   const { user, token, loading: authLoading } = useAuth();
   const nextPath = pathname || '/marketplace';
-  const [guestCheckout, setGuestCheckout] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -51,14 +49,13 @@ export default function MarketplaceInquiryForm({
   const [formError, setFormError] = useState('');
   const selectedDate = onEventDateChange ? (eventDate ?? internalDate) : internalDate;
   const setSelectedDate = onEventDateChange ?? setInternalDate;
-  const showAuthChoice = !authLoading && !token && !guestCheckout;
+  const showAuthChoice = !authLoading && !token;
 
   useEffect(() => {
     if (!user) return;
     setName((prev) => prev || user.name || '');
     setEmail((prev) => prev || user.email || '');
     setPhone((prev) => prev || user.phone || '');
-    setGuestCheckout(false);
   }, [user]);
 
   const composedMessage = () => {
@@ -104,14 +101,12 @@ export default function MarketplaceInquiryForm({
       {showAuthChoice ? (
         <ClientAuthChoice
           nextPath={nextPath}
-          description="Connectez-vous pour envoyer un devis et suivre vos demandes, ou continuez en invité."
-          onGuest={() => setGuestCheckout(true)}
+          description="Connectez-vous ou créez un compte pour envoyer un devis et suivre vos demandes."
         />
       ) : (
         <>
           <p className="text-xs text-muted leading-relaxed">
-            Le professionnel reçoit votre message par e-mail. Pour bloquer une date avec acompte, connectez-vous et
-            utilisez Réserver (paiement hors plateforme).
+            Le professionnel reçoit votre message par e-mail. Pour bloquer une date avec acompte, utilisez Réserver (paiement hors plateforme).
           </p>
           {token && user && (
             <p className="text-[11px] text-muted">
@@ -122,18 +117,8 @@ export default function MarketplaceInquiryForm({
               .
             </p>
           )}
-          {!token && (
-            <p className="text-[11px] text-muted">
-              Demande invité.{' '}
-              <Link href={clientLoginHref(nextPath)} className="font-semibold text-primary hover:underline">Se connecter</Link>
-              {' · '}
-              <Link href={clientRegisterHref(nextPath)} className="font-semibold text-primary hover:underline">Créer un compte</Link>
-            </p>
-          )}
           {formError && <Alert variant="error">{formError}</Alert>}
           {sent && <Alert variant="success">{sent}</Alert>}
-          <Input label="Votre nom" required value={name} onChange={(e) => setName(e.target.value)} />
-          <Input label="E-mail" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           <Input label="Téléphone" value={phone} onChange={(e) => setPhone(e.target.value)} />
           <label className="block space-y-1.5">
             <span className="text-xs font-medium text-muted">Type d’événement</span>
