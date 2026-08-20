@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ChevronDown } from 'lucide-react';
 import { FAQ_ITEMS } from '@/config/siteContent';
@@ -14,6 +14,8 @@ interface FaqSectionProps {
   subtitle?: string;
   showContactLink?: boolean;
   className?: string;
+  /** Si fourni, n’affiche que ces questions (ordre conservé). */
+  itemIds?: string[];
 }
 
 export default function FaqSection({
@@ -22,11 +24,23 @@ export default function FaqSection({
   subtitle = 'Forfaits, invitations, accueil le jour J, marketplace et support.',
   showContactLink = true,
   className = '',
+  itemIds,
 }: FaqSectionProps) {
   const { site } = usePlatformSite();
-  const [openId, setOpenId] = useState<string | null>(FAQ_ITEMS[0]?.id ?? null);
+  const source = useMemo(() => {
+    if (!itemIds?.length) return FAQ_ITEMS;
+    return itemIds
+      .map((itemId) => FAQ_ITEMS.find((item) => item.id === itemId))
+      .filter((item): item is (typeof FAQ_ITEMS)[number] => Boolean(item));
+  }, [itemIds]);
 
-  const items = FAQ_ITEMS.map((item) => ({
+  const [openId, setOpenId] = useState<string | null>(source[0]?.id ?? null);
+
+  useEffect(() => {
+    setOpenId(source[0]?.id ?? null);
+  }, [source]);
+
+  const items = source.map((item) => ({
     ...item,
     answer:
       item.id === 'support'

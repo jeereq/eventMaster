@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Check, Minus, ChevronDown, ChevronUp, Sparkles, Tag } from 'lucide-react';
 import {
@@ -56,6 +56,8 @@ function parseComparisonQuota(planId: PlanId, label: string): number {
 
 interface LandingPricingSectionProps {
  dbPlans: Record<string, DbPlan> | null;
+ defaultAudience?: 'B2B' | 'B2C' | 'VENDOR';
+ lead?: string;
 }
 
 function FeatureCell({ value }: { value: string | boolean }) {
@@ -87,10 +89,18 @@ const TIER_ACCENT: Record<string, string> = {
  catalog: 'bg-violet-600',
 };
 
-export default function LandingPricingSection({ dbPlans }: LandingPricingSectionProps) {
+export default function LandingPricingSection({
+ dbPlans,
+ defaultAudience = 'B2B',
+ lead,
+}: LandingPricingSectionProps) {
  const [billing, setBilling] = useState<BillingCycle>('monthly');
  const [showComparison, setShowComparison] = useState(false);
- const [audience, setAudience] = useState<'B2B' | 'B2C' | 'VENDOR'>('B2B');
+ const [audience, setAudience] = useState<'B2B' | 'B2C' | 'VENDOR'>(defaultAudience);
+
+ useEffect(() => {
+  setAudience(defaultAudience);
+ }, [defaultAudience]);
 
  const plans = useMemo(() => {
  return LANDING_PLANS.map((plan) => {
@@ -206,12 +216,19 @@ export default function LandingPricingSection({ dbPlans }: LandingPricingSection
  Forfaits
  </p>
  <h2 className="text-2xl font-semibold text-foreground tracking-tight">
- Organisations, particuliers, salles et prestataires
+ {audience === 'B2C'
+  ? 'Forfaits particuliers'
+  : audience === 'VENDOR'
+    ? 'Forfaits salles et prestataires'
+    : 'Forfaits organisations'}
  </h2>
  <p className="text-sm text-muted leading-relaxed">
- Organisations (Business) : facturation au mois. Particuliers : palier d’invités (50, 100, 200 ou +200), trimestre 90 jours, salles de plan de table — pas de publication marketplace.
- Salle, Prestataire et Salle & presta : publication de fiches, pas un abonnement d’agence.
- Sur tous les forfaits payants, y compris Particulier, le paiement annuel facture 12 mois (ou 4 trimestres) d’un coup, avec −{ANNUAL_DISCOUNT_PERCENT} %.
+ {lead ||
+  (audience === 'B2C'
+   ? `Palier d’invités (50, 100, 200 ou +200), trimestre 90 jours, plan de table — pas de publication marketplace. Le paiement annuel facture 4 trimestres d’un coup, avec −${ANNUAL_DISCOUNT_PERCENT} %.`
+   : audience === 'VENDOR'
+     ? `Publication de fiches salle, métier ou location — pas un abonnement d’agence. Sur les forfaits payants, le paiement annuel facture 12 mois d’un coup, avec −${ANNUAL_DISCOUNT_PERCENT} %.`
+     : `Facturation au mois (Business, Premium, Enterprise). Sur tous les forfaits payants, le paiement annuel facture 12 mois d’un coup, avec −${ANNUAL_DISCOUNT_PERCENT} %.`)}
  </p>
  </div>
 

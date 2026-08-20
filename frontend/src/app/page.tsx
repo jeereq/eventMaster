@@ -1,30 +1,28 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
 import type { LandingTemplate } from '@/config/landingTemplates';
 import { fetchPublicLandingTemplates } from '@/lib/landingTemplateAdapter';
 import LandingPricingSection from '@/components/landing/LandingPricingSection';
-import LandingRolesSection from '@/components/landing/LandingRolesSection';
 import LandingWorkflowSection from '@/components/landing/LandingWorkflowSection';
-import LandingMobileSection from '@/components/landing/LandingMobileSection';
+import LandingProfileGate from '@/components/landing/LandingProfileGate';
 import FaqSection from '@/components/landing/FaqSection';
-import LandingMapSection from '@/components/landing/LandingMapSection';
 import LandingVitrineSection from '@/components/landing/LandingVitrineSection';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import PublicCtaBand from '@/components/PublicCtaBand';
 import SiteFooter from '@/components/SiteFooter';
 import SiteHeader from '@/components/SiteHeader';
-import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
-import { Modal, Button, Skeleton } from '@/components/ui';
+import { Modal, Button } from '@/components/ui';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
-import { depositPercent } from '@/lib/platformRates';
 import {
-  ArrowRight, LayoutGrid, QrCode, Mail, Sparkles,
-  Building2, Users, CalendarCheck, Smartphone, Share2,
-} from 'lucide-react';
+  getLandingProfile,
+  isLandingProfileId,
+  type LandingProfileId,
+} from '@/lib/landingProfiles';
+import { ArrowRight, Smartphone, Sparkles } from 'lucide-react';
 import CelebrateMood from '@/components/CelebrateMood';
 
 function getCategoryLabel(category: string) {
@@ -40,6 +38,19 @@ export default function Home() {
   const [dbPlans, setDbPlans] = useState<any>(null);
   const [publicTemplates, setPublicTemplates] = useState<LandingTemplate[]>([]);
   const [loadingPublicTemplates, setLoadingPublicTemplates] = useState(true);
+  const [profileId, setProfileId] = useState<LandingProfileId>('personal');
+
+  const profile = getLandingProfile(profileId);
+
+  const selectProfile = useCallback((id: LandingProfileId, scrollToParcours = true) => {
+    setProfileId(id);
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, '', `#${id}`);
+    }
+    if (scrollToParcours) {
+      document.getElementById('parcours')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, []);
 
   useEffect(() => {
     async function fetchPlans() {
@@ -61,14 +72,31 @@ export default function Home() {
     loadPublicTemplates();
   }, []);
 
+  useEffect(() => {
+    const applyHash = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (isLandingProfileId(hash)) setProfileId(hash);
+    };
+    applyHash();
+    window.addEventListener('hashchange', applyHash);
+    return () => window.removeEventListener('hashchange', applyHash);
+  }, []);
+
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const faqSubtitle =
+    profileId === 'seeker'
+      ? 'Compte client, devis et packs — sans abonnement.'
+      : profileId === 'vendor'
+        ? 'Publication, acompte hors plateforme et forfaits salle / presta.'
+        : profileId === 'pro'
+          ? 'Organisation, équipe, protocoles et forfaits Business.'
+          : 'Invitations, plan de table, accueil et forfaits particuliers.';
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground font-sans antialiased">
       <CelebrateMood />
       <SiteHeader variant="landing" />
 
-      {/* Hero */}
       <section className="relative em-landing-hero">
         <div className="page-container relative z-10 py-14 sm:py-18 lg:py-22">
           <div className="max-w-3xl space-y-6 animate-slide-up">
@@ -83,13 +111,28 @@ export default function Home() {
             </div>
 
             <h1 className="font-display text-[2.15rem] sm:text-5xl lg:text-[3.2rem] font-semibold tracking-tight text-foreground leading-[1.12]">
-              Invitez, placez, accueillez — depuis le navigateur
+              Vous venez pour… ?
             </h1>
 
             <p className="text-[15px] sm:text-base text-muted leading-relaxed max-w-2xl">
-              Envoyez les invitations, suivez les réponses, placez vos invités et scannez les badges le jour J.
-              Tout se fait déjà sur le web, y compris au téléphone. L’app iOS et Android arrive bientôt.
+              Choisissez votre situation. Le parcours, les tarifs et les questions s’adaptent.
+              RSVP, plan de table et scan QR marchent déjà dans le navigateur — y compris au téléphone.
             </p>
+          </div>
+
+          <LandingProfileGate
+            selectedId={profileId}
+            onSelect={(id) => selectProfile(id, true)}
+          />
+
+          <div className="mt-8 max-w-2xl space-y-4">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+              {profile.eyebrow}
+            </p>
+            <h2 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">
+              {profile.title}
+            </h2>
+            <p className="text-sm text-muted leading-relaxed">{profile.intro}</p>
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 pt-1">
               {user ? (
@@ -100,9 +143,9 @@ export default function Home() {
                 </Link>
               ) : site.allowRegistration ? (
                 <>
-                  <Link href="/register">
+                  <Link href={profile.cta.href}>
                     <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                      Lancer mon premier événement
+                      {profile.cta.label}
                     </Button>
                   </Link>
                   <Link href="/login">
@@ -125,7 +168,7 @@ export default function Home() {
                 href="#parcours"
                 className="inline-flex items-center justify-center gap-1.5 px-1 py-2 text-sm font-semibold text-foreground/80 hover:text-primary transition"
               >
-                C’est pour qui ?
+                Voir le parcours
                 <ArrowRight className="w-3.5 h-3.5" />
               </a>
             </div>
@@ -138,103 +181,10 @@ export default function Home() {
               </p>
             </div>
           </div>
-
-          <ul className="em-landing-hero-grid mt-12">
-            {[
-              {
-                icon: Mail,
-                title: 'Invitations & RSVP',
-                text: 'Chaque invité reçoit un lien. Il répond, vous suivez. Le badge QR arrive dès qu’il dit oui.',
-              },
-              {
-                icon: LayoutGrid,
-                title: 'Salles & plan de table',
-                text: 'Dessinez la salle, glissez les sièges. Vos confirmés savent où s’asseoir avant d’arriver.',
-              },
-              {
-                icon: QrCode,
-                title: 'Accueil le jour J',
-                text: 'Scannez le badge à l’entrée, depuis le téléphone. Présence et siège validés tout de suite.',
-              },
-              {
-                icon: Building2,
-                title: 'Trouver une salle',
-                text: 'Photos, tarifs, plan et calendrier. Filtrez, comparez, demandez un devis.',
-              },
-              {
-                icon: Sparkles,
-                title: 'Prestataires & locations',
-                text: 'Traiteur, photo, DJ, habits, voitures… Publiez vos offres ou trouvez le bon pro.',
-              },
-              {
-                icon: CalendarCheck,
-                title: 'Réservations & budget',
-                text: `Trois packs selon votre enveloppe. Acompte ${depositPercent(site)} % versé au pro, hors plateforme.`,
-              },
-              {
-                icon: Share2,
-                title: 'Partage public',
-                text: 'Copiez le lien d’une salle ou d’une recherche. Le destinataire voit la même chose.',
-              },
-              {
-                icon: Users,
-                title: 'Équipe & rôles',
-                text: 'Organisateur, protocole, salle, commercial : chacun voit seulement ce qu’il gère.',
-              },
-            ].map(({ icon: Icon, title, text }) => (
-              <li
-                key={title}
-                className="rounded-[var(--radius-card)] border border-border bg-surface p-4 shadow-[var(--shadow-soft)]"
-              >
-                <Icon className="w-5 h-5 text-[color:var(--festive-accent)] mb-3" />
-                <h2 className="text-sm font-semibold text-foreground mb-1">{title}</h2>
-                <p className="text-xs text-muted leading-relaxed">{text}</p>
-              </li>
-            ))}
-          </ul>
-
-          {loadingPublicTemplates ? (
-            <div className="mt-10 flex flex-wrap items-center gap-3" role="status" aria-label="Chargement des modèles">
-              <Skeleton className="h-3 w-24" />
-              <div className="flex gap-2">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="w-14 aspect-[3/4] rounded-md shrink-0" />
-                ))}
-              </div>
-            </div>
-          ) : publicTemplates.length > 0 ? (
-            <div className="mt-10 flex flex-wrap items-center gap-3">
-              <p className="text-xs font-medium text-muted shrink-0">Modèles vitrine</p>
-              <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
-                {publicTemplates.slice(0, 8).map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setModalTemplate(t)}
-                    title={t.name}
-                    className="shrink-0 w-14 aspect-[3/4] rounded-md border border-border overflow-hidden hover:border-primary/40 transition"
-                  >
-                    <TemplatePreviewThumb
-                      content={t.previewContent}
-                      name={t.name}
-                      className="!w-full !h-full !rounded-none !border-0"
-                    />
-                  </button>
-                ))}
-              </div>
-              <a href="#modeles" className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1">
-                Tous les modèles <ArrowRight className="w-3.5 h-3.5" />
-              </a>
-            </div>
-          ) : null}
         </div>
       </section>
 
-      <LandingMapSection />
-
-      <LandingRolesSection />
-      <LandingWorkflowSection />
-      <LandingMobileSection />
+      <LandingWorkflowSection profileId={profileId} onProfileChange={(id) => selectProfile(id, false)} />
 
       <LandingVitrineSection
         publicTemplates={publicTemplates}
@@ -243,12 +193,20 @@ export default function Home() {
         onPreviewTemplate={setModalTemplate}
       />
 
-      <LandingPricingSection dbPlans={dbPlans} />
-      <FaqSection />
+      <LandingPricingSection
+        dbPlans={dbPlans}
+        defaultAudience={profile.pricingAudience}
+        lead={
+          profileId === 'seeker'
+            ? 'Le compte client est gratuit : favoris, packs et devis. Les forfaits ci-dessous concernent l’organisation d’une fête, si vous en avez aussi besoin.'
+            : undefined
+        }
+      />
+      <FaqSection itemIds={profile.faqIds} subtitle={faqSubtitle} />
 
       <PublicCtaBand
-        title="Prêt à lancer votre événement ?"
-        description="Créez votre espace, publiez une salle, ou cherchez un prestataire — tout de suite, dans le navigateur."
+        title={profile.title}
+        description={profile.registerHint}
         actions={
           user ? (
             <Link href="/dashboard">
@@ -259,9 +217,9 @@ export default function Home() {
           ) : (
             <>
               {site.allowRegistration && (
-                <Link href="/register">
+                <Link href={profile.cta.href}>
                   <Button size="lg" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                    Créer mon espace maintenant
+                    {profile.cta.label}
                   </Button>
                 </Link>
               )}

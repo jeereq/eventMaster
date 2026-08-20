@@ -21,14 +21,15 @@ export const FOOTER_FEATURES = [
 ] as const;
 
 export const FOOTER_PRODUCT = [
-  { label: 'Modèles', href: '/#modeles' },
-  { label: 'Marketplace', href: '/marketplace' },
   { label: 'Parcours', href: '/#parcours' },
+  { label: 'Marketplace', href: '/marketplace' },
+  { label: 'Modèles', href: '/#modeles' },
   { label: 'Tarifs', href: '/#tarifs' },
   { label: 'FAQ', href: '/faq' },
 ] as const;
 
 export const FOOTER_RESOURCES = [
+  { label: 'Aide invité', href: '/guide/invite' },
   { label: 'Contact & Support', href: '/contact' },
   { label: `Conditions d'utilisation (v${TERMS_VERSION})`, href: '/terms' },
   { label: `Politique de confidentialité (v${PRIVACY_VERSION})`, href: '/privacy' },

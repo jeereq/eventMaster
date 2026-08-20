@@ -294,16 +294,18 @@ export default function LandingVitrineSection({
   );
 
   return (
-    <section id="catalogue" className="py-14 sm:py-16 border-t border-border bg-surface scroll-mt-16">
+    <section className="py-14 sm:py-16 border-t border-border bg-surface">
+      <div id="catalogue" className="scroll-mt-16" />
+      <div id="modeles" className="scroll-mt-16" />
       <div className="page-container space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
           <div className="max-w-xl space-y-2">
-            <p className="em-festive-chip w-fit">Vitrine</p>
+            <p className="em-festive-chip w-fit">Déjà en ligne</p>
             <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-              Salles, prestataires, locations, événements et modèles
+              Salles, prestataires et modèles — sans créer de compte
             </h2>
             <p className="text-sm text-muted leading-relaxed">
-              Filtrez le marketplace EventMaster par lieu, dates, prix, type de salle, métier, location, mobilité ou entrée.
+              La preuve catalogue : filtrez par lieu, dates, prix, type de salle, métier ou location.
             </p>
           </div>
           <Link href="/marketplace">
