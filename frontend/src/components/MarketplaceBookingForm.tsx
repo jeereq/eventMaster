@@ -32,6 +32,7 @@ export default function MarketplaceBookingForm({
   onEventDateChange,
   onEventEndDateChange,
   showCalendar = true,
+  eventId,
 }: {
   listingSlug?: string;
   offeringSlug?: string;
@@ -45,6 +46,7 @@ export default function MarketplaceBookingForm({
   onEventDateChange?: (value: string) => void;
   onEventEndDateChange?: (value: string) => void;
   showCalendar?: boolean;
+  eventId?: string;
 }) {
   const { token, loading, tenant } = useAuth();
   const { site } = usePlatformSite();
@@ -77,7 +79,9 @@ export default function MarketplaceBookingForm({
       })
     : null;
   const loggedIn = Boolean(token && tenant?.id);
-  const bookingsHref = '/dashboard/bookings';
+  const bookingsHref = eventId
+    ? `/dashboard/bookings?tab=bookings&event=${encodeURIComponent(eventId)}`
+    : '/dashboard/bookings';
   const periodLabel = selectedDate ? formatBookingPeriod(selectedDate, selectedEnd) : '';
 
   const handleBook = async (e: React.FormEvent) => {
@@ -105,6 +109,7 @@ export default function MarketplaceBookingForm({
         eventEndDate: selectedEnd && selectedEnd !== selectedDate ? selectedEnd : undefined,
         guestCount: guestCount || undefined,
         notes: notes || undefined,
+        eventId: eventId || undefined,
       });
       setSent(data.message || 'Demande de réservation envoyée.');
       setNotes('');

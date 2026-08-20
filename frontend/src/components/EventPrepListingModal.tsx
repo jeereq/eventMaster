@@ -43,6 +43,7 @@ export default function EventPrepListingModal({
   dateKey,
   guestCount,
   eventTitle,
+  eventId,
   onClose,
   onRetainVenue,
   onRetainService,
@@ -53,6 +54,7 @@ export default function EventPrepListingModal({
   dateKey: string;
   guestCount?: number;
   eventTitle?: string;
+  eventId?: string;
   onClose: () => void;
   onRetainVenue: (venue: PublicVenue) => void;
   onRetainService: (service: PublicService) => void;
@@ -191,6 +193,7 @@ export default function EventPrepListingModal({
           eventDate={dateKey || undefined}
           defaultGuestCount={guestCount && guestCount > 0 ? guestCount : undefined}
           defaultMessage={eventTitle ? `Demande pour l’événement « ${eventTitle} ».` : undefined}
+          eventId={eventId}
         />
       ) : loading ? (
         <p className="text-sm text-muted inline-flex items-center gap-2 py-8 justify-center w-full">

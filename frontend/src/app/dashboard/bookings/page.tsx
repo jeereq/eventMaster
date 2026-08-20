@@ -2,7 +2,7 @@
 
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { PageHeader, Breadcrumbs, Alert, Button, EmptyState, Card } from '@/components/ui';
@@ -33,7 +33,9 @@ function OrganizerDemandesPage() {
   const { access, tenant } = useAuth();
   const { site } = usePlatformSite();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const requestedTab = searchParams.get('tab');
+  const eventFilter = searchParams.get('event') || 'all';
   const [tab, setTab] = useState<HubTab>(
     requestedTab === 'bookings' || requestedTab === 'packs' || requestedTab === 'favorites'
       ? requestedTab
@@ -42,6 +44,7 @@ function OrganizerDemandesPage() {
   const [bookings, setBookings] = useState<MarketplaceBookingItem[]>([]);
   const [inquiries, setInquiries] = useState<MarketplaceInquiryItem[]>([]);
   const [packs, setPacks] = useState<SavedEventPack[]>([]);
+  const [orgEvents, setOrgEvents] = useState<Array<{ id: string; title: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const favorites = useListingFavorites();
@@ -51,14 +54,17 @@ function OrganizerDemandesPage() {
     setLoading(true);
     setError('');
     try {
-      const [bookingData, inquiryData, packData] = await Promise.all([
+      const [bookingData, inquiryData, packData, eventsData] = await Promise.all([
         api.get('/marketplace/bookings?role=organizer'),
         api.get('/marketplace/inquiries?role=organizer'),
         api.get('/marketplace/event-packs').catch(() => ({ packs: [] })),
+        api.get('/events').catch(() => ({ events: [] })),
       ]);
       setBookings(bookingData.bookings || []);
       setInquiries(inquiryData.inquiries || []);
       setPacks(Array.isArray(packData.packs) ? packData.packs : []);
+      const eventRows = Array.isArray(eventsData) ? eventsData : eventsData.events || [];
+      setOrgEvents(eventRows.map((row: { id: string; title: string }) => ({ id: row.id, title: row.title })));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossible de charger vos demandes.');
     } finally {
@@ -77,17 +83,44 @@ function OrganizerDemandesPage() {
     }
   }, [requestedTab]);
 
-  const pendingQuotes = inquiries.filter((item) => item.status === 'NEW' && !item.hasBooking).length;
-  const openBookings = bookings.filter((item) => item.status === 'REQUESTED' || item.status === 'ACCEPTED').length;
+  const eventOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const row of orgEvents) map.set(row.id, row.title);
+    for (const item of inquiries) {
+      if (item.event?.id) map.set(item.event.id, item.event.title);
+    }
+    for (const item of bookings) {
+      if (item.event?.id) map.set(item.event.id, item.event.title);
+    }
+    return Array.from(map, ([id, title]) => ({ id, title }));
+  }, [orgEvents, inquiries, bookings]);
+
+  const visibleInquiries = eventFilter === 'all'
+    ? inquiries
+    : inquiries.filter((item) => item.event?.id === eventFilter);
+  const visibleBookings = eventFilter === 'all'
+    ? bookings
+    : bookings.filter((item) => item.event?.id === eventFilter);
+
+  const setEventFilter = (id: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (!id || id === 'all') params.delete('event');
+    else params.set('event', id);
+    const qs = params.toString();
+    router.replace(qs ? `/dashboard/bookings?${qs}` : '/dashboard/bookings');
+  };
+
+  const pendingQuotes = visibleInquiries.filter((item) => item.status === 'NEW' && !item.hasBooking).length;
+  const openBookings = visibleBookings.filter((item) => item.status === 'REQUESTED' || item.status === 'ACCEPTED').length;
 
   const tabs = useMemo(
     () => [
-      { id: 'quotes', label: pendingQuotes ? `Devis (${pendingQuotes})` : `Devis (${inquiries.length})` },
-      { id: 'bookings', label: openBookings ? `Réservations (${openBookings})` : `Réservations (${bookings.length})` },
+      { id: 'quotes', label: pendingQuotes ? `Devis (${pendingQuotes})` : `Devis (${visibleInquiries.length})` },
+      { id: 'bookings', label: openBookings ? `Réservations (${openBookings})` : `Réservations (${visibleBookings.length})` },
       { id: 'packs', label: `Packs (${packs.length})` },
       { id: 'favorites', label: `Favoris (${favorites.items.length})` },
     ],
-    [pendingQuotes, inquiries.length, openBookings, bookings.length, packs.length, favorites.items.length],
+    [pendingQuotes, visibleInquiries.length, openBookings, visibleBookings.length, packs.length, favorites.items.length],
   );
 
   return (
@@ -114,6 +147,22 @@ function OrganizerDemandesPage() {
 
       {error && <Alert variant="error">{error}</Alert>}
 
+      {eventOptions.length > 0 ? (
+        <label className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted shrink-0">Événement</span>
+          <select
+            value={eventFilter}
+            onChange={(e) => setEventFilter(e.target.value)}
+            className="w-full sm:max-w-sm px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface text-sm"
+          >
+            <option value="all">Tous les événements</option>
+            {eventOptions.map((event) => (
+              <option key={event.id} value={event.id}>{event.title}</option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+
       <CatalogueChoicePills
         options={tabs}
         value={tab}
@@ -125,10 +174,10 @@ function OrganizerDemandesPage() {
           <Loader2 className="w-6 h-6 animate-spin" />
         </div>
       ) : tab === 'quotes' ? (
-        <MarketplaceInquiriesPanel inquiries={inquiries} organizerView />
+        <MarketplaceInquiriesPanel inquiries={visibleInquiries} organizerView />
       ) : tab === 'bookings' ? (
         <MarketplaceBookingsPanel
-          bookings={bookings}
+          bookings={visibleBookings}
           commissionDueFc={0}
           onChanged={load}
           organizerView
@@ -161,7 +210,7 @@ function OrganizerDemandesPage() {
                     {pack.services.length ? ` · ${pack.services.length} fiche${pack.services.length > 1 ? 's' : ''}` : ''}
                   </p>
                   <Link href="/dashboard/catalogue?hub=plan" className="text-xs font-semibold text-primary hover:underline">
-                    Ouvrir la préparation
+                    Ouvrir le catalogue
                   </Link>
                 </Card>
               </li>

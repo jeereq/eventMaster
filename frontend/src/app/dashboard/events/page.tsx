@@ -50,7 +50,7 @@ import {
 import PlanLimitCallout from '@/components/PlanLimitCallout';
 import { eventDashboardHref, eventsListHref, isEventWorkspaceTab, type EventWorkspaceTab } from '@/lib/eventRoutes';
 import EventPrepPanel from '@/components/EventPrepPanel';
-import { eventPrepSummary, parseEventPrep } from '@/lib/eventPrep';
+import { eventPrepSummary, hasEventPrepShortlist, parseEventPrep } from '@/lib/eventPrep';
 import {
  displayGuestEmail,
  isPlaceholderGuestEmail,
@@ -442,7 +442,7 @@ export default function EventsPage() {
  
  // Tabs
  const [activeTab, setActiveTab] = useState<EventWorkspaceTab>(
- isProtocolOnly ? 'protocol' : 'guests',
+ isProtocolOnly ? 'protocol' : 'prep',
  );
 
  // Event form
@@ -665,13 +665,10 @@ export default function EventsPage() {
  isProtocolOnly,
  guestGuidelines: selectedEvent?.guestGuidelines ?? guestGuidelines,
  feedPostCount: selectedEvent?.feedPostCount ?? 0,
+ hasPrepShortlist: hasEventPrepShortlist(parseEventPrep(selectedEvent?.eventPrep)),
+ prepSummary: eventPrepSummary(parseEventPrep(selectedEvent?.eventPrep)),
  }),
- [guests, invitations, selectedEvent?.tablePlan, selectedEvent?.date, selectedEvent?.guestGuidelines, selectedEvent?.feedPostCount, guestGuidelines, isProtocolOnly],
- );
-
- const prepSummary = useMemo(
- () => eventPrepSummary(parseEventPrep(selectedEvent?.eventPrep)),
- [selectedEvent?.eventPrep],
+ [guests, invitations, selectedEvent?.tablePlan, selectedEvent?.date, selectedEvent?.guestGuidelines, selectedEvent?.feedPostCount, selectedEvent?.eventPrep, guestGuidelines, isProtocolOnly],
  );
 
  const broadcastConfirmInvite = invitations.find((invite) => invite.id === broadcastConfirmInviteId) || null;
@@ -1132,7 +1129,7 @@ Merci de confirmer votre présence :
  resetEventForm();
  setShowEventModal(false);
  loadEvents();
- router.push(eventDashboardHref(savedEvent.id, { protocol: protocolDesk }));
+ router.push(eventDashboardHref(savedEvent.id, { tab: protocolDesk ? undefined : 'prep', protocol: protocolDesk }));
  return;
  }
 
@@ -2297,7 +2294,7 @@ Merci de confirmer votre présence :
  {eventsViewMode === 'list' && (
  <button
  type="button"
- onClick={() => router.push(eventDashboardHref(event.id, { protocol: protocolDesk }))}
+ onClick={() => router.push(eventDashboardHref(event.id, { tab: protocolDesk ? undefined : 'prep', protocol: protocolDesk }))}
  className="inline-flex items-center"
  title={protocolDesk ? 'Ouvrir le protocole' : 'Voir détails'}
  >
@@ -2350,7 +2347,7 @@ Merci de confirmer votre présence :
  ? event.description
  : undefined
  }
- onClick={() => router.push(eventDashboardHref(event.id, { protocol: protocolDesk }))}
+ onClick={() => router.push(eventDashboardHref(event.id, { tab: protocolDesk ? undefined : 'prep', protocol: protocolDesk }))}
  actions={actions}
  />
  );
@@ -2380,32 +2377,6 @@ Merci de confirmer votre présence :
  onAction={handleWorkflowAction}
  compact={isProtocolOnly}
  />
-
- {!isProtocolOnly && activeTab !== 'prep' && (
- <div className="rounded-2xl border border-dashed border-primary/25 bg-primary/5 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
- <div className="min-w-0">
- <p className="text-sm font-semibold text-foreground">Préparation salle, métiers & locations — optionnel</p>
- <p className="text-xs text-muted mt-0.5">
- {prepSummary
- ? `Pistes retenues : ${prepSummary}`
- : 'Recherchez une salle, des métiers et des locations ici, sans bloquer les invitations.'}
- </p>
- </div>
- <button
- type="button"
- onClick={() => {
- setActiveTab('prep');
- if (eventIdFromRoute) {
- router.replace(eventDashboardHref(eventIdFromRoute, { tab: 'prep', protocol: protocolDesk }), { scroll: false });
- }
- }}
- className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold rounded-[var(--radius-button)] bg-primary text-white hover:bg-primary-hover shrink-0"
- >
- <Sparkles className="w-3.5 h-3.5" />
- Ouvrir
- </button>
- </div>
- )}
 
  {/* Tabs */}
  <div className="inline-flex flex-wrap gap-0.5 p-0.5 bg-surface-muted border border-border rounded-[var(--radius-button)] max-w-full overflow-x-auto">

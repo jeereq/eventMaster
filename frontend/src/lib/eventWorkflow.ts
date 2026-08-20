@@ -13,6 +13,7 @@ export type EventWorkflowTab =
 
 export type EventWorkflowStepId =
   | 'event'
+  | 'prep'
   | 'guests'
   | 'invitation'
   | 'rsvp'
@@ -47,6 +48,7 @@ export interface EventWorkflowStep {
   href?: string;
   status: EventWorkflowStepStatus;
   detail?: string;
+  optional?: boolean;
 }
 
 export interface EventWorkflowState {
@@ -91,24 +93,36 @@ function countCheckedIn(guests: EventWorkflowGuest[]): number {
   return guests.filter((g) => g.checkedInAt).length;
 }
 
+function isStepComplete(step: Omit<EventWorkflowStep, 'status'>): boolean {
+  return Boolean(step.detail?.startsWith('✓'));
+}
+
 function resolveStatuses(steps: Omit<EventWorkflowStep, 'status'>[]): EventWorkflowStep[] {
-  const firstIncomplete = steps.findIndex((s) => !s.detail?.startsWith('✓'));
+  const firstOpen = steps.findIndex((step, index) => {
+    if (isStepComplete(step)) return false;
+    if (step.optional && steps.some((later, laterIndex) => laterIndex > index && isStepComplete(later))) {
+      return false;
+    }
+    return true;
+  });
 
   return steps.map((step, index) => {
-    const isComplete = step.detail?.startsWith('✓') ?? false;
-    let status: EventWorkflowStepStatus = 'upcoming';
-
-    if (isComplete) {
-      status = 'complete';
-    } else if (firstIncomplete === -1) {
-      status = index === steps.length - 1 ? 'current' : 'complete';
-    } else if (index === firstIncomplete) {
-      status = 'current';
-    } else if (index < firstIncomplete) {
-      status = 'complete';
+    if (isStepComplete(step)) {
+      return { ...step, status: 'complete' as const };
     }
-
-    return { ...step, status };
+    if (step.optional && steps.some((later, laterIndex) => laterIndex > index && isStepComplete(later))) {
+      return { ...step, status: 'skipped' as const };
+    }
+    if (firstOpen === -1) {
+      return { ...step, status: index === steps.length - 1 ? 'current' : 'complete' };
+    }
+    if (index === firstOpen) {
+      return { ...step, status: 'current' as const };
+    }
+    if (index < firstOpen) {
+      return { ...step, status: 'complete' as const };
+    }
+    return { ...step, status: 'upcoming' as const };
   });
 }
 
@@ -120,6 +134,8 @@ export function computeEventWorkflowState(input: {
   isProtocolOnly?: boolean;
   guestGuidelines?: GuestGuidelines | null;
   feedPostCount?: number;
+  hasPrepShortlist?: boolean;
+  prepSummary?: string | null;
 }): EventWorkflowState {
   const { guests, invitations, tablePlan, eventDate, isProtocolOnly } = input;
 
@@ -178,8 +194,18 @@ export function computeEventWorkflowState(input: {
     {
       id: 'event',
       title: 'Événement',
-      description: 'Titre, date, lieu. Salle et prestataires restent optionnels.',
+      description: 'Titre, date et lieu.',
       detail: '✓ Événement créé',
+    },
+    {
+      id: 'prep',
+      title: 'Préparation',
+      description: 'Retenez une salle, des métiers ou des locations. Les devis se lient à cet événement.',
+      tab: 'prep',
+      optional: true,
+      detail: input.hasPrepShortlist
+        ? `✓ ${input.prepSummary || 'Pistes retenues'}`
+        : 'Optionnel — retenez des fiches, puis demandez un devis',
     },
     {
       id: 'guests',
@@ -229,7 +255,7 @@ export function computeEventWorkflowState(input: {
   ];
 
   const steps = resolveStatuses(rawSteps);
-  const completedCount = steps.filter((s) => s.status === 'complete').length;
+  const completedCount = steps.filter((s) => s.status === 'complete' || s.status === 'skipped').length;
 
   return {
     steps,

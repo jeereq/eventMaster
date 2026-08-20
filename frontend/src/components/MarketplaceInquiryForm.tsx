@@ -18,6 +18,7 @@ export default function MarketplaceInquiryForm({
   onEventDateChange,
   defaultGuestCount,
   defaultMessage,
+  eventId,
 }: {
   endpoint: string;
   successCopy?: string;
@@ -25,6 +26,7 @@ export default function MarketplaceInquiryForm({
   onEventDateChange?: (value: string) => void;
   defaultGuestCount?: number | string;
   defaultMessage?: string;
+  eventId?: string;
 }) {
   const pathname = usePathname();
   const { user, token, loading: authLoading } = useAuth();
@@ -82,6 +84,7 @@ export default function MarketplaceInquiryForm({
         eventDate: selectedDate || undefined,
         guestCount: guestCount || undefined,
         message: composedMessage(),
+        eventId: eventId || undefined,
       });
       setSent(data.message || successCopy);
       setMessage('');
@@ -110,7 +113,7 @@ export default function MarketplaceInquiryForm({
           {token && user && (
             <p className="text-[11px] text-muted">
               Connecté en tant que {user.name || user.email}. Après envoi, suivez la demande dans{' '}
-              <Link href="/dashboard/bookings?tab=quotes" className="font-semibold text-primary hover:underline">
+              <Link href={eventId ? `/dashboard/bookings?tab=quotes&event=${encodeURIComponent(eventId)}` : '/dashboard/bookings?tab=quotes'} className="font-semibold text-primary hover:underline">
                 Devis & réservations
               </Link>
               .

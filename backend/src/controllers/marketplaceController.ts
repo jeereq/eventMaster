@@ -40,6 +40,15 @@ import {
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
+async function resolveLinkedEventId(req: AuthenticatedRequest, eventId: unknown): Promise<string | null> {
+  if (!eventId || !req.user?.tenantId) return null;
+  const event = await prisma.event.findFirst({
+    where: { id: String(eventId), tenantId: req.user.tenantId },
+    select: { id: true },
+  });
+  return event?.id || null;
+}
+
 function toPublicVenue(listing: {
   slug: string;
   headline: string | null;
@@ -364,7 +373,7 @@ export async function getPublicVenue(req: Request, res: Response) {
 export async function createVenueInquiry(req: AuthenticatedRequest, res: Response) {
   try {
     const slug = String(req.params.slug || '').trim();
-    const { name, email, phone, eventDate, guestCount, message } = req.body || {};
+    const { name, email, phone, eventDate, guestCount, message, eventId } = req.body || {};
 
     if (!name?.trim() || !email?.trim() || !message?.trim()) {
       return res.status(400).json({ error: 'Nom, e-mail et message sont requis.' });
@@ -392,6 +401,7 @@ export async function createVenueInquiry(req: AuthenticatedRequest, res: Respons
 
     const parsedDate = eventDate ? new Date(eventDate) : null;
     const parsedGuests = Number.parseInt(String(guestCount || ''), 10);
+    const linkedEventId = await resolveLinkedEventId(req, eventId);
 
     const inquiry = await prisma.marketplaceInquiry.create({
       data: {
@@ -403,6 +413,7 @@ export async function createVenueInquiry(req: AuthenticatedRequest, res: Respons
         guestCount: Number.isFinite(parsedGuests) && parsedGuests > 0 ? parsedGuests : null,
         message: String(message).trim().slice(0, 4000),
         fromTenantId: req.user?.tenantId || null,
+        eventId: linkedEventId,
       },
     });
 
@@ -825,14 +836,7 @@ export async function createServiceInquiry(req: AuthenticatedRequest, res: Respo
 
     const parsedDate = eventDate ? new Date(eventDate) : null;
     const parsedGuests = Number.parseInt(String(guestCount || ''), 10);
-    let linkedEventId: string | null = null;
-    if (eventId && req.user?.tenantId) {
-      const event = await prisma.event.findFirst({
-        where: { id: String(eventId), tenantId: req.user.tenantId },
-        select: { id: true },
-      });
-      linkedEventId = event?.id || null;
-    }
+    const linkedEventId = await resolveLinkedEventId(req, eventId);
 
     const inquiry = await prisma.marketplaceInquiry.create({
       data: {

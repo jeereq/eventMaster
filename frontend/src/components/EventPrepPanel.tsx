@@ -14,6 +14,7 @@ import {
   MapPin,
   Search,
   Sparkles,
+  Inbox,
   X,
 } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -645,7 +646,7 @@ export default function EventPrepPanel({
         <div className="space-y-1">
           <h2 className="text-lg font-semibold text-foreground tracking-tight">Préparation</h2>
           <p className="text-sm text-muted">
-            Filtrez salles, métiers et locations, ouvrez la fiche, puis retenez. Rien n’est obligatoire.
+            Filtrez salles, métiers et locations, ouvrez la fiche, retenez, puis demandez un devis rattaché à cet événement.
             {dateKey ? ` Date : ${new Date(`${dateKey}T12:00:00`).toLocaleDateString('fr-FR')}.` : ''}
           </p>
         </div>
@@ -658,6 +659,13 @@ export default function EventPrepPanel({
           ) : (
             <span className="text-xs text-muted">Enregistré automatiquement</span>
           )}
+          <Link
+            href={`/dashboard/bookings?event=${encodeURIComponent(eventId)}`}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-[var(--radius-button)] border border-border hover:border-primary/40 hover:bg-primary/5 transition"
+          >
+            <Inbox className="w-3.5 h-3.5" />
+            Devis & résas
+          </Link>
           <Link
             href="/dashboard/catalogue?hub=plan"
             onClick={() =>
@@ -940,6 +948,7 @@ export default function EventPrepPanel({
         dateKey={dateKey}
         guestCount={guestCount}
         eventTitle={eventTitle}
+        eventId={eventId}
         onClose={() => setPreview(null)}
         onRetainVenue={retainVenue}
         onRetainService={retainService}

@@ -27,6 +27,7 @@ import {
   inquiryNextStep,
   type MarketplaceInquiryItem,
 } from '@/lib/marketplace';
+import { eventDashboardHref } from '@/lib/eventRoutes';
 import { Building2, CalendarCheck, CheckCircle2, Inbox, KeyRound, Mail, Phone, Sparkles } from 'lucide-react';
 
 const KIND_OPTIONS = [
@@ -99,7 +100,7 @@ export default function MarketplaceInquiriesPanel({
       }
       if (kind && kind !== 'all' && item.kind !== kind) return false;
       if (!q) return true;
-      const hay = [item.title, item.fromName, item.fromEmail, item.fromPhone, item.message, item.vendorName]
+      const hay = [item.title, item.fromName, item.fromEmail, item.fromPhone, item.message, item.vendorName, item.event?.title]
         .filter(Boolean)
         .join(' ')
         .toLowerCase();
@@ -247,6 +248,7 @@ export default function MarketplaceInquiriesPanel({
                 kindLabel(item.kind),
                 organizerView ? item.vendorName : item.fromName,
                 item.eventDate ? `date ${new Date(item.eventDate).toLocaleDateString('fr-FR')}` : null,
+                item.event?.title ? `événement ${item.event.title}` : null,
                 item.guestCount ? `${item.guestCount} invités` : null,
               ].filter(Boolean);
               const actions = (
@@ -261,6 +263,11 @@ export default function MarketplaceInquiriesPanel({
                         <Button size="sm" variant={organizerView ? 'primary' : 'secondary'}>Voir la fiche</Button>
                       </Link>
                     )
+                  ) : null}
+                  {organizerView && item.event?.id ? (
+                    <Link href={eventDashboardHref(item.event.id, { tab: 'prep' })} className="inline-flex">
+                      <Button size="sm" variant="secondary">Événement</Button>
+                    </Link>
                   ) : null}
                   {!organizerView && item.status === 'NEW' && onMarkContacted ? (
                     <Button

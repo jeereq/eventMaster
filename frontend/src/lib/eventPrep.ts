@@ -133,8 +133,12 @@ export function eventPrepSummary(prep: EventPrep): string | null {
   return parts.join(' · ');
 }
 
+export function hasEventPrepShortlist(prep: EventPrep): boolean {
+  return Boolean(prep.venue || prep.vendors.length > 0);
+}
+
 export function hasEventPrepSelection(prep: EventPrep): boolean {
-  return Boolean(prep.venue || prep.vendors.length > 0 || prep.notes);
+  return hasEventPrepShortlist(prep) || Boolean(prep.notes);
 }
 
 export function eventPrepEstimateFc(prep: EventPrep): {

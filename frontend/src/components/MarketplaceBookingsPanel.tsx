@@ -39,6 +39,7 @@ import {
   type MarketplaceBookingItem,
   type MarketplaceBookingStatus,
 } from '@/lib/marketplace';
+import { eventDashboardHref } from '@/lib/eventRoutes';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import { Building2, CalendarCheck, CheckCircle2, KeyRound, Sparkles, XCircle } from 'lucide-react';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -141,7 +142,7 @@ export default function MarketplaceBookingsPanel({
     if (kind === 'rental' && (b.kind !== 'service' || !isServiceRentalCategory(b.offeringCategory))) return false;
     const q = query.trim().toLowerCase();
     if (q) {
-      const hay = [b.title, b.vendorName, b.organizerName, b.notes].filter(Boolean).join(' ').toLowerCase();
+      const hay = [b.title, b.vendorName, b.organizerName, b.notes, b.event?.title].filter(Boolean).join(' ').toLowerCase();
       if (!hay.includes(q)) return false;
     }
     const day = (b.eventDate || '').slice(0, 10);
@@ -325,6 +326,7 @@ export default function MarketplaceBookingsPanel({
                 kindLabel(item),
                 isVendor ? item.organizerName || 'Organisateur' : item.vendorName,
                 formatBookingPeriod(item.eventDate, item.eventEndDate),
+                item.event?.title ? `événement ${item.event.title}` : null,
                 item.depositMarkedAt ? 'acompte marqué' : null,
               ].filter(Boolean);
 
@@ -381,6 +383,11 @@ export default function MarketplaceBookingsPanel({
                         <Button size="sm" variant="ghost">Voir la fiche</Button>
                       </Link>
                     )
+                  ) : null}
+                  {organizerView && item.event?.id ? (
+                    <Link href={eventDashboardHref(item.event.id, { tab: 'prep' })} className="inline-flex">
+                      <Button size="sm" variant="secondary">Événement</Button>
+                    </Link>
                   ) : null}
                 </div>
               );

@@ -10,6 +10,7 @@ import {
   Route,
   ArrowRight,
   ExternalLink,
+  MinusCircle,
 } from 'lucide-react';
 import {
   type EventWorkflowState,
@@ -28,6 +29,9 @@ interface EventWorkflowPanelProps {
 function StepIcon({ step }: { step: EventWorkflowStep }) {
   if (step.status === 'complete') {
     return <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />;
+  }
+  if (step.status === 'skipped') {
+    return <MinusCircle className="w-5 h-5 text-muted shrink-0" />;
   }
   if (step.status === 'current') {
     return (
@@ -195,7 +199,9 @@ function WorkflowStepCard({
             ? 'bg-emerald-50/80 border-emerald-200'
             : step.status === 'current'
               ? 'bg-primary/10 border-primary/40 ring-1 ring-primary/20'
-              : 'bg-surface border-border hover:border-primary/30'
+              : step.status === 'skipped'
+                ? 'bg-surface-muted/50 border-border'
+                : 'bg-surface border-border hover:border-primary/30'
         }`}
       >
         {content}
@@ -215,7 +221,9 @@ function WorkflowStepCard({
             ? 'bg-emerald-50/80 border-emerald-200 hover:border-emerald-300'
             : step.status === 'current'
               ? 'bg-primary/10 border-primary/40 ring-1 ring-primary/20'
-              : 'bg-surface border-border hover:border-primary/30'
+              : step.status === 'skipped'
+                ? 'bg-surface-muted/50 border-border'
+                : 'bg-surface border-border hover:border-primary/30'
       }`}
     >
       {content}
@@ -241,7 +249,9 @@ function WorkflowStepRow({
         ? 'bg-emerald-50/60 border-emerald-200'
         : step.status === 'current'
           ? 'bg-primary/5 border-primary/30'
-          : 'bg-surface border-border'
+          : step.status === 'skipped'
+            ? 'bg-surface-muted/50 border-border'
+            : 'bg-surface border-border'
   }`;
 
   const inner = (
