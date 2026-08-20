@@ -76,5 +76,6 @@ export const FAMILY_LABEL_FR: Record<string, string> = {
   billing: 'Facturation',
   commissions: 'Commissions',
   catalog: 'Catalogue',
+  tasks: 'Tâches',
   account: 'Compte',
 };

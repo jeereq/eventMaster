@@ -28,12 +28,17 @@ export default function EventTaskInbox({ protocol }: { protocol?: boolean }) {
 
   if (tasks.length === 0) return null;
 
+  const overdue = tasks.filter((task) => taskDueState(task.dueAt, task.status) === 'overdue').length;
+
   return (
     <div className="rounded-[var(--radius-card)] border border-border bg-surface px-4 py-3 space-y-2">
       <p className="text-sm font-semibold inline-flex items-center gap-2">
         <ClipboardList className="w-4 h-4 text-primary" />
         Mes tâches ouvertes
         <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">{tasks.length}</span>
+        {overdue > 0 ? (
+          <StatusPill tone="rose">{overdue} en retard</StatusPill>
+        ) : null}
       </p>
       <ul className="space-y-1">
         {tasks.slice(0, 6).map((task) => (

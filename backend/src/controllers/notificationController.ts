@@ -27,12 +27,14 @@ export async function listNotifications(req: AuthenticatedRequest, res: Response
     const unread = req.query.unread === '1' || req.query.unread === 'true';
     const type = typeof req.query.type === 'string' && req.query.type ? req.query.type : undefined;
     const family = typeof req.query.family === 'string' && req.query.family ? req.query.family : undefined;
+    const eventId = typeof req.query.eventId === 'string' && req.query.eventId ? req.query.eventId : undefined;
     const result = await getUserNotifications(req.user.id, {
       limit,
       page,
       unread: unread || undefined,
       type,
       family,
+      eventId,
     });
     return res.json(result);
   } catch (error: any) {

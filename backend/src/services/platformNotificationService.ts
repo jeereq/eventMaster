@@ -258,7 +258,7 @@ export async function hasNotificationForPeriod(params: {
 
 export async function getUserNotifications(
   userId: string,
-  opts?: { limit?: number; page?: number; unread?: boolean; type?: string; family?: string },
+  opts?: { limit?: number; page?: number; unread?: boolean; type?: string; family?: string; eventId?: string },
 ) {
   const limit = Math.min(Math.max(opts?.limit ?? 30, 1), 100);
   const page = Math.max(opts?.page ?? 1, 1);
@@ -268,6 +268,9 @@ export async function getUserNotifications(
     ...(opts?.unread ? { readAt: null } : {}),
     ...(opts?.type ? { type: opts.type } : {}),
     ...(familyTypes ? { type: { in: familyTypes } } : {}),
+    ...(opts?.eventId
+      ? { metadata: { path: ['eventId'], equals: opts.eventId } }
+      : {}),
   };
 
   const [items, unreadCount, total] = await Promise.all([

@@ -3,13 +3,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Check, ClipboardList, Loader2, Plus, Sparkles, Trash2, UserRound } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Alert, Button, EmptyState, Input, StatusPill } from '@/components/ui';
+import { Alert, Button, EmptyState, Input, StatusPill, ViewModeToggle, useViewMode, listStackClass } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import EventTaskNotifications from '@/components/EventTaskNotifications';
 import {
   EVENT_TASK_KIND_LABELS,
   EVENT_TASK_PRIORITY_LABELS,
   EVENT_TASK_STATUS_LABELS,
   isOpenEventTask,
+  summarizeTasksByPerson,
   taskDueLabel,
   taskDueState,
   type EventTaskAssigneeOption,
@@ -37,6 +39,8 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<'open' | 'all'>('open');
+  const [personFilter, setPersonFilter] = useState('all');
+  const { mode, setViewMode, columns, setGridColumns, gridClassName } = useViewMode('em-view-event-tasks', 'list', 2);
   const [title, setTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
@@ -69,11 +73,14 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
 
-  const visible = useMemo(
-    () => (filter === 'open' ? tasks.filter((item) => isOpenEventTask(item.status)) : tasks),
-    [filter, tasks],
-  );
+  const visible = useMemo(() => {
+    const byStatus = filter === 'open' ? tasks.filter((item) => isOpenEventTask(item.status)) : tasks;
+    if (personFilter === 'all') return byStatus;
+    if (personFilter === 'unassigned') return byStatus.filter((item) => !item.assignee);
+    return byStatus.filter((item) => item.assignee?.id === personFilter);
+  }, [filter, personFilter, tasks]);
   const openCount = tasks.filter((item) => isOpenEventTask(item.status)).length;
+  const personStats = useMemo(() => summarizeTasksByPerson(tasks), [tasks]);
 
   const patch = async (taskId: string, body: Record<string, unknown>) => {
     setError('');
@@ -166,6 +173,13 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <ViewModeToggle
+            storageKey="em-view-event-tasks"
+            value={mode}
+            onChange={setViewMode}
+            columns={columns}
+            onColumnsChange={setGridColumns}
+          />
           <div className="inline-flex rounded-[var(--radius-button)] border border-border p-0.5">
             <button
               type="button"
@@ -204,10 +218,57 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
 
       {error ? <Alert variant="error">{error}</Alert> : null}
 
+      <EventTaskNotifications
+        eventId={eventId}
+        refreshKey={tasks.map((item) => `${item.id}:${item.status}:${item.assignee?.id || ''}`).join('|')}
+      />
+
+      {personStats.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+          {personStats.map((person) => {
+            const active = personFilter === person.id;
+            const remaining = person.open + person.inProgress + person.blocked;
+            return (
+              <button
+                key={person.id}
+                type="button"
+                onClick={() => setPersonFilter(active ? 'all' : person.id)}
+                className={cn(
+                  'text-left rounded-[var(--radius-card)] border px-3 py-2.5 transition',
+                  active
+                    ? 'border-foreground bg-foreground text-background'
+                    : 'border-border bg-surface hover:border-foreground/30',
+                )}
+              >
+                <p className="text-xs font-semibold truncate">{person.label}</p>
+                <p className={cn('text-[11px] mt-1', active ? 'text-background/80' : 'text-muted')}>
+                  {remaining} ouverte{remaining > 1 ? 's' : ''}
+                  {person.overdue > 0 ? ` · ${person.overdue} en retard` : ''}
+                  {' · '}
+                  {person.done} faite{person.done > 1 ? 's' : ''}
+                </p>
+                <div className={cn('mt-2 h-1.5 rounded-full overflow-hidden', active ? 'bg-background/20' : 'bg-surface-muted')}>
+                  <div
+                    className={cn('h-full rounded-full', active ? 'bg-background' : 'bg-emerald-500')}
+                    style={{ width: `${person.total ? Math.round((person.done / person.total) * 100) : 0}%` }}
+                  />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+
       {visible.length === 0 ? (
         <EmptyState
           icon={<ClipboardList className="w-5 h-5" />}
-          title={filter === 'open' ? 'Rien à faire pour le moment' : 'Aucune tâche'}
+          title={
+            personFilter !== 'all'
+              ? 'Aucune tâche pour cette personne'
+              : filter === 'open'
+                ? 'Rien à faire pour le moment'
+                : 'Aucune tâche'
+          }
           description={
             canManage
               ? 'Générez la checklist depuis la préparation, ou ajoutez une tâche ci-dessous.'
@@ -215,7 +276,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
           }
         />
       ) : (
-        <ul className="space-y-2">
+        <ul className={mode === 'grid' ? gridClassName : listStackClass}>
           {visible.map((task) => {
             const done = task.status === 'DONE';
             const canToggle = task.mine || canManage || !task.assignee;
@@ -227,6 +288,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
                 key={task.id}
                 className={cn(
                   'rounded-[var(--radius-card)] border border-border bg-surface px-3 py-2.5 flex items-start gap-3',
+                  mode === 'grid' && 'h-full',
                   done && 'opacity-70',
                 )}
               >

@@ -4,10 +4,7 @@ import { prisma } from '../db';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { canAccessEvent, canManageEvent, getAccessibleEventIds } from '../services/permissionsService';
 import { verifyEventBelongsToTenant } from '../utils/tenantAccess';
-import { notifyUsers } from '../services/platformNotificationService';
-import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
-
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+import { notifyEventTaskAssigned, notifyEventTaskCompleted } from '../services/eventTaskNotifyService';
 
 const OPEN_TASK_STATUSES: EventTaskStatus[] = ['OPEN', 'IN_PROGRESS', 'BLOCKED'];
 
@@ -351,16 +348,15 @@ export async function createEventTask(req: AuthenticatedRequest, res: Response) 
       include: taskInclude,
     });
 
-    if (assigneeId && assigneeId !== userId) {
-      void notifyUsers([assigneeId], {
-        type: PLATFORM_NOTIFICATION_TYPE.EVENT_TASK_ASSIGNED,
-        title: `Tâche — ${event.title}`,
-        message: title,
-        metadata: {
-          eventId,
-          taskId: task.id,
-          href: `${FRONTEND_URL}/dashboard/events/${eventId}?tab=tasks`,
-        },
+    if (assigneeId) {
+      notifyEventTaskAssigned({
+        actorId: userId,
+        assigneeId,
+        createdById: userId,
+        eventId,
+        eventTitle: event.title,
+        taskId: task.id,
+        taskTitle: title,
       });
     }
 
@@ -565,21 +561,31 @@ export async function updateEventTask(req: AuthenticatedRequest, res: Response) 
       });
     }
 
+    if (data.status === 'DONE' && existing.status !== 'DONE') {
+      notifyEventTaskCompleted({
+        actorId: userId,
+        assigneeId: task.assigneeId,
+        createdById: task.createdById,
+        eventId,
+        eventTitle: event.title,
+        taskId: task.id,
+        taskTitle: task.title,
+      });
+    }
+
     if (
       canManage
       && data.assigneeId
       && data.assigneeId !== existing.assigneeId
-      && data.assigneeId !== userId
     ) {
-      void notifyUsers([data.assigneeId], {
-        type: PLATFORM_NOTIFICATION_TYPE.EVENT_TASK_ASSIGNED,
-        title: `Tâche — ${event.title}`,
-        message: task.title,
-        metadata: {
-          eventId,
-          taskId: task.id,
-          href: `${FRONTEND_URL}/dashboard/events/${eventId}?tab=tasks`,
-        },
+      notifyEventTaskAssigned({
+        actorId: userId,
+        assigneeId: data.assigneeId,
+        createdById: existing.createdById,
+        eventId,
+        eventTitle: event.title,
+        taskId: task.id,
+        taskTitle: task.title,
       });
     }
 

@@ -10,7 +10,7 @@ import {
  Calendar, Users, Mail, CreditCard, LayoutDashboard,
  LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper, User, Sun, Moon, BarChart3,
  Building2, FileText, Key, MessageSquare, ScanLine, Briefcase, Clock, BookOpen,
- PanelLeftClose, PanelLeft, Store, CalendarCheck, ScrollText, Ticket, Wallet,
+ PanelLeftClose, PanelLeft, Store, CalendarCheck, ScrollText, Ticket, Wallet, Bell,
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import UserLegalGate from '@/components/UserLegalGate';
@@ -97,6 +97,7 @@ const NAV_TOOLTIPS: Record<string, string> = {
  Modèles: 'Concepteur d’invitations',
  'Facturation & plan': 'Forfait, quotas et upgrade',
  'Versements commerciaux': 'Commissions de vos commerciaux org., hors plateforme',
+ Notifications: 'Alertes tâches, devis, factures et réservations',
  'Journal d’audit': 'Actions Super Admin et Commercial',
  Catalogue: 'Fiches, demandes et réservations publiques',
 };
@@ -117,6 +118,14 @@ function navSection(label: string | undefined, items: NavItem[]): NavSection | n
 
 function buildNavSections(...sections: Array<NavSection | null>): NavSection[] {
  return sections.filter((section): section is NavSection => Boolean(section?.items.length));
+}
+
+function compteNavItems(): NavItem[] {
+ return [
+  { name: 'Notifications', href: '/dashboard/notifications', tourId: 'nav-notifications', icon: Bell },
+  { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
+  { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
+ ];
 }
 
 function buildDashboardNav(opts: {
@@ -156,10 +165,7 @@ function buildDashboardNav(opts: {
    navSection('Système', [
     { name: 'Réglages plateforme', href: '/dashboard?tab=settings', tab: 'settings', tourId: 'nav-settings', icon: Key },
    ]),
-   navSection('Compte', [
-    { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
-    { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
-   ]),
+   navSection('Compte', compteNavItems()),
   );
  }
 
@@ -173,10 +179,7 @@ function buildDashboardNav(opts: {
    navSection('Gains', [
     { name: 'Parrainage & commissions', href: '/dashboard/commercial', tourId: 'nav-commercial', icon: Briefcase },
    ]),
-   navSection('Compte', [
-    { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
-    { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
-   ]),
+   navSection('Compte', compteNavItems()),
   );
  }
 
@@ -185,10 +188,7 @@ function buildDashboardNav(opts: {
    navSection('Réseau', [
     { name: 'Réseau commercial', href: '/dashboard/org-commercial', tourId: 'nav-org-commercial', icon: Briefcase },
    ]),
-   navSection('Compte', [
-    { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
-    { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
-   ]),
+   navSection('Compte', compteNavItems()),
   );
  }
 
@@ -201,10 +201,7 @@ function buildDashboardNav(opts: {
    navSection('Suivi', [
     { name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3 },
    ]),
-   navSection('Compte', [
-    { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
-    { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
-   ]),
+   navSection('Compte', compteNavItems()),
   );
  }
 
@@ -218,10 +215,7 @@ function buildDashboardNav(opts: {
     { name: 'Mes billets', href: '/dashboard/tickets', tourId: 'nav-tickets', icon: Ticket, description: 'Inscriptions, filtres, vue grille/liste et badges QR' },
     { name: 'Devis & réservations', href: '/dashboard/bookings', tourId: 'nav-bookings', icon: CalendarCheck },
    ]),
-   navSection('Compte', [
-    { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
-    { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
-   ]),
+   navSection('Compte', compteNavItems()),
   );
  }
 
@@ -274,10 +268,7 @@ function buildDashboardNav(opts: {
    ? [{ name: 'Équipe', href: '/dashboard/team', tourId: 'nav-team', icon: Users }]
    : []),
   navSection('Facturation', billingItems),
-  navSection('Compte', [
-   { name: 'Guide utilisateur', href: '/dashboard/guide', tourId: 'nav-guide', icon: BookOpen },
-   { name: 'Mon compte', href: '/dashboard/profile', tourId: 'nav-profile', icon: User },
-  ]),
+  navSection('Compte', compteNavItems()),
  );
 }
 

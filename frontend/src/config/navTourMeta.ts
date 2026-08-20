@@ -154,7 +154,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-notifications': {
     title: 'Notifications',
     description:
-      'Inbox de votre compte : factures, devis marketplace, réservations et alertes d’abonnement. Marquez comme lu et ouvrez l’écran concerné.',
+      'Inbox de votre compte : tâches assignées ou faites, factures, devis marketplace et alertes d’abonnement. Visible ici et dans l’onglet Notifications de la barre latérale.',
     route: '/dashboard/notifications',
   },
   'nav-audit': {

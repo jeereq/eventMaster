@@ -14,6 +14,7 @@ export const PLATFORM_NOTIFICATION_TYPE = {
   MARKETPLACE_BOOKING_STATUS: 'MARKETPLACE_BOOKING_STATUS',
   EVENT_TASK_ASSIGNED: 'EVENT_TASK_ASSIGNED',
   EVENT_TASK_DUE: 'EVENT_TASK_DUE',
+  EVENT_TASK_COMPLETED: 'EVENT_TASK_COMPLETED',
 } as const;
 
 export type PlatformNotificationType =
@@ -39,11 +40,16 @@ export const NOTIFICATION_FAMILIES = {
     PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING,
     PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING_STATUS,
   ],
+  tasks: [
+    PLATFORM_NOTIFICATION_TYPE.EVENT_TASK_ASSIGNED,
+    PLATFORM_NOTIFICATION_TYPE.EVENT_TASK_DUE,
+    PLATFORM_NOTIFICATION_TYPE.EVENT_TASK_COMPLETED,
+  ],
 } as const;
 
 export type NotificationFamily = keyof typeof NOTIFICATION_FAMILIES;
 
-export const NOTIFICATION_PREF_FAMILIES = ['billing', 'commissions', 'catalog'] as const;
+export const NOTIFICATION_PREF_FAMILIES = ['billing', 'commissions', 'catalog', 'tasks'] as const;
 export type NotificationPrefFamily = (typeof NOTIFICATION_PREF_FAMILIES)[number];
 
 export type NotificationChannel = 'IN_APP' | 'EMAIL' | 'WHATSAPP' | 'PUSH';
@@ -59,6 +65,7 @@ export function familyForType(type: string): NotificationPrefFamily | 'account' 
   if ((NOTIFICATION_FAMILIES.billing as readonly string[]).includes(type)) return 'billing';
   if ((NOTIFICATION_FAMILIES.commissions as readonly string[]).includes(type)) return 'commissions';
   if ((NOTIFICATION_FAMILIES.catalog as readonly string[]).includes(type)) return 'catalog';
+  if ((NOTIFICATION_FAMILIES.tasks as readonly string[]).includes(type)) return 'tasks';
   return 'account';
 }
 

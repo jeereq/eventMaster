@@ -14,15 +14,17 @@ export const PLATFORM_NOTIFICATION_TYPE = {
   MARKETPLACE_BOOKING_STATUS: 'MARKETPLACE_BOOKING_STATUS',
   EVENT_TASK_ASSIGNED: 'EVENT_TASK_ASSIGNED',
   EVENT_TASK_DUE: 'EVENT_TASK_DUE',
+  EVENT_TASK_COMPLETED: 'EVENT_TASK_COMPLETED',
 } as const;
 
-export type NotificationFamily = 'billing' | 'commissions' | 'catalog' | 'all';
+export type NotificationFamily = 'billing' | 'commissions' | 'catalog' | 'tasks' | 'all';
 export type NotificationPrefFamily = Exclude<NotificationFamily, 'all'>;
 
 export const NOTIFICATION_FAMILY_LABELS: Record<NotificationPrefFamily, string> = {
   billing: 'Facturation',
   commissions: 'Commissions',
   catalog: 'Catalogue',
+  tasks: 'Tâches',
 };
 
 const BILLING_TYPES = new Set([
@@ -47,10 +49,17 @@ const CATALOG_TYPES = new Set([
   PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING_STATUS,
 ]);
 
+const TASK_TYPES = new Set([
+  PLATFORM_NOTIFICATION_TYPE.EVENT_TASK_ASSIGNED,
+  PLATFORM_NOTIFICATION_TYPE.EVENT_TASK_DUE,
+  PLATFORM_NOTIFICATION_TYPE.EVENT_TASK_COMPLETED,
+]);
+
 export function notificationFamily(type: string): Exclude<NotificationFamily, 'all'> | 'account' {
   if (BILLING_TYPES.has(type as never)) return 'billing';
   if (COMMISSION_TYPES.has(type as never)) return 'commissions';
   if (CATALOG_TYPES.has(type as never)) return 'catalog';
+  if (TASK_TYPES.has(type as never)) return 'tasks';
   return 'account';
 }
 
@@ -59,5 +68,6 @@ export function notificationFamilyLabel(type: string): string {
   if (family === 'billing') return 'Facturation';
   if (family === 'commissions') return 'Commissions';
   if (family === 'catalog') return 'Catalogue';
+  if (family === 'tasks') return 'Tâches';
   return 'Compte';
 }

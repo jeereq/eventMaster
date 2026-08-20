@@ -18,7 +18,7 @@ type PreferencesResponse = {
   families: Record<NotificationPrefFamily, ChannelPreference>;
 };
 
-const FAMILIES: NotificationPrefFamily[] = ['billing', 'commissions', 'catalog'];
+const FAMILIES: NotificationPrefFamily[] = ['billing', 'commissions', 'catalog', 'tasks'];
 
 const CHANNELS: Array<{ key: keyof ChannelPreference; label: string; icon: React.ReactNode }> = [
   { key: 'email', label: 'E-mail', icon: <Mail className="w-3.5 h-3.5" /> },

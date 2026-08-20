@@ -85,7 +85,7 @@ export default function NotificationsPage() {
     }
     return {
       title: 'Aucune notification',
-      description: 'Les alertes de votre espace (factures, devis, réservations) s’afficheront ici.',
+      description: 'Les alertes de votre espace (tâches, factures, devis, réservations) s’afficheront ici.',
     };
   }, [access?.level, user?.role]);
 
@@ -168,7 +168,7 @@ export default function NotificationsPage() {
       </details>
 
       <div className="flex flex-wrap items-center gap-2">
-        {(['all', 'billing', 'commissions', 'catalog'] as NotificationFamily[]).map((id) => (
+        {(['all', 'tasks', 'billing', 'commissions', 'catalog'] as NotificationFamily[]).map((id) => (
           <button
             key={id}
             type="button"
@@ -183,7 +183,15 @@ export default function NotificationsPage() {
                 : 'text-muted border-transparent hover:text-foreground',
             )}
           >
-            {id === 'all' ? 'Toutes' : id === 'billing' ? 'Facturation' : id === 'commissions' ? 'Commissions' : 'Catalogue'}
+            {id === 'all'
+              ? 'Toutes'
+              : id === 'billing'
+                ? 'Facturation'
+                : id === 'commissions'
+                  ? 'Commissions'
+                  : id === 'catalog'
+                    ? 'Catalogue'
+                    : 'Tâches'}
           </button>
         ))}
         <label className="ml-auto flex items-center gap-2 text-xs font-medium text-muted">
