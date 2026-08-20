@@ -1,7 +1,7 @@
 'use client';
 
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Heart, Minimize2, Store, Wallet, Bookmark } from 'lucide-react';
+import { Heart, ListChecks, Minimize2, MousePointerClick, Store, Wallet, Bookmark, Wand2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import {
   Alert,
@@ -79,6 +79,7 @@ import EventPrepAiSimulator from '@/components/EventPrepAiSimulator';
 import CatalogueViewToggle from '@/components/CatalogueViewToggle';
 
 type HubTab = 'explore' | 'favorites' | 'plan' | 'packs';
+type PlanPrepView = 'manual' | 'ai' | 'final';
 type HubFilters = CatalogueGeoState & CatalogueEntityExtras;
 
 const HUB_TABS: HubTab[] = ['explore', 'favorites', 'plan', 'packs'];
@@ -86,6 +87,11 @@ const HUB_TABS: HubTab[] = ['explore', 'favorites', 'plan', 'packs'];
 function parseHubTab(params: URLSearchParams): HubTab {
   const raw = params.get('hub') || params.get('tab');
   return HUB_TABS.includes(raw as HubTab) ? (raw as HubTab) : 'explore';
+}
+
+function parsePlanPrepView(params: URLSearchParams): PlanPrepView {
+  const raw = params.get('planView');
+  return raw === 'ai' || raw === 'final' ? raw : 'manual';
 }
 
 const emptyFilters: HubFilters = {
@@ -123,7 +129,9 @@ function ClientMarketplaceInner() {
   const [briefReady, setBriefReady] = useState(false);
   const [planning, setPlanning] = useState(false);
   const [planError, setPlanError] = useState('');
-  const [packages, setPackages] = useState<PlanPackage[]>([]);
+  const [manualPackages, setManualPackages] = useState<PlanPackage[]>([]);
+  const [aiPackages, setAiPackages] = useState<PlanPackage[]>([]);
+  const [finalPackage, setFinalPackage] = useState<PlanPackage | null>(null);
   const [spendableFc, setSpendableFc] = useState(0);
   const [planLock, setPlanLock] = useState<EventPlanLock | null>(null);
   const [flexSlots, setFlexSlots] = useState<string[]>([]);
@@ -138,7 +146,9 @@ function ClientMarketplaceInner() {
   const [saveError, setSaveError] = useState('');
 
   const urlTab = parseHubTab(searchParams);
+  const urlPlanView = parsePlanPrepView(searchParams);
   const [tab, setTabState] = useState<HubTab>(urlTab);
+  const [planView, setPlanViewState] = useState<PlanPrepView>(urlPlanView);
   const pendingTab = useRef<HubTab | null>(null);
 
   useEffect(() => {
@@ -149,6 +159,10 @@ function ClientMarketplaceInner() {
     setTabState(urlTab);
   }, [urlTab]);
 
+  useEffect(() => {
+    setPlanViewState(urlPlanView);
+  }, [urlPlanView]);
+
   const setTab = (next: HubTab) => {
     pendingTab.current = next;
     setTabState(next);
@@ -158,6 +172,20 @@ function ClientMarketplaceInner() {
     params.delete('tab');
     if (next === 'explore') params.delete('hub');
     else params.set('hub', next);
+    if (next !== 'plan') params.delete('planView');
+    const qs = params.toString();
+    const href = qs ? `${pathname}?${qs}` : pathname;
+    router.replace(href, { scroll: false });
+  };
+
+  const setPlanView = (next: PlanPrepView) => {
+    setPlanViewState(next);
+    const params = new URLSearchParams(
+      typeof window !== 'undefined' ? window.location.search : searchParams.toString(),
+    );
+    params.set('hub', 'plan');
+    if (next === 'manual') params.delete('planView');
+    else params.set('planView', next);
     const qs = params.toString();
     const href = qs ? `${pathname}?${qs}` : pathname;
     router.replace(href, { scroll: false });
@@ -301,13 +329,13 @@ function ClientMarketplaceInner() {
         lock: lock || undefined,
         flexSlots: nextFlex.length ? nextFlex : undefined,
       });
-      setPackages(data.packages || []);
+      setManualPackages(data.packages || []);
       setSpendableFc(Number(data.spendableFc) || brief.budgetMaxFc);
       if (!(data.packages || []).length) {
         setPlanError('Aucune proposition pour ce budget. Élargissez la ville, le type, la date ou le montant.');
       }
     } catch (err: unknown) {
-      setPackages([]);
+      setManualPackages([]);
       setPlanError(err instanceof Error ? err.message : 'Impossible de préparer la proposition.');
     } finally {
       setPlanning(false);
@@ -316,7 +344,7 @@ function ClientMarketplaceInner() {
 
   const replacePackItem = (packId: string, currentSlug: string, next: PlanItem) => {
     const budget = brief.budgetMaxFc || 0;
-    setPackages((current) => current.map((pack) => {
+    const apply = (current: PlanPackage[]) => current.map((pack) => {
       if (pack.id !== packId) return pack;
       const rows = pack.venue ? [pack.venue, ...pack.services] : pack.services;
       const currentItem = rows.find((item) => item.slug === currentSlug);
@@ -343,8 +371,18 @@ function ClientMarketplaceInner() {
         leftoverFc: Math.max(0, budget - totalFc),
         overBudget: totalFc > budget,
       };
-    }));
+    });
+    if (planView === 'ai') setAiPackages((current) => apply(current));
+    else if (planView === 'final') setFinalPackage((prev) => (prev ? apply([prev])[0] || prev : prev));
+    else setManualPackages((current) => apply(current));
   };
+
+  const workingPackages = planView === 'ai' ? aiPackages : planView === 'final' ? (finalPackage ? [finalPackage] : []) : manualPackages;
+  const planNav: Array<{ id: PlanPrepView; label: string; hint: string; count: number; icon: typeof MousePointerClick }> = [
+    { id: 'manual', label: 'Sans IA', hint: 'Budget et packs calculés', count: manualPackages.length, icon: MousePointerClick },
+    { id: 'ai', label: 'Avec IA', hint: 'Simulation et retenus IA', count: aiPackages.length, icon: Wand2 },
+    { id: 'final', label: 'Solution finale', hint: 'Pack retenu pour réserver', count: finalPackage ? 1 : 0, icon: ListChecks },
+  ];
 
   const persistPack = async (payload: {
     name: string;
@@ -481,7 +519,11 @@ function ClientMarketplaceInner() {
         title={searchParams.get('kind') === 'event' && tab === 'explore' ? 'Agenda' : 'Marketplace'}
         description={
           tab === 'plan'
-            ? 'Décrivez l’enveloppe et les besoins : EventMaster propose 3 packs dans votre budget, avec les montants exacts à côté des pourcentages.'
+            ? planView === 'ai'
+              ? 'Simulez un mix salle / métiers / locations, puis retenez-le dans cette vue.'
+              : planView === 'final'
+                ? 'Choisissez le pack retenu — c’est celui que vous enregistrerez pour les devis.'
+                : 'Décrivez l’enveloppe : EventMaster propose des packs dans votre budget, sans IA.'
             : tab === 'favorites'
               ? 'Salles, prestataires et locations enregistrés. Filtrez et changez la vue grille ou liste.'
               : tab === 'packs'
@@ -665,98 +707,188 @@ function ClientMarketplaceInner() {
       ) : null}
 
       {tab === 'plan' ? (
-        <div className="space-y-5">
-          <EventPrepAiSimulator
-            defaults={{
-              eventType: brief.eventType,
-              city: brief.city,
-              commune: brief.commune,
-              guestCount: brief.guestCount,
-              eventDate: brief.eventDate,
-              budgetMaxFc: brief.budgetMaxFc,
-            }}
-            applyLabel="Voir comme pack à enregistrer"
-            onApply={(result) => {
-              setPackages([eventPlanAiToPackage(result, brief.budgetMaxFc)]);
-              setPlanError('');
-            }}
-          />
-          <EventPlanBriefForm
-            brief={brief}
-            onChange={(next) => {
-              setBrief(next);
-              setPlanLock(null);
-              setFlexSlots([]);
-            }}
-            planning={planning}
-            error={planError}
-            onSubmit={() => {
-              setPlanLock(null);
-              setFlexSlots([]);
-              void runPlan({ lock: null, flexSlots: [] });
-            }}
-            briefs={savedBriefs}
-            onSaveBrief={async (name) => {
-              await api.post('/marketplace/event-briefs', { name, payload: brief });
-              await loadSavedBriefs();
-            }}
-            onLoadBrief={(item) => {
-              setBrief(hydrateBrief(item.payload));
-              setPlanLock(null);
-              setFlexSlots([]);
-              setPackages([]);
-            }}
-            onDeleteBrief={async (id) => {
-              await api.delete(`/marketplace/event-briefs/${id}`);
-              await loadSavedBriefs();
-            }}
-          />
+        <div className="flex flex-col lg:flex-row gap-4 items-start">
+          <nav className="w-full lg:w-56 shrink-0 lg:sticky lg:top-4 rounded-[var(--radius-card)] border border-border bg-surface p-1.5 flex lg:flex-col gap-1 overflow-x-auto">
+            {planNav.map((item) => {
+              const Icon = item.icon;
+              const active = planView === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setPlanView(item.id)}
+                  className={cn(
+                    'flex items-center gap-2.5 rounded-[var(--radius-button)] px-3 py-2.5 text-left transition min-w-[10.5rem] lg:min-w-0',
+                    active ? 'bg-primary/10 text-foreground border border-primary/25' : 'text-muted hover:text-foreground hover:bg-surface-muted/70',
+                  )}
+                >
+                  <Icon className={cn('w-4 h-4 shrink-0', active ? 'text-primary' : '')} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold truncate">{item.label}</span>
+                    <span className="block text-[10px] text-muted truncate">{item.hint}</span>
+                  </span>
+                  <span className={cn(
+                    'min-w-5 h-5 px-1 rounded-full text-[10px] font-semibold inline-flex items-center justify-center',
+                    item.count > 0 ? 'bg-primary text-white' : 'bg-surface-muted text-muted',
+                  )}>
+                    {item.count}
+                  </span>
+                </button>
+              );
+            })}
+          </nav>
 
-          {packages.length > 0 ? (
-            <EventPlanPacks
-              packages={packages}
-              budgetFc={brief.budgetMaxFc}
-              spendableFc={spendableFc || brief.budgetMaxFc}
-              isFavorite={isFavorite}
-              onToggleFavorite={(kind, slug) => void toggleFavorite(kind, slug)}
-              onReplace={replacePackItem}
-              onSave={(pack) => {
-                setSaveName(`${eventTypeLabel(brief.eventType)} · ${pack.label}`);
-                setSaveError('');
-                setSaveTarget(pack);
-              }}
-              onKeep={(item) => {
-                const lock: EventPlanLock = {
-                  kind: item.kind,
-                  slug: item.slug,
-                  category: item.kind === 'service' ? item.category : undefined,
-                };
-                setPlanLock(lock);
-                void runPlan({ lock });
-              }}
-              onWidenSlot={(slot: PlanMissingSlot) => {
-                const nextBrief: EventPlanBrief = { ...brief, matchMode: 'widen', missingStrategy: 'widen_city' };
-                if (slot.slot === 'venue') {
-                  nextBrief.includeVenue = 'yes';
-                } else {
-                  nextBrief.slots = { ...brief.slots, [slot.slot]: 'required' };
-                  const nextFlex = flexSlots.includes(slot.slot) ? flexSlots : [...flexSlots, slot.slot];
-                  setFlexSlots(nextFlex);
+          <div className="flex-1 min-w-0 space-y-5">
+            {planView === 'ai' ? (
+              <EventPrepAiSimulator
+                defaults={{
+                  eventType: brief.eventType,
+                  city: brief.city,
+                  commune: brief.commune,
+                  guestCount: brief.guestCount,
+                  eventDate: brief.eventDate,
+                  budgetMaxFc: brief.budgetMaxFc,
+                  keepVenueSlug: aiPackages[0]?.venue?.slug || manualPackages[0]?.venue?.slug,
+                  keepServiceSlugs: [
+                    ...(aiPackages[0]?.services || []),
+                    ...(manualPackages[0]?.services || []),
+                  ].map((item) => item.slug),
+                }}
+                applyLabel="Retenir dans la simulation IA"
+                onApply={(result) => {
+                  setAiPackages([eventPlanAiToPackage(result, brief.budgetMaxFc)]);
+                  setPlanError('');
+                }}
+              />
+            ) : null}
+
+            {planView === 'manual' ? (
+              <EventPlanBriefForm
+                brief={brief}
+                onChange={(next) => {
+                  setBrief(next);
+                  setPlanLock(null);
+                  setFlexSlots([]);
+                }}
+                planning={planning}
+                error={planError}
+                onSubmit={() => {
+                  setPlanLock(null);
+                  setFlexSlots([]);
+                  void runPlan({ lock: null, flexSlots: [] });
+                }}
+                briefs={savedBriefs}
+                onSaveBrief={async (name) => {
+                  await api.post('/marketplace/event-briefs', { name, payload: brief });
+                  await loadSavedBriefs();
+                }}
+                onLoadBrief={(item) => {
+                  setBrief(hydrateBrief(item.payload));
+                  setPlanLock(null);
+                  setFlexSlots([]);
+                  setManualPackages([]);
+                }}
+                onDeleteBrief={async (id) => {
+                  await api.delete(`/marketplace/event-briefs/${id}`);
+                  await loadSavedBriefs();
+                }}
+              />
+            ) : null}
+
+            {planView === 'final' ? (
+              <div className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-3">
+                <p className="text-sm font-semibold">Composer la solution finale</p>
+                <p className="text-xs text-muted">Reprenez un pack d’une simulation — c’est celui que vous enregistrerez dans Mes packs.</p>
+                {manualPackages.length === 0 && aiPackages.length === 0 ? (
+                  <p className="text-sm text-muted">Générez d’abord un pack sans IA ou avec IA.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {manualPackages.map((pack) => (
+                      <Button
+                        key={`manual-${pack.id}`}
+                        type="button"
+                        size="sm"
+                        variant={finalPackage?.id === `final-${pack.id}` ? 'primary' : 'secondary'}
+                        onClick={() => setFinalPackage({ ...pack, id: `final-${pack.id}`, label: pack.label || 'Pack sans IA' })}
+                      >
+                        Sans IA · {pack.label}
+                      </Button>
+                    ))}
+                    {aiPackages.map((pack) => (
+                      <Button
+                        key={`ai-${pack.id}`}
+                        type="button"
+                        size="sm"
+                        variant={finalPackage?.id === `final-${pack.id}` ? 'primary' : 'secondary'}
+                        onClick={() => setFinalPackage({ ...pack, id: `final-${pack.id}`, label: pack.label || 'Proposition IA' })}
+                      >
+                        IA · {pack.label}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
+
+            {workingPackages.length > 0 ? (
+              <EventPlanPacks
+                packages={workingPackages}
+                budgetFc={brief.budgetMaxFc}
+                spendableFc={spendableFc || brief.budgetMaxFc}
+                isFavorite={isFavorite}
+                onToggleFavorite={(kind, slug) => void toggleFavorite(kind, slug)}
+                onReplace={replacePackItem}
+                onSave={(pack) => {
+                  if (planView !== 'final') setFinalPackage(pack);
+                  setSaveName(`${eventTypeLabel(brief.eventType)} · ${pack.label}`);
+                  setSaveError('');
+                  setSaveTarget(pack);
+                }}
+                onKeep={planView === 'manual' ? (item) => {
+                  const lock: EventPlanLock = {
+                    kind: item.kind,
+                    slug: item.slug,
+                    category: item.kind === 'service' ? item.category : undefined,
+                  };
+                  setPlanLock(lock);
+                  void runPlan({ lock });
+                } : undefined}
+                onWidenSlot={planView === 'manual' ? (slot: PlanMissingSlot) => {
+                  const nextBrief: EventPlanBrief = { ...brief, matchMode: 'widen', missingStrategy: 'widen_city' };
+                  if (slot.slot === 'venue') {
+                    nextBrief.includeVenue = 'yes';
+                  } else {
+                    nextBrief.slots = { ...brief.slots, [slot.slot]: 'required' };
+                    const nextFlex = flexSlots.includes(slot.slot) ? flexSlots : [...flexSlots, slot.slot];
+                    setFlexSlots(nextFlex);
+                    setBrief(nextBrief);
+                    void runPlan({ flexSlots: nextFlex, brief: nextBrief });
+                    return;
+                  }
                   setBrief(nextBrief);
-                  void runPlan({ flexSlots: nextFlex, brief: nextBrief });
-                  return;
+                  void runPlan({ lock: planLock, brief: nextBrief });
+                } : undefined}
+              />
+            ) : !planning && (planView !== 'manual' || !planError) ? (
+              <EmptyState
+                icon={<Wallet className="w-5 h-5" />}
+                title={
+                  planView === 'ai'
+                    ? 'Aucune simulation IA retenue'
+                    : planView === 'final'
+                      ? 'Pas encore de solution finale'
+                      : 'Préparez votre événement'
                 }
-                setBrief(nextBrief);
-                void runPlan({ lock: planLock, brief: nextBrief });
-              }}
-            />
-          ) : !planning && !planError ? (
-            <EmptyState
-              icon={<Wallet className="w-5 h-5" />}
-              title="Préparez votre événement"
-              description="Indiquez le budget (min / max), la date, les métiers obligatoires et la répartition, puis lancez la recherche."
-            />
-          ) : null}
+                description={
+                  planView === 'ai'
+                    ? 'Lancez une simulation, puis retenez le mix proposé dans cette vue.'
+                    : planView === 'final'
+                      ? 'Choisissez un pack dans la simulation sans IA ou avec IA.'
+                      : 'Indiquez le budget, la date et les métiers, puis lancez la recherche.'
+                }
+              />
+            ) : null}
+          </div>
         </div>
       ) : null}
 
