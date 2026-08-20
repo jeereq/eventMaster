@@ -83,7 +83,7 @@ export default function LandingWorkflowSection({
       <div className="page-container space-y-8">
         <div className="max-w-2xl space-y-2">
           <p className="text-xs font-medium uppercase tracking-wider text-muted">
-            Deux-trois clics
+            En un clic
           </p>
           <h2 className="text-2xl font-semibold text-foreground tracking-tight">
             Voici exactement quoi faire

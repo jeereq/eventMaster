@@ -43,7 +43,7 @@ const SIGNUP_FLOWS: Record<
     ],
   },
   CLIENT: {
-    title: 'Trouvez salle et prestas en deux-trois clics.',
+    title: 'Trouvez salle et prestas en un clic.',
     description:
       'Compte gratuit. Cherchez, composez un pack, demandez un devis. L’acompte ({depositPercent} %) se verse au professionnel, hors EventMaster.',
     features: [
@@ -53,7 +53,7 @@ const SIGNUP_FLOWS: Record<
     ],
   },
   VENDOR: {
-    title: 'Publiez vos offres en deux-trois clics.',
+    title: 'Publiez vos offres en un clic.',
     description:
       'Une fiche, les demandes arrivent, vous bloquez la date. Commission vendeur {commissionPercent} % sur les réservations confirmées.',
     features: [

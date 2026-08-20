@@ -42,7 +42,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "EventMaster — Préparez votre événement en deux-trois clics",
+  title: "EventMaster — Préparez votre événement en un clic",
   description: "Invitez, placez, accueillez. Trouvez une salle ou un prestataire. RSVP, plan de table et scan QR dans le navigateur.",
   appleWebApp: {
     capable: true,

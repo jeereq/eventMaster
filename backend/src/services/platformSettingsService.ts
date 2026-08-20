@@ -66,7 +66,7 @@ export interface PublicSiteConfig {
 
 export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   platformName: 'EventMaster',
-  platformTagline: 'Préparez votre événement en deux-trois clics.',
+  platformTagline: 'Préparez votre événement en un clic.',
   supportEmail: process.env.CONTACT_ADMIN_EMAIL || 'mingandajeereq@gmail.com',
   supportPhone: '+243 817 125 577',
   supportWhatsApp: process.env.CONTACT_ADMIN_WHATSAPP || '+243817125577',

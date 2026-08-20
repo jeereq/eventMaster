@@ -55,8 +55,8 @@ export type LandingProfile = {
 /** Slogan landing — promesse unique, visible dès le premier écran. */
 export const LANDING_SLOGAN = {
   lead: 'Préparez votre événement',
-  highlight: 'en deux-trois clics',
-  full: 'Préparez votre événement en deux-trois clics.',
+  highlight: 'en un clic',
+  full: 'Préparez votre événement en un clic.',
 } as const;
 
 export const LANDING_PROFILES: LandingProfile[] = [

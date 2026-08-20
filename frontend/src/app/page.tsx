@@ -126,7 +126,7 @@ export default function Home() {
             <ol
               key={profileId}
               className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-muted animate-fade-in"
-              aria-label="Trois clics"
+              aria-label="Les étapes"
             >
               {profile.clicks.map((label, index) => {
                 const href = profile.clickHrefs[index];
