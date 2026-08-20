@@ -192,7 +192,6 @@ html[data-mood="celebrate"] .font-display {
 
 .em-landing-hero {
   position: relative;
-  overflow: hidden;
   background: var(--background);
   border-bottom: 1px solid var(--border);
 }

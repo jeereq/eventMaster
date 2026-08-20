@@ -24,7 +24,6 @@ import {
   type LandingProfileId,
 } from '@/lib/landingProfiles';
 import { ArrowRight, Smartphone, Sparkles } from 'lucide-react';
-import CelebrateMood from '@/components/CelebrateMood';
 
 function getCategoryLabel(category: string) {
   if (category === 'private') return 'Célébrations';
@@ -95,39 +94,36 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground font-sans antialiased">
-      <CelebrateMood />
       <SiteHeader variant="landing" />
 
-      <section className="relative em-landing-hero em-celebrate-hero">
+      <section className="relative em-landing-hero">
         <div className="page-container relative z-10 py-14 sm:py-18 lg:py-22">
-          <div className="max-w-3xl space-y-5 animate-slide-up">
+          <div className="max-w-3xl space-y-6 animate-slide-up">
             <div className="flex flex-wrap items-center gap-2">
               <span className="em-festive-chip">
                 <Sparkles className="w-3 h-3" />
                 {site.platformName}
               </span>
+              <span className="text-[11px] font-medium text-muted tracking-wide">
+                Invitez, placez, accueillez
+              </span>
             </div>
 
-            <h1 className="font-display text-[2.15rem] sm:text-5xl lg:text-[3.35rem] font-semibold tracking-tight text-foreground leading-[1.12]">
-              {LANDING_SLOGAN.lead}
-              <span className="block mt-1">
-                <em className="not-italic text-[color:var(--festive-accent)]">{LANDING_SLOGAN.highlight}</em>.
-              </span>
+            <h1 className="font-display text-[2.15rem] sm:text-5xl lg:text-[3.2rem] font-semibold tracking-tight text-foreground leading-[1.12]">
+              {LANDING_SLOGAN.full}
             </h1>
 
-            <p className="text-[15px] sm:text-base text-muted leading-relaxed max-w-xl">
-              Invitez, placez, accueillez — ou trouvez une salle. Tout se fait dans le navigateur, y compris au téléphone.
+            <p className="text-[15px] sm:text-base text-muted leading-relaxed max-w-2xl">
+              Créez l’événement, invitez, accueillez — ou trouvez une salle. Tout se fait dans le navigateur, y compris au téléphone.
             </p>
 
-            <ol className="flex flex-wrap items-center gap-x-2 gap-y-2 pt-1" aria-label="Trois clics">
+            <ol className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-muted" aria-label="Trois clics">
               {profile.clicks.map((label, index) => (
-                <li key={`${profile.id}-${label}`} className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-white text-sm font-bold tabular-nums">
-                    {index + 1}
-                  </span>
-                  <span className="text-sm font-semibold text-foreground">{label}</span>
+                <li key={`${profile.id}-${label}`} className="inline-flex items-center gap-2">
+                  <span className="text-[11px] font-semibold tabular-nums text-foreground/70">{index + 1}.</span>
+                  <span className="font-medium text-foreground">{label}</span>
                   {index < profile.clicks.length - 1 ? (
-                    <ArrowRight className="w-4 h-4 text-muted/70 shrink-0" aria-hidden />
+                    <ArrowRight className="w-3.5 h-3.5 text-border" aria-hidden />
                   ) : null}
                 </li>
               ))}
@@ -139,7 +135,7 @@ export default function Home() {
             onSelect={(id) => selectProfile(id, false)}
           />
 
-          <div className="mt-8 rounded-[var(--radius-card)] border border-border bg-surface/90 p-5 sm:p-6 shadow-[var(--shadow-soft)] max-w-2xl space-y-4">
+          <div className="mt-8 max-w-2xl space-y-4">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
               {profile.eyebrow}
             </p>
@@ -187,7 +183,7 @@ export default function Home() {
               </a>
             </div>
 
-            <div className="inline-flex items-start gap-2.5 rounded-[var(--radius-card)] border border-border bg-background/80 px-3.5 py-2.5 text-xs text-muted max-w-xl">
+            <div className="inline-flex items-start gap-2.5 rounded-[var(--radius-card)] border border-border bg-surface/90 px-3.5 py-2.5 text-xs text-muted max-w-xl">
               <Smartphone className="w-4 h-4 shrink-0 mt-0.5 text-foreground" />
               <p>
                 <span className="font-semibold text-foreground">Pas d’app à installer.</span>
