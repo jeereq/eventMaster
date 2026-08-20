@@ -21,6 +21,8 @@ export type RecommendationType =
   | 'accessibility'
   | 'custom';
 
+export const MAX_GUIDELINE_IMAGES = 4;
+
 export interface GuestGuidelinesDressCode {
   enabled: boolean;
   presetId?: DressCodePresetId;
@@ -28,6 +30,7 @@ export interface GuestGuidelinesDressCode {
   themeColorLabel?: string;
   customText?: string;
   examples?: string[];
+  imageUrls?: string[];
 }
 
 export interface GuestGuidelinesRecommendation {
@@ -36,6 +39,7 @@ export interface GuestGuidelinesRecommendation {
   enabled: boolean;
   title?: string;
   content: string;
+  imageUrls?: string[];
 }
 
 export interface GuestGuidelines {
@@ -144,6 +148,20 @@ export const RECOMMENDATION_PRESETS: Record<
   },
 };
 
+export function parseGuidelineImageUrls(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const urls: string[] = [];
+  const seen = new Set<string>();
+  for (const item of raw) {
+    const url = typeof item === 'string' ? item.trim() : '';
+    if (!url || seen.has(url) || !/^https?:\/\//i.test(url)) continue;
+    seen.add(url);
+    urls.push(url);
+    if (urls.length >= MAX_GUIDELINE_IMAGES) break;
+  }
+  return urls;
+}
+
 export function defaultGuestGuidelines(): GuestGuidelines {
   return {
     dressCode: { enabled: false, presetId: 'cocktail', examples: [] },
@@ -165,6 +183,7 @@ export function normalizeGuestGuidelines(raw: unknown): GuestGuidelines {
       themeColorLabel: g.dressCode?.themeColorLabel,
       customText: g.dressCode?.customText,
       examples: g.dressCode?.examples ?? [],
+      imageUrls: parseGuidelineImageUrls(g.dressCode?.imageUrls),
     },
     recommendations: Array.isArray(g.recommendations)
       ? g.recommendations.map((r) => ({
@@ -173,6 +192,7 @@ export function normalizeGuestGuidelines(raw: unknown): GuestGuidelines {
           enabled: r.enabled ?? true,
           title: r.title,
           content: r.content || '',
+          imageUrls: parseGuidelineImageUrls(r.imageUrls),
         }))
       : [],
     additionalNotes: g.additionalNotes || '',
@@ -244,8 +264,8 @@ export function formatGuestGuidelinesBlock(guidelines: GuestGuidelines): string 
 
 export function hasGuestGuidelinesContent(guidelines: GuestGuidelines | null | undefined): boolean {
   const g = normalizeGuestGuidelines(guidelines);
-  if (g.dressCode.enabled && formatDressCodeText(g)) return true;
-  if (g.recommendations.some((r) => r.enabled && r.content.trim())) return true;
+  if (g.dressCode.enabled && (formatDressCodeText(g) || (g.dressCode.imageUrls?.length ?? 0) > 0)) return true;
+  if (g.recommendations.some((r) => r.enabled && (r.content.trim() || (r.imageUrls?.length ?? 0) > 0))) return true;
   if (g.additionalNotes?.trim()) return true;
   return false;
 }

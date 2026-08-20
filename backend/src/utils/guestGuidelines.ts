@@ -28,6 +28,7 @@ export interface GuestGuidelinesDressCode {
   themeColorLabel?: string;
   customText?: string;
   examples?: string[];
+    imageUrls?: string[];
 }
 
 export interface GuestGuidelinesRecommendation {
@@ -36,6 +37,7 @@ export interface GuestGuidelinesRecommendation {
   enabled: boolean;
   title?: string;
   content: string;
+  imageUrls?: string[];
 }
 
 export interface GuestGuidelines {
@@ -73,6 +75,14 @@ const RECOMMENDATION_LABELS: Record<RecommendationType, string> = {
   custom: 'Autre',
 };
 
+function parseImageUrls(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((item): item is string => typeof item === 'string' && /^https?:\/\//i.test(item.trim()))
+    .map((item) => item.trim())
+    .slice(0, 4);
+}
+
 export function normalizeGuestGuidelines(raw: unknown): GuestGuidelines {
   if (!raw || typeof raw !== 'object') {
     return {
@@ -91,8 +101,14 @@ export function normalizeGuestGuidelines(raw: unknown): GuestGuidelines {
       themeColorLabel: g.dressCode?.themeColorLabel,
       customText: g.dressCode?.customText,
       examples: g.dressCode?.examples ?? [],
+      imageUrls: parseImageUrls(g.dressCode?.imageUrls),
     },
-    recommendations: Array.isArray(g.recommendations) ? g.recommendations : [],
+    recommendations: Array.isArray(g.recommendations)
+      ? g.recommendations.map((r) => ({
+          ...r,
+          imageUrls: parseImageUrls(r.imageUrls),
+        }))
+      : [],
     additionalNotes: g.additionalNotes || '',
     showOnRsvp: g.showOnRsvp !== false,
     showOnInvitation: g.showOnInvitation !== false,

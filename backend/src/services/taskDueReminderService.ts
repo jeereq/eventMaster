@@ -19,7 +19,7 @@ export async function processTaskDueReminders() {
 
   const tasks = await prisma.eventTask.findMany({
     where: {
-      status: 'OPEN',
+      status: { in: ['OPEN', 'IN_PROGRESS', 'BLOCKED'] },
       dueAt: { lte: horizon },
       OR: [{ dueRemindedAt: null }, { dueRemindedAt: { lt: staleBefore } }],
     },

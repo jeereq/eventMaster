@@ -12,11 +12,14 @@ import {
   Eye,
   Filter,
   KeyRound,
+  ListChecks,
   Loader2,
   MapPin,
+  MousePointerClick,
   Search,
   Sparkles,
   Inbox,
+  Wand2,
   X,
 } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -41,18 +44,23 @@ import {
 import { ROOM_TYPE_FILTER_OPTIONS } from '@/lib/catalogueEntityFilters';
 import { communesForCity, normalizeRdcCity } from '@/lib/rdcCities';
 import {
-  emptyEventPrep,
+  applyPackToEventPrepBasket,
+  emptyEventPrepBasket,
   eventDateKey,
+  eventPrepBasket,
+  eventPrepBasketCount,
   eventPrepEstimateFc,
   eventPrepFromAiRecommendation,
-  eventPrepFromSavedPack,
-  groupEventPrepByVendor,
+  groupEventPrepBasketByVendor,
   parseEventPrep,
   splitEventPrepVendors,
+  withEventPrepBasket,
   type EventPrep,
+  type EventPrepBasket,
   type EventPrepVendor,
   type EventPrepVendorGroup,
   type EventPrepVenue,
+  type EventPrepViewId,
 } from '@/lib/eventPrep';
 import { seedBriefFromEvent, type SavedEventPack } from '@/lib/eventPlan';
 import EventPrepListingModal, {
@@ -561,8 +569,13 @@ export default function EventPrepPanel({
   const notesTimer = useRef<number | null>(null);
   const dateKey = eventDateKey(eventDate);
   const defaultCity = inferPrepCity(eventLocation);
-  const { trades, rentals } = splitEventPrepVendors(prep.vendors);
-  const vendorGroups = useMemo(() => groupEventPrepByVendor(prep), [prep]);
+  const view: EventPrepViewId = prep.activeView === 'ai' || prep.activeView === 'final' ? prep.activeView : 'manual';
+  const working = eventPrepBasket(prep, view);
+  const { trades, rentals } = splitEventPrepVendors(working.vendors);
+  const vendorGroups = useMemo(() => groupEventPrepBasketByVendor(working), [working]);
+  const manualCount = eventPrepBasketCount(eventPrepBasket(prep, 'manual'));
+  const aiCount = eventPrepBasketCount(eventPrepBasket(prep, 'ai'));
+  const finalCount = eventPrepBasketCount(eventPrepBasket(prep, 'final'));
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -664,8 +677,14 @@ export default function EventPrepPanel({
     };
   }, []);
 
+  const persistBasket = (target: EventPrepViewId, basket: EventPrepBasket) => {
+    void persist(withEventPrepBasket(prep, target, basket));
+  };
+
+  const retainTarget = (): Exclude<EventPrepViewId, 'final'> => (view === 'ai' ? 'ai' : 'manual');
+
   const onNotesChange = (notes: string) => {
-    const next = { ...prep, notes: notes.slice(0, 2000) };
+    const next = withEventPrepBasket(prep, view, { ...working, notes: notes.slice(0, 2000) });
     setPrep(next);
     if (notesTimer.current) window.clearTimeout(notesTimer.current);
     notesTimer.current = window.setTimeout(() => {
@@ -678,37 +697,51 @@ export default function EventPrepPanel({
   }, []);
 
   const retainVenue = (venue: PublicVenue) => {
-    void persist({ ...prep, venue: venueFromPublic(venue) });
+    const target = retainTarget();
+    persistBasket(target, { ...eventPrepBasket(prep, target), venue: venueFromPublic(venue) });
     setPreview(null);
   };
 
   const retainService = (service: PublicService) => {
-    if (prep.vendors.some((item) => item.slug === service.slug)) {
+    const target = retainTarget();
+    const basket = eventPrepBasket(prep, target);
+    if (basket.vendors.some((item) => item.slug === service.slug)) {
       setPreview(null);
       return;
     }
-    void persist({ ...prep, vendors: [...prep.vendors, vendorFromPublic(service)] });
+    persistBasket(target, { ...basket, vendors: [...basket.vendors, vendorFromPublic(service)] });
     setPreview(null);
   };
 
   const removeVendor = (slug: string) => {
-    void persist({ ...prep, vendors: prep.vendors.filter((item) => item.slug !== slug) });
+    persistBasket(view, { ...working, vendors: working.vendors.filter((item) => item.slug !== slug) });
     if (preview?.slug === slug) setPreview(null);
   };
 
   const previewSelected = Boolean(
     preview
       && (preview.kind === 'venue'
-        ? prep.venue?.slug === preview.slug
-        : prep.vendors.some((item) => item.slug === preview.slug)),
+        ? working.venue?.slug === preview.slug
+        : working.vendors.some((item) => item.slug === preview.slug)),
   );
 
   const tabs: Array<{ id: PrepLaneId; label: string; count: number; icon: typeof Building2; hint: string }> = [
-    { id: 'venue', label: 'Salle', count: prep.venue ? 1 : 0, icon: Building2, hint: 'Le lieu — 1 choix' },
+    { id: 'venue', label: 'Salle', count: working.venue ? 1 : 0, icon: Building2, hint: 'Le lieu — 1 choix' },
     { id: 'trade', label: 'Métiers', count: trades.length, icon: Sparkles, hint: 'Le savoir-faire' },
     { id: 'rental', label: 'Locations', count: rentals.length, icon: KeyRound, hint: 'Le bien loué' },
   ];
-  const estimate = eventPrepEstimateFc(prep);
+  const estimate = eventPrepEstimateFc(working);
+  const viewNav: Array<{
+    id: EventPrepViewId;
+    label: string;
+    hint: string;
+    count: number;
+    icon: typeof MousePointerClick;
+  }> = [
+    { id: 'manual', label: 'Sans IA', hint: 'Catalogue et retenus manuels', count: manualCount, icon: MousePointerClick },
+    { id: 'ai', label: 'Avec IA', hint: 'Simulation et retenus IA', count: aiCount, icon: Wand2 },
+    { id: 'final', label: 'Solution finale', hint: 'Composer à partir des deux vues', count: finalCount, icon: ListChecks },
+  ];
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -716,7 +749,7 @@ export default function EventPrepPanel({
         <div className="space-y-1">
           <h2 className="text-lg font-semibold text-foreground tracking-tight">Préparation</h2>
           <p className="text-sm text-muted">
-            Filtrez salles, métiers et locations, retenez, demandez un devis, puis réservez si un tarif est publié.
+            Simulez sans IA ou avec l’IA, puis composez la solution finale utilisée pour les devis et les réservations.
             {dateKey ? ` Date : ${new Date(`${dateKey}T12:00:00`).toLocaleDateString('fr-FR')}.` : ''}
           </p>
         </div>
@@ -757,32 +790,87 @@ export default function EventPrepPanel({
         <p className="text-sm text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-[var(--radius-card)] px-4 py-3">{error}</p>
       ) : null}
 
-      <EventPrepAiSimulator
-        defaults={{
-          city: defaultCity,
-          guestCount,
-          eventDate: dateKey,
-          eventTitle,
-          keepVenueSlug: prep.venue?.slug,
-          keepServiceSlugs: prep.vendors.map((item) => item.slug),
-        }}
-        onApply={(result) => void persist(eventPrepFromAiRecommendation(result, prep))}
-      />
+      <div className="flex flex-col lg:flex-row gap-4 items-start">
+        <nav className="w-full lg:w-56 shrink-0 lg:sticky lg:top-4 rounded-[var(--radius-card)] border border-border bg-surface p-1.5 flex lg:flex-col gap-1 overflow-x-auto">
+          {viewNav.map((item) => {
+            const Icon = item.icon;
+            const active = view === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => void persist({ ...prep, activeView: item.id })}
+                className={cn(
+                  'flex items-center gap-2.5 rounded-[var(--radius-button)] px-3 py-2.5 text-left transition min-w-[10.5rem] lg:min-w-0',
+                  active ? 'bg-primary/10 text-foreground border border-primary/25' : 'text-muted hover:text-foreground hover:bg-surface-muted/70',
+                )}
+              >
+                <Icon className={cn('w-4 h-4 shrink-0', active ? 'text-primary' : '')} />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold truncate">{item.label}</span>
+                  <span className="block text-[10px] text-muted truncate">{item.hint}</span>
+                </span>
+                <span className={cn(
+                  'min-w-5 h-5 px-1 rounded-full text-[10px] font-semibold inline-flex items-center justify-center',
+                  item.count > 0 ? 'bg-primary text-white' : 'bg-surface-muted text-muted',
+                )}>
+                  {item.count}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="flex-1 min-w-0 space-y-5">
+      {view === 'ai' ? (
+        <EventPrepAiSimulator
+          applyLabel="Retenir dans la simulation IA"
+          defaults={{
+            city: defaultCity,
+            guestCount,
+            eventDate: dateKey,
+            eventTitle,
+            keepVenueSlug: eventPrepBasket(prep, 'ai').venue?.slug || eventPrepBasket(prep, 'manual').venue?.slug,
+            keepServiceSlugs: [
+              ...eventPrepBasket(prep, 'ai').vendors,
+              ...eventPrepBasket(prep, 'manual').vendors,
+            ].map((item) => item.slug),
+          }}
+          onApply={(result) => void persist(eventPrepFromAiRecommendation(result, prep))}
+        />
+      ) : null}
+
+      {view === 'final' ? (
+        <PrepFinalComposer
+          prep={prep}
+          onApply={(basket) => persistBasket('final', basket)}
+        />
+      ) : null}
 
       <Card>
         <CardHeader
-          title="Retenus pour cet événement"
+          title={
+            view === 'ai'
+              ? 'Retenus — simulation IA'
+              : view === 'final'
+                ? 'Solution finale'
+                : 'Retenus — sans IA'
+          }
           description={
             estimate.totalItems === 0
-              ? 'Parcourez le catalogue ci-dessous et retenez une salle, des métiers et des locations.'
+              ? view === 'final'
+                ? 'Choisissez ci-dessus les options des deux simulations, puis appliquez.'
+                : view === 'ai'
+                  ? 'Lancez une simulation IA, puis retenez le mix proposé.'
+                  : 'Parcourez le catalogue et retenez une salle, des métiers et des locations.'
               : estimate.priced > 0
                 ? `À partir de ${formatFc(estimate.total)} · ${estimate.totalItems} fiche${estimate.totalItems > 1 ? 's' : ''}`
                 : `${estimate.totalItems} fiche${estimate.totalItems > 1 ? 's' : ''} retenue${estimate.totalItems > 1 ? 's' : ''}`
           }
           action={
-            (prep.venue || prep.vendors.length > 0 || prep.notes) ? (
-              <Button type="button" variant="ghost" size="sm" onClick={() => void persist(emptyEventPrep())}>
-                Tout vider
+            (working.venue || working.vendors.length > 0 || working.notes) ? (
+              <Button type="button" variant="ghost" size="sm" onClick={() => persistBasket(view, emptyEventPrepBasket())}>
+                Vider cette vue
               </Button>
             ) : null
           }
@@ -793,26 +881,29 @@ export default function EventPrepPanel({
             label="Salle"
             icon={<Building2 className="w-3.5 h-3.5" />}
             empty="Aucune salle retenue"
-            onBrowse={() => setLane('venue')}
+            onBrowse={() => {
+              if (view === 'final') void persist({ ...prep, activeView: 'manual' });
+              setLane('venue');
+            }}
           >
-            {prep.venue ? (
+            {working.venue ? (
               <SelectedCard
                 tone="venue"
-                cover={prep.venue.coverUrl}
+                cover={working.venue.coverUrl}
                 icon={<Building2 className="w-4 h-4" />}
-                title={prep.venue.name}
-                meta={[prep.venue.orgName, prep.venue.city, prep.venue.capacity ? `${prep.venue.capacity} places` : null]}
-                price={prep.venue.priceFromFc}
-                pipeline={pipelineFor(prep.venue.slug, 'venue')}
+                title={working.venue.name}
+                meta={[working.venue.orgName, working.venue.city, working.venue.capacity ? `${working.venue.capacity} places` : null]}
+                price={working.venue.priceFromFc}
+                pipeline={pipelineFor(working.venue.slug, 'venue')}
                 onDetails={() => {
                   setLane('venue');
-                  openPreview({ kind: 'venue', slug: prep.venue!.slug });
+                  openPreview({ kind: 'venue', slug: working.venue!.slug });
                 }}
                 onBook={() => {
                   setLane('venue');
-                  openPreview({ kind: 'venue', slug: prep.venue!.slug }, 'book');
+                  openPreview({ kind: 'venue', slug: working.venue!.slug }, 'book');
                 }}
-                onRemove={() => void persist({ ...prep, venue: null })}
+                onRemove={() => persistBasket(view, { ...working, venue: null })}
               />
             ) : null}
           </RetainedColumn>
@@ -951,15 +1042,17 @@ export default function EventPrepPanel({
             </ul>
           </div>
         ) : null}
-        {prep.venue || prep.vendors.length > 0 ? (
+        {working.venue || working.vendors.length > 0 ? (
           <p className="text-xs text-muted flex items-start gap-1.5 mt-3">
             <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-            Retenir ne bloque pas la date. Demandez un devis, puis réservez quand un tarif est publié.
+            {view === 'final'
+              ? 'Cette solution alimente les devis, réservations et tâches générées.'
+              : 'Ces retenus appartiennent à cette simulation. Composez la solution finale dans l’onglet dédié.'}
           </p>
         ) : null}
       </Card>
 
-      {savedPacks.length > 0 ? (
+      {view === 'manual' && savedPacks.length > 0 ? (
         <details className="group bg-surface border border-border rounded-[var(--radius-card)]">
           <summary className="cursor-pointer list-none flex items-center justify-between gap-3 px-5 py-3.5 [&::-webkit-details-marker]:hidden">
             <span className="inline-flex items-center gap-2 text-sm font-semibold text-foreground tracking-tight">
@@ -976,7 +1069,7 @@ export default function EventPrepPanel({
                 <li key={pack.id}>
                   <button
                     type="button"
-                    onClick={() => void persist(eventPrepFromSavedPack(pack, prep))}
+                    onClick={() => persistBasket('manual', applyPackToEventPrepBasket(pack, eventPrepBasket(prep, 'manual')))}
                     className="w-full text-left rounded-[var(--radius-card)] border border-border px-3 py-2.5 hover:border-primary/40 hover:bg-primary/5 transition"
                   >
                     <p className="text-sm font-semibold truncate">{pack.name}</p>
@@ -993,6 +1086,7 @@ export default function EventPrepPanel({
         </details>
       ) : null}
 
+      {view === 'manual' ? (
       <Card padding="none">
         <div className="flex flex-wrap gap-1 p-2 border-b border-border bg-surface-muted/50">
           {tabs.map((tab) => {
@@ -1054,7 +1148,7 @@ export default function EventPrepPanel({
               dateKey={dateKey}
               guestCount={guestCount}
               defaultCity={defaultCity}
-              selectedSlugs={prep.venue ? [prep.venue.slug] : []}
+              selectedSlugs={working.venue ? [working.venue.slug] : []}
               onOpen={(target) => openPreview(target)}
               onRetainVenue={retainVenue}
               onRetainService={retainService}
@@ -1067,7 +1161,7 @@ export default function EventPrepPanel({
               dateKey={dateKey}
               guestCount={guestCount}
               defaultCity={defaultCity}
-              selectedSlugs={prep.vendors.map((item) => item.slug)}
+              selectedSlugs={working.vendors.map((item) => item.slug)}
               onOpen={(target) => openPreview(target)}
               onRetainVenue={retainVenue}
               onRetainService={retainService}
@@ -1080,7 +1174,7 @@ export default function EventPrepPanel({
               dateKey={dateKey}
               guestCount={guestCount}
               defaultCity={defaultCity}
-              selectedSlugs={prep.vendors.map((item) => item.slug)}
+              selectedSlugs={working.vendors.map((item) => item.slug)}
               onOpen={(target) => openPreview(target)}
               onRetainVenue={retainVenue}
               onRetainService={retainService}
@@ -1088,20 +1182,23 @@ export default function EventPrepPanel({
           </div>
         </div>
       </Card>
+      ) : null}
 
       <Card>
         <label className="text-[10px] font-semibold uppercase tracking-wider text-muted" htmlFor="event-prep-notes">
-          Notes de préparation
+          Notes {view === 'final' ? 'de la solution' : view === 'ai' ? 'de la simulation IA' : 'de la simulation'}
         </label>
         <textarea
           id="event-prep-notes"
-          value={prep.notes}
+          value={working.notes}
           onChange={(e) => onNotesChange(e.target.value)}
           rows={3}
           placeholder="Budget visé, horaires, contraintes logistiques… (optionnel)"
           className="mt-2 w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm resize-y min-h-[4.5rem]"
         />
       </Card>
+        </div>
+      </div>
 
       <EventPrepListingModal
         target={preview}
@@ -1120,7 +1217,7 @@ export default function EventPrepPanel({
         onRetainService={retainService}
         onRemove={() => {
           if (!preview) return;
-          if (preview.kind === 'venue') void persist({ ...prep, venue: null });
+          if (preview.kind === 'venue') persistBasket(view, { ...working, venue: null });
           else removeVendor(preview.slug);
         }}
         onPipelineChange={() => void reloadPipeline()}
@@ -1137,7 +1234,7 @@ export default function EventPrepPanel({
         onOpenListing={(target, view) => {
           if (target.kind === 'venue') setLane('venue');
           else {
-            const vendor = prep.vendors.find((item) => item.slug === target.slug);
+            const vendor = working.vendors.find((item) => item.slug === target.slug);
             setLane(vendor?.category.startsWith('RENTAL_') ? 'rental' : 'trade');
           }
           setVendorSheet(null);
@@ -1146,6 +1243,176 @@ export default function EventPrepPanel({
         onPipelineChange={() => void reloadPipeline()}
       />
     </div>
+  );
+}
+
+function PrepFinalComposer({
+  prep,
+  onApply,
+}: {
+  prep: EventPrep;
+  onApply: (basket: EventPrepBasket) => void;
+}) {
+  const manual = eventPrepBasket(prep, 'manual');
+  const ai = eventPrepBasket(prep, 'ai');
+  const current = eventPrepBasket(prep, 'final');
+  const [venueSource, setVenueSource] = useState<'none' | 'manual' | 'ai' | 'current'>(() => {
+    if (current.venue) {
+      if (manual.venue?.slug === current.venue.slug) return 'manual';
+      if (ai.venue?.slug === current.venue.slug) return 'ai';
+      return 'current';
+    }
+    if (manual.venue) return 'manual';
+    if (ai.venue) return 'ai';
+    return 'none';
+  });
+  const vendorOptions = useMemo(() => {
+    const map = new Map<string, { slug: string; manual?: EventPrepVendor; ai?: EventPrepVendor }>();
+    for (const vendor of manual.vendors) {
+      map.set(vendor.slug, { slug: vendor.slug, manual: vendor });
+    }
+    for (const vendor of ai.vendors) {
+      const existing = map.get(vendor.slug) || { slug: vendor.slug };
+      existing.ai = vendor;
+      map.set(vendor.slug, existing);
+    }
+    return [...map.values()];
+  }, [manual.vendors, ai.vendors]);
+  const [vendorPicks, setVendorPicks] = useState<Record<string, 'none' | 'manual' | 'ai'>>(() => {
+    const next: Record<string, 'none' | 'manual' | 'ai'> = {};
+    const currentSlugs = new Set(current.vendors.map((item) => item.slug));
+    const options: Array<{ slug: string; manual?: EventPrepVendor; ai?: EventPrepVendor }> = [];
+    const map = new Map<string, { slug: string; manual?: EventPrepVendor; ai?: EventPrepVendor }>();
+    for (const vendor of manual.vendors) map.set(vendor.slug, { slug: vendor.slug, manual: vendor });
+    for (const vendor of ai.vendors) {
+      const existing = map.get(vendor.slug) || { slug: vendor.slug };
+      existing.ai = vendor;
+      map.set(vendor.slug, existing);
+    }
+    options.push(...map.values());
+    for (const option of options) {
+      if (currentSlugs.has(option.slug)) {
+        next[option.slug] = option.manual ? 'manual' : 'ai';
+      } else {
+        next[option.slug] = 'none';
+      }
+    }
+    return next;
+  });
+
+  const compose = (source: 'manual' | 'ai') => {
+    onApply(source === 'ai' ? { ...ai } : { ...manual });
+  };
+
+  const applyMix = () => {
+    const venue =
+      venueSource === 'manual' ? manual.venue
+        : venueSource === 'ai' ? ai.venue
+          : venueSource === 'current' ? current.venue
+            : null;
+    const vendors: EventPrepVendor[] = [];
+    const seen = new Set<string>();
+    for (const option of vendorOptions) {
+      const pick = vendorPicks[option.slug] || 'none';
+      const vendor = pick === 'manual' ? option.manual : pick === 'ai' ? option.ai : undefined;
+      if (!vendor || seen.has(vendor.slug)) continue;
+      seen.add(vendor.slug);
+      vendors.push(vendor);
+    }
+    const notes = [manual.notes, ai.notes].filter(Boolean).join('\n').slice(0, 2000) || current.notes;
+    onApply({ venue, vendors, notes });
+  };
+
+  const empty = eventPrepBasketCount(manual) === 0 && eventPrepBasketCount(ai) === 0;
+
+  return (
+    <Card>
+      <CardHeader
+        title="Composer la solution finale"
+        description="Reprenez toute une simulation, ou mélangez salle et prestataires des deux vues."
+      />
+      {empty ? (
+        <p className="text-sm text-muted">Retenez d’abord des options dans la simulation sans IA ou avec IA.</p>
+      ) : (
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" variant="secondary" disabled={eventPrepBasketCount(manual) === 0} onClick={() => compose('manual')}>
+              Reprendre toute la simulation sans IA
+            </Button>
+            <Button type="button" size="sm" variant="secondary" disabled={eventPrepBasketCount(ai) === 0} onClick={() => compose('ai')}>
+              Reprendre toute la simulation IA
+            </Button>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Salle</p>
+            <div className="flex flex-wrap gap-2">
+              {([
+                { id: 'none' as const, label: 'Aucune' },
+                ...(manual.venue ? [{ id: 'manual' as const, label: `Sans IA · ${manual.venue.name}` }] : []),
+                ...(ai.venue ? [{ id: 'ai' as const, label: `IA · ${ai.venue.name}` }] : []),
+                ...(current.venue && current.venue.slug !== manual.venue?.slug && current.venue.slug !== ai.venue?.slug
+                  ? [{ id: 'current' as const, label: `Actuelle · ${current.venue.name}` }]
+                  : []),
+              ]).map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setVenueSource(option.id)}
+                  className={cn(
+                    'px-2.5 py-1.5 rounded-[var(--radius-button)] text-[11px] font-semibold border transition',
+                    venueSource === option.id
+                      ? 'bg-primary text-white border-primary'
+                      : 'border-border text-muted hover:text-foreground',
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {vendorOptions.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Métiers & locations</p>
+              <ul className="space-y-1.5">
+                {vendorOptions.map((option) => {
+                  const pick = vendorPicks[option.slug] || 'none';
+                  const label = option.manual?.title || option.ai?.title || option.slug;
+                  return (
+                    <li key={option.slug} className="flex flex-wrap items-center gap-2 rounded-[var(--radius-card)] border border-border px-3 py-2">
+                      <span className="text-sm font-semibold min-w-0 flex-1 truncate">{label}</span>
+                      {(['none', 'manual', 'ai'] as const).map((id) => {
+                        if (id === 'manual' && !option.manual) return null;
+                        if (id === 'ai' && !option.ai) return null;
+                        const caption = id === 'none' ? 'Ignorer' : id === 'manual' ? 'Sans IA' : 'IA';
+                        return (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() => setVendorPicks((prev) => ({ ...prev, [option.slug]: id }))}
+                            className={cn(
+                              'px-2 py-1 rounded-[var(--radius-button)] text-[10px] font-semibold border',
+                              pick === id ? 'bg-primary text-white border-primary' : 'border-border text-muted',
+                            )}
+                          >
+                            {caption}
+                          </button>
+                        );
+                      })}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
+
+          <Button type="button" onClick={applyMix}>
+            Appliquer ce mix à la solution finale
+          </Button>
+        </div>
+      )}
+    </Card>
   );
 }
 

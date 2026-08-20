@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { EventTaskStatus } from '@prisma/client';
+import { EventTaskKind, EventTaskStatus } from '@prisma/client';
 import { prisma } from '../db';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { canAccessEvent, canManageEvent, getAccessibleEventIds } from '../services/permissionsService';
@@ -9,11 +9,14 @@ import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes'
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
+const OPEN_TASK_STATUSES: EventTaskStatus[] = ['OPEN', 'IN_PROGRESS', 'BLOCKED'];
+
 const userLite = { id: true, name: true, email: true } as const;
 
 const taskInclude = {
   assignee: { select: userLite },
   createdBy: { select: userLite },
+  blockedBy: { select: { id: true, title: true, status: true } },
   event: { select: { id: true, title: true, date: true } },
 };
 
@@ -29,13 +32,17 @@ function serializeTask(row: {
   title: string;
   notes: string | null;
   status: EventTaskStatus;
+  kind: EventTaskKind;
+  priority: number;
   dueAt: Date | null;
   sourceKey: string | null;
   createdAt: Date;
   updatedAt: Date;
   completedAt: Date | null;
+  blockedById: string | null;
   assignee: { id: string; name: string | null; email: string } | null;
   createdBy: { id: string; name: string | null; email: string };
+  blockedBy: { id: string; title: string; status: EventTaskStatus } | null;
   event: { id: string; title: string; date: Date };
 }, userId: string) {
   return {
@@ -44,11 +51,15 @@ function serializeTask(row: {
     title: row.title,
     notes: row.notes,
     status: row.status,
+    kind: row.kind,
+    priority: row.priority,
     dueAt: row.dueAt,
     sourceKey: row.sourceKey,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     completedAt: row.completedAt,
+    blockedById: row.blockedById,
+    blockedBy: row.blockedBy,
     assignee: row.assignee,
     createdBy: row.createdBy,
     event: row.event,
@@ -56,11 +67,19 @@ function serializeTask(row: {
   };
 }
 
-function sortTasks<T extends { status: EventTaskStatus; createdAt: Date; dueAt: Date | null }>(rows: T[]): T[] {
-  const rank = (status: EventTaskStatus) => (status === 'OPEN' ? 0 : status === 'DONE' ? 1 : 2);
+function sortTasks<T extends { status: EventTaskStatus; priority: number; createdAt: Date; dueAt: Date | null }>(rows: T[]): T[] {
+  const rank = (status: EventTaskStatus) => {
+    if (status === 'BLOCKED') return 0;
+    if (status === 'OPEN') return 1;
+    if (status === 'IN_PROGRESS') return 2;
+    if (status === 'DONE') return 3;
+    return 4;
+  };
   return [...rows].sort((a, b) => {
     const byStatus = rank(a.status) - rank(b.status);
     if (byStatus !== 0) return byStatus;
+    const byPriority = (b.priority ?? 1) - (a.priority ?? 1);
+    if (byPriority !== 0) return byPriority;
     const aDue = a.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER;
     const bDue = b.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER;
     if (aDue !== bDue) return aDue - bDue;
@@ -116,9 +135,9 @@ function suggestionsFromEvent(event: {
   title: string;
   location: string;
   eventPrep: unknown;
-}): Array<{ sourceKey: string; title: string; notes: string }> {
+}): Array<{ sourceKey: string; title: string; notes: string; kind: EventTaskKind }> {
   const prep = asRecord(event.eventPrep);
-  const items: Array<{ sourceKey: string; title: string; notes: string }> = [];
+  const items: Array<{ sourceKey: string; title: string; notes: string; kind: EventTaskKind }> = [];
   const venue = asRecord(prep?.venue);
   const venueName = typeof venue?.name === 'string' ? venue.name.trim() : '';
   const venueHeadline = typeof venue?.headline === 'string' ? venue.headline.trim() : '';
@@ -128,6 +147,7 @@ function suggestionsFromEvent(event: {
       sourceKey: `prep:venue:${venueSlug}`,
       title: `Confirmer la salle — ${venueName || venueHeadline}`,
       notes: 'Vérifier la réservation, l’accès et le brief du lieu.',
+      kind: 'VENUE',
     });
   }
   const vendors = Array.isArray(prep?.vendors) ? prep.vendors : [];
@@ -141,6 +161,7 @@ function suggestionsFromEvent(event: {
       sourceKey: `prep:vendor:${slug}`,
       title: `Confirmer ${title}`,
       notes: orgName ? `Prestataire : ${orgName}. Vérifier devis ou réservation.` : 'Vérifier devis ou réservation.',
+      kind: 'VENDOR',
     });
   }
   items.push(
@@ -148,24 +169,74 @@ function suggestionsFromEvent(event: {
       sourceKey: 'ops:tables',
       title: 'Vérifier le plan de table',
       notes: 'Places assignées et PDF sièges pour les invités confirmés.',
+      kind: 'GUESTS',
     },
     {
       sourceKey: 'ops:checkin',
       title: 'Accueil et check-in',
       notes: 'Scanner les badges et confirmer les présences.',
+      kind: 'PROTOCOL',
     },
     {
       sourceKey: 'ops:briefing',
       title: 'Briefing protocole jour J',
       notes: `Lieu : ${event.location}. Brief de l’équipe avant l’accueil.`,
+      kind: 'PROTOCOL',
     },
   );
   return items;
 }
 
 function parseStatus(value: unknown): EventTaskStatus | null {
-  if (value === 'OPEN' || value === 'DONE' || value === 'CANCELLED') return value;
+  if (
+    value === 'OPEN'
+    || value === 'IN_PROGRESS'
+    || value === 'BLOCKED'
+    || value === 'DONE'
+    || value === 'CANCELLED'
+  ) {
+    return value;
+  }
   return null;
+}
+
+function parseKind(value: unknown): EventTaskKind | null {
+  if (
+    value === 'GENERAL'
+    || value === 'VENUE'
+    || value === 'VENDOR'
+    || value === 'GUESTS'
+    || value === 'PROTOCOL'
+    || value === 'LOGISTICS'
+    || value === 'COMMUNICATION'
+    || value === 'FINANCE'
+  ) {
+    return value;
+  }
+  return null;
+}
+
+function parsePriority(value: unknown): number | null {
+  const n = typeof value === 'number' ? value : typeof value === 'string' && value.trim() ? Number(value) : NaN;
+  if (!Number.isInteger(n) || n < 0 || n > 2) return null;
+  return n;
+}
+
+async function wouldCreateCycle(eventId: string, taskId: string, blockedById: string): Promise<boolean> {
+  if (taskId === blockedById) return true;
+  const rows = await prisma.eventTask.findMany({
+    where: { eventId },
+    select: { id: true, blockedById: true },
+  });
+  const nextById = new Map(rows.map((item) => [item.id, item.blockedById]));
+  const seen = new Set<string>([taskId]);
+  let current: string | null = blockedById;
+  while (current) {
+    if (seen.has(current)) return true;
+    seen.add(current);
+    current = nextById.get(current) ?? null;
+  }
+  return false;
 }
 
 async function loadEventOr404(eventId: string, tenantId: string) {
@@ -184,7 +255,7 @@ export async function listMyEventTasks(req: AuthenticatedRequest, res: Response)
       : { eventId: { in: accessIds } };
 
     const rows = await prisma.eventTask.findMany({
-      where: { ...eventFilter, assigneeId: userId, status: 'OPEN' },
+      where: { ...eventFilter, assigneeId: userId, status: { in: OPEN_TASK_STATUSES } },
       include: taskInclude,
       orderBy: [{ dueAt: 'asc' }, { createdAt: 'asc' }],
       take: 50,
@@ -256,6 +327,14 @@ export async function createEventTask(req: AuthenticatedRequest, res: Response) 
     const dueAtRaw = req.body?.dueAt ? new Date(String(req.body.dueAt)) : event.date;
     const dueAt = Number.isNaN(dueAtRaw.getTime()) ? event.date : dueAtRaw;
 
+    const kind = parseKind(req.body?.kind) || 'GENERAL';
+    const priority = parsePriority(req.body?.priority) ?? 1;
+    const blockedById = req.body?.blockedById ? String(req.body.blockedById) : null;
+    if (blockedById) {
+      const blocker = await prisma.eventTask.findFirst({ where: { id: blockedById, eventId }, select: { id: true } });
+      if (!blocker) return res.status(400).json({ error: 'Tâche dépendante introuvable.' });
+    }
+
     const task = await prisma.eventTask.create({
       data: {
         eventId,
@@ -264,6 +343,10 @@ export async function createEventTask(req: AuthenticatedRequest, res: Response) 
         dueAt,
         assigneeId,
         createdById: userId,
+        kind,
+        priority,
+        blockedById,
+        status: blockedById ? 'BLOCKED' : 'OPEN',
       },
       include: taskInclude,
     });
@@ -329,6 +412,7 @@ export async function seedEventTasks(req: AuthenticatedRequest, res: Response) {
         dueAt: event.date,
         createdById: userId,
         sourceKey: item.sourceKey,
+        kind: item.kind,
       })),
     });
 
@@ -381,8 +465,11 @@ export async function updateEventTask(req: AuthenticatedRequest, res: Response) 
       title?: string;
       notes?: string | null;
       status?: EventTaskStatus;
+      kind?: EventTaskKind;
+      priority?: number;
       dueAt?: Date | null;
       assigneeId?: string | null;
+      blockedById?: string | null;
       completedAt?: Date | null;
       dueRemindedAt?: Date | null;
     } = {};
@@ -415,6 +502,39 @@ export async function updateEventTask(req: AuthenticatedRequest, res: Response) 
         }
         data.assigneeId = assigneeId;
       }
+      if (req.body?.kind !== undefined) {
+        const kind = parseKind(req.body.kind);
+        if (!kind) return res.status(400).json({ error: 'Type de tâche invalide.' });
+        data.kind = kind;
+      }
+      if (req.body?.priority !== undefined) {
+        const priority = parsePriority(req.body.priority);
+        if (priority == null) return res.status(400).json({ error: 'Priorité invalide.' });
+        data.priority = priority;
+      }
+      if (req.body?.blockedById !== undefined) {
+        const blockedById = req.body.blockedById ? String(req.body.blockedById) : null;
+        if (blockedById) {
+          const blocker = await prisma.eventTask.findFirst({
+            where: { id: blockedById, eventId },
+            select: { id: true, status: true },
+          });
+          if (!blocker) return res.status(400).json({ error: 'Tâche dépendante introuvable.' });
+          if (await wouldCreateCycle(eventId, existing.id, blockedById)) {
+            return res.status(400).json({ error: 'Cette dépendance créerait un cycle.' });
+          }
+          data.blockedById = blockedById;
+          if (blocker.status !== 'DONE' && req.body?.status === undefined) {
+            data.status = 'BLOCKED';
+            data.completedAt = null;
+          }
+        } else {
+          data.blockedById = null;
+          if (existing.status === 'BLOCKED' && req.body?.status === undefined) {
+            data.status = 'OPEN';
+          }
+        }
+      }
     }
 
     if (req.body?.status !== undefined) {
@@ -425,7 +545,7 @@ export async function updateEventTask(req: AuthenticatedRequest, res: Response) 
       }
       data.status = status;
       data.completedAt = status === 'DONE' ? new Date() : null;
-      if (status === 'OPEN') data.dueRemindedAt = null;
+      if (status === 'OPEN' || status === 'IN_PROGRESS') data.dueRemindedAt = null;
     }
 
     if (Object.keys(data).length === 0) {
@@ -437,6 +557,13 @@ export async function updateEventTask(req: AuthenticatedRequest, res: Response) 
       data,
       include: taskInclude,
     });
+
+    if (data.status === 'DONE') {
+      await prisma.eventTask.updateMany({
+        where: { blockedById: existing.id, status: 'BLOCKED' },
+        data: { status: 'OPEN' },
+      });
+    }
 
     if (
       canManage

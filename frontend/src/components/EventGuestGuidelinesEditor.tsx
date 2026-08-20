@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import {
-  Plus, Trash2, Shirt, Save, Eye,
+  Plus, Trash2, Shirt, Save, Eye, ImagePlus, Loader2,
 } from 'lucide-react';
 import {
   type GuestGuidelines,
@@ -10,6 +10,7 @@ import {
   type RecommendationType,
   DRESS_CODE_PRESETS,
   RECOMMENDATION_PRESETS,
+  MAX_GUIDELINE_IMAGES,
   defaultGuestGuidelines,
   normalizeGuestGuidelines,
   createRecommendation,
@@ -17,6 +18,7 @@ import {
   formatDressCodeText,
 } from '@/lib/guestGuidelines';
 import GuestGuidelinesView from '@/components/GuestGuidelinesView';
+import { uploadImageFile } from '@/lib/cloudinaryUpload';
 
 interface EventGuestGuidelinesEditorProps {
   value: GuestGuidelines;
@@ -189,6 +191,12 @@ export default function EventGuestGuidelinesEditor({
                   </div>
                 ))}
               </div>
+
+              <GuidelineImageField
+                urls={guidelines.dressCode.imageUrls ?? []}
+                onChange={(imageUrls) => updateDressCode({ imageUrls })}
+                label="Photos ou illustrations de tenue"
+              />
             </>
           )}
         </div>
@@ -253,6 +261,11 @@ export default function EventGuestGuidelinesEditor({
                   value={rec.content}
                   onChange={(e) => updateRecommendation(rec.id, { content: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg border text-xs h-16 resize-none bg-surface"
+                />
+                <GuidelineImageField
+                  urls={rec.imageUrls ?? []}
+                  onChange={(imageUrls) => updateRecommendation(rec.id, { imageUrls })}
+                  label="Illustrations"
                 />
               </div>
             ))}
@@ -324,6 +337,81 @@ export default function EventGuestGuidelinesEditor({
         </p>
       </div>
       )}
+    </div>
+  );
+}
+
+function GuidelineImageField({
+  urls,
+  onChange,
+  label,
+}: {
+  urls: string[];
+  onChange: (urls: string[]) => void;
+  label: string;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+  const full = urls.length >= MAX_GUIDELINE_IMAGES;
+
+  const onFile = async (file?: File) => {
+    if (!file || full) return;
+    setUploading(true);
+    setError('');
+    try {
+      const uploaded = await uploadImageFile(file);
+      if (uploaded.url) onChange([...urls, uploaded.url].slice(0, MAX_GUIDELINE_IMAGES));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Upload impossible.');
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = '';
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold text-muted">{label}</span>
+        <button
+          type="button"
+          disabled={full || uploading}
+          onClick={() => inputRef.current?.click()}
+          className="text-[10px] font-bold text-primary inline-flex items-center gap-1 disabled:opacity-40"
+        >
+          {uploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <ImagePlus className="w-3 h-3" />}
+          {full ? 'Maximum atteint' : 'Ajouter une image'}
+        </button>
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => void onFile(e.target.files?.[0])}
+      />
+      {urls.length > 0 ? (
+        <ul className="flex flex-wrap gap-2">
+          {urls.map((url) => (
+            <li key={url} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={url} alt="" className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => onChange(urls.filter((item) => item !== url))}
+                className="absolute top-0.5 right-0.5 p-0.5 rounded bg-black/60 text-white"
+                title="Retirer"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-[11px] text-muted">Optionnel — photo de tenue, plan d’accès, illustration…</p>
+      )}
+      {error ? <p className="text-[11px] text-rose-600">{error}</p> : null}
     </div>
   );
 }

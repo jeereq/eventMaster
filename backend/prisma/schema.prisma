@@ -755,8 +755,21 @@ model EventStaff {
 
 enum EventTaskStatus {
   OPEN
+  IN_PROGRESS
+  BLOCKED
   DONE
   CANCELLED
+}
+
+enum EventTaskKind {
+  GENERAL
+  VENUE
+  VENDOR
+  GUESTS
+  PROTOCOL
+  LOGISTICS
+  COMMUNICATION
+  FINANCE
 }
 
 model EventTask {
@@ -766,11 +779,16 @@ model EventTask {
   title        String
   notes        String?
   status       EventTaskStatus @default(OPEN)
+  kind         EventTaskKind   @default(GENERAL)
+  priority     Int             @default(1)
   dueAt        DateTime?
   assigneeId   String?
   assignee     User?           @relation("EventTaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   createdById  String
   createdBy    User            @relation("EventTaskCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  blockedById  String?
+  blockedBy    EventTask?      @relation("EventTaskBlockedBy", fields: [blockedById], references: [id], onDelete: SetNull)
+  blocking     EventTask[]     @relation("EventTaskBlockedBy")
   sourceKey    String?
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
@@ -780,6 +798,7 @@ model EventTask {
   @@unique([eventId, sourceKey])
   @@index([eventId, status])
   @@index([assigneeId, status])
+  @@index([blockedById])
 }
 
 model PlatformNotification {

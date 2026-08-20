@@ -111,13 +111,13 @@ export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
         ? prisma.guest.count({ where: { checkedInAt: { not: null }, event: { tenant: tenantWhere } } })
         : prisma.guest.count({ where: { checkedInAt: { not: null } } }),
       commercialId
-        ? prisma.eventTask.count({ where: { status: 'OPEN', event: { tenant: tenantWhere } } })
-        : prisma.eventTask.count({ where: { status: 'OPEN' } }),
+        ? prisma.eventTask.count({ where: { status: { in: ['OPEN', 'IN_PROGRESS', 'BLOCKED'] }, event: { tenant: tenantWhere } } })
+        : prisma.eventTask.count({ where: { status: { in: ['OPEN', 'IN_PROGRESS', 'BLOCKED'] } } }),
       commercialId
         ? prisma.eventTask.count({
-            where: { status: 'OPEN', dueAt: { lt: now }, event: { tenant: tenantWhere } },
+            where: { status: { in: ['OPEN', 'IN_PROGRESS', 'BLOCKED'] }, dueAt: { lt: now }, event: { tenant: tenantWhere } },
           })
-        : prisma.eventTask.count({ where: { status: 'OPEN', dueAt: { lt: now } } }),
+        : prisma.eventTask.count({ where: { status: { in: ['OPEN', 'IN_PROGRESS', 'BLOCKED'] }, dueAt: { lt: now } } }),
       commercialId
         ? prisma.event.count({ where: { date: { gte: now }, tenant: tenantWhere } })
         : prisma.event.count({ where: { date: { gte: now } } }),

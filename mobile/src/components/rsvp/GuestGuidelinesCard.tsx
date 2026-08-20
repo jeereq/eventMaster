@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import {
   formatDressCodeText,
   getRecommendationLabel,
@@ -24,17 +24,19 @@ export function GuestGuidelinesCard({ guidelines: raw }: Props) {
     <View style={styles.card}>
       <Text style={styles.title}>Infos pratiques</Text>
 
-      {dressCode ? (
+      {dressCode || (guidelines.dressCode.imageUrls?.length ?? 0) > 0 ? (
         <View style={styles.block}>
           <Text style={styles.blockLabel}>Tenue</Text>
-          <Text style={styles.blockText}>{dressCode}</Text>
+          {dressCode ? <Text style={styles.blockText}>{dressCode}</Text> : null}
+          <GuidelineImages urls={guidelines.dressCode.imageUrls} />
         </View>
       ) : null}
 
       {recommendations.map((rec) => (
         <View key={rec.id} style={styles.block}>
           <Text style={styles.blockLabel}>{getRecommendationLabel(rec.type, rec.title)}</Text>
-          <Text style={styles.blockText}>{rec.content}</Text>
+          {rec.content?.trim() ? <Text style={styles.blockText}>{rec.content}</Text> : null}
+          <GuidelineImages urls={rec.imageUrls} />
         </View>
       ))}
 
@@ -44,6 +46,17 @@ export function GuestGuidelinesCard({ guidelines: raw }: Props) {
           <Text style={styles.blockText}>{guidelines.additionalNotes.trim()}</Text>
         </View>
       ) : null}
+    </View>
+  );
+}
+
+function GuidelineImages({ urls }: { urls?: string[] }) {
+  if (!urls?.length) return null;
+  return (
+    <View style={styles.images}>
+      {urls.map((url) => (
+        <Image key={url} source={{ uri: url }} style={styles.image} />
+      ))}
     </View>
   );
 }
@@ -75,5 +88,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
     color: colors.textMuted,
+  },
+  images: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 6,
+  },
+  image: {
+    width: 72,
+    height: 72,
+    borderRadius: 12,
+    backgroundColor: colors.border,
   },
 });

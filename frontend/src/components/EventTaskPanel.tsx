@@ -6,19 +6,28 @@ import { api } from '@/lib/api';
 import { Alert, Button, EmptyState, Input, StatusPill } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
+  EVENT_TASK_KIND_LABELS,
+  EVENT_TASK_PRIORITY_LABELS,
   EVENT_TASK_STATUS_LABELS,
+  isOpenEventTask,
   taskDueLabel,
   taskDueState,
   type EventTaskAssigneeOption,
   type EventTaskItem,
+  type EventTaskKind,
   type EventTaskStatus,
 } from '@/lib/eventTasks';
 
-function statusTone(status: EventTaskStatus): 'amber' | 'emerald' | 'slate' {
+function statusTone(status: EventTaskStatus): 'amber' | 'emerald' | 'slate' | 'sky' | 'rose' {
   if (status === 'DONE') return 'emerald';
   if (status === 'CANCELLED') return 'slate';
+  if (status === 'IN_PROGRESS') return 'sky';
+  if (status === 'BLOCKED') return 'rose';
   return 'amber';
 }
+
+const KIND_OPTIONS = Object.entries(EVENT_TASK_KIND_LABELS) as Array<[EventTaskKind, string]>;
+const STATUS_OPTIONS = Object.entries(EVENT_TASK_STATUS_LABELS) as Array<[EventTaskStatus, string]>;
 
 export default function EventTaskPanel({ eventId }: { eventId: string }) {
   const [tasks, setTasks] = useState<EventTaskItem[]>([]);
@@ -29,8 +38,12 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<'open' | 'all'>('open');
   const [title, setTitle] = useState('');
+  const [notes, setNotes] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
   const [dueAt, setDueAt] = useState('');
+  const [kind, setKind] = useState<EventTaskKind>('GENERAL');
+  const [priority, setPriority] = useState(1);
+  const [blockedById, setBlockedById] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -57,17 +70,17 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
   }, [eventId]);
 
   const visible = useMemo(
-    () => (filter === 'open' ? tasks.filter((item) => item.status === 'OPEN') : tasks),
+    () => (filter === 'open' ? tasks.filter((item) => isOpenEventTask(item.status)) : tasks),
     [filter, tasks],
   );
-  const openCount = tasks.filter((item) => item.status === 'OPEN').length;
+  const openCount = tasks.filter((item) => isOpenEventTask(item.status)).length;
 
   const patch = async (taskId: string, body: Record<string, unknown>) => {
     setError('');
     try {
       const data = (await api.patch(`/events/${eventId}/tasks/${taskId}`, body)) as { task?: EventTaskItem };
       if (data.task) {
-        setTasks((prev) => prev.map((item) => (item.id === data.task!.id ? data.task! : item)));
+        await load();
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossible de mettre à jour la tâche.');
@@ -82,13 +95,21 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
     try {
       const data = (await api.post(`/events/${eventId}/tasks`, {
         title: title.trim(),
+        notes: notes.trim() || undefined,
         assigneeId: assigneeId || undefined,
         dueAt: dueAt || undefined,
+        kind,
+        priority,
+        blockedById: blockedById || undefined,
       })) as { task?: EventTaskItem };
       if (data.task) setTasks((prev) => [...prev, data.task!]);
       setTitle('');
+      setNotes('');
       setAssigneeId('');
       setDueAt('');
+      setKind('GENERAL');
+      setPriority(1);
+      setBlockedById('');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossible de créer la tâche.');
     } finally {
@@ -130,6 +151,8 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
     );
   }
 
+  const selectClass = 'px-2 py-1 rounded-[var(--radius-button)] border border-border bg-surface-muted text-[11px] font-medium text-foreground';
+
   return (
     <div className="space-y-5 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -139,7 +162,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
             Tâches de l’événement
           </h2>
           <p className="text-sm text-muted">
-            Checklist opérationnelle : salle, prestas, plan de table, accueil. Distincte des accès équipe.
+            Type, priorité, dépendances et statuts. Distincte des accès équipe.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -152,7 +175,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
                 filter === 'open' ? 'bg-surface text-foreground shadow-sm' : 'text-muted',
               )}
             >
-              À faire ({openCount})
+              Ouvertes ({openCount})
             </button>
             <button
               type="button"
@@ -198,6 +221,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
             const canToggle = task.mine || canManage || !task.assignee;
             const due = taskDueState(task.dueAt, task.status);
             const dueText = taskDueLabel(task.dueAt, task.status);
+            const blockers = tasks.filter((item) => item.id !== task.id && item.status !== 'CANCELLED');
             return (
               <li
                 key={task.id}
@@ -208,7 +232,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
               >
                 <button
                   type="button"
-                  disabled={!canToggle || task.status === 'CANCELLED'}
+                  disabled={!canToggle || task.status === 'CANCELLED' || task.status === 'BLOCKED'}
                   onClick={() => void patch(task.id, { status: done ? 'OPEN' : 'DONE' })}
                   className={cn(
                     'mt-0.5 w-7 h-7 rounded-full border inline-flex items-center justify-center shrink-0',
@@ -220,11 +244,55 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
                 >
                   <Check className="w-4 h-4" />
                 </button>
-                <div className="min-w-0 flex-1 space-y-1">
+                <div className="min-w-0 flex-1 space-y-1.5">
                   <p className={cn('text-sm font-semibold', done && 'line-through text-muted')}>{task.title}</p>
                   {task.notes ? <p className="text-xs text-muted">{task.notes}</p> : null}
+                  {task.blockedBy ? (
+                    <p className="text-[11px] text-muted">
+                      Dépend de : {task.blockedBy.title}
+                      {task.blockedBy.status !== 'DONE' ? ' (non terminée)' : ''}
+                    </p>
+                  ) : null}
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <StatusPill tone={statusTone(task.status)}>{EVENT_TASK_STATUS_LABELS[task.status]}</StatusPill>
+                    {canManage ? (
+                      <select
+                        value={task.status}
+                        onChange={(e) => void patch(task.id, { status: e.target.value })}
+                        className={selectClass}
+                      >
+                        {STATUS_OPTIONS.map(([id, label]) => (
+                          <option key={id} value={id}>{label}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <StatusPill tone={statusTone(task.status)}>{EVENT_TASK_STATUS_LABELS[task.status]}</StatusPill>
+                    )}
+                    {canManage ? (
+                      <select
+                        value={task.kind || 'GENERAL'}
+                        onChange={(e) => void patch(task.id, { kind: e.target.value })}
+                        className={selectClass}
+                      >
+                        {KIND_OPTIONS.map(([id, label]) => (
+                          <option key={id} value={id}>{label}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <StatusPill tone="slate">{EVENT_TASK_KIND_LABELS[task.kind || 'GENERAL']}</StatusPill>
+                    )}
+                    {canManage ? (
+                      <select
+                        value={String(task.priority ?? 1)}
+                        onChange={(e) => void patch(task.id, { priority: Number(e.target.value) })}
+                        className={selectClass}
+                      >
+                        {[0, 1, 2].map((level) => (
+                          <option key={level} value={level}>{EVENT_TASK_PRIORITY_LABELS[level]}</option>
+                        ))}
+                      </select>
+                    ) : task.priority === 2 ? (
+                      <StatusPill tone="rose">Haute</StatusPill>
+                    ) : null}
                     {dueText ? (
                       <StatusPill tone={due === 'overdue' ? 'rose' : due === 'today' ? 'amber' : 'slate'}>
                         {dueText}
@@ -252,6 +320,19 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
                         {task.assignee ? task.assignee.name || task.assignee.email : 'Non assignée'}
                       </span>
                     )}
+                    {canManage ? (
+                      <select
+                        value={task.blockedById || ''}
+                        onChange={(e) => void patch(task.id, { blockedById: e.target.value || null })}
+                        className={selectClass}
+                        title="Tâche bloquante"
+                      >
+                        <option value="">Sans dépendance</option>
+                        {blockers.map((item) => (
+                          <option key={item.id} value={item.id}>{item.title}</option>
+                        ))}
+                      </select>
+                    ) : null}
                   </div>
                 </div>
                 {canManage ? (
@@ -288,15 +369,52 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
               />
             </div>
             <select
+              value={kind}
+              onChange={(e) => setKind(e.target.value as EventTaskKind)}
+              className="px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+            >
+              {KIND_OPTIONS.map(([id, label]) => (
+                <option key={id} value={id}>{label}</option>
+              ))}
+            </select>
+            <select
+              value={priority}
+              onChange={(e) => setPriority(Number(e.target.value))}
+              className="px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+            >
+              {[0, 1, 2].map((level) => (
+                <option key={level} value={level}>{EVENT_TASK_PRIORITY_LABELS[level]}</option>
+              ))}
+            </select>
+          </div>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={2}
+            placeholder="Notes, contexte, livrable attendu… (optionnel)"
+            className="w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm resize-y min-h-[3rem]"
+          />
+          <div className="flex flex-col sm:flex-row gap-2">
+            <select
               value={assigneeId}
               onChange={(e) => setAssigneeId(e.target.value)}
-              className="px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+              className="px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm flex-1"
             >
               <option value="">Non assignée</option>
               {assignees.map((person) => (
                 <option key={person.id} value={person.id}>
                   {person.name || person.email} · {person.label}
                 </option>
+              ))}
+            </select>
+            <select
+              value={blockedById}
+              onChange={(e) => setBlockedById(e.target.value)}
+              className="px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm flex-1"
+            >
+              <option value="">Sans dépendance</option>
+              {tasks.filter((item) => isOpenEventTask(item.status) || item.status === 'DONE').map((item) => (
+                <option key={item.id} value={item.id}>Après : {item.title}</option>
               ))}
             </select>
             <input
@@ -311,7 +429,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
             </Button>
           </div>
           <p className="text-[11px] text-muted">
-            Avec une échéance, l’assigné (ou le créateur) reçoit un rappel in-app et WhatsApp la veille / le jour J, puis en cas de retard.
+            Une tâche dépendante passe en « bloquée » tant que la précédente n’est pas faite. Avec une échéance, l’assigné reçoit un rappel la veille / le jour J.
           </p>
         </form>
       ) : null}

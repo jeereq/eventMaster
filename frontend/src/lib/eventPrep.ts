@@ -23,14 +23,34 @@ export type EventPrepVendor = {
   priceFromFc?: number | null;
 };
 
-export type EventPrep = {
+export type EventPrepViewId = 'manual' | 'ai' | 'final';
+
+export type EventPrepBasket = {
   venue: EventPrepVenue | null;
   vendors: EventPrepVendor[];
   notes: string;
+  summary?: string;
 };
 
-export function emptyEventPrep(): EventPrep {
+export type EventPrep = EventPrepBasket & {
+  activeView?: EventPrepViewId;
+  /** Une fois vrai, les simulations ne recouvrent plus la solution finale. */
+  finalComposed?: boolean;
+  manual?: EventPrepBasket;
+  ai?: EventPrepBasket;
+};
+
+export function emptyEventPrepBasket(): EventPrepBasket {
   return { venue: null, vendors: [], notes: '' };
+}
+
+export function emptyEventPrep(): EventPrep {
+  return {
+    ...emptyEventPrepBasket(),
+    activeView: 'manual',
+    manual: emptyEventPrepBasket(),
+    ai: emptyEventPrepBasket(),
+  };
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -89,9 +109,9 @@ function parseVendor(raw: unknown): EventPrepVendor | null {
   };
 }
 
-export function parseEventPrep(raw: unknown): EventPrep {
+function parseBasket(raw: unknown): EventPrepBasket {
   const row = asRecord(raw);
-  if (!row) return emptyEventPrep();
+  if (!row) return emptyEventPrepBasket();
   const vendorsRaw = Array.isArray(row.vendors) ? row.vendors : [];
   const seen = new Set<string>();
   const vendors: EventPrepVendor[] = [];
@@ -105,7 +125,65 @@ export function parseEventPrep(raw: unknown): EventPrep {
     venue: parseVenue(row.venue),
     vendors,
     notes: asString(row.notes).slice(0, 2000),
+    summary: asString(row.summary).slice(0, 400) || undefined,
   };
+}
+
+export function parseEventPrep(raw: unknown): EventPrep {
+  const row = asRecord(raw);
+  if (!row) return emptyEventPrep();
+  const root = parseBasket(row);
+  const hasLegacy = Boolean(root.venue || root.vendors.length || root.notes);
+  const manual = row.manual != null ? parseBasket(row.manual) : hasLegacy ? { ...root, summary: undefined } : emptyEventPrepBasket();
+  const ai = row.ai != null ? parseBasket(row.ai) : emptyEventPrepBasket();
+  const activeView: EventPrepViewId =
+    row.activeView === 'ai' || row.activeView === 'final' || row.activeView === 'manual'
+      ? row.activeView
+      : 'manual';
+  return {
+    ...root,
+    activeView,
+    finalComposed: row.finalComposed === true,
+    manual,
+    ai,
+  };
+}
+
+export function eventPrepBasketCount(basket: EventPrepBasket): number {
+  return (basket.venue ? 1 : 0) + basket.vendors.length;
+}
+
+export function eventPrepBasket(prep: EventPrep, view: EventPrepViewId): EventPrepBasket {
+  if (view === 'ai') return prep.ai || emptyEventPrepBasket();
+  if (view === 'manual') return prep.manual || emptyEventPrepBasket();
+  return { venue: prep.venue, vendors: prep.vendors, notes: prep.notes };
+}
+
+export function withEventPrepBasket(prep: EventPrep, view: EventPrepViewId, basket: EventPrepBasket): EventPrep {
+  if (view === 'final') {
+    return {
+      ...prep,
+      venue: basket.venue,
+      vendors: basket.vendors,
+      notes: basket.notes,
+      activeView: 'final',
+      finalComposed: true,
+    };
+  }
+  const next: EventPrep = { ...prep, [view]: basket, activeView: view };
+  if (!prep.finalComposed) {
+    return {
+      ...next,
+      venue: basket.venue,
+      vendors: basket.vendors,
+      notes: basket.notes,
+    };
+  }
+  return next;
+}
+
+export function eventPrepBasketKey(item: { slug: string }, kind: 'venue' | 'service') {
+  return `${kind}:${item.slug}`;
 }
 
 export function isEventPrepRental(vendor: Pick<EventPrepVendor, 'category'>): boolean {
@@ -135,6 +213,15 @@ export type EventPrepVendorGroup = {
 
 export function eventPrepVendorKey(item: { orgSlug?: string | null; orgName?: string | null }): string {
   return (item.orgSlug || '').trim() || (item.orgName || '').trim() || 'Sans enseigne';
+}
+
+export function groupEventPrepBasketByVendor(basket: EventPrepBasket): EventPrepVendorGroup[] {
+  return groupEventPrepByVendor({
+    ...emptyEventPrep(),
+    venue: basket.venue,
+    vendors: basket.vendors,
+    notes: basket.notes,
+  });
 }
 
 export function groupEventPrepByVendor(prep: EventPrep): EventPrepVendorGroup[] {
@@ -182,7 +269,7 @@ export function hasEventPrepSelection(prep: EventPrep): boolean {
   return hasEventPrepShortlist(prep) || Boolean(prep.notes);
 }
 
-export function eventPrepEstimateFc(prep: EventPrep): {
+export function eventPrepEstimateFc(prep: Pick<EventPrepBasket, 'venue' | 'vendors'>): {
   total: number;
   priced: number;
   totalItems: number;
@@ -258,7 +345,20 @@ export function eventPrepFromSavedPack(
   }
   const noteLine = pack.name ? `Pack appliqué : ${pack.name}` : '';
   const notes = [current.notes, noteLine].filter(Boolean).join('\n').slice(0, 2000);
-  return { venue, vendors: vendors.length ? vendors : current.vendors, notes };
+  return { ...current, venue, vendors: vendors.length ? vendors : current.vendors, notes };
+}
+
+export function applyPackToEventPrepBasket(
+  pack: Parameters<typeof eventPrepFromSavedPack>[0],
+  current: EventPrepBasket,
+): EventPrepBasket {
+  const next = eventPrepFromSavedPack(pack, { ...current, activeView: 'manual', manual: current, ai: emptyEventPrepBasket() });
+  return {
+    venue: next.venue,
+    vendors: next.vendors,
+    notes: next.notes,
+    summary: pack.name || current.summary,
+  };
 }
 
 export function eventPrepFromAiRecommendation(
@@ -287,7 +387,7 @@ export function eventPrepFromAiRecommendation(
   },
   current: EventPrep,
 ): EventPrep {
-  return eventPrepFromSavedPack(
+  const packed = eventPrepFromSavedPack(
     {
       name: result.summary || 'Simulation IA',
       venue: result.venue,
@@ -298,6 +398,17 @@ export function eventPrepFromAiRecommendation(
           : item.href,
       })),
     },
-    current,
+    {
+      ...emptyEventPrep(),
+      venue: current.ai?.venue ?? null,
+      vendors: current.ai?.vendors ?? [],
+      notes: current.ai?.notes ?? '',
+    },
   );
+  return withEventPrepBasket(current, 'ai', {
+    venue: packed.venue,
+    vendors: packed.vendors,
+    notes: packed.notes,
+    summary: result.summary || packed.notes,
+  });
 }

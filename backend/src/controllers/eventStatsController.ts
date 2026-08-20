@@ -67,13 +67,13 @@ export async function getWorkspaceStats(req: AuthenticatedRequest, res: Response
         _count: { _all: true },
       }),
       prisma.eventTask.count({
-        where: { event: eventWhere, status: 'OPEN', dueAt: { lt: today } },
+        where: { event: eventWhere, status: { in: ['OPEN', 'IN_PROGRESS', 'BLOCKED'] }, dueAt: { lt: today } },
       }),
       prisma.eventTask.count({
-        where: { event: eventWhere, status: 'OPEN', dueAt: { gte: today, lte: tonight } },
+        where: { event: eventWhere, status: { in: ['OPEN', 'IN_PROGRESS', 'BLOCKED'] }, dueAt: { gte: today, lte: tonight } },
       }),
       prisma.eventTask.count({
-        where: { event: eventWhere, status: 'OPEN', assigneeId: userId },
+        where: { event: eventWhere, status: { in: ['OPEN', 'IN_PROGRESS', 'BLOCKED'] }, assigneeId: userId },
       }),
       prisma.event.findMany({
         where: { ...eventWhere, date: { gte: today } },
@@ -104,7 +104,7 @@ export async function getWorkspaceStats(req: AuthenticatedRequest, res: Response
           }),
           prisma.eventTask.groupBy({
             by: ['eventId'],
-            where: { eventId: { in: upcomingIds }, status: 'OPEN' },
+            where: { eventId: { in: upcomingIds }, status: { in: ['OPEN', 'IN_PROGRESS', 'BLOCKED'] } },
             _count: { _all: true },
           }),
         ])

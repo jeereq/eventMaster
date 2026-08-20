@@ -47,7 +47,7 @@ export default function GuestGuidelinesView({
 
   const accent = accentColor || 'var(--primary)';
   const dressText = formatDressCodeText(guidelines);
-  const activeRecs = guidelines.recommendations.filter((r) => r.enabled && r.content.trim());
+  const activeRecs = guidelines.recommendations.filter((r) => r.enabled && (r.content.trim() || (r.imageUrls?.length ?? 0) > 0));
 
   return (
     <div className={cn('space-y-3', className)}>
@@ -56,13 +56,13 @@ export default function GuestGuidelinesView({
         Infos pratiques
       </h3>
 
-      {guidelines.dressCode.enabled && dressText && (
+      {guidelines.dressCode.enabled && (dressText || (guidelines.dressCode.imageUrls?.length ?? 0) > 0) && (
         <div className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-1.5 text-foreground">
           <div className="flex items-center gap-2">
             <Shirt className="w-4 h-4 shrink-0" style={{ color: accent }} />
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Tenue recommandée</span>
           </div>
-          <p className="text-sm leading-relaxed text-muted">{dressText}</p>
+          {dressText ? <p className="text-sm leading-relaxed text-muted">{dressText}</p> : null}
           {guidelines.dressCode.presetId === 'theme_color' && guidelines.dressCode.themeColor && (
             <div className="flex items-center gap-2 pt-1">
               <span
@@ -74,6 +74,7 @@ export default function GuestGuidelinesView({
               )}
             </div>
           )}
+          <GuidelineImageGrid urls={guidelines.dressCode.imageUrls} />
         </div>
       )}
 
@@ -86,7 +87,8 @@ export default function GuestGuidelinesView({
               <Icon className="w-4 h-4 shrink-0" style={{ color: accent }} />
               <span className="text-xs font-semibold text-foreground">{label}</span>
             </div>
-            <p className="text-sm leading-relaxed text-muted">{rec.content}</p>
+            {rec.content ? <p className="text-sm leading-relaxed text-muted">{rec.content}</p> : null}
+            <GuidelineImageGrid urls={rec.imageUrls} />
           </div>
         );
       })}
@@ -98,6 +100,23 @@ export default function GuestGuidelinesView({
           </p>
         </div>
       )}
+    </div>
+  );
+}
+
+function GuidelineImageGrid({ urls }: { urls?: string[] }) {
+  if (!urls?.length) return null;
+  return (
+    <div className="flex flex-wrap gap-2 pt-1">
+      {urls.map((url) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={url}
+          src={url}
+          alt=""
+          className="h-20 w-20 rounded-[var(--radius-button)] object-cover border border-border"
+        />
+      ))}
     </div>
   );
 }

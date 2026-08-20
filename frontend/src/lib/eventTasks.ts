@@ -1,9 +1,25 @@
-export type EventTaskStatus = 'OPEN' | 'DONE' | 'CANCELLED';
+export type EventTaskStatus = 'OPEN' | 'IN_PROGRESS' | 'BLOCKED' | 'DONE' | 'CANCELLED';
+
+export type EventTaskKind =
+  | 'GENERAL'
+  | 'VENUE'
+  | 'VENDOR'
+  | 'GUESTS'
+  | 'PROTOCOL'
+  | 'LOGISTICS'
+  | 'COMMUNICATION'
+  | 'FINANCE';
 
 export type EventTaskPerson = {
   id: string;
   name: string | null;
   email: string;
+};
+
+export type EventTaskBlockedBy = {
+  id: string;
+  title: string;
+  status: EventTaskStatus;
 };
 
 export type EventTaskItem = {
@@ -12,6 +28,8 @@ export type EventTaskItem = {
   title: string;
   notes: string | null;
   status: EventTaskStatus;
+  kind: EventTaskKind;
+  priority: number;
   dueAt: string | null;
   sourceKey: string | null;
   createdAt: string;
@@ -19,6 +37,8 @@ export type EventTaskItem = {
   completedAt: string | null;
   assignee: EventTaskPerson | null;
   createdBy: EventTaskPerson;
+  blockedById: string | null;
+  blockedBy: EventTaskBlockedBy | null;
   event: { id: string; title: string; date: string };
   mine: boolean;
 };
@@ -32,9 +52,34 @@ export type EventTaskAssigneeOption = {
 
 export const EVENT_TASK_STATUS_LABELS: Record<EventTaskStatus, string> = {
   OPEN: 'À faire',
+  IN_PROGRESS: 'En cours',
+  BLOCKED: 'Bloquée',
   DONE: 'Faite',
   CANCELLED: 'Annulée',
 };
+
+export const EVENT_TASK_KIND_LABELS: Record<EventTaskKind, string> = {
+  GENERAL: 'Générale',
+  VENUE: 'Salle',
+  VENDOR: 'Prestataire',
+  GUESTS: 'Invités',
+  PROTOCOL: 'Protocole',
+  LOGISTICS: 'Logistique',
+  COMMUNICATION: 'Communication',
+  FINANCE: 'Finance',
+};
+
+export const EVENT_TASK_PRIORITY_LABELS: Record<number, string> = {
+  0: 'Basse',
+  1: 'Normale',
+  2: 'Haute',
+};
+
+export const OPEN_EVENT_TASK_STATUSES: EventTaskStatus[] = ['OPEN', 'IN_PROGRESS', 'BLOCKED'];
+
+export function isOpenEventTask(status: EventTaskStatus): boolean {
+  return OPEN_EVENT_TASK_STATUSES.includes(status);
+}
 
 export type TaskDueState = 'none' | 'upcoming' | 'today' | 'overdue';
 

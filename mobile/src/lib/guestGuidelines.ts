@@ -18,6 +18,7 @@ export interface GuestGuidelinesDressCode {
   themeColorLabel?: string;
   customText?: string;
   examples?: string[];
+  imageUrls?: string[];
 }
 
 export interface GuestGuidelinesRecommendation {
@@ -26,6 +27,7 @@ export interface GuestGuidelinesRecommendation {
   enabled: boolean;
   title?: string;
   content: string;
+  imageUrls?: string[];
 }
 
 export interface GuestGuidelines {
@@ -60,6 +62,14 @@ const RECOMMENDATION_LABELS: Record<string, string> = {
   custom: 'Autre',
 };
 
+function parseImageUrls(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((item): item is string => typeof item === 'string' && /^https?:\/\//i.test(item.trim()))
+    .map((item) => item.trim())
+    .slice(0, 4);
+}
+
 export function normalizeGuestGuidelines(raw: unknown): GuestGuidelines {
   if (!raw || typeof raw !== 'object') {
     return {
@@ -78,8 +88,14 @@ export function normalizeGuestGuidelines(raw: unknown): GuestGuidelines {
       themeColorLabel: g.dressCode?.themeColorLabel,
       customText: g.dressCode?.customText,
       examples: g.dressCode?.examples ?? [],
+      imageUrls: parseImageUrls(g.dressCode?.imageUrls),
     },
-    recommendations: Array.isArray(g.recommendations) ? g.recommendations : [],
+    recommendations: Array.isArray(g.recommendations)
+      ? g.recommendations.map((r) => ({
+          ...r,
+          imageUrls: parseImageUrls(r.imageUrls),
+        }))
+      : [],
     additionalNotes: g.additionalNotes || '',
     showOnRsvp: g.showOnRsvp !== false,
     showOnInvitation: g.showOnInvitation !== false,
@@ -104,8 +120,8 @@ export function formatDressCodeText(guidelines: GuestGuidelines): string {
 
 export function hasGuestGuidelinesContent(guidelines: GuestGuidelines | null | undefined): boolean {
   const g = normalizeGuestGuidelines(guidelines);
-  if (g.dressCode.enabled && formatDressCodeText(g)) return true;
-  if (g.recommendations.some((r) => r.enabled && r.content.trim())) return true;
+  if (g.dressCode.enabled && (formatDressCodeText(g) || (g.dressCode.imageUrls?.length ?? 0) > 0)) return true;
+  if (g.recommendations.some((r) => r.enabled && (r.content.trim() || (r.imageUrls?.length ?? 0) > 0))) return true;
   if (g.additionalNotes?.trim()) return true;
   return false;
 }
@@ -116,7 +132,7 @@ export function hasVisibleGuestGuidelines(guidelines: GuestGuidelines | null | u
 }
 
 export function getVisibleRecommendations(guidelines: GuestGuidelines) {
-  return guidelines.recommendations.filter((r) => r.enabled && r.content.trim());
+  return guidelines.recommendations.filter((r) => r.enabled && (r.content.trim() || (r.imageUrls?.length ?? 0) > 0));
 }
 
 export function getRecommendationLabel(type: string, title?: string): string {
