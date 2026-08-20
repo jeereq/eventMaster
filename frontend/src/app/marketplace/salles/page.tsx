@@ -48,7 +48,7 @@ function MarketplaceVenuesPageInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filterError, setFilterError] = useState('');
-  const [pageSize, setPageSize] = usePageSize('marketplace-venues', 12);
+  const [pageSize, setPageSize] = usePageSize('marketplace-venues', 8);
 
   const load = useCallback(async (filters: VenueFilters, search: string) => {
     setLoading(true);

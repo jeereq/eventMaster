@@ -23,6 +23,7 @@ import {
   getLandingProfile,
   isLandingProfileId,
   LANDING_SLOGAN,
+  scrollToLandingSection,
   type LandingProfileId,
 } from '@/lib/landingProfiles';
 import { ArrowRight, Smartphone, Sparkles } from 'lucide-react';
@@ -44,13 +45,16 @@ export default function Home() {
 
   const profile = getLandingProfile(profileId);
 
-  const selectProfile = useCallback((id: LandingProfileId, scrollToParcours = true) => {
+  const selectProfile = useCallback((id: LandingProfileId, scrollToSection = true) => {
+    const next = getLandingProfile(id);
     setProfileId(id);
     if (typeof window !== 'undefined') {
-      window.history.replaceState(null, '', `#${id}`);
-    }
-    if (scrollToParcours) {
-      document.getElementById('parcours')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const hash = scrollToSection && next.sectionId !== 'parcours' ? next.sectionId : id;
+      window.history.replaceState(null, '', `#${hash}`);
+      if (scrollToSection) {
+        window.dispatchEvent(new Event('hashchange'));
+        scrollToLandingSection(next.sectionId);
+      }
     }
   }, []);
 
@@ -124,21 +128,30 @@ export default function Home() {
               className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-muted animate-fade-in"
               aria-label="Trois clics"
             >
-              {profile.clicks.map((label, index) => (
-                <li key={`${profile.id}-${label}`} className="inline-flex items-center gap-2">
-                  <span className="text-[11px] font-semibold tabular-nums text-foreground/70">{index + 1}.</span>
-                  <span className="font-medium text-foreground">{label}</span>
-                  {index < profile.clicks.length - 1 ? (
-                    <ArrowRight className="w-3.5 h-3.5 text-border" aria-hidden />
-                  ) : null}
-                </li>
-              ))}
+              {profile.clicks.map((label, index) => {
+                const href = profile.clickHrefs[index];
+                const clickClass =
+                  'font-medium text-foreground hover:text-primary underline-offset-2 hover:underline transition';
+                return (
+                  <li key={`${profile.id}-${label}`} className="inline-flex items-center gap-2">
+                    <span className="text-[11px] font-semibold tabular-nums text-foreground/70">{index + 1}.</span>
+                    {href.startsWith('#') ? (
+                      <a href={href} className={clickClass}>{label}</a>
+                    ) : (
+                      <Link href={href} className={clickClass}>{label}</Link>
+                    )}
+                    {index < profile.clicks.length - 1 ? (
+                      <ArrowRight className="w-3.5 h-3.5 text-border" aria-hidden />
+                    ) : null}
+                  </li>
+                );
+              })}
             </ol>
           </div>
 
           <LandingProfileGate
             selectedId={profileId}
-            onSelect={(id) => selectProfile(id, false)}
+            onSelect={(id) => selectProfile(id, true)}
           />
 
           <div className="mt-8 max-w-2xl space-y-4">
@@ -181,10 +194,10 @@ export default function Home() {
                 </>
               )}
               <a
-                href="#parcours"
+                href={profile.exploreCta.href}
                 className="inline-flex items-center justify-center gap-1.5 px-1 py-2 text-sm font-semibold text-foreground/80 hover:text-primary transition"
               >
-                Voir les étapes
+                {profile.exploreCta.label}
                 <ArrowRight className="w-3.5 h-3.5" />
               </a>
             </div>

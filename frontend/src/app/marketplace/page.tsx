@@ -60,7 +60,7 @@ function MarketplaceHubPageInner() {
   const [events, setEvents] = useState<PublicEventCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterError, setFilterError] = useState('');
-  const [pageSize, setPageSize] = usePageSize('marketplace-hub', 12);
+  const [pageSize, setPageSize] = usePageSize('marketplace-hub', 8);
 
   const load = useCallback(async (filters: HubFilters, search: string) => {
     setLoading(true);
@@ -163,7 +163,7 @@ function MarketplaceHubPageInner() {
           compactToggle={variant === 'float'}
           search={query}
           onSearchChange={setQuery}
-          searchPlaceholder="Nom, organisation, ville…"
+          searchPlaceholder="Nom, organisation, ville…" 
           view={mode}
           onViewChange={setView}
           gridCols={gridCols}

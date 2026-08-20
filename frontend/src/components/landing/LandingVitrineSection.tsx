@@ -39,7 +39,7 @@ import {
   type LandingTemplate,
 } from '@/config/landingTemplates';
 import { ArrowRight, Building2, Calendar, FileText, KeyRound, Sparkles } from 'lucide-react';
-import { useCatalogueGridCols, CatalogueGridColsToggle, type CatalogueGridCols } from '@/components/CatalogueViewToggle';
+import { useCatalogueGridCols, type CatalogueGridCols } from '@/components/CatalogueViewToggle';
 import { marketplaceSectionUrl } from '@/lib/share';
 import { useLandingReveal } from '@/components/landing/useLandingReveal';
 
@@ -298,6 +298,10 @@ export default function LandingVitrineSection({
   return (
     <section ref={revealRef} className="em-reveal py-14 sm:py-16 border-t border-border bg-surface">
       <div id="catalogue" className="scroll-mt-16" />
+      <div id="salles" className="scroll-mt-16" />
+      <div id="prestataires" className="scroll-mt-16" />
+      <div id="locations" className="scroll-mt-16" />
+      <div id="evenements" className="scroll-mt-16" />
       <div className="page-container space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
           <div className="max-w-xl space-y-2">
@@ -336,7 +340,7 @@ export default function LandingVitrineSection({
         </div>
 
         {tab === 'venues' && (
-          <div id="salles" className="space-y-4 scroll-mt-20">
+          <div className="space-y-4">
             {catalogFilters}
             {loadingCatalog ? (
               <CatalogueResultsSkeleton mode="grid" count={pageSize} gridCols={vitrineCols} />
@@ -363,7 +367,7 @@ export default function LandingVitrineSection({
         )}
 
         {tab === 'services' && (
-          <div id="prestataires" className="space-y-4 scroll-mt-20">
+          <div className="space-y-4">
             {catalogFilters}
             {loadingCatalog ? (
               <CatalogueResultsSkeleton mode="grid" count={pageSize} gridCols={vitrineCols} />
@@ -390,7 +394,7 @@ export default function LandingVitrineSection({
         )}
 
         {tab === 'rentals' && (
-          <div id="locations" className="space-y-4 scroll-mt-20">
+          <div className="space-y-4">
             {catalogFilters}
             {loadingCatalog ? (
               <CatalogueResultsSkeleton mode="grid" count={pageSize} gridCols={vitrineCols} />
@@ -417,7 +421,7 @@ export default function LandingVitrineSection({
         )}
 
         {tab === 'events' && (
-          <div id="evenements" className="space-y-4 scroll-mt-20">
+          <div className="space-y-4">
             {catalogFilters}
             {loadingCatalog ? (
               <CatalogueResultsSkeleton mode="grid" count={pageSize} gridCols={vitrineCols} />
@@ -444,7 +448,7 @@ export default function LandingVitrineSection({
         )}
 
         {tab === 'templates' && (
-          <div className="space-y-4 scroll-mt-20">
+          <div className="space-y-4">
             <div className="text-sm text-muted leading-relaxed">
               {loadingTemplates ? (
                 <Skeleton className="h-4 w-72 max-w-full" />
@@ -457,37 +461,27 @@ export default function LandingVitrineSection({
                 Gérer la vitrine (Super Admin)
               </Link>
             )}
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex flex-wrap gap-1.5 flex-1">
-                {[
-                  { id: 'all', name: 'Tous' },
-                  { id: 'private', name: 'Célébrations' },
-                  { id: 'corporate', name: 'Professionnel' },
-                  { id: 'casual', name: 'Soirées' },
-                ].map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setTemplateCategory(c.id)}
-                    className={cn(
-                      'px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-medium transition',
-                      templateCategory === c.id
-                        ? 'bg-foreground text-background'
-                        : 'bg-background text-muted hover:text-foreground border border-border',
-                    )}
-                  >
-                    {c.name}
-                  </button>
-                ))}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-semibold text-muted hidden sm:inline">Colonnes</span>
-                <CatalogueGridColsToggle
-                  value={vitrineCols}
-                  onChange={(cols) => setGridCols(cols === 5 ? 4 : cols)}
-                  options={[2, 3, 4]}
-                />
-              </div>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { id: 'all', name: 'Tous' },
+                { id: 'private', name: 'Célébrations' },
+                { id: 'corporate', name: 'Professionnel' },
+                { id: 'casual', name: 'Soirées' },
+              ].map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setTemplateCategory(c.id)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-medium transition',
+                    templateCategory === c.id
+                      ? 'bg-foreground text-background'
+                      : 'bg-background text-muted hover:text-foreground border border-border',
+                  )}
+                >
+                  {c.name}
+                </button>
+              ))}
             </div>
 
             {loadingTemplates ? (
@@ -502,11 +496,7 @@ export default function LandingVitrineSection({
               <p className="text-sm text-muted py-8">Aucun modèle dans cette catégorie.</p>
             ) : (
               <>
-                <div className={cn(
-                  vitrineCols === 2 && 'grid grid-cols-1 sm:grid-cols-2 gap-4',
-                  vitrineCols === 3 && 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4',
-                  vitrineCols === 4 && 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4',
-                )}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {pagedTemplates.map((t) => (
                     <article
                       key={t.id}

@@ -50,7 +50,7 @@ function MarketplaceEventsPageInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filterError, setFilterError] = useState('');
-  const [pageSize, setPageSize] = usePageSize('marketplace-events', 12);
+  const [pageSize, setPageSize] = usePageSize('marketplace-events', 8);
 
   const load = useCallback(async (filters: EventFilters, search: string) => {
     setLoading(true);

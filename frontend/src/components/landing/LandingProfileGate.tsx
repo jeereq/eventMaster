@@ -17,7 +17,7 @@ export default function LandingProfileGate({
     <div className="mt-12 space-y-3">
       <div className="space-y-1">
         <p className="text-xs font-medium uppercase tracking-wider text-muted">Vous venez pour… ?</p>
-        <p className="text-sm text-muted">Un clic. Le parcours, les tarifs et les questions s’adaptent.</p>
+        <p className="text-sm text-muted">Un clic. On vous emmène à la section qui vous concerne.</p>
       </div>
 
               <ul id="profils" className="em-landing-hero-grid em-stagger" role="list">

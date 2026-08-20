@@ -26,6 +26,9 @@ export type LandingJourneyStep = {
   icon: LucideIcon;
 };
 
+/** Ancres de la landing — le hero y envoie selon le profil. */
+export type LandingSectionId = 'parcours' | 'produit' | 'modeles' | 'salles' | 'catalogue' | 'prestataires' | 'tarifs';
+
 export type LandingProfile = {
   id: LandingProfileId;
   label: string;
@@ -35,6 +38,11 @@ export type LandingProfile = {
   intro: string;
   examples: string;
   clicks: [string, string, string];
+  /** Cibles des 3 clics (ancres landing ou pages). */
+  clickHrefs: [string, string, string];
+  /** Section vers laquelle le choix de profil fait défiler. */
+  sectionId: LandingSectionId;
+  exploreCta: { href: string; label: string };
   cta: { href: string; label: string };
   registerHint: string;
   results: Array<{ icon: LucideIcon; label: string }>;
@@ -61,6 +69,9 @@ export const LANDING_PROFILES: LandingProfile[] = [
     intro: 'Créez l’événement, invitez, accueillez. C’est tout.',
     examples: 'Mariage, anniversaire, baptême, soirée',
     clicks: ['Créer', 'Inviter', 'Accueillir'],
+    clickHrefs: ['#parcours', '#modeles', '#produit'],
+    sectionId: 'parcours',
+    exploreCta: { href: '#parcours', label: 'Voir les étapes' },
     cta: { href: '/register', label: 'Créer mon événement' },
     registerHint: 'Compte organisateur. Forfait selon le nombre d’invités.',
     results: [
@@ -118,6 +129,9 @@ export const LANDING_PROFILES: LandingProfile[] = [
     intro: 'Agence, wedding planner, event master : dossiers, équipe, salles.',
     examples: 'Agence, wedding planner, protocole',
     clicks: ['Ouvrir l’espace', 'Préparer', 'Jour J'],
+    clickHrefs: ['#parcours', '#catalogue', '#produit'],
+    sectionId: 'parcours',
+    exploreCta: { href: '#parcours', label: 'Voir les étapes' },
     cta: { href: '/register', label: 'Ouvrir mon espace pro' },
     registerHint: 'Compte organisateur. Forfaits Business, Premium ou Enterprise.',
     results: [
@@ -175,6 +189,9 @@ export const LANDING_PROFILES: LandingProfile[] = [
     intro: 'Compte gratuit. Pas d’abonnement. Un devis en quelques clics.',
     examples: 'Budget, devis, réservation',
     clicks: ['Chercher', 'Composer', 'Demander un devis'],
+    clickHrefs: ['#salles', '#catalogue', '#prestataires'],
+    sectionId: 'salles',
+    exploreCta: { href: '#salles', label: 'Voir le catalogue' },
     cta: { href: '/register?kind=CLIENT', label: 'Trouver salle et prestas' },
     registerHint: 'Compte client gratuit : favoris, packs, devis.',
     results: [
@@ -225,6 +242,9 @@ export const LANDING_PROFILES: LandingProfile[] = [
     intro: 'Salle, traiteur, photo, location : une fiche, puis les devis arrivent.',
     examples: 'Salle, DJ, traiteur, location',
     clicks: ['Publier', 'Répondre', 'Bloquer la date'],
+    clickHrefs: ['#tarifs', '#parcours', '#salles'],
+    sectionId: 'tarifs',
+    exploreCta: { href: '#tarifs', label: 'Voir les tarifs' },
     cta: { href: '/register?kind=VENDOR', label: 'Publier mes offres' },
     registerHint: 'Compte prestataire. Forfaits Salle, Prestataire, ou les deux.',
     results: [
@@ -274,4 +294,12 @@ export function getLandingProfile(id: LandingProfileId | string | null | undefin
 
 export function isLandingProfileId(value: string | null | undefined): value is LandingProfileId {
   return value === 'personal' || value === 'pro' || value === 'seeker' || value === 'vendor';
+}
+
+export function scrollToLandingSection(sectionId: string) {
+  if (typeof document === 'undefined') return;
+  const run = () => {
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  requestAnimationFrame(() => requestAnimationFrame(run));
 }

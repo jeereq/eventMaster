@@ -1,8 +1,9 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import { Button, Skeleton } from '@/components/ui';
+import { Button, Pagination, paginateItems, Skeleton, usePageSize } from '@/components/ui';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import type { LandingTemplate } from '@/config/landingTemplates';
 import { useLandingReveal } from '@/components/landing/useLandingReveal';
@@ -23,7 +24,13 @@ export default function LandingModelsSection({
   onPreview: (template: LandingTemplate) => void;
 }) {
   const revealRef = useLandingReveal<HTMLElement>();
-  const shown = templates.slice(0, 6);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = usePageSize('landing-models', 8);
+  const shown = paginateItems(templates, page, pageSize);
+
+  useEffect(() => {
+    setPage(1);
+  }, [templates, pageSize]);
 
   return (
     <section
@@ -49,52 +56,62 @@ export default function LandingModelsSection({
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
               <Skeleton key={i} className="h-56 rounded-[var(--radius-card)]" />
             ))}
           </div>
-        ) : shown.length === 0 ? (
+        ) : templates.length === 0 ? (
           <p className="text-sm text-muted">
             Les modèles publiés apparaîtront ici. Vous pourrez aussi en créer après inscription.
           </p>
         ) : (
-          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 em-stagger">
-            {shown.map((template) => (
-              <li key={template.id}>
-                <article className="h-full rounded-[var(--radius-card)] border border-border bg-surface p-3.5 flex flex-col shadow-[var(--shadow-soft)] em-soft-hover">
-                  <button
-                    type="button"
-                    onClick={() => onPreview(template)}
-                    className="w-full text-left rounded-[var(--radius-button)] overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
-                  >
-                    <LandingInvitationPreview template={template} compact className="!max-h-[200px]" />
-                  </button>
-                  <div className="mt-3 space-y-1.5 flex-1">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
-                      {categoryLabel(template.category)}
-                    </p>
-                    <h3 className="text-sm font-semibold text-foreground leading-snug line-clamp-1">{template.name}</h3>
-                    {template.description ? (
-                      <p className="text-xs text-muted leading-relaxed line-clamp-2">{template.description}</p>
-                    ) : null}
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-border flex items-center justify-between gap-2">
+          <>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 em-stagger">
+              {shown.map((template) => (
+                <li key={template.id}>
+                  <article className="h-full rounded-[var(--radius-card)] border border-border bg-surface p-3.5 flex flex-col shadow-[var(--shadow-soft)] em-soft-hover">
                     <button
                       type="button"
                       onClick={() => onPreview(template)}
-                      className="text-xs font-medium text-foreground hover:underline"
+                      className="w-full text-left rounded-[var(--radius-button)] overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
                     >
-                      Aperçu
+                      <LandingInvitationPreview template={template} compact className="!max-h-[200px]" />
                     </button>
-                    <Link href="/register" className="text-xs font-medium text-foreground hover:underline inline-flex items-center gap-1">
-                      Utiliser <ArrowRight className="w-3 h-3" />
-                    </Link>
-                  </div>
-                </article>
-              </li>
-            ))}
-          </ul>
+                    <div className="mt-3 space-y-1.5 flex-1">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">
+                        {categoryLabel(template.category)}
+                      </p>
+                      <h3 className="text-sm font-semibold text-foreground leading-snug line-clamp-1">{template.name}</h3>
+                      {template.description ? (
+                        <p className="text-xs text-muted leading-relaxed line-clamp-2">{template.description}</p>
+                      ) : null}
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-border flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onPreview(template)}
+                        className="text-xs font-medium text-foreground hover:underline"
+                      >
+                        Aperçu
+                      </button>
+                      <Link href="/register" className="text-xs font-medium text-foreground hover:underline inline-flex items-center gap-1">
+                        Utiliser <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </div>
+                  </article>
+                </li>
+              ))}
+            </ul>
+            <Pagination
+              page={page}
+              pageSize={pageSize}
+              total={templates.length}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+              itemLabel="modèles"
+            />
+          </>
         )}
       </div>
     </section>

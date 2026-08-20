@@ -59,7 +59,7 @@ function MarketplaceRentalsPageInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filterError, setFilterError] = useState('');
-  const [pageSize, setPageSize] = usePageSize('marketplace-rentals', 12);
+  const [pageSize, setPageSize] = usePageSize('marketplace-rentals', 8);
 
   const load = useCallback(async (filters: ServiceFilters, search: string) => {
     setLoading(true);
