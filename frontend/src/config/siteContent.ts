@@ -12,12 +12,12 @@ export const SITE_CONTACT = {
 } as const;
 
 export const FOOTER_FEATURES = [
-  'Invitations et réponses (lien d’abord, PDF ensuite)',
-  'Plan de table et accueil QR le jour J',
+  'Préparez votre événement en deux-trois clics',
+  'Invitations, réponses, plan de table, accueil QR',
   'Marketplace : salles, métiers, locations',
   'Favoris, packs budget et réservations',
   'Événements publics et billets',
-  'Application mobile (bientôt)',
+  'Tout dans le navigateur — l’app arrive bientôt',
 ] as const;
 
 export const FOOTER_PRODUCT = [
@@ -38,7 +38,7 @@ export const FOOTER_RESOURCES = [
 ] as const;
 
 export const FOOTER_BRAND_DESCRIPTION =
-  'Invitez vos proches, placez-les à table et accueillez-les le jour J — plus un marketplace pour salles et prestataires. Tout se fait dans le navigateur. L’app mobile arrive bientôt.';
+  'Préparez votre événement en deux-trois clics : invitations, plan de table, accueil QR, plus un marketplace pour salles et prestataires. Tout se fait dans le navigateur.';
 
 export interface FaqItem {
   id: string;
@@ -51,7 +51,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'what-is-eventmaster',
     question: 'Qu\'est-ce qu\'EventMaster ?',
     answer:
-      'Un outil pour organiser un événement de bout en bout : invitations, réponses, plan de table, accueil QR le jour J, et un marketplace pour trouver (ou publier) salles et prestataires. Pas besoin d’app : tout marche dans le navigateur, y compris sur téléphone.',
+      'Un outil pour préparer un événement en deux-trois clics : invitations, réponses, plan de table, accueil QR le jour J, et un marketplace pour trouver (ou publier) salles et prestataires. Pas besoin d’app : tout marche dans le navigateur, y compris sur téléphone.',
   },
   {
     id: 'mobile-app',

@@ -34,6 +34,7 @@ export type LandingProfile = {
   title: string;
   intro: string;
   examples: string;
+  clicks: [string, string, string];
   cta: { href: string; label: string };
   registerHint: string;
   results: Array<{ icon: LucideIcon; label: string }>;
@@ -43,17 +44,25 @@ export type LandingProfile = {
   icon: LucideIcon;
 };
 
+/** Slogan landing — promesse unique, visible dès le premier écran. */
+export const LANDING_SLOGAN = {
+  lead: 'Préparez votre événement',
+  highlight: 'en deux-trois clics',
+  full: 'Préparez votre événement en deux-trois clics.',
+} as const;
+
 export const LANDING_PROFILES: LandingProfile[] = [
   {
     id: 'personal',
     label: 'J’organise mon événement',
     shortLabel: 'Mon événement',
     eyebrow: 'Particulier',
-    title: 'Mariage, anniversaire, soirée — jusqu’au jour J',
-    intro: 'Vous préparez votre propre fête. Un seul événement à mener : invitations, places, accueil.',
-    examples: 'Marié·e, anniversaire, baptême, soirée privée',
+    title: 'Votre fête, du premier clic au jour J',
+    intro: 'Créez l’événement, invitez, accueillez. C’est tout.',
+    examples: 'Mariage, anniversaire, baptême, soirée',
+    clicks: ['Créer', 'Inviter', 'Accueillir'],
     cta: { href: '/register', label: 'Créer mon événement' },
-    registerHint: 'Compte organisateur — forfaits particuliers selon le nombre d’invités.',
+    registerHint: 'Compte organisateur. Forfait selon le nombre d’invités.',
     results: [
       { icon: Shirt, label: 'Infos invités' },
       { icon: Mail, label: 'RSVP' },
@@ -65,35 +74,35 @@ export const LANDING_PROFILES: LandingProfile[] = [
     steps: [
       {
         title: 'Créer l’événement',
-        description: 'Titre, date, lieu. Mariage, anniversaire ou soirée — c’est votre fête.',
+        description: 'Titre, date, lieu. Un clic pour commencer.',
         detail: 'Renseignez l’essentiel. Ajoutez le dress code, le parking et les notes pratiques : vos invités les verront sur leur lien.',
         outcome: 'Votre événement existe, prêt à recevoir la liste d’invités.',
         icon: CalendarCheck,
       },
       {
         title: 'Trouver salle et prestataires',
-        description: 'Optionnel : comparez salles, traiteur, photo, DJ. Simulation avec ou sans IA.',
+        description: 'Optionnel. Comparez salle, traiteur, photo, DJ.',
         detail: 'Retenez des fiches, composez une solution, demandez un devis. Rien n’est réservé tant que vous n’envoyez pas la demande.',
         outcome: 'Un mix salle / prestas, ou vous passez directement aux invitations.',
         icon: Store,
       },
       {
         title: 'Inviter',
-        description: 'E-mail ou WhatsApp. Le premier message contient seulement le lien pour répondre.',
+        description: 'Un lien par personne, par e-mail ou WhatsApp.',
         detail: 'Chaque proche a un lien personnel. Pas de PDF ni de plan à ce stade — uniquement la réponse.',
         outcome: 'Les réponses arrivent dans votre tableau RSVP.',
         icon: Mail,
       },
       {
         title: 'Placer',
-        description: 'Glissez les invités sur les sièges. PDF et GPS partent après le « oui ».',
+        description: 'Glissez les invités sur les sièges. Ils reçoivent le plan après le « oui ».',
         detail: 'Dès qu’un invité a accepté et qu’une place est assignée, le plan et le pin GPS partent automatiquement.',
         outcome: 'Chaque confirmé sait où s’asseoir avant d’arriver.',
         icon: LayoutGrid,
       },
       {
         title: 'Accueillir',
-        description: 'Scannez le badge QR à l’entrée, depuis le téléphone.',
+        description: 'Scannez le QR à l’entrée, depuis le téléphone.',
         detail: 'Mode Protocole dans le navigateur : présence enregistrée, siège validé. Pas d’app à installer.',
         outcome: 'Entrée contrôlée, le jour J.',
         icon: ScanLine,
@@ -105,11 +114,12 @@ export const LANDING_PROFILES: LandingProfile[] = [
     label: 'J’organise pour mes clients',
     shortLabel: 'Event master',
     eyebrow: 'Professionnel',
-    title: 'Pilotez plusieurs événements, l’équipe et les salles',
-    intro: 'Vous êtes agence, wedding planner ou event master. Plusieurs dossiers, des rôles, des modèles.',
-    examples: 'Agence, wedding planner, protocole d’entreprise',
+    title: 'Tous vos événements clients, un seul espace',
+    intro: 'Agence, wedding planner, event master : dossiers, équipe, salles.',
+    examples: 'Agence, wedding planner, protocole',
+    clicks: ['Ouvrir l’espace', 'Préparer', 'Jour J'],
     cta: { href: '/register', label: 'Ouvrir mon espace pro' },
-    registerHint: 'Compte organisateur — forfaits Business, Premium ou Enterprise.',
+    registerHint: 'Compte organisateur. Forfaits Business, Premium ou Enterprise.',
     results: [
       { icon: Users, label: 'Équipe' },
       { icon: Building2, label: 'Salles' },
@@ -161,11 +171,12 @@ export const LANDING_PROFILES: LandingProfile[] = [
     label: 'Je cherche salle ou prestataires',
     shortLabel: 'Je cherche',
     eyebrow: 'Client marketplace',
-    title: 'Comparez, composez un pack, demandez un devis',
-    intro: 'Pas d’abonnement. Vous cherchez un lieu ou des prestas, sans gérer toute la liste d’invités.',
-    examples: 'Budget, devis, réservation — sans espace événement',
+    title: 'Salle et prestas : cherchez, composez, demandez',
+    intro: 'Compte gratuit. Pas d’abonnement. Un devis en quelques clics.',
+    examples: 'Budget, devis, réservation',
+    clicks: ['Chercher', 'Composer', 'Demander un devis'],
     cta: { href: '/register?kind=CLIENT', label: 'Trouver salle et prestas' },
-    registerHint: 'Compte client gratuit : favoris, packs, devis. Les forfaits ci-dessous servent si vous organisez aussi la fête.',
+    registerHint: 'Compte client gratuit : favoris, packs, devis.',
     results: [
       { icon: Heart, label: 'Favoris' },
       { icon: Wallet, label: 'Packs' },
@@ -210,11 +221,12 @@ export const LANDING_PROFILES: LandingProfile[] = [
     label: 'Je propose un lieu ou un service',
     shortLabel: 'Je publie',
     eyebrow: 'Salle & prestataire',
-    title: 'Publiez, recevez des demandes, bloquez les dates',
-    intro: 'Salle, traiteur, photo, locations… Vos fiches apparaissent sur le marketplace.',
-    examples: 'Gestionnaire de salle, DJ, traiteur, location',
-    cta: { href: '/register?kind=VENDOR', label: 'Mettre mes offres en ligne' },
-    registerHint: 'Compte prestataire — forfaits Salle, Prestataire, ou les deux.',
+    title: 'Publiez vos offres, recevez des demandes',
+    intro: 'Salle, traiteur, photo, location : une fiche, puis les devis arrivent.',
+    examples: 'Salle, DJ, traiteur, location',
+    clicks: ['Publier', 'Répondre', 'Bloquer la date'],
+    cta: { href: '/register?kind=VENDOR', label: 'Publier mes offres' },
+    registerHint: 'Compte prestataire. Forfaits Salle, Prestataire, ou les deux.',
     results: [
       { icon: Building2, label: 'Fiche publique' },
       { icon: MessageSquare, label: 'Devis' },

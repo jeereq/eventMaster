@@ -20,6 +20,7 @@ import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
   getLandingProfile,
   isLandingProfileId,
+  LANDING_SLOGAN,
   type LandingProfileId,
 } from '@/lib/landingProfiles';
 import { ArrowRight, Smartphone, Sparkles } from 'lucide-react';
@@ -85,53 +86,66 @@ export default function Home() {
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const faqSubtitle =
     profileId === 'seeker'
-      ? 'Compte client, devis et packs — sans abonnement.'
+      ? 'Compte gratuit, devis, packs. Quatre questions, des réponses courtes.'
       : profileId === 'vendor'
-        ? 'Publication, acompte hors plateforme et forfaits salle / presta.'
+        ? 'Publier, acompte, forfaits salle et presta.'
         : profileId === 'pro'
-          ? 'Organisation, équipe, protocoles et forfaits Business.'
-          : 'Invitations, plan de table, accueil et forfaits particuliers.';
+          ? 'Équipe, protocoles, forfaits Business.'
+          : 'Invitations, places, accueil. Forfaits particuliers.';
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground font-sans antialiased">
       <CelebrateMood />
       <SiteHeader variant="landing" />
 
-      <section className="relative em-landing-hero">
+      <section className="relative em-landing-hero em-celebrate-hero">
         <div className="page-container relative z-10 py-14 sm:py-18 lg:py-22">
-          <div className="max-w-3xl space-y-6 animate-slide-up">
+          <div className="max-w-3xl space-y-5 animate-slide-up">
             <div className="flex flex-wrap items-center gap-2">
               <span className="em-festive-chip">
                 <Sparkles className="w-3 h-3" />
                 {site.platformName}
               </span>
-              <span className="text-[11px] font-medium text-muted tracking-wide">
-                {site.platformTagline}
-              </span>
             </div>
 
-            <h1 className="font-display text-[2.15rem] sm:text-5xl lg:text-[3.2rem] font-semibold tracking-tight text-foreground leading-[1.12]">
-              Vous venez pour… ?
+            <h1 className="font-display text-[2.15rem] sm:text-5xl lg:text-[3.35rem] font-semibold tracking-tight text-foreground leading-[1.12]">
+              {LANDING_SLOGAN.lead}
+              <span className="block mt-1">
+                <em className="not-italic text-[color:var(--festive-accent)]">{LANDING_SLOGAN.highlight}</em>.
+              </span>
             </h1>
 
-            <p className="text-[15px] sm:text-base text-muted leading-relaxed max-w-2xl">
-              Choisissez votre situation. Le parcours, les tarifs et les questions s’adaptent.
-              RSVP, plan de table et scan QR marchent déjà dans le navigateur — y compris au téléphone.
+            <p className="text-[15px] sm:text-base text-muted leading-relaxed max-w-xl">
+              Invitez, placez, accueillez — ou trouvez une salle. Tout se fait dans le navigateur, y compris au téléphone.
             </p>
+
+            <ol className="flex flex-wrap items-center gap-x-2 gap-y-2 pt-1" aria-label="Trois clics">
+              {profile.clicks.map((label, index) => (
+                <li key={`${profile.id}-${label}`} className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-white text-sm font-bold tabular-nums">
+                    {index + 1}
+                  </span>
+                  <span className="text-sm font-semibold text-foreground">{label}</span>
+                  {index < profile.clicks.length - 1 ? (
+                    <ArrowRight className="w-4 h-4 text-muted/70 shrink-0" aria-hidden />
+                  ) : null}
+                </li>
+              ))}
+            </ol>
           </div>
 
           <LandingProfileGate
             selectedId={profileId}
-            onSelect={(id) => selectProfile(id, true)}
+            onSelect={(id) => selectProfile(id, false)}
           />
 
-          <div className="mt-8 max-w-2xl space-y-4">
+          <div className="mt-8 rounded-[var(--radius-card)] border border-border bg-surface/90 p-5 sm:p-6 shadow-[var(--shadow-soft)] max-w-2xl space-y-4">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
               {profile.eyebrow}
             </p>
-            <h2 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">
+            <h3 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">
               {profile.title}
-            </h2>
+            </h3>
             <p className="text-sm text-muted leading-relaxed">{profile.intro}</p>
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 pt-1">
@@ -168,16 +182,16 @@ export default function Home() {
                 href="#parcours"
                 className="inline-flex items-center justify-center gap-1.5 px-1 py-2 text-sm font-semibold text-foreground/80 hover:text-primary transition"
               >
-                Voir le parcours
+                Voir les étapes
                 <ArrowRight className="w-3.5 h-3.5" />
               </a>
             </div>
 
-            <div className="inline-flex items-start gap-2.5 rounded-[var(--radius-card)] border border-border bg-surface/90 px-3.5 py-2.5 text-xs text-muted max-w-xl">
+            <div className="inline-flex items-start gap-2.5 rounded-[var(--radius-card)] border border-border bg-background/80 px-3.5 py-2.5 text-xs text-muted max-w-xl">
               <Smartphone className="w-4 h-4 shrink-0 mt-0.5 text-foreground" />
               <p>
-                <span className="font-semibold text-foreground">Pas d’app à installer pour l’instant.</span>
-                {' '}Le RSVP, le scan QR et le tableau de bord marchent déjà dans le navigateur de votre téléphone.
+                <span className="font-semibold text-foreground">Pas d’app à installer.</span>
+                {' '}RSVP, scan QR et tableau de bord : déjà dans votre navigateur.
               </p>
             </div>
           </div>
@@ -205,8 +219,8 @@ export default function Home() {
       <FaqSection itemIds={profile.faqIds} subtitle={faqSubtitle} />
 
       <PublicCtaBand
-        title={profile.title}
-        description={profile.registerHint}
+        title={LANDING_SLOGAN.full}
+        description={profile.intro}
         actions={
           user ? (
             <Link href="/dashboard">

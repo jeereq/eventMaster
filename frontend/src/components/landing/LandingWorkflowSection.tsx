@@ -76,9 +76,11 @@ export default function LandingWorkflowSection({
     <section id="parcours" className="py-16 sm:py-20 bg-background border-t border-border scroll-mt-16">
       <div className="page-container space-y-8">
         <div className="max-w-2xl space-y-2">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted">Parcours</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-[color:var(--festive-accent)]">
+            Deux-trois clics
+          </p>
           <h2 className="text-2xl font-semibold text-foreground tracking-tight">
-            {journey.eyebrow} — les étapes
+            Voici exactement quoi faire
           </h2>
           <p className="text-sm text-muted leading-relaxed">{journey.intro}</p>
         </div>

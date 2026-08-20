@@ -302,10 +302,10 @@ export default function LandingVitrineSection({
           <div className="max-w-xl space-y-2">
             <p className="em-festive-chip w-fit">Déjà en ligne</p>
             <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-              Salles, prestataires et modèles — sans créer de compte
+              Déjà des salles et des prestas en ligne
             </h2>
             <p className="text-sm text-muted leading-relaxed">
-              La preuve catalogue : filtrez par lieu, dates, prix, type de salle, métier ou location.
+              Parcourez sans compte. Un clic ouvre la fiche.
             </p>
           </div>
           <Link href="/marketplace">

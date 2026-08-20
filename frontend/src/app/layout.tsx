@@ -42,8 +42,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "EventMaster - SaaS de gestion d'événements privés",
-  description: "Plateforme SaaS Multi-tenant d'organisation d'événements, RSVP et invitations personnalisées",
+  title: "EventMaster — Préparez votre événement en deux-trois clics",
+  description: "Invitez, placez, accueillez. Trouvez une salle ou un prestataire. RSVP, plan de table et scan QR dans le navigateur.",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

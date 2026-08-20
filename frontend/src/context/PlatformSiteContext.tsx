@@ -32,7 +32,7 @@ export interface PublicSiteConfig {
 
 export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
   platformName: 'EventMaster',
-  platformTagline: 'Organisez vos événements, de la salle au scan invité.',
+  platformTagline: 'Préparez votre événement en deux-trois clics.',
   supportEmail: SITE_CONTACT.email,
   supportPhone: SITE_CONTACT.phone,
   supportPhoneHref: SITE_CONTACT.phoneHref,
