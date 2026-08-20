@@ -66,8 +66,8 @@ export default function LocationPickerMap({
     L.divIcon({
       className: 'em-map-pin',
       html: '<span class="em-map-pin-dot"></span>',
-      iconSize: [18, 18],
-      iconAnchor: [9, 9],
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
     });
 
   const acceptPoint = (point: { lat: number; lng: number }) => {

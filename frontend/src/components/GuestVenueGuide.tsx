@@ -128,8 +128,8 @@ export default function GuestVenueGuide({
     const icon = L.divIcon({
       className: 'em-guide-user-marker',
       html: '<span class="em-guide-user-dot"></span>',
-      iconSize: [18, 18],
-      iconAnchor: [9, 9],
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
     });
     userMarkerRef.current = L.marker([pos.lat, pos.lng], { icon, zIndexOffset: 600 }).addTo(mapRef.current);
   }, []);
@@ -173,8 +173,8 @@ export default function GuestVenueGuide({
           const destIcon = L.divIcon({
             className: 'em-guide-dest-marker',
             html: '<span class="em-guide-dest-pin"></span>',
-            iconSize: [28, 28],
-            iconAnchor: [14, 28],
+            iconSize: [20, 20],
+            iconAnchor: [10, 20],
           });
           destMarkerRef.current = L.marker([resolved.lat, resolved.lng], { icon: destIcon }).addTo(map);
           destMarkerRef.current.bindPopup(destinationLabel);
