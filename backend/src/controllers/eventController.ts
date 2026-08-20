@@ -19,6 +19,73 @@ function serializeEvent<T extends { _count?: { posts: number } }>(event: T) {
   return { ...rest, feedPostCount: _count?.posts ?? 0 };
 }
 
+const EVENT_KIND_IDS = new Set([
+  'WEDDING',
+  'BIRTHDAY',
+  'BAPTISM',
+  'CORPORATE',
+  'CONFERENCE',
+  'GALA',
+  'OTHER',
+]);
+
+function parseOptionalString(value: unknown): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  const text = String(value).trim();
+  return text || null;
+}
+
+function parseOptionalInt(value: unknown): number | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null || value === '') return null;
+  const n = Math.round(Number(value));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function parseOptionalDate(value: unknown): Date | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null || value === '') return null;
+  const d = new Date(String(value));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function parseEventKind(value: unknown): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null || value === '') return null;
+  const kind = String(value).trim().toUpperCase();
+  return EVENT_KIND_IDS.has(kind) ? kind : null;
+}
+
+function eventDossierData(body: Record<string, unknown>, forCreate: boolean) {
+  const eventKind = parseEventKind(body.eventKind);
+  const clientName = parseOptionalString(body.clientName);
+  const endsAt = parseOptionalDate(body.endsAt);
+  const estimatedGuests = parseOptionalInt(body.estimatedGuests);
+  const dayOfContactName = parseOptionalString(body.dayOfContactName);
+  const dayOfContactPhone = parseOptionalString(body.dayOfContactPhone);
+
+  if (forCreate) {
+    return {
+      eventKind: eventKind ?? null,
+      clientName: clientName ?? null,
+      endsAt: endsAt ?? null,
+      estimatedGuests: estimatedGuests ?? null,
+      dayOfContactName: dayOfContactName ?? null,
+      dayOfContactPhone: dayOfContactPhone ?? null,
+    };
+  }
+
+  return {
+    ...(eventKind !== undefined ? { eventKind } : {}),
+    ...(clientName !== undefined ? { clientName } : {}),
+    ...(endsAt !== undefined ? { endsAt } : {}),
+    ...(estimatedGuests !== undefined ? { estimatedGuests } : {}),
+    ...(dayOfContactName !== undefined ? { dayOfContactName } : {}),
+    ...(dayOfContactPhone !== undefined ? { dayOfContactPhone } : {}),
+  };
+}
+
 async function eventVisibilityData(
   title: string,
   body: Record<string, unknown>,
@@ -153,6 +220,7 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
         rsvpForm: rsvpForm !== undefined ? toPrismaJson(rsvpForm) : undefined,
         photos: toPrismaJson(parsePhotoUrls(req.body.photos)),
         ...visibility,
+        ...eventDossierData(req.body, true),
       },
       include: {
         room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } },
@@ -254,6 +322,7 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
         eventPrep: eventPrep !== undefined ? toPrismaJson(eventPrep) : existingEvent.eventPrep ?? undefined,
         ...(req.body.photos !== undefined ? { photos: toPrismaJson(parsePhotoUrls(req.body.photos)) } : {}),
         ...visibility,
+        ...eventDossierData(req.body, false),
       },
       include: {
         room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } },

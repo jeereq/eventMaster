@@ -1,18 +1,18 @@
 'use client';
 
-import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import * as XLSX from 'xlsx';
 import { 
- Calendar, MapPin, Users, PlusCircle, Trash2, Edit3, ChevronDown,
+ Calendar, MapPin, Users, PlusCircle, Trash2, Edit3,
  ChevronRight, ArrowLeft, Check, Upload, Mail, Send, 
  Sparkles, CheckCircle2, XCircle, AlertCircle, Loader2,
  Copy, MessageSquare, Share2, Search, Filter, RefreshCw,
  ClipboardList, Eye, Utensils, FileSpreadsheet, Download, LayoutGrid,
- Building2, ScanLine, Shirt, Globe, GlobeLock, Ticket, LayoutTemplate,
+ Building2, ScanLine, Shirt, Globe, GlobeLock,
 } from 'lucide-react';
 import TablePlanner from './TablePlanner';
 import EventStaffPanel from './EventStaffPanel';
@@ -22,7 +22,7 @@ import EventTaskPanel from '@/components/EventTaskPanel';
 import EventTaskInbox from '@/components/EventTaskInbox';
 import EventGuestGuidelinesEditor from '@/components/EventGuestGuidelinesEditor';
 import EventWorkflowPanel from '@/components/EventWorkflowPanel';
-import MarketplaceMediaField from '@/components/MarketplaceMediaField';
+import EventConfigForm from '@/components/EventConfigForm';
 import {
  computeEventWorkflowState,
  type EventWorkflowTab,
@@ -52,6 +52,8 @@ import {
 import PlanLimitCallout from '@/components/PlanLimitCallout';
 import { eventDashboardHref, eventsListHref, isEventWorkspaceTab, type EventWorkspaceTab } from '@/lib/eventRoutes';
 import EventPrepPanel from '@/components/EventPrepPanel';
+import { isB2cPlanId } from '@/config/landingPricing';
+import type { EventConfigPayload } from '@/lib/eventConfig';
 import { eventPrepSummary, hasEventPrepShortlist, parseEventPrep } from '@/lib/eventPrep';
 import {
  displayGuestEmail,
@@ -80,7 +82,13 @@ interface EventItem {
  title: string;
  description: string;
  date: string;
+ endsAt?: string | null;
  location: string;
+ eventKind?: string | null;
+ clientName?: string | null;
+ estimatedGuests?: number | null;
+ dayOfContactName?: string | null;
+ dayOfContactPhone?: string | null;
  reminderFrequency?: string;
  latitude?: number;
  longitude?: number;
@@ -449,39 +457,15 @@ export default function EventsPage() {
 
  // Event form
  const [showEventModal, setShowEventModal] = useState(false);
- const [eventTitle, setEventTitle] = useState('');
- const [eventDesc, setEventDescription] = useState('');
- const [eventDate, setEventDate] = useState('');
- const [eventLoc, setEventLocation] = useState('');
- const [eventReminderFrequency, setEventReminderFrequency] = useState('NONE');
- const [eventLatitude, setEventLatitude] = useState('');
- const [eventLongitude, setEventLongitude] = useState('');
- const [eventIsPublic, setEventIsPublic] = useState(false);
- const [eventTicketing, setEventTicketing] = useState(false);
- const [eventTicketPrice, setEventTicketPrice] = useState('');
- const [eventTicketsTotal, setEventTicketsTotal] = useState('');
- const [eventPhotos, setEventPhotos] = useState<string[]>([]);
- const [eventRoomId, setEventRoomId] = useState('');
- const [eventFormTemplateId, setEventFormTemplateId] = useState('');
- const [openTablePlanAfterSave, setOpenTablePlanAfterSave] = useState(false);
+ const [eventFormTarget, setEventFormTarget] = useState<EventItem | null>(null);
  const [orgRooms, setOrgRooms] = useState<OrgRoomOption[]>([]);
  const [loadingRooms, setLoadingRooms] = useState(false);
- const [editingEventId, setEditingEventId] = useState<string | null>(null);
  const [savingEvent, setSavingEvent] = useState(false);
  const [importingLayout, setImportingLayout] = useState(false);
  const [guestGuidelines, setGuestGuidelines] = useState<GuestGuidelines>(defaultGuestGuidelines());
  const [savingGuidelines, setSavingGuidelines] = useState(false);
  const [eventRsvpFields, setEventRsvpFields] = useState<RsvpField[]>(() => createMandatoryRsvpFields());
  const [savingRsvpForm, setSavingRsvpForm] = useState(false);
-
- const [eventExtrasOpen, setEventExtrasOpen] = useState(false);
-
- // Map Picker States & Refs
- const [eventMapOpen, setEventMapOpen] = useState(false);
- const [searchingLocation, setSearchingLocation] = useState(false);
- const [searchError, setSearchError] = useState('');
- const mapRef = useRef<any>(null);
- const markerRef = useRef<any>(null);
 
  // Guest form
  const [showGuestModal, setShowGuestModal] = useState(false);
@@ -774,180 +758,8 @@ export default function EventsPage() {
  }
  }, [user]);
 
- // Leaflet Map Initialization Effect
- useEffect(() => {
- if (!showEventModal || !eventMapOpen) {
- mapRef.current = null;
- markerRef.current = null;
- return;
- }
-
- let mapInstance: any = null;
- let markerInstance: any = null;
-
- const initMap = () => {
- const L = (window as any).L;
- if (!L) return;
-
- // Default coordinates: Kinshasa (-4.3224, 15.3070)
- const initialLat = eventLatitude ? parseFloat(eventLatitude) : -4.3224;
- const initialLng = eventLongitude ? parseFloat(eventLongitude) : 15.3070;
-
- const mapContainer = document.getElementById('map-picker');
- if (!mapContainer) return;
-
- // Clear existing map container content
- mapContainer.innerHTML = '';
- const mapDiv = document.createElement('div');
- mapDiv.style.height = '100%';
- mapDiv.style.width = '100%';
- mapContainer.appendChild(mapDiv);
-
- try {
- mapInstance = L.map(mapDiv).setView([initialLat, initialLng], 13);
- mapRef.current = mapInstance;
-
- L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
- attribution: '&copy; OpenStreetMap contributors'
- }).addTo(mapInstance);
-
- // Add marker if coordinates exist
- if (eventLatitude && eventLongitude) {
- markerInstance = L.marker([initialLat, initialLng], { draggable: true }).addTo(mapInstance);
- markerRef.current = markerInstance;
- }
-
- // Map click handler
- mapInstance.on('click', (e: any) => {
- const { lat, lng } = e.latlng;
- setEventLatitude(lat.toFixed(6));
- setEventLongitude(lng.toFixed(6));
-
- if (markerRef.current) {
- markerRef.current.setLatLng([lat, lng]);
- } else {
- const newMarker = L.marker([lat, lng], { draggable: true }).addTo(mapRef.current);
- markerRef.current = newMarker;
- 
- newMarker.on('dragend', (de: any) => {
- const position = newMarker.getLatLng();
- setEventLatitude(position.lat.toFixed(6));
- setEventLongitude(position.lng.toFixed(6));
- });
- }
- });
-
- if (markerInstance) {
- markerInstance.on('dragend', (de: any) => {
- const position = markerInstance.getLatLng();
- setEventLatitude(position.lat.toFixed(6));
- setEventLongitude(position.lng.toFixed(6));
- });
- }
- } catch (err) {
- console.error('Error initializing Leaflet map:', err);
- }
- };
-
- // Check if Leaflet is already loaded
- if (!(window as any).L) {
- // Load CSS
- const link = document.createElement('link');
- link.rel = 'stylesheet';
- link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
- document.head.appendChild(link);
-
- // Load JS
- const script = document.createElement('script');
- script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
- script.onload = () => {
- initMap();
- };
- document.body.appendChild(script);
- } else {
- // Wait a brief moment for the modal transition to complete and container to be rendered
- const timer = setTimeout(initMap, 200);
- return () => clearTimeout(timer);
- }
-
- return () => {
- if (mapInstance) {
- try {
- mapInstance.remove();
- } catch (e) {
- console.error('Error removing map instance:', e);
- }
- }
- };
- }, [showEventModal, eventMapOpen]);
-
- // Geocoding search function
- const searchLocationOnMap = async () => {
- if (!eventLoc) {
- setSearchError('Veuillez d\'abord saisir un lieu dans le champ "Lieu".');
- return;
- }
- setSearchingLocation(true);
- setSearchError('');
- try {
- const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(eventLoc)}`);
- const data = await res.json();
- if (data && data.length > 0) {
- const first = data[0];
- const lat = parseFloat(first.lat);
- const lon = parseFloat(first.lon);
- setEventLatitude(lat.toFixed(6));
- setEventLongitude(lon.toFixed(6));
- 
- const L = (window as any).L;
- if (L && mapRef.current) {
- mapRef.current.setView([lat, lon], 15);
- 
- if (markerRef.current) {
- markerRef.current.setLatLng([lat, lon]);
- } else {
- const newMarker = L.marker([lat, lon], { draggable: true }).addTo(mapRef.current);
- markerRef.current = newMarker;
- 
- newMarker.on('dragend', (de: any) => {
- const position = newMarker.getLatLng();
- setEventLatitude(position.lat.toFixed(6));
- setEventLongitude(position.lng.toFixed(6));
- });
- }
- }
- } else {
- setSearchError('Lieu non trouvé. Essayez de préciser la ville (ex. Kinshasa).');
- }
- } catch (err) {
- console.error(err);
- setSearchError('Erreur lors de la recherche du lieu.');
- } finally {
- setSearchingLocation(false);
- }
- };
-
  const resetEventForm = () => {
- setEventTitle('');
- setEventDescription('');
- setEventDate('');
- setEventLocation('');
- setEventReminderFrequency('NONE');
- setEventLatitude('');
- setEventLongitude('');
- setEventIsPublic(false);
- setEventTicketing(false);
- setEventTicketPrice('');
- setEventTicketsTotal('');
- setEventPhotos([]);
- setEventRoomId('');
- setEventFormTemplateId('');
- setOpenTablePlanAfterSave(false);
- setEditingEventId(null);
- setEventMapOpen(false);
- setSearchError('');
- setGuestGuidelines(defaultGuestGuidelines());
- setEventExtrasOpen(false);
+ setEventFormTarget(null);
  };
 
  const openCreateEventModal = () => {
@@ -955,7 +767,7 @@ export default function EventsPage() {
  setError(getQuotaActionMessage('events', planQuota, tenant?.plan));
  return;
  }
- resetEventForm();
+ setEventFormTarget(null);
  setShowEventModal(true);
  };
 
@@ -1003,20 +815,11 @@ Merci de confirmer votre présence :
  } catch {
  /* ignore */
  }
- if (!editingEventId) return;
- try {
- const invitesData = await api.get(`/events/${editingEventId}/invitations`);
- if (cancelled) return;
- const first = Array.isArray(invitesData) ? invitesData[0] : null;
- setEventFormTemplateId(first?.template?.id || '');
- } catch {
- if (!cancelled) setEventFormTemplateId('');
- }
  })();
  return () => {
  cancelled = true;
  };
- }, [showEventModal, editingEventId]);
+ }, [showEventModal]);
 
  const openAddGuestModal = () => {
  if (guestsAtLimit && !editingGuestId) {
@@ -1055,51 +858,47 @@ Merci de confirmer votre présence :
  loadRooms();
  }, [showEventModal, user?.role]);
 
- const handleRoomChange = (roomId: string) => {
- setEventRoomId(roomId);
- if (!roomId) return;
- const room = orgRooms.find((r) => r.id === roomId);
- if (!room) return;
- const parts = [room.name, room.floor, room.location].filter(Boolean);
- if (parts.length > 0) {
- setEventLocation(parts.join(' — '));
- }
- };
-
- const handleCreateOrUpdateEvent = async (e: React.FormEvent) => {
- e.preventDefault();
+ const handleCreateOrUpdateEvent = async (form: EventConfigPayload) => {
  setError('');
  setSuccess('');
 
  setSavingEvent(true);
  try {
+ const editingEventId = eventFormTarget?.id ?? null;
  const payload = {
- title: eventTitle,
- description: eventDesc,
- date: eventDate,
- location: eventLoc,
- reminderFrequency: eventReminderFrequency,
- latitude: eventLatitude ? parseFloat(eventLatitude) : null,
- longitude: eventLongitude ? parseFloat(eventLongitude) : null,
- roomId: eventRoomId || null,
- isPublic: eventIsPublic,
- ticketingEnabled: eventIsPublic && eventTicketing,
- ticketPriceFc: eventIsPublic && eventTicketing ? Number(eventTicketPrice) || 0 : 0,
- ticketsTotal: eventIsPublic && eventTicketsTotal ? Number(eventTicketsTotal) : null,
- photos: eventPhotos,
- guestGuidelines,
+ title: form.title,
+ description: form.description,
+ date: form.date,
+ location: form.location,
+ reminderFrequency: form.reminderFrequency,
+ latitude: form.latitude,
+ longitude: form.longitude,
+ roomId: form.roomId,
+ isPublic: form.isPublic,
+ ticketingEnabled: form.ticketingEnabled,
+ ticketPriceFc: form.ticketPriceFc,
+ ticketsTotal: form.ticketsTotal,
+ photos: form.photos,
+ guestGuidelines: form.guestGuidelines,
+ eventKind: form.eventKind,
+ clientName: form.clientName,
+ endsAt: form.endsAt,
+ estimatedGuests: form.estimatedGuests,
+ dayOfContactName: form.dayOfContactName,
+ dayOfContactPhone: form.dayOfContactPhone,
  };
 
  if (editingEventId) {
  const savedEvent: EventItem = await api.put(`/events/${editingEventId}`, payload);
- if (eventFormTemplateId) {
- await syncEventRsvpForm(savedEvent.id, eventFormTemplateId, eventTitle);
+ if (form.formTemplateId) {
+ await syncEventRsvpForm(savedEvent.id, form.formTemplateId, form.title);
  }
  setSuccess('Événement mis à jour avec succès !');
  if (selectedEvent?.id === editingEventId) {
  setSelectedEvent((prev) => (prev ? { ...prev, ...savedEvent } : prev));
+ setGuestGuidelines(normalizeGuestGuidelines(savedEvent.guestGuidelines));
  }
- if (openTablePlanAfterSave) {
+ if (form.openTablePlanAfterSave) {
  setShowEventModal(false);
  resetEventForm();
  loadEvents();
@@ -1109,20 +908,20 @@ Merci de confirmer votre présence :
  } else {
  const savedEvent: EventItem = await api.post('/events', {
  ...payload,
- importRoomLayout: Boolean(eventRoomId),
+ importRoomLayout: form.importRoomLayout,
  });
- if (eventFormTemplateId) {
- await syncEventRsvpForm(savedEvent.id, eventFormTemplateId, eventTitle);
+ if (form.formTemplateId) {
+ await syncEventRsvpForm(savedEvent.id, form.formTemplateId, form.title);
  }
  const importedPlan = savedEvent.tablePlan?.tables?.length;
  setSuccess(
  importedPlan
  ? 'Événement créé et plan de table importé depuis la salle.'
- : eventFormTemplateId
+ : form.formTemplateId
  ? 'Événement créé avec le formulaire RSVP.'
  : 'Événement créé avec succès !'
  );
- if (openTablePlanAfterSave) {
+ if (form.openTablePlanAfterSave) {
  setShowEventModal(false);
  resetEventForm();
  loadEvents();
@@ -1147,27 +946,7 @@ Merci de confirmer votre présence :
  };
 
  const handleEditEventClick = (event: EventItem) => {
- setEventTitle(event.title);
- setEventDescription(event.description || '');
- setEventDate(new Date(event.date).toISOString().slice(0, 16));
- setEventLocation(event.location);
- setEventReminderFrequency(event.reminderFrequency || 'NONE');
- setEventLatitude(event.latitude !== undefined && event.latitude !== null ? event.latitude.toString() : '');
- setEventLongitude(event.longitude !== undefined && event.longitude !== null ? event.longitude.toString() : '');
- setEventIsPublic(Boolean(event.isPublic));
- setEventTicketing(Boolean(event.ticketingEnabled));
- setEventTicketPrice(event.ticketPriceFc != null && event.ticketPriceFc > 0 ? String(event.ticketPriceFc) : '');
- setEventTicketsTotal(event.ticketsTotal != null ? String(event.ticketsTotal) : '');
- setEventPhotos(Array.isArray(event.photos) ? event.photos.filter((u): u is string => typeof u === 'string') : []);
- setEventRoomId(event.roomId || event.room?.id || '');
- setGuestGuidelines(normalizeGuestGuidelines(event.guestGuidelines));
- setEditingEventId(event.id);
- setEventMapOpen(
- event.latitude !== undefined && event.latitude !== null &&
- event.longitude !== undefined && event.longitude !== null,
- );
- setSearchError('');
- setEventExtrasOpen(true);
+ setEventFormTarget(event);
  setShowEventModal(true);
  };
 
@@ -3119,420 +2898,23 @@ Merci de confirmer votre présence :
  {/* MODALS */}
 
  {/* Event Modal */}
- <Modal
+ <EventConfigForm
  open={showEventModal}
  onClose={() => setShowEventModal(false)}
- title={editingEventId ? 'Configurer l’événement' : 'Nouvel événement'}
- description="Renseignez l’essentiel. La carte GPS est optionnelle."
- size="lg"
- footer={
- <div className="flex w-full justify-end gap-2">
- <Button type="button" variant="secondary" size="sm" onClick={() => setShowEventModal(false)}>
- Annuler
- </Button>
- <Button
- type="submit"
- form="event-config-form"
- size="sm"
- loading={savingEvent}
- disabled={!editingEventId && eventsAtLimit}
- title={!editingEventId && eventsQuotaMsg ? eventsQuotaMsg : undefined}
- >
- Enregistrer
- </Button>
- </div>
- }
- >
- <form id="event-config-form" onSubmit={handleCreateOrUpdateEvent} className="space-y-5">
- <section className="space-y-3">
- <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted">Essentiel</h4>
- <Input
- label="Titre"
- value={eventTitle}
- onChange={(e) => setEventTitle(e.target.value)}
- placeholder="ex. Mariage de Claire & Alexandre"
- required
- />
- <label className="block space-y-1.5">
- <span className="block text-xs font-semibold text-muted dark:text-muted">Description</span>
- <textarea
- value={eventDesc}
- onChange={(e) => setEventDescription(e.target.value)}
- placeholder="Optionnel — ambiance, précisions générales…"
- rows={2}
- className="w-full px-3.5 py-2.5 bg-surface-muted dark:bg-background border border-border dark:border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary resize-none"
- />
- </label>
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
- <Input
- label="Date & heure"
- type="datetime-local"
- value={eventDate}
- onChange={(e) => setEventDate(e.target.value)}
- required
- />
- <Input
- label="Lieu"
- value={eventLoc}
- onChange={(e) => setEventLocation(e.target.value)}
- placeholder="ex. Hôtel Fleuve Congo"
- required
- leftIcon={<MapPin className="w-4 h-4" />}
- />
- </div>
- </section>
-
- <section className="space-y-3 pt-1 border-t border-border">
- <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted pt-3">Visibilité &amp; billets</h4>
- <div className="flex flex-wrap gap-1.5">
- {[
- { id: false, label: 'Privé — liste d’invités', icon: GlobeLock },
- { id: true, label: 'Public — inscription ouverte', icon: Globe },
- ].map((opt) => (
- <button
- key={String(opt.id)}
- type="button"
- onClick={() => {
- setEventIsPublic(opt.id);
- if (!opt.id) setEventTicketing(false);
- }}
- className={cn(
- 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition',
- eventIsPublic === opt.id
- ? 'bg-foreground text-background border-foreground'
- : 'bg-surface text-muted border-border hover:text-foreground',
- )}
- >
- <opt.icon className="w-3.5 h-3.5" />
- {opt.label}
- </button>
- ))}
- </div>
- <p className="text-[11px] text-muted leading-relaxed">
- {eventIsPublic
- ? 'La fiche sera listée sur le marketplace (grille, liste et carte). Les visiteurs s’inscrivent ou achètent un billet ; ils apparaissent ensuite dans Invités. Placez le pin GPS pour qu’il apparaisse sur la carte.'
- : 'Seules les personnes que vous ajoutez (ou invitez) ont accès via leur lien RSVP.'}
- </p>
- {eventIsPublic && (
- <div className="space-y-3">
- <label className="flex items-center gap-2 text-sm">
- <input
- type="checkbox"
- checked={eventTicketing}
- onChange={(e) => setEventTicketing(e.target.checked)}
- className="rounded border-border"
- />
- <span className="inline-flex items-center gap-1.5 font-medium">
- <Ticket className="w-4 h-4" />
- Billets payants en ligne
- </span>
- </label>
- {eventTicketing && (
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
- <Input
- label="Prix du billet (FC)"
- type="number"
- min={0}
- value={eventTicketPrice}
- onChange={(e) => setEventTicketPrice(e.target.value)}
- placeholder="ex. 25000"
- required
- />
- <Input
- label="Nombre de places (optionnel)"
- type="number"
- min={1}
- value={eventTicketsTotal}
- onChange={(e) => setEventTicketsTotal(e.target.value)}
- placeholder="Illimité"
- />
- </div>
- )}
- {!eventTicketing && (
- <Input
- label="Capacité (optionnel)"
- type="number"
- min={1}
- value={eventTicketsTotal}
- onChange={(e) => setEventTicketsTotal(e.target.value)}
- placeholder="Illimité"
- />
- )}
- <p className="text-[11px] text-muted">
- {eventTicketing
- ? 'Paiement par carte (Stripe). En développement, le paiement est simulé. L’acheteur reçoit le lien RSVP / badge QR.'
- : 'Inscription gratuite : le visiteur renseigne nom et e-mail, puis reçoit son lien RSVP.'}
- </p>
- </div>
- )}
- </section>
-
- <div className="pt-1 border-t border-border">
- <button
- type="button"
- onClick={() => setEventExtrasOpen((v) => !v)}
- className="w-full flex items-center justify-between py-3 text-left"
- >
- <div>
- <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted">Plus d’options</h4>
- <p className="text-xs text-muted mt-0.5">
- Galerie, infos invités, salle, rappels et modèle RSVP
- </p>
- </div>
- <span className={cn(
- 'inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-md border border-border',
- eventExtrasOpen ? 'bg-foreground text-background border-transparent' : 'text-muted',
- )}>
- {eventExtrasOpen ? 'Masquer' : 'Afficher'}
- <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', eventExtrasOpen && 'rotate-180')} />
- </span>
- </button>
- </div>
-
- {eventExtrasOpen && (
- <>
- <section className="space-y-3">
- <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted">Galerie</h4>
- <MarketplaceMediaField urls={eventPhotos} onChange={setEventPhotos} />
- <p className="text-[11px] text-muted leading-relaxed">
- Photos et vidéos affichées sur la fiche publique, le marketplace et la carte si l’événement est public.
- </p>
- </section>
-
- <section className="space-y-3 pt-1 border-t border-border">
- <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted pt-3">Infos invités</h4>
- <p className="text-[11px] text-muted leading-relaxed">
- Dress code, avantages (parking, cadeaux, extras) et notes pratiques. Ils apparaissent sur le portail RSVP et peuvent être insérés dans l’invitation. Vous pourrez affiner dans l’onglet Infos invités.
- </p>
- <EventGuestGuidelinesEditor
- value={guestGuidelines}
- onChange={setGuestGuidelines}
- compact
- />
- </section>
-
- <section className="space-y-3 pt-1 border-t border-border">
- <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted pt-3">Salle & rappels</h4>
- <label className="block space-y-1.5">
- <span className="flex items-center gap-1.5 text-xs font-semibold text-muted dark:text-muted">
- <Building2 className="w-3.5 h-3.5" />
- Salle (optionnel)
- </span>
- <select
- value={eventRoomId}
- onChange={(e) => handleRoomChange(e.target.value)}
- disabled={loadingRooms}
- className="w-full px-3.5 py-2.5 bg-surface-muted dark:bg-background border border-border dark:border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
- >
- <option value="">Aucune — lieu libre</option>
- {orgRooms.map((room) => (
- <option key={room.id} value={room.id}>
- {room.name}
- {room.floor ? ` (${room.floor})` : ''}
- {room.capacity ? ` · ${room.capacity} pl.` : ''}
- </option>
- ))}
- </select>
- <p className="text-[11px] text-muted">
- {orgRooms.length === 0
- ? (
- <>
- Créez des salles dans{' '}
- <Link href="/dashboard/rooms" className="font-semibold text-primary hover:underline">
- Salles
- </Link>
- , ou parcourez le marketplace.
- </>
- )
- : 'Préremplit le lieu et lie le staff de la salle. À la création, le plan 2D de la salle est importé si un modèle existe.'}
- {' '}
- <Link href="/marketplace/salles" className="font-semibold text-primary hover:underline">
- Trouver une salle
- </Link>
- {' · '}
- <Link href="/marketplace/prestataires" className="font-semibold text-primary hover:underline">
- Trouver un prestataire
- </Link>
- </p>
- </label>
- <label className="block space-y-1.5">
- <span className="block text-xs font-semibold text-muted dark:text-muted">Rappels RSVP</span>
- <select
- value={eventReminderFrequency}
- onChange={(e) => setEventReminderFrequency(e.target.value)}
- className="w-full px-3.5 py-2.5 bg-surface-muted dark:bg-background border border-border dark:border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
- >
- <option value="NONE">Pas de rappel automatique</option>
- <option value="DAILY">Chaque jour</option>
- <option value="EVERY_3_DAYS">Tous les 3 jours</option>
- <option value="EVERY_5_DAYS">Tous les 5 jours</option>
- <option value="WEEKLY">Chaque semaine</option>
- </select>
- <p className="text-[11px] text-muted">
- Envoyés aux invités encore « en attente ».
- </p>
- </label>
- </section>
-
- <section className="space-y-3 pt-1 border-t border-border">
- <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted pt-3">Plan de table &amp; formulaire RSVP</h4>
- <p className="text-[11px] text-muted leading-relaxed">
- Associez une salle ci-dessus pour importer son plan 2D à la création. Vous pouvez aussi ouvrir l’éditeur après enregistrement. Le modèle définit les champs du formulaire RSVP (allergies, accompagnants, etc.).
- </p>
- <label className="block space-y-1.5">
- <span className="flex items-center gap-1.5 text-xs font-semibold text-muted">
- <LayoutTemplate className="w-3.5 h-3.5" />
- Modèle de formulaire RSVP
- </span>
- <select
- value={eventFormTemplateId}
- onChange={(e) => setEventFormTemplateId(e.target.value)}
- className="w-full px-3.5 py-2.5 bg-surface-muted dark:bg-background border border-border dark:border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary"
- >
- <option value="">Aucun — je configurerai plus tard</option>
- {templates.map((t) => (
- <option key={t.id} value={t.id}>{t.name}</option>
- ))}
- </select>
- {templates.length === 0 ? (
- <p className="text-[11px] text-muted">
- Aucun modèle pour l’instant. Créez-en un dans{' '}
- <Link href="/dashboard/templates" className="font-semibold text-primary hover:underline">Modèles</Link>
- .
- </p>
- ) : (
- <p className="text-[11px] text-muted">
- Une invitation e-mail sera créée (ou mise à jour) avec ce modèle. Vous pourrez encore modifier le message dans l’onglet Invitations.
- </p>
- )}
- </label>
- {editingEventId ? (
- <Button
- type="button"
- variant="secondary"
- size="sm"
- leftIcon={<LayoutGrid className="w-3.5 h-3.5" />}
- onClick={() => {
- const event = events.find((e) => e.id === editingEventId);
+ initialEvent={eventFormTarget}
+ defaultMode={isB2cPlanId(tenant?.plan || '') ? 'simple' : 'complete'}
+ rooms={orgRooms}
+ loadingRooms={loadingRooms}
+ templates={templates}
+ saving={savingEvent}
+ createDisabled={eventsAtLimit}
+ createDisabledTitle={eventsQuotaMsg || undefined}
+ onSave={handleCreateOrUpdateEvent}
+ onOpenTablePlan={(eventId) => {
+ const event = events.find((item) => item.id === eventId) || eventFormTarget;
  if (event) void openEventTablePlan(event);
  }}
- >
- Ouvrir le plan de table 2D
- </Button>
- ) : (
- <label className="flex items-start gap-2 text-sm">
- <input
- type="checkbox"
- checked={openTablePlanAfterSave}
- onChange={(e) => setOpenTablePlanAfterSave(e.target.checked)}
- className="mt-0.5 rounded border-border"
  />
- <span>
- Ouvrir le plan de table après création
- <span className="block text-[11px] text-muted">Utile si vous n’avez pas de salle liée, pour dessiner les tables à la main.</span>
- </span>
- </label>
- )}
- </section>
- </>
- )}
-
- <section className="pt-1 border-t border-border">
- <button
- type="button"
- onClick={() => setEventMapOpen((v) => !v)}
- className="w-full flex items-center justify-between py-3 text-left"
- >
- <div>
- <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted">Localisation GPS</h4>
- <p className="text-xs text-muted mt-0.5">
- {eventLatitude && eventLongitude
- ? `${eventLatitude}, ${eventLongitude}`
- : 'Optionnel — pin WhatsApp à l’acceptation RSVP, et carte marketplace si l’événement est public'}
- </p>
- </div>
- <span className={cn(
- 'text-xs font-medium px-2.5 py-1 rounded-md border border-border',
- eventMapOpen ? 'bg-foreground text-background border-transparent' : 'text-muted',
- )}>
- {eventMapOpen ? 'Masquer' : 'Afficher'}
- </span>
- </button>
-
- {eventMapOpen && (
- <div className="space-y-3 pb-1">
- <div className="flex items-center justify-end">
- <button
- type="button"
- onClick={searchLocationOnMap}
- disabled={searchingLocation}
- className="text-xs font-medium text-foreground hover:underline inline-flex items-center gap-1 disabled:opacity-50"
- >
- {searchingLocation ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
- Rechercher le lieu saisi
- </button>
- </div>
- {searchError && <p className="text-xs text-rose-600">{searchError}</p>}
- <div
- id="map-picker"
- className="w-full h-48 bg-surface-muted rounded-[var(--radius-card)] border border-border overflow-hidden relative"
- >
- <div className="absolute inset-0 flex items-center justify-center text-muted text-xs">
- Chargement de la carte…
- </div>
- </div>
- <div className="grid grid-cols-2 gap-3">
- <Input
- label="Latitude"
- type="number"
- step="any"
- value={eventLatitude}
- onChange={(e) => {
- setEventLatitude(e.target.value);
- const lat = parseFloat(e.target.value);
- const lng = parseFloat(eventLongitude);
- const L = (window as any).L;
- if (!isNaN(lat) && !isNaN(lng) && L && mapRef.current) {
- mapRef.current.setView([lat, lng]);
- if (markerRef.current) {
- markerRef.current.setLatLng([lat, lng]);
- } else {
- markerRef.current = L.marker([lat, lng], { draggable: true }).addTo(mapRef.current);
- }
- }
- }}
- placeholder="-4.3014"
- />
- <Input
- label="Longitude"
- type="number"
- step="any"
- value={eventLongitude}
- onChange={(e) => {
- setEventLongitude(e.target.value);
- const lat = parseFloat(eventLatitude);
- const lng = parseFloat(e.target.value);
- const L = (window as any).L;
- if (!isNaN(lat) && !isNaN(lng) && L && mapRef.current) {
- mapRef.current.setView([lat, lng]);
- if (markerRef.current) {
- markerRef.current.setLatLng([lat, lng]);
- } else {
- markerRef.current = L.marker([lat, lng], { draggable: true }).addTo(mapRef.current);
- }
- }
- }}
- placeholder="15.3048"
- />
- </div>
- <p className="text-[11px] text-muted">
- Cliquez sur la carte ou faites glisser le marqueur.
- </p>
- </div>
- )}
- </section>
- </form>
- </Modal>
 
  {/* Guest Modal */}
  {showGuestModal && (

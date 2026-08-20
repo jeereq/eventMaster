@@ -221,7 +221,16 @@ model Event {
   title             String
   description       String?
   date              DateTime
+  /** Fin optionnelle (gestionnaire). */
+  endsAt            DateTime?
   location          String
+  /** WEDDING, BIRTHDAY, BAPTISM, CORPORATE, CONFERENCE, GALA, OTHER */
+  eventKind         String?
+  /** Nom du client / dossier (gestionnaire). */
+  clientName        String?
+  estimatedGuests   Int?
+  dayOfContactName  String?
+  dayOfContactPhone String?
   reminderFrequency String?      @default("NONE") // NONE, DAILY, EVERY_3_DAYS, EVERY_5_DAYS, WEEKLY
   latitude          Float?
   longitude         Float?
