@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Inter, Geist_Mono, Fraunces } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
@@ -92,7 +93,9 @@ export default function RootLayout({
                 <BrandFaviconSync />
                 <PWARegister />
                 <MaintenanceOverlay />
-                {children}
+                <Suspense fallback={null}>
+                  {children}
+                </Suspense>
               </ViewPreferencesBridge>
             </AuthProvider>
           </PlatformSiteProvider>

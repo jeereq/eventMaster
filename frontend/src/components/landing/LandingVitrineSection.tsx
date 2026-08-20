@@ -39,7 +39,7 @@ import {
   type LandingTemplate,
 } from '@/config/landingTemplates';
 import { ArrowRight, Building2, Calendar, FileText, KeyRound, Sparkles } from 'lucide-react';
-import { useCatalogueView, CatalogueGridColsToggle, type CatalogueGridCols } from '@/components/CatalogueViewToggle';
+import { useCatalogueGridCols, CatalogueGridColsToggle, type CatalogueGridCols } from '@/components/CatalogueViewToggle';
 import { marketplaceSectionUrl } from '@/lib/share';
 
 type VitrineTab = 'venues' | 'services' | 'rentals' | 'events' | 'templates';
@@ -76,7 +76,7 @@ export default function LandingVitrineSection({
   const [templateCategory, setTemplateCategory] = useState('all');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePageSize('landing-vitrine', 8);
-  const { gridCols, setGridCols } = useCatalogueView();
+  const { gridCols, setGridCols } = useCatalogueGridCols();
   const vitrineCols: CatalogueGridCols = gridCols === 5 ? 4 : gridCols === 2 || gridCols === 3 || gridCols === 4 ? gridCols : 3;
 
   const entity = tab === 'venues' ? 'venue' : tab === 'services' ? 'service' : tab === 'rentals' ? 'rental' : tab === 'events' ? 'event' : 'all';

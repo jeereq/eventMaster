@@ -16,13 +16,8 @@ function parseViewParam(value: string | null): CatalogueViewMode | null {
 
 export type CatalogueGridCols = 2 | 3 | 4 | 5;
 
-export function useCatalogueView(defaultMode: CatalogueViewMode = 'grid') {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
-  const urlView = parseViewParam(searchParams.get('view'));
-  const [mode, setMode] = useState<CatalogueViewMode>(urlView || defaultMode);
-  const [gridCols, setGridColsState] = useState<CatalogueGridCols>(4);
+export function useCatalogueGridCols(defaultCols: CatalogueGridCols = 4) {
+  const [gridCols, setGridColsState] = useState<CatalogueGridCols>(defaultCols);
 
   useEffect(() => {
     try {
@@ -31,6 +26,29 @@ export function useCatalogueView(defaultMode: CatalogueViewMode = 'grid') {
     } catch {
       /* ignore */
     }
+  }, []);
+
+  const setGridCols = (next: CatalogueGridCols) => {
+    setGridColsState(next);
+    try {
+      localStorage.setItem(COLS_KEY, String(next));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  return { gridCols, setGridCols };
+}
+
+export function useCatalogueView(defaultMode: CatalogueViewMode = 'grid') {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const urlView = parseViewParam(searchParams.get('view'));
+  const [mode, setMode] = useState<CatalogueViewMode>(urlView || defaultMode);
+  const { gridCols, setGridCols } = useCatalogueGridCols();
+
+  useEffect(() => {
     if (urlView) {
       setMode(urlView);
       try {
@@ -65,15 +83,6 @@ export function useCatalogueView(defaultMode: CatalogueViewMode = 'grid') {
     const current = searchParams.toString() ? `${pathname}?${searchParams.toString()}` : pathname;
     if (href === current) return;
     router.replace(href, { scroll: false });
-  };
-
-  const setGridCols = (next: CatalogueGridCols) => {
-    setGridColsState(next);
-    try {
-      localStorage.setItem(COLS_KEY, String(next));
-    } catch {
-      /* ignore */
-    }
   };
 
   return { mode, setView, gridCols, setGridCols };
