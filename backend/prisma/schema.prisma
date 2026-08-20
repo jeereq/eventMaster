@@ -197,6 +197,8 @@ model User {
   legalAcceptances LegalAcceptance[]
   eventStaff     EventStaff[]
   roomStaff      RoomStaff[]
+  assignedEventTasks EventTask[] @relation("EventTaskAssignee")
+  createdEventTasks  EventTask[] @relation("EventTaskCreator")
   guestCheckIns  Guest[]   @relation("GuestCheckIns")
   guestSeatVerifications Guest[] @relation("GuestSeatVerifications")
   protocolNotes  GuestProtocolNote[]
@@ -247,6 +249,7 @@ model Event {
   shares      GuestShare[]
   posts       EventPost[]
   staff       EventStaff[]
+  tasks       EventTask[]
   marketplaceInquiries MarketplaceInquiry[]
   marketplaceBookings MarketplaceBooking[]
   ticketOrders TicketOrder[]
@@ -748,6 +751,34 @@ model EventStaff {
 
   @@unique([eventId, userId])
   @@index([userId])
+}
+
+enum EventTaskStatus {
+  OPEN
+  DONE
+  CANCELLED
+}
+
+model EventTask {
+  id           String          @id @default(uuid())
+  eventId      String
+  event        Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  title        String
+  notes        String?
+  status       EventTaskStatus @default(OPEN)
+  dueAt        DateTime?
+  assigneeId   String?
+  assignee     User?           @relation("EventTaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdById  String
+  createdBy    User            @relation("EventTaskCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  sourceKey    String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  completedAt  DateTime?
+
+  @@unique([eventId, sourceKey])
+  @@index([eventId, status])
+  @@index([assigneeId, status])
 }
 
 model PlatformNotification {

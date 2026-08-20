@@ -18,6 +18,8 @@ import TablePlanner from './TablePlanner';
 import EventStaffPanel from './EventStaffPanel';
 import EventFeedManager from './EventFeedManager';
 import GuestProtocolPanel from './GuestProtocolPanel';
+import EventTaskPanel from '@/components/EventTaskPanel';
+import EventTaskInbox from '@/components/EventTaskInbox';
 import EventGuestGuidelinesEditor from '@/components/EventGuestGuidelinesEditor';
 import EventWorkflowPanel from '@/components/EventWorkflowPanel';
 import MarketplaceMediaField from '@/components/MarketplaceMediaField';
@@ -627,9 +629,10 @@ export default function EventsPage() {
 
  useEffect(() => {
  if (protocolDesk && selectedEvent) {
- setActiveTab('protocol');
+ const tab = searchParams.get('tab');
+ setActiveTab(tab === 'tasks' ? 'tasks' : 'protocol');
  }
- }, [protocolDesk, selectedEvent?.id]);
+ }, [protocolDesk, selectedEvent?.id, searchParams]);
 
  const filteredEventsList = events.filter((event) => {
  const q = eventSearch.trim().toLowerCase();
@@ -1276,7 +1279,7 @@ Merci de confirmer votre présence :
 
  useEffect(() => {
  const tab = searchParams.get('tab');
- if (isEventWorkspaceTab(tab) && !(protocolDesk && tab !== 'protocol')) {
+ if (isEventWorkspaceTab(tab) && !(protocolDesk && tab !== 'protocol' && tab !== 'tasks')) {
  setActiveTab(tab);
  }
  }, [searchParams, protocolDesk]);
@@ -2036,6 +2039,7 @@ Merci de confirmer votre présence :
  {eventsAtLimit && (
  <PlanLimitCallout kind="events" planQuota={planQuota} planName={tenant?.plan} />
  )}
+ <EventTaskInbox protocol={protocolDesk} />
  {events.length === 0 && !protocolDesk && (
  <GettingStartedChecklist hasEvents={false} />
  )}
@@ -2388,6 +2392,7 @@ Merci de confirmer votre présence :
  !isProtocolOnly && { id: 'tablePlan' as const, label: 'Plan de table', icon: LayoutGrid },
  !isProtocolOnly && { id: 'feed' as const, label: 'Feed', icon: MessageSquare },
  { id: 'protocol' as const, label: 'Protocole', icon: ScanLine },
+ { id: 'tasks' as const, label: 'Tâches', icon: ClipboardList },
  !isProtocolOnly && { id: 'staff' as const, label: 'Équipe', icon: Users },
  ].filter(Boolean) as Array<{ id: EventWorkspaceTab; label: string; icon: React.ComponentType<{ className?: string }> }>).map(({ id, label, icon: Icon }) => {
  const locked = id === 'protocol' && protocolLocked;
@@ -3091,6 +3096,10 @@ Merci de confirmer votre présence :
  {/* Tab Content: Feed & Shares */}
  {activeTab === 'staff' && selectedEvent && (
  <EventStaffPanel eventId={selectedEvent.id} />
+ )}
+
+ {activeTab === 'tasks' && selectedEvent && (
+ <EventTaskPanel eventId={selectedEvent.id} />
  )}
 
  {activeTab === 'feed' && (

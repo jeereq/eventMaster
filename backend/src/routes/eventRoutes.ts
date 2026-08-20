@@ -1,6 +1,14 @@
 import { Router } from 'express';
 import { getEvents, createEvent, getEventById, updateEvent, deleteEvent, importRoomLayout, listEventTicketOrders } from '../controllers/eventController';
 import { getEventStaff, assignEventStaff, removeEventStaff } from '../controllers/eventStaffController';
+import {
+  listMyEventTasks,
+  listEventTasks,
+  createEventTask,
+  seedEventTasks,
+  updateEventTask,
+  deleteEventTask,
+} from '../controllers/eventTaskController';
 import { getGuests, createGuest, updateGuest, deleteGuest, importGuests } from '../controllers/guestController';
 import {
   scanGuest,
@@ -23,6 +31,7 @@ router.use(requireActiveLicense);
 // Events CRUD
 router.get('/', getEvents);
 router.post('/', createEvent);
+router.get('/tasks/inbox', listMyEventTasks);
 router.get('/:id', getEventById);
 router.put('/:id', updateEvent);
 router.post('/:id/import-room-layout', importRoomLayout);
@@ -33,6 +42,13 @@ router.get('/:eventId/ticket-orders', listEventTicketOrders);
 router.get('/:eventId/staff', getEventStaff);
 router.post('/:eventId/staff', assignEventStaff);
 router.delete('/:eventId/staff/:userId', removeEventStaff);
+
+// Event tasks (checklist opérationnelle — distincte de EventStaff)
+router.get('/:eventId/tasks', listEventTasks);
+router.post('/:eventId/tasks', createEventTask);
+router.post('/:eventId/tasks/seed', seedEventTasks);
+router.patch('/:eventId/tasks/:taskId', updateEventTask);
+router.delete('/:eventId/tasks/:taskId', deleteEventTask);
 
 // Guests related to Events
 router.get('/:eventId/guests', getGuests);

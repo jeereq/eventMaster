@@ -6,7 +6,8 @@ export type EventWorkspaceTab =
   | 'tablePlan'
   | 'staff'
   | 'protocol'
-  | 'prep';
+  | 'prep'
+  | 'tasks';
 
 export const EVENT_WORKSPACE_TABS: EventWorkspaceTab[] = [
   'prep',
@@ -16,6 +17,7 @@ export const EVENT_WORKSPACE_TABS: EventWorkspaceTab[] = [
   'tablePlan',
   'feed',
   'protocol',
+  'tasks',
   'staff',
 ];
 

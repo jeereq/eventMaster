@@ -60,6 +60,7 @@ async function clearDatabase() {
   await prisma.eventComment.deleteMany({});
   await prisma.eventPost.deleteMany({});
   await prisma.guestShare.deleteMany({});
+  await prisma.eventTask.deleteMany({});
   await prisma.eventStaff.deleteMany({});
   await prisma.roomStaff.deleteMany({});
   await prisma.invitation.deleteMany({});
