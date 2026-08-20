@@ -97,7 +97,7 @@ export default function ProductTourOverlay() {
           </div>
           <button
             type="button"
-            onClick={stopTour}
+            onClick={() => stopTour('abort')}
             className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition shrink-0"
             aria-label="Quitter la visite"
           >
