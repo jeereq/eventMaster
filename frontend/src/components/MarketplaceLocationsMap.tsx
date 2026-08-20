@@ -12,7 +12,7 @@ import {
   type DrivingRoute,
 } from '@/lib/osrm';
 import { findRdcCity, cityForPoint, leafletMaxBounds, nominatimViewbox, pointInAllowedRdcCities, pointInBounds } from '@/lib/rdcCities';
-import { formatDistanceKm, haversineKm, isVideoUrl, catalogueKindChipLabel, catalogueKindFilterLabel, catalogueKindHint, catalogueKindLabel } from '@/lib/marketplace';
+import { formatDistanceKm, haversineKm, isVideoUrl, catalogueKindFilterLabel, catalogueKindHint, catalogueKindLabel } from '@/lib/marketplace';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
@@ -86,17 +86,15 @@ const PIN_ARROW_SVG = '<svg class="em-map-marker-arrow" viewBox="0 0 8 5" width=
 function listingIconHtml(kind?: MarketplaceMapKind, coverUrl?: string | null, title?: string, delayMs = 0) {
   const pinClass = kind === 'service' ? 'is-service' : kind === 'rental' ? 'is-rental' : kind === 'event' ? 'is-event' : 'is-venue';
   const icon = kind === 'service' ? SERVICE_ICON_SVG : kind === 'rental' ? RENTAL_ICON_SVG : kind === 'event' ? EVENT_ICON_SVG : VENUE_ICON_SVG;
-  const kindLabel = catalogueKindChipLabel(kind);
-  const chip = `<span class="em-map-marker-chip">${kindLabel}</span>`;
   const caption = title
     ? `<span class="em-map-marker-caption">${escapeAttr(title)}</span>`
     : '';
   const pulse = '<span class="em-map-marker-pulse" aria-hidden="true"></span>';
   const delayStyle = `style="--pin-delay:${Math.max(0, delayMs)}ms"`;
-  if (coverUrl) {
-    return `<span class="em-map-marker-hit em-map-marker-hit-photo" ${delayStyle}>${pulse}${chip}${caption}<span class="em-map-marker-photo-pin ${pinClass}"><span class="em-map-marker-photo-wrap"><span class="em-map-marker-photo-frame"><img class="em-map-marker-photo" src="${escapeAttr(coverUrl)}" alt="" /></span><span class="em-map-marker-photo-badge">${icon}</span></span><span class="em-map-marker-photo-pointer">${PIN_ARROW_SVG}</span></span></span>`;
-  }
-  return `<span class="em-map-marker-hit" ${delayStyle}>${pulse}${chip}${caption}<span class="em-map-marker-inner ${pinClass}"><span class="em-map-marker-head">${icon}</span><span class="em-map-marker-tail">${PIN_ARROW_SVG}</span></span></span>`;
+  const photo = coverUrl
+    ? `<img class="em-map-marker-card-photo" src="${escapeAttr(coverUrl)}" alt="" />`
+    : '';
+  return `<span class="em-map-marker-hit" ${delayStyle}>${pulse}${caption}<span class="em-map-marker-card ${pinClass}${coverUrl ? ' has-photo' : ''}"><span class="em-map-marker-card-face">${photo}<span class="em-map-marker-card-icon">${icon}</span></span><span class="em-map-marker-card-arrow">${PIN_ARROW_SVG}</span></span></span>`;
 }
 
 function hereIconHtml() {
@@ -552,13 +550,12 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
         );
         const layers: any[] = points.map((m, index) => {
           const photoUrl = markerPhotoUrl(m);
-          const hasPhoto = Boolean(photoUrl);
           const leafletMarker = L.marker([m.lat, m.lng], {
             icon: L.divIcon({
-              className: `leaflet-interactive em-map-marker ${markerKindClass(m.kind)}${hasPhoto ? ' has-photo-pin' : ''}`,
+              className: `leaflet-interactive em-map-marker ${markerKindClass(m.kind)}`,
               html: listingIconHtml(m.kind, photoUrl, m.title, Math.min(index, 20) * 45),
-              iconSize: [36, 56],
-              iconAnchor: [18, 52],
+              iconSize: [32, 46],
+              iconAnchor: [16, 44],
             }),
             interactive: true,
             bubblingMouseEvents: false,

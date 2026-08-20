@@ -707,10 +707,8 @@ export function missingPublishLocation(draft: {
 
 export function appendCatalogueGeoParams(params: URLSearchParams, filters: CatalogueGeoState) {
   if (filters.city.trim()) params.set('city', filters.city.trim());
-  if (filters.proximity !== 'near') {
-    if (filters.commune.trim()) params.set('commune', filters.commune.trim());
-    if (filters.neighborhood.trim()) params.set('neighborhood', filters.neighborhood.trim());
-  }
+  if (filters.commune.trim()) params.set('commune', filters.commune.trim());
+  if (filters.neighborhood.trim()) params.set('neighborhood', filters.neighborhood.trim());
   if (filters.street.trim()) params.set('street', filters.street.trim());
   if (filters.minPrice.trim()) params.set('minPrice', filters.minPrice.trim());
   if (filters.maxPrice.trim()) params.set('maxPrice', filters.maxPrice.trim());
@@ -718,10 +716,12 @@ export function appendCatalogueGeoParams(params: URLSearchParams, filters: Catal
   if (filters.maxCapacity.trim()) params.set('maxCapacity', filters.maxCapacity.trim());
   if (filters.availableFrom.trim()) params.set('availableFrom', filters.availableFrom.trim());
   if (filters.availableTo.trim()) params.set('availableTo', filters.availableTo.trim());
+  if (filters.proximity) {
+    params.set('radiusKm', String(clampRadiusKm(filters.radiusKm)));
+  }
   if (filters.proximity && filters.lat != null && filters.lng != null) {
     params.set('lat', String(filters.lat));
     params.set('lng', String(filters.lng));
-    params.set('radiusKm', String(clampRadiusKm(filters.radiusKm)));
   }
 }
 
@@ -731,10 +731,8 @@ export function catalogueGeoChips(
 ): Array<{ id: string; label: string; value: string; tone?: 'venue' | 'service' | 'event' | 'neutral' }> {
   const next: Array<{ id: string; label: string; value: string }> = [];
   if (filters.city.trim()) next.push({ id: 'city', label: 'Ville', value: filters.city.trim() });
-  if (filters.proximity !== 'near') {
-    if (filters.commune.trim()) next.push({ id: 'commune', label: 'Commune', value: filters.commune.trim() });
-    if (filters.neighborhood.trim()) next.push({ id: 'neighborhood', label: 'Quartier', value: filters.neighborhood.trim() });
-  }
+  if (filters.commune.trim()) next.push({ id: 'commune', label: 'Commune', value: filters.commune.trim() });
+  if (filters.neighborhood.trim()) next.push({ id: 'neighborhood', label: 'Quartier', value: filters.neighborhood.trim() });
   if (filters.street.trim()) next.push({ id: 'street', label: 'Avenue', value: filters.street.trim() });
   if (filters.minPrice.trim()) next.push({ id: 'minPrice', label: 'Prix min', value: `${filters.minPrice.trim()} FC` });
   if (filters.maxPrice.trim()) next.push({ id: 'maxPrice', label: 'Prix max', value: `${filters.maxPrice.trim()} FC` });
@@ -753,11 +751,7 @@ export function catalogueGeoChips(
   if (filters.proximity === 'around') {
     next.push({ id: 'proximity', label: 'Autour de moi', value: `${filters.radiusKm} km` });
   } else if (filters.proximity === 'near') {
-    next.push({
-      id: 'proximity',
-      label: 'Près de',
-      value: [filters.neighborhood.trim(), filters.commune.trim(), `${filters.radiusKm} km`].filter(Boolean).join(' · '),
-    });
+    next.push({ id: 'proximity', label: 'Rayon', value: `${filters.radiusKm} km` });
   }
   return [...next, ...extra];
 }
