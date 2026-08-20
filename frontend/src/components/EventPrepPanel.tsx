@@ -51,6 +51,7 @@ import {
   splitEventPrepVendors,
   type EventPrep,
   type EventPrepVendor,
+  type EventPrepVendorGroup,
   type EventPrepVenue,
 } from '@/lib/eventPrep';
 import { seedBriefFromEvent, type SavedEventPack } from '@/lib/eventPlan';
@@ -58,6 +59,7 @@ import EventPrepListingModal, {
   type EventPrepListingView,
   type EventPrepPreviewTarget,
 } from '@/components/EventPrepListingModal';
+import EventPrepVendorSheet from '@/components/EventPrepVendorSheet';
 import EventPrepAiSimulator from '@/components/EventPrepAiSimulator';
 
 type OrgRoomOption = {
@@ -105,6 +107,7 @@ function venueFromPublic(venue: PublicVenue): EventPrepVenue {
     address: venue.address,
     coverUrl: venue.coverUrl,
     orgName: venue.orgName,
+    orgSlug: venue.orgSlug || null,
     priceFromFc: venue.priceFromFc,
     capacity: venue.capacity,
   };
@@ -119,6 +122,7 @@ function vendorFromPublic(service: PublicService): EventPrepVendor {
     city: service.city,
     coverUrl: service.coverUrl,
     orgName: service.orgName,
+    orgSlug: service.orgSlug || null,
     priceFromFc: service.priceFromFc,
   };
 }
@@ -549,6 +553,7 @@ export default function EventPrepPanel({
   const [lane, setLane] = useState<PrepLaneId>('venue');
   const [preview, setPreview] = useState<EventPrepPreviewTarget | null>(null);
   const [previewView, setPreviewView] = useState<EventPrepListingView>('details');
+  const [vendorSheet, setVendorSheet] = useState<EventPrepVendorGroup | null>(null);
   const [savedPacks, setSavedPacks] = useState<SavedEventPack[]>([]);
   const [inquiries, setInquiries] = useState<MarketplaceInquiryItem[]>([]);
   const [bookings, setBookings] = useState<MarketplaceBookingItem[]>([]);
@@ -576,6 +581,7 @@ export default function EventPrepPanel({
     setLane('venue');
     setPreview(null);
     setPreviewView('details');
+    setVendorSheet(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventId]);
 
@@ -869,7 +875,7 @@ export default function EventPrepPanel({
             ))}
           </RetainedColumn>
         </div>
-        {vendorGroups.some((group) => (group.venue ? 1 : 0) + group.vendors.length > 1) || vendorGroups.length > 1 ? (
+        {vendorGroups.length > 0 ? (
           <div className="mt-4 space-y-2">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Par prestataire</p>
             <ul className="space-y-2">
@@ -894,9 +900,28 @@ export default function EventPrepPanel({
                     price: vendor.priceFromFc,
                   })),
                 ];
+                const pipelines = offers.map((offer) => pipelineFor(offer.slug, offer.kind));
+                const missing = pipelines.filter((item) => item.stage === 'none').length;
+                const booked = pipelines.filter((item) => item.stage === 'booking').length;
                 return (
-                  <li key={group.orgName} className="rounded-[var(--radius-card)] border border-border px-3 py-2 space-y-1.5">
-                    <p className="text-sm font-semibold truncate">{group.orgName}</p>
+                  <li key={group.key} className="rounded-[var(--radius-card)] border border-border px-3 py-2 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setVendorSheet(group)}
+                        className="min-w-0 text-left"
+                      >
+                        <p className="text-sm font-semibold truncate">{group.orgName}</p>
+                        <p className="text-[11px] text-muted">
+                          {offers.length} offre{offers.length > 1 ? 's' : ''}
+                          {booked ? ` · ${booked} résa` : ''}
+                          {missing ? ` · ${missing} sans devis` : ''}
+                        </p>
+                      </button>
+                      <Button size="sm" variant="secondary" onClick={() => setVendorSheet(group)}>
+                        Fiche
+                      </Button>
+                    </div>
                     {offers.map((offer) => {
                       const pipeline = pipelineFor(offer.slug, offer.kind);
                       return (
@@ -1097,6 +1122,26 @@ export default function EventPrepPanel({
           if (!preview) return;
           if (preview.kind === 'venue') void persist({ ...prep, venue: null });
           else removeVendor(preview.slug);
+        }}
+        onPipelineChange={() => void reloadPipeline()}
+      />
+      <EventPrepVendorSheet
+        group={vendorSheet}
+        eventId={eventId}
+        eventTitle={eventTitle}
+        dateKey={dateKey}
+        guestCount={guestCount}
+        inquiries={inquiries}
+        bookings={bookings}
+        onClose={() => setVendorSheet(null)}
+        onOpenListing={(target, view) => {
+          if (target.kind === 'venue') setLane('venue');
+          else {
+            const vendor = prep.vendors.find((item) => item.slug === target.slug);
+            setLane(vendor?.category.startsWith('RENTAL_') ? 'rental' : 'trade');
+          }
+          setVendorSheet(null);
+          openPreview(target, view);
         }}
         onPipelineChange={() => void reloadPipeline()}
       />

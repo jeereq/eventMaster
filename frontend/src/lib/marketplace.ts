@@ -46,6 +46,7 @@ export interface PublicVenue {
   coverUrl: string | null;
   publishedAt: string | null;
   orgName: string;
+  orgSlug?: string | null;
   orgCity: string | null;
   layoutPreview?: unknown | null;
   blockedDates?: string[];
@@ -309,6 +310,7 @@ export interface MarketplaceInquiryItem {
   bookingId?: string | null;
   bookingStatus?: MarketplaceBookingStatus | null;
   vendorName?: string | null;
+  vendorSlug?: string | null;
   listingSlug?: string | null;
   offeringSlug?: string | null;
   offeringCategory?: string | null;
@@ -376,6 +378,7 @@ export interface MarketplaceBookingItem {
   vendorTenantId: string;
   organizerTenantId: string | null;
   vendorName: string;
+  vendorSlug?: string | null;
   organizerName: string | null;
   eventDate: string;
   eventEndDate?: string | null;
@@ -511,6 +514,35 @@ export function matchPrepListingPipeline(
 export function prepListingCanBook(priceFromFc?: number | null, pipeline?: PrepListingPipeline | null): boolean {
   if (priceFromFc == null || !Number.isFinite(priceFromFc) || priceFromFc < 0) return false;
   return pipeline?.stage !== 'booking';
+}
+
+export function vendorMatchesPrepGroup(
+  item: { vendorSlug?: string | null; vendorName?: string | null },
+  group: { orgSlug?: string | null; orgName: string },
+): boolean {
+  if (group.orgSlug && item.vendorSlug) return item.vendorSlug === group.orgSlug;
+  const name = (item.vendorName || '').trim().toLowerCase();
+  return Boolean(name) && name === group.orgName.trim().toLowerCase();
+}
+
+export function extraPrepVendorItems(
+  group: { orgSlug?: string | null; orgName: string },
+  retainedSlugs: Set<string>,
+  inquiries: MarketplaceInquiryItem[],
+  bookings: MarketplaceBookingItem[],
+): { inquiries: MarketplaceInquiryItem[]; bookings: MarketplaceBookingItem[] } {
+  return {
+    inquiries: inquiries.filter((item) => {
+      const slug = item.listingSlug || item.offeringSlug;
+      if (!slug || retainedSlugs.has(slug) || item.hasBooking) return false;
+      return vendorMatchesPrepGroup(item, group);
+    }),
+    bookings: bookings.filter((item) => {
+      const slug = item.listingSlug || item.offeringSlug;
+      if (!slug || retainedSlugs.has(slug) || item.status === 'CANCELLED') return false;
+      return vendorMatchesPrepGroup(item, group);
+    }),
+  };
 }
 
 export function parseBlockedDates(input: unknown): string[] {

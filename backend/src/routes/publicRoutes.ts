@@ -16,6 +16,7 @@ import {
   createVenueInquiry,
   listPublicServices,
   getPublicService,
+  getPublicVendor,
   createServiceInquiry,
 } from '../controllers/marketplaceController';
 import {
@@ -94,6 +95,7 @@ router.post('/venues/:slug/inquire', optionalAuth, createVenueInquiry);
 router.get('/services', listPublicServices);
 router.get('/services/:slug', optionalAuth, getPublicService);
 router.post('/services/:slug/inquire', optionalAuth, createServiceInquiry);
+router.get('/vendors/:slug', getPublicVendor);
 router.get('/events', listPublicEvents);
 router.get('/events/:slug', getPublicEvent);
 router.post('/events/:slug/checkout', optionalAuth, checkoutPublicEvent);

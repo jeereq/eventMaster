@@ -77,7 +77,7 @@ function toPublicVenue(listing: {
   tenant: {
     name: string;
     branding: unknown;
-    vendorProfile: { displayName: string; city: string | null } | null;
+    vendorProfile: { displayName: string; city: string | null; slug?: string | null } | null;
   };
   bookings?: Array<{ eventDate: Date; eventEndDate?: Date | null }>;
   details?: unknown;
@@ -107,6 +107,7 @@ function toPublicVenue(listing: {
     coverUrl: coverFromMedia(photos),
     publishedAt: listing.publishedAt,
     orgName: listing.tenant.vendorProfile?.displayName || listing.tenant.name,
+    orgSlug: listing.tenant.vendorProfile?.slug || null,
     orgCity: listing.tenant.vendorProfile?.city || listing.city,
     layoutPreview: sanitizeLayoutBlueprint(listing.room.layoutBlueprint),
     blockedDates: parseBlockedDates(listing.blockedDates),
@@ -252,7 +253,7 @@ const listingInclude = {
     select: {
       name: true,
       branding: true,
-      vendorProfile: { select: { displayName: true, city: true } },
+      vendorProfile: { select: { displayName: true, city: true, slug: true } },
     },
   },
   bookings: {
@@ -766,6 +767,27 @@ export async function getPublicService(req: Request, res: Response) {
   }
 }
 
+export async function getPublicVendor(req: Request, res: Response) {
+  try {
+    const slug = String(req.params.slug || '').trim();
+    if (!slug) return res.status(400).json({ error: 'Slug requis.' });
+    const profile = await prisma.vendorProfile.findUnique({
+      where: { slug },
+      select: {
+        slug: true,
+        displayName: true,
+        city: true,
+        bio: true,
+      },
+    });
+    if (!profile) return res.status(404).json({ error: 'Prestataire introuvable.' });
+    return res.json(profile);
+  } catch (error) {
+    console.error('getPublicVendor:', error);
+    return res.status(500).json({ error: 'Impossible de charger le prestataire.' });
+  }
+}
+
 async function notifyInquiry(params: {
   ownerOrgName: string;
   subjectTitle: string;
@@ -1071,7 +1093,7 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
             slug: true,
             headline: true,
             room: { select: { name: true } },
-            tenant: { select: { name: true } },
+            tenant: { select: { name: true, vendorProfile: { select: { slug: true, displayName: true } } } },
           },
         },
         offering: {
@@ -1080,6 +1102,7 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
             title: true,
             category: true,
             tenant: { select: { name: true } },
+            vendorProfile: { select: { slug: true, displayName: true } },
           },
         },
         event: { select: { id: true, title: true, date: true } },
@@ -1119,7 +1142,13 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
           hasBooking: Boolean(booking),
           bookingId: booking?.id || null,
           bookingStatus: booking?.status || null,
-          vendorName: item.offering?.tenant.name || item.listing?.tenant.name || null,
+          vendorName:
+            item.offering?.vendorProfile?.displayName
+            || item.offering?.tenant.name
+            || item.listing?.tenant.vendorProfile?.displayName
+            || item.listing?.tenant.name
+            || null,
+          vendorSlug: item.offering?.vendorProfile?.slug || item.listing?.tenant.vendorProfile?.slug || null,
           listingSlug: item.listing?.slug || null,
           offeringSlug: item.offering?.slug || null,
           offeringCategory: item.offering?.category || null,

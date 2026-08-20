@@ -6,6 +6,7 @@ export type EventPrepVenue = {
   address?: string | null;
   coverUrl?: string | null;
   orgName?: string | null;
+  orgSlug?: string | null;
   priceFromFc?: number | null;
   capacity?: number | null;
 };
@@ -18,6 +19,7 @@ export type EventPrepVendor = {
   city?: string | null;
   coverUrl?: string | null;
   orgName?: string | null;
+  orgSlug?: string | null;
   priceFromFc?: number | null;
 };
 
@@ -63,6 +65,7 @@ function parseVenue(raw: unknown): EventPrepVenue | null {
     address: asString(row?.address) || null,
     coverUrl: asString(row?.coverUrl) || null,
     orgName: asString(row?.orgName) || null,
+    orgSlug: asString(row?.orgSlug) || null,
     priceFromFc: asNumber(row?.priceFromFc),
     capacity: asNumber(row?.capacity),
   };
@@ -81,6 +84,7 @@ function parseVendor(raw: unknown): EventPrepVendor | null {
     city: asString(row?.city) || null,
     coverUrl: asString(row?.coverUrl) || null,
     orgName: asString(row?.orgName) || null,
+    orgSlug: asString(row?.orgSlug) || null,
     priceFromFc: asNumber(row?.priceFromFc),
   };
 }
@@ -122,23 +126,38 @@ export function splitEventPrepVendors(vendors: EventPrepVendor[]): {
 }
 
 export type EventPrepVendorGroup = {
+  key: string;
   orgName: string;
+  orgSlug: string | null;
   venue: EventPrepVenue | null;
   vendors: EventPrepVendor[];
 };
 
+export function eventPrepVendorKey(item: { orgSlug?: string | null; orgName?: string | null }): string {
+  return (item.orgSlug || '').trim() || (item.orgName || '').trim() || 'Sans enseigne';
+}
+
 export function groupEventPrepByVendor(prep: EventPrep): EventPrepVendorGroup[] {
   const map = new Map<string, EventPrepVendorGroup>();
-  const keyOf = (name?: string | null) => (name || '').trim() || 'Sans enseigne';
+  const upsert = (item: { orgSlug?: string | null; orgName?: string | null }) => {
+    const key = eventPrepVendorKey(item);
+    const existing = map.get(key);
+    if (existing) return existing;
+    const created: EventPrepVendorGroup = {
+      key,
+      orgName: (item.orgName || '').trim() || 'Sans enseigne',
+      orgSlug: (item.orgSlug || '').trim() || null,
+      venue: null,
+      vendors: [],
+    };
+    map.set(key, created);
+    return created;
+  };
   if (prep.venue) {
-    const key = keyOf(prep.venue.orgName);
-    map.set(key, { orgName: key, venue: prep.venue, vendors: [] });
+    upsert(prep.venue).venue = prep.venue;
   }
   for (const vendor of prep.vendors) {
-    const key = keyOf(vendor.orgName);
-    const existing = map.get(key);
-    if (existing) existing.vendors.push(vendor);
-    else map.set(key, { orgName: key, venue: null, vendors: [vendor] });
+    upsert(vendor).vendors.push(vendor);
   }
   return [...map.values()];
 }
