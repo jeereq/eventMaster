@@ -34,7 +34,7 @@ export default function StairsUserGuide({
 
       {open ? (
         <div className="px-3 pb-3 space-y-3 border-t border-sky-200/60">
-          <p className="text-[11px] text-sky-950/80 leading-relaxed pt-2">{STAIRS_USER_GUIDE.intro}</p>
+          <p className="text-[11px] text-sky-950/80 leading-relaxed pt-2 whitespace-pre-line">{STAIRS_USER_GUIDE.intro}</p>
 
           <div className="space-y-1.5">
             {STAIRS_USER_GUIDE.sections.map((section) => {

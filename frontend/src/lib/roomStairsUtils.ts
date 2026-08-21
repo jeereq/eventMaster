@@ -191,12 +191,13 @@ export const STAIRS_USER_GUIDE: {
 } = {
   title: 'Guide — Escaliers entre étages',
   intro:
-    'Un escalier relie deux niveaux du bâtiment. Le système calcule automatiquement la hauteur, le nombre de marches et la longueur de course pour rejoindre l’étage d’arrivée.',
+    'Un escalier relie deux niveaux du bâtiment. Le système calcule automatiquement la hauteur, le nombre de marches et la longueur de course pour rejoindre l’étage d’arrivée.\n\nAbonnement : escaliers et balcons exigent le niveau d’éditeur Premium ou Complet (Business Premium, Enterprise, forfaits Salle…). Essentiel = tables seules ; Business = entrées / allées / couloirs uniquement. Voir Facturation et la FAQ « éditeur de salles ».',
   sections: [
     {
       id: 'prereq',
       title: 'Avant de commencer',
       steps: [
+        'Vérifiez votre forfait : Facturation doit afficher éditeur Premium ou Complet (thèmes / fixtures activés). Sinon, passez à Business Premium ou équivalent.',
         'Créez au moins deux étages (modèle Duplex / Villa, ou bouton + Étage).',
         'Sélectionnez l’étage de départ dans la barre « Étage » (ex. RDC).',
         'Activez « Empiler » pour vérifier le résultat en 3D.',
@@ -238,5 +239,6 @@ export const STAIRS_USER_GUIDE: {
     'Sur un Triplex, un escalier relie RDC→1er et un autre 1er→2e (un par liaison).',
     'Si l’arrivée est trop raide, choisissez le style Droit (pas Compact) puis recalibrez.',
     'Supprimer un étage retire aussi les escaliers qui y étaient liés.',
+    'Sur Business (standard), les escaliers ne sont pas proposés : passez en Premium pour les débloquer.',
   ],
 };

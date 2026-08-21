@@ -272,11 +272,26 @@ export const USER_GUIDES: UserGuide[] = [
         links: [{ label: 'Marketplace', href: '/dashboard/marketplace' }],
       },
       {
+        id: 'room-editor-plans',
+        title: 'Éditeur de salles selon le forfait',
+        content:
+          'L’éditeur 2D/3D est borné par roomEditorLevel (affiché dans Facturation) :\n1. Essentiel — tables simples uniquement (pas de thèmes ni fixtures).\n2. Business — rangées, grille ; entrées, allées, couloirs.\n3. Premium — thèmes, scène, buffet, zones ; escaliers entre étages et balcons.\n4. Complet — tout le Premium + périmètre, tapis, thèmes et images personnalisés (Enterprise, forfaits Salle).\n5. Duplex / Empiler : structure multi-étages ; créer un escalier ou balcon exige Premium ou Complet.\n6. Pour monter de niveau : Facturation → changer de forfait. Détail aussi dans la FAQ publique.',
+        links: [
+          { label: 'Facturation', href: '/dashboard/billing' },
+          { label: 'Salles', href: '/dashboard/rooms' },
+          { label: 'FAQ', href: '/faq' },
+        ],
+      },
+      {
         id: 'room-stairs',
         title: 'Escaliers entre étages (guide dédié)',
         content:
-          '1. Prérequis : au moins 2 étages (modèle Duplex / Villa, ou + Étage).\n2. Sélectionnez l’étage de départ dans la barre Étage.\n3. Cliquez « Escalier vers… » et choisissez l’étage d’arrivée — hauteur et marches sont calculées.\n4. Sélectionnez l’escalier : définissez arrivée, style (Droit / Ouvert / Compact) et orientation.\n5. Recalibrer si besoin, puis Empiler pour vérifier en 3D.\n6. Dans l’éditeur, ouvrez le panneau « Guide — Escaliers entre étages » pour le détail pas à pas.',
-        links: [{ label: 'Salles', href: '/dashboard/rooms' }],
+          'Abonnement requis : niveau d’éditeur Premium ou Complet (Business Premium, Enterprise, forfaits Salle…). Sur Essentiel ou Business, les boutons Escalier / Balcon sont masqués.\n\n1. Prérequis : au moins 2 étages (modèle Duplex / Villa, ou + Étage).\n2. Sélectionnez l’étage de départ dans la barre Étage.\n3. Cliquez « Escalier vers… » et choisissez l’étage d’arrivée — hauteur et marches sont calculées.\n4. Sélectionnez l’escalier : définissez arrivée, style (Droit / Ouvert / Compact) et orientation.\n5. Recalibrer si besoin, puis Empiler pour vérifier en 3D.\n6. Dans l’éditeur, ouvrez le panneau « Guide — Escaliers entre étages » pour le détail pas à pas.',
+        links: [
+          { label: 'Salles', href: '/dashboard/rooms' },
+          { label: 'Facturation', href: '/dashboard/billing' },
+          { label: 'FAQ éditeur', href: '/faq' },
+        ],
       },
     ],
     tips: [
@@ -284,7 +299,8 @@ export const USER_GUIDES: UserGuide[] = [
       'Les couleurs de l’organisation (Profil) s’appliquent à toute l’équipe ; l’accent personnel du header ne concerne que cet appareil.',
       'Assignez des protocoles org. pour le scan QR web (navigateur) sur tous les événements.',
       'Configurez les salles avant de créer des événements avec plan de table.',
-      'Pour un bâtiment multi-niveaux : modèle Duplex puis guide Escaliers dans Salles.',
+      'Éditeur de salles : Essentiel → tables ; Business → allées ; Premium → escaliers / balcons / thèmes ; Complet → tout + perso. Détail dans le workflow « Éditeur de salles selon le forfait ».',
+      'Pour un bâtiment multi-niveaux : modèle Duplex puis guide Escaliers (Premium+) dans Salles.',
       'La commission marketplace ({commissionPercent} %) est due par le vendeur, distincte de l’abonnement SaaS.',
       'Le paiement annuel facture 12 mois (ou 4 trimestres Particulier) d’un coup, avec −10 % sur ce total. Le cycle est mémorisé : le rappel J-7 et la facture de renouvellement auto reprennent l’annuel.',
       'Les commissions de vos commerciaux org. se versent hors plateforme (Facturation → Versements), avec preuve.',
@@ -336,15 +352,30 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'setup-room',
         title: 'Configurer une salle 2D',
         content:
-          '1. Ouvrez Salles → Créer.\n2. Identité puis type (banquet, conférence…).\n3. Structure & plan : choisissez un modèle d’étages (Plein pied, Duplex, Villa…).\n4. Placez tables et chaises ; peaufinez le plan 3D.\n5. Associez la salle à un événement pour le placement invités.',
+          '1. Ouvrez Salles → Créer.\n2. Identité puis type (banquet, conférence…).\n3. Structure & plan : choisissez un modèle d’étages (Plein pied, Duplex, Villa…).\n4. Placez tables et chaises ; peaufinez le plan 3D.\n5. Associez la salle à un événement pour le placement invités.\n6. Les fonctions avancées (thèmes, escaliers, balcons) dépendent du niveau d’éditeur — voir « Éditeur de salles selon le forfait ».',
         links: [{ label: 'Salles', href: '/dashboard/rooms' }],
+      },
+      {
+        id: 'room-editor-plans',
+        title: 'Éditeur de salles selon le forfait',
+        content:
+          'L’éditeur 2D/3D est borné par le niveau d’éditeur du forfait (Facturation) :\n1. Essentiel — tables simples uniquement (pas de thèmes ni fixtures).\n2. Business — rangées, grille ; entrées, allées, couloirs.\n3. Premium — thèmes, scène, buffet, zones ; escaliers entre étages et balcons.\n4. Complet — tout le Premium + périmètre, tapis, thèmes et images personnalisés (Enterprise, forfaits Salle).\n5. Duplex / Empiler : structure multi-étages ; créer un escalier ou balcon exige Premium ou Complet.\n6. Pour monter de niveau : Facturation → changer de forfait. Même détail dans la FAQ publique.',
+        links: [
+          { label: 'Facturation', href: '/dashboard/billing' },
+          { label: 'Salles', href: '/dashboard/rooms' },
+          { label: 'FAQ', href: '/faq' },
+        ],
       },
       {
         id: 'room-stairs',
         title: 'Escaliers entre étages (guide dédié)',
         content:
-          '1. Prérequis : au moins 2 étages (modèle Duplex / Villa, ou + Étage).\n2. Sélectionnez l’étage de départ dans la barre Étage.\n3. Cliquez « Escalier vers… » et choisissez l’étage d’arrivée — hauteur et marches sont calculées.\n4. Sélectionnez l’escalier : définissez arrivée, style (Droit / Ouvert / Compact) et orientation.\n5. Recalibrer si besoin, puis Empiler pour vérifier en 3D.\n6. Dans l’éditeur, ouvrez le panneau « Guide — Escaliers entre étages » pour le détail pas à pas.',
-        links: [{ label: 'Salles', href: '/dashboard/rooms' }],
+          'Abonnement requis : niveau d’éditeur Premium ou Complet (Business Premium, Enterprise, forfaits Salle…). Sur Essentiel ou Business, les boutons Escalier / Balcon sont masqués.\n\n1. Prérequis : au moins 2 étages (modèle Duplex / Villa, ou + Étage).\n2. Sélectionnez l’étage de départ dans la barre Étage.\n3. Cliquez « Escalier vers… » et choisissez l’étage d’arrivée — hauteur et marches sont calculées.\n4. Sélectionnez l’escalier : définissez arrivée, style (Droit / Ouvert / Compact) et orientation.\n5. Recalibrer si besoin, puis Empiler pour vérifier en 3D.\n6. Dans l’éditeur, ouvrez le panneau « Guide — Escaliers entre étages » pour le détail pas à pas.',
+        links: [
+          { label: 'Salles', href: '/dashboard/rooms' },
+          { label: 'Facturation', href: '/dashboard/billing' },
+          { label: 'FAQ éditeur', href: '/faq' },
+        ],
       },
       {
         id: 'invite-guests',
@@ -365,7 +396,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Respectez le quota de managers org. selon votre forfait.',
       'Déléguez le protocole aux membres Protocole pour le jour J.',
       'Utilisez les modèles globaux comme base dans le concepteur visuel.',
-      'Escaliers multi-étages : voir le workflow « Escaliers entre étages » ou le guide dans l’éditeur de salle.',
+      'Escaliers multi-étages : Premium+ ; voir « Éditeur de salles selon le forfait » et le guide dans l’éditeur.',
       'La commission marketplace ({commissionPercent} %) est due par le vendeur, distincte de l’abonnement SaaS.',
     ],
   },

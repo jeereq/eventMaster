@@ -105,7 +105,13 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'plans-quotas',
     question: 'Comment fonctionnent les forfaits et les quotas ?',
     answer:
-      'Chaque organisation souscrit un seul forfait. Les particuliers choisissent un palier d’invités (50, 100, 200 ou +200) : période de base = trimestre (90 jours). Les organisateurs B2B ont Essentials (gratuit), Business, Premium et Enterprise (mois). Les gestionnaires de salles et prestataires ont Salle, Prestataire (fiches illimitées dès l’abonnement payé) ou Salle & presta. Le tableau de bord affiche vos quotas. Le paiement annuel facture 12 mois (ou 4 trimestres pour Particulier) d’un coup, avec −10 % sur ce total.',
+      'Chaque organisation souscrit un seul forfait. Les particuliers choisissent un palier d’invités (50, 100, 200 ou +200) : période de base = trimestre (90 jours). Les organisateurs B2B ont Essentials (gratuit), Business, Premium et Enterprise (mois). Les gestionnaires de salles et prestataires ont Salle, Prestataire (fiches illimitées dès l’abonnement payé) ou Salle & presta. Le tableau de bord affiche vos quotas. Le paiement annuel facture 12 mois (ou 4 trimestres pour Particulier) d’un coup, avec −10 % sur ce total. L’éditeur de salles 2D/3D (thèmes, escaliers, balcons…) dépend aussi du niveau d’éditeur du forfait — voir la question dédiée.',
+  },
+  {
+    id: 'room-editor-plans',
+    question: 'Quelles fonctions de l’éditeur de salles sont incluses selon mon abonnement ?',
+    answer:
+      'L’éditeur de salles est délimité par le niveau d’éditeur du forfait (visible dans Facturation) :\n\n• Essentiel (Essentials / découverte) — tables simples, déplacement et suppression. Pas de thèmes ni d’éléments décoratifs (fixtures).\n• Business — rangées, duplication, verrouillage, grille ; entrées, allées et couloirs.\n• Premium (Business Premium et équivalents) — thèmes, sol, scène, buffet, zones (piste, VIP), rotation, rendu showcase ; escaliers entre étages et balcons.\n• Complet (Enterprise, forfaits Salle / Salle & presta) — tout le Premium, plus périmètre, tapis, thèmes personnalisés et images custom.\n\nLes modèles multi-étages (Duplex, Villa…) et la vue empilée sont disponibles dès que vous avez accès à l’éditeur ; créer un escalier ou un balcon exige le niveau Premium (ou Complet) avec thèmes/fixtures activés. Pour monter de niveau : Facturation → changer de forfait.',
   },
   {
     id: 'b2c-annual',

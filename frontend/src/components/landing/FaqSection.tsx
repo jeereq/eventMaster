@@ -76,7 +76,7 @@ export default function FaqSection({
                   />
                 </button>
                 {isOpen && (
-                  <div className="px-4 pb-4 text-sm text-muted leading-relaxed border-t border-border pt-3">
+                  <div className="px-4 pb-4 text-sm text-muted leading-relaxed border-t border-border pt-3 whitespace-pre-line">
                     {item.answer}
                   </div>
                 )}

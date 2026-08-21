@@ -141,7 +141,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
     ],
     icon: Sparkles,
     pricingAudience: 'B2B',
-    faqIds: ['what-is-eventmaster', 'public-events', 'roles', 'protocol-qr', 'plans-quotas'],
+    faqIds: ['what-is-eventmaster', 'public-events', 'roles', 'protocol-qr', 'plans-quotas', 'room-editor-plans'],
     steps: [
       {
         title: 'Créer l’organisation',
@@ -254,7 +254,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
     ],
     icon: Briefcase,
     pricingAudience: 'VENDOR',
-    faqIds: ['marketplace-booking', 'free-trial', 'plans-quotas', 'upgrade'],
+    faqIds: ['marketplace-booking', 'free-trial', 'plans-quotas', 'room-editor-plans', 'upgrade'],
     steps: [
       {
         title: 'Publier',
