@@ -49,6 +49,8 @@ interface RoomWebGLViewerProps {
   wallEditMode?: boolean;
   /** Bloque orbit / pan pour déplacer le mobilier sans changer la perspective. */
   lockOrbit?: boolean;
+  /** Mode aperçu (marketplace / fiches) : pas de hints d’édition, orbit libre. */
+  previewMode?: boolean;
 }
 
 function pctToWorld(xPct: number, yPct: number, widthM: number, heightM: number): [number, number] {
@@ -1496,17 +1498,25 @@ export default function RoomWebGLViewer({
   className,
   wallEditMode = false,
   lockOrbit = false,
+  previewMode = false,
 }: RoomWebGLViewerProps) {
+  const orbitLocked = previewMode ? false : lockOrbit;
   return (
-    <div className={cn('relative w-full overflow-hidden rounded-[var(--radius-card)] border border-border bg-[#1a1410]', className)}>
+    <div
+      className={cn(
+        'relative w-full overflow-hidden rounded-[var(--radius-card)] border border-border',
+        previewMode ? 'bg-gradient-to-b from-[#1c1917] to-[#0c0a09]' : 'bg-[#1a1410]',
+        className,
+      )}
+    >
       <Canvas
         shadows
-        dpr={[1, 2]}
+        dpr={previewMode ? [1, 1.5] : [1, 2]}
         gl={{ antialias: true, alpha: false }}
-        camera={{ position: [0, 18, 12], fov: 45, near: 0.1, far: 200 }}
+        camera={{ position: [0, 18, 12], fov: previewMode ? 42 : 45, near: 0.1, far: 200 }}
         onPointerMissed={() => onSelect(null)}
       >
-        <color attach="background" args={['#1a1410']} />
+        <color attach="background" args={[previewMode ? '#14110f' : '#1a1410']} />
         <Suspense fallback={null}>
           <SceneContent
             blueprint={blueprint}
@@ -1514,16 +1524,25 @@ export default function RoomWebGLViewer({
             onSelect={onSelect}
             onMoveItem={onMoveItem}
             onMoveEnd={onMoveEnd}
-            readOnly={readOnly}
+            readOnly={readOnly || previewMode}
             wallEditMode={wallEditMode}
-            lockOrbit={lockOrbit}
+            lockOrbit={orbitLocked}
           />
         </Suspense>
       </Canvas>
-      <div className="pointer-events-none absolute bottom-2 left-2 rounded-md bg-black/50 px-2 py-1 text-[9px] font-medium text-white/80">
-        {lockOrbit
-          ? 'Caméra bloquée · posez tables/chaises sur moquette, piste, podium · molette = zoom'
-          : 'Orbit libre · activez « Caméra bloquée » pour placer le mobilier sur les surfaces'}
+      <div className="pointer-events-none absolute bottom-2 left-2 right-2 flex items-end justify-between gap-2">
+        <div className="rounded-md bg-black/55 px-2 py-1 text-[9px] font-medium text-white/85 backdrop-blur-sm">
+          {previewMode
+            ? 'Rendu 3D réaliste · molette = zoom · glisser = orbit'
+            : orbitLocked
+              ? 'Caméra bloquée · posez tables/chaises sur moquette, piste, podium · molette = zoom'
+              : 'Orbit libre · activez « Caméra bloquée » pour placer le mobilier sur les surfaces'}
+        </div>
+        {previewMode ? (
+          <div className="rounded-md bg-black/45 px-2 py-1 text-[9px] font-bold text-amber-100/90 backdrop-blur-sm">
+            {blueprint.canvas.widthM}×{blueprint.canvas.heightM} m
+          </div>
+        ) : null}
       </div>
     </div>
   );

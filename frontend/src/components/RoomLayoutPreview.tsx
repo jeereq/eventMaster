@@ -2,265 +2,384 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import {
- RoomLayoutBlueprint,
- getRoomOutlineClipPath,
- resolveTableColor,
- roomTypeLabels,
- ensureBlueprintDefaults,
+  RoomLayoutBlueprint,
+  getRoomOutlineClipPath,
+  resolveTableColor,
+  roomTypeLabels,
+  ensureBlueprintDefaults,
 } from '@/lib/roomLayoutUtils';
 import { getSeatCoordinates, getTableVisualStyle } from '@/lib/tablePlanUtils';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
 import {
- depthScaleForY,
- furnitureDepthStyle,
- resolveDepthAmount,
- resolveFloorStyle,
+  depthScaleForY,
+  furnitureDepthStyle,
+  resolveFloorStyle,
 } from '@/lib/roomFloorUtils';
 import FloorDepthFrame from '@/components/FloorDepthFrame';
 import ChairRenderer from '@/components/ChairRenderer';
 import FixtureRenderer from '@/components/FixtureRenderer';
+import RoomWebGLViewer from '@/components/RoomWebGLViewer';
 import { cn } from '@/lib/cn';
 
 export type RoomPreviewQuality = 'thumb' | 'standard' | 'showcase';
 
 interface RoomLayoutPreviewProps {
- blueprint: RoomLayoutBlueprint | null;
- className?: string;
- quality?: RoomPreviewQuality;
- showMeta?: boolean;
- showDepthControls?: boolean;
+  blueprint: RoomLayoutBlueprint | null;
+  className?: string;
+  quality?: RoomPreviewQuality;
+  showMeta?: boolean;
+  /** Conservé pour compatibilité : le showcase WebGL n’utilise plus le slider 2D. */
+  showDepthControls?: boolean;
+  /** Forcer le rendu 2D même en showcase (listes légères). */
+  force2d?: boolean;
 }
 
-function DepthSlider({ value, onChange }: { value: number; onChange: (n: number) => void }) {
- return (
- <label className="flex items-center gap-2 text-[10px] font-bold text-muted min-w-0">
- <span className="shrink-0">Profondeur 2D</span>
- <input
- type="range"
- min={0}
- max={100}
- value={value}
- onChange={(e) => onChange(Number(e.target.value))}
- className="flex-1 min-w-[80px] accent-indigo-600"
- />
- <span className="tabular-nums w-9 text-right">{value}%</span>
- </label>
- );
+/** Miniatures / listes : rendu 2D léger, teintes alignées sur le style WebGL. */
+function ThumbPreview({
+  blueprint,
+  className,
+}: {
+  blueprint: RoomLayoutBlueprint;
+  className?: string;
+}) {
+  const outline = blueprint.roomOutline;
+  const clipPath = outline ? getRoomOutlineClipPath(outline.shape) : undefined;
+  const theme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
+  const floorType = blueprint.metadata.floorType ?? theme.defaultFloorType;
+  const floorStyle = {
+    ...resolveFloorStyle(floorType, blueprint.metadata.floorImageUrl, theme.accentColor),
+    ...(blueprint.metadata.floorColor
+      ? { backgroundColor: blueprint.metadata.floorColor }
+      : {}),
+  };
+
+  return (
+    <div
+      className={cn(
+        'relative aspect-[4/3] h-full min-h-0 overflow-hidden rounded-2xl border border-border bg-[#1a1410]',
+        className,
+      )}
+    >
+      <div className="absolute inset-0 opacity-95" style={floorStyle} />
+      {outline && (
+        <div
+          className="absolute pointer-events-none z-[1] overflow-hidden"
+          style={{
+            left: `${outline.x}%`,
+            top: `${outline.y}%`,
+            width: `${outline.w}%`,
+            height: `${outline.h}%`,
+            border: `2px solid ${outline.stroke ?? theme.roomOutline.stroke}`,
+            borderRadius: outline.shape === 'circle' ? '50%' : '4px',
+            clipPath,
+            boxShadow: theme.roomOutline.innerGlow,
+            background: outline.fill ?? 'rgba(248,250,252,0.12)',
+          }}
+        />
+      )}
+      {blueprint.fixtures.map((f) => (
+        <div
+          key={f.id}
+          className="absolute z-[2] pointer-events-none opacity-90"
+          style={{
+            left: `${f.x}%`,
+            top: `${f.y}%`,
+            width: `${f.w}%`,
+            height: `${f.h}%`,
+          }}
+        >
+          <FixtureRenderer fixture={f} showLabel={false} fill />
+        </div>
+      ))}
+      {blueprint.furniture.map((item) => {
+        if (item.kind === 'zone') {
+          return (
+            <div
+              key={item.id}
+              className="absolute z-[2] rounded-sm border border-white/20"
+              style={{
+                left: `${item.x}%`,
+                top: `${item.y}%`,
+                width: `${item.w}%`,
+                height: `${item.h}%`,
+                background: item.color ?? 'rgba(99,102,241,0.35)',
+                transform: item.rotation ? `rotate(${item.rotation}deg)` : undefined,
+              }}
+            />
+          );
+        }
+        if (item.kind === 'table') {
+          const tableColor = resolveTableColor(item.tableColor, blueprint.metadata.defaultTableColor);
+          const { className: tableClass, style: tableStyle } = getTableVisualStyle(
+            item.shape,
+            false,
+            tableColor,
+            item.tableImageUrl,
+          );
+          return (
+            <div
+              key={item.id}
+              className="absolute z-[3] flex items-center justify-center"
+              style={{
+                left: `${item.x}%`,
+                top: `${item.y}%`,
+                transform: `translate(-50%, -50%) scale(0.38)${item.rotation ? ` rotate(${item.rotation}deg)` : ''}`,
+              }}
+            >
+              <div className={`${tableClass} origin-center`} style={tableStyle} />
+            </div>
+          );
+        }
+        if (item.kind === 'chair') {
+          return (
+            <div
+              key={item.id}
+              className="absolute z-[3]"
+              style={{
+                left: `${item.x}%`,
+                top: `${item.y}%`,
+                transform: `translate(-50%, -50%) scale(0.55) rotate(${item.rotation ?? 0}deg)`,
+              }}
+            >
+              <ChairRenderer chairType={item.chairType} imageUrl={item.chairImageUrl} size="xs" />
+            </div>
+          );
+        }
+        if (item.kind === 'row') {
+          return (
+            <div
+              key={item.id}
+              className="absolute z-[3] flex gap-0.5"
+              style={{
+                left: `${item.x}%`,
+                top: `${item.y}%`,
+                transform: `translate(-50%, -50%) scale(0.45) rotate(${item.rotation ?? 0}deg)`,
+              }}
+            >
+              {Array.from({ length: Math.min(item.seatCount, 6) }).map((_, i) => (
+                <ChairRenderer key={i} chairType={item.chairType} imageUrl={item.chairImageUrl} size="xs" />
+              ))}
+            </div>
+          );
+        }
+        return null;
+      })}
+      <div className="absolute bottom-1 left-1 rounded bg-black/50 px-1.5 py-0.5 text-[8px] font-bold text-white/80">
+        3D · {blueprint.metadata.totalSeats} pl.
+      </div>
+    </div>
+  );
+}
+
+/** Aperçu détail encore en 2,5D (fallback si force2d). */
+function FlatShowcasePreview({
+  blueprint,
+  className,
+}: {
+  blueprint: RoomLayoutBlueprint;
+  className?: string;
+}) {
+  const outline = blueprint.roomOutline;
+  const clipPath = outline ? getRoomOutlineClipPath(outline.shape) : undefined;
+  const theme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
+  const floorType = blueprint.metadata.floorType ?? theme.defaultFloorType;
+  const floorStyle = resolveFloorStyle(floorType, blueprint.metadata.floorImageUrl, theme.accentColor);
+  const amount = 62;
+
+  return (
+    <FloorDepthFrame
+      amount={amount}
+      floorStyle={{
+        ...floorStyle,
+        ...(blueprint.metadata.floorColor ? { backgroundColor: blueprint.metadata.floorColor } : {}),
+      }}
+      maxTilt={44}
+      className={cn('aspect-[16/10] min-h-[260px] sm:min-h-[340px] rounded-2xl border border-border overflow-hidden', className)}
+    >
+      {outline && (
+        <div
+          className="absolute pointer-events-none z-0 overflow-hidden"
+          style={{
+            left: `${outline.x}%`,
+            top: `${outline.y}%`,
+            width: `${outline.w}%`,
+            height: `${outline.h}%`,
+            border: `2px solid ${outline.stroke ?? theme.roomOutline.stroke}`,
+            borderRadius: outline.shape === 'circle' ? '50%' : '4px',
+            clipPath,
+            boxShadow: theme.roomOutline.innerGlow,
+          }}
+        />
+      )}
+      {blueprint.fixtures.map((f) => (
+        <div
+          key={f.id}
+          className="absolute z-[1]"
+          style={{ left: `${f.x}%`, top: `${f.y}%`, width: `${f.w}%`, height: `${f.h}%`, ...furnitureDepthStyle(f.y, amount) }}
+        >
+          <FixtureRenderer fixture={f} />
+        </div>
+      ))}
+      {blueprint.furniture.map((item) => {
+        if (item.kind === 'zone') {
+          return (
+            <div
+              key={item.id}
+              className="absolute z-[1] rounded border border-white/30"
+              style={{
+                left: `${item.x}%`,
+                top: `${item.y}%`,
+                width: `${item.w}%`,
+                height: `${item.h}%`,
+                background: item.color ?? 'rgba(49,46,129,0.45)',
+                transform: item.rotation ? `rotate(${item.rotation}deg)` : undefined,
+                ...furnitureDepthStyle(item.y + item.h / 2, amount),
+              }}
+            />
+          );
+        }
+        if (item.kind === 'row') {
+          return (
+            <div
+              key={item.id}
+              className="absolute z-[2] flex gap-0.5"
+              style={{
+                left: `${item.x}%`,
+                top: `${item.y}%`,
+                transform: `translate(-50%, -50%) scale(${0.7 * depthScaleForY(item.y, amount)}) rotate(${item.rotation ?? 0}deg)`,
+                ...furnitureDepthStyle(item.y, amount),
+              }}
+            >
+              {Array.from({ length: Math.min(item.seatCount, 12) }).map((_, i) => (
+                <ChairRenderer key={i} chairType={item.chairType} imageUrl={item.chairImageUrl} size="sm" />
+              ))}
+            </div>
+          );
+        }
+        if (item.kind === 'chair') {
+          return (
+            <div
+              key={item.id}
+              className="absolute z-[2]"
+              style={{
+                left: `${item.x}%`,
+                top: `${item.y}%`,
+                transform: `translate(-50%, -50%) scale(${0.75 * depthScaleForY(item.y, amount)}) rotate(${item.rotation ?? 0}deg)`,
+                ...furnitureDepthStyle(item.y, amount),
+              }}
+            >
+              <ChairRenderer chairType={item.chairType} imageUrl={item.chairImageUrl} size="sm" />
+            </div>
+          );
+        }
+        if (item.kind !== 'table') return null;
+        const tableColor = resolveTableColor(item.tableColor, blueprint.metadata.defaultTableColor);
+        const { className: tableClass, style: tableStyle } = getTableVisualStyle(item.shape, false, tableColor, item.tableImageUrl);
+        const depthScale = depthScaleForY(item.y, amount);
+        return (
+          <div
+            key={item.id}
+            className="absolute z-[2] flex flex-col items-center"
+            style={{
+              left: `${item.x}%`,
+              top: `${item.y}%`,
+              transform: `translate(-50%, -50%) scale(${0.85 * depthScale})${item.rotation ? ` rotate(${item.rotation}deg)` : ''}`,
+              ...furnitureDepthStyle(item.y, amount),
+            }}
+          >
+            <div className="relative flex items-center justify-center">
+              <div className={`${tableClass} origin-center flex items-center justify-center`} style={tableStyle}>
+                <span className="text-[8px] font-bold px-1 truncate max-w-[72px]">{item.name}</span>
+              </div>
+              {Array.from({ length: Math.min(item.capacity, 10) }).map((_, seatIndex) => {
+                const coords = getSeatCoordinates(item.shape, item.capacity, seatIndex, 44);
+                return (
+                  <span
+                    key={seatIndex}
+                    className="absolute"
+                    style={{
+                      left: `calc(50% + ${coords.x}px)`,
+                      top: `calc(50% + ${coords.y}px)`,
+                      transform: `translate(-50%, -50%) rotate(${coords.rotationDeg ?? 0}deg)`,
+                    }}
+                  >
+                    <ChairRenderer chairType={item.chairType} imageUrl={item.chairImageUrl} size="xs" />
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </FloorDepthFrame>
+  );
 }
 
 export default function RoomLayoutPreview({
- blueprint: rawBlueprint,
- className = '',
- quality = 'standard',
- showMeta,
- showDepthControls,
+  blueprint: rawBlueprint,
+  className = '',
+  quality = 'standard',
+  showMeta,
+  force2d = false,
 }: RoomLayoutPreviewProps) {
- const showHeader = showMeta ?? quality !== 'thumb';
- const showSlider = showDepthControls ?? quality === 'showcase';
- const blueprint = rawBlueprint ? ensureBlueprintDefaults(rawBlueprint) : null;
- const storedDepth = resolveDepthAmount(blueprint?.metadata);
- const [localDepth, setLocalDepth] = useState(storedDepth || (quality === 'showcase' ? 58 : 0));
+  const showHeader = showMeta ?? quality !== 'thumb';
+  const blueprint = rawBlueprint ? ensureBlueprintDefaults(rawBlueprint) : null;
+  const [mounted, setMounted] = useState(false);
 
- useEffect(() => {
- const next = resolveDepthAmount(blueprint?.metadata) || (quality === 'showcase' ? 58 : 0);
- setLocalDepth(next);
- }, [blueprint?.metadata.depthAmount, blueprint?.metadata.depthView, quality]);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
- const canvasClass = useMemo(() => {
- if (quality === 'thumb') return 'aspect-[4/3] h-full min-h-0';
- if (quality === 'showcase') return 'aspect-[16/10] min-h-[260px] sm:min-h-[340px]';
- return 'aspect-[4/3]';
- }, [quality]);
+  const canvasClass = useMemo(() => {
+    if (quality === 'thumb') return 'aspect-[4/3] h-full min-h-0';
+    if (quality === 'showcase') return 'aspect-[16/10] min-h-[280px] sm:min-h-[360px]';
+    return 'aspect-[4/3] min-h-[200px]';
+  }, [quality]);
 
- if (!blueprint) {
- return (
- <div className={`aspect-[4/3] bg-surface-muted rounded-2xl border border-dashed border-border flex items-center justify-center text-xs text-muted ${className}`}>
- Aperçu indisponible
- </div>
- );
- }
+  if (!blueprint) {
+    return (
+      <div className={`aspect-[4/3] bg-surface-muted rounded-2xl border border-dashed border-border flex items-center justify-center text-xs text-muted ${className}`}>
+        Aperçu indisponible
+      </div>
+    );
+  }
 
- const amount = localDepth;
- const outline = blueprint.roomOutline;
- const clipPath = outline ? getRoomOutlineClipPath(outline.shape) : undefined;
- const theme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
- const floorType = blueprint.metadata.floorType ?? theme.defaultFloorType;
- const floorStyle = resolveFloorStyle(floorType, blueprint.metadata.floorImageUrl, theme.accentColor);
- const chairLimit = quality === 'thumb' ? 0 : quality === 'standard' ? 10 : 24;
- const chairRadius = quality === 'showcase' ? 50 : 36;
+  const theme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
+  const useWebGL = !force2d && quality !== 'thumb' && mounted;
 
- return (
- <div className={cn('space-y-2', className)}>
- {showHeader && (
- <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wider text-muted">
- <span>{roomTypeLabels[blueprint.roomType]} · {theme.name}</span>
- <span>{blueprint.metadata.totalSeats} places · {blueprint.canvas.widthM}×{blueprint.canvas.heightM} m</span>
- </div>
- )}
- {showSlider && (
- <DepthSlider value={amount} onChange={setLocalDepth} />
- )}
- <FloorDepthFrame
- amount={quality === 'thumb' ? 0 : amount}
- floorStyle={floorStyle}
- maxTilt={quality === 'showcase' ? 44 : 36}
- className={cn(canvasClass, 'rounded-2xl border border-border overflow-hidden')}
- >
- {outline && (
- <div
- className="absolute pointer-events-none z-0 overflow-hidden"
- style={{
- left: `${outline.x}%`,
- top: `${outline.y}%`,
- width: `${outline.w}%`,
- height: `${outline.h}%`,
- border: `2px solid ${outline.stroke ?? theme.roomOutline.stroke}`,
- borderRadius: outline.shape === 'circle' ? '50%' : '4px',
- clipPath,
- boxShadow: theme.roomOutline.innerGlow,
- }}
- >
- <div className="absolute inset-0" style={floorStyle} />
- {theme.ambientOverlay && (
- <div className="absolute inset-0" style={{ background: theme.ambientOverlay }} />
- )}
- </div>
- )}
+  return (
+    <div className={cn('space-y-2', className)}>
+      {showHeader && (
+        <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-wider text-muted">
+          <span>{roomTypeLabels[blueprint.roomType]} · {theme.name}</span>
+          <span>
+            {blueprint.metadata.totalSeats} places · {blueprint.canvas.widthM}×{blueprint.canvas.heightM} m
+            {useWebGL ? ' · WebGL' : ''}
+          </span>
+        </div>
+      )}
 
- {blueprint.fixtures.map((fixture) => (
- <div
- key={fixture.id}
- className="absolute"
- style={{
- left: `${fixture.x}%`,
- top: `${fixture.y}%`,
- width: `${fixture.w}%`,
- height: `${fixture.h}%`,
- transform: `scale(${depthScaleForY(fixture.y, amount)})`,
- transformOrigin: '50% 100%',
- ...furnitureDepthStyle(fixture.y, amount),
- filter: amount > 0 ? 'drop-shadow(var(--em-item-shadow, 0 8px 12px rgba(0,0,0,0.25)))' : undefined,
- }}
- >
- <FixtureRenderer fixture={fixture} />
- </div>
- ))}
+      {quality === 'thumb' ? (
+        <ThumbPreview blueprint={blueprint} className={className} />
+      ) : useWebGL ? (
+        <RoomWebGLViewer
+          blueprint={blueprint}
+          selected={null}
+          onSelect={() => {}}
+          readOnly
+          previewMode
+          className={cn(canvasClass, 'shadow-[var(--shadow-soft)]')}
+        />
+      ) : (
+        <FlatShowcasePreview blueprint={blueprint} className={className} />
+      )}
 
- {blueprint.furniture.map((item) => {
- if (item.kind === 'zone') {
- return (
- <div
- key={item.id}
- className="absolute border-2 border-dashed border-sky-300 bg-sky-50/60 rounded-xl flex items-center justify-center text-[9px] font-semibold text-sky-700 z-[6]"
- style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.w}%`, height: `${item.h}%` }}
- >
- {item.label}
- </div>
- );
- }
-
- if (item.kind === 'row') {
- const depthScale = depthScaleForY(item.y, amount);
- return (
- <div
- key={item.id}
- className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
- style={{
- left: `${item.x}%`,
- top: `${item.y}%`,
- transform: `translate(-50%, -50%) scale(${(quality === 'thumb' ? 0.4 : 0.85) * depthScale})`,
- ...furnitureDepthStyle(item.y, amount),
- }}
- >
- <div className="px-3 py-1.5 bg-white/95 border border-border rounded-lg shadow-sm min-w-[72px] text-center">
- <p className="text-[8px] font-bold text-foreground truncate max-w-[100px]">{item.label}</p>
- {quality !== 'thumb' && (
- <div className="flex justify-center gap-0.5 mt-1 flex-wrap max-w-[120px]">
- {Array.from({ length: Math.min(item.seatCount, quality === 'showcase' ? 16 : 8) }).map((_, i) => (
- <ChairRenderer key={i} chairType={item.chairType} imageUrl={item.chairImageUrl} size={quality === 'showcase' ? 'sm' : 'xs'} />
- ))}
- </div>
- )}
- </div>
- </div>
- );
- }
-
- if (item.kind === 'chair') {
- const depthScale = depthScaleForY(item.y, amount);
- return (
- <div
- key={item.id}
- className="absolute z-10"
- style={{
- left: `${item.x}%`,
- top: `${item.y}%`,
- transform: `translate(-50%, -50%) scale(${(quality === 'thumb' ? 0.45 : 0.8) * depthScale})${item.rotation ? ` rotate(${item.rotation}deg)` : ''}`,
- ...furnitureDepthStyle(item.y, amount),
- }}
- >
- <ChairRenderer chairType={item.chairType} imageUrl={item.chairImageUrl} size={quality === 'showcase' ? 'sm' : 'xs'} />
- </div>
- );
- }
-
- if (item.kind !== 'table') return null;
-
- const tableColor = resolveTableColor(item.tableColor, blueprint.metadata.defaultTableColor);
- const { className: tableClass, style: tableStyle } = getTableVisualStyle(item.shape, false, tableColor, item.tableImageUrl);
- const depthScale = depthScaleForY(item.y, amount);
- const baseScale = quality === 'thumb' ? 0.42 : quality === 'showcase' ? 0.92 : 0.62;
-
- return (
- <div
- key={item.id}
- className="absolute flex flex-col items-center"
- style={{
- left: `${item.x}%`,
- top: `${item.y}%`,
- transform: `translate(-50%, -50%) scale(${baseScale * depthScale})${item.rotation ? ` rotate(${item.rotation}deg)` : ''}`,
- transformOrigin: '50% 80%',
- ...furnitureDepthStyle(item.y, amount),
- }}
- >
- <div className="relative flex items-center justify-center" style={{ filter: amount > 0 ? 'drop-shadow(var(--em-item-shadow, 0 8px 12px rgba(0,0,0,0.25)))' : undefined }}>
- <div className={`${tableClass} origin-center flex items-center justify-center`} style={tableStyle}>
- {quality !== 'thumb' && (
- <span className="text-[8px] font-bold drop-shadow-[0_1px_1px_rgba(255,255,255,0.85)] px-1 truncate max-w-[72px]">
- {item.name}
- </span>
- )}
- </div>
- {chairLimit > 0 && item.attachedChairs !== false &&
- Array.from({ length: Math.min(item.capacity, chairLimit) }).map((_, seatIndex) => {
- const coords = getSeatCoordinates(item.shape, item.capacity, seatIndex, chairRadius);
- return (
- <span
- key={seatIndex}
- className="absolute"
- style={{
- left: `calc(50% + ${coords.x}px)`,
- top: `calc(50% + ${coords.y}px)`,
- transform: `translate(-50%, -50%) rotate(${coords.rotationDeg ?? 0}deg)`,
- }}
- >
- <ChairRenderer chairType={item.chairType} imageUrl={item.chairImageUrl} size={quality === 'showcase' ? 'sm' : 'xs'} />
- </span>
- );
- })}
- </div>
- {quality === 'thumb' && (
- <span className="text-[6px] font-bold text-muted bg-white/90 px-0.5 rounded mt-0.5">{item.name}</span>
- )}
- </div>
- );
- })}
- </FloorDepthFrame>
- {quality === 'showcase' && (
- <p className="text-[10px] text-muted leading-relaxed">
- Rendu <span className="font-semibold text-foreground">2,5D</span> : le sol recule en perspective. Réglez la profondeur ; un moteur 3D n’est pas nécessaire.
- </p>
- )}
- </div>
- );
+      {quality === 'showcase' && useWebGL && (
+        <p className="text-[10px] text-muted leading-relaxed">
+          Visualisation <span className="font-semibold text-foreground">3D réaliste</span> : textures de sol, murs, mobilier et surfaces.
+          Orbitez pour inspecter la salle comme dans l’éditeur.
+        </p>
+      )}
+    </div>
+  );
 }
