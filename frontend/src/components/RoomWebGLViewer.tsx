@@ -17,6 +17,7 @@ import {
   type SeatMaterial,
   type TableShape,
   type ZoneMaterial,
+  type ZoneKind,
 } from '@/lib/roomLayoutUtils';
 import { resolveDepthAmount } from '@/lib/roomFloorUtils';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
@@ -37,6 +38,11 @@ import {
   CatalogueFlower,
   CatalogueTableStructure,
 } from '@/components/CatalogueFurnitureMeshes';
+import {
+  AmphitheaterRiser,
+  EventStage,
+  EventZoneSurface,
+} from '@/components/CatalogueEventArchitecture';
 import {
   resolveLightingPreset,
   resolveRenderQuality,
@@ -802,6 +808,7 @@ function ZoneMesh({
   hPct,
   label,
   material,
+  zoneKind,
   color,
   rotation = 0,
   widthM,
@@ -818,6 +825,7 @@ function ZoneMesh({
   hPct: number;
   label: string;
   material?: ZoneMaterial;
+  zoneKind?: ZoneKind;
   color?: string;
   rotation?: number;
   widthM: number;
@@ -835,8 +843,6 @@ function ZoneMesh({
   const { gl } = useThree();
   const rot = ((rotation ?? 0) * Math.PI) / 180;
   const thickness = mat.thicknessM ?? 0.03;
-  const isDance = material === 'vinyl' || material === 'led';
-  const isCarpet = material === 'carpet';
 
   return (
     <group
@@ -855,47 +861,16 @@ function ZoneMesh({
         gl.domElement.style.cursor = 'grabbing';
       }}
     >
-      <mesh
-        receiveShadow
-        castShadow={isCarpet}
-        raycast={pickable ? undefined : () => null}
-      >
-        <boxGeometry args={[w, thickness, h]} />
-        <meshStandardMaterial
-          color={selected ? '#c7d2fe' : (color ?? mat.color)}
-          map={mat.map ?? undefined}
-          roughness={mat.roughness}
-          metalness={mat.metalness}
-          emissive={mat.emissive}
-          emissiveIntensity={mat.emissiveIntensity ?? 0}
-        />
-      </mesh>
-      {/* Bordure / frange */}
-      <mesh position={[0, thickness * 0.15, 0]} receiveShadow>
-        <boxGeometry args={[w + 0.04, thickness * 0.35, h + 0.04]} />
-        <meshStandardMaterial
-          color={isCarpet ? '#0f172a' : isDance ? '#0ea5e9' : '#44403c'}
-          roughness={isDance ? 0.2 : 0.9}
-          metalness={isDance ? 0.5 : 0.05}
-          emissive={isDance ? '#0284c7' : '#000000'}
-          emissiveIntensity={isDance ? 0.35 : 0}
-        />
-      </mesh>
-      {isDance && (
-        <>
-          {/* Reflet central piste */}
-          <mesh position={[0, thickness / 2 + 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[w * 0.7, h * 0.7]} />
-            <meshStandardMaterial
-              color="#e0f2fe"
-              transparent
-              opacity={0.12}
-              roughness={0.05}
-              metalness={0.6}
-            />
-          </mesh>
-        </>
-      )}
+      <EventZoneSurface
+        w={w}
+        h={h}
+        thickness={thickness}
+        material={material}
+        zoneKind={zoneKind}
+        color={color}
+        selected={selected}
+        pickable={pickable}
+      />
       <mesh position={[0, thickness + 0.04, -h * 0.35]} rotation={[-Math.PI / 2, 0, Math.PI]}>
         <coneGeometry args={[Math.min(w, h) * 0.06, Math.min(w, h) * 0.14, 3]} />
         <meshStandardMaterial color="#fef3c7" emissive="#f59e0b" emissiveIntensity={0.45} />
@@ -1147,30 +1122,17 @@ function FixtureMesh({
           map={map}
         />
       ) : kind === 'podium' || kind === 'stage' ? (
-        <group>
-          {Array.from({ length: stepCount }).map((_, i) => {
-            const stepH = height / stepCount;
-            const shrink = 1 - i * 0.08;
-            return (
-              <group key={i} position={[0, stepH * i, (1 - shrink) * d * 0.12]}>
-                <mesh position={[0, stepH / 2, 0]} castShadow receiveShadow>
-                  <boxGeometry args={[w * shrink, stepH * 0.92, d * shrink]} />
-                  <meshStandardMaterial
-                    color={selected ? '#c7d2fe' : map ? '#ffffff' : baseColor}
-                    map={map ?? undefined}
-                    roughness={0.55}
-                    metalness={0.06}
-                  />
-                </mesh>
-                <mesh position={[0, stepH + 0.01, d * shrink * 0.42]} castShadow>
-                  <boxGeometry args={[w * shrink * 0.98, 0.025, 0.05]} />
-                  <meshStandardMaterial color="#292524" roughness={0.9} />
-                </mesh>
-              </group>
-            );
-          })}
-        </group>
-            ) : kind === 'stairs' ? (
+        <EventStage
+          w={w}
+          d={d}
+          height={height}
+          steps={stepCount}
+          map={map}
+          baseColor={baseColor}
+          selected={selected}
+          kind={kind === 'podium' ? 'podium' : 'stage'}
+        />
+      ) : kind === 'stairs' ? (
         <group rotation={[0, ((stairDirection ?? 0) * Math.PI) / 180, 0]}>
           {Array.from({ length: stairSteps }).map((_, i) => {
             const stepH = height / stairSteps;
@@ -1222,6 +1184,15 @@ function FixtureMesh({
               })}
             </group>
           ))}
+          {/* Palier haut */}
+          <mesh position={[0, height + 0.03, d / 2 - 0.15]} castShadow receiveShadow>
+            <boxGeometry args={[w * 0.98, 0.06, 0.35]} />
+            <meshStandardMaterial
+              color={selected ? '#c7d2fe' : '#ffffff'}
+              map={(map ?? getStairWoodMap()) || undefined}
+              roughness={0.5}
+            />
+          </mesh>
         </group>
       ) : kind === 'buffet' ? (
         <CatalogueBuffet
@@ -1233,6 +1204,34 @@ function FixtureMesh({
           selected={selected}
           hasCouverts={hasCouverts}
         />
+      ) : kind === 'aisle' ? (
+        <group>
+          <mesh position={[0, 0.02, 0]} receiveShadow>
+            <boxGeometry args={[w, 0.04, d]} />
+            <meshStandardMaterial color={selected ? '#c7d2fe' : '#e7e5e4'} roughness={0.85} />
+          </mesh>
+          <mesh position={[0, 0.045, 0]} receiveShadow>
+            <boxGeometry args={[w * 0.55, 0.015, d * 0.98]} />
+            <meshStandardMaterial color="#f8fafc" roughness={0.7} />
+          </mesh>
+        </group>
+      ) : kind === 'entrance' ? (
+        <group>
+          <mesh position={[0, 0.03, 0]} receiveShadow castShadow>
+            <boxGeometry args={[w, 0.06, d]} />
+            <meshStandardMaterial color={selected ? '#c7d2fe' : '#059669'} roughness={0.75} />
+          </mesh>
+          {([-1, 1] as const).map((side) => (
+            <mesh key={side} position={[side * w * 0.4, 0.55, 0]} castShadow>
+              <cylinderGeometry args={[0.04, 0.05, 1.1, 12]} />
+              <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.3} />
+            </mesh>
+          ))}
+          <mesh position={[0, 1.05, 0]} castShadow>
+            <boxGeometry args={[w * 0.85, 0.08, 0.08]} />
+            <meshStandardMaterial color="#b45309" metalness={0.4} roughness={0.4} />
+          </mesh>
+        </group>
       ) : (
         <mesh position={[0, height / 2, 0]} castShadow receiveShadow>
           <boxGeometry args={[w, height, d]} />
@@ -1399,6 +1398,7 @@ function SceneContent({
               hPct={item.h}
               label={item.label}
               material={item.material}
+              zoneKind={item.zoneKind}
               color={item.color}
               rotation={item.rotation}
               widthM={widthM}
@@ -1465,26 +1465,13 @@ function SceneContent({
             >
               {/* Plateforme / gradin amphithéâtre */}
               {(item.elevationM ?? 0) > 0.05 || item.tier > 0 ? (
-                <group>
-                  <mesh position={[0, elevation / 2, 0.2]} receiveShadow castShadow>
-                    <boxGeometry args={[count * spacing + 0.7, Math.max(elevation, 0.12), 1.25 + curve * 2]} />
-                    <meshStandardMaterial
-                      color={selected.some((s) => s.kind === 'row' && s.id === item.id) ? '#c7d2fe' : '#57534e'}
-                      map={getStairWoodMap()}
-                      roughness={0.7}
-                    />
-                  </mesh>
-                  {/* Face avant du gradin */}
-                  <mesh position={[0, elevation / 2, 0.2 + (1.25 + curve * 2) / 2]} castShadow>
-                    <boxGeometry args={[count * spacing + 0.7, Math.max(elevation, 0.12), 0.06]} />
-                    <meshStandardMaterial color="#44403c" roughness={0.65} metalness={0.05} />
-                  </mesh>
-                  {/* Moquette de rangée */}
-                  <mesh position={[0, elevation + 0.015, 0.15]} receiveShadow>
-                    <boxGeometry args={[count * spacing + 0.55, 0.03, 0.95]} />
-                    <meshStandardMaterial color="#1e293b" roughness={0.95} metalness={0} />
-                  </mesh>
-                </group>
+                <AmphitheaterRiser
+                  seatCount={count}
+                  spacing={spacing}
+                  elevation={elevation}
+                  curve={curve}
+                  selected={selected.some((s) => s.kind === 'row' && s.id === item.id)}
+                />
               ) : null}
               {Array.from({ length: count }).map((_, i) => {
                 const t = i - (count - 1) / 2;
