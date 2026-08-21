@@ -15,12 +15,17 @@ export default function PrivacyPage() {
  lastUpdated="17 août 2026"
  version={PRIVACY_VERSION}
  >
- <Section title="1. Responsables de traitement">
- <p>
- <strong>Données de compte plateforme</strong> (inscription organisateur, prestataire, client, Super Admin,
- personnels EventMaster, commerciaux plateforme) : EventMaster agit en qualité de responsable de traitement pour
- la gestion du compte, de la facturation plateforme, du support et de la sécurité.
- </p>
+  <Section title="1. Responsables de traitement et Appartenance au Groupe">
+    <p>
+      <strong>Appartenance au Groupe Tekango :</strong> EventMaster est un projet et une plateforme appartenant au <strong>Groupe Tekango</strong>. 
+      Les données partagées et collectées ici peuvent être utilisées pour d'autres applications du groupe, comme la plateforme de e-commerce 
+      Tekango elle-même, la plateforme Poz'tion, ou toute autre plateforme du Groupe Tekango.
+    </p>
+    <p>
+      <strong>Données de compte plateforme</strong> (inscription organisateur, prestataire, client, Super Admin,
+      personnels EventMaster, commerciaux plateforme) : EventMaster (Groupe Tekango) agit en qualité de responsable de traitement pour
+      la gestion du compte, de la facturation plateforme, du support, de la sécurité et des synergies avec les autres plateformes du groupe.
+    </p>
  <p>
  <strong>Données des événements, invités et membres d&apos;organisation</strong> : l&apos;organisation
  utilisatrice (organisateur ou professionnel marketplace) est responsable de traitement. EventMaster traite ces
@@ -50,9 +55,10 @@ export default function PrivacyPage() {
  </Section>
 
  <Section title="3. Finalités du traitement">
- <ul className="list-disc pl-5 space-y-1">
- <li>Création et gestion des comptes et des organisations ;</li>
- <li>Envoi d&apos;invitations, rappels RSVP et notifications (e-mail et WhatsApp) sur instruction de l&apos;organisateur ;</li>
+    <ul className="list-disc pl-5 space-y-1">
+      <li>Création et gestion des comptes et des organisations ;</li>
+      <li>Utilisation transverse par les autres plateformes du Groupe Tekango (plateforme e-commerce Tekango, Poz'tion, etc.) pour des synergies de services ;</li>
+      <li>Envoi d&apos;invitations, rappels RSVP et notifications (e-mail et WhatsApp) sur instruction de l&apos;organisateur ;</li>
  <li>Protocole : scan QR, confirmation de présence, vérification de placement ;</li>
  <li>Publication et consultation du marketplace ; mise en relation et suivi des réservations de dates ;</li>
  <li>Affichage de proximité ou d&apos;itinéraires lorsque la géolocalisation est utilisée (avec votre permission côté appareil) ;</li>

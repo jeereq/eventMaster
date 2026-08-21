@@ -20,7 +20,7 @@ interface LegalAcceptanceModalProps {
 export default function LegalAcceptanceModal({
   open,
   title = 'Conditions d\'utilisation',
-  subtitle = 'Pour accéder à EventMaster, vous devez accepter nos conditions et notre politique de confidentialité.',
+  subtitle = 'Pour accéder à la plateforme EventMaster (un projet du Groupe Tekango), vous devez accepter nos conditions et notre politique de confidentialité.',
   submitting = false,
   error = '',
   onAccept,

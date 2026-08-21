@@ -86,8 +86,8 @@ export default function UserLegalGate({ children }: { children: React.ReactNode 
         title={isFirstAcceptance ? 'Conditions d\'utilisation' : 'Mise à jour des conditions'}
         subtitle={
           isFirstAcceptance
-            ? 'Pour accéder à EventMaster après connexion, veuillez accepter nos conditions d\'utilisation et notre politique de confidentialité.'
-            : 'Pour continuer à utiliser EventMaster, veuillez accepter la version actuelle de nos conditions et de notre politique de confidentialité.'
+            ? 'Pour accéder à EventMaster (projet du Groupe Tekango) après connexion, veuillez accepter nos conditions d\'utilisation et notre politique de confidentialité.'
+            : 'Pour continuer à utiliser EventMaster (projet du Groupe Tekango), veuillez accepter la version actuelle de nos conditions et de notre politique de confidentialité.'
         }
         submitting={submitting}
         error={error}

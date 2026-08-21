@@ -77,7 +77,7 @@ export function GuestLegalGate({ guestId, children }: GuestLegalGateProps) {
       <View style={styles.gate}>
         <Text style={styles.title}>Bienvenue dans votre espace invité</Text>
         <Text style={styles.subtitle}>
-          Avant d&apos;accéder à votre invitation, acceptez les conditions d&apos;utilisation et la
+          Avant d&apos;accéder à votre invitation sur EventMaster (un projet du Groupe Tekango), acceptez les conditions d&apos;utilisation et la
           politique de confidentialité.
         </Text>
 

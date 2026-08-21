@@ -16,18 +16,24 @@ export default function TermsPage() {
  lastUpdated="17 août 2026"
  version={TERMS_VERSION}
  >
- <Section title="1. Objet">
- <p>
- EventMaster est une solution SaaS multi-tenant destinée à la gestion d&apos;événements privés et professionnels :
- invitations et RSVP, plans de table 2D, protocole (scan QR, confirmation de présence), fil d&apos;actualité, livre d&apos;or,
- modèles de messages, gestion d&apos;équipe, marketplace de salles et de prestations, réservations de dates,
- et facturation par abonnement.
- </p>
- <p>
- En créant un compte, en vous connectant ou en utilisant nos services, vous acceptez sans réserve les présentes
- conditions d&apos;utilisation (version en vigueur au moment de votre acceptation).
- </p>
- </Section>
+  <Section title="1. Objet">
+    <p>
+      <strong>EventMaster</strong> est un projet et une plateforme appartenant au <strong>Groupe Tekango</strong>. 
+      Il s'agit d'une solution SaaS multi-tenant destinée à la gestion d'événements privés et professionnels :
+      invitations et RSVP, plans de table 2D, protocole (scan QR, confirmation de présence), fil d'actualité, livre d'or,
+      modèles de messages, gestion d'équipe, marketplace de salles et de prestations, réservations de dates,
+      et facturation par abonnement.
+    </p>
+    <p>
+      <strong>Important :</strong> En tant que projet du Groupe Tekango, vous acceptez que les données partagées et collectées sur la plateforme EventMaster 
+      puissent être utilisées de manière transverse pour d'autres applications et services du groupe, notamment la plateforme 
+      e-commerce Tekango elle-même, la plateforme Poz'tion, ou toute autre plateforme présente ou à venir appartenant au Groupe Tekango.
+    </p>
+    <p>
+      En créant un compte, en vous connectant ou en utilisant nos services, vous acceptez sans réserve les présentes
+      conditions d'utilisation (version en vigueur au moment de votre acceptation).
+    </p>
+  </Section>
 
  <Section title="2. Comptes, organisations et rôles">
  <p>
