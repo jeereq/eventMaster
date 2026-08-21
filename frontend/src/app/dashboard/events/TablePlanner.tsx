@@ -483,7 +483,7 @@ export default function TablePlanner({
  )}
  </div>
  ) : (
- <p className="text-[10px] text-muted">Aucun invité placé</p>
+ <p className="text-[10px] text-muted">Table libre</p>
  )}
  </div>
  </div>
@@ -879,7 +879,7 @@ export default function TablePlanner({
  Sélectionner un invité présent ({unassignedGuests.length} disponibles)
  </label>
  {unassignedGuests.length === 0 ? (
- <p className="text-xs text-muted italic">Aucun invité présent n'est disponible pour le placement.</p>
+ <p className="text-xs text-muted italic">Tous vos invités présents ont déjà une place attribuée.</p>
  ) : (
  <div className="max-h-60 overflow-y-auto border border-border rounded-[var(--radius-card)] divide-y divide-border">
  {unassignedGuests.map(g => (

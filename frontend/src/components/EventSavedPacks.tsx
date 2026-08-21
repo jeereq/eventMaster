@@ -124,8 +124,8 @@ export default function EventSavedPacks({
       {packs.length === 0 ? (
         <EmptyState
           icon={<Bookmark className="w-5 h-5" />}
-          title="Aucun pack enregistré"
-          description="Sauvegardez une proposition après simulation, ou composez un pack à partir de vos favoris."
+          title="Votre sélection est vide"
+          description="Créez des listes de prestataires favoris pour organiser vos idées et comparer vos options."
           action={
             <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
               Composer depuis les favoris

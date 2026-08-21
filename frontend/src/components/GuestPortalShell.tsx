@@ -33,7 +33,7 @@ function swipeBlocked(target: EventTarget | null) {
 
 export default function GuestPortalShell({
   title,
-  eyebrow = 'Espace invité',
+  eyebrow = 'Votre expérience invité',
   guestId,
   showBrand = false,
   organizationName,

@@ -137,8 +137,8 @@ function MarketplaceRentalsPageInner() {
       markers={markers}
       loading={loading}
       error={error}
-      emptyTitle="Aucune location pour ces filtres"
-      emptyDescription="Élargissez le type ou la commune, ou publiez une fiche location depuis votre espace prestataire."
+      emptyTitle="Nous cherchons encore la perle rare..."
+      emptyDescription="Aucune location ne correspond exactement à vos critères. Élargissez votre recherche pour découvrir d'autres options."
       page={page}
       pageSize={pageSize}
       onPageChange={setPage}

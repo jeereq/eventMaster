@@ -2015,10 +2015,10 @@ Merci de confirmer votre présence :
  ) : (
  <>
  <Calendar className="w-12 h-12 text-muted mx-auto mb-4 opacity-50" />
- <h3 className="text-lg font-semibold text-foreground">Créer votre premier événement</h3>
- <p className="text-sm text-muted mt-2 max-w-md mx-auto leading-relaxed">
- Ensuite : ajoutez des invités, choisissez un modèle d&apos;invitation, puis envoyez les RSVP.
- </p>
+                  <h3 className="text-lg font-semibold text-foreground">Votre premier événement vous attend</h3>
+                  <p className="text-sm text-muted mt-2 max-w-md mx-auto leading-relaxed">
+                    Ajoutez un titre, une date, puis lancez vos invitations. L'aventure commence ici.
+                  </p>
  <ol className="mt-5 inline-flex flex-col sm:flex-row gap-2 sm:gap-3 text-left text-xs text-muted">
  <li className="px-3 py-2 rounded-lg bg-surface-muted border border-border">1. Événement</li>
  <li className="px-3 py-2 rounded-lg bg-surface-muted border border-border">2. Invités</li>
@@ -2501,7 +2501,7 @@ Merci de confirmer votre présence :
  <div className="rounded-[var(--radius-card)] border border-border bg-surface text-center py-16 px-6">
  <Search className="w-12 h-12 text-muted mx-auto mb-4" />
  <h3 className="font-semibold text-foreground">Aucun résultat</h3>
- <p className="text-sm text-muted mt-1 max-w-xs mx-auto">Aucun invité ne correspond à vos critères de recherche ou de filtrage.</p>
+ <p className="text-sm text-muted mt-1 max-w-xs mx-auto">La recherche n'a retourné aucun profil correspondant.</p>
  <button
  type="button"
  onClick={() => {
@@ -2747,16 +2747,16 @@ Merci de confirmer votre présence :
  </Card>
 
  {invitations.length === 0 ? (
- <EmptyState
- icon={<Mail className="w-5 h-5" />}
- title="Aucune invitation configurée"
- description="Créez une invitation pour envoyer des liens RSVP personnalisés à vos invités."
- action={
- <Button onClick={openNewInvitationModal} leftIcon={<PlusCircle className="w-4 h-4" />}>
- Configurer une invitation
- </Button>
- }
- />
+                <EmptyState
+                  icon={<Mail className="w-5 h-5" />}
+                  title="Invitations à configurer"
+                  description="Personnalisez vos faire-part numériques et commencez à récolter les confirmations de présence (RSVP) de vos invités."
+                  action={
+                    <Button onClick={openNewInvitationModal} leftIcon={<PlusCircle className="w-4 h-4" />}>
+                      Configurer une invitation
+                    </Button>
+                  }
+                />
  ) : (
  <div className="grid md:grid-cols-2 gap-4">
  {invitations.map((invite) => (

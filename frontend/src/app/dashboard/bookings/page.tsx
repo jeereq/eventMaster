@@ -190,7 +190,7 @@ function OrganizerDemandesPage() {
           <EmptyState
             icon={<Bookmark className="w-5 h-5" />}
             title="Aucun pack enregistré"
-            description="Composez un mix salle / métiers / locations depuis le marketplace, puis enregistrez-le ici."
+            description="Explorez le catalogue, imaginez votre composition idéale et enregistrez votre projet ici."
             action={
               <Link href="/dashboard/catalogue?hub=plan">
                 <Button size="sm">Préparer un pack</Button>

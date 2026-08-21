@@ -2231,7 +2231,11 @@ function DashboardPageContent() {
  {tenantsLoading ? (
  <SkeletonTabContent mode={tenantsViewMode === 'list' ? 'list' : 'grid'} count={6} columns={3} />
  ) : filteredTenants.length === 0 ? (
- <p className="text-center text-muted text-sm py-10">Aucune organisation trouvée.</p>
+              <EmptyState 
+                icon={<Building2 className="w-5 h-5" />} 
+                title="Aucune organisation active" 
+                description="Votre réseau est actuellement vide. Créez une première organisation pour structurer vos événements."
+              />
  ) : (
  <div
  className={
@@ -2406,7 +2410,11 @@ function DashboardPageContent() {
  {usersLoading ? (
  <SkeletonTabContent mode={usersViewMode === 'list' ? 'list' : 'grid'} count={6} columns={3} />
  ) : filteredUsers.length === 0 ? (
- <p className="text-center text-muted text-sm py-10">Aucun utilisateur trouvé.</p>
+              <EmptyState 
+                icon={<Users className="w-5 h-5" />} 
+                title="Aucun utilisateur" 
+                description="L'équipe est pour le moment restreinte. Ajoutez des collaborateurs pour déléguer l'organisation."
+              />
  ) : (
  <>
  <div
@@ -2606,7 +2614,11 @@ function DashboardPageContent() {
  {adminEventsLoading ? (
  <SkeletonTabContent mode={adminEventsViewMode === 'list' ? 'list' : 'grid'} count={6} columns={3} />
  ) : filteredEvents.length === 0 ? (
- <p className="text-center text-muted text-sm py-10">Aucun événement trouvé.</p>
+              <EmptyState 
+                icon={<Calendar className="w-5 h-5" />} 
+                title="Votre calendrier est libre" 
+                description="Vous n'avez pas encore d'événements. Créez votre première célébration pour commencer."
+              />
  ) : (
  <>
  <div
@@ -2744,7 +2756,11 @@ function DashboardPageContent() {
  {adminGuestsLoading ? (
  <SkeletonTabContent mode={guestsViewMode === 'list' ? 'list' : 'grid'} count={6} columns={3} />
  ) : filteredGuests.length === 0 ? (
- <p className="text-center text-muted text-sm py-10">Aucun invité trouvé.</p>
+              <EmptyState 
+                icon={<Users className="w-5 h-5" />} 
+                title="Liste d'invités vide" 
+                description="Commencez par ajouter vos invités pour leur envoyer des faire-part et organiser leur placement."
+              />
  ) : (
  <>
  <div className={guestsViewMode === 'grid' ? guestsGridClass : listStackClass}>
@@ -3710,7 +3726,7 @@ function DashboardPageContent() {
  </div>
  <div>
  <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{adminData?.stats.openTasks ?? 0}</span>
- <span className="text-xs text-muted dark:text-muted font-bold">Tâches ouvertes</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Actions en cours</span>
  </div>
  </div>
  <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
@@ -3719,7 +3735,7 @@ function DashboardPageContent() {
  </div>
  <div>
  <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{adminData?.stats.overdueTasks ?? 0}</span>
- <span className="text-xs text-muted dark:text-muted font-bold">Tâches en retard</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Urgences</span>
  </div>
  </div>
  </div>
@@ -3784,7 +3800,7 @@ function DashboardPageContent() {
  </div>
  <div>
  <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.tasks?.open ?? 0}</span>
- <span className="text-xs text-muted dark:text-muted font-bold">Tâches ouvertes</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Actions en cours</span>
  </div>
  </div>
  <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
@@ -3793,7 +3809,7 @@ function DashboardPageContent() {
  </div>
  <div>
  <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.tasks?.overdue ?? 0}</span>
- <span className="text-xs text-muted dark:text-muted font-bold">Tâches en retard</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Urgences</span>
  </div>
  </div>
  <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
@@ -4189,8 +4205,8 @@ function DashboardPageContent() {
  { label: 'GMV billets', value: formatFc(platformInsights?.tickets.gmvFc ?? 0) },
  { label: 'Avec localisation GPS', value: platformInsights?.events.gpsCount ?? 0 },
  { label: 'À venir', value: adminData?.stats.upcomingEvents ?? 0 },
- { label: 'Tâches ouvertes', value: platformInsights?.tasks?.open ?? adminData?.stats.openTasks ?? 0 },
- { label: 'Tâches en retard', value: platformInsights?.tasks?.overdue ?? adminData?.stats.overdueTasks ?? 0 },
+{ label: 'Actions en cours', value: platformInsights?.tasks?.open ?? adminData?.stats.openTasks ?? 0 },
+{ label: 'Urgences', value: platformInsights?.tasks?.overdue ?? adminData?.stats.overdueTasks ?? 0 },
  ].map((row) => (
  <div key={row.label} className="flex justify-between text-sm">
  <span className="text-muted dark:text-muted font-medium">{row.label}</span>

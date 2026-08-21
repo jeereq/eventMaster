@@ -109,8 +109,8 @@ function MarketplaceVenuesPageInner() {
       markers={markers}
       loading={loading}
       error={error}
-      emptyTitle="Aucune salle pour ces filtres"
-      emptyDescription="Élargissez la recherche, ou publiez une salle depuis Salles dans le tableau de bord."
+      emptyTitle="Nous cherchons encore la perle rare..."
+      emptyDescription="Aucun lieu ne correspond exactement à vos critères. Élargissez votre recherche pour trouver le cadre idéal."
       page={page}
       pageSize={pageSize}
       onPageChange={setPage}

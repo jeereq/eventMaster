@@ -166,7 +166,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
         <div className="space-y-1">
           <h2 className="text-lg font-semibold text-foreground tracking-tight inline-flex items-center gap-2">
             <ClipboardList className="w-4.5 h-4.5 text-primary" />
-            Tâches de l’événement
+            Ce qui requiert votre attention
           </h2>
           <p className="text-sm text-muted">
             Type, priorité, dépendances et statuts. Distincte des accès équipe.
@@ -266,12 +266,12 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
             personFilter !== 'all'
               ? 'Aucune tâche pour cette personne'
               : filter === 'open'
-                ? 'Rien à faire pour le moment'
+                ? 'Tout est sous contrôle'
                 : 'Aucune tâche'
           }
           description={
             canManage
-              ? 'Générez la checklist depuis la préparation, ou ajoutez une tâche ci-dessous.'
+              ? 'Vous êtes à jour. Générez la checklist depuis la préparation, ou ajoutez une tâche ci-dessous.'
               : 'Le manager n’a pas encore assigné de tâches pour cet événement.'
           }
         />

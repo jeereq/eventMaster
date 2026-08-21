@@ -122,8 +122,8 @@ function MarketplaceEventsPageInner() {
       markers={markers}
       loading={loading}
       error={error}
-      emptyTitle="Aucun événement public pour ces filtres"
-      emptyDescription="Élargissez la recherche, ou publiez un événement public depuis le tableau de bord organisateur."
+      emptyTitle="Nous cherchons encore la perle rare..."
+      emptyDescription="Aucun événement public ne correspond exactement à vos critères. Élargissez vos filtres pour découvrir de nouvelles expériences."
       page={page}
       pageSize={pageSize}
       onPageChange={setPage}

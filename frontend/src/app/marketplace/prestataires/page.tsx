@@ -137,8 +137,8 @@ function MarketplaceServicesPageInner() {
       markers={markers}
       loading={loading}
       error={error}
-      emptyTitle="Aucun prestataire pour ces filtres"
-      emptyDescription="Élargissez la commune ou la catégorie, ou publiez une prestation depuis Marketplace."
+      emptyTitle="Nous cherchons encore la perle rare..."
+      emptyDescription="Aucun prestataire ne correspond exactement à vos critères. Élargissez votre recherche pour découvrir de nouveaux talents."
       page={page}
       pageSize={pageSize}
       onPageChange={setPage}

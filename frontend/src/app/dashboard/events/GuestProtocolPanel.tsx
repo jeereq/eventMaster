@@ -415,7 +415,7 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
         <div className="divide-y divide-border max-h-[420px] overflow-y-auto">
           {filteredGuests.length === 0 ? (
             <p className="px-5 py-8 text-center text-sm text-muted">
-              {guests.length === 0 ? 'Aucun invité pour cet événement.' : 'Aucun résultat pour cette recherche.'}
+              {guests.length === 0 ? 'Votre liste d\'invités est encore vide.' : 'Aucun résultat pour cette recherche.'}
             </p>
           ) : (
             filteredGuests.map((g) => (

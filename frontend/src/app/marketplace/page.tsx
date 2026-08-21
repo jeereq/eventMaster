@@ -137,8 +137,8 @@ function MarketplaceHubPageInner() {
       items={visible}
       markers={markers}
       loading={loading}
-      emptyTitle="Aucune fiche pour cette recherche"
-      emptyDescription="Élargissez les mots-clés, ou publiez une salle, une prestation ou un événement public."
+      emptyTitle="Nous cherchons encore la perle rare..."
+      emptyDescription="Aucune fiche ne correspond exactement à vos critères. Élargissez votre recherche pour explorer plus de possibilités."
       page={page}
       pageSize={pageSize}
       onPageChange={setPage}

@@ -299,12 +299,12 @@ export default function MarketplaceBookingsPanel({
       {visible.length === 0 ? (
         <EmptyState
           icon={<CalendarCheck className="w-5 h-5" />}
-          title={bookings.length ? 'Aucune réservation pour ces filtres' : 'Aucune réservation'}
+          title={bookings.length ? 'Aucune réservation pour ces filtres' : 'Aucune réservation confirmée'}
           description={bookings.length
-            ? 'Changez le statut, le type ou les dates pour élargir la recherche.'
+            ? 'Ajustez vos filtres pour trouver ce que vous cherchez.'
             : organizerView
-              ? 'Les demandes de dates envoyées aux salles, métiers et locations apparaîtront ici.'
-              : 'Les demandes de date (salles, prestations et locations) apparaîtront ici.'}
+              ? 'Sécurisez vos prestataires et lieux favoris pour les voir apparaître ici.'
+              : 'Vos demandes de réservation (salles, prestations et locations) s\'afficheront ici une fois confirmées.'}
         />
       ) : (
         <>

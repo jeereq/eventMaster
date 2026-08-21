@@ -145,14 +145,14 @@ export default function MarketplaceInquiriesPanel({
 
   if (inquiries.length === 0) {
     return (
-      <EmptyState
-        icon={<Inbox className="w-5 h-5" />}
-        title={organizerView ? 'Aucun devis envoyé' : 'Aucune demande'}
-        description={
-          organizerView
-            ? 'Parcourez salles, métiers et locations, puis envoyez une demande depuis la fiche.'
-            : 'Les devis salles, métiers et locations arriveront ici.'
-        }
+        <EmptyState
+          icon={<Inbox className="w-5 h-5" />}
+          title={organizerView ? 'Aucune demande en cours' : 'Votre boîte de réception est vide'}
+          description={
+            organizerView
+              ? 'Explorez notre catalogue et contactez les prestataires qui correspondent à vos envies.'
+              : 'Les demandes de devis apparaîtront ici.'
+          }
         action={
           organizerView ? (
             <Link href="/dashboard/catalogue">

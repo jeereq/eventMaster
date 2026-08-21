@@ -265,8 +265,8 @@ export default function AdminGuestsPage() {
       ) : items.length === 0 ? (
         <EmptyState
           icon={<Users className="w-5 h-5" />}
-          title="Aucun invité"
-          description="Aucun invité ne correspond à ces filtres."
+          title="Liste vide"
+          description="Aucun invité ne correspond à ces critères."
         />
       ) : (
         <div className={viewMode === 'grid' ? gridClassName : listStackClass}>

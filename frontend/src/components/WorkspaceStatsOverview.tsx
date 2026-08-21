@@ -102,7 +102,7 @@ export function WorkspaceStatsOverview({
             <StatCard label="Invités" value={stats.guests.total} hint={`${stats.guests.accepted} présents`} />
             <StatCard label="Check-in" value={`${stats.guests.checkInRate}%`} hint={`${stats.guests.checkedIn} scannés`} tone="emerald" />
             <StatCard
-              label="Tâches ouvertes"
+              label="Actions en cours"
               value={stats.tasks.open}
               hint={stats.tasks.overdue ? `${stats.tasks.overdue} en retard` : `${stats.tasks.dueToday} aujourd’hui`}
               tone={stats.tasks.overdue ? 'rose' : 'amber'}
