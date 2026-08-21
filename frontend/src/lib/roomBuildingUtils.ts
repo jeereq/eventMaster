@@ -1,5 +1,10 @@
 import type { RoomLayoutBlueprint, ZoneMaterial } from '@/lib/roomLayoutUtils';
-import { createWallOpening, makeLayoutId, refreshBlueprintMetadata } from '@/lib/roomLayoutUtils';
+import {
+  createBlueprintFixture,
+  createWallOpening,
+  makeLayoutId,
+  refreshBlueprintMetadata,
+} from '@/lib/roomLayoutUtils';
 import type { LayoutSelectionItem } from '@/lib/roomSelectionUtils';
 
 /** Étage d’un bâtiment / maison (plan multi-niveaux). */
@@ -219,6 +224,7 @@ export function linkStairsToStory(
   const toElev = storyElevationM(blueprint, toStoryId);
   const heightM = Math.max(0.8, Math.abs(toElev - fromElev));
   const steps = Math.max(4, Math.min(20, Math.round(heightM / 0.18)));
+  const toLabel = stories.find((s) => s.id === toStoryId)?.label ?? 'étage';
 
   const link: VerticalLink = {
     id: makeLayoutId('vlink'),
@@ -234,7 +240,14 @@ export function linkStairsToStory(
     ...blueprint,
     fixtures: blueprint.fixtures.map((f) =>
       f.id === stairsId
-        ? { ...f, connectsToStoryId: toStoryId, heightM, steps, storyId: fromStoryId }
+        ? {
+            ...f,
+            connectsToStoryId: toStoryId,
+            heightM,
+            steps,
+            storyId: fromStoryId,
+            label: f.label?.startsWith('Escalier') ? `Escalier → ${toLabel}` : f.label,
+          }
         : f,
     ),
     metadata: {
@@ -242,6 +255,42 @@ export function linkStairsToStory(
       stories,
       verticalLinks: links,
     },
+  };
+}
+
+/**
+ * Crée un escalier sur l’étage actif, déjà relié vers `toStoryId`.
+ * Hauteur / marches calculées automatiquement.
+ */
+export function addStairsLinkingStories(
+  blueprint: RoomLayoutBlueprint,
+  toStoryId: string,
+): { blueprint: RoomLayoutBlueprint; stairsId: string } | null {
+  const stories = resolveStories(blueprint);
+  if (stories.length < 2) return null;
+  if (!stories.some((s) => s.id === toStoryId)) return null;
+
+  const fromStoryId = resolveActiveStoryId(blueprint);
+  if (fromStoryId === toStoryId) return null;
+
+  const toLabel = stories.find((s) => s.id === toStoryId)?.label ?? 'étage';
+  const base = createBlueprintFixture('stairs');
+  const stairs = {
+    ...base,
+    storyId: fromStoryId,
+    label: `Escalier → ${toLabel}`,
+  };
+  const withStairs: RoomLayoutBlueprint = {
+    ...blueprint,
+    fixtures: [...blueprint.fixtures, stairs],
+    metadata: {
+      ...blueprint.metadata,
+      stories,
+    },
+  };
+  return {
+    blueprint: linkStairsToStory(withStairs, stairs.id, toStoryId),
+    stairsId: stairs.id,
   };
 }
 

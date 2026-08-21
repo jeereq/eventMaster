@@ -95,6 +95,7 @@ import {
 import { FLOOR_TYPE_PICKER_ORDER, floorTypeLabels, resolveDepthAmount, resolveFloorStyle } from '@/lib/roomFloorUtils';
 import CustomRoomThemePanel from '@/components/CustomRoomThemePanel';
 import {
+  addStairsLinkingStories,
   addStory,
   applyStyleToSelection,
   belongsToActiveStory,
@@ -149,7 +150,7 @@ export default function RoomLayoutEditor({
   const [lockOrbit, setLockOrbit] = useState(true);
   const [walkthroughActive, setWalkthroughActive] = useState(false);
   const [walkthroughLabel, setWalkthroughLabel] = useState('');
-  const [quickCreate, setQuickCreate] = useState<null | 'aisles' | 'chairs'>(null);
+  const [quickCreate, setQuickCreate] = useState<null | 'aisles' | 'chairs' | 'stairs'>(null);
   const [aisleCount, setAisleCount] = useState(2);
   const [chairGroups, setChairGroups] = useState(2);
   const [rowsPerGroup, setRowsPerGroup] = useState(4);
@@ -558,9 +559,54 @@ export default function RoomLayoutEditor({
     const fixture = { ...createCorridorFixture(n), storyId: resolveActiveStoryId(blueprint) };
     updateBlueprint(
       { ...blueprint, fixtures: [...blueprint.fixtures, fixture] },
-      { message: `Couloir « ${fixture.label} » ajouté`, kind: 'add' },
+      { message: `${fixture.label} ajouté`, kind: 'add' },
     );
     setSelection([{ kind: 'fixture', id: fixture.id }]);
+  };
+
+  /** Escalier déjà relié vers un autre étage (1 clic). */
+  const addStairsToStory = (toStoryId: string) => {
+    if (!caps.canFixtures || !caps.fixtureKinds.includes('stairs')) {
+      log('Les escaliers ne sont pas inclus dans votre forfait', 'info');
+      return;
+    }
+    const stories = resolveStories(blueprint);
+    if (stories.length < 2) {
+      log('Ajoutez d’abord un étage (panneau Étages)', 'info');
+      setAccordion('batiment');
+      return;
+    }
+    const result = addStairsLinkingStories(blueprint, toStoryId);
+    if (!result) {
+      log('Impossible de relier cet étage', 'info');
+      return;
+    }
+    const toLabel = stories.find((s) => s.id === toStoryId)?.label ?? 'étage';
+    updateBlueprint(result.blueprint, {
+      message: `Escalier vers « ${toLabel} » ajouté`,
+      kind: 'add',
+    });
+    setSelection([{ kind: 'fixture', id: result.stairsId }]);
+    setQuickCreate(null);
+  };
+
+  const openStairsQuickCreate = () => {
+    if (!caps.canFixtures || !caps.fixtureKinds.includes('stairs')) {
+      log('Les escaliers ne sont pas inclus dans votre forfait', 'info');
+      return;
+    }
+    const stories = resolveStories(blueprint);
+    if (stories.length < 2) {
+      setAccordion('batiment');
+      log('Ajoutez un étage, puis créez l’escalier vers celui-ci', 'info');
+      return;
+    }
+    const others = stories.filter((s) => s.id !== resolveActiveStoryId(blueprint));
+    if (others.length === 1 && others[0]) {
+      addStairsToStory(others[0].id);
+      return;
+    }
+    setQuickCreate(quickCreate === 'stairs' ? null : 'stairs');
   };
 
   const applyTemplate = (templateId: string) => {
@@ -1408,41 +1454,52 @@ export default function RoomLayoutEditor({
               onClick={() => setAccordion(accordion === 'batiment' ? '' : 'batiment')}
             >
               <span className="flex items-center gap-2">
-                <Layers className="w-4 h-4" /> Maison · Étages · Fondation
+                <Layers className="w-4 h-4" /> Étages & vues
               </span>
             </button>
             {accordion === 'batiment' && (
               <div className="p-4 bg-surface space-y-4 border-t border-border">
+                <div className="rounded-[var(--radius-button)] border border-primary/20 bg-primary/5 px-3 py-2 space-y-1">
+                  <p className="text-[11px] font-semibold text-foreground">En 3 gestes</p>
+                  <ol className="text-[10px] text-muted leading-relaxed list-decimal pl-3.5 space-y-0.5">
+                    <li>Créez / sélectionnez l’étage à éditer</li>
+                    <li>Ajoutez un escalier vers l’autre niveau</li>
+                    <li>Activez « Voir tout » pour l’aperçu global</li>
+                  </ol>
+                </div>
+
                 <div className="space-y-2">
-                  <p className="text-[10px] font-bold uppercase text-muted">Étages</p>
+                  <p className="text-[10px] font-bold uppercase text-muted">1 · Étages</p>
                   <div className="flex flex-wrap gap-1.5">
                     {resolveStories(blueprint).map((story) => (
                       <button
                         key={story.id}
                         type="button"
                         onClick={() => {
-                          updateBlueprint(setActiveStory(blueprint, story.id), {
-                            message: `Étage actif : ${story.label}`,
-                            kind: 'settings',
-                          });
+                          updateBlueprint(
+                            setStackView(setActiveStory(blueprint, story.id), false),
+                            {
+                              message: `Édition : ${story.label}`,
+                              kind: 'settings',
+                            },
+                          );
                           setSelection([]);
                         }}
                         className={cn(
                           'px-2.5 py-1 rounded-[var(--radius-button)] border text-[10px] font-bold',
-                          resolveActiveStoryId(blueprint) === story.id
+                          resolveActiveStoryId(blueprint) === story.id && !blueprint.metadata.stackView
                             ? 'bg-primary/10 border-primary/40 text-primary'
                             : 'border-border text-muted hover:bg-white',
                         )}
                       >
                         {story.label}
-                        <span className="opacity-60 ml-1">{story.elevationM.toFixed(1)} m</span>
                       </button>
                     ))}
                     <button
                       type="button"
                       onClick={() => {
                         const next = addStory(blueprint);
-                        updateBlueprint(next, { message: 'Nouvel étage ajouté', kind: 'add' });
+                        updateBlueprint(setStackView(next, false), { message: 'Nouvel étage ajouté', kind: 'add' });
                         setSelection([]);
                       }}
                       className="px-2.5 py-1 rounded-[var(--radius-button)] border border-dashed border-border text-[10px] font-bold text-muted hover:bg-white"
@@ -1450,92 +1507,154 @@ export default function RoomLayoutEditor({
                       + Étage
                     </button>
                   </div>
-                  <p className="text-[10px] text-muted leading-relaxed">
-                    Placez le mobilier, les couloirs et les murs sur l’étage actif. Reliez les niveaux avec un escalier.
+                  <p className="text-[10px] text-muted">
+                    Vous éditez : <span className="font-semibold text-foreground">{resolveStories(blueprint).find((s) => s.id === resolveActiveStoryId(blueprint))?.label ?? 'RDC'}</span>
+                    {' '}— le mobilier ajouté va sur cet étage.
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const next = !blueprint.metadata.stackView;
-                      updateBlueprint(setStackView(blueprint, next), {
-                        message: next ? 'Vue empilée activée' : 'Vue étage unique',
-                        kind: 'settings',
-                      });
-                    }}
-                    className={cn(
-                      'w-full py-2 rounded-[var(--radius-button)] border text-xs font-bold',
-                      blueprint.metadata.stackView
-                        ? 'bg-violet-50 border-violet-300 text-violet-900'
-                        : 'border-border text-muted hover:bg-white',
-                    )}
-                  >
-                    {blueprint.metadata.stackView ? 'Vue empilée ON' : 'Vue empilée (coupe)'}
-                  </button>
                 </div>
-                <div className="space-y-2">
-                  <p className="text-[10px] font-bold uppercase text-muted">Fondation</p>
-                  <select
-                    value={resolveFoundation(blueprint).kind}
-                    onChange={(e) => {
-                      const kind = e.target.value as FoundationKind;
-                      updateBlueprint(
-                        updateFoundation(blueprint, {
-                          kind,
-                          heightM: kind === 'none' ? 0 : kind === 'basement' ? 2.4 : kind === 'crawlspace' ? 0.9 : 0.35,
-                        }),
-                        { message: `Fondation : ${foundationKindLabels[kind]}`, kind: 'settings' },
-                      );
-                    }}
-                    className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-xs"
-                  >
-                    {(Object.keys(foundationKindLabels) as FoundationKind[]).map((k) => (
-                      <option key={k} value={k}>{foundationKindLabels[k]}</option>
-                    ))}
-                  </select>
-                  {resolveFoundation(blueprint).kind !== 'none' ? (
-                    <label className="block text-[10px] space-y-1">
-                      <span className="font-semibold text-muted">Hauteur (m)</span>
-                      <input
-                        type="number"
-                        min={0.1}
-                        max={4}
-                        step={0.05}
-                        value={resolveFoundation(blueprint).heightM}
-                        onChange={(e) => updateBlueprint(
-                          updateFoundation(blueprint, { heightM: parseFloat(e.target.value) || 0.35 }),
-                          { message: 'Hauteur fondation mise à jour', kind: 'settings' },
-                        )}
-                        className="w-full px-2 py-1.5 rounded border text-xs"
-                      />
-                    </label>
-                  ) : null}
-                </div>
-                {caps.fixtureKinds.includes('corridor') ? (
+
+                {caps.fixtureKinds.includes('stairs') ? (
                   <div className="space-y-2">
+                    <p className="text-[10px] font-bold uppercase text-muted">2 · Escalier vers…</p>
+                    {resolveStories(blueprint).length < 2 ? (
+                      <p className="text-[10px] text-muted">Ajoutez un 2ᵉ étage pour pouvoir créer un escalier.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {resolveStories(blueprint)
+                          .filter((s) => s.id !== resolveActiveStoryId(blueprint))
+                          .map((story) => (
+                            <button
+                              key={story.id}
+                              type="button"
+                              onClick={() => addStairsToStory(story.id)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] border border-stone-300 bg-stone-50 text-[10px] font-bold text-stone-800 hover:bg-stone-100"
+                            >
+                              <StepForward className="w-3 h-3" />
+                              Vers {story.label}
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                    <p className="text-[10px] text-muted">Hauteur et marches calculées automatiquement. Déplacez ensuite l’escalier sur le plan.</p>
+                  </div>
+                ) : null}
+
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold uppercase text-muted">3 · Vue</p>
+                  <div className="grid grid-cols-2 gap-1.5">
                     <button
                       type="button"
-                      onClick={addCorridor}
-                      className="w-full py-2 rounded-[var(--radius-button)] border border-stone-300 bg-stone-50 text-stone-800 text-xs font-bold"
+                      onClick={() => {
+                        updateBlueprint(setStackView(blueprint, false), {
+                          message: 'Vue étage unique',
+                          kind: 'settings',
+                        });
+                      }}
+                      className={cn(
+                        'py-2 rounded-[var(--radius-button)] border text-xs font-bold',
+                        !blueprint.metadata.stackView
+                          ? 'bg-primary/10 border-primary/40 text-primary'
+                          : 'border-border text-muted hover:bg-white',
+                      )}
                     >
-                      + Ajouter un couloir
+                      Éditer un étage
                     </button>
                     <button
                       type="button"
                       onClick={() => {
-                        const { blueprint: next, added } = punchCorridorOpenings(blueprint);
-                        updateBlueprint(next, {
-                          message: added > 0
-                            ? `${added} porte${added > 1 ? 's' : ''} percée${added > 1 ? 's' : ''} depuis les couloirs`
-                            : 'Aucune intersection couloir / mur trouvée',
-                          kind: added > 0 ? 'edit' : 'info',
+                        updateBlueprint(setStackView(blueprint, true), {
+                          message: 'Vue d’ensemble activée',
+                          kind: 'settings',
                         });
                       }}
-                      className="w-full py-2 rounded-[var(--radius-button)] border border-amber-200 bg-amber-50 text-amber-900 text-xs font-bold"
+                      className={cn(
+                        'inline-flex items-center justify-center gap-1 py-2 rounded-[var(--radius-button)] border text-xs font-bold',
+                        blueprint.metadata.stackView
+                          ? 'bg-violet-50 border-violet-300 text-violet-900'
+                          : 'border-border text-muted hover:bg-white',
+                      )}
                     >
-                      Percer portes (couloirs → murs)
+                      <Eye className="w-3.5 h-3.5" />
+                      Voir tout
                     </button>
                   </div>
-                ) : null}
+                  <p className="text-[10px] text-muted leading-relaxed">
+                    {blueprint.metadata.stackView
+                      ? 'Tous les étages sont visibles en coupe. Revenez à « Éditer un étage » pour modifier le mobilier.'
+                      : 'Seul l’étage actif est affiché — idéal pour placer tables et murs.'}
+                  </p>
+                </div>
+
+                <details className="rounded-[var(--radius-button)] border border-border bg-surface-muted/40 px-3 py-2">
+                  <summary className="text-[10px] font-bold uppercase text-muted cursor-pointer select-none">
+                    Options avancées (fondation, couloirs)
+                  </summary>
+                  <div className="mt-3 space-y-3">
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-bold uppercase text-muted">Fondation</p>
+                      <select
+                        value={resolveFoundation(blueprint).kind}
+                        onChange={(e) => {
+                          const kind = e.target.value as FoundationKind;
+                          updateBlueprint(
+                            updateFoundation(blueprint, {
+                              kind,
+                              heightM: kind === 'none' ? 0 : kind === 'basement' ? 2.4 : kind === 'crawlspace' ? 0.9 : 0.35,
+                            }),
+                            { message: `Fondation : ${foundationKindLabels[kind]}`, kind: 'settings' },
+                          );
+                        }}
+                        className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-xs"
+                      >
+                        {(Object.keys(foundationKindLabels) as FoundationKind[]).map((k) => (
+                          <option key={k} value={k}>{foundationKindLabels[k]}</option>
+                        ))}
+                      </select>
+                      {resolveFoundation(blueprint).kind !== 'none' ? (
+                        <label className="block text-[10px] space-y-1">
+                          <span className="font-semibold text-muted">Hauteur (m)</span>
+                          <input
+                            type="number"
+                            min={0.1}
+                            max={4}
+                            step={0.05}
+                            value={resolveFoundation(blueprint).heightM}
+                            onChange={(e) => updateBlueprint(
+                              updateFoundation(blueprint, { heightM: parseFloat(e.target.value) || 0.35 }),
+                              { message: 'Hauteur fondation mise à jour', kind: 'settings' },
+                            )}
+                            className="w-full px-2 py-1.5 rounded border text-xs"
+                          />
+                        </label>
+                      ) : null}
+                    </div>
+                    {caps.fixtureKinds.includes('corridor') ? (
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-bold uppercase text-muted">Couloir</p>
+                        <button
+                          type="button"
+                          onClick={addCorridor}
+                          className="w-full py-1.5 rounded-[var(--radius-button)] border border-border text-xs font-bold text-muted hover:bg-white"
+                        >
+                          + Couloir sur l’étage actif
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const { blueprint: next, added } = punchCorridorOpenings(blueprint);
+                            updateBlueprint(next, {
+                              message: added > 0 ? `${added} ouverture(s) dans les murs` : 'Aucune ouverture ajoutée',
+                              kind: 'edit',
+                            });
+                          }}
+                          className="w-full py-1.5 rounded-[var(--radius-button)] border border-dashed border-border text-[10px] font-bold text-muted hover:bg-white"
+                        >
+                          Percer les portes (couloirs → murs)
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                </details>
               </div>
             )}
           </div>
@@ -1817,31 +1936,40 @@ export default function RoomLayoutEditor({
 
             {isStairs && (
               <>
-                <label className="block text-xs space-y-1">
-                  <span className="font-semibold text-muted">Hauteur totale (m)</span>
-                  <input
-                    type="number"
-                    min={0.4}
-                    max={4}
-                    step={0.1}
-                    value={selectedFixture.heightM ?? 1.2}
-                    onChange={(e) => updateFixture(selectedFixture.id, { heightM: parseFloat(e.target.value) || 1.2 }, 'Hauteur escalier')}
-                    className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
-                  />
-                </label>
-                <label className="block text-xs space-y-1">
-                  <span className="font-semibold text-muted">Nombre de marches</span>
-                  <input
-                    type="number"
-                    min={3}
-                    max={16}
-                    value={selectedFixture.steps ?? 6}
-                    onChange={(e) => updateFixture(selectedFixture.id, { steps: Math.max(3, Math.min(16, parseInt(e.target.value, 10) || 6)) }, 'Marches escalier')}
-                    className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
-                  />
-                </label>
+                <div className="rounded-[var(--radius-button)] border border-stone-200 bg-stone-50 px-3 py-2 space-y-2">
+                  <p className="text-[10px] font-bold uppercase text-muted">Cet escalier mène vers</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {resolveStories(blueprint)
+                      .filter((s) => s.id !== (selectedFixture.storyId ?? resolveActiveStoryId(blueprint)))
+                      .map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => updateBlueprint(
+                            linkStairsToStory(blueprint, selectedFixture.id, s.id),
+                            { message: `Escalier relié vers ${s.label}`, kind: 'edit' },
+                          )}
+                          className={cn(
+                            'px-2.5 py-1.5 rounded-[var(--radius-button)] border text-[10px] font-bold',
+                            selectedFixture.connectsToStoryId === s.id
+                              ? 'bg-primary/10 border-primary/40 text-primary'
+                              : 'border-border bg-white text-muted hover:bg-surface-muted',
+                          )}
+                        >
+                          {s.label}
+                        </button>
+                      ))}
+                  </div>
+                  {selectedFixture.connectsToStoryId ? (
+                    <p className="text-[10px] text-muted">
+                      Hauteur auto : {(selectedFixture.heightM ?? 0).toFixed(1)} m · {selectedFixture.steps ?? 0} marches
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-amber-800">Choisissez l’étage d’arrivée.</p>
+                  )}
+                </div>
                 <div className="space-y-1">
-                  <p className="text-[10px] font-bold uppercase text-muted">Direction</p>
+                  <p className="text-[10px] font-bold uppercase text-muted">Orientation sur le plan</p>
                   <div className="grid grid-cols-4 gap-1">
                     {([
                       { deg: 0 as const, label: 'Haut' },
@@ -1860,38 +1988,38 @@ export default function RoomLayoutEditor({
                     ))}
                   </div>
                 </div>
-                <label className="block text-xs space-y-1">
-                  <span className="font-semibold text-muted">Relie vers l’étage</span>
-                  <select
-                    value={selectedFixture.connectsToStoryId ?? ''}
-                    onChange={(e) => {
-                      const to = e.target.value;
-                      if (!to) {
-                        updateFixture(selectedFixture.id, { connectsToStoryId: undefined }, 'Liaison escalier retirée');
-                        return;
-                      }
-                      updateBlueprint(
-                        linkStairsToStory(blueprint, selectedFixture.id, to),
-                        { message: 'Escalier relié entre étages', kind: 'edit' },
-                      );
-                    }}
-                    className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
-                  >
-                    <option value="">— Aucun —</option>
-                    {resolveStories(blueprint)
-                      .filter((s) => s.id !== (selectedFixture.storyId ?? resolveActiveStoryId(blueprint)))
-                      .map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.label} ({s.elevationM.toFixed(1)} m)
-                        </option>
-                      ))}
-                  </select>
-                  <p className="text-[10px] text-muted">La hauteur et le nombre de marches s’ajustent à la différence d’élévation.</p>
-                </label>
-                <label className="block text-xs space-y-1">
-                  <span className="font-semibold text-muted">Couleur</span>
-                  <input type="color" value={selectedFixture.color ?? '#a8a29e'} onChange={(e) => updateFixture(selectedFixture.id, { color: e.target.value })} className="w-full h-9 rounded-[var(--radius-button)] border cursor-pointer" />
-                </label>
+                <details className="text-xs">
+                  <summary className="font-semibold text-muted cursor-pointer">Réglages fins</summary>
+                  <div className="mt-2 space-y-2">
+                    <label className="block space-y-1">
+                      <span className="font-semibold text-muted">Hauteur (m)</span>
+                      <input
+                        type="number"
+                        min={0.4}
+                        max={4}
+                        step={0.1}
+                        value={selectedFixture.heightM ?? 1.2}
+                        onChange={(e) => updateFixture(selectedFixture.id, { heightM: parseFloat(e.target.value) || 1.2 }, 'Hauteur escalier')}
+                        className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
+                      />
+                    </label>
+                    <label className="block space-y-1">
+                      <span className="font-semibold text-muted">Marches</span>
+                      <input
+                        type="number"
+                        min={3}
+                        max={16}
+                        value={selectedFixture.steps ?? 6}
+                        onChange={(e) => updateFixture(selectedFixture.id, { steps: Math.max(3, Math.min(16, parseInt(e.target.value, 10) || 6)) }, 'Marches escalier')}
+                        className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
+                      />
+                    </label>
+                    <label className="block space-y-1">
+                      <span className="font-semibold text-muted">Couleur</span>
+                      <input type="color" value={selectedFixture.color ?? '#a8a29e'} onChange={(e) => updateFixture(selectedFixture.id, { color: e.target.value })} className="w-full h-9 rounded-[var(--radius-button)] border cursor-pointer" />
+                    </label>
+                  </div>
+                </details>
               </>
             )}
 
@@ -2900,8 +3028,18 @@ export default function RoomLayoutEditor({
         <button type="button" onClick={() => addFixture('podium')} className="px-3 py-1.5 bg-orange-50 border border-orange-200 text-orange-800 rounded-[var(--radius-button)] text-xs font-bold">Podium</button>
       ) : null}
       {caps.fixtureKinds.includes('stairs') ? (
-        <button type="button" onClick={() => addFixture('stairs')} className="inline-flex items-center gap-1 px-3 py-1.5 bg-stone-100 border border-stone-300 text-stone-800 rounded-[var(--radius-button)] text-xs font-bold">
-          <StepForward className="w-3.5 h-3.5" /> Escalier
+        <button
+          type="button"
+          onClick={openStairsQuickCreate}
+          className={cn(
+            'inline-flex items-center gap-1 px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
+            quickCreate === 'stairs'
+              ? 'bg-stone-200 border-stone-500 text-stone-900'
+              : 'bg-stone-100 border-stone-300 text-stone-800',
+          )}
+          title="Escalier vers un autre étage"
+        >
+          <StepForward className="w-3.5 h-3.5" /> Escalier vers…
         </button>
       ) : null}
       {caps.fixtureKinds.includes('buffet') ? (
@@ -3032,6 +3170,39 @@ export default function RoomLayoutEditor({
           </button>
         </>
       )}
+      {quickCreate === 'stairs' && (
+        <>
+          <p className="text-[11px] text-muted self-center">
+            Depuis <span className="font-semibold text-foreground">{resolveStories(blueprint).find((s) => s.id === resolveActiveStoryId(blueprint))?.label ?? 'RDC'}</span>, créer un escalier vers :
+          </p>
+          {resolveStories(blueprint)
+            .filter((s) => s.id !== resolveActiveStoryId(blueprint))
+            .map((story) => (
+              <button
+                key={story.id}
+                type="button"
+                onClick={() => addStairsToStory(story.id)}
+                className="inline-flex items-center gap-1 px-3 py-1.5 bg-stone-800 text-white rounded-[var(--radius-button)] text-xs font-bold"
+              >
+                <StepForward className="w-3.5 h-3.5" />
+                {story.label}
+              </button>
+            ))}
+          {resolveStories(blueprint).length < 2 ? (
+            <button
+              type="button"
+              onClick={() => {
+                const next = addStory(blueprint);
+                updateBlueprint(setStackView(next, false), { message: 'Nouvel étage ajouté', kind: 'add' });
+                setAccordion('batiment');
+              }}
+              className="px-3 py-1.5 bg-primary text-white rounded-[var(--radius-button)] text-xs font-bold"
+            >
+              + Créer un étage d’abord
+            </button>
+          ) : null}
+        </>
+      )}
       <button
         type="button"
         onClick={() => setQuickCreate(null)}
@@ -3041,6 +3212,77 @@ export default function RoomLayoutEditor({
       </button>
     </div>
   ) : null;
+
+  const stories = resolveStories(blueprint);
+  const activeStory = stories.find((s) => s.id === resolveActiveStoryId(blueprint));
+  const storyBar = (
+    <div className="flex flex-wrap items-center gap-2 px-2.5 py-2 rounded-[var(--radius-card)] border border-border bg-surface-muted/50">
+      <span className="text-[10px] font-bold uppercase tracking-wide text-muted shrink-0">Étage</span>
+      <div className="flex flex-wrap gap-1">
+        {stories.map((story) => (
+          <button
+            key={story.id}
+            type="button"
+            onClick={() => {
+              updateBlueprint(
+                setStackView(setActiveStory(blueprint, story.id), false),
+                { message: `Édition : ${story.label}`, kind: 'settings' },
+              );
+              setSelection([]);
+            }}
+            className={cn(
+              'px-2 py-1 rounded-[var(--radius-button)] border text-[10px] font-bold',
+              !blueprint.metadata.stackView && resolveActiveStoryId(blueprint) === story.id
+                ? 'bg-primary text-white border-primary'
+                : 'border-border bg-surface text-muted hover:bg-white',
+            )}
+          >
+            {story.label}
+          </button>
+        ))}
+        {!readOnly ? (
+          <button
+            type="button"
+            onClick={() => {
+              const next = addStory(blueprint);
+              updateBlueprint(setStackView(next, false), { message: 'Nouvel étage ajouté', kind: 'add' });
+              setSelection([]);
+              setAccordion('batiment');
+            }}
+            className="px-2 py-1 rounded-[var(--radius-button)] border border-dashed border-border text-[10px] font-bold text-muted hover:bg-white"
+          >
+            +
+          </button>
+        ) : null}
+      </div>
+      <div className="h-4 w-px bg-border mx-0.5 hidden sm:block" />
+      <button
+        type="button"
+        onClick={() => {
+          const next = !blueprint.metadata.stackView;
+          updateBlueprint(setStackView(blueprint, next), {
+            message: next ? 'Vue d’ensemble activée' : 'Vue étage unique',
+            kind: 'settings',
+          });
+        }}
+        className={cn(
+          'inline-flex items-center gap-1 px-2.5 py-1 rounded-[var(--radius-button)] border text-[10px] font-bold ml-auto sm:ml-0',
+          blueprint.metadata.stackView
+            ? 'bg-violet-100 border-violet-300 text-violet-900'
+            : 'border-border bg-surface text-muted hover:bg-white',
+        )}
+        title="Afficher tous les étages en coupe"
+      >
+        <Eye className="w-3 h-3" />
+        {blueprint.metadata.stackView ? 'Voir tout · ON' : 'Voir tout'}
+      </button>
+      <p className="text-[10px] text-muted w-full sm:w-auto sm:ml-1">
+        {blueprint.metadata.stackView
+          ? 'Aperçu global (tous les niveaux)'
+          : `Édition : ${activeStory?.label ?? 'RDC'}`}
+      </p>
+    </div>
+  );
 
   const header = (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 shrink-0">
@@ -3085,7 +3327,8 @@ export default function RoomLayoutEditor({
               {quickCreatePanel}
             </div>
             <div className="flex flex-col md:flex-row flex-1 min-h-0 gap-2 sm:gap-3 p-2 sm:p-3 overflow-hidden">
-              <div className="flex-1 min-w-0 min-h-[50dvh] md:min-h-0 flex flex-col">
+              <div className="flex-1 min-w-0 min-h-[50dvh] md:min-h-0 flex flex-col gap-2">
+                {storyBar}
                 {renderCanvas('flex-1 min-h-0 h-full')}
               </div>
               <div className="md:flex-1 md:min-w-[240px] md:max-w-[320px] max-h-[34dvh] md:max-h-none overflow-y-auto shrink-0 space-y-3">
@@ -3118,7 +3361,10 @@ export default function RoomLayoutEditor({
         {toolbar}
         {quickCreatePanel}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4">
-          <div className="lg:col-span-2 min-h-0">{renderCanvas('em-plan-stage lg:aspect-[16/10] lg:h-auto lg:min-h-[320px]')}</div>
+          <div className="lg:col-span-2 min-h-0 space-y-2">
+            {storyBar}
+            {renderCanvas('em-plan-stage lg:aspect-[16/10] lg:h-auto lg:min-h-[320px]')}
+          </div>
           <div className="max-h-[36dvh] lg:max-h-[520px] overflow-y-auto space-y-3">
             {renderCanvasInventory()}
             {renderEditPanel()}
