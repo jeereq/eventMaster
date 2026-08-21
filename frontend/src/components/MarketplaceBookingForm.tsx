@@ -13,9 +13,9 @@ import {
   type VenuePriceUnit,
 } from '@/lib/marketplace';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
+import ClientAuthChoice from '@/components/ClientAuthChoice';
 import { Lock } from 'lucide-react';
 import { usePathname } from 'next/navigation';
-import { clientLoginHref, clientRegisterHref } from '@/lib/safeAppPath';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { depositPercent } from '@/lib/platformRates';
 
@@ -50,7 +50,7 @@ export default function MarketplaceBookingForm({
   eventId?: string;
   onSent?: () => void;
 }) {
-  const { token, loading, tenant } = useAuth();
+  const { token, loading } = useAuth();
   const { site } = usePlatformSite();
   const depositPct = depositPercent(site);
   const pathname = usePathname();
@@ -80,7 +80,7 @@ export default function MarketplaceBookingForm({
         depositRate: site.marketplaceDepositRate,
       })
     : null;
-  const loggedIn = Boolean(token && tenant?.id);
+  const loggedIn = Boolean(token);
   const bookingsHref = eventId
     ? `/dashboard/bookings?tab=bookings&event=${encodeURIComponent(eventId)}`
     : '/dashboard/bookings';
@@ -156,18 +156,10 @@ export default function MarketplaceBookingForm({
         {calendar}
         <div className="border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface space-y-3">
           <h2 className="text-sm font-semibold text-foreground">Réserver</h2>
-          <p className="text-xs text-muted leading-relaxed">
-            Créez un compte client (gratuit) pour demander une date ou une période. L’acompte ({depositPct} %) se verse hors
-            plateforme au professionnel ; EventMaster n’encaisse pas ce paiement.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Link href={clientLoginHref(nextPath)} className="inline-flex">
-              <Button size="sm">Se connecter</Button>
-            </Link>
-            <Link href={clientRegisterHref(nextPath)} className="inline-flex">
-              <Button size="sm" variant="secondary">Créer un compte client</Button>
-            </Link>
-          </div>
+          <ClientAuthChoice
+            nextPath={nextPath}
+            description={`Un compte est requis pour demander une date. L’acompte (${depositPct} %) se verse hors plateforme au professionnel ; EventMaster n’encaisse pas ce paiement.`}
+          />
         </div>
       </div>
     );

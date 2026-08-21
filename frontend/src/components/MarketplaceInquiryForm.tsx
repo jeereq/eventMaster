@@ -101,7 +101,7 @@ export default function MarketplaceInquiryForm({
       {showAuthChoice ? (
         <ClientAuthChoice
           nextPath={nextPath}
-          description="Connectez-vous ou créez un compte pour envoyer un devis et suivre vos demandes."
+          description="Connectez-vous ou créez un compte pour envoyer un devis, suivre vos demandes et réserver."
         />
       ) : (
         <>

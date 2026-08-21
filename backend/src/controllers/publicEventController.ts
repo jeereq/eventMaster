@@ -214,12 +214,24 @@ export async function getPublicEvent(req: Request, res: Response) {
 
 export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Response) {
   try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Connectez-vous pour réserver ou vous inscrire.' });
+    }
+
     const slug = String(req.params.slug || '');
-    const buyerName = String(req.body?.buyerName || '').trim();
-    const buyerEmail = String(req.body?.buyerEmail || '').trim().toLowerCase();
-    const buyerPhone = String(req.body?.buyerPhone || '').trim() || null;
+    const account = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { id: true, email: true, name: true, phone: true },
+    });
+    if (!account) {
+      return res.status(401).json({ error: 'Connectez-vous pour réserver ou vous inscrire.' });
+    }
+
+    const buyerEmail = account.email.trim().toLowerCase();
+    const buyerName = String(req.body?.buyerName || account.name || '').trim();
+    const buyerPhone = String(req.body?.buyerPhone || account.phone || '').trim() || null;
     const quantity = Math.min(8, Math.max(1, Number(req.body?.quantity) || 1));
-    const userId = req.user?.id || null;
+    const userId = account.id;
 
     if (!buyerName || !buyerEmail || !buyerEmail.includes('@')) {
       return res.status(400).json({ error: 'Nom et e-mail valides requis.' });

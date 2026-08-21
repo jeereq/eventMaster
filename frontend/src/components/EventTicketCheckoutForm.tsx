@@ -9,7 +9,7 @@ import { Alert, Button, Input } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import { Ticket } from 'lucide-react';
 import ClientAuthChoice from '@/components/ClientAuthChoice';
-import { clientLoginHref, clientRegisterHref, eventPublicHref } from '@/lib/safeAppPath';
+import { eventPublicHref } from '@/lib/safeAppPath';
 import type { PublicEventCard } from '@/lib/marketplace';
 
 export default function EventTicketCheckoutForm({ event }: { event: PublicEventCard }) {
@@ -20,19 +20,15 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
   const slug = event.slug || '';
   const nextPath = pathname || eventPublicHref(slug);
   const [busy, setBusy] = useState(false);
-  const [guestCheckout, setGuestCheckout] = useState(false);
   const [error, setError] = useState('');
   const [buyerName, setBuyerName] = useState('');
-  const [buyerEmail, setBuyerEmail] = useState('');
   const [buyerPhone, setBuyerPhone] = useState('');
   const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
     if (!user) return;
     setBuyerName((prev) => prev || user.name || '');
-    setBuyerEmail((prev) => prev || user.email || '');
     setBuyerPhone((prev) => prev || user.phone || '');
-    setGuestCheckout(false);
   }, [user]);
 
   const submit = async (e: React.FormEvent) => {
@@ -42,7 +38,6 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
     try {
       const data = await api.post(`/public/events/${slug}/checkout`, {
         buyerName,
-        buyerEmail,
         buyerPhone,
         quantity,
       });
@@ -59,7 +54,7 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
     }
   };
 
-  const showAuthChoice = !authLoading && !token && !guestCheckout;
+  const showAuthChoice = !authLoading && !token;
 
   return (
     <form onSubmit={submit} className="border border-border rounded-[var(--radius-card)] p-4 sm:p-5 bg-surface space-y-3">
@@ -76,8 +71,7 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
       ) : showAuthChoice ? (
         <ClientAuthChoice
           nextPath={nextPath}
-          description="Connectez-vous pour retrouver vos billets dans le tableau de bord, ou continuez en invité."
-          onGuest={() => setGuestCheckout(true)}
+          description="Un compte est requis pour réserver une place ou acheter un billet. Après connexion, vous revenez à cette fiche."
         />
       ) : (
         <>
@@ -87,16 +81,8 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
               <Link href="/dashboard/tickets" className="font-semibold text-primary hover:underline">Mes billets</Link>.
             </p>
           )}
-          {!token && (
-            <p className="text-xs text-muted">
-              Inscription invité.{' '}
-              <Link href={clientLoginHref(nextPath)} className="font-semibold text-primary hover:underline">Se connecter</Link>
-              {' · '}
-              <Link href={clientRegisterHref(nextPath)} className="font-semibold text-primary hover:underline">Créer un compte</Link>
-            </p>
-          )}
           <Input label="Nom complet" value={buyerName} onChange={(e) => setBuyerName(e.target.value)} required />
-          <Input label="E-mail" type="email" value={buyerEmail} onChange={(e) => setBuyerEmail(e.target.value)} required />
+          <Input label="E-mail" type="email" value={user?.email || ''} disabled />
           <Input label="Téléphone (optionnel)" value={buyerPhone} onChange={(e) => setBuyerPhone(e.target.value)} />
           <Input
             label="Nombre de places"
