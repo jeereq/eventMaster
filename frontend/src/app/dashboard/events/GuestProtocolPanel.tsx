@@ -48,6 +48,7 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
   const [query, setQuery] = useState('');
   const [listFilter, setListFilter] = useState<ListFilter>('queue');
   const [justCheckedIn, setJustCheckedIn] = useState(false);
+  const [isKioskMode, setIsKioskMode] = useState(false);
 
   const loadGuests = useCallback(async () => {
     setLoading(true);
@@ -192,11 +193,34 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
     );
   }
 
+  const kioskClasses = isKioskMode 
+    ? "fixed inset-0 z-[9999] bg-background/95 backdrop-blur-md overflow-y-auto p-4 sm:p-8 flex flex-col xl:flex-row gap-6 animate-fade-in items-start" 
+    : "space-y-5";
+
   return (
-    <div className="space-y-5">
-      <div className="rounded-[var(--radius-card)] border border-border bg-surface p-4 sm:p-5 space-y-1">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">Parcours jour J</p>
-        <h3 className="font-semibold text-foreground text-base">1. Scanner · 2. Confirmer · 3. Invité suivant</h3>
+    <div className={kioskClasses}>
+      {isKioskMode && (
+        <button 
+          onClick={() => setIsKioskMode(false)}
+          className="absolute top-4 right-4 p-2 text-muted hover:text-foreground bg-surface border border-border rounded-full shadow-sm z-50 transition"
+          title="Quitter le mode Kiosk"
+        >
+          <XCircle className="w-6 h-6" />
+        </button>
+      )}
+
+      <div className={cn("rounded-[var(--radius-card)] border border-border bg-surface p-4 sm:p-5 space-y-1", isKioskMode && "w-full xl:w-80 shrink-0 sticky top-4 xl:top-8")}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">Parcours jour J</p>
+            <h3 className="font-semibold text-foreground text-base">1. Scanner · 2. Confirmer · 3. Invité suivant</h3>
+          </div>
+          {!isKioskMode && (
+            <Button variant="secondary" onClick={() => setIsKioskMode(true)} className="shrink-0" size="sm" title="Mode Plein Écran">
+              <ScanLine className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
         <p className="text-xs text-muted leading-relaxed">
           Présentez le badge QR. Après confirmation, le scanner se relance automatiquement.
         </p>
@@ -216,11 +240,12 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
         </div>
       </div>
 
-      <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 space-y-4">
-        <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm">
-          <ScanLine className="w-4 h-4 text-primary" />
-          Scanner un badge
-        </h3>
+      <div className={cn("flex-1 min-w-0 space-y-5", isKioskMode && "w-full max-w-2xl mx-auto")}>
+        <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 space-y-4">
+          <h3 className="font-semibold text-foreground flex items-center gap-2 text-sm">
+            <ScanLine className="w-4 h-4 text-primary" />
+            Scanner un badge
+          </h3>
 
         <QrCameraToggle
           cameraActive={cameraActive}
@@ -453,6 +478,7 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
             ))
           )}
         </div>
+      </div>
       </div>
     </div>
   );

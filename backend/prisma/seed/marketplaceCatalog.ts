@@ -83,11 +83,11 @@ const STAFF_ORG_LIMIT = 5;
 
 const ROOM_TYPES: RoomType[] = ['BANQUET', 'CONFERENCE', 'AMPHITHEATER', 'TENT', 'CUSTOM'];
 const TRADE_CATEGORIES: ServiceCategory[] = [
-  'CATERING', 'PHOTOGRAPHY', 'VIDEO', 'DJ', 'DECORATION', 'SECURITY', 'FLORIST', 'TRANSPORT', 'MC', 'OTHER',
+  'CATERING', 'PHOTOGRAPHY', 'VIDEO', 'DJ', 'DECORATION', 'SECURITY', 'FLORIST', 'TRANSPORT', 'MC', 'BEAUTY_HAIR', 'EVENT_PLANNER', 'ENTERTAINMENT', 'OFFICIANT', 'CHILDCARE', 'AV_TECHNICIAN', 'STATIONERY', 'OTHER',
 ];
 const RENTAL_CATEGORIES: ServiceCategory[] = [
   'RENTAL_CLOTHING_MEN', 'RENTAL_CLOTHING_WOMEN', 'RENTAL_CLOTHING_CHILD',
-  'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT',
+  'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT', 'RENTAL_FURNITURE', 'RENTAL_AV', 'RENTAL_TABLEWARE', 'RENTAL_DECOR', 'RENTAL_TENT'
 ];
 
 const VENUE_PREFIXES = [
@@ -130,7 +130,14 @@ const TRADE_TITLES: Record<string, string[]> = {
   FLORIST: ['Fleuriste — bouquet de mariée', 'Fleuriste — centres de table', 'Fleuriste — décor église', 'Fleuriste — composition tropicale'],
   TRANSPORT: ['Chauffeur — navette invités', 'Chauffeur — cortège mariage', 'Chauffeur — minibus VIP', 'Chauffeur — transfert aéroport'],
   MC: ['Maître de cérémonie', 'Animateur protocole (personne)', 'Présentateur de gala', 'Host bilingue'],
-  OTHER: ['Wedding planner — coordination jour J', 'Coordinateur événement', 'Hôte d’accueil', 'Régisseur plateau'],
+  BEAUTY_HAIR: ['Maquilleuse professionnelle', 'Coiffeur mariage', 'Esthéticienne jour J'],
+  EVENT_PLANNER: ['Wedding planner', 'Coordinateur événementiel', 'Organisateur de conférence'],
+  ENTERTAINMENT: ['Groupe de musique live', 'Danseurs traditionnels', 'Magicien', 'Comédien'],
+  OFFICIANT: ['Officiant de cérémonie', 'Célébrant laïque', 'Pasteur'],
+  CHILDCARE: ['Animatrice enfants', 'Nounou événementiel', 'Garderie jour J'],
+  AV_TECHNICIAN: ['Technicien son', 'Ingénieur lumière', 'Régisseur vidéo'],
+  STATIONERY: ['Créateur faire-part', 'Calligraphe', 'Impression invitations'],
+  OTHER: ['Coordinateur logistique', 'Hôte d’accueil', 'Régisseur plateau'],
 };
 
 const RENTAL_TITLES: Record<string, string[]> = {
@@ -139,7 +146,12 @@ const RENTAL_TITLES: Record<string, string[]> = {
   RENTAL_CLOTHING_CHILD: ['Location costume cortège enfant', 'Location robe demoiselle d’honneur', 'Location tenue baptême', 'Location habits cérémonie enfant'],
   RENTAL_CAR: ['Location berline sans chauffeur', 'Location 4x4 à conduire soi-même', 'Location limousine sans chauffeur', 'Location monospace familial'],
   RENTAL_MOTO: ['Location moto (casques inclus, sans pilote)', 'Location scooter staff', 'Location moto cortège à conduire', 'Location deux-roues événement'],
-  RENTAL_EQUIPMENT: ['Location sono + éclairage (sans DJ)', 'Location chapiteau et chaises', 'Location groupe électrogène', 'Location tables banquet'],
+  RENTAL_EQUIPMENT: ['Location groupe électrogène', 'Location podium', 'Location machine à fumée'],
+  RENTAL_FURNITURE: ['Location chaises Chiavari', 'Location tables rondes banquet', 'Location mange-debout', 'Location canapés VIP'],
+  RENTAL_AV: ['Location sono complète', 'Location écran LED géant', 'Location micros sans fil', 'Location projecteurs'],
+  RENTAL_TABLEWARE: ['Location assiettes et couverts', 'Location verres cristal', 'Location nappes et serviettes', 'Location centres de table'],
+  RENTAL_DECOR: ['Location arches fleuries', 'Location tapis rouge', 'Location trônes mariés', 'Location chandeliers'],
+  RENTAL_TENT: ['Location tente pagode', 'Location chapiteau VIP', 'Location tente nomade', 'Location barnum'],
 };
 
 function offeringCopy(kind: 'prestas' | 'locations', title: string, place: { city: City; commune: Commune; neighborhood: string }) {

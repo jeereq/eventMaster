@@ -15,6 +15,7 @@ exports.sendLicenseExpiryWarning = sendLicenseExpiryWarning;
 exports.formatInvoiceForApi = formatInvoiceForApi;
 exports.formatInvoiceDetailForApi = formatInvoiceDetailForApi;
 exports.findInvoiceById = findInvoiceById;
+exports.markInvoicePaid = markInvoicePaid;
 exports.buildInvoicePdf = buildInvoicePdf;
 exports.resendInvoiceByEmail = resendInvoiceByEmail;
 const pdfkit_1 = __importDefault(require("pdfkit"));
@@ -22,17 +23,19 @@ const db_1 = require("../db");
 const plansConfig_1 = require("../config/plansConfig");
 const commercialService_1 = require("./commercialService");
 const notificationService_1 = require("./notificationService");
+const platformNotificationService_1 = require("./platformNotificationService");
+const platformNotificationTypes_1 = require("../config/platformNotificationTypes");
 const invoiceText_1 = require("../utils/invoiceText");
 Object.defineProperty(exports, "formatAmountFc", { enumerable: true, get: function () { return invoiceText_1.formatAmountFc; } });
-function getPlanAmount(plan) {
+function getPlanAmount(plan, durationDays) {
     if (plan === 'FREE')
         return 0;
-    return (0, plansConfig_1.getCatalogMonthlyPriceFc)(plan);
+    return (0, plansConfig_1.getPlanBaseAmount)(plan, durationDays);
 }
-function getEffectivePlanAmount(plan) {
+function getEffectivePlanAmount(plan, durationDays) {
     if (plan === 'FREE')
         return 0;
-    return (0, plansConfig_1.getEffectiveMonthlyPriceFc)(plan);
+    return (0, plansConfig_1.periodAmountToInvoiceBase)((0, plansConfig_1.getEffectiveMonthlyPriceFc)(plan), plan, durationDays);
 }
 function computeApprovedAmount(baseAmount, options) {
     const base = Math.max(0, Math.round(baseAmount));
@@ -200,7 +203,7 @@ async function createAndSendInvoice(params) {
     if (!tenant) {
         throw new Error('Organisation introuvable.');
     }
-    const amount = params.amount ?? getPlanAmount(params.plan);
+    const amount = params.amount ?? getPlanAmount(params.plan, params.durationDays);
     if (amount <= 0 && params.plan !== 'FREE') {
         console.warn(`[Invoice Service] Montant nul pour le plan ${params.plan}, facture ignorée.`);
     }
@@ -278,21 +281,36 @@ async function createAndSendInvoice(params) {
             console.error(`[Invoice Service] Échec envoi facture ${invoiceNumber} à ${recipient.email}: ${result.error}`);
         }
     }
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    void (0, platformNotificationService_1.notifyTenantOperators)(params.tenantId, {
+        type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.INVOICE_ISSUED,
+        title: `Facture ${invoiceNumber}`,
+        message: `${planDef.name} — ${(0, invoiceText_1.formatAmountFc)(amount)}. Consultez Factures pour le PDF.`,
+        metadata: {
+            invoiceId: invoice.id,
+            invoiceNumber,
+            href: `${frontendUrl}/dashboard/invoices`,
+        },
+        channels: ['IN_APP', 'PUSH', 'WHATSAPP'],
+    });
     return invoice;
 }
 async function sendLicenseExpiryWarning(params) {
     const planDef = (0, plansConfig_1.getPlanLimits)(params.plan);
-    const amount = getPlanAmount(params.plan);
+    const durationDays = params.durationDays ?? undefined;
+    const amount = getPlanAmount(params.plan, durationDays);
+    const discountPercent = (0, plansConfig_1.isAnnualDurationDays)(durationDays) ? plansConfig_1.ANNUAL_DISCOUNT_PERCENT : 0;
+    const payable = discountPercent > 0
+        ? computeApprovedAmount(amount, { discountPercent }).finalAmount
+        : amount;
     const expiryStr = (0, invoiceText_1.formatFrenchDate)(params.expiresAt);
     const subject = 'EventMaster - Votre abonnement expire dans 7 jours';
     const safeTenant = (0, invoiceText_1.escapeHtml)((0, invoiceText_1.normalizeInvoiceText)(params.tenantName));
-    const safeName = params.ownerName ? (0, invoiceText_1.escapeHtml)((0, invoiceText_1.normalizeInvoiceText)(params.ownerName)) : '';
     const safePlan = (0, invoiceText_1.escapeHtml)((0, invoiceText_1.normalizeInvoiceText)(planDef.name));
+    const operatorMessage = `« ${params.tenantName} » (${planDef.name}) expire le ${expiryStr}. Renouvelez depuis Facturation.`;
     const text = [
-        `Bonjour${params.ownerName ? ` ${(0, invoiceText_1.normalizeInvoiceText)(params.ownerName)}` : ''},`,
-        '',
         `L'abonnement de l'organisation « ${(0, invoiceText_1.normalizeInvoiceText)(params.tenantName)} » (forfait ${(0, invoiceText_1.normalizeInvoiceText)(planDef.name)}) expire le ${expiryStr}.`,
-        `Montant du renouvellement : ${(0, invoiceText_1.formatAmountFc)(amount)}.`,
+        `Montant du renouvellement : ${(0, invoiceText_1.formatAmountFc)(payable)}.`,
         '',
         'Connectez-vous a EventMaster pour soumettre une demande de renouvellement ou mettre a jour votre paiement.',
     ].join('\n');
@@ -302,34 +320,43 @@ async function sendLicenseExpiryWarning(params) {
 <body style="font-family:Segoe UI,Arial,sans-serif;background:#f8fafc;margin:0;padding:24px;">
   <div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:24px;">
     <h2 style="margin:0 0 16px;color:#b45309;">Rappel - expiration dans 7 jours</h2>
-    <p>Bonjour${safeName ? ` ${safeName}` : ''},</p>
     <p>L'abonnement de <strong>${safeTenant}</strong> (forfait <strong>${safePlan}</strong>) expire le <strong>${(0, invoiceText_1.escapeHtml)(expiryStr)}</strong>.</p>
-    <p>Montant estime du renouvellement : <strong style="color:#4f46e5;">${(0, invoiceText_1.escapeHtml)((0, invoiceText_1.formatAmountFc)(amount))}</strong>.</p>
+    <p>Montant estime du renouvellement : <strong style="color:#4f46e5;">${(0, invoiceText_1.escapeHtml)((0, invoiceText_1.formatAmountFc)(payable))}</strong>.</p>
     <p style="color:#64748b;font-size:14px;">Connectez-vous a EventMaster, section Facturation, pour renouveler avant la date limite.</p>
   </div>
 </body>
 </html>`;
-    const emailResult = await (0, notificationService_1.sendRealEmail)(params.ownerEmail, subject, text, html);
-    if (!emailResult.success) {
-        console.error(`[Invoice Service] Échec e-mail rappel J-7 à ${params.ownerEmail}: ${emailResult.error}`);
-    }
-    if (params.ownerPhone?.trim()) {
-        const waBody = [
-            'EventMaster - Rappel abonnement',
-            '',
-            `Bonjour${params.ownerName ? ` ${(0, invoiceText_1.normalizeInvoiceText)(params.ownerName)}` : ''},`,
-            `L'organisation « ${(0, invoiceText_1.normalizeInvoiceText)(params.tenantName)} » (${(0, invoiceText_1.normalizeInvoiceText)(planDef.name)}) expire le ${expiryStr}.`,
-            `Renouvellement estime : ${(0, invoiceText_1.formatAmountFc)(amount)}.`,
-            'Connectez-vous a EventMaster, section Facturation, pour renouveler.',
-        ].join('\n');
-        const waResult = await (0, notificationService_1.sendRealWhatsApp)(params.ownerPhone, waBody);
-        if (waResult.success && !waResult.simulated) {
-            console.log(`[Invoice Service] Rappel J-7 WhatsApp envoyé à ${params.ownerPhone}`);
-        }
-        else if (!waResult.success) {
-            console.error(`[Invoice Service] Échec WhatsApp rappel J-7: ${waResult.error}`);
-        }
-    }
+    const waBody = [
+        'EventMaster - Rappel abonnement',
+        '',
+        `L'organisation « ${(0, invoiceText_1.normalizeInvoiceText)(params.tenantName)} » (${(0, invoiceText_1.normalizeInvoiceText)(planDef.name)}) expire le ${expiryStr}.`,
+        `Renouvellement estime : ${(0, invoiceText_1.formatAmountFc)(payable)}.`,
+        'Connectez-vous a EventMaster, section Facturation, pour renouveler.',
+    ].join('\n');
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const expiryIso = params.expiresAt.toISOString().slice(0, 10);
+    void (0, platformNotificationService_1.notifyTenantOperators)(params.tenantId, {
+        type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.LICENSE_EXPIRING,
+        title: 'Licence : expiration dans 7 jours',
+        message: operatorMessage,
+        metadata: {
+            tenantId: params.tenantId,
+            expiresAt: expiryIso,
+            href: `${frontendUrl}/dashboard/billing`,
+        },
+        email: { subject, text, html },
+        whatsapp: waBody,
+    });
+    void (0, platformNotificationService_1.notifyPlatformStaff)({
+        type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.LICENSE_EXPIRING,
+        title: `Licence J-7 — ${params.tenantName}`,
+        message: `Le forfait ${planDef.name} expire le ${expiryStr}.`,
+        metadata: {
+            tenantId: params.tenantId,
+            expiresAt: expiryIso,
+            href: `${frontendUrl}/dashboard?tab=tenants`,
+        },
+    });
 }
 const INVOICE_TYPE_LABELS = {
     SUBSCRIPTION_APPROVAL: 'Approbation abonnement',
@@ -409,6 +436,37 @@ async function findInvoiceById(invoiceId) {
             },
         },
     });
+}
+async function markInvoicePaid(params) {
+    const invoice = await findInvoiceById(params.invoiceId);
+    if (!invoice)
+        return { error: 'NOT_FOUND' };
+    if (invoice.status === 'PAID')
+        return { error: 'ALREADY_PAID' };
+    const details = invoice.details && typeof invoice.details === 'object' && !Array.isArray(invoice.details)
+        ? invoice.details
+        : {};
+    const updated = await db_1.prisma.platformInvoice.update({
+        where: { id: invoice.id },
+        data: {
+            status: 'PAID',
+            details: {
+                ...details,
+                paidAt: new Date().toISOString(),
+                paidByUserId: params.paidByUserId,
+                paidReason: params.reason.slice(0, 500),
+            },
+        },
+        include: {
+            tenant: { select: { name: true } },
+            commercialCommissions: {
+                include: {
+                    commercial: { select: { name: true, email: true } },
+                },
+            },
+        },
+    });
+    return { invoice: updated };
 }
 function getInvoicePlanName(invoice) {
     const details = invoice.details;

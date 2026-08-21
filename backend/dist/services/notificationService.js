@@ -7,6 +7,7 @@ exports.sendRealEmail = sendRealEmail;
 exports.sendRealWhatsApp = sendRealWhatsApp;
 exports.sendRealWhatsAppLocation = sendRealWhatsAppLocation;
 exports.sendRealWhatsAppImage = sendRealWhatsAppImage;
+exports.sendRealWhatsAppDocument = sendRealWhatsAppDocument;
 const mail_1 = __importDefault(require("@sendgrid/mail"));
 const notificationConfig_1 = require("../config/notificationConfig");
 (0, notificationConfig_1.logNotificationConfigStatus)();
@@ -25,7 +26,7 @@ function formatPhoneE164(to) {
 /**
  * Envoie un e-mail via SendGrid uniquement (aucune simulation).
  */
-async function sendRealEmail(to, subject, textBody, htmlBody) {
+async function sendRealEmail(to, subject, textBody, htmlBody, attachments) {
     if (!(0, notificationConfig_1.isSendGridConfigured)()) {
         const errMsg = 'SendGrid non configuré. Définissez sendgridApiKey et sendgridFrom (settings.json ou variables d\'environnement).';
         console.error(`[Notification Service] ${errMsg} Destinataire: ${to}`);
@@ -41,6 +42,14 @@ async function sendRealEmail(to, subject, textBody, htmlBody) {
             text: textBody,
             html: htmlBody || textBody.replace(/\n/g, '<br>'),
         };
+        if (attachments?.length) {
+            msg.attachments = attachments.map((a) => ({
+                content: a.content.toString('base64'),
+                filename: a.filename,
+                type: a.type || 'application/octet-stream',
+                disposition: 'attachment',
+            }));
+        }
         const response = await mail_1.default.send(msg);
         const messageId = response[0]?.headers?.['x-message-id'] || 'sg-sent';
         console.log(`[Notification Service] SendGrid email sent successfully to ${to}. Message ID: ${messageId}`);
@@ -131,4 +140,22 @@ async function sendRealWhatsAppImage(to, imageUrl, caption) {
     params.append('image', imageUrl);
     params.append('caption', caption);
     return sendUltraMsgRequest('image', formattedTo, params);
+}
+/**
+ * Send a WhatsApp document (PDF) using UltraMsg or fall back to simulation
+ */
+async function sendRealWhatsAppDocument(to, documentUrl, filename, caption) {
+    const formattedTo = formatPhoneE164(to);
+    const { ultramsgInstanceId, ultramsgToken } = (0, notificationConfig_1.getNotificationCredentials)();
+    if (!ultramsgInstanceId || !ultramsgToken) {
+        console.log(`[Simulation] Sending UltraMsg WhatsApp Document to ${formattedTo}:\nDocument: ${documentUrl}\nFilename: ${filename}\n`);
+        return { success: true, simulated: true };
+    }
+    const params = new URLSearchParams();
+    params.append('to', formattedTo);
+    params.append('document', documentUrl);
+    params.append('filename', filename);
+    if (caption?.trim())
+        params.append('caption', caption.trim());
+    return sendUltraMsgRequest('document', formattedTo, params);
 }

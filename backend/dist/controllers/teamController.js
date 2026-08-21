@@ -16,14 +16,17 @@ const permissionsService_1 = require("../services/permissionsService");
 const planFeaturesService_1 = require("../services/planFeaturesService");
 const commercialService_1 = require("../services/commercialService");
 const authController_1 = require("./authController");
+const phone_1 = require("../utils/phone");
 const userSelect = {
     id: true,
     name: true,
     email: true,
     phone: true,
+    phoneCountryCode: true,
     orgRole: true,
     referralCode: true,
     commissionRate: true,
+    renewalCommissionRate: true,
     isEmailVerified: true,
     createdAt: true,
 };
@@ -45,21 +48,35 @@ async function getTeamMembers(req, res) {
         });
         const tenant = await db_1.prisma.tenant.findUnique({
             where: { id: tenantId },
-            select: { managerId: true, defaultOrgCommercialCommissionRate: true },
+            select: {
+                managerId: true,
+                defaultOrgCommercialCommissionRate: true,
+                defaultOrgCommercialRenewalCommissionRate: true,
+            },
         });
         return res.json({
-            members: members.map((m) => ({
-                ...m,
-                commissionRate: m.commissionRate ?? tenant?.defaultOrgCommercialCommissionRate ?? 0.2,
-                isOwner: tenant?.managerId === m.id,
-                orgRoleLabel: tenant?.managerId === m.id
-                    ? 'OWNER'
-                    : m.orgRole || 'MANAGER',
-            })),
+            members: members.map((m) => {
+                const rates = (0, commercialService_1.resolveCommissionRates)({
+                    first: m.commissionRate,
+                    renewal: m.renewalCommissionRate,
+                    firstFallback: tenant?.defaultOrgCommercialCommissionRate ?? commercialService_1.DEFAULT_COMMISSION_RATE,
+                    renewalFallback: tenant?.defaultOrgCommercialRenewalCommissionRate ?? commercialService_1.DEFAULT_RENEWAL_COMMISSION_RATE,
+                });
+                return {
+                    ...m,
+                    commissionRate: rates.first,
+                    renewalCommissionRate: rates.renewal,
+                    isOwner: tenant?.managerId === m.id,
+                    orgRoleLabel: tenant?.managerId === m.id
+                        ? 'OWNER'
+                        : m.orgRole || 'MANAGER',
+                };
+            }),
             access,
             isManager: access.canManageTeam,
             orgCommercialSettings: {
-                defaultCommissionRate: tenant?.defaultOrgCommercialCommissionRate ?? 0.2,
+                defaultCommissionRate: tenant?.defaultOrgCommercialCommissionRate ?? commercialService_1.DEFAULT_COMMISSION_RATE,
+                defaultRenewalCommissionRate: tenant?.defaultOrgCommercialRenewalCommissionRate ?? commercialService_1.DEFAULT_RENEWAL_COMMISSION_RATE,
             },
         });
     }
@@ -79,12 +96,13 @@ async function createTeamMember(req, res) {
         if (!access.canManageTeam) {
             return res.status(403).json({ error: 'Seuls le propriétaire et les managers peuvent créer des utilisateurs.' });
         }
-        const { name, email, password, phone, orgRole = 'MANAGER', verificationMethod = 'EMAIL', commissionRate } = req.body;
+        const { name, email, password, phone, phoneCountryCode, nationalNumber, orgRole = 'MANAGER', verificationMethod = 'EMAIL', commissionRate, renewalCommissionRate } = req.body;
         if (!name || !email || !password) {
             return res.status(400).json({ error: 'Le nom, l\'e-mail et le mot de passe sont requis.' });
         }
         const method = (verificationMethod === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL');
-        if (method === 'WHATSAPP' && !phone) {
+        const phoneFields = (0, phone_1.resolvePhoneFields)({ phone, phoneCountryCode, nationalNumber });
+        if (method === 'WHATSAPP' && !phoneFields.phone) {
             return res.status(400).json({ error: 'Le téléphone est obligatoire pour la validation par WhatsApp.' });
         }
         if (!(0, permissionsService_1.isValidOrgRole)(orgRole)) {
@@ -121,22 +139,32 @@ async function createTeamMember(req, res) {
         }
         const tenant = await db_1.prisma.tenant.findUnique({
             where: { id: tenantId },
-            select: { defaultOrgCommercialCommissionRate: true },
+            select: {
+                defaultOrgCommercialCommissionRate: true,
+                defaultOrgCommercialRenewalCommissionRate: true,
+            },
         });
         const passwordHash = await bcryptjs_1.default.hash(password, 10);
-        const resolvedCommissionRate = orgRole === 'COMMERCIAL'
-            ? (0, commercialService_1.normalizeCommissionRate)(commissionRate, tenant?.defaultOrgCommercialCommissionRate ?? 0.2)
+        const rates = orgRole === 'COMMERCIAL'
+            ? (0, commercialService_1.resolveCommissionRates)({
+                first: commissionRate,
+                renewal: renewalCommissionRate,
+                firstFallback: tenant?.defaultOrgCommercialCommissionRate ?? commercialService_1.DEFAULT_COMMISSION_RATE,
+                renewalFallback: tenant?.defaultOrgCommercialRenewalCommissionRate ?? commercialService_1.DEFAULT_RENEWAL_COMMISSION_RATE,
+            })
             : null;
         const newUser = await db_1.prisma.user.create({
             data: {
                 name,
                 email,
-                phone: phone || null,
+                phone: phoneFields.phone,
+                phoneCountryCode: phoneFields.phoneCountryCode,
                 passwordHash,
                 role: 'USER',
                 orgRole,
                 tenantId,
-                commissionRate: resolvedCommissionRate,
+                commissionRate: rates?.first ?? null,
+                renewalCommissionRate: rates?.renewal ?? null,
                 isEmailVerified: false,
                 verificationMethod: method,
             },
@@ -149,7 +177,7 @@ async function createTeamMember(req, res) {
             userId: newUser.id,
             name,
             email,
-            phone,
+            phone: phoneFields.phone,
             method,
             invitedToTeam: true,
         });
@@ -165,7 +193,8 @@ async function createTeamMember(req, res) {
                 ...refreshed,
                 isOwner: false,
                 orgRoleLabel: orgRole,
-                commissionRate: resolvedCommissionRate,
+                commissionRate: rates?.first ?? null,
+                renewalCommissionRate: rates?.renewal ?? null,
             },
         });
     }
@@ -224,10 +253,15 @@ async function updateTeamMember(req, res) {
         }
         const updateData = { orgRole };
         if (orgRole === 'COMMERCIAL' && member.commissionRate == null) {
-            updateData.commissionRate = tenant?.defaultOrgCommercialCommissionRate ?? 0.2;
+            updateData.commissionRate = tenant?.defaultOrgCommercialCommissionRate ?? commercialService_1.DEFAULT_COMMISSION_RATE;
+        }
+        if (orgRole === 'COMMERCIAL' && member.renewalCommissionRate == null) {
+            updateData.renewalCommissionRate =
+                tenant?.defaultOrgCommercialRenewalCommissionRate ?? commercialService_1.DEFAULT_RENEWAL_COMMISSION_RATE;
         }
         if (orgRole !== 'COMMERCIAL') {
             updateData.commissionRate = null;
+            updateData.renewalCommissionRate = null;
         }
         const updated = await db_1.prisma.user.update({
             where: { id: memberId },
@@ -244,7 +278,15 @@ async function updateTeamMember(req, res) {
                 ...finalUser,
                 isOwner: false,
                 orgRoleLabel: orgRole,
-                commissionRate: finalUser?.commissionRate ?? tenant?.defaultOrgCommercialCommissionRate ?? 0.2,
+                ...(() => {
+                    const rates = (0, commercialService_1.resolveCommissionRates)({
+                        first: finalUser?.commissionRate,
+                        renewal: finalUser?.renewalCommissionRate,
+                        firstFallback: tenant?.defaultOrgCommercialCommissionRate ?? commercialService_1.DEFAULT_COMMISSION_RATE,
+                        renewalFallback: tenant?.defaultOrgCommercialRenewalCommissionRate ?? commercialService_1.DEFAULT_RENEWAL_COMMISSION_RATE,
+                    });
+                    return { commissionRate: rates.first, renewalCommissionRate: rates.renewal };
+                })(),
             },
         });
     }
@@ -265,9 +307,9 @@ async function updateMemberCommissionRate(req, res) {
         if (!access.canManageTeam) {
             return res.status(403).json({ error: 'Seuls le propriétaire et les managers peuvent modifier les commissions.' });
         }
-        const { commissionRate } = req.body;
-        if (commissionRate === undefined) {
-            return res.status(400).json({ error: 'commissionRate est requis.' });
+        const { commissionRate, renewalCommissionRate } = req.body;
+        if (commissionRate === undefined && renewalCommissionRate === undefined) {
+            return res.status(400).json({ error: 'commissionRate ou renewalCommissionRate est requis.' });
         }
         const member = await db_1.prisma.user.findFirst({
             where: { id: memberId, tenantId, role: 'USER', orgRole: 'COMMERCIAL' },
@@ -277,17 +319,28 @@ async function updateMemberCommissionRate(req, res) {
         }
         const tenant = await db_1.prisma.tenant.findUnique({
             where: { id: tenantId },
-            select: { defaultOrgCommercialCommissionRate: true },
+            select: {
+                defaultOrgCommercialCommissionRate: true,
+                defaultOrgCommercialRenewalCommissionRate: true,
+            },
         });
-        const rate = (0, commercialService_1.normalizeCommissionRate)(commissionRate, tenant?.defaultOrgCommercialCommissionRate ?? 0.2);
+        const rates = (0, commercialService_1.resolveCommissionRates)({
+            first: commissionRate ?? member.commissionRate,
+            renewal: renewalCommissionRate ?? member.renewalCommissionRate,
+            firstFallback: tenant?.defaultOrgCommercialCommissionRate ?? commercialService_1.DEFAULT_COMMISSION_RATE,
+            renewalFallback: tenant?.defaultOrgCommercialRenewalCommissionRate ?? commercialService_1.DEFAULT_RENEWAL_COMMISSION_RATE,
+        });
         const updated = await db_1.prisma.user.update({
             where: { id: memberId },
-            data: { commissionRate: rate },
+            data: {
+                commissionRate: rates.first,
+                renewalCommissionRate: rates.renewal,
+            },
             select: userSelect,
         });
         return res.json({
             message: 'Taux de commission mis à jour.',
-            member: { ...updated, commissionRate: rate },
+            member: { ...updated, commissionRate: rates.first, renewalCommissionRate: rates.renewal },
         });
     }
     catch (error) {
@@ -315,19 +368,29 @@ async function updateOrgCommercialSettings(req, res) {
             }
             throw err;
         }
-        const { defaultCommissionRate } = req.body;
-        if (defaultCommissionRate === undefined) {
-            return res.status(400).json({ error: 'defaultCommissionRate est requis.' });
+        const { defaultCommissionRate, defaultRenewalCommissionRate } = req.body;
+        if (defaultCommissionRate === undefined && defaultRenewalCommissionRate === undefined) {
+            return res.status(400).json({ error: 'Un taux de commission est requis.' });
         }
-        const rate = (0, commercialService_1.normalizeCommissionRate)(defaultCommissionRate);
+        const data = {};
+        if (defaultCommissionRate !== undefined) {
+            data.defaultOrgCommercialCommissionRate = (0, commercialService_1.normalizeCommissionRate)(defaultCommissionRate);
+        }
+        if (defaultRenewalCommissionRate !== undefined) {
+            data.defaultOrgCommercialRenewalCommissionRate = (0, commercialService_1.normalizeCommissionRate)(defaultRenewalCommissionRate, commercialService_1.DEFAULT_RENEWAL_COMMISSION_RATE);
+        }
         const tenant = await db_1.prisma.tenant.update({
             where: { id: tenantId },
-            data: { defaultOrgCommercialCommissionRate: rate },
-            select: { defaultOrgCommercialCommissionRate: true },
+            data,
+            select: {
+                defaultOrgCommercialCommissionRate: true,
+                defaultOrgCommercialRenewalCommissionRate: true,
+            },
         });
         return res.json({
-            message: 'Commission par défaut mise à jour.',
+            message: 'Commissions par défaut mises à jour.',
             defaultCommissionRate: tenant.defaultOrgCommercialCommissionRate,
+            defaultRenewalCommissionRate: tenant.defaultOrgCommercialRenewalCommissionRate,
         });
     }
     catch (error) {

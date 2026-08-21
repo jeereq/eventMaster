@@ -3,12 +3,41 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.JWT_SECRET = void 0;
+exports.signUserToken = signUserToken;
+exports.optionalAuth = optionalAuth;
 exports.requireAuth = requireAuth;
 exports.requireRole = requireRole;
 exports.requireActiveLicense = requireActiveLicense;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const db_1 = require("../db");
-const JWT_SECRET = process.env.JWT_SECRET || 'eventmaster-secret-key-12345';
+exports.JWT_SECRET = process.env.JWT_SECRET || 'eventmaster-secret-key-12345';
+function signUserToken(payload, expiresIn = '24h') {
+    return jsonwebtoken_1.default.sign(payload, exports.JWT_SECRET, { expiresIn: expiresIn });
+}
+function userFromPayload(payload) {
+    return {
+        id: payload.userId,
+        tenantId: payload.tenantId,
+        role: payload.role,
+        impersonatedBy: payload.impersonatedBy || undefined,
+    };
+}
+function optionalAuth(req, _res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+        return next();
+    }
+    const token = authHeader.split(' ')[1];
+    try {
+        const payload = jsonwebtoken_1.default.verify(token, exports.JWT_SECRET);
+        req.user = userFromPayload(payload);
+    }
+    catch {
+        /* ignore invalid token on public routes */
+    }
+    next();
+}
 function requireAuth(req, res, next) {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -16,12 +45,8 @@ function requireAuth(req, res, next) {
     }
     const token = authHeader.split(' ')[1];
     try {
-        const payload = jsonwebtoken_1.default.verify(token, JWT_SECRET);
-        req.user = {
-            id: payload.userId,
-            tenantId: payload.tenantId,
-            role: payload.role,
-        };
+        const payload = jsonwebtoken_1.default.verify(token, exports.JWT_SECRET);
+        req.user = userFromPayload(payload);
         next();
     }
     catch (error) {
@@ -43,8 +68,8 @@ async function requireActiveLicense(req, res, next) {
     if (!req.user) {
         return res.status(401).json({ error: 'Non authentifié.' });
     }
-    // SUPER_ADMIN et COMMERCIAL (sans organisation) contournent la vérification de licence
-    if (req.user.role === 'SUPER_ADMIN' || req.user.role === 'COMMERCIAL') {
+    // SUPER_ADMIN, COMMERCIAL (sans organisation) et session support contournent la licence
+    if (req.user.role === 'SUPER_ADMIN' || req.user.role === 'COMMERCIAL' || req.user.impersonatedBy) {
         return next();
     }
     const tenantId = req.user.tenantId;
@@ -57,6 +82,9 @@ async function requireActiveLicense(req, res, next) {
         });
         if (!tenant) {
             return res.status(404).json({ error: 'Organisation non trouvée.' });
+        }
+        if (tenant.accountKind === 'CLIENT') {
+            return next();
         }
         if (!tenant.licenseActive) {
             return res.status(403).json({

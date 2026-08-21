@@ -9,7 +9,7 @@ exports.listProtocolGuests = listProtocolGuests;
 const db_1 = require("../db");
 const permissionsService_1 = require("../services/permissionsService");
 const commercialService_1 = require("../services/commercialService");
-const guestSeatNotificationService_1 = require("../services/guestSeatNotificationService");
+const guestPlacementDeliveryService_1 = require("../services/guestPlacementDeliveryService");
 const planFeaturesService_1 = require("../services/planFeaturesService");
 async function ensureProtocolPlan(tenantId) {
     await (0, planFeaturesService_1.assertPlanFeature)(tenantId, 'protocolQr');
@@ -111,8 +111,13 @@ async function checkInGuest(req, res) {
             return res.status(404).json({ error: 'Invité introuvable.' });
         }
         if (guest.rsvp !== 'ACCEPTED') {
+            const rsvpHint = guest.rsvp === 'PENDING'
+                ? 'RSVP encore en attente : orientez l\'invité vers son lien pour confirmer, puis réessayez le check-in.'
+                : guest.rsvp === 'DECLINED'
+                    ? 'Cet invité a décliné l\'invitation — check-in impossible.'
+                    : 'Cet invité n\'a pas confirmé sa présence (RSVP non accepté).';
             return res.status(400).json({
-                error: 'Cet invité n\'a pas confirmé sa présence (RSVP non accepté).',
+                error: rsvpHint,
                 guest: { id: guest.id, rsvp: guest.rsvp },
             });
         }
@@ -123,14 +128,31 @@ async function checkInGuest(req, res) {
                 checkedInByUserId: userId,
             },
         });
+        const placementDelivery = await (0, guestPlacementDeliveryService_1.deliverGuestPlacementIfEligible)({
+            guestId,
+            eventId,
+            tenantId,
+        });
+        let placementHint = '';
+        if (placementDelivery.delivered && placementDelivery.notification?.channels.length) {
+            placementHint = ` Placement envoyé par ${placementDelivery.notification.channels.join(', ')}.`;
+        }
+        else if (placementDelivery.skippedReason === 'forfait') {
+            placementHint =
+                ' Le PDF et le GPS de placement ne sont pas inclus dans votre forfait (Premium ou supérieur requis).';
+        }
+        else if (placementDelivery.skippedReason === 'delivery_failed') {
+            placementHint = ' Notification de placement non envoyée (coordonnées manquantes ou erreur d\'envoi).';
+        }
         return res.json({
-            message: `${guest.firstName} ${guest.lastName} authentifié avec succès.`,
+            message: `${guest.firstName} ${guest.lastName} authentifié avec succès.${placementHint}`,
             guest: updated,
+            placementDelivery,
         });
     }
     catch (error) {
         console.error('checkInGuest:', error);
-        return res.status(500).json({ error: 'Erreur lors de l\'émargement.' });
+        return res.status(500).json({ error: 'Erreur lors de la confirmation de présence.' });
     }
 }
 async function verifyGuestSeat(req, res) {
@@ -166,7 +188,6 @@ async function verifyGuestSeat(req, res) {
         if (!guest) {
             return res.status(404).json({ error: 'Invité introuvable.' });
         }
-        const wasAlreadyVerified = guest.seatVerified;
         const assigned = (0, commercialService_1.findGuestSeatInTablePlan)(event.tablePlan, guestId);
         let seatMatch = true;
         let mismatchReason = null;
@@ -190,50 +211,43 @@ async function verifyGuestSeat(req, res) {
                 seatVerifiedByUserId: userId,
             },
         });
-        let notification = null;
-        if (seatMatch && assigned && !wasAlreadyVerified) {
-            const snapshot = await (0, planFeaturesService_1.getTenantPlanSnapshot)(tenantId);
-            if (snapshot?.features.seatNotifications) {
-                notification = await (0, guestSeatNotificationService_1.notifyGuestSeatConfirmed)({
-                    guest: {
-                        id: guest.id,
-                        firstName: guest.firstName,
-                        lastName: guest.lastName,
-                        email: guest.email,
-                        phone: guest.phone,
-                        preferences: guest.preferences,
-                    },
-                    event: {
-                        title: event.title,
-                        date: event.date,
-                        location: event.location,
-                    },
-                    assignedSeat: assigned,
-                });
-                if (!notification.sent) {
-                    console.warn('[Protocol] Notification placement non envoyée:', notification.errors);
-                }
-                else {
-                    console.log('[Protocol] Notification placement envoyée:', notification.channels.join(', '));
-                }
+        let placementDelivery = null;
+        if (seatMatch && assigned) {
+            placementDelivery = await (0, guestPlacementDeliveryService_1.deliverGuestPlacementIfEligible)({
+                guestId,
+                eventId,
+                tenantId,
+            });
+            if (placementDelivery.delivered) {
+                console.log('[Protocol] Placement envoyé:', placementDelivery.notification?.channels.join(', '));
+            }
+            else if (placementDelivery.skippedReason === 'delivery_failed') {
+                console.warn('[Protocol] Notification placement non envoyée:', placementDelivery.notification?.errors);
             }
         }
         const baseMessage = seatMatch
             ? 'Siège confirmé : l\'invité est bien à sa place.'
             : mismatchReason || 'Siège non conforme.';
-        const notificationHint = seatMatch && notification?.sent
-            ? ` Notification envoyée (${notification.channels.join(', ')}).`
-            : seatMatch && notification && !notification.sent
-                ? ' Notification non envoyée (coordonnées invité manquantes ou erreur d\'envoi).'
-                : '';
+        const notificationHint = seatMatch && placementDelivery?.delivered && placementDelivery.notification?.channels.length
+            ? ` Notification envoyée (${placementDelivery.notification.channels.join(', ')}).`
+            : seatMatch && placementDelivery?.skippedReason === 'forfait'
+                ? ' Le PDF et le GPS de placement ne sont pas inclus dans votre forfait (Premium ou supérieur requis).'
+                : seatMatch && placementDelivery?.skippedReason === 'delivery_failed'
+                    ? ' Notification non envoyée (coordonnées invité manquantes ou erreur d\'envoi).'
+                    : '';
         return res.json({
             message: baseMessage + notificationHint,
             seatMatch,
             assignedSeat: assigned,
             guest: updated,
-            notification: notification
-                ? { sent: notification.sent, channels: notification.channels, errors: notification.errors }
+            notification: placementDelivery?.notification
+                ? {
+                    sent: placementDelivery.notification.sent,
+                    channels: placementDelivery.notification.channels,
+                    errors: placementDelivery.notification.errors,
+                }
                 : undefined,
+            placementDelivery,
         });
     }
     catch (error) {

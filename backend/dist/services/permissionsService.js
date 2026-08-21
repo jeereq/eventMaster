@@ -39,6 +39,26 @@ async function resolveOrgAccess(userId, tenantId) {
     };
     if (!user)
         return none;
+    const tenant = await db_1.prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: { accountKind: true, managerId: true },
+    });
+    if (tenant?.accountKind === 'CLIENT') {
+        return {
+            level: 'client',
+            orgRole: null,
+            isOwner: tenant.managerId === userId,
+            canManageTeam: false,
+            canManageRooms: false,
+            canCreateEvents: false,
+            canCreateRooms: false,
+            canManageAllEvents: false,
+            canProtocolAllEvents: false,
+            canViewBilling: false,
+            canViewInvoices: false,
+            isProtocolOnly: false,
+        };
+    }
     const owner = await (0, tenantAccess_1.isTenantManager)(userId, tenantId);
     if (owner) {
         return {

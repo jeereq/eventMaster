@@ -20,11 +20,15 @@ const commercialRoutes_1 = __importDefault(require("./routes/commercialRoutes"))
 const orgCommercialRoutes_1 = __importDefault(require("./routes/orgCommercialRoutes"));
 const uploadRoutes_1 = __importDefault(require("./routes/uploadRoutes"));
 const notificationRoutes_1 = __importDefault(require("./routes/notificationRoutes"));
+const marketplaceRoutes_1 = __importDefault(require("./routes/marketplaceRoutes"));
 const billingController_1 = require("./controllers/billingController");
 const db_1 = require("./db");
 const reminderService_1 = require("./services/reminderService");
 const subscriptionExpiryService_1 = require("./services/subscriptionExpiryService");
+const commercialPayoutWorker_1 = require("./services/commercialPayoutWorker");
+const subscriptionPlanCatalogService_1 = require("./services/subscriptionPlanCatalogService");
 const notificationConfig_1 = require("./config/notificationConfig");
+const maintenanceGuard_1 = require("./middleware/maintenanceGuard");
 // Load environment variables
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -47,6 +51,16 @@ app.get('/health', async (req, res) => {
         res.status(500).json({ status: 'ERROR', database: 'Disconnected', error: error.message });
     }
 });
+app.get('/api/health', async (req, res) => {
+    try {
+        await db_1.prisma.$queryRaw `SELECT 1`;
+        res.json({ status: 'OK', database: 'Connected', message: 'EventMaster API is running' });
+    }
+    catch (error) {
+        res.status(500).json({ status: 'ERROR', database: 'Disconnected', error: error.message });
+    }
+});
+app.use(maintenanceGuard_1.maintenanceGuard);
 // Mount Routes
 app.use('/api/auth', authRoutes_1.default);
 app.use('/api/events', eventRoutes_1.default);
@@ -58,16 +72,26 @@ app.use('/api/public', publicRoutes_1.default);
 app.use('/api/subscriptions', subscriptionRoutes_1.default);
 app.use('/api/team', teamRoutes_1.default);
 app.use('/api/rooms', roomRoutes_1.default);
+app.use('/api/marketplace', marketplaceRoutes_1.default);
 app.use('/api/commercial', commercialRoutes_1.default);
 app.use('/api/org-commercial', orgCommercialRoutes_1.default);
 app.use('/api/notifications', notificationRoutes_1.default);
 app.post('/api/billing/webhook', billingController_1.handleStripeWebhook);
 app.use('/api/billing', billingRoutes_1.default);
 // Start Server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
     console.log(`[EventMaster Server] running on http://localhost:${PORT}`);
+    try {
+        await (0, subscriptionPlanCatalogService_1.loadSubscriptionPlansFromDb)();
+    }
+    catch (error) {
+        console.error('[EventMaster Server] Impossible de charger les forfaits depuis la BD — fallback défauts code.', error);
+    }
     if (!(0, notificationConfig_1.isSendGridConfigured)()) {
-        console.error('[EventMaster Server] ATTENTION : SendGrid non configuré — aucun e-mail ne sera envoyé. Configurez SENDGRID_API_KEY et SENDGRID_FROM.');
+        console.error('[EventMaster Server] ATTENTION : SendGrid non configuré — aucun e-mail ne sera envoyé. Configurez SENDGRID_API_KEY et SENDGRID_FROM (ou les réglages plateforme).');
+    }
+    else {
+        (0, notificationConfig_1.logNotificationConfigStatus)();
     }
     if (!process.env.CLOUDINARY_CLOUD_NAME) {
         console.warn('[EventMaster Server] Cloudinary non configuré — uploads d\'images modèles désactivés. CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET.');
@@ -75,5 +99,6 @@ app.listen(PORT, () => {
     // Start background workers
     (0, reminderService_1.startReminderWorker)();
     (0, subscriptionExpiryService_1.startSubscriptionExpiryWorker)();
+    (0, commercialPayoutWorker_1.startCommercialPayoutWorker)();
 });
-// Trigger ts-node-dev reload to pick up generated Prisma client after schema change (latitude and longitude fields added)
+// Reload ts-node-dev after Prisma generate (maxServices + forfaits VENUE / SERVICE / CATALOG).

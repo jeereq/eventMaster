@@ -3,10 +3,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getInvoiceDetail = getInvoiceDetail;
 exports.downloadInvoicePdf = downloadInvoicePdf;
 exports.sendInvoiceByEmail = sendInvoiceByEmail;
+exports.markAdminInvoicePaid = markAdminInvoicePaid;
 const platformAccess_1 = require("../middleware/platformAccess");
 const platformCommercialScope_1 = require("../services/platformCommercialScope");
 const permissionsService_1 = require("../services/permissionsService");
 const invoiceService_1 = require("../services/invoiceService");
+const adminAuditService_1 = require("../services/adminAuditService");
 async function assertInvoiceAccess(req, invoiceId) {
     const invoice = await (0, invoiceService_1.findInvoiceById)(invoiceId);
     if (!invoice) {
@@ -84,5 +86,48 @@ async function sendInvoiceByEmail(req, res) {
     catch (err) {
         console.error('Erreur sendInvoiceByEmail:', err);
         return res.status(500).json({ error: err.message || 'Impossible d\'envoyer la facture.' });
+    }
+}
+async function markAdminInvoicePaid(req, res) {
+    try {
+        if (req.user?.role !== 'SUPER_ADMIN' || !req.user.id) {
+            return res.status(403).json({ error: 'Seul le Super Admin peut déclarer une facture payée.' });
+        }
+        const id = req.params.id;
+        const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
+        if (reason.length < 8) {
+            return res.status(400).json({ error: 'Motif obligatoire (8 caractères min.). Paiement hors plateforme.' });
+        }
+        const { invoice, error, status } = await assertInvoiceAccess(req, id);
+        if (!invoice) {
+            return res.status(status || 404).json({ error });
+        }
+        const result = await (0, invoiceService_1.markInvoicePaid)({
+            invoiceId: id,
+            paidByUserId: req.user.id,
+            reason,
+        });
+        if (result.error === 'NOT_FOUND') {
+            return res.status(404).json({ error: 'Facture introuvable.' });
+        }
+        if (result.error === 'ALREADY_PAID') {
+            return res.status(400).json({ error: 'Cette facture est déjà marquée payée.' });
+        }
+        await (0, adminAuditService_1.auditReq)(req, {
+            action: 'INVOICE_MARK_PAID',
+            targetType: 'platform_invoice',
+            targetId: result.invoice.id,
+            tenantId: result.invoice.tenantId,
+            summary: `Facture ${result.invoice.invoiceNumber} déclarée payée (hors plateforme)`,
+            metadata: { reason, invoiceNumber: result.invoice.invoiceNumber },
+        });
+        return res.json({
+            message: 'Facture marquée payée. Le paiement reste hors plateforme.',
+            invoice: (0, invoiceService_1.formatInvoiceDetailForApi)(result.invoice),
+        });
+    }
+    catch (err) {
+        console.error('Erreur markAdminInvoicePaid:', err);
+        return res.status(500).json({ error: 'Impossible de marquer la facture payée.' });
     }
 }

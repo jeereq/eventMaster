@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getSystemStats = getSystemStats;
+exports.listAdminTenants = listAdminTenants;
 exports.getTenantSubscriptionHistory = getTenantSubscriptionHistory;
 exports.getAdminInvoices = getAdminInvoices;
 exports.createTenant = createTenant;
@@ -29,15 +30,18 @@ exports.getAdminSettings = getAdminSettings;
 exports.updateAdminSettings = updateAdminSettings;
 const db_1 = require("../db");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
-const fs_1 = __importDefault(require("fs"));
-const path_1 = __importDefault(require("path"));
 const plansConfig_1 = require("../config/plansConfig");
+const subscriptionPlanCatalogService_1 = require("../services/subscriptionPlanCatalogService");
 const commercialService_1 = require("../services/commercialService");
 const platformAccess_1 = require("../middleware/platformAccess");
 const platformCommercialScope_1 = require("../services/platformCommercialScope");
 const invoiceService_1 = require("../services/invoiceService");
+const mandatoryRsvpFields_1 = require("../utils/mandatoryRsvpFields");
 const tenantBillingService_1 = require("../services/tenantBillingService");
-const plansConfig_2 = require("../config/plansConfig");
+const phone_1 = require("../utils/phone");
+const platformSettingsService_1 = require("../services/platformSettingsService");
+const adminAuditService_1 = require("../services/adminAuditService");
+const adminPager_1 = require("../utils/adminPager");
 // Get global system statistics and list of all tenants (Super Admin only)
 async function getSystemStats(req, res) {
     try {
@@ -46,7 +50,8 @@ async function getSystemStats(req, res) {
         }
         const commercialId = (0, platformCommercialScope_1.isPlatformCommercial)(req.user?.role) ? req.user?.id : undefined;
         const tenantWhere = commercialId ? (0, platformCommercialScope_1.commercialReferredTenantFilter)(commercialId) : {};
-        const [tenantCount, userCount, eventCount, guestCount] = await Promise.all([
+        const now = new Date();
+        const [tenantCount, userCount, eventCount, guestCount, verifiedUsers, licensesActive, planGroups, kindGroups, roleGroups, orgRoleGroups, checkedIn, openTasks, overdueTasks, upcomingEvents,] = await Promise.all([
             db_1.prisma.tenant.count({ where: tenantWhere }),
             commercialId
                 ? db_1.prisma.user.count({ where: { tenant: tenantWhere } })
@@ -57,52 +62,168 @@ async function getSystemStats(req, res) {
             commercialId
                 ? db_1.prisma.guest.count({ where: { event: { tenant: tenantWhere } } })
                 : db_1.prisma.guest.count(),
+            commercialId
+                ? db_1.prisma.user.count({ where: { isEmailVerified: true, tenant: tenantWhere } })
+                : db_1.prisma.user.count({ where: { isEmailVerified: true } }),
+            db_1.prisma.tenant.count({
+                where: {
+                    ...tenantWhere,
+                    licenseActive: true,
+                    OR: [{ licenseExpiresAt: null }, { licenseExpiresAt: { gt: now } }],
+                },
+            }),
+            db_1.prisma.tenant.groupBy({
+                by: ['plan'],
+                where: tenantWhere,
+                _count: { _all: true },
+            }),
+            db_1.prisma.tenant.groupBy({
+                by: ['accountKind'],
+                where: tenantWhere,
+                _count: { _all: true },
+            }),
+            commercialId
+                ? db_1.prisma.user.groupBy({
+                    by: ['role'],
+                    where: { tenant: tenantWhere },
+                    _count: { _all: true },
+                })
+                : db_1.prisma.user.groupBy({
+                    by: ['role'],
+                    _count: { _all: true },
+                }),
+            db_1.prisma.user.groupBy({
+                by: ['orgRole'],
+                where: commercialId
+                    ? { role: 'USER', tenant: tenantWhere }
+                    : { role: 'USER' },
+                _count: { _all: true },
+            }),
+            commercialId
+                ? db_1.prisma.guest.count({ where: { checkedInAt: { not: null }, event: { tenant: tenantWhere } } })
+                : db_1.prisma.guest.count({ where: { checkedInAt: { not: null } } }),
+            commercialId
+                ? db_1.prisma.eventTask.count({ where: { status: { in: ['OPEN', 'IN_PROGRESS', 'BLOCKED'] }, event: { tenant: tenantWhere } } })
+                : db_1.prisma.eventTask.count({ where: { status: { in: ['OPEN', 'IN_PROGRESS', 'BLOCKED'] } } }),
+            commercialId
+                ? db_1.prisma.eventTask.count({
+                    where: { status: { in: ['OPEN', 'IN_PROGRESS', 'BLOCKED'] }, dueAt: { lt: now }, event: { tenant: tenantWhere } },
+                })
+                : db_1.prisma.eventTask.count({ where: { status: { in: ['OPEN', 'IN_PROGRESS', 'BLOCKED'] }, dueAt: { lt: now } } }),
+            commercialId
+                ? db_1.prisma.event.count({ where: { date: { gte: now }, tenant: tenantWhere } })
+                : db_1.prisma.event.count({ where: { date: { gte: now } } }),
         ]);
-        const tenants = await db_1.prisma.tenant.findMany({
-            where: tenantWhere,
-            include: {
-                manager: {
-                    select: {
-                        name: true,
-                        email: true,
-                    },
-                },
-                _count: {
-                    select: {
-                        events: true,
-                        users: true,
-                    },
-                },
-            },
-            orderBy: {
-                createdAt: 'desc',
-            },
-        });
+        const planCounts = {};
+        for (const row of planGroups)
+            planCounts[row.plan] = row._count._all;
+        const accountKindCounts = {};
+        for (const row of kindGroups)
+            accountKindCounts[row.accountKind] = row._count._all;
+        const userRoleCounts = {};
+        for (const row of roleGroups)
+            userRoleCounts[row.role] = row._count._all;
+        const orgRoleCounts = {};
+        for (const row of orgRoleGroups)
+            orgRoleCounts[row.orgRole || 'NONE'] = row._count._all;
         return res.json({
             stats: {
                 tenants: tenantCount,
                 users: userCount,
                 events: eventCount,
                 guests: guestCount,
+                verifiedUsers,
+                licensesActive,
+                checkedIn,
+                openTasks,
+                overdueTasks,
+                upcomingEvents,
             },
-            tenants: tenants.map(t => ({
-                id: t.id,
-                name: t.name,
-                plan: t.plan,
-                licenseActive: t.licenseActive,
-                licenseExpiresAt: t.licenseExpiresAt,
-                licenseKey: t.licenseKey,
-                createdAt: t.createdAt,
-                managerName: t.manager?.name || 'Aucun',
-                managerEmail: t.manager?.email || 'Aucun',
-                eventsCount: t._count.events,
-                usersCount: t._count.users,
-            })),
+            planCounts,
+            accountKindCounts,
+            userRoleCounts,
+            orgRoleCounts,
         });
     }
     catch (error) {
         console.error('Erreur lors de la récupération des stats admin:', error);
         return res.status(500).json({ error: 'Erreur lors de la récupération des statistiques globales' });
+    }
+}
+async function listAdminTenants(req, res) {
+    try {
+        if (!(0, platformAccess_1.isPlatformStaff)(req.user?.role)) {
+            return res.status(403).json({ error: 'Accès refusé. Privilèges plateforme requis.' });
+        }
+        const commercialId = (0, platformCommercialScope_1.isPlatformCommercial)(req.user?.role) ? req.user?.id : undefined;
+        const { page, pageSize, skip } = (0, adminPager_1.adminPager)(req);
+        const q = (0, adminPager_1.adminSearch)(req);
+        const plan = (0, adminPager_1.adminQueryString)(req, 'plan');
+        const accountKind = (0, adminPager_1.adminQueryString)(req, 'accountKind');
+        const license = (0, adminPager_1.adminQueryString)(req, 'license');
+        const sort = (0, adminPager_1.adminQueryString)(req, 'sort') || 'createdAt';
+        const now = new Date();
+        const where = {
+            ...(commercialId ? (0, platformCommercialScope_1.commercialReferredTenantFilter)(commercialId) : {}),
+            ...(plan ? { plan: plan } : {}),
+            ...(accountKind ? { accountKind } : {}),
+        };
+        if (license === 'active') {
+            where.licenseActive = true;
+            (0, adminPager_1.prismaAnd)(where, { OR: [{ licenseExpiresAt: null }, { licenseExpiresAt: { gt: now } }] });
+        }
+        else if (license === 'expired') {
+            where.licenseExpiresAt = { lte: now };
+        }
+        else if (license === 'inactive') {
+            where.licenseActive = false;
+        }
+        if (q) {
+            (0, adminPager_1.prismaAnd)(where, {
+                OR: [
+                    { name: { contains: q, mode: 'insensitive' } },
+                    { manager: { name: { contains: q, mode: 'insensitive' } } },
+                    { manager: { email: { contains: q, mode: 'insensitive' } } },
+                ],
+            });
+        }
+        const orderBy = sort === 'events'
+            ? { events: { _count: 'desc' } }
+            : sort === 'name'
+                ? { name: 'asc' }
+                : { createdAt: 'desc' };
+        const [rows, total] = await Promise.all([
+            db_1.prisma.tenant.findMany({
+                where,
+                include: {
+                    manager: { select: { name: true, email: true } },
+                    _count: { select: { events: true, users: true } },
+                },
+                orderBy,
+                skip,
+                take: pageSize,
+            }),
+            db_1.prisma.tenant.count({ where }),
+        ]);
+        return res.json((0, adminPager_1.listPayload)(rows.map((t) => ({
+            id: t.id,
+            name: t.name,
+            plan: t.plan,
+            licenseActive: t.licenseActive,
+            licenseExpiresAt: t.licenseExpiresAt,
+            licenseKey: t.licenseKey,
+            createdAt: t.createdAt,
+            managerName: t.manager?.name || 'Aucun',
+            managerEmail: t.manager?.email || 'Aucun',
+            eventsCount: t._count.events,
+            usersCount: t._count.users,
+            accountKind: t.accountKind,
+            billingCycle: t.billingCycle,
+        })), total, page, pageSize));
+    }
+    catch (error) {
+        console.error('Erreur liste organisations admin:', error);
+        return res.status(500).json({ error: 'Impossible de charger les organisations.' });
     }
 }
 const SUBSCRIPTION_REQUEST_STATUS_LABELS = {
@@ -258,15 +379,27 @@ async function createTenant(req, res) {
         if (!name) {
             return res.status(400).json({ error: 'Le nom de l\'organisation est requis.' });
         }
+        const nextPlanKey = (0, plansConfig_1.normalizePlanKey)(plan || 'FREE');
+        const nextPlan = nextPlanKey;
+        const accountKind = (0, plansConfig_1.accountKindForPlanAssignment)(nextPlanKey, 'ORGANIZER');
         const newTenant = await db_1.prisma.tenant.create({
             data: {
                 name,
-                plan: plan || 'FREE',
+                plan: nextPlan,
+                accountKind,
                 licenseActive: licenseActive !== undefined ? Boolean(licenseActive) : true,
                 licenseExpiresAt: licenseExpiresAt ? new Date(licenseExpiresAt) : null,
                 licenseKey: licenseKey || null,
                 referredByCommercialId: req.user?.role === 'COMMERCIAL' ? req.user.id : null,
             },
+        });
+        await (0, adminAuditService_1.auditReq)(req, {
+            action: 'TENANT_CREATE',
+            targetType: 'tenant',
+            targetId: newTenant.id,
+            tenantId: newTenant.id,
+            summary: `Organisation « ${newTenant.name} » créée (${newTenant.plan})`,
+            metadata: { plan: newTenant.plan, accountKind: newTenant.accountKind },
         });
         return res.status(201).json({ message: 'Organisation créée avec succès', tenant: newTenant });
     }
@@ -287,15 +420,17 @@ async function updateTenantPlanOrLicense(req, res) {
         if (!existing) {
             return res.status(404).json({ error: 'Organisation introuvable.' });
         }
-        const newPlan = plan ?? existing.plan;
+        const newPlanKey = (0, plansConfig_1.normalizePlanKey)(String(plan ?? existing.plan));
+        const newPlan = newPlanKey;
+        const nextAccountKind = (0, plansConfig_1.accountKindForPlanAssignment)(newPlanKey, existing.accountKind);
         let nextExpiry = licenseExpiresAt !== undefined
             ? licenseExpiresAt
                 ? new Date(licenseExpiresAt)
                 : null
             : existing.licenseExpiresAt;
         const billingPayload = billing;
-        const durationDays = billingPayload?.durationDays ? parseInt(String(billingPayload.durationDays), 10) : 30;
-        if (billingPayload?.extendLicense && newPlan !== 'FREE' && plansConfig_2.PAID_PLAN_KEYS.includes(newPlan)) {
+        const durationDays = (0, plansConfig_1.resolveDurationDaysForPlan)(newPlanKey, billingPayload?.durationDays ? parseInt(String(billingPayload.durationDays), 10) : null);
+        if (billingPayload?.extendLicense && newPlanKey !== 'FREE' && plansConfig_1.PAID_PLAN_KEYS.includes(newPlanKey)) {
             nextExpiry = (0, tenantBillingService_1.computeExtendedExpiry)(existing.licenseExpiresAt, durationDays);
         }
         const updatedTenant = await db_1.prisma.tenant.update({
@@ -303,16 +438,22 @@ async function updateTenantPlanOrLicense(req, res) {
             data: {
                 name: name !== undefined ? name : undefined,
                 plan: newPlan,
+                accountKind: nextAccountKind,
                 licenseActive: licenseActive !== undefined ? Boolean(licenseActive) : undefined,
                 licenseExpiresAt: licenseExpiresAt !== undefined ? nextExpiry : undefined,
                 licenseKey: licenseKey !== undefined ? licenseKey : undefined,
                 licenseExpiryWarningFor: billingPayload?.extendLicense || billingPayload?.issueInvoice ? null : undefined,
+                billingCycle: newPlanKey === 'FREE'
+                    ? 'PERIOD'
+                    : billingPayload?.extendLicense || billingPayload?.issueInvoice
+                        ? (0, plansConfig_1.billingCycleFromDurationDays)(durationDays)
+                        : undefined,
             },
         });
         let billingResult = null;
         if (billingPayload?.issueInvoice &&
-            newPlan !== 'FREE' &&
-            plansConfig_2.PAID_PLAN_KEYS.includes(newPlan)) {
+            newPlanKey !== 'FREE' &&
+            plansConfig_1.PAID_PLAN_KEYS.includes(newPlanKey)) {
             const parsedDiscount = billingPayload.discountPercent !== undefined && billingPayload.discountPercent !== null
                 ? parseFloat(String(billingPayload.discountPercent))
                 : undefined;
@@ -353,6 +494,28 @@ async function updateTenantPlanOrLicense(req, res) {
         const commercialNote = billingResult?.commercialNotified.length
             ? ` Commerciaux informés : ${billingResult.commercialNotified.join(', ')}.`
             : '';
+        await (0, adminAuditService_1.auditReq)(req, {
+            action: 'TENANT_UPDATE',
+            targetType: 'tenant',
+            targetId: updatedTenant.id,
+            tenantId: updatedTenant.id,
+            summary: `Organisation « ${updatedTenant.name} » mise à jour`,
+            metadata: {
+                before: {
+                    name: existing.name,
+                    plan: existing.plan,
+                    licenseActive: existing.licenseActive,
+                    licenseExpiresAt: existing.licenseExpiresAt,
+                },
+                after: {
+                    name: updatedTenant.name,
+                    plan: updatedTenant.plan,
+                    licenseActive: updatedTenant.licenseActive,
+                    licenseExpiresAt: updatedTenant.licenseExpiresAt,
+                },
+                invoiceIssued: Boolean(billingResult?.invoice),
+            },
+        });
         return res.json({
             message: `Organisation mise à jour.${invoiceNote}${commercialNote}`,
             tenant: updatedTenant,
@@ -384,8 +547,23 @@ async function deleteTenant(req, res) {
             return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
         }
         const id = req.params.id;
+        const existing = await db_1.prisma.tenant.findUnique({
+            where: { id },
+            select: { id: true, name: true, plan: true },
+        });
+        if (!existing) {
+            return res.status(404).json({ error: 'Organisation introuvable.' });
+        }
         await db_1.prisma.tenant.delete({
             where: { id },
+        });
+        await (0, adminAuditService_1.auditReq)(req, {
+            action: 'TENANT_DELETE',
+            targetType: 'tenant',
+            targetId: existing.id,
+            tenantId: existing.id,
+            summary: `Organisation « ${existing.name} » supprimée`,
+            metadata: { plan: existing.plan },
         });
         return res.json({ message: 'Tenant supprimé avec succès' });
     }
@@ -400,28 +578,51 @@ async function getAllUsers(req, res) {
         if (req.user?.role !== 'SUPER_ADMIN') {
             return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
         }
-        const users = await db_1.prisma.user.findMany({
-            include: {
-                tenant: {
-                    select: {
-                        name: true,
-                    },
-                },
-            },
-            orderBy: {
-                createdAt: 'desc',
-            },
-        });
-        return res.json(users.map(u => ({
+        const { page, pageSize, skip } = (0, adminPager_1.adminPager)(req);
+        const q = (0, adminPager_1.adminSearch)(req);
+        const role = (0, adminPager_1.adminQueryString)(req, 'role');
+        const orgRole = (0, adminPager_1.adminQueryString)(req, 'orgRole');
+        const verified = (0, adminPager_1.adminQueryString)(req, 'verified');
+        const tenantName = (0, adminPager_1.adminQueryString)(req, 'org');
+        const where = {
+            ...(role ? { role: role } : {}),
+            ...(orgRole ? { orgRole } : {}),
+            ...(verified === 'verified' ? { isEmailVerified: true } : {}),
+            ...(verified === 'unverified' ? { isEmailVerified: false } : {}),
+            ...(tenantName ? { tenant: { name: tenantName } } : {}),
+        };
+        if (q) {
+            (0, adminPager_1.prismaAnd)(where, {
+                OR: [
+                    { name: { contains: q, mode: 'insensitive' } },
+                    { email: { contains: q, mode: 'insensitive' } },
+                    { tenant: { name: { contains: q, mode: 'insensitive' } } },
+                ],
+            });
+        }
+        const [users, total] = await Promise.all([
+            db_1.prisma.user.findMany({
+                where,
+                include: { tenant: { select: { name: true } } },
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: pageSize,
+            }),
+            db_1.prisma.user.count({ where }),
+        ]);
+        return res.json((0, adminPager_1.listPayload)(users.map((u) => ({
             id: u.id,
             name: u.name,
             email: u.email,
             role: u.role,
+            orgRole: u.orgRole,
             tenantId: u.tenantId,
             isEmailVerified: u.isEmailVerified,
             tenantName: u.tenant?.name || 'Aucun (Super Admin)',
             createdAt: u.createdAt,
-        })));
+            commissionRate: u.commissionRate,
+            renewalCommissionRate: u.renewalCommissionRate,
+        })), total, page, pageSize));
     }
     catch (error) {
         console.error('Erreur lors de la récupération des utilisateurs:', error);
@@ -434,7 +635,7 @@ async function createUser(req, res) {
         if (req.user?.role !== 'SUPER_ADMIN') {
             return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
         }
-        const { name, email, password, role, isEmailVerified, tenantId } = req.body;
+        const { name, email, password, role, isEmailVerified, tenantId, commissionRate, renewalCommissionRate } = req.body;
         if (!email || !password) {
             return res.status(400).json({ error: 'L\'adresse email et le mot de passe sont requis.' });
         }
@@ -455,7 +656,12 @@ async function createUser(req, res) {
                 role: resolvedRole,
                 isEmailVerified: isEmailVerified !== undefined ? Boolean(isEmailVerified) : false,
                 tenantId: resolvedTenantId,
-                commissionRate: resolvedRole === 'COMMERCIAL' ? (0, commercialService_1.normalizeCommissionRate)(0.2) : null,
+                commissionRate: resolvedRole === 'COMMERCIAL'
+                    ? (0, commercialService_1.resolveCommissionRates)({ first: commissionRate, renewal: renewalCommissionRate }).first
+                    : null,
+                renewalCommissionRate: resolvedRole === 'COMMERCIAL'
+                    ? (0, commercialService_1.resolveCommissionRates)({ first: commissionRate, renewal: renewalCommissionRate }).renewal
+                    : null,
             },
         });
         if (newUser.role === 'COMMERCIAL') {
@@ -471,6 +677,14 @@ async function createUser(req, res) {
                 });
             }
         }
+        await (0, adminAuditService_1.auditReq)(req, {
+            action: 'USER_CREATE',
+            targetType: 'user',
+            targetId: newUser.id,
+            tenantId: newUser.tenantId,
+            summary: `Utilisateur ${newUser.email} créé (${newUser.role})`,
+            metadata: { role: newUser.role, tenantId: newUser.tenantId },
+        });
         return res.status(201).json({ message: 'Utilisateur créé avec succès', user: newUser });
     }
     catch (error) {
@@ -485,7 +699,7 @@ async function updateUserRoleOrStatus(req, res) {
             return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
         }
         const id = req.params.id;
-        const { name, email, password, role, isEmailVerified, tenantId } = req.body;
+        const { name, email, password, role, isEmailVerified, tenantId, commissionRate, renewalCommissionRate } = req.body;
         const updateData = {
             name: name !== undefined ? name : undefined,
             email: email !== undefined ? email : undefined,
@@ -494,9 +708,12 @@ async function updateUserRoleOrStatus(req, res) {
         };
         if (role === 'COMMERCIAL') {
             updateData.tenantId = null;
-            if (updateData.commissionRate === undefined) {
-                updateData.commissionRate = (0, commercialService_1.normalizeCommissionRate)(0.2);
-            }
+            const rates = (0, commercialService_1.resolveCommissionRates)({
+                first: commissionRate,
+                renewal: renewalCommissionRate,
+            });
+            updateData.commissionRate = rates.first;
+            updateData.renewalCommissionRate = rates.renewal;
         }
         else if (tenantId !== undefined) {
             updateData.tenantId = tenantId || null;
@@ -511,6 +728,14 @@ async function updateUserRoleOrStatus(req, res) {
         if (updatedUser.role === 'COMMERCIAL') {
             await (0, commercialService_1.ensureCommercialReferralCode)(updatedUser.id);
         }
+        await (0, adminAuditService_1.auditReq)(req, {
+            action: 'USER_UPDATE',
+            targetType: 'user',
+            targetId: updatedUser.id,
+            tenantId: updatedUser.tenantId,
+            summary: `Utilisateur ${updatedUser.email} mis à jour (${updatedUser.role})`,
+            metadata: { role: updatedUser.role, tenantId: updatedUser.tenantId },
+        });
         return res.json({ message: 'Utilisateur mis à jour avec succès', user: updatedUser });
     }
     catch (error) {
@@ -525,8 +750,23 @@ async function deleteUser(req, res) {
             return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
         }
         const id = req.params.id;
+        const existingUser = await db_1.prisma.user.findUnique({
+            where: { id },
+            select: { id: true, email: true, role: true, tenantId: true },
+        });
+        if (!existingUser) {
+            return res.status(404).json({ error: 'Utilisateur introuvable.' });
+        }
         await db_1.prisma.user.delete({
             where: { id },
+        });
+        await (0, adminAuditService_1.auditReq)(req, {
+            action: 'USER_DELETE',
+            targetType: 'user',
+            targetId: existingUser.id,
+            tenantId: existingUser.tenantId,
+            summary: `Utilisateur ${existingUser.email} supprimé`,
+            metadata: { role: existingUser.role },
         });
         return res.json({ message: 'Utilisateur supprimé avec succès' });
     }
@@ -541,27 +781,56 @@ async function getAllTemplates(req, res) {
         if (req.user?.role !== 'SUPER_ADMIN') {
             return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
         }
-        const templates = await db_1.prisma.template.findMany({
-            include: {
-                tenant: {
-                    select: {
-                        name: true,
-                    },
-                },
-            },
-            orderBy: {
-                createdAt: 'desc',
+        const { page, pageSize, skip } = (0, adminPager_1.adminPager)(req);
+        const q = (0, adminPager_1.adminSearch)(req);
+        const type = (0, adminPager_1.adminQueryString)(req, 'type');
+        const landing = (0, adminPager_1.adminQueryString)(req, 'landing');
+        const where = {
+            ...(type === 'GLOBAL' ? { tenantId: null } : {}),
+            ...(type === 'TENANT' ? { tenantId: { not: null } } : {}),
+            ...(landing === 'yes' ? { showOnLanding: true } : {}),
+            ...(landing === 'no' ? { showOnLanding: false } : {}),
+        };
+        if (q) {
+            (0, adminPager_1.prismaAnd)(where, {
+                OR: [
+                    { name: { contains: q, mode: 'insensitive' } },
+                    { tenant: { name: { contains: q, mode: 'insensitive' } } },
+                ],
+            });
+        }
+        const [templates, total, allCount, globalCount, tenantCount, landingCount] = await Promise.all([
+            db_1.prisma.template.findMany({
+                where,
+                include: { tenant: { select: { name: true } } },
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: pageSize,
+            }),
+            db_1.prisma.template.count({ where }),
+            db_1.prisma.template.count(),
+            db_1.prisma.template.count({ where: { tenantId: null } }),
+            db_1.prisma.template.count({ where: { tenantId: { not: null } } }),
+            db_1.prisma.template.count({ where: { tenantId: null, showOnLanding: true } }),
+        ]);
+        return res.json({
+            ...(0, adminPager_1.listPayload)(templates.map((t) => ({
+                id: t.id,
+                name: t.name,
+                content: (0, mandatoryRsvpFields_1.ensureMandatoryRsvpFieldsOnContent)(t.content),
+                isGlobal: t.tenantId === null,
+                showOnLanding: t.showOnLanding,
+                tenantId: t.tenantId,
+                tenantName: t.tenant?.name || 'Global (Tous)',
+                createdAt: t.createdAt,
+            })), total, page, pageSize),
+            counts: {
+                total: allCount,
+                global: globalCount,
+                tenant: tenantCount,
+                landing: landingCount,
             },
         });
-        return res.json(templates.map(t => ({
-            id: t.id,
-            name: t.name,
-            content: t.content,
-            isGlobal: t.tenantId === null,
-            showOnLanding: t.showOnLanding,
-            tenantName: t.tenant?.name || 'Global (Tous)',
-            createdAt: t.createdAt,
-        })));
     }
     catch (error) {
         console.error('Erreur lors de la récupération des modèles:', error);
@@ -581,7 +850,7 @@ async function createGlobalTemplate(req, res) {
         const template = await db_1.prisma.template.create({
             data: {
                 name,
-                content,
+                content: (0, mandatoryRsvpFields_1.ensureMandatoryRsvpFieldsOnContent)(content),
                 showOnLanding: showOnLanding !== undefined ? Boolean(showOnLanding) : false,
                 tenantId: null, // Null means it is a global template
             },
@@ -637,25 +906,50 @@ async function getAllEvents(req, res) {
         if (req.user?.role !== 'SUPER_ADMIN') {
             return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
         }
-        const events = await db_1.prisma.event.findMany({
-            include: {
-                tenant: {
-                    select: {
-                        name: true,
-                    },
+        const { page, pageSize, skip } = (0, adminPager_1.adminPager)(req);
+        const q = (0, adminPager_1.adminSearch)(req);
+        const visibility = (0, adminPager_1.adminQueryString)(req, 'visibility');
+        const ticketing = (0, adminPager_1.adminQueryString)(req, 'ticketing');
+        const gps = (0, adminPager_1.adminQueryString)(req, 'gps');
+        const when = (0, adminPager_1.adminQueryString)(req, 'when');
+        const tenantName = (0, adminPager_1.adminQueryString)(req, 'org');
+        const now = new Date();
+        const where = {
+            ...(visibility === 'public' ? { isPublic: true } : {}),
+            ...(visibility === 'private' ? { isPublic: false } : {}),
+            ...(ticketing === 'yes' ? { ticketingEnabled: true } : {}),
+            ...(ticketing === 'no' ? { ticketingEnabled: false } : {}),
+            ...(gps === 'yes' ? { latitude: { not: null }, longitude: { not: null } } : {}),
+            ...(when === 'upcoming' ? { date: { gte: now } } : {}),
+            ...(when === 'past' ? { date: { lt: now } } : {}),
+            ...(tenantName ? { tenant: { name: tenantName } } : {}),
+        };
+        if (gps === 'no') {
+            (0, adminPager_1.prismaAnd)(where, { OR: [{ latitude: null }, { longitude: null }] });
+        }
+        if (q) {
+            (0, adminPager_1.prismaAnd)(where, {
+                OR: [
+                    { title: { contains: q, mode: 'insensitive' } },
+                    { location: { contains: q, mode: 'insensitive' } },
+                    { tenant: { name: { contains: q, mode: 'insensitive' } } },
+                ],
+            });
+        }
+        const [events, total] = await Promise.all([
+            db_1.prisma.event.findMany({
+                where,
+                include: {
+                    tenant: { select: { name: true } },
+                    _count: { select: { guests: true, invitations: true } },
                 },
-                _count: {
-                    select: {
-                        guests: true,
-                        invitations: true,
-                    },
-                },
-            },
-            orderBy: {
-                date: 'desc',
-            },
-        });
-        return res.json(events.map(e => ({
+                orderBy: { date: 'desc' },
+                skip,
+                take: pageSize,
+            }),
+            db_1.prisma.event.count({ where }),
+        ]);
+        return res.json((0, adminPager_1.listPayload)(events.map((e) => ({
             id: e.id,
             title: e.title,
             description: e.description,
@@ -664,12 +958,17 @@ async function getAllEvents(req, res) {
             reminderFrequency: e.reminderFrequency,
             latitude: e.latitude,
             longitude: e.longitude,
+            isPublic: e.isPublic,
+            ticketingEnabled: e.ticketingEnabled,
+            ticketPriceFc: e.ticketPriceFc,
+            ticketsSold: e.ticketsSold,
+            ticketsTotal: e.ticketsTotal,
             tenantId: e.tenantId,
             tenantName: e.tenant?.name || 'Inconnu',
             guestCount: e._count.guests,
             invitationCount: e._count.invitations,
             createdAt: e.createdAt,
-        })));
+        })), total, page, pageSize));
     }
     catch (error) {
         console.error('Erreur lors de la récupération de tous les événements:', error);
@@ -746,8 +1045,22 @@ async function deleteAdminEvent(req, res) {
             return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
         }
         const id = req.params.id;
+        const existingEvent = await db_1.prisma.event.findUnique({
+            where: { id },
+            select: { id: true, title: true, tenantId: true },
+        });
+        if (!existingEvent) {
+            return res.status(404).json({ error: 'Événement introuvable.' });
+        }
         await db_1.prisma.event.delete({
             where: { id },
+        });
+        await (0, adminAuditService_1.auditReq)(req, {
+            action: 'EVENT_DELETE',
+            targetType: 'event',
+            targetId: existingEvent.id,
+            tenantId: existingEvent.tenantId,
+            summary: `Événement « ${existingEvent.title} » supprimé`,
         });
         return res.json({ message: 'Événement supprimé avec succès' });
     }
@@ -763,36 +1076,79 @@ async function getAllGuests(req, res) {
         if (req.user?.role !== 'SUPER_ADMIN') {
             return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
         }
-        const guests = await db_1.prisma.guest.findMany({
-            include: {
-                event: {
-                    select: {
-                        title: true,
-                        tenant: {
-                            select: {
-                                name: true,
-                            },
+        const { page, pageSize, skip } = (0, adminPager_1.adminPager)(req);
+        const q = (0, adminPager_1.adminSearch)(req);
+        const rsvp = (0, adminPager_1.adminQueryString)(req, 'rsvp');
+        const checkin = (0, adminPager_1.adminQueryString)(req, 'checkin');
+        const pdf = (0, adminPager_1.adminQueryString)(req, 'pdf');
+        const category = (0, adminPager_1.adminQueryString)(req, 'category');
+        const tenantName = (0, adminPager_1.adminQueryString)(req, 'org');
+        const eventTitle = (0, adminPager_1.adminQueryString)(req, 'event');
+        const where = {
+            ...(rsvp ? { rsvp } : {}),
+            ...(checkin === 'in' ? { checkedInAt: { not: null } } : {}),
+            ...(checkin === 'out' ? { checkedInAt: null } : {}),
+            ...(pdf === 'delivered' ? { seatingInvitationPdfUrl: { not: null } } : {}),
+            ...(pdf === 'missing' ? { rsvp: 'ACCEPTED', seatingInvitationPdfUrl: null } : {}),
+            ...(category ? { category } : {}),
+            ...(tenantName || eventTitle
+                ? {
+                    event: {
+                        ...(eventTitle ? { title: eventTitle } : {}),
+                        ...(tenantName ? { tenant: { name: tenantName } } : {}),
+                    },
+                }
+                : {}),
+        };
+        if (q) {
+            (0, adminPager_1.prismaAnd)(where, {
+                OR: [
+                    { firstName: { contains: q, mode: 'insensitive' } },
+                    { lastName: { contains: q, mode: 'insensitive' } },
+                    { email: { contains: q, mode: 'insensitive' } },
+                    { category: { contains: q, mode: 'insensitive' } },
+                    { event: { title: { contains: q, mode: 'insensitive' } } },
+                    { event: { tenant: { name: { contains: q, mode: 'insensitive' } } } },
+                ],
+            });
+        }
+        const [guests, total] = await Promise.all([
+            db_1.prisma.guest.findMany({
+                where,
+                include: {
+                    event: {
+                        select: {
+                            title: true,
+                            tenantId: true,
+                            tenant: { select: { name: true } },
                         },
                     },
                 },
-            },
-            orderBy: {
-                createdAt: 'desc',
-            },
-        });
-        return res.json(guests.map((g) => ({
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: pageSize,
+            }),
+            db_1.prisma.guest.count({ where }),
+        ]);
+        return res.json((0, adminPager_1.listPayload)(guests.map((g) => ({
             id: g.id,
             eventId: g.eventId,
             eventTitle: g.event?.title || 'Événement inconnu',
+            tenantId: g.event?.tenantId || null,
             tenantName: g.event?.tenant?.name || 'Organisation inconnue',
             firstName: g.firstName,
             lastName: g.lastName,
             email: g.email,
+            phone: g.phone,
+            phoneCountryCode: g.phoneCountryCode,
             category: g.category || 'Général',
             rsvp: g.rsvp,
             preferences: g.preferences,
+            checkedInAt: g.checkedInAt,
+            seatVerified: g.seatVerified,
+            seatingInvitationPdfUrl: g.seatingInvitationPdfUrl,
             createdAt: g.createdAt,
-        })));
+        })), total, page, pageSize));
     }
     catch (error) {
         console.error('Erreur lors de la récupération de tous les invités:', error);
@@ -805,7 +1161,7 @@ async function createAdminGuest(req, res) {
         if (req.user?.role !== 'SUPER_ADMIN') {
             return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
         }
-        const { eventId, firstName, lastName, email, category, rsvp, preferences } = req.body;
+        const { eventId, firstName, lastName, email, category, rsvp, preferences, phone, phoneCountryCode, nationalNumber } = req.body;
         if (!eventId || !firstName || !lastName || !email) {
             return res.status(400).json({ error: 'Les champs eventId, firstName, lastName et email sont requis' });
         }
@@ -816,12 +1172,15 @@ async function createAdminGuest(req, res) {
         if (existingGuest) {
             return res.status(400).json({ error: 'Un invité avec cet email existe déjà pour cet événement' });
         }
+        const phoneFields = (0, phone_1.resolvePhoneFields)({ phone, phoneCountryCode, nationalNumber });
         const guest = await db_1.prisma.guest.create({
             data: {
                 eventId,
                 firstName,
                 lastName,
                 email,
+                phone: phoneFields.phone,
+                phoneCountryCode: phoneFields.phoneCountryCode,
                 category: category || 'Général',
                 rsvp: rsvp || 'PENDING',
                 preferences: preferences || {},
@@ -849,6 +1208,8 @@ async function createAdminGuest(req, res) {
                 firstName: guest.firstName,
                 lastName: guest.lastName,
                 email: guest.email,
+                phone: guest.phone,
+                phoneCountryCode: guest.phoneCountryCode,
                 category: guest.category,
                 rsvp: guest.rsvp,
                 preferences: guest.preferences,
@@ -868,12 +1229,19 @@ async function updateAdminGuest(req, res) {
             return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
         }
         const id = req.params.id;
-        const { eventId, firstName, lastName, email, category, rsvp, preferences } = req.body;
+        const { eventId, firstName, lastName, email, category, rsvp, preferences, phone, phoneCountryCode, nationalNumber } = req.body;
         const existingGuest = await db_1.prisma.guest.findUnique({
             where: { id },
         });
         if (!existingGuest) {
             return res.status(404).json({ error: 'Invité non trouvé' });
+        }
+        let nextPhone = existingGuest.phone;
+        let nextPhoneCountryCode = existingGuest.phoneCountryCode;
+        if (phone !== undefined || phoneCountryCode !== undefined || nationalNumber !== undefined) {
+            const resolved = (0, phone_1.resolvePhoneFields)({ phone, phoneCountryCode, nationalNumber });
+            nextPhone = resolved.phone;
+            nextPhoneCountryCode = resolved.phoneCountryCode;
         }
         const updatedGuest = await db_1.prisma.guest.update({
             where: { id },
@@ -882,6 +1250,8 @@ async function updateAdminGuest(req, res) {
                 firstName: firstName !== undefined ? firstName : existingGuest.firstName,
                 lastName: lastName !== undefined ? lastName : existingGuest.lastName,
                 email: email !== undefined ? email : existingGuest.email,
+                phone: nextPhone,
+                phoneCountryCode: nextPhoneCountryCode,
                 category: category !== undefined ? category : existingGuest.category,
                 rsvp: rsvp !== undefined ? rsvp : existingGuest.rsvp,
                 preferences: preferences !== undefined ? preferences : existingGuest.preferences,
@@ -909,6 +1279,8 @@ async function updateAdminGuest(req, res) {
                 firstName: updatedGuest.firstName,
                 lastName: updatedGuest.lastName,
                 email: updatedGuest.email,
+                phone: updatedGuest.phone,
+                phoneCountryCode: updatedGuest.phoneCountryCode,
                 category: updatedGuest.category,
                 rsvp: updatedGuest.rsvp,
                 preferences: updatedGuest.preferences,
@@ -928,8 +1300,22 @@ async function deleteAdminGuest(req, res) {
             return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
         }
         const id = req.params.id;
+        const existingGuest = await db_1.prisma.guest.findUnique({
+            where: { id },
+            select: { id: true, firstName: true, lastName: true, event: { select: { tenantId: true, title: true } } },
+        });
+        if (!existingGuest) {
+            return res.status(404).json({ error: 'Invité introuvable.' });
+        }
         await db_1.prisma.guest.delete({
             where: { id },
+        });
+        await (0, adminAuditService_1.auditReq)(req, {
+            action: 'GUEST_DELETE',
+            targetType: 'guest',
+            targetId: existingGuest.id,
+            tenantId: existingGuest.event.tenantId,
+            summary: `Invité ${existingGuest.firstName} ${existingGuest.lastName} supprimé (${existingGuest.event.title})`,
         });
         return res.json({ message: 'Invité supprimé avec succès' });
     }
@@ -939,43 +1325,18 @@ async function deleteAdminGuest(req, res) {
     }
 }
 // === CONFIGURATION & SETTINGS (Super Admin only) ===
-const settingsFilePath = path_1.default.join(__dirname, '..', 'config', 'settings.json');
-// Ensure the directory exists
-function ensureSettingsDir() {
-    const dir = path_1.default.dirname(settingsFilePath);
-    if (!fs_1.default.existsSync(dir)) {
-        fs_1.default.mkdirSync(dir, { recursive: true });
-    }
-}
-const defaultSettings = {
-    platformName: "EventMaster",
-    supportEmail: "mingandajeereq@gmail.com",
-    maintenanceMode: false,
-    allowRegistration: true,
-    ultramsgInstanceId: process.env.ULTRAMSG_INSTANCE_ID || "",
-    ultramsgToken: process.env.ULTRAMSG_TOKEN || "",
-    sendgridApiKey: process.env.SENDGRID_API_KEY || "",
-    twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || "",
-    twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || "",
-    twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER || "",
-    plans: (0, plansConfig_1.getDefaultPlans)(),
-};
 async function getAdminSettings(req, res) {
     try {
         if (req.user?.role !== 'SUPER_ADMIN') {
             return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
         }
-        ensureSettingsDir();
-        if (fs_1.default.existsSync(settingsFilePath)) {
-            const data = fs_1.default.readFileSync(settingsFilePath, 'utf-8');
-            const settings = JSON.parse(data);
-            return res.json({
-                ...defaultSettings,
-                ...settings,
-                plans: (0, plansConfig_1.getPlansConfiguration)(),
-            });
-        }
-        return res.json({ ...defaultSettings, plans: (0, plansConfig_1.getPlansConfiguration)() });
+        const plans = await (0, subscriptionPlanCatalogService_1.loadSubscriptionPlansFromDb)();
+        const settings = (0, platformSettingsService_1.loadPlatformSettings)();
+        return res.json({
+            ...platformSettingsService_1.DEFAULT_PLATFORM_SETTINGS,
+            ...settings,
+            plans,
+        });
     }
     catch (error) {
         console.error('Erreur lors de la récupération des paramètres:', error);
@@ -987,22 +1348,47 @@ async function updateAdminSettings(req, res) {
         if (req.user?.role !== 'SUPER_ADMIN') {
             return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
         }
-        const newSettings = req.body;
-        ensureSettingsDir();
-        let currentSettings = { ...defaultSettings };
-        if (fs_1.default.existsSync(settingsFilePath)) {
-            const data = fs_1.default.readFileSync(settingsFilePath, 'utf-8');
-            currentSettings = { ...currentSettings, ...JSON.parse(data) };
+        const { plans: incomingPlans, ...otherSettings } = req.body || {};
+        const current = (0, platformSettingsService_1.loadPlatformSettings)();
+        const merged = (0, platformSettingsService_1.mergeSettingsUpdate)(current, otherSettings);
+        const updatedSettings = (0, platformSettingsService_1.savePlatformSettings)(merged);
+        let plans = (0, plansConfig_1.getPlansConfiguration)();
+        if (incomingPlans) {
+            plans = await (0, subscriptionPlanCatalogService_1.saveSubscriptionPlansToDb)(incomingPlans);
         }
-        const updatedSettings = {
-            ...currentSettings,
-            ...newSettings,
-        };
-        if (newSettings.plans) {
-            updatedSettings.plans = (0, plansConfig_1.mergePlansForSave)(newSettings.plans);
+        else {
+            plans = await (0, subscriptionPlanCatalogService_1.loadSubscriptionPlansFromDb)();
         }
-        fs_1.default.writeFileSync(settingsFilePath, JSON.stringify(updatedSettings, null, 2), 'utf-8');
-        return res.json({ message: 'Paramètres mis à jour avec succès', settings: updatedSettings });
+        await (0, adminAuditService_1.auditReq)(req, {
+            action: 'SETTINGS_UPDATE',
+            targetType: 'settings',
+            targetId: 'platform',
+            summary: `Réglages plateforme mis à jour${incomingPlans ? ' (forfaits inclus)' : ''}`,
+            metadata: {
+                keys: Object.keys(otherSettings || {}),
+                plansUpdated: Boolean(incomingPlans),
+                marketplaceCommissionRate: {
+                    from: current.marketplaceCommissionRate,
+                    to: updatedSettings.marketplaceCommissionRate,
+                },
+                marketplaceDepositRate: {
+                    from: current.marketplaceDepositRate,
+                    to: updatedSettings.marketplaceDepositRate,
+                },
+                commercialFirstCommissionRate: {
+                    from: current.commercialFirstCommissionRate,
+                    to: updatedSettings.commercialFirstCommissionRate,
+                },
+                commercialRenewalCommissionRate: {
+                    from: current.commercialRenewalCommissionRate,
+                    to: updatedSettings.commercialRenewalCommissionRate,
+                },
+            },
+        });
+        return res.json({
+            message: 'Paramètres mis à jour avec succès',
+            settings: { ...updatedSettings, plans },
+        });
     }
     catch (error) {
         console.error('Erreur lors de la mise à jour des paramètres:', error);

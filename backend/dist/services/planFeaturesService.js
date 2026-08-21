@@ -7,6 +7,8 @@ exports.allowsRoomBlueprint = allowsRoomBlueprint;
 exports.getTenantPlanSnapshot = getTenantPlanSnapshot;
 exports.assertPlanFeature = assertPlanFeature;
 exports.assertRoomQuota = assertRoomQuota;
+exports.assertServiceQuota = assertServiceQuota;
+exports.assertVenueCatalogPublish = assertVenueCatalogPublish;
 exports.assertOrgManagerQuota = assertOrgManagerQuota;
 exports.assertRoomTypeForPlan = assertRoomTypeForPlan;
 exports.formatPlanFeaturesResponse = formatPlanFeaturesResponse;
@@ -27,7 +29,7 @@ function isRoomTypeAllowed(plan, roomType) {
 }
 function allowsRoomBlueprint(plan, roomType) {
     if (roomType === 'SIMPLE')
-        return false;
+        return true;
     if (roomType === 'CUSTOM')
         return plan.roomEditorLevel === 'complete';
     return plan.roomEditorLevel !== 'basic';
@@ -36,12 +38,12 @@ async function getTenantPlanSnapshot(tenantId) {
     const tenant = await db_1.prisma.tenant.findUnique({
         where: { id: tenantId },
         include: {
-            _count: { select: { events: true, templates: true, rooms: true } },
+            _count: { select: { events: true, templates: true, rooms: true, serviceOfferings: true } },
         },
     });
     if (!tenant)
         return null;
-    const features = (0, plansConfig_1.getPlanLimits)(tenant.plan);
+    const features = (0, plansConfig_1.getPlanLimitsForTenant)(tenant.plan, tenant.accountKind);
     const guestCount = await db_1.prisma.guest.count({
         where: { event: { tenantId } },
     });
@@ -57,6 +59,7 @@ async function getTenantPlanSnapshot(tenantId) {
             guests: guestCount,
             templates: tenant._count.templates,
             rooms: tenant._count.rooms,
+            services: tenant._count.serviceOfferings,
             orgManagers: orgManagers + (tenant.managerId ? 1 : 0),
         },
     };
@@ -86,7 +89,33 @@ async function assertRoomQuota(tenantId) {
     if (max >= 9999)
         return;
     if (snapshot.usage.rooms >= max) {
-        throw new PlanFeatureError(`Quota de salles atteint (${max} max pour ${snapshot.planName}). Passez à un forfait supérieur.`);
+        throw new PlanFeatureError(max <= 0
+            ? `La création de salles n’est pas incluse dans ${snapshot.planName}. Choisissez le forfait Salle ou Salle & presta.`
+            : `Quota de salles atteint (${max} max pour ${snapshot.planName}). Passez à un forfait supérieur.`);
+    }
+}
+async function assertServiceQuota(tenantId) {
+    const snapshot = await getTenantPlanSnapshot(tenantId);
+    if (!snapshot)
+        throw new PlanFeatureError('Organisation introuvable.');
+    const max = snapshot.features.maxServices;
+    if (max >= 9999)
+        return;
+    if (snapshot.usage.services >= max) {
+        throw new PlanFeatureError(max <= 0
+            ? `La publication de prestations n’est pas incluse dans ${snapshot.planName}. Choisissez le forfait Prestataire (prestations illimitées) ou Salle & presta.`
+            : `Quota de prestations atteint (${max} max pour ${snapshot.planName}). Passez à un forfait supérieur.`);
+    }
+}
+async function assertVenueCatalogPublish(tenantId) {
+    const snapshot = await getTenantPlanSnapshot(tenantId);
+    if (!snapshot)
+        throw new PlanFeatureError('Organisation introuvable.');
+    const { audience, maxRooms, name } = snapshot.features;
+    const isTrial = snapshot.plan === 'FREE' && maxRooms > 0;
+    const isCatalogPlan = audience === 'VENUE' || audience === 'CATALOG';
+    if ((!isCatalogPlan && !isTrial) || maxRooms <= 0) {
+        throw new PlanFeatureError(`La publication d’une salle au catalogue n’est pas incluse dans ${name}. Choisissez le forfait Salle ou Salle & presta.`);
     }
 }
 async function assertOrgManagerQuota(tenantId, addingManager = true) {
@@ -116,6 +145,7 @@ function formatPlanFeaturesResponse(snapshot) {
     return {
         plan: snapshot.plan,
         planName: snapshot.planName,
+        audience: f.audience,
         price: f.price,
         description: f.description,
         usage: snapshot.usage,
@@ -124,12 +154,14 @@ function formatPlanFeaturesResponse(snapshot) {
             maxGuests: f.maxGuests,
             maxTemplates: f.maxTemplates,
             maxRooms: f.maxRooms,
+            maxServices: f.maxServices,
             maxOrgManagers: f.maxOrgManagers,
         },
         capabilities: {
             protocolQr: f.protocolQr,
             seatNotifications: f.seatNotifications,
             customTemplates: f.customTemplates,
+            customRsvpFields: f.customRsvpFields,
             mockupOcr: f.mockupOcr,
             roomThemesFixtures: f.roomThemesFixtures,
             commercialNetwork: f.commercialNetwork,
@@ -137,12 +169,14 @@ function formatPlanFeaturesResponse(snapshot) {
             roomEditorLevel: f.roomEditorLevel,
             allowedRoomTypes: ROOM_TYPES_BY_LEVEL[f.roomEditorLevel],
             supportLevel: f.supportLevel,
+            audience: f.audience,
         },
         formattedLimits: {
             maxEvents: f.maxEvents >= 9999 ? 'Illimité' : String(f.maxEvents),
             maxGuests: f.maxGuests >= 99999 ? 'Illimité' : String(f.maxGuests),
             maxTemplates: f.maxTemplates >= 9999 ? 'Illimité' : String(f.maxTemplates),
             maxRooms: f.maxRooms >= 9999 ? 'Illimité' : String(f.maxRooms),
+            maxServices: f.maxServices >= 9999 ? 'Illimité' : String(f.maxServices),
             maxOrgManagers: f.maxOrgManagers >= 9999 ? 'Illimité' : String(f.maxOrgManagers),
             price: (0, plansConfig_1.formatPlanPriceFc)(f.monthlyPriceFc),
         },

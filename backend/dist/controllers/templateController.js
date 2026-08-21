@@ -9,6 +9,7 @@ exports.deleteTemplate = deleteTemplate;
 const db_1 = require("../db");
 const plansConfig_1 = require("../config/plansConfig");
 const planFeaturesService_1 = require("../services/planFeaturesService");
+const mandatoryRsvpFields_1 = require("../utils/mandatoryRsvpFields");
 function isCustomTemplateContent(content) {
     if (!content || typeof content !== 'object')
         return false;
@@ -68,6 +69,7 @@ async function getTemplates(req, res) {
             const isOwned = Boolean(tenantId && t.tenantId === tenantId);
             return {
                 ...t,
+                content: (0, mandatoryRsvpFields_1.ensureMandatoryRsvpFieldsOnContent)(t.content),
                 isGlobal,
                 isOwned,
                 canEdit: isSuperAdmin || isOwned,
@@ -102,7 +104,7 @@ async function createTemplate(req, res) {
                 include: { _count: { select: { templates: true } } },
             });
             if (tenant) {
-                const limits = (0, plansConfig_1.getPlanLimits)(tenant.plan);
+                const limits = (0, plansConfig_1.getPlanLimitsForTenant)(tenant.plan, tenant.accountKind);
                 if (tenant._count.templates >= limits.maxTemplates) {
                     return res.status(403).json({
                         error: `Quota de modèles atteint pour le plan ${tenant.plan} (Max ${limits.maxTemplates >= 9999 ? 'illimité' : limits.maxTemplates}). Veuillez passer à un forfait supérieur.`,
@@ -120,7 +122,7 @@ async function createTemplate(req, res) {
             data: {
                 tenantId: finalTenantId,
                 name,
-                content: content || {},
+                content: (0, mandatoryRsvpFields_1.ensureMandatoryRsvpFieldsOnContent)(content || {}),
                 showOnLanding: isSuperAdmin && !finalTenantId ? Boolean(showOnLanding) : false,
             },
         });
@@ -155,6 +157,7 @@ async function getTemplateById(req, res) {
         const isOwned = Boolean(tenantId && template.tenantId === tenantId);
         return res.json({
             ...template,
+            content: (0, mandatoryRsvpFields_1.ensureMandatoryRsvpFieldsOnContent)(template.content),
             isGlobal,
             isOwned,
             canEdit: isSuperAdmin || isOwned,
@@ -196,7 +199,9 @@ async function updateTemplate(req, res) {
         }
         const updateData = {
             name: name !== undefined ? name : existingTemplate.name,
-            content: content !== undefined ? content : existingTemplate.content,
+            content: content !== undefined
+                ? (0, mandatoryRsvpFields_1.ensureMandatoryRsvpFieldsOnContent)(content)
+                : (0, mandatoryRsvpFields_1.ensureMandatoryRsvpFieldsOnContent)(existingTemplate.content),
         };
         if (isSuperAdmin && targetTenantId !== undefined) {
             updateData.tenantId = targetTenantId || null;
@@ -262,7 +267,7 @@ async function duplicateTemplate(req, res) {
         if (!tenant) {
             return res.status(404).json({ error: 'Organisation introuvable' });
         }
-        const limits = (0, plansConfig_1.getPlanLimits)(tenant.plan);
+        const limits = (0, plansConfig_1.getPlanLimitsForTenant)(tenant.plan, tenant.accountKind);
         if (tenant._count.templates >= limits.maxTemplates) {
             return res.status(403).json({
                 error: `Quota de modèles atteint pour le plan ${tenant.plan} (max ${limits.maxTemplates >= 9999 ? 'illimité' : limits.maxTemplates}). Passez à un forfait supérieur.`,
@@ -286,7 +291,7 @@ async function duplicateTemplate(req, res) {
             data: {
                 tenantId: finalTenantId,
                 name: copyName,
-                content: source.content,
+                content: (0, mandatoryRsvpFields_1.ensureMandatoryRsvpFieldsOnContent)(source.content),
                 showOnLanding: false,
             },
         });

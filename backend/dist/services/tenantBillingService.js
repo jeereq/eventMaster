@@ -5,6 +5,7 @@ exports.invoiceTypeForAction = invoiceTypeForAction;
 exports.sourceForAction = sourceForAction;
 exports.notificationEventForBilling = notificationEventForBilling;
 exports.issueTenantPlanInvoice = issueTenantPlanInvoice;
+exports.resolveRenewalTerms = resolveRenewalTerms;
 exports.computeExtendedExpiry = computeExtendedExpiry;
 const invoiceService_1 = require("./invoiceService");
 const plansConfig_1 = require("../config/plansConfig");
@@ -42,7 +43,7 @@ function notificationEventForBilling(action, subscriptionRequestId) {
     return 'ADMIN_ACTIVATION';
 }
 async function issueTenantPlanInvoice(params) {
-    const durationDays = params.billing.durationDays ?? 30;
+    const durationDays = (0, plansConfig_1.resolveDurationDaysForPlan)(params.plan, params.billing.durationDays);
     const periodStart = params.billing.periodStart ?? new Date();
     const periodEnd = params.billing.periodEnd ??
         (() => {
@@ -50,14 +51,14 @@ async function issueTenantPlanInvoice(params) {
             d.setDate(d.getDate() + durationDays);
             return d;
         })();
-    const baseAmount = (0, invoiceService_1.getPlanAmount)(params.plan);
+    const baseAmount = (0, invoiceService_1.getPlanAmount)(params.plan, durationDays);
     const planDef = (0, plansConfig_1.getPlanLimits)(params.plan);
     let approvedAmount = params.billing.approvedAmount;
     let discountPercent = params.billing.discountPercent;
     const hasExplicitDiscount = (discountPercent !== undefined && discountPercent > 0) ||
         approvedAmount !== undefined;
     if (!hasExplicitDiscount && planDef.promoActive && planDef.promoMonthlyPriceFc != null) {
-        approvedAmount = planDef.promoMonthlyPriceFc;
+        approvedAmount = (0, plansConfig_1.resolveDefaultPromoApprovedAmount)(params.plan, durationDays, planDef.promoMonthlyPriceFc);
     }
     const pricing = (0, invoiceService_1.computeApprovedAmount)(baseAmount, {
         discountPercent,
@@ -77,6 +78,7 @@ async function issueTenantPlanInvoice(params) {
         periodEnd,
         includeManagers: true,
         subscriptionRequestId: params.subscriptionRequestId,
+        status: 'PAID',
     });
     const commissionRecords = await (0, commercialService_1.recordCommercialCommission)({
         tenantId: params.tenantId,
@@ -105,6 +107,13 @@ async function issueTenantPlanInvoice(params) {
         invoice,
         commercialNotified: commercialNotification.notified,
     };
+}
+function resolveRenewalTerms(plan, billingCycle) {
+    const durationDays = billingCycle === 'ANNUAL' ? plansConfig_1.YEAR_DURATION_DAYS : (0, plansConfig_1.resolveDurationDaysForPlan)(plan);
+    const discountPercent = billingCycle === 'ANNUAL' ? plansConfig_1.ANNUAL_DISCOUNT_PERCENT : 0;
+    const baseAmount = (0, invoiceService_1.getPlanAmount)(plan, durationDays);
+    const pricing = (0, invoiceService_1.computeApprovedAmount)(baseAmount, { discountPercent });
+    return { durationDays, ...pricing };
 }
 function computeExtendedExpiry(currentExpiry, durationDays, fromDate = new Date()) {
     const base = currentExpiry && new Date(currentExpiry) > fromDate ? new Date(currentExpiry) : new Date(fromDate);

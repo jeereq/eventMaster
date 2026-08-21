@@ -49,11 +49,15 @@ exports.setupUserOtpVerification = setupUserOtpVerification;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const db_1 = require("../db");
+const auth_1 = require("../middleware/auth");
 const tenantAccess_1 = require("../utils/tenantAccess");
+const plansConfig_1 = require("../config/plansConfig");
 const legalService_1 = require("../services/legalService");
 const permissionsService_1 = require("../services/permissionsService");
 const commercialService_1 = require("../services/commercialService");
 const otpService_1 = require("../services/otpService");
+const platformSettingsService_1 = require("../services/platformSettingsService");
+const phone_1 = require("../utils/phone");
 const JWT_SECRET = process.env.JWT_SECRET || 'eventmaster-secret-key-12345';
 async function issueAndSendOtp(params) {
     const code = (0, otpService_1.generateOtpCode)();
@@ -80,20 +84,50 @@ async function issueAndSendOtp(params) {
     });
     return sentVia;
 }
-function buildAuthToken(user) {
-    return jsonwebtoken_1.default.sign({ userId: user.id, tenantId: user.tenantId, role: user.role }, JWT_SECRET, { expiresIn: '24h' });
+function publicUser(user) {
+    return {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        phone: user.phone,
+        phoneCountryCode: user.phoneCountryCode ?? null,
+        avatarUrl: user.avatarUrl ?? null,
+        role: user.role,
+        orgRole: user.orgRole ?? null,
+    };
+}
+function buildAuthToken(user, options) {
+    return (0, auth_1.signUserToken)({
+        userId: user.id,
+        tenantId: user.tenantId,
+        role: user.role,
+        impersonatedBy: options?.impersonatedBy,
+    }, options?.expiresIn || '24h');
 }
 async function register(req, res) {
     try {
-        const { email, password, name, tenantName, phone, verificationMethod = 'EMAIL', acceptTerms, acceptPrivacy, referralCode } = req.body;
-        if (!email || !password || !name || !tenantName) {
-            return res.status(400).json({ error: 'Tous les champs sont obligatoires (email, password, name, tenantName)' });
+        const platform = (0, platformSettingsService_1.loadPlatformSettings)();
+        if (platform.maintenanceMode) {
+            return res.status(503).json({
+                error: 'maintenance',
+                message: platform.maintenanceMessage || 'La plateforme est en maintenance.',
+            });
+        }
+        if (!platform.allowRegistration) {
+            return res.status(403).json({
+                error: 'Les inscriptions sont actuellement fermées. Contactez le support pour créer une organisation.',
+            });
+        }
+        const { email, password, name, tenantName, phone, phoneCountryCode, nationalNumber, verificationMethod = 'EMAIL', acceptTerms, acceptPrivacy, referralCode, accountKind: rawAccountKind } = req.body;
+        if (!email || !password || !name) {
+            return res.status(400).json({ error: 'Tous les champs sont obligatoires (email, password, name)' });
         }
         if (!acceptTerms || !acceptPrivacy) {
             return res.status(400).json({ error: 'Vous devez accepter les conditions d\'utilisation et la politique de confidentialité.' });
         }
         const method = (verificationMethod === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL');
-        if (method === 'WHATSAPP' && !phone) {
+        const phoneFields = (0, phone_1.resolvePhoneFields)({ phone, phoneCountryCode, nationalNumber });
+        if (method === 'WHATSAPP' && !phoneFields.phone) {
             return res.status(400).json({ error: 'Le numéro de téléphone est obligatoire pour la validation par WhatsApp.' });
         }
         const existingUser = await db_1.prisma.user.findUnique({ where: { email } });
@@ -115,11 +149,17 @@ async function register(req, res) {
                 referredByOrgUserId = commercial.id;
             }
         }
+        const accountKind = (0, tenantAccess_1.parseAccountKind)(rawAccountKind);
+        const resolvedTenantName = String(tenantName || '').trim() || (accountKind === 'CLIENT' ? String(name).trim() : '');
+        if (!resolvedTenantName) {
+            return res.status(400).json({ error: 'Le nom de l’organisation est obligatoire.' });
+        }
         const result = await db_1.prisma.$transaction(async (tx) => {
             const tenant = await tx.tenant.create({
                 data: {
-                    name: tenantName,
+                    name: resolvedTenantName,
                     plan: 'FREE',
+                    accountKind,
                     referredByCommercialId,
                     referredByOrgUserId,
                 },
@@ -129,7 +169,8 @@ async function register(req, res) {
                     email,
                     passwordHash,
                     name,
-                    phone: phone || null,
+                    phone: phoneFields.phone,
+                    phoneCountryCode: phoneFields.phoneCountryCode,
                     role: 'USER',
                     tenantId: tenant.id,
                     isEmailVerified: false,
@@ -153,10 +194,12 @@ async function register(req, res) {
             userId: result.user.id,
             name,
             email,
-            phone,
+            phone: phoneFields.phone,
             method,
         });
-        const destination = sentVia === 'WHATSAPP' && phone ? (0, otpService_1.maskPhone)(phone) : (0, otpService_1.maskEmail)(email);
+        const destination = sentVia === 'WHATSAPP' && phoneFields.phone
+            ? (0, otpService_1.maskPhone)(phoneFields.phone)
+            : (0, otpService_1.maskEmail)(email);
         return res.status(201).json({
             message: sentVia === 'WHATSAPP'
                 ? `Compte créé ! Un code OTP a été envoyé sur WhatsApp (${destination}). Saisissez-le pour activer votre compte.`
@@ -164,13 +207,7 @@ async function register(req, res) {
             requiresVerification: true,
             verificationMethod: sentVia,
             email: result.user.email,
-            user: {
-                id: result.user.id,
-                email: result.user.email,
-                name: result.user.name,
-                phone: result.user.phone,
-                role: result.user.role,
-            },
+            user: publicUser(result.user),
             tenant: (0, tenantAccess_1.formatTenantResponse)(result.tenant),
         });
     }
@@ -218,14 +255,7 @@ async function verifyOtp(req, res) {
         return res.json({
             message: 'Compte validé avec succès ! Connexion en cours...',
             token,
-            user: {
-                id: updatedUser.id,
-                email: updatedUser.email,
-                name: updatedUser.name,
-                phone: updatedUser.phone,
-                role: updatedUser.role,
-                orgRole: updatedUser.orgRole,
-            },
+            user: publicUser(updatedUser),
             tenant: user.tenant ? (0, tenantAccess_1.formatTenantResponse)(user.tenant) : null,
             access,
         });
@@ -281,9 +311,18 @@ async function login(req, res) {
         if (!email || !password) {
             return res.status(400).json({ error: 'Veuillez saisir votre email (ou téléphone) et mot de passe' });
         }
+        const identifier = String(email).trim();
+        const digits = identifier.replace(/[^\d]/g, '');
+        const phoneCandidates = Array.from(new Set([
+            identifier,
+            identifier.startsWith('+') ? identifier : digits ? `+${digits}` : '',
+        ].filter(Boolean)));
         const user = await db_1.prisma.user.findFirst({
             where: {
-                OR: [{ email: email }, { phone: email }],
+                OR: [
+                    { email: identifier },
+                    ...phoneCandidates.map((phone) => ({ phone })),
+                ],
             },
             include: { tenant: true },
         });
@@ -308,14 +347,7 @@ async function login(req, res) {
             : null;
         return res.json({
             token,
-            user: {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                phone: user.phone,
-                role: user.role,
-                orgRole: user.orgRole,
-            },
+            user: publicUser(user),
             tenant: user.tenant ? (0, tenantAccess_1.formatTenantResponse)(user.tenant) : null,
             access,
         });
@@ -352,13 +384,7 @@ async function verifyEmail(req, res) {
         return res.json({
             message: 'Votre compte a été confirmé avec succès ! Connexion automatique en cours...',
             token: jwtToken,
-            user: {
-                id: updatedUser.id,
-                email: updatedUser.email,
-                name: updatedUser.name,
-                phone: updatedUser.phone,
-                role: updatedUser.role,
-            },
+            user: publicUser(updatedUser),
             tenant: user.tenant ? (0, tenantAccess_1.formatTenantResponse)(user.tenant) : null,
         });
     }
@@ -384,12 +410,8 @@ async function getProfile(req, res) {
             : null;
         return res.json({
             user: {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                phone: user.phone,
-                role: user.role,
-                orgRole: user.orgRole,
+                ...publicUser(user),
+                impersonatedBy: req.user.impersonatedBy || null,
             },
             tenant: user.tenant ? (0, tenantAccess_1.formatTenantResponse)(user.tenant) : null,
             access,
@@ -405,7 +427,7 @@ async function updateProfile(req, res) {
         if (!req.user) {
             return res.status(401).json({ error: 'Non authentifié.' });
         }
-        const { name, email, phone, password, tenantName } = req.body;
+        const { name, email, phone, phoneCountryCode, nationalNumber, avatarUrl, password, tenantName, accountKind } = req.body;
         if (!name || !email) {
             return res.status(400).json({ error: 'Le nom et l\'adresse e-mail sont obligatoires.' });
         }
@@ -418,13 +440,28 @@ async function updateProfile(req, res) {
         if (existingUser) {
             return res.status(400).json({ error: 'Cette adresse e-mail est déjà utilisée par un autre compte.' });
         }
+        const phoneFields = (0, phone_1.resolvePhoneFields)({ phone, phoneCountryCode, nationalNumber });
         const updateData = {
             name,
             email,
-            phone: phone || null,
+            phone: phoneFields.phone,
+            phoneCountryCode: phoneFields.phoneCountryCode,
         };
+        if (typeof avatarUrl === 'string') {
+            updateData.avatarUrl = avatarUrl.trim() || null;
+        }
+        if (avatarUrl === null) {
+            updateData.avatarUrl = null;
+        }
         if (password && password.trim() !== '') {
             updateData.passwordHash = await bcryptjs_1.default.hash(password, 10);
+        }
+        const wantsAccountKind = accountKind === 'ORGANIZER' || accountKind === 'VENDOR' || accountKind === 'BOTH' || accountKind === 'CLIENT';
+        if (wantsAccountKind && req.user.tenantId) {
+            const access = await (0, permissionsService_1.resolveOrgAccess)(req.user.id, req.user.tenantId);
+            if (!access.isOwner && access.level !== 'manager' && access.level !== 'client') {
+                return res.status(403).json({ error: 'Seuls le propriétaire et les managers peuvent changer le type de compte.' });
+            }
         }
         const result = await db_1.prisma.$transaction(async (tx) => {
             const updatedUser = await tx.user.update({
@@ -432,28 +469,45 @@ async function updateProfile(req, res) {
                 data: updateData,
             });
             let updatedTenant = null;
-            if (tenantName && req.user.tenantId) {
-                updatedTenant = await tx.tenant.update({
+            let planResetToFree = false;
+            if (req.user.tenantId) {
+                const currentTenant = await tx.tenant.findUnique({
                     where: { id: req.user.tenantId },
-                    data: { name: tenantName },
+                    select: { plan: true },
                 });
+                const tenantData = {};
+                if (tenantName)
+                    tenantData.name = tenantName;
+                if (wantsAccountKind) {
+                    const nextKind = (0, tenantAccess_1.parseAccountKind)(accountKind);
+                    tenantData.accountKind = nextKind;
+                    const currentPlan = currentTenant?.plan || 'FREE';
+                    if (nextKind === 'CLIENT' || !(0, plansConfig_1.isPlanAllowedForAccountKind)(currentPlan, nextKind)) {
+                        if (currentPlan !== 'FREE')
+                            planResetToFree = true;
+                        tenantData.plan = 'FREE';
+                    }
+                }
+                if (Object.keys(tenantData).length > 0) {
+                    updatedTenant = await tx.tenant.update({
+                        where: { id: req.user.tenantId },
+                        data: tenantData,
+                    });
+                }
+                else {
+                    updatedTenant = await tx.tenant.findUnique({
+                        where: { id: req.user.tenantId },
+                    });
+                }
             }
-            else if (req.user.tenantId) {
-                updatedTenant = await tx.tenant.findUnique({
-                    where: { id: req.user.tenantId },
-                });
-            }
-            return { user: updatedUser, tenant: updatedTenant };
+            return { user: updatedUser, tenant: updatedTenant, planResetToFree };
         });
         return res.json({
-            message: 'Profil mis à jour avec succès !',
-            user: {
-                id: result.user.id,
-                email: result.user.email,
-                name: result.user.name,
-                phone: result.user.phone,
-                role: result.user.role,
-            },
+            message: result.planResetToFree
+                ? 'Profil mis à jour. L’ancien forfait n’était pas destiné à ce type de compte : l’espace est passé à l’essai Essentials. Choisissez un forfait adapté dans Facturation.'
+                : 'Profil mis à jour avec succès !',
+            planResetToFree: result.planResetToFree,
+            user: publicUser(result.user),
             tenant: result.tenant ? (0, tenantAccess_1.formatTenantResponse)(result.tenant) : null,
         });
     }

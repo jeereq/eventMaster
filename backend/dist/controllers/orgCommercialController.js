@@ -17,14 +17,28 @@ async function getOrgCommercialDashboard(req, res) {
                 name: true,
                 referralCode: true,
                 commissionRate: true,
-                tenant: { select: { name: true, defaultOrgCommercialCommissionRate: true } },
+                renewalCommissionRate: true,
+                tenant: {
+                    select: {
+                        name: true,
+                        defaultOrgCommercialCommissionRate: true,
+                        defaultOrgCommercialRenewalCommissionRate: true,
+                    },
+                },
             },
         });
         if (!user) {
             return res.status(403).json({ error: 'Accès réservé aux commerciaux organisation.' });
         }
         const referralCode = await (0, commercialService_1.ensureOrgCommercialReferralCode)(userId, tenantId);
-        const commissionRate = (0, commercialService_1.normalizeCommissionRate)(user.commissionRate, user.tenant?.defaultOrgCommercialCommissionRate ?? 0.2);
+        const rates = (0, commercialService_1.resolveCommissionRates)({
+            first: user.commissionRate,
+            renewal: user.renewalCommissionRate,
+            firstFallback: user.tenant?.defaultOrgCommercialCommissionRate ?? commercialService_1.DEFAULT_COMMISSION_RATE,
+            renewalFallback: user.tenant?.defaultOrgCommercialRenewalCommissionRate ?? commercialService_1.DEFAULT_RENEWAL_COMMISSION_RATE,
+        });
+        const commissionRate = rates.first;
+        const renewalCommissionRate = rates.renewal;
         const [organizations, commissions] = await Promise.all([
             db_1.prisma.tenant.findMany({
                 where: { referredByOrgUserId: userId },
@@ -41,17 +55,21 @@ async function getOrgCommercialDashboard(req, res) {
             }),
         ]);
         const totalCommission = commissions.reduce((sum, c) => sum + c.commissionAmount, 0);
-        const monthlyCommission = commissions
-            .filter((c) => c.billingPeriod === new Date().toISOString().slice(0, 7))
+        const monthlyCommissions = commissions.filter((c) => c.billingPeriod === new Date().toISOString().slice(0, 7));
+        const monthlyCommission = monthlyCommissions.reduce((sum, c) => sum + c.commissionAmount, 0);
+        const monthlyDue = monthlyCommissions
+            .filter((c) => !c.paidAt)
             .reduce((sum, c) => sum + c.commissionAmount, 0);
         return res.json({
             referralCode,
             commissionRate,
+            renewalCommissionRate,
             organizationName: user.tenant?.name,
             stats: {
                 organizations: organizations.length,
                 totalCommission,
                 monthlyCommission,
+                monthlyDue,
             },
             organizations: organizations.map((o) => ({
                 id: o.id,

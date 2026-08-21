@@ -12,6 +12,10 @@ const platformCommercialScope_1 = require("../services/platformCommercialScope")
 const plansConfig_1 = require("../config/plansConfig");
 const tenantBillingService_1 = require("../services/tenantBillingService");
 const invoiceService_1 = require("../services/invoiceService");
+const adminAuditService_1 = require("../services/adminAuditService");
+const platformNotificationService_1 = require("../services/platformNotificationService");
+const platformNotificationTypes_1 = require("../config/platformNotificationTypes");
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 // 1. Submit a subscription request (Tenant)
 async function submitSubscriptionRequest(req, res) {
     try {
@@ -23,7 +27,16 @@ async function submitSubscriptionRequest(req, res) {
         if (!requestedPlan || !plansConfig_1.PAID_PLAN_KEYS.includes(requestedPlan)) {
             return res.status(400).json({ error: 'Le forfait demandé est invalide.' });
         }
-        const days = durationDays ? parseInt(durationDays) : 30;
+        const tenant = await db_1.prisma.tenant.findUnique({
+            where: { id: tenantId },
+            select: { accountKind: true },
+        });
+        if (!tenant || !(0, plansConfig_1.isPlanAllowedForAccountKind)(requestedPlan, tenant.accountKind)) {
+            return res.status(403).json({
+                error: (0, plansConfig_1.planAudienceMismatchMessage)(requestedPlan, tenant?.accountKind),
+            });
+        }
+        const days = (0, plansConfig_1.resolveDurationDaysForPlan)(requestedPlan, durationDays != null ? parseInt(String(durationDays), 10) : null);
         if (isNaN(days) || days <= 0) {
             return res.status(400).json({ error: 'La durée demandée est invalide.' });
         }
@@ -36,6 +49,22 @@ async function submitSubscriptionRequest(req, res) {
                 proofOfPayment: proofOfPayment || null,
                 status: 'PENDING',
             },
+        });
+        const org = await db_1.prisma.tenant.findUnique({
+            where: { id: tenantId },
+            select: { name: true },
+        });
+        void (0, platformNotificationService_1.notifyPlatformStaff)({
+            type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.SUBSCRIPTION_REQUEST_PENDING,
+            title: `Demande d’abonnement — ${org?.name || 'Organisation'}`,
+            message: `Forfait ${requestedPlan} · ${days} jours. À traiter dans Demandes d’abonnement.`,
+            metadata: {
+                tenantId,
+                requestedPlan,
+                requestId: request.id,
+                href: `${FRONTEND_URL}/dashboard?tab=subscription-requests`,
+            },
+            includeCommercials: true,
         });
         return res.status(201).json({
             message: 'Votre demande d\'abonnement a été soumise avec succès au Super Admin !',
@@ -93,6 +122,14 @@ async function getAdminSubscriptionRequests(req, res) {
                 tenant: {
                     select: tenantCommercialSelect,
                 },
+                platformInvoice: {
+                    select: {
+                        id: true,
+                        invoiceNumber: true,
+                        amount: true,
+                        status: true,
+                    },
+                },
             },
             orderBy: { createdAt: 'desc' },
         });
@@ -132,6 +169,7 @@ async function approveSubscriptionRequest(req, res) {
                         plan: true,
                         licenseActive: true,
                         licenseExpiresAt: true,
+                        accountKind: true,
                     },
                 },
             },
@@ -142,20 +180,26 @@ async function approveSubscriptionRequest(req, res) {
         if (request.status !== 'PENDING') {
             return res.status(400).json({ error: 'Cette demande a déjà été traitée.' });
         }
+        if (!(0, plansConfig_1.isPlanAllowedForAccountKind)(request.requestedPlan, request.tenant.accountKind)) {
+            return res.status(403).json({
+                error: (0, plansConfig_1.planAudienceMismatchMessage)(request.requestedPlan, request.tenant.accountKind),
+            });
+        }
         if ((0, platformCommercialScope_1.isPlatformCommercial)(req.user?.role) && req.user?.id) {
             const owns = await (0, platformCommercialScope_1.assertCommercialOwnsTenant)(req.user.id, request.tenantId);
             if (!owns) {
                 return res.status(403).json({ error: 'Vous ne pouvez approuver que les demandes des organisations que vous avez parrainées.' });
             }
         }
-        const baseAmount = (0, invoiceService_1.getPlanAmount)(request.requestedPlan);
+        const durationDays = (0, plansConfig_1.resolveDurationDaysForPlan)(request.requestedPlan, request.durationDays);
+        const baseAmount = (0, invoiceService_1.getPlanAmount)(request.requestedPlan, durationDays);
         const planDef = (0, plansConfig_1.getPlanLimits)(request.requestedPlan);
         let resolvedApproved = parsedApproved;
         let resolvedDiscount = parsedDiscount;
         const hasExplicitDiscount = (resolvedDiscount !== undefined && resolvedDiscount > 0) ||
             resolvedApproved !== undefined;
         if (!hasExplicitDiscount && planDef.promoActive && planDef.promoMonthlyPriceFc != null) {
-            resolvedApproved = planDef.promoMonthlyPriceFc;
+            resolvedApproved = (0, plansConfig_1.resolveDefaultPromoApprovedAmount)(request.requestedPlan, durationDays, planDef.promoMonthlyPriceFc);
         }
         const pricing = (0, invoiceService_1.computeApprovedAmount)(baseAmount, {
             discountPercent: resolvedDiscount,
@@ -167,10 +211,10 @@ async function approveSubscriptionRequest(req, res) {
             tenantBefore.licenseExpiresAt &&
             tenantBefore.plan === request.requestedPlan;
         const expiryDate = isSamePlanRenewal
-            ? (0, tenantBillingService_1.computeExtendedExpiry)(tenantBefore.licenseExpiresAt, request.durationDays)
+            ? (0, tenantBillingService_1.computeExtendedExpiry)(tenantBefore.licenseExpiresAt, durationDays)
             : (() => {
                 const d = new Date();
-                d.setDate(d.getDate() + request.durationDays);
+                d.setDate(d.getDate() + durationDays);
                 return d;
             })();
         const billingAction = tenantBefore.plan === 'FREE' || !tenantBefore.licenseActive
@@ -206,6 +250,7 @@ async function approveSubscriptionRequest(req, res) {
                     licenseExpiresAt: expiryDate,
                     licenseKey: newLicenseKey,
                     licenseExpiryWarningFor: null,
+                    billingCycle: (0, plansConfig_1.billingCycleFromDurationDays)(durationDays),
                 },
             }),
         ]);
@@ -223,7 +268,7 @@ async function approveSubscriptionRequest(req, res) {
                     plan: request.requestedPlan,
                     billing: {
                         action: billingAction,
-                        durationDays: request.durationDays,
+                        durationDays,
                         discountPercent: resolvedDiscount,
                         approvedAmount: resolvedApproved,
                         periodStart,
@@ -239,6 +284,18 @@ async function approveSubscriptionRequest(req, res) {
                 console.error('Erreur facturation après approbation abonnement:', billingError);
             }
         })();
+        await (0, adminAuditService_1.auditReq)(req, {
+            action: 'SUBSCRIPTION_APPROVE',
+            targetType: 'subscriptionRequest',
+            targetId: requestId,
+            tenantId: request.tenantId,
+            summary: `Demande d’abonnement approuvée pour « ${tenantBefore.name} » (${request.requestedPlan})`,
+            metadata: {
+                requestedPlan: request.requestedPlan,
+                billingAction,
+                approvedAmount: pricing.finalAmount,
+            },
+        });
         return res.json({
             message: successMessage,
             request: updatedRequest,
@@ -292,6 +349,14 @@ async function rejectSubscriptionRequest(req, res) {
         const updatedRequest = await db_1.prisma.subscriptionRequest.update({
             where: { id: requestId },
             data: { status: 'REJECTED' },
+        });
+        await (0, adminAuditService_1.auditReq)(req, {
+            action: 'SUBSCRIPTION_REJECT',
+            targetType: 'subscriptionRequest',
+            targetId: requestId,
+            tenantId: request.tenantId,
+            summary: `Demande d’abonnement rejetée (${request.requestedPlan})`,
+            metadata: { requestedPlan: request.requestedPlan },
         });
         return res.json({
             message: 'La demande d\'abonnement a été rejetée.',

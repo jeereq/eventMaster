@@ -35,7 +35,7 @@ async function buildRevenueReport(period) {
     const commissions = await db_1.prisma.commercialCommission.findMany({
         where: { billingPeriod: period },
         include: {
-            commercial: { select: { id: true, name: true, email: true, referralCode: true } },
+            commercial: { select: { id: true, name: true, email: true, phone: true, referralCode: true, role: true, tenantId: true } },
             tenant: { select: { id: true, name: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -51,12 +51,19 @@ async function buildRevenueReport(period) {
                 referralCode: c.commercial.referralCode,
                 totalInvoiceAmount: 0,
                 totalCommission: 0,
+                unpaidCommission: 0,
+                paidCommission: 0,
+                kind: c.commercial.role === 'COMMERCIAL' && !c.commercial.tenantId ? 'platform' : 'org',
                 entries: [],
             });
         }
         const row = commercialMap.get(key);
         row.totalInvoiceAmount += c.invoiceAmount;
         row.totalCommission += c.commissionAmount;
+        if (c.paidAt)
+            row.paidCommission += c.commissionAmount;
+        else
+            row.unpaidCommission += c.commissionAmount;
         row.entries.push({
             tenantId: c.tenantId,
             tenantName: c.tenant.name,
@@ -64,10 +71,13 @@ async function buildRevenueReport(period) {
             invoiceAmount: c.invoiceAmount,
             commissionAmount: c.commissionAmount,
             source: c.source,
+            paidAt: c.paidAt,
         });
     }
     const commercialCommissions = Array.from(commercialMap.values()).sort((a, b) => b.totalCommission - a.totalCommission);
     const totalCommissions = commercialCommissions.reduce((s, c) => s + c.totalCommission, 0);
+    const unpaidCommissions = commercialCommissions.reduce((s, c) => s + c.unpaidCommission, 0);
+    const paidCommissions = commercialCommissions.reduce((s, c) => s + c.paidCommission, 0);
     const trendMonths = [];
     const base = new Date();
     base.setDate(1);
@@ -99,6 +109,10 @@ async function buildRevenueReport(period) {
             invoiceCount: invoices.length,
             totalCommissions,
             totalCommissionsFormatted: (0, invoiceService_1.formatAmountFc)(totalCommissions),
+            unpaidCommissions,
+            unpaidCommissionsFormatted: (0, invoiceService_1.formatAmountFc)(unpaidCommissions),
+            paidCommissions,
+            paidCommissionsFormatted: (0, invoiceService_1.formatAmountFc)(paidCommissions),
             netRevenue: totalRevenue - totalCommissions,
             netRevenueFormatted: (0, invoiceService_1.formatAmountFc)(totalRevenue - totalCommissions),
         },
@@ -134,6 +148,8 @@ function buildRevenueReportCsv(report) {
         'Résumé',
         `Revenus bruts,${report.summary.totalRevenue}`,
         `Commissions,${report.summary.totalCommissions}`,
+        `Commissions dues,${report.summary.unpaidCommissions}`,
+        `Commissions versées,${report.summary.paidCommissions}`,
         `Revenu net,${report.summary.netRevenue}`,
         `Nombre de factures,${report.summary.invoiceCount}`,
         '',
@@ -151,14 +167,17 @@ function buildRevenueReportCsv(report) {
             csvEscape(new Date(inv.createdAt).toLocaleDateString('fr-FR')),
         ].join(','));
     }
-    lines.push('', 'Commissions commerciales', 'Commercial,Email,Code parrainage,CA parrainé (FC),Commission (FC),Nb org.');
+    lines.push('', 'Commissions commerciales', 'Commercial,Email,Code parrainage,Type,CA parrainé (FC),Commission (FC),Dû (FC),Versé (FC),Nb org.');
     for (const c of report.commercialCommissions) {
         lines.push([
             csvEscape(c.name || ''),
             csvEscape(c.email),
             csvEscape(c.referralCode || ''),
+            csvEscape(c.kind),
             c.totalInvoiceAmount,
             c.totalCommission,
+            c.unpaidCommission,
+            c.paidCommission,
             c.entries.length,
         ].join(','));
     }
@@ -183,7 +202,8 @@ function buildRevenueReportPdf(report) {
         doc.moveDown(0.5);
         doc.fontSize(11).font('Helvetica');
         doc.text(`Revenus bruts : ${report.summary.totalRevenueFormatted}`);
-        doc.text(`Commissions (20 %) : ${report.summary.totalCommissionsFormatted}`);
+        doc.text(`Commissions (30 %) : ${report.summary.totalCommissionsFormatted}`);
+        doc.text(`Dont dues (non versées) : ${report.summary.unpaidCommissionsFormatted}`);
         doc.text(`Revenu net plateforme : ${report.summary.netRevenueFormatted}`);
         doc.text(`Nombre de factures : ${report.summary.invoiceCount}`);
         doc.moveDown(1);
@@ -202,7 +222,7 @@ function buildRevenueReportPdf(report) {
         }
         else {
             for (const c of report.commercialCommissions) {
-                doc.text(`${c.name || c.email} — Commission : ${(0, invoiceService_1.formatAmountFc)(c.totalCommission)} | CA : ${(0, invoiceService_1.formatAmountFc)(c.totalInvoiceAmount)} | ${c.entries.length} org.`);
+                doc.text(`${c.name || c.email} — Commission : ${(0, invoiceService_1.formatAmountFc)(c.totalCommission)} (dû ${(0, invoiceService_1.formatAmountFc)(c.unpaidCommission)}) | CA : ${(0, invoiceService_1.formatAmountFc)(c.totalInvoiceAmount)} | ${c.entries.length} org.`);
             }
         }
         doc.moveDown(1);

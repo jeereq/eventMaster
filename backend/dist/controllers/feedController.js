@@ -5,6 +5,7 @@ exports.getEventShares = getEventShares;
 exports.getPublicEventShares = getPublicEventShares;
 exports.getEventFeed = getEventFeed;
 exports.createEventPost = createEventPost;
+exports.updateEventPost = updateEventPost;
 exports.deleteEventPost = deleteEventPost;
 exports.deleteGuestShare = deleteGuestShare;
 exports.createEventComment = createEventComment;
@@ -146,6 +147,7 @@ async function createEventPost(req, res) {
                 mediaUrl: legacyMediaUrl,
                 mediaType: legacyMediaType,
                 mediaUrls: finalMediaUrls.length > 0 ? finalMediaUrls : undefined,
+                publishedOnListing: req.body.publishedOnListing === true || req.body.publishedOnListing === 'true',
             },
         });
         return res.status(201).json(post);
@@ -153,6 +155,37 @@ async function createEventPost(req, res) {
     catch (error) {
         console.error('Erreur lors de la création du post:', error);
         return res.status(500).json({ error: 'Erreur lors de la création du post.' });
+    }
+}
+async function updateEventPost(req, res) {
+    try {
+        const tenantId = req.user?.tenantId;
+        const eventId = req.params.eventId;
+        const postId = req.params.postId;
+        const userId = req.user?.id;
+        if (!tenantId || !userId) {
+            return res.status(403).json({ error: 'Tenant non identifié.' });
+        }
+        if (!(await (0, permissionsService_1.canManageEvent)(userId, tenantId, eventId))) {
+            return res.status(403).json({ error: 'Accès refusé à cet événement.' });
+        }
+        const existing = await db_1.prisma.eventPost.findFirst({
+            where: { id: postId, eventId },
+        });
+        if (!existing) {
+            return res.status(404).json({ error: 'Publication introuvable.' });
+        }
+        const post = await db_1.prisma.eventPost.update({
+            where: { id: postId },
+            data: {
+                publishedOnListing: req.body.publishedOnListing === true || req.body.publishedOnListing === 'true',
+            },
+        });
+        return res.json(post);
+    }
+    catch (error) {
+        console.error('Erreur lors de la mise à jour du post:', error);
+        return res.status(500).json({ error: 'Erreur lors de la mise à jour du post.' });
     }
 }
 // 5. Delete Event Post (Protected - Organization members)

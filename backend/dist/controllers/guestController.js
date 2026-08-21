@@ -7,11 +7,15 @@ exports.deleteGuest = deleteGuest;
 exports.importGuests = importGuests;
 const db_1 = require("../db");
 const plansConfig_1 = require("../config/plansConfig");
-const guestIdentity_1 = require("../utils/guestIdentity");
 const permissionsService_1 = require("../services/permissionsService");
-function resolveGuestPhone(body, preferences) {
-    const rawPhone = body?.phone || preferences?.phone || preferences?.telephone;
-    return (0, guestIdentity_1.normalizePhone)(typeof rawPhone === 'string' ? rawPhone : null);
+const phone_1 = require("../utils/phone");
+const guestIdentity_1 = require("../utils/guestIdentity");
+function resolveGuestPhoneFields(body, preferences) {
+    return (0, phone_1.resolvePhoneFields)({
+        phone: body?.phone || preferences?.phone || preferences?.telephone,
+        phoneCountryCode: body?.phoneCountryCode,
+        nationalNumber: body?.nationalNumber,
+    });
 }
 async function assertGuestListAccess(userId, tenantId, eventId) {
     const canManage = await (0, permissionsService_1.canManageGuests)(userId, tenantId, eventId);
@@ -53,34 +57,42 @@ async function createGuest(req, res) {
         if (!(await (0, permissionsService_1.canManageGuests)(userId, tenantId, eventId))) {
             return res.status(403).json({ error: 'Vous n\'avez pas la permission de gérer les invités.' });
         }
-        if (!firstName || !lastName || !email) {
-            return res.status(400).json({ error: 'Les champs firstName, lastName et email sont requis' });
+        if (!firstName || !lastName) {
+            return res.status(400).json({ error: 'Le prénom et le nom sont requis.' });
         }
         const tenant = await db_1.prisma.tenant.findUnique({ where: { id: tenantId } });
         const guestCount = await db_1.prisma.guest.count({ where: { event: { tenantId } } });
         if (tenant) {
-            const limits = (0, plansConfig_1.getPlanLimits)(tenant.plan);
+            const limits = (0, plansConfig_1.getPlanLimitsForTenant)(tenant.plan, tenant.accountKind);
             if (guestCount >= limits.maxGuests) {
                 return res.status(403).json({
                     error: `Quota total d'invités atteint pour le plan ${tenant.plan} (Max ${limits.maxGuests >= 9999 ? 'illimité' : limits.maxGuests}). Veuillez passer à un forfait supérieur.`,
                 });
             }
         }
+        const guestPreferences = { ...(preferences || {}) };
+        const { phone: normalizedPhone, phoneCountryCode } = resolveGuestPhoneFields(req.body, guestPreferences);
+        if (normalizedPhone) {
+            guestPreferences.phone = normalizedPhone;
+        }
+        const contact = (0, guestIdentity_1.resolveGuestContactEmail)({ email, phone: normalizedPhone });
+        if ('error' in contact) {
+            return res.status(400).json({ error: contact.error });
+        }
         const existingGuest = await db_1.prisma.guest.findUnique({
-            where: { eventId_email: { eventId, email } },
+            where: { eventId_email: { eventId, email: contact.email } },
         });
         if (existingGuest) {
-            return res.status(400).json({ error: 'Un invité avec cet email existe déjà pour cet événement' });
+            return res.status(400).json({ error: 'Un invité avec cet e-mail ou ce WhatsApp existe déjà pour cet événement' });
         }
-        const guestPreferences = preferences || {};
-        const normalizedPhone = resolveGuestPhone(req.body, guestPreferences);
         const guest = await db_1.prisma.guest.create({
             data: {
                 eventId,
                 firstName,
                 lastName,
-                email,
+                email: contact.email,
                 phone: normalizedPhone,
+                phoneCountryCode,
                 category: category || 'Général',
                 rsvp: rsvp || 'PENDING',
                 preferences: guestPreferences,
@@ -110,17 +122,44 @@ async function updateGuest(req, res) {
         if (!existingGuest) {
             return res.status(404).json({ error: 'Invité non trouvé dans cet événement' });
         }
-        const mergedPreferences = preferences !== undefined ? preferences : existingGuest.preferences;
-        const normalizedPhone = req.body.phone !== undefined || preferences !== undefined
-            ? resolveGuestPhone(req.body, mergedPreferences)
-            : existingGuest.phone;
+        const mergedPreferences = preferences !== undefined
+            ? { ...preferences }
+            : { ...(existingGuest.preferences || {}) };
+        let normalizedPhone = existingGuest.phone;
+        let phoneCountryCode = existingGuest.phoneCountryCode;
+        if (req.body.phone !== undefined ||
+            req.body.phoneCountryCode !== undefined ||
+            req.body.nationalNumber !== undefined ||
+            preferences !== undefined) {
+            const resolved = resolveGuestPhoneFields(req.body, mergedPreferences);
+            normalizedPhone = resolved.phone;
+            phoneCountryCode = resolved.phoneCountryCode;
+            if (normalizedPhone) {
+                mergedPreferences.phone = normalizedPhone;
+            }
+        }
+        const nextEmail = email !== undefined
+            ? (0, guestIdentity_1.resolveGuestContactEmail)({ email, phone: normalizedPhone })
+            : { email: existingGuest.email };
+        if ('error' in nextEmail) {
+            return res.status(400).json({ error: nextEmail.error });
+        }
+        if (nextEmail.email !== existingGuest.email) {
+            const clash = await db_1.prisma.guest.findUnique({
+                where: { eventId_email: { eventId, email: nextEmail.email } },
+            });
+            if (clash && clash.id !== id) {
+                return res.status(400).json({ error: 'Un invité avec cet e-mail ou ce WhatsApp existe déjà pour cet événement' });
+            }
+        }
         const updatedGuest = await db_1.prisma.guest.update({
             where: { id },
             data: {
                 firstName: firstName !== undefined ? firstName : existingGuest.firstName,
                 lastName: lastName !== undefined ? lastName : existingGuest.lastName,
-                email: email !== undefined ? email : existingGuest.email,
+                email: nextEmail.email,
                 phone: normalizedPhone,
+                phoneCountryCode,
                 category: category !== undefined ? category : existingGuest.category,
                 rsvp: rsvp !== undefined ? rsvp : existingGuest.rsvp,
                 preferences: mergedPreferences,
@@ -175,7 +214,7 @@ async function importGuests(req, res) {
         const tenant = await db_1.prisma.tenant.findUnique({ where: { id: tenantId } });
         const guestCount = await db_1.prisma.guest.count({ where: { event: { tenantId } } });
         if (tenant) {
-            const limits = (0, plansConfig_1.getPlanLimits)(tenant.plan);
+            const limits = (0, plansConfig_1.getPlanLimitsForTenant)(tenant.plan, tenant.accountKind);
             if (guestCount + guests.length > limits.maxGuests) {
                 return res.status(403).json({
                     error: `Quota total d'invités dépassé pour le plan ${tenant.plan} (Max ${limits.maxGuests >= 9999 ? 'illimité' : limits.maxGuests}). Veuillez passer à un forfait supérieur.`,
@@ -185,32 +224,43 @@ async function importGuests(req, res) {
         let importedCount = 0;
         const errors = [];
         for (const g of guests) {
-            if (!g.firstName || !g.lastName || !g.email) {
-                errors.push(`Champs requis manquants pour l'invité: ${JSON.stringify(g)}`);
+            if (!g.firstName || !g.lastName) {
+                errors.push(`Prénom et nom requis pour l'invité: ${JSON.stringify(g)}`);
                 continue;
             }
             const guestPrefs = g.preferences || {};
-            if (g.phone)
-                guestPrefs.phone = g.phone;
             if (g.notes)
                 guestPrefs.notes = g.notes;
-            const normalizedPhone = resolveGuestPhone(g, guestPrefs);
+            if (g.allergies)
+                guestPrefs.allergies = g.allergies;
+            if (g.specialMeal)
+                guestPrefs.specialMeal = g.specialMeal;
+            const { phone: normalizedPhone, phoneCountryCode } = resolveGuestPhoneFields(g, guestPrefs);
+            if (normalizedPhone)
+                guestPrefs.phone = normalizedPhone;
+            const contact = (0, guestIdentity_1.resolveGuestContactEmail)({ email: g.email, phone: normalizedPhone || g.phone });
+            if ('error' in contact) {
+                errors.push(`${g.firstName || ''} ${g.lastName || ''}: ${contact.error}`);
+                continue;
+            }
             try {
                 await db_1.prisma.guest.upsert({
-                    where: { eventId_email: { eventId, email: g.email } },
+                    where: { eventId_email: { eventId, email: contact.email } },
                     update: {
                         firstName: g.firstName,
                         lastName: g.lastName,
                         category: g.category || 'Général',
                         phone: normalizedPhone,
+                        phoneCountryCode,
                         preferences: guestPrefs,
                     },
                     create: {
                         eventId,
                         firstName: g.firstName,
                         lastName: g.lastName,
-                        email: g.email,
+                        email: contact.email,
                         phone: normalizedPhone,
+                        phoneCountryCode,
                         category: g.category || 'Général',
                         preferences: guestPrefs,
                     },
@@ -218,7 +268,7 @@ async function importGuests(req, res) {
                 importedCount++;
             }
             catch (err) {
-                errors.push(`Erreur pour ${g.email}: ${err.message}`);
+                errors.push(`Erreur pour ${g.firstName} ${g.lastName}: ${err.message}`);
             }
         }
         return res.status(200).json({

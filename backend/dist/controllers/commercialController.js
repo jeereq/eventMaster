@@ -13,6 +13,7 @@ const db_1 = require("../db");
 const commercialService_1 = require("../services/commercialService");
 Object.defineProperty(exports, "recordCommercialCommission", { enumerable: true, get: function () { return commercialService_1.recordCommercialCommission; } });
 const authController_1 = require("./authController");
+const phone_1 = require("../utils/phone");
 async function getCommercialDashboard(req, res) {
     try {
         if (req.user?.role !== 'COMMERCIAL' || req.user.tenantId) {
@@ -21,9 +22,14 @@ async function getCommercialDashboard(req, res) {
         const referralCode = await (0, commercialService_1.ensureCommercialReferralCode)(req.user.id);
         const commercialUser = await db_1.prisma.user.findUnique({
             where: { id: req.user.id },
-            select: { commissionRate: true },
+            select: { commissionRate: true, renewalCommissionRate: true },
         });
-        const commissionRate = (0, commercialService_1.normalizeCommissionRate)(commercialUser?.commissionRate);
+        const rates = (0, commercialService_1.resolveCommissionRates)({
+            first: commercialUser?.commissionRate,
+            renewal: commercialUser?.renewalCommissionRate,
+        });
+        const commissionRate = rates.first;
+        const renewalCommissionRate = rates.renewal;
         const [organizations, commissions] = await Promise.all([
             db_1.prisma.tenant.findMany({
                 where: { referredByCommercialId: req.user.id },
@@ -40,16 +46,20 @@ async function getCommercialDashboard(req, res) {
             }),
         ]);
         const totalCommission = commissions.reduce((sum, c) => sum + c.commissionAmount, 0);
-        const monthlyCommission = commissions
-            .filter((c) => c.billingPeriod === new Date().toISOString().slice(0, 7))
+        const monthlyCommissions = commissions.filter((c) => c.billingPeriod === new Date().toISOString().slice(0, 7));
+        const monthlyCommission = monthlyCommissions.reduce((sum, c) => sum + c.commissionAmount, 0);
+        const monthlyDue = monthlyCommissions
+            .filter((c) => !c.paidAt)
             .reduce((sum, c) => sum + c.commissionAmount, 0);
         return res.json({
             referralCode,
             commissionRate,
+            renewalCommissionRate,
             stats: {
                 organizations: organizations.length,
                 totalCommission,
                 monthlyCommission,
+                monthlyDue,
             },
             organizations: organizations.map((o) => ({
                 id: o.id,
@@ -77,14 +87,19 @@ async function createCommercialOrganization(req, res) {
         if (req.user?.role !== 'COMMERCIAL' || req.user.tenantId) {
             return res.status(403).json({ error: 'Accès réservé aux commerciaux plateforme (sans organisation).' });
         }
-        const { organizationName, managerName, managerEmail, managerPassword, managerPhone, plan, verificationMethod = 'EMAIL' } = req.body;
+        const { organizationName, managerName, managerEmail, managerPassword, managerPhone, phoneCountryCode, nationalNumber, plan, verificationMethod = 'EMAIL' } = req.body;
+        const phoneFields = (0, phone_1.resolvePhoneFields)({
+            phone: managerPhone,
+            phoneCountryCode,
+            nationalNumber,
+        });
         if (!organizationName || !managerName || !managerEmail || !managerPassword) {
             return res.status(400).json({
                 error: 'Nom de l\'organisation, nom, e-mail et mot de passe du manager sont requis.',
             });
         }
         const method = (verificationMethod === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL');
-        if (method === 'WHATSAPP' && !managerPhone) {
+        if (method === 'WHATSAPP' && !phoneFields.phone) {
             return res.status(400).json({ error: 'Le téléphone est obligatoire pour la validation par WhatsApp.' });
         }
         if (managerPassword.length < 6) {
@@ -108,7 +123,8 @@ async function createCommercialOrganization(req, res) {
                 data: {
                     name: managerName.trim(),
                     email: managerEmail.trim().toLowerCase(),
-                    phone: managerPhone || null,
+                    phone: phoneFields.phone,
+                    phoneCountryCode: phoneFields.phoneCountryCode,
                     passwordHash,
                     role: 'USER',
                     tenantId: tenant.id,
@@ -126,7 +142,7 @@ async function createCommercialOrganization(req, res) {
             userId: result.manager.id,
             name: result.manager.name || managerName.trim(),
             email: result.manager.email,
-            phone: managerPhone,
+            phone: phoneFields.phone,
             method,
             invitedByCommercial: true,
         });
@@ -203,12 +219,17 @@ async function getCommercialReferralInfo(req, res) {
         const referralCode = await (0, commercialService_1.ensureCommercialReferralCode)(req.user.id);
         const commercialUser = await db_1.prisma.user.findUnique({
             where: { id: req.user.id },
-            select: { commissionRate: true },
+            select: { commissionRate: true, renewalCommissionRate: true },
+        });
+        const rates = (0, commercialService_1.resolveCommissionRates)({
+            first: commercialUser?.commissionRate,
+            renewal: commercialUser?.renewalCommissionRate,
         });
         return res.json({
             referralCode,
-            commissionRate: (0, commercialService_1.normalizeCommissionRate)(commercialUser?.commissionRate),
-            description: '20% de la facture mensuelle générée par chaque organisation parrainée.',
+            commissionRate: rates.first,
+            renewalCommissionRate: rates.renewal,
+            description: `${Math.round(rates.first * 100)} % au premier paiement, puis ${Math.round(rates.renewal * 100)} % sur les factures suivantes.`,
         });
     }
     catch (error) {

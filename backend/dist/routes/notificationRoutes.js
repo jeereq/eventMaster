@@ -6,6 +6,10 @@ const notificationController_1 = require("../controllers/notificationController"
 const router = (0, express_1.Router)();
 router.use(auth_1.requireAuth);
 router.get('/', notificationController_1.listNotifications);
+router.get('/preferences', notificationController_1.getPreferences);
+router.put('/preferences', notificationController_1.updatePreferences);
+router.post('/push-token', notificationController_1.registerPushToken);
+router.delete('/push-token', notificationController_1.unregisterPushToken);
 router.patch('/:id/read', notificationController_1.readNotification);
 router.post('/read-all', notificationController_1.readAllNotifications);
 exports.default = router;

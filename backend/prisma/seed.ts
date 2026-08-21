@@ -448,6 +448,7 @@ async function main() {
       ticketsTotal: 200,
       ticketsSold: 0,
       guestGuidelines: seedGuestGuidelines(1),
+      themeId: 'royal-gold',
     },
   });
 
@@ -463,6 +464,7 @@ async function main() {
       longitude: 15.302,
       photos: eventPhotos(2),
       guestGuidelines: seedGuestGuidelines(2),
+      themeId: 'emerald-garden',
     },
   });
 
@@ -482,6 +484,7 @@ async function main() {
       publishedAt: new Date(),
       ticketingEnabled: false,
       guestGuidelines: seedGuestGuidelines(3),
+      themeId: 'midnight-blue',
     },
   });
 
@@ -497,6 +500,7 @@ async function main() {
       longitude: 15.253,
       photos: eventPhotos(4),
       guestGuidelines: seedGuestGuidelines(4),
+      themeId: 'rose-gold',
     },
   });
 
@@ -512,6 +516,7 @@ async function main() {
       longitude: 15.2861,
       photos: eventPhotos(5),
       guestGuidelines: seedGuestGuidelines(5),
+      themeId: 'obsidian-silver',
     },
   });
 

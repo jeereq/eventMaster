@@ -3,12 +3,24 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getGuestRsvpDetails = getGuestRsvpDetails;
 exports.getGuestAllInvitations = getGuestAllInvitations;
 exports.submitRsvp = submitRsvp;
+exports.downloadSeatingInvitationPdf = downloadSeatingInvitationPdf;
+exports.getGuestQrPng = getGuestQrPng;
 const rsvpPreferences_1 = require("../utils/rsvpPreferences");
 const db_1 = require("../db");
 const notificationService_1 = require("../services/notificationService");
 const messageTemplateService_1 = require("../services/messageTemplateService");
 const legalService_1 = require("../services/legalService");
 const guestIdentity_1 = require("../utils/guestIdentity");
+const commercialService_1 = require("../services/commercialService");
+const seatingInvitationStorageService_1 = require("../services/seatingInvitationStorageService");
+const tablePlanAssignment_1 = require("../utils/tablePlanAssignment");
+const guestGuidelines_1 = require("../utils/guestGuidelines");
+const guestPlacementAccess_1 = require("../utils/guestPlacementAccess");
+const guestPlacementDeliveryService_1 = require("../services/guestPlacementDeliveryService");
+const qrCode_1 = require("../utils/qrCode");
+const brandedMessaging_1 = require("../utils/brandedMessaging");
+const brandingUtils_1 = require("../utils/brandingUtils");
+const mandatoryRsvpFields_1 = require("../utils/mandatoryRsvpFields");
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 function isEventDatePassed(eventDate) {
     return new Date(eventDate).getTime() < Date.now();
@@ -74,33 +86,30 @@ async function notifyOrganizerOfRsvp(params) {
     const preferencesDetails = formatPreferencesDetails(preferences);
     const ownerSubject = `[RSVP] ${guest.firstName} ${guest.lastName} — ${rsvp === 'ACCEPTED' ? 'Présent' : 'Décliné'}`;
     const dashboardUrl = `${FRONTEND_URL}/dashboard/events`;
+    const orgBrand = await (0, brandedMessaging_1.loadOrgBrand)(params.tenantId);
     const ownerTextBody = `Bonjour ${organizer.name || 'Organisateur'},\n\n` +
         `Un invité vient de répondre à votre invitation pour l'événement "${eventTitle}".\n\n` +
         `Invité : ${guest.firstName} ${guest.lastName}\n` +
         `Email : ${guest.email}\n` +
         `Statut : ${statusLabel}${preferencesDetails}\n\n` +
         `Consultez la liste complète : ${dashboardUrl}\n\n` +
-        `L'équipe EventMaster`;
-    const ownerHtmlBody = `
-    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
-      <h2 style="color: #1e1b4b; margin-bottom: 5px;">Nouvelle réponse RSVP</h2>
-      <p style="color: #64748b; margin-top: 0; margin-bottom: 20px;">Un invité a répondu pour <strong>${eventTitle}</strong>.</p>
-      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-        <p style="margin: 0 0 8px;"><strong>Invité :</strong> ${guest.firstName} ${guest.lastName}</p>
-        <p style="margin: 0 0 8px;"><strong>Email :</strong> ${guest.email}</p>
-        <p style="margin: 0;">
-          <strong>Statut :</strong>
-          <span style="display: inline-block; padding: 4px 10px; font-size: 12px; font-weight: bold; border-radius: 20px; margin-left: 6px; ${rsvp === 'ACCEPTED' ? 'background-color: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;' : 'background-color: #fff1f2; color: #be123c; border: 1px solid #fecdd3;'}">
-            ${statusLabel}
-          </span>
-        </p>
+        `${orgBrand.orgName}`;
+    const ownerHtmlBody = (0, brandedMessaging_1.wrapBrandedEmail)({
+        branding: orgBrand.branding,
+        orgName: orgBrand.orgName,
+        title: 'Nouvelle réponse RSVP',
+        eyebrow: eventTitle,
+        innerHtml: `
+      <p style="color:#64748b;margin:0 0 18px;">Un invité a répondu pour <strong>${(0, brandingUtils_1.escapeHtml)(eventTitle)}</strong>.</p>
+      <div style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:8px;">
+        <p style="margin:0 0 8px;"><strong>Invité :</strong> ${(0, brandingUtils_1.escapeHtml)(`${guest.firstName} ${guest.lastName}`)}</p>
+        <p style="margin:0 0 8px;"><strong>Email :</strong> ${(0, brandingUtils_1.escapeHtml)(guest.email)}</p>
+        <p style="margin:0;"><strong>Statut :</strong> ${(0, brandingUtils_1.escapeHtml)(statusLabel)}</p>
       </div>
-      ${preferencesDetails ? `<pre style="background-color: #fffbeb; border: 1px solid #fef3c7; border-radius: 8px; padding: 15px; font-size: 13px; white-space: pre-wrap;">${preferencesDetails.trim()}</pre>` : ''}
-      <div style="text-align: center; margin-top: 25px;">
-        <a href="${dashboardUrl}" style="display: inline-block; background-color: #4f46e5; color: white; padding: 12px 24px; font-weight: bold; border-radius: 8px; text-decoration: none; font-size: 14px;">Voir mes invités</a>
-      </div>
-    </div>
-  `;
+      ${preferencesDetails ? `<pre style="background-color:#fffbeb;border:1px solid #fef3c7;border-radius:8px;padding:15px;font-size:13px;white-space:pre-wrap;">${(0, brandingUtils_1.escapeHtml)(preferencesDetails.trim())}</pre>` : ''}
+    `,
+        cta: { href: dashboardUrl, label: 'Voir mes invités' },
+    });
     const ownerWhatsappRendered = await (0, messageTemplateService_1.renderGuestMessage)('RSVP_ORGANIZER_WHATSAPP', {
         title: eventTitle,
         firstName: guest.firstName,
@@ -108,8 +117,9 @@ async function notifyOrganizerOfRsvp(params) {
         statusLabel: rsvp === 'ACCEPTED' ? '✅ Présent' : '❌ Décliné',
         preferencesDetails: preferencesDetails ? `\n\n📋 *Préférences* :${preferencesDetails}` : '',
         dashboardUrl,
+        orgName: orgBrand.orgName,
     });
-    const ownerWhatsappBody = (0, messageTemplateService_1.polishWhatsAppBody)(ownerWhatsappRendered.body);
+    const ownerWhatsappBody = (0, brandedMessaging_1.wrapBrandedWhatsApp)(ownerWhatsappRendered.body, orgBrand.orgName);
     const organizerPhone = getUserPhone(organizer);
     const results = [];
     if (isValidEmail(organizer.email)) {
@@ -160,11 +170,14 @@ async function getGuestRsvpDetails(req, res) {
                         latitude: true,
                         longitude: true,
                         tablePlan: true,
+                        guestGuidelines: true,
+                        rsvpForm: true,
                         room: {
                             select: {
                                 layoutBlueprint: true,
                             },
                         },
+                        tenant: { select: { name: true, branding: true } },
                         invitations: {
                             where: {
                                 templateId: { not: null }
@@ -181,14 +194,21 @@ async function getGuestRsvpDetails(req, res) {
         if (!guest) {
             return res.status(404).json({ error: 'Invité non trouvé ou lien RSVP invalide.' });
         }
-        // Extract table details if the guest is assigned to a table
+        const forPrint = req.query.print === '1';
+        const hasSeatAssignment = Boolean((0, commercialService_1.findGuestSeatInTablePlan)(guest.event.tablePlan, guestId));
+        const placementAccessible = (0, guestPlacementAccess_1.canGuestAccessPlacement)(guest) || (forPrint && hasSeatAssignment);
+        // Extract table details if the guest is assigned to a table (after validation only)
         let tableDetails = null;
         let tablePlanOverview = null;
         let planFixtures = null;
         let roomOutline = null;
         let roomThemeId = null;
+        let floorType = null;
+        let floorImageUrl = null;
+        let depthAmount = 0;
+        let depthView = false;
         const eventObj = guest.event;
-        if (eventObj && eventObj.tablePlan && typeof eventObj.tablePlan === 'object') {
+        if (placementAccessible && eventObj && eventObj.tablePlan && typeof eventObj.tablePlan === 'object') {
             const plan = eventObj.tablePlan;
             if (Array.isArray(plan.tables)) {
                 tablePlanOverview = plan.tables.map((table) => ({
@@ -203,6 +223,7 @@ async function getGuestRsvpDetails(req, res) {
                     chairType: table.chairType,
                     chairImageUrl: table.chairImageUrl,
                     tableColor: table.tableColor,
+                    tableImageUrl: table.tableImageUrl,
                 }));
                 if (Array.isArray(plan.fixtures)) {
                     planFixtures = plan.fixtures;
@@ -260,14 +281,69 @@ async function getGuestRsvpDetails(req, res) {
             else if (plan.roomThemeId) {
                 roomThemeId = plan.roomThemeId;
             }
+            if (room?.layoutBlueprint?.metadata?.floorType) {
+                floorType = room.layoutBlueprint.metadata.floorType;
+            }
+            else if (plan.floorType) {
+                floorType = plan.floorType;
+            }
+            if (room?.layoutBlueprint?.metadata?.floorImageUrl) {
+                floorImageUrl = room.layoutBlueprint.metadata.floorImageUrl;
+            }
+            else if (plan.floorImageUrl) {
+                floorImageUrl = plan.floorImageUrl;
+            }
+            const meta = room?.layoutBlueprint?.metadata;
+            if (typeof meta?.depthAmount === 'number') {
+                depthAmount = meta.depthAmount;
+                depthView = meta.depthAmount > 0;
+            }
+            else if (typeof plan.depthAmount === 'number') {
+                depthAmount = plan.depthAmount;
+                depthView = plan.depthAmount > 0;
+            }
+            else if (meta?.depthView || plan.depthView) {
+                depthView = true;
+                depthAmount = 55;
+            }
+        }
+        const { event: guestEvent, ...guestWithoutEvent } = guest;
+        const tenant = guestEvent.tenant;
+        const { tenant: _tenant, ...eventWithoutTenant } = guestEvent;
+        void _tenant;
+        const eventForClient = placementAccessible
+            ? eventWithoutTenant
+            : { ...eventWithoutTenant, latitude: null, longitude: null };
+        if (eventForClient && typeof eventForClient === 'object' && Array.isArray(eventForClient.invitations)) {
+            eventForClient.invitations =
+                eventForClient.invitations.map((inv) => {
+                    if (!inv?.template)
+                        return inv;
+                    return {
+                        ...inv,
+                        template: {
+                            ...inv.template,
+                            content: (0, mandatoryRsvpFields_1.overlayRsvpFieldsOnContent)((0, mandatoryRsvpFields_1.ensureMandatoryRsvpFieldsOnContent)(inv.template.content), guestEvent.rsvpForm),
+                        },
+                    };
+                });
         }
         return res.json({
-            ...guest,
+            ...guestWithoutEvent,
+            event: eventForClient,
+            branding: (0, brandingUtils_1.resolveBranding)(tenant?.branding),
+            organizationName: tenant?.name || 'Organisation',
+            placementAccessible,
+            seatingInvitationPdfUrl: placementAccessible ? guest.seatingInvitationPdfUrl ?? null : null,
             tableDetails,
             tablePlanOverview,
             planFixtures,
             roomOutline,
             roomThemeId,
+            floorType,
+            floorImageUrl,
+            depthAmount,
+            depthView,
             eventPassed: isEventDatePassed(guest.event.date),
             rsvpLocked: isEventDatePassed(guest.event.date),
         });
@@ -299,6 +375,7 @@ async function getGuestAllInvitations(req, res) {
                 rsvp: record.rsvp,
                 event: record.event,
                 organizationName: record.event.tenant?.name || 'Organisation',
+                branding: (0, brandingUtils_1.resolveBranding)(record.event.tenant?.branding),
                 eventPassed,
                 rsvpLocked: eventPassed,
                 isCurrent: record.id === guestId,
@@ -374,55 +451,69 @@ async function submitRsvp(req, res) {
             weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
         }) : '';
         if (rsvp === 'ACCEPTED') {
-            // Customized QR Code with platform colors (Indigo: #4f46e5) - point to the public RSVP landing page for this guest
-            const rsvpUrl = `${FRONTEND_URL}/rsvp/${guest.id}`;
-            const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(rsvpUrl)}&color=4f-46-e5&bgcolor=ffffff&qzone=2`;
+            const qrCodeUrl = (0, qrCode_1.buildGuestQrImageUrl)(guest.id, 300);
+            const orgBrand = (0, brandedMessaging_1.orgBrandFromTenant)(guest.event.tenant);
             const subject = `Confirmation de votre présence - ${guest.event.title}`;
-            const textBody = `Bonjour ${guest.firstName},\n\nVotre présence à l'événement "${guest.event.title}" a été confirmée avec succès !\n\nVoici votre badge d'émargement QR Code : ${qrCodeUrl}\n\nPrésentez ce QR Code à l'entrée pour valider votre présence.\n\nDate : ${formattedDate}\nLieu : ${guest.event.location || 'Non défini'}\n\nMerci et à très bientôt !`;
-            const htmlBody = `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
-          <h2 style="color: #1e1b4b; text-align: center; margin-bottom: 5px;">Présence Confirmée !</h2>
-          <p style="text-align: center; color: #4f46e5; font-weight: bold; margin-top: 0; margin-bottom: 20px;">Merci, ${guest.firstName} !</p>
-          <p>Bonjour <strong>${guest.firstName} ${guest.lastName}</strong>,</p>
-          <p>Votre présence à l'événement <strong>${guest.event.title}</strong> a été enregistrée avec succès.</p>
-          
-          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
-            <span style="font-size: 12px; font-weight: bold; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 10px;">Votre Badge d'Émargement</span>
-            <img src="${qrCodeUrl}" alt="QR Code d'émargement" style="width: 180px; height: 180px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 5px; background-color: white;" />
-            <p style="font-size: 12px; color: #64748b; margin-top: 10px; margin-bottom: 0;">Présentez ce QR Code à l'entrée pour valider votre présence.</p>
+            const textBody = `Bonjour ${guest.firstName},\n\nVotre présence à l'événement "${guest.event.title}" a été confirmée avec succès !\n\nVoici votre badge de confirmation de présence (QR Code) : ${qrCodeUrl}\n\nPrésentez ce QR Code à l'entrée le jour J.\n\nDate : ${formattedDate}\nLieu : ${guest.event.location || 'Non défini'}\n\nVotre plan de table, invitation PDF et localisation GPS vous sont envoyés dès maintenant (si votre place est déjà assignée et selon le forfait de l'organisateur).\n\nMerci et à très bientôt !\n${orgBrand.orgName}`;
+            const htmlBody = (0, brandedMessaging_1.wrapBrandedEmail)({
+                branding: orgBrand.branding,
+                orgName: orgBrand.orgName,
+                title: 'Présence confirmée',
+                eyebrow: guest.event.title,
+                innerHtml: `
+          <p style="text-align:center;color:${orgBrand.branding.primary};font-weight:700;margin:0 0 16px;">Merci, ${(0, brandingUtils_1.escapeHtml)(guest.firstName)} !</p>
+          <p>Votre présence à <strong>${(0, brandingUtils_1.escapeHtml)(guest.event.title)}</strong> a été enregistrée.</p>
+          <div style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:20px;text-align:center;margin:20px 0;">
+            <span style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:10px;">Votre badge</span>
+            <img src="${qrCodeUrl}" alt="QR Code" style="width:180px;height:180px;border:1px solid #cbd5e1;border-radius:8px;padding:5px;background:#fff;" />
+            <p style="font-size:12px;color:#64748b;margin:10px 0 0;">Présentez ce QR Code à l'entrée le jour J.</p>
           </div>
-
-          <div style="margin-top: 20px; font-size: 14px; color: #334155; background-color: #f1f5f9; padding: 15px; border-radius: 8px;">
-            <strong>Détails de l'événement :</strong><br />
-            📅 Date : ${formattedDate}<br />
-            📍 Lieu : ${guest.event.location || 'Non défini'}
-          </div>
-          
-          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-          <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 0;">Cet e-mail automatique a été envoyé par EventMaster.</p>
-        </div>
-      `;
+          ${(0, brandedMessaging_1.brandedEventDetailsHtml)(orgBrand.branding, [
+                    { label: 'Date', value: formattedDate },
+                    { label: 'Lieu', value: guest.event.location || 'Non défini' },
+                ])}
+        `,
+                footerNote: 'Votre plan de table, invitation PDF et localisation GPS sont débloqués dès cette confirmation, dès que votre place est assignée.',
+            });
             const whatsappRendered = await (0, messageTemplateService_1.renderGuestMessage)('RSVP_CONFIRMATION_WHATSAPP', {
                 firstName: guest.firstName,
                 title: guest.event.title,
                 date: formattedDate,
                 location: guest.event.location || 'Non défini',
+                orgName: orgBrand.orgName,
             });
-            const whatsappCaption = (0, messageTemplateService_1.polishWhatsAppBody)(whatsappRendered.body);
+            const whatsappCaption = (0, brandedMessaging_1.wrapBrandedWhatsApp)(whatsappRendered.body, orgBrand.orgName, {
+                guidelinesBlock: (0, guestGuidelines_1.guestGuidelinesInvitationText)(guest.event.guestGuidelines),
+            });
             // Run sending in the background to avoid blocking the user response
             (async () => {
                 try {
                     // 1. Send Email if valid email address
-                    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guest.email.trim());
-                    if (isEmail) {
-                        console.log(`[RSVP Controller] Sending confirmation email with QR Code to ${guest.email}...`);
-                        await (0, notificationService_1.sendRealEmail)(guest.email, subject, textBody, htmlBody);
+                    const destEmail = (0, guestIdentity_1.extractGuestEmail)(guest);
+                    if (destEmail) {
+                        console.log(`[RSVP Controller] Sending confirmation email with QR Code to ${destEmail}...`);
+                        await (0, notificationService_1.sendRealEmail)(destEmail, subject, textBody, htmlBody);
                     }
                     // 2. WhatsApp avec image QR
                     const phone = getGuestPhone(guest);
                     if (phone) {
                         console.log(`[RSVP Controller] Sending confirmation WhatsApp Image with QR Code to ${phone}...`);
                         await (0, notificationService_1.sendRealWhatsAppImage)(phone, qrCodeUrl, whatsappCaption);
+                    }
+                    // 3. PDF / plan / GPS dès acceptation (si siège assigné + forfait)
+                    const tenantId = guest.event.tenantId;
+                    if (tenantId) {
+                        const placement = await (0, guestPlacementDeliveryService_1.deliverGuestPlacementIfEligible)({
+                            guestId: guest.id,
+                            eventId: guest.eventId,
+                            tenantId,
+                        });
+                        if (placement.delivered) {
+                            console.log('[RSVP Controller] Placement PDF/GPS envoyé:', placement.notification?.channels?.join(', '));
+                        }
+                        else {
+                            console.log('[RSVP Controller] Placement non envoyé:', placement.skippedReason);
+                        }
                     }
                 }
                 catch (notifErr) {
@@ -449,6 +540,7 @@ async function submitRsvp(req, res) {
                         eventTitle: guest.event.title,
                         rsvp,
                         preferences: preferences || {},
+                        tenantId: guest.event.tenantId,
                     });
                 }
                 catch (ownerNotifErr) {
@@ -470,5 +562,96 @@ async function submitRsvp(req, res) {
     catch (error) {
         console.error('Erreur lors de la soumission du RSVP:', error);
         return res.status(500).json({ error: 'Erreur lors de l\'enregistrement de votre réponse RSVP.' });
+    }
+}
+async function downloadSeatingInvitationPdf(req, res) {
+    try {
+        const guestId = req.params.guestId;
+        const guest = await db_1.prisma.guest.findUnique({
+            where: { id: guestId },
+            include: {
+                event: {
+                    select: {
+                        title: true,
+                        description: true,
+                        date: true,
+                        location: true,
+                        guestGuidelines: true,
+                        tablePlan: true,
+                    },
+                },
+            },
+        });
+        if (!guest?.event) {
+            return res.status(404).json({ error: 'Invitation introuvable.' });
+        }
+        if (!(0, guestPlacementAccess_1.canGuestAccessPlacement)(guest)) {
+            return res.status(403).json({
+                error: 'Votre plan de table, invitation PDF et localisation GPS seront disponibles dès que vous aurez accepté l\'invitation (RSVP).',
+            });
+        }
+        const assigned = (0, commercialService_1.findGuestSeatInTablePlan)(guest.event.tablePlan, guestId);
+        if (!assigned) {
+            return res.status(404).json({ error: 'Aucun placement de table pour cet invité.' });
+        }
+        const mateIds = (0, tablePlanAssignment_1.getTableMateGuestIds)(guest.event.tablePlan, guestId);
+        const tableMates = mateIds.length
+            ? await db_1.prisma.guest.findMany({
+                where: { id: { in: mateIds } },
+                select: { firstName: true, lastName: true },
+                orderBy: { lastName: 'asc' },
+            })
+            : [];
+        const dressCode = (0, guestGuidelines_1.formatDressCodeText)((0, guestGuidelines_1.normalizeGuestGuidelines)(guest.event.guestGuidelines)) || null;
+        const pdfInput = {
+            guestId: guest.id,
+            eventId: guest.eventId,
+            guest: { firstName: guest.firstName, lastName: guest.lastName },
+            event: guest.event,
+            assignedSeat: assigned,
+            tableMates,
+            dressCode,
+        };
+        if (guest.seatingInvitationPdfUrl) {
+            return res.redirect(302, guest.seatingInvitationPdfUrl);
+        }
+        const stored = await (0, seatingInvitationStorageService_1.generateAndStoreGuestInvitationPdf)(pdfInput);
+        if (stored.url) {
+            return res.redirect(302, stored.url);
+        }
+        const filename = `invitation-${guest.lastName || 'invite'}.pdf`;
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+        return res.send(stored.buffer);
+    }
+    catch (error) {
+        console.error('Erreur génération PDF invitation:', error);
+        return res.status(500).json({ error: 'Impossible de générer le PDF.' });
+    }
+}
+/** PNG QR auto-hébergé pour badge invité (e-mail, WhatsApp, portail). */
+async function getGuestQrPng(req, res) {
+    try {
+        const guestId = req.params.guestId;
+        const sizeRaw = Number(req.query.size);
+        const size = Number.isFinite(sizeRaw) ? Math.min(600, Math.max(80, Math.round(sizeRaw))) : 300;
+        const guest = await db_1.prisma.guest.findUnique({
+            where: { id: guestId },
+            select: { id: true },
+        });
+        if (!guest) {
+            return res.status(404).json({ error: 'Invité introuvable.' });
+        }
+        const FRONTEND = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const rsvpUrl = `${FRONTEND}/rsvp/${guest.id}`;
+        const png = await (0, qrCode_1.generateQrPngBuffer)(rsvpUrl, { size });
+        res.setHeader('Content-Type', 'image/png');
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+        res.setHeader('Content-Disposition', `inline; filename="qr-${guest.id}.png"`);
+        return res.send(png);
+    }
+    catch (error) {
+        console.error('Erreur génération QR:', error);
+        return res.status(500).json({ error: 'Impossible de générer le QR code.' });
     }
 }

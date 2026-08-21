@@ -11,6 +11,27 @@ const db_1 = require("../db");
 const permissionsService_1 = require("../services/permissionsService");
 const planFeaturesService_1 = require("../services/planFeaturesService");
 const roomLayoutService_1 = require("../services/roomLayoutService");
+const HOLD_BOOKING_STATUSES = ['REQUESTED', 'ACCEPTED', 'CONFIRMED'];
+function blueprintUsesThemesOrFixtures(blueprint) {
+    if (!blueprint || typeof blueprint !== 'object')
+        return false;
+    const bp = blueprint;
+    const themeId = bp.metadata?.roomThemeId;
+    if (themeId && themeId !== 'classic')
+        return true;
+    if (Array.isArray(bp.metadata?.customThemes) && bp.metadata.customThemes.length > 0)
+        return true;
+    if (bp.metadata?.floorImageUrl)
+        return true;
+    if (Array.isArray(bp.fixtures) && bp.fixtures.length > 0)
+        return true;
+    return false;
+}
+async function assertThemesFixturesForBlueprint(tenantId, blueprint) {
+    if (!blueprintUsesThemesOrFixtures(blueprint))
+        return;
+    await (0, planFeaturesService_1.assertPlanFeature)(tenantId, 'roomThemesFixtures');
+}
 function resolveRoomLayout(roomType, layoutParams, layoutBlueprint) {
     const type = (roomType || 'SIMPLE');
     if (layoutBlueprint && typeof layoutBlueprint === 'object') {
@@ -38,6 +59,14 @@ async function getRooms(req, res) {
                 staff: {
                     include: {
                         user: { select: { id: true, name: true, email: true, orgRole: true } },
+                    },
+                },
+                venueListing: {
+                    include: {
+                        bookings: {
+                            where: { status: { in: HOLD_BOOKING_STATUSES } },
+                            select: { eventDate: true, eventEndDate: true },
+                        },
                     },
                 },
                 _count: { select: { events: true } },
@@ -92,6 +121,15 @@ async function createRoom(req, res) {
             throw err;
         }
         const blueprint = resolveRoomLayout(resolvedType, layoutParams, layoutBlueprint);
+        try {
+            await assertThemesFixturesForBlueprint(tenantId, blueprint);
+        }
+        catch (err) {
+            if (err instanceof planFeaturesService_1.PlanFeatureError) {
+                return res.status(403).json({ error: err.message });
+            }
+            throw err;
+        }
         const computedCapacity = blueprint
             ? (0, roomLayoutService_1.calculateBlueprintCapacity)(blueprint)
             : capacity
@@ -148,11 +186,25 @@ async function updateRoom(req, res) {
             throw err;
         }
         let nextBlueprint = existing.layoutBlueprint;
+        const layoutChanging = layoutBlueprint !== undefined ||
+            layoutParams !== undefined ||
+            (roomType !== undefined && roomType !== existing.roomType);
         if (layoutBlueprint !== undefined) {
             nextBlueprint = layoutBlueprint;
         }
         else if (layoutParams !== undefined || (roomType !== undefined && roomType !== existing.roomType)) {
             nextBlueprint = resolveRoomLayout(nextType, layoutParams, null);
+        }
+        if (layoutChanging) {
+            try {
+                await assertThemesFixturesForBlueprint(tenantId, nextBlueprint);
+            }
+            catch (err) {
+                if (err instanceof planFeaturesService_1.PlanFeatureError) {
+                    return res.status(403).json({ error: err.message });
+                }
+                throw err;
+            }
         }
         const computedCapacity = nextBlueprint && typeof nextBlueprint === 'object'
             ? (0, roomLayoutService_1.calculateBlueprintCapacity)(nextBlueprint)

@@ -5,6 +5,7 @@ exports.startSubscriptionExpiryWorker = startSubscriptionExpiryWorker;
 const db_1 = require("../db");
 const invoiceService_1 = require("./invoiceService");
 const commercialService_1 = require("./commercialService");
+const tenantBillingService_1 = require("./tenantBillingService");
 function startOfDay(date) {
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
@@ -34,6 +35,7 @@ async function processSubscriptionExpiryTasks() {
                 id: true,
                 name: true,
                 plan: true,
+                billingCycle: true,
                 licenseExpiresAt: true,
                 licenseExpiryWarningFor: true,
             },
@@ -41,6 +43,7 @@ async function processSubscriptionExpiryTasks() {
         for (const tenant of tenants) {
             const expiresAt = tenant.licenseExpiresAt;
             const remaining = daysUntil(expiresAt, now);
+            const renewal = (0, tenantBillingService_1.resolveRenewalTerms)(tenant.plan, tenant.billingCycle);
             // J-7 : avertir le propriétaire une seule fois par date d'expiration
             if (remaining === 7 && !isSameExpiryDate(tenant.licenseExpiryWarningFor, expiresAt)) {
                 const owner = await (0, invoiceService_1.getTenantOwner)(tenant.id);
@@ -53,6 +56,7 @@ async function processSubscriptionExpiryTasks() {
                         ownerEmail: owner.email,
                         ownerName: owner.name,
                         ownerPhone: owner.phone,
+                        durationDays: renewal.durationDays,
                     });
                     await db_1.prisma.tenant.update({
                         where: { id: tenant.id },
@@ -61,7 +65,7 @@ async function processSubscriptionExpiryTasks() {
                     console.log(`[Subscription Expiry] Rappel J-7 envoyé pour ${tenant.name}`);
                 }
             }
-            // Jour J : facture de renouvellement
+            // Jour J : facture de renouvellement (même cycle que la période en cours)
             if (remaining === 0) {
                 const existing = await db_1.prisma.platformInvoice.findFirst({
                     where: {
@@ -72,23 +76,41 @@ async function processSubscriptionExpiryTasks() {
                 });
                 if (!existing) {
                     const periodStart = new Date(expiresAt);
-                    periodStart.setDate(periodStart.getDate() - 30);
+                    periodStart.setDate(periodStart.getDate() - renewal.durationDays);
                     const invoice = await (0, invoiceService_1.createAndSendInvoice)({
                         tenantId: tenant.id,
                         plan: tenant.plan,
                         type: 'RENEWAL',
                         periodStart,
                         periodEnd: expiresAt,
-                        durationDays: 30,
+                        durationDays: renewal.durationDays,
+                        amount: renewal.finalAmount,
+                        baseAmount: renewal.baseAmount,
+                        discountPercent: renewal.discountPercent,
+                        discountAmount: renewal.discountAmount,
                         includeManagers: true,
                     });
                     if (invoice) {
-                        await (0, commercialService_1.recordCommercialCommission)({
+                        const commissionRecords = await (0, commercialService_1.recordCommercialCommission)({
                             tenantId: tenant.id,
                             plan: tenant.plan,
                             source: 'LICENSE_RENEWAL',
                             invoiceAmount: invoice.amount,
                             platformInvoiceId: invoice.id,
+                        });
+                        const commissionsByUserId = Object.fromEntries(commissionRecords.map((r) => [r.commercialId, r.commissionAmount]));
+                        await (0, commercialService_1.notifyCommercialsOnSubscriptionApproval)({
+                            tenantId: tenant.id,
+                            tenantName: tenant.name,
+                            plan: tenant.plan,
+                            durationDays: renewal.durationDays,
+                            baseAmount: renewal.baseAmount,
+                            finalAmount: renewal.finalAmount,
+                            discountPercent: renewal.discountPercent,
+                            discountAmount: renewal.discountAmount,
+                            invoiceNumber: invoice.invoiceNumber,
+                            event: 'LICENSE_RENEWAL',
+                            commissionsByUserId,
                         });
                         console.log(`[Subscription Expiry] Facture renouvellement ${invoice.invoiceNumber} pour ${tenant.name}`);
                     }

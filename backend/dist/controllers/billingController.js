@@ -16,6 +16,7 @@ const permissionsService_1 = require("../services/permissionsService");
 const commercialService_1 = require("../services/commercialService");
 const invoiceService_1 = require("../services/invoiceService");
 const planFeaturesService_1 = require("../services/planFeaturesService");
+const ticketOrderService_1 = require("../services/ticketOrderService");
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_mock';
 const stripe = new stripe_1.default(STRIPE_SECRET_KEY, {
     apiVersion: '2025-11-13', // standard latest api version
@@ -59,7 +60,7 @@ async function getBillingStatus(req, res) {
             where: { tenantId, role: 'USER', orgRole: 'MANAGER' },
         });
         const limits = getPlansFromSettings();
-        const currentLimits = (0, plansConfig_1.getPlanLimits)(tenant.plan);
+        const currentLimits = (0, plansConfig_1.getPlanLimitsForTenant)(tenant.plan, tenant.accountKind);
         const snapshot = await (0, planFeaturesService_1.getTenantPlanSnapshot)(tenantId);
         const planDetails = snapshot ? (0, planFeaturesService_1.formatPlanFeaturesResponse)(snapshot) : null;
         return res.json({
@@ -69,6 +70,7 @@ async function getBillingStatus(req, res) {
                 guests: guestCount,
                 templates: tenant._count.templates,
                 rooms: roomCount,
+                services: snapshot?.usage.services ?? 0,
                 orgManagers: orgManagerCount + (tenant.managerId ? 1 : 0),
             },
             limits: {
@@ -76,6 +78,7 @@ async function getBillingStatus(req, res) {
                 maxGuests: currentLimits.maxGuests,
                 maxTemplates: currentLimits.maxTemplates,
                 maxRooms: currentLimits.maxRooms,
+                maxServices: currentLimits.maxServices,
                 maxOrgManagers: currentLimits.maxOrgManagers,
                 customTemplates: currentLimits.customTemplates,
             },
@@ -83,15 +86,18 @@ async function getBillingStatus(req, res) {
                 protocolQr: currentLimits.protocolQr,
                 seatNotifications: currentLimits.seatNotifications,
                 customTemplates: currentLimits.customTemplates,
+                customRsvpFields: currentLimits.customRsvpFields,
                 mockupOcr: currentLimits.mockupOcr,
                 roomThemesFixtures: currentLimits.roomThemesFixtures,
                 commercialNetwork: currentLimits.commercialNetwork,
                 adminReports: currentLimits.adminReports,
                 roomEditorLevel: currentLimits.roomEditorLevel,
                 supportLevel: currentLimits.supportLevel,
+                audience: currentLimits.audience,
             },
             planDetails,
             plans: limits,
+            billingCycle: tenant.billingCycle === 'ANNUAL' ? 'annual' : 'monthly',
         });
     }
     catch (error) {
@@ -166,11 +172,15 @@ async function createCheckoutSession(req, res) {
         if (!tenant) {
             return res.status(404).json({ error: 'Tenant non trouvé' });
         }
+        if (!(0, plansConfig_1.isPlanAllowedForAccountKind)(planType, tenant.accountKind)) {
+            return res.status(403).json({ error: (0, plansConfig_1.planAudienceMismatchMessage)(planType, tenant.accountKind) });
+        }
         // If Stripe is mock mode or we want to support easy upgrades:
         if (STRIPE_SECRET_KEY === 'sk_test_mock' || req.body.mock === true) {
             // Direct mock upgrade for local dev convenience - also activate and extend license
+            const durationDays = (0, plansConfig_1.resolveDurationDaysForPlan)(planType);
             const expiryDate = new Date();
-            expiryDate.setDate(expiryDate.getDate() + 30); // Extend by 30 days
+            expiryDate.setDate(expiryDate.getDate() + durationDays);
             const updatedTenant = await db_1.prisma.tenant.update({
                 where: { id: tenantId },
                 data: {
@@ -187,7 +197,7 @@ async function createCheckoutSession(req, res) {
                 type: 'PAYMENT',
                 periodStart,
                 periodEnd: expiryDate,
-                durationDays: 30,
+                durationDays,
                 includeManagers: true,
                 status: 'PAID',
             });
@@ -255,6 +265,16 @@ async function handleStripeWebhook(req, res) {
         switch (event.type) {
             case 'checkout.session.completed': {
                 const session = event.data.object;
+                if (session.metadata?.purpose === 'event_ticket' && session.metadata.orderId) {
+                    await (0, ticketOrderService_1.fulfillTicketOrder)(session.metadata.orderId, {
+                        id: session.id,
+                        payment_intent: typeof session.payment_intent === 'string'
+                            ? session.payment_intent
+                            : session.payment_intent?.id,
+                    });
+                    console.log(`[Stripe Webhook] Billet payé commande ${session.metadata.orderId}`);
+                    break;
+                }
                 const tenantId = session.client_reference_id;
                 if (tenantId) {
                     const expiryDate = new Date();
@@ -281,13 +301,29 @@ async function handleStripeWebhook(req, res) {
                         includeManagers: true,
                         status: 'PAID',
                     });
-                    await (0, commercialService_1.recordCommercialCommission)({
+                    const commissionRecords = await (0, commercialService_1.recordCommercialCommission)({
                         tenantId,
                         plan: 'PREMIUM_2',
                         source: 'STRIPE_WEBHOOK',
                         invoiceAmount: invoice?.amount,
                         platformInvoiceId: invoice?.id,
                     });
+                    const tenant = await db_1.prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
+                    if (tenant && invoice) {
+                        await (0, commercialService_1.notifyCommercialsOnSubscriptionApproval)({
+                            tenantId,
+                            tenantName: tenant.name,
+                            plan: 'PREMIUM_2',
+                            durationDays: 30,
+                            baseAmount: invoice.amount,
+                            finalAmount: invoice.amount,
+                            discountPercent: 0,
+                            discountAmount: 0,
+                            invoiceNumber: invoice.invoiceNumber,
+                            event: 'ADMIN_ACTIVATION',
+                            commissionsByUserId: Object.fromEntries(commissionRecords.map((r) => [r.commercialId, r.commissionAmount])),
+                        });
+                    }
                     console.log(`[Stripe Webhook] Tenant ${tenantId} upgraded to PREMIUM_2 and license extended`);
                 }
                 break;
@@ -334,8 +370,16 @@ async function mockUpgrade(req, res) {
         if (!plan || !plansConfig_1.PLAN_KEYS.includes(plan)) {
             return res.status(400).json({ error: 'Plan invalide' });
         }
+        const currentTenant = await db_1.prisma.tenant.findUnique({
+            where: { id: tenantId },
+            select: { accountKind: true },
+        });
+        if (plan !== 'FREE' && currentTenant && !(0, plansConfig_1.isPlanAllowedForAccountKind)(plan, currentTenant.accountKind)) {
+            return res.status(403).json({ error: (0, plansConfig_1.planAudienceMismatchMessage)(plan, currentTenant.accountKind) });
+        }
+        const durationDays = (0, plansConfig_1.resolveDurationDaysForPlan)(plan);
         const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + 30); // 30 days extension
+        expiryDate.setDate(expiryDate.getDate() + durationDays);
         const updatedTenant = await db_1.prisma.tenant.update({
             where: { id: tenantId },
             data: {
@@ -353,7 +397,7 @@ async function mockUpgrade(req, res) {
                 type: 'PAYMENT',
                 periodStart,
                 periodEnd: expiryDate,
-                durationDays: 30,
+                durationDays,
                 includeManagers: true,
                 status: 'PAID',
             });

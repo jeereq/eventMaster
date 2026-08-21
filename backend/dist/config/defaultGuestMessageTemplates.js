@@ -20,8 +20,9 @@ exports.DEFAULT_GUEST_MESSAGE_TEMPLATES = [
 👉 *Confirmez votre présence* en un clic :
 {{rsvpLink}}
 
+_Votre plan de table, PDF et localisation GPS vous seront envoyés dès votre confirmation RSVP (si votre place est déjà assignée)._
 _Nous serons ravis de vous compter parmi nous._
-— L'équipe organisatrice · EventMaster`,
+— {{orgName}}`,
     },
     {
         type: 'REMINDER_WHATSAPP',
@@ -41,13 +42,14 @@ Nous n'avons pas encore reçu votre réponse RSVP.
 👉 Merci de confirmer ici :
 {{rsvpLink}}
 
+_Après confirmation, votre placement (PDF, plan, GPS) vous est envoyé dès que votre place est assignée._
 _Votre réponse nous aide à mieux organiser cette réception._
-— EventMaster`,
+— {{orgName}}`,
     },
     {
         type: 'RSVP_CONFIRMATION_WHATSAPP',
         name: 'Confirmation RSVP invité (WhatsApp)',
-        description: 'Message de confirmation envoyé à l\'invité après validation de sa présence.',
+        description: 'Message envoyé à l\'invité après acceptation de son RSVP (badge QR).',
         channel: 'WHATSAPP',
         body: `Bonjour *{{firstName}}* ✨
 
@@ -56,10 +58,11 @@ Votre présence à *{{title}}* est bien *confirmée* !
 📅 *Date* : {{date}}
 📍 *Lieu* : {{location}}
 
-Présentez le QR Code ci-joint à l'entrée pour valider votre accès.
+Présentez le QR Code ci-joint à l'entrée le jour J.
+Votre plan de table, invitation PDF et localisation GPS vous sont envoyés dès maintenant (si votre place est déjà assignée).
 
 _Au plaisir de vous accueillir très bientôt !_
-— L'équipe organisatrice · EventMaster`,
+— {{orgName}}`,
     },
     {
         type: 'RSVP_ORGANIZER_WHATSAPP',
@@ -77,7 +80,7 @@ _Au plaisir de vous accueillir très bientôt !_
 👉 Voir la liste des invités :
 {{dashboardUrl}}
 
-_EventMaster — suivi en temps réel_`,
+_{{orgName}} — suivi en temps réel_`,
     },
     {
         type: 'CONTACT_ADMIN_WHATSAPP',

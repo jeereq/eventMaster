@@ -192,7 +192,7 @@ async function findGuestsByIdentity(guest) {
                     description: true,
                     date: true,
                     location: true,
-                    tenant: { select: { name: true } },
+                    tenant: { select: { name: true, branding: true } },
                 },
             },
         },

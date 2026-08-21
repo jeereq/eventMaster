@@ -8,6 +8,8 @@ const router = (0, express_1.Router)();
 router.get('/:guestId/legal-status', legalController_1.getGuestLegalStatusHandler);
 router.post('/:guestId/legal-accept', legalController_1.acceptGuestLegalHandler);
 router.get('/:guestId/invitations', rsvpController_1.getGuestAllInvitations);
+router.get('/:guestId/seating-invitation.pdf', rsvpController_1.downloadSeatingInvitationPdf);
+router.get('/:guestId/qr.png', rsvpController_1.getGuestQrPng);
 router.get('/:guestId', rsvpController_1.getGuestRsvpDetails);
 router.post('/:guestId', rsvpController_1.submitRsvp);
 // Guest feed and sharing routes

@@ -1,50 +1,13 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getNotificationCredentials = getNotificationCredentials;
 exports.isSendGridConfigured = isSendGridConfigured;
 exports.isUltraMsgConfigured = isUltraMsgConfigured;
 exports.assertSendGridConfigured = assertSendGridConfigured;
 exports.logNotificationConfigStatus = logNotificationConfigStatus;
-const fs_1 = __importDefault(require("fs"));
-const path_1 = __importDefault(require("path"));
-const settingsFilePath = path_1.default.join(__dirname, 'settings.json');
-function readSettingsFile() {
-    try {
-        if (fs_1.default.existsSync(settingsFilePath)) {
-            return JSON.parse(fs_1.default.readFileSync(settingsFilePath, 'utf-8'));
-        }
-    }
-    catch (error) {
-        console.warn('[Notification Config] Impossible de lire settings.json:', error);
-    }
-    return {};
-}
-function pickString(settings, settingsKey, envKey, fallback = '') {
-    const fromSettings = settings[settingsKey];
-    if (typeof fromSettings === 'string' && fromSettings.trim()) {
-        return fromSettings.trim();
-    }
-    const fromEnv = process.env[envKey];
-    if (fromEnv?.trim()) {
-        return fromEnv.trim();
-    }
-    return fallback;
-}
-/** Lit settings.json (panneau admin) avec repli sur les variables d'environnement. */
+const platformSettingsService_1 = require("../services/platformSettingsService");
 function getNotificationCredentials() {
-    const settings = readSettingsFile();
-    return {
-        sendgridApiKey: pickString(settings, 'sendgridApiKey', 'SENDGRID_API_KEY'),
-        sendgridFrom: pickString(settings, 'sendgridFrom', 'SENDGRID_FROM', 'no-reply@eventmaster.cd'),
-        twilioSid: pickString(settings, 'twilioAccountSid', 'TWILIO_ACCOUNT_SID'),
-        twilioAuthToken: pickString(settings, 'twilioAuthToken', 'TWILIO_AUTH_TOKEN'),
-        twilioPhone: pickString(settings, 'twilioPhoneNumber', 'TWILIO_PHONE_NUMBER'),
-        ultramsgInstanceId: pickString(settings, 'ultramsgInstanceId', 'ULTRAMSG_INSTANCE_ID'),
-        ultramsgToken: pickString(settings, 'ultramsgToken', 'ULTRAMSG_TOKEN'),
-    };
+    return (0, platformSettingsService_1.getNotificationCredentials)();
 }
 function isSendGridConfigured(credentials = getNotificationCredentials()) {
     return !!(credentials.sendgridApiKey?.trim() && credentials.sendgridFrom?.trim());
@@ -54,13 +17,12 @@ function isUltraMsgConfigured(credentials = getNotificationCredentials()) {
 }
 function assertSendGridConfigured() {
     if (!isSendGridConfigured()) {
-        throw new Error('SendGrid obligatoire pour l\'envoi d\'e-mails. Configurez sendgridApiKey et sendgridFrom dans settings.json ou SENDGRID_API_KEY / SENDGRID_FROM.');
+        throw new Error("SendGrid obligatoire pour l'envoi d'e-mails. Configurez sendgridApiKey et sendgridFrom dans les réglages plateforme (ou SENDGRID_API_KEY / SENDGRID_FROM).");
     }
 }
 function logNotificationConfigStatus() {
     const creds = getNotificationCredentials();
-    const settingsExists = fs_1.default.existsSync(settingsFilePath);
-    console.log(`[Notification Config] settings.json ${settingsExists ? 'trouvé' : 'absent'} — credentials chargées depuis le panneau admin et/ou les variables d'environnement.`);
+    console.log("[Notification Config] Credentials chargées depuis les réglages plateforme et/ou les variables d'environnement.");
     if (isSendGridConfigured(creds)) {
         console.log(`[Notification Service] SendGrid configuré (expéditeur: ${creds.sendgridFrom}).`);
     }

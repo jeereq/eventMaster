@@ -94,8 +94,8 @@ export default function TablePlanner({
  const [draggingTableId, setDraggingTableId] = useState<string | null>(null);
  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
- // Filter guests who accepted the invitation
- const acceptedGuests = guests.filter(g => g.rsvp === 'ACCEPTED');
+ // Filter guests who are eligible for seating (not declined)
+ const placeableGuests = guests.filter(g => g.rsvp !== 'DECLINED');
 
  // Get list of assigned guest IDs
  const assignedGuestIds = new Set<string>();
@@ -105,13 +105,13 @@ export default function TablePlanner({
  });
  });
 
- // Unassigned accepted guests
- const unassignedGuests = acceptedGuests.filter(g => !assignedGuestIds.has(g.id));
+ // Unassigned eligible guests
+ const unassignedGuests = placeableGuests.filter(g => !assignedGuestIds.has(g.id));
 
  // Auto-seat "Placement Magique"
  const handleAutoSeat = () => {
    if (unassignedGuests.length === 0) {
-     alert("Tous les invités ayant accepté sont déjà placés !");
+     alert("Tous les invités à placer le sont déjà !");
      return;
    }
    if (tables.length === 0) {
@@ -148,7 +148,7 @@ export default function TablePlanner({
      for (let i = 0; i < totalSeats; i++) {
        const gid = table.seats[i];
        if (gid) {
-         const g = acceptedGuests.find(guest => guest.id === gid);
+         const g = placeableGuests.find(guest => guest.id === gid);
          if (g && g.category) existingCats.push(g.category);
        }
      }
@@ -356,7 +356,7 @@ export default function TablePlanner({
    for (let i = 0; i < totalSeats; i++) {
      const gid = table.seats[i];
      if (gid) {
-       const g = acceptedGuests.find(guest => guest.id === gid);
+       const g = placeableGuests.find(guest => guest.id === gid);
        if (g && g.category) existingCats.push(g.category);
      }
    }
@@ -967,7 +967,7 @@ export default function TablePlanner({
  Invités non placés ({unassignedGuests.length})
  </h3>
  <span className="flex items-center gap-2">
- <span className="text-[10px] font-medium text-primary">{acceptedGuests.length} Présents</span>
+ <span className="text-[10px] font-medium text-primary">{placeableGuests.length} À placer</span>
  <ChevronDown className={cn('w-4 h-4 text-muted xl:hidden transition', guestsOpen && 'rotate-180')} />
  </span>
  </button>
@@ -976,7 +976,7 @@ export default function TablePlanner({
  {unassignedGuests.length === 0 ? (
  <div className="text-center py-8 xl:py-12 text-muted space-y-2">
  <HelpCircle className="w-8 h-8 mx-auto text-muted" />
- <p className="text-xs font-medium">Tous les invités présents ont été placés !</p>
+ <p className="text-xs font-medium">Tous les invités éligibles ont été placés !</p>
  </div>
  ) : (
  unassignedGuests.map(g => (
@@ -1069,7 +1069,7 @@ export default function TablePlanner({
  Sélectionner un invité présent ({unassignedGuests.length} disponibles)
  </label>
  {unassignedGuests.length === 0 ? (
- <p className="text-xs text-muted italic">Tous vos invités présents ont déjà une place attribuée.</p>
+ <p className="text-xs text-muted italic">Tous les invités éligibles ont déjà une place attribuée.</p>
  ) : (
  <div className="max-h-60 overflow-y-auto border border-border rounded-[var(--radius-card)] divide-y divide-border">
  {unassignedGuests.map(g => (
