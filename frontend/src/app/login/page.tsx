@@ -79,11 +79,11 @@ function LoginPageContent() {
   return (
     <AuthSplitLayout
       badge={isClientFlow ? 'Compte client' : 'Plateforme tout-en-un'}
-      title={isClientFlow ? 'Connectez-vous pour retrouver vos demandes et billets.' : 'Organisez des événements privés inoubliables.'}
+      title={isClientFlow ? 'Connectez-vous pour retrouver vos demandes et billets.' : 'Heureux de vous revoir !'}
       description={
         isClientFlow
           ? 'Après connexion, vous revenez à la fiche. Un compte est requis pour un devis, une réservation ou un billet.'
-          : 'EventMaster simplifie chaque étape de l’organisation de vos mariages, anniversaires, conférences et soirées privées.'
+          : 'Retrouvez votre centre de commande et continuez à organiser vos événements en toute sérénité.'
       }
       features={isClientFlow ? CLIENT_FEATURES : FEATURES}
       backHref="/"
@@ -96,9 +96,9 @@ function LoginPageContent() {
           </div>
           <h2 className="text-2xl font-semibold text-foreground tracking-tight">Connexion</h2>
           <p className="mt-2 text-sm text-muted">
-            Ravi de vous revoir !{' '}
+            Nouveau ici ?{' '}
             <Link href={registerHref} className="font-semibold text-primary hover:underline">
-              Créez votre compte
+              Commencer l'aventure
             </Link>
           </p>
         </div>

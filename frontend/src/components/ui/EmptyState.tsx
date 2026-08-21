@@ -14,12 +14,12 @@ export default function EmptyState({ icon, title, description, action, className
     <div
       className={cn(
         'flex flex-col items-center justify-center text-center py-12 px-6 rounded-[var(--radius-card)]',
-        'border border-dashed border-border bg-surface-muted/40',
+        'border border-border/60 bg-surface-muted/30 shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)]',
         className,
       )}
     >
       {icon && (
-        <div className="mb-4 inline-flex items-center justify-center w-12 h-12 rounded-[var(--radius-card)] bg-surface border border-border text-primary">
+        <div className="mb-4 inline-flex items-center justify-center w-12 h-12 rounded-full bg-surface border border-border/80 text-primary shadow-sm">
           {icon}
         </div>
       )}

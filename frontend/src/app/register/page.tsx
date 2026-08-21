@@ -35,41 +35,41 @@ const SIGNUP_FLOWS: Record<
   ORGANIZER: {
     title: LANDING_SLOGAN.full,
     description:
-      'Créez l’événement, invitez, accueillez. Modèles d’invitation, plan de table et scan QR — dans le même espace.',
+      'Créez l’événement, invitez, accueillez. Retrouvez la sérénité avec un centre de commande unifié pour toutes vos célébrations.',
     features: [
-      { step: 1, icon: Calendar, title: 'Créer', desc: 'Titre, date, lieu. Un modèle d’invitation si vous voulez.' },
-      { step: 2, icon: Mail, title: 'Inviter', desc: 'Un lien par personne. Ils répondent. Vous suivez.' },
-      { step: 3, icon: ScanLine, title: 'Accueillir', desc: 'Scan du badge QR à l’entrée, depuis le téléphone.' },
+      { step: 1, icon: Calendar, title: 'Créer', desc: 'Titre, date, lieu. Un modèle d’invitation prêt en un clic.' },
+      { step: 2, icon: Mail, title: 'Inviter', desc: 'Un lien par personne. Suivez les réponses sans aucun stress.' },
+      { step: 3, icon: ScanLine, title: 'Accueillir', desc: 'Scannez vos invités à l’entrée, directement depuis votre smartphone.' },
     ],
   },
   CLIENT: {
-    title: 'Trouvez salle et prestas en un clic.',
+    title: 'Trouvez la perle rare, tout simplement.',
     description:
-      'Compte gratuit. Cherchez, composez un pack, demandez un devis. L’acompte ({depositPercent} %) se verse au professionnel, hors EventMaster.',
+      'Compte gratuit. Cherchez, comparez et demandez un devis sans engagement. L’acompte ({depositPercent} %) se verse directement au professionnel.',
     features: [
-      { step: 1, icon: LayoutGrid, title: 'Chercher', desc: 'Salles, métiers, locations. Filtrez par ville et prix.' },
-      { step: 2, icon: Wallet, title: 'Composer', desc: 'Un pack selon votre budget. Rien n’est réservé tant que vous n’envoyez pas le devis.' },
-      { step: 3, icon: CalendarCheck, title: 'Demander un devis', desc: 'Après acceptation, l’acompte ({depositPercent} %) se verse au pro, hors plateforme.' },
+      { step: 1, icon: LayoutGrid, title: 'Explorer', desc: 'Salles, métiers, locations. Trouvez exactement ce qu\'il vous faut.' },
+      { step: 2, icon: Wallet, title: 'Composer', desc: 'Un pack sur mesure. Rien n’est réservé tant que le devis n\'est pas envoyé.' },
+      { step: 3, icon: CalendarCheck, title: 'Confirmer', desc: 'Versez l’acompte ({depositPercent} %) au pro, hors plateforme, et sécurisez votre date.' },
     ],
   },
   VENDOR: {
-    title: 'Publiez vos offres en un clic.',
+    title: 'Donnez de la visibilité à votre activité.',
     description:
-      'Une fiche, les demandes arrivent, vous bloquez la date. Commission vendeur {commissionPercent} % sur les réservations confirmées.',
+      'Publiez votre fiche, recevez des demandes qualifiées et bloquez vos dates. Commission vendeur {commissionPercent} % sur les réservations confirmées.',
     features: [
-      { step: 1, icon: Store, title: 'Publier', desc: 'Photos, tarif, ville. Salle, métier ou location.' },
-      { step: 2, icon: MessageSquare, title: 'Répondre', desc: 'Les devis arrivent dans votre desk. Contactez, puis convertissez.' },
-      { step: 3, icon: CalendarCheck, title: 'Bloquer la date', desc: 'Acompte hors EventMaster. Vous confirmez : la date est prise.' },
+      { step: 1, icon: Store, title: 'Publier', desc: 'Photos, tarif, ville. Une belle vitrine pour vos salles ou vos talents.' },
+      { step: 2, icon: MessageSquare, title: 'Répondre', desc: 'Recevez les demandes et discutez avec vos futurs clients.' },
+      { step: 3, icon: CalendarCheck, title: 'Bloquer la date', desc: 'Acceptez l\'acompte, confirmez la réservation et préparez l\'événement.' },
     ],
   },
   BOTH: {
-    title: LANDING_SLOGAN.full,
+    title: 'Le meilleur des deux mondes.',
     description:
-      'Organisez une fête et publiez vos offres, dans le même compte. Un forfait à la fois.',
+      'Organisez vos événements et proposez vos propres services. Maîtrisez tout depuis un seul compte.',
     features: [
-      { step: 1, icon: Calendar, title: 'Créer ou publier', desc: 'Un événement, ou une fiche salle / presta.' },
-      { step: 2, icon: Mail, title: 'Inviter et répondre', desc: 'Liens RSVP côté fête. Devis côté offres.' },
-      { step: 3, icon: ScanLine, title: 'Jour J', desc: 'Scan QR, dates bloquées. Tout dans le navigateur.' },
+      { step: 1, icon: Calendar, title: 'Créer ou publier', desc: 'Un événement privé ou une fiche vitrine publique.' },
+      { step: 2, icon: Mail, title: 'Échanger', desc: 'Gérez vos invitations d\'un côté, et vos devis clients de l\'autre.' },
+      { step: 3, icon: ScanLine, title: 'Le Jour J', desc: 'Accueil fluide au scan QR, sans aucune application à installer.' },
     ],
   },
 };
