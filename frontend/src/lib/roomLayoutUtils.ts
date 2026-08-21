@@ -234,6 +234,12 @@ export interface RoomLayoutBlueprint {
     roomThemeId?: string;
     floorType?: import('@/lib/roomThemeUtils').FloorType;
     floorImageUrl?: string;
+    /**
+     * Affichage de l’image de sol / plan :
+     * - cover = plan importé (image entière, sans tuilage)
+     * - tile = texture répétée
+     */
+    floorImageFit?: 'cover' | 'tile';
     /** Teinte / couleur dominante du sol (architecture). */
     floorColor?: string;
     /** Afficher le toit / plafond en 3D. */
@@ -1389,6 +1395,7 @@ function mergeTemplateStyle(
       roomThemeId: previous.metadata.roomThemeId,
       floorType: previous.metadata.floorType,
       floorImageUrl: previous.metadata.floorImageUrl,
+      floorImageFit: previous.metadata.floorImageFit,
       depthView: previous.metadata.depthView,
       depthAmount: previous.metadata.depthAmount,
       defaultTableColor: previous.metadata.defaultTableColor,
@@ -2160,6 +2167,7 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
     roomThemeId: blueprint.metadata.roomThemeId,
     floorType: blueprint.metadata.floorType,
     floorImageUrl: blueprint.metadata.floorImageUrl,
+    floorImageFit: blueprint.metadata.floorImageFit,
     floorColor: blueprint.metadata.floorColor,
     depthAmount: blueprint.metadata.depthAmount ?? (blueprint.metadata.depthView ? 55 : 0),
     depthView: Boolean(blueprint.metadata.depthView || (blueprint.metadata.depthAmount ?? 0) > 0),

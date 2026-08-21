@@ -115,12 +115,12 @@ function LightingExposure({ exposure }: { exposure: number }) {
 /** Midi = ombres dures (Basic) ; crépuscule/nuit = douces si qualité soft. */
 function ShadowHardness({ hard, softPreferred }: { hard: boolean; softPreferred: boolean }) {
   const { gl } = useThree();
+  const type = hard || !softPreferred ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
   useEffect(() => {
-    gl.shadowMap.type = hard || !softPreferred
-      ? THREE.BasicShadowMap
-      : THREE.PCFSoftShadowMap;
+    if (gl.shadowMap.type === type) return;
+    gl.shadowMap.type = type;
     gl.shadowMap.needsUpdate = true;
-  }, [gl, hard, softPreferred]);
+  }, [gl, type]);
   return null;
 }
 
@@ -162,7 +162,7 @@ function ScenicLights({
       ) : null}
 
       {lighting.showStars ? (
-        <Stars radius={100} depth={60} count={4200} factor={3.2} saturation={0} fade speed={0.2} />
+        <Stars radius={100} depth={60} count={3200} factor={2.6} saturation={0} fade={false} speed={0} />
       ) : null}
 
       {lighting.showSky && !isNight ? (
@@ -404,6 +404,7 @@ function FloorPlane({
   heightM,
   floorType,
   floorImageUrl,
+  floorImageFit,
   floorColor,
   outline,
   onPointerMissed,
@@ -412,13 +413,14 @@ function FloorPlane({
   heightM: number;
   floorType?: import('@/lib/roomThemeUtils').FloorType;
   floorImageUrl?: string;
+  floorImageFit?: 'cover' | 'tile';
   floorColor?: string;
   outline?: RoomLayoutBlueprint['roomOutline'];
   onPointerMissed?: () => void;
 }) {
   const mat = useMemo(
-    () => resolveFloorMap(floorType, floorImageUrl, widthM, heightM, floorColor),
-    [floorType, floorImageUrl, floorColor, widthM, heightM],
+    () => resolveFloorMap(floorType, floorImageUrl, widthM, heightM, floorColor, floorImageFit),
+    [floorType, floorImageUrl, floorImageFit, floorColor, widthM, heightM],
   );
 
   const shapeGeo = useMemo(() => {
@@ -441,7 +443,7 @@ function FloorPlane({
     <mesh
       geometry={shapeGeo ?? undefined}
       rotation={shapeGeo ? [0, 0, 0] : [-Math.PI / 2, 0, 0]}
-      position={[0, 0, 0]}
+      position={[0, -0.002, 0]}
       receiveShadow
       onClick={(e) => {
         e.stopPropagation();
@@ -449,11 +451,17 @@ function FloorPlane({
       }}
     >
       {!shapeGeo && <planeGeometry args={[widthM, heightM]} />}
-      <meshStandardMaterial
+      <meshPhysicalMaterial
         color={mat.color}
         map={mat.map ?? undefined}
         roughness={mat.roughness}
         metalness={mat.metalness}
+        clearcoat={mat.clearcoat}
+        clearcoatRoughness={mat.clearcoat > 0 ? 0.2 : 1}
+        envMapIntensity={mat.envMapIntensity}
+        polygonOffset
+        polygonOffsetFactor={1}
+        polygonOffsetUnits={1}
       />
     </mesh>
   );
@@ -931,7 +939,7 @@ function WallMesh({
         const cx = (brick.x0 + brick.x1) / 2;
         const cy = (brick.y0 + brick.y1) / 2 - wallH / 2;
         return (
-          <mesh key={`brick-${idx}-${bw.toFixed(2)}-${bh.toFixed(2)}`} position={[cx, cy, 0]} castShadow receiveShadow>
+          <mesh key={`brick-${idx}`} position={[cx, cy, 0]} castShadow receiveShadow>
             <boxGeometry args={[bw, bh, thick]} />
             <meshStandardMaterial
               color={selected ? '#c7d2fe' : mat.color}
@@ -940,6 +948,10 @@ function WallMesh({
               metalness={mat.metalness}
               emissive={selected ? '#312e81' : '#000000'}
               emissiveIntensity={selected ? 0.2 : 0}
+              envMapIntensity={0.45}
+              polygonOffset
+              polygonOffsetFactor={1}
+              polygonOffsetUnits={1}
             />
           </mesh>
         );
@@ -956,7 +968,7 @@ function WallMesh({
       </mesh>
       {openings.map((op) => (
         <OpeningMesh
-          key={`${op.id}-${op.style}-${op.material}-${op.color}-${op.frameColor}-${op.widthM}-${op.heightM}-${op.t}-${op.sillM}-${op.hasMat}-${op.matColor}`}
+          key={op.id}
           opening={op}
           wallLengthM={length}
           wallHeightM={wallH}
@@ -1668,16 +1680,18 @@ function SceneContent({
 
       {qualitySettings.contactShadows ? (
         <ContactShadows
-          position={[0, 0.02, 0]}
+          position={[0, 0.028, 0]}
           opacity={
             qualitySettings.contactShadowsOpacity
-            * (lighting.preset === 'night' ? 0.55 : lighting.preset === 'dusk' ? 0.85 : 1)
+            * (lighting.preset === 'night' ? 0.45 : lighting.preset === 'dusk' ? 0.75 : 0.85)
+            * (blueprint.metadata.floorImageFit === 'cover' || blueprint.metadata.floorImageUrl ? 0.55 : 1)
           }
           scale={Math.max(widthM, heightM) * 1.35}
           blur={qualitySettings.contactShadowsBlur * (lighting.preset === 'dusk' ? 1.15 : 1)}
-          far={10}
-          resolution={qualitySettings.contactShadowsResolution}
+          far={8}
+          resolution={Math.min(qualitySettings.contactShadowsResolution, 1024)}
           color={lighting.preset === 'night' ? '#020617' : lighting.preset === 'dusk' ? '#431407' : '#1c1917'}
+          frames={1}
         />
       ) : null}
 
@@ -1686,6 +1700,7 @@ function SceneContent({
         heightM={heightM}
         floorType={floorType}
         floorImageUrl={blueprint.metadata.floorImageUrl}
+        floorImageFit={blueprint.metadata.floorImageFit}
         floorColor={blueprint.metadata.floorColor}
         outline={blueprint.roomOutline}
         onPointerMissed={() => onSelect(null)}

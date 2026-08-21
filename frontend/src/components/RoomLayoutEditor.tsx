@@ -616,16 +616,31 @@ export default function RoomLayoutEditor({
   const setFloorType = (floorType: FloorType) => {
     updateBlueprint({
       ...blueprint,
-      metadata: { ...blueprint.metadata, floorType, floorImageUrl: undefined },
+      metadata: { ...blueprint.metadata, floorType, floorImageUrl: undefined, floorImageFit: undefined },
     }, { message: `Sol : ${floorTypeLabels[floorType]}`, kind: 'settings' });
   };
 
+  /** Texture de sol répétée (photo). */
   const setFloorImage = async (file: File) => {
     const url = await readImageFile(file);
     updateBlueprint({
       ...blueprint,
-      metadata: { ...blueprint.metadata, floorImageUrl: url, floorType: 'custom' },
-    }, { message: 'Image de sol importée', kind: 'settings' });
+      metadata: { ...blueprint.metadata, floorImageUrl: url, floorType: 'custom', floorImageFit: 'tile' },
+    }, { message: 'Texture de sol importée', kind: 'settings' });
+  };
+
+  /** Plan de salle complet (image entière affichée sur le sol). */
+  const importRoomPlanImage = async (file: File) => {
+    const url = await readImageFile(file);
+    updateBlueprint({
+      ...blueprint,
+      metadata: {
+        ...blueprint.metadata,
+        floorImageUrl: url,
+        floorType: 'custom',
+        floorImageFit: 'cover',
+      },
+    }, { message: 'Plan de salle importé depuis l’image', kind: 'settings' });
   };
 
   const activeTheme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
@@ -1220,31 +1235,63 @@ export default function RoomLayoutEditor({
                   </div>
                 </div>
                 {caps.canCustomImages ? (
-                  <label className="block text-xs space-y-1">
-                    <span className="font-semibold text-muted flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> Importer une texture (photo de sol)</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="w-full text-[10px]"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (file) await setFloorImage(file);
-                        e.target.value = '';
-                      }}
-                    />
+                  <div className="space-y-3">
+                    <label className="block text-xs space-y-1">
+                      <span className="font-semibold text-muted flex items-center gap-1">
+                        <ImagePlus className="w-3.5 h-3.5" /> Importer un plan de salle (image)
+                      </span>
+                      <p className="text-[10px] text-muted font-normal leading-relaxed">
+                        Photo ou scan du plan : affiché en entier sous le mobilier (repère pour placer tables &amp; allées).
+                      </p>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="w-full text-[10px]"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) await importRoomPlanImage(file);
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                    <label className="block text-xs space-y-1">
+                      <span className="font-semibold text-muted flex items-center gap-1">
+                        <ImagePlus className="w-3.5 h-3.5" /> Texture de sol (mosaïque)
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="w-full text-[10px]"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) await setFloorImage(file);
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
                     {blueprint.metadata.floorImageUrl && (
-                      <button
-                        type="button"
-                        className="text-[10px] text-rose-600 font-bold"
-                        onClick={() => updateBlueprint({
-                          ...blueprint,
-                          metadata: { ...blueprint.metadata, floorImageUrl: undefined, floorType: activeTheme.defaultFloorType },
-                        }, { message: 'Image de sol retirée', kind: 'settings' })}
-                      >
-                        Retirer l&apos;image de sol
-                      </button>
+                      <div className="flex flex-wrap gap-2 items-center">
+                        <span className="text-[10px] font-bold text-primary">
+                          {blueprint.metadata.floorImageFit === 'cover' ? 'Plan importé' : 'Texture tuilée'}
+                        </span>
+                        <button
+                          type="button"
+                          className="text-[10px] text-rose-600 font-bold"
+                          onClick={() => updateBlueprint({
+                            ...blueprint,
+                            metadata: {
+                              ...blueprint.metadata,
+                              floorImageUrl: undefined,
+                              floorImageFit: undefined,
+                              floorType: activeTheme.defaultFloorType,
+                            },
+                          }, { message: 'Image de plan / sol retirée', kind: 'settings' })}
+                        >
+                          Retirer l&apos;image
+                        </button>
+                      </div>
                     )}
-                  </label>
+                  </div>
                 ) : null}
                   </div>
                 </div>
@@ -2533,6 +2580,22 @@ export default function RoomLayoutEditor({
       <button type="button" onClick={addTable} className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-[var(--radius-button)] text-xs font-bold shadow-sm">
         <Plus className="w-3.5 h-3.5" /> Table
       </button>
+      {caps.canCustomImages ? (
+        <label className="inline-flex items-center gap-1 px-3 py-1.5 bg-sky-50 border border-sky-200 text-sky-900 rounded-[var(--radius-button)] text-xs font-bold cursor-pointer">
+          <ImagePlus className="w-3.5 h-3.5" />
+          Importer plan
+          <input
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (file) await importRoomPlanImage(file);
+              e.target.value = '';
+            }}
+          />
+        </label>
+      ) : null}
       {caps.canAddRows ? (
         <>
           <button type="button" onClick={addRow} className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-border text-foreground rounded-[var(--radius-button)] text-xs font-bold">

@@ -13,8 +13,7 @@ function configureMap(tex: THREE.Texture, repeatX: number, repeatY: number) {
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   tex.repeat.set(Math.max(0.5, repeatX), Math.max(0.5, repeatY));
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 16;
-  tex.needsUpdate = true;
+  tex.anisotropy = 8;
   return tex;
 }
 
@@ -30,16 +29,53 @@ export function loadTiledTexture(url: string, repeatX: number, repeatY: number):
   return tex;
 }
 
+/** Image de plan : un seul panneau, sans répétition (évite le mosaïque). */
+export function loadCoverTexture(url: string): THREE.Texture {
+  const key = `cover:${url}`;
+  const cached = textureCache.get(key);
+  if (cached) return cached;
+
+  const loader = new THREE.TextureLoader();
+  const tex = loader.load(url);
+  tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.repeat.set(1, 1);
+  tex.offset.set(0, 0);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  textureCache.set(key, tex);
+  return tex;
+}
+
 export function resolveFloorMap(
   floorType: FloorType | undefined,
   floorImageUrl: string | undefined,
   widthM: number,
   heightM: number,
   floorColor?: string,
-): { map: THREE.Texture | null; color: string; roughness: number; metalness: number } {
+  floorImageFit?: 'cover' | 'tile',
+): {
+  map: THREE.Texture | null;
+  color: string;
+  roughness: number;
+  metalness: number;
+  clearcoat: number;
+  envMapIntensity: number;
+  isPlan: boolean;
+} {
   if (floorImageUrl) {
-    const map = loadTiledTexture(floorImageUrl, widthM / 3.5, heightM / 3.5);
-    return { map, color: floorColor && floorColor !== '#ffffff' ? floorColor : '#ffffff', roughness: 0.75, metalness: 0.05 };
+    const isPlan = floorImageFit !== 'tile';
+    const map = isPlan
+      ? loadCoverTexture(floorImageUrl)
+      : loadTiledTexture(floorImageUrl, widthM / 3.5, heightM / 3.5);
+    return {
+      map,
+      color: floorColor && floorColor !== '#ffffff' ? floorColor : '#ffffff',
+      roughness: isPlan ? 0.82 : 0.7,
+      metalness: 0.04,
+      clearcoat: 0,
+      envMapIntensity: isPlan ? 0.25 : 0.45,
+      isPlan,
+    };
   }
   const type = floorType && floorType !== 'custom' ? floorType : 'parquet';
   const asset = getFloorAsset(type);
@@ -48,21 +84,28 @@ export function resolveFloorMap(
 
   let roughness = 0.72;
   let metalness = 0.04;
+  let clearcoat = 0;
+  let envMapIntensity = 0.4;
   if (
     type === 'epoxy' || type === 'marbre' || type === 'epoxyMenthe'
     || type === 'marbreCalacatta' || type === 'marbreOr' || type === 'marbreBourgogne'
   ) {
     roughness = type === 'epoxyMenthe' || type === 'marbreCalacatta' || type === 'marbreOr' ? 0.08 : 0.18;
-    metalness = 0.16;
+    metalness = 0.12;
+    clearcoat = 0.85;
+    envMapIntensity = 1.1;
   } else if (type === 'moquette' || type === 'herbe' || type === 'pelouse' || type === 'prairie' || type === 'gazonSynth') {
     roughness = 0.98;
     metalness = 0;
+    envMapIntensity = 0.15;
   } else if (type === 'beton' || type === 'pavesPinwheel' || type === 'pavesGranit') {
     roughness = 0.88;
     metalness = 0.04;
+    envMapIntensity = 0.3;
   } else if (type === 'pierreModulaire' || type === 'dallesIrregulieres') {
     roughness = 0.78;
     metalness = 0.05;
+    envMapIntensity = 0.35;
   } else if (
     type === 'parquet' || type === 'chevron' || type === 'chevronGris' || type === 'chevronGreige'
     || type === 'bois' || type === 'boisPanel' || type === 'boisHex' || type === 'boisAmber'
@@ -73,11 +116,21 @@ export function resolveFloorMap(
       type === 'boisAmber' ? 0.38 :
       type === 'boisBlond' || type === 'chevronGreige' ? 0.55 :
       type === 'boisPanel' || type === 'boisMarqueterie' ? 0.62 : 0.48;
-    metalness = 0.06;
+    metalness = 0.05;
+    clearcoat = type === 'boisAmber' || type === 'boisBlond' ? 0.25 : 0.1;
+    envMapIntensity = 0.55;
   }
 
   const tint = floorColor && floorColor !== '#ffffff' ? floorColor : asset.fallback;
-  return { map, color: floorColor ? tint : '#ffffff', roughness, metalness };
+  return {
+    map,
+    color: floorColor ? tint : '#ffffff',
+    roughness,
+    metalness,
+    clearcoat,
+    envMapIntensity,
+    isPlan: false,
+  };
 }
 
 function makeCanvasTexture(
@@ -101,8 +154,7 @@ function makeCanvasTexture(
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 16;
-  tex.needsUpdate = true;
+  tex.anisotropy = 8;
   canvasCache.set(key, tex);
   return tex;
 }
