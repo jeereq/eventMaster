@@ -2,7 +2,7 @@
 
 import React, { Suspense, useMemo, useRef, useCallback, useEffect } from 'react';
 import { Canvas, ThreeEvent, useThree } from '@react-three/fiber';
-import { OrbitControls, Html } from '@react-three/drei';
+import { OrbitControls, Html, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
 import {
   RoomLayoutBlueprint,
@@ -23,9 +23,11 @@ import { getRoomTheme } from '@/lib/roomThemeUtils';
 import { getTableSeatPlacement3D } from '@/lib/tablePlanUtils';
 import {
   getWallTexture,
+  getStairWoodMap,
   resolveChairMap,
   resolveChairVisual,
   resolveFloorMap,
+  resolveSeatFabricMap,
   resolveTableMaterial,
   resolveZoneMaterialMap,
 } from '@/lib/roomWebGLMaterials';
@@ -40,8 +42,9 @@ export interface WebGLSelection {
 
 interface RoomWebGLViewerProps {
   blueprint: RoomLayoutBlueprint;
-  selected: WebGLSelection | null;
-  onSelect: (sel: WebGLSelection | null) => void;
+  /** Sélection simple ou multiple. */
+  selected: WebGLSelection[];
+  onSelect: (sel: WebGLSelection | null, opts?: { additive?: boolean }) => void;
   onMoveItem?: (kind: WebGLSelectableKind, id: string, xPct: number, yPct: number) => void;
   onMoveEnd?: () => void;
   readOnly?: boolean;
@@ -465,7 +468,7 @@ function WallMesh({
   widthM: number;
   heightM: number;
   selected: boolean;
-  onSelect: () => void;
+  onSelect: (mods?: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean }) => void;
   paintColor?: string;
 }) {
   const [sx, sz] = pctToWorld(wall.start.x, wall.start.y, widthM, heightM);
@@ -492,7 +495,7 @@ function WallMesh({
       rotation={[0, -angle, 0]}
       onClick={(e) => {
         e.stopPropagation();
-        onSelect();
+        onSelect({ shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
       }}
     >
       <mesh castShadow receiveShadow>
@@ -505,6 +508,16 @@ function WallMesh({
           emissive={selected ? '#312e81' : '#000000'}
           emissiveIntensity={selected ? 0.2 : 0}
         />
+      </mesh>
+      {/* Plinthe */}
+      <mesh position={[0, -wallH / 2 + 0.06, thick * 0.55]} castShadow receiveShadow>
+        <boxGeometry args={[length * 0.995, 0.12, 0.04]} />
+        <meshStandardMaterial color="#3f3f46" roughness={0.7} metalness={0.05} />
+      </mesh>
+      {/* Corniche haute */}
+      <mesh position={[0, wallH / 2 - 0.04, thick * 0.45]} castShadow>
+        <boxGeometry args={[length * 0.995, 0.06, 0.05]} />
+        <meshStandardMaterial color="#e7e5e4" roughness={0.85} metalness={0.02} />
       </mesh>
       {(wall.openings ?? []).map((op) => (
         <OpeningMesh
@@ -540,64 +553,129 @@ function RealisticChair({
     () => resolveChairVisual(chairType, chairStyle, seatMaterial),
     [chairType, chairStyle, seatMaterial],
   );
-  const map = useMemo(() => resolveChairMap(imageUrl), [imageUrl]);
+  const fabric = useMemo(
+    () => resolveSeatFabricMap(seatMaterial, visual.seatColor),
+    [seatMaterial, visual.seatColor],
+  );
+  const map = useMemo(() => resolveChairMap(imageUrl) ?? fabric.map, [imageUrl, fabric.map]);
   const seatH = 0.42 * visual.scale;
   const [sw0, sh0, sd0] = visual.seatSize;
   const sw = sw0 * visual.scale;
   const sh = sh0 * visual.scale;
   const sd = sd0 * visual.scale;
   const backH = visual.backHeight * visual.scale;
+  const isArmchair = chairType === 'ARMCHAIR' || chairStyle === 'lounge' || chairStyle === 'club' || chairStyle === 'bergere';
+  const seatColor = selected ? '#a5b4fc' : '#ffffff';
+  const frameMetal = chairStyle === 'chiavari' || chairType === 'FOLDING';
 
   return (
-    <group position={position} rotation={[0, rotationY, 0]} scale={visual.scale > 1.2 ? 1 : 1}>
-      {([-1, 1] as const).flatMap((sx) =>
+    <group position={position} rotation={[0, rotationY, 0]}>
+      {/* Pieds */}
+      {chairType !== 'STOOL' && ([-1, 1] as const).flatMap((sx) =>
         ([-1, 1] as const).map((sz) => (
-          <mesh key={`${sx}-${sz}`} position={[sx * sw * 0.35, seatH / 2, sz * sd * 0.35]} castShadow>
-            <cylinderGeometry args={[0.025, 0.03, seatH, 8]} />
-            <meshStandardMaterial color={visual.frameColor} metalness={0.55} roughness={0.35} />
+          <mesh key={`${sx}-${sz}`} position={[sx * sw * 0.38, seatH / 2, sz * sd * 0.36]} castShadow>
+            <cylinderGeometry args={[frameMetal ? 0.012 : 0.022, frameMetal ? 0.016 : 0.028, seatH, 10]} />
+            <meshStandardMaterial
+              color={visual.frameColor}
+              metalness={frameMetal ? 0.75 : 0.35}
+              roughness={frameMetal ? 0.25 : 0.45}
+            />
           </mesh>
         )),
       )}
-      <mesh position={[0, seatH, 0]} castShadow receiveShadow>
-        <boxGeometry args={[sw, sh, sd]} />
-        <meshStandardMaterial
-          color={selected ? '#a5b4fc' : visual.seatColor}
-          map={map ?? undefined}
-          roughness={visual.cushion ? 0.9 : 0.5}
-          metalness={seatMaterial === 'leather' ? 0.15 : 0.05}
-        />
-      </mesh>
-      {backH > 0 && (
-        <mesh position={[0, seatH + backH / 2, -sd * 0.42]} castShadow>
-          <boxGeometry args={[sw * (chairStyle === 'bergere' ? 1 : 0.92), backH, chairStyle === 'lounge' ? 0.12 : 0.05]} />
-          <meshStandardMaterial
-            color={selected ? '#a5b4fc' : visual.seatColor}
-            map={map ?? undefined}
-            roughness={0.8}
-          />
+      {/* Structure assise */}
+      {chairType !== 'STOOL' && (
+        <mesh position={[0, seatH - sh * 0.15, 0]} castShadow>
+          <boxGeometry args={[sw * 1.02, sh * 0.45, sd * 1.02]} />
+          <meshStandardMaterial color={visual.frameColor} metalness={0.25} roughness={0.5} />
         </mesh>
       )}
+      {/* Coussin assise */}
+      <mesh position={[0, seatH + sh * 0.35, 0]} castShadow receiveShadow>
+        {chairType === 'STOOL' ? (
+          <cylinderGeometry args={[sw * 0.48, sw * 0.5, sh * 1.1, 24]} />
+        ) : (
+          <boxGeometry args={[sw, sh * (visual.cushion ? 1.1 : 0.7), sd]} />
+        )}
+        <meshStandardMaterial
+          color={seatColor}
+          map={map}
+          roughness={fabric.roughness}
+          metalness={fabric.metalness}
+        />
+      </mesh>
+      {/* Dossier */}
+      {backH > 0 && (
+        <group position={[0, seatH + backH * 0.42, -sd * 0.42]}>
+          <mesh castShadow>
+            <boxGeometry args={[
+              sw * (chairStyle === 'bergere' || isArmchair ? 1.05 : 0.92),
+              backH,
+              isArmchair ? 0.12 : 0.055,
+            ]} />
+            <meshStandardMaterial
+              color={seatColor}
+              map={map}
+              roughness={fabric.roughness}
+              metalness={fabric.metalness}
+            />
+          </mesh>
+          {isArmchair && (
+            <mesh position={[0, backH * 0.15, 0.02]} castShadow>
+              <boxGeometry args={[sw * 0.9, backH * 0.55, 0.06]} />
+              <meshStandardMaterial color={seatColor} map={map} roughness={0.92} metalness={0.02} />
+            </mesh>
+          )}
+          {/* Barre dossier (chiavari / banquet) */}
+          {(chairStyle === 'chiavari' || chairType === 'BANQUET') && (
+            <mesh position={[0, backH * 0.15, 0.02]} castShadow>
+              <torusGeometry args={[sw * 0.28, 0.012, 8, 20, Math.PI]} />
+              <meshStandardMaterial color={visual.frameColor} metalness={0.7} roughness={0.3} />
+            </mesh>
+          )}
+        </group>
+      )}
+      {/* Accoudoirs */}
       {visual.hasArms && (
         <>
-          <mesh position={[-sw * 0.48, seatH + 0.14 * visual.scale, 0]} castShadow>
-            <boxGeometry args={[0.06, 0.1 * visual.scale, sd * 0.85]} />
-            <meshStandardMaterial color={visual.frameColor} metalness={0.4} roughness={0.4} />
-          </mesh>
-          <mesh position={[sw * 0.48, seatH + 0.14 * visual.scale, 0]} castShadow>
-            <boxGeometry args={[0.06, 0.1 * visual.scale, sd * 0.85]} />
-            <meshStandardMaterial color={visual.frameColor} metalness={0.4} roughness={0.4} />
-          </mesh>
+          {([-1, 1] as const).map((side) => (
+            <group key={side} position={[side * sw * 0.5, seatH + 0.12 * visual.scale, -sd * 0.05]}>
+              <mesh castShadow>
+                <boxGeometry args={[isArmchair ? 0.09 : 0.055, 0.08 * visual.scale, sd * 0.78]} />
+                <meshStandardMaterial
+                  color={isArmchair ? seatColor : visual.frameColor}
+                  map={isArmchair ? map : undefined}
+                  metalness={isArmchair ? fabric.metalness : 0.4}
+                  roughness={isArmchair ? fabric.roughness : 0.4}
+                />
+              </mesh>
+              <mesh position={[0, -0.1 * visual.scale, sd * 0.15]} castShadow>
+                <cylinderGeometry args={[0.018, 0.02, 0.22 * visual.scale, 8]} />
+                <meshStandardMaterial color={visual.frameColor} metalness={0.45} roughness={0.4} />
+              </mesh>
+            </group>
+          ))}
         </>
+      )}
+      {chairType === 'STOOL' && (
+        <mesh position={[0, seatH * 0.45, 0]} castShadow>
+          <cylinderGeometry args={[0.04, 0.06, seatH * 0.85, 12]} />
+          <meshStandardMaterial color={visual.frameColor} metalness={0.5} roughness={0.35} />
+        </mesh>
       )}
       {chairType === 'WHEELCHAIR' && (
         <>
-          <mesh position={[-sw * 0.4, 0.22, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
-            <torusGeometry args={[0.2, 0.03, 8, 16]} />
-            <meshStandardMaterial color="#111827" metalness={0.6} roughness={0.4} />
+          <mesh position={[-sw * 0.42, 0.22, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+            <torusGeometry args={[0.22, 0.035, 10, 20]} />
+            <meshStandardMaterial color="#111827" metalness={0.65} roughness={0.35} />
           </mesh>
-          <mesh position={[sw * 0.4, 0.22, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
-            <torusGeometry args={[0.2, 0.03, 8, 16]} />
-            <meshStandardMaterial color="#111827" metalness={0.6} roughness={0.4} />
+          <mesh position={[sw * 0.42, 0.22, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+            <torusGeometry args={[0.22, 0.035, 10, 20]} />
+            <meshStandardMaterial color="#111827" metalness={0.65} roughness={0.35} />
+          </mesh>
+          <mesh position={[0, 0.08, sd * 0.45]} castShadow>
+            <sphereGeometry args={[0.06, 12, 12]} />
+            <meshStandardMaterial color="#1f2937" metalness={0.5} roughness={0.4} />
           </mesh>
         </>
       )}
@@ -646,7 +724,7 @@ function TableMesh({
   widthM: number;
   heightM: number;
   selected: boolean;
-  onSelect: () => void;
+  onSelect: (mods?: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean }) => void;
   onDragStart?: () => void;
   readOnly?: boolean;
 }) {
@@ -673,63 +751,88 @@ function TableMesh({
       rotation={[0, ((rotation ?? 0) * Math.PI) / 180, 0]}
       onClick={(e) => {
         e.stopPropagation();
-        onSelect();
+        onSelect({ shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
       }}
       onPointerDown={(e) => {
         if (readOnly || !onDragStart) return;
         e.stopPropagation();
-        onSelect();
+        onSelect({ shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
         onDragStart();
         gl.domElement.style.cursor = 'grabbing';
       }}
     >
       {isRound ? (
-        <mesh position={[0, topY, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[size[0] / 2, size[0] / 2, 0.08, shape === 'oval' ? 28 : 36]} />
-          <meshStandardMaterial
-            color={selected ? '#c7d2fe' : mat.color}
-            map={mat.map ?? undefined}
-            roughness={mat.roughness}
-            metalness={mat.metalness}
-          />
-        </mesh>
+        <>
+          {/* Plateau */}
+          <mesh position={[0, topY, 0]} castShadow receiveShadow>
+            <cylinderGeometry args={[size[0] / 2, size[0] / 2, 0.06, shape === 'oval' ? 36 : 48]} />
+            <meshStandardMaterial
+              color={selected ? '#c7d2fe' : mat.color}
+              map={mat.map ?? undefined}
+              roughness={mat.roughness}
+              metalness={mat.metalness}
+            />
+          </mesh>
+          {/* Chanfrein / bord */}
+          <mesh position={[0, topY - 0.035, 0]} castShadow>
+            <cylinderGeometry args={[size[0] / 2 * 1.01, size[0] / 2 * 0.97, 0.03, 48]} />
+            <meshStandardMaterial color="#5c4030" roughness={0.55} metalness={0.1} />
+          </mesh>
+        </>
       ) : (
-        <mesh position={[0, topY, 0]} castShadow receiveShadow>
-          <boxGeometry args={[size[0], 0.08, size[1]]} />
-          <meshStandardMaterial
-            color={selected ? '#c7d2fe' : mat.color}
-            map={mat.map ?? undefined}
-            roughness={mat.roughness}
-            metalness={mat.metalness}
-          />
-        </mesh>
+        <>
+          <mesh position={[0, topY, 0]} castShadow receiveShadow>
+            <boxGeometry args={[size[0], 0.06, size[1]]} />
+            <meshStandardMaterial
+              color={selected ? '#c7d2fe' : mat.color}
+              map={mat.map ?? undefined}
+              roughness={mat.roughness}
+              metalness={mat.metalness}
+            />
+          </mesh>
+          {/* Ceinture */}
+          <mesh position={[0, topY - 0.08, 0]} castShadow>
+            <boxGeometry args={[size[0] * 0.96, 0.1, size[1] * 0.96]} />
+            <meshStandardMaterial color="#4a3728" roughness={0.6} metalness={0.08} />
+          </mesh>
+        </>
       )}
-      <mesh position={[0, topY + 0.045, 0]} receiveShadow>
+      <mesh position={[0, topY + 0.035, 0]} receiveShadow>
         {isRound ? (
-          <cylinderGeometry args={[size[0] / 2 * 0.92, size[0] / 2 * 0.92, 0.01, 32]} />
+          <cylinderGeometry args={[size[0] / 2 * 0.9, size[0] / 2 * 0.9, 0.012, 40]} />
         ) : (
-          <boxGeometry args={[size[0] * 0.92, 0.01, size[1] * 0.92]} />
+          <boxGeometry args={[size[0] * 0.9, 0.012, size[1] * 0.9]} />
         )}
-        <meshStandardMaterial color="#faf7f2" transparent opacity={0.55} roughness={0.9} />
+        <meshStandardMaterial color="#faf7f2" transparent opacity={0.5} roughness={0.85} metalness={0.02} />
       </mesh>
       {isRound ? (
         <>
           <mesh position={[0, topY / 2, 0]} castShadow>
-            <cylinderGeometry args={[0.07, 0.11, topY, 12]} />
-            <meshStandardMaterial color="#57534e" metalness={0.45} roughness={0.4} />
+            <cylinderGeometry args={[0.055, 0.09, topY - 0.08, 16]} />
+            <meshStandardMaterial color="#6b7280" metalness={0.65} roughness={0.28} />
           </mesh>
-          <mesh position={[0, 0.04, 0]} castShadow>
-            <cylinderGeometry args={[0.35, 0.35, 0.06, 24]} />
-            <meshStandardMaterial color="#44403c" metalness={0.3} roughness={0.5} />
+          <mesh position={[0, topY * 0.55, 0]} castShadow>
+            <torusGeometry args={[0.1, 0.018, 10, 24]} />
+            <meshStandardMaterial color="#9ca3af" metalness={0.8} roughness={0.2} />
+          </mesh>
+          <mesh position={[0, 0.035, 0]} castShadow>
+            <cylinderGeometry args={[0.32, 0.38, 0.07, 28]} />
+            <meshStandardMaterial color="#3f3f46" metalness={0.4} roughness={0.45} />
           </mesh>
         </>
       ) : (
         ([-1, 1] as const).flatMap((sx) =>
           ([-1, 1] as const).map((sz) => (
-            <mesh key={`${sx}-${sz}`} position={[sx * size[0] * 0.38, topY / 2, sz * size[1] * 0.38]} castShadow>
-              <boxGeometry args={[0.07, topY, 0.07]} />
-              <meshStandardMaterial color="#57534e" metalness={0.35} roughness={0.45} />
-            </mesh>
+            <group key={`${sx}-${sz}`} position={[sx * size[0] * 0.4, 0, sz * size[1] * 0.4]}>
+              <mesh position={[0, topY / 2, 0]} castShadow>
+                <boxGeometry args={[0.06, topY - 0.05, 0.06]} />
+                <meshStandardMaterial color="#57534e" metalness={0.4} roughness={0.4} />
+              </mesh>
+              <mesh position={[0, 0.03, 0]} castShadow>
+                <boxGeometry args={[0.1, 0.05, 0.1]} />
+                <meshStandardMaterial color="#44403c" metalness={0.3} roughness={0.5} />
+              </mesh>
+            </group>
           )),
         )
       )}
@@ -738,14 +841,26 @@ function TableMesh({
         const a = (i / Math.max(capacity, 1)) * Math.PI * 2;
         const r = Math.max(size[0], size[1]) * 0.28;
         return (
-          <group key={`c-${i}`} position={[Math.cos(a) * r, topY + 0.06, Math.sin(a) * r]}>
+          <group key={`c-${i}`} position={[Math.cos(a) * r, topY + 0.055, Math.sin(a) * r]} rotation={[0, -a, 0]}>
             <mesh>
-              <cylinderGeometry args={[0.06, 0.06, 0.01, 16]} />
-              <meshStandardMaterial color="#f8fafc" metalness={0.2} roughness={0.3} />
+              <cylinderGeometry args={[0.065, 0.07, 0.012, 20]} />
+              <meshStandardMaterial color="#f8fafc" metalness={0.25} roughness={0.25} />
             </mesh>
-            <mesh position={[0.08, 0.01, 0]} rotation={[0, 0, 0.2]}>
-              <boxGeometry args={[0.1, 0.005, 0.015]} />
+            <mesh position={[0, 0.01, 0]}>
+              <cylinderGeometry args={[0.035, 0.035, 0.008, 16]} />
+              <meshStandardMaterial color="#e2e8f0" metalness={0.15} roughness={0.3} />
+            </mesh>
+            <mesh position={[0.09, 0.012, 0]} rotation={[0, 0, 0.15]}>
+              <boxGeometry args={[0.11, 0.004, 0.012]} />
+              <meshStandardMaterial color="#cbd5e1" metalness={0.85} roughness={0.15} />
+            </mesh>
+            <mesh position={[-0.09, 0.012, 0]} rotation={[0, 0, -0.15]}>
+              <boxGeometry args={[0.1, 0.004, 0.014]} />
               <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.2} />
+            </mesh>
+            <mesh position={[0.02, 0.02, 0.08]}>
+              <cylinderGeometry args={[0.018, 0.015, 0.04, 10]} />
+              <meshStandardMaterial color="#f1f5f9" transparent opacity={0.55} roughness={0.05} metalness={0.3} />
             </mesh>
           </group>
         );
@@ -804,7 +919,7 @@ function ZoneMesh({
   widthM: number;
   heightM: number;
   selected: boolean;
-  onSelect: () => void;
+  onSelect: (mods?: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean }) => void;
   onDragStart?: () => void;
   readOnly?: boolean;
   pickable?: boolean;
@@ -815,30 +930,33 @@ function ZoneMesh({
   const mat = useMemo(() => resolveZoneMaterialMap(material), [material]);
   const { gl } = useThree();
   const rot = ((rotation ?? 0) * Math.PI) / 180;
+  const thickness = mat.thicknessM ?? 0.03;
+  const isDance = material === 'vinyl' || material === 'led';
+  const isCarpet = material === 'carpet';
 
   return (
     <group
-      position={[cx, 0.04, cz]}
+      position={[cx, thickness / 2, cz]}
       rotation={[0, rot, 0]}
       onClick={(e) => {
         if (!pickable) return;
         e.stopPropagation();
-        onSelect();
+        onSelect({ shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
       }}
       onPointerDown={(e) => {
         if (!pickable || readOnly || !onDragStart) return;
         e.stopPropagation();
-        onSelect();
+        onSelect({ shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
         onDragStart();
         gl.domElement.style.cursor = 'grabbing';
       }}
     >
       <mesh
-        rotation={[-Math.PI / 2, 0, 0]}
         receiveShadow
+        castShadow={isCarpet}
         raycast={pickable ? undefined : () => null}
       >
-        <planeGeometry args={[w, h]} />
+        <boxGeometry args={[w, thickness, h]} />
         <meshStandardMaterial
           color={selected ? '#c7d2fe' : (color ?? mat.color)}
           map={mat.map ?? undefined}
@@ -848,11 +966,37 @@ function ZoneMesh({
           emissiveIntensity={mat.emissiveIntensity ?? 0}
         />
       </mesh>
-      <mesh position={[0, 0.06, -h * 0.35]} rotation={[-Math.PI / 2, 0, Math.PI]}>
-        <coneGeometry args={[Math.min(w, h) * 0.07, Math.min(w, h) * 0.16, 3]} />
-        <meshStandardMaterial color="#fef3c7" emissive="#f59e0b" emissiveIntensity={0.4} />
+      {/* Bordure / frange */}
+      <mesh position={[0, thickness * 0.15, 0]} receiveShadow>
+        <boxGeometry args={[w + 0.04, thickness * 0.35, h + 0.04]} />
+        <meshStandardMaterial
+          color={isCarpet ? '#0f172a' : isDance ? '#0ea5e9' : '#44403c'}
+          roughness={isDance ? 0.2 : 0.9}
+          metalness={isDance ? 0.5 : 0.05}
+          emissive={isDance ? '#0284c7' : '#000000'}
+          emissiveIntensity={isDance ? 0.35 : 0}
+        />
       </mesh>
-      <Html center distanceFactor={12} style={{ pointerEvents: 'none' }} position={[0, 0.25, 0]}>
+      {isDance && (
+        <>
+          {/* Reflet central piste */}
+          <mesh position={[0, thickness / 2 + 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[w * 0.7, h * 0.7]} />
+            <meshStandardMaterial
+              color="#e0f2fe"
+              transparent
+              opacity={0.12}
+              roughness={0.05}
+              metalness={0.6}
+            />
+          </mesh>
+        </>
+      )}
+      <mesh position={[0, thickness + 0.04, -h * 0.35]} rotation={[-Math.PI / 2, 0, Math.PI]}>
+        <coneGeometry args={[Math.min(w, h) * 0.06, Math.min(w, h) * 0.14, 3]} />
+        <meshStandardMaterial color="#fef3c7" emissive="#f59e0b" emissiveIntensity={0.45} />
+      </mesh>
+      <Html center distanceFactor={12} style={{ pointerEvents: 'none' }} position={[0, thickness + 0.22, 0]}>
         <span className="text-[10px] font-bold text-white bg-black/55 px-1.5 py-0.5 rounded shadow-sm">{label}</span>
       </Html>
     </group>
@@ -887,7 +1031,7 @@ function FreeChairMesh({
   widthM: number;
   heightM: number;
   selected: boolean;
-  onSelect: () => void;
+  onSelect: (mods?: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean }) => void;
   onDragStart?: () => void;
   readOnly?: boolean;
   label?: string;
@@ -897,11 +1041,14 @@ function FreeChairMesh({
   return (
     <group
       position={[wx, elevationM, wz]}
-      onClick={(e) => { e.stopPropagation(); onSelect(); }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelect({ shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
+      }}
       onPointerDown={(e) => {
         if (readOnly || !onDragStart) return;
         e.stopPropagation();
-        onSelect();
+        onSelect({ shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
         onDragStart();
         gl.domElement.style.cursor = 'grabbing';
       }}
@@ -1002,7 +1149,7 @@ function FixtureMesh({
   widthM: number;
   roomDepthM: number;
   selected: boolean;
-  onSelect: () => void;
+  onSelect: (mods?: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean }) => void;
   onDrag?: (xPct: number, yPct: number) => void;
   readOnly?: boolean;
   pickable?: boolean;
@@ -1057,13 +1204,13 @@ function FixtureMesh({
       onClick={(e) => {
         if (!pickable) return;
         e.stopPropagation();
-        onSelect();
+        onSelect({ shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
       }}
       onPointerDown={(e) => {
         if (!pickable || readOnly || !onDrag) return;
         e.stopPropagation();
         dragging.current = true;
-        onSelect();
+        onSelect({ shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
         gl.domElement.style.cursor = 'grabbing';
       }}
       onPointerUp={() => { dragging.current = false; gl.domElement.style.cursor = 'auto'; }}
@@ -1093,55 +1240,78 @@ function FixtureMesh({
       ) : kind === 'podium' || kind === 'stage' ? (
         <group>
           {Array.from({ length: stepCount }).map((_, i) => {
-            const t = (i + 1) / stepCount;
             const stepH = height / stepCount;
             const shrink = 1 - i * 0.08;
             return (
-              <mesh
-                key={i}
-                position={[0, stepH * i + stepH / 2, (1 - shrink) * d * 0.15]}
-                castShadow
-                receiveShadow
-              >
-                <boxGeometry args={[w * shrink, stepH * 0.95, d * shrink]} />
-                <meshStandardMaterial
-                  color={selected ? '#c7d2fe' : map ? '#ffffff' : baseColor}
-                  map={map ?? undefined}
-                  roughness={0.65}
-                />
-              </mesh>
+              <group key={i} position={[0, stepH * i, (1 - shrink) * d * 0.12]}>
+                <mesh position={[0, stepH / 2, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[w * shrink, stepH * 0.92, d * shrink]} />
+                  <meshStandardMaterial
+                    color={selected ? '#c7d2fe' : map ? '#ffffff' : baseColor}
+                    map={map ?? undefined}
+                    roughness={0.55}
+                    metalness={0.06}
+                  />
+                </mesh>
+                <mesh position={[0, stepH + 0.01, d * shrink * 0.42]} castShadow>
+                  <boxGeometry args={[w * shrink * 0.98, 0.025, 0.05]} />
+                  <meshStandardMaterial color="#292524" roughness={0.9} />
+                </mesh>
+              </group>
             );
           })}
         </group>
             ) : kind === 'stairs' ? (
         <group rotation={[0, ((stairDirection ?? 0) * Math.PI) / 180, 0]}>
           {Array.from({ length: stairSteps }).map((_, i) => {
-            const t = (i + 1) / stairSteps;
             const stepH = height / stairSteps;
             const tread = d / stairSteps;
+            const woodMap = map ?? getStairWoodMap();
             return (
-              <mesh
-                key={i}
-                position={[0, stepH * i + stepH / 2, -d / 2 + tread * (i + 0.5)]}
-                castShadow
-                receiveShadow
-                raycast={pickable ? undefined : () => null}
-              >
-                <boxGeometry args={[w * 0.95, stepH * 0.92, tread * 0.92]} />
-                <meshStandardMaterial
-                  color={selected ? '#c7d2fe' : map ? '#ffffff' : (baseColor || '#a8a29e')}
-                  map={map ?? undefined}
-                  roughness={0.7}
-                />
-              </mesh>
+              <group key={i} position={[0, stepH * i, -d / 2 + tread * (i + 0.5)]}>
+                {/* Contremarche */}
+                <mesh position={[0, stepH / 2, -tread * 0.35]} castShadow receiveShadow raycast={pickable ? undefined : () => null}>
+                  <boxGeometry args={[w * 0.96, stepH, tread * 0.35]} />
+                  <meshStandardMaterial color={selected ? '#c7d2fe' : '#78716c'} map={woodMap} roughness={0.75} />
+                </mesh>
+                {/* Marche (nez débordant) */}
+                <mesh position={[0, stepH + 0.015, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[w * 0.98, 0.04, tread * 0.95]} />
+                  <meshStandardMaterial color={selected ? '#c7d2fe' : '#ffffff'} map={woodMap} roughness={0.55} metalness={0.05} />
+                </mesh>
+                {/* Bande antidérapante */}
+                <mesh position={[0, stepH + 0.038, tread * 0.35]}>
+                  <boxGeometry args={[w * 0.9, 0.008, 0.04]} />
+                  <meshStandardMaterial color="#1c1917" roughness={0.95} />
+                </mesh>
+              </group>
             );
           })}
-          {/* Rampes */}
+          {/* Rampes tubulaires */}
           {([-1, 1] as const).map((side) => (
-            <mesh key={side} position={[side * w * 0.48, height * 0.55, 0]} castShadow>
-              <boxGeometry args={[0.04, height * 0.9, d * 0.95]} />
-              <meshStandardMaterial color="#57534e" metalness={0.35} roughness={0.45} />
-            </mesh>
+            <group key={side}>
+              <mesh
+                position={[side * w * 0.48, height * 0.55, 0]}
+                rotation={[Math.atan2(height, d) - Math.PI / 2, 0, 0]}
+                castShadow
+              >
+                <cylinderGeometry args={[0.025, 0.025, Math.hypot(height, d) * 0.95, 12]} />
+                <meshStandardMaterial color="#a8a29e" metalness={0.7} roughness={0.25} />
+              </mesh>
+              {Array.from({ length: Math.max(3, Math.ceil(stairSteps / 2)) }).map((_, pi) => {
+                const t = (pi + 0.5) / Math.max(3, Math.ceil(stairSteps / 2));
+                return (
+                  <mesh
+                    key={pi}
+                    position={[side * w * 0.48, height * t * 0.85 + 0.15, -d / 2 + d * t]}
+                    castShadow
+                  >
+                    <cylinderGeometry args={[0.018, 0.018, height * t * 0.85 + 0.15, 8]} />
+                    <meshStandardMaterial color="#78716c" metalness={0.65} roughness={0.3} />
+                  </mesh>
+                );
+              })}
+            </group>
           ))}
         </group>
       ) : kind === 'buffet' ? (
@@ -1239,26 +1409,42 @@ function SceneContent({
 
   return (
     <>
-      <ambientLight intensity={0.45} />
+      <ambientLight intensity={0.35} />
       <directionalLight
-        position={[widthM * 0.45, 14, heightM * 0.25]}
-        intensity={1.25}
+        position={[widthM * 0.4, 16, heightM * 0.2]}
+        intensity={1.35}
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
-        shadow-camera-far={80}
+        shadow-bias={-0.0002}
+        shadow-camera-far={90}
         shadow-camera-left={-Math.max(widthM, heightM)}
         shadow-camera-right={Math.max(widthM, heightM)}
         shadow-camera-top={Math.max(widthM, heightM)}
         shadow-camera-bottom={-Math.max(widthM, heightM)}
+        color="#fff7ed"
       />
-      <hemisphereLight args={['#f8fafc', '#78716c', 0.4]} />
+      <directionalLight position={[-widthM * 0.5, 8, -heightM * 0.3]} intensity={0.35} color="#bfdbfe" />
+      <hemisphereLight args={['#fef3c7', '#57534e', 0.45]} />
       <spotLight
-        position={[0, 10, 0]}
-        angle={0.55}
-        penumbra={0.5}
-        intensity={0.35}
+        position={[0, 12, 0]}
+        angle={0.6}
+        penumbra={0.65}
+        intensity={0.4}
         castShadow={false}
+        color="#fffbeb"
+      />
+      <pointLight position={[widthM * 0.3, 3.2, heightM * 0.25]} intensity={0.25} color="#fde68a" distance={18} />
+      <pointLight position={[-widthM * 0.25, 3.2, -heightM * 0.2]} intensity={0.2} color="#e0f2fe" distance={16} />
+
+      <ContactShadows
+        position={[0, 0.02, 0]}
+        opacity={0.5}
+        scale={Math.max(widthM, heightM) * 1.35}
+        blur={2.8}
+        far={10}
+        resolution={1024}
+        color="#1c1917"
       />
 
       <FloorPlane
@@ -1294,8 +1480,8 @@ function SceneContent({
           widthM={widthM}
           heightM={heightM}
           paintColor={blueprint.metadata.wallPaintColor}
-          selected={selected?.kind === 'wall' && selected.id === wall.id}
-          onSelect={() => onSelect({ kind: 'wall', id: wall.id })}
+          selected={selected.some((s) => s.kind === 'wall' && s.id === wall.id)}
+          onSelect={(e) => onSelect({ kind: 'wall', id: wall.id }, { additive: Boolean(e?.shiftKey || e?.metaKey || e?.ctrlKey) })}
         />
       ))}
 
@@ -1317,11 +1503,11 @@ function SceneContent({
           stairDirection={f.stairDirection}
           widthM={widthM}
           roomDepthM={heightM}
-          selected={selected?.kind === 'fixture' && selected.id === f.id}
-          onSelect={() => onSelect({ kind: 'fixture', id: f.id })}
+          selected={selected.some((s) => s.kind === 'fixture' && s.id === f.id)}
+          onSelect={(e) => onSelect({ kind: 'fixture', id: f.id }, { additive: Boolean(e?.shiftKey || e?.metaKey || e?.ctrlKey) })}
           onDrag={wallEditMode || !surfacePickable ? undefined : (x, y) => moveAny('fixture', f.id, x, y)}
           readOnly={readOnly || wallEditMode}
-          pickable={surfacePickable || (selected?.kind === 'fixture' && selected.id === f.id)}
+          pickable={surfacePickable || selected.some((s) => s.kind === 'fixture' && s.id === f.id)}
         />
       ))}
 
@@ -1340,11 +1526,11 @@ function SceneContent({
               rotation={item.rotation}
               widthM={widthM}
               heightM={heightM}
-              selected={selected?.kind === 'zone' && selected.id === item.id}
-              onSelect={() => onSelect({ kind: 'zone', id: item.id })}
+              selected={selected.some((s) => s.kind === 'zone' && s.id === item.id)}
+              onSelect={(e) => onSelect({ kind: 'zone', id: item.id }, { additive: Boolean(e?.shiftKey || e?.metaKey || e?.ctrlKey) })}
               onDragStart={wallEditMode || readOnly || !surfacePickable ? undefined : () => setDragTarget({ kind: 'zone', id: item.id })}
               readOnly={readOnly || wallEditMode}
-              pickable={surfacePickable || (selected?.kind === 'zone' && selected.id === item.id)}
+              pickable={surfacePickable || selected.some((s) => s.kind === 'zone' && s.id === item.id)}
             />
           );
         }
@@ -1364,8 +1550,8 @@ function SceneContent({
               label={item.label}
               widthM={widthM}
               heightM={heightM}
-              selected={selected?.kind === 'chair' && selected.id === item.id}
-              onSelect={() => onSelect({ kind: 'chair', id: item.id })}
+              selected={selected.some((s) => s.kind === 'chair' && s.id === item.id)}
+              onSelect={(e) => onSelect({ kind: 'chair', id: item.id }, { additive: Boolean(e?.shiftKey || e?.metaKey || e?.ctrlKey) })}
               onDragStart={wallEditMode || readOnly || item.locked ? undefined : () => setDragTarget({ kind: 'chair', id: item.id })}
               readOnly={readOnly || wallEditMode || item.locked}
             />
@@ -1389,21 +1575,40 @@ function SceneContent({
               key={item.id}
               position={[wx, 0, wz]}
               rotation={[0, rowRot, 0]}
-              onClick={(e) => { e.stopPropagation(); onSelect({ kind: 'row', id: item.id }); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect({ kind: 'row', id: item.id }, { additive: e.shiftKey || e.metaKey || e.ctrlKey });
+              }}
               onPointerDown={(e) => {
                 if (readOnly || wallEditMode) return;
                 e.stopPropagation();
-                onSelect({ kind: 'row', id: item.id });
+                onSelect({ kind: 'row', id: item.id }, { additive: e.shiftKey || e.metaKey || e.ctrlKey });
                 setDragTarget({ kind: 'row', id: item.id });
               }}
             >
-              {/* Plateforme / gradin (seulement si élévation propre, pas juste moquette) */}
-              {(item.elevationM ?? 0) > 0.05 && (
-                <mesh position={[0, (item.elevationM ?? 0) / 2, 0.15]} receiveShadow castShadow>
-                  <boxGeometry args={[count * spacing + 0.6, item.elevationM ?? 0, 1.1 + curve * 2]} />
-                  <meshStandardMaterial color={selected ? '#c7d2fe' : '#78716c'} roughness={0.85} />
-                </mesh>
-              )}
+              {/* Plateforme / gradin amphithéâtre */}
+              {(item.elevationM ?? 0) > 0.05 || item.tier > 0 ? (
+                <group>
+                  <mesh position={[0, elevation / 2, 0.2]} receiveShadow castShadow>
+                    <boxGeometry args={[count * spacing + 0.7, Math.max(elevation, 0.12), 1.25 + curve * 2]} />
+                    <meshStandardMaterial
+                      color={selected.some((s) => s.kind === 'row' && s.id === item.id) ? '#c7d2fe' : '#57534e'}
+                      map={getStairWoodMap()}
+                      roughness={0.7}
+                    />
+                  </mesh>
+                  {/* Face avant du gradin */}
+                  <mesh position={[0, elevation / 2, 0.2 + (1.25 + curve * 2) / 2]} castShadow>
+                    <boxGeometry args={[count * spacing + 0.7, Math.max(elevation, 0.12), 0.06]} />
+                    <meshStandardMaterial color="#44403c" roughness={0.65} metalness={0.05} />
+                  </mesh>
+                  {/* Moquette de rangée */}
+                  <mesh position={[0, elevation + 0.015, 0.15]} receiveShadow>
+                    <boxGeometry args={[count * spacing + 0.55, 0.03, 0.95]} />
+                    <meshStandardMaterial color="#1e293b" roughness={0.95} metalness={0} />
+                  </mesh>
+                </group>
+              ) : null}
               {Array.from({ length: count }).map((_, i) => {
                 const t = i - (count - 1) / 2;
                 const localX = t * spacing;
@@ -1420,7 +1625,7 @@ function SceneContent({
                     imageUrl={item.chairImageUrl}
                     position={[localX, elevation, localZ]}
                     rotationY={faceY}
-                    selected={selected?.kind === 'row' && selected.id === item.id}
+                    selected={selected.some((s) => s.kind === 'row' && s.id === item.id)}
                   />
                 );
               })}
@@ -1453,8 +1658,8 @@ function SceneContent({
             elevationM={surface?.elevationM ?? 0}
             widthM={widthM}
             heightM={heightM}
-            selected={selected?.kind === 'table' && selected.id === item.id}
-            onSelect={() => onSelect({ kind: 'table', id: item.id })}
+            selected={selected.some((s) => s.kind === 'table' && s.id === item.id)}
+            onSelect={(e) => onSelect({ kind: 'table', id: item.id }, { additive: Boolean(e?.shiftKey || e?.metaKey || e?.ctrlKey) })}
             onDragStart={wallEditMode || readOnly || item.locked ? undefined : () => setDragTarget({ kind: 'table', id: item.id })}
             readOnly={readOnly || wallEditMode || item.locked}
           />
@@ -1512,9 +1717,18 @@ export default function RoomWebGLViewer({
       <Canvas
         shadows
         dpr={previewMode ? [1, 1.5] : [1, 2]}
-        gl={{ antialias: true, alpha: false }}
+        gl={{
+          antialias: true,
+          alpha: false,
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 1.12,
+        }}
         camera={{ position: [0, 18, 12], fov: previewMode ? 42 : 45, near: 0.1, far: 200 }}
         onPointerMissed={() => onSelect(null)}
+        onCreated={({ gl }) => {
+          gl.shadowMap.type = THREE.PCFSoftShadowMap;
+          gl.outputColorSpace = THREE.SRGBColorSpace;
+        }}
       >
         <color attach="background" args={[previewMode ? '#14110f' : '#1a1410']} />
         <Suspense fallback={null}>

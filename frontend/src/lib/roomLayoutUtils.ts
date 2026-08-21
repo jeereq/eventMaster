@@ -151,6 +151,8 @@ export interface RoomLayoutBlueprint {
     buffetStyle?: 'straight' | 'corner' | 'island';
     /** Escalier : orientation (0 = haut du plan). */
     stairDirection?: 0 | 90 | 180 | 270;
+    /** Groupe de sélection / alignement. */
+    groupId?: string;
   }>;
   furniture: Array<
     | {
@@ -172,6 +174,7 @@ export interface RoomLayoutBlueprint {
         locked?: boolean;
         rotation?: number;
         attachedChairs?: boolean;
+        groupId?: string;
       }
     | {
         id: string;
@@ -185,6 +188,7 @@ export interface RoomLayoutBlueprint {
         y: number;
         rotation?: number;
         locked?: boolean;
+        groupId?: string;
       }
     | {
         id: string;
@@ -205,6 +209,7 @@ export interface RoomLayoutBlueprint {
         /** Point de visée en % (scène) pour orienter les sièges. */
         focusX?: number;
         focusY?: number;
+        groupId?: string;
       }
     | {
         id: string;
@@ -218,6 +223,7 @@ export interface RoomLayoutBlueprint {
         w: number;
         h: number;
         rotation?: number;
+        groupId?: string;
       }
   >;
   metadata: {

@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart,
 } from 'lucide-react';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
 import ImageCropModal from '@/components/ImageCropModal';
@@ -58,6 +58,19 @@ import {
   type ZoneMaterial,
 } from '@/lib/roomLayoutUtils';
 import { roomEditorCapabilities, snapLayoutPct } from '@/lib/roomEditorAccess';
+import {
+  alignLayoutSelection,
+  alignModeLabels,
+  expandSelectionWithGroups,
+  getSelectionBounds,
+  groupLayoutSelection,
+  moveLayoutSelectionByDelta,
+  selectionKey,
+  toggleSelectionItem,
+  ungroupLayoutSelection,
+  type AlignMode,
+  type LayoutSelectionItem,
+} from '@/lib/roomSelectionUtils';
 import { prependLayoutAction, LayoutActionEntry } from '@/lib/layoutActionLog';
 import { readImageFile } from '@/lib/imageCropUtils';
 import { applyRoomTheme, getRoomTheme, listAvailableThemes, RoomThemeId, type FloorType } from '@/lib/roomThemeUtils';
@@ -90,7 +103,7 @@ export default function RoomLayoutEditor({
 }: RoomLayoutEditorProps) {
   const blueprint = ensureBlueprintDefaults(rawBlueprint);
   const caps = roomEditorCapabilities(editorLevel, allowThemesFixtures);
-  const [selected, setSelected] = useState<{ kind: SelectableKind; id: string } | null>(null);
+  const [selection, setSelection] = useState<LayoutSelectionItem[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
   const [actionLog, setActionLog] = useState<LayoutActionEntry[]>([]);
   const [cropTarget, setCropTarget] = useState<CropTarget>(null);
@@ -184,12 +197,50 @@ export default function RoomLayoutEditor({
     return () => window.removeEventListener('keydown', onKey);
   }, [readOnly, undo, redo]);
 
+  const primary = selection.length === 1 ? selection[0] : null;
+  const selected = primary; // compat panneaux propriété (sélection unique)
+  const multiSelection = selection.length >= 2;
   const selectedFurniture = selected && selected.kind !== 'fixture' && selected.kind !== 'wall'
     ? blueprint.furniture.find((f) => f.id === selected.id)
     : null;
   const selectedFixture = selected?.kind === 'fixture'
     ? blueprint.fixtures.find((f) => f.id === selected.id)
     : null;
+
+  const handleCanvasSelect = useCallback((sel: LayoutSelectionItem | null, opts?: { additive?: boolean }) => {
+    if (!sel) {
+      setSelection([]);
+      return;
+    }
+    if (opts?.additive) {
+      setSelection((prev) => toggleSelectionItem(prev, sel));
+      return;
+    }
+    setSelection(expandSelectionWithGroups(blueprint, [sel]));
+  }, [blueprint]);
+
+  const applyAlign = useCallback((mode: AlignMode) => {
+    if (selection.length < 2 || readOnly) return;
+    updateBlueprint(alignLayoutSelection(blueprint, selection, mode), {
+      message: alignModeLabels[mode],
+      kind: 'edit',
+    });
+  }, [blueprint, readOnly, selection]);
+
+  const groupSelection = useCallback(() => {
+    if (selection.length < 2 || readOnly) return;
+    const next = groupLayoutSelection(blueprint, selection);
+    updateBlueprint(next, { message: `Groupe créé (${selection.length} éléments)`, kind: 'edit' });
+    setSelection(expandSelectionWithGroups(next, selection));
+  }, [blueprint, readOnly, selection]);
+
+  const ungroupSelection = useCallback(() => {
+    if (selection.length === 0 || readOnly) return;
+    updateBlueprint(ungroupLayoutSelection(blueprint, selection), {
+      message: 'Groupe dissous',
+      kind: 'edit',
+    });
+  }, [blueprint, readOnly, selection]);
 
   const handleWebGLMove = useCallback((kind: SelectableKind, id: string, xPct: number, yPct: number) => {
     if (readOnly) return;
@@ -200,7 +251,22 @@ export default function RoomLayoutEditor({
     const x = snapLayoutPct(xPct, caps.canSnapGrid);
     const y = snapLayoutPct(yPct, caps.canSnapGrid);
     skipHistoryRef.current = true;
-    if (kind === 'fixture') {
+
+    const movingInSelection = selection.some((s) => s.kind === kind && s.id === id);
+    const moveSet = movingInSelection && selection.length > 1
+      ? expandSelectionWithGroups(blueprint, selection)
+      : [{ kind, id } as LayoutSelectionItem];
+
+    if (moveSet.length > 1) {
+      const box = getSelectionBounds(blueprint, { kind, id });
+      if (box) {
+        const dx = x - box.x;
+        const dy = y - box.y;
+        onChange(refreshBlueprintMetadata(ensureBlueprintDefaults(
+          moveLayoutSelectionByDelta(blueprint, moveSet, dx, dy),
+        )));
+      }
+    } else if (kind === 'fixture') {
       onChange(refreshBlueprintMetadata(ensureBlueprintDefaults({
         ...blueprint,
         fixtures: blueprint.fixtures.map((f) => (f.id === id ? { ...f, x, y } : f)),
@@ -212,7 +278,7 @@ export default function RoomLayoutEditor({
       })));
     }
     skipHistoryRef.current = false;
-  }, [blueprint, caps.canSnapGrid, onChange, pushHistory, readOnly]);
+  }, [blueprint, caps.canSnapGrid, onChange, pushHistory, readOnly, selection]);
 
   const handleWebGLMoveEnd = useCallback(() => {
     if (dragHistPushedRef.current) {
@@ -222,29 +288,62 @@ export default function RoomLayoutEditor({
   }, [log]);
 
   const deleteSelected = () => {
-    if (!selected || readOnly) return;
-    if (selected.kind === 'wall') {
-      updateBlueprint({
-        ...blueprint,
-        walls: (blueprint.walls ?? []).filter((w) => w.id !== selected.id),
-      }, { message: 'Mur supprimé', kind: 'delete' });
-      setSelected(null);
-      return;
-    }
-    const label = selected.kind === 'fixture' ? 'Élément fixe' : 'Mobilier';
-    if (selected.kind === 'fixture') {
-      updateBlueprint({
-        ...blueprint,
-        fixtures: blueprint.fixtures.filter((f) => f.id !== selected.id),
-      }, { message: `${label} supprimé`, kind: 'delete' });
-    } else {
-      updateBlueprint({
-        ...blueprint,
-        furniture: blueprint.furniture.filter((f) => f.id !== selected.id),
-      }, { message: `${label} supprimé`, kind: 'delete' });
-    }
-    setSelected(null);
+    if (selection.length === 0 || readOnly) return;
+    const wallIds = new Set(selection.filter((s) => s.kind === 'wall').map((s) => s.id));
+    const fixtureIds = new Set(selection.filter((s) => s.kind === 'fixture').map((s) => s.id));
+    const furnitureIds = new Set(
+      selection.filter((s) => s.kind !== 'wall' && s.kind !== 'fixture').map((s) => s.id),
+    );
+    updateBlueprint({
+      ...blueprint,
+      walls: (blueprint.walls ?? []).filter((w) => !wallIds.has(w.id)),
+      fixtures: blueprint.fixtures.filter((f) => !fixtureIds.has(f.id)),
+      furniture: blueprint.furniture.filter((f) => !furnitureIds.has(f.id)),
+    }, {
+      message: selection.length > 1 ? `${selection.length} éléments supprimés` : 'Élément supprimé',
+      kind: 'delete',
+    });
+    setSelection([]);
   };
+
+  useEffect(() => {
+    if (readOnly) return;
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable) return;
+      const mod = e.metaKey || e.ctrlKey;
+      const key = e.key.toLowerCase();
+      if (e.key === 'Escape') {
+        setSelection([]);
+        return;
+      }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selection.length > 0) {
+        e.preventDefault();
+        deleteSelected();
+        return;
+      }
+      if (!mod) return;
+      if (key === 'g' && !e.shiftKey && selection.length >= 2) {
+        e.preventDefault();
+        groupSelection();
+      } else if (key === 'g' && e.shiftKey) {
+        e.preventDefault();
+        ungroupSelection();
+      } else if (key === 'a') {
+        e.preventDefault();
+        const all: LayoutSelectionItem[] = [
+          ...blueprint.furniture
+            .filter((f) => f.kind === 'table' || f.kind === 'chair' || f.kind === 'row' || f.kind === 'zone')
+            .map((f) => ({ kind: f.kind as SelectableKind, id: f.id })),
+          ...blueprint.fixtures.map((f) => ({ kind: 'fixture' as const, id: f.id })),
+        ];
+        setSelection(all);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [readOnly, selection, blueprint.furniture, blueprint.fixtures, groupSelection, ungroupSelection]);
 
   const addTable = () => {
     const tableCount = blueprint.furniture.filter((f) => f.kind === 'table').length;
@@ -257,7 +356,7 @@ export default function RoomLayoutEditor({
       blueprint.roomType === 'CONFERENCE' || blueprint.roomType === 'AMPHITHEATER' ? 'THEATER' : 'BANQUET';
     const table = createBlueprintTable(count, { chairType: defaultChair, shape: caps.tableShapes[0] });
     updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, table] }, { message: `Table « ${table.name} » ajoutée`, kind: 'add' });
-    setSelected({ kind: 'table', id: table.id });
+    setSelection([{ kind: 'table', id: table.id }]);
   };
 
   const duplicateSelectedTable = () => {
@@ -282,7 +381,7 @@ export default function RoomLayoutEditor({
       locked: false,
     };
     updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, copy] }, { message: `Table « ${copy.name} » dupliquée`, kind: 'add' });
-    setSelected({ kind: 'table', id: copy.id });
+    setSelection([{ kind: 'table', id: copy.id }]);
   };
 
   const addRow = () => {
@@ -298,7 +397,7 @@ export default function RoomLayoutEditor({
     const count = rowCount + 1;
     const row = createBlueprintRow(count);
     updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, row] }, { message: `Rangée « ${row.label} » ajoutée`, kind: 'add' });
-    setSelected({ kind: 'row', id: row.id });
+    setSelection([{ kind: 'row', id: row.id }]);
   };
 
   const addZone = (label: string, opts?: { zoneKind?: ZoneKind; material?: ZoneMaterial }) => {
@@ -309,7 +408,7 @@ export default function RoomLayoutEditor({
     const count = blueprint.furniture.filter((f) => f.kind === 'zone').length + 1;
     const zone = createBlueprintZone(label, count, opts);
     updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, zone] }, { message: `Zone « ${zone.label} » ajoutée`, kind: 'add' });
-    setSelected({ kind: 'zone', id: zone.id });
+    setSelection([{ kind: 'zone', id: zone.id }]);
   };
 
   const addFreeChair = () => {
@@ -320,7 +419,7 @@ export default function RoomLayoutEditor({
       seatMaterial: 'velvet',
     });
     updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, chair] }, { message: 'Fauteuil ajouté', kind: 'add' });
-    setSelected({ kind: 'chair', id: chair.id });
+    setSelection([{ kind: 'chair', id: chair.id }]);
   };
 
   const addCarpet = () => {
@@ -330,12 +429,12 @@ export default function RoomLayoutEditor({
     }
     const fixture = createBlueprintFixture('carpet');
     updateBlueprint({ ...blueprint, fixtures: [...blueprint.fixtures, fixture] }, { message: 'Moquette ajoutée', kind: 'add' });
-    setSelected({ kind: 'fixture', id: fixture.id });
+    setSelection([{ kind: 'fixture', id: fixture.id }]);
   };
 
   const clearWalls = () => {
     updateBlueprint({ ...blueprint, walls: [] }, { message: 'Tous les murs ont été retirés', kind: 'settings' });
-    setSelected(null);
+    setSelection([]);
     setWallEditMode(false);
   };
 
@@ -346,7 +445,7 @@ export default function RoomLayoutEditor({
     }
     const fixture = createBlueprintFixture(kind);
     updateBlueprint({ ...blueprint, fixtures: [...blueprint.fixtures, fixture] }, { message: `${fixture.label || kind} ajouté`, kind: 'add' });
-    setSelected({ kind: 'fixture', id: fixture.id });
+    setSelection([{ kind: 'fixture', id: fixture.id }]);
   };
 
   const applyTemplate = (templateId: string) => {
@@ -362,7 +461,7 @@ export default function RoomLayoutEditor({
       `Modèle « ${tpl?.name} » généré${seats ? ` — ${seats} places` : ''}`,
       'template',
     );
-    setSelected(null);
+    setSelection([]);
   };
 
   const saveCurrentAsTemplate = () => {
@@ -383,7 +482,7 @@ export default function RoomLayoutEditor({
     skipHistoryRef.current = false;
     const name = blueprint.metadata.customTemplates?.find((t) => t.id === templateId)?.name ?? 'perso.';
     log(`Modèle « ${name} » appliqué`, 'template');
-    setSelected(null);
+    setSelection([]);
   };
 
   const setRoomOutlineShape = (shape: RoomOutlineShape) => {
@@ -490,8 +589,8 @@ export default function RoomLayoutEditor({
   const renderCanvas = (className: string) => (
     <RoomWebGLViewer
       blueprint={blueprint}
-      selected={selected}
-      onSelect={(sel) => setSelected(sel)}
+      selected={selection}
+      onSelect={handleCanvasSelect}
       onMoveItem={handleWebGLMove}
       onMoveEnd={handleWebGLMoveEnd}
       readOnly={readOnly}
@@ -502,7 +601,7 @@ export default function RoomLayoutEditor({
   );
 
   const selectWall = useCallback((id: string | null) => {
-    setSelected(id ? { kind: 'wall', id } : null);
+    setSelection(id ? [{ kind: 'wall', id }] : []);
   }, []);
 
   const renderChairImageUpload = (id: string, currentUrl?: string) => (
@@ -551,6 +650,61 @@ export default function RoomLayoutEditor({
 
   const renderEditPanel = () => {
     if (readOnly) return null;
+
+    if (multiSelection) {
+      return (
+        <div className="space-y-4">
+          <div className="p-4 border border-border rounded-[var(--radius-card)] bg-surface space-y-3">
+            <p className="text-sm font-semibold flex items-center gap-2">
+              <BoxSelect className="w-4 h-4" />
+              {selection.length} éléments sélectionnés
+            </p>
+            <p className="text-[10px] text-muted">
+              Shift+clic pour ajouter / retirer · Échap pour tout désélectionner
+              {caps.canAlign ? ' · Cmd/Ctrl+G pour grouper' : ''}
+            </p>
+            {caps.canAlign ? (
+              <>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {([
+                    ['left', AlignLeft],
+                    ['centerX', AlignCenter],
+                    ['right', AlignRight],
+                    ['distributeX', BetweenHorizontalStart],
+                    ['top', AlignStartVertical],
+                    ['centerY', AlignCenterVertical],
+                    ['bottom', AlignEndVertical],
+                    ['distributeY', BetweenVerticalStart],
+                  ] as const).map(([mode, Icon]) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      title={alignModeLabels[mode]}
+                      onClick={() => applyAlign(mode)}
+                      className="flex items-center justify-center gap-1 py-2 rounded-[var(--radius-button)] border border-border text-[10px] font-bold hover:bg-surface-muted"
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <button type="button" onClick={groupSelection} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-[var(--radius-button)] border border-border text-xs font-bold hover:bg-surface-muted">
+                    <Group className="w-3.5 h-3.5" /> Grouper
+                  </button>
+                  <button type="button" onClick={ungroupSelection} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-[var(--radius-button)] border border-border text-xs font-bold hover:bg-surface-muted">
+                    <Ungroup className="w-3.5 h-3.5" /> Dégrouper
+                  </button>
+                </div>
+              </>
+            ) : null}
+            <button type="button" onClick={deleteSelected} className="w-full flex items-center justify-center gap-1.5 py-2 rounded-[var(--radius-button)] border border-rose-200 text-rose-700 text-xs font-bold hover:bg-rose-50">
+              <Trash2 className="w-3.5 h-3.5" /> Supprimer la sélection
+            </button>
+          </div>
+          <LayoutActionPanel actions={actionLog} />
+        </div>
+      );
+    }
 
     if (!selected) {
       return (
@@ -1913,9 +2067,9 @@ export default function RoomLayoutEditor({
       {caps.fixtureKinds.includes('perimeter') ? (
         <button type="button" onClick={() => addFixture('perimeter')} className="px-3 py-1.5 bg-sky-50 border border-sky-200 text-sky-800 rounded-[var(--radius-button)] text-xs font-bold">Périmètre</button>
       ) : null}
-      {selected && (
+      {selection.length > 0 && (
         <button type="button" onClick={deleteSelected} className="inline-flex items-center gap-1 px-3 py-1.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-[var(--radius-button)] text-xs font-bold ml-auto">
-          <Trash2 className="w-3.5 h-3.5" /> Supprimer
+          <Trash2 className="w-3.5 h-3.5" /> Supprimer{selection.length > 1 ? ` (${selection.length})` : ''}
         </button>
       )}
       {onRegenerate && (

@@ -364,7 +364,7 @@ export default function RoomLayoutPreview({
       ) : useWebGL ? (
         <RoomWebGLViewer
           blueprint={blueprint}
-          selected={null}
+          selected={[]}
           onSelect={() => {}}
           readOnly
           previewMode
