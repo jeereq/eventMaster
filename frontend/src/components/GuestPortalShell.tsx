@@ -75,7 +75,7 @@ export default function GuestPortalShell({
   return (
     <div className={cn('em-guest-page flex flex-col min-h-dvh', className)}>
       <header className="sticky top-0 z-40 border-b border-border bg-surface">
-        <div className="page-container max-w-xl mx-auto h-14 flex items-center justify-between gap-3">
+        <div className="page-container max-w-xl mx-auto h-12 sm:h-14 flex items-center justify-between gap-3">
           {showBrand ? (
             <Link href="/" className="flex items-center gap-2.5 min-w-0 hover:opacity-90 transition">
               <span className="inline-flex items-center justify-center w-8 h-8 rounded-[var(--radius-button)] bg-primary text-white text-[11px] font-semibold shrink-0">
@@ -106,7 +106,7 @@ export default function GuestPortalShell({
 
       <main
         className={cn(
-          'page-container mx-auto w-full flex-1 max-w-xl py-5',
+          'page-container mx-auto w-full flex-1 max-w-xl py-3 sm:py-5',
           tabs ? 'pb-[calc(4.75rem+env(safe-area-inset-bottom))]' : 'pb-8',
           contentClassName,
         )}

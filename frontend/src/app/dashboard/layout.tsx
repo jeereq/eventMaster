@@ -16,7 +16,7 @@ import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import UserLegalGate from '@/components/UserLegalGate';
 import SupportSessionBanner from '@/components/admin/SupportSessionBanner';
 import { NotificationBell } from '@/components/CommercialNotifications';
-import DashboardTopBar from '@/components/DashboardTopBar';
+import DashboardTopBar, { useDashboardTitle } from '@/components/DashboardTopBar';
 import UserAvatar from '@/components/UserAvatar';
 import ViewCustomizerDrawer, {
  ViewCustomizerEdgeHandle,
@@ -372,6 +372,11 @@ function SidebarNav({
  );
 }
 
+function DashboardMobileTitle() {
+ const { title } = useDashboardTitle();
+ return <span className="font-semibold text-sm text-foreground truncate">{title}</span>;
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
  const { user, tenant, token, loading, logout, access, planFeatures, planQuota, supportSession } = useAuth();
  const { theme, toggleTheme } = useTheme();
@@ -556,14 +561,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  )}
 
  {/* Header mobile */}
- <header className="md:hidden bg-sidebar border-b border-border h-14 px-4 flex items-center justify-between sticky top-0 z-50">
- <div className="flex items-center gap-2.5">
- <div className="bg-primary p-1.5 rounded-lg text-white">
+ <header className="md:hidden bg-sidebar border-b border-border h-12 px-3 flex items-center justify-between sticky top-0 z-50">
+ <div className="flex items-center gap-2 min-w-0">
+ <div className="bg-primary p-1.5 rounded-lg text-white shrink-0">
  <PartyPopper className="w-4 h-4" />
  </div>
- <span className="font-semibold text-base text-foreground">EventMaster</span>
+ <DashboardMobileTitle />
  </div>
- <div className="flex items-center gap-1.5">
+ <div className="flex items-center gap-0.5 shrink-0">
  {showNotifications && <NotificationBell />}
  <ViewCustomizerTrigger />
  <button
@@ -587,7 +592,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  {/* Sidebar */}
  <aside
  className={cn(
- 'fixed top-14 bottom-0 left-0 z-40 max-w-[85vw] bg-sidebar border-r border-border',
+ 'fixed top-12 bottom-0 left-0 z-40 max-w-[85vw] bg-sidebar border-r border-border',
  'flex flex-col transform transition-[transform,width] duration-300 ease-out',
  'md:top-0 md:bottom-auto md:inset-y-0 md:translate-x-0 md:sticky md:h-screen md:max-w-none md:z-30',
  mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
@@ -768,7 +773,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  {/* Contenu principal */}
  <main id="main-content" className="flex-1 min-w-0 overflow-y-auto bg-background flex flex-col">
  <DashboardTopBar />
- <div className="page-container py-5 sm:py-6 lg:py-8 flex-1 em-dashboard-content">
+ <div className="page-container py-3 sm:py-6 lg:py-8 flex-1 em-dashboard-content">
  <UserLegalGate>
   {children}
   <FirstLoginTourHost />

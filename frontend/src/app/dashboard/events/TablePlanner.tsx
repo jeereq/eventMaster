@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { 
  Plus, Trash2, Users, Check, Move, X, RefreshCw, 
- HelpCircle, Edit2, LayoutGrid, Maximize2, Minimize2, Copy, Lock, Unlock, Palette, RotateCw, Sparkles
+ HelpCircle, Edit2, LayoutGrid, Maximize2, Minimize2, Copy, Lock, Unlock, Palette, RotateCw, Sparkles, ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import {
@@ -84,6 +84,7 @@ export default function TablePlanner({
  const [newTableColor, setNewTableColor] = useState('#f3e6c8');
  const [newChairType, setNewChairType] = useState<ChairType>('BANQUET');
  const [isExpanded, setIsExpanded] = useState(false);
+ const [guestsOpen, setGuestsOpen] = useState(false);
  const [hoveredTableId, setHoveredTableId] = useState<string | null>(null);
 
  // Dragging states
@@ -647,9 +648,9 @@ export default function TablePlanner({
  </div>
  ) : null}
 
- <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+ <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
  <div>
- <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+ <h2 className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
  <LayoutGrid className="w-5 h-5 text-primary" />
  Plan de Table Interactif
  </h2>
@@ -660,7 +661,7 @@ export default function TablePlanner({
  Placez les invités confirmés sur les sièges.
  </p>
  </div>
- <div className="flex gap-2.5">
+ <div className="flex flex-wrap gap-2">
  <button
  onClick={() => {
  if (tables.length >= caps.maxTables) {
@@ -669,7 +670,7 @@ export default function TablePlanner({
  }
  setShowAddModal(true);
  }}
- className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-surface border border-border text-foreground hover:bg-surface-muted font-medium rounded-[var(--radius-button)] text-sm transition"
+ className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 bg-surface border border-border text-foreground hover:bg-surface-muted font-medium rounded-[var(--radius-button)] text-xs sm:text-sm transition"
  >
  <Plus className="w-4 h-4" />
  Ajouter une Table
@@ -694,50 +695,13 @@ export default function TablePlanner({
  </div>
  </div>
 
- {/* Grid Layout for Planner */}
- <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
- {/* Left Sidebar: Unassigned Guests */}
- <div className="xl:col-span-1 bg-surface border border-border rounded-[var(--radius-card)] p-4 flex flex-col h-[600px]">
- <div className="flex items-center justify-between pb-3 border-b border-border">
- <h3 className="font-semibold text-foreground text-sm flex items-center gap-2">
- <Users className="w-4 h-4 text-muted" />
- Invités non placés ({unassignedGuests.length})
- </h3>
- <span className="text-[10px] font-medium text-primary">
- {acceptedGuests.length} Présents
- </span>
- </div>
-
- <div className="flex-1 overflow-y-auto pt-2">
- {unassignedGuests.length === 0 ? (
- <div className="text-center py-12 text-muted space-y-2">
- <HelpCircle className="w-8 h-8 mx-auto text-muted" />
- <p className="text-xs font-medium">Tous les invités présents ont été placés !</p>
- </div>
- ) : (
- unassignedGuests.map(g => (
- <div 
- key={g.id}
- className="px-3 py-2.5 border-b border-border last:border-b-0 flex items-center justify-between text-xs hover:bg-surface-muted transition"
- >
- <div>
- <div className="font-medium text-foreground">{g.firstName} {g.lastName}</div>
- <div className="text-[10px] text-muted mt-0.5">{g.category || 'Général'}</div>
- </div>
- <span className="text-[10px] text-muted font-medium">
- Confirmé
- </span>
- </div>
- ))
- )}
- </div>
- </div>
-
- {/* Visual Canvas Area */}
- <div className="xl:col-span-3 flex flex-col space-y-4">
- <div className="bg-surface border border-border rounded-[var(--radius-card)] px-3 py-2 text-xs text-muted font-medium flex flex-wrap items-center gap-2">
+ {/* Grid Layout for Planner — canvas first on mobile */}
+ <div className="flex flex-col xl:grid xl:grid-cols-4 gap-3 xl:gap-6">
+ <div className="order-1 xl:order-2 xl:col-span-3 flex flex-col space-y-3">
+ <div className="bg-surface border border-border rounded-[var(--radius-card)] px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs text-muted font-medium flex flex-wrap items-center gap-1.5 sm:gap-2 overflow-x-auto">
  <Move className="w-3.5 h-3.5 text-muted shrink-0" />
- <span className="flex-1 min-w-[12rem]">Glissez les tables · déverrouillez pour déplacer un import · cliquez un siège pour placer un invité</span>
+ <span className="flex-1 min-w-[10rem] hidden sm:inline">Glissez les tables · déverrouillez pour déplacer un import · cliquez un siège pour placer un invité</span>
+ <span className="flex-1 sm:hidden">Glissez · touchez un siège</span>
  {caps.canAutoAssign ? (
  <button
  type="button"
@@ -799,34 +763,75 @@ export default function TablePlanner({
  </button>
  </div>
 
- {!isExpanded && renderCanvas('h-[520px]')}
+ {!isExpanded && renderCanvas('em-plan-stage')}
+ </div>
+
+ <div className="order-2 xl:order-1 xl:col-span-1 bg-surface border border-border rounded-[var(--radius-card)] p-3 sm:p-4 flex flex-col xl:h-[600px]">
+ <button
+ type="button"
+ onClick={() => setGuestsOpen((open) => !open)}
+ className="flex items-center justify-between gap-2 xl:pointer-events-none"
+ >
+ <h3 className="font-semibold text-foreground text-sm flex items-center gap-2">
+ <Users className="w-4 h-4 text-muted" />
+ Invités non placés ({unassignedGuests.length})
+ </h3>
+ <span className="flex items-center gap-2">
+ <span className="text-[10px] font-medium text-primary">{acceptedGuests.length} Présents</span>
+ <ChevronDown className={cn('w-4 h-4 text-muted xl:hidden transition', guestsOpen && 'rotate-180')} />
+ </span>
+ </button>
+
+ <div className={cn('overflow-y-auto pt-2', guestsOpen ? 'max-h-[36vh]' : 'hidden', 'xl:block xl:flex-1 xl:max-h-none')}>
+ {unassignedGuests.length === 0 ? (
+ <div className="text-center py-8 xl:py-12 text-muted space-y-2">
+ <HelpCircle className="w-8 h-8 mx-auto text-muted" />
+ <p className="text-xs font-medium">Tous les invités présents ont été placés !</p>
+ </div>
+ ) : (
+ unassignedGuests.map(g => (
+ <div 
+ key={g.id}
+ className="px-3 py-2 border-b border-border last:border-b-0 flex items-center justify-between text-xs hover:bg-surface-muted transition"
+ >
+ <div>
+ <div className="font-medium text-foreground">{g.firstName} {g.lastName}</div>
+ <div className="text-[10px] text-muted mt-0.5">{g.category || 'Général'}</div>
+ </div>
+ <span className="text-[10px] text-muted font-medium">
+ Confirmé
+ </span>
+ </div>
+ ))
+ )}
+ </div>
  </div>
  </div>
 
  {/* Expanded fullscreen canvas */}
  {isExpanded && (
- <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-sm flex flex-col p-4 md:p-6">
- <div className="flex items-center justify-between gap-4 mb-4">
- <div>
- <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
- <LayoutGrid className="w-5 h-5 text-primary" />
- Plan de table — vue agrandie
+ <div className="fixed inset-0 z-[100] bg-background flex flex-col p-1.5 sm:p-4 md:p-6" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
+ <div className="flex items-center justify-between gap-3 mb-2 sm:mb-4 shrink-0">
+ <div className="min-w-0">
+ <h3 className="text-sm sm:text-lg font-semibold text-foreground flex items-center gap-2">
+ <LayoutGrid className="w-4 h-4 sm:w-5 sm:h-5 text-primary shrink-0" />
+ <span className="truncate">Plan de table</span>
  </h3>
- <p className="text-xs text-muted mt-0.5">
+ <p className="text-[11px] text-muted mt-0.5 hidden sm:block">
  Survolez une table pour afficher son type, sa capacité et les invités placés.
  </p>
  </div>
  <button
  type="button"
  onClick={() => setIsExpanded(false)}
- className="inline-flex items-center gap-2 px-4 py-2 bg-surface border border-border text-foreground hover:bg-surface-muted font-medium rounded-[var(--radius-button)] text-sm transition"
+ className="inline-flex items-center gap-2 px-3 py-2 bg-surface border border-border text-foreground hover:bg-surface-muted font-medium rounded-[var(--radius-button)] text-sm transition shrink-0"
  >
  <Minimize2 className="w-4 h-4" />
  Réduire
  </button>
  </div>
  <div className="flex-1 min-h-0">
- {renderCanvas('h-full min-h-[60vh]')}
+ {renderCanvas('h-full min-h-0')}
  </div>
  </div>
  )}

@@ -310,15 +310,8 @@ export function SkeletonListingDetail() {
       aria-live="polite"
       aria-label="Chargement de la fiche"
     >
-      <div className="lg:col-span-3 space-y-4 sm:space-y-5">
-        <Skeleton className="aspect-[5/4] sm:aspect-[16/9] w-full rounded-[var(--radius-card)]" />
-        <div className="lg:hidden flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface p-3.5">
-          <div className="space-y-1.5 min-w-0 flex-1">
-            <Skeleton className="h-2.5 w-16" />
-            <Skeleton className="h-5 w-28" />
-          </div>
-          <Skeleton className="h-10 w-20 rounded-[var(--radius-button)] shrink-0" />
-        </div>
+      <div className="lg:col-span-3 space-y-3 sm:space-y-5">
+        <Skeleton className="em-listing-hero w-full rounded-[var(--radius-card)]" />
         <div className="flex gap-1 p-1 rounded-[var(--radius-button)] bg-surface-muted border border-border">
           <Skeleton className="h-11 flex-1 rounded-[var(--radius-button)]" />
           <Skeleton className="h-11 flex-1 rounded-[var(--radius-button)]" />

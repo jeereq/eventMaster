@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   getSeatCoordinates,
   getTableShapeLabel,
@@ -127,10 +127,21 @@ export default function GuestTablePlanView({
   immersive = false,
 }: GuestTablePlanViewProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [planHeight, setPlanHeight] = useState(360);
   const guestFullName = `${guestFirstName} ${guestLastName}`;
   const theme = getRoomTheme(roomThemeId);
   const neighborNames = tableDetails?.neighbors.map((n) => `${n.firstName} ${n.lastName}`) ?? [];
   const guestTableId = tablePlanOverview?.find((t) => t.isGuestTable)?.id;
+
+  useEffect(() => {
+    const update = () => {
+      const h = window.innerHeight;
+      setPlanHeight(Math.round(Math.max(280, Math.min(h * 0.62, 560))));
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
 
   if (!placementAccessible) {
     return (
@@ -161,10 +172,10 @@ export default function GuestTablePlanView({
     );
   }
 
-  const planSection = (height: number) =>
+  const planSection = (opts: { height?: number; fill?: boolean }) =>
     tablePlanOverview && tablePlanOverview.length > 0 ? (
-      <div className="space-y-3 w-full">
-        <div className="flex items-center justify-between gap-2">
+      <div className={opts.fill ? 'space-y-2 w-full h-full min-h-0 flex flex-col' : 'space-y-3 w-full'}>
+        <div className="flex items-center justify-between gap-2 shrink-0">
           <div>
             <h4 className="font-semibold text-foreground text-xs">Plan de la salle</h4>
             <p className="text-[10px] text-muted mt-0.5">
@@ -193,14 +204,16 @@ export default function GuestTablePlanView({
           guestTableId={guestTableId}
           guestFullName={guestFullName}
           neighborNames={neighborNames}
-          height={height}
+          height={opts.height}
+          fill={opts.fill}
+          className={opts.fill ? 'flex-1 min-h-0' : undefined}
         />
       </div>
     ) : null;
 
   const seatDetailSection = tableDetails && (
     <>
-      <div className="rounded-[var(--radius-card)] border border-border bg-surface p-4 sm:p-5 space-y-4 shadow-[var(--shadow-soft)]">
+      <div className="rounded-[var(--radius-card)] border border-border bg-surface p-3 sm:p-5 space-y-3 sm:space-y-4 shadow-[var(--shadow-soft)]">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1 min-w-0">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Votre placement</span>
@@ -246,7 +259,7 @@ export default function GuestTablePlanView({
         )}
       </div>
 
-      <div className="bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 shadow-[var(--shadow-soft)]">
+      <div className="bg-surface border border-border rounded-[var(--radius-card)] p-3 sm:p-5 shadow-[var(--shadow-soft)]">
         <p className="text-[10px] font-semibold text-muted mb-4 text-center">
           Votre place à la table
         </p>
@@ -327,29 +340,29 @@ export default function GuestTablePlanView({
 
   if (isFullscreen) {
     return (
-      <div className="fixed inset-0 z-[80] bg-background flex flex-col p-3 sm:p-4">
-        <div className="flex items-center justify-between mb-3 shrink-0">
-          <p className="text-sm font-semibold text-foreground">Plan de la salle · {theme.name}</p>
-          <button type="button" onClick={() => setIsFullscreen(false)} className="px-3 py-1.5 border border-border bg-surface text-foreground rounded-[var(--radius-button)] text-xs font-semibold hover:bg-surface-muted transition">
+      <div className="fixed inset-0 z-[80] bg-background flex flex-col p-2 sm:p-4" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
+        <div className="flex items-center justify-between mb-2 shrink-0">
+          <p className="text-sm font-semibold text-foreground truncate">Plan de la salle · {theme.name}</p>
+          <button type="button" onClick={() => setIsFullscreen(false)} className="px-3 py-1.5 border border-border bg-surface text-foreground rounded-[var(--radius-button)] text-xs font-semibold hover:bg-surface-muted transition shrink-0">
             Fermer
           </button>
         </div>
-        <div className="flex-1 min-h-0">{planSection(typeof window !== 'undefined' ? window.innerHeight - 120 : 600)}</div>
+        <div className="flex-1 min-h-0">{planSection({ fill: true })}</div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 w-full">
+    <div className="flex flex-col gap-4 w-full">
       {immersive ? (
         <>
-          {planSection(typeof window !== 'undefined' ? Math.max(360, window.innerHeight - 220) : 480)}
+          {planSection({ height: planHeight })}
           {seatDetailSection}
         </>
       ) : (
         <>
-          {seatDetailSection}
-          {planSection(420)}
+          <div className="order-1 md:order-2">{planSection({ height: planHeight })}</div>
+          <div className="order-2 md:order-1 space-y-4">{seatDetailSection}</div>
         </>
       )}
     </div>

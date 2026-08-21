@@ -25,8 +25,8 @@ function ListingMediaGallery({
 }) {
   const current = photos[photoIndex];
   return (
-    <div className="space-y-3">
-      <div className="aspect-[5/4] sm:aspect-[16/9] rounded-[var(--radius-card)] overflow-hidden bg-black/80 border border-border">
+    <div className="space-y-2">
+      <div className="em-listing-hero rounded-[var(--radius-card)] overflow-hidden bg-black/80 border border-border">
         {current ? (
           isVideoUrl(current) ? (
             <video
@@ -55,7 +55,7 @@ function ListingMediaGallery({
               type="button"
               onClick={() => onPhotoIndex(i)}
               className={cn(
-                'relative snap-start shrink-0 w-[4.75rem] sm:w-[5.5rem] aspect-[4/3] rounded-[var(--radius-button)] overflow-hidden border bg-surface-muted',
+                'relative snap-start shrink-0 w-[3.75rem] sm:w-[5.5rem] aspect-[4/3] rounded-[var(--radius-button)] overflow-hidden border bg-surface-muted',
                 i === photoIndex ? 'border-primary ring-2 ring-primary/30' : 'border-border',
               )}
             >
@@ -193,11 +193,11 @@ export default function ListingDetailLayout({
   );
 
   return (
-    <main className={embedded ? 'pb-8 sm:pb-10 flex-1' : 'page-container pt-4 pb-24 sm:pt-8 lg:py-10 lg:pb-10 flex-1'}>
+    <main className={embedded ? 'pb-8 sm:pb-10 flex-1' : 'page-container pt-3 pb-20 sm:pt-6 lg:py-10 lg:pb-10 flex-1'}>
       <button
         type="button"
         onClick={goBack}
-        className="inline-flex items-center gap-1.5 min-h-11 -ml-1 px-1 text-xs font-semibold text-muted hover:text-foreground mb-3 sm:mb-5"
+        className="inline-flex items-center gap-1.5 min-h-9 -ml-1 px-1 text-xs font-semibold text-muted hover:text-foreground mb-2 sm:mb-5"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
         {backLabel}
@@ -212,9 +212,9 @@ export default function ListingDetailLayout({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 lg:gap-8 items-start">
-            <div className="lg:col-span-3 space-y-4 sm:space-y-5 min-w-0">
-              <div className="relative aspect-[5/4] sm:aspect-[16/9] rounded-[var(--radius-card)] overflow-hidden bg-black/80 border border-border shadow-[var(--shadow-soft)]">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 lg:gap-8 items-start">
+            <div className="lg:col-span-3 space-y-3 sm:space-y-5 min-w-0">
+              <div className="relative em-listing-hero rounded-[var(--radius-card)] overflow-hidden bg-black/80 border border-border shadow-[var(--shadow-soft)]">
                 {heroUrl ? (
                   isVideoUrl(heroUrl) ? (
                     <video src={heroUrl} poster={mediaPosterUrl(heroUrl)} className="w-full h-full object-cover" muted playsInline />
@@ -241,29 +241,20 @@ export default function ListingDetailLayout({
                     ) : null}
                   </div>
                 ) : null}
-                <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6 text-white space-y-1">
+                <div className="absolute inset-x-0 bottom-0 p-3 sm:p-6 text-white space-y-0.5">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-white/80">{chip}</p>
-                  <h1 className="text-xl sm:text-3xl font-semibold tracking-tight drop-shadow leading-tight">
+                  <h1 className="text-lg sm:text-3xl font-semibold tracking-tight drop-shadow leading-tight">
                     {title}
                   </h1>
-                  <p className="text-sm text-white/85 truncate">{subtitle}</p>
+                  <p className="text-xs sm:text-sm text-white/85 truncate">{subtitle}</p>
+                  <p className="lg:hidden text-sm font-semibold pt-1">
+                    {priceLabel}
+                    {priceUnitLabel ? <span className="text-[11px] font-normal text-white/75"> · {priceUnitLabel}</span> : null}
+                  </p>
                 </div>
               </div>
 
-              <div className="lg:hidden flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface p-3.5">
-                <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">À partir de</p>
-                  <p className="text-base font-semibold truncate">{priceLabel}</p>
-                  {priceUnitLabel ? <p className="text-[11px] text-muted truncate">{priceUnitLabel}</p> : null}
-                </div>
-                {showCommerce ? (
-                  <Button size="sm" className="shrink-0 min-h-10" onClick={() => scrollToContact('inquire')}>
-                    {hideBooking ? inquireLabel : 'Devis'}
-                  </Button>
-                ) : null}
-              </div>
-
-              <div className="sticky top-14 z-20 -mx-1 px-1 py-1 bg-background/95 backdrop-blur-md">
+              <div className={cn('sticky z-20 -mx-1 px-1 py-1 bg-background/95 backdrop-blur-md', embedded ? 'top-12' : 'top-14', 'md:top-16')}>
                 <MarketplaceFormTabs value={tab} onChange={onTab} />
               </div>
 
@@ -281,7 +272,7 @@ export default function ListingDetailLayout({
 
             <aside
               id="listing-contact"
-              className="lg:col-span-2 space-y-3 sm:space-y-4 lg:sticky lg:top-24 scroll-mt-32"
+              className="lg:col-span-2 space-y-3 sm:space-y-4 lg:sticky lg:top-24 scroll-mt-24"
             >
               <div className="hidden lg:block">{priceBlock}</div>
 

@@ -106,6 +106,18 @@ html[data-density="compact"] .em-dashboard-home.space-y-6 > :not([hidden]) ~ :no
   margin-top: 1rem;
 }
 
+@media (max-width: 767px) {
+  .em-dashboard-content {
+    padding-top: 0.75rem;
+    padding-bottom: 1rem;
+  }
+
+  html[data-density="compact"] .em-dashboard-content {
+    padding-top: 0.5rem;
+    padding-bottom: 0.75rem;
+  }
+}
+
 @keyframes slide-in-right {
   from { opacity: 0; transform: translateX(1rem); }
   to { opacity: 1; transform: translateX(0); }
@@ -893,10 +905,35 @@ html[data-mood="celebrate"] .font-display {
   padding-right: 0;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .app-container,
   .page-container {
-    width: 91.666667%;
+    width: 100%;
+    max-width: none;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+}
+
+.em-listing-hero {
+  aspect-ratio: 16 / 10;
+  max-height: min(42vh, 280px);
+}
+
+@media (min-width: 640px) {
+  .em-listing-hero {
+    aspect-ratio: 16 / 9;
+    max-height: none;
+  }
+}
+
+.em-plan-stage {
+  height: min(62dvh, 520px);
+}
+
+@media (min-width: 1280px) {
+  .em-plan-stage {
+    height: 520px;
   }
 }
 

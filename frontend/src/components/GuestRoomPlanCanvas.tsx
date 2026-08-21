@@ -38,6 +38,8 @@ interface GuestRoomPlanCanvasProps {
   guestFullName?: string;
   neighborNames?: string[];
   height?: number;
+  /** Remplit le parent (plein écran / RSVP immersif). */
+  fill?: boolean;
   className?: string;
 }
 
@@ -86,9 +88,11 @@ export default function GuestRoomPlanCanvas({
   guestFullName,
   neighborNames = [],
   height = 400,
+  fill = false,
   className = '',
 }: GuestRoomPlanCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const pinchRef = useRef<{ dist: number; zoom: number } | null>(null);
   const [zoom, setZoom] = useState(1);
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
 
@@ -109,20 +113,69 @@ export default function GuestRoomPlanCanvas({
 
   const markerSize = getGuestTableMarkerSize(tables.length);
 
+  const fitToContainer = () => {
+    const el = containerRef.current;
+    if (!el) return;
+    const h = fill ? el.clientHeight : height;
+    const fit = computeFitZoom(el.clientWidth, h);
+    setZoom(Math.max(0.22, fit));
+  };
+
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const fit = computeFitZoom(el.clientWidth, height);
-    setZoom(Math.max(0.45, fit));
-  }, [height, tables.length]);
+    fitToContainer();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => fitToContainer());
+    ro.observe(el);
+    return () => ro.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [height, fill, tables.length]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onTouchStart = (event: TouchEvent) => {
+      if (event.touches.length === 2) {
+        pinchRef.current = {
+          dist: Math.hypot(
+            event.touches[0].clientX - event.touches[1].clientX,
+            event.touches[0].clientY - event.touches[1].clientY,
+          ),
+          zoom,
+        };
+      }
+    };
+    const onTouchMove = (event: TouchEvent) => {
+      if (event.touches.length !== 2 || !pinchRef.current) return;
+      event.preventDefault();
+      const dist = Math.hypot(
+        event.touches[0].clientX - event.touches[1].clientX,
+        event.touches[0].clientY - event.touches[1].clientY,
+      );
+      const next = pinchRef.current.zoom * (dist / Math.max(1, pinchRef.current.dist));
+      setZoom(Math.max(0.22, Math.min(2.4, next)));
+    };
+    const onTouchEnd = () => {
+      pinchRef.current = null;
+    };
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    el.addEventListener('touchend', onTouchEnd);
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+      el.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [zoom]);
 
   const adjustZoom = (delta: number) => {
-    setZoom((z) => Math.max(0.35, Math.min(2, z + delta)));
+    setZoom((z) => Math.max(0.22, Math.min(2.4, z + delta)));
   };
 
   return (
-    <div className={`space-y-2 ${className}`} data-guest-no-swipe>
-      <div className="flex items-center justify-end gap-1.5">
+    <div className={`space-y-2 ${fill ? 'h-full min-h-0 flex flex-col' : ''} ${className}`} data-guest-no-swipe>
+      <div className="flex items-center justify-end gap-1.5 shrink-0">
         <button type="button" onClick={() => adjustZoom(-0.15)} className="p-1.5 rounded-[var(--radius-button)] border border-border text-muted hover:text-foreground hover:bg-surface-muted transition" aria-label="Zoom arrière">
           <ZoomOut className="w-3.5 h-3.5" />
         </button>
@@ -132,10 +185,7 @@ export default function GuestRoomPlanCanvas({
         </button>
         <button
           type="button"
-          onClick={() => {
-            const el = containerRef.current;
-            if (el) setZoom(Math.max(0.45, computeFitZoom(el.clientWidth, height)));
-          }}
+          onClick={fitToContainer}
           className="p-1.5 rounded-[var(--radius-button)] border border-border text-muted hover:text-foreground hover:bg-surface-muted transition"
           aria-label="Réinitialiser"
         >
@@ -145,10 +195,11 @@ export default function GuestRoomPlanCanvas({
 
       <div
         ref={containerRef}
-        className="relative w-full overflow-auto rounded-[var(--radius-card)] border border-border touch-pan-x touch-pan-y shadow-[var(--shadow-soft)]"
+        className={`relative w-full overflow-auto rounded-[var(--radius-card)] border border-border shadow-[var(--shadow-soft)] ${fill ? 'flex-1 min-h-0' : ''}`}
         style={{
-          height: `${height}px`,
+          height: fill ? undefined : `${height}px`,
           background: 'var(--surface-muted)',
+          touchAction: 'none',
         }}
       >
         <div
@@ -295,8 +346,8 @@ export default function GuestRoomPlanCanvas({
         </div>
       </div>
 
-      <p className="text-[10px] text-muted text-center">
-        Touchez une table pour voir les détails · Pincez ou utilisez les contrôles de zoom
+      <p className="text-[10px] text-muted text-center shrink-0">
+        Touchez une table · Pincez pour zoomer
       </p>
     </div>
   );

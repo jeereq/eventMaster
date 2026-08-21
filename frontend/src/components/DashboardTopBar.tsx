@@ -10,7 +10,7 @@ import UserAvatar from '@/components/UserAvatar';
 import { ViewCustomizerTrigger } from '@/components/ViewCustomizer';
 import { Sun, Moon, User } from 'lucide-react';
 
-function useDashboardTitle(): { title: string; subtitle?: string } {
+export function useDashboardTitle(): { title: string; subtitle?: string } {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user } = useAuth();

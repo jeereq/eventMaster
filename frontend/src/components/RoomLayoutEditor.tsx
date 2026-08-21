@@ -1317,7 +1317,7 @@ export default function RoomLayoutEditor({
  );
 
  const toolbar = !readOnly && (
- <div className="flex flex-wrap gap-2">
+ <div className="flex flex-nowrap lg:flex-wrap gap-2 overflow-x-auto pb-0.5 -mx-0.5 px-0.5">
  <button type="button" onClick={addTable} className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-bold shadow-sm">
  <Plus className="w-3.5 h-3.5" /> Table
  </button>
@@ -1405,23 +1405,23 @@ export default function RoomLayoutEditor({
  initialImageUrl={cropFixture?.imageUrl}
  initialCrop={cropFixture?.imageCrop}
  />
- <div className="fixed inset-0 z-[70] bg-background/70 backdrop-blur-sm flex flex-col p-2 sm:p-3">
- <div className="bg-white rounded-2xl shadow-2xl flex flex-col flex-1 min-h-0 overflow-hidden">
- <div className="p-4 space-y-3 border-b border-border-subtle shrink-0">
+ <div className="fixed inset-0 z-[70] bg-background/70 backdrop-blur-sm flex flex-col p-1.5 sm:p-3">
+ <div className="bg-background sm:bg-white rounded-none sm:rounded-2xl shadow-2xl flex flex-col flex-1 min-h-0 overflow-hidden">
+ <div className="p-2.5 sm:p-4 space-y-2 sm:space-y-3 border-b border-border-subtle shrink-0">
  {header}
  {templateBar}
  {toolbar}
  </div>
- <div className="flex flex-1 min-h-0 gap-3 p-3 overflow-hidden">
- <div className="flex-[4] min-w-0 min-h-0 flex flex-col">
+ <div className="flex flex-col md:flex-row flex-1 min-h-0 gap-2 sm:gap-3 p-2 sm:p-3 overflow-hidden">
+ <div className="flex-1 min-w-0 min-h-[50dvh] md:min-h-0 flex flex-col">
  {renderCanvas('flex-1 min-h-0 h-full')}
  </div>
- <div className="flex-1 min-w-[240px] max-w-[320px] overflow-y-auto shrink-0">
+ <div className="md:flex-1 md:min-w-[240px] md:max-w-[320px] max-h-[34dvh] md:max-h-none overflow-y-auto shrink-0">
  {renderEditPanel()}
  </div>
  </div>
- <div className="p-3 border-t border-border-subtle flex justify-end shrink-0">
- <button type="button" onClick={() => setIsExpanded(false)} className="px-5 py-2.5 bg-surface-muted text-white rounded-xl text-xs font-bold">Fermer le mode agrandi</button>
+ <div className="p-2 sm:p-3 border-t border-border-subtle flex justify-end shrink-0">
+ <button type="button" onClick={() => setIsExpanded(false)} className="px-5 py-2.5 bg-surface-muted text-foreground rounded-xl text-xs font-bold">Fermer le mode agrandi</button>
  </div>
  </div>
  </div>
@@ -1443,9 +1443,9 @@ export default function RoomLayoutEditor({
  {header}
  {templateBar}
  {toolbar}
- <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
- <div className="lg:col-span-2 min-h-[320px]">{renderCanvas('aspect-[16/10] min-h-[320px]')}</div>
- <div className="max-h-[520px] overflow-y-auto">{renderEditPanel()}</div>
+ <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4">
+ <div className="lg:col-span-2 min-h-0">{renderCanvas('em-plan-stage lg:aspect-[16/10] lg:h-auto lg:min-h-[320px]')}</div>
+ <div className="max-h-[36dvh] lg:max-h-[520px] overflow-y-auto">{renderEditPanel()}</div>
  </div>
  </div>
  </>
