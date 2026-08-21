@@ -616,32 +616,78 @@ export default function RsvpPage() {
         >
             {/* 1. BADGE & INFOS TAB */}
             {activeGuestTab === 'badge' && (
-              <div className="space-y-4">
-                <GuestPortalCard className="space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-                    <div className="flex-1 min-w-0 space-y-2">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-[var(--radius-button)] bg-emerald-50 text-emerald-700 border border-emerald-100 text-[10px] font-semibold uppercase tracking-wider">
-                        Présence confirmée
-                      </span>
-                      <h2 className="text-lg font-semibold leading-snug tracking-tight">
-                        Bonjour {guest.firstName}
-                      </h2>
-                      <p className="text-muted text-xs leading-relaxed">
-                        Présentez votre badge QR à l&apos;entrée le jour J. Gardez-le à portée de main sur cet écran.
-                      </p>
-                    </div>
-                    <div className="shrink-0 mx-auto sm:mx-0 text-center space-y-2">
-                      <div className="p-2.5 bg-white border border-border rounded-[var(--radius-card)] inline-block">
-                        <img
-                          src={getGuestQrImageUrl(guest.id, 180)}
-                          alt="QR Code de confirmation de présence"
-                          className="w-36 h-36 sm:w-40 sm:h-40"
-                        />
+              <div className="space-y-6">
+                <div className="bg-surface rounded-3xl border border-border/50 shadow-sm overflow-hidden relative">
+                  {/* Billets / Pass Design */}
+                  <div className="absolute top-0 inset-x-0 h-32 bg-primary opacity-10" />
+                  <div className="absolute -top-16 -right-16 w-48 h-48 bg-primary opacity-20 rounded-full blur-3xl" />
+                  
+                  <div className="p-6 sm:p-8 relative space-y-6">
+                    <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6">
+                      <div className="flex-1 min-w-0 space-y-3 text-center sm:text-left">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-100/50 text-emerald-700 border border-emerald-200 text-[10px] font-bold uppercase tracking-[0.1em]">
+                          Présence confirmée
+                        </span>
+                        <h2 className="text-2xl font-display font-semibold leading-tight tracking-tight text-foreground">
+                          Bonjour {guest.firstName}
+                        </h2>
+                        <p className="text-muted text-sm leading-relaxed max-w-sm mx-auto sm:mx-0">
+                          Voici votre pass exclusif pour l&apos;événement. Présentez ce badge à l&apos;accueil le jour J.
+                        </p>
+                        
+                        <div className="pt-4 grid grid-cols-2 gap-4">
+                          <div className="space-y-1 text-center sm:text-left">
+                            <p className="text-[10px] font-bold text-muted uppercase tracking-wider">Date</p>
+                            <p className="text-sm font-semibold">{new Date(guest.event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</p>
+                          </div>
+                          <div className="space-y-1 text-center sm:text-left">
+                            <p className="text-[10px] font-bold text-muted uppercase tracking-wider">Heure</p>
+                            <p className="text-sm font-semibold">{new Date(guest.event.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Badge QR</p>
+                      
+                      <div className="shrink-0 relative">
+                        {/* Perforated edge effect for the ticket */}
+                        <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-background rounded-full hidden sm:block" />
+                        
+                        <div className="p-3 bg-white border border-border/60 rounded-2xl shadow-sm inline-block relative z-10">
+                          <img
+                            src={getGuestQrImageUrl(guest.id, 180)}
+                            alt="QR Code Pass"
+                            className="w-40 h-40"
+                          />
+                        </div>
+                        <p className="text-center text-[10px] font-mono text-muted mt-3 uppercase tracking-widest">
+                          {guest.id.split('-')[0]}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </GuestPortalCard>
+                  
+                  {/* Decorative Dashed Line */}
+                  <div className="w-full border-t-2 border-dashed border-border/50 relative">
+                    <div className="absolute -left-3 -top-3 w-6 h-6 bg-background rounded-full" />
+                    <div className="absolute -right-3 -top-3 w-6 h-6 bg-background rounded-full" />
+                  </div>
+                  
+                  <div className="px-6 py-4 bg-surface-muted/30 flex justify-between items-center text-xs font-semibold text-muted">
+                    <span className="tracking-widest">VIP PASS</span>
+                    <span className="tracking-widest">{guest.organizationName?.toUpperCase() || 'EVENTMASTER'}</span>
+                  </div>
+                </div>
+
+                {!rsvpLocked && (
+                  <div className="flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setSubmitted(false)}
+                      className="inline-flex items-center justify-center px-6 py-2.5 rounded-xl border-2 border-border bg-surface text-foreground text-sm font-semibold hover:bg-surface-muted transition shadow-sm"
+                    >
+                      Modifier mes informations RSVP
+                    </button>
+                  </div>
+                )}
 
                 <GuestPortalCard className="space-y-4">
                   {guest.event.description?.trim() ? (
@@ -735,32 +781,41 @@ export default function RsvpPage() {
 
             {/* 2. MA TABLE TAB */}
             {activeGuestTab === 'table' && (
-              <GuestTablePlanView
-                guestId={guestId}
-                placementAccessible={guest.placementAccessible}
-                seatingInvitationPdfUrl={guest.seatingInvitationPdfUrl}
-                tableDetails={guest.tableDetails ? {
-                  ...guest.tableDetails,
-                  chairType: guest.tableDetails.chairType as ChairType | undefined,
-                } : null}
-                tablePlanOverview={guest.tablePlanOverview?.map((t) => ({
-                  ...t,
-                  chairType: t.chairType as ChairType | undefined,
-                })) ?? null}
-                planFixtures={guest.planFixtures ?? null}
-                roomOutline={guest.roomOutline ? {
-                  ...guest.roomOutline,
-                  shape: guest.roomOutline.shape as RoomOutlineShape,
-                } : null}
-                roomThemeId={guest.roomThemeId ?? null}
-                floorType={guest.floorType ?? null}
-                floorImageUrl={guest.floorImageUrl ?? null}
-                depthAmount={guest.depthAmount ?? null}
-                depthView={guest.depthView ?? null}
-                guestFirstName={guest.firstName}
-                guestLastName={guest.lastName}
-                immersive
-              />
+              <div className="space-y-4">
+                <GuestPortalCard noPadding className="bg-surface-muted/30">
+                  <div className="p-4 sm:p-5 border-b border-border bg-surface">
+                    <h2 className="text-lg font-semibold leading-snug tracking-tight text-foreground">
+                      Votre placement
+                    </h2>
+                  </div>
+                  <GuestTablePlanView
+                    guestId={guestId}
+                    placementAccessible={guest.placementAccessible}
+                    seatingInvitationPdfUrl={guest.seatingInvitationPdfUrl}
+                    tableDetails={guest.tableDetails ? {
+                      ...guest.tableDetails,
+                      chairType: guest.tableDetails.chairType as ChairType | undefined,
+                    } : null}
+                    tablePlanOverview={guest.tablePlanOverview?.map((t) => ({
+                      ...t,
+                      chairType: t.chairType as ChairType | undefined,
+                    })) ?? null}
+                    planFixtures={guest.planFixtures ?? null}
+                    roomOutline={guest.roomOutline ? {
+                      ...guest.roomOutline,
+                      shape: guest.roomOutline.shape as RoomOutlineShape,
+                    } : null}
+                    roomThemeId={guest.roomThemeId ?? null}
+                    floorType={guest.floorType ?? null}
+                    floorImageUrl={guest.floorImageUrl ?? null}
+                    depthAmount={guest.depthAmount ?? null}
+                    depthView={guest.depthView ?? null}
+                    guestFirstName={guest.firstName}
+                    guestLastName={guest.lastName}
+                    immersive
+                  />
+                </GuestPortalCard>
+              </div>
             )}
 
             {/* 3. LIVRE D'OR TAB */}
@@ -2134,25 +2189,39 @@ export default function RsvpPage() {
                     Serez-vous parmi nous ?
                   </label>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <button
                       type="button"
                       disabled={rsvpLocked}
                       onClick={() => !rsvpLocked && setRsvpStatus('ACCEPTED')}
-                      className={`py-4 px-6 border rounded-[var(--radius-button)] flex flex-col items-center justify-center gap-2 transition ${rsvpStatus === 'ACCEPTED' ? 'border-emerald-600 bg-emerald-50 text-emerald-800' : 'border-border hover:bg-surface-muted text-muted'}`}
+                      className={cn(
+                        "py-5 px-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all duration-300 border-2",
+                        rsvpStatus === 'ACCEPTED' 
+                          ? "border-emerald-500 bg-emerald-50/50 shadow-sm ring-4 ring-emerald-500/10" 
+                          : "border-border/50 bg-surface hover:bg-surface-muted hover:border-border"
+                      )}
                     >
-                      <CheckCircle2 className={`w-7 h-7 ${rsvpStatus === 'ACCEPTED' ? 'text-emerald-600' : 'text-foreground/80'}`} />
-                      <span className="text-sm font-semibold">Oui, je serai présent</span>
+                      <CheckCircle2 className={cn("w-8 h-8", rsvpStatus === 'ACCEPTED' ? "text-emerald-500" : "text-muted")} />
+                      <span className={cn("text-sm font-semibold", rsvpStatus === 'ACCEPTED' ? "text-emerald-700" : "text-foreground")}>
+                        Oui, je serai présent
+                      </span>
                     </button>
 
                     <button
                       type="button"
                       disabled={rsvpLocked}
                       onClick={() => !rsvpLocked && setRsvpStatus('DECLINED')}
-                      className={`py-4 px-6 border rounded-[var(--radius-button)] flex flex-col items-center justify-center gap-2 transition ${rsvpStatus === 'DECLINED' ? 'border-rose-600 bg-rose-50 text-rose-800' : 'border-border hover:bg-surface-muted text-muted'}`}
+                      className={cn(
+                        "py-5 px-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all duration-300 border-2",
+                        rsvpStatus === 'DECLINED' 
+                          ? "border-rose-500 bg-rose-50/50 shadow-sm ring-4 ring-rose-500/10" 
+                          : "border-border/50 bg-surface hover:bg-surface-muted hover:border-border"
+                      )}
                     >
-                      <XCircle className={`w-7 h-7 ${rsvpStatus === 'DECLINED' ? 'text-rose-600' : 'text-foreground/80'}`} />
-                      <span className="text-sm font-semibold">Non, je ne pourrai pas</span>
+                      <XCircle className={cn("w-8 h-8", rsvpStatus === 'DECLINED' ? "text-rose-500" : "text-muted")} />
+                      <span className={cn("text-sm font-semibold", rsvpStatus === 'DECLINED' ? "text-rose-700" : "text-foreground")}>
+                        Non, je décline
+                      </span>
                     </button>
                   </div>
                 </div>

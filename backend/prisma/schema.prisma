@@ -256,6 +256,8 @@ model Event {
   isPublic          Boolean      @default(false)
   slug              String?      @unique
   publishedAt       DateTime?
+  isBlockedByAdmin  Boolean      @default(false)
+  adminBlockReason  String?
   ticketingEnabled  Boolean      @default(false)
   ticketPriceFc     Int          @default(0)
   ticketsTotal      Int?
@@ -568,6 +570,8 @@ model VendorProfile {
   displayName String
   city        String?
   bio         String?
+  isBlockedByAdmin Boolean @default(false)
+  adminBlockReason String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -596,6 +600,8 @@ model VenueListing {
   photos       Json?
   details      Json?
   blockedDates Json?
+  isBlockedByAdmin Boolean @default(false)
+  adminBlockReason String?
   publishedAt  DateTime?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
@@ -691,6 +697,8 @@ model ServiceOffering {
   details           Json?
   blockedDates      Json?
   isPublic          Boolean          @default(false)
+  isBlockedByAdmin  Boolean          @default(false)
+  adminBlockReason  String?
   publishedAt       DateTime?
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt

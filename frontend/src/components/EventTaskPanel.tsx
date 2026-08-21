@@ -158,18 +158,18 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
     );
   }
 
-  const selectClass = 'px-2 py-1 rounded-[var(--radius-button)] border border-border bg-surface-muted text-[11px] font-medium text-foreground';
+  const selectClass = 'px-3 py-1.5 rounded-xl border border-border bg-surface text-[12px] font-medium text-foreground hover:bg-surface-muted transition-colors outline-none focus:ring-2 focus:ring-primary/20';
 
   return (
-    <div className="space-y-5 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold text-foreground tracking-tight inline-flex items-center gap-2">
-            <ClipboardList className="w-4.5 h-4.5 text-primary" />
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="space-y-1.5">
+          <h2 className="text-xl font-display font-semibold text-foreground tracking-tight inline-flex items-center gap-2">
+            <ClipboardList className="w-5 h-5 text-primary" />
             Ce qui requiert votre attention
           </h2>
           <p className="text-sm text-muted">
-            Type, priorité, dépendances et statuts. Distincte des accès équipe.
+            Priorités, dépendances et progression de l'événement.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -180,13 +180,13 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
             columns={columns}
             onColumnsChange={setGridColumns}
           />
-          <div className="inline-flex rounded-[var(--radius-button)] border border-border p-0.5">
+          <div className="inline-flex rounded-xl border border-border bg-surface-muted p-1">
             <button
               type="button"
               onClick={() => setFilter('open')}
               className={cn(
-                'px-2.5 py-1 text-xs font-semibold rounded-[var(--radius-button)]',
-                filter === 'open' ? 'bg-surface text-foreground shadow-sm' : 'text-muted',
+                'px-3 py-1.5 text-xs font-semibold rounded-lg transition-all',
+                filter === 'open' ? 'bg-surface text-foreground shadow-sm ring-1 ring-border/50' : 'text-muted hover:text-foreground',
               )}
             >
               Ouvertes ({openCount})
@@ -195,8 +195,8 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
               type="button"
               onClick={() => setFilter('all')}
               className={cn(
-                'px-2.5 py-1 text-xs font-semibold rounded-[var(--radius-button)]',
-                filter === 'all' ? 'bg-surface text-foreground shadow-sm' : 'text-muted',
+                'px-3 py-1.5 text-xs font-semibold rounded-lg transition-all',
+                filter === 'all' ? 'bg-surface text-foreground shadow-sm ring-1 ring-border/50' : 'text-muted hover:text-foreground',
               )}
             >
               Toutes
@@ -287,35 +287,45 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
               <li
                 key={task.id}
                 className={cn(
-                  'rounded-[var(--radius-card)] border border-border bg-surface px-3 py-2.5 flex items-start gap-3',
-                  mode === 'grid' && 'h-full',
-                  done && 'opacity-70',
+                  'rounded-xl border border-border/50 bg-surface px-4 py-3 flex items-start gap-4 transition-colors hover:border-border hover:shadow-sm',
+                  mode === 'grid' && 'h-full flex-col',
+                  done && 'opacity-60 bg-surface-muted/30 border-transparent',
                 )}
               >
-                <button
-                  type="button"
-                  disabled={!canToggle || task.status === 'CANCELLED' || task.status === 'BLOCKED'}
-                  onClick={() => void patch(task.id, { status: done ? 'OPEN' : 'DONE' })}
-                  className={cn(
-                    'mt-0.5 w-7 h-7 rounded-full border inline-flex items-center justify-center shrink-0',
-                    done
-                      ? 'bg-emerald-600 border-emerald-600 text-white'
-                      : 'border-border text-muted hover:border-primary hover:text-primary',
-                  )}
-                  title={done ? 'Rouvrir' : 'Marquer faite'}
-                >
-                  <Check className="w-4 h-4" />
-                </button>
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <p className={cn('text-sm font-semibold', done && 'line-through text-muted')}>{task.title}</p>
-                  {task.notes ? <p className="text-xs text-muted">{task.notes}</p> : null}
-                  {task.blockedBy ? (
-                    <p className="text-[11px] text-muted">
-                      Dépend de : {task.blockedBy.title}
-                      {task.blockedBy.status !== 'DONE' ? ' (non terminée)' : ''}
-                    </p>
-                  ) : null}
-                  <div className="flex flex-wrap items-center gap-1.5">
+                <div className={cn(
+                  "flex items-start gap-3 w-full",
+                  mode === 'grid' && "items-center"
+                )}>
+                  <button
+                    type="button"
+                    disabled={!canToggle || task.status === 'CANCELLED' || task.status === 'BLOCKED'}
+                    onClick={() => void patch(task.id, { status: done ? 'OPEN' : 'DONE' })}
+                    className={cn(
+                      'mt-0.5 w-6 h-6 rounded-full border-2 inline-flex items-center justify-center shrink-0 transition-all',
+                      done
+                        ? 'bg-emerald-500 border-emerald-500 text-white'
+                        : 'border-muted/30 text-transparent hover:border-primary hover:text-primary',
+                    )}
+                    title={done ? 'Rouvrir' : 'Marquer faite'}
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                  </button>
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <p className={cn('text-sm font-semibold tracking-tight', done && 'line-through text-muted')}>{task.title}</p>
+                    {task.notes ? <p className="text-xs text-muted/80">{task.notes}</p> : null}
+                    {task.blockedBy ? (
+                      <p className="text-[10px] text-muted inline-flex items-center gap-1 bg-surface-muted px-2 py-0.5 rounded-full mt-1">
+                        Dépend de : <span className="font-medium">{task.blockedBy.title}</span>
+                        {task.blockedBy.status !== 'DONE' ? ' (en cours)' : ''}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+                <div className={cn(
+                  "flex flex-wrap items-center gap-2",
+                  mode === 'list' && "mt-1 pl-9",
+                  mode === 'grid' && "mt-auto w-full pt-3"
+                )}>
                     {canManage ? (
                       <select
                         value={task.status}
@@ -401,7 +411,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
                   <button
                     type="button"
                     onClick={() => void handleDelete(task.id)}
-                    className="p-1.5 rounded-[var(--radius-button)] text-muted hover:text-rose-600"
+                    className="p-1.5 rounded-lg text-muted/50 hover:text-rose-600 hover:bg-rose-50 transition-colors"
                     title="Supprimer"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -416,24 +426,25 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
       {canManage ? (
         <form
           onSubmit={handleCreate}
-          className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-3"
+          className="rounded-2xl border border-border/60 bg-surface-muted/10 p-5 space-y-4 shadow-sm"
         >
           <p className="text-sm font-semibold inline-flex items-center gap-2">
             <Plus className="w-4 h-4 text-primary" />
             Nouvelle tâche
           </p>
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 min-w-0">
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Ex. Vérifier le parking VIP"
+                className="w-full bg-surface"
               />
             </div>
             <select
               value={kind}
               onChange={(e) => setKind(e.target.value as EventTaskKind)}
-              className="px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+              className="px-3 py-2.5 rounded-xl border border-border bg-surface text-sm focus:ring-2 focus:ring-primary/20 outline-none"
             >
               {KIND_OPTIONS.map(([id, label]) => (
                 <option key={id} value={id}>{label}</option>
@@ -442,7 +453,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
             <select
               value={priority}
               onChange={(e) => setPriority(Number(e.target.value))}
-              className="px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+              className="px-3 py-2.5 rounded-xl border border-border bg-surface text-sm focus:ring-2 focus:ring-primary/20 outline-none"
             >
               {[0, 1, 2].map((level) => (
                 <option key={level} value={level}>{EVENT_TASK_PRIORITY_LABELS[level]}</option>
@@ -454,13 +465,13 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
             placeholder="Notes, contexte, livrable attendu… (optionnel)"
-            className="w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm resize-y min-h-[3rem]"
+            className="w-full rounded-xl border border-border bg-surface px-3 py-2.5 text-sm resize-y min-h-[3rem] focus:ring-2 focus:ring-primary/20 outline-none"
           />
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-col sm:flex-row gap-3">
             <select
               value={assigneeId}
               onChange={(e) => setAssigneeId(e.target.value)}
-              className="px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm flex-1"
+              className="px-3 py-2.5 rounded-xl border border-border bg-surface text-sm flex-1 focus:ring-2 focus:ring-primary/20 outline-none"
             >
               <option value="">Non assignée</option>
               {assignees.map((person) => (
@@ -472,7 +483,7 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
             <select
               value={blockedById}
               onChange={(e) => setBlockedById(e.target.value)}
-              className="px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm flex-1"
+              className="px-3 py-2.5 rounded-xl border border-border bg-surface text-sm flex-1 focus:ring-2 focus:ring-primary/20 outline-none"
             >
               <option value="">Sans dépendance</option>
               {tasks.filter((item) => isOpenEventTask(item.status) || item.status === 'DONE').map((item) => (
@@ -483,10 +494,10 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
               type="date"
               value={dueAt}
               onChange={(e) => setDueAt(e.target.value)}
-              className="px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+              className="px-3 py-2.5 rounded-xl border border-border bg-surface text-sm focus:ring-2 focus:ring-primary/20 outline-none"
               title="Échéance — un rappel est envoyé la veille et le jour J"
             />
-            <Button type="submit" loading={saving} disabled={!title.trim()}>
+            <Button type="submit" loading={saving} disabled={!title.trim()} className="shrink-0 h-[42px]">
               Ajouter
             </Button>
           </div>
@@ -495,6 +506,21 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
           </p>
         </form>
       ) : null}
+
+      {canManage && tasks.length === 0 && !loading && (
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-6 text-center space-y-4">
+          <Sparkles className="w-8 h-8 text-primary mx-auto" />
+          <div>
+            <h3 className="font-display font-semibold text-foreground text-lg">Générer une checklist type</h3>
+            <p className="text-sm text-muted max-w-sm mx-auto mt-1">
+              Commencez rapidement avec une liste de tâches pré-configurée (communication, logistique, relances).
+            </p>
+          </div>
+          <Button onClick={handleSeed} variant="secondary" loading={saving}>
+            Générer les tâches de base
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
