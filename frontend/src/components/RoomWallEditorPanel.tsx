@@ -424,9 +424,20 @@ export default function RoomWallEditorPanel({
                     <span className="text-muted">Style</span>
                     <select
                       value={op.style}
-                      onChange={(e) => updateOpening(selected.id, op.id, {
-                        style: e.target.value as DoorStyle | WindowStyle,
-                      })}
+                      onChange={(e) => {
+                        const style = e.target.value as DoorStyle | WindowStyle;
+                        const patch: Partial<RoomWallOpening> = { style };
+                        if (op.kind === 'door') {
+                          if (style === 'double') patch.widthM = Math.max(op.widthM, 1.6);
+                          if (style === 'sliding') patch.widthM = Math.max(op.widthM, 1.2);
+                          if (style === 'arch') patch.heightM = Math.max(op.heightM, 2.4);
+                          if (style === 'glass') patch.material = 'glass';
+                        }
+                        if (op.kind === 'window' && style === 'bay') {
+                          patch.widthM = Math.max(op.widthM, 1.8);
+                        }
+                        updateOpening(selected.id, op.id, patch);
+                      }}
                       className="w-full px-1 py-1 rounded border text-[10px]"
                     >
                       {op.kind === 'door'

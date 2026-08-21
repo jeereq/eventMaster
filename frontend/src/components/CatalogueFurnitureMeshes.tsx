@@ -491,22 +491,23 @@ export function CatalogueColumn({
   square?: boolean;
 }) {
   const r = Math.min(w, d) / 2;
+  const raycast = pickable ? undefined : () => null;
   return (
     <group>
       {/* Base */}
-      <mesh position={[0, 0.06, 0]} castShadow receiveShadow>
+      <mesh position={[0, 0.06, 0]} castShadow receiveShadow raycast={raycast}>
         {square ? <boxGeometry args={[r * 2.2, 0.12, r * 2.2]} /> : <cylinderGeometry args={[r * 1.25, r * 1.35, 0.12, 24]} />}
         <Mat color={selected ? '#c7d2fe' : '#d6d3d1'} map={map} roughness={0.8} />
       </mesh>
       {/* Fût */}
-      <mesh position={[0, height / 2, 0]} castShadow raycast={pickable ? undefined : () => null}>
+      <mesh position={[0, height / 2, 0]} castShadow raycast={raycast}>
         {square
           ? <boxGeometry args={[r * 1.7, height * 0.88, r * 1.7]} />
           : <cylinderGeometry args={[r * 0.92, r, height * 0.88, 24]} />}
         <Mat color={selected ? '#c7d2fe' : '#ffffff'} map={map} roughness={0.82} />
       </mesh>
       {/* Chapiteau */}
-      <mesh position={[0, height - 0.08, 0]} castShadow>
+      <mesh position={[0, height - 0.08, 0]} castShadow raycast={raycast}>
         {square ? <boxGeometry args={[r * 2.15, 0.14, r * 2.15]} /> : <cylinderGeometry args={[r * 1.3, r * 1.15, 0.14, 24]} />}
         <Mat color={selected ? '#c7d2fe' : '#e7e5e4'} map={map} roughness={0.75} />
       </mesh>

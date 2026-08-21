@@ -37,10 +37,35 @@ export type BuiltInRoomThemeId =
 
 export type RoomThemeId = BuiltInRoomThemeId | `custom_${string}`;
 
+/** Groupes thématiques pour l’UI éditeur. */
+export type RoomThemeCategory =
+  | 'ceremony'
+  | 'evening'
+  | 'nature'
+  | 'contemporary'
+  | 'custom';
+
+export const roomThemeCategoryLabels: Record<RoomThemeCategory, string> = {
+  ceremony: 'Cérémonie & élégance',
+  evening: 'Soirée & gala',
+  nature: 'Nature & extérieur',
+  contemporary: 'Contemporain',
+  custom: 'Personnalisés',
+};
+
+export const ROOM_THEME_CATEGORY_ORDER: RoomThemeCategory[] = [
+  'ceremony',
+  'evening',
+  'nature',
+  'contemporary',
+  'custom',
+];
+
 export interface RoomTheme {
   id: RoomThemeId;
   name: string;
   description: string;
+  category?: RoomThemeCategory;
   isCustom?: boolean;
   roomOutline: {
     fill: string;
@@ -63,6 +88,7 @@ export const ROOM_THEMES: Record<BuiltInRoomThemeId, RoomTheme> = {
   classic: {
     id: 'classic',
     name: 'Classique',
+    category: 'ceremony',
     description: 'Neutre et élégant, parquet point de Hongrie.',
     roomOutline: {
       fill: 'rgba(248, 250, 252, 0.92)',
@@ -81,6 +107,7 @@ export const ROOM_THEMES: Record<BuiltInRoomThemeId, RoomTheme> = {
   wedding: {
     id: 'wedding',
     name: 'Mariage',
+    category: 'ceremony',
     description: 'Ivoire, doré, nappes crème et sol marbre.',
     roomOutline: {
       fill: 'rgba(255, 251, 235, 0.94)',
@@ -101,6 +128,7 @@ export const ROOM_THEMES: Record<BuiltInRoomThemeId, RoomTheme> = {
   gala: {
     id: 'gala',
     name: 'Gala',
+    category: 'evening',
     description: 'Velours noir, lumières dorées et moquette premium.',
     roomOutline: {
       fill: 'rgba(15, 23, 42, 0.94)',
@@ -121,6 +149,7 @@ export const ROOM_THEMES: Record<BuiltInRoomThemeId, RoomTheme> = {
   garden: {
     id: 'garden',
     name: 'Jardin',
+    category: 'nature',
     description: 'Gazon naturel, pergola verte et tables en bois.',
     roomOutline: {
       fill: 'rgba(236, 253, 245, 0.9)',
@@ -141,6 +170,7 @@ export const ROOM_THEMES: Record<BuiltInRoomThemeId, RoomTheme> = {
   modern: {
     id: 'modern',
     name: 'Moderne',
+    category: 'contemporary',
     description: 'Béton poli, lignes nettes et indigo.',
     roomOutline: {
       fill: 'rgba(241, 245, 249, 0.96)',
@@ -160,6 +190,7 @@ export const ROOM_THEMES: Record<BuiltInRoomThemeId, RoomTheme> = {
   royal: {
     id: 'royal',
     name: 'Royal',
+    category: 'ceremony',
     description: 'Marbre pourpre, dorures et velours.',
     roomOutline: {
       fill: 'rgba(250, 245, 255, 0.93)',
@@ -180,6 +211,7 @@ export const ROOM_THEMES: Record<BuiltInRoomThemeId, RoomTheme> = {
   champagne: {
     id: 'champagne',
     name: 'Champagne',
+    category: 'ceremony',
     description: 'Blush, or pâle et parquet chevron clair.',
     roomOutline: {
       fill: 'rgba(255, 247, 237, 0.94)',
@@ -200,6 +232,7 @@ export const ROOM_THEMES: Record<BuiltInRoomThemeId, RoomTheme> = {
   soiree: {
     id: 'soiree',
     name: 'Soirée',
+    category: 'evening',
     description: 'Nuit indigo, damier et lumières froides.',
     roomOutline: {
       fill: 'rgba(15, 23, 42, 0.95)',
@@ -220,6 +253,7 @@ export const ROOM_THEMES: Record<BuiltInRoomThemeId, RoomTheme> = {
   rustique: {
     id: 'rustique',
     name: 'Rustique',
+    category: 'nature',
     description: 'Bois chaud, pierre et nappes lin.',
     roomOutline: {
       fill: 'rgba(255, 251, 235, 0.9)',
@@ -240,6 +274,7 @@ export const ROOM_THEMES: Record<BuiltInRoomThemeId, RoomTheme> = {
   cotier: {
     id: 'cotier',
     name: 'Côtier',
+    category: 'nature',
     description: 'Sable, aqua et lumière de bord de mer.',
     roomOutline: {
       fill: 'rgba(240, 253, 250, 0.92)',
@@ -260,6 +295,7 @@ export const ROOM_THEMES: Record<BuiltInRoomThemeId, RoomTheme> = {
   fete: {
     id: 'fete',
     name: 'Fête',
+    category: 'evening',
     description: 'Vert profond, or et terrazzo festif.',
     roomOutline: {
       fill: 'rgba(236, 253, 245, 0.9)',
@@ -280,6 +316,7 @@ export const ROOM_THEMES: Record<BuiltInRoomThemeId, RoomTheme> = {
   loft: {
     id: 'loft',
     name: 'Loft',
+    category: 'contemporary',
     description: 'Brique, résine brillante et acier.',
     roomOutline: {
       fill: 'rgba(244, 244, 245, 0.94)',
@@ -311,6 +348,7 @@ export function createCustomTheme(partial: Partial<RoomTheme> & { name: string }
   return {
     id,
     isCustom: true,
+    category: 'custom',
     name: partial.name,
     description: partial.description ?? 'Thème personnalisé',
     roomOutline: partial.roomOutline ?? {
@@ -333,6 +371,27 @@ export function createCustomTheme(partial: Partial<RoomTheme> & { name: string }
 export function listAvailableThemes(blueprint?: RoomLayoutBlueprint | null): RoomTheme[] {
   const custom = (blueprint?.metadata?.customThemes ?? []) as CustomRoomTheme[];
   return [...roomThemeList, ...custom];
+}
+
+export function groupThemesByCategory(
+  themes: RoomTheme[],
+): { category: RoomThemeCategory; label: string; themes: RoomTheme[] }[] {
+  const buckets = new Map<RoomThemeCategory, RoomTheme[]>();
+  for (const theme of themes) {
+    const cat: RoomThemeCategory = theme.isCustom
+      ? 'custom'
+      : (theme.category ?? 'ceremony');
+    const list = buckets.get(cat) ?? [];
+    list.push(theme);
+    buckets.set(cat, list);
+  }
+  return ROOM_THEME_CATEGORY_ORDER
+    .filter((cat) => (buckets.get(cat)?.length ?? 0) > 0)
+    .map((category) => ({
+      category,
+      label: roomThemeCategoryLabels[category],
+      themes: buckets.get(category) ?? [],
+    }));
 }
 
 export function getRoomTheme(
