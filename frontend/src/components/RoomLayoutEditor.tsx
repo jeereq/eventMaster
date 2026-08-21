@@ -86,7 +86,8 @@ export default function RoomLayoutEditor({
  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
  const [isExpanded, setIsExpanded] = useState(false);
  const [actionLog, setActionLog] = useState<LayoutActionEntry[]>([]);
- const [cropTarget, setCropTarget] = useState<CropTarget>(null);
+  const [accordion, setAccordion] = useState<string>('murs-sols');
+  const [cropTarget, setCropTarget] = useState<CropTarget>(null);
  const [arrangeDensity, setArrangeDensity] = useState<ArrangeDensity>('comfortable');
  const [keepTemplateStyle, setKeepTemplateStyle] = useState(true);
  const [keepThemeFloor, setKeepThemeFloor] = useState(false);
@@ -511,15 +512,15 @@ export default function RoomLayoutEditor({
  return (
  <div
  key={item.id}
- onMouseDown={(e) => handleMouseDown('row', item.id, e)}
- onClick={(e) => { e.stopPropagation(); setSelected({ kind: 'row', id: item.id }); }}
- className={cn(
- 'absolute -translate-x-1/2 -translate-y-1/2 cursor-grab em-floor-item',
- isSel && 'em-floor-item--active z-40',
- isDrag && 'z-40 scale-105 drop-shadow-md',
- !isSel && !isDrag && 'z-20',
- )}
- style={{
+        onMouseDown={(e) => handleMouseDown('row', item.id, e)}
+        onClick={(e) => { e.stopPropagation(); setSelected({ kind: 'row', id: item.id }); }}
+        className={cn(
+          'absolute -translate-x-1/2 -translate-y-1/2 cursor-grab em-floor-item drop-shadow-md',
+          isSel && 'em-floor-item--active z-40 drop-shadow-xl scale-[1.02]',
+          isDrag && 'z-40 scale-105 drop-shadow-2xl',
+          !isSel && !isDrag && 'z-20',
+        )}
+        style={{
  left: `${item.x}%`,
  top: `${item.y}%`,
  transform: isDrag ? undefined : `translate(-50%, -50%) scale(${depthScaleForY(item.y, liveDepth)})`,
@@ -546,28 +547,28 @@ export default function RoomLayoutEditor({
  const isSel = selected?.kind === 'table' && selected.id === item.id;
  const isDrag = dragging?.kind === 'table' && dragging.id === item.id;
  const tableColor = resolveTableColor(item.tableColor, blueprint.metadata.defaultTableColor);
- const { className: tableClass, style: tableStyle } = getTableVisualStyle(item.shape, isSel, tableColor, item.tableImageUrl);
- const depthScale = depthScaleForY(item.y, liveDepth);
- return (
- <div
- key={item.id}
- onMouseDown={(e) => handleMouseDown('table', item.id, e)}
- onClick={(e) => { e.stopPropagation(); setSelected({ kind: 'table', id: item.id }); }}
- className={cn(
- 'absolute cursor-grab em-floor-item',
- isSel && 'em-floor-item--active z-40',
- isDrag && 'em-floor-item--dragging',
- !isSel && !isDrag && 'z-20',
- )}
- style={{
- left: `${item.x}%`,
- top: `${item.y}%`,
- transform: isDrag
- ? undefined
- : `translate(-50%, -50%) scale(${depthScale})${item.rotation ? ` rotate(${item.rotation}deg)` : ''}`,
- ...(isSel || isDrag ? { zIndex: 50 } : furnitureDepthStyle(item.y, liveDepth)),
- }}
- >
+    const { className: tableClass, style: tableStyle } = getTableVisualStyle(item.shape, isSel, tableColor, item.tableImageUrl);
+    const depthScale = depthScaleForY(item.y, liveDepth);
+    return (
+      <div
+        key={item.id}
+        onMouseDown={(e) => handleMouseDown('table', item.id, e)}
+        onClick={(e) => { e.stopPropagation(); setSelected({ kind: 'table', id: item.id }); }}
+        className={cn(
+          'absolute cursor-grab em-floor-item drop-shadow-md',
+          isSel && 'em-floor-item--active z-40 drop-shadow-xl scale-[1.02]',
+          isDrag && 'em-floor-item--dragging drop-shadow-2xl',
+          !isSel && !isDrag && 'z-20',
+        )}
+        style={{
+          left: `${item.x}%`,
+          top: `${item.y}%`,
+          transform: isDrag
+            ? undefined
+            : `translate(-50%, -50%) scale(${depthScale})${item.rotation ? ` rotate(${item.rotation}deg)` : ''}`,
+          ...(isSel || isDrag ? { zIndex: 50 } : furnitureDepthStyle(item.y, liveDepth)),
+        }}
+      >
  <div
  className={cn('relative flex items-center justify-center', tableClass)}
  style={tableStyle}
@@ -797,110 +798,142 @@ export default function RoomLayoutEditor({
  ['banquet', Columns2, tableArrangeLabels.banquet],
  ['ushape', BoxSelect, tableArrangeLabels.ushape],
  ['circle', Circle, tableArrangeLabels.circle],
- ] as Array<[TableArrangePreset, typeof LayoutGrid, string]>).map(([id, Icon, label]) => (
- <button
- key={id}
- type="button"
- onClick={() => applyArrange(id)}
- className="inline-flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg border border-border text-[10px] font-bold text-muted hover:bg-white hover:text-foreground"
- >
- <Icon className="w-3.5 h-3.5" />
- {label}
- </button>
- ))}
- </div>
- <div className="space-y-1.5 pt-1">
- <label className="flex items-center justify-between gap-2 text-[10px] font-bold text-muted">
- <span className="inline-flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> Profondeur 2D</span>
- <span className="tabular-nums">{depthAmount}%</span>
- </label>
- <input
- type="range"
- min={0}
- max={100}
- value={depthAmount}
- onChange={(e) => setDepthAmount(Number(e.target.value))}
- className="w-full accent-indigo-600"
- />
- <p className="text-[10px] text-muted leading-relaxed">
- 0 = plan à plat · 100 = salle en perspective (le sol recule, le fond est plus petit). Le plan se remet à plat pendant un glisser-déposer.
- </p>
- </div>
- </div>
- <div className="p-4 bg-surface-muted rounded-xl border space-y-3">
- <p className="text-xs font-bold uppercase text-muted flex items-center gap-1"><Ruler className="w-3.5 h-3.5" /> Dimensions réelles</p>
- <div className="grid grid-cols-2 gap-2">
- <label className="text-xs space-y-1">
- <span className="font-semibold text-muted">Largeur (m)</span>
- <input
- type="number"
- min={5}
- max={80}
- value={blueprint.canvas.widthM}
- onChange={(e) => updateBlueprint({ ...blueprint, canvas: { ...blueprint.canvas, widthM: parseInt(e.target.value, 10) || 5 } }, { message: 'Largeur de salle modifiée', kind: 'settings' })}
- className="w-full px-2 py-1.5 rounded-lg border text-sm"
- />
- </label>
- <label className="text-xs space-y-1">
- <span className="font-semibold text-muted">Longueur (m)</span>
- <input
- type="number"
- min={5}
- max={80}
- value={blueprint.canvas.heightM}
- onChange={(e) => updateBlueprint({ ...blueprint, canvas: { ...blueprint.canvas, heightM: parseInt(e.target.value, 10) || 5 } }, { message: 'Longueur de salle modifiée', kind: 'settings' })}
- className="w-full px-2 py-1.5 rounded-lg border text-sm"
- />
- </label>
- </div>
- </div>
- <div className="p-4 bg-surface-muted rounded-xl border space-y-3">
- <p className="text-xs font-bold uppercase text-muted flex items-center gap-1"><Palette className="w-3.5 h-3.5" /> Couleur des tables</p>
- <div className="flex gap-2 items-center">
- <input
- type="color"
- value={blueprint.metadata.defaultTableColor ?? '#ffffff'}
- onChange={(e) => setDefaultTableColor(e.target.value)}
- className="w-12 h-9 rounded-lg border cursor-pointer shrink-0"
- />
- <button
- type="button"
- onClick={() => applyTableColorToAll(blueprint.metadata.defaultTableColor ?? '#ffffff')}
- className="flex-1 py-2 px-2 rounded-lg border border-primary/30 bg-primary/10 text-primary text-[10px] font-bold hover:bg-primary/15"
- >
- Appliquer à toutes les tables
- </button>
- </div>
- </div>
- {caps.canChangeOutline ? (
- <div className="p-4 bg-surface-muted rounded-xl border space-y-3">
- <p className="text-xs font-bold uppercase text-muted flex items-center gap-1"><Shapes className="w-3.5 h-3.5" /> Forme de la salle</p>
- <div className="grid grid-cols-3 gap-2">
- {(Object.keys(roomOutlineLabels) as RoomOutlineShape[]).map((shape) => (
- <button
- key={shape}
- type="button"
- onClick={() => setRoomOutlineShape(shape)}
- className={`py-2 px-1.5 rounded-lg border text-[10px] font-bold transition ${outline.shape === shape ? 'bg-primary/10 border-primary/50 text-primary' : 'border-border text-muted hover:bg-white'}`}
- >
- <span
- className="block h-7 mx-auto mb-1 bg-primary/25 border border-primary/20"
- style={{
-  width: '70%',
-  clipPath: getRoomOutlineClipPath(shape) ?? 'none',
-  background: outline.shape === shape ? 'var(--color-primary, #6366f1)' : undefined,
- }}
- />
- {roomOutlineLabels[shape]}
- </button>
- ))}
- </div>
- </div>
- ) : null}
- <LayoutActionPanel actions={actionLog} />
- </div>
- );
- }
+                  ] as const).map(([id, Icon, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      disabled={!caps.canAlign}
+                      className={cn(
+                        "flex flex-col items-center justify-center p-3 border rounded-[var(--radius-button)] transition",
+                        !caps.canAlign ? 'opacity-50 cursor-not-allowed border-border/50' : 'border-border bg-surface-muted/50 hover:border-primary hover:text-primary'
+                      )}
+                      onClick={() => autoArrangeTables(id as TableArrangePreset, arrangeDensity)}
+                    >
+                      <Icon className="w-5 h-5 mb-1.5 opacity-80" />
+                      <span className="text-[10px] font-medium">{label}</span>
+                    </button>
+                  ))}
+                </div>
+                
+                <div className="space-y-1.5 pt-1 border-t border-border/50">
+                  <label className="flex items-center justify-between gap-2 text-[10px] font-bold text-muted mt-3">
+                    <span className="inline-flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> Profondeur 2D</span>
+                    <span className="tabular-nums bg-surface-muted px-1.5 py-0.5 rounded">{depthAmount}%</span>
+                  </label>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={depthAmount}
+                    onChange={(e) => setDepthAmount(Number(e.target.value))}
+                    className="w-full accent-primary"
+                  />
+                  <p className="text-[9px] text-muted leading-relaxed">
+                    0 = plan à plat · 100 = salle en perspective maximale. Le plan se remet à plat pendant un glisser-déposer.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Accordion 3 : Configuration Globale */}
+          <div className="border border-border rounded-[var(--radius-card)] bg-surface overflow-hidden shadow-sm">
+            <button
+              type="button"
+              className={cn("w-full flex items-center justify-between p-3.5 text-left text-sm font-semibold transition-colors", accordion === 'config' ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50 hover:text-foreground')}
+              onClick={() => setAccordion(accordion === 'config' ? '' : 'config')}
+            >
+              <span className="flex items-center gap-2">
+                <Ruler className="w-4 h-4" /> Configuration Globale
+              </span>
+            </button>
+            
+            {accordion === 'config' && (
+              <div className="p-4 bg-surface space-y-4 border-t border-border">
+                <div className="space-y-2">
+                  <p className="text-xs font-bold uppercase text-muted">Dimensions de la zone</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="text-xs space-y-1">
+                      <span className="font-semibold text-muted">Largeur (m)</span>
+                      <input
+                        type="number"
+                        min={5}
+                        max={80}
+                        value={blueprint.canvas.widthM}
+                        onChange={(e) => updateBlueprint({ ...blueprint, canvas: { ...blueprint.canvas, widthM: parseInt(e.target.value, 10) || 5 } }, { message: 'Largeur de salle modifiée', kind: 'settings' })}
+                        className="w-full px-2.5 py-1.5 rounded-[var(--radius-button)] border border-border bg-surface-muted/30 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition"
+                      />
+                    </label>
+                    <label className="text-xs space-y-1">
+                      <span className="font-semibold text-muted">Longueur (m)</span>
+                      <input
+                        type="number"
+                        min={5}
+                        max={80}
+                        value={blueprint.canvas.heightM}
+                        onChange={(e) => updateBlueprint({ ...blueprint, canvas: { ...blueprint.canvas, heightM: parseInt(e.target.value, 10) || 5 } }, { message: 'Longueur de salle modifiée', kind: 'settings' })}
+                        className="w-full px-2.5 py-1.5 rounded-[var(--radius-button)] border border-border bg-surface-muted/30 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-3 border-t border-border/50">
+                  <p className="text-xs font-bold uppercase text-muted flex items-center gap-1">Couleur des tables par défaut</p>
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="color"
+                      value={blueprint.metadata.defaultTableColor ?? '#ffffff'}
+                      onChange={(e) => setDefaultTableColor(e.target.value)}
+                      className="w-10 h-10 rounded-[var(--radius-button)] border border-border cursor-pointer shrink-0 bg-surface-muted/50 p-1"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => applyTableColorToAll(blueprint.metadata.defaultTableColor ?? '#ffffff')}
+                      className="flex-1 py-2 px-2 rounded-[var(--radius-button)] border border-primary/30 bg-primary/10 text-primary text-[10px] font-bold hover:bg-primary/20 transition"
+                    >
+                      Appliquer à toutes les tables
+                    </button>
+                  </div>
+                </div>
+
+                {caps.canChangeOutline && (
+                  <div className="space-y-2 pt-3 border-t border-border/50">
+                    <p className="text-xs font-bold uppercase text-muted flex items-center gap-1">Forme de la salle</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(Object.keys(roomOutlineLabels) as RoomOutlineShape[]).map((shape) => (
+                        <button
+                          key={shape}
+                          type="button"
+                          onClick={() => setRoomOutlineShape(shape)}
+                          className={cn(
+                            "py-2 px-1.5 rounded-[var(--radius-button)] border text-[10px] font-bold transition",
+                            outline.shape === shape ? 'bg-primary/10 border-primary/50 text-primary' : 'border-border text-muted hover:bg-surface-muted'
+                          )}
+                        >
+                          <span
+                            className="block h-7 mx-auto mb-1 border"
+                            style={{
+                              width: '70%',
+                              clipPath: getRoomOutlineClipPath(shape) ?? 'none',
+                              background: outline.shape === shape ? 'var(--primary)' : 'var(--border)',
+                              borderColor: outline.shape === shape ? 'var(--primary)' : 'var(--border)',
+                            }}
+                          />
+                          {roomOutlineLabels[shape]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          
+          <LayoutActionPanel actions={actionLog} />
+        </div>
+      );
+    }
 
  if (selectedFixture) {
  const isColumn = selectedFixture.kind === 'pillar' || selectedFixture.kind === 'column';

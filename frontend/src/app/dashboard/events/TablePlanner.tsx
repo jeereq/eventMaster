@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { 
- Plus, Trash2, Users, Check, Move, X, RefreshCw, 
+ Plus, Trash2, Users, Check, Move, X, RefreshCw, Search,
  HelpCircle, Edit2, LayoutGrid, Maximize2, Minimize2, Copy, Lock, Unlock, Palette, RotateCw, Sparkles, ChevronDown, Download, PlusCircle, Save
 } from 'lucide-react';
 import { Button } from '@/components/ui';
@@ -105,84 +105,17 @@ export default function TablePlanner({
  });
  });
 
- // Unassigned eligible guests
- const unassignedGuests = placeableGuests.filter(g => !assignedGuestIds.has(g.id));
+  // Search term for unassigned guests
+  const [guestSearch, setGuestSearch] = useState('');
 
- // Auto-seat "Placement Magique"
- const handleAutoSeat = () => {
-   if (unassignedGuests.length === 0) {
-     alert("Tous les invités à placer le sont déjà !");
-     return;
-   }
-   if (tables.length === 0) {
-     alert("Veuillez d'abord ajouter des tables sur le plan.");
-     return;
-   }
+  // Unassigned eligible guests
+  const unassignedGuests = placeableGuests.filter(g => !assignedGuestIds.has(g.id));
+  const filteredUnassignedGuests = unassignedGuests.filter(g => 
+    (g.firstName + ' ' + g.lastName).toLowerCase().includes(guestSearch.toLowerCase()) || 
+    (g.category || '').toLowerCase().includes(guestSearch.toLowerCase())
+  );
 
-   const updatedTables = [...tables.map(t => ({...t, seats: {...t.seats}}))];
-   let unplaced = [...unassignedGuests];
-
-   // Simple grouping by category
-   // First, group unplaced guests by category
-   const guestsByCat: Record<string, typeof unplaced> = {};
-   unplaced.forEach(g => {
-     const cat = g.category || 'Général';
-     if (!guestsByCat[cat]) guestsByCat[cat] = [];
-     guestsByCat[cat].push(g);
-   });
-
-   // Try to fill tables primarily with same category
-   for (const table of updatedTables) {
-     const totalSeats = table.capacity;
-     
-     // Find empty seats indices
-     const emptySeatIndices: number[] = [];
-     for (let i = 0; i < totalSeats; i++) {
-       if (!table.seats[i]) emptySeatIndices.push(i);
-     }
-     
-     if (emptySeatIndices.length === 0) continue;
-
-     // Is this table already partially filled? Determine its main category
-     const existingCats: string[] = [];
-     for (let i = 0; i < totalSeats; i++) {
-       const gid = table.seats[i];
-       if (gid) {
-         const g = placeableGuests.find(guest => guest.id === gid);
-         if (g && g.category) existingCats.push(g.category);
-       }
-     }
-     // Mode category for the table
-     let dominantCat: string | null = null;
-     if (existingCats.length > 0) {
-       dominantCat = existingCats.sort((a,b) =>
-         existingCats.filter(v => v===a).length
-         - existingCats.filter(v => v===b).length
-       ).pop() || 'Général';
-     }
-
-     // Try to pick from dominantCat first, then largest available group
-     for (const seatIndex of emptySeatIndices) {
-       let catToPick = dominantCat;
-       if (!catToPick || !guestsByCat[catToPick] || guestsByCat[catToPick].length === 0) {
-         // Find largest category group remaining
-         const availableCats = Object.keys(guestsByCat).filter(k => guestsByCat[k].length > 0);
-         if (availableCats.length === 0) break; // no guests left
-         catToPick = availableCats.sort((a,b) => guestsByCat[b].length - guestsByCat[a].length)[0];
-       }
-       if (catToPick && guestsByCat[catToPick]?.length > 0) {
-         const guest = guestsByCat[catToPick].shift();
-         if (guest) {
-           table.seats[seatIndex] = guest.id;
-         }
-       }
-     }
-   }
-
-   setTables(updatedTables);
- };
-
- // Add a new table
+  // Add a new table
  const handleAddTable = () => {
  if (!newTableName.trim()) return;
  if (tables.length >= caps.maxTables) {
@@ -528,34 +461,37 @@ export default function TablePlanner({
  .filter(Boolean) as Array<{ seatIndex: number; name: string }>;
  };
 
- const renderCanvas = (heightClass: string) => (
- <div className="space-y-4 flex-1 flex flex-col min-h-0">
- <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-surface border border-border rounded-2xl shadow-sm shrink-0">
-   <div className="flex items-center gap-2">
-     <Button
-       size="sm"
-       variant="ghost"
-       onClick={() => setShowAddModal(true)}
-       className="font-medium"
-       disabled={tables.length >= caps.maxTables}
-     >
-       <PlusCircle className="w-4 h-4 mr-1.5" />
-       Nouvelle table
-     </Button>
-     
-     {canImportRoomLayout && (
-       <Button
-         size="sm"
-         variant="ghost"
-         onClick={() => {
-           if (tables.length > 0 && !confirm('Attention : l’importation remplacera votre plan actuel. Continuer ?')) return;
-           onImportRoomLayout?.(true);
-         }}
-         loading={importingLayout}
-         disabled={importingLayout}
-         className="text-primary hover:bg-primary/10 transition font-medium"
-       >
-         <Download className="w-4 h-4 mr-1.5" />
+  const renderCanvas = (heightClass: string) => (
+    <div className="space-y-4 flex-1 flex flex-col min-h-0">
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-surface border border-border rounded-[var(--radius-card)] shadow-sm shrink-0">
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setShowAddModal(true)}
+            className="font-medium"
+            disabled={tables.length >= caps.maxTables}
+          >
+            <PlusCircle className="w-4 h-4 mr-1.5" />
+            Nouvelle table
+          </Button>
+          
+          {canImportRoomLayout && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                if (tables.length > 0 && !confirm('Attention : l’importation remplacera votre plan actuel. Continuer ?')) return;
+                onImportRoomLayout?.(true);
+              }}
+              loading={importingLayout}
+              disabled={importingLayout}
+              className="text-primary hover:bg-primary/10 transition font-medium"
+            >
+              <Download className="w-4 h-4 mr-1.5" />
+              Importer plan type
+            </Button>
+          )}
          Importer depuis salle
        </Button>
      )}
@@ -572,25 +508,37 @@ export default function TablePlanner({
        Placement Magique
      </Button>
      
-     <Button
-       size="sm"
-       onClick={handleSavePlan}
-       loading={saving}
-       disabled={saving}
-       className="bg-primary hover:bg-primary-hover text-white transition shadow-sm font-semibold"
-     >
-       <Save className="w-4 h-4 mr-1.5" />
-       Enregistrer
-     </Button>
-     
-     <button
-       type="button"
-       onClick={() => setIsExpanded(!isExpanded)}
-       className="p-2 text-muted hover:text-foreground bg-surface hover:bg-surface-muted rounded-xl border border-border transition shadow-sm"
-       title={isExpanded ? 'Réduire' : 'Plein écran'}
-     >
-       {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-     </button>
+          <Button
+            size="sm"
+            onClick={handleAutoAssign}
+            disabled={unassignedGuests.length === 0}
+            className="bg-gradient-to-r from-primary to-primary-hover text-white transition shadow-sm font-semibold border-0"
+            title="Placement Magique : regroupe les invités par catégorie"
+          >
+            <Sparkles className="w-4 h-4 mr-1.5" />
+            Placement Magique
+          </Button>
+
+          <Button
+            size="sm"
+            onClick={handleSavePlan}
+            loading={saving}
+            disabled={saving}
+            variant="secondary"
+            className="transition shadow-sm font-semibold"
+          >
+            <Save className="w-4 h-4 mr-1.5" />
+            Enregistrer
+          </Button>
+          
+          <button
+            type="button"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="p-2 text-muted hover:text-foreground bg-surface hover:bg-surface-muted rounded-[var(--radius-button)] border border-border transition shadow-sm"
+            title={isExpanded ? 'Réduire' : 'Plein écran'}
+          >
+            {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
    </div>
  </div>
 
@@ -956,44 +904,68 @@ export default function TablePlanner({
  {!isExpanded && renderCanvas('em-plan-stage')}
  </div>
 
- <div className="order-2 xl:order-1 xl:col-span-1 bg-surface border border-border rounded-[var(--radius-card)] p-3 sm:p-4 flex flex-col xl:h-[600px]">
+ <div className="order-2 xl:order-1 xl:col-span-1 bg-surface border border-border rounded-[var(--radius-card)] p-3 sm:p-4 flex flex-col xl:h-[600px] shadow-sm">
  <button
  type="button"
  onClick={() => setGuestsOpen((open) => !open)}
- className="flex items-center justify-between gap-2 xl:pointer-events-none"
+ className="flex items-center justify-between gap-2 xl:pointer-events-none mb-3"
  >
  <h3 className="font-semibold text-foreground text-sm flex items-center gap-2">
- <Users className="w-4 h-4 text-muted" />
- Invités non placés ({unassignedGuests.length})
+ <Users className="w-5 h-5 text-primary" />
+ À placer
  </h3>
  <span className="flex items-center gap-2">
- <span className="text-[10px] font-medium text-primary">{placeableGuests.length} À placer</span>
+ <span className="text-xs font-semibold bg-primary/10 text-primary px-2.5 py-0.5 rounded-full">{unassignedGuests.length}</span>
  <ChevronDown className={cn('w-4 h-4 text-muted xl:hidden transition', guestsOpen && 'rotate-180')} />
  </span>
  </button>
 
- <div className={cn('overflow-y-auto pt-2', guestsOpen ? 'max-h-[36vh]' : 'hidden', 'xl:block xl:flex-1 xl:max-h-none')}>
- {unassignedGuests.length === 0 ? (
- <div className="text-center py-8 xl:py-12 text-muted space-y-2">
- <HelpCircle className="w-8 h-8 mx-auto text-muted" />
- <p className="text-xs font-medium">Tous les invités éligibles ont été placés !</p>
- </div>
- ) : (
- unassignedGuests.map(g => (
- <div 
- key={g.id}
- className="px-3 py-2 border-b border-border last:border-b-0 flex items-center justify-between text-xs hover:bg-surface-muted transition"
- >
- <div>
- <div className="font-medium text-foreground">{g.firstName} {g.lastName}</div>
- <div className="text-[10px] text-muted mt-0.5">{g.category || 'Général'}</div>
- </div>
- <span className="text-[10px] text-muted font-medium">
- Confirmé
- </span>
- </div>
- ))
- )}
+ <div className={cn('flex flex-col flex-1', guestsOpen ? '' : 'hidden', 'xl:flex')}>
+  <div className="relative mb-3">
+    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+    <input
+      type="text"
+      placeholder="Rechercher un invité..."
+      value={guestSearch}
+      onChange={e => setGuestSearch(e.target.value)}
+      className="w-full pl-8 pr-3 py-1.5 text-xs bg-surface-muted border border-border rounded-[var(--radius-button)] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+    />
+  </div>
+  
+  <div className="overflow-y-auto flex-1 bg-surface-muted/30 p-2 rounded-xl border border-border/50">
+    {filteredUnassignedGuests.length === 0 ? (
+    <div className="text-center py-8 text-muted space-y-3">
+      {guestSearch ? (
+        <p className="text-xs">Aucun résultat.</p>
+      ) : (
+        <>
+          <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto">
+            <Check className="w-5 h-5 text-emerald-500" />
+          </div>
+          <p className="text-sm font-medium">Placement terminé !</p>
+        </>
+      )}
+    </div>
+    ) : (
+      <div className="space-y-1.5">
+        {filteredUnassignedGuests.map(g => (
+        <div 
+        key={g.id}
+        className="p-2.5 bg-surface border border-border/80 hover:border-primary/40 rounded-[var(--radius-button)] shadow-sm hover:shadow transition flex flex-col gap-1 cursor-grab"
+        >
+        <div className="flex items-start justify-between">
+        <span className="font-semibold text-foreground text-xs leading-tight">{g.firstName} {g.lastName}</span>
+        <span className="text-[9px] uppercase tracking-wider font-bold bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded border border-emerald-100 shrink-0">Confirmé</span>
+        </div>
+        <div className="text-[10px] text-muted flex items-center gap-1.5 mt-0.5">
+        <span className="w-1.5 h-1.5 rounded-full bg-primary/40 shrink-0" />
+        {g.category || 'Général'}
+        </div>
+        </div>
+        ))}
+      </div>
+    )}
+  </div>
  </div>
  </div>
  </div>
@@ -1065,28 +1037,48 @@ export default function TablePlanner({
  )}
 
  <div className="space-y-3">
- <label className="block text-xs font-medium text-muted uppercase tracking-wider">
- Sélectionner un invité présent ({unassignedGuests.length} disponibles)
- </label>
+ <div className="flex items-center justify-between">
+   <label className="text-xs font-medium text-muted uppercase tracking-wider">
+     Invités présents ({unassignedGuests.length})
+   </label>
+ </div>
  {unassignedGuests.length === 0 ? (
  <p className="text-xs text-muted italic">Tous les invités éligibles ont déjà une place attribuée.</p>
  ) : (
- <div className="max-h-60 overflow-y-auto border border-border rounded-[var(--radius-card)] divide-y divide-border">
- {unassignedGuests.map(g => (
+ <div className="space-y-2">
+  <div className="relative">
+    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+    <input
+      type="text"
+      placeholder="Rechercher..."
+      value={guestSearch}
+      onChange={e => setGuestSearch(e.target.value)}
+      className="w-full pl-8 pr-3 py-1.5 text-xs bg-surface border border-border rounded-[var(--radius-button)] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+    />
+  </div>
+ <div className="max-h-52 overflow-y-auto bg-surface-muted/30 p-2 border border-border/50 rounded-xl space-y-1.5">
+ {filteredUnassignedGuests.length === 0 ? (
+   <div className="text-center py-4 text-xs text-muted">Aucun résultat</div>
+ ) : (
+ filteredUnassignedGuests.map(g => (
  <button
  key={g.id}
  onClick={() => handleAssignGuest(selectedSeat.tableId, selectedSeat.seatIndex, g.id)}
- className="w-full text-left px-3 py-2.5 hover:bg-surface-muted transition flex items-center justify-between text-xs"
+ className="w-full text-left p-2.5 bg-surface border border-border/80 hover:border-primary/40 rounded-[var(--radius-button)] shadow-sm hover:shadow transition flex items-center justify-between text-xs group"
  >
  <div>
- <span className="font-medium text-foreground">{g.firstName} {g.lastName}</span>
- <span className="text-[10px] text-muted block mt-0.5">{g.category || 'Général'}</span>
+ <span className="font-semibold text-foreground block leading-tight">{g.firstName} {g.lastName}</span>
+ <span className="text-[10px] text-muted flex items-center gap-1 mt-0.5">
+   <span className="w-1.5 h-1.5 rounded-full bg-primary/40 shrink-0" />
+   {g.category || 'Général'}
+ </span>
  </div>
- <span className="text-[10px] text-primary font-medium">
- Installer
+ <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+ Choisir
  </span>
  </button>
- ))}
+ )))}
+ </div>
  </div>
  )}
  </div>
