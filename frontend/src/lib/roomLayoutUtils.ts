@@ -249,6 +249,10 @@ export interface RoomLayoutBlueprint {
     depthView?: boolean;
     /** 0 = vue à plat, 100 = perspective 2,5D maximale. */
     depthAmount?: number;
+    /** Qualité de rendu WebGL (draft / standard / showcase). */
+    renderQuality?: import('@/lib/roomRenderQuality').RenderQuality;
+    /** Ambiance lumineuse scénique. */
+    lightingPreset?: import('@/lib/roomRenderQuality').LightingPreset;
   };
 }
 

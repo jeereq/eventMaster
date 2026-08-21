@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useMemo, useRef, useCallback, useEffect } from 'react';
+import React, { Suspense, useMemo, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Canvas, ThreeEvent, useThree } from '@react-three/fiber';
 import { OrbitControls, Html, ContactShadows } from '@react-three/drei';
 import * as THREE from 'three';
@@ -32,6 +32,12 @@ import {
   resolveZoneMaterialMap,
 } from '@/lib/roomWebGLMaterials';
 import { cn } from '@/lib/cn';
+import {
+  resolveLightingPreset,
+  resolveRenderQuality,
+  type LightingPreset,
+  type RenderQuality,
+} from '@/lib/roomRenderQuality';
 
 export type WebGLSelectableKind = 'table' | 'row' | 'zone' | 'fixture' | 'wall' | 'chair';
 
@@ -39,6 +45,10 @@ export interface WebGLSelection {
   kind: WebGLSelectableKind;
   id: string;
 }
+
+export type RoomWebGLCaptureApi = {
+  capturePng: (scale?: number) => string | null;
+};
 
 interface RoomWebGLViewerProps {
   blueprint: RoomLayoutBlueprint;
@@ -54,6 +64,10 @@ interface RoomWebGLViewerProps {
   lockOrbit?: boolean;
   /** Mode aperçu (marketplace / fiches) : pas de hints d’édition, orbit libre. */
   previewMode?: boolean;
+  /** Override qualité (sinon metadata / défaut). */
+  renderQuality?: RenderQuality;
+  /** Override éclairage (sinon metadata / auto). */
+  lightingPreset?: LightingPreset;
 }
 
 function pctToWorld(xPct: number, yPct: number, widthM: number, heightM: number): [number, number] {
@@ -67,6 +81,99 @@ function worldToPct(x: number, z: number, widthM: number, heightM: number): { x:
     x: Math.max(0, Math.min(100, ((x / widthM) + 0.5) * 100)),
     y: Math.max(0, Math.min(100, ((z / heightM) + 0.5) * 100)),
   };
+}
+
+
+function ScenicLights({
+  widthM,
+  heightM,
+  lighting,
+  shadowMapSize,
+}: {
+  widthM: number;
+  heightM: number;
+  lighting: ReturnType<typeof resolveLightingPreset>;
+  shadowMapSize: number;
+}) {
+  const extent = Math.max(widthM, heightM);
+  return (
+    <>
+      <ambientLight intensity={lighting.ambient} />
+      <directionalLight
+        position={[widthM * 0.4, 16, heightM * 0.2]}
+        intensity={lighting.keyIntensity}
+        castShadow
+        shadow-mapSize-width={shadowMapSize}
+        shadow-mapSize-height={shadowMapSize}
+        shadow-bias={-0.0002}
+        shadow-camera-far={90}
+        shadow-camera-left={-extent}
+        shadow-camera-right={extent}
+        shadow-camera-top={extent}
+        shadow-camera-bottom={-extent}
+        color={lighting.keyColor}
+      />
+      <directionalLight
+        position={[-widthM * 0.5, 8, -heightM * 0.3]}
+        intensity={lighting.fillIntensity}
+        color={lighting.fillColor}
+      />
+      <hemisphereLight args={[lighting.hemiSky, lighting.hemiGround, lighting.hemiIntensity]} />
+      <spotLight
+        position={[0, 12, 0]}
+        angle={0.6}
+        penumbra={0.65}
+        intensity={lighting.spotIntensity}
+        castShadow={false}
+        color={lighting.spotColor}
+      />
+      <pointLight
+        position={[widthM * 0.3, 3.2, heightM * 0.25]}
+        intensity={lighting.warmPoint}
+        color="#fde68a"
+        distance={18}
+      />
+      <pointLight
+        position={[-widthM * 0.25, 3.2, -heightM * 0.2]}
+        intensity={lighting.coolPoint}
+        color="#e0f2fe"
+        distance={16}
+      />
+    </>
+  );
+}
+
+function CaptureBridge({
+  apiRef,
+}: {
+  apiRef: React.MutableRefObject<RoomWebGLCaptureApi | null>;
+}) {
+  const { gl, scene, camera, size } = useThree();
+  useEffect(() => {
+    apiRef.current = {
+      capturePng: (scale = 1) => {
+        try {
+          const w = Math.max(1, Math.floor(size.width * scale));
+          const h = Math.max(1, Math.floor(size.height * scale));
+          const prevPr = gl.getPixelRatio();
+          gl.setPixelRatio(1);
+          gl.setSize(w, h, false);
+          gl.render(scene, camera);
+          const url = gl.domElement.toDataURL('image/png');
+          gl.setPixelRatio(prevPr);
+          gl.setSize(size.width, size.height, false);
+          gl.render(scene, camera);
+          return url;
+        } catch {
+          return null;
+        }
+      },
+    };
+    return () => {
+      apiRef.current = null;
+    };
+  }, [apiRef, camera, gl, scene, size.height, size.width]);
+  return null;
 }
 
 function FloorPlane({
@@ -1379,7 +1486,14 @@ function SceneContent({
   readOnly,
   wallEditMode,
   lockOrbit = false,
-}: Omit<RoomWebGLViewerProps, 'className'>) {
+  qualitySettings,
+  lighting,
+  captureApiRef,
+}: Omit<RoomWebGLViewerProps, 'className' | 'previewMode' | 'renderQuality' | 'lightingPreset'> & {
+  qualitySettings: ReturnType<typeof resolveRenderQuality>;
+  lighting: ReturnType<typeof resolveLightingPreset>;
+  captureApiRef?: React.MutableRefObject<RoomWebGLCaptureApi | null>;
+}) {
   const widthM = blueprint.canvas.widthM;
   const heightM = blueprint.canvas.heightM;
   const depthAmount = resolveDepthAmount(blueprint.metadata);
@@ -1395,8 +1509,11 @@ function SceneContent({
     const back = Math.sin((tilt * Math.PI) / 180) * dist;
     camera.position.set(0, Math.max(elev, 4), back + heightM * 0.15);
     camera.lookAt(0, 0, 0);
+    if ('fov' in camera) {
+      (camera as THREE.PerspectiveCamera).fov = qualitySettings.fov;
+    }
     camera.updateProjectionMatrix();
-  }, [camera, depthAmount, widthM, heightM]);
+  }, [camera, depthAmount, widthM, heightM, qualitySettings.fov]);
 
   const [dragTarget, setDragTarget] = React.useState<{ kind: WebGLSelectableKind; id: string } | null>(null);
   /** En mode caméra bloquée (placement mobilier), les surfaces ne capturent pas les clics. */
@@ -1409,43 +1526,25 @@ function SceneContent({
 
   return (
     <>
-      <ambientLight intensity={0.35} />
-      <directionalLight
-        position={[widthM * 0.4, 16, heightM * 0.2]}
-        intensity={1.35}
-        castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-        shadow-bias={-0.0002}
-        shadow-camera-far={90}
-        shadow-camera-left={-Math.max(widthM, heightM)}
-        shadow-camera-right={Math.max(widthM, heightM)}
-        shadow-camera-top={Math.max(widthM, heightM)}
-        shadow-camera-bottom={-Math.max(widthM, heightM)}
-        color="#fff7ed"
+      {captureApiRef ? <CaptureBridge apiRef={captureApiRef} /> : null}
+      <ScenicLights
+        widthM={widthM}
+        heightM={heightM}
+        lighting={lighting}
+        shadowMapSize={qualitySettings.shadowMapSize}
       />
-      <directionalLight position={[-widthM * 0.5, 8, -heightM * 0.3]} intensity={0.35} color="#bfdbfe" />
-      <hemisphereLight args={['#fef3c7', '#57534e', 0.45]} />
-      <spotLight
-        position={[0, 12, 0]}
-        angle={0.6}
-        penumbra={0.65}
-        intensity={0.4}
-        castShadow={false}
-        color="#fffbeb"
-      />
-      <pointLight position={[widthM * 0.3, 3.2, heightM * 0.25]} intensity={0.25} color="#fde68a" distance={18} />
-      <pointLight position={[-widthM * 0.25, 3.2, -heightM * 0.2]} intensity={0.2} color="#e0f2fe" distance={16} />
 
-      <ContactShadows
-        position={[0, 0.02, 0]}
-        opacity={0.5}
-        scale={Math.max(widthM, heightM) * 1.35}
-        blur={2.8}
-        far={10}
-        resolution={1024}
-        color="#1c1917"
-      />
+      {qualitySettings.contactShadows ? (
+        <ContactShadows
+          position={[0, 0.02, 0]}
+          opacity={qualitySettings.contactShadowsOpacity}
+          scale={Math.max(widthM, heightM) * 1.35}
+          blur={qualitySettings.contactShadowsBlur}
+          far={10}
+          resolution={qualitySettings.contactShadowsResolution}
+          color="#1c1917"
+        />
+      ) : null}
 
       <FloorPlane
         widthM={widthM}
@@ -1693,7 +1792,7 @@ function SceneContent({
   );
 }
 
-export default function RoomWebGLViewer({
+export default forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(function RoomWebGLViewer({
   blueprint,
   selected,
   onSelect,
@@ -1704,8 +1803,30 @@ export default function RoomWebGLViewer({
   wallEditMode = false,
   lockOrbit = false,
   previewMode = false,
-}: RoomWebGLViewerProps) {
+  renderQuality: renderQualityProp,
+  lightingPreset: lightingPresetProp,
+}, ref) {
   const orbitLocked = previewMode ? false : lockOrbit;
+  const qualitySettings = useMemo(
+    () => resolveRenderQuality(
+      renderQualityProp ?? blueprint.metadata.renderQuality,
+      { preview: previewMode },
+    ),
+    [renderQualityProp, blueprint.metadata.renderQuality, previewMode],
+  );
+  const lighting = useMemo(
+    () => resolveLightingPreset(
+      lightingPresetProp ?? blueprint.metadata.lightingPreset,
+      blueprint.roomType,
+    ),
+    [lightingPresetProp, blueprint.metadata.lightingPreset, blueprint.roomType],
+  );
+  const captureApiRef = useRef<RoomWebGLCaptureApi | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    capturePng: (scale) => captureApiRef.current?.capturePng(scale) ?? null,
+  }), []);
+
   return (
     <div
       className={cn(
@@ -1716,21 +1837,24 @@ export default function RoomWebGLViewer({
     >
       <Canvas
         shadows
-        dpr={previewMode ? [1, 1.5] : [1, 2]}
+        dpr={qualitySettings.dpr}
         gl={{
           antialias: true,
           alpha: false,
+          preserveDrawingBuffer: true,
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 1.12,
+          toneMappingExposure: qualitySettings.exposure,
         }}
-        camera={{ position: [0, 18, 12], fov: previewMode ? 42 : 45, near: 0.1, far: 200 }}
+        camera={{ position: [0, 18, 12], fov: qualitySettings.fov, near: 0.1, far: 200 }}
         onPointerMissed={() => onSelect(null)}
         onCreated={({ gl }) => {
-          gl.shadowMap.type = THREE.PCFSoftShadowMap;
+          gl.shadowMap.type = qualitySettings.softShadows
+            ? THREE.PCFSoftShadowMap
+            : THREE.BasicShadowMap;
           gl.outputColorSpace = THREE.SRGBColorSpace;
         }}
       >
-        <color attach="background" args={[previewMode ? '#14110f' : '#1a1410']} />
+        <color attach="background" args={[lighting.background]} />
         <Suspense fallback={null}>
           <SceneContent
             blueprint={blueprint}
@@ -1741,23 +1865,40 @@ export default function RoomWebGLViewer({
             readOnly={readOnly || previewMode}
             wallEditMode={wallEditMode}
             lockOrbit={orbitLocked}
+            qualitySettings={qualitySettings}
+            lighting={lighting}
+            captureApiRef={captureApiRef}
           />
         </Suspense>
       </Canvas>
-      <div className="pointer-events-none absolute bottom-2 left-2 right-2 flex items-end justify-between gap-2">
-        <div className="rounded-md bg-black/55 px-2 py-1 text-[9px] font-medium text-white/85 backdrop-blur-sm">
-          {previewMode
-            ? 'Rendu 3D réaliste · molette = zoom · glisser = orbit'
-            : orbitLocked
-              ? 'Caméra bloquée · posez tables/chaises sur moquette, piste, podium · molette = zoom'
-              : 'Orbit libre · activez « Caméra bloquée » pour placer le mobilier sur les surfaces'}
-        </div>
-        {previewMode ? (
-          <div className="rounded-md bg-black/45 px-2 py-1 text-[9px] font-bold text-amber-100/90 backdrop-blur-sm">
-            {blueprint.canvas.widthM}×{blueprint.canvas.heightM} m
+      {qualitySettings.showHints ? (
+        <div className="pointer-events-none absolute bottom-2 left-2 right-2 flex items-end justify-between gap-2">
+          <div className="rounded-md bg-black/55 px-2 py-1 text-[9px] font-medium text-white/85 backdrop-blur-sm">
+            {previewMode
+              ? 'Rendu 3D réaliste · molette = zoom · glisser = orbit'
+              : orbitLocked
+                ? 'Caméra bloquée · posez tables/chaises sur moquette, piste, podium · molette = zoom'
+                : 'Orbit libre · activez « Caméra bloquée » pour placer le mobilier sur les surfaces'}
           </div>
-        ) : null}
-      </div>
+          {previewMode ? (
+            <div className="rounded-md bg-black/45 px-2 py-1 text-[9px] font-bold text-amber-100/90 backdrop-blur-sm">
+              {blueprint.canvas.widthM}×{blueprint.canvas.heightM} m
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        <div className="pointer-events-none absolute bottom-2 right-2">
+          <div className="rounded-md bg-black/40 px-2 py-1 text-[9px] font-bold text-white/80 backdrop-blur-sm">
+            Showcase · {renderQualityLabelsSafe(qualitySettings.quality)}
+          </div>
+        </div>
+      )}
     </div>
   );
+});
+
+function renderQualityLabelsSafe(q: RenderQuality) {
+  if (q === 'draft') return 'Brouillon';
+  if (q === 'showcase') return 'Showcase';
+  return 'Standard';
 }

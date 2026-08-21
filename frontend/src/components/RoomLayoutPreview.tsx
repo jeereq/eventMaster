@@ -368,6 +368,8 @@ export default function RoomLayoutPreview({
           onSelect={() => {}}
           readOnly
           previewMode
+          renderQuality={quality === 'showcase' ? 'showcase' : 'standard'}
+          lightingPreset={blueprint.metadata.lightingPreset ?? 'auto'}
           className={cn(canvasClass, 'shadow-[var(--shadow-soft)]')}
         />
       ) : (

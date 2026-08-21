@@ -2,11 +2,11 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Aperture, Sun,
 } from 'lucide-react';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
 import ImageCropModal from '@/components/ImageCropModal';
-import RoomWebGLViewer from '@/components/RoomWebGLViewer';
+import RoomWebGLViewer, { type RoomWebGLCaptureApi } from '@/components/RoomWebGLViewer';
 import RoomWallEditorPanel from '@/components/RoomWallEditorPanel';
 import {
   ChairType,
@@ -58,6 +58,14 @@ import {
   type ZoneMaterial,
 } from '@/lib/roomLayoutUtils';
 import { roomEditorCapabilities, snapLayoutPct } from '@/lib/roomEditorAccess';
+import {
+  downloadDataUrl,
+  exportPixelRatio,
+  lightingPresetLabels,
+  renderQualityLabels,
+  type LightingPreset,
+  type RenderQuality,
+} from '@/lib/roomRenderQuality';
 import {
   alignLayoutSelection,
   alignModeLabels,
@@ -113,6 +121,7 @@ export default function RoomLayoutEditor({
   const [accordion, setAccordion] = useState<string>('murs-sols');
   const [wallEditMode, setWallEditMode] = useState(false);
   const [lockOrbit, setLockOrbit] = useState(true);
+  const webglRef = useRef<RoomWebGLCaptureApi>(null);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const pastRef = useRef<RoomLayoutBlueprint[]>([]);
@@ -585,9 +594,38 @@ export default function RoomLayoutEditor({
   };
 
   const outline = blueprint.roomOutline!;
+  const renderQuality = (blueprint.metadata.renderQuality ?? 'standard') as RenderQuality;
+  const lightingPreset = (blueprint.metadata.lightingPreset ?? 'auto') as LightingPreset;
+
+  const setRenderQuality = (q: RenderQuality) => {
+    updateBlueprint({
+      ...blueprint,
+      metadata: { ...blueprint.metadata, renderQuality: q },
+    }, { message: `Qualité rendu : ${renderQualityLabels[q]}`, kind: 'settings' });
+  };
+
+  const setLightingPreset = (p: LightingPreset) => {
+    updateBlueprint({
+      ...blueprint,
+      metadata: { ...blueprint.metadata, lightingPreset: p },
+    }, { message: `Éclairage : ${lightingPresetLabels[p]}`, kind: 'settings' });
+  };
+
+  const exportShowcasePng = () => {
+    const scale = exportPixelRatio(renderQuality === 'draft' ? 'standard' : renderQuality);
+    const url = webglRef.current?.capturePng(scale);
+    if (!url) {
+      log('Capture indisponible — réessayez dans une seconde', 'info');
+      return;
+    }
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    downloadDataUrl(url, `salle-${blueprint.roomType.toLowerCase()}-${stamp}.png`);
+    log('Export PNG HD téléchargé', 'info');
+  };
 
   const renderCanvas = (className: string) => (
     <RoomWebGLViewer
+      ref={webglRef}
       blueprint={blueprint}
       selected={selection}
       onSelect={handleCanvasSelect}
@@ -596,6 +634,8 @@ export default function RoomLayoutEditor({
       readOnly={readOnly}
       wallEditMode={wallEditMode}
       lockOrbit={lockOrbit}
+      renderQuality={renderQuality}
+      lightingPreset={lightingPreset}
       className={className}
     />
   );
@@ -2015,6 +2055,40 @@ export default function RoomLayoutEditor({
       >
         {lockOrbit ? <VideoOff className="w-3.5 h-3.5" /> : <Video className="w-3.5 h-3.5" />}
         {lockOrbit ? 'Caméra bloquée' : 'Caméra libre'}
+      </button>
+      <label className="inline-flex items-center gap-1 px-2 py-1.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-[10px] font-bold text-muted">
+        <Aperture className="w-3.5 h-3.5" />
+        <select
+          value={renderQuality}
+          onChange={(e) => setRenderQuality(e.target.value as RenderQuality)}
+          className="bg-transparent text-xs font-bold text-foreground outline-none"
+          title="Qualité de rendu"
+        >
+          {(Object.keys(renderQualityLabels) as RenderQuality[]).map((q) => (
+            <option key={q} value={q}>{renderQualityLabels[q]}</option>
+          ))}
+        </select>
+      </label>
+      <label className="inline-flex items-center gap-1 px-2 py-1.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-[10px] font-bold text-muted">
+        <Sun className="w-3.5 h-3.5" />
+        <select
+          value={lightingPreset}
+          onChange={(e) => setLightingPreset(e.target.value as LightingPreset)}
+          className="bg-transparent text-xs font-bold text-foreground outline-none max-w-[140px]"
+          title="Éclairage scénique"
+        >
+          {(Object.keys(lightingPresetLabels) as LightingPreset[]).map((p) => (
+            <option key={p} value={p}>{lightingPresetLabels[p]}</option>
+          ))}
+        </select>
+      </label>
+      <button
+        type="button"
+        onClick={exportShowcasePng}
+        className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-[var(--radius-button)] text-xs font-bold"
+        title="Exporter une capture PNG haute définition"
+      >
+        <Download className="w-3.5 h-3.5" /> Export PNG
       </button>
       <button type="button" onClick={addTable} className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-[var(--radius-button)] text-xs font-bold shadow-sm">
         <Plus className="w-3.5 h-3.5" /> Table
