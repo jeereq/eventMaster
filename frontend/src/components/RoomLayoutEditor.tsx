@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall,
 } from 'lucide-react';
-import ChairRenderer from '@/components/ChairRenderer';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
-import FixtureRenderer from '@/components/FixtureRenderer';
 import ImageCropModal from '@/components/ImageCropModal';
+import RoomWebGLViewer from '@/components/RoomWebGLViewer';
+import RoomWallEditorPanel from '@/components/RoomWallEditorPanel';
 import {
   ChairType,
   ColumnShape,
@@ -41,21 +41,20 @@ import {
   saveCustomTemplateToBlueprint,
   tableArrangeLabels,
   tableShapeLabels,
+  wallsFromRoomOutline,
   type ArrangeDensity,
   type LayoutParams,
   type TableArrangePreset,
 } from '@/lib/roomLayoutUtils';
 import { roomEditorCapabilities, snapLayoutPct } from '@/lib/roomEditorAccess';
 import { prependLayoutAction, LayoutActionEntry } from '@/lib/layoutActionLog';
-import { getSeatCoordinates, getTableVisualStyle } from '@/lib/tablePlanUtils';
 import { readImageFile } from '@/lib/imageCropUtils';
 import { applyRoomTheme, getRoomTheme, listAvailableThemes, RoomThemeId, type FloorType } from '@/lib/roomThemeUtils';
-import { depthScaleForY, floorTypeLabels, furnitureDepthStyle, resolveDepthAmount, resolveFloorStyle } from '@/lib/roomFloorUtils';
-import FloorDepthFrame from '@/components/FloorDepthFrame';
+import { floorTypeLabels, resolveDepthAmount, resolveFloorStyle } from '@/lib/roomFloorUtils';
 import CustomRoomThemePanel from '@/components/CustomRoomThemePanel';
 import { cn } from '@/lib/cn';
 
-type SelectableKind = 'table' | 'row' | 'zone' | 'fixture';
+type SelectableKind = 'table' | 'row' | 'zone' | 'fixture' | 'wall';
 
 interface RoomLayoutEditorProps {
   blueprint: RoomLayoutBlueprint;
@@ -80,10 +79,7 @@ export default function RoomLayoutEditor({
 }: RoomLayoutEditorProps) {
   const blueprint = ensureBlueprintDefaults(rawBlueprint);
   const caps = roomEditorCapabilities(editorLevel, allowThemesFixtures);
-  const canvasRef = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<{ kind: SelectableKind; id: string } | null>(null);
-  const [dragging, setDragging] = useState<{ kind: SelectableKind; id: string } | null>(null);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isExpanded, setIsExpanded] = useState(false);
   const [actionLog, setActionLog] = useState<LayoutActionEntry[]>([]);
   const [cropTarget, setCropTarget] = useState<CropTarget>(null);
@@ -91,6 +87,7 @@ export default function RoomLayoutEditor({
   const [keepTemplateStyle, setKeepTemplateStyle] = useState(true);
   const [keepThemeFloor, setKeepThemeFloor] = useState(false);
   const [accordion, setAccordion] = useState<string>('murs-sols');
+  const [wallEditMode, setWallEditMode] = useState(false);
   const [customTplName, setCustomTplName] = useState('');
   const [tplParams, setTplParams] = useState<LayoutParams>({
     tableCount: 8,
@@ -109,89 +106,40 @@ export default function RoomLayoutEditor({
     if (action) log(action.message, action.kind);
   };
 
-  const selectedFurniture = selected && selected.kind !== 'fixture'
+  const selectedFurniture = selected && selected.kind !== 'fixture' && selected.kind !== 'wall'
     ? blueprint.furniture.find((f) => f.id === selected.id)
     : null;
   const selectedFixture = selected?.kind === 'fixture'
     ? blueprint.fixtures.find((f) => f.id === selected.id)
     : null;
 
-  const handleMouseDown = (
-    kind: SelectableKind,
-    id: string,
-    e: React.MouseEvent,
-    anchor: 'center' | 'topleft' = 'center',
-  ) => {
+  const handleWebGLMove = useCallback((kind: SelectableKind, id: string, xPct: number, yPct: number) => {
     if (readOnly) return;
-    if (e.target instanceof HTMLButtonElement || e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
-    const furniture = blueprint.furniture.find((f) => f.id === id);
-    if (furniture?.kind === 'table' && furniture.locked) {
-      e.preventDefault();
-      e.stopPropagation();
-      setSelected({ kind, id });
+    const x = snapLayoutPct(xPct, caps.canSnapGrid);
+    const y = snapLayoutPct(yPct, caps.canSnapGrid);
+    if (kind === 'fixture') {
+      onChange(refreshBlueprintMetadata(ensureBlueprintDefaults({
+        ...blueprint,
+        fixtures: blueprint.fixtures.map((f) => (f.id === id ? { ...f, x, y } : f)),
+      })));
       return;
     }
-    e.preventDefault();
-    e.stopPropagation();
-    setSelected({ kind, id });
-    setDragging({ kind, id });
-
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    let itemX: number;
-    let itemY: number;
-
-    if (kind === 'fixture') {
-      const fixture = blueprint.fixtures.find((f) => f.id === id);
-      if (!fixture) return;
-      itemX = (fixture.x / 100) * rect.width;
-      itemY = (fixture.y / 100) * rect.height;
-    } else {
-      const item = blueprint.furniture.find((f) => f.id === id);
-      if (!item) return;
-      itemX = (item.x / 100) * rect.width;
-      itemY = (item.y / 100) * rect.height;
-      void anchor;
-    }
-
-    setDragOffset({ x: e.clientX - rect.left - itemX, y: e.clientY - rect.top - itemY });
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!dragging || !canvasRef.current || readOnly) return;
-    const rect = canvasRef.current.getBoundingClientRect();
-    const rawX = (Math.max(0, Math.min(rect.width, e.clientX - rect.left - dragOffset.x)) / rect.width) * 100;
-    const rawY = (Math.max(0, Math.min(rect.height, e.clientY - rect.top - dragOffset.y)) / rect.height) * 100;
-    const xPct = snapLayoutPct(rawX, caps.canSnapGrid);
-    const yPct = snapLayoutPct(rawY, caps.canSnapGrid);
-
-    if (dragging.kind === 'fixture') {
-      updateBlueprint({
-        ...blueprint,
-        fixtures: blueprint.fixtures.map((f) =>
-          f.id === dragging.id ? { ...f, x: xPct, y: yPct } : f,
-        ),
-      });
-    } else {
-      updateBlueprint({
-        ...blueprint,
-        furniture: blueprint.furniture.map((f) =>
-          f.id === dragging.id ? { ...f, x: xPct, y: yPct } : f,
-        ),
-      });
-    }
-  };
-
-  const handleMouseUp = () => {
-    if (dragging) {
-      log(`Élément repositionné`, 'move');
-    }
-    setDragging(null);
-  };
+    onChange(refreshBlueprintMetadata(ensureBlueprintDefaults({
+      ...blueprint,
+      furniture: blueprint.furniture.map((f) => (f.id === id ? { ...f, x, y } : f)),
+    })));
+  }, [blueprint, caps.canSnapGrid, onChange, readOnly]);
 
   const deleteSelected = () => {
     if (!selected || readOnly) return;
+    if (selected.kind === 'wall') {
+      updateBlueprint({
+        ...blueprint,
+        walls: (blueprint.walls ?? []).filter((w) => w.id !== selected.id),
+      }, { message: 'Mur supprimé', kind: 'delete' });
+      setSelected(null);
+      return;
+    }
     const label = selected.kind === 'fixture' ? 'Élément fixe' : 'Mobilier';
     if (selected.kind === 'fixture') {
       updateBlueprint({
@@ -315,9 +263,17 @@ export default function RoomLayoutEditor({
   };
 
   const setRoomOutlineShape = (shape: RoomOutlineShape) => {
+    const outline = { ...(blueprint.roomOutline ?? defaultRoomOutline(shape)), shape };
+    const walls = wallsFromRoomOutline(outline, {
+      heightM: blueprint.walls?.[0]?.heightM ?? 3,
+      thicknessM: blueprint.walls?.[0]?.thicknessM ?? 0.2,
+      texture: blueprint.walls?.[0]?.texture ?? 'plaster',
+      withEntrance: true,
+    });
     updateBlueprint({
       ...blueprint,
-      roomOutline: { ...(blueprint.roomOutline ?? defaultRoomOutline(shape)), shape },
+      roomOutline: outline,
+      walls,
     }, { message: `Forme de salle : ${roomOutlineLabels[shape]}`, kind: 'settings' });
   };
 
@@ -403,212 +359,26 @@ export default function RoomLayoutEditor({
     updateBlueprint({
       ...blueprint,
       metadata: { ...blueprint.metadata, depthAmount: next, depthView: next > 0 },
-    }, { message: next <= 0 ? 'Vue à plat' : `Profondeur 2D : ${next}%`, kind: 'settings' });
+    }, { message: next <= 0 ? 'Vue du dessus' : `Perspective WebGL : ${next}%`, kind: 'settings' });
   };
 
   const outline = blueprint.roomOutline!;
-  const clipPath = getRoomOutlineClipPath(outline.shape);
-  const floorStyle = resolveFloorStyle(
-    effectiveFloorType,
-    blueprint.metadata.floorImageUrl,
-    activeTheme.accentColor,
-  );
-  const liveDepth = dragging ? 0 : depthAmount;
-
-  const renderRoomOutline = () => {
-    return (
-      <div
-        className="absolute pointer-events-none z-0 overflow-hidden"
-        style={{
-          left: `${outline.x}%`,
-          top: `${outline.y}%`,
-          width: `${outline.w}%`,
-          height: `${outline.h}%`,
-          borderRadius: outline.shape === 'circle' ? '50%' : outline.shape === 'square' ? '4%' : '8px',
-          clipPath: clipPath,
-          border: `${outline.strokeWidth ?? 2}px solid ${outline.stroke}`,
-          boxShadow: activeTheme.roomOutline.innerGlow,
-        }}
-      >
-        <div className="absolute inset-0" style={floorStyle} />
-        {activeTheme.ambientOverlay && (
-          <div className="absolute inset-0 pointer-events-none" style={{ background: activeTheme.ambientOverlay, opacity: 0.35 }} />
-        )}
-        {depthAmount > 0 && (
-          <div className="absolute inset-0 pointer-events-none em-floor-depth-haze" />
-        )}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ boxShadow: 'inset 0 0 0 8px rgba(70,42,16,0.35), inset 0 0 28px rgba(40,20,6,0.18)' }}
-        />
-      </div>
-    );
-  };
 
   const renderCanvas = (className: string) => (
-    <FloorDepthFrame
-      ref={canvasRef}
-      amount={liveDepth}
-      floorStyle={floorStyle}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-      onClick={() => setSelected(null)}
-      className={cn('w-full', className, dragging && 'em-floor-canvas--dragging')}
-    >
-      {renderRoomOutline()}
-
-      {blueprint.fixtures.map((fixture) => {
-        const isSel = selected?.kind === 'fixture' && selected.id === fixture.id;
-        const isDrag = dragging?.kind === 'fixture' && dragging.id === fixture.id;
-        return (
-          <div
-            key={fixture.id}
-            onMouseDown={(e) => handleMouseDown('fixture', fixture.id, e, 'topleft')}
-            onClick={(e) => { e.stopPropagation(); setSelected({ kind: 'fixture', id: fixture.id }); }}
-            className={cn(
-              'absolute cursor-grab em-floor-item',
-              isSel && 'em-floor-item--active ring-2 ring-primary/60 z-30 rounded-[var(--radius-button)]',
-              isDrag && 'opacity-90 cursor-grabbing z-40',
-              !isSel && 'z-10',
-            )}
-            style={{
-              left: `${fixture.x}%`,
-              top: `${fixture.y}%`,
-              width: `${fixture.w}%`,
-              height: `${fixture.h}%`,
-              transform: isDrag ? undefined : `scale(${depthScaleForY(fixture.y, liveDepth)})`,
-              transformOrigin: '50% 100%',
-              ...(!isSel && !isDrag ? furnitureDepthStyle(fixture.y, liveDepth) : {}),
-            }}
-          >
-            <FixtureRenderer fixture={fixture} fill showLabel={fixture.kind !== 'flower'} />
-          </div>
-        );
-      })}
-
-      {blueprint.furniture.map((item) => {
-        if (item.kind === 'zone') {
-          const isSel = selected?.kind === 'zone' && selected.id === item.id;
-          return (
-            <div
-              key={item.id}
-              onMouseDown={(e) => handleMouseDown('zone', item.id, e, 'topleft')}
-              onClick={(e) => { e.stopPropagation(); setSelected({ kind: 'zone', id: item.id }); }}
-              className={cn(
-                'absolute border border-dashed border-primary/40 bg-primary/5 rounded-[var(--radius-card)] flex items-center justify-center text-xs font-semibold text-primary cursor-grab z-10 em-floor-item',
-                isSel && 'ring-2 ring-primary/50 bg-primary/10',
-              )}
-              style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.w}%`, height: `${item.h}%` }}
-            >
-              {item.label}
-            </div>
-          );
-        }
-
-        if (item.kind === 'row') {
-          const isSel = selected?.kind === 'row' && selected.id === item.id;
-          const isDrag = dragging?.kind === 'row' && dragging.id === item.id;
-          return (
-            <div
-              key={item.id}
-              onMouseDown={(e) => handleMouseDown('row', item.id, e)}
-              onClick={(e) => { e.stopPropagation(); setSelected({ kind: 'row', id: item.id }); }}
-              className={cn(
-                'absolute -translate-x-1/2 -translate-y-1/2 cursor-grab em-floor-item',
-                isSel && 'em-floor-item--active z-40',
-                isDrag && 'z-40 scale-105 drop-shadow-md',
-                !isSel && !isDrag && 'z-20',
-              )}
-              style={{
-                left: `${item.x}%`,
-                top: `${item.y}%`,
-                transform: isDrag ? undefined : `translate(-50%, -50%) scale(${depthScaleForY(item.y, liveDepth)})`,
-                ...(!isSel && !isDrag ? furnitureDepthStyle(item.y, liveDepth) : {}),
-              }}
-            >
-              <div
-                className={cn(
-                  'px-3 py-2 bg-surface/95 backdrop-blur-sm border rounded-[var(--radius-card)] min-w-[110px] shadow-[var(--shadow-soft)]',
-                  isSel ? 'border-primary ring-2 ring-primary/20' : 'border-border',
-                )}
-              >
-                <p className="text-[10px] font-semibold text-foreground text-center truncate">{item.label}</p>
-                <div className="flex justify-center gap-1 mt-1.5 flex-wrap max-w-[130px]">
-                  {Array.from({ length: Math.min(item.seatCount, 14) }).map((_, i) => (
-                    <ChairRenderer key={i} chairType={item.chairType} imageUrl={item.chairImageUrl} size="sm" />
-                  ))}
-                </div>
-              </div>
-            </div>
-          );
-        }
-
-        const isSel = selected?.kind === 'table' && selected.id === item.id;
-        const isDrag = dragging?.kind === 'table' && dragging.id === item.id;
-        const tableColor = resolveTableColor(item.tableColor, blueprint.metadata.defaultTableColor);
-        const { className: tableClass, style: tableStyle } = getTableVisualStyle(item.shape, isSel, tableColor, item.tableImageUrl);
-        const depthScale = depthScaleForY(item.y, liveDepth);
-        return (
-          <div
-            key={item.id}
-            onMouseDown={(e) => handleMouseDown('table', item.id, e)}
-            onClick={(e) => { e.stopPropagation(); setSelected({ kind: 'table', id: item.id }); }}
-            className={cn(
-              'absolute cursor-grab em-floor-item',
-              isSel && 'em-floor-item--active z-40',
-              isDrag && 'em-floor-item--dragging',
-              !isSel && !isDrag && 'z-20',
-            )}
-            style={{
-              left: `${item.x}%`,
-              top: `${item.y}%`,
-              transform: isDrag
-                ? undefined
-                : `translate(-50%, -50%) scale(${depthScale})${item.rotation ? ` rotate(${item.rotation}deg)` : ''}`,
-              ...(isSel || isDrag ? { zIndex: 50 } : furnitureDepthStyle(item.y, liveDepth)),
-            }}
-          >
-            <div
-              className={cn('relative flex items-center justify-center', tableClass)}
-              style={tableStyle}
-            >
-              <div className="px-2 text-center z-10 drop-shadow-[0_1px_1px_rgba(255,255,255,0.85)]">
-                <div className="text-[10px] font-semibold truncate max-w-[80px] tracking-tight">{item.name}</div>
-                <div className="text-[8px] opacity-80 tabular-nums">{item.capacity} pl.</div>
-              </div>
-              {Array.from({ length: item.capacity }).map((_, seatIndex) => {
-                const coords = getSeatCoordinates(item.shape, item.capacity, seatIndex, 42);
-                return (
-                  <span
-                    key={seatIndex}
-                    className="absolute transition-transform duration-150 hover:scale-110"
-                    style={{
-                      left: `calc(50% + ${coords.x}px)`,
-                      top: `calc(50% + ${coords.y}px)`,
-                      transform: 'translate(-50%, -50%)',
-                    }}
-                  >
-                    <ChairRenderer chairType={item.chairType} imageUrl={item.chairImageUrl} size="md" />
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-
-      {blueprint.furniture.length === 0 && blueprint.fixtures.length <= 1 && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-muted pointer-events-none z-10">
-          <div className="w-12 h-12 rounded-[var(--radius-card)] bg-surface border border-border flex items-center justify-center mb-2">
-            <LayoutGrid className="w-6 h-6 text-primary" />
-          </div>
-          <p className="text-sm font-semibold text-foreground">Plan vide</p>
-          <p className="text-xs text-muted mt-1">Choisissez un modèle ou ajoutez des éléments</p>
-        </div>
-      )}
-    </FloorDepthFrame>
+    <RoomWebGLViewer
+      blueprint={blueprint}
+      selected={selected}
+      onSelect={(sel) => setSelected(sel)}
+      onMoveItem={handleWebGLMove}
+      readOnly={readOnly}
+      wallEditMode={wallEditMode}
+      className={className}
+    />
   );
+
+  const selectWall = useCallback((id: string | null) => {
+    setSelected(id ? { kind: 'wall', id } : null);
+  }, []);
 
   const renderChairImageUpload = (id: string, currentUrl?: string) => (
     <label className="block text-xs space-y-1">
@@ -836,7 +606,7 @@ export default function RoomLayoutEditor({
             </div>
             <div className="space-y-1.5 pt-1">
               <label className="flex items-center justify-between gap-2 text-[10px] font-bold text-muted">
-                <span className="inline-flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> Profondeur 2D</span>
+                <span className="inline-flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> Perspective 3D</span>
                 <span className="tabular-nums">{depthAmount}%</span>
               </label>
               <input
@@ -848,11 +618,50 @@ export default function RoomLayoutEditor({
                 className="w-full accent-primary"
               />
               <p className="text-[10px] text-muted leading-relaxed">
-                0 = plan à plat · 100 = salle en perspective maximale. Le plan se remet à plat pendant un glisser-déposer.
+                0 = vue du dessus · 100 = caméra WebGL en perspective immersive.
               </p>
             </div>
             </div>
           )}
+          </div>
+
+          {/* Accordion murs */}
+          <div className="border border-border rounded-[var(--radius-card)] bg-surface overflow-hidden shadow-sm">
+            <button
+              type="button"
+              className={cn("w-full flex items-center justify-between p-3.5 text-left text-sm font-semibold transition-colors", accordion === 'murs' ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50 hover:text-foreground')}
+              onClick={() => {
+                const next = accordion === 'murs' ? '' : 'murs';
+                setAccordion(next);
+                setWallEditMode(next === 'murs');
+              }}
+            >
+              <span className="flex items-center gap-2">
+                <BrickWall className="w-4 h-4" /> Murs, portes & fenêtres
+              </span>
+            </button>
+            {accordion === 'murs' && (
+              <div className="p-4 bg-surface space-y-3 border-t border-border">
+                <p className="text-[10px] text-muted leading-relaxed">
+                  Configurez la hauteur, l&apos;épaisseur, la texture des murs et le style des ouvertures. Cliquez un mur dans la vue 3D pour le sélectionner.
+                </p>
+                <label className="flex items-center gap-2 text-[10px] text-muted cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={wallEditMode}
+                    onChange={(e) => setWallEditMode(e.target.checked)}
+                    className="rounded border-border"
+                  />
+                  Mode édition murs (orbit caméra désactivé)
+                </label>
+                <RoomWallEditorPanel
+                  blueprint={blueprint}
+                  selectedWallId={null}
+                  onSelectWall={selectWall}
+                  onChange={(next, action) => updateBlueprint(next, action)}
+                />
+              </div>
+            )}
           </div>
           
           {/* Accordion 3 : Configuration Globale */}
@@ -942,6 +751,25 @@ export default function RoomLayoutEditor({
           ) : null}
               </div>
             )}
+          </div>
+          <LayoutActionPanel actions={actionLog} />
+        </div>
+      );
+    }
+
+    if (selected?.kind === 'wall') {
+      return (
+        <div className="space-y-3">
+          <div className="p-4 bg-surface-muted rounded-[var(--radius-card)] border space-y-3">
+            <p className="text-xs font-bold uppercase text-muted flex items-center gap-1">
+              <BrickWall className="w-3.5 h-3.5" /> Mur sélectionné
+            </p>
+            <RoomWallEditorPanel
+              blueprint={blueprint}
+              selectedWallId={selected.id}
+              onSelectWall={selectWall}
+              onChange={(next, action) => updateBlueprint(next, action)}
+            />
           </div>
           <LayoutActionPanel actions={actionLog} />
         </div>
@@ -1422,10 +1250,10 @@ export default function RoomLayoutEditor({
       <div>
         <p className="text-sm font-bold text-foreground flex items-center gap-2">
           <Move className="w-4 h-4 text-primary" />
-          Éditeur 2D — {roomTypeLabels[blueprint.roomType as RoomType]}
+          Éditeur WebGL — {roomTypeLabels[blueprint.roomType as RoomType]}
         </p>
         <p className="text-xs text-muted mt-0.5">
-          {blueprint.metadata.totalSeats} places · {roomOutlineLabels[outline.shape]}
+          {blueprint.metadata.totalSeats} places · {(blueprint.walls ?? []).length} murs · {roomOutlineLabels[outline.shape]}
           {caps.canSnapGrid ? ' · Grille' : ''} · Éditeur {caps.label}
         </p>
       </div>

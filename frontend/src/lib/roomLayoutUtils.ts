@@ -25,6 +25,38 @@ export type RoomOutlineShape =
 export type ColumnShape = 'round' | 'square';
 export type FlowerType = 'rose' | 'tulipe' | 'orchidee' | 'tournesol' | 'lavande' | 'boquet' | 'personnalise';
 
+/** Styles de texture murale pour le rendu WebGL. */
+export type WallTextureStyle = 'plaster' | 'brick' | 'wood' | 'concrete' | 'wallpaper' | 'stone';
+/** Styles de porte configurables. */
+export type DoorStyle = 'single' | 'double' | 'sliding' | 'arch' | 'glass';
+/** Styles de fenêtre configurables. */
+export type WindowStyle = 'rectangular' | 'arched' | 'bay' | 'french';
+
+export interface RoomWallOpening {
+  id: string;
+  kind: 'door' | 'window';
+  /** Position le long du mur (0 = début, 1 = fin). */
+  t: number;
+  widthM: number;
+  heightM: number;
+  /** Hauteur du bas de l’ouverture (0 = sol pour portes). */
+  sillM?: number;
+  style: DoorStyle | WindowStyle;
+  color?: string;
+}
+
+export interface RoomWallSegment {
+  id: string;
+  /** Coordonnées en % du canvas (0–100). */
+  start: { x: number; y: number };
+  end: { x: number; y: number };
+  heightM: number;
+  thicknessM: number;
+  texture: WallTextureStyle;
+  color?: string;
+  openings?: RoomWallOpening[];
+}
+
 export interface ImageCropRect {
   x: number;
   y: number;
@@ -71,6 +103,8 @@ export interface RoomLayoutBlueprint {
     stroke?: string;
     strokeWidth?: number;
   };
+  /** Murs procéduraux (éditeur 2.5D / WebGL). Si absent, dérivés de roomOutline. */
+  walls?: RoomWallSegment[];
   canvas: { widthM: number; heightM: number };
   fixtures: Array<{
     id: string;
@@ -250,10 +284,141 @@ export function defaultRoomOutline(shape: RoomOutlineShape = 'rectangle'): NonNu
   };
 }
 
+export const wallTextureLabels: Record<WallTextureStyle, string> = {
+  plaster: 'Crépi / plâtre',
+  brick: 'Brique',
+  wood: 'Bois',
+  concrete: 'Béton',
+  wallpaper: 'Papier peint',
+  stone: 'Pierre',
+};
+
+export const doorStyleLabels: Record<DoorStyle, string> = {
+  single: 'Porte simple',
+  double: 'Porte double',
+  sliding: 'Coulissante',
+  arch: 'Arche',
+  glass: 'Vitrée',
+};
+
+export const windowStyleLabels: Record<WindowStyle, string> = {
+  rectangular: 'Rectangulaire',
+  arched: 'En arche',
+  bay: 'Baie',
+  french: 'Française',
+};
+
+export const WALL_TEXTURE_COLORS: Record<WallTextureStyle, string> = {
+  plaster: '#e8e4df',
+  brick: '#b4533c',
+  wood: '#8b6914',
+  concrete: '#9ca3af',
+  wallpaper: '#c4b5a0',
+  stone: '#78716c',
+};
+
+export function createWallOpening(
+  kind: 'door' | 'window',
+  partial: Partial<RoomWallOpening> = {},
+): RoomWallOpening {
+  if (kind === 'door') {
+    return {
+      id: makeLayoutId('door'),
+      kind: 'door',
+      t: partial.t ?? 0.5,
+      widthM: partial.widthM ?? 0.9,
+      heightM: partial.heightM ?? 2.1,
+      sillM: 0,
+      style: (partial.style as DoorStyle) ?? 'single',
+      color: partial.color ?? '#5c4033',
+    };
+  }
+  return {
+    id: makeLayoutId('window'),
+    kind: 'window',
+    t: partial.t ?? 0.5,
+    widthM: partial.widthM ?? 1.2,
+    heightM: partial.heightM ?? 1.2,
+    sillM: partial.sillM ?? 0.9,
+    style: (partial.style as WindowStyle) ?? 'rectangular',
+    color: partial.color ?? '#93c5fd',
+  };
+}
+
+export function createWallSegment(partial: Partial<RoomWallSegment> = {}): RoomWallSegment {
+  return {
+    id: makeLayoutId('wall'),
+    start: partial.start ?? { x: 10, y: 10 },
+    end: partial.end ?? { x: 90, y: 10 },
+    heightM: partial.heightM ?? 3,
+    thicknessM: partial.thicknessM ?? 0.2,
+    texture: partial.texture ?? 'plaster',
+    color: partial.color,
+    openings: partial.openings ?? [],
+  };
+}
+
+/** Génère 4 murs rectangulaires à partir du contour de salle. */
+export function wallsFromRoomOutline(
+  outline: NonNullable<RoomLayoutBlueprint['roomOutline']>,
+  opts: { heightM?: number; thicknessM?: number; texture?: WallTextureStyle; withEntrance?: boolean } = {},
+): RoomWallSegment[] {
+  const { x, y, w, h } = outline;
+  const heightM = opts.heightM ?? 3;
+  const thicknessM = opts.thicknessM ?? 0.2;
+  const texture = opts.texture ?? 'plaster';
+  const corners = [
+    { x, y },
+    { x: x + w, y },
+    { x: x + w, y: y + h },
+    { x, y: y + h },
+  ];
+  const walls: RoomWallSegment[] = [];
+  for (let i = 0; i < 4; i += 1) {
+    const start = corners[i];
+    const end = corners[(i + 1) % 4];
+    const openings: RoomWallOpening[] = [];
+    // Porte d'entrée sur le mur avant (bas)
+    if (opts.withEntrance !== false && i === 2) {
+      openings.push(createWallOpening('door', { t: 0.5, style: 'double' }));
+    }
+    // Fenêtres sur les murs latéraux
+    if (i === 0 || i === 1 || i === 3) {
+      openings.push(createWallOpening('window', { t: 0.35 }));
+      openings.push(createWallOpening('window', { t: 0.65 }));
+    }
+    walls.push(createWallSegment({ start, end, heightM, thicknessM, texture, openings }));
+  }
+  return walls;
+}
+
+export function resolveBlueprintWalls(blueprint: RoomLayoutBlueprint): RoomWallSegment[] {
+  if (blueprint.walls && blueprint.walls.length > 0) return blueprint.walls;
+  const outline = blueprint.roomOutline ?? defaultRoomOutline('rectangle');
+  return wallsFromRoomOutline(outline, { withEntrance: true });
+}
+
+export function wallLengthPct(wall: RoomWallSegment): number {
+  const dx = wall.end.x - wall.start.x;
+  const dy = wall.end.y - wall.start.y;
+  return Math.hypot(dx, dy);
+}
+
+export function wallLengthMeters(wall: RoomWallSegment, canvas: { widthM: number; heightM: number }): number {
+  const pct = wallLengthPct(wall);
+  // Approximation : moyenne des axes canvas
+  const avgM = (canvas.widthM + canvas.heightM) / 2;
+  return (pct / 100) * avgM;
+}
+
 export function ensureBlueprintDefaults(blueprint: RoomLayoutBlueprint): RoomLayoutBlueprint {
+  const outline = blueprint.roomOutline ?? defaultRoomOutline('rectangle');
   return {
     ...blueprint,
-    roomOutline: blueprint.roomOutline ?? defaultRoomOutline('rectangle'),
+    roomOutline: outline,
+    walls: blueprint.walls && blueprint.walls.length > 0
+      ? blueprint.walls
+      : wallsFromRoomOutline(outline, { withEntrance: true }),
     metadata: {
       ...blueprint.metadata,
       defaultTableColor: blueprint.metadata.defaultTableColor ?? '#ffffff',
