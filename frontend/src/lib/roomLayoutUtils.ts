@@ -322,6 +322,93 @@ export function createBlueprintZone(
   };
 }
 
+function pointInLayoutRect(
+  xPct: number,
+  yPct: number,
+  rect: { x: number; y: number; w: number; h: number },
+): boolean {
+  return xPct >= rect.x && xPct <= rect.x + rect.w && yPct >= rect.y && yPct <= rect.y + rect.h;
+}
+
+export type FurnitureSurfaceHit = {
+  id: string;
+  kind: 'podium' | 'stage' | 'carpet' | 'dance' | 'vip' | 'buffet' | 'zone';
+  label: string;
+  /** Hauteur du dessus de surface (m), pour poser le mobilier dessus. */
+  elevationM: number;
+};
+
+/**
+ * Surface sous un point (moquette, piste, podium…) pour y poser tables / chaises.
+ * Priorité : podium / scène > autres surfaces.
+ */
+export function resolveFurnitureSurfaceAt(
+  blueprint: RoomLayoutBlueprint,
+  xPct: number,
+  yPct: number,
+): FurnitureSurfaceHit | null {
+  let best: FurnitureSurfaceHit | null = null;
+
+  const consider = (hit: FurnitureSurfaceHit) => {
+    if (!best) {
+      best = hit;
+      return;
+    }
+    const bestIsRaised = best.kind === 'podium' || best.kind === 'stage';
+    const hitIsRaised = hit.kind === 'podium' || hit.kind === 'stage';
+    if (hitIsRaised && (!bestIsRaised || hit.elevationM >= best.elevationM)) {
+      best = hit;
+      return;
+    }
+    if (!bestIsRaised && hit.elevationM >= best.elevationM) {
+      best = hit;
+    }
+  };
+
+  for (const f of blueprint.fixtures) {
+    if (!pointInLayoutRect(xPct, yPct, f)) continue;
+    if (f.kind === 'podium' || f.kind === 'stage') {
+      consider({
+        id: f.id,
+        kind: f.kind,
+        label: f.label ?? (f.kind === 'podium' ? 'Podium' : 'Scène'),
+        elevationM: f.heightM ?? (f.kind === 'podium' ? 0.6 : 0.45),
+      });
+    } else if (f.kind === 'carpet') {
+      consider({
+        id: f.id,
+        kind: 'carpet',
+        label: f.label ?? 'Moquette',
+        elevationM: 0.06,
+      });
+    }
+  }
+
+  for (const item of blueprint.furniture) {
+    if (item.kind !== 'zone') continue;
+    if (!pointInLayoutRect(xPct, yPct, { x: item.x, y: item.y, w: item.w, h: item.h })) continue;
+    const kind =
+      item.zoneKind === 'dance' ? 'dance' :
+      item.zoneKind === 'carpet' ? 'carpet' :
+      item.zoneKind === 'vip' ? 'vip' :
+      item.zoneKind === 'buffet' ? 'buffet' :
+      'zone';
+    const elevationM =
+      kind === 'dance' ? 0.07 :
+      kind === 'carpet' ? 0.06 :
+      kind === 'vip' ? 0.05 :
+      0.04;
+    consider({
+      id: item.id,
+      kind,
+      label: item.label,
+      elevationM,
+    });
+  }
+
+  return best;
+}
+
 export function createBlueprintChair(
   index = 1,
   defaults: {

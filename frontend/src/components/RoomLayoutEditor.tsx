@@ -48,6 +48,7 @@ import {
   tableArrangeLabels,
   tableShapeLabels,
   wallsFromRoomOutline,
+  resolveFurnitureSurfaceAt,
   type ArrangeDensity,
   type ChairStyle,
   type LayoutParams,
@@ -1135,6 +1136,21 @@ export default function RoomLayoutEditor({
               />
               Afficher assiettes & couverts
             </label>
+            {(() => {
+              const surface = resolveFurnitureSurfaceAt(blueprint, selectedFurniture.x, selectedFurniture.y);
+              if (!surface) {
+                return (
+                  <p className="text-[10px] text-muted leading-snug">
+                    Glissez la table sur une moquette, piste ou podium : elle se pose automatiquement dessus (caméra bloquée recommandée).
+                  </p>
+                );
+              }
+              return (
+                <p className="text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-[var(--radius-button)] px-2 py-1.5">
+                  Posée sur « {surface.label} » ({surface.elevationM.toFixed(2)} m)
+                </p>
+              );
+            })()}
             <label className="block text-xs space-y-1">
               <span className="font-semibold text-muted">Type de chaise</span>
               <select value={selectedFurniture.chairType} onChange={(e) => updateFurniture(selectedFurniture.id, { chairType: e.target.value as ChairType })} className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm">
@@ -1434,6 +1450,19 @@ export default function RoomLayoutEditor({
               </label>
             ) : null}
             {caps.canCustomImages ? renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl) : null}
+            {(() => {
+              const surface = resolveFurnitureSurfaceAt(blueprint, selectedFurniture.x, selectedFurniture.y);
+              if (!surface) {
+                return (
+                  <p className="text-[10px] text-muted">Glissez le siège sur une moquette, piste ou podium pour le poser dessus.</p>
+                );
+              }
+              return (
+                <p className="text-[10px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-[var(--radius-button)] px-2 py-1.5">
+                  Posé sur « {surface.label} » ({surface.elevationM.toFixed(2)} m)
+                </p>
+              );
+            })()}
             <p className="text-[10px] text-muted">Glissez la chaise librement dans la vue 3D.</p>
           </div>
           <LayoutActionPanel actions={actionLog} />

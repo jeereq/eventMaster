@@ -10,6 +10,7 @@ import {
   RoomWallOpening,
   outlinePolygonPoints,
   resolveBlueprintWalls,
+  resolveFurnitureSurfaceAt,
   resolveTableColor,
   type ChairType,
   type ChairStyle,
@@ -560,6 +561,7 @@ function TableMesh({
   hasCouverts = false,
   attachedChairs = true,
   rotation,
+  elevationM = 0,
   widthM,
   heightM,
   selected,
@@ -581,6 +583,7 @@ function TableMesh({
   hasCouverts?: boolean;
   attachedChairs?: boolean;
   rotation?: number;
+  elevationM?: number;
   widthM: number;
   heightM: number;
   selected: boolean;
@@ -607,7 +610,7 @@ function TableMesh({
 
   return (
     <group
-      position={[wx, 0, wz]}
+      position={[wx, elevationM, wz]}
       rotation={[0, ((rotation ?? 0) * Math.PI) / 180, 0]}
       onClick={(e) => {
         e.stopPropagation();
@@ -728,6 +731,7 @@ function ZoneMesh({
   onSelect,
   onDragStart,
   readOnly,
+  pickable = true,
 }: {
   xPct: number;
   yPct: number;
@@ -742,6 +746,8 @@ function ZoneMesh({
   onSelect: () => void;
   onDragStart?: () => void;
   readOnly?: boolean;
+  /** Si false, le mobilier au-dessus reste cliquable / déplaçable. */
+  pickable?: boolean;
 }) {
   const w = (wPct / 100) * widthM;
   const h = (hPct / 100) * heightM;
@@ -752,16 +758,24 @@ function ZoneMesh({
   return (
     <group
       position={[cx, 0.04, cz]}
-      onClick={(e) => { e.stopPropagation(); onSelect(); }}
+      onClick={(e) => {
+        if (!pickable) return;
+        e.stopPropagation();
+        onSelect();
+      }}
       onPointerDown={(e) => {
-        if (readOnly || !onDragStart) return;
+        if (!pickable || readOnly || !onDragStart) return;
         e.stopPropagation();
         onSelect();
         onDragStart();
         gl.domElement.style.cursor = 'grabbing';
       }}
     >
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        receiveShadow
+        raycast={pickable ? undefined : () => null}
+      >
         <planeGeometry args={[w, h]} />
         <meshStandardMaterial
           color={selected ? '#c7d2fe' : (color ?? mat.color)}
@@ -787,6 +801,7 @@ function FreeChairMesh({
   seatMaterial,
   chairImageUrl,
   rotation,
+  elevationM = 0,
   widthM,
   heightM,
   selected,
@@ -802,6 +817,7 @@ function FreeChairMesh({
   seatMaterial?: SeatMaterial;
   chairImageUrl?: string;
   rotation?: number;
+  elevationM?: number;
   widthM: number;
   heightM: number;
   selected: boolean;
@@ -814,7 +830,7 @@ function FreeChairMesh({
   const { gl } = useThree();
   return (
     <group
-      position={[wx, 0, wz]}
+      position={[wx, elevationM, wz]}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
       onPointerDown={(e) => {
         if (readOnly || !onDragStart) return;
@@ -901,6 +917,7 @@ function FixtureMesh({
   onSelect,
   onDrag,
   readOnly,
+  pickable = true,
 }: {
   xPct: number;
   yPct: number;
@@ -920,6 +937,7 @@ function FixtureMesh({
   onSelect: () => void;
   onDrag?: (xPct: number, yPct: number) => void;
   readOnly?: boolean;
+  pickable?: boolean;
 }) {
   const w = (wPct / 100) * widthM;
   const d = (hPct / 100) * roomDepthM;
@@ -964,9 +982,13 @@ function FixtureMesh({
   return (
     <group
       position={[cx, 0, cz]}
-      onClick={(e) => { e.stopPropagation(); onSelect(); }}
+      onClick={(e) => {
+        if (!pickable) return;
+        e.stopPropagation();
+        onSelect();
+      }}
       onPointerDown={(e) => {
-        if (readOnly || !onDrag) return;
+        if (!pickable || readOnly || !onDrag) return;
         e.stopPropagation();
         dragging.current = true;
         onSelect();
@@ -981,7 +1003,7 @@ function FixtureMesh({
       }}
     >
       {kind === 'column' || kind === 'pillar' ? (
-        <mesh position={[0, height / 2, 0]} castShadow>
+        <mesh position={[0, height / 2, 0]} castShadow raycast={pickable ? undefined : () => null}>
           <cylinderGeometry args={[Math.min(w, d) / 2, Math.min(w, d) / 2, height, 20]} />
           <meshStandardMaterial color={selected ? '#c7d2fe' : '#ffffff'} map={map ?? undefined} roughness={0.85} />
         </mesh>
@@ -1104,6 +1126,8 @@ function SceneContent({
   }, [camera, depthAmount, widthM, heightM]);
 
   const [dragTarget, setDragTarget] = React.useState<{ kind: WebGLSelectableKind; id: string } | null>(null);
+  /** En mode caméra bloquée (placement mobilier), les surfaces ne capturent pas les clics. */
+  const surfacePickable = !lockOrbit && !dragTarget;
 
   const moveAny = useCallback(
     (kind: WebGLSelectableKind, id: string, x: number, y: number) => onMoveItem?.(kind, id, x, y),
@@ -1178,8 +1202,9 @@ function SceneContent({
           roomDepthM={heightM}
           selected={selected?.kind === 'fixture' && selected.id === f.id}
           onSelect={() => onSelect({ kind: 'fixture', id: f.id })}
-          onDrag={wallEditMode ? undefined : (x, y) => moveAny('fixture', f.id, x, y)}
+          onDrag={wallEditMode || !surfacePickable ? undefined : (x, y) => moveAny('fixture', f.id, x, y)}
           readOnly={readOnly || wallEditMode}
+          pickable={surfacePickable || (selected?.kind === 'fixture' && selected.id === f.id)}
         />
       ))}
 
@@ -1199,12 +1224,14 @@ function SceneContent({
               heightM={heightM}
               selected={selected?.kind === 'zone' && selected.id === item.id}
               onSelect={() => onSelect({ kind: 'zone', id: item.id })}
-              onDragStart={wallEditMode || readOnly ? undefined : () => setDragTarget({ kind: 'zone', id: item.id })}
+              onDragStart={wallEditMode || readOnly || !surfacePickable ? undefined : () => setDragTarget({ kind: 'zone', id: item.id })}
               readOnly={readOnly || wallEditMode}
+              pickable={surfacePickable || (selected?.kind === 'zone' && selected.id === item.id)}
             />
           );
         }
         if (item.kind === 'chair') {
+          const surface = resolveFurnitureSurfaceAt(blueprint, item.x, item.y);
           return (
             <FreeChairMesh
               key={item.id}
@@ -1215,6 +1242,7 @@ function SceneContent({
               seatMaterial={item.seatMaterial}
               chairImageUrl={item.chairImageUrl}
               rotation={item.rotation}
+              elevationM={surface?.elevationM ?? 0}
               label={item.label}
               widthM={widthM}
               heightM={heightM}
@@ -1228,7 +1256,11 @@ function SceneContent({
         if (item.kind === 'row') {
           const [wx, wz] = pctToWorld(item.x, item.y, widthM, heightM);
           const count = Math.min(item.seatCount, 24);
-          const elevation = item.elevationM ?? (item.tier > 0 ? item.tier * 0.38 : 0);
+          const surface = resolveFurnitureSurfaceAt(blueprint, item.x, item.y);
+          const elevation = Math.max(
+            item.elevationM ?? (item.tier > 0 ? item.tier * 0.38 : 0),
+            surface?.elevationM ?? 0,
+          );
           const curve = item.curve ?? 0;
           const spacing = 0.55;
           const [fx, fz] = pctToWorld(item.focusX ?? item.x, item.focusY ?? Math.max(4, item.y - 25), widthM, heightM);
@@ -1247,19 +1279,17 @@ function SceneContent({
                 setDragTarget({ kind: 'row', id: item.id });
               }}
             >
-              {/* Plateforme / gradin */}
-              {elevation > 0.05 && (
-                <mesh position={[0, elevation / 2, 0.15]} receiveShadow castShadow>
-                  <boxGeometry args={[count * spacing + 0.6, elevation, 1.1 + curve * 2]} />
+              {/* Plateforme / gradin (seulement si élévation propre, pas juste moquette) */}
+              {(item.elevationM ?? 0) > 0.05 && (
+                <mesh position={[0, (item.elevationM ?? 0) / 2, 0.15]} receiveShadow castShadow>
+                  <boxGeometry args={[count * spacing + 0.6, item.elevationM ?? 0, 1.1 + curve * 2]} />
                   <meshStandardMaterial color={selected ? '#c7d2fe' : '#78716c'} roughness={0.85} />
                 </mesh>
               )}
               {Array.from({ length: count }).map((_, i) => {
                 const t = i - (count - 1) / 2;
                 const localX = t * spacing;
-                // Arc : les sièges du milieu avancent vers la scène
                 const localZ = curve * (t * t) * 0.08;
-                // Orientation vers le point de focus (scène), en espace monde puis local
                 const worldX = wx + Math.cos(rowRot) * localX - Math.sin(rowRot) * localZ;
                 const worldZ = wz + Math.sin(rowRot) * localX + Math.cos(rowRot) * localZ;
                 const faceY = Math.atan2(fx - worldX, fz - worldZ) - rowRot;
@@ -1284,6 +1314,7 @@ function SceneContent({
         }
 
         const tableColor = resolveTableColor(item.tableColor, blueprint.metadata.defaultTableColor) ?? '#f8fafc';
+        const surface = resolveFurnitureSurfaceAt(blueprint, item.x, item.y);
         return (
           <TableMesh
             key={item.id}
@@ -1301,6 +1332,7 @@ function SceneContent({
             hasCouverts={item.hasCouverts}
             attachedChairs={item.attachedChairs}
             rotation={item.rotation}
+            elevationM={surface?.elevationM ?? 0}
             widthM={widthM}
             heightM={heightM}
             selected={selected?.kind === 'table' && selected.id === item.id}
@@ -1374,8 +1406,8 @@ export default function RoomWebGLViewer({
       </Canvas>
       <div className="pointer-events-none absolute bottom-2 left-2 rounded-md bg-black/50 px-2 py-1 text-[9px] font-medium text-white/80">
         {lockOrbit
-          ? 'Caméra verrouillée · glissez le mobilier · molette = zoom'
-          : 'WebGL · orbit libre · molette = zoom · verrouillez la caméra pour déplacer'}
+          ? 'Caméra bloquée · posez tables/chaises sur moquette, piste, podium · molette = zoom'
+          : 'Orbit libre · activez « Caméra bloquée » pour placer le mobilier sur les surfaces'}
       </div>
     </div>
   );
