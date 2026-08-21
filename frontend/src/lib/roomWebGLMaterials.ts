@@ -48,20 +48,31 @@ export function resolveFloorMap(
 
   let roughness = 0.72;
   let metalness = 0.04;
-  if (type === 'epoxy' || type === 'marbre') {
-    roughness = 0.18;
-    metalness = 0.18;
+  if (
+    type === 'epoxy' || type === 'marbre' || type === 'epoxyMenthe'
+    || type === 'marbreCalacatta' || type === 'marbreOr' || type === 'marbreBourgogne'
+  ) {
+    roughness = type === 'epoxyMenthe' || type === 'marbreCalacatta' || type === 'marbreOr' ? 0.08 : 0.18;
+    metalness = 0.16;
   } else if (type === 'moquette' || type === 'herbe' || type === 'pelouse' || type === 'prairie' || type === 'gazonSynth') {
     roughness = 0.98;
     metalness = 0;
-  } else if (type === 'beton') {
-    roughness = 0.68;
-    metalness = 0.08;
+  } else if (type === 'beton' || type === 'pavesPinwheel' || type === 'pavesGranit') {
+    roughness = 0.88;
+    metalness = 0.04;
+  } else if (type === 'pierreModulaire' || type === 'dallesIrregulieres') {
+    roughness = 0.78;
+    metalness = 0.05;
   } else if (
-    type === 'parquet' || type === 'chevron' || type === 'bois'
-    || type === 'boisPanel' || type === 'boisHex' || type === 'boisAmber' || type === 'boisRustique'
+    type === 'parquet' || type === 'chevron' || type === 'chevronGris' || type === 'chevronGreige'
+    || type === 'bois' || type === 'boisPanel' || type === 'boisHex' || type === 'boisAmber'
+    || type === 'boisRustique' || type === 'boisBlond' || type === 'boisPetale'
+    || type === 'boisCharcoal' || type === 'boisMarqueterie'
   ) {
-    roughness = type === 'boisAmber' ? 0.38 : type === 'boisPanel' ? 0.62 : 0.48;
+    roughness =
+      type === 'boisAmber' ? 0.38 :
+      type === 'boisBlond' || type === 'chevronGreige' ? 0.55 :
+      type === 'boisPanel' || type === 'boisMarqueterie' ? 0.62 : 0.48;
     metalness = 0.06;
   }
 

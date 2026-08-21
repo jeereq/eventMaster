@@ -11,7 +11,7 @@ import {
  type FloorType,
  type RoomTheme,
 } from '@/lib/roomThemeUtils';
-import { floorTypeLabels } from '@/lib/roomFloorUtils';
+import { FLOOR_TYPE_PICKER_ORDER, floorTypeLabels } from '@/lib/roomFloorUtils';
 import type { RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
 
 interface CustomRoomThemePanelProps {
@@ -157,9 +157,9 @@ export default function CustomRoomThemePanel({
  onChange={(e) => setDraft({ ...draft, defaultFloorType: e.target.value as FloorType })}
  className="w-full px-2 py-1.5 rounded-lg border text-xs"
  >
- {(Object.keys(floorTypeLabels) as FloorType[]).filter((k) => k !== 'custom').map((k) => (
+ {(FLOOR_TYPE_PICKER_ORDER.map((k) => (
  <option key={k} value={k}>{floorTypeLabels[k]}</option>
- ))}
+ )))}
  </select>
  </label>
  <button

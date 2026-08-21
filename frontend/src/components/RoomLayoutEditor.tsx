@@ -92,7 +92,7 @@ import {
   RoomThemeId,
   type FloorType,
 } from '@/lib/roomThemeUtils';
-import { floorTypeLabels, resolveDepthAmount, resolveFloorStyle } from '@/lib/roomFloorUtils';
+import { FLOOR_TYPE_PICKER_ORDER, floorTypeLabels, resolveDepthAmount, resolveFloorStyle } from '@/lib/roomFloorUtils';
 import CustomRoomThemePanel from '@/components/CustomRoomThemePanel';
 import { cn } from '@/lib/cn';
 
@@ -903,13 +903,7 @@ export default function RoomLayoutEditor({
                   <div className="space-y-3 pt-4 border-t border-border/50">
                     <p className="text-xs font-bold uppercase text-muted flex items-center gap-1"><Layers className="w-3.5 h-3.5" /> Sol de la salle</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {(
-                    [
-                      'boisPanel', 'boisHex', 'boisAmber', 'boisRustique', 'bois', 'parquet', 'chevron',
-                      'carrelage', 'marbre', 'damier', 'terrazzo', 'pierre', 'moquette',
-                      'herbe', 'pelouse', 'gazonSynth', 'prairie', 'sable', 'beton', 'epoxy', 'brique',
-                    ] as FloorType[]
-                  ).filter((k) => k in floorTypeLabels).map((type) => (
+                  {FLOOR_TYPE_PICKER_ORDER.map((type) => (
                     <button
                       key={type}
                       type="button"

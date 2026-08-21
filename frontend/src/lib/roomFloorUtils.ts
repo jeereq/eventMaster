@@ -9,6 +9,20 @@ export const floorTypeLabels: Record<FloorType, string> = {
   boisHex: 'Bois hexagonal',
   boisAmber: 'Bois ambré veiné',
   boisRustique: 'Bois rustique',
+  boisBlond: 'Chêne blond',
+  boisPetale: 'Parquet pétale',
+  boisCharcoal: 'Bois anthracite',
+  boisMarqueterie: 'Marqueterie sombre',
+  chevronGris: 'Chevron gris',
+  chevronGreige: 'Chevron greige',
+  marbreCalacatta: 'Marbre calacatta or',
+  marbreOr: 'Marbre géométrique or',
+  marbreBourgogne: 'Marbre bordeaux',
+  epoxyMenthe: 'Résine menthe & or',
+  pavesPinwheel: 'Pavés pinwheel',
+  pierreModulaire: 'Pierre modulaire',
+  pavesGranit: 'Pavés granit',
+  dallesIrregulieres: 'Dalles irrégulières',
   carrelage: 'Carrelage pierre',
   marbre: 'Marbre veiné',
   damier: 'Damier',
@@ -26,6 +40,16 @@ export const floorTypeLabels: Record<FloorType, string> = {
   custom: 'Image importée',
 };
 
+/** Ordre d’affichage dans le sélecteur de sol (photos réalistes en tête). */
+export const FLOOR_TYPE_PICKER_ORDER: FloorType[] = [
+  'boisPanel', 'boisHex', 'boisAmber', 'boisRustique', 'boisBlond', 'boisPetale',
+  'boisCharcoal', 'boisMarqueterie', 'bois', 'parquet', 'chevron', 'chevronGris', 'chevronGreige',
+  'marbreCalacatta', 'marbreOr', 'marbreBourgogne', 'marbre', 'epoxyMenthe', 'epoxy',
+  'pavesPinwheel', 'pierreModulaire', 'pavesGranit', 'dallesIrregulieres',
+  'carrelage', 'damier', 'terrazzo', 'pierre', 'moquette',
+  'herbe', 'pelouse', 'gazonSynth', 'prairie', 'sable', 'beton', 'brique',
+];
+
 type FloorAsset = {
   url: string;
   size: string;
@@ -33,15 +57,30 @@ type FloorAsset = {
 };
 
 const DAMIER_TILE = '36px 36px';
+const PHOTO = '120px 120px';
 
 export const FLOOR_ASSETS: Record<Exclude<FloorType, 'custom'>, FloorAsset> = {
   parquet: { url: '/floors/parquet-herringbone.svg', size: '88px 88px', fallback: '#c4a06a' },
   chevron: { url: '/floors/chevron.svg', size: '72px 44px', fallback: '#c9a06a' },
   bois: { url: '/floors/parquet-oak.svg', size: '96px 96px', fallback: '#d2b07a' },
-  boisPanel: { url: '/floors/wood-panel.png', size: '120px 120px', fallback: '#4a3018' },
-  boisHex: { url: '/floors/wood-hex.png', size: '110px 110px', fallback: '#6b4423' },
-  boisAmber: { url: '/floors/wood-amber.png', size: '140px 140px', fallback: '#c4782a' },
-  boisRustique: { url: '/floors/wood-rustic.png', size: '130px 130px', fallback: '#5c3317' },
+  boisPanel: { url: '/floors/wood-panel.png', size: PHOTO, fallback: '#4a3018' },
+  boisHex: { url: '/floors/wood-hex.png', size: PHOTO, fallback: '#6b4423' },
+  boisAmber: { url: '/floors/wood-amber.png', size: PHOTO, fallback: '#c4782a' },
+  boisRustique: { url: '/floors/wood-rustic.png', size: PHOTO, fallback: '#5c3317' },
+  boisBlond: { url: '/floors/wood-blonde.png', size: PHOTO, fallback: '#d4c4a8' },
+  boisPetale: { url: '/floors/wood-petal.png', size: PHOTO, fallback: '#b8956a' },
+  boisCharcoal: { url: '/floors/wood-charcoal.png', size: PHOTO, fallback: '#4a4a4a' },
+  boisMarqueterie: { url: '/floors/wood-marquetry.png', size: PHOTO, fallback: '#3d2a1a' },
+  chevronGris: { url: '/floors/herringbone-grey.png', size: PHOTO, fallback: '#7a7a7a' },
+  chevronGreige: { url: '/floors/herringbone-greige.png', size: PHOTO, fallback: '#b8b0a4' },
+  marbreCalacatta: { url: '/floors/marble-calacatta.png', size: PHOTO, fallback: '#f5f0ea' },
+  marbreOr: { url: '/floors/marble-gold-shard.png', size: PHOTO, fallback: '#f0ebe3' },
+  marbreBourgogne: { url: '/floors/marble-burgundy.png', size: PHOTO, fallback: '#5c0a0a' },
+  epoxyMenthe: { url: '/floors/epoxy-mint-gold.png', size: PHOTO, fallback: '#c8e0d4' },
+  pavesPinwheel: { url: '/floors/paver-pinwheel.png', size: PHOTO, fallback: '#9a9a9a' },
+  pierreModulaire: { url: '/floors/stone-modular-brown.png', size: PHOTO, fallback: '#5c4030' },
+  pavesGranit: { url: '/floors/cobble-granite.png', size: PHOTO, fallback: '#8a8a8a' },
+  dallesIrregulieres: { url: '/floors/flagstone.png', size: PHOTO, fallback: '#6b6558' },
   carrelage: { url: '/floors/tile.svg', size: '56px 56px', fallback: '#e2dcd0' },
   marbre: { url: '/floors/marble.svg', size: DAMIER_TILE, fallback: '#ebe6dc' },
   damier: { url: '/floors/damier.svg', size: DAMIER_TILE, fallback: '#1c1917' },
@@ -67,6 +106,20 @@ export const FLOOR_TEXTURE_REPEAT_M: Record<Exclude<FloorType, 'custom'>, number
   boisHex: 1.4,
   boisAmber: 2.0,
   boisRustique: 1.8,
+  boisBlond: 2.6,
+  boisPetale: 2.2,
+  boisCharcoal: 2.2,
+  boisMarqueterie: 1.5,
+  chevronGris: 1.6,
+  chevronGreige: 1.6,
+  marbreCalacatta: 2.4,
+  marbreOr: 2.2,
+  marbreBourgogne: 2.4,
+  epoxyMenthe: 3.2,
+  pavesPinwheel: 1.5,
+  pierreModulaire: 1.8,
+  pavesGranit: 1.2,
+  dallesIrregulieres: 2.0,
   carrelage: 1.2,
   marbre: 2.8,
   damier: 1.0,
@@ -111,7 +164,10 @@ function lightingOverlays(floorType: FloorType): { image: string; size: string; 
       blend: 'overlay, multiply',
     };
   }
-  if (floorType === 'epoxy' || floorType === 'marbre') {
+  if (
+    floorType === 'epoxy' || floorType === 'marbre' || floorType === 'epoxyMenthe'
+    || floorType === 'marbreCalacatta' || floorType === 'marbreOr' || floorType === 'marbreBourgogne'
+  ) {
     return {
       image: [
         'radial-gradient(ellipse at 50% 42%, transparent 40%, rgba(12,16,28,0.28) 100%)',
