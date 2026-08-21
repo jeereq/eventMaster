@@ -2,6 +2,204 @@
 
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
+import {
+  resolveChandelierCount,
+  resolveChandelierType,
+  type ChandelierType,
+} from '@/lib/roomCeilingUtils';
+
+function ChandelierClassic({ pointLights }: { pointLights: boolean }) {
+  return (
+    <group>
+      <mesh position={[0, 0.25, 0]}>
+        <cylinderGeometry args={[0.008, 0.008, 0.5, 6]} />
+        <meshStandardMaterial color="#a8a29e" metalness={0.7} roughness={0.3} />
+      </mesh>
+      <mesh position={[0, -0.05, 0]} castShadow>
+        <sphereGeometry args={[0.14, 16, 16]} />
+        <meshStandardMaterial color="#fef3c7" emissive="#fbbf24" emissiveIntensity={0.55} roughness={0.25} metalness={0.2} />
+      </mesh>
+      {[0, 1, 2, 3, 4, 5].map((a) => {
+        const ang = (a / 6) * Math.PI * 2;
+        return (
+          <group key={a} rotation={[0, ang, 0]}>
+            <mesh position={[0.22, -0.08, 0]} rotation={[0, 0, 0.4]} castShadow>
+              <cylinderGeometry args={[0.012, 0.012, 0.28, 6]} />
+              <meshStandardMaterial color="#d4af37" metalness={0.8} roughness={0.25} />
+            </mesh>
+            <mesh position={[0.34, -0.18, 0]} castShadow>
+              <sphereGeometry args={[0.05, 10, 10]} />
+              <meshStandardMaterial color="#fff7ed" emissive="#fde68a" emissiveIntensity={0.7} roughness={0.2} />
+            </mesh>
+          </group>
+        );
+      })}
+      {pointLights ? (
+        <pointLight position={[0, -0.2, 0]} intensity={0.55} color="#fef3c7" distance={10} decay={2} />
+      ) : null}
+    </group>
+  );
+}
+
+function ChandelierCrystal({ pointLights }: { pointLights: boolean }) {
+  return (
+    <group>
+      <mesh position={[0, 0.28, 0]}>
+        <cylinderGeometry args={[0.006, 0.006, 0.45, 6]} />
+        <meshStandardMaterial color="#cbd5e1" metalness={0.85} roughness={0.2} />
+      </mesh>
+      <mesh position={[0, 0.02, 0]} castShadow>
+        <octahedronGeometry args={[0.1, 0]} />
+        <meshStandardMaterial color="#e0f2fe" metalness={0.9} roughness={0.08} transparent opacity={0.85} />
+      </mesh>
+      {[0, 1, 2, 3, 4, 5, 6, 7].map((a) => {
+        const ang = (a / 8) * Math.PI * 2;
+        const r = 0.2 + (a % 2) * 0.06;
+        return (
+          <group key={a} rotation={[0, ang, 0]}>
+            <mesh position={[r, -0.12, 0]} castShadow>
+              <octahedronGeometry args={[0.045, 0]} />
+              <meshPhysicalMaterial
+                color="#f0f9ff"
+                metalness={0.15}
+                roughness={0.05}
+                transmission={0.55}
+                thickness={0.4}
+                transparent
+                opacity={0.9}
+              />
+            </mesh>
+            <mesh position={[r * 0.7, -0.28, 0]} castShadow>
+              <octahedronGeometry args={[0.03, 0]} />
+              <meshStandardMaterial color="#e0f2fe" emissive="#bae6fd" emissiveIntensity={0.35} roughness={0.1} />
+            </mesh>
+          </group>
+        );
+      })}
+      {pointLights ? (
+        <pointLight position={[0, -0.15, 0]} intensity={0.7} color="#e0f2fe" distance={11} decay={2} />
+      ) : null}
+    </group>
+  );
+}
+
+function ChandelierModern({ pointLights }: { pointLights: boolean }) {
+  return (
+    <group>
+      <mesh position={[0, 0.35, 0]}>
+        <cylinderGeometry args={[0.005, 0.005, 0.55, 6]} />
+        <meshStandardMaterial color="#57534e" metalness={0.6} roughness={0.35} />
+      </mesh>
+      <mesh position={[0, 0.02, 0]} castShadow>
+        <cylinderGeometry args={[0.09, 0.11, 0.28, 24]} />
+        <meshStandardMaterial color="#1c1917" metalness={0.55} roughness={0.35} />
+      </mesh>
+      <mesh position={[0, -0.14, 0]}>
+        <cylinderGeometry args={[0.08, 0.08, 0.04, 24]} />
+        <meshStandardMaterial color="#fef3c7" emissive="#fbbf24" emissiveIntensity={0.85} roughness={0.4} />
+      </mesh>
+      {pointLights ? (
+        <pointLight position={[0, -0.25, 0]} intensity={0.65} color="#fff7ed" distance={9} decay={2} />
+      ) : null}
+    </group>
+  );
+}
+
+function ChandelierIndustrial({ pointLights }: { pointLights: boolean }) {
+  return (
+    <group>
+      <mesh position={[0, 0.32, 0]}>
+        <cylinderGeometry args={[0.01, 0.01, 0.5, 6]} />
+        <meshStandardMaterial color="#292524" metalness={0.7} roughness={0.4} />
+      </mesh>
+      <mesh position={[0, 0.05, 0]} castShadow>
+        <coneGeometry args={[0.18, 0.22, 16, 1, true]} />
+        <meshStandardMaterial color="#44403c" metalness={0.65} roughness={0.4} side={THREE.DoubleSide} />
+      </mesh>
+      <mesh position={[0, -0.02, 0]}>
+        <sphereGeometry args={[0.07, 12, 12]} />
+        <meshStandardMaterial color="#fef9c3" emissive="#fde68a" emissiveIntensity={0.9} roughness={0.3} />
+      </mesh>
+      {pointLights ? (
+        <pointLight position={[0, -0.15, 0]} intensity={0.5} color="#fde68a" distance={8} decay={2} />
+      ) : null}
+    </group>
+  );
+}
+
+function ChandelierLantern({ pointLights }: { pointLights: boolean }) {
+  return (
+    <group>
+      <mesh position={[0, 0.3, 0]}>
+        <cylinderGeometry args={[0.006, 0.006, 0.4, 6]} />
+        <meshStandardMaterial color="#a8a29e" metalness={0.75} roughness={0.3} />
+      </mesh>
+      <mesh position={[0, 0.08, 0]} castShadow>
+        <boxGeometry args={[0.22, 0.06, 0.22]} />
+        <meshStandardMaterial color="#d4af37" metalness={0.8} roughness={0.25} />
+      </mesh>
+      <mesh position={[0, -0.08, 0]} castShadow>
+        <boxGeometry args={[0.2, 0.28, 0.2]} />
+        <meshStandardMaterial color="#fef3c7" emissive="#fbbf24" emissiveIntensity={0.45} transparent opacity={0.75} roughness={0.35} />
+      </mesh>
+      {[0, 1, 2, 3].map((i) => (
+        <mesh key={i} position={[0, -0.08, 0]} rotation={[0, (i * Math.PI) / 2, 0]} castShadow>
+          <boxGeometry args={[0.22, 0.28, 0.012]} />
+          <meshStandardMaterial color="#b45309" metalness={0.55} roughness={0.4} />
+        </mesh>
+      ))}
+      <mesh position={[0, -0.24, 0]} castShadow>
+        <boxGeometry args={[0.22, 0.04, 0.22]} />
+        <meshStandardMaterial color="#d4af37" metalness={0.8} roughness={0.25} />
+      </mesh>
+      {pointLights ? (
+        <pointLight position={[0, -0.1, 0]} intensity={0.6} color="#fdba74" distance={9} decay={2} />
+      ) : null}
+    </group>
+  );
+}
+
+function ChandelierRecessed({ pointLights }: { pointLights: boolean }) {
+  return (
+    <group>
+      <mesh position={[0, 0.02, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[0.08, 0.12, 24]} />
+        <meshStandardMaterial color="#a8a29e" metalness={0.5} roughness={0.4} side={THREE.DoubleSide} />
+      </mesh>
+      <mesh position={[0, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.08, 24]} />
+        <meshStandardMaterial color="#fffbeb" emissive="#fde68a" emissiveIntensity={1.1} roughness={0.5} />
+      </mesh>
+      {pointLights ? (
+        <pointLight position={[0, -0.35, 0]} intensity={0.45} color="#fff7ed" distance={7} decay={2} />
+      ) : null}
+    </group>
+  );
+}
+
+function ChandelierByType({
+  type,
+  pointLights,
+}: {
+  type: ChandelierType;
+  pointLights: boolean;
+}) {
+  switch (type) {
+    case 'crystal':
+      return <ChandelierCrystal pointLights={pointLights} />;
+    case 'modern':
+      return <ChandelierModern pointLights={pointLights} />;
+    case 'industrial':
+      return <ChandelierIndustrial pointLights={pointLights} />;
+    case 'lantern':
+      return <ChandelierLantern pointLights={pointLights} />;
+    case 'recessed':
+      return <ChandelierRecessed pointLights={pointLights} />;
+    case 'classic':
+    default:
+      return <ChandelierClassic pointLights={pointLights} />;
+  }
+}
 
 /** Lustres / suspensions au plafond. */
 export function RoomChandeliers({
@@ -10,55 +208,35 @@ export function RoomChandeliers({
   wallHeightM,
   count = 3,
   pointLights = true,
+  chandelierType = 'classic',
 }: {
   widthM: number;
   heightM: number;
   wallHeightM: number;
   count?: number;
   pointLights?: boolean;
+  chandelierType?: ChandelierType | string;
 }) {
+  const type = resolveChandelierType(chandelierType);
   const positions = useMemo(() => {
     const n = Math.max(1, Math.min(5, count));
+    const flush = type === 'recessed';
     return Array.from({ length: n }).map((_, i) => {
       const t = n === 1 ? 0.5 : i / (n - 1);
+      const y = flush ? wallHeightM - 0.02 : wallHeightM - 0.15;
       return [
         (t - 0.5) * widthM * 0.55,
-        wallHeightM - 0.15,
+        y,
         (i % 2 === 0 ? -0.12 : 0.12) * heightM,
       ] as [number, number, number];
     });
-  }, [count, widthM, heightM, wallHeightM]);
+  }, [count, widthM, heightM, wallHeightM, type]);
 
   return (
     <group>
       {positions.map((pos, i) => (
-        <group key={i} position={pos}>
-          <mesh position={[0, 0.25, 0]}>
-            <cylinderGeometry args={[0.008, 0.008, 0.5, 6]} />
-            <meshStandardMaterial color="#a8a29e" metalness={0.7} roughness={0.3} />
-          </mesh>
-          <mesh position={[0, -0.05, 0]} castShadow>
-            <sphereGeometry args={[0.14, 16, 16]} />
-            <meshStandardMaterial color="#fef3c7" emissive="#fbbf24" emissiveIntensity={0.55} roughness={0.25} metalness={0.2} />
-          </mesh>
-          {[0, 1, 2, 3, 4, 5].map((a) => {
-            const ang = (a / 6) * Math.PI * 2;
-            return (
-              <group key={a} rotation={[0, ang, 0]}>
-                <mesh position={[0.22, -0.08, 0]} rotation={[0, 0, 0.4]} castShadow>
-                  <cylinderGeometry args={[0.012, 0.012, 0.28, 6]} />
-                  <meshStandardMaterial color="#d4af37" metalness={0.8} roughness={0.25} />
-                </mesh>
-                <mesh position={[0.34, -0.18, 0]} castShadow>
-                  <sphereGeometry args={[0.05, 10, 10]} />
-                  <meshStandardMaterial color="#fff7ed" emissive="#fde68a" emissiveIntensity={0.7} roughness={0.2} />
-                </mesh>
-              </group>
-            );
-          })}
-          {pointLights ? (
-            <pointLight position={[0, -0.2, 0]} intensity={0.55} color="#fef3c7" distance={10} decay={2} />
-          ) : null}
+        <group key={`${type}-${i}`} position={pos}>
+          <ChandelierByType type={type} pointLights={pointLights} />
         </group>
       ))}
     </group>
@@ -141,7 +319,6 @@ export function RoomCurtains({
             <boxGeometry args={[p.w, h, 0.05]} />
             <meshStandardMaterial color="#7f1d1d" roughness={0.88} metalness={0.02} />
           </mesh>
-          {/* Plis */}
           {Array.from({ length: 8 }).map((_, f) => {
             const x = ((f + 0.5) / 8 - 0.5) * p.w * 0.95;
             return (
@@ -151,7 +328,6 @@ export function RoomCurtains({
               </mesh>
             );
           })}
-          {/* Tringle */}
           <mesh position={[0, h / 2 + 0.04, 0.02]} castShadow>
             <cylinderGeometry args={[0.02, 0.02, p.w * 1.05, 8]} />
             <meshStandardMaterial color="#d4af37" metalness={0.75} roughness={0.25} />
@@ -218,6 +394,8 @@ export function RoomAmbiance({
   maxChandeliers = 3,
   maxUplights = 12,
   chandelierPointLights = true,
+  chandelierType,
+  chandelierCount,
 }: {
   widthM: number;
   heightM: number;
@@ -226,7 +404,10 @@ export function RoomAmbiance({
   maxChandeliers?: number;
   maxUplights?: number;
   chandelierPointLights?: boolean;
+  chandelierType?: ChandelierType | string;
+  chandelierCount?: number;
 }) {
+  const count = resolveChandelierCount(chandelierCount, maxChandeliers);
   return (
     <group>
       {flags.chandeliers ? (
@@ -234,8 +415,9 @@ export function RoomAmbiance({
           widthM={widthM}
           heightM={heightM}
           wallHeightM={wallHeightM}
-          count={maxChandeliers}
+          count={count}
           pointLights={chandelierPointLights}
+          chandelierType={chandelierType}
         />
       ) : null}
       {flags.uplights ? (

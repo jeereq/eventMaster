@@ -258,6 +258,10 @@ export interface RoomLayoutBlueprint {
     roofOpacity?: number;
     /** Couleur du plafond / underside. */
     roofColor?: string;
+    /** Style de lustre / suspension. */
+    chandelierType?: import('@/lib/roomCeilingUtils').ChandelierType;
+    /** Nombre de lustres (1–5, plafonné par la qualité de rendu). */
+    chandelierCount?: number;
     /** Couleur de peinture globale des murs (override léger). */
     wallPaintColor?: string;
     customThemes?: import('@/lib/roomThemeUtils').CustomRoomTheme[];

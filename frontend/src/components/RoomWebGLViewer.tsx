@@ -20,7 +20,7 @@ import {
   type ZoneKind,
 } from '@/lib/roomLayoutUtils';
 import { resolveDepthAmount } from '@/lib/roomFloorUtils';
-import { isStoryVisible, resolveActiveStoryId, resolveFoundation, resolveStories, worldElevationForStory } from '@/lib/roomBuildingUtils';
+import { isStoryVisible, resolveActiveStoryId, resolveFoundation, resolveStories, stackViewFocusY, worldElevationForStory } from '@/lib/roomBuildingUtils';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
 import { getTableSeatPlacement3D } from '@/lib/tablePlanUtils';
 import {
@@ -475,6 +475,7 @@ function RoofMesh({
   outline,
   color = '#e7e5e4',
   opacity = 0.55,
+  baseElevationM = 0,
 }: {
   widthM: number;
   heightM: number;
@@ -482,8 +483,10 @@ function RoofMesh({
   outline?: RoomLayoutBlueprint['roomOutline'];
   color?: string;
   opacity?: number;
+  /** Décalage Y (vue empilée : sommet du dernier étage). */
+  baseElevationM?: number;
 }) {
-  const y = wallHeightM + 0.04;
+  const y = baseElevationM + wallHeightM + 0.04;
   const shapeGeo = useMemo(() => {
     if (!outline || outline.shape === 'rectangle') return null;
     const pts = outlinePolygonPoints(outline);
@@ -518,6 +521,108 @@ function RoofMesh({
         depthWrite={opacity > 0.85}
       />
     </mesh>
+  );
+}
+
+/** Dalles d’étages empilés (vue coupe / bâtiment). */
+function StoryStackDecks({
+  widthM,
+  heightM,
+  wallHeightM,
+  stories,
+  activeStoryId,
+  hideLabels,
+}: {
+  widthM: number;
+  heightM: number;
+  wallHeightM: number;
+  stories: ReturnType<typeof resolveStories>;
+  activeStoryId: string;
+  hideLabels?: boolean;
+}) {
+  const slabH = 0.22;
+  const colors = ['#e7e5e4', '#d6d3d1', '#c4c0bb', '#b8b2ab', '#a8a29e'];
+
+  return (
+    <group>
+      {stories.map((story, index) => {
+        const active = story.id === activeStoryId;
+        const elev = story.elevationM;
+        const next = stories[index + 1];
+        const storyClear = next ? Math.max(2.4, next.elevationM - elev - slabH) : wallHeightM;
+        return (
+          <group key={`stack-${story.id}`} position={[0, elev, 0]}>
+            {/* Plancher épais */}
+            <mesh position={[0, -slabH / 2, 0]} castShadow receiveShadow>
+              <boxGeometry args={[widthM * 1.02, slabH, heightM * 1.02]} />
+              <meshStandardMaterial
+                color={colors[index % colors.length]}
+                roughness={0.88}
+                metalness={0.04}
+              />
+            </mesh>
+            {/* Surface supérieure (plus claire si étage actif) */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]} receiveShadow>
+              <planeGeometry args={[widthM * 0.985, heightM * 0.985]} />
+              <meshStandardMaterial
+                color={active ? '#fafaf9' : '#f5f5f4'}
+                roughness={0.82}
+                metalness={0.02}
+                transparent={!active}
+                opacity={active ? 1 : 0.92}
+              />
+            </mesh>
+            {/* Rebord pour lire la coupe */}
+            <mesh position={[0, -slabH / 2, heightM / 2 + 0.02]}>
+              <boxGeometry args={[widthM * 1.02, slabH * 0.95, 0.04]} />
+              <meshStandardMaterial color={active ? '#4573d2' : '#78716c'} roughness={0.6} metalness={0.15} />
+            </mesh>
+            {/* Poteaux d’angle entre cet étage et le suivant */}
+            {next ? (
+              ([[-1, -1], [1, -1], [-1, 1], [1, 1]] as const).map(([sx, sz]) => (
+                <mesh
+                  key={`col-${sx}-${sz}`}
+                  position={[
+                    sx * (widthM / 2 - 0.2),
+                    storyClear / 2,
+                    sz * (heightM / 2 - 0.2),
+                  ]}
+                  castShadow
+                >
+                  <boxGeometry args={[0.18, storyClear, 0.18]} />
+                  <meshStandardMaterial color="#a8a29e" roughness={0.75} metalness={0.08} />
+                </mesh>
+              ))
+            ) : null}
+            {!hideLabels ? (
+              <Html
+                position={[-widthM / 2 - 0.15, Math.min(1.2, storyClear * 0.35), -heightM / 2]}
+                style={{ pointerEvents: 'none', userSelect: 'none' }}
+                distanceFactor={14}
+              >
+                <div
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: 6,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    whiteSpace: 'nowrap',
+                    background: active ? 'rgba(69,115,210,0.92)' : 'rgba(28,25,23,0.78)',
+                    color: '#fff',
+                    border: active ? '1px solid rgba(255,255,255,0.35)' : '1px solid rgba(255,255,255,0.12)',
+                  }}
+                >
+                  {story.label}
+                  <span style={{ opacity: 0.75, fontWeight: 500, marginLeft: 6 }}>
+                    {elev.toFixed(1)} m
+                  </span>
+                </div>
+              </Html>
+            ) : null}
+          </group>
+        );
+      })}
+    </group>
   );
 }
 
@@ -1632,21 +1737,31 @@ function SceneContent({
   const theme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
   const floorType = blueprint.metadata.floorType ?? theme.defaultFloorType;
   const walls = resolveBlueprintWalls(blueprint);
+  const wallHeightM = walls[0]?.heightM ?? 3;
+  const stackView = blueprint.metadata.stackView === true;
+  const stories = resolveStories(blueprint);
+  const focusY = stackViewFocusY(blueprint, wallHeightM);
+  const topStoryElev = stories.reduce((max, s) => Math.max(max, s.elevationM), 0);
 
   const { camera } = useThree();
   useEffect(() => {
     if (walkthroughActive) return;
     const tilt = (depthAmount / 100) * 55;
-    const dist = Math.max(widthM, heightM) * (1.1 + (100 - depthAmount) * 0.008);
-    const elev = Math.cos((tilt * Math.PI) / 180) * dist;
+    const buildingH = stackView ? topStoryElev + wallHeightM : wallHeightM;
+    const dist = Math.max(widthM, heightM, buildingH * 1.2) * (1.15 + (100 - depthAmount) * 0.008);
+    const elev = Math.cos((tilt * Math.PI) / 180) * dist + (stackView ? focusY * 0.35 : 0);
     const back = Math.sin((tilt * Math.PI) / 180) * dist;
-    camera.position.set(0, Math.max(elev, 4), back + heightM * 0.15);
-    camera.lookAt(0, 0, 0);
+    camera.position.set(
+      stackView ? dist * 0.35 : 0,
+      Math.max(elev, stackView ? focusY + 4 : 4),
+      back + heightM * (stackView ? 0.35 : 0.15),
+    );
+    camera.lookAt(0, focusY, 0);
     if ('fov' in camera) {
       (camera as THREE.PerspectiveCamera).fov = qualitySettings.fov;
     }
     camera.updateProjectionMatrix();
-  }, [camera, depthAmount, widthM, heightM, qualitySettings.fov, walkthroughActive]);
+  }, [camera, depthAmount, widthM, heightM, qualitySettings.fov, walkthroughActive, stackView, focusY, topStoryElev, wallHeightM]);
 
   const [dragTarget, setDragTarget] = React.useState<{ kind: WebGLSelectableKind; id: string } | null>(null);
   /** En mode caméra bloquée (placement mobilier), les surfaces ne capturent pas les clics. */
@@ -1713,16 +1828,43 @@ function SceneContent({
         />
       ) : null}
 
-      <FloorPlane
-        widthM={widthM}
-        heightM={heightM}
-        floorType={floorType}
-        floorImageUrl={blueprint.metadata.floorImageUrl}
-        floorImageFit={blueprint.metadata.floorImageFit}
-        floorColor={blueprint.metadata.floorColor}
-        outline={blueprint.roomOutline}
-        onPointerMissed={() => onSelect(null)}
-      />
+      {stackView ? (
+        <StoryStackDecks
+          widthM={widthM}
+          heightM={heightM}
+          wallHeightM={wallHeightM}
+          stories={stories}
+          activeStoryId={resolveActiveStoryId(blueprint)}
+          hideLabels={hideLabels}
+        />
+      ) : (
+        <FloorPlane
+          widthM={widthM}
+          heightM={heightM}
+          floorType={floorType}
+          floorImageUrl={blueprint.metadata.floorImageUrl}
+          floorImageFit={blueprint.metadata.floorImageFit}
+          floorColor={blueprint.metadata.floorColor}
+          outline={blueprint.roomOutline}
+          onPointerMissed={() => onSelect(null)}
+        />
+      )}
+
+      {/* Texture de sol sur l’étage RDC en vue empilée */}
+      {stackView ? (
+        <group position={[0, (stories[0]?.elevationM ?? 0) + 0.01, 0]}>
+          <FloorPlane
+            widthM={widthM * 0.98}
+            heightM={heightM * 0.98}
+            floorType={floorType}
+            floorImageUrl={blueprint.metadata.floorImageUrl}
+            floorImageFit={blueprint.metadata.floorImageFit}
+            floorColor={blueprint.metadata.floorColor}
+            outline={blueprint.roomOutline}
+            onPointerMissed={() => onSelect(null)}
+          />
+        </group>
+      ) : null}
 
       {(() => {
         const foundation = resolveFoundation(blueprint);
@@ -1740,55 +1882,38 @@ function SceneContent({
         );
       })()}
 
-      {blueprint.metadata.stackView
-        ? resolveStories(blueprint).map((story) => (
-            <mesh
-              key={`deck-${story.id}`}
-              position={[0, story.elevationM - 0.02, 0]}
-              rotation={[-Math.PI / 2, 0, 0]}
-              receiveShadow
-            >
-              <planeGeometry args={[widthM * 0.98, heightM * 0.98]} />
-              <meshStandardMaterial
-                color={story.id === resolveActiveStoryId(blueprint) ? '#e7e5e4' : '#d6d3d1'}
-                roughness={0.9}
-                transparent
-                opacity={0.55}
-                polygonOffset
-                polygonOffsetFactor={1}
-                polygonOffsetUnits={1}
-              />
-            </mesh>
-          ))
-        : null}
-
       {blueprint.metadata.showRoof === true && (
         <RoofMesh
           widthM={widthM}
           heightM={heightM}
-          wallHeightM={walls[0]?.heightM ?? 3}
+          wallHeightM={wallHeightM}
           outline={blueprint.roomOutline}
           color={blueprint.metadata.roofColor ?? '#d6d3d1'}
           opacity={blueprint.metadata.roofOpacity ?? 0.45}
+          baseElevationM={stackView ? topStoryElev : 0}
         />
       )}
 
-      <RoomAmbiance
-        widthM={widthM}
-        heightM={heightM}
-        wallHeightM={walls[0]?.heightM ?? 3}
-        flags={{
-          chandeliers: blueprint.metadata.showChandeliers === true,
-          uplights: blueprint.metadata.showUplights === true,
-          curtains: blueprint.metadata.showCurtains === true,
-          plants: blueprint.metadata.showDecorPlants === true,
-        }}
-        maxChandeliers={qualitySettings.maxChandeliers}
-        maxUplights={qualitySettings.maxUplights}
-        chandelierPointLights={qualitySettings.chandelierPointLights}
-      />
+      <group position={[0, stackView ? topStoryElev : 0, 0]}>
+        <RoomAmbiance
+          widthM={widthM}
+          heightM={heightM}
+          wallHeightM={wallHeightM}
+          flags={{
+            chandeliers: blueprint.metadata.showChandeliers === true,
+            uplights: blueprint.metadata.showUplights === true,
+            curtains: blueprint.metadata.showCurtains === true,
+            plants: blueprint.metadata.showDecorPlants === true,
+          }}
+          maxChandeliers={qualitySettings.maxChandeliers}
+          maxUplights={qualitySettings.maxUplights}
+          chandelierPointLights={qualitySettings.chandelierPointLights}
+          chandelierType={blueprint.metadata.chandelierType}
+          chandelierCount={blueprint.metadata.chandelierCount}
+        />
+      </group>
 
-      {!presentationMode && !hideLabels ? (
+      {!presentationMode && !hideLabels && !stackView ? (
         <gridHelper
           args={[Math.max(widthM, heightM), 24, '#64748b', '#334155']}
           position={[0, 0.015, 0]}
@@ -2023,6 +2148,7 @@ function SceneContent({
       />
 
       <OrbitControls
+        key={stackView ? `stack-${stories.length}-${focusY.toFixed(1)}` : 'floor'}
         enablePan={!wallEditMode && !lockOrbit && !dragTarget && !presentationMode && !walkthroughActive}
         enableRotate={(!wallEditMode && !lockOrbit && !dragTarget && !walkthroughActive) || (presentationMode && !walkthroughActive)}
         enableZoom={!walkthroughActive}
@@ -2030,8 +2156,8 @@ function SceneContent({
         autoRotateSpeed={0.55}
         maxPolarAngle={Math.PI / 2.05}
         minDistance={3}
-        maxDistance={Math.max(widthM, heightM) * 3}
-        target={[0, 0, 0]}
+        maxDistance={Math.max(widthM, heightM, stackView ? topStoryElev + wallHeightM : 0) * (stackView ? 4.5 : 3)}
+        target={[0, focusY, 0]}
       />
     </>
   );

@@ -93,6 +93,13 @@ import {
   type FloorType,
 } from '@/lib/roomThemeUtils';
 import { FLOOR_TYPE_PICKER_ORDER, floorTypeLabels, resolveDepthAmount, resolveFloorStyle } from '@/lib/roomFloorUtils';
+import {
+  CHANDELIER_TYPE_ORDER,
+  chandelierTypeHints,
+  chandelierTypeLabels,
+  resolveChandelierCount,
+  resolveChandelierType,
+} from '@/lib/roomCeilingUtils';
 import CustomRoomThemePanel from '@/components/CustomRoomThemePanel';
 import {
   addStairsLinkingStories,
@@ -1314,7 +1321,11 @@ export default function RoomLayoutEditor({
                     />
                   </div>
                 </div>
-                <div className="space-y-2 pt-3 border-t border-border/50">
+                <div className="space-y-3 pt-3 border-t border-border/50">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase text-muted">Toit & éclairage</p>
+                    <p className="text-[10px] text-muted mt-0.5">Plafond visible + style de lustres.</p>
+                  </div>
                   <label className="flex items-center gap-2 text-xs font-semibold text-foreground cursor-pointer">
                     <input
                       type="checkbox"
@@ -1330,7 +1341,7 @@ export default function RoomLayoutEditor({
                   {blueprint.metadata.showRoof && (
                     <div className="grid grid-cols-2 gap-2 pl-1">
                       <label className="text-[9px] space-y-0.5">
-                        <span className="text-muted">Couleur toit</span>
+                        <span className="text-muted">Couleur plafond</span>
                         <input
                           type="color"
                           value={blueprint.metadata.roofColor ?? '#d6d3d1'}
@@ -1358,28 +1369,107 @@ export default function RoomLayoutEditor({
                       </label>
                     </div>
                   )}
-                  <div className="space-y-1.5 pt-2 border-t border-border/50">
-                    <p className="text-[10px] font-bold uppercase text-muted">Ambiance 3D</p>
-                    {([
-                      ['showChandeliers', 'Lustres'],
-                      ['showUplights', 'Uplights muraux'],
-                      ['showCurtains', 'Rideaux'],
-                      ['showDecorPlants', 'Plantes d’angle'],
-                    ] as const).map(([key, label]) => (
-                      <label key={key} className="flex items-center gap-2 text-[11px] text-foreground cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={blueprint.metadata[key] === true}
-                          onChange={(e) => updateBlueprint({
-                            ...blueprint,
-                            metadata: { ...blueprint.metadata, [key]: e.target.checked },
-                          }, { message: e.target.checked ? `${label} activés` : `${label} masqués`, kind: 'settings' })}
-                          className="rounded border-border"
-                        />
-                        {label}
-                      </label>
-                    ))}
+
+                  <div className="space-y-2 rounded-[var(--radius-button)] border border-border bg-surface-muted/40 p-2.5">
+                    <label className="flex items-center gap-2 text-xs font-semibold text-foreground cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={blueprint.metadata.showChandeliers === true}
+                        onChange={(e) => updateBlueprint({
+                          ...blueprint,
+                          metadata: {
+                            ...blueprint.metadata,
+                            showChandeliers: e.target.checked,
+                            ...(e.target.checked && !blueprint.metadata.showRoof ? { showRoof: true } : {}),
+                          },
+                        }, { message: e.target.checked ? 'Lustres activés' : 'Lustres masqués', kind: 'settings' })}
+                        className="rounded border-border"
+                      />
+                      Lustres au plafond
+                    </label>
+                    {blueprint.metadata.showChandeliers === true ? (
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-bold uppercase text-muted">Type de lustre</p>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {CHANDELIER_TYPE_ORDER.map((type) => {
+                            const active = resolveChandelierType(blueprint.metadata.chandelierType) === type;
+                            return (
+                              <button
+                                key={type}
+                                type="button"
+                                onClick={() => updateBlueprint({
+                                  ...blueprint,
+                                  metadata: {
+                                    ...blueprint.metadata,
+                                    showChandeliers: true,
+                                    chandelierType: type,
+                                    showRoof: blueprint.metadata.showRoof ?? true,
+                                  },
+                                }, { message: `Lustre : ${chandelierTypeLabels[type]}`, kind: 'settings' })}
+                                className={cn(
+                                  'text-left px-2 py-1.5 rounded-[var(--radius-button)] border transition',
+                                  active
+                                    ? 'border-primary bg-primary/10 text-primary'
+                                    : 'border-border bg-surface text-muted hover:bg-white',
+                                )}
+                              >
+                                <span className="block text-[10px] font-bold">{chandelierTypeLabels[type]}</span>
+                                <span className="block text-[9px] opacity-80 font-normal mt-0.5">{chandelierTypeHints[type]}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <label className="block text-[9px] space-y-0.5">
+                          <span className="text-muted">
+                            Nombre : {resolveChandelierCount(blueprint.metadata.chandelierCount, 5)}
+                          </span>
+                          <input
+                            type="range"
+                            min={1}
+                            max={5}
+                            step={1}
+                            value={resolveChandelierCount(blueprint.metadata.chandelierCount, 5)}
+                            onChange={(e) => updateBlueprint({
+                              ...blueprint,
+                              metadata: {
+                                ...blueprint.metadata,
+                                chandelierCount: parseInt(e.target.value, 10) || 3,
+                              },
+                            }, { message: 'Nombre de lustres', kind: 'settings' })}
+                            className="w-full accent-primary"
+                          />
+                        </label>
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-muted">Activez pour choisir le style (classique, cristal, moderne…).</p>
+                    )}
                   </div>
+
+                  <details className="rounded-[var(--radius-button)] border border-border bg-surface-muted/30 px-2.5 py-2">
+                    <summary className="text-[10px] font-bold uppercase text-muted cursor-pointer select-none">
+                      Autre décor (uplights, rideaux…)
+                    </summary>
+                    <div className="mt-2 space-y-1.5">
+                      {([
+                        ['showUplights', 'Uplights muraux'],
+                        ['showCurtains', 'Rideaux'],
+                        ['showDecorPlants', 'Plantes d’angle'],
+                      ] as const).map(([key, label]) => (
+                        <label key={key} className="flex items-center gap-2 text-[11px] text-foreground cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={blueprint.metadata[key] === true}
+                            onChange={(e) => updateBlueprint({
+                              ...blueprint,
+                              metadata: { ...blueprint.metadata, [key]: e.target.checked },
+                            }, { message: e.target.checked ? `${label} activés` : `${label} masqués`, kind: 'settings' })}
+                            className="rounded border-border"
+                          />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
+                  </details>
                 </div>
                 {caps.canCustomImages ? (
                   <div className="space-y-3">
@@ -1499,7 +1589,11 @@ export default function RoomLayoutEditor({
                       type="button"
                       onClick={() => {
                         const next = addStory(blueprint);
-                        updateBlueprint(setStackView(next, false), { message: 'Nouvel étage ajouté', kind: 'add' });
+                        // Dès 2 étages : activer la vue empilée pour voir le bâtiment.
+                        updateBlueprint(setStackView(next, true), {
+                          message: 'Nouvel étage — vue empilée',
+                          kind: 'add',
+                        });
                         setSelection([]);
                       }}
                       className="px-2.5 py-1 rounded-[var(--radius-button)] border border-dashed border-border text-[10px] font-bold text-muted hover:bg-white"
@@ -1562,8 +1656,16 @@ export default function RoomLayoutEditor({
                     <button
                       type="button"
                       onClick={() => {
+                        if (resolveStories(blueprint).length < 2) {
+                          const next = addStory(blueprint);
+                          updateBlueprint(setStackView(next, true), {
+                            message: 'Étage ajouté — vue empilée',
+                            kind: 'add',
+                          });
+                          return;
+                        }
                         updateBlueprint(setStackView(blueprint, true), {
-                          message: 'Vue d’ensemble activée',
+                          message: 'Étages empilés affichés',
                           kind: 'settings',
                         });
                       }}
@@ -1575,12 +1677,12 @@ export default function RoomLayoutEditor({
                       )}
                     >
                       <Eye className="w-3.5 h-3.5" />
-                      Voir tout
+                      Empiler les étages
                     </button>
                   </div>
                   <p className="text-[10px] text-muted leading-relaxed">
                     {blueprint.metadata.stackView
-                      ? 'Tous les étages sont visibles en coupe. Revenez à « Éditer un étage » pour modifier le mobilier.'
+                      ? 'Tous les niveaux sont empilés en 3D (RDC en bas, étages au-dessus). Tournez la caméra pour voir la coupe.'
                       : 'Seul l’étage actif est affiché — idéal pour placer tables et murs.'}
                   </p>
                 </div>
@@ -3259,9 +3361,17 @@ export default function RoomLayoutEditor({
       <button
         type="button"
         onClick={() => {
+          if (!blueprint.metadata.stackView && resolveStories(blueprint).length < 2) {
+            const next = addStory(blueprint);
+            updateBlueprint(setStackView(next, true), {
+              message: 'Étage ajouté — vue empilée',
+              kind: 'add',
+            });
+            return;
+          }
           const next = !blueprint.metadata.stackView;
           updateBlueprint(setStackView(blueprint, next), {
-            message: next ? 'Vue d’ensemble activée' : 'Vue étage unique',
+            message: next ? 'Étages empilés affichés' : 'Vue étage unique',
             kind: 'settings',
           });
         }}
@@ -3271,14 +3381,14 @@ export default function RoomLayoutEditor({
             ? 'bg-violet-100 border-violet-300 text-violet-900'
             : 'border-border bg-surface text-muted hover:bg-white',
         )}
-        title="Afficher tous les étages en coupe"
+        title="Afficher les étages empilés les uns sur les autres"
       >
         <Eye className="w-3 h-3" />
-        {blueprint.metadata.stackView ? 'Voir tout · ON' : 'Voir tout'}
+        {blueprint.metadata.stackView ? 'Empilés · ON' : 'Empiler'}
       </button>
       <p className="text-[10px] text-muted w-full sm:w-auto sm:ml-1">
         {blueprint.metadata.stackView
-          ? 'Aperçu global (tous les niveaux)'
+          ? 'Étages empilés en 3D'
           : `Édition : ${activeStory?.label ?? 'RDC'}`}
       </p>
     </div>

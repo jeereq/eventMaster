@@ -323,7 +323,27 @@ export function worldElevationForStory(
   storyId: string | undefined,
 ): number {
   if (!blueprint.metadata.stackView) return 0;
+  // Sans storyId = éléments legacy → RDC (pas l’étage actif).
+  if (!storyId) {
+    return resolveStories(blueprint)[0]?.elevationM ?? 0;
+  }
   return storyElevationM(blueprint, storyId);
+}
+
+/** Hauteur totale du bâtiment (dernier plancher + murs). */
+export function buildingTopElevationM(
+  blueprint: RoomLayoutBlueprint,
+  wallHeightM = 3,
+): number {
+  const stories = resolveStories(blueprint);
+  const topFloor = stories.reduce((max, s) => Math.max(max, s.elevationM), 0);
+  return topFloor + wallHeightM;
+}
+
+/** Centre vertical pour cadrer la vue empilée. */
+export function stackViewFocusY(blueprint: RoomLayoutBlueprint, wallHeightM = 3): number {
+  if (!blueprint.metadata.stackView) return 0;
+  return buildingTopElevationM(blueprint, wallHeightM) / 2;
 }
 
 function pointOnSegment(
