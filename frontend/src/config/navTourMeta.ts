@@ -106,7 +106,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-events': {
     title: 'Événements',
     description:
-      'Parcours guidé : événement privé ou public, invités ou billets en ligne, invitation RSVP, plan de table, protocole jour J.',
+      'Parcours guidé : événement privé ou public, invités ou billets, plan de table, protocole. Sous-onglets Liste et Tâches sur la même page.',
     route: '/dashboard/events',
   },
   'nav-rooms': {
@@ -130,14 +130,8 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-protocol': {
     title: 'Protocole',
     description:
-      'Mode accueil le jour J : scan caméra du QR invité, vérification d\'identité et confirmation de présence à l\'entrée. Onglet Tâches pour la checklist protocole.',
+      'Mode accueil le jour J : scan QR. Les tâches sont dans Événements → sous-onglet Tâches (même page).',
     route: '/dashboard/events?mode=protocol',
-  },
-  'nav-protocol-tasks': {
-    title: 'Tâches protocole',
-    description:
-      'Vos tâches d’accueil assignées (briefing, postes). Cochez-les depuis le desk protocole ou l’événement.',
-    route: '/dashboard/events?mode=protocol&view=tasks',
   },
   'nav-analytics-org': {
     title: 'Statistiques',

@@ -67,11 +67,13 @@ export default function ProtocolTasksInbox({ protocol = true }: { protocol?: boo
       <div className="px-4 py-3 border-b border-border flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-semibold inline-flex items-center gap-2">
           <ClipboardList className="w-4 h-4 text-primary" />
-          Mes tâches protocole
+          Mes tâches
           <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">{open.length}</span>
           {overdue > 0 ? <StatusPill tone="rose">{overdue} en retard</StatusPill> : null}
         </p>
-        <p className="text-[11px] text-muted">Assignées à vous · tous événements</p>
+        <p className="text-[11px] text-muted">
+          {protocol ? 'Assignées à vous · desk protocole' : 'Assignées à vous · tous événements'}
+        </p>
       </div>
 
       <div className="px-4 py-3 space-y-2">

@@ -19,7 +19,6 @@ import EventStaffPanel from './EventStaffPanel';
 import EventFeedManager from './EventFeedManager';
 import GuestProtocolPanel from './GuestProtocolPanel';
 import EventTaskPanel from '@/components/EventTaskPanel';
-import EventTaskInbox from '@/components/EventTaskInbox';
 import ProtocolTasksPanel from '@/components/ProtocolTasksPanel';
 import ProtocolTasksInbox from '@/components/ProtocolTasksInbox';
 import EventGuestGuidelinesEditor from '@/components/EventGuestGuidelinesEditor';
@@ -615,11 +614,14 @@ export default function EventsPage() {
  setProtocolDesk(isProtocolOnly || searchParams.get('mode') === 'protocol');
  }, [isProtocolOnly, searchParams]);
 
- useEffect(() => {
- if (!protocolDesk || selectedEvent || searchParams.get('view') !== 'tasks') return;
- const el = document.getElementById('protocol-tasks-inbox');
- if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
- }, [protocolDesk, selectedEvent, searchParams]);
+ const listView: 'events' | 'tasks' = searchParams.get('view') === 'tasks' ? 'tasks' : 'events';
+
+ const setListView = useCallback(
+ (view: 'events' | 'tasks') => {
+ router.replace(eventsListHref(protocolDesk, view), { scroll: false });
+ },
+ [protocolDesk, router],
+ );
 
  useEffect(() => {
  if (protocolDesk && selectedEvent) {
@@ -1779,15 +1781,15 @@ Merci de confirmer votre présence :
  title={protocolDesk ? 'Accueil jour J' : 'Vos événements'}
  description={
  protocolDesk
- ? 'Choisissez l’événement pour l’accueil (scan) ou consultez vos tâches protocole.'
- : "Créez des réceptions privées (liste d’invités) ou publiques (inscription / billets en ligne)."
+ ? 'Liste des événements à accueillir, ou tâches protocole dans le même onglet.'
+ : "Créez des réceptions privées (liste d’invités) ou publiques (inscription / billets en ligne). Les tâches d’équipe sont dans l’onglet Tâches."
  }
  breadcrumbs={
  <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: protocolDesk ? 'Protocole' : 'Événements' }]} />
  }
  action={
  <div className="flex flex-wrap items-center gap-2">
- {events.length > 0 && (
+ {listView === 'events' && events.length > 0 && (
  <ViewModeToggle
  storageKey="em-view-events"
  value={eventsViewMode}
@@ -1796,7 +1798,7 @@ Merci de confirmer votre présence :
  onColumnsChange={setEventsColumns}
  />
  )}
- {access?.canCreateEvents && !protocolDesk ? (
+ {access?.canCreateEvents && !protocolDesk && listView === 'events' ? (
  <div className="flex flex-col items-end gap-1">
  <Button
  onClick={openCreateEventModal}
@@ -1816,16 +1818,45 @@ Merci de confirmer votre présence :
  </div>
  }
  />
- {eventsAtLimit && (
+ {eventsAtLimit && listView === 'events' && (
  <PlanLimitCallout kind="events" planQuota={planQuota} planName={tenant?.plan} />
  )}
- {protocolDesk ? (
+
+ <div className="inline-flex rounded-xl border border-border bg-surface-muted p-1 w-fit">
+ <button
+ type="button"
+ onClick={() => setListView('events')}
+ className={cn(
+ 'inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all',
+ listView === 'events'
+ ? 'bg-surface text-foreground shadow-sm ring-1 ring-border/50'
+ : 'text-muted hover:text-foreground',
+ )}
+ >
+ <Calendar className="w-3.5 h-3.5" />
+ Événements
+ </button>
+ <button
+ type="button"
+ onClick={() => setListView('tasks')}
+ className={cn(
+ 'inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all',
+ listView === 'tasks'
+ ? 'bg-surface text-foreground shadow-sm ring-1 ring-border/50'
+ : 'text-muted hover:text-foreground',
+ )}
+ >
+ <ClipboardList className="w-3.5 h-3.5" />
+ Tâches
+ </button>
+ </div>
+
+ {listView === 'tasks' ? (
  <div id="protocol-tasks-inbox">
- <ProtocolTasksInbox protocol />
+ {protocolDesk ? <ProtocolTasksInbox protocol /> : <ProtocolTasksInbox protocol={false} />}
  </div>
  ) : (
- <EventTaskInbox />
- )}
+ <>
  {events.length === 0 && !protocolDesk && (
  <GettingStartedChecklist hasEvents={false} />
  )}
@@ -1892,6 +1923,8 @@ Merci de confirmer votre présence :
  </>
  }
  />
+ )}
+ </>
  )}
  </>
  ) : (
@@ -2001,7 +2034,7 @@ Merci de confirmer votre présence :
  )}
 
  {/* Event List View */}
- {!selectedEvent && (
+ {!selectedEvent && listView === 'events' && (
  <div
  className={
  eventsViewMode === 'grid'
@@ -2146,7 +2179,7 @@ Merci de confirmer votre présence :
  </div>
  )}
 
- {!selectedEvent && (
+ {!selectedEvent && listView === 'events' && (
  <Pagination
  page={eventsListPage}
  pageSize={eventsPageSize}

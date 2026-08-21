@@ -45,6 +45,10 @@ export function eventDashboardHref(
   return `/dashboard/events/${eventId}${q ? `?${q}` : ''}`;
 }
 
-export function eventsListHref(protocol?: boolean): string {
-  return protocol ? '/dashboard/events?mode=protocol' : '/dashboard/events';
+export function eventsListHref(protocol?: boolean, view?: 'events' | 'tasks'): string {
+  const params = new URLSearchParams();
+  if (protocol) params.set('mode', 'protocol');
+  if (view === 'tasks') params.set('view', 'tasks');
+  const q = params.toString();
+  return q ? `/dashboard/events?${q}` : '/dashboard/events';
 }

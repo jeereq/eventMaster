@@ -422,7 +422,7 @@ export const USER_GUIDES: UserGuide[] = [
     navLinks: [
       { label: 'Événements', href: '/dashboard/events' },
       { label: 'Mode Protocole', href: '/dashboard/events?mode=protocol' },
-      { label: 'Tâches protocole', href: '/dashboard/events?mode=protocol&view=tasks' },
+      { label: 'Tâches (dans Événements)', href: '/dashboard/events?view=tasks' },
       { label: 'Statistiques', href: '/dashboard/analytics' },
     ],
     workflows: [
@@ -437,9 +437,9 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'protocol-tasks',
         title: 'Suivre les tâches protocole du jour',
         content:
-          '1. Menu Tâches (ou Protocole → vue tâches) : vos tâches assignées sur tous les événements.\n2. Ouvrez un événement → onglet Tâches : checklist Jour J (kind Protocole + à vous).\n3. Démarrez ou cochez « Faite » au fur et à mesure.\n4. Revenez à Accueil pour scanner les badges.',
+          '1. Ouvrez Événements (ou Protocole) → sous-onglet Tâches : vos tâches assignées.\n2. Sur un événement → onglet Tâches : checklist Jour J.\n3. Démarrez ou cochez « Faite ».\n4. Revenez à Accueil pour scanner.',
         links: [
-          { label: 'Tâches protocole', href: '/dashboard/events?mode=protocol&view=tasks' },
+          { label: 'Événements → Tâches', href: '/dashboard/events?view=tasks' },
           { label: 'Mode Protocole', href: '/dashboard/events?mode=protocol' },
         ],
       },
@@ -455,7 +455,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Testez le scan dans le navigateur en conditions réelles avant l\'événement (lumière, connexion).',
       'Assurez une connexion stable pour la synchronisation en direct.',
       'Les invités sans QR peuvent être recherchés manuellement dans la liste.',
-      'L’onglet Tâches du desk protocole sert de checklist d’accueil en parallèle du scan.',
+      'Les tâches sont un sous-onglet d’Événements / Protocole, pas un menu séparé.',
       'L’application iOS/Android n’est pas encore disponible : le scan se fait sur le web.',
     ],
   },
