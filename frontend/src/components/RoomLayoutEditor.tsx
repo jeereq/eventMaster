@@ -105,15 +105,18 @@ import {
   addBalconies,
   addStairsLinkingStories,
   addStory,
+  applyBuildingStoryPreset,
   applyStyleToSelection,
   belongsToActiveStory,
   balconySideLabels,
+  BUILDING_STORY_PRESETS,
   createCorridorFixture,
   foundationKindLabels,
   linkStairsToStory,
   punchCorridorOpenings,
   removeStory,
   resolveActiveStoryId,
+  resolveBuildingPresetId,
   resolveFoundation,
   resolveStories,
   setActiveStory,
@@ -1600,12 +1603,43 @@ export default function RoomLayoutEditor({
             </button>
             {accordion === 'batiment' && (
               <div className="p-4 bg-surface space-y-4 border-t border-border">
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold uppercase text-muted">Modèle prêt à l’emploi</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    {BUILDING_STORY_PRESETS.map((preset) => {
+                      const active = resolveBuildingPresetId(blueprint) === preset.id;
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => {
+                            updateBlueprint(
+                              applyBuildingStoryPreset(blueprint, preset.id),
+                              { message: `Structure « ${preset.label} » appliquée`, kind: 'settings' },
+                            );
+                            setSelection([]);
+                          }}
+                          className={cn(
+                            'text-left px-2.5 py-2 rounded-[var(--radius-button)] border text-[10px]',
+                            active
+                              ? 'border-primary bg-primary/10 text-primary'
+                              : 'border-border text-muted hover:bg-white',
+                          )}
+                        >
+                          <span className="font-bold block">{preset.label}</span>
+                          <span className="opacity-80">{preset.hint}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <div className="rounded-[var(--radius-button)] border border-primary/20 bg-primary/5 px-3 py-2 space-y-1">
                   <p className="text-[11px] font-semibold text-foreground">En 3 gestes</p>
                   <ol className="text-[10px] text-muted leading-relaxed list-decimal pl-3.5 space-y-0.5">
-                    <li>Créez / sélectionnez l’étage à éditer</li>
-                    <li>Ajoutez un escalier vers l’autre niveau</li>
-                    <li>Activez « Voir tout » pour l’aperçu global</li>
+                    <li>Choisissez un modèle (ci-dessus) ou créez les étages</li>
+                    <li>Ajustez escaliers / balcons si besoin</li>
+                    <li>Activez « Empiler » pour voir le bâtiment</li>
                   </ol>
                 </div>
 

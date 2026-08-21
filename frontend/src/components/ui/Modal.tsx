@@ -25,7 +25,7 @@ const sizeMap = {
   md: 'max-w-lg',
   lg: 'max-w-2xl',
   xl: 'max-w-4xl',
-  full: 'max-w-5xl',
+  full: 'max-w-[100vw] sm:max-w-[min(98vw,90rem)]',
 };
 
 /** Classes partagées pour overlays ad-hoc (même look que Modal). */

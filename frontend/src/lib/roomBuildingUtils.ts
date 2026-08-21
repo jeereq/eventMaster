@@ -76,6 +76,15 @@ export function belongsToActiveStory(
   return storyId === active;
 }
 
+export type BalconySide = 'north' | 'south' | 'east' | 'west';
+
+export const balconySideLabels: Record<BalconySide, string> = {
+  north: 'Nord (haut)',
+  south: 'Sud (bas)',
+  east: 'Est (droite)',
+  west: 'Ouest (gauche)',
+};
+
 export function addStory(
   blueprint: RoomLayoutBlueprint,
   label?: string,
@@ -98,6 +107,153 @@ export function addStory(
       foundation: blueprint.metadata.foundation ?? defaultFoundation(),
     },
   };
+}
+
+/** Modèles prêts à l’emploi pour la structure multi-étages. */
+export type BuildingStoryPresetId = 'rdc' | 'duplex' | 'triplex' | 'villa' | 'immeuble';
+
+export type BuildingStoryPreset = {
+  id: BuildingStoryPresetId;
+  label: string;
+  hint: string;
+  storyCount: number;
+  withStairs: boolean;
+  balconySides: BalconySide[];
+  foundation: FoundationKind;
+  stackView: boolean;
+};
+
+export const BUILDING_STORY_PRESETS: BuildingStoryPreset[] = [
+  {
+    id: 'rdc',
+    label: 'Plein pied',
+    hint: '1 niveau · idéal salle unique',
+    storyCount: 1,
+    withStairs: false,
+    balconySides: [],
+    foundation: 'slab',
+    stackView: false,
+  },
+  {
+    id: 'duplex',
+    label: 'Duplex',
+    hint: 'RDC + 1er · escalier inclus',
+    storyCount: 2,
+    withStairs: true,
+    balconySides: [],
+    foundation: 'slab',
+    stackView: true,
+  },
+  {
+    id: 'triplex',
+    label: 'Triplex',
+    hint: '3 niveaux · escaliers entre étages',
+    storyCount: 3,
+    withStairs: true,
+    balconySides: [],
+    foundation: 'slab',
+    stackView: true,
+  },
+  {
+    id: 'villa',
+    label: 'Villa',
+    hint: '2 niveaux · balcons · escalier',
+    storyCount: 2,
+    withStairs: true,
+    balconySides: ['south', 'east'],
+    foundation: 'slab',
+    stackView: true,
+  },
+  {
+    id: 'immeuble',
+    label: 'Petit immeuble',
+    hint: '3 niveaux · 4 balcons · sous-sol',
+    storyCount: 3,
+    withStairs: true,
+    balconySides: ['north', 'south', 'east', 'west'],
+    foundation: 'basement',
+    stackView: true,
+  },
+];
+
+/**
+ * Applique un modèle de structure (étages, escaliers, balcons, fondation).
+ * Conserves le mobilier existant en le reportant sur le RDC si besoin.
+ */
+export function applyBuildingStoryPreset(
+  blueprint: RoomLayoutBlueprint,
+  presetId: BuildingStoryPresetId | string,
+): RoomLayoutBlueprint {
+  const preset =
+    BUILDING_STORY_PRESETS.find((p) => p.id === presetId) ?? BUILDING_STORY_PRESETS[0]!;
+
+  const stories: RoomStory[] = Array.from({ length: preset.storyCount }).map((_, i) => ({
+    id: i === 0 ? DEFAULT_STORY_ID : `story-lvl-${i}`,
+    label: i === 0 ? 'RDC' : `${i}ᵉ étage`,
+    elevationM: i * 3.2,
+  }));
+  const rdcId = stories[0]!.id;
+  const validIds = new Set(stories.map((s) => s.id));
+
+  const remapStory = (storyId?: string) =>
+    storyId && validIds.has(storyId) ? storyId : rdcId;
+
+  let next: RoomLayoutBlueprint = {
+    ...blueprint,
+    furniture: blueprint.furniture.map((f) => ({ ...f, storyId: remapStory(f.storyId) })),
+    fixtures: blueprint.fixtures
+      .filter((f) => f.kind !== 'stairs' && f.kind !== 'balcony')
+      .map((f) => ({
+        ...f,
+        storyId: remapStory(f.storyId),
+        connectsToStoryId: undefined,
+      })),
+    walls: (blueprint.walls ?? []).map((w) => ({ ...w, storyId: remapStory(w.storyId) })),
+    metadata: {
+      ...blueprint.metadata,
+      stories,
+      activeStoryId: rdcId,
+      stackView: preset.stackView,
+      verticalLinks: [],
+      buildingPresetId: preset.id,
+      foundation: {
+        kind: preset.foundation,
+        heightM:
+          preset.foundation === 'basement' ? 2.4
+            : preset.foundation === 'crawlspace' ? 0.9
+              : preset.foundation === 'none' ? 0
+                : 0.35,
+        material: 'concrete',
+        color: '#78716c',
+      },
+    },
+  };
+
+  if (preset.withStairs && stories.length >= 2) {
+    for (let i = 0; i < stories.length - 1; i += 1) {
+      next = setActiveStory(next, stories[i]!.id);
+      const linked = addStairsLinkingStories(next, stories[i + 1]!.id);
+      if (linked) next = linked.blueprint;
+    }
+  }
+
+  if (preset.balconySides.length > 0) {
+    const balconyStoryId = stories[Math.min(1, stories.length - 1)]!.id;
+    next = setActiveStory(next, balconyStoryId);
+    next = addBalconies(next, preset.balconySides).blueprint;
+  }
+
+  return refreshBlueprintMetadata(setActiveStory(next, rdcId));
+}
+
+export function resolveBuildingPresetId(
+  blueprint?: RoomLayoutBlueprint | null,
+): BuildingStoryPresetId | null {
+  const id = blueprint?.metadata?.buildingPresetId;
+  if (id && BUILDING_STORY_PRESETS.some((p) => p.id === id)) {
+    return id as BuildingStoryPresetId;
+  }
+  return null;
 }
 
 /**
@@ -154,15 +310,6 @@ export function removeStory(
     },
   });
 }
-
-export type BalconySide = 'north' | 'south' | 'east' | 'west';
-
-export const balconySideLabels: Record<BalconySide, string> = {
-  north: 'Nord (haut)',
-  south: 'Sud (bas)',
-  east: 'Est (droite)',
-  west: 'Ouest (gauche)',
-};
 
 const BALCONY_PLACEMENTS: Record<BalconySide, { x: number; y: number; w: number; h: number }> = {
   north: { x: 28, y: 1, w: 44, h: 9 },

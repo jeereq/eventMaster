@@ -285,6 +285,8 @@ export interface RoomLayoutBlueprint {
     showDecorPlants?: boolean;
     /** Mode présentation (orbit auto, labels masqués). */
     presentationMode?: boolean;
+    /** Modèle de structure multi-étages appliqué. */
+    buildingPresetId?: import('@/lib/roomBuildingUtils').BuildingStoryPresetId;
     /** Étages du bâtiment (RDC, 1er…). */
     stories?: import('@/lib/roomBuildingUtils').RoomStory[];
     /** Étage actuellement édité. */
