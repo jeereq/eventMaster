@@ -262,6 +262,10 @@ model Event {
   ticketPriceFc     Int          @default(0)
   ticketsTotal      Int?
   ticketsSold       Int          @default(0)
+  /** Achat billet pour une place précise (plan de table requis). */
+  seatSelectionEnabled Boolean   @default(false)
+  /** Programme structuré (créneaux + ambiance lumière). */
+  eventProgram      Json?
   themeId           String?
   /** Galerie publique (URLs Cloudinary), comme une fiche salle. */
   photos            Json?
@@ -277,6 +281,7 @@ model Event {
   marketplaceInquiries MarketplaceInquiry[]
   marketplaceBookings MarketplaceBooking[]
   ticketOrders TicketOrder[]
+  seatHolds    SeatHold[]
 
   @@index([isPublic, date])
 }
@@ -332,12 +337,35 @@ model TicketOrder {
   paidAt                  DateTime?
   userId                  String?
   user                    User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /** Place choisie (si seatSelectionEnabled). */
+  tableId                 String?
+  seatIndex               Int?
   createdAt               DateTime  @default(now())
   guests                  Guest[]
+  seatHold                SeatHold?
 
   @@index([eventId, status])
   @@index([buyerEmail])
   @@index([userId])
+  @@index([eventId, tableId, seatIndex])
+}
+
+/** Réservation temporaire d’un siège pendant le checkout. */
+model SeatHold {
+  id         String      @id @default(uuid())
+  eventId    String
+  event      Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  tableId    String
+  seatIndex  Int
+  buyerEmail String
+  expiresAt  DateTime
+  orderId    String?     @unique
+  order      TicketOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  createdAt  DateTime    @default(now())
+
+  @@unique([eventId, tableId, seatIndex])
+  @@index([expiresAt])
+  @@index([eventId])
 }
 
 model GuestProtocolNote {

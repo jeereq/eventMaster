@@ -116,11 +116,40 @@ function ScenicLights({
   shadowMapSize: number;
 }) {
   const extent = Math.max(widthM, heightM);
+  const [sx, sy, sz] = lighting.sunPosition;
+  const skyR = extent * 2.8;
   return (
     <>
+      {lighting.showSky ? (
+        <mesh>
+          <sphereGeometry args={[skyR, 32, 16]} />
+          <meshBasicMaterial
+            color={lighting.skyTop}
+            side={THREE.BackSide}
+            depthWrite={false}
+            fog={false}
+          />
+        </mesh>
+      ) : null}
+      {lighting.showSky ? (
+        <mesh position={[0, -0.02, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+          <circleGeometry args={[extent * 1.8, 48]} />
+          <meshStandardMaterial color={lighting.hemiGround} roughness={0.95} metalness={0} />
+        </mesh>
+      ) : null}
+      {/* Disque soleil (visible jour / crépuscule) */}
+      {lighting.showSky && lighting.preset !== 'night' ? (
+        <mesh position={[sx * 0.85, sy * 0.85, sz * 0.85]}>
+          <sphereGeometry args={[lighting.preset === 'dusk' ? 1.8 : 1.2, 16, 16]} />
+          <meshBasicMaterial
+            color={lighting.preset === 'dusk' ? '#fb923c' : '#fef08a'}
+            fog={false}
+          />
+        </mesh>
+      ) : null}
       <ambientLight intensity={lighting.ambient} />
       <directionalLight
-        position={[widthM * 0.4, 16, heightM * 0.2]}
+        position={[sx, sy, sz]}
         intensity={lighting.keyIntensity}
         castShadow
         shadow-mapSize-width={shadowMapSize}
@@ -143,19 +172,19 @@ function ScenicLights({
         position={[0, 12, 0]}
         angle={0.6}
         penumbra={0.65}
-        intensity={lighting.spotIntensity}
+        intensity={lighting.spotIntensity * lighting.interiorBoost}
         castShadow={false}
         color={lighting.spotColor}
       />
       <pointLight
         position={[widthM * 0.3, 3.2, heightM * 0.25]}
-        intensity={lighting.warmPoint}
+        intensity={lighting.warmPoint * lighting.interiorBoost}
         color="#fde68a"
         distance={18}
       />
       <pointLight
         position={[-widthM * 0.25, 3.2, -heightM * 0.2]}
-        intensity={lighting.coolPoint}
+        intensity={lighting.coolPoint * lighting.interiorBoost}
         color="#e0f2fe"
         distance={16}
       />

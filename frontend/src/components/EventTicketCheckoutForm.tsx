@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
@@ -11,6 +11,17 @@ import { Ticket } from 'lucide-react';
 import ClientAuthChoice from '@/components/ClientAuthChoice';
 import { eventPublicHref } from '@/lib/safeAppPath';
 import type { PublicEventCard } from '@/lib/marketplace';
+import { resolveLightingFromProgram, normalizeEventProgram } from '@/lib/eventProgram';
+import { lightingPresetLabels } from '@/lib/roomRenderQuality';
+
+type SeatRow = {
+  tableId: string;
+  tableName: string;
+  seatIndex: number;
+  available: boolean;
+  x: number;
+  y: number;
+};
 
 export default function EventTicketCheckoutForm({ event }: { event: PublicEventCard }) {
   const router = useRouter();
@@ -24,6 +35,19 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
   const [buyerName, setBuyerName] = useState('');
   const [buyerPhone, setBuyerPhone] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [seats, setSeats] = useState<SeatRow[]>([]);
+  const [selected, setSelected] = useState<{ tableId: string; seatIndex: number } | null>(null);
+  const [seatsLoading, setSeatsLoading] = useState(false);
+
+  const seatMode = Boolean(event.seatSelectionEnabled);
+  const programHint = useMemo(() => {
+    const lighting = resolveLightingFromProgram(
+      normalizeEventProgram(event.eventProgram),
+      new Date(),
+      event.date,
+    );
+    return lightingPresetLabels[lighting];
+  }, [event.eventProgram, event.date]);
 
   useEffect(() => {
     if (!user) return;
@@ -31,15 +55,49 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
     setBuyerPhone((prev) => prev || user.phone || '');
   }, [user]);
 
+  useEffect(() => {
+    if (!seatMode || !slug) return;
+    let cancelled = false;
+    setSeatsLoading(true);
+    api.get(`/public/events/${slug}/seats`)
+      .then((data) => {
+        if (cancelled) return;
+        setSeats(Array.isArray(data.seats) ? data.seats : []);
+      })
+      .catch(() => {
+        if (!cancelled) setError('Impossible de charger les places disponibles.');
+      })
+      .finally(() => {
+        if (!cancelled) setSeatsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [seatMode, slug]);
+
+  const tables = useMemo(() => {
+    const map = new Map<string, { name: string; seats: SeatRow[] }>();
+    for (const s of seats) {
+      const cur = map.get(s.tableId) ?? { name: s.tableName, seats: [] };
+      cur.seats.push(s);
+      map.set(s.tableId, cur);
+    }
+    return [...map.entries()];
+  }, [seats]);
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError('');
     try {
+      if (seatMode && !selected) {
+        setError('Sélectionnez une place sur le plan.');
+        setBusy(false);
+        return;
+      }
       const data = await api.post(`/public/events/${slug}/checkout`, {
         buyerName,
         buyerPhone,
-        quantity,
+        quantity: seatMode ? 1 : quantity,
+        ...(selected ? { tableId: selected.tableId, seatIndex: selected.seatIndex } : {}),
       });
       if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl;
@@ -62,6 +120,9 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
         <Ticket className="w-4 h-4" />
         {event.paid ? 'Acheter un billet' : 'S’inscrire'}
       </h2>
+      {programHint && (
+        <p className="text-[10px] text-muted">Ambiance programme actuelle : {programHint}</p>
+      )}
       {search.get('canceled') && (
         <Alert variant="error">Paiement annulé. Vous pouvez réessayer.</Alert>
       )}
@@ -78,23 +139,68 @@ export default function EventTicketCheckoutForm({ event }: { event: PublicEventC
           {token && user && (
             <p className="text-xs text-muted">
               Connecté en tant que {user.name || user.email}. Les billets apparaîtront dans{' '}
-              <Link href="/dashboard/tickets" className="font-semibold text-primary hover:underline">Mes billets</Link>.
+              <Link href="/dashboard/tickets" className="text-primary font-semibold underline">Mes billets</Link>.
             </p>
           )}
           <Input label="Nom complet" value={buyerName} onChange={(e) => setBuyerName(e.target.value)} required />
-          <Input label="E-mail" type="email" value={user?.email || ''} disabled />
-          <Input label="Téléphone (optionnel)" value={buyerPhone} onChange={(e) => setBuyerPhone(e.target.value)} />
-          <Input
-            label="Nombre de places"
-            type="number"
-            min={1}
-            max={8}
-            value={String(quantity)}
-            onChange={(e) => setQuantity(Math.min(8, Math.max(1, Number(e.target.value) || 1)))}
-          />
+          <Input label="Téléphone" value={buyerPhone} onChange={(e) => setBuyerPhone(e.target.value)} />
+          {seatMode ? (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-foreground">Choisissez votre place</p>
+              {seatsLoading ? (
+                <p className="text-xs text-muted">Chargement du plan…</p>
+              ) : tables.length === 0 ? (
+                <p className="text-xs text-muted">Aucune place libre sur le plan.</p>
+              ) : (
+                <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+                  {tables.map(([tableId, info]) => (
+                    <div key={tableId} className="rounded border border-border p-2">
+                      <p className="text-[11px] font-bold text-foreground mb-1.5">{info.name}</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {info.seats.map((s) => {
+                          const active = selected?.tableId === s.tableId && selected.seatIndex === s.seatIndex;
+                          return (
+                            <button
+                              key={`${s.tableId}-${s.seatIndex}`}
+                              type="button"
+                              disabled={!s.available}
+                              onClick={() => setSelected({ tableId: s.tableId, seatIndex: s.seatIndex })}
+                              className={`min-w-[2rem] px-2 py-1 rounded text-[10px] font-bold border transition ${
+                                !s.available
+                                  ? 'opacity-40 cursor-not-allowed border-border text-muted'
+                                  : active
+                                    ? 'bg-primary text-white border-primary'
+                                    : 'border-border hover:border-primary text-foreground'
+                              }`}
+                            >
+                              {s.seatIndex + 1}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {selected && (
+                <p className="text-[11px] text-primary font-semibold">
+                  Place sélectionnée : siège {selected.seatIndex + 1}
+                </p>
+              )}
+            </div>
+          ) : (
+            <Input
+              label="Quantité"
+              type="number"
+              min={1}
+              max={8}
+              value={quantity}
+              onChange={(e) => setQuantity(Number(e.target.value) || 1)}
+            />
+          )}
           {event.paid && (
-            <p className="text-sm font-semibold">
-              Total : {formatFc(event.ticketPriceFc * quantity)}
+            <p className="text-xs text-muted">
+              Total : {formatFc(event.ticketPriceFc * (seatMode ? 1 : quantity))}
             </p>
           )}
           <Button type="submit" loading={busy} fullWidth className="min-h-11">

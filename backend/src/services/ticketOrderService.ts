@@ -1,6 +1,7 @@
 import { prisma } from '../db';
 import { getPlanLimitsForTenant } from '../config/plansConfig';
 import { sendRealEmail } from './notificationService';
+import { assignSeatInTablePlan } from './seatSelectionService';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -108,10 +109,22 @@ export async function fulfillTicketOrder(orderId: string, stripeSession?: {
   });
 
   const primary = paid?.guests.find((g) => g.email.toLowerCase() === order.buyerEmail.toLowerCase()) || paid?.guests[0];
+  if (primary && order.tableId != null && order.seatIndex != null) {
+    try {
+      await assignSeatInTablePlan(event.id, order.tableId, order.seatIndex, primary.id);
+    } catch (err) {
+      console.error('[Ticket] assignSeatInTablePlan', err);
+    }
+  }
+
   if (primary) {
     const rsvpUrl = `${FRONTEND_URL}/rsvp/${primary.id}`;
+    const seatLine =
+      order.tableId != null && order.seatIndex != null
+        ? `\nPlace réservée : table ${order.tableId} · siège ${order.seatIndex + 1}\n`
+        : '';
     const subject = `Votre billet — ${event.title}`;
-    const text = `Bonjour ${order.buyerName},\n\nVotre inscription à « ${event.title} » est confirmée (${order.quantity} place${order.quantity > 1 ? 's' : ''}).\n\nAccédez à votre espace invité (badge QR) :\n${rsvpUrl}\n\nOrganisé par ${event.tenant.name}.\n`;
+    const text = `Bonjour ${order.buyerName},\n\nVotre inscription à « ${event.title} » est confirmée (${order.quantity} place${order.quantity > 1 ? 's' : ''}).${seatLine}\nAccédez à votre espace invité (badge QR) :\n${rsvpUrl}\n\nOrganisé par ${event.tenant.name}.\n`;
     void sendRealEmail(order.buyerEmail, subject, text).catch(() => undefined);
   }
 

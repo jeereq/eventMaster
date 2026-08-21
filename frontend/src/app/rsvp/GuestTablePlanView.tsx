@@ -33,6 +33,8 @@ export interface GuestTablePlanOverviewItem {
   y: number;
   occupiedCount: number;
   isGuestTable: boolean;
+  /** Index du siège de l’invité (0-based) si isGuestTable. */
+  guestSeatIndex?: number;
   chairType?: ChairType;
   chairImageUrl?: string;
   tableColor?: string;

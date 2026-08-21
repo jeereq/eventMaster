@@ -27,6 +27,13 @@ import {
 } from '@/lib/guestGuidelines';
 import { INVITATION_COLOR_THEMES } from '@/lib/templateColorThemes';
 import {
+  createEmptyProgram,
+  createProgramSlot,
+  normalizeEventProgram,
+  type EventProgram,
+} from '@/lib/eventProgram';
+import { lightingPresetLabels, type LightingPreset } from '@/lib/roomRenderQuality';
+import {
   EVENT_CONFIG_TABS,
   EVENT_KIND_LABELS,
   EVENT_KINDS_PRO,
@@ -123,6 +130,8 @@ export default function EventConfigForm({
   const [ticketing, setTicketing] = useState(false);
   const [ticketPrice, setTicketPrice] = useState('');
   const [ticketsTotal, setTicketsTotal] = useState('');
+  const [seatSelection, setSeatSelection] = useState(false);
+  const [eventProgram, setEventProgram] = useState<EventProgram>(() => createEmptyProgram());
   const [photos, setPhotos] = useState<string[]>([]);
   const [roomId, setRoomId] = useState('');
   const [formTemplateId, setFormTemplateId] = useState('');
@@ -166,6 +175,8 @@ export default function EventConfigForm({
       setTicketing(false);
       setTicketPrice('');
       setTicketsTotal('');
+      setSeatSelection(false);
+      setEventProgram(createEmptyProgram());
       setPhotos([]);
       setRoomId('');
       setFormTemplateId('');
@@ -201,6 +212,8 @@ export default function EventConfigForm({
         : '',
     );
     setTicketsTotal(initialEvent.ticketsTotal != null ? String(initialEvent.ticketsTotal) : '');
+    setSeatSelection(Boolean((initialEvent as { seatSelectionEnabled?: boolean }).seatSelectionEnabled));
+    setEventProgram(normalizeEventProgram((initialEvent as { eventProgram?: unknown }).eventProgram));
     setPhotos(photosFromEvent(initialEvent.photos));
     setRoomId(initialEvent.roomId || initialEvent.room?.id || '');
     setOpenTablePlanAfterSave(false);
@@ -457,6 +470,8 @@ export default function EventConfigForm({
           ? Number(ticketsTotal)
           : null
         : initialEvent?.ticketsTotal ?? null,
+      seatSelectionEnabled: complete ? publicEvent && seatSelection : Boolean((initialEvent as { seatSelectionEnabled?: boolean } | undefined)?.seatSelectionEnabled),
+      eventProgram,
       photos,
       guestGuidelines,
       formTemplateId,
@@ -924,6 +939,87 @@ export default function EventConfigForm({
                     ? 'Paiement par carte (Stripe). L’acheteur reçoit le lien RSVP / badge QR.'
                     : 'Inscription gratuite : le visiteur renseigne nom et e-mail, puis reçoit son lien RSVP.'}
                 </p>
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={seatSelection}
+                    onChange={(e) => setSeatSelection(e.target.checked)}
+                    className="rounded border-border mt-0.5"
+                  />
+                  <span>
+                    <span className="font-medium">Choisir sa place à l’achat</span>
+                    <span className="block text-[11px] text-muted mt-0.5">
+                      Plan de table importé depuis la salle requis. 1 billet = 1 siège.
+                    </span>
+                  </span>
+                </label>
+                <div className="space-y-2 pt-2 border-t border-border">
+                  <p className="text-xs font-semibold text-foreground">Programme & ambiance</p>
+                  <p className="text-[11px] text-muted">Créneaux Soleil / Crépuscule / Nuit pour la vue extérieure.</p>
+                  {eventProgram.slots.map((slot) => (
+                    <div key={slot.id} className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end p-2 rounded border border-border bg-surface-muted/40">
+                      <Input
+                        label="Titre"
+                        value={slot.label}
+                        onChange={(e) => setEventProgram((p) => ({
+                          ...p,
+                          slots: p.slots.map((s) => (s.id === slot.id ? { ...s, label: e.target.value } : s)),
+                        }))}
+                      />
+                      <Input
+                        label="Début (HH:mm)"
+                        value={slot.startsAt}
+                        onChange={(e) => setEventProgram((p) => ({
+                          ...p,
+                          slots: p.slots.map((s) => (s.id === slot.id ? { ...s, startsAt: e.target.value } : s)),
+                        }))}
+                        placeholder="18:00"
+                      />
+                      <label className="text-xs space-y-1 block">
+                        <span className="text-muted">Ambiance</span>
+                        <select
+                          className="w-full rounded border border-border bg-surface px-2 py-1.5 text-sm"
+                          value={slot.lighting ?? 'dusk'}
+                          onChange={(e) => setEventProgram((p) => ({
+                            ...p,
+                            slots: p.slots.map((s) => (s.id === slot.id
+                              ? { ...s, lighting: e.target.value as Exclude<LightingPreset, 'auto'> }
+                              : s)),
+                          }))}
+                        >
+                          {(['day', 'dusk', 'night'] as const).map((k) => (
+                            <option key={k} value={k}>{lightingPresetLabels[k]}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <button
+                        type="button"
+                        className="text-xs text-rose-600 font-semibold py-2"
+                        onClick={() => setEventProgram((p) => ({
+                          ...p,
+                          slots: p.slots.filter((s) => s.id !== slot.id),
+                        }))}
+                      >
+                        Retirer
+                      </button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setEventProgram((p) => ({
+                      ...p,
+                      slots: [...p.slots, createProgramSlot({
+                        label: `Créneau ${p.slots.length + 1}`,
+                        startsAt: p.slots.length === 0 ? '14:00' : '19:00',
+                        lighting: p.slots.length === 0 ? 'day' : 'night',
+                      })],
+                    }))}
+                  >
+                    Ajouter un créneau
+                  </Button>
+                </div>
               </div>
             )}
 

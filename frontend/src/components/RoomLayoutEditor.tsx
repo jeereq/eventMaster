@@ -61,6 +61,7 @@ import { roomEditorCapabilities, snapLayoutPct } from '@/lib/roomEditorAccess';
 import {
   downloadDataUrl,
   exportPixelRatio,
+  lightingPresetGroups,
   lightingPresetLabels,
   renderQualityLabels,
   type LightingPreset,
@@ -2184,8 +2185,12 @@ export default function RoomLayoutEditor({
           className="bg-transparent text-xs font-bold text-foreground outline-none max-w-[140px]"
           title="Éclairage scénique"
         >
-          {(Object.keys(lightingPresetLabels) as LightingPreset[]).map((p) => (
-            <option key={p} value={p}>{lightingPresetLabels[p]}</option>
+          {lightingPresetGroups.map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.presets.map((p) => (
+                <option key={p} value={p}>{lightingPresetLabels[p]}</option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </label>

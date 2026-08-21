@@ -477,25 +477,26 @@ export default function TablePlanner({
             Nouvelle table
           </Button>
           
-          {canImportRoomLayout && (
+          {canImportRoomLayout && onImportRoomLayout && (
             <Button
               size="sm"
               variant="secondary"
-              onClick={() => {}}
-              disabled={false || tables.length > 0}
+              onClick={() => onImportRoomLayout(tables.length > 0)}
+              disabled={importingLayout}
               className="bg-surface font-medium"
+              title="Met à jour depuis le plan 3D de la salle (places conservées)"
             >
-              <Download className="w-4 h-4 mr-1.5" />
+              {importingLayout ? <RefreshCw className="w-4 h-4 mr-1.5 animate-spin" /> : <Download className="w-4 h-4 mr-1.5" />}
               Importer depuis salle
             </Button>
           )}
 
-          {onImportRoomLayout && (
+          {onImportRoomLayout && !canImportRoomLayout && (
             <Button
               size="sm"
               variant="ghost"
               onClick={() => {
-                if (tables.length > 0 && !confirm('Attention : l’importation remplacera votre plan actuel. Continuer ?')) return;
+                if (tables.length > 0 && !confirm('Mettre à jour depuis la salle en conservant les places ?')) return;
                 onImportRoomLayout?.(true);
               }}
               loading={importingLayout}
@@ -776,12 +777,13 @@ export default function TablePlanner({
  <p className="font-semibold text-primary">Plan de salle disponible</p>
  <p className="text-muted text-xs mt-0.5">
  {roomName ? (
- <>Importer la disposition de <span className="text-primary font-medium">« {roomName} »</span> comme base du plan de table.</>
+ <>Mettre à jour depuis <span className="text-primary font-medium">« {roomName} »</span> — le nouveau plan 3D est appliqué ; les places déjà assignées sont conservées.</>
  ) : (
- 'Importer le modèle de la salle liée.'
+ 'Importer le modèle de la salle liée (places conservées si possible).'
  )}
  </p>
  </div>
+ <div className="flex flex-wrap gap-2">
  <button
  type="button"
  disabled={importingLayout}
@@ -789,8 +791,9 @@ export default function TablePlanner({
  className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover disabled:opacity-60 text-white text-xs font-semibold rounded-[var(--radius-button)] transition"
  >
  {importingLayout ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
- Importer depuis la salle
+ {tables.length > 0 ? 'Mettre à jour depuis la salle' : 'Importer depuis la salle'}
  </button>
+ </div>
  </div>
  )}
 

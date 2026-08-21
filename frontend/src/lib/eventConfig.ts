@@ -87,6 +87,8 @@ export type EventConfigPayload = {
   dayOfContactName: string | null;
   dayOfContactPhone: string | null;
   themeId: string | null;
+  seatSelectionEnabled?: boolean;
+  eventProgram?: import('@/lib/eventProgram').EventProgram | null;
 };
 
 export function isEventKindId(value: string | null | undefined): value is EventKindId {

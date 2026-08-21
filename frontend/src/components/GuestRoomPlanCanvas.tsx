@@ -339,6 +339,11 @@ export default function GuestRoomPlanCanvas({
                   >
                     {table.name}
                   </span>
+                  {isGuest && typeof table.guestSeatIndex === 'number' && (
+                    <span className="mt-0.5 text-[8px] font-black uppercase tracking-wide text-amber-200 bg-amber-950/70 px-1.5 py-0.5 rounded">
+                      Siège {table.guestSeatIndex + 1}
+                    </span>
+                  )}
                 </div>
               );
             })}

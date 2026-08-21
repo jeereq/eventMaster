@@ -8,7 +8,7 @@ import {
   getAccessibleEventIds,
   resolveOrgAccess,
 } from '../services/permissionsService';
-import { blueprintToTablePlan } from '../services/roomLayoutService';
+import { blueprintToTablePlan, mergeBlueprintIntoTablePlan } from '../services/roomLayoutService';
 import { notifyTableAssignmentChanges } from '../services/tableAssignmentNotificationService';
 import { toPrismaJson } from '../utils/prismaJson';
 import { uniqueSlug } from '../utils/slug';
@@ -118,6 +118,8 @@ async function eventVisibilityData(
     ticketingEnabled: isPublic ? ticketingEnabled : false,
     ticketPriceFc: isPublic ? ticketPriceFc : 0,
     ticketsTotal: isPublic ? ticketsTotal : existing?.ticketsTotal ?? null,
+    seatSelectionEnabled:
+      isPublic && (body.seatSelectionEnabled === true || body.seatSelectionEnabled === 'true'),
   };
 }
 
@@ -220,6 +222,9 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
         rsvpForm: rsvpForm !== undefined ? toPrismaJson(rsvpForm) : undefined,
         themeId: themeId || null,
         photos: toPrismaJson(parsePhotoUrls(req.body.photos)),
+        ...(req.body.eventProgram !== undefined
+          ? { eventProgram: toPrismaJson(req.body.eventProgram) }
+          : {}),
         ...visibility,
         ...eventDossierData(req.body, true),
       },
@@ -323,6 +328,9 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
         eventPrep: eventPrep !== undefined ? toPrismaJson(eventPrep) : existingEvent.eventPrep ?? undefined,
         themeId: themeId !== undefined ? (themeId || null) : existingEvent.themeId,
         ...(req.body.photos !== undefined ? { photos: toPrismaJson(parsePhotoUrls(req.body.photos)) } : {}),
+        ...(req.body.eventProgram !== undefined
+          ? { eventProgram: toPrismaJson(req.body.eventProgram) }
+          : {}),
         ...visibility,
         ...eventDossierData(req.body, false),
       },
@@ -407,7 +415,7 @@ export async function importRoomLayout(req: AuthenticatedRequest, res: Response)
     const tenantId = req.user?.tenantId;
     const userId = req.user?.id;
     const id = req.params.id as string;
-    const { replaceExisting } = req.body;
+    const { replaceExisting, preserveAssignments } = req.body;
 
     if (!tenantId || !userId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
@@ -432,17 +440,23 @@ export async function importRoomLayout(req: AuthenticatedRequest, res: Response)
       return res.status(400).json({ error: 'Cet événement n\'est pas lié à une salle avec un plan configuré.' });
     }
 
-    if (event.tablePlan && !replaceExisting) {
-      const plan = event.tablePlan as { tables?: unknown[] };
-      if (plan.tables && plan.tables.length > 0) {
-        return res.status(409).json({
-          error: 'Un plan de table existe déjà. Confirmez le remplacement avec replaceExisting: true.',
-          hasExistingPlan: true,
-        });
-      }
+    const existingPlan = event.tablePlan as { tables?: unknown[] } | null;
+    const hasTables = Boolean(existingPlan?.tables && existingPlan.tables.length > 0);
+
+    if (hasTables && !replaceExisting && preserveAssignments !== true) {
+      return res.status(409).json({
+        error: 'Un plan de table existe déjà. Utilisez replaceExisting ou preserveAssignments.',
+        hasExistingPlan: true,
+      });
     }
 
-    const tablePlan = blueprintToTablePlan(event.room.layoutBlueprint as any);
+    const blueprint = event.room.layoutBlueprint as any;
+    const keepSeats = preserveAssignments === true || (replaceExisting && preserveAssignments !== false);
+    const tablePlan =
+      keepSeats && hasTables
+        ? mergeBlueprintIntoTablePlan(existingPlan as any, blueprint)
+        : blueprintToTablePlan(blueprint);
+
     const updatedEvent = await prisma.event.update({
       where: { id },
       data: { tablePlan: toPrismaJson(tablePlan) },

@@ -274,6 +274,10 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
           y: table.y,
           occupiedCount: Object.values(table.seats || {}).filter(Boolean).length,
           isGuestTable: Object.values(table.seats || {}).includes(guestId),
+          guestSeatIndex: (() => {
+            const entry = Object.entries(table.seats || {}).find(([, id]) => id === guestId);
+            return entry ? parseInt(entry[0], 10) : undefined;
+          })(),
           chairType: table.chairType,
           chairImageUrl: table.chairImageUrl,
           tableColor: table.tableColor,

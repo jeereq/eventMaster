@@ -5,6 +5,7 @@ import {
   fulfillTicketOrder,
   ticketsRemaining,
 } from '../services/ticketOrderService';
+import { createSeatHold, listSeatInventory } from '../services/seatSelectionService';
 import { getPlanLimitsForTenant } from '../config/plansConfig';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { parsePhotoUrls, coverFromMedia } from '../utils/publicVenue';
@@ -72,6 +73,9 @@ function serializePublicEvent(event: {
   ticketPriceFc: number;
   ticketsTotal: number | null;
   ticketsSold: number;
+  seatSelectionEnabled?: boolean;
+  tablePlan?: unknown;
+  eventProgram?: unknown;
   photos?: unknown;
   tenant: { name: string };
   posts?: Array<{
@@ -86,6 +90,8 @@ function serializePublicEvent(event: {
   const remaining = ticketsRemaining(event);
   const paid = event.ticketingEnabled && event.ticketPriceFc > 0;
   const photos = parsePhotoUrls(event.photos);
+  const plan = event.tablePlan as { tables?: unknown[] } | null;
+  const hasTablePlan = Boolean(plan?.tables && plan.tables.length > 0);
   return {
     id: event.id,
     slug: event.slug,
@@ -103,6 +109,8 @@ function serializePublicEvent(event: {
     ticketsSold: event.ticketsSold,
     ticketsRemaining: remaining,
     soldOut: remaining === 0,
+    seatSelectionEnabled: Boolean(event.seatSelectionEnabled) && hasTablePlan,
+    eventProgram: event.eventProgram ?? null,
     photos,
     coverUrl: coverFromMedia(photos),
     posts: (event.posts || []).map(serializePublicPost),
@@ -213,6 +221,25 @@ export async function getPublicEvent(req: Request, res: Response) {
   }
 }
 
+export async function listPublicEventSeats(req: Request, res: Response) {
+  try {
+    const slug = String(req.params.slug || '');
+    const event = await prisma.event.findFirst({
+      where: { slug, isPublic: true, isBlockedByAdmin: false },
+      select: { id: true, seatSelectionEnabled: true, tablePlan: true },
+    });
+    if (!event) return res.status(404).json({ error: 'Événement introuvable ou privé.' });
+    if (!event.seatSelectionEnabled) {
+      return res.status(400).json({ error: 'Sélection de siège non activée.' });
+    }
+    const inventory = await listSeatInventory(event.id);
+    return res.json(inventory);
+  } catch (error) {
+    console.error('[Public events] seats', error);
+    return res.status(500).json({ error: 'Impossible de charger les places.' });
+  }
+}
+
 export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Response) {
   try {
     if (!req.user?.id) {
@@ -231,7 +258,15 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
     const buyerEmail = account.email.trim().toLowerCase();
     const buyerName = String(req.body?.buyerName || account.name || '').trim();
     const buyerPhone = String(req.body?.buyerPhone || account.phone || '').trim() || null;
-    const quantity = Math.min(8, Math.max(1, Number(req.body?.quantity) || 1));
+    let quantity = Math.min(8, Math.max(1, Number(req.body?.quantity) || 1));
+    const tableId = req.body?.tableId ? String(req.body.tableId) : null;
+    const seatIndexRaw = req.body?.seatIndex;
+    const seatIndex =
+      seatIndexRaw === 0 || seatIndexRaw === '0'
+        ? 0
+        : seatIndexRaw != null && seatIndexRaw !== ''
+          ? Number(seatIndexRaw)
+          : null;
     const userId = account.id;
 
     if (!buyerName || !buyerEmail || !buyerEmail.includes('@')) {
@@ -245,6 +280,13 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
     if (!event) return res.status(404).json({ error: 'Événement introuvable ou privé.' });
     if (new Date(event.date).getTime() < Date.now()) {
       return res.status(400).json({ error: 'Cet événement est déjà passé.' });
+    }
+
+    if (event.seatSelectionEnabled) {
+      quantity = 1;
+      if (!tableId || seatIndex == null || !Number.isFinite(seatIndex)) {
+        return res.status(400).json({ error: 'Choisissez une table et un siège sur le plan.' });
+      }
     }
 
     const remaining = ticketsRemaining(event);
@@ -281,8 +323,25 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
         status: paid ? 'PENDING' : 'PAID',
         paidAt: paid ? null : new Date(),
         userId,
+        tableId: event.seatSelectionEnabled ? tableId : null,
+        seatIndex: event.seatSelectionEnabled ? seatIndex : null,
       },
     });
+
+    if (event.seatSelectionEnabled && tableId != null && seatIndex != null) {
+      try {
+        await createSeatHold({
+          eventId: event.id,
+          tableId,
+          seatIndex,
+          buyerEmail,
+          orderId: order.id,
+        });
+      } catch (err: any) {
+        await prisma.ticketOrder.update({ where: { id: order.id }, data: { status: 'CANCELLED' } });
+        return res.status(409).json({ error: err?.message || 'Siège indisponible.' });
+      }
+    }
 
     if (!paid) {
       const fulfilled = await fulfillTicketOrder(order.id);
@@ -310,6 +369,11 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
       });
     }
 
+    const seatHint =
+      event.seatSelectionEnabled && tableId != null && seatIndex != null
+        ? ` · siège ${seatIndex + 1}`
+        : '';
+
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
@@ -321,7 +385,7 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
             currency: STRIPE_TICKET_CURRENCY,
             unit_amount: fcToStripeUnitAmount(amountFc),
             product_data: {
-              name: `${event.title} — ${quantity} billet${quantity > 1 ? 's' : ''}`,
+              name: `${event.title} — ${quantity} billet${quantity > 1 ? 's' : ''}${seatHint}`,
               description: `${amountFc.toLocaleString('fr-FR')} FC`,
             },
           },
@@ -333,7 +397,8 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
       metadata: {
         purpose: 'event_ticket',
         orderId: order.id,
-        eventId: event.id,
+        ...(tableId ? { tableId } : {}),
+        ...(seatIndex != null ? { seatIndex: String(seatIndex) } : {}),
       },
     });
 

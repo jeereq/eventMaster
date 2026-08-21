@@ -1000,25 +1000,39 @@ Merci de confirmer votre présence :
  }
  };
 
- const handleImportRoomLayout = async (replaceExisting: boolean) => {
+ const handleImportRoomLayout = async (replaceExisting: boolean, preserveAssignments = true) => {
  if (!selectedEvent) return;
- if (replaceExisting && !confirm('Remplacer le plan de table actuel par le modèle de la salle ? Les assignations seront perdues.')) {
+ if (replaceExisting && !preserveAssignments) {
+ if (!confirm('Remplacer le plan par le modèle de la salle ? Les assignations de sièges seront perdues.')) {
  return;
+ }
+ } else if (replaceExisting && preserveAssignments) {
+ if (!confirm('Mettre à jour le plan depuis la salle en conservant les places déjà assignées ?')) {
+ return;
+ }
  }
  setImportingLayout(true);
  setError('');
  try {
  const updatedEvent = await api.post(`/events/${selectedEvent.id}/import-room-layout`, {
- replaceExisting,
+ replaceExisting: replaceExisting || preserveAssignments,
+ preserveAssignments,
  });
  setSelectedEvent(updatedEvent);
  setEvents(events.map((e) => (e.id === selectedEvent.id ? updatedEvent : e)));
- setSuccess('Plan de table importé depuis la salle.');
+ setSuccess(
+ preserveAssignments
+ ? 'Plan importé depuis la salle (places conservées).'
+ : 'Plan de table importé depuis la salle.',
+ );
  } catch (err: any) {
  if (err.message?.includes('existe déjà') || err.hasExistingPlan) {
- if (confirm('Un plan existe déjà. Voulez-vous le remplacer par le modèle de la salle ?')) {
+ const keep = confirm(
+ 'Un plan existe déjà.\n\nOK = mettre à jour en gardant les places\nAnnuler = ne rien faire\n\n(Pour tout remplacer sans garder les places, réessayez puis refusez la conservation.)',
+ );
+ if (keep) {
  setImportingLayout(false);
- return handleImportRoomLayout(true);
+ return handleImportRoomLayout(true, true);
  }
  } else {
  setError(err.message || 'Impossible d\'importer le plan de la salle.');

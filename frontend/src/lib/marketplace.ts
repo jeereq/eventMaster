@@ -1116,6 +1116,8 @@ export interface PublicEventCard {
   ticketsSold: number;
   ticketsRemaining: number | null;
   soldOut: boolean;
+  seatSelectionEnabled?: boolean;
+  eventProgram?: unknown;
   photos?: string[];
   coverUrl?: string | null;
   posts?: PublicEventPost[];

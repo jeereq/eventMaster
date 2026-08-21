@@ -4,7 +4,15 @@ import type { RoomType } from '@/lib/roomLayoutUtils';
 export type RenderQuality = 'draft' | 'standard' | 'showcase';
 
 /** Ambiance lumineuse scénique. */
-export type LightingPreset = 'auto' | 'banquet' | 'conference' | 'tent' | 'neutral';
+export type LightingPreset =
+  | 'auto'
+  | 'banquet'
+  | 'conference'
+  | 'tent'
+  | 'neutral'
+  | 'day'
+  | 'dusk'
+  | 'night';
 
 export const renderQualityLabels: Record<RenderQuality, string> = {
   draft: 'Brouillon',
@@ -14,11 +22,21 @@ export const renderQualityLabels: Record<RenderQuality, string> = {
 
 export const lightingPresetLabels: Record<LightingPreset, string> = {
   auto: 'Auto (type de salle)',
+  day: 'Soleil (jour)',
+  dusk: 'Crépuscule',
+  night: 'Nuit',
   banquet: 'Banquet chaud',
   conference: 'Conférence neutre',
   tent: 'Tente / extérieur',
   neutral: 'Studio neutre',
 };
+
+/** Groupes pour le sélecteur UI. */
+export const lightingPresetGroups: { label: string; presets: LightingPreset[] }[] = [
+  { label: 'Moment', presets: ['auto', 'day', 'dusk', 'night'] },
+  { label: 'Scène', presets: ['banquet', 'conference', 'tent', 'neutral'] },
+];
+
 
 export type RenderQualitySettings = {
   quality: RenderQuality;
@@ -64,7 +82,16 @@ export type ScenicLightSettings = {
   warmPoint: number;
   coolPoint: number;
   background: string;
+  /** Position soleil / clé (monde). */
+  sunPosition: [number, number, number];
+  /** Ciel / extérieur visible. */
+  showSky: boolean;
+  skyTop: string;
+  skyHorizon: string;
+  /** Intensité intérieure (lustres / uplights relative). */
+  interiorBoost: number;
 };
+
 
 const QUALITY: Record<RenderQuality, RenderQualitySettings> = {
   draft: {
@@ -139,6 +166,69 @@ const QUALITY: Record<RenderQuality, RenderQualitySettings> = {
 };
 
 const LIGHTING: Record<Exclude<LightingPreset, 'auto'>, ScenicLightSettings> = {
+  day: {
+    preset: 'day',
+    ambient: 0.55,
+    keyIntensity: 2.1,
+    keyColor: '#fffbeb',
+    fillIntensity: 0.55,
+    fillColor: '#bae6fd',
+    hemiSky: '#7dd3fc',
+    hemiGround: '#a8a29e',
+    hemiIntensity: 0.7,
+    spotIntensity: 0.12,
+    spotColor: '#ffffff',
+    warmPoint: 0.08,
+    coolPoint: 0.35,
+    background: '#87ceeb',
+    sunPosition: [18, 28, 8],
+    showSky: true,
+    skyTop: '#38bdf8',
+    skyHorizon: '#e0f2fe',
+    interiorBoost: 0.35,
+  },
+  dusk: {
+    preset: 'dusk',
+    ambient: 0.32,
+    keyIntensity: 1.35,
+    keyColor: '#fdba74',
+    fillIntensity: 0.4,
+    fillColor: '#c4b5fd',
+    hemiSky: '#fb923c',
+    hemiGround: '#57534e',
+    hemiIntensity: 0.55,
+    spotIntensity: 0.35,
+    spotColor: '#ffedd5',
+    warmPoint: 0.45,
+    coolPoint: 0.2,
+    background: '#431407',
+    sunPosition: [22, 6, -4],
+    showSky: true,
+    skyTop: '#7c2d12',
+    skyHorizon: '#fb923c',
+    interiorBoost: 0.85,
+  },
+  night: {
+    preset: 'night',
+    ambient: 0.14,
+    keyIntensity: 0.35,
+    keyColor: '#93c5fd',
+    fillIntensity: 0.18,
+    fillColor: '#1e3a5f',
+    hemiSky: '#0f172a',
+    hemiGround: '#1c1917',
+    hemiIntensity: 0.25,
+    spotIntensity: 0.7,
+    spotColor: '#fef3c7',
+    warmPoint: 0.55,
+    coolPoint: 0.25,
+    background: '#020617',
+    sunPosition: [-8, 40, 12],
+    showSky: true,
+    skyTop: '#020617',
+    skyHorizon: '#1e293b',
+    interiorBoost: 1.25,
+  },
   banquet: {
     preset: 'banquet',
     ambient: 0.28,
@@ -154,6 +244,11 @@ const LIGHTING: Record<Exclude<LightingPreset, 'auto'>, ScenicLightSettings> = {
     warmPoint: 0.38,
     coolPoint: 0.12,
     background: '#14110e',
+    sunPosition: [12, 16, 6],
+    showSky: false,
+    skyTop: '#1a1410',
+    skyHorizon: '#292524',
+    interiorBoost: 1,
   },
   conference: {
     preset: 'conference',
@@ -170,6 +265,11 @@ const LIGHTING: Record<Exclude<LightingPreset, 'auto'>, ScenicLightSettings> = {
     warmPoint: 0.14,
     coolPoint: 0.3,
     background: '#0c1220',
+    sunPosition: [10, 18, 4],
+    showSky: false,
+    skyTop: '#0f172a',
+    skyHorizon: '#1e293b',
+    interiorBoost: 0.9,
   },
   tent: {
     preset: 'tent',
@@ -186,6 +286,11 @@ const LIGHTING: Record<Exclude<LightingPreset, 'auto'>, ScenicLightSettings> = {
     warmPoint: 0.42,
     coolPoint: 0.32,
     background: '#0a3a52',
+    sunPosition: [16, 22, 10],
+    showSky: true,
+    skyTop: '#38bdf8',
+    skyHorizon: '#fef3c7',
+    interiorBoost: 0.7,
   },
   neutral: {
     preset: 'neutral',
@@ -202,8 +307,14 @@ const LIGHTING: Record<Exclude<LightingPreset, 'auto'>, ScenicLightSettings> = {
     warmPoint: 0.2,
     coolPoint: 0.2,
     background: '#121212',
+    sunPosition: [8, 20, 8],
+    showSky: false,
+    skyTop: '#171717',
+    skyHorizon: '#27272a',
+    interiorBoost: 1,
   },
 };
+
 
 export function resolveRenderQuality(
   quality?: RenderQuality | null,
@@ -225,7 +336,16 @@ export function resolveLightingPreset(
   roomType: RoomType,
 ): ScenicLightSettings {
   const key = !preset || preset === 'auto' ? lightingFromRoomType(roomType) : preset;
-  return LIGHTING[key];
+  return LIGHTING[key] ?? LIGHTING.neutral;
+}
+
+/** Alias pour le programme événement (day/dusk/night…). */
+export function resolveLightingFromPresetKey(
+  key: Exclude<LightingPreset, 'auto'> | undefined | null,
+  roomType: RoomType,
+): ScenicLightSettings {
+  if (key && LIGHTING[key]) return LIGHTING[key];
+  return resolveLightingPreset('auto', roomType);
 }
 
 /** Qualité d’export PNG (multiplicateur de résolution canvas). */

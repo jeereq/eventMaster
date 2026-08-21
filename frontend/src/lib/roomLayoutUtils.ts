@@ -2088,8 +2088,66 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
     roomThemeId: blueprint.metadata.roomThemeId,
     floorType: blueprint.metadata.floorType,
     floorImageUrl: blueprint.metadata.floorImageUrl,
+    floorColor: blueprint.metadata.floorColor,
+    depthAmount: blueprint.metadata.depthAmount ?? (blueprint.metadata.depthView ? 55 : 0),
+    depthView: Boolean(blueprint.metadata.depthView || (blueprint.metadata.depthAmount ?? 0) > 0),
     roomOutline: blueprint.roomOutline,
     sourceRoomType: blueprint.roomType,
+    sourceRoomBlueprintVersion: 1,
+    importedAt: new Date().toISOString(),
+  };
+}
+
+type TablePlanLike = {
+  tables?: Array<{
+    id: string;
+    sourceFurnitureId?: string;
+    capacity: number;
+    seats?: Record<string | number, string | null>;
+    [key: string]: unknown;
+  }>;
+  [key: string]: unknown;
+};
+
+/**
+ * Importe le blueprint salle en conservant les assignations existantes
+ * (même sourceFurnitureId / id) et les tables ajoutées manuellement.
+ */
+export function mergeBlueprintIntoTablePlan(
+  existing: TablePlanLike | null | undefined,
+  blueprint: RoomLayoutBlueprint | null | undefined,
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+): any {
+  const fresh = blueprintToTablePlan(blueprint) as any;
+  const oldTables = Array.isArray(existing?.tables) ? existing!.tables! : [];
+  const bySource = new Map<string, (typeof oldTables)[number]>();
+  for (const t of oldTables) {
+    bySource.set(String(t.sourceFurnitureId || t.id), t);
+  }
+
+  const mergedTables = (fresh.tables || []).map((t: any) => {
+    const prev = bySource.get(String(t.sourceFurnitureId || t.id));
+    if (!prev?.seats) return t;
+    const seats: Record<number, string | null> = {};
+    for (let i = 0; i < t.capacity; i++) seats[i] = null;
+    for (const [k, v] of Object.entries(prev.seats)) {
+      const idx = Number(k);
+      if (!Number.isFinite(idx) || idx < 0 || idx >= t.capacity) continue;
+      if (v) seats[idx] = v as string;
+    }
+    return { ...t, id: prev.id, seats };
+  });
+
+  const freshKeys = new Set(mergedTables.map((t: any) => String(t.sourceFurnitureId || t.id)));
+  const manualExtras = oldTables.filter((t) => {
+    if (t.sourceFurnitureId) return false;
+    return !freshKeys.has(String(t.id));
+  });
+
+  return {
+    ...fresh,
+    tables: [...mergedTables, ...manualExtras],
+    mergeMode: 'preserve-seats',
     importedAt: new Date().toISOString(),
   };
 }
