@@ -33,6 +33,8 @@ import {
   createBlueprintRow,
   createBlueprintTable,
   createBlueprintZone,
+  createAislesBatch,
+  createChairRowGroups,
   createSavedRoomTemplate,
   defaultRoomOutline,
   deleteCustomTemplateFromBlueprint,
@@ -131,6 +133,11 @@ export default function RoomLayoutEditor({
   const [lockOrbit, setLockOrbit] = useState(true);
   const [walkthroughActive, setWalkthroughActive] = useState(false);
   const [walkthroughLabel, setWalkthroughLabel] = useState('');
+  const [quickCreate, setQuickCreate] = useState<null | 'aisles' | 'chairs'>(null);
+  const [aisleCount, setAisleCount] = useState(2);
+  const [chairGroups, setChairGroups] = useState(2);
+  const [rowsPerGroup, setRowsPerGroup] = useState(4);
+  const [seatsPerRow, setSeatsPerRow] = useState(12);
   const webglRef = useRef<RoomWebGLCaptureApi>(null);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
@@ -417,6 +424,46 @@ export default function RoomLayoutEditor({
     const row = createBlueprintRow(count);
     updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, row] }, { message: `Rangée « ${row.label} » ajoutée`, kind: 'add' });
     setSelection([{ kind: 'row', id: row.id }]);
+  };
+
+  const addAislesQuick = () => {
+    if (!caps.canFixtures || !caps.fixtureKinds.includes('aisle')) {
+      log('Les allées ne sont pas incluses dans votre forfait', 'info');
+      return;
+    }
+    const existing = blueprint.fixtures.filter((f) => f.kind === 'aisle').length;
+    const batch = createAislesBatch(aisleCount, existing);
+    updateBlueprint(
+      { ...blueprint, fixtures: [...blueprint.fixtures, ...batch] },
+      { message: `${batch.length} allée${batch.length > 1 ? 's' : ''} ajoutée${batch.length > 1 ? 's' : ''}`, kind: 'add' },
+    );
+    setQuickCreate(null);
+    if (batch[0]) setSelection([{ kind: 'fixture', id: batch[0].id }]);
+  };
+
+  const addChairGroupsQuick = () => {
+    if (!caps.canAddRows) {
+      log('Les rangées ne sont pas incluses dans votre forfait', 'info');
+      return;
+    }
+    const rowCount = blueprint.furniture.filter((f) => f.kind === 'row').length;
+    const toAdd = chairGroups * rowsPerGroup;
+    if (rowCount + toAdd > caps.maxRows) {
+      log(`Limite de ${caps.maxRows} rangées (il reste ${Math.max(0, caps.maxRows - rowCount)})`, 'info');
+      return;
+    }
+    const rows = createChairRowGroups({
+      groupCount: chairGroups,
+      rowsPerGroup,
+      seatsPerRow,
+      startRowIndex: rowCount + 1,
+    });
+    updateBlueprint(
+      { ...blueprint, furniture: [...blueprint.furniture, ...rows] },
+      { message: `${chairGroups} groupe${chairGroups > 1 ? 's' : ''} · ${rows.length} rangées ajoutées`, kind: 'add' },
+    );
+    setQuickCreate(null);
+    if (rows[0]) setSelection(rows.map((r) => ({ kind: 'row' as const, id: r.id })));
   };
 
   const addZone = (label: string, opts?: { zoneKind?: ZoneKind; material?: ZoneMaterial }) => {
@@ -856,7 +903,13 @@ export default function RoomLayoutEditor({
                   <div className="space-y-3 pt-4 border-t border-border/50">
                     <p className="text-xs font-bold uppercase text-muted flex items-center gap-1"><Layers className="w-3.5 h-3.5" /> Sol de la salle</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {(Object.keys(floorTypeLabels) as FloorType[]).filter((k) => k !== 'custom').map((type) => (
+                  {(
+                    [
+                      'boisPanel', 'boisHex', 'boisAmber', 'boisRustique', 'bois', 'parquet', 'chevron',
+                      'carrelage', 'marbre', 'damier', 'terrazzo', 'pierre', 'moquette',
+                      'herbe', 'pelouse', 'gazonSynth', 'prairie', 'sable', 'beton', 'epoxy', 'brique',
+                    ] as FloorType[]
+                  ).filter((k) => k in floorTypeLabels).map((type) => (
                     <button
                       key={type}
                       type="button"
@@ -2270,9 +2323,24 @@ export default function RoomLayoutEditor({
         <Plus className="w-3.5 h-3.5" /> Table
       </button>
       {caps.canAddRows ? (
-        <button type="button" onClick={addRow} className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-border text-foreground rounded-[var(--radius-button)] text-xs font-bold">
-          <Plus className="w-3.5 h-3.5" /> Rangée
-        </button>
+        <>
+          <button type="button" onClick={addRow} className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-border text-foreground rounded-[var(--radius-button)] text-xs font-bold">
+            <Plus className="w-3.5 h-3.5" /> Rangée
+          </button>
+          <button
+            type="button"
+            onClick={() => setQuickCreate(quickCreate === 'chairs' ? null : 'chairs')}
+            className={cn(
+              'inline-flex items-center gap-1 px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
+              quickCreate === 'chairs'
+                ? 'bg-indigo-50 border-indigo-300 text-indigo-900'
+                : 'bg-white border-border text-foreground',
+            )}
+            title="Créer plusieurs groupes de chaises en une fois"
+          >
+            Groupes chaises
+          </button>
+        </>
       ) : null}
       {caps.canZones ? (
         <>
@@ -2309,7 +2377,19 @@ export default function RoomLayoutEditor({
         </button>
       ) : null}
       {caps.fixtureKinds.includes('aisle') ? (
-        <button type="button" onClick={() => addFixture('aisle')} className="px-3 py-1.5 bg-surface-muted border border-border text-muted rounded-[var(--radius-button)] text-xs font-bold">Allée</button>
+        <button
+          type="button"
+          onClick={() => setQuickCreate(quickCreate === 'aisles' ? null : 'aisles')}
+          className={cn(
+            'px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
+            quickCreate === 'aisles'
+              ? 'bg-slate-200 border-slate-400 text-slate-900'
+              : 'bg-surface-muted border-border text-muted',
+          )}
+          title="Définir le nombre d’allées"
+        >
+          Allées…
+        </button>
       ) : null}
       {caps.fixtureKinds.includes('entrance') ? (
         <button type="button" onClick={() => addFixture('entrance')} className="px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-[var(--radius-button)] text-xs font-bold">Entrée</button>
@@ -2329,6 +2409,87 @@ export default function RoomLayoutEditor({
       )}
     </div>
   );
+
+  const quickCreatePanel = quickCreate ? (
+    <div className="flex flex-wrap items-end gap-3 p-3 rounded-[var(--radius-card)] border border-border bg-surface-muted/60">
+      {quickCreate === 'aisles' && (
+        <>
+          <label className="text-[10px] font-bold uppercase text-muted space-y-1">
+            <span>Nombre d’allées</span>
+            <input
+              type="number"
+              min={1}
+              max={12}
+              value={aisleCount}
+              onChange={(e) => setAisleCount(Math.max(1, Math.min(12, parseInt(e.target.value, 10) || 1)))}
+              className="block w-24 px-2 py-1.5 rounded border border-border text-sm font-bold text-foreground bg-surface"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={addAislesQuick}
+            className="px-3 py-1.5 bg-primary text-white rounded-[var(--radius-button)] text-xs font-bold"
+          >
+            Créer {aisleCount} allée{aisleCount > 1 ? 's' : ''}
+          </button>
+        </>
+      )}
+      {quickCreate === 'chairs' && (
+        <>
+          <label className="text-[10px] font-bold uppercase text-muted space-y-1">
+            <span>Groupes</span>
+            <input
+              type="number"
+              min={1}
+              max={8}
+              value={chairGroups}
+              onChange={(e) => setChairGroups(Math.max(1, Math.min(8, parseInt(e.target.value, 10) || 1)))}
+              className="block w-20 px-2 py-1.5 rounded border border-border text-sm font-bold text-foreground bg-surface"
+            />
+          </label>
+          <label className="text-[10px] font-bold uppercase text-muted space-y-1">
+            <span>Rangées / groupe</span>
+            <input
+              type="number"
+              min={1}
+              max={20}
+              value={rowsPerGroup}
+              onChange={(e) => setRowsPerGroup(Math.max(1, Math.min(20, parseInt(e.target.value, 10) || 1)))}
+              className="block w-20 px-2 py-1.5 rounded border border-border text-sm font-bold text-foreground bg-surface"
+            />
+          </label>
+          <label className="text-[10px] font-bold uppercase text-muted space-y-1">
+            <span>Sièges / rangée</span>
+            <input
+              type="number"
+              min={2}
+              max={40}
+              value={seatsPerRow}
+              onChange={(e) => setSeatsPerRow(Math.max(2, Math.min(40, parseInt(e.target.value, 10) || 2)))}
+              className="block w-20 px-2 py-1.5 rounded border border-border text-sm font-bold text-foreground bg-surface"
+            />
+          </label>
+          <p className="text-[10px] text-muted self-center">
+            = {chairGroups * rowsPerGroup} rangées · {chairGroups * rowsPerGroup * seatsPerRow} places
+          </p>
+          <button
+            type="button"
+            onClick={addChairGroupsQuick}
+            className="px-3 py-1.5 bg-primary text-white rounded-[var(--radius-button)] text-xs font-bold"
+          >
+            Créer les groupes
+          </button>
+        </>
+      )}
+      <button
+        type="button"
+        onClick={() => setQuickCreate(null)}
+        className="px-2 py-1.5 text-xs font-bold text-muted hover:text-foreground ml-auto"
+      >
+        Fermer
+      </button>
+    </div>
+  ) : null;
 
   const header = (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 shrink-0">
@@ -2370,6 +2531,7 @@ export default function RoomLayoutEditor({
               {header}
               {templateBar}
               {toolbar}
+              {quickCreatePanel}
             </div>
             <div className="flex flex-col md:flex-row flex-1 min-h-0 gap-2 sm:gap-3 p-2 sm:p-3 overflow-hidden">
               <div className="flex-1 min-w-0 min-h-[50dvh] md:min-h-0 flex flex-col">
@@ -2402,6 +2564,7 @@ export default function RoomLayoutEditor({
         {header}
         {templateBar}
         {toolbar}
+        {quickCreatePanel}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4">
           <div className="lg:col-span-2 min-h-0">{renderCanvas('em-plan-stage lg:aspect-[16/10] lg:h-auto lg:min-h-[320px]')}</div>
           <div className="max-h-[36dvh] lg:max-h-[520px] overflow-y-auto">{renderEditPanel()}</div>

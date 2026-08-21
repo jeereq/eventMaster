@@ -307,18 +307,90 @@ export function createBlueprintTable(
 
 export function createBlueprintRow(
   index: number,
-  defaults: { seatCount?: number; chairType?: ChairType; tier?: number } = {},
+  defaults: {
+    seatCount?: number;
+    chairType?: ChairType;
+    tier?: number;
+    x?: number;
+    y?: number;
+    label?: string;
+    groupId?: string;
+    curve?: number;
+  } = {},
 ): Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'row' }> {
   return {
     id: makeLayoutId('row'),
     kind: 'row',
-    label: `Rangée ${index}`,
+    label: defaults.label ?? `Rangée ${index}`,
     seatCount: defaults.seatCount ?? 10,
     chairType: defaults.chairType ?? 'THEATER',
     tier: defaults.tier ?? 0,
-    x: 50,
-    y: 20 + index * 10,
+    x: defaults.x ?? 50,
+    y: defaults.y ?? 20 + index * 8,
+    ...(defaults.groupId ? { groupId: defaults.groupId } : {}),
+    ...(defaults.curve != null ? { curve: defaults.curve } : {}),
   };
+}
+
+/** Crée plusieurs allées espacées simplement (nombre défini par l’utilisateur). */
+export function createAislesBatch(
+  count: number,
+  existingAisleCount = 0,
+): RoomLayoutBlueprint['fixtures'] {
+  const n = Math.max(1, Math.min(12, Math.round(count)));
+  const fixtures: RoomLayoutBlueprint['fixtures'] = [];
+  for (let i = 0; i < n; i += 1) {
+    const t = n === 1 ? 0.5 : i / (n - 1);
+    const x = 18 + t * 64;
+    fixtures.push({
+      ...createBlueprintFixture('aisle'),
+      id: makeLayoutId('aisle'),
+      x: Math.max(8, Math.min(88, x - 2)),
+      y: 16,
+      w: n > 4 ? 3 : 4,
+      h: 68,
+      label: n === 1 ? 'Allée centrale' : `Allée ${existingAisleCount + i + 1}`,
+    });
+  }
+  return fixtures;
+}
+
+/**
+ * Crée des groupes de rangées de chaises.
+ * Ex. 3 groupes × 4 rangées × 12 sièges.
+ */
+export function createChairRowGroups(opts: {
+  groupCount: number;
+  rowsPerGroup: number;
+  seatsPerRow: number;
+  startRowIndex?: number;
+  chairType?: ChairType;
+}): Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'row' }>[] {
+  const groups = Math.max(1, Math.min(8, Math.round(opts.groupCount)));
+  const rowsPer = Math.max(1, Math.min(20, Math.round(opts.rowsPerGroup)));
+  const seats = Math.max(2, Math.min(40, Math.round(opts.seatsPerRow)));
+  const start = opts.startRowIndex ?? 1;
+  const rows: Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'row' }>[] = [];
+  let rowIdx = start;
+  for (let g = 0; g < groups; g += 1) {
+    const groupId = makeLayoutId('grp');
+    const xBase = groups === 1 ? 50 : 22 + (g / Math.max(1, groups - 1)) * 56;
+    for (let r = 0; r < rowsPer; r += 1) {
+      rows.push(
+        createBlueprintRow(rowIdx, {
+          seatCount: seats,
+          chairType: opts.chairType ?? 'THEATER',
+          tier: r,
+          x: xBase,
+          y: 22 + r * 7,
+          label: groups > 1 ? `Groupe ${g + 1} · R${r + 1}` : `Rangée ${rowIdx}`,
+          groupId,
+        }),
+      );
+      rowIdx += 1;
+    }
+  }
+  return rows;
 }
 
 export function createBlueprintZone(

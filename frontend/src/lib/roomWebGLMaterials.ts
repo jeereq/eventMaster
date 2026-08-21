@@ -57,8 +57,11 @@ export function resolveFloorMap(
   } else if (type === 'beton') {
     roughness = 0.68;
     metalness = 0.08;
-  } else if (type === 'parquet' || type === 'chevron' || type === 'bois') {
-    roughness = 0.48;
+  } else if (
+    type === 'parquet' || type === 'chevron' || type === 'bois'
+    || type === 'boisPanel' || type === 'boisHex' || type === 'boisAmber' || type === 'boisRustique'
+  ) {
+    roughness = type === 'boisAmber' ? 0.38 : type === 'boisPanel' ? 0.62 : 0.48;
     metalness = 0.06;
   }
 
@@ -239,6 +242,17 @@ export function getWallTexture(style: WallTextureStyle, colorOverride?: string):
   metalness: number;
 } {
   const base = colorOverride ?? WALL_TEXTURE_COLORS[style];
+
+  if (style === 'wood') {
+    const photo = loadTiledTexture('/floors/wood-amber.png', 2.4, 2.4);
+    return {
+      map: photo,
+      color: colorOverride && colorOverride !== '#ffffff' ? colorOverride : '#ffffff',
+      roughness: 0.55,
+      metalness: 0.05,
+    };
+  }
+
   const key = `wall:${style}:${base}`;
 
   const map = makeCanvasTexture(key, (ctx, size) => {
@@ -264,34 +278,6 @@ export function getWallTexture(style: WallTextureStyle, colorOverride?: string):
         }
       }
       noise(ctx, size, 0.14);
-      return;
-    }
-
-    if (style === 'wood') {
-      const grad = ctx.createLinearGradient(0, 0, size, 0);
-      grad.addColorStop(0, '#4a3018');
-      grad.addColorStop(0.35, '#8b6914');
-      grad.addColorStop(0.55, '#c4a06a');
-      grad.addColorStop(0.75, '#6b4a22');
-      grad.addColorStop(1, '#5c3d1e');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, size, size);
-      for (let i = 0; i < 28; i += 1) {
-        ctx.strokeStyle = `rgba(40,24,8,${0.06 + Math.random() * 0.14})`;
-        ctx.lineWidth = 0.8 + Math.random();
-        ctx.beginPath();
-        ctx.moveTo(0, (i / 28) * size + Math.random() * 4);
-        ctx.bezierCurveTo(size * 0.25, (i / 28) * size + 10, size * 0.6, (i / 28) * size - 8, size, (i / 28) * size + 5);
-        ctx.stroke();
-      }
-      for (let i = 0; i < 6; i += 1) {
-        const cy = Math.random() * size;
-        ctx.strokeStyle = 'rgba(90,50,20,0.2)';
-        ctx.beginPath();
-        ctx.ellipse(Math.random() * size, cy, 8 + Math.random() * 12, 4, 0, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-      noise(ctx, size, 0.12);
       return;
     }
 
@@ -353,10 +339,9 @@ export function getWallTexture(style: WallTextureStyle, colorOverride?: string):
     noise(ctx, size, 0.14);
   });
 
-  map.repeat.set(style === 'brick' ? 4 : style === 'wood' ? 2.5 : 3, style === 'brick' ? 3 : 2);
+  map.repeat.set(style === 'brick' ? 4 : 3, style === 'brick' ? 3 : 2);
 
   const roughness =
-    style === 'wood' ? 0.7 :
     style === 'concrete' ? 0.9 :
     style === 'stone' ? 0.92 :
     style === 'wallpaper' ? 0.8 :
@@ -588,9 +573,9 @@ export function resolveZoneMaterialMap(material: ZoneMaterial | undefined): {
   }
   if (mat === 'parquet' || mat === 'wood') {
     return {
-      map: loadTiledTexture('/floors/parquet-oak.svg', 2, 2),
+      map: loadTiledTexture('/floors/wood-amber.png', 1.8, 1.8),
       color: '#ffffff',
-      roughness: 0.55,
+      roughness: 0.42,
       metalness: 0.06,
       thicknessM: 0.02,
     };
