@@ -40,6 +40,8 @@ export type WallTextureStyle = 'plaster' | 'brick' | 'wood' | 'concrete' | 'wall
 export type DoorStyle = 'single' | 'double' | 'sliding' | 'arch' | 'glass';
 /** Styles de fenêtre configurables. */
 export type WindowStyle = 'rectangular' | 'arched' | 'bay' | 'french';
+/** Matériau d’ouverture (porte / fenêtre). */
+export type OpeningMaterial = 'wood' | 'glass' | 'metal' | 'painted';
 
 export interface RoomWallOpening {
   id: string;
@@ -51,7 +53,14 @@ export interface RoomWallOpening {
   /** Hauteur du bas de l’ouverture (0 = sol pour portes). */
   sillM?: number;
   style: DoorStyle | WindowStyle;
+  /** Bois, vitre, métal, peint. */
+  material?: OpeningMaterial;
   color?: string;
+  /** Couleur du dormant / huisserie. */
+  frameColor?: string;
+  /** Paillasson devant la porte. */
+  hasMat?: boolean;
+  matColor?: string;
 }
 
 export interface RoomWallSegment {
@@ -567,14 +576,21 @@ export const doorStyleLabels: Record<DoorStyle, string> = {
   double: 'Porte double',
   sliding: 'Coulissante',
   arch: 'Arche',
-  glass: 'Vitrée',
+  glass: 'Vitrée (panneaux)',
 };
 
 export const windowStyleLabels: Record<WindowStyle, string> = {
   rectangular: 'Rectangulaire',
   arched: 'En arche',
-  bay: 'Baie',
-  french: 'Française',
+  bay: 'Baie vitrée',
+  french: 'Française (croisillons)',
+};
+
+export const openingMaterialLabels: Record<OpeningMaterial, string> = {
+  wood: 'Bois',
+  glass: 'Vitre / verre',
+  metal: 'Métal',
+  painted: 'Peint',
 };
 
 export const WALL_TEXTURE_COLORS: Record<WallTextureStyle, string> = {
@@ -591,26 +607,34 @@ export function createWallOpening(
   partial: Partial<RoomWallOpening> = {},
 ): RoomWallOpening {
   if (kind === 'door') {
+    const style = (partial.style as DoorStyle) ?? 'single';
     return {
       id: makeLayoutId('door'),
       kind: 'door',
       t: partial.t ?? 0.5,
-      widthM: partial.widthM ?? 0.9,
-      heightM: partial.heightM ?? 2.1,
-      sillM: 0,
-      style: (partial.style as DoorStyle) ?? 'single',
-      color: partial.color ?? '#5c4033',
+      widthM: partial.widthM ?? (style === 'double' ? 1.6 : style === 'sliding' ? 1.2 : 0.9),
+      heightM: partial.heightM ?? (style === 'arch' ? 2.4 : 2.1),
+      sillM: partial.sillM ?? 0,
+      style,
+      material: partial.material ?? (style === 'glass' ? 'glass' : 'wood'),
+      color: partial.color ?? '#6b4423',
+      frameColor: partial.frameColor ?? '#3f2a1a',
+      hasMat: partial.hasMat ?? true,
+      matColor: partial.matColor ?? '#1e3a5f',
     };
   }
+  const style = (partial.style as WindowStyle) ?? 'rectangular';
   return {
     id: makeLayoutId('window'),
     kind: 'window',
     t: partial.t ?? 0.5,
-    widthM: partial.widthM ?? 1.2,
-    heightM: partial.heightM ?? 1.2,
+    widthM: partial.widthM ?? (style === 'bay' ? 1.8 : style === 'french' ? 1.4 : 1.2),
+    heightM: partial.heightM ?? (style === 'arched' ? 1.5 : 1.2),
     sillM: partial.sillM ?? 0.9,
-    style: (partial.style as WindowStyle) ?? 'rectangular',
+    style,
+    material: partial.material ?? (style === 'bay' || style === 'french' ? 'glass' : 'glass'),
     color: partial.color ?? '#93c5fd',
+    frameColor: partial.frameColor ?? '#f8fafc',
   };
 }
 

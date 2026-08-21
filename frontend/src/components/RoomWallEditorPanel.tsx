@@ -4,6 +4,7 @@ import React from 'react';
 import { DoorOpen, Plus, Trash2, BrickWall } from 'lucide-react';
 import {
   DoorStyle,
+  OpeningMaterial,
   RoomLayoutBlueprint,
   RoomWallOpening,
   RoomWallSegment,
@@ -12,6 +13,7 @@ import {
   createWallOpening,
   createWallSegment,
   doorStyleLabels,
+  openingMaterialLabels,
   wallLengthMeters,
   wallTextureLabels,
   wallsFromRoomOutline,
@@ -385,8 +387,8 @@ export default function RoomWallEditorPanel({
                     <input
                       type="number"
                       min={0.4}
-                      max={3}
-                      step={0.1}
+                      max={4}
+                      step={0.05}
                       value={op.widthM}
                       onChange={(e) => updateOpening(selected.id, op.id, { widthM: parseFloat(e.target.value) || 0.9 })}
                       className="w-full px-1 py-0.5 rounded border text-[10px]"
@@ -398,47 +400,108 @@ export default function RoomWallEditorPanel({
                       type="number"
                       min={0.4}
                       max={3.5}
-                      step={0.1}
+                      step={0.05}
                       value={op.heightM}
                       onChange={(e) => updateOpening(selected.id, op.id, { heightM: parseFloat(e.target.value) || 2 })}
                       className="w-full px-1 py-0.5 rounded border text-[10px]"
                     />
                   </label>
                 </div>
-                {op.kind === 'door' ? (
-                  <p className="text-[9px] text-muted">Hauteur de porte typique : 2,0 – 2,2 m (double : largeur ~1,6 m).</p>
-                ) : (
-                  <label className="text-[9px] space-y-0.5 block">
-                    <span className="text-muted">Allège (bas) m</span>
+                <label className="text-[9px] space-y-0.5 block">
+                  <span className="text-muted">{op.kind === 'door' ? 'Seuil / bas (m)' : 'Allège bas (m)'}</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={2.5}
+                    step={0.05}
+                    value={op.sillM ?? (op.kind === 'door' ? 0 : 0.9)}
+                    onChange={(e) => updateOpening(selected.id, op.id, { sillM: parseFloat(e.target.value) || 0 })}
+                    className="w-full px-1 py-0.5 rounded border text-[10px]"
+                  />
+                </label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <label className="text-[9px] space-y-0.5">
+                    <span className="text-muted">Style</span>
+                    <select
+                      value={op.style}
+                      onChange={(e) => updateOpening(selected.id, op.id, {
+                        style: e.target.value as DoorStyle | WindowStyle,
+                      })}
+                      className="w-full px-1 py-1 rounded border text-[10px]"
+                    >
+                      {op.kind === 'door'
+                        ? (Object.keys(doorStyleLabels) as DoorStyle[]).map((k) => (
+                            <option key={k} value={k}>{doorStyleLabels[k]}</option>
+                          ))
+                        : (Object.keys(windowStyleLabels) as WindowStyle[]).map((k) => (
+                            <option key={k} value={k}>{windowStyleLabels[k]}</option>
+                          ))}
+                    </select>
+                  </label>
+                  <label className="text-[9px] space-y-0.5">
+                    <span className="text-muted">Matériau</span>
+                    <select
+                      value={op.material ?? (op.kind === 'door' ? 'wood' : 'glass')}
+                      onChange={(e) => updateOpening(selected.id, op.id, {
+                        material: e.target.value as OpeningMaterial,
+                      })}
+                      className="w-full px-1 py-1 rounded border text-[10px]"
+                    >
+                      {(Object.keys(openingMaterialLabels) as OpeningMaterial[]).map((k) => (
+                        <option key={k} value={k}>{openingMaterialLabels[k]}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <label className="text-[9px] space-y-0.5">
+                    <span className="text-muted">Couleur vantail</span>
                     <input
-                      type="number"
-                      min={0}
-                      max={2}
-                      step={0.1}
-                      value={op.sillM ?? 0.9}
-                      onChange={(e) => updateOpening(selected.id, op.id, { sillM: parseFloat(e.target.value) || 0 })}
-                      className="w-full px-1 py-0.5 rounded border text-[10px]"
+                      type="color"
+                      value={op.color ?? '#6b4423'}
+                      onChange={(e) => updateOpening(selected.id, op.id, { color: e.target.value })}
+                      className="w-full h-7 rounded border cursor-pointer"
                     />
                   </label>
+                  <label className="text-[9px] space-y-0.5">
+                    <span className="text-muted">Couleur cadre</span>
+                    <input
+                      type="color"
+                      value={op.frameColor ?? '#3f2a1a'}
+                      onChange={(e) => updateOpening(selected.id, op.id, { frameColor: e.target.value })}
+                      className="w-full h-7 rounded border cursor-pointer"
+                    />
+                  </label>
+                </div>
+                {op.kind === 'door' && (
+                  <div className="space-y-1.5 pt-1 border-t border-border/60">
+                    <label className="flex items-center gap-2 text-[9px] text-muted cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={op.hasMat !== false}
+                        onChange={(e) => updateOpening(selected.id, op.id, { hasMat: e.target.checked })}
+                        className="rounded border-border"
+                      />
+                      Paillasson / tapis d&apos;entrée
+                    </label>
+                    {op.hasMat !== false && (
+                      <label className="text-[9px] space-y-0.5 block">
+                        <span className="text-muted">Couleur tapis</span>
+                        <input
+                          type="color"
+                          value={op.matColor ?? '#1e3a5f'}
+                          onChange={(e) => updateOpening(selected.id, op.id, { matColor: e.target.value })}
+                          className="w-full h-7 rounded border cursor-pointer"
+                        />
+                      </label>
+                    )}
+                  </div>
                 )}
-                <label className="text-[9px] space-y-0.5 block">
-                  <span className="text-muted">Style</span>
-                  <select
-                    value={op.style}
-                    onChange={(e) => updateOpening(selected.id, op.id, {
-                      style: e.target.value as DoorStyle | WindowStyle,
-                    })}
-                    className="w-full px-1 py-1 rounded border text-[10px]"
-                  >
-                    {op.kind === 'door'
-                      ? (Object.keys(doorStyleLabels) as DoorStyle[]).map((k) => (
-                          <option key={k} value={k}>{doorStyleLabels[k]}</option>
-                        ))
-                      : (Object.keys(windowStyleLabels) as WindowStyle[]).map((k) => (
-                          <option key={k} value={k}>{windowStyleLabels[k]}</option>
-                        ))}
-                  </select>
-                </label>
+                <p className="text-[9px] text-muted leading-snug">
+                  {op.kind === 'door'
+                    ? 'Porte : largeur / hauteur / matériau (bois, vitre…) et tapis devant.'
+                    : 'Fenêtre : allège = hauteur du bas ; baie / française / arche pour le style.'}
+                </p>
               </div>
             ))}
           </div>

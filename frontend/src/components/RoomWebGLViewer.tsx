@@ -134,47 +134,262 @@ function OpeningMesh({
 }) {
   const localX = (opening.t - 0.5) * wallLengthM;
   const sill = opening.sillM ?? (opening.kind === 'door' ? 0 : 0.9);
-  const h = Math.min(opening.heightM, wallHeightM - sill - 0.05);
-  const w = Math.min(opening.widthM, wallLengthM * 0.45);
-  const y = sill + h / 2;
+  const h = Math.min(opening.heightM, Math.max(0.3, wallHeightM - sill - 0.05));
+  const w = Math.min(opening.widthM, wallLengthM * 0.85);
   const isDoor = opening.kind === 'door';
-  const color = opening.color ?? (isDoor ? '#5c4033' : '#93c5fd');
-  const depth = wallThicknessM + 0.06;
+  const style = opening.style;
+  const material = opening.material ?? (isDoor ? (style === 'glass' ? 'glass' : 'wood') : 'glass');
+  const leafColor = opening.color ?? (isDoor ? '#6b4423' : '#93c5fd');
+  const frameColor = opening.frameColor ?? (isDoor ? '#3f2a1a' : '#f1f5f9');
+  const depth = wallThicknessM + 0.08;
+  const frameT = 0.06;
   const woodMap = useMemo(() => {
-    if (!isDoor || typeof document === 'undefined') return null;
-    return getWallTexture('wood').map;
-  }, [isDoor]);
+    if (typeof document === 'undefined') return null;
+    if (material === 'wood' || (isDoor && material !== 'glass' && material !== 'metal')) {
+      return getWallTexture('wood').map;
+    }
+    return null;
+  }, [material, isDoor]);
+
+  const glassProps = {
+    color: '#bfdbfe',
+    transparent: true,
+    opacity: 0.35,
+    roughness: 0.05,
+    metalness: 0.4,
+  } as const;
+
+  const leafMatProps = (() => {
+    if (material === 'glass' || style === 'glass') {
+      return { color: '#e0f2fe', transparent: true, opacity: 0.55, roughness: 0.08, metalness: 0.35, map: undefined as THREE.Texture | undefined };
+    }
+    if (material === 'metal') {
+      return { color: leafColor, transparent: false, opacity: 1, roughness: 0.25, metalness: 0.85, map: undefined as THREE.Texture | undefined };
+    }
+    if (material === 'painted') {
+      return { color: leafColor, transparent: false, opacity: 1, roughness: 0.65, metalness: 0.05, map: undefined as THREE.Texture | undefined };
+    }
+    return {
+      color: woodMap ? '#ffffff' : leafColor,
+      transparent: false,
+      opacity: 1,
+      roughness: 0.55,
+      metalness: 0.08,
+      map: woodMap ?? undefined,
+    };
+  })();
+
+  const arch = style === 'arch' || style === 'arched';
+  const leafH = arch ? h * 0.72 : h;
+  const archR = w * 0.48;
+
+  // Position relative to wall center: openings were at y = sill + h/2 with wall at wallH/2
+  // Wall group is at wallH/2, OpeningMesh was at localY = sill+h/2 relative to group... 
+  // Looking at old code: group position={[localX, y, 0]} where y = sill + h/2, and wall group is at wallH/2.
+  // So opening center in wall-local Y is sill + h/2 (from floor), but wall mesh goes from -wallH/2 to +wallH/2.
+  // Old code used y = sill + h/2 as child of wall group at wallH/2, so world Y = wallH/2 + (sill+h/2) which is WRONG (too high)!
+  // Actually wall group position is [midX, wallH/2, midZ], children with y=sill+h/2 end up at wallH/2+sill+h/2.
+  // For door sill=0 h=2.1 wallH=3: center at 1.05+1.5=2.55 from floor, door extends 1.5 to 3.6 - broken.
+  // Wait - maybe they intended opening y relative to wall center differently.
+  // Fix: opening center should be at sill + h/2 - wallH/2 in wall-local coordinates.
+  const localY = sill + h / 2 - wallHeightM / 2;
 
   return (
-    <group position={[localX, y, 0]}>
-      <mesh castShadow>
-        <boxGeometry args={[w, h, depth]} />
-        <meshStandardMaterial
-          color={isDoor ? '#ffffff' : color}
-          map={isDoor ? woodMap ?? undefined : undefined}
-          transparent={!isDoor}
-          opacity={isDoor ? 1 : 0.45}
-          roughness={isDoor ? 0.55 : 0.15}
-          metalness={isDoor ? 0.08 : 0.35}
-        />
+    <group position={[localX, localY, 0]}>
+      {/* Dormant / cadre */}
+      <mesh position={[0, 0, 0]} castShadow>
+        <boxGeometry args={[w + frameT * 2, h + frameT * 2, depth * 0.95]} />
+        <meshStandardMaterial color={frameColor} roughness={0.7} metalness={material === 'metal' ? 0.6 : 0.05} />
       </mesh>
-      {isDoor && opening.style === 'double' && (
-        <mesh position={[0, 0, depth / 2 + 0.01]}>
-          <boxGeometry args={[0.04, h * 0.95, 0.02]} />
-          <meshStandardMaterial color="#2a1810" />
+      {/* Vide intérieur (couleur mur sombre pour simuler l’ouverture) */}
+      <mesh position={[0, 0, 0]}>
+        <boxGeometry args={[w, h, depth * 1.05]} />
+        <meshStandardMaterial color="#1c1917" roughness={1} />
+      </mesh>
+
+      {/* Seuil / allège */}
+      <mesh position={[0, -h / 2 + 0.03, depth * 0.15]} receiveShadow>
+        <boxGeometry args={[w + 0.08, 0.06, depth * 0.7]} />
+        <meshStandardMaterial color={isDoor ? '#57534e' : frameColor} roughness={0.55} metalness={0.2} />
+      </mesh>
+
+      {/* Arche (linteau courbé) */}
+      {arch && (
+        <mesh position={[0, -h / 2 + leafH + archR * 0.35, depth * 0.05]} castShadow>
+          <cylinderGeometry args={[archR, archR, depth * 0.7, 16, 1, false, 0, Math.PI]} />
+          <meshStandardMaterial
+            color={leafMatProps.color}
+            map={leafMatProps.map}
+            transparent={leafMatProps.transparent}
+            opacity={leafMatProps.opacity}
+            roughness={leafMatProps.roughness}
+            metalness={leafMatProps.metalness}
+          />
         </mesh>
       )}
-      {isDoor && (
-        <mesh position={[w * 0.35, 0, depth / 2 + 0.02]}>
-          <sphereGeometry args={[0.04, 8, 8]} />
-          <meshStandardMaterial color="#c9a227" metalness={0.85} roughness={0.15} />
+
+      {/* Vantaux de porte */}
+      {isDoor && style === 'double' && (
+        <>
+          {([-1, 1] as const).map((side) => (
+            <group key={side} position={[side * (w * 0.25 + 0.01), -h / 2 + leafH / 2, depth * 0.12]}>
+              <mesh castShadow>
+                <boxGeometry args={[w * 0.46, leafH * 0.98, 0.05]} />
+                <meshStandardMaterial {...leafMatProps} />
+              </mesh>
+              {material === 'glass' && (
+                <mesh position={[0, 0.1, 0.03]}>
+                  <boxGeometry args={[w * 0.32, leafH * 0.55, 0.02]} />
+                  <meshStandardMaterial {...glassProps} />
+                </mesh>
+              )}
+              {material === 'wood' && (
+                <>
+                  <mesh position={[0, leafH * 0.18, 0.03]}>
+                    <boxGeometry args={[w * 0.36, leafH * 0.28, 0.02]} />
+                    <meshStandardMaterial color="#4a2f1a" map={woodMap ?? undefined} roughness={0.6} />
+                  </mesh>
+                  <mesh position={[0, -leafH * 0.22, 0.03]}>
+                    <boxGeometry args={[w * 0.36, leafH * 0.28, 0.02]} />
+                    <meshStandardMaterial color="#4a2f1a" map={woodMap ?? undefined} roughness={0.6} />
+                  </mesh>
+                </>
+              )}
+              <mesh position={[side * -w * 0.15, 0, 0.04]}>
+                <sphereGeometry args={[0.035, 10, 10]} />
+                <meshStandardMaterial color="#c9a227" metalness={0.9} roughness={0.15} />
+              </mesh>
+            </group>
+          ))}
+        </>
+      )}
+
+      {isDoor && style === 'sliding' && (
+        <>
+          <mesh position={[-w * 0.12, -h / 2 + leafH / 2, depth * 0.2]} castShadow>
+            <boxGeometry args={[w * 0.55, leafH * 0.98, 0.04]} />
+            <meshStandardMaterial {...leafMatProps} />
+          </mesh>
+          <mesh position={[w * 0.18, -h / 2 + leafH / 2, depth * 0.08]} castShadow>
+            <boxGeometry args={[w * 0.55, leafH * 0.98, 0.04]} />
+            <meshStandardMaterial {...leafMatProps} transparent opacity={material === 'glass' ? 0.45 : 0.92} />
+          </mesh>
+          <mesh position={[0, h / 2 - 0.04, depth * 0.15]}>
+            <boxGeometry args={[w * 0.95, 0.04, 0.06]} />
+            <meshStandardMaterial color="#64748b" metalness={0.7} roughness={0.3} />
+          </mesh>
+        </>
+      )}
+
+      {isDoor && style !== 'double' && style !== 'sliding' && (
+        <group position={[style === 'glass' ? 0 : 0, -h / 2 + leafH / 2, depth * 0.12]}>
+          <mesh castShadow>
+            <boxGeometry args={[w * 0.92, leafH * 0.98, 0.05]} />
+            <meshStandardMaterial {...leafMatProps} />
+          </mesh>
+          {(material === 'glass' || style === 'glass') && (
+            <>
+              <mesh position={[0, leafH * 0.15, 0.03]}>
+                <boxGeometry args={[w * 0.7, leafH * 0.4, 0.02]} />
+                <meshStandardMaterial {...glassProps} />
+              </mesh>
+              <mesh position={[0, -leafH * 0.22, 0.03]}>
+                <boxGeometry args={[w * 0.7, leafH * 0.28, 0.02]} />
+                <meshStandardMaterial {...glassProps} />
+              </mesh>
+            </>
+          )}
+          {material === 'wood' && style !== 'glass' && (
+            <>
+              <mesh position={[0, leafH * 0.2, 0.03]}>
+                <boxGeometry args={[w * 0.7, leafH * 0.32, 0.02]} />
+                <meshStandardMaterial color="#4a2f1a" map={woodMap ?? undefined} roughness={0.6} />
+              </mesh>
+              <mesh position={[0, -leafH * 0.22, 0.03]}>
+                <boxGeometry args={[w * 0.7, leafH * 0.32, 0.02]} />
+                <meshStandardMaterial color="#4a2f1a" map={woodMap ?? undefined} roughness={0.6} />
+              </mesh>
+            </>
+          )}
+          <mesh position={[w * 0.32, 0, 0.04]}>
+            <sphereGeometry args={[0.04, 10, 10]} />
+            <meshStandardMaterial color="#c9a227" metalness={0.9} roughness={0.15} />
+          </mesh>
+        </group>
+      )}
+
+      {/* Paillasson */}
+      {isDoor && opening.hasMat !== false && (
+        <mesh position={[0, -h / 2 - sill + 0.01, depth / 2 + 0.35]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+          <planeGeometry args={[Math.max(0.7, w * 0.85), 0.55]} />
+          <meshStandardMaterial color={opening.matColor ?? '#1e3a5f'} roughness={0.95} />
         </mesh>
       )}
+
+      {/* Fenêtres */}
       {!isDoor && (
-        <mesh position={[0, 0, depth / 2 + 0.01]}>
-          <boxGeometry args={[w * 0.88, h * 0.88, 0.015]} />
-          <meshStandardMaterial color="#bfdbfe" transparent opacity={0.4} roughness={0.08} metalness={0.5} />
-        </mesh>
+        <group position={[0, 0, style === 'bay' ? depth * 0.35 : depth * 0.1]}>
+          {style === 'bay' && (
+            <mesh position={[0, 0, depth * 0.25]} castShadow>
+              <boxGeometry args={[w * 1.05, h * 1.05, depth * 0.5]} />
+              <meshStandardMaterial color={frameColor} roughness={0.65} />
+            </mesh>
+          )}
+          <mesh castShadow>
+            <boxGeometry args={[w * 0.88, h * 0.88, 0.03]} />
+            <meshStandardMaterial {...glassProps} color={leafColor} />
+          </mesh>
+          {/* Croisillons */}
+          {(style === 'french' || style === 'rectangular') && (
+            <>
+              <mesh position={[0, 0, 0.02]}>
+                <boxGeometry args={[0.03, h * 0.85, 0.02]} />
+                <meshStandardMaterial color={frameColor} />
+              </mesh>
+              <mesh position={[0, 0, 0.02]}>
+                <boxGeometry args={[w * 0.85, 0.03, 0.02]} />
+                <meshStandardMaterial color={frameColor} />
+              </mesh>
+              {style === 'french' && (
+                <>
+                  <mesh position={[-w * 0.22, 0, 0.02]}>
+                    <boxGeometry args={[0.025, h * 0.85, 0.02]} />
+                    <meshStandardMaterial color={frameColor} />
+                  </mesh>
+                  <mesh position={[w * 0.22, 0, 0.02]}>
+                    <boxGeometry args={[0.025, h * 0.85, 0.02]} />
+                    <meshStandardMaterial color={frameColor} />
+                  </mesh>
+                  <mesh position={[0, h * 0.2, 0.02]}>
+                    <boxGeometry args={[w * 0.85, 0.025, 0.02]} />
+                    <meshStandardMaterial color={frameColor} />
+                  </mesh>
+                  <mesh position={[0, -h * 0.2, 0.02]}>
+                    <boxGeometry args={[w * 0.85, 0.025, 0.02]} />
+                    <meshStandardMaterial color={frameColor} />
+                  </mesh>
+                </>
+              )}
+            </>
+          )}
+          {style === 'bay' && (
+            <>
+              <mesh position={[-w * 0.3, 0, 0.02]}>
+                <boxGeometry args={[0.03, h * 0.85, 0.02]} />
+                <meshStandardMaterial color={frameColor} />
+              </mesh>
+              <mesh position={[w * 0.3, 0, 0.02]}>
+                <boxGeometry args={[0.03, h * 0.85, 0.02]} />
+                <meshStandardMaterial color={frameColor} />
+              </mesh>
+            </>
+          )}
+          {/* Appui de fenêtre */}
+          <mesh position={[0, -h / 2 - 0.02, depth * 0.2]} receiveShadow>
+            <boxGeometry args={[w + 0.12, 0.05, 0.18]} />
+            <meshStandardMaterial color={frameColor} roughness={0.5} />
+          </mesh>
+        </group>
       )}
     </group>
   );
