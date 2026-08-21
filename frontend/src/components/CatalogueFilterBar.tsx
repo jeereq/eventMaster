@@ -218,7 +218,7 @@ export default function CatalogueFilterBar({
 
   const chipsRow = (count > 0 || resultLabel) ? (
     <div className={cn(
-      'flex items-center gap-1.5',
+      'flex flex-wrap items-center gap-1.5 min-w-0 max-w-full',
       variant === 'float' ? 'overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none]' : 'flex-wrap',
     )}>
       {chips.map((chip, index) => (
@@ -268,7 +268,7 @@ export default function CatalogueFilterBar({
         </button>
       ) : null}
       {resultLabel && variant !== 'float' ? (
-        <span className="ml-auto text-[10px] text-muted font-medium shrink-0">{resultLabel}</span>
+        <span className="ml-auto text-[10px] text-muted font-medium w-full sm:w-auto shrink-0">{resultLabel}</span>
       ) : null}
     </div>
   ) : null;
@@ -371,8 +371,8 @@ export default function CatalogueFilterBar({
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-surface p-3 sm:p-4 space-y-3 shadow-[var(--shadow-soft)]">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+    <div className="rounded-2xl border border-border bg-surface p-3 sm:p-4 space-y-3 shadow-[var(--shadow-soft)] overflow-hidden">
+      <div className="flex flex-col gap-2 min-w-0 sm:flex-row sm:items-center">
         <div className="flex-1 min-w-0">
           <Input
             value={search}
@@ -381,7 +381,7 @@ export default function CatalogueFilterBar({
             leftIcon={<Search className="w-4 h-4" />}
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 min-w-0">
           {hasFilters && (
             <Button
               type="button"
@@ -389,6 +389,7 @@ export default function CatalogueFilterBar({
               size="sm"
               onClick={openModal}
               leftIcon={<SlidersHorizontal className="w-3.5 h-3.5" />}
+              className="shrink-0"
             >
               Filtres
               {count > 0 ? (
@@ -405,6 +406,7 @@ export default function CatalogueFilterBar({
             text="Salles, prestataires, locations et événements filtrés sur EventMaster."
             label="Partager"
             url={shareUrl}
+            className="shrink-0 px-2.5 sm:px-3"
           />
           ) : null}
           {actions}
@@ -414,11 +416,13 @@ export default function CatalogueFilterBar({
               onChange={onViewChange}
               compact={compactToggle}
               hideMap={hideMap}
-              className="flex-1 sm:flex-none justify-between sm:justify-start"
+              className="min-w-0 basis-full flex-1 justify-between overflow-hidden sm:basis-auto sm:flex-none sm:justify-start"
             />
           ) : null}
           {view === 'grid' && gridCols && onGridColsChange ? (
-            <CatalogueGridColsToggle value={gridCols} onChange={onGridColsChange} options={gridColOptions} />
+            <div className="hidden sm:block shrink-0">
+              <CatalogueGridColsToggle value={gridCols} onChange={onGridColsChange} options={gridColOptions} />
+            </div>
           ) : null}
         </div>
       </div>

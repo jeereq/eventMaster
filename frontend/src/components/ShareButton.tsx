@@ -53,7 +53,7 @@ export default function ShareButton({
         aria-label={caption}
       >
         {icon}
-        {caption}
+        <span className="hidden sm:inline">{caption}</span>
       </button>
     );
   }

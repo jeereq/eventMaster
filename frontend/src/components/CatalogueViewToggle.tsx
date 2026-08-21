@@ -164,7 +164,7 @@ export default function CatalogueViewToggle({
   return (
     <div
       className={cn(
-        'inline-flex items-center rounded-full border border-border bg-surface-muted p-0.5',
+        'flex items-center rounded-full border border-border bg-surface-muted p-0.5',
         className,
       )}
       role="group"
