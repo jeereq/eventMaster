@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Aperture, Sun, Presentation, DoorOpen,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen,
 } from 'lucide-react';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
 import ImageCropModal from '@/components/ImageCropModal';
@@ -138,6 +138,9 @@ export default function RoomLayoutEditor({
   const [chairGroups, setChairGroups] = useState(2);
   const [rowsPerGroup, setRowsPerGroup] = useState(4);
   const [seatsPerRow, setSeatsPerRow] = useState(12);
+  const [elementsFilter, setElementsFilter] = useState<'all' | LayoutSelectionItem['kind']>('all');
+  const [elementsQuery, setElementsQuery] = useState('');
+  const [elementsOpen, setElementsOpen] = useState(true);
   const webglRef = useRef<RoomWebGLCaptureApi>(null);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
@@ -673,6 +676,179 @@ export default function RoomLayoutEditor({
       ...blueprint,
       metadata: { ...blueprint.metadata, lightingPreset: p },
     }, { message: `Éclairage : ${lightingPresetLabels[p]}`, kind: 'settings' });
+  };
+
+  const canvasInventory = (() => {
+    const kindLabel: Record<LayoutSelectionItem['kind'], string> = {
+      table: 'Table',
+      row: 'Rangée',
+      zone: 'Zone',
+      chair: 'Chaise',
+      fixture: 'Élément',
+      wall: 'Mur',
+    };
+    const items: Array<{
+      kind: LayoutSelectionItem['kind'];
+      id: string;
+      title: string;
+      subtitle: string;
+    }> = [];
+
+    for (const f of blueprint.furniture) {
+      if (f.kind === 'table') {
+        items.push({
+          kind: 'table',
+          id: f.id,
+          title: f.name || `Table`,
+          subtitle: `${tableShapeLabels[f.shape] ?? f.shape} · ${f.capacity} places`,
+        });
+      } else if (f.kind === 'row') {
+        items.push({
+          kind: 'row',
+          id: f.id,
+          title: f.label || 'Rangée',
+          subtitle: `${f.seatCount} sièges`,
+        });
+      } else if (f.kind === 'zone') {
+        items.push({
+          kind: 'zone',
+          id: f.id,
+          title: f.label || 'Zone',
+          subtitle: zoneKindLabels[f.zoneKind] ?? f.zoneKind,
+        });
+      } else if (f.kind === 'chair') {
+        items.push({
+          kind: 'chair',
+          id: f.id,
+          title: f.label || (f.chairType === 'ARMCHAIR' ? 'Fauteuil' : 'Chaise'),
+          subtitle: chairTypeLabels[f.chairType] ?? f.chairType,
+        });
+      }
+    }
+
+    for (const fx of blueprint.fixtures) {
+      items.push({
+        kind: 'fixture',
+        id: fx.id,
+        title: fx.label || kindLabel.fixture,
+        subtitle: fx.kind,
+      });
+    }
+
+    for (const [i, wall] of (blueprint.walls ?? []).entries()) {
+      items.push({
+        kind: 'wall',
+        id: wall.id,
+        title: `Mur ${i + 1}`,
+        subtitle: `${wall.texture} · ${wall.heightM.toFixed(1)} m`,
+      });
+    }
+
+    const q = elementsQuery.trim().toLowerCase();
+    return items.filter((it) => {
+      if (elementsFilter !== 'all' && it.kind !== elementsFilter) return false;
+      if (!q) return true;
+      return `${it.title} ${it.subtitle} ${it.kind}`.toLowerCase().includes(q);
+    });
+  })();
+
+  const renderCanvasInventory = () => {
+    if (readOnly) return null;
+    const counts = {
+      all: blueprint.furniture.length + blueprint.fixtures.length + (blueprint.walls?.length ?? 0),
+      table: blueprint.furniture.filter((f) => f.kind === 'table').length,
+      row: blueprint.furniture.filter((f) => f.kind === 'row').length,
+      zone: blueprint.furniture.filter((f) => f.kind === 'zone').length,
+      chair: blueprint.furniture.filter((f) => f.kind === 'chair').length,
+      fixture: blueprint.fixtures.length,
+      wall: blueprint.walls?.length ?? 0,
+    };
+    const filters: Array<{ id: typeof elementsFilter; label: string; n: number }> = [
+      { id: 'all', label: 'Tous', n: counts.all },
+      { id: 'table', label: 'Tables', n: counts.table },
+      { id: 'row', label: 'Rangées', n: counts.row },
+      { id: 'zone', label: 'Zones', n: counts.zone },
+      { id: 'chair', label: 'Chaises', n: counts.chair },
+      { id: 'fixture', label: 'Fixtures', n: counts.fixture },
+      { id: 'wall', label: 'Murs', n: counts.wall },
+    ];
+
+    return (
+      <div className="border border-border rounded-[var(--radius-card)] bg-surface overflow-hidden shadow-sm">
+        <button
+          type="button"
+          className={cn(
+            'w-full flex items-center justify-between p-3 text-left text-sm font-semibold transition-colors',
+            elementsOpen ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50',
+          )}
+          onClick={() => setElementsOpen((v) => !v)}
+        >
+          <span className="flex items-center gap-2">
+            <ListTree className="w-4 h-4" />
+            Éléments du plan
+            <span className="text-[10px] font-bold text-muted tabular-nums">({counts.all})</span>
+          </span>
+          <span className="text-[10px] text-muted">{elementsOpen ? 'Masquer' : 'Afficher'}</span>
+        </button>
+        {elementsOpen ? (
+          <div className="border-t border-border p-2.5 space-y-2">
+            <input
+              type="search"
+              value={elementsQuery}
+              onChange={(e) => setElementsQuery(e.target.value)}
+              placeholder="Rechercher…"
+              className="w-full px-2.5 py-1.5 rounded-[var(--radius-button)] border border-border text-xs bg-background"
+            />
+            <div className="flex flex-wrap gap-1">
+              {filters.filter((f) => f.id === 'all' || f.n > 0).map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setElementsFilter(f.id)}
+                  className={cn(
+                    'px-2 py-0.5 rounded-full text-[10px] font-bold border',
+                    elementsFilter === f.id
+                      ? 'bg-primary/10 border-primary/40 text-primary'
+                      : 'bg-surface-muted border-border text-muted',
+                  )}
+                >
+                  {f.label} {f.n}
+                </button>
+              ))}
+            </div>
+            <div className="max-h-48 overflow-y-auto space-y-0.5 pr-0.5">
+              {canvasInventory.length === 0 ? (
+                <p className="text-[11px] text-muted px-1 py-3 text-center">Aucun élément</p>
+              ) : (
+                canvasInventory.map((it) => {
+                  const active = selection.some((s) => s.kind === it.kind && s.id === it.id);
+                  return (
+                    <button
+                      key={`${it.kind}:${it.id}`}
+                      type="button"
+                      onClick={(e) => {
+                        if (it.kind === 'wall') setWallEditMode(true);
+                        handleCanvasSelect({ kind: it.kind, id: it.id }, { additive: e.shiftKey || e.metaKey || e.ctrlKey });
+                      }}
+                      className={cn(
+                        'w-full text-left px-2.5 py-1.5 rounded-[var(--radius-button)] border transition',
+                        active
+                          ? 'bg-primary/10 border-primary/40 text-primary'
+                          : 'bg-background border-transparent hover:border-border hover:bg-surface-muted',
+                      )}
+                      title="Clic = sélectionner · Shift/Cmd = multi"
+                    >
+                      <span className="block text-xs font-bold truncate">{it.title}</span>
+                      <span className="block text-[10px] text-muted truncate capitalize">{it.subtitle}</span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
   };
 
   const exportShowcasePng = () => {
@@ -2241,6 +2417,34 @@ export default function RoomLayoutEditor({
           ))}
         </select>
       </label>
+      <button
+        type="button"
+        onClick={() => setLightingPreset('day')}
+        title="Mode soleil (jour)"
+        className={cn(
+          'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
+          lightingPreset === 'day'
+            ? 'bg-amber-100 border-amber-400 text-amber-950'
+            : 'bg-white border-border text-muted hover:bg-amber-50',
+        )}
+      >
+        <Sun className="w-3.5 h-3.5" />
+        Soleil
+      </button>
+      <button
+        type="button"
+        onClick={() => setLightingPreset('night')}
+        title="Mode nuit"
+        className={cn(
+          'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
+          lightingPreset === 'night'
+            ? 'bg-indigo-100 border-indigo-400 text-indigo-950'
+            : 'bg-white border-border text-muted hover:bg-indigo-50',
+        )}
+      >
+        <Moon className="w-3.5 h-3.5" />
+        Nuit
+      </button>
       {caps.canShowcaseRender ? (
       <button
         type="button"
@@ -2531,7 +2735,8 @@ export default function RoomLayoutEditor({
               <div className="flex-1 min-w-0 min-h-[50dvh] md:min-h-0 flex flex-col">
                 {renderCanvas('flex-1 min-h-0 h-full')}
               </div>
-              <div className="md:flex-1 md:min-w-[240px] md:max-w-[320px] max-h-[34dvh] md:max-h-none overflow-y-auto shrink-0">
+              <div className="md:flex-1 md:min-w-[240px] md:max-w-[320px] max-h-[34dvh] md:max-h-none overflow-y-auto shrink-0 space-y-3">
+                {renderCanvasInventory()}
                 {renderEditPanel()}
               </div>
             </div>
@@ -2561,7 +2766,10 @@ export default function RoomLayoutEditor({
         {quickCreatePanel}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4">
           <div className="lg:col-span-2 min-h-0">{renderCanvas('em-plan-stage lg:aspect-[16/10] lg:h-auto lg:min-h-[320px]')}</div>
-          <div className="max-h-[36dvh] lg:max-h-[520px] overflow-y-auto">{renderEditPanel()}</div>
+          <div className="max-h-[36dvh] lg:max-h-[520px] overflow-y-auto space-y-3">
+            {renderCanvasInventory()}
+            {renderEditPanel()}
+          </div>
         </div>
       </div>
     </>
