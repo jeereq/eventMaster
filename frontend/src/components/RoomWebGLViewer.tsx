@@ -20,6 +20,7 @@ import {
   type ZoneKind,
 } from '@/lib/roomLayoutUtils';
 import { resolveDepthAmount } from '@/lib/roomFloorUtils';
+import { belongsToActiveStory, resolveFoundation } from '@/lib/roomBuildingUtils';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
 import { getTableSeatPlacement3D } from '@/lib/tablePlanUtils';
 import {
@@ -1413,6 +1414,8 @@ function FixtureMesh({
             ? '#059669'
             : kind === 'aisle'
               ? '#e7e5e4'
+              : kind === 'corridor'
+                ? '#d6d3d1'
               : '#78716c');
 
   const { gl } = useThree();
@@ -1535,16 +1538,31 @@ function FixtureMesh({
           selected={selected}
           hasCouverts={hasCouverts}
         />
-      ) : kind === 'aisle' ? (
+      ) : kind === 'aisle' || kind === 'corridor' ? (
         <group>
           <mesh position={[0, 0.02, 0]} receiveShadow>
             <boxGeometry args={[w, 0.04, d]} />
-            <meshStandardMaterial color={selected ? '#c7d2fe' : '#e7e5e4'} roughness={0.85} />
+            <meshStandardMaterial
+              color={selected ? '#c7d2fe' : kind === 'corridor' ? '#d6d3d1' : '#e7e5e4'}
+              roughness={0.85}
+            />
           </mesh>
           <mesh position={[0, 0.045, 0]} receiveShadow>
-            <boxGeometry args={[w * 0.55, 0.015, d * 0.98]} />
-            <meshStandardMaterial color="#f8fafc" roughness={0.7} />
+            <boxGeometry args={[w * (kind === 'corridor' ? 0.72 : 0.55), 0.015, d * 0.98]} />
+            <meshStandardMaterial color={kind === 'corridor' ? '#fafaf9' : '#f8fafc'} roughness={0.7} />
           </mesh>
+          {kind === 'corridor' ? (
+            <>
+              <mesh position={[-w * 0.48, 1.1, 0]} castShadow>
+                <boxGeometry args={[0.08, 2.2, d * 0.98]} />
+                <meshStandardMaterial color="#a8a29e" roughness={0.9} />
+              </mesh>
+              <mesh position={[w * 0.48, 1.1, 0]} castShadow>
+                <boxGeometry args={[0.08, 2.2, d * 0.98]} />
+                <meshStandardMaterial color="#a8a29e" roughness={0.9} />
+              </mesh>
+            </>
+          ) : null}
         </group>
       ) : kind === 'entrance' ? (
         <group>
@@ -1706,6 +1724,22 @@ function SceneContent({
         onPointerMissed={() => onSelect(null)}
       />
 
+      {(() => {
+        const foundation = resolveFoundation(blueprint);
+        if (foundation.kind === 'none' || foundation.heightM <= 0) return null;
+        const h = foundation.heightM;
+        return (
+          <mesh position={[0, -h / 2 - 0.01, 0]} receiveShadow castShadow>
+            <boxGeometry args={[widthM * 1.04, h, heightM * 1.04]} />
+            <meshStandardMaterial
+              color={foundation.color ?? '#78716c'}
+              roughness={0.92}
+              metalness={0.05}
+            />
+          </mesh>
+        );
+      })()}
+
       {blueprint.metadata.showRoof === true && (
         <RoofMesh
           widthM={widthM}
@@ -1739,7 +1773,7 @@ function SceneContent({
         />
       ) : null}
 
-      {walls.map((wall) => (
+      {walls.filter((wall) => belongsToActiveStory(blueprint, wall.storyId)).map((wall) => (
         <WallMesh
           key={wall.id}
           wall={wall}
@@ -1751,9 +1785,9 @@ function SceneContent({
         />
       ))}
 
-      {blueprint.fixtures.map((f) => {
+      {blueprint.fixtures.filter((f) => belongsToActiveStory(blueprint, f.storyId)).map((f) => {
         /** Surfaces plates : ne capturent pas les clics en mode caméra bloquée. */
-        const isSurfaceFixture = f.kind === 'carpet' || f.kind === 'aisle' || f.kind === 'perimeter';
+        const isSurfaceFixture = f.kind === 'carpet' || f.kind === 'aisle' || f.kind === 'corridor' || f.kind === 'perimeter';
         const fixturePickable = isSurfaceFixture
           ? surfacePickable || selected.some((s) => s.kind === 'fixture' && s.id === f.id)
           : true;
@@ -1787,7 +1821,7 @@ function SceneContent({
         );
       })}
 
-      {blueprint.furniture.map((item) => {
+      {blueprint.furniture.filter((item) => belongsToActiveStory(blueprint, item.storyId)).map((item) => {
         if (item.kind === 'zone') {
           return (
             <ZoneMesh

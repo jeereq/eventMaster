@@ -73,6 +73,8 @@ export interface RoomWallSegment {
   texture: WallTextureStyle;
   color?: string;
   openings?: RoomWallOpening[];
+  /** Étage (maison multi-niveaux). */
+  storyId?: string;
 }
 
 export interface ImageCropRect {
@@ -126,7 +128,7 @@ export interface RoomLayoutBlueprint {
   canvas: { widthM: number; heightM: number };
   fixtures: Array<{
     id: string;
-    kind: 'stage' | 'podium' | 'aisle' | 'entrance' | 'pillar' | 'perimeter' | 'column' | 'flower' | 'carpet' | 'buffet' | 'stairs';
+    kind: 'stage' | 'podium' | 'aisle' | 'corridor' | 'entrance' | 'pillar' | 'perimeter' | 'column' | 'flower' | 'carpet' | 'buffet' | 'stairs';
     x: number;
     y: number;
     w: number;
@@ -153,6 +155,8 @@ export interface RoomLayoutBlueprint {
     stairDirection?: 0 | 90 | 180 | 270;
     /** Groupe de sélection / alignement. */
     groupId?: string;
+    /** Étage du bâtiment (maison multi-niveaux). */
+    storyId?: string;
   }>;
   furniture: Array<
     | {
@@ -175,6 +179,7 @@ export interface RoomLayoutBlueprint {
         rotation?: number;
         attachedChairs?: boolean;
         groupId?: string;
+        storyId?: string;
       }
     | {
         id: string;
@@ -189,6 +194,7 @@ export interface RoomLayoutBlueprint {
         rotation?: number;
         locked?: boolean;
         groupId?: string;
+        storyId?: string;
       }
     | {
         id: string;
@@ -210,6 +216,7 @@ export interface RoomLayoutBlueprint {
         focusX?: number;
         focusY?: number;
         groupId?: string;
+        storyId?: string;
       }
     | {
         id: string;
@@ -224,6 +231,7 @@ export interface RoomLayoutBlueprint {
         h: number;
         rotation?: number;
         groupId?: string;
+        storyId?: string;
       }
   >;
   metadata: {
@@ -269,6 +277,12 @@ export interface RoomLayoutBlueprint {
     showDecorPlants?: boolean;
     /** Mode présentation (orbit auto, labels masqués). */
     presentationMode?: boolean;
+    /** Étages du bâtiment (RDC, 1er…). */
+    stories?: import('@/lib/roomBuildingUtils').RoomStory[];
+    /** Étage actuellement édité. */
+    activeStoryId?: string;
+    /** Fondation sous le RDC. */
+    foundation?: import('@/lib/roomBuildingUtils').RoomFoundation;
   };
 }
 
@@ -583,6 +597,7 @@ export function createBlueprintFixture(
     stage: { x: 25, y: 4, w: 50, h: 8, label: 'Scène' },
     podium: { x: 40, y: 6, w: 20, h: 10, label: 'Podium' },
     aisle: { x: 48, y: 18, w: 4, h: 72, label: 'Allée' },
+    corridor: { x: 42, y: 18, w: 14, h: 64, label: 'Couloir' },
     entrance: { x: 42, y: 2, w: 16, h: 6, label: 'Entrée' },
     pillar: { x: 48, y: 48, w: 4, h: 4, label: 'Poteau' },
     column: { x: 30, y: 40, w: 3, h: 3, label: 'Colonne' },
@@ -937,6 +952,14 @@ export function wallLengthMeters(wall: RoomWallSegment, canvas: { widthM: number
 
 export function ensureBlueprintDefaults(blueprint: RoomLayoutBlueprint): RoomLayoutBlueprint {
   const outline = blueprint.roomOutline ?? defaultRoomOutline('rectangle');
+  const stories =
+    Array.isArray(blueprint.metadata.stories) && blueprint.metadata.stories.length > 0
+      ? blueprint.metadata.stories
+      : [{ id: 'story-rdc', label: 'RDC', elevationM: 0 }];
+  const activeStoryId =
+    blueprint.metadata.activeStoryId && stories.some((s) => s.id === blueprint.metadata.activeStoryId)
+      ? blueprint.metadata.activeStoryId
+      : stories[0]!.id;
   return {
     ...blueprint,
     roomOutline: outline,
@@ -946,6 +969,9 @@ export function ensureBlueprintDefaults(blueprint: RoomLayoutBlueprint): RoomLay
     metadata: {
       ...blueprint.metadata,
       defaultTableColor: blueprint.metadata.defaultTableColor ?? '#ffffff',
+      stories,
+      activeStoryId,
+      foundation: blueprint.metadata.foundation ?? { kind: 'none', heightM: 0 },
     },
   };
 }
@@ -2312,6 +2338,8 @@ export function getFixtureClass(kind: string): string {
       return 'bg-stone-100 border-stone-400 text-stone-700';
     case 'aisle':
       return 'bg-slate-100 border-slate-200 border-dashed text-slate-400';
+    case 'corridor':
+      return 'bg-stone-100 border-stone-300 text-stone-700';
     case 'pillar':
     case 'column':
       return 'bg-stone-400 border-stone-500';

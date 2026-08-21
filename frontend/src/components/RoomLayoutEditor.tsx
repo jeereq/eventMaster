@@ -94,6 +94,19 @@ import {
 } from '@/lib/roomThemeUtils';
 import { FLOOR_TYPE_PICKER_ORDER, floorTypeLabels, resolveDepthAmount, resolveFloorStyle } from '@/lib/roomFloorUtils';
 import CustomRoomThemePanel from '@/components/CustomRoomThemePanel';
+import {
+  addStory,
+  applyStyleToSelection,
+  belongsToActiveStory,
+  createCorridorFixture,
+  foundationKindLabels,
+  resolveActiveStoryId,
+  resolveFoundation,
+  resolveStories,
+  setActiveStory,
+  updateFoundation,
+  type FoundationKind,
+} from '@/lib/roomBuildingUtils';
 import { cn } from '@/lib/cn';
 
 type SelectableKind = 'table' | 'row' | 'zone' | 'fixture' | 'wall' | 'chair';
@@ -141,6 +154,7 @@ export default function RoomLayoutEditor({
   const [elementsFilter, setElementsFilter] = useState<'all' | LayoutSelectionItem['kind']>('all');
   const [elementsQuery, setElementsQuery] = useState('');
   const [elementsOpen, setElementsOpen] = useState(true);
+  const [groupStyleColor, setGroupStyleColor] = useState('#c4a06a');
   const webglRef = useRef<RoomWebGLCaptureApi>(null);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
@@ -383,7 +397,10 @@ export default function RoomLayoutEditor({
     const count = tableCount + 1;
     const defaultChair: ChairType =
       blueprint.roomType === 'CONFERENCE' || blueprint.roomType === 'AMPHITHEATER' ? 'THEATER' : 'BANQUET';
-    const table = createBlueprintTable(count, { chairType: defaultChair, shape: caps.tableShapes[0] });
+    const table = {
+      ...createBlueprintTable(count, { chairType: defaultChair, shape: caps.tableShapes[0] }),
+      storyId: resolveActiveStoryId(blueprint),
+    };
     updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, table] }, { message: `Table « ${table.name} » ajoutée`, kind: 'add' });
     setSelection([{ kind: 'table', id: table.id }]);
   };
@@ -424,7 +441,7 @@ export default function RoomLayoutEditor({
       return;
     }
     const count = rowCount + 1;
-    const row = createBlueprintRow(count);
+    const row = { ...createBlueprintRow(count), storyId: resolveActiveStoryId(blueprint) };
     updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, row] }, { message: `Rangée « ${row.label} » ajoutée`, kind: 'add' });
     setSelection([{ kind: 'row', id: row.id }]);
   };
@@ -435,7 +452,10 @@ export default function RoomLayoutEditor({
       return;
     }
     const existing = blueprint.fixtures.filter((f) => f.kind === 'aisle').length;
-    const batch = createAislesBatch(aisleCount, existing);
+    const batch = createAislesBatch(aisleCount, existing).map((f) => ({
+      ...f,
+      storyId: resolveActiveStoryId(blueprint),
+    }));
     updateBlueprint(
       { ...blueprint, fixtures: [...blueprint.fixtures, ...batch] },
       { message: `${batch.length} allée${batch.length > 1 ? 's' : ''} ajoutée${batch.length > 1 ? 's' : ''}`, kind: 'add' },
@@ -475,18 +495,24 @@ export default function RoomLayoutEditor({
       return;
     }
     const count = blueprint.furniture.filter((f) => f.kind === 'zone').length + 1;
-    const zone = createBlueprintZone(label, count, opts);
+    const zone = {
+      ...createBlueprintZone(label, count, opts),
+      storyId: resolveActiveStoryId(blueprint),
+    };
     updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, zone] }, { message: `Zone « ${zone.label} » ajoutée`, kind: 'add' });
     setSelection([{ kind: 'zone', id: zone.id }]);
   };
 
   const addFreeChair = () => {
     const count = blueprint.furniture.filter((f) => f.kind === 'chair').length + 1;
-    const chair = createBlueprintChair(count, {
+    const chair = {
+      ...createBlueprintChair(count, {
       chairType: 'ARMCHAIR',
       chairStyle: 'lounge',
       seatMaterial: 'velvet',
-    });
+    }),
+      storyId: resolveActiveStoryId(blueprint),
+    };
     updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, chair] }, { message: 'Fauteuil ajouté', kind: 'add' });
     setSelection([{ kind: 'chair', id: chair.id }]);
   };
@@ -512,8 +538,25 @@ export default function RoomLayoutEditor({
       log('Cet élément n’est pas inclus dans votre forfait', 'info');
       return;
     }
-    const fixture = createBlueprintFixture(kind);
+    const fixture = {
+      ...createBlueprintFixture(kind),
+      storyId: resolveActiveStoryId(blueprint),
+    };
     updateBlueprint({ ...blueprint, fixtures: [...blueprint.fixtures, fixture] }, { message: `${fixture.label || kind} ajouté`, kind: 'add' });
+    setSelection([{ kind: 'fixture', id: fixture.id }]);
+  };
+
+  const addCorridor = () => {
+    if (!caps.canFixtures || !caps.fixtureKinds.includes('corridor')) {
+      log('Les couloirs ne sont pas inclus dans votre forfait', 'info');
+      return;
+    }
+    const n = blueprint.fixtures.filter((f) => f.kind === 'corridor').length + 1;
+    const fixture = { ...createCorridorFixture(n), storyId: resolveActiveStoryId(blueprint) };
+    updateBlueprint(
+      { ...blueprint, fixtures: [...blueprint.fixtures, fixture] },
+      { message: `Couloir « ${fixture.label} » ajouté`, kind: 'add' },
+    );
     setSelection([{ kind: 'fixture', id: fixture.id }]);
   };
 
@@ -710,6 +753,7 @@ export default function RoomLayoutEditor({
     }> = [];
 
     for (const f of blueprint.furniture) {
+      if (!belongsToActiveStory(blueprint, f.storyId)) continue;
       if (f.kind === 'table') {
         items.push({
           kind: 'table',
@@ -742,6 +786,7 @@ export default function RoomLayoutEditor({
     }
 
     for (const fx of blueprint.fixtures) {
+      if (!belongsToActiveStory(blueprint, fx.storyId)) continue;
       items.push({
         kind: 'fixture',
         id: fx.id,
@@ -751,6 +796,7 @@ export default function RoomLayoutEditor({
     }
 
     for (const [i, wall] of (blueprint.walls ?? []).entries()) {
+      if (!belongsToActiveStory(blueprint, wall.storyId)) continue;
       items.push({
         kind: 'wall',
         id: wall.id,
@@ -1003,6 +1049,58 @@ export default function RoomLayoutEditor({
             <button type="button" onClick={deleteSelected} className="w-full flex items-center justify-center gap-1.5 py-2 rounded-[var(--radius-button)] border border-rose-200 text-rose-700 text-xs font-bold hover:bg-rose-50">
               <Trash2 className="w-3.5 h-3.5" /> Supprimer la sélection
             </button>
+            <div className="pt-2 border-t border-border space-y-2">
+              <p className="text-[10px] font-bold uppercase text-muted">Déplacer le groupe</p>
+              <div className="grid grid-cols-3 gap-1 place-items-center max-w-[140px] mx-auto">
+                <span />
+                <button type="button" onClick={() => updateBlueprint(moveLayoutSelectionByDelta(blueprint, selection, 0, -3), { message: 'Groupe déplacé ↑', kind: 'edit' })} className="p-2 rounded border hover:bg-surface-muted"><ArrowUp className="w-4 h-4" /></button>
+                <span />
+                <button type="button" onClick={() => updateBlueprint(moveLayoutSelectionByDelta(blueprint, selection, -3, 0), { message: 'Groupe déplacé ←', kind: 'edit' })} className="p-2 rounded border hover:bg-surface-muted"><ArrowLeft className="w-4 h-4" /></button>
+                <button type="button" onClick={() => updateBlueprint(moveLayoutSelectionByDelta(blueprint, selection, 0, 3), { message: 'Groupe déplacé ↓', kind: 'edit' })} className="p-2 rounded border hover:bg-surface-muted"><ArrowDown className="w-4 h-4" /></button>
+                <button type="button" onClick={() => updateBlueprint(moveLayoutSelectionByDelta(blueprint, selection, 3, 0), { message: 'Groupe déplacé →', kind: 'edit' })} className="p-2 rounded border hover:bg-surface-muted"><ArrowRight className="w-4 h-4" /></button>
+              </div>
+              <p className="text-[10px] font-bold uppercase text-muted pt-1">Style du groupe</p>
+              <label className="flex items-center gap-2 text-xs">
+                <span className="text-muted font-semibold">Couleur</span>
+                <input
+                  type="color"
+                  value={groupStyleColor}
+                  onChange={(e) => setGroupStyleColor(e.target.value)}
+                  className="h-8 w-12 rounded border border-border cursor-pointer"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateBlueprint(
+                      applyStyleToSelection(blueprint, selection, {
+                        tableColor: groupStyleColor,
+                        color: groupStyleColor,
+                      }),
+                      { message: 'Style appliqué à la sélection', kind: 'edit' },
+                    );
+                  }}
+                  className="flex-1 py-1.5 rounded-[var(--radius-button)] bg-primary text-white text-[10px] font-bold"
+                >
+                  Appliquer
+                </button>
+              </label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => updateBlueprint(applyStyleToSelection(blueprint, selection, { locked: true }), { message: 'Groupe verrouillé', kind: 'edit' })}
+                  className="flex-1 py-1.5 rounded border text-[10px] font-bold hover:bg-surface-muted"
+                >
+                  <Lock className="w-3 h-3 inline mr-1" /> Verrouiller
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateBlueprint(applyStyleToSelection(blueprint, selection, { locked: false }), { message: 'Groupe déverrouillé', kind: 'edit' })}
+                  className="flex-1 py-1.5 rounded border text-[10px] font-bold hover:bg-surface-muted"
+                >
+                  <Unlock className="w-3 h-3 inline mr-1" /> Déverrouiller
+                </button>
+              </div>
+            </div>
           </div>
           <LayoutActionPanel actions={actionLog} />
         </div>
@@ -1299,7 +1397,110 @@ export default function RoomLayoutEditor({
             </div>
           )}
 
-          {/* Accordion 2 : Outils Automatiques */}
+          {/* Accordion bâtiment */}
+          <div className="border border-border rounded-[var(--radius-card)] bg-surface overflow-hidden shadow-sm">
+            <button
+              type="button"
+              className={cn("w-full flex items-center justify-between p-3.5 text-left text-sm font-semibold transition-colors", accordion === 'batiment' ? 'bg-surface-muted text-foreground' : 'bg-surface text-muted hover:bg-surface-muted/50 hover:text-foreground')}
+              onClick={() => setAccordion(accordion === 'batiment' ? '' : 'batiment')}
+            >
+              <span className="flex items-center gap-2">
+                <Layers className="w-4 h-4" /> Maison · Étages · Fondation
+              </span>
+            </button>
+            {accordion === 'batiment' && (
+              <div className="p-4 bg-surface space-y-4 border-t border-border">
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold uppercase text-muted">Étages</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {resolveStories(blueprint).map((story) => (
+                      <button
+                        key={story.id}
+                        type="button"
+                        onClick={() => {
+                          updateBlueprint(setActiveStory(blueprint, story.id), {
+                            message: `Étage actif : ${story.label}`,
+                            kind: 'settings',
+                          });
+                          setSelection([]);
+                        }}
+                        className={cn(
+                          'px-2.5 py-1 rounded-[var(--radius-button)] border text-[10px] font-bold',
+                          resolveActiveStoryId(blueprint) === story.id
+                            ? 'bg-primary/10 border-primary/40 text-primary'
+                            : 'border-border text-muted hover:bg-white',
+                        )}
+                      >
+                        {story.label}
+                        <span className="opacity-60 ml-1">{story.elevationM.toFixed(1)} m</span>
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = addStory(blueprint);
+                        updateBlueprint(next, { message: 'Nouvel étage ajouté', kind: 'add' });
+                        setSelection([]);
+                      }}
+                      className="px-2.5 py-1 rounded-[var(--radius-button)] border border-dashed border-border text-[10px] font-bold text-muted hover:bg-white"
+                    >
+                      + Étage
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-muted leading-relaxed">
+                    Placez le mobilier, les couloirs et les murs sur l’étage actif. Reliez les niveaux avec un escalier.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold uppercase text-muted">Fondation</p>
+                  <select
+                    value={resolveFoundation(blueprint).kind}
+                    onChange={(e) => {
+                      const kind = e.target.value as FoundationKind;
+                      updateBlueprint(
+                        updateFoundation(blueprint, {
+                          kind,
+                          heightM: kind === 'none' ? 0 : kind === 'basement' ? 2.4 : kind === 'crawlspace' ? 0.9 : 0.35,
+                        }),
+                        { message: `Fondation : ${foundationKindLabels[kind]}`, kind: 'settings' },
+                      );
+                    }}
+                    className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-xs"
+                  >
+                    {(Object.keys(foundationKindLabels) as FoundationKind[]).map((k) => (
+                      <option key={k} value={k}>{foundationKindLabels[k]}</option>
+                    ))}
+                  </select>
+                  {resolveFoundation(blueprint).kind !== 'none' ? (
+                    <label className="block text-[10px] space-y-1">
+                      <span className="font-semibold text-muted">Hauteur (m)</span>
+                      <input
+                        type="number"
+                        min={0.1}
+                        max={4}
+                        step={0.05}
+                        value={resolveFoundation(blueprint).heightM}
+                        onChange={(e) => updateBlueprint(
+                          updateFoundation(blueprint, { heightM: parseFloat(e.target.value) || 0.35 }),
+                          { message: 'Hauteur fondation mise à jour', kind: 'settings' },
+                        )}
+                        className="w-full px-2 py-1.5 rounded border text-xs"
+                      />
+                    </label>
+                  ) : null}
+                </div>
+                {caps.fixtureKinds.includes('corridor') ? (
+                  <button
+                    type="button"
+                    onClick={addCorridor}
+                    className="w-full py-2 rounded-[var(--radius-button)] border border-stone-300 bg-stone-50 text-stone-800 text-xs font-bold"
+                  >
+                    + Ajouter un couloir
+                  </button>
+                ) : null}
+              </div>
+            )}
+          </div>
           <div className="border border-border rounded-[var(--radius-card)] bg-surface overflow-hidden shadow-sm">
             <button
               type="button"
@@ -2663,6 +2864,16 @@ export default function RoomLayoutEditor({
           title="Définir le nombre d’allées"
         >
           Allées…
+        </button>
+      ) : null}
+      {caps.fixtureKinds.includes('corridor') ? (
+        <button
+          type="button"
+          onClick={addCorridor}
+          className="px-3 py-1.5 bg-stone-100 border border-stone-300 text-stone-800 rounded-[var(--radius-button)] text-xs font-bold"
+          title="Couloir structurant (circulation entre pièces)"
+        >
+          Couloir
         </button>
       ) : null}
       {caps.fixtureKinds.includes('entrance') ? (

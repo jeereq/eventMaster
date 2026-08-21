@@ -911,7 +911,10 @@ export default function RoomsManagement() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input label="Nom de la salle" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex. Grand salon" />
-              <Input label="Étage / Aile" value={floor} onChange={(e) => setFloor(e.target.value)} placeholder="Ex. RDC" />
+              <Input label="Étage / Aile (libellé affiché)" value={floor} onChange={(e) => setFloor(e.target.value)} placeholder="Ex. RDC, 1er étage, Aile Est" />
+              <p className="sm:col-span-2 text-[10px] text-muted -mt-1">
+                Astuce : dans le plan (étape 3), vous pourrez créer plusieurs étages, une fondation et des couloirs.
+              </p>
               <div className="sm:col-span-2">
                 <Input label="Emplacement" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Ex. Bâtiment A, jardin" />
               </div>
