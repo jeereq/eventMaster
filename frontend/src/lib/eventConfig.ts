@@ -59,6 +59,7 @@ export type EventConfigSource = {
   dayOfContactName?: string | null;
   dayOfContactPhone?: string | null;
   room?: { id: string } | null;
+  themeId?: string | null;
 };
 
 export type EventConfigPayload = {
@@ -85,6 +86,7 @@ export type EventConfigPayload = {
   estimatedGuests: number | null;
   dayOfContactName: string | null;
   dayOfContactPhone: string | null;
+  themeId: string | null;
 };
 
 export function isEventKindId(value: string | null | undefined): value is EventKindId {

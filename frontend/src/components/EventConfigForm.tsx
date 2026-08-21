@@ -24,6 +24,7 @@ import {
   type DressCodePresetId,
   type GuestGuidelines,
 } from '@/lib/guestGuidelines';
+import { INVITATION_COLOR_THEMES } from '@/lib/templateColorThemes';
 import {
   EVENT_CONFIG_TABS,
   EVENT_KIND_LABELS,
@@ -126,6 +127,7 @@ export default function EventConfigForm({
   const [formTemplateId, setFormTemplateId] = useState('');
   const [openTablePlanAfterSave, setOpenTablePlanAfterSave] = useState(false);
   const [guestGuidelines, setGuestGuidelines] = useState<GuestGuidelines>(guidelinesFromEvent(null));
+  const [themeId, setThemeId] = useState<string | null>(initialEvent?.themeId ?? null);
   const [contactName, setContactName] = useState('');
   const [contactCc, setContactCc] = useState(DEFAULT_PHONE_COUNTRY_CODE);
   const [contactNational, setContactNational] = useState('');
@@ -471,6 +473,7 @@ export default function EventConfigForm({
       dayOfContactPhone: complete
         ? composeE164(contactCc, contactNational) || null
         : initialEvent?.dayOfContactPhone || null,
+      themeId: themeId || null,
     };
   };
 
@@ -996,6 +999,43 @@ export default function EventConfigForm({
                     Dress code, avantages et notes pratiques. Ils apparaissent sur le portail RSVP.
                   </p>
                   <EventGuestGuidelinesEditor value={guestGuidelines} onChange={setGuestGuidelines} compact />
+                </div>
+                <div className="space-y-3 pt-1 border-t border-border">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted pt-3">Thème de l'invitation</h4>
+                  </div>
+                  <p className="text-[11px] text-muted leading-relaxed">
+                    Choisissez la couleur qui habillera le portail invité et le RSVP.
+                  </p>
+                  <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+                    {INVITATION_COLOR_THEMES.map(theme => (
+                      <button
+                        key={theme.id}
+                        type="button"
+                        onClick={() => setThemeId(theme.id)}
+                        className={cn(
+                          "relative w-10 h-10 rounded-full border-2 transition overflow-hidden group",
+                          themeId === theme.id ? "border-foreground ring-2 ring-foreground/20" : "border-transparent hover:border-border"
+                        )}
+                        style={{ backgroundColor: theme.palette.background }}
+                        title={theme.name}
+                      >
+                        <div 
+                          className="absolute inset-0 m-auto w-5 h-5 rounded-full" 
+                          style={{ backgroundColor: theme.palette.primary }}
+                        />
+                        <div 
+                          className="absolute bottom-1 right-1 w-2.5 h-2.5 rounded-full" 
+                          style={{ backgroundColor: theme.palette.accent }}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-2">
+                    <Link href={`/dashboard/templates?previewTheme=${themeId || 'default'}`} target="_blank" className="text-xs font-semibold text-primary hover:underline">
+                      Prévisualiser l'espace invité ↗
+                    </Link>
+                  </div>
                 </div>
               </>
             ) : (

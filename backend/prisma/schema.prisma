@@ -260,6 +260,7 @@ model Event {
   ticketPriceFc     Int          @default(0)
   ticketsTotal      Int?
   ticketsSold       Int          @default(0)
+  themeId           String?
   /** Galerie publique (URLs Cloudinary), comme une fiche salle. */
   photos            Json?
   createdAt         DateTime     @default(now())

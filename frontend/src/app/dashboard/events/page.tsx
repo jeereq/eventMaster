@@ -62,6 +62,7 @@ import {
  resolveGuestFormEmail,
 } from '@/lib/guestContact';
 import InvitationMessagePreview from '@/components/InvitationMessagePreview';
+import InvitationEditorModal, { type InvitationFormData } from '@/components/InvitationEditorModal';
 import { resolveWhatsAppInvitationBody, toWhatsAppTone } from '@/lib/whatsappTone';
 import {
  extractRsvpFieldsFromTemplateContent,
@@ -1513,75 +1514,51 @@ Merci de confirmer votre présence :
  }
  };
 
- // Create or Update Invitation
- const handleCreateInvitation = async (e: React.FormEvent) => {
- e.preventDefault();
- if (!selectedEvent) return;
- setError('');
- setSavingInvite(true);
+  // Create or Update Invitation
+  const handleSaveInvitation = async (data: InvitationFormData) => {
+    if (!selectedEvent) return;
 
- try {
- const payload = {
- templateId: selectedTemplateId || null,
- subject: inviteSubject,
- body: channelNeedsEmail(inviteChannel) ? inviteBody : (inviteBody.trim() || inviteWhatsAppBody),
- whatsappBody: channelNeedsWhatsApp(inviteChannel) ? (inviteWhatsAppBody.trim() || null) : null,
- channel: inviteChannel,
- };
+    const payload = {
+      templateId: data.templateId || null,
+      subject: data.subject,
+      body: channelNeedsEmail(data.channel) ? data.body : (data.body.trim() || data.whatsappBody),
+      whatsappBody: channelNeedsWhatsApp(data.channel) ? (data.whatsappBody.trim() || null) : null,
+      channel: data.channel,
+    };
 
- if (editingInviteId) {
- const updatedInvite = await api.put(`/events/${selectedEvent.id}/invitations/${editingInviteId}`, payload);
- setInvitations(invitations.map(i => i.id === editingInviteId ? updatedInvite : i));
- setSuccess('Invitation mise à jour avec succès !');
- } else {
- const newInvite = await api.post(`/events/${selectedEvent.id}/invitations`, payload);
- setInvitations([...invitations, newInvite]);
- setSuccess('Invitation configurée avec succès !');
- }
+    if (editingInviteId) {
+      const updatedInvite = await api.put(`/events/${selectedEvent.id}/invitations/${editingInviteId}`, payload);
+      setInvitations(invitations.map(i => i.id === editingInviteId ? updatedInvite : i));
+      setSuccess('Invitation mise à jour avec succès !');
+    } else {
+      const newInvite = await api.post(`/events/${selectedEvent.id}/invitations`, payload);
+      setInvitations([...invitations, newInvite]);
+      setSuccess('Invitation configurée avec succès !');
+    }
 
- setInviteSubject('');
- setInviteBody('');
- setInviteWhatsAppBody('');
- setSelectedTemplateId('');
- setEditingInviteId(null);
- setShowInviteModal(false);
- } catch (err: any) {
- setError(err.message || "Erreur de configuration de l'invitation");
- } finally {
- setSavingInvite(false);
- }
- };
+    setEditingInviteId(null);
+    setShowInviteModal(false);
+  };
 
- const handleEditInvitationClick = (invite: InvitationItem) => {
- setEditingInviteId(invite.id);
- setInviteSubject(invite.subject);
- setInviteBody(invite.body);
- setInviteWhatsAppBody(invite.whatsappBody || '');
- setSelectedTemplateId(invite.template?.id || '');
- setInviteChannel(invite.channel || 'EMAIL');
- setShowInviteModal(true);
- };
+  const handleEditInvitationClick = (invite: InvitationItem) => {
+    setEditingInviteId(invite.id);
+    setInviteSubject(invite.subject);
+    setInviteBody(invite.body);
+    setInviteWhatsAppBody(invite.whatsappBody || '');
+    setSelectedTemplateId(invite.template?.id || '');
+    setInviteChannel(invite.channel || 'EMAIL');
+    setShowInviteModal(true);
+  };
 
- const openNewInvitationModal = () => {
- setEditingInviteId(null);
- setInviteSubject('');
- setInviteBody('');
- setInviteWhatsAppBody('');
- setSelectedTemplateId('');
- setInviteChannel('EMAIL');
- setShowInviteModal(true);
- };
-
- const handleSelectMessageTemplate = (templateId: string) => {
- const template = MESSAGE_TEMPLATES.find(t => t.id === templateId);
- if (template) {
- setInviteSubject(template.subject);
- setInviteBody(template.body);
- if (channelNeedsWhatsApp(inviteChannel)) {
- setInviteWhatsAppBody(toWhatsAppTone(template.body));
- }
- }
- };
+  const openNewInvitationModal = () => {
+    setEditingInviteId(null);
+    setInviteSubject('');
+    setInviteBody('');
+    setInviteWhatsAppBody('');
+    setSelectedTemplateId('');
+    setInviteChannel('EMAIL');
+    setShowInviteModal(true);
+  };
 
  // Delete Invitation
  const handleDeleteInvitation = async (inviteId: string) => {
@@ -3546,168 +3523,27 @@ Merci de confirmer votre présence :
   </div>
  </Modal>
 
- {/* Invitation Configuration Modal */}
- {showInviteModal && (
- <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
- <div className="bg-white rounded-3xl border border-border shadow-2xl w-full max-w-2xl p-6 space-y-6 max-h-[92vh] overflow-y-auto">
- <div className="flex items-center justify-between border-b border-border-subtle pb-4">
- <h3 className="text-lg font-bold text-foreground">
- {editingInviteId ? "Modifier l'invitation" : "Configurer une invitation"}
- </h3>
- <button onClick={() => { setShowInviteModal(false); setEditingInviteId(null); }} className="text-muted hover:text-muted transition">
- <XCircle className="w-6 h-6" />
- </button>
- </div>
- <form onSubmit={handleCreateInvitation} className="space-y-4">
- <p className="text-xs text-muted leading-relaxed">
- Trois choses distinctes : la <span className="font-semibold text-foreground">page RSVP</span> (ce que l’invité voit), le <span className="font-semibold text-foreground">canal</span> (e-mail ou WhatsApp), puis le <span className="font-semibold text-foreground">texte du message</span>.
- </p>
- <div className="grid grid-cols-2 gap-4">
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Page RSVP</label>
- <p className="text-[11px] text-muted">Apparence du formulaire que l’invité ouvre. Ce n’est pas le texte du message.</p>
- <select 
- value={selectedTemplateId}
- onChange={(e) => setSelectedTemplateId(e.target.value)}
- className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
- >
- <option value="">-- Aucune page personnalisée --</option>
- {templates.map(t => (
- <option key={t.id} value={t.id}>{t.name}</option>
- ))}
- </select>
- </div>
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Canal</label>
- <p className="text-[11px] text-muted">Où envoyer le lien RSVP.</p>
- <select 
- value={inviteChannel}
- onChange={(e) => {
-  const next = e.target.value;
-  setInviteChannel(next);
-  if (channelNeedsWhatsApp(next) && !inviteWhatsAppBody.trim() && inviteBody.trim()) {
-   setInviteWhatsAppBody(toWhatsAppTone(inviteBody));
-  }
- }}
- className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
- >
- <option value="EMAIL">E-mail</option>
- <option value="WHATSAPP">WhatsApp</option>
- <option value="EMAIL_AND_WHATSAPP">E-mail et WhatsApp</option>
- </select>
- </div>
- </div>
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Texte d’exemple (optionnel)</label>
- <select 
- onChange={(e) => handleSelectMessageTemplate(e.target.value)}
- defaultValue=""
- className="w-full px-4 py-2.5 bg-primary/10 border border-primary/20 text-primary rounded-xl text-sm font-semibold focus:outline-none focus:border-primary transition"
- >
- <option value="">-- Pré-remplir le message --</option>
- {MESSAGE_TEMPLATES.map(mt => (
- <option key={mt.id} value={mt.id}>{mt.name}</option>
- ))}
- </select>
- </div>
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">
-  {channelNeedsEmail(inviteChannel) ? 'Objet e-mail' : 'Objet (référence)'}
- </label>
- <input 
- type="text" 
- value={inviteSubject}
- onChange={(e) => setInviteSubject(e.target.value)}
- placeholder="ex. Invitation officielle : Gala de Charité d'Élite"
- className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
- required
- />
- </div>
- <p className="text-[11px] text-muted leading-relaxed">
- Variables utilisables : {'{{firstName}}'}, {'{{lastName}}'}, {'{{rsvpLink}}'}, {'{{title}}'}, {'{{date}}'}, {'{{location}}'}, {'{{description}}'}, {'{{orgName}}'}, {'{{dressCode}}'}, {'{{guestGuidelines}}'}. La table et le siège s’ajoutent après confirmation RSVP, pas ici.
- </p>
- {channelNeedsEmail(inviteChannel) ? (
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Texte e-mail</label>
- <textarea 
- value={inviteBody}
- onChange={(e) => setInviteBody(e.target.value)}
- placeholder="Cher(e) {{firstName}},&#10;Nous avons l'honneur de vous inviter...&#10;&#10;Veuillez confirmer votre présence ici : {{rsvpLink}}"
- className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition h-32 resize-none"
- required
- />
- </div>
- ) : null}
- {channelNeedsWhatsApp(inviteChannel) ? (
- <div className="space-y-1.5">
- <div className="flex items-center justify-between gap-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Texte WhatsApp</label>
- {channelNeedsEmail(inviteChannel) && inviteBody.trim() ? (
-  <button
-   type="button"
-   onClick={() => setInviteWhatsAppBody(toWhatsAppTone(inviteBody))}
-   className="text-[11px] font-semibold text-primary hover:underline"
-  >
-   Adapter depuis l’e-mail
-  </button>
- ) : null}
- </div>
- <p className="text-[11px] text-muted">Plus court, tutoiement possible. Le *gras* fonctionne ici.</p>
- <textarea 
- value={inviteWhatsAppBody}
- onChange={(e) => setInviteWhatsAppBody(e.target.value)}
- placeholder="Bonjour {{firstName}},&#10;&#10;Tu es invité(e) à {{title}}.&#10;&#10;Confirme ici :&#10;{{rsvpLink}}"
- className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition h-32 resize-none"
- required={!channelNeedsEmail(inviteChannel)}
- />
- </div>
- ) : null}
- {selectedEvent && (
- <InvitationMessagePreview
-  subject={inviteSubject.replaceAll('{{title}}', selectedEvent.title)}
-  body={fillInvitationPreviewVars(inviteBody, selectedEvent, tenant?.name || 'Organisation')}
-  whatsappBody={fillInvitationPreviewVars(
-   resolveWhatsAppInvitationBody(inviteBody, inviteWhatsAppBody),
-   selectedEvent,
-   tenant?.name || 'Organisation',
-  )}
-  channel={inviteChannel}
-  orgName={tenant?.name || 'Organisation'}
-  primary={tenant?.branding?.primary}
-  accent={tenant?.branding?.accent}
-  guidelinesBlock={formatGuestGuidelinesBlock(normalizeGuestGuidelines(selectedEvent.guestGuidelines))}
- />
- )}
- <div className="pt-4 flex gap-3 border-t border-border-subtle">
- <button 
- type="button"
- onClick={() => { setShowInviteModal(false); setEditingInviteId(null); }}
- className="flex-1 py-2.5 border border-border text-muted font-semibold rounded-xl text-sm hover:bg-surface-muted transition"
- disabled={savingInvite}
- >
- Annuler
- </button>
- <button 
- type="submit"
- disabled={savingInvite}
- className="flex-1 py-2.5 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/10 flex items-center justify-center gap-2"
- >
- {savingInvite ? (
- <>
- <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
- Enregistrement...
- </>
- ) : (
- editingInviteId ? "Enregistrer" : "Créer"
- )}
- </button>
- </div>
- </form>
- </div>
- </div>
- )}
+  {/* Invitation Configuration Modal */}
+  <InvitationEditorModal
+    open={showInviteModal}
+    onClose={() => { setShowInviteModal(false); setEditingInviteId(null); }}
+    editingId={editingInviteId}
+    initialData={{
+      templateId: selectedTemplateId,
+      channel: inviteChannel,
+      subject: inviteSubject,
+      body: inviteBody,
+      whatsappBody: inviteWhatsAppBody,
+    }}
+    templates={templates}
+    messageTemplates={MESSAGE_TEMPLATES}
+    eventTitle={selectedEvent?.title || 'Événement'}
+    orgName={tenant?.name || 'Organisation'}
+    guestGuidelines={selectedEvent?.guestGuidelines || undefined}
+    onSave={handleSaveInvitation}
+  />
 
- {/* Broadcast Results Modal */}
+  {/* Broadcast Results Modal */}
  {showBroadcastModal && broadcastResults && (
  <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
  <div className="bg-white rounded-3xl border border-border shadow-2xl w-full max-w-4xl p-6 space-y-6">
