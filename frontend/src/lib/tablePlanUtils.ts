@@ -132,13 +132,15 @@ export function getSeatCoordinates(
   seatIndex: number,
   radius = 45,
 ) {
-  if (shape === 'round' || shape === 'oval') {
+  if (shape === 'round' || shape === 'oval' || shape === 'cocktail' || shape === 'highTop') {
     const angle = (seatIndex / capacity) * 2 * Math.PI - Math.PI / 2;
     const rx = shape === 'oval' ? radius * 1.3 : radius;
     const ry = shape === 'oval' ? radius * 0.8 : radius;
     return {
       x: Math.cos(angle) * rx,
       y: Math.sin(angle) * ry,
+      /** Angle en degrés : dossier à l’extérieur, face vers le centre de la table. */
+      rotationDeg: (angle * 180) / Math.PI + 90,
     };
   }
 
@@ -149,10 +151,10 @@ export function getSeatCoordinates(
     const step = 80 / (seatsPerSide + 1);
     const offset = -40 + step * (indexOnSide + 1);
 
-    if (side === 0) return { x: offset, y: -40 };
-    if (side === 1) return { x: 40, y: offset };
-    if (side === 2) return { x: -offset, y: 40 };
-    return { x: -40, y: -offset };
+    if (side === 0) return { x: offset, y: -40, rotationDeg: 180 };
+    if (side === 1) return { x: 40, y: offset, rotationDeg: 270 };
+    if (side === 2) return { x: -offset, y: 40, rotationDeg: 0 };
+    return { x: -40, y: -offset, rotationDeg: 90 };
   }
 
   const seatsPerSide = Math.ceil(capacity / 2);
@@ -162,5 +164,54 @@ export function getSeatCoordinates(
   const step = width / (seatsPerSide + 1);
   const x = -width / 2 + step * (sideIndex + 1);
   const y = isTopSide ? -35 : 35;
-  return { x, y };
+  return { x, y, rotationDeg: isTopSide ? 180 : 0 };
+}
+
+/**
+ * Placement 3D des chaises autour d’une table (mètres locaux, centre = 0).
+ * Le fauteuil modèle regarde vers +Z : rotationY oriente le siège vers le plateau.
+ */
+export function getTableSeatPlacement3D(
+  shape: TableShape,
+  capacity: number,
+  seatIndex: number,
+  tableSize: [number, number],
+): { x: number; z: number; rotationY: number } {
+  const [tw, td] = tableSize;
+  const gap = 0.48;
+  const n = Math.max(1, capacity);
+
+  if (shape === 'round' || shape === 'oval' || shape === 'cocktail' || shape === 'highTop') {
+    const a = (seatIndex / n) * Math.PI * 2 - Math.PI / 2;
+    const rx = (shape === 'oval' ? tw * 0.55 : tw / 2) + gap;
+    const rz = (shape === 'oval' ? td * 0.55 : td / 2) + gap;
+    const x = Math.cos(a) * rx;
+    const z = Math.sin(a) * rz;
+    // Face vers le centre (0,0)
+    return { x, z, rotationY: Math.atan2(-x, -z) };
+  }
+
+  if (shape === 'square') {
+    const seatsPerSide = Math.ceil(n / 4);
+    const side = Math.floor(seatIndex / seatsPerSide) % 4;
+    const indexOnSide = seatIndex % seatsPerSide;
+    const half = Math.max(tw, td) / 2 + gap;
+    const span = Math.max(tw, td) * 0.75;
+    const step = span / (seatsPerSide + 1);
+    const offset = -span / 2 + step * (indexOnSide + 1);
+    if (side === 0) return { x: offset, z: -half, rotationY: 0 };
+    if (side === 1) return { x: half, z: offset, rotationY: -Math.PI / 2 };
+    if (side === 2) return { x: -offset, z: half, rotationY: Math.PI };
+    return { x: -half, z: -offset, rotationY: Math.PI / 2 };
+  }
+
+  // rectangular: côtés longs haut/bas
+  const seatsPerSide = Math.ceil(n / 2);
+  const isTop = seatIndex < seatsPerSide;
+  const sideIndex = isTop ? seatIndex : seatIndex - seatsPerSide;
+  const span = tw * 0.85;
+  const step = span / (seatsPerSide + 1);
+  const x = -span / 2 + step * (sideIndex + 1);
+  const z = isTop ? -(td / 2 + gap) : td / 2 + gap;
+  return { x, z, rotationY: isTop ? 0 : Math.PI };
 }

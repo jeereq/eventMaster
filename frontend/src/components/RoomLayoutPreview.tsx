@@ -241,7 +241,7 @@ export default function RoomLayoutPreview({
  style={{
  left: `calc(50% + ${coords.x}px)`,
  top: `calc(50% + ${coords.y}px)`,
- transform: 'translate(-50%, -50%)',
+ transform: `translate(-50%, -50%) rotate(${coords.rotationDeg ?? 0}deg)`,
  }}
  >
  <ChairRenderer chairType={item.chairType} imageUrl={item.chairImageUrl} size={quality === 'showcase' ? 'sm' : 'xs'} />

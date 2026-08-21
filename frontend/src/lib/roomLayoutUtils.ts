@@ -189,6 +189,11 @@ export interface RoomLayoutBlueprint {
         y: number;
         curve?: number;
         rotation?: number;
+        /** Élévation du gradin (m) — amphithéâtre en pente. */
+        elevationM?: number;
+        /** Point de visée en % (scène) pour orienter les sièges. */
+        focusX?: number;
+        focusY?: number;
       }
     | {
         id: string;
@@ -350,7 +355,8 @@ export function detachTableChairs(
       seatMaterial: table.seatMaterial,
       x: Math.max(2, Math.min(98, table.x + Math.cos(a) * radiusPct)),
       y: Math.max(2, Math.min(98, table.y + Math.sin(a) * radiusPct)),
-      rotation: ((-a + Math.PI) * 180) / Math.PI,
+      // Face vers la table : angle vers le centre
+      rotation: ((Math.atan2(-Math.cos(a), -Math.sin(a)) * 180) / Math.PI),
     });
   });
   return {
@@ -852,7 +858,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
   {
     id: 'amphitheater-small',
     name: 'Amphithéâtre compact',
-    description: 'Gradins en hexagone autour de la scène',
+    description: 'Gradins en pente autour de la scène',
     roomType: 'AMPHITHEATER',
     outlineShape: 'hexagon',
     build: (p) => composeTemplate('amphitheater-small', 'AMPHITHEATER', 'hexagon', {
@@ -861,6 +867,96 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
       seatsPerRow: p?.seatsPerRow ?? p?.seatsPerTable ?? 12,
       ...p,
     }),
+  },
+  {
+    id: 'amphitheater-slope',
+    name: 'Amphithéâtre en pente',
+    description: 'Gradins courbes surélevés face à la scène, allée centrale',
+    roomType: 'AMPHITHEATER',
+    outlineShape: 'trapezoid',
+    build: (p) => composeTemplate('amphitheater-slope', 'AMPHITHEATER', 'trapezoid', {
+      tierCount: p?.tierCount ?? 5,
+      rowsPerTier: p?.rowsPerTier ?? 2,
+      seatsPerRow: p?.seatsPerRow ?? p?.seatsPerTable ?? 14,
+      chairType: p?.chairType ?? 'THEATER',
+      ...p,
+    }),
+  },
+  {
+    id: 'chairs-theater',
+    name: 'Théâtre — chaises seules',
+    description: 'Rangées de sièges face au podium, sans tables',
+    roomType: 'CONFERENCE',
+    outlineShape: 'rectangle',
+    build: (p) => {
+      const bp = generateChairOnlyBlueprint(
+        { rowCount: p?.rowCount ?? p?.tableCount ?? 7, seatsPerRow: p?.seatsPerRow ?? p?.seatsPerTable ?? 12, ...p },
+        p?.chairType ?? 'THEATER',
+        'theater',
+      );
+      return refreshBlueprintMetadata({
+        ...bp,
+        templateId: 'chairs-theater',
+        roomOutline: defaultRoomOutline('rectangle'),
+      });
+    },
+  },
+  {
+    id: 'chairs-cinema',
+    name: 'Cinéma — gradins chaises',
+    description: 'Sièges seuls en pente face à l’écran',
+    roomType: 'AMPHITHEATER',
+    outlineShape: 'rectangle',
+    build: (p) => {
+      const bp = generateChairOnlyBlueprint(
+        { rowCount: p?.rowCount ?? 10, seatsPerRow: p?.seatsPerRow ?? 14, ...p },
+        p?.chairType ?? 'THEATER',
+        'cinema',
+      );
+      return refreshBlueprintMetadata({
+        ...bp,
+        templateId: 'chairs-cinema',
+        roomOutline: defaultRoomOutline('rectangle'),
+      });
+    },
+  },
+  {
+    id: 'chairs-ceremony',
+    name: 'Cérémonie — chaises',
+    description: 'Deux blocs de chaises, allée centrale, sans tables',
+    roomType: 'CONFERENCE',
+    outlineShape: 'rectangle',
+    build: (p) => {
+      const bp = generateChairOnlyBlueprint(
+        { rowCount: p?.rowCount ?? 8, seatsPerRow: p?.seatsPerRow ?? 10, ...p },
+        p?.chairType ?? 'BANQUET',
+        'ceremony',
+      );
+      return refreshBlueprintMetadata({
+        ...bp,
+        templateId: 'chairs-ceremony',
+        roomOutline: defaultRoomOutline('rectangle'),
+      });
+    },
+  },
+  {
+    id: 'chairs-grid',
+    name: 'Grille de chaises',
+    description: 'Plan uniquement de chaises individuelles face au pupitre',
+    roomType: 'CONFERENCE',
+    outlineShape: 'rectangle',
+    build: (p) => {
+      const bp = generateChairOnlyBlueprint(
+        { rowCount: p?.rowCount ?? 6, seatsPerRow: p?.seatsPerRow ?? 8, ...p },
+        p?.chairType ?? 'FOLDING',
+        'grid',
+      );
+      return refreshBlueprintMetadata({
+        ...bp,
+        templateId: 'chairs-grid',
+        roomOutline: defaultRoomOutline('rectangle'),
+      });
+    },
   },
   {
     id: 'tent-garden',
@@ -1211,6 +1307,7 @@ export function calculateBlueprintCapacity(blueprint: RoomLayoutBlueprint): numb
   return blueprint.furniture.reduce((sum, item) => {
     if (item.kind === 'table') return sum + item.capacity;
     if (item.kind === 'row') return sum + item.seatCount;
+    if (item.kind === 'chair') return sum + 1;
     return sum;
   }, 0);
 }
@@ -1336,6 +1433,10 @@ function generateConferenceBlueprint(params: LayoutParams, chairType: ChairType)
       tier: 0,
       x: 50,
       y: rowCount === 1 ? 55 : startY + step * i,
+      curve: 0.04,
+      focusX: 50,
+      focusY: 8,
+      rotation: 0,
     });
   }
 
@@ -1369,28 +1470,40 @@ function generateConferenceBlueprint(params: LayoutParams, chairType: ChairType)
 }
 
 function generateAmphitheaterBlueprint(params: LayoutParams, chairType: ChairType): RoomLayoutBlueprint {
-  const tierCount = Math.max(1, params.tierCount ?? 3);
+  const tierCount = Math.max(1, params.tierCount ?? 4);
   const rowsPerTier = Math.max(1, params.rowsPerTier ?? 2);
-  const seatsPerRow = Math.max(2, params.seatsPerRow ?? 12);
+  const baseSeats = Math.max(6, params.seatsPerRow ?? 12);
   const furniture: RoomLayoutBlueprint['furniture'] = [];
+  const risePerTierM = 0.38;
+  const stageFocus = { x: 50, y: 10 };
   let rowIndex = 0;
+  let totalSeats = 0;
 
+  // Scène en bas de la pente (haut du plan) ; gradins qui remontent vers le fond
   for (let tier = 0; tier < tierCount; tier++) {
     for (let r = 0; r < rowsPerTier; r++) {
-      const progress = (tier * rowsPerTier + r) / (tierCount * rowsPerTier - 1 || 1);
-      const y = 25 + progress * 60;
-      const curve = 0.15 + tier * 0.08;
+      const rowDepth = tier * rowsPerTier + r;
+      const progress = rowDepth / Math.max(1, tierCount * rowsPerTier - 1);
+      const y = 28 + progress * 58;
+      const seats = baseSeats + tier * 2;
+      const curve = 0.12 + progress * 0.22;
+      const elevationM = tier * risePerTierM + r * (risePerTierM * 0.35);
       furniture.push({
         id: uid('row'),
         kind: 'row',
         label: `Gradin ${tier + 1} — Rangée ${r + 1}`,
-        seatCount: seatsPerRow,
+        seatCount: seats,
         chairType,
         tier,
         x: 50,
         y,
         curve,
+        elevationM,
+        focusX: stageFocus.x,
+        focusY: stageFocus.y,
+        rotation: 0,
       });
+      totalSeats += seats;
       rowIndex++;
     }
   }
@@ -1398,20 +1511,192 @@ function generateAmphitheaterBlueprint(params: LayoutParams, chairType: ChairTyp
   return {
     version: 1,
     roomType: 'AMPHITHEATER',
-    canvas: { widthM: 22, heightM: 16 },
+    canvas: { widthM: 24, heightM: 18 },
     fixtures: [
       {
         id: uid('stage'),
         kind: 'stage',
-        x: 30,
-        y: 88,
-        w: 40,
-        h: 8,
+        x: 28,
+        y: 3,
+        w: 44,
+        h: 10,
         label: 'Scène',
+        heightM: 0.55,
+        material: 'wood',
+      },
+      {
+        id: uid('aisle'),
+        kind: 'aisle',
+        x: 47,
+        y: 16,
+        w: 6,
+        h: 72,
+        label: 'Allée centrale',
       },
     ],
     furniture,
-    metadata: { rowCount: rowIndex, totalSeats: rowIndex * seatsPerRow },
+    metadata: { rowCount: rowIndex, totalSeats },
+  };
+}
+
+/** Plan uniquement composé de chaises / rangées (sans tables). */
+function generateChairOnlyBlueprint(
+  params: LayoutParams,
+  chairType: ChairType,
+  mode: 'theater' | 'ceremony' | 'grid' | 'cinema',
+): RoomLayoutBlueprint {
+  const furniture: RoomLayoutBlueprint['furniture'] = [];
+  const fixtures: RoomLayoutBlueprint['fixtures'] = [];
+
+  if (mode === 'grid') {
+    const cols = Math.max(4, Math.min(12, params.seatsPerRow ?? 8));
+    const rows = Math.max(3, Math.min(14, params.rowCount ?? 6));
+    const startX = 18;
+    const startY = 20;
+    const endX = 82;
+    const endY = 82;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const x = cols === 1 ? 50 : startX + (c / (cols - 1)) * (endX - startX);
+        const y = rows === 1 ? 50 : startY + (r / (rows - 1)) * (endY - startY);
+        furniture.push({
+          id: uid('chair'),
+          kind: 'chair',
+          chairType,
+          label: `Siège ${r * cols + c + 1}`,
+          x,
+          y,
+          rotation: 0,
+        });
+      }
+    }
+    fixtures.push({
+      id: uid('podium'),
+      kind: 'podium',
+      x: 40,
+      y: 4,
+      w: 20,
+      h: 8,
+      label: 'Pupitre',
+      heightM: 0.45,
+      steps: 1,
+    });
+    return {
+      version: 1,
+      roomType: 'CONFERENCE',
+      canvas: { widthM: 16, heightM: 12 },
+      fixtures,
+      furniture,
+      metadata: { totalSeats: rows * cols, rowCount: rows },
+    };
+  }
+
+  if (mode === 'ceremony') {
+    const rowCount = Math.max(4, params.rowCount ?? 8);
+    const seatsPerSide = Math.max(4, Math.floor((params.seatsPerRow ?? 10) / 2));
+    for (let i = 0; i < rowCount; i++) {
+      const y = 28 + (i / Math.max(1, rowCount - 1)) * 55;
+      const curve = 0.08 + i * 0.015;
+      // Rangée gauche
+      furniture.push({
+        id: uid('row'),
+        kind: 'row',
+        label: `Gauche ${i + 1}`,
+        seatCount: seatsPerSide,
+        chairType,
+        tier: 0,
+        x: 32,
+        y,
+        curve,
+        focusX: 50,
+        focusY: 12,
+        rotation: 8,
+      });
+      // Rangée droite
+      furniture.push({
+        id: uid('row'),
+        kind: 'row',
+        label: `Droite ${i + 1}`,
+        seatCount: seatsPerSide,
+        chairType,
+        tier: 0,
+        x: 68,
+        y,
+        curve,
+        focusX: 50,
+        focusY: 12,
+        rotation: -8,
+      });
+    }
+    fixtures.push(
+      { id: uid('aisle'), kind: 'aisle', x: 47, y: 18, w: 6, h: 70, label: 'Allée centrale' },
+      { id: uid('stage'), kind: 'stage', x: 35, y: 3, w: 30, h: 10, label: 'Autel / podium', heightM: 0.35 },
+    );
+    return {
+      version: 1,
+      roomType: 'CONFERENCE',
+      canvas: { widthM: 18, heightM: 14 },
+      fixtures,
+      furniture,
+      metadata: { rowCount: rowCount * 2, totalSeats: rowCount * 2 * seatsPerSide },
+    };
+  }
+
+  // theater / cinema — rangées continues face à la scène
+  const rowCount = Math.max(4, params.rowCount ?? (mode === 'cinema' ? 10 : 7));
+  const seatsPerRow = Math.max(6, params.seatsPerRow ?? (mode === 'cinema' ? 14 : 12));
+  const startY = mode === 'cinema' ? 24 : 26;
+  const endY = 88;
+  for (let i = 0; i < rowCount; i++) {
+    const progress = rowCount === 1 ? 0 : i / (rowCount - 1);
+    const y = startY + progress * (endY - startY);
+    const elevationM = mode === 'cinema' ? progress * 1.4 : 0;
+    furniture.push({
+      id: uid('row'),
+      kind: 'row',
+      label: `Rangée ${i + 1}`,
+      seatCount: seatsPerRow + (mode === 'cinema' ? Math.floor(i / 2) : 0),
+      chairType,
+      tier: mode === 'cinema' ? Math.floor(progress * 4) : 0,
+      x: 50,
+      y,
+      curve: mode === 'cinema' ? 0.06 + progress * 0.1 : 0.04,
+      elevationM,
+      focusX: 50,
+      focusY: 8,
+      rotation: 0,
+    });
+  }
+  fixtures.push(
+    {
+      id: uid(mode === 'cinema' ? 'stage' : 'podium'),
+      kind: mode === 'cinema' ? 'stage' : 'podium',
+      x: mode === 'cinema' ? 22 : 38,
+      y: 3,
+      w: mode === 'cinema' ? 56 : 24,
+      h: mode === 'cinema' ? 12 : 10,
+      label: mode === 'cinema' ? 'Écran / scène' : 'Podium',
+      heightM: mode === 'cinema' ? 0.5 : 0.55,
+      steps: mode === 'cinema' ? 1 : 2,
+    },
+    {
+      id: uid('aisle'),
+      kind: 'aisle',
+      x: 48,
+      y: 18,
+      w: 4,
+      h: 72,
+      label: 'Allée',
+    },
+  );
+  const totalSeats = furniture.reduce((s, f) => s + (f.kind === 'row' ? f.seatCount : 0), 0);
+  return {
+    version: 1,
+    roomType: mode === 'cinema' ? 'AMPHITHEATER' : 'CONFERENCE',
+    canvas: { widthM: mode === 'cinema' ? 22 : 18, heightM: mode === 'cinema' ? 16 : 12 },
+    fixtures,
+    furniture,
+    metadata: { rowCount, totalSeats },
   };
 }
 

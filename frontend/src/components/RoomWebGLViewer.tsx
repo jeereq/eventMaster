@@ -18,6 +18,7 @@ import {
 } from '@/lib/roomLayoutUtils';
 import { resolveDepthAmount } from '@/lib/roomFloorUtils';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
+import { getTableSeatPlacement3D } from '@/lib/tablePlanUtils';
 import {
   getWallTexture,
   resolveChairMap,
@@ -450,8 +451,7 @@ function TableMesh({
         );
       })}
       {attachedChairs !== false && shape !== 'cocktail' && shape !== 'highTop' && Array.from({ length: Math.min(capacity, 14) }).map((_, i) => {
-        const a = (i / capacity) * Math.PI * 2 - Math.PI / 2;
-        const r = Math.max(size[0], size[1]) / 2 + 0.48;
+        const seat = getTableSeatPlacement3D(shape, capacity, i, size as [number, number]);
         return (
           <RealisticChair
             key={i}
@@ -459,8 +459,8 @@ function TableMesh({
             chairStyle={chairStyle}
             seatMaterial={seatMaterial}
             imageUrl={chairImageUrl}
-            position={[Math.cos(a) * r, 0, Math.sin(a) * r]}
-            rotationY={-a + Math.PI}
+            position={[seat.x, 0, seat.z]}
+            rotationY={seat.rotationY}
             selected={selected}
           />
         );
@@ -986,12 +986,18 @@ function SceneContent({
         }
         if (item.kind === 'row') {
           const [wx, wz] = pctToWorld(item.x, item.y, widthM, heightM);
-          const count = Math.min(item.seatCount, 20);
+          const count = Math.min(item.seatCount, 24);
+          const elevation = item.elevationM ?? (item.tier > 0 ? item.tier * 0.38 : 0);
+          const curve = item.curve ?? 0;
+          const spacing = 0.55;
+          const [fx, fz] = pctToWorld(item.focusX ?? item.x, item.focusY ?? Math.max(4, item.y - 25), widthM, heightM);
+          const rowRot = ((item.rotation ?? 0) * Math.PI) / 180;
+
           return (
             <group
               key={item.id}
               position={[wx, 0, wz]}
-              rotation={[0, ((item.rotation ?? 0) * Math.PI) / 180, 0]}
+              rotation={[0, rowRot, 0]}
               onClick={(e) => { e.stopPropagation(); onSelect({ kind: 'row', id: item.id }); }}
               onPointerDown={(e) => {
                 if (readOnly || wallEditMode) return;
@@ -1000,19 +1006,36 @@ function SceneContent({
                 setDragTarget({ kind: 'row', id: item.id });
               }}
             >
-              {Array.from({ length: count }).map((_, i) => (
-                <RealisticChair
-                  key={i}
-                  chairType={item.chairType}
-                  chairStyle={item.chairStyle}
-                  seatMaterial={item.seatMaterial}
-                  imageUrl={item.chairImageUrl}
-                  position={[(i - (count - 1) / 2) * 0.55, 0, 0]}
-                  rotationY={Math.PI}
-                  selected={selected?.kind === 'row' && selected.id === item.id}
-                />
-              ))}
-              <Html center distanceFactor={10} style={{ pointerEvents: 'none' }} position={[0, 1.1, 0]}>
+              {/* Plateforme / gradin */}
+              {elevation > 0.05 && (
+                <mesh position={[0, elevation / 2, 0.15]} receiveShadow castShadow>
+                  <boxGeometry args={[count * spacing + 0.6, elevation, 1.1 + curve * 2]} />
+                  <meshStandardMaterial color={selected ? '#c7d2fe' : '#78716c'} roughness={0.85} />
+                </mesh>
+              )}
+              {Array.from({ length: count }).map((_, i) => {
+                const t = i - (count - 1) / 2;
+                const localX = t * spacing;
+                // Arc : les sièges du milieu avancent vers la scène
+                const localZ = curve * (t * t) * 0.08;
+                // Orientation vers le point de focus (scène), en espace monde puis local
+                const worldX = wx + Math.cos(rowRot) * localX - Math.sin(rowRot) * localZ;
+                const worldZ = wz + Math.sin(rowRot) * localX + Math.cos(rowRot) * localZ;
+                const faceY = Math.atan2(fx - worldX, fz - worldZ) - rowRot;
+                return (
+                  <RealisticChair
+                    key={i}
+                    chairType={item.chairType}
+                    chairStyle={item.chairStyle}
+                    seatMaterial={item.seatMaterial}
+                    imageUrl={item.chairImageUrl}
+                    position={[localX, elevation, localZ]}
+                    rotationY={faceY}
+                    selected={selected?.kind === 'row' && selected.id === item.id}
+                  />
+                );
+              })}
+              <Html center distanceFactor={10} style={{ pointerEvents: 'none' }} position={[0, elevation + 1.1, 0]}>
                 <span className="text-[9px] font-bold bg-white/90 px-1.5 py-0.5 rounded shadow-sm">{item.label}</span>
               </Html>
             </group>
