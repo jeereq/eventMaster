@@ -15,13 +15,25 @@ export type ServiceCategory =
   | 'FLORIST'
   | 'TRANSPORT'
   | 'MC'
+  | 'BEAUTY_HAIR'
+  | 'EVENT_PLANNER'
+  | 'ENTERTAINMENT'
+  | 'OFFICIANT'
+  | 'CHILDCARE'
+  | 'AV_TECHNICIAN'
+  | 'STATIONERY'
   | 'OTHER'
   | 'RENTAL_CLOTHING_MEN'
   | 'RENTAL_CLOTHING_WOMEN'
   | 'RENTAL_CLOTHING_CHILD'
   | 'RENTAL_CAR'
   | 'RENTAL_MOTO'
-  | 'RENTAL_EQUIPMENT';
+  | 'RENTAL_EQUIPMENT'
+  | 'RENTAL_FURNITURE'
+  | 'RENTAL_AV'
+  | 'RENTAL_TABLEWARE'
+  | 'RENTAL_DECOR'
+  | 'RENTAL_TENT';
 
 export interface PublicVenue {
   slug: string;
@@ -104,23 +116,38 @@ export const SERVICE_CATEGORY_LABELS: Record<ServiceCategory, string> = {
   FLORIST: 'Fleuriste',
   TRANSPORT: 'Transport',
   MC: 'Maître de cérémonie',
+  BEAUTY_HAIR: 'Beauté / Coiffure',
+  EVENT_PLANNER: 'Organisateur / Wedding Planner',
+  ENTERTAINMENT: 'Animation / Groupe de musique',
+  OFFICIANT: 'Officiant de cérémonie',
+  CHILDCARE: 'Garde d\'enfants',
+  AV_TECHNICIAN: 'Technicien son et lumière',
+  STATIONERY: 'Papeterie & Faire-part',
   OTHER: 'Autre prestation',
   RENTAL_CLOTHING_MEN: 'Location habits homme',
   RENTAL_CLOTHING_WOMEN: 'Location habits femme',
   RENTAL_CLOTHING_CHILD: 'Location habits enfant',
   RENTAL_CAR: 'Location voiture',
   RENTAL_MOTO: 'Location moto',
-  RENTAL_EQUIPMENT: 'Location matériel',
+  RENTAL_EQUIPMENT: 'Location matériel divers',
+  RENTAL_FURNITURE: 'Location mobilier & chaises',
+  RENTAL_AV: 'Location matériel audiovisuel',
+  RENTAL_TABLEWARE: 'Location vaisselle & linge de table',
+  RENTAL_DECOR: 'Location matériel de décoration',
+  RENTAL_TENT: 'Location tentes & chapiteaux',
 };
 
 export const SERVICE_TRADE_CATEGORIES: ServiceCategory[] = [
   'CATERING', 'PHOTOGRAPHY', 'VIDEO', 'DJ', 'DECORATION',
-  'SECURITY', 'FLORIST', 'TRANSPORT', 'MC', 'OTHER',
+  'SECURITY', 'FLORIST', 'TRANSPORT', 'MC', 'BEAUTY_HAIR',
+  'EVENT_PLANNER', 'ENTERTAINMENT', 'OFFICIANT', 'CHILDCARE',
+  'AV_TECHNICIAN', 'STATIONERY', 'OTHER',
 ];
 
 export const SERVICE_RENTAL_CATEGORIES: ServiceCategory[] = [
   'RENTAL_CLOTHING_MEN', 'RENTAL_CLOTHING_WOMEN', 'RENTAL_CLOTHING_CHILD',
-  'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT',
+  'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT', 'RENTAL_FURNITURE',
+  'RENTAL_AV', 'RENTAL_TABLEWARE', 'RENTAL_DECOR', 'RENTAL_TENT',
 ];
 
 export const SERVICE_CATEGORIES = [...SERVICE_TRADE_CATEGORIES, ...SERVICE_RENTAL_CATEGORIES];
@@ -187,6 +214,48 @@ export const SERVICE_CATEGORY_META: Record<ServiceCategory, ServiceCategoryMeta>
     defaultUnit: 'EVENT',
     units: ['EVENT', 'HOUR'],
   },
+  BEAUTY_HAIR: {
+    group: 'trade',
+    hint: 'Maquillage, coiffure ou soins pour le jour J.',
+    defaultUnit: 'EVENT',
+    units: ['EVENT', 'PERSON', 'HOUR'],
+  },
+  EVENT_PLANNER: {
+    group: 'trade',
+    hint: 'Organisation complète, wedding planner ou coordination.',
+    defaultUnit: 'EVENT',
+    units: ['EVENT', 'DAY'],
+  },
+  ENTERTAINMENT: {
+    group: 'trade',
+    hint: 'Groupe de musique, chanteur, magicien ou danseurs.',
+    defaultUnit: 'EVENT',
+    units: ['EVENT', 'HOUR'],
+  },
+  OFFICIANT: {
+    group: 'trade',
+    hint: 'Célébrant pour cérémonie laïque ou religieuse.',
+    defaultUnit: 'EVENT',
+    units: ['EVENT', 'HOUR'],
+  },
+  CHILDCARE: {
+    group: 'trade',
+    hint: 'Garde d\'enfants, baby-sitters, animations enfants.',
+    defaultUnit: 'HOUR',
+    units: ['HOUR', 'EVENT', 'DAY'],
+  },
+  AV_TECHNICIAN: {
+    group: 'trade',
+    hint: 'Ingénieur du son, technicien lumière ou régisseur.',
+    defaultUnit: 'DAY',
+    units: ['DAY', 'EVENT', 'HOUR'],
+  },
+  STATIONERY: {
+    group: 'trade',
+    hint: 'Création et impression de faire-parts, menus, signalétique.',
+    defaultUnit: 'QUOTA',
+    units: ['QUOTA', 'EVENT'],
+  },
   OTHER: {
     group: 'trade',
     hint: 'Coordination jour J, photobooth, générateur…',
@@ -225,9 +294,39 @@ export const SERVICE_CATEGORY_META: Record<ServiceCategory, ServiceCategoryMeta>
   },
   RENTAL_EQUIPMENT: {
     group: 'rental',
-    hint: 'Chapiteau, chaises, sono, groupe électrogène.',
+    hint: 'Générateur, climatisation, matériel divers.',
     defaultUnit: 'DAY',
     units: ['DAY', 'EVENT', 'HOUR'],
+  },
+  RENTAL_FURNITURE: {
+    group: 'rental',
+    hint: 'Chaises, tables, mange-debout, canapés.',
+    defaultUnit: 'DAY',
+    units: ['DAY', 'EVENT'],
+  },
+  RENTAL_AV: {
+    group: 'rental',
+    hint: 'Sonorisation, micros, écrans, projecteurs, jeux de lumière.',
+    defaultUnit: 'DAY',
+    units: ['DAY', 'EVENT'],
+  },
+  RENTAL_TABLEWARE: {
+    group: 'rental',
+    hint: 'Assiettes, verres, couverts, nappes, serviettes.',
+    defaultUnit: 'DAY',
+    units: ['DAY', 'EVENT', 'PERSON'],
+  },
+  RENTAL_DECOR: {
+    group: 'rental',
+    hint: 'Arches, vases, tapis, chandeliers, mobilier décoratif.',
+    defaultUnit: 'DAY',
+    units: ['DAY', 'EVENT'],
+  },
+  RENTAL_TENT: {
+    group: 'rental',
+    hint: 'Chapiteaux, tentes de réception, barnums.',
+    defaultUnit: 'DAY',
+    units: ['DAY', 'EVENT'],
   },
 };
 
