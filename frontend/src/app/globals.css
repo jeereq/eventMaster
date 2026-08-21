@@ -1545,5 +1545,5 @@ html[data-mood="celebrate"] .font-display {
 
 .em-snap-card {
   scroll-snap-align: center;
-  flex: 0 0 min(78vw, 300px);
+  flex: 0 0 min(72vw, 260px);
 }

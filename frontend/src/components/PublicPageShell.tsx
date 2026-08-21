@@ -9,11 +9,13 @@ export default function PublicPageShell({
   children,
   faqHref = '/#faq',
   hideFooter = false,
+  hideHeader = false,
   mobileFooterPad = false,
 }: {
   children: React.ReactNode;
   faqHref?: string;
   hideFooter?: boolean;
+  hideHeader?: boolean;
   mobileFooterPad?: boolean;
 }) {
   return (
@@ -21,7 +23,7 @@ export default function PublicPageShell({
       'flex flex-col min-h-screen bg-background text-foreground font-sans antialiased',
       hideFooter && 'h-dvh overflow-hidden',
     )}>
-      <SiteHeader />
+      {hideHeader ? null : <SiteHeader />}
       {children}
       {hideFooter ? null : (
         <SiteFooter faqHref={faqHref} className={mobileFooterPad ? 'pb-24 lg:pb-0' : undefined} />

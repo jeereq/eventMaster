@@ -1235,7 +1235,7 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
         {(route || routeHint || routing) && (
           <div className={cn(
             'absolute z-[1100] left-3 right-3 sm:right-auto sm:w-80 rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-soft)] p-3 space-y-2 max-h-[42%] overflow-auto',
-            immersive || variant === 'focus' ? 'top-[11.5rem] max-h-[28%]' : 'top-3',
+            immersive || variant === 'focus' ? 'top-[6.75rem] sm:top-[11.5rem] max-h-[28%]' : 'top-3',
           )}>
             <div className="flex items-start justify-between gap-2">
               <div>

@@ -267,7 +267,7 @@ export default function CatalogueFilterBar({
           Tout effacer
         </button>
       ) : null}
-      {resultLabel ? (
+      {resultLabel && variant !== 'float' ? (
         <span className="ml-auto text-[10px] text-muted font-medium shrink-0">{resultLabel}</span>
       ) : null}
     </div>
@@ -302,15 +302,15 @@ export default function CatalogueFilterBar({
 
   if (variant === 'float') {
     return (
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-1.5">
           <div className="flex-1 min-w-0 relative">
-            <Search className="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-3.5 h-3.5 text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder={searchPlaceholder}
-              className="w-full h-11 pl-10 pr-4 rounded-full bg-surface/90 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/25"
+              className="w-full h-9 pl-9 pr-3 rounded-full bg-surface/90 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/25"
             />
           </div>
           {hasFilters && (
@@ -318,14 +318,14 @@ export default function CatalogueFilterBar({
               type="button"
               onClick={openModal}
               className={cn(
-                'relative h-11 w-11 shrink-0 rounded-full border shadow-lg backdrop-blur-xl inline-flex items-center justify-center transition',
+                'relative h-9 w-9 shrink-0 rounded-full border shadow-lg backdrop-blur-xl inline-flex items-center justify-center transition',
                 count
                   ? 'bg-primary text-white border-primary'
                   : 'bg-surface/90 text-foreground border-white/25 dark:border-white/10',
               )}
               aria-label="Filtres"
             >
-              <SlidersHorizontal className="w-4 h-4" />
+              <SlidersHorizontal className="w-3.5 h-3.5" />
               {count > 0 ? (
                 <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-white text-primary text-[10px] font-bold leading-4">
                   {count}
@@ -340,6 +340,7 @@ export default function CatalogueFilterBar({
             text="Salles, prestataires, locations et événements filtrés sur EventMaster."
             label="Partager la recherche"
             url={shareUrl}
+            className="!h-9 !w-9 !rounded-full"
           />
           ) : null}
         </div>
@@ -349,11 +350,11 @@ export default function CatalogueFilterBar({
               onChange={onViewChange}
               compact={compactToggle}
               hideMap={hideMap}
-              className="w-full justify-between bg-surface/90 backdrop-blur-xl border-white/25 dark:border-white/10 shadow-lg"
+              className="hidden sm:inline-flex w-full justify-between bg-surface/90 backdrop-blur-xl border-white/25 dark:border-white/10 shadow-lg"
             />
         ) : null}
         {view === 'grid' && gridCols && onGridColsChange ? (
-          <div className="flex items-center gap-2">
+          <div className="hidden sm:flex items-center gap-2">
             <span className="text-[11px] font-semibold text-muted">Colonnes</span>
             <CatalogueGridColsToggle
               value={gridCols}
@@ -363,7 +364,7 @@ export default function CatalogueFilterBar({
             />
           </div>
         ) : null}
-        {chipsRow}
+        {count > 0 ? chipsRow : null}
         {filterModal}
       </div>
     );

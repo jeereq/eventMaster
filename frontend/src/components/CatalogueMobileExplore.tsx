@@ -14,12 +14,12 @@ import { catalogueItemDisplayKind, catalogueKindAccent, catalogueKindLabel, form
 
 type SheetSnap = 'peek' | 'mid' | 'full';
 
-const PEEK = 268;
+const PEEK = 176;
 
 function snapHeights(vh: number) {
   return {
     peek: PEEK,
-    mid: Math.round(vh * 0.46),
+    mid: Math.round(vh * 0.38),
     full: Math.round(vh * 0.9),
   };
 }
@@ -58,7 +58,7 @@ function StoryCard({
     >
       <span className={cn('absolute inset-x-0 top-0 h-1 z-10', accent.bar)} aria-hidden />
       <button type="button" onClick={onSelect} className="block w-full text-left">
-        <div className="relative h-[7.5rem] bg-surface-muted">
+        <div className="relative h-[4.75rem] bg-surface-muted">
           {item.coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={item.coverUrl} alt="" className="w-full h-full object-cover" />
@@ -90,18 +90,18 @@ function StoryCard({
           </div>
         </div>
       </button>
-      <div className="flex items-center gap-2 p-2.5">
+      <div className="flex items-center gap-2 px-2.5 py-2">
         <button
           type="button"
           onClick={onDirections}
-          className="flex-1 h-9 rounded-full bg-primary text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5"
+          className="flex-1 h-8 rounded-full bg-primary text-white text-[11px] font-semibold inline-flex items-center justify-center gap-1.5"
         >
           <Navigation className="w-3.5 h-3.5" />
           Y aller
         </button>
         <Link
           href={item.href}
-          className="flex-1 h-9 rounded-full border border-border bg-surface-muted text-foreground text-xs font-semibold inline-flex items-center justify-center"
+          className="flex-1 h-8 rounded-full border border-border bg-surface-muted text-foreground text-[11px] font-semibold inline-flex items-center justify-center"
         >
           Voir
         </Link>
@@ -172,7 +172,8 @@ export default function CatalogueMobileExplore({
   markers,
   loading,
   error,
-  header,
+  nav,
+  filters,
   emptyTitle,
   emptyDescription,
   searchCenter,
@@ -185,7 +186,8 @@ export default function CatalogueMobileExplore({
   markers: MarketplaceMapMarker[];
   loading?: boolean;
   error?: string;
-  header: React.ReactNode;
+  nav?: React.ReactNode;
+  filters?: React.ReactNode;
   emptyTitle: string;
   emptyDescription: string;
   searchCenter?: { lat: number; lng: number } | null;
@@ -295,7 +297,7 @@ export default function CatalogueMobileExplore({
   const selected = items.find((item) => item.id === selectedId) || null;
 
   return (
-    <div className="relative isolate h-[calc(100dvh-3.5rem)] overflow-hidden bg-background overscroll-none">
+    <div className="relative isolate h-dvh overflow-hidden bg-background overscroll-none">
       <div className="absolute inset-0 z-0">
         <MarketplaceLocationsMap
           ref={mapApi}
@@ -310,28 +312,29 @@ export default function CatalogueMobileExplore({
         />
       </div>
 
-      <div className="absolute z-10 top-0 left-0 right-0 p-3 space-y-2 bg-gradient-to-b from-background/90 via-background/50 to-transparent pointer-events-none">
-        <div className="pointer-events-auto space-y-2">
+      <div className="absolute z-10 top-0 left-0 right-0 px-2.5 pt-[max(0.5rem,env(safe-area-inset-top))] pb-10 space-y-1.5 bg-gradient-to-b from-background/75 via-background/25 to-transparent pointer-events-none">
+        <div className="pointer-events-auto flex items-center gap-1.5">
           {onExit ? (
             <button
               type="button"
               onClick={onExit}
-              className="h-11 px-3.5 rounded-full bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center gap-1.5 text-sm font-semibold text-foreground"
+              className="h-9 px-2.5 rounded-full bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center gap-1 text-xs font-semibold text-foreground shrink-0"
             >
-              <X className="w-4 h-4" />
-              Quitter la carte
+              <X className="w-3.5 h-3.5" />
+              Quitter
             </button>
           ) : null}
-          {header}
+          {nav ? <div className="min-w-0 flex-1">{nav}</div> : null}
         </div>
+        {filters ? <div className="pointer-events-auto">{filters}</div> : null}
       </div>
 
       {snap !== 'full' ? (
         <button
           type="button"
           onClick={() => mapApi.current?.recenter()}
-          className="absolute z-10 right-3 h-11 w-11 rounded-full bg-surface/90 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center justify-center text-foreground"
-          style={{ bottom: sheetH + 16, transition: dragging ? 'none' : 'bottom 0.32s cubic-bezier(0.22, 1, 0.36, 1)' }}
+          className="absolute z-10 right-3 h-10 w-10 rounded-full bg-surface/90 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center justify-center text-foreground"
+          style={{ bottom: sheetH + 12, transition: dragging ? 'none' : 'bottom 0.32s cubic-bezier(0.22, 1, 0.36, 1)' }}
           aria-label="Recentrer la carte"
         >
           <Locate className="w-4 h-4" />
@@ -348,7 +351,7 @@ export default function CatalogueMobileExplore({
         }}
       >
         <div
-          className="shrink-0 pt-2 pb-1 px-4 touch-none"
+          className="shrink-0 pt-1.5 pb-1 px-3 touch-none"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={(e) => endDrag(e.clientY)}
@@ -425,7 +428,7 @@ export default function CatalogueMobileExplore({
           >
             {loading && items.length === 0 ? (
               Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="em-snap-card h-[12.5rem] rounded-[var(--radius-card)] bg-surface-muted animate-pulse" />
+                <div key={i} className="em-snap-card h-[8.25rem] rounded-[var(--radius-card)] bg-surface-muted animate-pulse" />
               ))
             ) : items.length === 0 ? (
               <div className="px-2 py-6 text-center w-full">

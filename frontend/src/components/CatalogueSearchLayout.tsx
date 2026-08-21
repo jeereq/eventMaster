@@ -61,7 +61,7 @@ export function CatalogueFocusStage({
           searchOriginLabel={searchOriginLabel}
         />
       </div>
-      <div className="absolute inset-x-0 top-0 z-10 p-3 sm:p-4 space-y-2 bg-gradient-to-b from-background via-background/80 to-transparent pointer-events-none">
+      <div className="absolute inset-x-0 top-0 z-10 p-2 sm:p-4 space-y-1.5 sm:space-y-2 bg-gradient-to-b from-background/80 via-background/35 to-transparent pointer-events-none">
         {header ? <div className="pointer-events-auto">{header}</div> : null}
         {filters ? <div className="pointer-events-auto max-w-2xl em-focus-filters">{filters}</div> : null}
         {error ? (
@@ -149,7 +149,7 @@ export default function CatalogueSearchLayout({
 
   if (isMobile && mapMode) {
     return (
-      <PublicPageShell faqHref="/faq" hideFooter>
+      <PublicPageShell faqHref="/faq" hideFooter hideHeader>
         <CatalogueMobileExplore
           items={items}
           markers={markers}
@@ -162,15 +162,14 @@ export default function CatalogueSearchLayout({
           city={city}
           searchOriginLabel={searchOriginLabel}
           onExit={exitMap}
-          header={
-            <>
-              <MarketplacePublicNav
-                active={activeNav}
-                className="bg-surface/90 backdrop-blur-xl border-white/25 dark:border-white/10 shadow-lg"
-              />
-              {renderFilters('float')}
-            </>
+          nav={
+            <MarketplacePublicNav
+              dense
+              active={activeNav}
+              className="bg-surface/90 backdrop-blur-xl border-white/25 dark:border-white/10 shadow-lg"
+            />
           }
+          filters={renderFilters('float')}
         />
       </PublicPageShell>
     );
