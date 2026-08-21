@@ -112,6 +112,18 @@ function LightingExposure({ exposure }: { exposure: number }) {
   return null;
 }
 
+/** Midi = ombres dures (Basic) ; crépuscule/nuit = douces si qualité soft. */
+function ShadowHardness({ hard, softPreferred }: { hard: boolean; softPreferred: boolean }) {
+  const { gl } = useThree();
+  useEffect(() => {
+    gl.shadowMap.type = hard || !softPreferred
+      ? THREE.BasicShadowMap
+      : THREE.PCFSoftShadowMap;
+    gl.shadowMap.needsUpdate = true;
+  }, [gl, hard, softPreferred]);
+  return null;
+}
+
 function ScenicLights({
   widthM,
   heightM,
@@ -127,7 +139,14 @@ function ScenicLights({
   const [sx, sy, sz] = lighting.sunPosition;
   const isNight = lighting.preset === 'night';
   const isDusk = lighting.preset === 'dusk';
-  const isDayLike = lighting.showSky && (lighting.preset === 'day' || lighting.preset === 'dusk' || lighting.preset === 'tent');
+  const isDay = lighting.preset === 'day';
+  const isDayLike = lighting.showSky && (isDay || isDusk || lighting.preset === 'tent');
+
+  // Réglette LED au sommet du « chevalet » (bord haut / avant de la scène)
+  const ledY = Math.max(3.2, extent * 0.22);
+  const ledZ = -heightM * 0.48;
+  const ledTarget: [number, number, number] = [0, 0.15, -heightM * 0.22];
+  const ledSpan = Math.min(widthM * 0.55, 6.5);
 
   return (
     <>
@@ -138,43 +157,33 @@ function ScenicLights({
           turbidity={lighting.skyTurbidity}
           rayleigh={lighting.skyRayleigh}
           mieCoefficient={lighting.skyMie}
-          mieDirectionalG={isDusk ? 0.92 : 0.8}
+          mieDirectionalG={isDusk ? 0.95 : 0.72}
         />
       ) : null}
 
       {lighting.showStars ? (
-        <Stars radius={90} depth={50} count={2800} factor={2.8} saturation={0} fade speed={0.35} />
+        <Stars radius={100} depth={60} count={4200} factor={3.2} saturation={0} fade speed={0.2} />
       ) : null}
 
-      {/* Sol extérieur / horizon (rebond visuel) */}
-      {lighting.showSky ? (
+      {lighting.showSky && !isNight ? (
         <mesh position={[0, -0.04, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
           <circleGeometry args={[extent * 2.2, 64]} />
-          <meshStandardMaterial
-            color={isNight ? '#0c0f14' : lighting.hemiGround}
-            roughness={0.96}
-            metalness={0}
-          />
+          <meshStandardMaterial color={lighting.hemiGround} roughness={0.96} metalness={0} />
         </mesh>
       ) : null}
 
-      {/* Disque soleil / lune */}
-      {lighting.showSky ? (
-        <group position={[sx * 0.9, sy * 0.9, sz * 0.9]}>
+      {lighting.showSky && !isNight ? (
+        <group position={[sx * 0.88, sy * 0.88, sz * 0.88]}>
           <mesh>
-            <sphereGeometry args={[isNight ? 1.1 : isDusk ? 2.1 : 1.35, 24, 24]} />
-            <meshBasicMaterial
-              color={isNight ? '#e2e8f0' : isDusk ? '#ff8c42' : '#fff7ad'}
-              fog={false}
-            />
+            <sphereGeometry args={[isDusk ? 2.4 : 1.15, 24, 24]} />
+            <meshBasicMaterial color={isDusk ? '#ff7a3d' : '#fff4a8'} fog={false} />
           </mesh>
-          {/* Halo soft */}
-          <mesh scale={2.4}>
-            <sphereGeometry args={[isNight ? 1.1 : isDusk ? 2.1 : 1.35, 16, 16]} />
+          <mesh scale={isDusk ? 3.2 : 2.2}>
+            <sphereGeometry args={[isDusk ? 2.4 : 1.15, 16, 16]} />
             <meshBasicMaterial
-              color={isNight ? '#94a3b8' : isDusk ? '#fb923c' : '#fde68a'}
+              color={isDusk ? '#fb7185' : '#fde68a'}
               transparent
-              opacity={isNight ? 0.12 : isDusk ? 0.22 : 0.16}
+              opacity={isDusk ? 0.28 : 0.14}
               depthWrite={false}
               fog={false}
             />
@@ -182,86 +191,178 @@ function ScenicLights({
         </group>
       ) : null}
 
-      <ambientLight intensity={lighting.ambient} color={isNight ? '#1e293b' : '#ffffff'} />
+      {isNight ? (
+        <NightLedStrip
+          ledY={ledY}
+          ledZ={ledZ}
+          ledTarget={ledTarget}
+          ledSpan={ledSpan}
+          heightM={heightM}
+          shadowMapSize={shadowMapSize}
+          ambient={lighting.ambient}
+          hemiIntensity={lighting.hemiIntensity}
+        />
+      ) : (
+        <>
+          <ambientLight intensity={lighting.ambient} color={isDusk ? '#ffc9a8' : '#ffffff'} />
+          <directionalLight
+            position={[sx, sy, sz]}
+            intensity={lighting.keyIntensity}
+            castShadow={lighting.keyIntensity > 0.05}
+            shadow-mapSize-width={shadowMapSize}
+            shadow-mapSize-height={shadowMapSize}
+            shadow-bias={isDay ? -0.00008 : -0.00018}
+            shadow-normalBias={isDay ? 0.018 : 0.04}
+            shadow-camera-far={140}
+            shadow-camera-near={0.5}
+            shadow-camera-left={-extent * (isDay ? 1.05 : 1.2)}
+            shadow-camera-right={extent * (isDay ? 1.05 : 1.2)}
+            shadow-camera-top={extent * (isDay ? 1.05 : 1.2)}
+            shadow-camera-bottom={-extent * (isDay ? 1.05 : 1.2)}
+            color={lighting.keyColor}
+          />
+          <directionalLight
+            position={isDusk ? [-sx * 0.2, 5, -sz * 0.4] : [-sx * 0.5, Math.max(5, sy * 0.25), -sz * 0.5]}
+            intensity={lighting.fillIntensity}
+            color={lighting.fillColor}
+          />
+          {lighting.bounceIntensity > 0 ? (
+            <directionalLight
+              position={[sx * 0.15, 0.8, sz * 0.15]}
+              intensity={lighting.bounceIntensity}
+              color={lighting.bounceColor}
+            />
+          ) : null}
+          <hemisphereLight args={[lighting.hemiSky, lighting.hemiGround, lighting.hemiIntensity]} />
+          {lighting.spotIntensity > 0 ? (
+            <spotLight
+              position={[0, Math.max(9, extent * 0.55), 0]}
+              angle={isDusk ? 0.85 : 0.65}
+              penumbra={isDusk ? 0.9 : 0.55}
+              intensity={lighting.spotIntensity * lighting.interiorBoost}
+              castShadow={false}
+              color={lighting.spotColor}
+              distance={extent * 2.2}
+              decay={1.6}
+            />
+          ) : null}
+          {lighting.warmPoint > 0 ? (
+            <>
+              <pointLight
+                position={[widthM * 0.28, 3.4, heightM * 0.22]}
+                intensity={lighting.warmPoint * lighting.interiorBoost}
+                color="#ffd89a"
+                distance={20}
+                decay={2}
+              />
+              <pointLight
+                position={[-widthM * 0.26, 3.4, -heightM * 0.18]}
+                intensity={lighting.warmPoint * lighting.interiorBoost * 0.75}
+                color="#fde68a"
+                distance={18}
+                decay={2}
+              />
+            </>
+          ) : null}
+          {lighting.coolPoint > 0 ? (
+            <pointLight
+              position={[-widthM * 0.35, 2.8, heightM * 0.3]}
+              intensity={lighting.coolPoint * lighting.interiorBoost}
+              color="#e0f2fe"
+              distance={16}
+              decay={2}
+            />
+          ) : null}
+        </>
+      )}
+    </>
+  );
+}
 
-      {/* Soleil / lune — clé directionnelle avec ombres réalistes */}
-      <directionalLight
-        position={[sx, sy, sz]}
-        intensity={lighting.keyIntensity}
+/** Réglette LED au sommet du chevalet — seule source en mode nuit. */
+function NightLedStrip({
+  ledY,
+  ledZ,
+  ledTarget,
+  ledSpan,
+  heightM,
+  shadowMapSize,
+  ambient,
+  hemiIntensity,
+}: {
+  ledY: number;
+  ledZ: number;
+  ledTarget: [number, number, number];
+  ledSpan: number;
+  heightM: number;
+  shadowMapSize: number;
+  ambient: number;
+  hemiIntensity: number;
+}) {
+  const spotRef = React.useRef<THREE.SpotLight>(null);
+  const targetRef = React.useRef<THREE.Object3D>(null);
+
+  useEffect(() => {
+    if (spotRef.current && targetRef.current) {
+      spotRef.current.target = targetRef.current;
+      spotRef.current.target.updateMatrixWorld();
+    }
+  }, []);
+
+  return (
+    <group>
+      <ambientLight intensity={ambient} color="#0b1224" />
+      <hemisphereLight args={['#020617', '#000000', hemiIntensity]} />
+
+      <group position={[0, ledY, ledZ]}>
+        <mesh position={[0, -0.55, 0.08]}>
+          <boxGeometry args={[0.08, 1.1, 0.08]} />
+          <meshStandardMaterial color="#1c1917" roughness={0.7} metalness={0.2} />
+        </mesh>
+        <mesh castShadow>
+          <boxGeometry args={[ledSpan, 0.06, 0.12]} />
+          <meshStandardMaterial color="#111827" roughness={0.45} metalness={0.55} />
+        </mesh>
+        <mesh position={[0, -0.04, 0.02]}>
+          <boxGeometry args={[ledSpan * 0.96, 0.02, 0.04]} />
+          <meshStandardMaterial
+            color="#f8fafc"
+            emissive="#e2e8f0"
+            emissiveIntensity={2.4}
+            roughness={0.3}
+            metalness={0.1}
+          />
+        </mesh>
+      </group>
+
+      <spotLight
+        ref={spotRef}
+        position={[0, ledY - 0.05, ledZ + 0.05]}
+        angle={0.32}
+        penumbra={0.22}
+        intensity={8.5}
+        color="#f1f5f9"
         castShadow
         shadow-mapSize-width={shadowMapSize}
         shadow-mapSize-height={shadowMapSize}
-        shadow-bias={-0.00015}
-        shadow-normalBias={0.035}
-        shadow-camera-far={120}
-        shadow-camera-near={0.5}
-        shadow-camera-left={-extent * 1.15}
-        shadow-camera-right={extent * 1.15}
-        shadow-camera-top={extent * 1.15}
-        shadow-camera-bottom={-extent * 1.15}
-        color={lighting.keyColor}
+        shadow-bias={-0.0002}
+        shadow-normalBias={0.03}
+        distance={heightM * 1.4}
+        decay={1.75}
       />
+      <object3D ref={targetRef} position={ledTarget} />
 
-      {/* Ciel / fill opposé (lumière diffuse du ciel) */}
-      <directionalLight
-        position={[-sx * 0.55, Math.max(6, sy * 0.35), -sz * 0.55]}
-        intensity={lighting.fillIntensity}
-        color={lighting.fillColor}
-      />
-
-      {/* Rebond sol (bounce) */}
-      <directionalLight
-        position={[sx * 0.2, 1.2, sz * 0.2]}
-        intensity={lighting.bounceIntensity}
-        color={lighting.bounceColor}
-      />
-
-      <hemisphereLight args={[lighting.hemiSky, lighting.hemiGround, lighting.hemiIntensity]} />
-
-      {/* Éclairage plafond / ambiance intérieure */}
-      <spotLight
-        position={[0, Math.max(9, extent * 0.55), 0]}
-        angle={0.72}
-        penumbra={0.78}
-        intensity={lighting.spotIntensity * lighting.interiorBoost}
-        castShadow={false}
-        color={lighting.spotColor}
-        distance={extent * 2.2}
-        decay={1.6}
-      />
-      {/* Pratiques chaudes (lustres / appliques) */}
-      <pointLight
-        position={[widthM * 0.28, 3.4, heightM * 0.22]}
-        intensity={lighting.warmPoint * lighting.interiorBoost}
-        color="#ffd89a"
-        distance={20}
-        decay={2}
-      />
-      <pointLight
-        position={[-widthM * 0.26, 3.4, -heightM * 0.18]}
-        intensity={lighting.warmPoint * lighting.interiorBoost * 0.75}
-        color="#fde68a"
-        distance={18}
-        decay={2}
-      />
-      {/* Accents froids (fenêtres / nuit) */}
-      <pointLight
-        position={[-widthM * 0.35, 2.8, heightM * 0.3]}
-        intensity={lighting.coolPoint * lighting.interiorBoost}
-        color={isNight ? '#93c5fd' : '#e0f2fe'}
-        distance={16}
-        decay={2}
-      />
-      {isNight ? (
+      {[-0.35, -0.15, 0, 0.15, 0.35].map((t) => (
         <pointLight
-          position={[0, 0.35, heightM * 0.45]}
-          intensity={0.35 * lighting.interiorBoost}
-          color="#fbbf24"
-          distance={12}
+          key={t}
+          position={[ledSpan * t, ledY - 0.08, ledZ + 0.06]}
+          intensity={0.55}
+          color="#eef2ff"
+          distance={4.5}
           decay={2}
         />
-      ) : null}
-    </>
+      ))}
+    </group>
   );
 }
 
@@ -1536,6 +1637,7 @@ function SceneContent({
         shadowMapSize={qualitySettings.shadowMapSize}
       />
       <LightingExposure exposure={lighting.exposure * (qualitySettings.exposure / 1.16)} />
+      <ShadowHardness hard={lighting.preset === 'day'} softPreferred={qualitySettings.softShadows} />
 
       {qualitySettings.fog ? (
         <fog

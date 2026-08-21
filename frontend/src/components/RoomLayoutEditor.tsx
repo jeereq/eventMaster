@@ -714,7 +714,7 @@ export default function RoomLayoutEditor({
           kind: 'zone',
           id: f.id,
           title: f.label || 'Zone',
-          subtitle: zoneKindLabels[f.zoneKind] ?? f.zoneKind,
+          subtitle: (f.zoneKind && zoneKindLabels[f.zoneKind]) || f.zoneKind || 'Zone',
         });
       } else if (f.kind === 'chair') {
         items.push({
@@ -2420,7 +2420,7 @@ export default function RoomLayoutEditor({
       <button
         type="button"
         onClick={() => setLightingPreset('day')}
-        title="Mode soleil (jour)"
+        title="Soleil de midi — lumière zénithale, ombres franches"
         className={cn(
           'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
           lightingPreset === 'day'
@@ -2429,12 +2429,25 @@ export default function RoomLayoutEditor({
         )}
       >
         <Sun className="w-3.5 h-3.5" />
-        Soleil
+        Midi
+      </button>
+      <button
+        type="button"
+        onClick={() => setLightingPreset('dusk')}
+        title="Crépuscule — ciel orange / rose / violet, lumière latérale douce"
+        className={cn(
+          'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
+          lightingPreset === 'dusk'
+            ? 'bg-orange-100 border-orange-400 text-orange-950'
+            : 'bg-white border-border text-muted hover:bg-orange-50',
+        )}
+      >
+        Crépuscule
       </button>
       <button
         type="button"
         onClick={() => setLightingPreset('night')}
-        title="Mode nuit"
+        title="Nuit — ciel étoilé + réglette LED sur le haut du plan"
         className={cn(
           'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
           lightingPreset === 'night'
@@ -2443,7 +2456,7 @@ export default function RoomLayoutEditor({
         )}
       >
         <Moon className="w-3.5 h-3.5" />
-        Nuit
+        Nuit LED
       </button>
       {caps.canShowcaseRender ? (
       <button
