@@ -126,7 +126,7 @@ export interface RoomLayoutBlueprint {
   canvas: { widthM: number; heightM: number };
   fixtures: Array<{
     id: string;
-    kind: 'stage' | 'podium' | 'aisle' | 'entrance' | 'pillar' | 'perimeter' | 'column' | 'flower' | 'carpet' | 'buffet';
+    kind: 'stage' | 'podium' | 'aisle' | 'entrance' | 'pillar' | 'perimeter' | 'column' | 'flower' | 'carpet' | 'buffet' | 'stairs';
     x: number;
     y: number;
     w: number;
@@ -141,14 +141,16 @@ export interface RoomLayoutBlueprint {
     flowerColor?: string;
     /** Matériau / texture pour moquette, scène, podium, buffet… */
     material?: ZoneMaterial;
-    /** Podium / scène : hauteur réelle en mètres. */
+    /** Podium / scène / escalier : hauteur réelle en mètres. */
     heightM?: number;
-    /** Podium : nombre de marches (1–4). */
+    /** Podium / escalier : nombre de marches. */
     steps?: number;
     /** Buffet : afficher assiettes / couverts. */
     hasCouverts?: boolean;
     /** Buffet : style d’implantation. */
     buffetStyle?: 'straight' | 'corner' | 'island';
+    /** Escalier : orientation (0 = haut du plan). */
+    stairDirection?: 0 | 90 | 180 | 270;
   }>;
   furniture: Array<
     | {
@@ -226,6 +228,16 @@ export interface RoomLayoutBlueprint {
     roomThemeId?: string;
     floorType?: import('@/lib/roomThemeUtils').FloorType;
     floorImageUrl?: string;
+    /** Teinte / couleur dominante du sol (architecture). */
+    floorColor?: string;
+    /** Afficher le toit / plafond en 3D. */
+    showRoof?: boolean;
+    /** Opacité du toit (0–1). */
+    roofOpacity?: number;
+    /** Couleur du plafond / underside. */
+    roofColor?: string;
+    /** Couleur de peinture globale des murs (override léger). */
+    wallPaintColor?: string;
     customThemes?: import('@/lib/roomThemeUtils').CustomRoomTheme[];
     customTemplates?: SavedRoomTemplate[];
     depthView?: boolean;
@@ -480,6 +492,7 @@ export function createBlueprintFixture(
     flower: { x: 10, y: 85, w: 4, h: 4, label: 'Fleurs' },
     carpet: { x: 30, y: 55, w: 40, h: 28, label: 'Moquette' },
     buffet: { x: 12, y: 70, w: 36, h: 10, label: 'Buffet' },
+    stairs: { x: 72, y: 40, w: 14, h: 22, label: 'Escalier' },
   };
   const d = defaults[kind] ?? { x: 40, y: 40, w: 20, h: 10, label: kind };
   return {
@@ -487,18 +500,20 @@ export function createBlueprintFixture(
     kind,
     ...d,
     columnShape: kind === 'pillar' || kind === 'column' ? 'round' as ColumnShape : undefined,
-    color: kind === 'pillar' || kind === 'column' ? '#78716c' : kind === 'carpet' ? '#1e3a5f' : kind === 'buffet' ? '#8b6914' : undefined,
+    color: kind === 'pillar' || kind === 'column' ? '#78716c' : kind === 'carpet' ? '#1e3a5f' : kind === 'buffet' ? '#8b6914' : kind === 'stairs' ? '#a8a29e' : undefined,
     flowerType: kind === 'flower' ? 'boquet' as FlowerType : undefined,
     flowerColor: kind === 'flower' ? '#e11d48' : undefined,
     material:
       kind === 'carpet' ? 'carpet' :
       kind === 'stage' || kind === 'podium' ? 'wood' :
       kind === 'buffet' ? 'wood' :
+      kind === 'stairs' ? 'wood' :
       undefined,
-    heightM: kind === 'podium' ? 0.6 : kind === 'stage' ? 0.45 : undefined,
-    steps: kind === 'podium' ? 2 : undefined,
+    heightM: kind === 'podium' ? 0.6 : kind === 'stage' ? 0.45 : kind === 'stairs' ? 1.2 : undefined,
+    steps: kind === 'podium' ? 2 : kind === 'stairs' ? 6 : undefined,
     hasCouverts: kind === 'buffet' ? true : undefined,
     buffetStyle: kind === 'buffet' ? 'straight' : undefined,
+    stairDirection: kind === 'stairs' ? 0 : undefined,
   };
 }
 
@@ -2135,6 +2150,8 @@ export function getFixtureClass(kind: string): string {
       return 'bg-orange-100 border-orange-300 text-orange-800';
     case 'buffet':
       return 'bg-amber-50 border-amber-300 text-amber-900';
+    case 'stairs':
+      return 'bg-stone-100 border-stone-400 text-stone-700';
     case 'aisle':
       return 'bg-slate-100 border-slate-200 border-dashed text-slate-400';
     case 'pillar':

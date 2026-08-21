@@ -35,10 +35,11 @@ export function resolveFloorMap(
   floorImageUrl: string | undefined,
   widthM: number,
   heightM: number,
+  floorColor?: string,
 ): { map: THREE.Texture | null; color: string; roughness: number; metalness: number } {
   if (floorImageUrl) {
     const map = loadTiledTexture(floorImageUrl, widthM / 3.5, heightM / 3.5);
-    return { map, color: '#ffffff', roughness: 0.75, metalness: 0.05 };
+    return { map, color: floorColor && floorColor !== '#ffffff' ? floorColor : '#ffffff', roughness: 0.75, metalness: 0.05 };
   }
   const type = floorType && floorType !== 'custom' ? floorType : 'parquet';
   const asset = getFloorAsset(type);
@@ -58,7 +59,8 @@ export function resolveFloorMap(
     metalness = 0.08;
   }
 
-  return { map, color: '#ffffff', roughness, metalness };
+  const tint = floorColor && floorColor !== '#ffffff' ? floorColor : asset.fallback;
+  return { map, color: floorColor ? tint : '#ffffff', roughness, metalness };
 }
 
 function makeCanvasTexture(

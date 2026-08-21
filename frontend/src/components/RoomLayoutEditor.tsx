@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward,
 } from 'lucide-react';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
 import ImageCropModal from '@/components/ImageCropModal';
@@ -648,6 +648,106 @@ export default function RoomLayoutEditor({
                     </button>
                   ))}
                 </div>
+                <div className="space-y-2 pt-2">
+                  <p className="text-[10px] font-bold uppercase text-muted flex items-center gap-1"><Palette className="w-3 h-3" /> Teinte / couleur du sol</p>
+                  <div className="flex flex-wrap gap-1.5 items-center">
+                    {['#ffffff', '#f5f0e8', '#e8d5a3', '#d4a574', '#a16207', '#78716c', '#1e3a5f', '#166534', '#7f1d1d', '#312e81'].map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        title={c}
+                        onClick={() => updateBlueprint({
+                          ...blueprint,
+                          metadata: { ...blueprint.metadata, floorColor: c === '#ffffff' ? undefined : c },
+                        }, { message: 'Teinte de sol', kind: 'settings' })}
+                        className={`w-7 h-7 rounded-full border-2 shrink-0 ${(blueprint.metadata.floorColor ?? '#ffffff') === c ? 'border-primary ring-2 ring-primary/30' : 'border-border'}`}
+                        style={{ background: c }}
+                      />
+                    ))}
+                    <input
+                      type="color"
+                      value={blueprint.metadata.floorColor ?? '#f5f0e8'}
+                      onChange={(e) => updateBlueprint({
+                        ...blueprint,
+                        metadata: { ...blueprint.metadata, floorColor: e.target.value },
+                      }, { message: 'Couleur de sol personnalisée', kind: 'settings' })}
+                      className="w-8 h-8 rounded border cursor-pointer"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2 pt-3 border-t border-border/50">
+                  <p className="text-[10px] font-bold uppercase text-muted flex items-center gap-1"><BrickWall className="w-3 h-3" /> Peinture murs (globale)</p>
+                  <div className="flex flex-wrap gap-1.5 items-center">
+                    {['#e8e4df', '#f8fafc', '#d6d3d1', '#b4533c', '#8b6914', '#78716c', '#1e3a5f', '#fef3c7'].map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => updateBlueprint({
+                          ...blueprint,
+                          metadata: { ...blueprint.metadata, wallPaintColor: c },
+                          walls: (blueprint.walls ?? []).map((w) => ({ ...w, color: c })),
+                        }, { message: 'Peinture des murs', kind: 'settings' })}
+                        className={`w-7 h-7 rounded-full border-2 ${(blueprint.metadata.wallPaintColor ?? '') === c ? 'border-primary ring-2 ring-primary/30' : 'border-border'}`}
+                        style={{ background: c }}
+                      />
+                    ))}
+                    <input
+                      type="color"
+                      value={blueprint.metadata.wallPaintColor ?? '#e8e4df'}
+                      onChange={(e) => updateBlueprint({
+                        ...blueprint,
+                        metadata: { ...blueprint.metadata, wallPaintColor: e.target.value },
+                        walls: (blueprint.walls ?? []).map((w) => ({ ...w, color: e.target.value })),
+                      }, { message: 'Couleur mur personnalisée', kind: 'settings' })}
+                      className="w-8 h-8 rounded border cursor-pointer"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2 pt-3 border-t border-border/50">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-foreground cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={blueprint.metadata.showRoof === true}
+                      onChange={(e) => updateBlueprint({
+                        ...blueprint,
+                        metadata: { ...blueprint.metadata, showRoof: e.target.checked },
+                      }, { message: e.target.checked ? 'Toit affiché' : 'Toit masqué', kind: 'settings' })}
+                      className="rounded border-border"
+                    />
+                    Afficher le toit / plafond
+                  </label>
+                  {blueprint.metadata.showRoof && (
+                    <div className="grid grid-cols-2 gap-2 pl-1">
+                      <label className="text-[9px] space-y-0.5">
+                        <span className="text-muted">Couleur toit</span>
+                        <input
+                          type="color"
+                          value={blueprint.metadata.roofColor ?? '#d6d3d1'}
+                          onChange={(e) => updateBlueprint({
+                            ...blueprint,
+                            metadata: { ...blueprint.metadata, roofColor: e.target.value },
+                          }, { message: 'Couleur du toit', kind: 'settings' })}
+                          className="w-full h-8 rounded border cursor-pointer"
+                        />
+                      </label>
+                      <label className="text-[9px] space-y-0.5">
+                        <span className="text-muted">Opacité {(Math.round((blueprint.metadata.roofOpacity ?? 0.45) * 100))}%</span>
+                        <input
+                          type="range"
+                          min={0.15}
+                          max={0.95}
+                          step={0.05}
+                          value={blueprint.metadata.roofOpacity ?? 0.45}
+                          onChange={(e) => updateBlueprint({
+                            ...blueprint,
+                            metadata: { ...blueprint.metadata, roofOpacity: parseFloat(e.target.value) },
+                          })}
+                          className="w-full accent-primary"
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
                 {caps.canCustomImages ? (
                   <label className="block text-xs space-y-1">
                     <span className="font-semibold text-muted flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> Importer une texture (photo de sol)</span>
@@ -919,13 +1019,14 @@ export default function RoomLayoutEditor({
       const isStage = selectedFixture.kind === 'stage' || isPodium;
       const isFlower = selectedFixture.kind === 'flower';
       const isBuffet = selectedFixture.kind === 'buffet';
-      const canHaveImage = isColumn || isStage || isFlower || isBuffet;
+      const isStairs = selectedFixture.kind === 'stairs';
+      const canHaveImage = isColumn || isStage || isFlower || isBuffet || isStairs;
 
       return (
         <div className="space-y-3">
           <div className="p-4 bg-surface-muted rounded-[var(--radius-card)] border space-y-3">
             <p className="text-xs font-bold uppercase text-muted">
-              {isBuffet ? 'Buffet' : isPodium ? 'Podium' : isFlower ? 'Décoration florale' : isColumn ? 'Colonne / Poteau' : isStage ? 'Scène' : `Fixe — ${selectedFixture.kind}`}
+              {isStairs ? 'Escalier' : isBuffet ? 'Buffet' : isPodium ? 'Podium' : isFlower ? 'Décoration florale' : isColumn ? 'Colonne / Poteau' : isStage ? 'Scène' : `Fixe — ${selectedFixture.kind}`}
             </p>
             <label className="block text-xs space-y-1">
               <span className="font-semibold text-muted">Libellé</span>
@@ -942,7 +1043,7 @@ export default function RoomLayoutEditor({
               </label>
             </div>
 
-            {(isStage || isBuffet) && (
+            {(isStage || isBuffet || isStairs) && (
               <label className="block text-xs space-y-1">
                 <span className="font-semibold text-muted">Matériau</span>
                 <select
@@ -955,6 +1056,58 @@ export default function RoomLayoutEditor({
                   ))}
                 </select>
               </label>
+            )}
+
+            {isStairs && (
+              <>
+                <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-muted">Hauteur totale (m)</span>
+                  <input
+                    type="number"
+                    min={0.4}
+                    max={4}
+                    step={0.1}
+                    value={selectedFixture.heightM ?? 1.2}
+                    onChange={(e) => updateFixture(selectedFixture.id, { heightM: parseFloat(e.target.value) || 1.2 }, 'Hauteur escalier')}
+                    className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
+                  />
+                </label>
+                <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-muted">Nombre de marches</span>
+                  <input
+                    type="number"
+                    min={3}
+                    max={16}
+                    value={selectedFixture.steps ?? 6}
+                    onChange={(e) => updateFixture(selectedFixture.id, { steps: Math.max(3, Math.min(16, parseInt(e.target.value, 10) || 6)) }, 'Marches escalier')}
+                    className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
+                  />
+                </label>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold uppercase text-muted">Direction</p>
+                  <div className="grid grid-cols-4 gap-1">
+                    {([
+                      { deg: 0 as const, label: 'Haut' },
+                      { deg: 90 as const, label: 'Droite' },
+                      { deg: 180 as const, label: 'Bas' },
+                      { deg: 270 as const, label: 'Gauche' },
+                    ]).map(({ deg, label }) => (
+                      <button
+                        key={deg}
+                        type="button"
+                        onClick={() => updateFixture(selectedFixture.id, { stairDirection: deg }, `Escalier vers ${label}`)}
+                        className={`py-1.5 rounded-[var(--radius-button)] border text-[10px] font-bold ${(selectedFixture.stairDirection ?? 0) === deg ? 'bg-stone-200 border-stone-500' : 'bg-white text-muted'}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-muted">Couleur</span>
+                  <input type="color" value={selectedFixture.color ?? '#a8a29e'} onChange={(e) => updateFixture(selectedFixture.id, { color: e.target.value })} className="w-full h-9 rounded-[var(--radius-button)] border cursor-pointer" />
+                </label>
+              </>
             )}
 
             {isPodium && (
@@ -1391,7 +1544,72 @@ export default function RoomLayoutEditor({
                 <input type="number" min={8} max={90} value={selectedFurniture.h} onChange={(e) => updateFurniture(selectedFurniture.id, { h: parseInt(e.target.value, 10) || 16 })} className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm" />
               </label>
             </div>
-            <p className="text-[10px] text-muted">Glissez la zone dans la vue 3D pour la repositionner.</p>
+            <div className="space-y-2 pt-1 border-t border-border">
+              <p className="text-[10px] font-bold uppercase text-muted">Direction / placement</p>
+              <div className="flex flex-col items-center gap-1">
+                <button
+                  type="button"
+                  title="Déplacer vers le haut"
+                  onClick={() => updateFurniture(selectedFurniture.id, { y: Math.max(2, selectedFurniture.y - 3) }, 'Zone déplacée ↑')}
+                  className="p-2 rounded-[var(--radius-button)] border bg-white hover:bg-surface-muted"
+                >
+                  <ArrowUp className="w-4 h-4" />
+                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    title="Déplacer à gauche"
+                    onClick={() => updateFurniture(selectedFurniture.id, { x: Math.max(2, selectedFurniture.x - 3) }, 'Zone déplacée ←')}
+                    className="p-2 rounded-[var(--radius-button)] border bg-white hover:bg-surface-muted"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    title="Centrer"
+                    onClick={() => updateFurniture(selectedFurniture.id, { x: 50 - selectedFurniture.w / 2, y: 50 - selectedFurniture.h / 2 }, 'Zone centrée')}
+                    className="p-2 rounded-[var(--radius-button)] border bg-primary/10 text-primary"
+                  >
+                    <Home className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    title="Déplacer à droite"
+                    onClick={() => updateFurniture(selectedFurniture.id, { x: Math.min(98 - selectedFurniture.w, selectedFurniture.x + 3) }, 'Zone déplacée →')}
+                    className="p-2 rounded-[var(--radius-button)] border bg-white hover:bg-surface-muted"
+                  >
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  title="Déplacer vers le bas"
+                  onClick={() => updateFurniture(selectedFurniture.id, { y: Math.min(98 - selectedFurniture.h, selectedFurniture.y + 3) }, 'Zone déplacée ↓')}
+                  className="p-2 rounded-[var(--radius-button)] border bg-white hover:bg-surface-muted"
+                >
+                  <ArrowDown className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="grid grid-cols-4 gap-1">
+                {([
+                  { deg: 0, label: 'Haut' },
+                  { deg: 90, label: 'Droite' },
+                  { deg: 180, label: 'Bas' },
+                  { deg: 270, label: 'Gauche' },
+                ] as const).map(({ deg, label }) => (
+                  <button
+                    key={deg}
+                    type="button"
+                    onClick={() => updateFurniture(selectedFurniture.id, { rotation: deg }, `Orientation ${label}`)}
+                    className={`py-1.5 rounded-[var(--radius-button)] border text-[10px] font-bold ${(selectedFurniture.rotation ?? 0) === deg ? 'bg-amber-50 border-amber-400 text-amber-900' : 'bg-white text-muted'}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-muted">La flèche jaune dans la vue 3D indique l’orientation de la zone.</p>
+            </div>
+            <p className="text-[10px] text-muted">Glissez aussi la zone dans la vue 3D.</p>
           </div>
           <LayoutActionPanel actions={actionLog} />
         </div>
@@ -1667,6 +1885,11 @@ export default function RoomLayoutEditor({
       ) : null}
       {caps.fixtureKinds.includes('podium') ? (
         <button type="button" onClick={() => addFixture('podium')} className="px-3 py-1.5 bg-orange-50 border border-orange-200 text-orange-800 rounded-[var(--radius-button)] text-xs font-bold">Podium</button>
+      ) : null}
+      {caps.fixtureKinds.includes('stairs') ? (
+        <button type="button" onClick={() => addFixture('stairs')} className="inline-flex items-center gap-1 px-3 py-1.5 bg-stone-100 border border-stone-300 text-stone-800 rounded-[var(--radius-button)] text-xs font-bold">
+          <StepForward className="w-3.5 h-3.5" /> Escalier
+        </button>
       ) : null}
       {caps.fixtureKinds.includes('buffet') ? (
         <button type="button" onClick={() => addFixture('buffet')} className="px-3 py-1.5 bg-amber-50 border border-amber-300 text-amber-900 rounded-[var(--radius-button)] text-xs font-bold">Buffet + couverts</button>

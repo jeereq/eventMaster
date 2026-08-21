@@ -69,6 +69,7 @@ function FloorPlane({
   heightM,
   floorType,
   floorImageUrl,
+  floorColor,
   outline,
   onPointerMissed,
 }: {
@@ -76,12 +77,13 @@ function FloorPlane({
   heightM: number;
   floorType?: import('@/lib/roomThemeUtils').FloorType;
   floorImageUrl?: string;
+  floorColor?: string;
   outline?: RoomLayoutBlueprint['roomOutline'];
   onPointerMissed?: () => void;
 }) {
   const mat = useMemo(
-    () => resolveFloorMap(floorType, floorImageUrl, widthM, heightM),
-    [floorType, floorImageUrl, widthM, heightM],
+    () => resolveFloorMap(floorType, floorImageUrl, widthM, heightM, floorColor),
+    [floorType, floorImageUrl, floorColor, widthM, heightM],
   );
 
   const shapeGeo = useMemo(() => {
@@ -117,6 +119,59 @@ function FloorPlane({
         map={mat.map ?? undefined}
         roughness={mat.roughness}
         metalness={mat.metalness}
+      />
+    </mesh>
+  );
+}
+
+function RoofMesh({
+  widthM,
+  heightM,
+  wallHeightM,
+  outline,
+  color = '#e7e5e4',
+  opacity = 0.55,
+}: {
+  widthM: number;
+  heightM: number;
+  wallHeightM: number;
+  outline?: RoomLayoutBlueprint['roomOutline'];
+  color?: string;
+  opacity?: number;
+}) {
+  const y = wallHeightM + 0.04;
+  const shapeGeo = useMemo(() => {
+    if (!outline || outline.shape === 'rectangle') return null;
+    const pts = outlinePolygonPoints(outline);
+    if (pts.length < 3) return null;
+    const shape = new THREE.Shape();
+    pts.forEach((p, i) => {
+      const [wx, wz] = pctToWorld(p.x, p.y, widthM, heightM);
+      if (i === 0) shape.moveTo(wx, -wz);
+      else shape.lineTo(wx, -wz);
+    });
+    shape.closePath();
+    const geo = new THREE.ShapeGeometry(shape);
+    geo.rotateX(Math.PI / 2);
+    return geo;
+  }, [outline, widthM, heightM]);
+
+  return (
+    <mesh
+      geometry={shapeGeo ?? undefined}
+      position={[0, y, 0]}
+      rotation={shapeGeo ? [0, 0, 0] : [Math.PI / 2, 0, 0]}
+      receiveShadow
+    >
+      {!shapeGeo && <planeGeometry args={[widthM * 0.98, heightM * 0.98]} />}
+      <meshStandardMaterial
+        color={color}
+        transparent
+        opacity={opacity}
+        roughness={0.9}
+        metalness={0.02}
+        side={THREE.DoubleSide}
+        depthWrite={opacity > 0.85}
       />
     </mesh>
   );
@@ -402,12 +457,14 @@ function WallMesh({
   heightM,
   selected,
   onSelect,
+  paintColor,
 }: {
   wall: RoomWallSegment;
   widthM: number;
   heightM: number;
   selected: boolean;
   onSelect: () => void;
+  paintColor?: string;
 }) {
   const [sx, sz] = pctToWorld(wall.start.x, wall.start.y, widthM, heightM);
   const [ex, ez] = pctToWorld(wall.end.x, wall.end.y, widthM, heightM);
@@ -421,8 +478,8 @@ function WallMesh({
   const thick = wall.thicknessM;
 
   const mat = useMemo(
-    () => getWallTexture(wall.texture, wall.color),
-    [wall.texture, wall.color],
+    () => getWallTexture(wall.texture, wall.color ?? paintColor),
+    [wall.texture, wall.color, paintColor],
   );
 
   if (length < 0.05) return null;
@@ -725,6 +782,7 @@ function ZoneMesh({
   label,
   material,
   color,
+  rotation = 0,
   widthM,
   heightM,
   selected,
@@ -740,13 +798,13 @@ function ZoneMesh({
   label: string;
   material?: ZoneMaterial;
   color?: string;
+  rotation?: number;
   widthM: number;
   heightM: number;
   selected: boolean;
   onSelect: () => void;
   onDragStart?: () => void;
   readOnly?: boolean;
-  /** Si false, le mobilier au-dessus reste cliquable / déplaçable. */
   pickable?: boolean;
 }) {
   const w = (wPct / 100) * widthM;
@@ -754,10 +812,12 @@ function ZoneMesh({
   const [cx, cz] = pctToWorld(xPct + wPct / 2, yPct + hPct / 2, widthM, heightM);
   const mat = useMemo(() => resolveZoneMaterialMap(material), [material]);
   const { gl } = useThree();
+  const rot = ((rotation ?? 0) * Math.PI) / 180;
 
   return (
     <group
       position={[cx, 0.04, cz]}
+      rotation={[0, rot, 0]}
       onClick={(e) => {
         if (!pickable) return;
         e.stopPropagation();
@@ -786,7 +846,11 @@ function ZoneMesh({
           emissiveIntensity={mat.emissiveIntensity ?? 0}
         />
       </mesh>
-      <Html center distanceFactor={12} style={{ pointerEvents: 'none' }} position={[0, 0.2, 0]}>
+      <mesh position={[0, 0.06, -h * 0.35]} rotation={[-Math.PI / 2, 0, Math.PI]}>
+        <coneGeometry args={[Math.min(w, h) * 0.07, Math.min(w, h) * 0.16, 3]} />
+        <meshStandardMaterial color="#fef3c7" emissive="#f59e0b" emissiveIntensity={0.4} />
+      </mesh>
+      <Html center distanceFactor={12} style={{ pointerEvents: 'none' }} position={[0, 0.25, 0]}>
         <span className="text-[10px] font-bold text-white bg-black/55 px-1.5 py-0.5 rounded shadow-sm">{label}</span>
       </Html>
     </group>
@@ -911,6 +975,7 @@ function FixtureMesh({
   podiumHeightM,
   steps,
   hasCouverts,
+  stairDirection = 0,
   widthM,
   roomDepthM,
   selected,
@@ -931,6 +996,7 @@ function FixtureMesh({
   podiumHeightM?: number;
   steps?: number;
   hasCouverts?: boolean;
+  stairDirection?: 0 | 90 | 180 | 270;
   widthM: number;
   roomDepthM: number;
   selected: boolean;
@@ -945,18 +1011,20 @@ function FixtureMesh({
   const podiumH = podiumHeightM ?? (kind === 'podium' ? 0.6 : kind === 'stage' ? 0.45 : 0.35);
   const stepCount = Math.max(1, Math.min(4, steps ?? (kind === 'podium' ? 2 : 1)));
   const height =
-    kind === 'stage' || kind === 'podium' ? podiumH :
+    kind === 'stage' || kind === 'podium' || kind === 'stairs' ? podiumH :
     kind === 'column' || kind === 'pillar' ? 2.6 :
     kind === 'flower' ? 0.7 :
     kind === 'carpet' ? 0.06 :
     kind === 'buffet' ? 0.9 :
     0.35;
+  const stairSteps = Math.max(3, Math.min(16, steps ?? (kind === 'stairs' ? 6 : 1)));
+
 
   const map = useMemo(() => {
     if (imageUrl) return resolveChairMap(imageUrl);
     if (kind === 'carpet') return resolveZoneMaterialMap(material ?? 'carpet').map;
     if (kind === 'buffet') return resolveZoneMaterialMap(material ?? 'wood').map;
-    if (kind === 'stage' || kind === 'podium') return resolveZoneMaterialMap(material ?? 'wood').map;
+    if (kind === 'stage' || kind === 'podium' || kind === 'stairs') return resolveZoneMaterialMap(material ?? 'wood').map;
     if (kind === 'column' || kind === 'pillar') return getWallTexture('stone').map;
     if (kind === 'perimeter') return getWallTexture('concrete').map;
     return null;
@@ -966,6 +1034,8 @@ function FixtureMesh({
     color ??
     (kind === 'stage' || kind === 'podium'
       ? '#b45309'
+      : kind === 'stairs'
+        ? '#a8a29e'
       : kind === 'buffet'
         ? '#8b6914'
         : kind === 'flower'
@@ -1040,6 +1110,37 @@ function FixtureMesh({
               </mesh>
             );
           })}
+        </group>
+            ) : kind === 'stairs' ? (
+        <group rotation={[0, ((stairDirection ?? 0) * Math.PI) / 180, 0]}>
+          {Array.from({ length: stairSteps }).map((_, i) => {
+            const t = (i + 1) / stairSteps;
+            const stepH = height / stairSteps;
+            const tread = d / stairSteps;
+            return (
+              <mesh
+                key={i}
+                position={[0, stepH * i + stepH / 2, -d / 2 + tread * (i + 0.5)]}
+                castShadow
+                receiveShadow
+                raycast={pickable ? undefined : () => null}
+              >
+                <boxGeometry args={[w * 0.95, stepH * 0.92, tread * 0.92]} />
+                <meshStandardMaterial
+                  color={selected ? '#c7d2fe' : map ? '#ffffff' : (baseColor || '#a8a29e')}
+                  map={map ?? undefined}
+                  roughness={0.7}
+                />
+              </mesh>
+            );
+          })}
+          {/* Rampes */}
+          {([-1, 1] as const).map((side) => (
+            <mesh key={side} position={[side * w * 0.48, height * 0.55, 0]} castShadow>
+              <boxGeometry args={[0.04, height * 0.9, d * 0.95]} />
+              <meshStandardMaterial color="#57534e" metalness={0.35} roughness={0.45} />
+            </mesh>
+          ))}
         </group>
       ) : kind === 'buffet' ? (
         <group>
@@ -1163,9 +1264,21 @@ function SceneContent({
         heightM={heightM}
         floorType={floorType}
         floorImageUrl={blueprint.metadata.floorImageUrl}
+        floorColor={blueprint.metadata.floorColor}
         outline={blueprint.roomOutline}
         onPointerMissed={() => onSelect(null)}
       />
+
+      {blueprint.metadata.showRoof === true && (
+        <RoofMesh
+          widthM={widthM}
+          heightM={heightM}
+          wallHeightM={walls[0]?.heightM ?? 3}
+          outline={blueprint.roomOutline}
+          color={blueprint.metadata.roofColor ?? '#d6d3d1'}
+          opacity={blueprint.metadata.roofOpacity ?? 0.45}
+        />
+      )}
 
       <gridHelper
         args={[Math.max(widthM, heightM), 24, '#64748b', '#334155']}
@@ -1178,6 +1291,7 @@ function SceneContent({
           wall={wall}
           widthM={widthM}
           heightM={heightM}
+          paintColor={blueprint.metadata.wallPaintColor}
           selected={selected?.kind === 'wall' && selected.id === wall.id}
           onSelect={() => onSelect({ kind: 'wall', id: wall.id })}
         />
@@ -1198,6 +1312,7 @@ function SceneContent({
           podiumHeightM={f.heightM}
           steps={f.steps}
           hasCouverts={f.hasCouverts}
+          stairDirection={f.stairDirection}
           widthM={widthM}
           roomDepthM={heightM}
           selected={selected?.kind === 'fixture' && selected.id === f.id}
@@ -1220,6 +1335,7 @@ function SceneContent({
               label={item.label}
               material={item.material}
               color={item.color}
+              rotation={item.rotation}
               widthM={widthM}
               heightM={heightM}
               selected={selected?.kind === 'zone' && selected.id === item.id}
