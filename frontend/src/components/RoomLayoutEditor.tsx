@@ -659,22 +659,24 @@ export default function RoomLayoutEditor({
 
  if (!selected) {
  return (
- <div className="space-y-4">
- {!caps.canThemes ? (
- <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 space-y-2">
- <p className="text-xs font-bold uppercase text-amber-800 flex items-center gap-1">
- <Sparkles className="w-3.5 h-3.5" /> Forfait {caps.label}
- </p>
- <p className="text-xs text-amber-900/80">
- {caps.description}
- </p>
- <a href="/dashboard/billing" className="inline-block text-xs font-bold text-primary hover:underline">
- Voir les forfaits →
- </a>
- </div>
- ) : (
- <>
- <div className="p-4 bg-surface-muted rounded-xl border space-y-3">
+        <div className="space-y-4">
+          {!caps.canThemes ? (
+            <div className="p-4 bg-amber-50 rounded-[var(--radius-card)] border border-amber-200 space-y-2">
+              <p className="text-xs font-bold uppercase text-amber-800 flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5" /> Forfait {caps.label}
+              </p>
+              <p className="text-xs text-amber-900/80">
+                {caps.description}
+              </p>
+              <a href="/dashboard/billing" className="inline-block text-xs font-bold text-primary hover:underline">
+                Voir les forfaits →
+              </a>
+            </div>
+          ) : null}
+
+          {/* Accordion 1 : Murs & Sols */}
+          {allowThemesFixtures && (
+          <div className="border border-border rounded-[var(--radius-card)] bg-surface overflow-hidden shadow-sm">
  <p className="text-xs font-bold uppercase text-muted flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> Thème de la salle</p>
  <label className="flex items-center gap-2 text-[10px] text-muted cursor-pointer">
  <input

@@ -464,17 +464,18 @@ export default function TablePlanner({
   const renderCanvas = (heightClass: string) => (
     <div className="space-y-4 flex-1 flex flex-col min-h-0">
       <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-surface border border-border rounded-[var(--radius-card)] shadow-sm shrink-0">
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setShowAddModal(true)}
-            className="font-medium"
-            disabled={tables.length >= caps.maxTables}
-          >
-            <PlusCircle className="w-4 h-4 mr-1.5" />
-            Nouvelle table
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowAddModal(true)}
+              className="font-medium"
+              disabled={tables.length >= caps.maxTables}
+              title={tables.length >= caps.maxTables ? `Limite de ${caps.maxTables} tables atteinte (${caps.label})` : undefined}
+            >
+              {tables.length >= caps.maxTables ? <Lock className="w-4 h-4 mr-1.5 opacity-70" /> : <PlusCircle className="w-4 h-4 mr-1.5" />}
+              Nouvelle table
+            </Button>
           
           {canImportRoomLayout && (
             <Button
@@ -513,9 +514,9 @@ export default function TablePlanner({
             onClick={handleAutoAssign}
             disabled={unassignedGuests.length === 0}
             className="bg-gradient-to-r from-primary to-primary-hover text-white transition shadow-sm font-semibold border-0"
-            title="Placement Magique : regroupe les invités par catégorie"
+            title={caps.canAutoAssign ? "Placement Magique : regroupe les invités par catégorie" : "Le placement magique nécessite un forfait supérieur"}
           >
-            <Sparkles className="w-4 h-4 mr-1.5" />
+            {caps.canAutoAssign ? <Sparkles className="w-4 h-4 mr-1.5" /> : <Lock className="w-4 h-4 mr-1.5 opacity-80" />}
             Placement Magique
           </Button>
 
