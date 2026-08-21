@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Calendar, Eye, Loader2, LogIn, MapPin, Trash2,
+  Calendar, Eye, Loader2, LogIn, MapPin, Trash2, AlertTriangle
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -34,6 +34,7 @@ interface AdminEventRow {
   guestCount: number;
   invitationCount: number;
   createdAt: string;
+  isBlockedByAdmin?: boolean;
 }
 
 function planBadgeClass() {
@@ -56,6 +57,9 @@ export default function AdminEventsPage() {
   const [items, setItems] = useState<AdminEventRow[]>([]);
   const [total, setTotal] = useState(0);
   const [details, setDetails] = useState<AdminEventRow | null>(null);
+  const [moderation, setModeration] = useState<{ id: string, title: string, isBlocked: boolean } | null>(null);
+  const [moderationReason, setModerationReason] = useState('');
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [openingId, setOpeningId] = useState<string | null>(null);
   const {
     mode: viewMode,
@@ -126,6 +130,31 @@ export default function AdminEventsPage() {
       await load();
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Erreur lors de la suppression.');
+    }
+  };
+
+  const handleToggleBlock = async () => {
+    if (!moderation) return;
+    if (!moderation.isBlocked && moderationReason.trim().length < 8) {
+      setError('Indiquez un motif d’au moins 8 caractères pour bloquer cet événement.');
+      return;
+    }
+    
+    setBusyId(moderation.id);
+    setError('');
+    
+    try {
+      await api.patch(`/admin/events/${moderation.id}/block`, {
+        isBlocked: !moderation.isBlocked,
+        reason: moderationReason.trim() || undefined,
+      });
+      setModeration(null);
+      setModerationReason('');
+      await load();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Impossible de bloquer/débloquer cet événement.');
+    } finally {
+      setBusyId(null);
     }
   };
 
@@ -234,8 +263,9 @@ export default function AdminEventsPage() {
             });
             const guestsChip = <StatusPill tone="primary">{e.guestCount} invités</StatusPill>;
             const invitesChip = <StatusPill tone="emerald">{e.invitationCount} invitations</StatusPill>;
+            const isBlocked = (e as any).isBlockedByAdmin;
             const visibilityChip = (
-              <StatusPill tone={e.isPublic ? 'primary' : 'slate'}>{e.isPublic ? 'Public' : 'Privé'}</StatusPill>
+              <StatusPill tone={isBlocked ? 'rose' : e.isPublic ? 'primary' : 'slate'}>{isBlocked ? 'Bloqué' : e.isPublic ? 'Public' : 'Privé'}</StatusPill>
             );
             const ticketsChip = e.ticketingEnabled ? (
               <StatusPill tone="amber">{e.ticketsSold || 0} billets</StatusPill>
@@ -282,6 +312,18 @@ export default function AdminEventsPage() {
                 status={viewMode === 'list' ? guestsChip : undefined}
                 actions={
                   <>
+                    <button
+                      type="button"
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        setModeration({ id: e.id, title: e.title, isBlocked: (e as any).isBlockedByAdmin });
+                        setModerationReason('');
+                      }}
+                      className="p-1.5 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-md transition"
+                      title={(e as any).isBlockedByAdmin ? "Débloquer l'événement" : "Bloquer l'événement"}
+                    >
+                      <AlertTriangle className="w-4 h-4" />
+                    </button>
                     {viewMode === 'list' ? (
                       <button type="button" onClick={() => setDetails(e)} className="inline-flex items-center" title="Voir détails">
                         <ListRowAction />
@@ -342,6 +384,63 @@ export default function AdminEventsPage() {
         openingWorkspace={openingId === details?.tenantId}
         planBadgeClass={planBadgeClass}
       />
+      
+      <Modal
+        open={Boolean(moderation)}
+        onClose={() => {
+          setModeration(null);
+          setModerationReason('');
+        }}
+        title={moderation?.isBlocked ? "Débloquer l'événement" : "Bloquer l'événement"}
+        description={
+          moderation?.isBlocked
+            ? `L'événement « ${moderation?.title} » sera de nouveau accessible selon ses paramètres d'origine.`
+            : `L'événement « ${moderation?.title} » sera masqué publiquement et bloqué.`
+        }
+        size="sm"
+        footer={
+          <div className="flex w-full justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setModeration(null);
+                setModerationReason('');
+              }}
+            >
+              Annuler
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={moderation?.isBlocked ? 'primary' : 'danger'}
+              loading={busyId === moderation?.id}
+              disabled={!moderation?.isBlocked && moderationReason.trim().length < 8}
+              onClick={() => void handleToggleBlock()}
+            >
+              Confirmer
+            </Button>
+          </div>
+        }
+      >
+        <label className="block space-y-1.5">
+          <span className="text-xs font-medium text-muted">
+            {moderation?.isBlocked ? 'Commentaire (optionnel)' : 'Motif (obligatoire)'}
+          </span>
+          <textarea
+            value={moderationReason}
+            onChange={(e) => setModerationReason(e.target.value)}
+            rows={4}
+            maxLength={500}
+            placeholder={moderation?.isBlocked ? "Raison du déblocage" : "Ex. contenu inapproprié, non-respect des règles…"}
+            className="w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/25"
+          />
+          {!moderation?.isBlocked && (
+            <span className="text-[11px] text-muted">{moderationReason.trim().length}/8 caractères min.</span>
+          )}
+        </label>
+      </Modal>
     </div>
   );
 }

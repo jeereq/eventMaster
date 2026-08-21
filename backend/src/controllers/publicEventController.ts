@@ -138,6 +138,7 @@ export async function listPublicEvents(req: Request, res: Response) {
     const events = await prisma.event.findMany({
       where: {
         isPublic: true,
+        isBlockedByAdmin: false,
         slug: { not: null },
         date: {
           gte: dateFrom || new Date(Date.now() - 12 * 60 * 60 * 1000),
@@ -193,7 +194,7 @@ export async function getPublicEvent(req: Request, res: Response) {
   try {
     const slug = String(req.params.slug || '');
     const event = await prisma.event.findFirst({
-      where: { slug, isPublic: true },
+      where: { slug, isPublic: true, isBlockedByAdmin: false },
       include: {
         tenant: { select: { name: true } },
         posts: {
@@ -238,7 +239,7 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
     }
 
     const event = await prisma.event.findFirst({
-      where: { slug, isPublic: true },
+      where: { slug, isPublic: true, isBlockedByAdmin: false },
       include: { tenant: { select: { plan: true, accountKind: true } } },
     });
     if (!event) return res.status(404).json({ error: 'Événement introuvable ou privé.' });

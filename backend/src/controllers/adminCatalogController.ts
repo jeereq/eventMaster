@@ -281,6 +281,7 @@ export async function listAdminVenues(req: AuthenticatedRequest, res: Response) 
           id: row.id,
           slug: row.slug,
           isPublic: row.isPublic,
+          isBlockedByAdmin: row.isBlockedByAdmin,
           headline: row.headline || row.room.name,
           roomName: row.room.name,
           roomType: row.room.roomType,
@@ -383,6 +384,7 @@ export async function listAdminOfferings(req: AuthenticatedRequest, res: Respons
           id: row.id,
           slug: row.slug,
           isPublic: row.isPublic,
+          isBlockedByAdmin: row.isBlockedByAdmin,
           title: row.title,
           category: row.category,
           categoryLabel: serviceCategoryLabel(row.category),
@@ -929,5 +931,74 @@ export async function unpublishServiceOffering(req: AuthenticatedRequest, res: R
   } catch (error) {
     console.error('Erreur unpublish offering admin:', error);
     return res.status(500).json({ error: 'Impossible de dépublier la prestation.' });
+  }
+}
+
+export async function toggleVendorBlock(req: AuthenticatedRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const { isBlocked, reason } = req.body;
+    
+    if (typeof isBlocked !== 'boolean') {
+      return res.status(400).json({ error: 'Le champ isBlocked est requis (boolean).' });
+    }
+
+    const updated = await prisma.vendorProfile.update({
+      where: { id },
+      data: {
+        isBlockedByAdmin: isBlocked,
+        adminBlockReason: isBlocked ? (reason || 'Non-respect des règles') : null,
+      },
+    });
+    return res.json({ success: true, vendor: updated });
+  } catch (error) {
+    console.error('Erreur toggleVendorBlock admin:', error);
+    return res.status(500).json({ error: 'Impossible de bloquer/débloquer le prestataire.' });
+  }
+}
+
+export async function toggleVenueBlock(req: AuthenticatedRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const { isBlocked, reason } = req.body;
+    
+    if (typeof isBlocked !== 'boolean') {
+      return res.status(400).json({ error: 'Le champ isBlocked est requis (boolean).' });
+    }
+
+    const updated = await prisma.venueListing.update({
+      where: { id },
+      data: {
+        isBlockedByAdmin: isBlocked,
+        adminBlockReason: isBlocked ? (reason || 'Non-respect des règles') : null,
+      },
+    });
+    return res.json({ success: true, venue: updated });
+  } catch (error) {
+    console.error('Erreur toggleVenueBlock admin:', error);
+    return res.status(500).json({ error: 'Impossible de bloquer/débloquer la salle.' });
+  }
+}
+
+export async function toggleOfferingBlock(req: AuthenticatedRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const { isBlocked, reason } = req.body;
+    
+    if (typeof isBlocked !== 'boolean') {
+      return res.status(400).json({ error: 'Le champ isBlocked est requis (boolean).' });
+    }
+
+    const updated = await prisma.serviceOffering.update({
+      where: { id },
+      data: {
+        isBlockedByAdmin: isBlocked,
+        adminBlockReason: isBlocked ? (reason || 'Non-respect des règles') : null,
+      },
+    });
+    return res.json({ success: true, offering: updated });
+  } catch (error) {
+    console.error('Erreur toggleOfferingBlock admin:', error);
+    return res.status(500).json({ error: 'Impossible de bloquer/débloquer la prestation.' });
   }
 }

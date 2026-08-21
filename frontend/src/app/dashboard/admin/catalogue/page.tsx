@@ -188,6 +188,7 @@ interface TenantOps {
     managerName: string;
     managerEmail: string;
     manager?: { name: string | null; email: string } | null;
+    vendorProfile?: { id: string; isBlockedByAdmin: boolean } | null;
   };
   counts: {
     users: number;
@@ -302,10 +303,11 @@ export default function AdminCataloguePage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [moderation, setModeration] = useState<{
-    kind: 'venues' | 'offerings';
+    kind: 'venues' | 'offerings' | 'vendors';
     id: string;
     label: string;
     publish: boolean;
+    isBlocking?: boolean;
   } | null>(null);
   const [moderationReason, setModerationReason] = useState('');
 
@@ -409,8 +411,8 @@ export default function AdminCataloguePage() {
     }
   };
 
-  const openModeration = (kind: 'venues' | 'offerings', id: string, label: string, publish: boolean) => {
-    setModeration({ kind, id, label, publish });
+  const openModeration = (kind: 'venues' | 'offerings' | 'vendors', id: string, label: string, publish: boolean, isBlocking: boolean = false) => {
+    setModeration({ kind, id, label, publish, isBlocking });
     setModerationReason('');
     setError('');
   };
@@ -418,21 +420,28 @@ export default function AdminCataloguePage() {
   const submitModeration = async () => {
     if (!moderation) return;
     if (!moderation.publish && moderationReason.trim().length < 8) {
-      setError('Indiquez un motif d’au moins 8 caractères pour dépublier.');
+      setError('Indiquez un motif d’au moins 8 caractères pour justifier.');
       return;
     }
     setBusyId(moderation.id);
     setError('');
     try {
-      await api.patch(`/admin/catalog/${moderation.kind}/${moderation.id}/visibility`, {
-        isPublic: moderation.publish,
-        reason: moderationReason.trim() || undefined,
-      });
+      if (moderation.isBlocking) {
+        await api.patch(`/admin/catalog/${moderation.kind}/${moderation.id}/block`, {
+          isBlocked: !moderation.publish,
+          reason: moderationReason.trim() || undefined,
+        });
+      } else {
+        await api.patch(`/admin/catalog/${moderation.kind}/${moderation.id}/visibility`, {
+          isPublic: moderation.publish,
+          reason: moderationReason.trim() || undefined,
+        });
+      }
       setModeration(null);
       setModerationReason('');
       await Promise.all([load(), loadOverview()]);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Impossible de mettre à jour la visibilité.');
+      setError(err instanceof Error ? err.message : 'Impossible de mettre à jour le statut.');
     } finally {
       setBusyId(null);
     }
@@ -747,48 +756,87 @@ export default function AdminCataloguePage() {
             />
             {catalogItems.length > 0 && (
               <ul className="divide-y divide-border border border-border rounded-[var(--radius-card)] overflow-hidden bg-surface">
-                {(tab === 'venues' ? venues?.items : offerings?.items)?.map((row) => (
+                {(tab === 'venues' ? venues?.items : offerings?.items)?.map((row) => {
+                  const isBlocked = (row as any).isBlockedByAdmin;
+                  return (
                   <li key={`mod-${row.id}`} className="px-4 py-2.5 flex flex-wrap items-center gap-2 text-xs">
-                    <Badge variant={row.isPublic ? 'success' : 'default'}>{row.isPublic ? 'Public' : 'Masqué'}</Badge>
+                    <Badge variant={isBlocked ? 'danger' : row.isPublic ? 'success' : 'default'}>
+                      {isBlocked ? 'Bloqué' : row.isPublic ? 'Public' : 'Masqué'}
+                    </Badge>
                     <span className="font-medium text-foreground truncate">
                       {'headline' in row ? row.headline : row.title}
                     </span>
                     <button type="button" className="text-primary hover:underline" onClick={() => void openFiche(row.tenantId)}>
                       {row.tenantName}
                     </button>
-                    {row.isPublic ? (
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        className="ml-auto"
-                        loading={busyId === row.id}
-                        onClick={() => openModeration(
-                          tab === 'venues' ? 'venues' : 'offerings',
-                          row.id,
-                          'headline' in row ? row.headline : row.title,
-                          false,
-                        )}
-                      >
-                        Dépublier
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="ml-auto"
-                        loading={busyId === row.id}
-                        onClick={() => openModeration(
-                          tab === 'venues' ? 'venues' : 'offerings',
-                          row.id,
-                          'headline' in row ? row.headline : row.title,
-                          true,
-                        )}
-                      >
-                        Republier
-                      </Button>
-                    )}
+                    
+                    <div className="ml-auto flex items-center gap-2">
+                      {!isBlocked ? (
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          loading={busyId === row.id}
+                          onClick={() => openModeration(
+                            tab === 'venues' ? 'venues' : 'offerings',
+                            row.id,
+                            'headline' in row ? row.headline : row.title,
+                            false,
+                            true
+                          )}
+                        >
+                          Bloquer
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          loading={busyId === row.id}
+                          onClick={() => openModeration(
+                            tab === 'venues' ? 'venues' : 'offerings',
+                            row.id,
+                            'headline' in row ? row.headline : row.title,
+                            true,
+                            true
+                          )}
+                        >
+                          Débloquer
+                        </Button>
+                      )}
+                      
+                      {!isBlocked && row.isPublic && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          loading={busyId === row.id}
+                          onClick={() => openModeration(
+                            tab === 'venues' ? 'venues' : 'offerings',
+                            row.id,
+                            'headline' in row ? row.headline : row.title,
+                            false,
+                          )}
+                        >
+                          Dépublier
+                        </Button>
+                      )}
+                      {!isBlocked && !row.isPublic && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          loading={busyId === row.id}
+                          onClick={() => openModeration(
+                            tab === 'venues' ? 'venues' : 'offerings',
+                            row.id,
+                            'headline' in row ? row.headline : row.title,
+                            true,
+                          )}
+                        >
+                          Republier
+                        </Button>
+                      )}
+                    </div>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             )}
           </div>
@@ -926,21 +974,44 @@ export default function AdminCataloguePage() {
         description="Fiche support : forfait, équipe et catalogue."
         size="lg"
         footer={
-          <div className="flex w-full justify-end gap-2">
-            <Button type="button" variant="secondary" size="sm" onClick={() => setFicheOpen(false)}>
-              Fermer
-            </Button>
-            {fiche?.canImpersonate && (
-              <Button
-                type="button"
-                size="sm"
-                loading={openingId === fiche.tenant.id}
-                leftIcon={<LogIn className="w-4 h-4" />}
-                onClick={() => void openWorkspace(fiche.tenant.id)}
-              >
-                Ouvrir l’espace
+          <div className="flex w-full justify-between items-center gap-2">
+            <div className="flex-1">
+              {fiche?.tenant.vendorProfile && (
+                <Button
+                  type="button"
+                  variant={fiche.tenant.vendorProfile.isBlockedByAdmin ? 'secondary' : 'danger'}
+                  size="sm"
+                  onClick={() => {
+                    setFicheOpen(false);
+                    openModeration(
+                      'vendors', 
+                      fiche!.tenant.vendorProfile!.id, 
+                      `Prestataire ${fiche!.tenant.name}`, 
+                      fiche!.tenant.vendorProfile!.isBlockedByAdmin, 
+                      true
+                    );
+                  }}
+                >
+                  {fiche.tenant.vendorProfile.isBlockedByAdmin ? 'Débloquer prestataire' : 'Bloquer prestataire'}
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="secondary" size="sm" onClick={() => setFicheOpen(false)}>
+                Fermer
               </Button>
-            )}
+              {fiche?.canImpersonate && (
+                <Button
+                  type="button"
+                  size="sm"
+                  loading={openingId === fiche.tenant.id}
+                  leftIcon={<LogIn className="w-4 h-4" />}
+                  onClick={() => void openWorkspace(fiche.tenant.id)}
+                >
+                  Ouvrir l’espace
+                </Button>
+              )}
+            </div>
           </div>
         }
       >
@@ -955,6 +1026,9 @@ export default function AdminCataloguePage() {
               <StatusPill tone={fiche.tenant.licenseActive ? 'emerald' : 'rose'}>
                 {fiche.tenant.licenseActive ? 'Licence active' : 'Licence désactivée'}
               </StatusPill>
+              {fiche.tenant.vendorProfile?.isBlockedByAdmin && (
+                <StatusPill tone="rose">Prestataire Bloqué</StatusPill>
+              )}
               <span className="text-xs text-muted">
                 {ACCOUNT_KIND_LABELS[fiche.tenant.accountKind] || fiche.tenant.accountKind}
               </span>
@@ -987,12 +1061,19 @@ export default function AdminCataloguePage() {
           setModeration(null);
           setModerationReason('');
         }}
-        title={moderation?.publish ? 'Republier la fiche' : 'Dépublier la fiche'}
+        title={moderation?.isBlocking 
+          ? (moderation?.publish ? 'Débloquer la fiche' : 'Bloquer la fiche')
+          : (moderation?.publish ? 'Republier la fiche' : 'Dépublier la fiche')
+        }
         description={
           moderation
-            ? moderation.publish
-              ? `« ${moderation.label} » redevient visible sur le marketplace public.`
-              : `« ${moderation.label} » disparaît du marketplace. Le motif est journalisé.`
+            ? moderation.isBlocking
+              ? (moderation.publish
+                ? `« ${moderation.label} » redeviendra visible selon son statut de publication.`
+                : `« ${moderation.label} » sera masquée du catalogue public et bloquée.`)
+              : (moderation.publish
+                ? `« ${moderation.label} » redevient visible sur le marketplace public.`
+                : `« ${moderation.label} » disparaît du marketplace. Le motif est journalisé.`)
             : undefined
         }
         size="sm"
@@ -1017,7 +1098,7 @@ export default function AdminCataloguePage() {
               disabled={!moderation?.publish && moderationReason.trim().length < 8}
               onClick={() => void submitModeration()}
             >
-              {moderation?.publish ? 'Republier' : 'Dépublier'}
+              Confirmer
             </Button>
           </div>
         }
@@ -1031,7 +1112,7 @@ export default function AdminCataloguePage() {
             onChange={(e) => setModerationReason(e.target.value)}
             rows={4}
             maxLength={500}
-            placeholder={moderation?.publish ? 'Ex. fiche corrigée par le vendeur' : 'Ex. photos hors charte, prix incohérent…'}
+            placeholder={moderation?.publish ? 'Ex. fiche corrigée par le vendeur' : 'Ex. non-respect des règles, photos inappropriées…'}
             className="w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/25"
           />
           {!moderation?.publish && (

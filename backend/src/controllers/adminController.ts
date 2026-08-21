@@ -1107,6 +1107,7 @@ export async function getAllEvents(req: AuthenticatedRequest, res: Response) {
           latitude: e.latitude,
           longitude: e.longitude,
           isPublic: e.isPublic,
+          isBlockedByAdmin: e.isBlockedByAdmin,
           ticketingEnabled: e.ticketingEnabled,
           ticketPriceFc: e.ticketPriceFc,
           ticketsSold: e.ticketsSold,
@@ -1197,6 +1198,33 @@ export async function updateAdminEvent(req: AuthenticatedRequest, res: Response)
   } catch (error: any) {
     console.error('Erreur lors de la modification de l\'événement par l\'admin:', error);
     return res.status(500).json({ error: 'Erreur lors de la modification de l\'événement' });
+  }
+}
+
+export async function toggleAdminEventBlock(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (req.user?.role !== 'SUPER_ADMIN') {
+      return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+    }
+
+    const { id } = req.params;
+    const { isBlocked, reason } = req.body;
+    
+    if (typeof isBlocked !== 'boolean') {
+      return res.status(400).json({ error: 'Le champ isBlocked est requis (boolean).' });
+    }
+
+    const updated = await prisma.event.update({
+      where: { id },
+      data: {
+        isBlockedByAdmin: isBlocked,
+        adminBlockReason: isBlocked ? (reason || 'Non-respect des règles') : null,
+      },
+    });
+    return res.json({ success: true, event: updated });
+  } catch (error) {
+    console.error('Erreur toggleAdminEventBlock admin:', error);
+    return res.status(500).json({ error: 'Impossible de bloquer/débloquer l\'événement.' });
   }
 }
 

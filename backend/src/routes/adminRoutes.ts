@@ -26,6 +26,7 @@ import {
   updateAdminSettings,
   getAdminInvoices,
   getTenantSubscriptionHistory,
+  toggleAdminEventBlock,
 } from '../controllers/adminController';
 import {
   getGuestMessageTemplates,
@@ -61,6 +62,9 @@ import {
   setServiceOfferingVisibility,
   unpublishVenueListing,
   unpublishServiceOffering,
+  toggleVendorBlock,
+  toggleVenueBlock,
+  toggleOfferingBlock,
 } from '../controllers/adminCatalogController';
 
 const router = Router();
@@ -100,6 +104,9 @@ router.post('/tenants/:id/impersonate', impersonateTenant);
 router.get('/catalog/overview', getCatalogOverview);
 router.get('/catalog/venues', listAdminVenues);
 router.get('/catalog/offerings', listAdminOfferings);
+router.patch('/catalog/vendors/:id/block', toggleVendorBlock);
+router.patch('/catalog/venues/:id/block', toggleVenueBlock);
+router.patch('/catalog/offerings/:id/block', toggleOfferingBlock);
 router.get('/catalog/inquiries', listAdminInquiries);
 router.get('/catalog/bookings', listAdminBookings);
 router.get('/catalog/commissions', listAdminCommissions);
@@ -131,6 +138,7 @@ router.post('/message-templates/:id/reset', resetGuestMessageTemplate);
 router.get('/events', getAllEvents);
 router.post('/events', createAdminEvent);
 router.put('/events/:id', updateAdminEvent);
+router.patch('/events/:id/block', toggleAdminEventBlock);
 router.delete('/events/:id', deleteAdminEvent);
 
 router.get('/guests', getAllGuests);
