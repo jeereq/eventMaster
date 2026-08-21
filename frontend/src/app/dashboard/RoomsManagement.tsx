@@ -29,6 +29,14 @@ import {
   roomTypeDescriptions,
   roomTypeLabels,
 } from '@/lib/roomLayoutUtils';
+import {
+  applyRoomTheme,
+  getRoomTheme,
+  groupThemesByCategory,
+  listAvailableThemes,
+  roomThemeCategoryLabels,
+  type RoomThemeId,
+} from '@/lib/roomThemeUtils';
 import { PRICE_UNIT_OPTIONS, bookingDateKeys, missingPublishLocation, parseBlockedDates, type VenuePriceUnit } from '@/lib/marketplace';
 import { EMPTY_LISTING_DETAILS, parseListingDetails, type ListingDetails } from '@/lib/listingDetails';
 import ListingDetailsFields from '@/components/ListingDetailsFields';
@@ -103,6 +111,39 @@ const roomTypeIcons: Record<RoomType, React.ReactNode> = {
 
 const selectableRoomTypes: RoomType[] = ['SIMPLE', 'BANQUET', 'CONFERENCE', 'AMPHITHEATER', 'TENT', 'CUSTOM'];
 
+/** Groupes ergonomiques pour le choix du type (création). */
+const ROOM_TYPE_THEME_GROUPS: Array<{
+  id: string;
+  label: string;
+  hint: string;
+  types: RoomType[];
+}> = [
+  {
+    id: 'reception',
+    label: 'Réception & cérémonie',
+    hint: 'Mariages, galas, dîners assis',
+    types: ['BANQUET', 'SIMPLE'],
+  },
+  {
+    id: 'pro',
+    label: 'Conférence & spectacle',
+    hint: 'Séminaires, amphithéâtre, plateaux',
+    types: ['CONFERENCE', 'AMPHITHEATER'],
+  },
+  {
+    id: 'outdoor',
+    label: 'Extérieur',
+    hint: 'Tentes et espaces ouverts',
+    types: ['TENT'],
+  },
+  {
+    id: 'custom',
+    label: 'Sur mesure',
+    hint: 'Plan libre ou importé',
+    types: ['CUSTOM'],
+  },
+];
+
 const defaultParams: Record<RoomType, LayoutParams> = {
   SIMPLE: {},
   BANQUET: { tableCount: 8, tableShape: 'round', seatsPerTable: 8, chairType: 'BANQUET', totalSeats: 64 },
@@ -113,9 +154,9 @@ const defaultParams: Record<RoomType, LayoutParams> = {
 };
 
 const WIZARD_STEPS = [
-  { id: 1, label: 'Infos' },
+  { id: 1, label: 'Identité' },
   { id: 2, label: 'Type' },
-  { id: 3, label: 'Plan' },
+  { id: 3, label: 'Plan & ambiance' },
 ] as const;
 
 const fieldClass =
@@ -904,87 +945,100 @@ export default function RoomsManagement() {
         </div>
 
         {wizardStep === 1 && (
-          <div className="space-y-4">
-            <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/60 p-4">
-              <p className="text-xs font-semibold text-foreground">Identité de la salle</p>
-              <p className="text-[11px] text-muted mt-0.5">Ces informations restent modifiables après création.</p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Input label="Nom de la salle" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex. Grand salon" />
-              <Input label="Étage / Aile (libellé affiché)" value={floor} onChange={(e) => setFloor(e.target.value)} placeholder="Ex. RDC, 1er étage, Aile Est" />
-              <p className="sm:col-span-2 text-[10px] text-muted -mt-1">
-                Astuce : dans le plan (étape 3), vous pourrez créer plusieurs étages, une fondation et des couloirs.
-              </p>
-              <div className="sm:col-span-2">
-                <Input label="Emplacement" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Ex. Bâtiment A, jardin" />
+          <div className="space-y-5">
+            <section className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide text-muted">Identité</p>
+                <p className="text-[11px] text-muted mt-0.5">Nom et localisation visibles pour l’équipe et le catalogue.</p>
               </div>
-            </div>
-            <label className="block">
-              <span className={labelClass}>Description</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input label="Nom de la salle" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex. Grand salon" />
+                <Input label="Étage / Aile" value={floor} onChange={(e) => setFloor(e.target.value)} placeholder="Ex. RDC, 1er étage" />
+                <div className="sm:col-span-2">
+                  <Input label="Emplacement" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Ex. Bâtiment A, jardin" />
+                </div>
+              </div>
+            </section>
+            <section className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-2">
+              <p className="text-xs font-bold uppercase tracking-wide text-muted">Notes</p>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
-                placeholder="Ambiance, contraintes, notes pour le protocole…"
+                placeholder="Ambiance, contraintes, notes protocole…"
                 className={fieldClass}
               />
-            </label>
+              <p className="text-[10px] text-muted">
+                À l’étape Plan, vous pourrez ajouter étages, fondation, couloirs et une ambiance visuelle.
+              </p>
+            </section>
           </div>
         )}
 
         {wizardStep === 2 && (
-          <div className="space-y-3">
-            <p className="text-xs text-muted">
-              Types disponibles selon votre forfait
-              {planFeatures?.roomEditorLevel ? ` (éditeur ${planFeatures.roomEditorLevel})` : ''}.
-              Les autres restent visibles mais verrouillés.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-              {selectableRoomTypes.map((type) => {
-                const locked = Boolean(planFeatures) && !allowedRoomTypes.includes(type);
-                const minLevel = ROOM_TYPE_MIN_LEVEL[type];
-                return (
-                <button
-                  key={type}
-                  type="button"
-                  disabled={locked}
-                  onClick={() => {
-                    if (locked) return;
-                    setRoomType(type);
-                    setLayoutParams(defaultParams[type]);
-                    setBlueprintDraft(null);
-                  }}
-                  className={cn(
-                    'text-left p-3.5 rounded-[var(--radius-card)] border transition-colors',
-                    locked && 'opacity-60 cursor-not-allowed bg-surface-muted',
-                    !locked && roomType === type
-                      ? 'border-primary bg-primary/5'
-                      : !locked
-                        ? 'border-border bg-surface hover:bg-surface-muted'
-                        : 'border-border',
-                  )}
-                >
-                  <div className={cn('mb-2 flex items-center justify-between', roomType === type && !locked ? 'text-primary' : 'text-muted')}>
-                    {roomTypeIcons[type]}
-                    {locked && <Lock className="w-3.5 h-3.5" />}
-                  </div>
-                  <p className="font-semibold text-sm text-foreground">{roomTypeLabels[type]}</p>
-                  <p className="text-[11px] text-muted mt-1 leading-relaxed">{roomTypeDescriptions[type]}</p>
-                  {locked && (
-                    <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 mt-2">
-                      {minLevel === 'standard' ? 'Business+' : minLevel === 'advanced' ? 'Premium+' : 'Enterprise 1+'}
-                    </p>
-                  )}
-                </button>
-                );
-              })}
+          <div className="space-y-5">
+            <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/50 px-4 py-3">
+              <p className="text-xs text-muted">
+                Choisissez le type selon l’usage. Disponibles selon votre forfait
+                {planFeatures?.roomEditorLevel ? ` (éditeur ${planFeatures.roomEditorLevel})` : ''}.
+              </p>
             </div>
+            {ROOM_TYPE_THEME_GROUPS.map((group) => (
+              <section key={group.id} className="space-y-2">
+                <div className="flex items-baseline justify-between gap-2 px-0.5">
+                  <h3 className="text-xs font-bold uppercase tracking-wide text-foreground">{group.label}</h3>
+                  <span className="text-[10px] text-muted">{group.hint}</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {group.types.map((type) => {
+                    const locked = Boolean(planFeatures) && !allowedRoomTypes.includes(type);
+                    const minLevel = ROOM_TYPE_MIN_LEVEL[type];
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        disabled={locked}
+                        onClick={() => {
+                          if (locked) return;
+                          setRoomType(type);
+                          setLayoutParams(defaultParams[type]);
+                          setBlueprintDraft(null);
+                        }}
+                        className={cn(
+                          'text-left p-3.5 rounded-[var(--radius-card)] border transition-colors',
+                          locked && 'opacity-55 cursor-not-allowed bg-surface-muted',
+                          !locked && roomType === type
+                            ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                            : !locked
+                              ? 'border-border bg-surface hover:bg-surface-muted'
+                              : 'border-border',
+                        )}
+                      >
+                        <div className={cn('mb-2 flex items-center justify-between', roomType === type && !locked ? 'text-primary' : 'text-muted')}>
+                          {roomTypeIcons[type]}
+                          {locked ? <Lock className="w-3.5 h-3.5" /> : roomType === type ? (
+                            <span className="text-[10px] font-bold text-primary">Sélectionné</span>
+                          ) : null}
+                        </div>
+                        <p className="font-semibold text-sm text-foreground">{roomTypeLabels[type]}</p>
+                        <p className="text-[11px] text-muted mt-1 leading-relaxed">{roomTypeDescriptions[type]}</p>
+                        {locked && (
+                          <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 mt-2">
+                            {minLevel === 'standard' ? 'Business+' : minLevel === 'advanced' ? 'Premium+' : 'Enterprise 1+'}
+                          </p>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
             {planFeatures && allowedRoomTypes.length < selectableRoomTypes.length && (
               <p className="text-[11px] text-muted">
                 <Link href="/dashboard/billing" className="font-semibold text-primary hover:underline">
                   Changer de forfait
                 </Link>
-                {' '}pour débloquer banquet, conférence, tente ou salle personnalisée.
+                {' '}pour débloquer d’autres types de salle.
               </p>
             )}
           </div>
@@ -993,10 +1047,10 @@ export default function RoomsManagement() {
         {wizardStep === 3 && blueprintDraft && (
           <div className="space-y-4">
             <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/50 p-4 space-y-3">
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
                 <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                   <Ruler className="w-4 h-4 text-primary" />
-                  Paramètres — {roomTypeLabels[roomType]}
+                  Capacité — {roomTypeLabels[roomType]}
                 </h3>
                 <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
                   {blueprintDraft.metadata.totalSeats} places · {blueprintDraft.canvas.widthM}×{blueprintDraft.canvas.heightM} m
@@ -1004,6 +1058,65 @@ export default function RoomsManagement() {
               </div>
               {renderTypeParams()}
             </div>
+
+            {planFeatures?.roomThemesFixtures === true ? (
+              <section className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    Ambiance visuelle
+                  </h3>
+                  <p className="text-[11px] text-muted mt-0.5">
+                    Thèmes groupés — appliqués au plan (sol, couleurs, atmosphère).
+                  </p>
+                </div>
+                <div className="space-y-4 max-h-[280px] overflow-y-auto pr-1">
+                  {groupThemesByCategory(listAvailableThemes(blueprintDraft)).map(({ category, label, themes }) => (
+                    <div key={category} className="space-y-2">
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-muted">
+                        {label || roomThemeCategoryLabels[category]}
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                        {themes.map((theme) => {
+                          const active =
+                            blueprintDraft.metadata.roomThemeId === theme.id
+                            || (!blueprintDraft.metadata.roomThemeId && theme.id === 'classic');
+                          return (
+                            <button
+                              key={theme.id}
+                              type="button"
+                              onClick={() => {
+                                setBlueprintDraft(applyRoomTheme(blueprintDraft, theme.id as RoomThemeId, { keepFloor: false }));
+                              }}
+                              className={cn(
+                                'text-left py-2 px-2 rounded-[var(--radius-button)] border text-[10px] font-bold transition overflow-hidden',
+                                active
+                                  ? 'bg-primary/10 border-primary/50 text-primary ring-1 ring-primary/20'
+                                  : 'border-border text-muted hover:bg-surface-muted',
+                              )}
+                            >
+                              <span
+                                className="block h-8 rounded-[var(--radius-button)] mb-1.5 border border-black/5"
+                                style={{
+                                  background: `${theme.canvasPattern ? `${theme.canvasPattern}, ` : ''}${theme.canvasBackground}`,
+                                }}
+                              />
+                              {theme.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {blueprintDraft.metadata.roomThemeId ? (
+                  <p className="text-[10px] text-muted">
+                    Thème actif : <span className="font-semibold text-foreground">{getRoomTheme(blueprintDraft.metadata.roomThemeId, blueprintDraft).name}</span>
+                  </p>
+                ) : null}
+              </section>
+            ) : null}
+
             <RoomLayoutEditor
               blueprint={blueprintDraft}
               onChange={setBlueprintDraft}
