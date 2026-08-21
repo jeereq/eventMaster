@@ -153,6 +153,8 @@ export interface RoomLayoutBlueprint {
     buffetStyle?: 'straight' | 'corner' | 'island';
     /** Escalier : orientation (0 = haut du plan). */
     stairDirection?: 0 | 90 | 180 | 270;
+    /** Escalier : style (droit / ouvert / compact). */
+    stairStyle?: import('@/lib/roomStairsUtils').StairStyle;
     /** Escalier : étage de destination (liaison verticale). */
     connectsToStoryId?: string;
     /** Balcon : façade d’attache. */
@@ -643,6 +645,7 @@ export function createBlueprintFixture(
     hasCouverts: kind === 'buffet' ? true : undefined,
     buffetStyle: kind === 'buffet' ? 'straight' : undefined,
     stairDirection: kind === 'stairs' ? 0 : undefined,
+    stairStyle: kind === 'stairs' ? 'straight' : undefined,
     balconySide: kind === 'balcony' ? 'south' : undefined,
   };
 }

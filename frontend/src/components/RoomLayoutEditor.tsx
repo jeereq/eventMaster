@@ -100,7 +100,17 @@ import {
   resolveChandelierCount,
   resolveChandelierType,
 } from '@/lib/roomCeilingUtils';
+import StairsUserGuide from '@/components/StairsUserGuide';
 import CustomRoomThemePanel from '@/components/CustomRoomThemePanel';
+import {
+  formatStairSummary,
+  resolveStairDefinition,
+  STAIR_DIRECTION_ORDER,
+  stairDirectionLabels,
+  stairStyleHints,
+  stairStyleLabels,
+  type StairStyle,
+} from '@/lib/roomStairsUtils';
 import {
   addBalconies,
   addStairsLinkingStories,
@@ -1709,7 +1719,7 @@ export default function RoomLayoutEditor({
                   <div className="space-y-2">
                     <p className="text-[10px] font-bold uppercase text-muted">2 · Escalier vers…</p>
                     {resolveStories(blueprint).length < 2 ? (
-                      <p className="text-[10px] text-muted">Ajoutez un 2ᵉ étage pour pouvoir créer un escalier.</p>
+                      <p className="text-[10px] text-muted">Ajoutez un 2ᵉ étage (ou un modèle Duplex) pour créer un escalier.</p>
                     ) : (
                       <div className="flex flex-wrap gap-1.5">
                         {resolveStories(blueprint)
@@ -1727,7 +1737,7 @@ export default function RoomLayoutEditor({
                           ))}
                       </div>
                     )}
-                    <p className="text-[10px] text-muted">Hauteur et marches calculées automatiquement. Déplacez ensuite l’escalier sur le plan.</p>
+                    <StairsUserGuide compact defaultOpen={false} />
                   </div>
                 ) : null}
 
@@ -2161,73 +2171,132 @@ export default function RoomLayoutEditor({
               </label>
             )}
 
-            {isStairs && (
+            {isStairs && (() => {
+              const def = resolveStairDefinition(blueprint, selectedFixture as Extract<typeof selectedFixture, { kind: 'stairs' }>);
+              return (
               <>
-                <div className="rounded-[var(--radius-button)] border border-stone-200 bg-stone-50 px-3 py-2 space-y-2">
-                  <p className="text-[10px] font-bold uppercase text-muted">Cet escalier mène vers</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {resolveStories(blueprint)
-                      .filter((s) => s.id !== (selectedFixture.storyId ?? resolveActiveStoryId(blueprint)))
-                      .map((s) => (
+                <div className="rounded-[var(--radius-button)] border border-stone-300 bg-stone-50 px-3 py-2.5 space-y-3">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase text-muted">Définition de l’escalier</p>
+                    <p className="text-[11px] font-semibold text-foreground mt-1">{formatStairSummary(def)}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-[10px]">
+                    <div className="rounded border border-border bg-white px-2 py-1.5">
+                      <p className="font-bold uppercase text-muted">Départ</p>
+                      <p className="font-semibold text-foreground mt-0.5">{def.fromLabel}</p>
+                    </div>
+                    <div className="rounded border border-border bg-white px-2 py-1.5">
+                      <p className="font-bold uppercase text-muted">Arrivée</p>
+                      <p className="font-semibold text-foreground mt-0.5">{def.toLabel ?? '—'}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-bold uppercase text-muted">Étage d’arrivée</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {resolveStories(blueprint)
+                        .filter((s) => s.id !== def.fromStoryId)
+                        .map((s) => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => updateBlueprint(
+                              linkStairsToStory(blueprint, selectedFixture.id, s.id, {
+                                style: def.style,
+                                keepPosition: true,
+                              }),
+                              { message: `Escalier : ${def.fromLabel} → ${s.label}`, kind: 'edit' },
+                            )}
+                            className={cn(
+                              'px-2.5 py-1.5 rounded-[var(--radius-button)] border text-[10px] font-bold',
+                              def.toStoryId === s.id
+                                ? 'bg-primary/10 border-primary/40 text-primary'
+                                : 'border-border bg-white text-muted hover:bg-surface-muted',
+                            )}
+                          >
+                            {s.label}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-bold uppercase text-muted">Style</p>
+                    <div className="grid grid-cols-1 gap-1">
+                      {(Object.keys(stairStyleLabels) as StairStyle[]).map((style) => (
                         <button
-                          key={s.id}
+                          key={style}
                           type="button"
-                          onClick={() => updateBlueprint(
-                            linkStairsToStory(blueprint, selectedFixture.id, s.id),
-                            { message: `Escalier relié vers ${s.label}`, kind: 'edit' },
-                          )}
+                          onClick={() => {
+                            if (def.toStoryId) {
+                              updateBlueprint(
+                                linkStairsToStory(blueprint, selectedFixture.id, def.toStoryId, {
+                                  style,
+                                  keepPosition: true,
+                                }),
+                                { message: `Style : ${stairStyleLabels[style]}`, kind: 'edit' },
+                              );
+                            } else {
+                              updateFixture(selectedFixture.id, { stairStyle: style }, `Style ${stairStyleLabels[style]}`);
+                            }
+                          }}
                           className={cn(
-                            'px-2.5 py-1.5 rounded-[var(--radius-button)] border text-[10px] font-bold',
-                            selectedFixture.connectsToStoryId === s.id
-                              ? 'bg-primary/10 border-primary/40 text-primary'
+                            'text-left px-2.5 py-1.5 rounded-[var(--radius-button)] border text-[10px]',
+                            def.style === style
+                              ? 'bg-stone-800 text-white border-stone-800'
                               : 'border-border bg-white text-muted hover:bg-surface-muted',
                           )}
                         >
-                          {s.label}
+                          <span className="font-bold">{stairStyleLabels[style]}</span>
+                          <span className={cn('block mt-0.5', def.style === style ? 'text-white/75' : 'opacity-80')}>
+                            {stairStyleHints[style]}
+                          </span>
                         </button>
                       ))}
+                    </div>
                   </div>
-                  {selectedFixture.connectsToStoryId ? (
-                    <p className="text-[10px] text-muted leading-relaxed">
-                      Hauteur {(selectedFixture.heightM ?? 0).toFixed(1)} m · {selectedFixture.steps ?? 0} marches
-                      {' '}· emprise ajustée pour rejoindre l’étage (palier + garde-corps).
-                    </p>
-                  ) : (
-                    <p className="text-[10px] text-amber-800">Choisissez l’étage d’arrivée — dimensions recalculées automatiquement.</p>
-                  )}
-                  {selectedFixture.connectsToStoryId ? (
+
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-bold uppercase text-muted">Orientation (montée)</p>
+                    <div className="grid grid-cols-4 gap-1">
+                      {STAIR_DIRECTION_ORDER.map((deg) => (
+                        <button
+                          key={deg}
+                          type="button"
+                          onClick={() => updateFixture(selectedFixture.id, { stairDirection: deg }, `Orientation ${stairDirectionLabels[deg]}`)}
+                          className={cn(
+                            'py-1.5 rounded-[var(--radius-button)] border text-[10px] font-bold',
+                            def.direction === deg ? 'bg-stone-200 border-stone-500' : 'bg-white text-muted',
+                          )}
+                        >
+                          {stairDirectionLabels[deg]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {def.linked && def.toStoryId ? (
                     <button
                       type="button"
                       onClick={() => updateBlueprint(
-                        linkStairsToStory(blueprint, selectedFixture.id, selectedFixture.connectsToStoryId!),
+                        linkStairsToStory(blueprint, selectedFixture.id, def.toStoryId!, {
+                          style: def.style,
+                          keepPosition: true,
+                        }),
                         { message: 'Escalier recalibré', kind: 'edit' },
                       )}
                       className="w-full py-1.5 rounded-[var(--radius-button)] border border-stone-300 bg-white text-[10px] font-bold text-stone-800 hover:bg-stone-100"
                     >
                       Recalibrer hauteur &amp; course
                     </button>
-                  ) : null}
+                  ) : (
+                    <p className="text-[10px] text-amber-800">Choisissez l’étage d’arrivée pour figer la définition.</p>
+                  )}
                 </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold uppercase text-muted">Orientation sur le plan</p>
-                  <div className="grid grid-cols-4 gap-1">
-                    {([
-                      { deg: 0 as const, label: 'Haut' },
-                      { deg: 90 as const, label: 'Droite' },
-                      { deg: 180 as const, label: 'Bas' },
-                      { deg: 270 as const, label: 'Gauche' },
-                    ]).map(({ deg, label }) => (
-                      <button
-                        key={deg}
-                        type="button"
-                        onClick={() => updateFixture(selectedFixture.id, { stairDirection: deg }, `Escalier vers ${label}`)}
-                        className={`py-1.5 rounded-[var(--radius-button)] border text-[10px] font-bold ${(selectedFixture.stairDirection ?? 0) === deg ? 'bg-stone-200 border-stone-500' : 'bg-white text-muted'}`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+
+                <StairsUserGuide defaultOpen={!def.linked} />
+
                 <details className="text-xs">
                   <summary className="font-semibold text-muted cursor-pointer">Réglages fins</summary>
                   <div className="mt-2 space-y-2">
@@ -2261,7 +2330,8 @@ export default function RoomLayoutEditor({
                   </div>
                 </details>
               </>
-            )}
+              );
+            })()}
 
             {isBalcony && (
               <div className="space-y-2">

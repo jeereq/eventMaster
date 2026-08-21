@@ -271,12 +271,20 @@ export const USER_GUIDES: UserGuide[] = [
           '1. Ouvrez Marketplace dans le menu.\n2. Onglet Prestations : créez une fiche métier (traiteur, photo, DJ…) ou location (habits homme / femme / enfant, voiture, moto, matériel) avec photos, tarif, ville, rayon ; passez en grille ou liste, puis publiez. Pour une salle : Salles → plan 2D → publier la fiche.\n3. Onglet Demandes : marquez un devis comme contacté, ou convertissez-le en réservation s’il a une date.\n4. Onglet Réservations : acceptez, marquez l’acompte reçu (versé hors plateforme), puis confirmez pour bloquer la date.\n5. Sur une fiche publique, le bouton Partager envoie le lien marketplace (pas l’URL interne du desk).',
         links: [{ label: 'Marketplace', href: '/dashboard/marketplace' }],
       },
+      {
+        id: 'room-stairs',
+        title: 'Escaliers entre étages (guide dédié)',
+        content:
+          '1. Prérequis : au moins 2 étages (modèle Duplex / Villa, ou + Étage).\n2. Sélectionnez l’étage de départ dans la barre Étage.\n3. Cliquez « Escalier vers… » et choisissez l’étage d’arrivée — hauteur et marches sont calculées.\n4. Sélectionnez l’escalier : définissez arrivée, style (Droit / Ouvert / Compact) et orientation.\n5. Recalibrer si besoin, puis Empiler pour vérifier en 3D.\n6. Dans l’éditeur, ouvrez le panneau « Guide — Escaliers entre étages » pour le détail pas à pas.',
+        links: [{ label: 'Salles', href: '/dashboard/rooms' }],
+      },
     ],
     tips: [
       'Les quotas (événements, invités, modèles) sont visibles sur le tableau de bord.',
       'Les couleurs de l’organisation (Profil) s’appliquent à toute l’équipe ; l’accent personnel du header ne concerne que cet appareil.',
       'Assignez des protocoles org. pour le scan QR web (navigateur) sur tous les événements.',
       'Configurez les salles avant de créer des événements avec plan de table.',
+      'Pour un bâtiment multi-niveaux : modèle Duplex puis guide Escaliers dans Salles.',
       'La commission marketplace ({commissionPercent} %) est due par le vendeur, distincte de l’abonnement SaaS.',
       'Le paiement annuel facture 12 mois (ou 4 trimestres Particulier) d’un coup, avec −10 % sur ce total. Le cycle est mémorisé : le rappel J-7 et la facture de renouvellement auto reprennent l’annuel.',
       'Les commissions de vos commerciaux org. se versent hors plateforme (Facturation → Versements), avec preuve.',
@@ -328,7 +336,14 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'setup-room',
         title: 'Configurer une salle 2D',
         content:
-          '1. Ouvrez Salles dans le menu → Créer.\n2. Choisissez le type (banquet, conférence…).\n3. Placez tables, chaises et éléments décoratifs.\n4. Associez la salle à un événement pour le placement invités.',
+          '1. Ouvrez Salles → Créer.\n2. Identité puis type (banquet, conférence…).\n3. Structure & plan : choisissez un modèle d’étages (Plein pied, Duplex, Villa…).\n4. Placez tables et chaises ; peaufinez le plan 3D.\n5. Associez la salle à un événement pour le placement invités.',
+        links: [{ label: 'Salles', href: '/dashboard/rooms' }],
+      },
+      {
+        id: 'room-stairs',
+        title: 'Escaliers entre étages (guide dédié)',
+        content:
+          '1. Prérequis : au moins 2 étages (modèle Duplex / Villa, ou + Étage).\n2. Sélectionnez l’étage de départ dans la barre Étage.\n3. Cliquez « Escalier vers… » et choisissez l’étage d’arrivée — hauteur et marches sont calculées.\n4. Sélectionnez l’escalier : définissez arrivée, style (Droit / Ouvert / Compact) et orientation.\n5. Recalibrer si besoin, puis Empiler pour vérifier en 3D.\n6. Dans l’éditeur, ouvrez le panneau « Guide — Escaliers entre étages » pour le détail pas à pas.',
         links: [{ label: 'Salles', href: '/dashboard/rooms' }],
       },
       {
@@ -350,6 +365,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Respectez le quota de managers org. selon votre forfait.',
       'Déléguez le protocole aux membres Protocole pour le jour J.',
       'Utilisez les modèles globaux comme base dans le concepteur visuel.',
+      'Escaliers multi-étages : voir le workflow « Escaliers entre étages » ou le guide dans l’éditeur de salle.',
       'La commission marketplace ({commissionPercent} %) est due par le vendeur, distincte de l’abonnement SaaS.',
     ],
   },

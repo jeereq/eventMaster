@@ -6,6 +6,11 @@ import {
   refreshBlueprintMetadata,
 } from '@/lib/roomLayoutUtils';
 import type { LayoutSelectionItem } from '@/lib/roomSelectionUtils';
+import {
+  computeStairMetrics,
+  resolveStairStyle,
+  type StairStyle,
+} from '@/lib/roomStairsUtils';
 
 /** Étage d’un bâtiment / maison (plan multi-niveaux). */
 export type RoomStory = {
@@ -476,11 +481,12 @@ export function resolveVerticalLinks(blueprint: RoomLayoutBlueprint): VerticalLi
   return blueprint.metadata.verticalLinks ?? [];
 }
 
-/** Relie un escalier de l’étage courant vers un autre étage (hauteur + emprise auto). */
+/** Relie un escalier de l’étage courant vers un autre étage (métriques auto). */
 export function linkStairsToStory(
   blueprint: RoomLayoutBlueprint,
   stairsId: string,
   toStoryId: string,
+  options?: { style?: StairStyle; keepPosition?: boolean },
 ): RoomLayoutBlueprint {
   const stories = resolveStories(blueprint);
   const stairs = blueprint.fixtures.find((f) => f.id === stairsId && f.kind === 'stairs');
@@ -491,19 +497,19 @@ export function linkStairsToStory(
 
   const fromElev = storyElevationM(blueprint, fromStoryId);
   const toElev = storyElevationM(blueprint, toStoryId);
-  const heightM = Math.max(0.8, Math.abs(toElev - fromElev));
-  const canvasW = Math.max(5, blueprint.canvas.widthM);
-  const canvasD = Math.max(5, blueprint.canvas.heightM);
-  const steps = Math.max(6, Math.min(22, Math.round(heightM / 0.175)));
-  const runM = Math.min(canvasD * 0.55, Math.max(2.2, steps * 0.28));
-  const stairWidthM = Math.min(2.2, Math.max(1.05, canvasW * 0.1));
-  const hPct = Math.max(12, Math.min(55, (runM / canvasD) * 100));
-  const wPct = Math.max(6, Math.min(28, (stairWidthM / canvasW) * 100));
+  const style = options?.style ?? resolveStairStyle(stairs.stairStyle);
+  const metrics = computeStairMetrics({
+    riseM: Math.abs(toElev - fromElev),
+    canvasWidthM: blueprint.canvas.widthM,
+    canvasDepthM: blueprint.canvas.heightM,
+    style,
+  });
   const toLabel = stories.find((s) => s.id === toStoryId)?.label ?? 'étage';
 
-  // Centrer l’escalier sans sortir du plan
-  const x = Math.max(2, Math.min(98 - wPct, stairs.x));
-  const y = Math.max(2, Math.min(98 - hPct, stairs.y));
+  const x = options?.keepPosition
+    ? Math.max(2, Math.min(98 - metrics.wPct, stairs.x))
+    : Math.max(2, Math.min(98 - metrics.wPct, stairs.x));
+  const y = Math.max(2, Math.min(98 - metrics.hPct, stairs.y));
 
   const link: VerticalLink = {
     id: makeLayoutId('vlink'),
@@ -522,13 +528,14 @@ export function linkStairsToStory(
         ? {
             ...f,
             connectsToStoryId: toStoryId,
-            heightM,
-            steps,
-            w: wPct,
-            h: hPct,
+            heightM: metrics.riseM,
+            steps: metrics.steps,
+            w: metrics.wPct,
+            h: metrics.hPct,
             x,
             y,
             storyId: fromStoryId,
+            stairStyle: style,
             label: f.label?.startsWith('Escalier') ? `Escalier → ${toLabel}` : f.label,
           }
         : f,

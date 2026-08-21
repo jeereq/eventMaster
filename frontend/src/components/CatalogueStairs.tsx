@@ -10,7 +10,7 @@ export function CatalogueInterstoryStairs({
   riseM,
   steps = 12,
   selected = false,
-  openRisers = false,
+  style = 'straight',
 }: {
   /** Largeur utile des marches (m). */
   widthM: number;
@@ -20,9 +20,9 @@ export function CatalogueInterstoryStairs({
   riseM: number;
   steps?: number;
   selected?: boolean;
-  /** Contremarches ouvertes (style loft). */
-  openRisers?: boolean;
+  style?: 'straight' | 'open' | 'compact';
 }) {
+  const openRisers = style === 'open';
   const wood = useMemo(() => getStairWoodMap(), []);
   const n = Math.max(4, Math.min(24, Math.round(steps)));
   const rise = Math.max(0.6, riseM);

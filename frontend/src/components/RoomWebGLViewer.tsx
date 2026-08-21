@@ -1449,6 +1449,7 @@ function FixtureMesh({
   steps,
   hasCouverts,
   stairDirection = 0,
+  stairStyle,
   balconySide,
   columnShape,
   widthM,
@@ -1473,6 +1474,7 @@ function FixtureMesh({
   steps?: number;
   hasCouverts?: boolean;
   stairDirection?: 0 | 90 | 180 | 270;
+  stairStyle?: 'straight' | 'open' | 'compact';
   balconySide?: 'north' | 'south' | 'east' | 'west';
   columnShape?: 'round' | 'square';
   widthM: number;
@@ -1586,6 +1588,7 @@ function FixtureMesh({
             riseM={Math.max(0.8, height)}
             steps={Math.max(4, Math.min(24, stairSteps))}
             selected={selected}
+            style={stairStyle ?? 'straight'}
           />
         </group>
       ) : kind === 'balcony' ? (
@@ -1919,6 +1922,7 @@ function SceneContent({
             steps={f.steps}
             hasCouverts={f.hasCouverts}
             stairDirection={f.stairDirection}
+            stairStyle={f.stairStyle}
             balconySide={f.balconySide}
             columnShape={f.columnShape}
             widthM={widthM}
