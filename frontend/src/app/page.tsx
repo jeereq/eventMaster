@@ -120,7 +120,7 @@ export default function Home() {
             </h1>
 
             <p className="text-[15px] sm:text-base text-muted leading-relaxed max-w-2xl">
-              Créez l’événement, invitez, accueillez — ou trouvez une salle. Tout se fait dans le navigateur, y compris au téléphone.
+              Rassemblez le lieu idéal, les meilleurs prestataires et tous vos invités sur une seule plateforme intuitive. Tout se fait dans le navigateur, y compris au téléphone.
             </p>
 
             <ol
@@ -165,37 +165,43 @@ export default function Home() {
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 pt-1">
               {user ? (
-                <Link href="/dashboard">
-                  <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                <Link href="/dashboard" className="w-full sm:w-auto">
+                  <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />} className="w-full sm:w-auto">
                     Reprendre là où j’en étais
                   </Button>
                 </Link>
               ) : site.allowRegistration ? (
-                <>
-                  <Link href={profile.cta.href}>
-                    <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
+                  <Link href={profile.cta.href} className="w-full sm:w-auto">
+                    <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />} className="w-full sm:w-auto">
                       {profile.cta.label}
                     </Button>
                   </Link>
-                  <Link href="/login">
-                    <Button size="lg" variant="secondary">J’ai déjà un compte</Button>
+                  <Link
+                    href="/login"
+                    className="inline-flex items-center justify-center gap-1.5 px-2 py-2 text-sm font-semibold text-foreground/80 hover:text-foreground hover:underline transition"
+                  >
+                    J’ai déjà un compte
                   </Link>
-                </>
+                </div>
               ) : (
-                <>
-                  <Link href="/login">
-                    <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
+                  <Link href="/login" className="w-full sm:w-auto">
+                    <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />} className="w-full sm:w-auto">
                       Accéder à mon espace
                     </Button>
                   </Link>
-                  <Link href="/contact">
-                    <Button size="lg" variant="secondary">Parler à l’équipe</Button>
+                  <Link
+                    href="/contact"
+                    className="inline-flex items-center justify-center gap-1.5 px-2 py-2 text-sm font-semibold text-foreground/80 hover:text-foreground hover:underline transition"
+                  >
+                    Parler à l’équipe
                   </Link>
-                </>
+                </div>
               )}
               <a
                 href={profile.exploreCta.href}
-                className="inline-flex items-center justify-center gap-1.5 px-1 py-2 text-sm font-semibold text-foreground/80 hover:text-primary transition"
+                className="inline-flex items-center justify-center gap-1.5 px-2 py-2 text-sm font-semibold text-primary hover:text-primary-hover transition"
               >
                 {profile.exploreCta.label}
                 <ArrowRight className="w-3.5 h-3.5" />

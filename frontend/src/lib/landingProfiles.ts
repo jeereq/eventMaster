@@ -54,25 +54,25 @@ export type LandingProfile = {
 
 /** Slogan landing — promesse unique, visible dès le premier écran. */
 export const LANDING_SLOGAN = {
-  lead: 'Préparez votre événement',
-  highlight: 'en un clic',
-  full: 'Préparez votre événement en un clic.',
+  lead: 'Votre événement,',
+  highlight: 'maîtrisé de A à Z',
+  full: 'Votre prochain événement, maîtrisé de A à Z.',
 } as const;
 
 export const LANDING_PROFILES: LandingProfile[] = [
   {
     id: 'personal',
-    label: 'J’organise mon événement',
+    label: 'Je célèbre un moment unique',
     shortLabel: 'Mon événement',
     eyebrow: 'Particulier',
     title: 'Votre fête, du premier clic au jour J',
     intro: 'Créez l’événement, invitez, accueillez. C’est tout.',
-    examples: 'Mariage, anniversaire, baptême, soirée',
+    examples: 'Mariage, anniversaire... Du faire-part au placement des invités.',
     clicks: ['Créer', 'Inviter', 'Accueillir'],
     clickHrefs: ['#parcours', '#modeles', '#produit'],
     sectionId: 'parcours',
     exploreCta: { href: '#parcours', label: 'Voir les étapes' },
-    cta: { href: '/register', label: 'Créer mon événement' },
+    cta: { href: '/register', label: 'Créer mon événement (Gratuit)' },
     registerHint: 'Compte organisateur. Forfait selon le nombre d’invités.',
     results: [
       { icon: Shirt, label: 'Infos invités' },
@@ -122,12 +122,12 @@ export const LANDING_PROFILES: LandingProfile[] = [
   },
   {
     id: 'pro',
-    label: 'J’organise pour mes clients',
+    label: 'Je suis organisateur Pro',
     shortLabel: 'Event master',
     eyebrow: 'Professionnel',
     title: 'Tous vos événements clients, un seul espace',
     intro: 'Agence, wedding planner, event master : dossiers, équipe, salles.',
-    examples: 'Agence, wedding planner, protocole',
+    examples: 'Centralisez vos dossiers, devis et la gestion d’équipe.',
     clicks: ['Ouvrir l’espace', 'Préparer', 'Jour J'],
     clickHrefs: ['#parcours', '#catalogue', '#produit'],
     sectionId: 'parcours',
@@ -182,17 +182,17 @@ export const LANDING_PROFILES: LandingProfile[] = [
   },
   {
     id: 'seeker',
-    label: 'Je cherche salle ou prestataires',
+    label: 'Je recherche un lieu ou talent',
     shortLabel: 'Je cherche',
     eyebrow: 'Client marketplace',
     title: 'Salle et prestas : cherchez, composez, demandez',
     intro: 'Compte gratuit. Pas d’abonnement. Un devis en quelques clics.',
-    examples: 'Budget, devis, réservation',
+    examples: 'Comparez et réservez salles, traiteurs, photographes...',
     clicks: ['Chercher', 'Composer', 'Demander un devis'],
     clickHrefs: ['#salles', '#catalogue', '#prestataires'],
     sectionId: 'salles',
     exploreCta: { href: '#salles', label: 'Voir le catalogue' },
-    cta: { href: '/register?kind=CLIENT', label: 'Trouver salle et prestas' },
+    cta: { href: '/register?kind=CLIENT', label: 'Créer mon compte (Gratuit)' },
     registerHint: 'Compte client gratuit : favoris, packs, devis.',
     results: [
       { icon: Heart, label: 'Favoris' },
@@ -235,17 +235,17 @@ export const LANDING_PROFILES: LandingProfile[] = [
   },
   {
     id: 'vendor',
-    label: 'Je propose un lieu ou un service',
+    label: 'Je référence mon espace ou service',
     shortLabel: 'Je publie',
     eyebrow: 'Salle & prestataire',
     title: 'Publiez vos offres, recevez des demandes',
     intro: 'Salle, traiteur, photo, location : une fiche, puis les devis arrivent.',
-    examples: 'Salle, DJ, traiteur, location',
+    examples: 'Développez votre visibilité et recevez des devis.',
     clicks: ['Publier', 'Répondre', 'Bloquer la date'],
     clickHrefs: ['#tarifs', '#parcours', '#salles'],
     sectionId: 'tarifs',
     exploreCta: { href: '#tarifs', label: 'Voir les tarifs' },
-    cta: { href: '/register?kind=VENDOR', label: 'Publier mes offres' },
+    cta: { href: '/register?kind=VENDOR', label: 'Développer mon activité' },
     registerHint: 'Compte prestataire. Forfaits Salle, Prestataire, ou les deux.',
     results: [
       { icon: Building2, label: 'Fiche publique' },
