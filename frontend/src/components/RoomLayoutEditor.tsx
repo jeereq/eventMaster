@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video,
 } from 'lucide-react';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
 import ImageCropModal from '@/components/ImageCropModal';
@@ -98,6 +98,13 @@ export default function RoomLayoutEditor({
   const [keepThemeFloor, setKeepThemeFloor] = useState(false);
   const [accordion, setAccordion] = useState<string>('murs-sols');
   const [wallEditMode, setWallEditMode] = useState(false);
+  const [lockOrbit, setLockOrbit] = useState(true);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  const pastRef = useRef<RoomLayoutBlueprint[]>([]);
+  const futureRef = useRef<RoomLayoutBlueprint[]>([]);
+  const skipHistoryRef = useRef(false);
+  const dragHistPushedRef = useRef(false);
   const [customTplName, setCustomTplName] = useState('');
   const [tplParams, setTplParams] = useState<LayoutParams>({
     tableCount: 8,
@@ -107,14 +114,74 @@ export default function RoomLayoutEditor({
     totalSeats: 64,
   });
 
+  const syncHistoryFlags = useCallback(() => {
+    setCanUndo(pastRef.current.length > 0);
+    setCanRedo(futureRef.current.length > 0);
+  }, []);
+
+  const pushHistory = useCallback((snapshot: RoomLayoutBlueprint) => {
+    pastRef.current = [...pastRef.current.slice(-49), structuredClone(snapshot)];
+    futureRef.current = [];
+    syncHistoryFlags();
+  }, [syncHistoryFlags]);
+
   const log = useCallback((message: string, kind: LayoutActionEntry['kind'] = 'info') => {
     setActionLog((prev) => prependLayoutAction(prev, message, kind));
   }, []);
 
   const updateBlueprint = (next: RoomLayoutBlueprint, action?: { message: string; kind?: LayoutActionEntry['kind'] }) => {
+    if (!skipHistoryRef.current) {
+      pushHistory(blueprint);
+    }
     onChange(refreshBlueprintMetadata(ensureBlueprintDefaults(next)));
     if (action) log(action.message, action.kind);
   };
+
+  const undo = useCallback(() => {
+    const prev = pastRef.current.pop();
+    if (!prev) return;
+    futureRef.current = [...futureRef.current, structuredClone(blueprint)];
+    skipHistoryRef.current = true;
+    onChange(refreshBlueprintMetadata(ensureBlueprintDefaults(prev)));
+    skipHistoryRef.current = false;
+    syncHistoryFlags();
+    log('Annuler (Ctrl+Z)', 'info');
+  }, [blueprint, log, onChange, syncHistoryFlags]);
+
+  const redo = useCallback(() => {
+    const next = futureRef.current.pop();
+    if (!next) return;
+    pastRef.current = [...pastRef.current, structuredClone(blueprint)];
+    skipHistoryRef.current = true;
+    onChange(refreshBlueprintMetadata(ensureBlueprintDefaults(next)));
+    skipHistoryRef.current = false;
+    syncHistoryFlags();
+    log('Rétablir (Ctrl+Y)', 'info');
+  }, [blueprint, log, onChange, syncHistoryFlags]);
+
+  useEffect(() => {
+    if (readOnly) return;
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable) return;
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) return;
+      const key = e.key.toLowerCase();
+      if (key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
+        e.preventDefault();
+        redo();
+      } else if (key === 'l') {
+        e.preventDefault();
+        setLockOrbit((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [readOnly, undo, redo]);
 
   const selectedFurniture = selected && selected.kind !== 'fixture' && selected.kind !== 'wall'
     ? blueprint.furniture.find((f) => f.id === selected.id)
@@ -125,20 +192,33 @@ export default function RoomLayoutEditor({
 
   const handleWebGLMove = useCallback((kind: SelectableKind, id: string, xPct: number, yPct: number) => {
     if (readOnly) return;
+    if (!dragHistPushedRef.current) {
+      pushHistory(blueprint);
+      dragHistPushedRef.current = true;
+    }
     const x = snapLayoutPct(xPct, caps.canSnapGrid);
     const y = snapLayoutPct(yPct, caps.canSnapGrid);
+    skipHistoryRef.current = true;
     if (kind === 'fixture') {
       onChange(refreshBlueprintMetadata(ensureBlueprintDefaults({
         ...blueprint,
         fixtures: blueprint.fixtures.map((f) => (f.id === id ? { ...f, x, y } : f)),
       })));
-      return;
+    } else {
+      onChange(refreshBlueprintMetadata(ensureBlueprintDefaults({
+        ...blueprint,
+        furniture: blueprint.furniture.map((f) => (f.id === id ? { ...f, x, y } : f)),
+      })));
     }
-    onChange(refreshBlueprintMetadata(ensureBlueprintDefaults({
-      ...blueprint,
-      furniture: blueprint.furniture.map((f) => (f.id === id ? { ...f, x, y } : f)),
-    })));
-  }, [blueprint, caps.canSnapGrid, onChange, readOnly]);
+    skipHistoryRef.current = false;
+  }, [blueprint, caps.canSnapGrid, onChange, pushHistory, readOnly]);
+
+  const handleWebGLMoveEnd = useCallback(() => {
+    if (dragHistPushedRef.current) {
+      log('Élément déplacé', 'move');
+    }
+    dragHistPushedRef.current = false;
+  }, [log]);
 
   const deleteSelected = () => {
     if (!selected || readOnly) return;
@@ -272,7 +352,10 @@ export default function RoomLayoutEditor({
     const tpl = ROOM_LAYOUT_TEMPLATES.find((t) => t.id === templateId);
     const next = applyRoomTemplate(templateId, tplParams, blueprint, { keepStyle: keepTemplateStyle });
     if (!next) return;
+    pushHistory(blueprint);
+    skipHistoryRef.current = true;
     onChange(next);
+    skipHistoryRef.current = false;
     const seats = next.metadata.totalSeats;
     log(
       `Modèle « ${tpl?.name} » généré${seats ? ` — ${seats} places` : ''}`,
@@ -293,7 +376,10 @@ export default function RoomLayoutEditor({
   const applyCustomTemplate = (templateId: string) => {
     const next = applySavedRoomTemplate(blueprint, templateId, { keepStyle: keepTemplateStyle });
     if (!next) return;
+    pushHistory(blueprint);
+    skipHistoryRef.current = true;
     onChange(next);
+    skipHistoryRef.current = false;
     const name = blueprint.metadata.customTemplates?.find((t) => t.id === templateId)?.name ?? 'perso.';
     log(`Modèle « ${name} » appliqué`, 'template');
     setSelected(null);
@@ -355,8 +441,7 @@ export default function RoomLayoutEditor({
 
   const applyTheme = (themeId: RoomThemeId) => {
     const next = applyRoomTheme(blueprint, themeId, { keepFloor: keepThemeFloor });
-    onChange(refreshBlueprintMetadata(ensureBlueprintDefaults(next)));
-    log(`Thème « ${getRoomTheme(themeId, blueprint).name} » appliqué`, 'settings');
+    updateBlueprint(next, { message: `Thème « ${getRoomTheme(themeId, blueprint).name} » appliqué`, kind: 'settings' });
   };
 
   const setFloorType = (floorType: FloorType) => {
@@ -407,8 +492,10 @@ export default function RoomLayoutEditor({
       selected={selected}
       onSelect={(sel) => setSelected(sel)}
       onMoveItem={handleWebGLMove}
+      onMoveEnd={handleWebGLMoveEnd}
       readOnly={readOnly}
       wallEditMode={wallEditMode}
+      lockOrbit={lockOrbit}
       className={className}
     />
   );
@@ -689,7 +776,16 @@ export default function RoomLayoutEditor({
                     onChange={(e) => setWallEditMode(e.target.checked)}
                     className="rounded border-border"
                   />
-                  Mode édition murs (orbit caméra désactivé)
+                  Mode édition murs (orbit désactivé)
+                </label>
+                <label className="flex items-center gap-2 text-[10px] text-muted cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={lockOrbit}
+                    onChange={(e) => setLockOrbit(e.target.checked)}
+                    className="rounded border-border"
+                  />
+                  Bloquer la perspective pour déplacer (Ctrl+L)
                 </label>
                 <RoomWallEditorPanel
                   blueprint={blueprint}
@@ -764,6 +860,9 @@ export default function RoomLayoutEditor({
           {caps.canChangeOutline ? (
             <div className="space-y-3 pt-4 border-t border-border/50">
               <p className="text-xs font-bold uppercase text-muted flex items-center gap-1"><Shapes className="w-3.5 h-3.5" /> Forme de la salle</p>
+              <p className="text-[10px] text-muted leading-relaxed">
+                Met à jour le sol découpé et les murs 3D (L, U, hexagone, cercle…). Annulable avec Ctrl+Z.
+              </p>
               <div className="grid grid-cols-3 gap-2">
                 {(Object.keys(roomOutlineLabels) as RoomOutlineShape[]).map((shape) => (
                   <button
@@ -1484,6 +1583,38 @@ export default function RoomLayoutEditor({
 
   const toolbar = !readOnly && (
     <div className="flex flex-nowrap lg:flex-wrap gap-2 overflow-x-auto pb-0.5 -mx-0.5 px-0.5">
+      <button
+        type="button"
+        onClick={undo}
+        disabled={!canUndo}
+        title="Annuler (Ctrl+Z)"
+        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-white border border-border text-foreground rounded-[var(--radius-button)] text-xs font-bold disabled:opacity-40"
+      >
+        <Undo2 className="w-3.5 h-3.5" /> Annuler
+      </button>
+      <button
+        type="button"
+        onClick={redo}
+        disabled={!canRedo}
+        title="Rétablir (Ctrl+Y)"
+        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-white border border-border text-foreground rounded-[var(--radius-button)] text-xs font-bold disabled:opacity-40"
+      >
+        <Redo2 className="w-3.5 h-3.5" /> Rétablir
+      </button>
+      <button
+        type="button"
+        onClick={() => setLockOrbit((v) => !v)}
+        title="Verrouiller / déverrouiller la caméra (Ctrl+L)"
+        className={cn(
+          'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
+          lockOrbit
+            ? 'bg-amber-50 border-amber-300 text-amber-900'
+            : 'bg-white border-border text-muted',
+        )}
+      >
+        {lockOrbit ? <VideoOff className="w-3.5 h-3.5" /> : <Video className="w-3.5 h-3.5" />}
+        {lockOrbit ? 'Caméra bloquée' : 'Caméra libre'}
+      </button>
       <button type="button" onClick={addTable} className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-[var(--radius-button)] text-xs font-bold shadow-sm">
         <Plus className="w-3.5 h-3.5" /> Table
       </button>

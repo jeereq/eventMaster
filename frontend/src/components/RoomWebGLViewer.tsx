@@ -8,6 +8,7 @@ import {
   RoomLayoutBlueprint,
   RoomWallSegment,
   RoomWallOpening,
+  outlinePolygonPoints,
   resolveBlueprintWalls,
   resolveTableColor,
   type ChairType,
@@ -41,9 +42,12 @@ interface RoomWebGLViewerProps {
   selected: WebGLSelection | null;
   onSelect: (sel: WebGLSelection | null) => void;
   onMoveItem?: (kind: WebGLSelectableKind, id: string, xPct: number, yPct: number) => void;
+  onMoveEnd?: () => void;
   readOnly?: boolean;
   className?: string;
   wallEditMode?: boolean;
+  /** Bloque orbit / pan pour déplacer le mobilier sans changer la perspective. */
+  lockOrbit?: boolean;
 }
 
 function pctToWorld(xPct: number, yPct: number, widthM: number, heightM: number): [number, number] {
@@ -64,12 +68,14 @@ function FloorPlane({
   heightM,
   floorType,
   floorImageUrl,
+  outline,
   onPointerMissed,
 }: {
   widthM: number;
   heightM: number;
   floorType?: import('@/lib/roomThemeUtils').FloorType;
   floorImageUrl?: string;
+  outline?: RoomLayoutBlueprint['roomOutline'];
   onPointerMissed?: () => void;
 }) {
   const mat = useMemo(
@@ -77,9 +83,26 @@ function FloorPlane({
     [floorType, floorImageUrl, widthM, heightM],
   );
 
+  const shapeGeo = useMemo(() => {
+    if (!outline || outline.shape === 'rectangle') return null;
+    const pts = outlinePolygonPoints(outline);
+    if (pts.length < 3) return null;
+    const shape = new THREE.Shape();
+    pts.forEach((p, i) => {
+      const [wx, wz] = pctToWorld(p.x, p.y, widthM, heightM);
+      if (i === 0) shape.moveTo(wx, -wz);
+      else shape.lineTo(wx, -wz);
+    });
+    shape.closePath();
+    const geo = new THREE.ShapeGeometry(shape);
+    geo.rotateX(-Math.PI / 2);
+    return geo;
+  }, [outline, widthM, heightM]);
+
   return (
     <mesh
-      rotation={[-Math.PI / 2, 0, 0]}
+      geometry={shapeGeo ?? undefined}
+      rotation={shapeGeo ? [0, 0, 0] : [-Math.PI / 2, 0, 0]}
       position={[0, 0, 0]}
       receiveShadow
       onClick={(e) => {
@@ -87,7 +110,7 @@ function FloorPlane({
         onPointerMissed?.();
       }}
     >
-      <planeGeometry args={[widthM, heightM]} />
+      {!shapeGeo && <planeGeometry args={[widthM, heightM]} />}
       <meshStandardMaterial
         color={mat.color}
         map={mat.map ?? undefined}
@@ -842,8 +865,10 @@ function SceneContent({
   selected,
   onSelect,
   onMoveItem,
+  onMoveEnd,
   readOnly,
   wallEditMode,
+  lockOrbit = false,
 }: Omit<RoomWebGLViewerProps, 'className'>) {
   const widthM = blueprint.canvas.widthM;
   const heightM = blueprint.canvas.heightM;
@@ -899,6 +924,7 @@ function SceneContent({
         heightM={heightM}
         floorType={floorType}
         floorImageUrl={blueprint.metadata.floorImageUrl}
+        outline={blueprint.roomOutline}
         onPointerMissed={() => onSelect(null)}
       />
 
@@ -1078,12 +1104,15 @@ function SceneContent({
           if (!dragTarget) return;
           moveAny(dragTarget.kind, dragTarget.id, x, y);
         }}
-        onEnd={() => setDragTarget(null)}
+        onEnd={() => {
+          setDragTarget(null);
+          onMoveEnd?.();
+        }}
       />
 
       <OrbitControls
-        enablePan={!wallEditMode && !dragTarget}
-        enableRotate={!wallEditMode && !dragTarget}
+        enablePan={!wallEditMode && !lockOrbit && !dragTarget}
+        enableRotate={!wallEditMode && !lockOrbit && !dragTarget}
         enableZoom
         maxPolarAngle={Math.PI / 2.05}
         minDistance={3}
@@ -1099,9 +1128,11 @@ export default function RoomWebGLViewer({
   selected,
   onSelect,
   onMoveItem,
+  onMoveEnd,
   readOnly = false,
   className,
   wallEditMode = false,
+  lockOrbit = false,
 }: RoomWebGLViewerProps) {
   return (
     <div className={cn('relative w-full overflow-hidden rounded-[var(--radius-card)] border border-border bg-[#1a1410]', className)}>
@@ -1119,13 +1150,17 @@ export default function RoomWebGLViewer({
             selected={selected}
             onSelect={onSelect}
             onMoveItem={onMoveItem}
+            onMoveEnd={onMoveEnd}
             readOnly={readOnly}
             wallEditMode={wallEditMode}
+            lockOrbit={lockOrbit}
           />
         </Suspense>
       </Canvas>
       <div className="pointer-events-none absolute bottom-2 left-2 rounded-md bg-black/50 px-2 py-1 text-[9px] font-medium text-white/80">
-        WebGL réaliste · textures sol / murs / mobilier · molette = zoom
+        {lockOrbit
+          ? 'Caméra verrouillée · glissez le mobilier · molette = zoom'
+          : 'WebGL · orbit libre · molette = zoom · verrouillez la caméra pour déplacer'}
       </div>
     </div>
   );

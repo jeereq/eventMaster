@@ -465,6 +465,94 @@ export function defaultRoomOutline(shape: RoomOutlineShape = 'rectangle'): NonNu
   };
 }
 
+/**
+ * Sommets du contour en % du canvas (ordre horaire), selon la forme.
+ * Utilisé pour murs WebGL et sol découpé.
+ */
+export function outlinePolygonPoints(
+  outline: NonNullable<RoomLayoutBlueprint['roomOutline']>,
+): Array<{ x: number; y: number }> {
+  const { x, y, w, h, shape } = outline;
+  const map = (px: number, py: number) => ({
+    x: x + (px / 100) * w,
+    y: y + (py / 100) * h,
+  });
+
+  switch (shape) {
+    case 'square':
+      return [map(20, 8), map(80, 8), map(80, 92), map(20, 92)];
+    case 'circle': {
+      const pts: Array<{ x: number; y: number }> = [];
+      const n = 24;
+      for (let i = 0; i < n; i += 1) {
+        const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+        pts.push(map(50 + Math.cos(a) * 45, 50 + Math.sin(a) * 42));
+      }
+      return pts;
+    }
+    case 'ellipse': {
+      const pts: Array<{ x: number; y: number }> = [];
+      const n = 28;
+      for (let i = 0; i < n; i += 1) {
+        const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+        pts.push(map(50 + Math.cos(a) * 48, 50 + Math.sin(a) * 30));
+      }
+      return pts;
+    }
+    case 'stadium': {
+      const pts: Array<{ x: number; y: number }> = [];
+      const n = 20;
+      for (let i = 0; i <= n; i += 1) {
+        const a = -Math.PI / 2 + (i / n) * Math.PI;
+        pts.push(map(50 + Math.cos(a) * 46, 12 + Math.sin(a) * 8));
+      }
+      for (let i = 0; i <= n; i += 1) {
+        const a = Math.PI / 2 + (i / n) * Math.PI;
+        pts.push(map(50 + Math.cos(a) * 46, 88 + Math.sin(a) * 8));
+      }
+      return pts;
+    }
+    case 'hexagon':
+      return [map(25, 0), map(75, 0), map(100, 50), map(75, 100), map(25, 100), map(0, 50)];
+    case 'octagon':
+      return [
+        map(30, 0), map(70, 0), map(100, 30), map(100, 70),
+        map(70, 100), map(30, 100), map(0, 70), map(0, 30),
+      ];
+    case 'pentagon':
+      return [map(50, 0), map(100, 38), map(82, 100), map(18, 100), map(0, 38)];
+    case 'triangle':
+      return [map(50, 0), map(100, 100), map(0, 100)];
+    case 'diamond':
+      return [map(50, 0), map(100, 50), map(50, 100), map(0, 50)];
+    case 'trapezoid':
+      return [map(18, 0), map(82, 0), map(100, 100), map(0, 100)];
+    case 'lShape':
+      return [map(0, 0), map(65, 0), map(65, 35), map(100, 35), map(100, 100), map(0, 100)];
+    case 'rShape':
+      return [map(35, 0), map(100, 0), map(100, 100), map(0, 100), map(0, 35), map(35, 35)];
+    case 'tShape':
+      return [
+        map(0, 0), map(100, 0), map(100, 38), map(68, 38),
+        map(68, 100), map(32, 100), map(32, 38), map(0, 38),
+      ];
+    case 'uShape':
+      return [
+        map(0, 0), map(32, 0), map(32, 62), map(68, 62),
+        map(68, 0), map(100, 0), map(100, 100), map(0, 100),
+      ];
+    case 'cross':
+      return [
+        map(35, 0), map(65, 0), map(65, 35), map(100, 35),
+        map(100, 65), map(65, 65), map(65, 100), map(35, 100),
+        map(35, 65), map(0, 65), map(0, 35), map(35, 35),
+      ];
+    case 'rectangle':
+    default:
+      return [map(0, 0), map(100, 0), map(100, 100), map(0, 100)];
+  }
+}
+
 export const wallTextureLabels: Record<WallTextureStyle, string> = {
   plaster: 'Crépi / plâtre',
   brick: 'Brique',
@@ -539,34 +627,65 @@ export function createWallSegment(partial: Partial<RoomWallSegment> = {}): RoomW
   };
 }
 
-/** Génère 4 murs rectangulaires à partir du contour de salle. */
+/** Génère les murs le long du polygone de la forme de salle. */
 export function wallsFromRoomOutline(
   outline: NonNullable<RoomLayoutBlueprint['roomOutline']>,
   opts: { heightM?: number; thicknessM?: number; texture?: WallTextureStyle; withEntrance?: boolean } = {},
 ): RoomWallSegment[] {
-  const { x, y, w, h } = outline;
   const heightM = opts.heightM ?? 3;
   const thicknessM = opts.thicknessM ?? 0.2;
   const texture = opts.texture ?? 'plaster';
-  const corners = [
-    { x, y },
-    { x: x + w, y },
-    { x: x + w, y: y + h },
-    { x, y: y + h },
-  ];
-  const walls: RoomWallSegment[] = [];
-  for (let i = 0; i < 4; i += 1) {
-    const start = corners[i];
-    const end = corners[(i + 1) % 4];
-    const openings: RoomWallOpening[] = [];
-    // Porte d'entrée sur le mur avant (bas)
-    if (opts.withEntrance !== false && i === 2) {
-      openings.push(createWallOpening('door', { t: 0.5, style: 'double' }));
+  const points = outlinePolygonPoints(outline);
+  if (points.length < 3) {
+    const { x, y, w, h } = outline;
+    const fallback = [
+      { x, y },
+      { x: x + w, y },
+      { x: x + w, y: y + h },
+      { x, y: y + h },
+    ];
+    return fallback.map((start, i) =>
+      createWallSegment({
+        start,
+        end: fallback[(i + 1) % 4],
+        heightM,
+        thicknessM,
+        texture,
+        openings: i === 2 && opts.withEntrance !== false
+          ? [createWallOpening('door', { t: 0.5, style: 'double' })]
+          : [],
+      }),
+    );
+  }
+
+  // Mur d’entrée = segment le plus proche du bas (y max) au centre
+  let entranceIdx = 0;
+  let bestScore = -Infinity;
+  for (let i = 0; i < points.length; i += 1) {
+    const a = points[i];
+    const b = points[(i + 1) % points.length];
+    const midY = (a.y + b.y) / 2;
+    const midX = (a.x + b.x) / 2;
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    const score = midY * 2 - Math.abs(midX - 50) * 0.3 + len * 0.05;
+    if (score > bestScore) {
+      bestScore = score;
+      entranceIdx = i;
     }
-    // Fenêtres sur les murs latéraux
-    if (i === 0 || i === 1 || i === 3) {
+  }
+
+  const walls: RoomWallSegment[] = [];
+  for (let i = 0; i < points.length; i += 1) {
+    const start = points[i];
+    const end = points[(i + 1) % points.length];
+    const openings: RoomWallOpening[] = [];
+    if (opts.withEntrance !== false && i === entranceIdx) {
+      openings.push(createWallOpening('door', { t: 0.5, style: 'double' }));
+    } else if (points.length <= 8 && i !== entranceIdx) {
       openings.push(createWallOpening('window', { t: 0.35 }));
       openings.push(createWallOpening('window', { t: 0.65 }));
+    } else if (i % 3 === 0 && i !== entranceIdx) {
+      openings.push(createWallOpening('window', { t: 0.5 }));
     }
     walls.push(createWallSegment({ start, end, heightM, thicknessM, texture, openings }));
   }
