@@ -22,6 +22,8 @@ export type RoomEditorCapabilities = {
   canTemplates: boolean;
   canAutoAssign: boolean;
   canAlign: boolean;
+  /** Qualité showcase + mode présentation. */
+  canShowcaseRender: boolean;
   tableShapes: TableShape[];
   fixtureKinds: Array<'stage' | 'podium' | 'aisle' | 'entrance' | 'column' | 'flower' | 'perimeter' | 'buffet' | 'carpet' | 'stairs'>;
 };
@@ -58,6 +60,7 @@ export function roomEditorCapabilities(
     canTemplates: false,
     canAutoAssign: false,
     canAlign: false,
+    canShowcaseRender: false,
     tableShapes: ['round', 'rectangular'],
     fixtureKinds: [],
   };
@@ -96,6 +99,7 @@ export function roomEditorCapabilities(
       canTemplates: true,
       canAutoAssign: true,
       canAlign: true,
+      canShowcaseRender: true,
       tableShapes: ['round', 'rectangular', 'square', 'oval', 'cocktail', 'highTop'] as TableShape[],
       fixtureKinds: themesFixtures
         ? ['stage', 'podium', 'aisle', 'entrance', 'column', 'flower', 'buffet', 'stairs']
@@ -121,6 +125,7 @@ export function roomEditorCapabilities(
       canTemplates: true,
       canAutoAssign: true,
       canAlign: true,
+      canShowcaseRender: true,
       tableShapes: ['round', 'rectangular', 'square', 'oval', 'cocktail', 'highTop'] as TableShape[],
       fixtureKinds: themesFixtures
         ? ['stage', 'podium', 'aisle', 'entrance', 'column', 'flower', 'perimeter', 'buffet', 'carpet', 'stairs']

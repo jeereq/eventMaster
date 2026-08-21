@@ -44,6 +44,7 @@ import {
   EventZoneSurface,
 } from '@/components/CatalogueEventArchitecture';
 import { RoomAmbiance } from '@/components/CatalogueAmbiance';
+import { RowSeatsLOD } from '@/components/RowSeatsLOD';
 import {
   resolveLightingPreset,
   resolveRenderQuality,
@@ -1370,6 +1371,9 @@ function SceneContent({
           curtains: blueprint.metadata.showCurtains === true,
           plants: blueprint.metadata.showDecorPlants === true,
         }}
+        maxChandeliers={qualitySettings.maxChandeliers}
+        maxUplights={qualitySettings.maxUplights}
+        chandelierPointLights={qualitySettings.chandelierPointLights}
       />
 
       {!presentationMode && !hideLabels ? (
@@ -1507,26 +1511,30 @@ function SceneContent({
                   selected={selected.some((s) => s.kind === 'row' && s.id === item.id)}
                 />
               ) : null}
-              {Array.from({ length: count }).map((_, i) => {
-                const t = i - (count - 1) / 2;
-                const localX = t * spacing;
-                const localZ = curve * (t * t) * 0.08;
-                const worldX = wx + Math.cos(rowRot) * localX - Math.sin(rowRot) * localZ;
-                const worldZ = wz + Math.sin(rowRot) * localX + Math.cos(rowRot) * localZ;
-                const faceY = Math.atan2(fx - worldX, fz - worldZ) - rowRot;
+              {(() => {
+                const dx = fx - wx;
+                const dz = fz - wz;
+                const focusLocal = {
+                  x: Math.cos(rowRot) * dx + Math.sin(rowRot) * dz,
+                  z: -Math.sin(rowRot) * dx + Math.cos(rowRot) * dz,
+                };
                 return (
-                  <RealisticChair
-                    key={i}
+                  <RowSeatsLOD
+                    count={count}
+                    spacing={spacing}
+                    curve={curve}
+                    elevation={elevation}
+                    focusLocal={focusLocal}
                     chairType={item.chairType}
                     chairStyle={item.chairStyle}
                     seatMaterial={item.seatMaterial}
-                    imageUrl={item.chairImageUrl}
-                    position={[localX, elevation, localZ]}
-                    rotationY={faceY}
+                    chairImageUrl={item.chairImageUrl}
                     selected={selected.some((s) => s.kind === 'row' && s.id === item.id)}
+                    lod={qualitySettings.rowChairLod}
+                    castShadow={qualitySettings.rowChairShadows}
                   />
                 );
-              })}
+              })()}
               {!hideLabels && (
                 <Html center distanceFactor={10} style={{ pointerEvents: 'none' }} position={[0, elevation + 1.1, 0]}>
                   <span className="text-[9px] font-bold bg-white/90 px-1.5 py-0.5 rounded shadow-sm">{item.label}</span>

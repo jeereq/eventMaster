@@ -32,6 +32,14 @@ export type RenderQualitySettings = {
   softShadows: boolean;
   showHints: boolean;
   fov: number;
+  /** Détail des chaises de rangées. */
+  rowChairLod: 'instanced' | 'simple' | 'full';
+  /** Ombres portées sur chaises de rangée. */
+  rowChairShadows: boolean;
+  maxChandeliers: number;
+  maxUplights: number;
+  /** Désactive les pointLights des lustres (perf). */
+  chandelierPointLights: boolean;
 };
 
 export type ScenicLightSettings = {
@@ -64,6 +72,11 @@ const QUALITY: Record<RenderQuality, RenderQualitySettings> = {
     softShadows: false,
     showHints: true,
     fov: 48,
+    rowChairLod: 'instanced',
+    rowChairShadows: false,
+    maxChandeliers: 1,
+    maxUplights: 6,
+    chandelierPointLights: false,
   },
   standard: {
     quality: 'standard',
@@ -77,6 +90,11 @@ const QUALITY: Record<RenderQuality, RenderQualitySettings> = {
     softShadows: true,
     showHints: true,
     fov: 45,
+    rowChairLod: 'simple',
+    rowChairShadows: false,
+    maxChandeliers: 2,
+    maxUplights: 10,
+    chandelierPointLights: false,
   },
   showcase: {
     quality: 'showcase',
@@ -90,6 +108,11 @@ const QUALITY: Record<RenderQuality, RenderQualitySettings> = {
     softShadows: true,
     showHints: false,
     fov: 42,
+    rowChairLod: 'full',
+    rowChairShadows: true,
+    maxChandeliers: 4,
+    maxUplights: 14,
+    chandelierPointLights: true,
   },
 };
 

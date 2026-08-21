@@ -594,10 +594,16 @@ export default function RoomLayoutEditor({
   };
 
   const outline = blueprint.roomOutline!;
-  const renderQuality = (blueprint.metadata.renderQuality ?? 'standard') as RenderQuality;
+  const renderQualityRaw = (blueprint.metadata.renderQuality ?? 'standard') as RenderQuality;
+  const renderQuality =
+    renderQualityRaw === 'showcase' && !caps.canShowcaseRender ? 'standard' : renderQualityRaw;
   const lightingPreset = (blueprint.metadata.lightingPreset ?? 'auto') as LightingPreset;
 
   const setRenderQuality = (q: RenderQuality) => {
+    if (q === 'showcase' && !caps.canShowcaseRender) {
+      log('Showcase réservé aux forfaits Premium / Complet', 'info');
+      return;
+    }
     updateBlueprint({
       ...blueprint,
       metadata: { ...blueprint.metadata, renderQuality: q },
@@ -2087,7 +2093,9 @@ export default function RoomLayoutEditor({
           className="bg-transparent text-xs font-bold text-foreground outline-none"
           title="Qualité de rendu"
         >
-          {(Object.keys(renderQualityLabels) as RenderQuality[]).map((q) => (
+          {(Object.keys(renderQualityLabels) as RenderQuality[])
+            .filter((q) => q !== 'showcase' || caps.canShowcaseRender)
+            .map((q) => (
             <option key={q} value={q}>{renderQualityLabels[q]}</option>
           ))}
         </select>
@@ -2105,6 +2113,7 @@ export default function RoomLayoutEditor({
           ))}
         </select>
       </label>
+      {caps.canShowcaseRender ? (
       <button
         type="button"
         onClick={() => {
@@ -2134,6 +2143,7 @@ export default function RoomLayoutEditor({
         <Presentation className="w-3.5 h-3.5" />
         {blueprint.metadata.presentationMode ? 'Présentation ON' : 'Présentation'}
       </button>
+      ) : null}
       <button
         type="button"
         onClick={exportShowcasePng}

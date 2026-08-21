@@ -9,11 +9,13 @@ export function RoomChandeliers({
   heightM,
   wallHeightM,
   count = 3,
+  pointLights = true,
 }: {
   widthM: number;
   heightM: number;
   wallHeightM: number;
   count?: number;
+  pointLights?: boolean;
 }) {
   const positions = useMemo(() => {
     const n = Math.max(1, Math.min(5, count));
@@ -31,17 +33,14 @@ export function RoomChandeliers({
     <group>
       {positions.map((pos, i) => (
         <group key={i} position={pos}>
-          {/* Chaîne */}
           <mesh position={[0, 0.25, 0]}>
             <cylinderGeometry args={[0.008, 0.008, 0.5, 6]} />
             <meshStandardMaterial color="#a8a29e" metalness={0.7} roughness={0.3} />
           </mesh>
-          {/* Corps */}
           <mesh position={[0, -0.05, 0]} castShadow>
             <sphereGeometry args={[0.14, 16, 16]} />
             <meshStandardMaterial color="#fef3c7" emissive="#fbbf24" emissiveIntensity={0.55} roughness={0.25} metalness={0.2} />
           </mesh>
-          {/* Branches */}
           {[0, 1, 2, 3, 4, 5].map((a) => {
             const ang = (a / 6) * Math.PI * 2;
             return (
@@ -57,7 +56,9 @@ export function RoomChandeliers({
               </group>
             );
           })}
-          <pointLight position={[0, -0.2, 0]} intensity={0.55} color="#fef3c7" distance={10} decay={2} />
+          {pointLights ? (
+            <pointLight position={[0, -0.2, 0]} intensity={0.55} color="#fef3c7" distance={10} decay={2} />
+          ) : null}
         </group>
       ))}
     </group>
@@ -68,9 +69,11 @@ export function RoomChandeliers({
 export function RoomUplights({
   widthM,
   heightM,
+  maxCount = 16,
 }: {
   widthM: number;
   heightM: number;
+  maxCount?: number;
 }) {
   const spots = useMemo(() => {
     const list: [number, number, number][] = [];
@@ -84,8 +87,8 @@ export function RoomUplights({
       list.push([-widthM / 2 + 0.35, 0.15, z]);
       list.push([widthM / 2 - 0.35, 0.15, z]);
     }
-    return list.slice(0, 16);
-  }, [widthM, heightM]);
+    return list.slice(0, Math.max(2, maxCount));
+  }, [widthM, heightM, maxCount]);
 
   return (
     <group>
@@ -212,18 +215,32 @@ export function RoomAmbiance({
   heightM,
   wallHeightM,
   flags,
+  maxChandeliers = 3,
+  maxUplights = 12,
+  chandelierPointLights = true,
 }: {
   widthM: number;
   heightM: number;
   wallHeightM: number;
   flags: RoomAmbianceFlags;
+  maxChandeliers?: number;
+  maxUplights?: number;
+  chandelierPointLights?: boolean;
 }) {
   return (
     <group>
       {flags.chandeliers ? (
-        <RoomChandeliers widthM={widthM} heightM={heightM} wallHeightM={wallHeightM} />
+        <RoomChandeliers
+          widthM={widthM}
+          heightM={heightM}
+          wallHeightM={wallHeightM}
+          count={maxChandeliers}
+          pointLights={chandelierPointLights}
+        />
       ) : null}
-      {flags.uplights ? <RoomUplights widthM={widthM} heightM={heightM} /> : null}
+      {flags.uplights ? (
+        <RoomUplights widthM={widthM} heightM={heightM} maxCount={maxUplights} />
+      ) : null}
       {flags.curtains ? (
         <RoomCurtains widthM={widthM} heightM={heightM} wallHeightM={wallHeightM} />
       ) : null}
