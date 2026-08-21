@@ -30,7 +30,7 @@ type FloorAsset = {
 
 const DAMIER_TILE = '36px 36px';
 
-const FLOOR_ASSETS: Record<Exclude<FloorType, 'custom'>, FloorAsset> = {
+export const FLOOR_ASSETS: Record<Exclude<FloorType, 'custom'>, FloorAsset> = {
   parquet: { url: '/floors/parquet-herringbone.svg', size: '88px 88px', fallback: '#c4a06a' },
   chevron: { url: '/floors/chevron.svg', size: '72px 44px', fallback: '#c9a06a' },
   bois: { url: '/floors/parquet-oak.svg', size: '96px 96px', fallback: '#d2b07a' },
@@ -49,6 +49,32 @@ const FLOOR_ASSETS: Record<Exclude<FloorType, 'custom'>, FloorAsset> = {
   epoxy: { url: '/floors/epoxy.svg', size: DAMIER_TILE, fallback: '#cbd5e1' },
   brique: { url: '/floors/brique.svg', size: '64px 32px', fallback: '#b45309' },
 };
+
+/** Répétition monde (mètres) pour textures WebGL. */
+export const FLOOR_TEXTURE_REPEAT_M: Record<Exclude<FloorType, 'custom'>, number> = {
+  parquet: 2.2,
+  chevron: 1.8,
+  bois: 2.4,
+  carrelage: 1.2,
+  marbre: 2.8,
+  damier: 1.0,
+  terrazzo: 1.6,
+  pierre: 1.8,
+  moquette: 1.4,
+  herbe: 2.0,
+  pelouse: 1.8,
+  gazonSynth: 1.6,
+  prairie: 2.2,
+  sable: 1.5,
+  beton: 2.5,
+  epoxy: 3.0,
+  brique: 1.4,
+};
+
+export function getFloorAsset(floorType: FloorType | undefined): FloorAsset {
+  if (!floorType || floorType === 'custom') return FLOOR_ASSETS.parquet;
+  return FLOOR_ASSETS[floorType] ?? FLOOR_ASSETS.parquet;
+}
 
 function lightingOverlays(floorType: FloorType): { image: string; size: string; repeat: string; blend: string } {
   if (floorType === 'moquette' || floorType === 'damier') {
