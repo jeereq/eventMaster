@@ -11,15 +11,17 @@ import {
   resolveBlueprintWalls,
   resolveTableColor,
   type ChairType,
+  type ChairStyle,
+  type SeatMaterial,
   type TableShape,
   type ZoneMaterial,
 } from '@/lib/roomLayoutUtils';
 import { resolveDepthAmount } from '@/lib/roomFloorUtils';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
 import {
-  CHAIR_VISUALS,
   getWallTexture,
   resolveChairMap,
+  resolveChairVisual,
   resolveFloorMap,
   resolveTableMaterial,
   resolveZoneMaterialMap,
@@ -220,25 +222,35 @@ function WallMesh({
 
 function RealisticChair({
   chairType,
+  chairStyle,
+  seatMaterial,
   imageUrl,
   position,
   rotationY = 0,
   selected = false,
 }: {
   chairType: ChairType;
+  chairStyle?: ChairStyle;
+  seatMaterial?: SeatMaterial;
   imageUrl?: string;
   position: [number, number, number];
   rotationY?: number;
   selected?: boolean;
 }) {
-  const visual = CHAIR_VISUALS[chairType] ?? CHAIR_VISUALS.BANQUET;
+  const visual = useMemo(
+    () => resolveChairVisual(chairType, chairStyle, seatMaterial),
+    [chairType, chairStyle, seatMaterial],
+  );
   const map = useMemo(() => resolveChairMap(imageUrl), [imageUrl]);
-  const seatH = 0.42;
-  const [sw, sh, sd] = visual.seatSize;
+  const seatH = 0.42 * visual.scale;
+  const [sw0, sh0, sd0] = visual.seatSize;
+  const sw = sw0 * visual.scale;
+  const sh = sh0 * visual.scale;
+  const sd = sd0 * visual.scale;
+  const backH = visual.backHeight * visual.scale;
 
   return (
-    <group position={position} rotation={[0, rotationY, 0]}>
-      {/* Pieds */}
+    <group position={position} rotation={[0, rotationY, 0]} scale={visual.scale > 1.2 ? 1 : 1}>
       {([-1, 1] as const).flatMap((sx) =>
         ([-1, 1] as const).map((sz) => (
           <mesh key={`${sx}-${sz}`} position={[sx * sw * 0.35, seatH / 2, sz * sd * 0.35]} castShadow>
@@ -247,20 +259,18 @@ function RealisticChair({
           </mesh>
         )),
       )}
-      {/* Assise */}
       <mesh position={[0, seatH, 0]} castShadow receiveShadow>
         <boxGeometry args={[sw, sh, sd]} />
         <meshStandardMaterial
           color={selected ? '#a5b4fc' : visual.seatColor}
           map={map ?? undefined}
-          roughness={visual.cushion ? 0.85 : 0.55}
-          metalness={0.05}
+          roughness={visual.cushion ? 0.9 : 0.5}
+          metalness={seatMaterial === 'leather' ? 0.15 : 0.05}
         />
       </mesh>
-      {/* Dossier */}
-      {visual.backHeight > 0 && (
-        <mesh position={[0, seatH + visual.backHeight / 2, -sd * 0.42]} castShadow>
-          <boxGeometry args={[sw * 0.92, visual.backHeight, 0.05]} />
+      {backH > 0 && (
+        <mesh position={[0, seatH + backH / 2, -sd * 0.42]} castShadow>
+          <boxGeometry args={[sw * (chairStyle === 'bergere' ? 1 : 0.92), backH, chairStyle === 'lounge' ? 0.12 : 0.05]} />
           <meshStandardMaterial
             color={selected ? '#a5b4fc' : visual.seatColor}
             map={map ?? undefined}
@@ -268,20 +278,18 @@ function RealisticChair({
           />
         </mesh>
       )}
-      {/* Accoudoirs */}
       {visual.hasArms && (
         <>
-          <mesh position={[-sw * 0.48, seatH + 0.12, 0]} castShadow>
-            <boxGeometry args={[0.05, 0.08, sd * 0.85]} />
+          <mesh position={[-sw * 0.48, seatH + 0.14 * visual.scale, 0]} castShadow>
+            <boxGeometry args={[0.06, 0.1 * visual.scale, sd * 0.85]} />
             <meshStandardMaterial color={visual.frameColor} metalness={0.4} roughness={0.4} />
           </mesh>
-          <mesh position={[sw * 0.48, seatH + 0.12, 0]} castShadow>
-            <boxGeometry args={[0.05, 0.08, sd * 0.85]} />
+          <mesh position={[sw * 0.48, seatH + 0.14 * visual.scale, 0]} castShadow>
+            <boxGeometry args={[0.06, 0.1 * visual.scale, sd * 0.85]} />
             <meshStandardMaterial color={visual.frameColor} metalness={0.4} roughness={0.4} />
           </mesh>
         </>
       )}
-      {/* Roues fauteuil roulant */}
       {chairType === 'WHEELCHAIR' && (
         <>
           <mesh position={[-sw * 0.4, 0.22, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
@@ -306,8 +314,11 @@ function TableMesh({
   name,
   capacity,
   chairType,
+  chairStyle,
+  seatMaterial,
   chairImageUrl,
   tableImageUrl,
+  hasCouverts = false,
   attachedChairs = true,
   rotation,
   widthM,
@@ -324,8 +335,11 @@ function TableMesh({
   name: string;
   capacity: number;
   chairType: ChairType;
+  chairStyle?: ChairStyle;
+  seatMaterial?: SeatMaterial;
   chairImageUrl?: string;
   tableImageUrl?: string;
+  hasCouverts?: boolean;
   attachedChairs?: boolean;
   rotation?: number;
   widthM: number;
@@ -346,9 +360,11 @@ function TableMesh({
     shape === 'rectangular' ? [1.8, 0.9] :
     shape === 'oval' ? [1.7, 1.0] :
     shape === 'square' ? [1.2, 1.2] :
+    shape === 'cocktail' ? [0.7, 0.7] :
+    shape === 'highTop' ? [0.75, 0.75] :
     [1.35, 1.35];
-  const isRound = shape === 'round' || shape === 'oval';
-  const topY = 0.72;
+  const isRound = shape === 'round' || shape === 'oval' || shape === 'cocktail' || shape === 'highTop';
+  const topY = shape === 'highTop' ? 1.05 : shape === 'cocktail' ? 0.55 : 0.72;
 
   return (
     <group
@@ -416,13 +432,32 @@ function TableMesh({
           )),
         )
       )}
-      {attachedChairs !== false && Array.from({ length: Math.min(capacity, 14) }).map((_, i) => {
+      {/* Couverts / assiettes */}
+      {hasCouverts && Array.from({ length: Math.min(capacity, 10) }).map((_, i) => {
+        const a = (i / Math.max(capacity, 1)) * Math.PI * 2;
+        const r = Math.max(size[0], size[1]) * 0.28;
+        return (
+          <group key={`c-${i}`} position={[Math.cos(a) * r, topY + 0.06, Math.sin(a) * r]}>
+            <mesh>
+              <cylinderGeometry args={[0.06, 0.06, 0.01, 16]} />
+              <meshStandardMaterial color="#f8fafc" metalness={0.2} roughness={0.3} />
+            </mesh>
+            <mesh position={[0.08, 0.01, 0]} rotation={[0, 0, 0.2]}>
+              <boxGeometry args={[0.1, 0.005, 0.015]} />
+              <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.2} />
+            </mesh>
+          </group>
+        );
+      })}
+      {attachedChairs !== false && shape !== 'cocktail' && shape !== 'highTop' && Array.from({ length: Math.min(capacity, 14) }).map((_, i) => {
         const a = (i / capacity) * Math.PI * 2 - Math.PI / 2;
         const r = Math.max(size[0], size[1]) / 2 + 0.48;
         return (
           <RealisticChair
             key={i}
             chairType={chairType}
+            chairStyle={chairStyle}
+            seatMaterial={seatMaterial}
             imageUrl={chairImageUrl}
             position={[Math.cos(a) * r, 0, Math.sin(a) * r]}
             rotationY={-a + Math.PI}
@@ -510,6 +545,8 @@ function FreeChairMesh({
   xPct,
   yPct,
   chairType,
+  chairStyle,
+  seatMaterial,
   chairImageUrl,
   rotation,
   widthM,
@@ -523,6 +560,8 @@ function FreeChairMesh({
   xPct: number;
   yPct: number;
   chairType: ChairType;
+  chairStyle?: ChairStyle;
+  seatMaterial?: SeatMaterial;
   chairImageUrl?: string;
   rotation?: number;
   widthM: number;
@@ -549,6 +588,8 @@ function FreeChairMesh({
     >
       <RealisticChair
         chairType={chairType}
+        chairStyle={chairStyle}
+        seatMaterial={seatMaterial}
         imageUrl={chairImageUrl}
         position={[0, 0, 0]}
         rotationY={((rotation ?? 0) * Math.PI) / 180}
@@ -612,8 +653,12 @@ function FixtureMesh({
   label,
   imageUrl,
   color,
+  material,
+  podiumHeightM,
+  steps,
+  hasCouverts,
   widthM,
-  heightM,
+  roomDepthM,
   selected,
   onSelect,
   onDrag,
@@ -627,44 +672,60 @@ function FixtureMesh({
   label?: string;
   imageUrl?: string;
   color?: string;
+  material?: ZoneMaterial;
+  podiumHeightM?: number;
+  steps?: number;
+  hasCouverts?: boolean;
   widthM: number;
-  heightM: number;
+  roomDepthM: number;
   selected: boolean;
   onSelect: () => void;
   onDrag?: (xPct: number, yPct: number) => void;
   readOnly?: boolean;
 }) {
   const w = (wPct / 100) * widthM;
-  const d = (hPct / 100) * heightM;
-  const [cx, cz] = pctToWorld(xPct + wPct / 2, yPct + hPct / 2, widthM, heightM);
-  const height = kind === 'stage' || kind === 'podium' ? 0.55 : kind === 'column' || kind === 'pillar' ? 2.6 : kind === 'flower' ? 0.7 : kind === 'carpet' ? 0.06 : 0.35;
+  const d = (hPct / 100) * roomDepthM;
+  const [cx, cz] = pctToWorld(xPct + wPct / 2, yPct + hPct / 2, widthM, roomDepthM);
+  const podiumH = podiumHeightM ?? (kind === 'podium' ? 0.6 : kind === 'stage' ? 0.45 : 0.35);
+  const stepCount = Math.max(1, Math.min(4, steps ?? (kind === 'podium' ? 2 : 1)));
+  const height =
+    kind === 'stage' || kind === 'podium' ? podiumH :
+    kind === 'column' || kind === 'pillar' ? 2.6 :
+    kind === 'flower' ? 0.7 :
+    kind === 'carpet' ? 0.06 :
+    kind === 'buffet' ? 0.9 :
+    0.35;
+
   const map = useMemo(() => {
     if (imageUrl) return resolveChairMap(imageUrl);
-    if (kind === 'carpet') return resolveZoneMaterialMap('carpet').map;
-    if (kind === 'stage' || kind === 'podium') return getWallTexture('wood').map;
+    if (kind === 'carpet') return resolveZoneMaterialMap(material ?? 'carpet').map;
+    if (kind === 'buffet') return resolveZoneMaterialMap(material ?? 'wood').map;
+    if (kind === 'stage' || kind === 'podium') return resolveZoneMaterialMap(material ?? 'wood').map;
     if (kind === 'column' || kind === 'pillar') return getWallTexture('stone').map;
     if (kind === 'perimeter') return getWallTexture('concrete').map;
     return null;
-  }, [imageUrl, kind]);
+  }, [imageUrl, kind, material]);
 
   const baseColor =
     color ??
     (kind === 'stage' || kind === 'podium'
       ? '#b45309'
-      : kind === 'flower'
-        ? '#fb7185'
-        : kind === 'entrance'
-          ? '#059669'
-          : kind === 'aisle'
-            ? '#e7e5e4'
-            : '#78716c');
+      : kind === 'buffet'
+        ? '#8b6914'
+        : kind === 'flower'
+          ? '#fb7185'
+          : kind === 'entrance'
+            ? '#059669'
+            : kind === 'aisle'
+              ? '#e7e5e4'
+              : '#78716c');
 
   const dragging = useRef(false);
   const { gl } = useThree();
 
   return (
     <group
-      position={[cx, height / 2, cz]}
+      position={[cx, 0, cz]}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
       onPointerDown={(e) => {
         if (readOnly || !onDrag) return;
@@ -677,47 +738,96 @@ function FixtureMesh({
       onPointerMove={(e) => {
         if (!dragging.current || !onDrag) return;
         e.stopPropagation();
-        const pct = worldToPct(e.point.x - w / 2, e.point.z - d / 2, widthM, heightM);
+        const pct = worldToPct(e.point.x - w / 2, e.point.z - d / 2, widthM, roomDepthM);
         onDrag(pct.x, pct.y);
       }}
     >
       {kind === 'column' || kind === 'pillar' ? (
-        <mesh castShadow>
+        <mesh position={[0, height / 2, 0]} castShadow>
           <cylinderGeometry args={[Math.min(w, d) / 2, Math.min(w, d) / 2, height, 20]} />
-          <meshStandardMaterial
-            color={selected ? '#c7d2fe' : '#ffffff'}
-            map={map ?? undefined}
-            roughness={0.85}
-          />
+          <meshStandardMaterial color={selected ? '#c7d2fe' : '#ffffff'} map={map ?? undefined} roughness={0.85} />
         </mesh>
       ) : kind === 'flower' ? (
         <group>
-          <mesh position={[0, -height * 0.2, 0]} castShadow>
+          <mesh position={[0, height * 0.2, 0]} castShadow>
             <cylinderGeometry args={[0.08, 0.12, height * 0.5, 8]} />
             <meshStandardMaterial color="#166534" />
           </mesh>
-          <mesh position={[0, height * 0.15, 0]} castShadow>
+          <mesh position={[0, height * 0.55, 0]} castShadow>
             <sphereGeometry args={[Math.min(w, d) * 0.35, 12, 12]} />
-            <meshStandardMaterial
-              color={selected ? '#fda4af' : baseColor}
-              map={map ?? undefined}
-              roughness={0.7}
-            />
+            <meshStandardMaterial color={selected ? '#fda4af' : baseColor} map={map ?? undefined} roughness={0.7} />
           </mesh>
         </group>
+      ) : kind === 'podium' || kind === 'stage' ? (
+        <group>
+          {Array.from({ length: stepCount }).map((_, i) => {
+            const t = (i + 1) / stepCount;
+            const stepH = height / stepCount;
+            const shrink = 1 - i * 0.08;
+            return (
+              <mesh
+                key={i}
+                position={[0, stepH * i + stepH / 2, (1 - shrink) * d * 0.15]}
+                castShadow
+                receiveShadow
+              >
+                <boxGeometry args={[w * shrink, stepH * 0.95, d * shrink]} />
+                <meshStandardMaterial
+                  color={selected ? '#c7d2fe' : map ? '#ffffff' : baseColor}
+                  map={map ?? undefined}
+                  roughness={0.65}
+                />
+              </mesh>
+            );
+          })}
+        </group>
+      ) : kind === 'buffet' ? (
+        <group>
+          <mesh position={[0, height / 2, 0]} castShadow receiveShadow>
+            <boxGeometry args={[w, height, d]} />
+            <meshStandardMaterial color={selected ? '#c7d2fe' : map ? '#ffffff' : baseColor} map={map ?? undefined} roughness={0.55} />
+          </mesh>
+          <mesh position={[0, height + 0.02, 0]} receiveShadow>
+            <boxGeometry args={[w * 1.02, 0.04, d * 1.02]} />
+            <meshStandardMaterial color="#f5f0e8" roughness={0.4} />
+          </mesh>
+          {hasCouverts !== false && Array.from({ length: Math.max(3, Math.round(w * 2)) }).map((_, i) => {
+            const n = Math.max(3, Math.round(w * 2));
+            const x = ((i + 0.5) / n - 0.5) * w * 0.85;
+            return (
+              <group key={i} position={[x, height + 0.08, 0]}>
+                <mesh>
+                  <cylinderGeometry args={[0.07, 0.07, 0.015, 16]} />
+                  <meshStandardMaterial color="#f8fafc" metalness={0.15} roughness={0.35} />
+                </mesh>
+                <mesh position={[0.09, 0.01, 0.02]}>
+                  <boxGeometry args={[0.12, 0.004, 0.014]} />
+                  <meshStandardMaterial color="#94a3b8" metalness={0.85} roughness={0.15} />
+                </mesh>
+                <mesh position={[-0.09, 0.01, 0.02]}>
+                  <boxGeometry args={[0.1, 0.004, 0.012]} />
+                  <meshStandardMaterial color="#cbd5e1" metalness={0.7} roughness={0.2} />
+                </mesh>
+                <mesh position={[0, 0.04, 0]}>
+                  <cylinderGeometry args={[0.035, 0.03, 0.06, 12]} />
+                  <meshStandardMaterial color="#e2e8f0" transparent opacity={0.55} roughness={0.1} metalness={0.2} />
+                </mesh>
+              </group>
+            );
+          })}
+        </group>
       ) : (
-        <mesh castShadow receiveShadow>
+        <mesh position={[0, height / 2, 0]} castShadow receiveShadow>
           <boxGeometry args={[w, height, d]} />
           <meshStandardMaterial
             color={selected ? '#c7d2fe' : map ? '#ffffff' : baseColor}
             map={map ?? undefined}
-            roughness={kind === 'stage' ? 0.65 : 0.75}
-            metalness={0.05}
+            roughness={0.75}
           />
         </mesh>
       )}
       {(selected || label) && (
-        <Html center distanceFactor={10} style={{ pointerEvents: 'none' }} position={[0, height * 0.55, 0]}>
+        <Html center distanceFactor={10} style={{ pointerEvents: 'none' }} position={[0, height + 0.35, 0]}>
           <span className="text-[9px] font-bold bg-black/65 text-white px-1.5 py-0.5 rounded">
             {label || kind}
           </span>
@@ -819,8 +929,12 @@ function SceneContent({
           label={f.label}
           imageUrl={f.imageUrl}
           color={f.color ?? f.flowerColor}
+          material={f.material}
+          podiumHeightM={f.heightM}
+          steps={f.steps}
+          hasCouverts={f.hasCouverts}
           widthM={widthM}
-          heightM={heightM}
+          roomDepthM={heightM}
           selected={selected?.kind === 'fixture' && selected.id === f.id}
           onSelect={() => onSelect({ kind: 'fixture', id: f.id })}
           onDrag={wallEditMode ? undefined : (x, y) => moveAny('fixture', f.id, x, y)}
@@ -856,6 +970,8 @@ function SceneContent({
               xPct={item.x}
               yPct={item.y}
               chairType={item.chairType}
+              chairStyle={item.chairStyle}
+              seatMaterial={item.seatMaterial}
               chairImageUrl={item.chairImageUrl}
               rotation={item.rotation}
               label={item.label}
@@ -888,6 +1004,8 @@ function SceneContent({
                 <RealisticChair
                   key={i}
                   chairType={item.chairType}
+                  chairStyle={item.chairStyle}
+                  seatMaterial={item.seatMaterial}
                   imageUrl={item.chairImageUrl}
                   position={[(i - (count - 1) / 2) * 0.55, 0, 0]}
                   rotationY={Math.PI}
@@ -912,8 +1030,11 @@ function SceneContent({
             name={item.name}
             capacity={item.capacity}
             chairType={item.chairType}
+            chairStyle={item.chairStyle}
+            seatMaterial={item.seatMaterial}
             chairImageUrl={item.chairImageUrl}
             tableImageUrl={item.tableImageUrl}
+            hasCouverts={item.hasCouverts}
             attachedChairs={item.attachedChairs}
             rotation={item.rotation}
             widthM={widthM}

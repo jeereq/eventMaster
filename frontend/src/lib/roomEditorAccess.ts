@@ -23,7 +23,7 @@ export type RoomEditorCapabilities = {
   canAutoAssign: boolean;
   canAlign: boolean;
   tableShapes: TableShape[];
-  fixtureKinds: Array<'stage' | 'podium' | 'aisle' | 'entrance' | 'column' | 'flower' | 'perimeter'>;
+  fixtureKinds: Array<'stage' | 'podium' | 'aisle' | 'entrance' | 'column' | 'flower' | 'perimeter' | 'buffet' | 'carpet'>;
 };
 
 const LEVEL_ORDER: RoomEditorLevel[] = ['basic', 'standard', 'advanced', 'complete'];
@@ -96,9 +96,9 @@ export function roomEditorCapabilities(
       canTemplates: true,
       canAutoAssign: true,
       canAlign: true,
-      tableShapes: ['round', 'rectangular', 'square', 'oval'] as TableShape[],
+      tableShapes: ['round', 'rectangular', 'square', 'oval', 'cocktail', 'highTop'] as TableShape[],
       fixtureKinds: themesFixtures
-        ? ['stage', 'podium', 'aisle', 'entrance', 'column', 'flower']
+        ? ['stage', 'podium', 'aisle', 'entrance', 'column', 'flower', 'buffet']
         : [],
     } satisfies Partial<RoomEditorCapabilities>);
   } else if (parsed === 'complete') {
@@ -121,9 +121,9 @@ export function roomEditorCapabilities(
       canTemplates: true,
       canAutoAssign: true,
       canAlign: true,
-      tableShapes: ['round', 'rectangular', 'square', 'oval'] as TableShape[],
+      tableShapes: ['round', 'rectangular', 'square', 'oval', 'cocktail', 'highTop'] as TableShape[],
       fixtureKinds: themesFixtures
-        ? ['stage', 'podium', 'aisle', 'entrance', 'column', 'flower', 'perimeter']
+        ? ['stage', 'podium', 'aisle', 'entrance', 'column', 'flower', 'perimeter', 'buffet', 'carpet']
         : [],
     } satisfies Partial<RoomEditorCapabilities>);
   }

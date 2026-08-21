@@ -1,9 +1,13 @@
 export type RoomType = 'SIMPLE' | 'BANQUET' | 'CONFERENCE' | 'AMPHITHEATER' | 'TENT' | 'CUSTOM';
 export type ChairType = 'BANQUET' | 'FOLDING' | 'THEATER' | 'STOOL' | 'ARMCHAIR' | 'WHEELCHAIR';
-export type TableShape = 'round' | 'rectangular' | 'square' | 'oval';
+export type TableShape = 'round' | 'rectangular' | 'square' | 'oval' | 'cocktail' | 'highTop';
+/** Style de fauteuil / chaise (surtout fauteuils). */
+export type ChairStyle = 'classic' | 'lounge' | 'club' | 'bergere' | 'modern' | 'chiavari';
+/** Matériau d’assise. */
+export type SeatMaterial = 'velvet' | 'leather' | 'linen' | 'fabric' | 'wood' | 'plastic';
 export type TableArrangePreset = 'grid' | 'banquet' | 'ushape' | 'circle';
 export type ArrangeDensity = 'compact' | 'comfortable' | 'ample';
-export type TableStyleField = 'shape' | 'chairType' | 'tableColor' | 'capacity';
+export type TableStyleField = 'shape' | 'chairType' | 'chairStyle' | 'seatMaterial' | 'tableColor' | 'capacity' | 'hasCouverts';
 
 export type RoomOutlineShape =
   | 'rectangle'
@@ -113,7 +117,7 @@ export interface RoomLayoutBlueprint {
   canvas: { widthM: number; heightM: number };
   fixtures: Array<{
     id: string;
-    kind: 'stage' | 'podium' | 'aisle' | 'entrance' | 'pillar' | 'perimeter' | 'column' | 'flower' | 'carpet';
+    kind: 'stage' | 'podium' | 'aisle' | 'entrance' | 'pillar' | 'perimeter' | 'column' | 'flower' | 'carpet' | 'buffet';
     x: number;
     y: number;
     w: number;
@@ -126,8 +130,16 @@ export interface RoomLayoutBlueprint {
     imageCrop?: ImageCropRect;
     flowerType?: FlowerType;
     flowerColor?: string;
-    /** Matériau / texture pour moquette, scène, etc. */
+    /** Matériau / texture pour moquette, scène, podium, buffet… */
     material?: ZoneMaterial;
+    /** Podium / scène : hauteur réelle en mètres. */
+    heightM?: number;
+    /** Podium : nombre de marches (1–4). */
+    steps?: number;
+    /** Buffet : afficher assiettes / couverts. */
+    hasCouverts?: boolean;
+    /** Buffet : style d’implantation. */
+    buffetStyle?: 'straight' | 'corner' | 'island';
   }>;
   furniture: Array<
     | {
@@ -137,20 +149,25 @@ export interface RoomLayoutBlueprint {
         shape: TableShape;
         capacity: number;
         chairType: ChairType;
+        chairStyle?: ChairStyle;
+        seatMaterial?: SeatMaterial;
         chairImageUrl?: string;
         tableColor?: string;
         tableImageUrl?: string;
+        /** Nappe / couverts sur la table. */
+        hasCouverts?: boolean;
         x: number;
         y: number;
         locked?: boolean;
         rotation?: number;
-        /** Afficher les chaises collées autour de la table (false si détachées). */
         attachedChairs?: boolean;
       }
     | {
         id: string;
         kind: 'chair';
         chairType: ChairType;
+        chairStyle?: ChairStyle;
+        seatMaterial?: SeatMaterial;
         chairImageUrl?: string;
         label?: string;
         x: number;
@@ -164,6 +181,8 @@ export interface RoomLayoutBlueprint {
         label: string;
         seatCount: number;
         chairType: ChairType;
+        chairStyle?: ChairStyle;
+        seatMaterial?: SeatMaterial;
         chairImageUrl?: string;
         tier: number;
         x: number;
@@ -291,13 +310,23 @@ export function createBlueprintZone(
 
 export function createBlueprintChair(
   index = 1,
-  defaults: { chairType?: ChairType; x?: number; y?: number; rotation?: number } = {},
+  defaults: {
+    chairType?: ChairType;
+    chairStyle?: ChairStyle;
+    seatMaterial?: SeatMaterial;
+    x?: number;
+    y?: number;
+    rotation?: number;
+  } = {},
 ): Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'chair' }> {
+  const chairType = defaults.chairType ?? 'ARMCHAIR';
   return {
     id: makeLayoutId('chair'),
     kind: 'chair',
-    chairType: defaults.chairType ?? 'BANQUET',
-    label: `Chaise ${index}`,
+    chairType,
+    chairStyle: defaults.chairStyle ?? (chairType === 'ARMCHAIR' ? 'lounge' : 'classic'),
+    seatMaterial: defaults.seatMaterial ?? (chairType === 'ARMCHAIR' ? 'velvet' : 'fabric'),
+    label: chairType === 'ARMCHAIR' ? `Fauteuil ${index}` : `Chaise ${index}`,
     x: defaults.x ?? 40 + Math.random() * 20,
     y: defaults.y ?? 40 + Math.random() * 20,
     rotation: defaults.rotation ?? 0,
@@ -317,6 +346,8 @@ export function detachTableChairs(
     const radiusPct = 7;
     return createBlueprintChair(i + 1, {
       chairType: table.chairType,
+      chairStyle: table.chairStyle,
+      seatMaterial: table.seatMaterial,
       x: Math.max(2, Math.min(98, table.x + Math.cos(a) * radiusPct)),
       y: Math.max(2, Math.min(98, table.y + Math.sin(a) * radiusPct)),
       rotation: ((-a + Math.PI) * 180) / Math.PI,
@@ -346,6 +377,7 @@ export function createBlueprintFixture(
     perimeter: { x: 8, y: 10, w: 84, h: 80, label: 'Périmètre' },
     flower: { x: 10, y: 85, w: 4, h: 4, label: 'Fleurs' },
     carpet: { x: 30, y: 55, w: 40, h: 28, label: 'Moquette' },
+    buffet: { x: 12, y: 70, w: 36, h: 10, label: 'Buffet' },
   };
   const d = defaults[kind] ?? { x: 40, y: 40, w: 20, h: 10, label: kind };
   return {
@@ -353,12 +385,47 @@ export function createBlueprintFixture(
     kind,
     ...d,
     columnShape: kind === 'pillar' || kind === 'column' ? 'round' as ColumnShape : undefined,
-    color: kind === 'pillar' || kind === 'column' ? '#78716c' : kind === 'carpet' ? '#1e3a5f' : undefined,
+    color: kind === 'pillar' || kind === 'column' ? '#78716c' : kind === 'carpet' ? '#1e3a5f' : kind === 'buffet' ? '#8b6914' : undefined,
     flowerType: kind === 'flower' ? 'boquet' as FlowerType : undefined,
     flowerColor: kind === 'flower' ? '#e11d48' : undefined,
-    material: kind === 'carpet' ? 'carpet' : kind === 'stage' || kind === 'podium' ? 'wood' : undefined,
+    material:
+      kind === 'carpet' ? 'carpet' :
+      kind === 'stage' || kind === 'podium' ? 'wood' :
+      kind === 'buffet' ? 'wood' :
+      undefined,
+    heightM: kind === 'podium' ? 0.6 : kind === 'stage' ? 0.45 : undefined,
+    steps: kind === 'podium' ? 2 : undefined,
+    hasCouverts: kind === 'buffet' ? true : undefined,
+    buffetStyle: kind === 'buffet' ? 'straight' : undefined,
   };
 }
+
+export const chairStyleLabels: Record<ChairStyle, string> = {
+  classic: 'Classique',
+  lounge: 'Lounge',
+  club: 'Club',
+  bergere: 'Bergère',
+  modern: 'Moderne',
+  chiavari: 'Chiavari',
+};
+
+export const seatMaterialLabels: Record<SeatMaterial, string> = {
+  velvet: 'Velours',
+  leather: 'Cuir',
+  linen: 'Lin',
+  fabric: 'Tissu',
+  wood: 'Bois',
+  plastic: 'Plastique',
+};
+
+export const SEAT_MATERIAL_COLORS: Record<SeatMaterial, { seat: string; frame: string }> = {
+  velvet: { seat: '#4c1d95', frame: '#c9a227' },
+  leather: { seat: '#7c2d12', frame: '#292524' },
+  linen: { seat: '#e7e5e4', frame: '#a8a29e' },
+  fabric: { seat: '#1e3a5f', frame: '#78716c' },
+  wood: { seat: '#92400e', frame: '#78350f' },
+  plastic: { seat: '#64748b', frame: '#94a3b8' },
+};
 
 export const zoneKindLabels: Record<ZoneKind, string> = {
   dance: 'Piste de danse',
@@ -984,8 +1051,11 @@ export function applyTableStyleToAll(
       ...item,
       shape: fields.includes('shape') ? source.shape : item.shape,
       chairType: fields.includes('chairType') ? source.chairType : item.chairType,
+      chairStyle: fields.includes('chairStyle') ? source.chairStyle : item.chairStyle,
+      seatMaterial: fields.includes('seatMaterial') ? source.seatMaterial : item.seatMaterial,
       tableColor: fields.includes('tableColor') ? source.tableColor : item.tableColor,
       capacity: fields.includes('capacity') ? source.capacity : item.capacity,
+      hasCouverts: fields.includes('hasCouverts') ? source.hasCouverts : item.hasCouverts,
     };
   });
   return refreshBlueprintMetadata({ ...blueprint, furniture });
@@ -1506,6 +1576,8 @@ export const tableShapeLabels: Record<TableShape, string> = {
   rectangular: 'Rectangulaire',
   square: 'Carrée',
   oval: 'Ovale',
+  cocktail: 'Cocktail (basse)',
+  highTop: 'Mange-debout',
 };
 
 export const flowerTypeLabels: Record<FlowerType, string> = {
@@ -1546,6 +1618,8 @@ export function getFixtureClass(kind: string): string {
       return 'bg-amber-100 border-amber-300 text-amber-800';
     case 'podium':
       return 'bg-orange-100 border-orange-300 text-orange-800';
+    case 'buffet':
+      return 'bg-amber-50 border-amber-300 text-amber-900';
     case 'aisle':
       return 'bg-slate-100 border-slate-200 border-dashed text-slate-400';
     case 'pillar':

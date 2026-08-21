@@ -1,8 +1,8 @@
 'use client';
 
 import * as THREE from 'three';
-import type { ChairType, TableShape, WallTextureStyle, ZoneMaterial } from '@/lib/roomLayoutUtils';
-import { WALL_TEXTURE_COLORS } from '@/lib/roomLayoutUtils';
+import type { ChairType, ChairStyle, SeatMaterial, TableShape, WallTextureStyle, ZoneMaterial } from '@/lib/roomLayoutUtils';
+import { SEAT_MATERIAL_COLORS, WALL_TEXTURE_COLORS } from '@/lib/roomLayoutUtils';
 import { getFloorAsset, FLOOR_TEXTURE_REPEAT_M } from '@/lib/roomFloorUtils';
 import type { FloorType } from '@/lib/roomThemeUtils';
 
@@ -224,7 +224,10 @@ export function resolveTableMaterial(
       metalness: 0.08,
     };
   }
-  const url = shape === 'round' || shape === 'oval' ? TABLE_LINEN_TEXTURE : TABLE_DEFAULT_TEXTURE;
+  const url =
+    shape === 'round' || shape === 'oval' || shape === 'cocktail' || shape === 'highTop'
+      ? TABLE_LINEN_TEXTURE
+      : TABLE_DEFAULT_TEXTURE;
   return {
     map: loadTiledTexture(url, 1.4, 1.4),
     color: color && color !== '#ffffff' ? color : '#f5f0e8',
@@ -240,6 +243,7 @@ export type ChairVisual = {
   seatSize: [number, number, number];
   hasArms: boolean;
   cushion: boolean;
+  scale: number;
 };
 
 export const CHAIR_VISUALS: Record<ChairType, ChairVisual> = {
@@ -250,6 +254,7 @@ export const CHAIR_VISUALS: Record<ChairType, ChairVisual> = {
     seatSize: [0.38, 0.06, 0.38],
     hasArms: false,
     cushion: true,
+    scale: 1,
   },
   FOLDING: {
     seatColor: '#64748b',
@@ -258,6 +263,7 @@ export const CHAIR_VISUALS: Record<ChairType, ChairVisual> = {
     seatSize: [0.36, 0.04, 0.34],
     hasArms: false,
     cushion: false,
+    scale: 0.95,
   },
   THEATER: {
     seatColor: '#7f1d1d',
@@ -266,6 +272,7 @@ export const CHAIR_VISUALS: Record<ChairType, ChairVisual> = {
     seatSize: [0.42, 0.08, 0.4],
     hasArms: true,
     cushion: true,
+    scale: 1.05,
   },
   STOOL: {
     seatColor: '#44403c',
@@ -274,14 +281,16 @@ export const CHAIR_VISUALS: Record<ChairType, ChairVisual> = {
     seatSize: [0.32, 0.05, 0.32],
     hasArms: false,
     cushion: false,
+    scale: 0.9,
   },
   ARMCHAIR: {
     seatColor: '#1e293b',
     frameColor: '#0f172a',
     backHeight: 0.7,
-    seatSize: [0.48, 0.1, 0.46],
+    seatSize: [0.52, 0.12, 0.5],
     hasArms: true,
     cushion: true,
+    scale: 1.15,
   },
   WHEELCHAIR: {
     seatColor: '#334155',
@@ -290,8 +299,38 @@ export const CHAIR_VISUALS: Record<ChairType, ChairVisual> = {
     seatSize: [0.45, 0.08, 0.48],
     hasArms: true,
     cushion: true,
+    scale: 1.1,
   },
 };
+
+const CHAIR_STYLE_TWEAKS: Record<ChairStyle, Partial<ChairVisual>> = {
+  classic: { backHeight: 0.65, hasArms: true, scale: 1.1 },
+  lounge: { backHeight: 0.55, seatSize: [0.58, 0.14, 0.56], scale: 1.25, cushion: true },
+  club: { backHeight: 0.72, seatSize: [0.5, 0.13, 0.52], scale: 1.2, hasArms: true },
+  bergere: { backHeight: 0.78, seatSize: [0.54, 0.12, 0.5], scale: 1.18, hasArms: true },
+  modern: { backHeight: 0.48, seatSize: [0.48, 0.08, 0.48], scale: 1.05, hasArms: false },
+  chiavari: { backHeight: 0.58, seatSize: [0.36, 0.05, 0.36], scale: 0.95, hasArms: false, cushion: false },
+};
+
+export function resolveChairVisual(
+  chairType: ChairType,
+  style?: ChairStyle,
+  material?: SeatMaterial,
+): ChairVisual {
+  const base = { ...CHAIR_VISUALS[chairType] };
+  if (chairType === 'ARMCHAIR' || style) {
+    const tweak = CHAIR_STYLE_TWEAKS[style ?? 'classic'];
+    Object.assign(base, tweak);
+  }
+  if (material) {
+    const colors = SEAT_MATERIAL_COLORS[material];
+    base.seatColor = colors.seat;
+    base.frameColor = colors.frame;
+    if (material === 'leather' || material === 'velvet') base.cushion = true;
+    if (material === 'wood' || material === 'plastic') base.cushion = false;
+  }
+  return base;
+}
 
 export const ZONE_MATERIAL_COLORS: Record<ZoneMaterial, string> = {
   wood: '#8b6914',

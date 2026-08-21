@@ -1,4 +1,4 @@
-export type TableShape = 'round' | 'rectangular' | 'square' | 'oval';
+export type TableShape = 'round' | 'rectangular' | 'square' | 'oval' | 'cocktail' | 'highTop';
 
 import type React from 'react';
 
@@ -86,7 +86,9 @@ export function getTableVisualStyle(
   tableImageUrl?: string,
 ): { className: string; style?: React.CSSProperties } {
   const size = tableSizeClass(shape);
-  const shapeKey = ['round', 'oval', 'square', 'rectangular'].includes(String(shape)) ? shape : 'rectangular';
+  const shapeKey = ['round', 'oval', 'square', 'rectangular', 'cocktail', 'highTop'].includes(String(shape))
+    ? (shape === 'cocktail' || shape === 'highTop' ? 'round' : shape)
+    : 'rectangular';
   const className = `${size} em-table-realistic em-table-realistic--${shapeKey}${active ? ' em-table-realistic--active' : ''}`;
   const linen = 'url(/floors/table-linen.svg)';
   const wood = 'url(/floors/table-wood.svg)';
