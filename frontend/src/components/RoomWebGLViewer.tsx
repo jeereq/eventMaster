@@ -39,6 +39,8 @@ import {
   CatalogueFlower,
   CatalogueTableStructure,
 } from '@/components/CatalogueFurnitureMeshes';
+import { CatalogueInterstoryStairs } from '@/components/CatalogueStairs';
+import { CatalogueBalcony } from '@/components/CatalogueBalcony';
 import {
   AmphitheaterRiser,
   EventStage,
@@ -1447,6 +1449,7 @@ function FixtureMesh({
   steps,
   hasCouverts,
   stairDirection = 0,
+  balconySide,
   columnShape,
   widthM,
   roomDepthM,
@@ -1470,6 +1473,7 @@ function FixtureMesh({
   steps?: number;
   hasCouverts?: boolean;
   stairDirection?: 0 | 90 | 180 | 270;
+  balconySide?: 'north' | 'south' | 'east' | 'west';
   columnShape?: 'round' | 'square';
   widthM: number;
   roomDepthM: number;
@@ -1487,12 +1491,13 @@ function FixtureMesh({
   const stepCount = Math.max(1, Math.min(4, steps ?? (kind === 'podium' ? 2 : 1)));
   const height =
     kind === 'stage' || kind === 'podium' || kind === 'stairs' ? podiumH :
+    kind === 'balcony' ? 0.12 :
     kind === 'column' || kind === 'pillar' ? 2.6 :
     kind === 'flower' ? 0.7 :
     kind === 'carpet' ? 0.06 :
     kind === 'buffet' ? 0.9 :
     0.35;
-  const stairSteps = Math.max(3, Math.min(16, steps ?? (kind === 'stairs' ? 6 : 1)));
+  const stairSteps = Math.max(3, Math.min(24, steps ?? (kind === 'stairs' ? 6 : 1)));
 
 
   const map = useMemo(() => {
@@ -1511,6 +1516,8 @@ function FixtureMesh({
       ? '#b45309'
       : kind === 'stairs'
         ? '#a8a29e'
+      : kind === 'balcony'
+        ? '#d6d3d1'
       : kind === 'buffet'
         ? '#8b6914'
         : kind === 'flower'
@@ -1573,66 +1580,22 @@ function FixtureMesh({
         />
       ) : kind === 'stairs' ? (
         <group rotation={[0, ((stairDirection ?? 0) * Math.PI) / 180, 0]}>
-          {Array.from({ length: stairSteps }).map((_, i) => {
-            const stepH = height / stairSteps;
-            const tread = d / stairSteps;
-            const woodMap = map ?? getStairWoodMap();
-            return (
-              <group key={i} position={[0, stepH * i, -d / 2 + tread * (i + 0.5)]}>
-                {/* Contremarche */}
-                <mesh position={[0, stepH / 2, -tread * 0.35]} castShadow receiveShadow raycast={pickable ? undefined : () => null}>
-                  <boxGeometry args={[w * 0.96, stepH, tread * 0.35]} />
-                  <meshStandardMaterial color={selected ? '#c7d2fe' : '#78716c'} map={woodMap} roughness={0.75} />
-                </mesh>
-                {/* Marche (nez débordant) */}
-                <mesh position={[0, stepH + 0.015, 0]} castShadow receiveShadow>
-                  <boxGeometry args={[w * 0.98, 0.04, tread * 0.95]} />
-                  <meshStandardMaterial color={selected ? '#c7d2fe' : '#ffffff'} map={woodMap} roughness={0.55} metalness={0.05} />
-                </mesh>
-                {/* Bande antidérapante */}
-                <mesh position={[0, stepH + 0.038, tread * 0.35]}>
-                  <boxGeometry args={[w * 0.9, 0.008, 0.04]} />
-                  <meshStandardMaterial color="#1c1917" roughness={0.95} />
-                </mesh>
-              </group>
-            );
-          })}
-          {/* Rampes tubulaires */}
-          {([-1, 1] as const).map((side) => (
-            <group key={side}>
-              <mesh
-                position={[side * w * 0.48, height * 0.55, 0]}
-                rotation={[Math.atan2(height, d) - Math.PI / 2, 0, 0]}
-                castShadow
-              >
-                <cylinderGeometry args={[0.025, 0.025, Math.hypot(height, d) * 0.95, 12]} />
-                <meshStandardMaterial color="#a8a29e" metalness={0.7} roughness={0.25} />
-              </mesh>
-              {Array.from({ length: Math.max(3, Math.ceil(stairSteps / 2)) }).map((_, pi) => {
-                const t = (pi + 0.5) / Math.max(3, Math.ceil(stairSteps / 2));
-                return (
-                  <mesh
-                    key={pi}
-                    position={[side * w * 0.48, height * t * 0.85 + 0.15, -d / 2 + d * t]}
-                    castShadow
-                  >
-                    <cylinderGeometry args={[0.018, 0.018, height * t * 0.85 + 0.15, 8]} />
-                    <meshStandardMaterial color="#78716c" metalness={0.65} roughness={0.3} />
-                  </mesh>
-                );
-              })}
-            </group>
-          ))}
-          {/* Palier haut */}
-          <mesh position={[0, height + 0.03, d / 2 - 0.15]} castShadow receiveShadow>
-            <boxGeometry args={[w * 0.98, 0.06, 0.35]} />
-            <meshStandardMaterial
-              color={selected ? '#c7d2fe' : '#ffffff'}
-              map={(map ?? getStairWoodMap()) || undefined}
-              roughness={0.5}
-            />
-          </mesh>
+          <CatalogueInterstoryStairs
+            widthM={Math.max(0.9, w)}
+            runM={Math.max(1.8, d)}
+            riseM={Math.max(0.8, height)}
+            steps={Math.max(4, Math.min(24, stairSteps))}
+            selected={selected}
+          />
         </group>
+      ) : kind === 'balcony' ? (
+        <CatalogueBalcony
+          w={Math.max(0.8, w)}
+          d={Math.max(0.6, d)}
+          selected={selected}
+          side={balconySide ?? 'south'}
+          color={baseColor}
+        />
       ) : kind === 'buffet' ? (
         <CatalogueBuffet
           w={w}
@@ -1956,6 +1919,7 @@ function SceneContent({
             steps={f.steps}
             hasCouverts={f.hasCouverts}
             stairDirection={f.stairDirection}
+            balconySide={f.balconySide}
             columnShape={f.columnShape}
             widthM={widthM}
             roomDepthM={heightM}

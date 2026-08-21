@@ -100,6 +100,128 @@ export function addStory(
   };
 }
 
+/**
+ * Supprime un étage et son contenu (mobilier, fixtures, murs).
+ * Impossible s’il ne reste qu’un seul étage.
+ */
+export function removeStory(
+  blueprint: RoomLayoutBlueprint,
+  storyId: string,
+): RoomLayoutBlueprint {
+  const stories = resolveStories(blueprint);
+  if (stories.length <= 1) return blueprint;
+  if (!stories.some((s) => s.id === storyId)) return blueprint;
+
+  const remaining = stories
+    .filter((s) => s.id !== storyId)
+    .map((s, i) => ({
+      ...s,
+      elevationM: i * 3.2,
+      label: s.label || (i === 0 ? 'RDC' : `${i}ᵉ étage`),
+    }));
+  const fallbackId = remaining[0]!.id;
+  const nextActive =
+    blueprint.metadata.activeStoryId === storyId
+      ? fallbackId
+      : remaining.some((s) => s.id === blueprint.metadata.activeStoryId)
+        ? blueprint.metadata.activeStoryId!
+        : fallbackId;
+
+  const furniture = blueprint.furniture.filter((f) => f.storyId !== storyId);
+  const fixtures = blueprint.fixtures
+    .filter((f) => f.storyId !== storyId)
+    .map((f) =>
+      f.connectsToStoryId === storyId
+        ? { ...f, connectsToStoryId: undefined }
+        : f,
+    );
+  const walls = (blueprint.walls ?? []).filter((w) => w.storyId !== storyId);
+  const verticalLinks = resolveVerticalLinks(blueprint).filter(
+    (l) => l.fromStoryId !== storyId && l.toStoryId !== storyId,
+  );
+
+  return refreshBlueprintMetadata({
+    ...blueprint,
+    furniture,
+    fixtures,
+    walls,
+    metadata: {
+      ...blueprint.metadata,
+      stories: remaining,
+      activeStoryId: nextActive,
+      verticalLinks,
+      stackView: remaining.length > 1 ? blueprint.metadata.stackView : false,
+    },
+  });
+}
+
+export type BalconySide = 'north' | 'south' | 'east' | 'west';
+
+export const balconySideLabels: Record<BalconySide, string> = {
+  north: 'Nord (haut)',
+  south: 'Sud (bas)',
+  east: 'Est (droite)',
+  west: 'Ouest (gauche)',
+};
+
+const BALCONY_PLACEMENTS: Record<BalconySide, { x: number; y: number; w: number; h: number }> = {
+  north: { x: 28, y: 1, w: 44, h: 9 },
+  south: { x: 28, y: 90, w: 44, h: 9 },
+  east: { x: 90, y: 28, w: 9, h: 44 },
+  west: { x: 1, y: 28, w: 9, h: 44 },
+};
+
+export function createBalconyFixture(
+  index = 1,
+  side: BalconySide = 'south',
+): RoomLayoutBlueprint['fixtures'][number] {
+  const place = BALCONY_PLACEMENTS[side];
+  return {
+    id: makeLayoutId('balcony'),
+    kind: 'balcony',
+    ...place,
+    label: index <= 1 ? `Balcon ${balconySideLabels[side].split(' ')[0]}` : `Balcon ${index}`,
+    material: 'concrete',
+    color: '#d6d3d1',
+    heightM: 0.12,
+    balconySide: side,
+  };
+}
+
+/** Ajoute un ou plusieurs balcons sur les façades libres. */
+export function addBalconies(
+  blueprint: RoomLayoutBlueprint,
+  sides: BalconySide[],
+): { blueprint: RoomLayoutBlueprint; ids: string[] } {
+  const storyId = resolveActiveStoryId(blueprint);
+  const existingSides = new Set(
+    blueprint.fixtures
+      .filter((f) => f.kind === 'balcony' && (f.storyId ?? storyId) === storyId)
+      .map((f) => f.balconySide)
+      .filter(Boolean),
+  );
+  const ids: string[] = [];
+  let fixtures = [...blueprint.fixtures];
+  let n = fixtures.filter((f) => f.kind === 'balcony').length;
+
+  for (const side of sides) {
+    if (existingSides.has(side)) continue;
+    n += 1;
+    const balcony = { ...createBalconyFixture(n, side), storyId };
+    fixtures.push(balcony);
+    ids.push(balcony.id);
+    existingSides.add(side);
+  }
+
+  if (ids.length === 0) {
+    return { blueprint, ids: [] };
+  }
+  return {
+    blueprint: refreshBlueprintMetadata({ ...blueprint, fixtures }),
+    ids,
+  };
+}
+
 export function setActiveStory(
   blueprint: RoomLayoutBlueprint,
   storyId: string,
@@ -207,7 +329,7 @@ export function resolveVerticalLinks(blueprint: RoomLayoutBlueprint): VerticalLi
   return blueprint.metadata.verticalLinks ?? [];
 }
 
-/** Relie un escalier de l’étage courant vers un autre étage (hauteur auto). */
+/** Relie un escalier de l’étage courant vers un autre étage (hauteur + emprise auto). */
 export function linkStairsToStory(
   blueprint: RoomLayoutBlueprint,
   stairsId: string,
@@ -223,8 +345,18 @@ export function linkStairsToStory(
   const fromElev = storyElevationM(blueprint, fromStoryId);
   const toElev = storyElevationM(blueprint, toStoryId);
   const heightM = Math.max(0.8, Math.abs(toElev - fromElev));
-  const steps = Math.max(4, Math.min(20, Math.round(heightM / 0.18)));
+  const canvasW = Math.max(5, blueprint.canvas.widthM);
+  const canvasD = Math.max(5, blueprint.canvas.heightM);
+  const steps = Math.max(6, Math.min(22, Math.round(heightM / 0.175)));
+  const runM = Math.min(canvasD * 0.55, Math.max(2.2, steps * 0.28));
+  const stairWidthM = Math.min(2.2, Math.max(1.05, canvasW * 0.1));
+  const hPct = Math.max(12, Math.min(55, (runM / canvasD) * 100));
+  const wPct = Math.max(6, Math.min(28, (stairWidthM / canvasW) * 100));
   const toLabel = stories.find((s) => s.id === toStoryId)?.label ?? 'étage';
+
+  // Centrer l’escalier sans sortir du plan
+  const x = Math.max(2, Math.min(98 - wPct, stairs.x));
+  const y = Math.max(2, Math.min(98 - hPct, stairs.y));
 
   const link: VerticalLink = {
     id: makeLayoutId('vlink'),
@@ -245,6 +377,10 @@ export function linkStairsToStory(
             connectsToStoryId: toStoryId,
             heightM,
             steps,
+            w: wPct,
+            h: hPct,
+            x,
+            y,
             storyId: fromStoryId,
             label: f.label?.startsWith('Escalier') ? `Escalier → ${toLabel}` : f.label,
           }

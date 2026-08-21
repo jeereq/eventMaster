@@ -102,20 +102,24 @@ import {
 } from '@/lib/roomCeilingUtils';
 import CustomRoomThemePanel from '@/components/CustomRoomThemePanel';
 import {
+  addBalconies,
   addStairsLinkingStories,
   addStory,
   applyStyleToSelection,
   belongsToActiveStory,
+  balconySideLabels,
   createCorridorFixture,
   foundationKindLabels,
   linkStairsToStory,
   punchCorridorOpenings,
+  removeStory,
   resolveActiveStoryId,
   resolveFoundation,
   resolveStories,
   setActiveStory,
   setStackView,
   updateFoundation,
+  type BalconySide,
   type FoundationKind,
 } from '@/lib/roomBuildingUtils';
 import { cn } from '@/lib/cn';
@@ -157,7 +161,7 @@ export default function RoomLayoutEditor({
   const [lockOrbit, setLockOrbit] = useState(true);
   const [walkthroughActive, setWalkthroughActive] = useState(false);
   const [walkthroughLabel, setWalkthroughLabel] = useState('');
-  const [quickCreate, setQuickCreate] = useState<null | 'aisles' | 'chairs' | 'stairs'>(null);
+  const [quickCreate, setQuickCreate] = useState<null | 'aisles' | 'chairs' | 'stairs' | 'balconies'>(null);
   const [aisleCount, setAisleCount] = useState(2);
   const [chairGroups, setChairGroups] = useState(2);
   const [rowsPerGroup, setRowsPerGroup] = useState(4);
@@ -614,6 +618,53 @@ export default function RoomLayoutEditor({
       return;
     }
     setQuickCreate(quickCreate === 'stairs' ? null : 'stairs');
+  };
+
+  const removeActiveOrStory = (storyId: string) => {
+    const stories = resolveStories(blueprint);
+    if (stories.length <= 1) {
+      log('Impossible de supprimer le dernier étage', 'info');
+      return;
+    }
+    const label = stories.find((s) => s.id === storyId)?.label ?? 'étage';
+    const next = removeStory(blueprint, storyId);
+    updateBlueprint(next, {
+      message: `Étage « ${label} » supprimé`,
+      kind: 'edit',
+    });
+    setSelection([]);
+  };
+
+  const addBalconyOnSide = (side: BalconySide) => {
+    if (!caps.canFixtures || !caps.fixtureKinds.includes('balcony')) {
+      log('Les balcons ne sont pas inclus dans votre forfait', 'info');
+      return;
+    }
+    const { blueprint: next, ids } = addBalconies(blueprint, [side]);
+    if (ids.length === 0) {
+      log(`Un balcon existe déjà côté ${balconySideLabels[side]}`, 'info');
+      return;
+    }
+    updateBlueprint(next, { message: `Balcon ${balconySideLabels[side]} ajouté`, kind: 'add' });
+    setSelection(ids.map((id) => ({ kind: 'fixture' as const, id })));
+  };
+
+  const addAllFacadesBalconies = () => {
+    if (!caps.canFixtures || !caps.fixtureKinds.includes('balcony')) {
+      log('Les balcons ne sont pas inclus dans votre forfait', 'info');
+      return;
+    }
+    const sides: BalconySide[] = ['north', 'south', 'east', 'west'];
+    const { blueprint: next, ids } = addBalconies(blueprint, sides);
+    if (ids.length === 0) {
+      log('Les quatre façades ont déjà un balcon', 'info');
+      return;
+    }
+    updateBlueprint(next, {
+      message: `${ids.length} balcon${ids.length > 1 ? 's' : ''} ajouté${ids.length > 1 ? 's' : ''}`,
+      kind: 'add',
+    });
+    setSelection(ids.map((id) => ({ kind: 'fixture' as const, id })));
   };
 
   const applyTemplate = (templateId: string) => {
@@ -1562,34 +1613,47 @@ export default function RoomLayoutEditor({
                   <p className="text-[10px] font-bold uppercase text-muted">1 · Étages</p>
                   <div className="flex flex-wrap gap-1.5">
                     {resolveStories(blueprint).map((story) => (
-                      <button
+                      <div
                         key={story.id}
-                        type="button"
-                        onClick={() => {
-                          updateBlueprint(
-                            setStackView(setActiveStory(blueprint, story.id), false),
-                            {
-                              message: `Édition : ${story.label}`,
-                              kind: 'settings',
-                            },
-                          );
-                          setSelection([]);
-                        }}
                         className={cn(
-                          'px-2.5 py-1 rounded-[var(--radius-button)] border text-[10px] font-bold',
+                          'inline-flex items-center rounded-[var(--radius-button)] border text-[10px] font-bold overflow-hidden',
                           resolveActiveStoryId(blueprint) === story.id && !blueprint.metadata.stackView
-                            ? 'bg-primary/10 border-primary/40 text-primary'
-                            : 'border-border text-muted hover:bg-white',
+                            ? 'border-primary/40 bg-primary/10 text-primary'
+                            : 'border-border text-muted',
                         )}
                       >
-                        {story.label}
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateBlueprint(
+                              setStackView(setActiveStory(blueprint, story.id), false),
+                              {
+                                message: `Édition : ${story.label}`,
+                                kind: 'settings',
+                              },
+                            );
+                            setSelection([]);
+                          }}
+                          className="px-2.5 py-1 hover:bg-white/60"
+                        >
+                          {story.label}
+                        </button>
+                        {resolveStories(blueprint).length > 1 ? (
+                          <button
+                            type="button"
+                            title={`Supprimer ${story.label}`}
+                            onClick={() => removeActiveOrStory(story.id)}
+                            className="px-1.5 py-1 border-l border-inherit text-rose-600 hover:bg-rose-50"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        ) : null}
+                      </div>
                     ))}
                     <button
                       type="button"
                       onClick={() => {
                         const next = addStory(blueprint);
-                        // Dès 2 étages : activer la vue empilée pour voir le bâtiment.
                         updateBlueprint(setStackView(next, true), {
                           message: 'Nouvel étage — vue empilée',
                           kind: 'add',
@@ -1603,7 +1667,7 @@ export default function RoomLayoutEditor({
                   </div>
                   <p className="text-[10px] text-muted">
                     Vous éditez : <span className="font-semibold text-foreground">{resolveStories(blueprint).find((s) => s.id === resolveActiveStoryId(blueprint))?.label ?? 'RDC'}</span>
-                    {' '}— le mobilier ajouté va sur cet étage.
+                    {' '}— supprimer un étage retire aussi son mobilier.
                   </p>
                 </div>
 
@@ -1630,6 +1694,32 @@ export default function RoomLayoutEditor({
                       </div>
                     )}
                     <p className="text-[10px] text-muted">Hauteur et marches calculées automatiquement. Déplacez ensuite l’escalier sur le plan.</p>
+                  </div>
+                ) : null}
+
+                {caps.fixtureKinds.includes('balcony') ? (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-bold uppercase text-muted">Balcons</p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {(Object.keys(balconySideLabels) as BalconySide[]).map((side) => (
+                        <button
+                          key={side}
+                          type="button"
+                          onClick={() => addBalconyOnSide(side)}
+                          className="px-2 py-1.5 rounded-[var(--radius-button)] border border-sky-200 bg-sky-50 text-[10px] font-bold text-sky-900 hover:bg-sky-100"
+                        >
+                          + {balconySideLabels[side]}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={addAllFacadesBalconies}
+                      className="w-full py-1.5 rounded-[var(--radius-button)] border border-sky-300 bg-sky-100 text-[10px] font-bold text-sky-950 hover:bg-sky-200"
+                    >
+                      Ajouter les 4 façades
+                    </button>
+                    <p className="text-[10px] text-muted">Les balcons se placent sur l’étage actif. Déplacez-les ensuite sur le plan.</p>
                   </div>
                 ) : null}
 
@@ -1998,13 +2088,14 @@ export default function RoomLayoutEditor({
       const isFlower = selectedFixture.kind === 'flower';
       const isBuffet = selectedFixture.kind === 'buffet';
       const isStairs = selectedFixture.kind === 'stairs';
+      const isBalcony = selectedFixture.kind === 'balcony';
       const canHaveImage = isColumn || isStage || isFlower || isBuffet || isStairs;
 
       return (
         <div className="space-y-3">
           <div className="p-4 bg-surface-muted rounded-[var(--radius-card)] border space-y-3">
             <p className="text-xs font-bold uppercase text-muted">
-              {isStairs ? 'Escalier' : isBuffet ? 'Buffet' : isPodium ? 'Podium' : isFlower ? 'Décoration florale' : isColumn ? 'Colonne / Poteau' : isStage ? 'Scène' : `Fixe — ${selectedFixture.kind}`}
+              {isBalcony ? 'Balcon' : isStairs ? 'Escalier' : isBuffet ? 'Buffet' : isPodium ? 'Podium' : isFlower ? 'Décoration florale' : isColumn ? 'Colonne / Poteau' : isStage ? 'Scène' : `Fixe — ${selectedFixture.kind}`}
             </p>
             <label className="block text-xs space-y-1">
               <span className="font-semibold text-muted">Libellé</span>
@@ -2063,12 +2154,25 @@ export default function RoomLayoutEditor({
                       ))}
                   </div>
                   {selectedFixture.connectsToStoryId ? (
-                    <p className="text-[10px] text-muted">
-                      Hauteur auto : {(selectedFixture.heightM ?? 0).toFixed(1)} m · {selectedFixture.steps ?? 0} marches
+                    <p className="text-[10px] text-muted leading-relaxed">
+                      Hauteur {(selectedFixture.heightM ?? 0).toFixed(1)} m · {selectedFixture.steps ?? 0} marches
+                      {' '}· emprise ajustée pour rejoindre l’étage (palier + garde-corps).
                     </p>
                   ) : (
-                    <p className="text-[10px] text-amber-800">Choisissez l’étage d’arrivée.</p>
+                    <p className="text-[10px] text-amber-800">Choisissez l’étage d’arrivée — dimensions recalculées automatiquement.</p>
                   )}
+                  {selectedFixture.connectsToStoryId ? (
+                    <button
+                      type="button"
+                      onClick={() => updateBlueprint(
+                        linkStairsToStory(blueprint, selectedFixture.id, selectedFixture.connectsToStoryId!),
+                        { message: 'Escalier recalibré', kind: 'edit' },
+                      )}
+                      className="w-full py-1.5 rounded-[var(--radius-button)] border border-stone-300 bg-white text-[10px] font-bold text-stone-800 hover:bg-stone-100"
+                    >
+                      Recalibrer hauteur &amp; course
+                    </button>
+                  ) : null}
                 </div>
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold uppercase text-muted">Orientation sur le plan</p>
@@ -2098,7 +2202,7 @@ export default function RoomLayoutEditor({
                       <input
                         type="number"
                         min={0.4}
-                        max={4}
+                        max={6}
                         step={0.1}
                         value={selectedFixture.heightM ?? 1.2}
                         onChange={(e) => updateFixture(selectedFixture.id, { heightM: parseFloat(e.target.value) || 1.2 }, 'Hauteur escalier')}
@@ -2109,10 +2213,10 @@ export default function RoomLayoutEditor({
                       <span className="font-semibold text-muted">Marches</span>
                       <input
                         type="number"
-                        min={3}
-                        max={16}
+                        min={4}
+                        max={24}
                         value={selectedFixture.steps ?? 6}
-                        onChange={(e) => updateFixture(selectedFixture.id, { steps: Math.max(3, Math.min(16, parseInt(e.target.value, 10) || 6)) }, 'Marches escalier')}
+                        onChange={(e) => updateFixture(selectedFixture.id, { steps: Math.max(4, Math.min(24, parseInt(e.target.value, 10) || 6)) }, 'Marches escalier')}
                         className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
                       />
                     </label>
@@ -2123,6 +2227,38 @@ export default function RoomLayoutEditor({
                   </div>
                 </details>
               </>
+            )}
+
+            {isBalcony && (
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold uppercase text-muted">Façade</p>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {(Object.keys(balconySideLabels) as BalconySide[]).map((side) => (
+                    <button
+                      key={side}
+                      type="button"
+                      onClick={() => updateFixture(selectedFixture.id, { balconySide: side }, `Balcon ${balconySideLabels[side]}`)}
+                      className={cn(
+                        'px-2 py-1.5 rounded-[var(--radius-button)] border text-[10px] font-bold',
+                        (selectedFixture.balconySide ?? 'south') === side
+                          ? 'bg-sky-100 border-sky-400 text-sky-900'
+                          : 'border-border text-muted hover:bg-surface-muted',
+                      )}
+                    >
+                      {balconySideLabels[side]}
+                    </button>
+                  ))}
+                </div>
+                <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-muted">Couleur dalle</span>
+                  <input
+                    type="color"
+                    value={selectedFixture.color ?? '#d6d3d1'}
+                    onChange={(e) => updateFixture(selectedFixture.id, { color: e.target.value })}
+                    className="w-full h-9 rounded-[var(--radius-button)] border cursor-pointer"
+                  />
+                </label>
+              </div>
             )}
 
             {isPodium && (
@@ -3144,6 +3280,20 @@ export default function RoomLayoutEditor({
           <StepForward className="w-3.5 h-3.5" /> Escalier vers…
         </button>
       ) : null}
+      {caps.fixtureKinds.includes('balcony') ? (
+        <button
+          type="button"
+          onClick={() => setQuickCreate(quickCreate === 'balconies' ? null : 'balconies')}
+          className={cn(
+            'px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
+            quickCreate === 'balconies'
+              ? 'bg-sky-200 border-sky-400 text-sky-950'
+              : 'bg-sky-50 border-sky-200 text-sky-900',
+          )}
+        >
+          Balcons…
+        </button>
+      ) : null}
       {caps.fixtureKinds.includes('buffet') ? (
         <button type="button" onClick={() => addFixture('buffet')} className="px-3 py-1.5 bg-amber-50 border border-amber-300 text-amber-900 rounded-[var(--radius-button)] text-xs font-bold">Buffet + couverts</button>
       ) : null}
@@ -3303,6 +3453,34 @@ export default function RoomLayoutEditor({
               + Créer un étage d’abord
             </button>
           ) : null}
+        </>
+      )}
+      {quickCreate === 'balconies' && (
+        <>
+          <p className="text-[11px] text-muted self-center">Balcon sur l’étage actif :</p>
+          {(Object.keys(balconySideLabels) as BalconySide[]).map((side) => (
+            <button
+              key={side}
+              type="button"
+              onClick={() => {
+                addBalconyOnSide(side);
+                setQuickCreate(null);
+              }}
+              className="px-3 py-1.5 bg-sky-700 text-white rounded-[var(--radius-button)] text-xs font-bold"
+            >
+              {balconySideLabels[side]}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => {
+              addAllFacadesBalconies();
+              setQuickCreate(null);
+            }}
+            className="px-3 py-1.5 bg-sky-900 text-white rounded-[var(--radius-button)] text-xs font-bold"
+          >
+            4 façades
+          </button>
         </>
       )}
       <button
