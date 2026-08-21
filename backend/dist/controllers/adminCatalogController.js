@@ -11,6 +11,9 @@ exports.setVenueListingVisibility = setVenueListingVisibility;
 exports.setServiceOfferingVisibility = setServiceOfferingVisibility;
 exports.unpublishVenueListing = unpublishVenueListing;
 exports.unpublishServiceOffering = unpublishServiceOffering;
+exports.toggleVendorBlock = toggleVendorBlock;
+exports.toggleVenueBlock = toggleVenueBlock;
+exports.toggleOfferingBlock = toggleOfferingBlock;
 const db_1 = require("../db");
 const adminAuditService_1 = require("../services/adminAuditService");
 const publicVenue_1 = require("../utils/publicVenue");
@@ -255,6 +258,7 @@ async function listAdminVenues(req, res) {
                     id: row.id,
                     slug: row.slug,
                     isPublic: row.isPublic,
+                    isBlockedByAdmin: row.isBlockedByAdmin,
                     headline: row.headline || row.room.name,
                     roomName: row.room.name,
                     roomType: row.room.roomType,
@@ -353,6 +357,7 @@ async function listAdminOfferings(req, res) {
                     id: row.id,
                     slug: row.slug,
                     isPublic: row.isPublic,
+                    isBlockedByAdmin: row.isBlockedByAdmin,
                     title: row.title,
                     category: row.category,
                     categoryLabel: (0, publicVenue_1.serviceCategoryLabel)(row.category),
@@ -854,5 +859,68 @@ async function unpublishServiceOffering(req, res) {
     catch (error) {
         console.error('Erreur unpublish offering admin:', error);
         return res.status(500).json({ error: 'Impossible de dépublier la prestation.' });
+    }
+}
+async function toggleVendorBlock(req, res) {
+    try {
+        const { id } = req.params;
+        const { isBlocked, reason } = req.body;
+        if (typeof isBlocked !== 'boolean') {
+            return res.status(400).json({ error: 'Le champ isBlocked est requis (boolean).' });
+        }
+        const updated = await db_1.prisma.vendorProfile.update({
+            where: { id },
+            data: {
+                isBlockedByAdmin: isBlocked,
+                adminBlockReason: isBlocked ? (typeof reason === 'string' ? reason : 'Non-respect des règles') : null,
+            },
+        });
+        return res.json({ success: true, vendor: updated });
+    }
+    catch (error) {
+        console.error('Erreur toggleVendorBlock admin:', error);
+        return res.status(500).json({ error: 'Impossible de bloquer/débloquer le prestataire.' });
+    }
+}
+async function toggleVenueBlock(req, res) {
+    try {
+        const { id } = req.params;
+        const { isBlocked, reason } = req.body;
+        if (typeof isBlocked !== 'boolean') {
+            return res.status(400).json({ error: 'Le champ isBlocked est requis (boolean).' });
+        }
+        const updated = await db_1.prisma.venueListing.update({
+            where: { id },
+            data: {
+                isBlockedByAdmin: isBlocked,
+                adminBlockReason: isBlocked ? (typeof reason === 'string' ? reason : 'Non-respect des règles') : null,
+            },
+        });
+        return res.json({ success: true, venue: updated });
+    }
+    catch (error) {
+        console.error('Erreur toggleVenueBlock admin:', error);
+        return res.status(500).json({ error: 'Impossible de bloquer/débloquer la salle.' });
+    }
+}
+async function toggleOfferingBlock(req, res) {
+    try {
+        const { id } = req.params;
+        const { isBlocked, reason } = req.body;
+        if (typeof isBlocked !== 'boolean') {
+            return res.status(400).json({ error: 'Le champ isBlocked est requis (boolean).' });
+        }
+        const updated = await db_1.prisma.serviceOffering.update({
+            where: { id },
+            data: {
+                isBlockedByAdmin: isBlocked,
+                adminBlockReason: isBlocked ? (typeof reason === 'string' ? reason : 'Non-respect des règles') : null,
+            },
+        });
+        return res.json({ success: true, offering: updated });
+    }
+    catch (error) {
+        console.error('Erreur toggleOfferingBlock admin:', error);
+        return res.status(500).json({ error: 'Impossible de bloquer/débloquer la prestation.' });
     }
 }

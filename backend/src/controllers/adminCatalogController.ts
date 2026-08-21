@@ -936,7 +936,7 @@ export async function unpublishServiceOffering(req: AuthenticatedRequest, res: R
 
 export async function toggleVendorBlock(req: AuthenticatedRequest, res: Response) {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const { isBlocked, reason } = req.body;
     
     if (typeof isBlocked !== 'boolean') {
@@ -947,7 +947,7 @@ export async function toggleVendorBlock(req: AuthenticatedRequest, res: Response
       where: { id },
       data: {
         isBlockedByAdmin: isBlocked,
-        adminBlockReason: isBlocked ? (reason || 'Non-respect des règles') : null,
+        adminBlockReason: isBlocked ? (typeof reason === 'string' ? reason : 'Non-respect des règles') : null,
       },
     });
     return res.json({ success: true, vendor: updated });
@@ -959,7 +959,7 @@ export async function toggleVendorBlock(req: AuthenticatedRequest, res: Response
 
 export async function toggleVenueBlock(req: AuthenticatedRequest, res: Response) {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const { isBlocked, reason } = req.body;
     
     if (typeof isBlocked !== 'boolean') {
@@ -970,7 +970,7 @@ export async function toggleVenueBlock(req: AuthenticatedRequest, res: Response)
       where: { id },
       data: {
         isBlockedByAdmin: isBlocked,
-        adminBlockReason: isBlocked ? (reason || 'Non-respect des règles') : null,
+        adminBlockReason: isBlocked ? (typeof reason === 'string' ? reason : 'Non-respect des règles') : null,
       },
     });
     return res.json({ success: true, venue: updated });
@@ -982,7 +982,7 @@ export async function toggleVenueBlock(req: AuthenticatedRequest, res: Response)
 
 export async function toggleOfferingBlock(req: AuthenticatedRequest, res: Response) {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const { isBlocked, reason } = req.body;
     
     if (typeof isBlocked !== 'boolean') {
@@ -993,7 +993,7 @@ export async function toggleOfferingBlock(req: AuthenticatedRequest, res: Respon
       where: { id },
       data: {
         isBlockedByAdmin: isBlocked,
-        adminBlockReason: isBlocked ? (reason || 'Non-respect des règles') : null,
+        adminBlockReason: isBlocked ? (typeof reason === 'string' ? reason : 'Non-respect des règles') : null,
       },
     });
     return res.json({ success: true, offering: updated });

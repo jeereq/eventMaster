@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { cn } from "@/lib/cn";
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { downloadMedia, getMediaExtension, sanitizeFilenamePart } from '@/lib/downloadMedia';
@@ -782,7 +783,7 @@ export default function RsvpPage() {
             {/* 2. MA TABLE TAB */}
             {activeGuestTab === 'table' && (
               <div className="space-y-4">
-                <GuestPortalCard noPadding className="bg-surface-muted/30">
+                <GuestPortalCard padding="sm" className="bg-surface-muted/30">
                   <div className="p-4 sm:p-5 border-b border-border bg-surface">
                     <h2 className="text-lg font-semibold leading-snug tracking-tight text-foreground">
                       Votre placement

@@ -21,6 +21,7 @@ exports.deleteTemplate = deleteTemplate;
 exports.getAllEvents = getAllEvents;
 exports.createAdminEvent = createAdminEvent;
 exports.updateAdminEvent = updateAdminEvent;
+exports.toggleAdminEventBlock = toggleAdminEventBlock;
 exports.deleteAdminEvent = deleteAdminEvent;
 exports.getAllGuests = getAllGuests;
 exports.createAdminGuest = createAdminGuest;
@@ -959,6 +960,7 @@ async function getAllEvents(req, res) {
             latitude: e.latitude,
             longitude: e.longitude,
             isPublic: e.isPublic,
+            isBlockedByAdmin: e.isBlockedByAdmin,
             ticketingEnabled: e.ticketingEnabled,
             ticketPriceFc: e.ticketPriceFc,
             ticketsSold: e.ticketsSold,
@@ -1036,6 +1038,30 @@ async function updateAdminEvent(req, res) {
     catch (error) {
         console.error('Erreur lors de la modification de l\'événement par l\'admin:', error);
         return res.status(500).json({ error: 'Erreur lors de la modification de l\'événement' });
+    }
+}
+async function toggleAdminEventBlock(req, res) {
+    try {
+        if (req.user?.role !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+        }
+        const { id } = req.params;
+        const { isBlocked, reason } = req.body;
+        if (typeof isBlocked !== 'boolean') {
+            return res.status(400).json({ error: 'Le champ isBlocked est requis (boolean).' });
+        }
+        const updated = await db_1.prisma.event.update({
+            where: { id },
+            data: {
+                isBlockedByAdmin: isBlocked,
+                adminBlockReason: isBlocked ? (typeof reason === 'string' ? reason : 'Non-respect des règles') : null,
+            },
+        });
+        return res.json({ success: true, event: updated });
+    }
+    catch (error) {
+        console.error('Erreur toggleAdminEventBlock admin:', error);
+        return res.status(500).json({ error: 'Impossible de bloquer/débloquer l\'événement.' });
     }
 }
 // Delete any event (Super Admin only)

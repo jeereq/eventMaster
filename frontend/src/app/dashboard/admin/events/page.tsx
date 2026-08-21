@@ -10,7 +10,7 @@ import { useAuth } from '@/context/AuthContext';
 import {
   PageHeader, Breadcrumbs, Alert, EmptyState, Pagination, StatusPill,
   ProjectCard, ListRowAction, SkeletonTabContent, ViewModeToggle, useViewMode,
-  usePageSize, listStackClass,
+  usePageSize, listStackClass, Button, Modal
 } from '@/components/ui';
 import AdminDetailsModal from '@/components/admin/AdminDetailsModal';
 import { unwrapAdminList, adminListParams } from '@/lib/adminList';

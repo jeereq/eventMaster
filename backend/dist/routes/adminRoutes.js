@@ -41,6 +41,9 @@ router.post('/tenants/:id/impersonate', adminOpsController_1.impersonateTenant);
 router.get('/catalog/overview', adminCatalogController_1.getCatalogOverview);
 router.get('/catalog/venues', adminCatalogController_1.listAdminVenues);
 router.get('/catalog/offerings', adminCatalogController_1.listAdminOfferings);
+router.patch('/catalog/vendors/:id/block', adminCatalogController_1.toggleVendorBlock);
+router.patch('/catalog/venues/:id/block', adminCatalogController_1.toggleVenueBlock);
+router.patch('/catalog/offerings/:id/block', adminCatalogController_1.toggleOfferingBlock);
 router.get('/catalog/inquiries', adminCatalogController_1.listAdminInquiries);
 router.get('/catalog/bookings', adminCatalogController_1.listAdminBookings);
 router.get('/catalog/commissions', adminCatalogController_1.listAdminCommissions);
@@ -67,6 +70,7 @@ router.post('/message-templates/:id/reset', guestMessageTemplateController_1.res
 router.get('/events', adminController_1.getAllEvents);
 router.post('/events', adminController_1.createAdminEvent);
 router.put('/events/:id', adminController_1.updateAdminEvent);
+router.patch('/events/:id/block', adminController_1.toggleAdminEventBlock);
 router.delete('/events/:id', adminController_1.deleteAdminEvent);
 router.get('/guests', adminController_1.getAllGuests);
 router.post('/guests', adminController_1.createAdminGuest);

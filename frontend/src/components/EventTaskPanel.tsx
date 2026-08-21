@@ -406,7 +406,6 @@ export default function EventTaskPanel({ eventId }: { eventId: string }) {
                       </select>
                     ) : null}
                   </div>
-                </div>
                 {canManage ? (
                   <button
                     type="button"

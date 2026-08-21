@@ -242,6 +242,12 @@ async function listPublicVenues(req, res) {
         const listings = await db_1.prisma.venueListing.findMany({
             where: {
                 isPublic: true,
+                isBlockedByAdmin: false,
+                tenant: {
+                    vendorProfile: {
+                        isBlockedByAdmin: false
+                    }
+                },
                 ...(0, rdcCities_1.allowedCityPrismaFilter)(city),
                 ...(commune ? { commune: { contains: commune, mode: 'insensitive' } } : {}),
                 ...(neighborhood ? { neighborhood: { contains: neighborhood, mode: 'insensitive' } } : {}),
@@ -304,7 +310,10 @@ async function getPublicVenue(req, res) {
         if (!slug)
             return res.status(400).json({ error: 'Slug requis.' });
         const listing = await db_1.prisma.venueListing.findFirst({
-            where: { slug },
+            where: {
+                slug,
+                isBlockedByAdmin: false
+            },
             include: listingInclude,
         });
         if (!listing) {
@@ -577,6 +586,10 @@ async function listPublicServices(req, res) {
         const travelsFilter = mobility === 'travels' ? true : mobility === 'on_site' ? false : null;
         const where = {
             isPublic: true,
+            isBlockedByAdmin: false,
+            vendorProfile: {
+                isBlockedByAdmin: false
+            },
             ...(0, rdcCities_1.allowedCityPrismaFilter)(city),
             ...(commune ? { commune: { contains: commune, mode: 'insensitive' } } : {}),
             ...(neighborhood ? { neighborhood: { contains: neighborhood, mode: 'insensitive' } } : {}),
@@ -642,7 +655,13 @@ async function getPublicService(req, res) {
         if (!slug)
             return res.status(400).json({ error: 'Slug requis.' });
         const offering = await db_1.prisma.serviceOffering.findFirst({
-            where: { slug },
+            where: {
+                slug,
+                isBlockedByAdmin: false,
+                vendorProfile: {
+                    isBlockedByAdmin: false
+                }
+            },
             include: offeringInclude,
         });
         if (!offering)
@@ -662,8 +681,11 @@ async function getPublicVendor(req, res) {
         const slug = String(req.params.slug || '').trim();
         if (!slug)
             return res.status(400).json({ error: 'Slug requis.' });
-        const profile = await db_1.prisma.vendorProfile.findUnique({
-            where: { slug },
+        const profile = await db_1.prisma.vendorProfile.findFirst({
+            where: {
+                slug,
+                isBlockedByAdmin: false
+            },
             select: {
                 slug: true,
                 displayName: true,

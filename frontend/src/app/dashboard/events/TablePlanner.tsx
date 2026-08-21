@@ -464,20 +464,33 @@ export default function TablePlanner({
   const renderCanvas = (heightClass: string) => (
     <div className="space-y-4 flex-1 flex flex-col min-h-0">
       <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-surface border border-border rounded-[var(--radius-card)] shadow-sm shrink-0">
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setShowAddModal(true)}
-              className="font-medium"
-              disabled={tables.length >= caps.maxTables}
-              title={tables.length >= caps.maxTables ? `Limite de ${caps.maxTables} tables atteinte (${caps.label})` : undefined}
-            >
-              {tables.length >= caps.maxTables ? <Lock className="w-4 h-4 mr-1.5 opacity-70" /> : <PlusCircle className="w-4 h-4 mr-1.5" />}
-              Nouvelle table
-            </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setShowAddModal(true)}
+            className="font-medium"
+            disabled={tables.length >= caps.maxTables}
+            title={tables.length >= caps.maxTables ? `Limite de ${caps.maxTables} tables atteinte (${caps.label})` : undefined}
+          >
+            {tables.length >= caps.maxTables ? <Lock className="w-4 h-4 mr-1.5 opacity-70" /> : <PlusCircle className="w-4 h-4 mr-1.5" />}
+            Nouvelle table
+          </Button>
           
           {canImportRoomLayout && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {}}
+              disabled={false || tables.length > 0}
+              className="bg-surface font-medium"
+            >
+              <Download className="w-4 h-4 mr-1.5" />
+              Importer depuis salle
+            </Button>
+          )}
+
+          {onImportRoomLayout && (
             <Button
               size="sm"
               variant="ghost"
@@ -493,12 +506,9 @@ export default function TablePlanner({
               Importer plan type
             </Button>
           )}
-         Importer depuis salle
-       </Button>
-     )}
-   </div>
-   <div className="flex items-center gap-2">
-     <Button
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
        size="sm"
        variant="ghost"
        onClick={handleAutoAssign}

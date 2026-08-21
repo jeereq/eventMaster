@@ -107,6 +107,7 @@ async function listPublicEvents(req, res) {
         const events = await db_1.prisma.event.findMany({
             where: {
                 isPublic: true,
+                isBlockedByAdmin: false,
                 slug: { not: null },
                 date: {
                     gte: dateFrom || new Date(Date.now() - 12 * 60 * 60 * 1000),
@@ -162,7 +163,7 @@ async function getPublicEvent(req, res) {
     try {
         const slug = String(req.params.slug || '');
         const event = await db_1.prisma.event.findFirst({
-            where: { slug, isPublic: true },
+            where: { slug, isPublic: true, isBlockedByAdmin: false },
             include: {
                 tenant: { select: { name: true } },
                 posts: {
@@ -204,7 +205,7 @@ async function checkoutPublicEvent(req, res) {
             return res.status(400).json({ error: 'Nom et e-mail valides requis.' });
         }
         const event = await db_1.prisma.event.findFirst({
-            where: { slug, isPublic: true },
+            where: { slug, isPublic: true, isBlockedByAdmin: false },
             include: { tenant: { select: { plan: true, accountKind: true } } },
         });
         if (!event)

@@ -286,6 +286,7 @@ async function getTenantOps(req, res) {
         const tenant = await db_1.prisma.tenant.findUnique({
             where: { id: tenantId },
             include: {
+                vendorProfile: { select: { id: true, isBlockedByAdmin: true } },
                 manager: { select: { id: true, name: true, email: true, role: true, orgRole: true } },
                 _count: {
                     select: {

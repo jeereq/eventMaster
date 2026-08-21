@@ -12,6 +12,7 @@ import {
   MapPin,
   Search,
   Ticket,
+  Sparkles,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button, Input, Modal, PhoneInput, parseStoredPhone } from '@/components/ui';
@@ -46,10 +47,10 @@ import {
 } from '@/lib/eventConfig';
 
 const SELECT_CLASS =
-  'w-full px-3.5 py-2.5 bg-surface-muted dark:bg-background border border-border dark:border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary';
+  'w-full px-3.5 py-2.5 bg-surface-muted/50 backdrop-blur-sm dark:bg-background border border-border/80 dark:border-border rounded-[var(--radius-button)] text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all';
 
 const TEXTAREA_CLASS =
-  'w-full px-3.5 py-2.5 bg-surface-muted dark:bg-background border border-border dark:border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary resize-none';
+  'w-full px-3.5 py-2.5 bg-surface-muted/50 backdrop-blur-sm dark:bg-background border border-border/80 dark:border-border rounded-[var(--radius-button)] text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none transition-all';
 
 const SIMPLE_DRESS_PRESETS: Array<Exclude<DressCodePresetId, 'custom' | 'white_tie' | 'theme_color'>> = [
   'cocktail',
@@ -658,13 +659,32 @@ export default function EventConfigForm({
               required
             />
 
-            <label className="block space-y-1.5">
-              <span className="block text-xs font-semibold text-muted">Description</span>
+            <label className="block space-y-1.5 relative group">
+              <div className="flex items-center justify-between">
+                <span className="block text-xs font-semibold text-muted">Description</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!title) return;
+                    const hints = [
+                      "Préparez-vous à vivre un moment inoubliable...",
+                      "Nous sommes ravis de vous convier à cet événement exceptionnel.",
+                      "Rejoignez-nous pour célébrer ensemble dans la joie et la bonne humeur.",
+                      "Une journée magique pleine de surprises vous attend."
+                    ];
+                    setDescription(`Bienvenue à "${title}". ${hints[Math.floor(Math.random() * hints.length)]}`);
+                  }}
+                  className="text-[10px] font-semibold text-primary/80 hover:text-primary transition-colors flex items-center gap-1 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                  title="Générer une description magique basée sur le titre"
+                >
+                  <Sparkles className="w-3 h-3" /> Assistant IA
+                </button>
+              </div>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Optionnel — ambiance, précisions générales…"
-                rows={2}
+                rows={3}
                 className={TEXTAREA_CLASS}
               />
             </label>

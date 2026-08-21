@@ -1207,7 +1207,7 @@ export async function toggleAdminEventBlock(req: AuthenticatedRequest, res: Resp
       return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
     }
 
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const { isBlocked, reason } = req.body;
     
     if (typeof isBlocked !== 'boolean') {
@@ -1218,7 +1218,7 @@ export async function toggleAdminEventBlock(req: AuthenticatedRequest, res: Resp
       where: { id },
       data: {
         isBlockedByAdmin: isBlocked,
-        adminBlockReason: isBlocked ? (reason || 'Non-respect des règles') : null,
+        adminBlockReason: isBlocked ? (typeof reason === 'string' ? reason : 'Non-respect des règles') : null,
       },
     });
     return res.json({ success: true, event: updated });
