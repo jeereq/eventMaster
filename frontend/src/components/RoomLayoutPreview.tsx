@@ -186,6 +186,26 @@ export default function RoomLayoutPreview({
  );
  }
 
+ if (item.kind === 'chair') {
+ const depthScale = depthScaleForY(item.y, amount);
+ return (
+ <div
+ key={item.id}
+ className="absolute z-10"
+ style={{
+ left: `${item.x}%`,
+ top: `${item.y}%`,
+ transform: `translate(-50%, -50%) scale(${(quality === 'thumb' ? 0.45 : 0.8) * depthScale})${item.rotation ? ` rotate(${item.rotation}deg)` : ''}`,
+ ...furnitureDepthStyle(item.y, amount),
+ }}
+ >
+ <ChairRenderer chairType={item.chairType} imageUrl={item.chairImageUrl} size={quality === 'showcase' ? 'sm' : 'xs'} />
+ </div>
+ );
+ }
+
+ if (item.kind !== 'table') return null;
+
  const tableColor = resolveTableColor(item.tableColor, blueprint.metadata.defaultTableColor);
  const { className: tableClass, style: tableStyle } = getTableVisualStyle(item.shape, false, tableColor, item.tableImageUrl);
  const depthScale = depthScaleForY(item.y, amount);
@@ -211,7 +231,7 @@ export default function RoomLayoutPreview({
  </span>
  )}
  </div>
- {chairLimit > 0 &&
+ {chairLimit > 0 && item.attachedChairs !== false &&
  Array.from({ length: Math.min(item.capacity, chairLimit) }).map((_, seatIndex) => {
  const coords = getSeatCoordinates(item.shape, item.capacity, seatIndex, chairRadius);
  return (

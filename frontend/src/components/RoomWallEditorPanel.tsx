@@ -122,6 +122,16 @@ export default function RoomWallEditorPanel({
         >
           <BrickWall className="w-3 h-3" /> Contour → 4 murs
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            setWalls([], 'Tous les murs retirés');
+            onSelectWall(null);
+          }}
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] border border-rose-200 bg-rose-50 text-rose-700 text-[10px] font-bold"
+        >
+          <Trash2 className="w-3 h-3" /> Enlever les murs
+        </button>
       </div>
 
       <div className="grid grid-cols-3 gap-2">
@@ -395,6 +405,22 @@ export default function RoomWallEditorPanel({
                     />
                   </label>
                 </div>
+                {op.kind === 'door' ? (
+                  <p className="text-[9px] text-muted">Hauteur de porte typique : 2,0 – 2,2 m (double : largeur ~1,6 m).</p>
+                ) : (
+                  <label className="text-[9px] space-y-0.5 block">
+                    <span className="text-muted">Allège (bas) m</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={2}
+                      step={0.1}
+                      value={op.sillM ?? 0.9}
+                      onChange={(e) => updateOpening(selected.id, op.id, { sillM: parseFloat(e.target.value) || 0 })}
+                      className="w-full px-1 py-0.5 rounded border text-[10px]"
+                    />
+                  </label>
+                )}
                 <label className="text-[9px] space-y-0.5 block">
                   <span className="text-muted">Style</span>
                   <select

@@ -1,7 +1,7 @@
 'use client';
 
 import * as THREE from 'three';
-import type { ChairType, TableShape, WallTextureStyle } from '@/lib/roomLayoutUtils';
+import type { ChairType, TableShape, WallTextureStyle, ZoneMaterial } from '@/lib/roomLayoutUtils';
 import { WALL_TEXTURE_COLORS } from '@/lib/roomLayoutUtils';
 import { getFloorAsset, FLOOR_TEXTURE_REPEAT_M } from '@/lib/roomFloorUtils';
 import type { FloorType } from '@/lib/roomThemeUtils';
@@ -292,6 +292,78 @@ export const CHAIR_VISUALS: Record<ChairType, ChairVisual> = {
     cushion: true,
   },
 };
+
+export const ZONE_MATERIAL_COLORS: Record<ZoneMaterial, string> = {
+  wood: '#8b6914',
+  carpet: '#1e3a5f',
+  vinyl: '#312e81',
+  led: '#0ea5e9',
+  marble: '#e7e5e4',
+  concrete: '#9ca3af',
+  parquet: '#c4a06a',
+  epoxy: '#cbd5e1',
+};
+
+export function resolveZoneMaterialMap(material: ZoneMaterial | undefined): {
+  map: THREE.Texture | null;
+  color: string;
+  roughness: number;
+  metalness: number;
+  emissive?: string;
+  emissiveIntensity?: number;
+} {
+  const mat = material ?? 'wood';
+  const color = ZONE_MATERIAL_COLORS[mat];
+  if (mat === 'carpet' || mat === 'vinyl') {
+    return {
+      map: loadTiledTexture('/floors/carpet.svg', 2.5, 2.5),
+      color: mat === 'vinyl' ? '#4c1d95' : color,
+      roughness: 0.95,
+      metalness: 0,
+    };
+  }
+  if (mat === 'parquet' || mat === 'wood') {
+    return {
+      map: loadTiledTexture('/floors/parquet-oak.svg', 2, 2),
+      color: '#ffffff',
+      roughness: 0.7,
+      metalness: 0.05,
+    };
+  }
+  if (mat === 'marble') {
+    return {
+      map: loadTiledTexture('/floors/marble.svg', 1.5, 1.5),
+      color: '#ffffff',
+      roughness: 0.3,
+      metalness: 0.12,
+    };
+  }
+  if (mat === 'concrete') {
+    return {
+      map: loadTiledTexture('/floors/concrete.svg', 2, 2),
+      color: '#ffffff',
+      roughness: 0.85,
+      metalness: 0.05,
+    };
+  }
+  if (mat === 'epoxy') {
+    return {
+      map: loadTiledTexture('/floors/epoxy.svg', 2, 2),
+      color: '#ffffff',
+      roughness: 0.2,
+      metalness: 0.2,
+    };
+  }
+  // led
+  return {
+    map: loadTiledTexture('/floors/epoxy.svg', 1.2, 1.2),
+    color: '#0ea5e9',
+    roughness: 0.25,
+    metalness: 0.4,
+    emissive: '#0284c7',
+    emissiveIntensity: 0.35,
+  };
+}
 
 export function resolveChairMap(imageUrl?: string): THREE.Texture | null {
   if (!imageUrl) return null;

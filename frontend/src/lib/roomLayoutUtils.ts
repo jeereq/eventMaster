@@ -25,6 +25,11 @@ export type RoomOutlineShape =
 export type ColumnShape = 'round' | 'square';
 export type FlowerType = 'rose' | 'tulipe' | 'orchidee' | 'tournesol' | 'lavande' | 'boquet' | 'personnalise';
 
+/** Type de zone au sol (piste, VIP, moquette…). */
+export type ZoneKind = 'dance' | 'vip' | 'buffet' | 'carpet' | 'custom';
+/** Matériau de surface pour zones / moquettes. */
+export type ZoneMaterial = 'wood' | 'carpet' | 'vinyl' | 'led' | 'marble' | 'concrete' | 'parquet' | 'epoxy';
+
 /** Styles de texture murale pour le rendu WebGL. */
 export type WallTextureStyle = 'plaster' | 'brick' | 'wood' | 'concrete' | 'wallpaper' | 'stone';
 /** Styles de porte configurables. */
@@ -103,12 +108,12 @@ export interface RoomLayoutBlueprint {
     stroke?: string;
     strokeWidth?: number;
   };
-  /** Murs procéduraux (éditeur 2.5D / WebGL). Si absent, dérivés de roomOutline. */
+  /** Murs procéduraux (éditeur 2.5D / WebGL). `[]` = sans murs ; `undefined` = générés depuis le contour. */
   walls?: RoomWallSegment[];
   canvas: { widthM: number; heightM: number };
   fixtures: Array<{
     id: string;
-    kind: 'stage' | 'podium' | 'aisle' | 'entrance' | 'pillar' | 'perimeter' | 'column' | 'flower';
+    kind: 'stage' | 'podium' | 'aisle' | 'entrance' | 'pillar' | 'perimeter' | 'column' | 'flower' | 'carpet';
     x: number;
     y: number;
     w: number;
@@ -121,6 +126,8 @@ export interface RoomLayoutBlueprint {
     imageCrop?: ImageCropRect;
     flowerType?: FlowerType;
     flowerColor?: string;
+    /** Matériau / texture pour moquette, scène, etc. */
+    material?: ZoneMaterial;
   }>;
   furniture: Array<
     | {
@@ -137,6 +144,19 @@ export interface RoomLayoutBlueprint {
         y: number;
         locked?: boolean;
         rotation?: number;
+        /** Afficher les chaises collées autour de la table (false si détachées). */
+        attachedChairs?: boolean;
+      }
+    | {
+        id: string;
+        kind: 'chair';
+        chairType: ChairType;
+        chairImageUrl?: string;
+        label?: string;
+        x: number;
+        y: number;
+        rotation?: number;
+        locked?: boolean;
       }
     | {
         id: string;
@@ -149,15 +169,20 @@ export interface RoomLayoutBlueprint {
         x: number;
         y: number;
         curve?: number;
+        rotation?: number;
       }
     | {
         id: string;
         kind: 'zone';
         label: string;
+        zoneKind?: ZoneKind;
+        material?: ZoneMaterial;
+        color?: string;
         x: number;
         y: number;
         w: number;
         h: number;
+        rotation?: number;
       }
   >;
   metadata: {
@@ -234,15 +259,77 @@ export function createBlueprintRow(
 export function createBlueprintZone(
   label: string,
   index = 1,
+  opts: { zoneKind?: ZoneKind; material?: ZoneMaterial; color?: string; w?: number; h?: number } = {},
 ): Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'zone' }> {
+  const zoneKind =
+    opts.zoneKind ??
+    (label.toLowerCase().includes('piste')
+      ? 'dance'
+      : label.toLowerCase().includes('vip')
+        ? 'vip'
+        : label.toLowerCase().includes('buffet')
+          ? 'buffet'
+          : label.toLowerCase().includes('moquette') || label.toLowerCase().includes('tapis')
+            ? 'carpet'
+            : 'custom');
+  const material =
+    opts.material ??
+    (zoneKind === 'dance' ? 'vinyl' : zoneKind === 'carpet' ? 'carpet' : zoneKind === 'vip' ? 'marble' : 'wood');
   return {
     id: makeLayoutId('zone'),
     kind: 'zone',
     label,
+    zoneKind,
+    material,
+    color: opts.color,
     x: 18 + (index % 3) * 10,
     y: 28 + (index % 2) * 8,
-    w: 26,
-    h: 16,
+    w: opts.w ?? (zoneKind === 'dance' ? 32 : zoneKind === 'carpet' ? 28 : 26),
+    h: opts.h ?? (zoneKind === 'dance' ? 24 : zoneKind === 'carpet' ? 20 : 16),
+  };
+}
+
+export function createBlueprintChair(
+  index = 1,
+  defaults: { chairType?: ChairType; x?: number; y?: number; rotation?: number } = {},
+): Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'chair' }> {
+  return {
+    id: makeLayoutId('chair'),
+    kind: 'chair',
+    chairType: defaults.chairType ?? 'BANQUET',
+    label: `Chaise ${index}`,
+    x: defaults.x ?? 40 + Math.random() * 20,
+    y: defaults.y ?? 40 + Math.random() * 20,
+    rotation: defaults.rotation ?? 0,
+  };
+}
+
+/** Détache les chaises d’une table en éléments déplaçables indépendamment. */
+export function detachTableChairs(
+  blueprint: RoomLayoutBlueprint,
+  tableId: string,
+): RoomLayoutBlueprint {
+  const table = blueprint.furniture.find((f) => f.kind === 'table' && f.id === tableId);
+  if (!table || table.kind !== 'table') return blueprint;
+  const capacity = Math.min(table.capacity, 14);
+  const chairs = Array.from({ length: capacity }).map((_, i) => {
+    const a = (i / capacity) * Math.PI * 2 - Math.PI / 2;
+    const radiusPct = 7;
+    return createBlueprintChair(i + 1, {
+      chairType: table.chairType,
+      x: Math.max(2, Math.min(98, table.x + Math.cos(a) * radiusPct)),
+      y: Math.max(2, Math.min(98, table.y + Math.sin(a) * radiusPct)),
+      rotation: ((-a + Math.PI) * 180) / Math.PI,
+    });
+  });
+  return {
+    ...blueprint,
+    furniture: [
+      ...blueprint.furniture.map((f) =>
+        f.id === tableId && f.kind === 'table' ? { ...f, attachedChairs: false } : f,
+      ),
+      ...chairs,
+    ],
   };
 }
 
@@ -258,6 +345,7 @@ export function createBlueprintFixture(
     column: { x: 30, y: 40, w: 3, h: 3, label: 'Colonne' },
     perimeter: { x: 8, y: 10, w: 84, h: 80, label: 'Périmètre' },
     flower: { x: 10, y: 85, w: 4, h: 4, label: 'Fleurs' },
+    carpet: { x: 30, y: 55, w: 40, h: 28, label: 'Moquette' },
   };
   const d = defaults[kind] ?? { x: 40, y: 40, w: 20, h: 10, label: kind };
   return {
@@ -265,11 +353,31 @@ export function createBlueprintFixture(
     kind,
     ...d,
     columnShape: kind === 'pillar' || kind === 'column' ? 'round' as ColumnShape : undefined,
-    color: kind === 'pillar' || kind === 'column' ? '#78716c' : undefined,
+    color: kind === 'pillar' || kind === 'column' ? '#78716c' : kind === 'carpet' ? '#1e3a5f' : undefined,
     flowerType: kind === 'flower' ? 'boquet' as FlowerType : undefined,
     flowerColor: kind === 'flower' ? '#e11d48' : undefined,
+    material: kind === 'carpet' ? 'carpet' : kind === 'stage' || kind === 'podium' ? 'wood' : undefined,
   };
 }
+
+export const zoneKindLabels: Record<ZoneKind, string> = {
+  dance: 'Piste de danse',
+  vip: 'Espace VIP',
+  buffet: 'Buffet',
+  carpet: 'Moquette / tapis',
+  custom: 'Zone libre',
+};
+
+export const zoneMaterialLabels: Record<ZoneMaterial, string> = {
+  wood: 'Bois',
+  carpet: 'Moquette',
+  vinyl: 'Vinyle danse',
+  led: 'Piste LED',
+  marble: 'Marbre',
+  concrete: 'Béton',
+  parquet: 'Parquet',
+  epoxy: 'Résine',
+};
 
 export function defaultRoomOutline(shape: RoomOutlineShape = 'rectangle'): NonNullable<RoomLayoutBlueprint['roomOutline']> {
   return {
@@ -393,7 +501,7 @@ export function wallsFromRoomOutline(
 }
 
 export function resolveBlueprintWalls(blueprint: RoomLayoutBlueprint): RoomWallSegment[] {
-  if (blueprint.walls && blueprint.walls.length > 0) return blueprint.walls;
+  if (Array.isArray(blueprint.walls)) return blueprint.walls;
   const outline = blueprint.roomOutline ?? defaultRoomOutline('rectangle');
   return wallsFromRoomOutline(outline, { withEntrance: true });
 }
@@ -416,7 +524,7 @@ export function ensureBlueprintDefaults(blueprint: RoomLayoutBlueprint): RoomLay
   return {
     ...blueprint,
     roomOutline: outline,
-    walls: blueprint.walls && blueprint.walls.length > 0
+    walls: Array.isArray(blueprint.walls)
       ? blueprint.walls
       : wallsFromRoomOutline(outline, { withEntrance: true }),
     metadata: {

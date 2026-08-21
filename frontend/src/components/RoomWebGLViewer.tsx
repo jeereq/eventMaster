@@ -12,6 +12,7 @@ import {
   resolveTableColor,
   type ChairType,
   type TableShape,
+  type ZoneMaterial,
 } from '@/lib/roomLayoutUtils';
 import { resolveDepthAmount } from '@/lib/roomFloorUtils';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
@@ -21,10 +22,11 @@ import {
   resolveChairMap,
   resolveFloorMap,
   resolveTableMaterial,
+  resolveZoneMaterialMap,
 } from '@/lib/roomWebGLMaterials';
 import { cn } from '@/lib/cn';
 
-export type WebGLSelectableKind = 'table' | 'row' | 'zone' | 'fixture' | 'wall';
+export type WebGLSelectableKind = 'table' | 'row' | 'zone' | 'fixture' | 'wall' | 'chair';
 
 export interface WebGLSelection {
   kind: WebGLSelectableKind;
@@ -306,12 +308,13 @@ function TableMesh({
   chairType,
   chairImageUrl,
   tableImageUrl,
+  attachedChairs = true,
   rotation,
   widthM,
   heightM,
   selected,
   onSelect,
-  onDrag,
+  onDragStart,
   readOnly,
 }: {
   xPct: number;
@@ -323,16 +326,16 @@ function TableMesh({
   chairType: ChairType;
   chairImageUrl?: string;
   tableImageUrl?: string;
+  attachedChairs?: boolean;
   rotation?: number;
   widthM: number;
   heightM: number;
   selected: boolean;
   onSelect: () => void;
-  onDrag?: (xPct: number, yPct: number) => void;
+  onDragStart?: () => void;
   readOnly?: boolean;
 }) {
   const [wx, wz] = pctToWorld(xPct, yPct, widthM, heightM);
-  const dragging = useRef(false);
   const { gl } = useThree();
   const mat = useMemo(
     () => resolveTableMaterial(shape, color, tableImageUrl),
@@ -347,26 +350,6 @@ function TableMesh({
   const isRound = shape === 'round' || shape === 'oval';
   const topY = 0.72;
 
-  const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
-    if (readOnly || !onDrag) return;
-    e.stopPropagation();
-    dragging.current = true;
-    onSelect();
-    gl.domElement.style.cursor = 'grabbing';
-  };
-
-  const handlePointerUp = () => {
-    dragging.current = false;
-    gl.domElement.style.cursor = 'auto';
-  };
-
-  const handlePointerMove = (e: ThreeEvent<PointerEvent>) => {
-    if (!dragging.current || !onDrag) return;
-    e.stopPropagation();
-    const pct = worldToPct(e.point.x, e.point.z, widthM, heightM);
-    onDrag(pct.x, pct.y);
-  };
-
   return (
     <group
       position={[wx, 0, wz]}
@@ -375,12 +358,14 @@ function TableMesh({
         e.stopPropagation();
         onSelect();
       }}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      onPointerMove={handlePointerMove}
-      onPointerLeave={handlePointerUp}
+      onPointerDown={(e) => {
+        if (readOnly || !onDragStart) return;
+        e.stopPropagation();
+        onSelect();
+        onDragStart();
+        gl.domElement.style.cursor = 'grabbing';
+      }}
     >
-      {/* Plateau */}
       {isRound ? (
         <mesh position={[0, topY, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[size[0] / 2, size[0] / 2, 0.08, shape === 'oval' ? 28 : 36]} />
@@ -402,7 +387,6 @@ function TableMesh({
           />
         </mesh>
       )}
-      {/* Nappe fine */}
       <mesh position={[0, topY + 0.045, 0]} receiveShadow>
         {isRound ? (
           <cylinderGeometry args={[size[0] / 2 * 0.92, size[0] / 2 * 0.92, 0.01, 32]} />
@@ -411,7 +395,6 @@ function TableMesh({
         )}
         <meshStandardMaterial color="#faf7f2" transparent opacity={0.55} roughness={0.9} />
       </mesh>
-      {/* Pied central / pieds */}
       {isRound ? (
         <>
           <mesh position={[0, topY / 2, 0]} castShadow>
@@ -433,8 +416,7 @@ function TableMesh({
           )),
         )
       )}
-      {/* Chaises autour */}
-      {Array.from({ length: Math.min(capacity, 14) }).map((_, i) => {
+      {attachedChairs !== false && Array.from({ length: Math.min(capacity, 14) }).map((_, i) => {
         const a = (i / capacity) * Math.PI * 2 - Math.PI / 2;
         const r = Math.max(size[0], size[1]) / 2 + 0.48;
         return (
@@ -465,42 +447,159 @@ function ZoneMesh({
   wPct,
   hPct,
   label,
+  material,
+  color,
   widthM,
   heightM,
   selected,
   onSelect,
+  onDragStart,
+  readOnly,
 }: {
   xPct: number;
   yPct: number;
   wPct: number;
   hPct: number;
   label: string;
+  material?: ZoneMaterial;
+  color?: string;
   widthM: number;
   heightM: number;
   selected: boolean;
   onSelect: () => void;
+  onDragStart?: () => void;
+  readOnly?: boolean;
 }) {
   const w = (wPct / 100) * widthM;
   const h = (hPct / 100) * heightM;
   const [cx, cz] = pctToWorld(xPct + wPct / 2, yPct + hPct / 2, widthM, heightM);
-  const wood = useMemo(() => getWallTexture('wood').map, []);
+  const mat = useMemo(() => resolveZoneMaterialMap(material), [material]);
+  const { gl } = useThree();
+
   return (
-    <group position={[cx, 0.03, cz]} onClick={(e) => { e.stopPropagation(); onSelect(); }}>
+    <group
+      position={[cx, 0.04, cz]}
+      onClick={(e) => { e.stopPropagation(); onSelect(); }}
+      onPointerDown={(e) => {
+        if (readOnly || !onDragStart) return;
+        e.stopPropagation();
+        onSelect();
+        onDragStart();
+        gl.domElement.style.cursor = 'grabbing';
+      }}
+    >
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[w, h]} />
         <meshStandardMaterial
-          color={selected ? '#818cf8' : label.toLowerCase().includes('piste') ? '#312e81' : '#a78bfa'}
-          map={wood}
-          transparent
-          opacity={0.45}
-          depthWrite={false}
-          roughness={0.9}
+          color={selected ? '#c7d2fe' : (color ?? mat.color)}
+          map={mat.map ?? undefined}
+          roughness={mat.roughness}
+          metalness={mat.metalness}
+          emissive={mat.emissive}
+          emissiveIntensity={mat.emissiveIntensity ?? 0}
         />
       </mesh>
-      <Html center distanceFactor={12} style={{ pointerEvents: 'none' }}>
-        <span className="text-[10px] font-bold text-primary bg-white/85 px-1.5 py-0.5 rounded shadow-sm">{label}</span>
+      <Html center distanceFactor={12} style={{ pointerEvents: 'none' }} position={[0, 0.2, 0]}>
+        <span className="text-[10px] font-bold text-white bg-black/55 px-1.5 py-0.5 rounded shadow-sm">{label}</span>
       </Html>
     </group>
+  );
+}
+
+function FreeChairMesh({
+  xPct,
+  yPct,
+  chairType,
+  chairImageUrl,
+  rotation,
+  widthM,
+  heightM,
+  selected,
+  onSelect,
+  onDragStart,
+  readOnly,
+  label,
+}: {
+  xPct: number;
+  yPct: number;
+  chairType: ChairType;
+  chairImageUrl?: string;
+  rotation?: number;
+  widthM: number;
+  heightM: number;
+  selected: boolean;
+  onSelect: () => void;
+  onDragStart?: () => void;
+  readOnly?: boolean;
+  label?: string;
+}) {
+  const [wx, wz] = pctToWorld(xPct, yPct, widthM, heightM);
+  const { gl } = useThree();
+  return (
+    <group
+      position={[wx, 0, wz]}
+      onClick={(e) => { e.stopPropagation(); onSelect(); }}
+      onPointerDown={(e) => {
+        if (readOnly || !onDragStart) return;
+        e.stopPropagation();
+        onSelect();
+        onDragStart();
+        gl.domElement.style.cursor = 'grabbing';
+      }}
+    >
+      <RealisticChair
+        chairType={chairType}
+        imageUrl={chairImageUrl}
+        position={[0, 0, 0]}
+        rotationY={((rotation ?? 0) * Math.PI) / 180}
+        selected={selected}
+      />
+      {selected && (
+        <Html center distanceFactor={9} style={{ pointerEvents: 'none' }} position={[0, 1.05, 0]}>
+          <span className="text-[9px] font-bold bg-primary text-white px-1.5 py-0.5 rounded">{label || 'Chaise'}</span>
+        </Html>
+      )}
+    </group>
+  );
+}
+
+function DragPlane({
+  active,
+  widthM,
+  heightM,
+  onDrag,
+  onEnd,
+}: {
+  active: boolean;
+  widthM: number;
+  heightM: number;
+  onDrag: (xPct: number, yPct: number) => void;
+  onEnd: () => void;
+}) {
+  const { gl } = useThree();
+  if (!active) return null;
+  return (
+    <mesh
+      rotation={[-Math.PI / 2, 0, 0]}
+      position={[0, 0.05, 0]}
+      onPointerMove={(e) => {
+        e.stopPropagation();
+        const pct = worldToPct(e.point.x, e.point.z, widthM, heightM);
+        onDrag(pct.x, pct.y);
+      }}
+      onPointerUp={(e) => {
+        e.stopPropagation();
+        gl.domElement.style.cursor = 'auto';
+        onEnd();
+      }}
+      onPointerLeave={() => {
+        gl.domElement.style.cursor = 'auto';
+        onEnd();
+      }}
+    >
+      <planeGeometry args={[widthM * 3, heightM * 3]} />
+      <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+    </mesh>
   );
 }
 
@@ -538,9 +637,10 @@ function FixtureMesh({
   const w = (wPct / 100) * widthM;
   const d = (hPct / 100) * heightM;
   const [cx, cz] = pctToWorld(xPct + wPct / 2, yPct + hPct / 2, widthM, heightM);
-  const height = kind === 'stage' || kind === 'podium' ? 0.55 : kind === 'column' || kind === 'pillar' ? 2.6 : kind === 'flower' ? 0.7 : 0.35;
+  const height = kind === 'stage' || kind === 'podium' ? 0.55 : kind === 'column' || kind === 'pillar' ? 2.6 : kind === 'flower' ? 0.7 : kind === 'carpet' ? 0.06 : 0.35;
   const map = useMemo(() => {
     if (imageUrl) return resolveChairMap(imageUrl);
+    if (kind === 'carpet') return resolveZoneMaterialMap('carpet').map;
     if (kind === 'stage' || kind === 'podium') return getWallTexture('wood').map;
     if (kind === 'column' || kind === 'pillar') return getWallTexture('stone').map;
     if (kind === 'perimeter') return getWallTexture('concrete').map;
@@ -653,12 +753,10 @@ function SceneContent({
     camera.updateProjectionMatrix();
   }, [camera, depthAmount, widthM, heightM]);
 
-  const moveTable = useCallback(
-    (id: string, x: number, y: number) => onMoveItem?.('table', id, x, y),
-    [onMoveItem],
-  );
-  const moveFixture = useCallback(
-    (id: string, x: number, y: number) => onMoveItem?.('fixture', id, x, y),
+  const [dragTarget, setDragTarget] = React.useState<{ kind: WebGLSelectableKind; id: string } | null>(null);
+
+  const moveAny = useCallback(
+    (kind: WebGLSelectableKind, id: string, x: number, y: number) => onMoveItem?.(kind, id, x, y),
     [onMoveItem],
   );
 
@@ -725,7 +823,7 @@ function SceneContent({
           heightM={heightM}
           selected={selected?.kind === 'fixture' && selected.id === f.id}
           onSelect={() => onSelect({ kind: 'fixture', id: f.id })}
-          onDrag={wallEditMode ? undefined : (x, y) => moveFixture(f.id, x, y)}
+          onDrag={wallEditMode ? undefined : (x, y) => moveAny('fixture', f.id, x, y)}
           readOnly={readOnly || wallEditMode}
         />
       ))}
@@ -740,10 +838,33 @@ function SceneContent({
               wPct={item.w}
               hPct={item.h}
               label={item.label}
+              material={item.material}
+              color={item.color}
               widthM={widthM}
               heightM={heightM}
               selected={selected?.kind === 'zone' && selected.id === item.id}
               onSelect={() => onSelect({ kind: 'zone', id: item.id })}
+              onDragStart={wallEditMode || readOnly ? undefined : () => setDragTarget({ kind: 'zone', id: item.id })}
+              readOnly={readOnly || wallEditMode}
+            />
+          );
+        }
+        if (item.kind === 'chair') {
+          return (
+            <FreeChairMesh
+              key={item.id}
+              xPct={item.x}
+              yPct={item.y}
+              chairType={item.chairType}
+              chairImageUrl={item.chairImageUrl}
+              rotation={item.rotation}
+              label={item.label}
+              widthM={widthM}
+              heightM={heightM}
+              selected={selected?.kind === 'chair' && selected.id === item.id}
+              onSelect={() => onSelect({ kind: 'chair', id: item.id })}
+              onDragStart={wallEditMode || readOnly || item.locked ? undefined : () => setDragTarget({ kind: 'chair', id: item.id })}
+              readOnly={readOnly || wallEditMode || item.locked}
             />
           );
         }
@@ -754,7 +875,14 @@ function SceneContent({
             <group
               key={item.id}
               position={[wx, 0, wz]}
+              rotation={[0, ((item.rotation ?? 0) * Math.PI) / 180, 0]}
               onClick={(e) => { e.stopPropagation(); onSelect({ kind: 'row', id: item.id }); }}
+              onPointerDown={(e) => {
+                if (readOnly || wallEditMode) return;
+                e.stopPropagation();
+                onSelect({ kind: 'row', id: item.id });
+                setDragTarget({ kind: 'row', id: item.id });
+              }}
             >
               {Array.from({ length: count }).map((_, i) => (
                 <RealisticChair
@@ -786,20 +914,32 @@ function SceneContent({
             chairType={item.chairType}
             chairImageUrl={item.chairImageUrl}
             tableImageUrl={item.tableImageUrl}
+            attachedChairs={item.attachedChairs}
             rotation={item.rotation}
             widthM={widthM}
             heightM={heightM}
             selected={selected?.kind === 'table' && selected.id === item.id}
             onSelect={() => onSelect({ kind: 'table', id: item.id })}
-            onDrag={wallEditMode || item.locked ? undefined : (x, y) => moveTable(item.id, x, y)}
+            onDragStart={wallEditMode || readOnly || item.locked ? undefined : () => setDragTarget({ kind: 'table', id: item.id })}
             readOnly={readOnly || wallEditMode || item.locked}
           />
         );
       })}
 
+      <DragPlane
+        active={Boolean(dragTarget) && !wallEditMode}
+        widthM={widthM}
+        heightM={heightM}
+        onDrag={(x, y) => {
+          if (!dragTarget) return;
+          moveAny(dragTarget.kind, dragTarget.id, x, y);
+        }}
+        onEnd={() => setDragTarget(null)}
+      />
+
       <OrbitControls
-        enablePan={!wallEditMode}
-        enableRotate={!wallEditMode}
+        enablePan={!wallEditMode && !dragTarget}
+        enableRotate={!wallEditMode && !dragTarget}
         enableZoom
         maxPolarAngle={Math.PI / 2.05}
         minDistance={3}

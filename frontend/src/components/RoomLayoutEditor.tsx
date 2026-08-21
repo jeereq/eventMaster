@@ -24,6 +24,7 @@ import {
   autoArrangeTables,
   arrangeDensityLabels,
   chairTypeLabels,
+  createBlueprintChair,
   createBlueprintFixture,
   createBlueprintRow,
   createBlueprintTable,
@@ -31,6 +32,7 @@ import {
   createSavedRoomTemplate,
   defaultRoomOutline,
   deleteCustomTemplateFromBlueprint,
+  detachTableChairs,
   ensureBlueprintDefaults,
   flowerTypeLabels,
   getRoomOutlineClipPath,
@@ -42,9 +44,13 @@ import {
   tableArrangeLabels,
   tableShapeLabels,
   wallsFromRoomOutline,
+  zoneKindLabels,
+  zoneMaterialLabels,
   type ArrangeDensity,
   type LayoutParams,
   type TableArrangePreset,
+  type ZoneKind,
+  type ZoneMaterial,
 } from '@/lib/roomLayoutUtils';
 import { roomEditorCapabilities, snapLayoutPct } from '@/lib/roomEditorAccess';
 import { prependLayoutAction, LayoutActionEntry } from '@/lib/layoutActionLog';
@@ -54,7 +60,7 @@ import { floorTypeLabels, resolveDepthAmount, resolveFloorStyle } from '@/lib/ro
 import CustomRoomThemePanel from '@/components/CustomRoomThemePanel';
 import { cn } from '@/lib/cn';
 
-type SelectableKind = 'table' | 'row' | 'zone' | 'fixture' | 'wall';
+type SelectableKind = 'table' | 'row' | 'zone' | 'fixture' | 'wall' | 'chair';
 
 interface RoomLayoutEditorProps {
   blueprint: RoomLayoutBlueprint;
@@ -210,15 +216,38 @@ export default function RoomLayoutEditor({
     setSelected({ kind: 'row', id: row.id });
   };
 
-  const addZone = (label: string) => {
+  const addZone = (label: string, opts?: { zoneKind?: ZoneKind; material?: ZoneMaterial }) => {
     if (!caps.canZones) {
       log('Les zones (piste, VIP, buffet) ne sont pas incluses dans votre forfait', 'info');
       return;
     }
     const count = blueprint.furniture.filter((f) => f.kind === 'zone').length + 1;
-    const zone = createBlueprintZone(label, count);
+    const zone = createBlueprintZone(label, count, opts);
     updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, zone] }, { message: `Zone « ${zone.label} » ajoutée`, kind: 'add' });
     setSelected({ kind: 'zone', id: zone.id });
+  };
+
+  const addFreeChair = () => {
+    const count = blueprint.furniture.filter((f) => f.kind === 'chair').length + 1;
+    const chair = createBlueprintChair(count, { chairType: 'BANQUET' });
+    updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, chair] }, { message: 'Chaise libre ajoutée', kind: 'add' });
+    setSelected({ kind: 'chair', id: chair.id });
+  };
+
+  const addCarpet = () => {
+    if (caps.canZones) {
+      addZone('Moquette', { zoneKind: 'carpet', material: 'carpet' });
+      return;
+    }
+    const fixture = createBlueprintFixture('carpet');
+    updateBlueprint({ ...blueprint, fixtures: [...blueprint.fixtures, fixture] }, { message: 'Moquette ajoutée', kind: 'add' });
+    setSelected({ kind: 'fixture', id: fixture.id });
+  };
+
+  const clearWalls = () => {
+    updateBlueprint({ ...blueprint, walls: [] }, { message: 'Tous les murs ont été retirés', kind: 'settings' });
+    setSelected(null);
+    setWallEditMode(false);
   };
 
   const addFixture = (kind: RoomLayoutBlueprint['fixtures'][number]['kind']) => {
@@ -958,6 +987,28 @@ export default function RoomLayoutEditor({
                 </button>
               ) : null}
             </div>
+            {selectedFurniture.attachedChairs !== false ? (
+              <button
+                type="button"
+                onClick={() => {
+                  updateBlueprint(detachTableChairs(blueprint, selectedFurniture.id), {
+                    message: 'Chaises détachées — déplacez-les librement',
+                    kind: 'edit',
+                  });
+                }}
+                className="w-full py-2 rounded-[var(--radius-button)] border border-violet-200 bg-violet-50 text-violet-800 text-[10px] font-bold"
+              >
+                Détacher les chaises (placement libre)
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => updateFurniture(selectedFurniture.id, { attachedChairs: true }, 'Chaises rattachées à la table')}
+                className="w-full py-2 rounded-[var(--radius-button)] border text-[10px] font-bold text-muted"
+              >
+                Réafficher chaises autour de la table
+              </button>
+            )}
             <div className="pt-2 border-t border-border space-y-1.5">
               <p className="text-[10px] font-bold uppercase text-muted">Appliquer à toutes les tables</p>
               <div className="grid grid-cols-2 gap-1.5">
@@ -1029,10 +1080,45 @@ export default function RoomLayoutEditor({
       return (
         <div className="space-y-3">
           <div className="p-4 bg-surface-muted rounded-[var(--radius-card)] border space-y-3">
-            <p className="text-xs font-bold uppercase text-muted">Zone</p>
+            <p className="text-xs font-bold uppercase text-muted">
+              {selectedFurniture.zoneKind === 'dance' ? 'Piste de danse' : selectedFurniture.zoneKind === 'carpet' ? 'Moquette' : 'Zone'}
+            </p>
             <label className="block text-xs space-y-1">
               <span className="font-semibold text-muted">Libellé</span>
               <input value={selectedFurniture.label} onChange={(e) => updateFurniture(selectedFurniture.id, { label: e.target.value })} className="w-full px-3 py-2 rounded-[var(--radius-button)] border text-sm" />
+            </label>
+            <label className="block text-xs space-y-1">
+              <span className="font-semibold text-muted">Type de zone</span>
+              <select
+                value={selectedFurniture.zoneKind ?? 'custom'}
+                onChange={(e) => updateFurniture(selectedFurniture.id, { zoneKind: e.target.value as ZoneKind }, 'Type de zone modifié')}
+                className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
+              >
+                {(Object.keys(zoneKindLabels) as ZoneKind[]).map((k) => (
+                  <option key={k} value={k}>{zoneKindLabels[k]}</option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-xs space-y-1">
+              <span className="font-semibold text-muted">Matériau / sol</span>
+              <select
+                value={selectedFurniture.material ?? 'vinyl'}
+                onChange={(e) => updateFurniture(selectedFurniture.id, { material: e.target.value as ZoneMaterial }, 'Matériau de zone modifié')}
+                className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm"
+              >
+                {(Object.keys(zoneMaterialLabels) as ZoneMaterial[]).map((k) => (
+                  <option key={k} value={k}>{zoneMaterialLabels[k]}</option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-xs space-y-1">
+              <span className="font-semibold text-muted">Teinte</span>
+              <input
+                type="color"
+                value={selectedFurniture.color ?? '#312e81'}
+                onChange={(e) => updateFurniture(selectedFurniture.id, { color: e.target.value }, 'Couleur de zone')}
+                className="w-full h-9 rounded-[var(--radius-button)] border cursor-pointer"
+              />
             </label>
             <div className="grid grid-cols-2 gap-2">
               <label className="text-xs space-y-1">
@@ -1040,10 +1126,42 @@ export default function RoomLayoutEditor({
                 <input type="number" min={8} max={90} value={selectedFurniture.w} onChange={(e) => updateFurniture(selectedFurniture.id, { w: parseInt(e.target.value, 10) || 20 })} className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm" />
               </label>
               <label className="text-xs space-y-1">
-                <span className="font-semibold text-muted">Hauteur %</span>
+                <span className="font-semibold text-muted">Profondeur %</span>
                 <input type="number" min={8} max={90} value={selectedFurniture.h} onChange={(e) => updateFurniture(selectedFurniture.id, { h: parseInt(e.target.value, 10) || 16 })} className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm" />
               </label>
             </div>
+            <p className="text-[10px] text-muted">Glissez la zone dans la vue 3D pour la repositionner.</p>
+          </div>
+          <LayoutActionPanel actions={actionLog} />
+        </div>
+      );
+    }
+
+    if (selectedFurniture?.kind === 'chair') {
+      return (
+        <div className="space-y-3">
+          <div className="p-4 bg-surface-muted rounded-[var(--radius-card)] border space-y-3">
+            <p className="text-xs font-bold uppercase text-muted">Chaise libre</p>
+            <label className="block text-xs space-y-1">
+              <span className="font-semibold text-muted">Libellé</span>
+              <input value={selectedFurniture.label ?? ''} onChange={(e) => updateFurniture(selectedFurniture.id, { label: e.target.value })} className="w-full px-3 py-2 rounded-[var(--radius-button)] border text-sm" />
+            </label>
+            <label className="block text-xs space-y-1">
+              <span className="font-semibold text-muted">Type</span>
+              <select value={selectedFurniture.chairType} onChange={(e) => updateFurniture(selectedFurniture.id, { chairType: e.target.value as ChairType })} className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm">
+                {Object.entries(chairTypeLabels).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+            </label>
+            {caps.canRotate ? (
+              <label className="block text-xs space-y-1">
+                <span className="font-semibold text-muted">Rotation °</span>
+                <input type="number" min={0} max={360} value={selectedFurniture.rotation ?? 0} onChange={(e) => updateFurniture(selectedFurniture.id, { rotation: parseFloat(e.target.value) || 0 })} className="w-full px-2 py-1.5 rounded-[var(--radius-button)] border text-sm" />
+              </label>
+            ) : null}
+            {caps.canCustomImages ? renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl) : null}
+            <p className="text-[10px] text-muted">Glissez la chaise librement dans la vue 3D.</p>
           </div>
           <LayoutActionPanel actions={actionLog} />
         </div>
@@ -1202,11 +1320,14 @@ export default function RoomLayoutEditor({
       ) : null}
       {caps.canZones ? (
         <>
-          <button type="button" onClick={() => addZone('Piste de danse')} className="px-3 py-1.5 bg-violet-50 border border-violet-200 text-violet-800 rounded-[var(--radius-button)] text-xs font-bold">Piste</button>
-          <button type="button" onClick={() => addZone('Espace VIP')} className="px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-[var(--radius-button)] text-xs font-bold">VIP</button>
-          <button type="button" onClick={() => addZone('Buffet')} className="px-3 py-1.5 bg-orange-50 border border-orange-200 text-orange-800 rounded-[var(--radius-button)] text-xs font-bold">Buffet</button>
+          <button type="button" onClick={() => addZone('Piste de danse', { zoneKind: 'dance', material: 'vinyl' })} className="px-3 py-1.5 bg-violet-50 border border-violet-200 text-violet-800 rounded-[var(--radius-button)] text-xs font-bold">Piste</button>
+          <button type="button" onClick={() => addZone('Espace VIP', { zoneKind: 'vip', material: 'marble' })} className="px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-[var(--radius-button)] text-xs font-bold">VIP</button>
+          <button type="button" onClick={() => addZone('Buffet', { zoneKind: 'buffet', material: 'wood' })} className="px-3 py-1.5 bg-orange-50 border border-orange-200 text-orange-800 rounded-[var(--radius-button)] text-xs font-bold">Buffet</button>
+          <button type="button" onClick={addCarpet} className="px-3 py-1.5 bg-sky-50 border border-sky-200 text-sky-800 rounded-[var(--radius-button)] text-xs font-bold">Moquette</button>
         </>
       ) : null}
+      <button type="button" onClick={addFreeChair} className="px-3 py-1.5 bg-white border border-border text-foreground rounded-[var(--radius-button)] text-xs font-bold">Chaise libre</button>
+      <button type="button" onClick={clearWalls} className="px-3 py-1.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-[var(--radius-button)] text-xs font-bold">Sans murs</button>
       {caps.fixtureKinds.includes('stage') ? (
         <button type="button" onClick={() => addFixture('stage')} className="px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-[var(--radius-button)] text-xs font-bold">Scène</button>
       ) : null}
