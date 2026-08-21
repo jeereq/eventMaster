@@ -59,6 +59,14 @@ export const KIND_FILTER_OPTIONS = [
   { id: 'event', label: 'Événements' },
 ];
 
+export function catalogueKindFilterTitle(kind: CatalogueKind, fallback = 'Filtrer'): string {
+  if (kind === 'venue') return 'Filtrer les salles';
+  if (kind === 'service') return 'Filtrer les métiers';
+  if (kind === 'rental') return 'Filtrer les locations';
+  if (kind === 'event') return 'Filtrer les événements';
+  return fallback;
+}
+
 export function parseCatalogueKind(value: string | undefined): CatalogueKind {
   return value === 'venue' || value === 'service' || value === 'rental' || value === 'event' ? value : 'all';
 }

@@ -44,6 +44,7 @@ import {
   KIND_FILTER_OPTIONS,
   appendCatalogueEntityParams,
   catalogueEntityExtraChips,
+  catalogueKindFilterTitle,
   clearCatalogueExtraChip,
   composeCatalogueFeed,
   mergeCatalogueExtras,
@@ -472,7 +473,7 @@ function ClientMarketplaceInner() {
           throw err;
         }
       }}
-      modalTitle="Filtrer le marketplace"
+      modalTitle={catalogueKindFilterTitle(draft.kind, 'Filtrer le marketplace')}
       filters={
         <CatalogueEntityFilterFields
           showKind

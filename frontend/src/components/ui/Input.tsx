@@ -41,7 +41,7 @@ export default function Input({
  <input
  id={id}
  className={cn(
- 'block w-full py-2.5 bg-surface-muted dark:bg-background border rounded-xl',
+ 'block w-full py-2.5 bg-surface-muted dark:bg-background border rounded-[var(--radius-button)]',
  'text-sm text-foreground dark:text-foreground placeholder:text-muted dark:placeholder:text-muted',
  'transition duration-150',
  'focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary',

@@ -26,6 +26,7 @@ import {
   HUB_FILTER_EXTRA_KEYS,
   appendCatalogueEntityParams,
   catalogueEntityExtraChips,
+  catalogueKindFilterTitle,
   clearCatalogueExtraChip,
   composeCatalogueFeed,
   mergeCatalogueExtras,
@@ -187,7 +188,7 @@ function MarketplaceHubPageInner() {
               throw err;
             }
           }}
-          modalTitle="Filtrer le marketplace"
+          modalTitle={catalogueKindFilterTitle(draft.kind, 'Filtrer le marketplace')}
           filters={
             <CatalogueEntityFilterFields
               showKind

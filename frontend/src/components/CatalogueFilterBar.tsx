@@ -87,7 +87,7 @@ export function CatalogueChoicePills({
             }}
             onPointerDown={(e) => e.stopPropagation()}
             className={cn(
-              'px-3 py-1.5 rounded-full text-xs font-medium border transition touch-manipulation',
+              'px-3 py-1.5 rounded-[var(--radius-button)] text-xs font-medium border transition touch-manipulation',
               active
                 ? 'bg-primary text-white border-primary'
                 : 'bg-surface-muted text-muted border-border hover:text-foreground hover:border-primary/30',
@@ -659,11 +659,11 @@ export function CatalogueEntityFilterFields({
   showAvailability?: boolean;
 }) {
   const kind = showKind ? extras.kind : entity;
-  const showVenue = kind === 'all' || kind === 'venue';
-  const showTrade = kind === 'all' || kind === 'service';
-  const showRental = kind === 'all' || kind === 'rental';
+  const showVenue = kind === 'venue';
+  const showTrade = kind === 'service';
+  const showRental = kind === 'rental';
+  const showEvent = kind === 'event';
   const showOffering = showTrade || showRental;
-  const showEvent = kind === 'all' || kind === 'event';
   const emit = (geo: CatalogueGeoState, nextExtras: CatalogueEntityExtras) => {
     onChange(geo, pickCatalogueExtras(nextExtras));
   };
@@ -674,25 +674,24 @@ export function CatalogueEntityFilterFields({
   return (
     <>
       {showKind ? (
-        <CatalogueFilterField label="Type de fiche">
+        <CatalogueFilterField
+          label="Type de fiche"
+          hint={kind === 'all' ? 'Choisissez salles, métiers, locations ou événements pour afficher les filtres correspondants.' : undefined}
+        >
           <CatalogueChoicePills
             options={KIND_FILTER_OPTIONS}
             value={extras.kind}
             onChange={(id) => {
-              const kind = (id as import('@/lib/catalogueEntityFilters').CatalogueKind) || 'all';
+              const nextKind = (id as CatalogueKind) || 'all';
+              const keepTrade = nextKind === 'service' && extras.category && !isServiceRentalCategory(extras.category);
+              const keepRental = nextKind === 'rental' && isServiceRentalCategory(extras.category);
               setExtras({
-                kind,
-                roomType: kind === 'service' || kind === 'rental' || kind === 'event' ? '' : extras.roomType,
-                category: kind === 'venue' || kind === 'event'
-                  ? ''
-                  : kind === 'service' && isServiceRentalCategory(extras.category)
-                    ? ''
-                    : kind === 'rental' && extras.category && !isServiceRentalCategory(extras.category)
-                      ? ''
-                      : extras.category,
-                mobility: kind === 'venue' || kind === 'event' ? '' : extras.mobility,
-                priceUnit: kind === 'venue' || kind === 'event' ? '' : extras.priceUnit,
-                entry: kind === 'venue' || kind === 'service' || kind === 'rental' ? '' : extras.entry,
+                kind: nextKind,
+                roomType: nextKind === 'venue' ? extras.roomType : '',
+                category: keepTrade || keepRental ? extras.category : '',
+                mobility: nextKind === 'service' || nextKind === 'rental' ? extras.mobility : '',
+                priceUnit: nextKind === 'service' || nextKind === 'rental' ? extras.priceUnit : '',
+                entry: nextKind === 'event' ? extras.entry : '',
               });
             }}
           />
@@ -702,20 +701,22 @@ export function CatalogueEntityFilterFields({
         value={value}
         onChange={(next) => emit(next, extras)}
         error={error}
-        showCapacity={kind !== 'service' && kind !== 'rental'}
+        showCapacity={showVenue || showEvent}
         showProximity={showProximity}
         showAvailability={showAvailability}
-        availabilityHint={kind === 'event'
+        availabilityHint={showEvent
           ? 'Date de l’événement (un jour ou du… au…).'
-          : kind === 'rental'
+          : showRental
             ? 'N’affiche que les locations libres sur toute la période.'
-            : kind === 'service'
-            ? 'N’affiche que les métiers (prestataires) libres sur toute la période.'
-            : undefined}
-        capacityHint={kind === 'event' ? 'Places / billets restants.' : undefined}
+            : showTrade
+              ? 'N’affiche que les métiers (prestataires) libres sur toute la période.'
+              : showVenue
+                ? 'N’affiche que les salles libres sur toute la période.'
+                : undefined}
+        capacityHint={showEvent ? 'Places / billets restants.' : showVenue ? 'Capacité de la salle (invités).' : undefined}
       />
       {showVenue ? (
-        <CatalogueFilterField label="Type de salle" hint={kind === 'all' ? 'S’applique uniquement aux salles.' : undefined}>
+        <CatalogueFilterField label="Type de salle">
           <CatalogueChoicePills
             options={ROOM_TYPE_FILTER_OPTIONS}
             value={extras.roomType}
@@ -726,7 +727,7 @@ export function CatalogueEntityFilterFields({
       {showOffering ? (
         <>
           {showTrade ? (
-          <CatalogueFilterField label={kind === 'service' ? 'Métier' : 'Métiers'} hint={kind === 'all' ? 'S’applique uniquement aux métiers (pas aux locations).' : undefined}>
+          <CatalogueFilterField label="Métier">
                 <CatalogueChoicePills
                   options={SERVICE_TRADE_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] }))}
                   value={extras.category}
@@ -743,7 +744,7 @@ export function CatalogueEntityFilterFields({
           </CatalogueFilterField>
           ) : null}
           {showRental ? (
-          <CatalogueFilterField label={kind === 'rental' ? 'Type de location' : 'Location'} hint={kind === 'all' ? 'Habits, véhicules et matériel à louer.' : undefined}>
+          <CatalogueFilterField label="Type de location">
                 <CatalogueChoicePills
                   options={SERVICE_RENTAL_CATEGORIES.map((id) => ({ id, label: SERVICE_CATEGORY_LABELS[id] }))}
                   value={extras.category}
@@ -786,7 +787,7 @@ export function CatalogueEntityFilterFields({
         </>
       ) : null}
       {showEvent ? (
-        <CatalogueFilterField label="Entrée" hint={kind === 'all' ? 'S’applique uniquement aux événements publics.' : undefined}>
+        <CatalogueFilterField label="Entrée">
           <CatalogueChoicePills
             options={EVENT_ENTRY_OPTIONS}
             value={extras.entry}

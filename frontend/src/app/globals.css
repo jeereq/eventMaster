@@ -773,7 +773,7 @@ html[data-mood="celebrate"] .font-display {
 }
 
 .em-filter-chip {
-  border-radius: 999px;
+  border-radius: var(--radius-button);
   animation: em-filter-chip-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 

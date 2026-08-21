@@ -27,6 +27,7 @@ import {
   EMPTY_CATALOGUE_EXTRAS,
   appendCatalogueEntityParams,
   catalogueEntityExtraChips,
+  catalogueKindFilterTitle,
   clearCatalogueExtraChip,
   composeCatalogueFeed,
   mergeGeoAndExtras,
@@ -124,7 +125,7 @@ export default function LandingMapSection() {
               Salles, prestataires, locations et événements à Kinshasa et Lubumbashi
             </h2>
             <p className="text-sm text-muted leading-relaxed">
-              Filtres complets (ville, dates, prix, type de salle, métier, location, entrée…). Sélectionnez un pin, puis ouvrez la fiche.
+              Filtres par type : ville, dates, prix, puis salles, métiers, locations ou événements.
             </p>
           </div>
           <Link href="/marketplace">
@@ -158,7 +159,7 @@ export default function LandingMapSection() {
               throw err;
             }
           }}
-          modalTitle="Filtrer la carte"
+          modalTitle={catalogueKindFilterTitle(draft.kind, 'Filtrer la carte')}
           filters={
             <CatalogueEntityFilterFields
               showKind

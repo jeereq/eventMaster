@@ -124,7 +124,7 @@ export default function Modal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="p-2 rounded-xl text-muted hover:text-foreground hover:bg-surface-muted transition shrink-0"
+                  className="p-2 rounded-[var(--radius-button)] text-muted hover:text-foreground hover:bg-surface-muted transition shrink-0"
                   aria-label="Fermer la fenêtre"
                 >
                   <X className="w-5 h-5" />
