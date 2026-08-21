@@ -29,6 +29,17 @@ export type ListingDetails = {
   depositPercent: string;
   accessNotes: string;
   instagram: string;
+  brand: string;
+  modelName: string;
+  year: string;
+  condition: string;
+  colors: string;
+  dimensions: string;
+  capacity: string;
+  securityDepositFc: string;
+  deliveryMode: string;
+  accessories: string;
+  returnRules: string;
 };
 
 function clip(value: unknown, max: number) {
@@ -70,5 +81,16 @@ export function parseListingDetails(input: unknown): ListingDetails {
     depositPercent: clipNum(raw.depositPercent),
     accessNotes: clip(raw.accessNotes, 1000),
     instagram: clip(raw.instagram, 80),
+    brand: clip(raw.brand, 100),
+    modelName: clip(raw.modelName, 100),
+    year: clipNum(raw.year, 4),
+    condition: clip(raw.condition, 50),
+    colors: clip(raw.colors, 200),
+    dimensions: clip(raw.dimensions, 200),
+    capacity: clipNum(raw.capacity, 50),
+    securityDepositFc: clipNum(raw.securityDepositFc, 20),
+    deliveryMode: clip(raw.deliveryMode, 50),
+    accessories: clip(raw.accessories, 1000),
+    returnRules: clip(raw.returnRules, 1000),
   };
 }

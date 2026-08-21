@@ -210,7 +210,108 @@ export default function ListingDetailsFields({
           placeholder="@votrecompte"
         />
       </div>
-      <label className="block space-y-1.5">
+
+      {isRental && (
+        <>
+          <h4 className="text-sm font-semibold text-foreground pt-4 border-t border-border mt-4">Détails de la location</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+            <Input
+              label="Marque"
+              value={value.brand}
+              onChange={(e) => onChange({ ...value, brand: e.target.value })}
+              placeholder="Ex: Mercedes, Sony, Dior..."
+            />
+            <Input
+              label="Modèle / Référence"
+              value={value.modelName}
+              onChange={(e) => onChange({ ...value, modelName: e.target.value })}
+              placeholder="Ex: Classe G, CDJ-2000..."
+            />
+            <Input
+              label="Année"
+              value={value.year}
+              onChange={(e) => onChange({ ...value, year: e.target.value })}
+              placeholder="Ex: 2023"
+            />
+            <label className="block space-y-1.5">
+              <span className="text-xs font-medium text-muted">État du matériel</span>
+              <select
+                value={value.condition}
+                onChange={(e) => onChange({ ...value, condition: e.target.value })}
+                className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+              >
+                <option value="">Sélectionner...</option>
+                <option value="new">Neuf</option>
+                <option value="very_good">Très bon état</option>
+                <option value="good">Bon état</option>
+                <option value="vintage">Vintage / Dans son jus</option>
+              </select>
+            </label>
+            <Input
+              label="Couleurs disponibles"
+              value={value.colors}
+              onChange={(e) => onChange({ ...value, colors: e.target.value })}
+              placeholder="Ex: Noir, Blanc, Doré..."
+            />
+            <Input
+              label="Tailles / Dimensions"
+              value={value.dimensions}
+              onChange={(e) => onChange({ ...value, dimensions: e.target.value })}
+              placeholder="Ex: S, M, L ou 2m x 1m..."
+            />
+            <Input
+              label="Capacité"
+              value={value.capacity}
+              onChange={(e) => onChange({ ...value, capacity: e.target.value })}
+              placeholder="Ex: 5 places, 50 personnes..."
+            />
+            <Input
+              label="Caution exigée (FC)"
+              type="number"
+              value={value.securityDepositFc}
+              onChange={(e) => onChange({ ...value, securityDepositFc: e.target.value })}
+              placeholder="Montant de la garantie"
+            />
+            <label className="block space-y-1.5">
+              <span className="text-xs font-medium text-muted">Mode de livraison</span>
+              <select
+                value={value.deliveryMode}
+                onChange={(e) => onChange({ ...value, deliveryMode: e.target.value })}
+                className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+              >
+                <option value="">Sélectionner...</option>
+                <option value="pickup">Retrait sur place uniquement</option>
+                <option value="included">Livraison incluse</option>
+                <option value="extra_fee">Livraison en supplément</option>
+              </select>
+            </label>
+          </div>
+          <div className="space-y-4 mt-3">
+            <label className="block space-y-1.5">
+              <span className="text-xs font-medium text-muted">Accessoires inclus</span>
+              <textarea
+                rows={2}
+                value={value.accessories}
+                onChange={(e) => onChange({ ...value, accessories: e.target.value })}
+                className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+                placeholder="Câblage, housse, casque..."
+              />
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-medium text-muted">Règles de restitution</span>
+              <textarea
+                rows={2}
+                value={value.returnRules}
+                onChange={(e) => onChange({ ...value, returnRules: e.target.value })}
+                className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+                placeholder="Rendre propre, plein de carburant fait..."
+              />
+            </label>
+          </div>
+        </>
+      )}
+
+      <label className="block space-y-1.5 mt-4 pt-4 border-t border-border">
         <span className="text-xs font-medium text-muted">Accès et repères</span>
         <textarea
           rows={2}

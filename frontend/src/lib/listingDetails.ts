@@ -59,6 +59,17 @@ export type ListingDetails = {
   depositPercent: string;
   accessNotes: string;
   instagram: string;
+  brand: string;
+  modelName: string;
+  year: string;
+  condition: string;
+  colors: string;
+  dimensions: string;
+  capacity: string;
+  securityDepositFc: string;
+  deliveryMode: string;
+  accessories: string;
+  returnRules: string;
 };
 
 export const EMPTY_LISTING_DETAILS: ListingDetails = {
@@ -82,6 +93,17 @@ export const EMPTY_LISTING_DETAILS: ListingDetails = {
   depositPercent: '',
   accessNotes: '',
   instagram: '',
+  brand: '',
+  modelName: '',
+  year: '',
+  condition: '',
+  colors: '',
+  dimensions: '',
+  capacity: '',
+  securityDepositFc: '',
+  deliveryMode: '',
+  accessories: '',
+  returnRules: '',
 };
 
 export const VENUE_AMENITIES: Array<{ id: ListingAmenityId; label: string }> = [
@@ -170,6 +192,17 @@ export function parseListingDetails(input: unknown): ListingDetails {
     depositPercent: raw.depositPercent != null ? String(raw.depositPercent) : '',
     accessNotes: text('accessNotes'),
     instagram: text('instagram'),
+    brand: text('brand'),
+    modelName: text('modelName'),
+    year: text('year'),
+    condition: text('condition'),
+    colors: text('colors'),
+    dimensions: text('dimensions'),
+    capacity: text('capacity'),
+    securityDepositFc: text('securityDepositFc'),
+    deliveryMode: text('deliveryMode'),
+    accessories: text('accessories'),
+    returnRules: text('returnRules'),
   };
 }
 
