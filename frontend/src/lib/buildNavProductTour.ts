@@ -72,7 +72,10 @@ export function buildOrgNavTourIds(
   if (workspace?.showRooms) tabs.push({ tourId: 'nav-rooms' });
   if (workspace?.showTeam) tabs.push({ tourId: 'nav-team' });
   if (workspace?.showMarketplace) tabs.push({ tourId: 'nav-marketplace' });
-  if (workspace?.showProtocol) tabs.push({ tourId: 'nav-protocol' });
+  if (workspace?.showProtocol) {
+    tabs.push({ tourId: 'nav-protocol' });
+    tabs.push({ tourId: 'nav-protocol-tasks' });
+  }
   if (workspace?.showAnalytics) tabs.push({ tourId: 'nav-analytics-org' });
   if (workspace?.showTemplates) tabs.push({ tourId: 'nav-templates', route: '/dashboard/templates' });
   if (access?.canViewBilling) tabs.push({ tourId: 'nav-billing' });
@@ -172,6 +175,7 @@ export function buildFirstLoginTour(
 
     case 'org_protocol':
       push('nav-protocol');
+      push('nav-protocol-tasks');
       push('nav-events');
       steps.push(firstLoginFinish(home, 'Ensuite : ouvrez un événement le jour J et testez le scan QR.'));
       return steps;
@@ -265,6 +269,7 @@ export function buildNavProductTour(
       return buildSteps([
         { tourId: 'nav-events' },
         { tourId: 'nav-protocol' },
+        { tourId: 'nav-protocol-tasks' },
         { tourId: 'nav-guide' },
         { tourId: 'nav-profile' },
       ]);

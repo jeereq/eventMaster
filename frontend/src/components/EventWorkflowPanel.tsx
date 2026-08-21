@@ -20,6 +20,8 @@ interface EventWorkflowPanelProps {
   onNavigateTab: (tab: EventWorkflowTab) => void;
   onAction?: (stepId: string) => void;
   compact?: boolean;
+  /** Mode protocole : pas d’onglets support (infos, feed, staff…). */
+  protocolDesk?: boolean;
 }
 
 const SUPPORT_TABS: Array<{ id: EventWorkflowTab; label: string; icon: any }> = [
@@ -34,9 +36,11 @@ export default function EventWorkflowPanel({
   activeTab,
   onNavigateTab,
   compact = false,
+  protocolDesk = false,
 }: EventWorkflowPanelProps) {
   
   const mainSteps = workflow.steps.filter(s => s.tab); // keep only steps with a tab mapped
+  const showSupport = !compact && !protocolDesk;
 
   return (
     <div className="space-y-4">
@@ -95,7 +99,7 @@ export default function EventWorkflowPanel({
       </div>
 
       {/* Support / Secondary Navigation */}
-      {!compact && (
+      {showSupport && (
         <div className="flex flex-wrap gap-2 items-center">
           <span className="text-[11px] font-semibold text-muted uppercase tracking-wider mr-2">
             Paramètres & Support :

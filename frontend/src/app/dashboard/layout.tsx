@@ -11,6 +11,7 @@ import {
  LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper, User, Sun, Moon, BarChart3,
  Building2, FileText, Key, MessageSquare, ScanLine, Briefcase, Clock, BookOpen,
  PanelLeftClose, PanelLeft, Store, CalendarCheck, ScrollText, Ticket, Wallet, Bell,
+ ClipboardList,
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import UserLegalGate from '@/components/UserLegalGate';
@@ -56,6 +57,10 @@ function navItemIsActive(pathname: string, search: string, item: NavItem, curren
   const have = new URLSearchParams(search);
   for (const [key, value] of want.entries()) {
    if (have.get(key) !== value) return false;
+  }
+  // Protocole (sans view) ≠ Tâches protocole (view=tasks)
+  if (want.get('mode') === 'protocol' && !want.has('view') && have.get('view') === 'tasks') {
+   return false;
   }
   return pathname === path;
  }
@@ -197,6 +202,7 @@ function buildDashboardNav(opts: {
    navSection('Jour J', [
     { name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar },
     { name: 'Protocole', href: '/dashboard/events?mode=protocol', tourId: 'nav-protocol', icon: ScanLine },
+    { name: 'Tâches', href: '/dashboard/events?mode=protocol&view=tasks', tourId: 'nav-protocol-tasks', icon: ClipboardList },
    ]),
    navSection('Suivi', [
     { name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3 },
@@ -224,7 +230,10 @@ function buildDashboardNav(opts: {
    ? [{ name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar }]
    : []),
   ...(workspace.showProtocol
-   ? [{ name: 'Protocole', href: '/dashboard/events?mode=protocol', tourId: 'nav-protocol', icon: ScanLine }]
+   ? [
+      { name: 'Protocole', href: '/dashboard/events?mode=protocol', tourId: 'nav-protocol', icon: ScanLine },
+      { name: 'Tâches protocole', href: '/dashboard/events?mode=protocol&view=tasks', tourId: 'nav-protocol-tasks', icon: ClipboardList },
+     ]
    : []),
   ...(workspace.showAnalytics
    ? [{ name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3 }]

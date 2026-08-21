@@ -20,6 +20,8 @@ import EventFeedManager from './EventFeedManager';
 import GuestProtocolPanel from './GuestProtocolPanel';
 import EventTaskPanel from '@/components/EventTaskPanel';
 import EventTaskInbox from '@/components/EventTaskInbox';
+import ProtocolTasksPanel from '@/components/ProtocolTasksPanel';
+import ProtocolTasksInbox from '@/components/ProtocolTasksInbox';
 import EventGuestGuidelinesEditor from '@/components/EventGuestGuidelinesEditor';
 import EventWorkflowPanel from '@/components/EventWorkflowPanel';
 import EventConfigForm from '@/components/EventConfigForm';
@@ -614,6 +616,12 @@ export default function EventsPage() {
  }, [isProtocolOnly, searchParams]);
 
  useEffect(() => {
+ if (!protocolDesk || selectedEvent || searchParams.get('view') !== 'tasks') return;
+ const el = document.getElementById('protocol-tasks-inbox');
+ if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+ }, [protocolDesk, selectedEvent, searchParams]);
+
+ useEffect(() => {
  if (protocolDesk && selectedEvent) {
  const tab = searchParams.get('tab');
  setActiveTab(tab === 'tasks' ? 'tasks' : 'protocol');
@@ -652,12 +660,13 @@ export default function EventsPage() {
  tablePlan: selectedEvent?.tablePlan,
  eventDate: selectedEvent?.date,
  isProtocolOnly,
+ protocolDesk,
  guestGuidelines: selectedEvent?.guestGuidelines ?? guestGuidelines,
  feedPostCount: selectedEvent?.feedPostCount ?? 0,
  hasPrepShortlist: hasEventPrepShortlist(parseEventPrep(selectedEvent?.eventPrep)),
  prepSummary: eventPrepSummary(parseEventPrep(selectedEvent?.eventPrep)),
  }),
- [guests, invitations, selectedEvent?.tablePlan, selectedEvent?.date, selectedEvent?.guestGuidelines, selectedEvent?.feedPostCount, selectedEvent?.eventPrep, guestGuidelines, isProtocolOnly],
+ [guests, invitations, selectedEvent?.tablePlan, selectedEvent?.date, selectedEvent?.guestGuidelines, selectedEvent?.feedPostCount, selectedEvent?.eventPrep, guestGuidelines, isProtocolOnly, protocolDesk],
  );
 
  const broadcastConfirmInvite = invitations.find((invite) => invite.id === broadcastConfirmInviteId) || null;
@@ -1770,7 +1779,7 @@ Merci de confirmer votre présence :
  title={protocolDesk ? 'Accueil jour J' : 'Vos événements'}
  description={
  protocolDesk
- ? 'Choisissez l’événement, puis scannez les badges pour confirmer les présences.'
+ ? 'Choisissez l’événement pour l’accueil (scan) ou consultez vos tâches protocole.'
  : "Créez des réceptions privées (liste d’invités) ou publiques (inscription / billets en ligne)."
  }
  breadcrumbs={
@@ -1810,7 +1819,13 @@ Merci de confirmer votre présence :
  {eventsAtLimit && (
  <PlanLimitCallout kind="events" planQuota={planQuota} planName={tenant?.plan} />
  )}
- <EventTaskInbox protocol={protocolDesk} />
+ {protocolDesk ? (
+ <div id="protocol-tasks-inbox">
+ <ProtocolTasksInbox protocol />
+ </div>
+ ) : (
+ <EventTaskInbox />
+ )}
  {events.length === 0 && !protocolDesk && (
  <GettingStartedChecklist hasEvents={false} />
  )}
@@ -2150,7 +2165,8 @@ Merci de confirmer votre présence :
  activeTab={activeTab}
  onNavigateTab={handleWorkflowNavigate}
  onAction={handleWorkflowAction}
- compact={isProtocolOnly}
+ compact={false}
+ protocolDesk={protocolDesk}
  />
 
  {activeTab === 'protocol' && selectedEvent && (
@@ -2910,7 +2926,11 @@ Merci de confirmer votre présence :
  )}
 
  {activeTab === 'tasks' && selectedEvent && (
+ protocolDesk ? (
+ <ProtocolTasksPanel eventId={selectedEvent.id} eventTitle={selectedEvent.title} />
+ ) : (
  <EventTaskPanel eventId={selectedEvent.id} />
+ )
  )}
 
  {activeTab === 'feed' && (

@@ -20,7 +20,8 @@ export type EventWorkflowStepId =
   | 'invitation'
   | 'rsvp'
   | 'tablePlan'
-  | 'protocol';
+  | 'protocol'
+  | 'protocolTasks';
 
 export type EventWorkflowStepStatus = 'complete' | 'current' | 'upcoming' | 'skipped';
 
@@ -134,12 +135,14 @@ export function computeEventWorkflowState(input: {
   tablePlan?: TablePlanMeta | null;
   eventDate?: string;
   isProtocolOnly?: boolean;
+  /** Mode accueil jour J — navigation Accueil / Tâches. */
+  protocolDesk?: boolean;
   guestGuidelines?: GuestGuidelines | null;
   feedPostCount?: number;
   hasPrepShortlist?: boolean;
   prepSummary?: string | null;
 }): EventWorkflowState {
-  const { guests, invitations, tablePlan, eventDate, isProtocolOnly } = input;
+  const { guests, invitations, tablePlan, eventDate, isProtocolOnly, protocolDesk } = input;
 
   const guestCount = guests.length;
   const assignedCount = countAssignedGuests(tablePlan ?? undefined);
@@ -151,14 +154,21 @@ export function computeEventWorkflowState(input: {
 
   const eventPassed = eventDate ? new Date(eventDate).getTime() < Date.now() : false;
 
-  if (isProtocolOnly) {
+  if (isProtocolOnly || protocolDesk) {
     const protocolSteps: Omit<EventWorkflowStep, 'status'>[] = [
       {
         id: 'protocol',
-        title: 'Protocole jour J',
+        title: 'Accueil',
         description: 'Scan QR, confirmation de présence et accueil des invités.',
         tab: 'protocol',
         detail: checkedInCount > 0 ? `✓ ${checkedInCount} invité(s) enregistré(s)` : `${guestCount} invité(s) à accueillir`,
+      },
+      {
+        id: 'protocolTasks',
+        title: 'Tâches',
+        description: 'Checklist protocole du jour : briefing, postes, urgences.',
+        tab: 'tasks',
+        detail: 'Ouvertes et assignées à l’équipe d’accueil',
       },
     ];
 
@@ -169,7 +179,7 @@ export function computeEventWorkflowState(input: {
       steps,
       completedCount,
       totalCount: steps.length,
-      progressPercent: Math.round((completedCount / steps.length) * 100),
+      progressPercent: Math.round((completedCount / Math.max(1, steps.length)) * 100),
       currentStepId: steps.find((s) => s.status === 'current')?.id ?? null,
     };
   }
