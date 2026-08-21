@@ -9,7 +9,9 @@ export type EventWorkflowTab =
   | 'feed'
   | 'protocol'
   | 'prep'
-  | 'analytics';
+  | 'analytics'
+  | 'tasks'
+  | 'staff';
 
 export type EventWorkflowStepId =
   | 'event'

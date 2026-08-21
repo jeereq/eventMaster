@@ -63,6 +63,7 @@ import {
 } from '@/lib/guestContact';
 import InvitationMessagePreview from '@/components/InvitationMessagePreview';
 import InvitationEditorModal, { type InvitationFormData } from '@/components/InvitationEditorModal';
+import { BarChart2, ArrowRight } from 'lucide-react';
 import { resolveWhatsAppInvitationBody, toWhatsAppTone } from '@/lib/whatsappTone';
 import {
  extractRsvpFieldsFromTemplateContent,
@@ -2138,51 +2139,6 @@ Merci de confirmer votre présence :
  compact={isProtocolOnly}
  />
 
- {/* Tabs */}
- <div className="inline-flex flex-wrap gap-0.5 p-0.5 bg-surface-muted border border-border rounded-[var(--radius-button)] max-w-full overflow-x-auto">
- {([
- !isProtocolOnly && { id: 'prep' as const, label: 'Préparation', icon: Sparkles },
- !isProtocolOnly && { id: 'guestInfo' as const, label: 'Infos invités', icon: Shirt },
- !isProtocolOnly && { id: 'guests' as const, label: `Invités (${guests.length})`, icon: Users },
- !isProtocolOnly && { id: 'invitations' as const, label: `Invitations (${invitations.length})`, icon: Mail },
- !isProtocolOnly && { id: 'tablePlan' as const, label: 'Plan de table', icon: LayoutGrid },
- !isProtocolOnly && { id: 'feed' as const, label: 'Feed', icon: MessageSquare },
- { id: 'protocol' as const, label: 'Protocole', icon: ScanLine },
- { id: 'tasks' as const, label: 'Tâches', icon: ClipboardList },
- !isProtocolOnly && { id: 'staff' as const, label: 'Équipe', icon: Users },
- ].filter(Boolean) as Array<{ id: EventWorkspaceTab; label: string; icon: React.ComponentType<{ className?: string }> }>).map(({ id, label, icon: Icon }) => {
- const locked = id === 'protocol' && protocolLocked;
- return (
- <button
- key={id}
- type="button"
- onClick={() => {
- setActiveTab(id);
- if (eventIdFromRoute) {
- router.replace(eventDashboardHref(eventIdFromRoute, { tab: id, protocol: protocolDesk }), { scroll: false });
- }
- }}
- title={locked ? protocolLockMsg : undefined}
- className={cn(
- 'inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium whitespace-nowrap transition-colors',
- activeTab === id
- ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
- : 'text-muted hover:text-foreground',
- locked && 'opacity-70',
- )}
- >
- <Icon className="w-3.5 h-3.5" />
- {label}
- {locked ? (
- <span className="text-[9px] font-bold uppercase tracking-wide text-amber-700 bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded">
- Forfait
- </span>
- ) : null}
- </button>
- );
- })}
- </div>
-
  {activeTab === 'protocol' && selectedEvent && (
  <>
  {protocolLocked ? (
@@ -2275,6 +2231,40 @@ Merci de confirmer votre présence :
  </div>
  {guestsAtLimit && (
  <PlanLimitCallout kind="guests" planQuota={planQuota} planName={tenant?.plan} />
+ )}
+
+ {/* Insights / Vue d'ensemble */}
+ {guests.length > 0 && (
+   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+     <div className="bg-surface border border-border p-4 rounded-2xl flex flex-col justify-center shadow-sm">
+       <p className="text-[11px] font-bold text-muted uppercase tracking-wider mb-1">Total Invités</p>
+       <p className="text-3xl font-bold text-foreground">{guests.length}</p>
+     </div>
+     <div className="bg-emerald-50/50 border border-emerald-100 p-4 rounded-2xl flex flex-col justify-center shadow-sm">
+       <p className="text-[11px] font-bold text-emerald-600/80 uppercase tracking-wider mb-1">Présences (RSVP)</p>
+       <p className="text-3xl font-bold text-emerald-700">
+         {guests.filter(g => g.rsvp === 'ACCEPTED').length}
+         <span className="text-sm text-emerald-600/60 font-medium ml-2">
+           ({Math.round((guests.filter(g => g.rsvp === 'ACCEPTED').length / guests.length) * 100) || 0}%)
+         </span>
+       </p>
+     </div>
+     <div className="bg-surface border border-border p-4 rounded-2xl flex flex-col justify-center shadow-sm">
+       <p className="text-[11px] font-bold text-muted uppercase tracking-wider mb-1">Spéc. Alim.</p>
+       <p className="text-3xl font-bold text-foreground">
+         {guests.filter(g => g.preferences?.specialMeal && g.preferences.specialMeal !== 'none').length}
+       </p>
+     </div>
+     <div className="bg-surface border border-border p-4 rounded-2xl flex flex-col justify-center shadow-sm">
+       <p className="text-[11px] font-bold text-muted uppercase tracking-wider mb-1">Check-in (Jour J)</p>
+       <p className="text-3xl font-bold text-foreground">
+         {guests.filter(g => g.checkedInAt).length}
+         <span className="text-sm text-muted font-medium ml-2">
+           / {guests.filter(g => g.rsvp === 'ACCEPTED').length || guests.length}
+         </span>
+       </p>
+     </div>
+   </div>
  )}
 
  {/* Search & Filtering Controls */}
@@ -2705,6 +2695,56 @@ Merci de confirmer votre présence :
  </div>
  </div>
 
+ {/* Entonnoir de Conversion (Insights) */}
+ {invitations.length > 0 && guests.length > 0 && (
+   <div className="bg-surface border border-border rounded-2xl p-5 shadow-sm relative overflow-hidden">
+     <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-emerald-500/5 to-transparent pointer-events-none" />
+     <h3 className="text-[11px] font-bold text-muted uppercase tracking-wider mb-4 flex items-center gap-2">
+       <BarChart2 className="w-3.5 h-3.5" />
+       Performances de la campagne
+     </h3>
+     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative">
+       
+       {/* 1. Invités */}
+       <div className="flex-1 flex flex-col items-center text-center relative z-10">
+         <div className="w-12 h-12 bg-surface-muted border border-border text-foreground rounded-full flex items-center justify-center font-bold text-lg mb-2">
+           {guests.length}
+         </div>
+         <p className="text-xs font-semibold text-foreground">Invités sur liste</p>
+       </div>
+       
+       <div className="hidden sm:block text-border/60"><ArrowRight className="w-5 h-5" /></div>
+       
+       {/* 2. Envoyées */}
+       <div className="flex-1 flex flex-col items-center text-center relative z-10">
+         <div className="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center font-bold text-lg mb-2 border border-primary/20">
+           {guests.filter(g => g.preferences?.invitationSentAt).length}
+         </div>
+         <p className="text-xs font-semibold text-foreground">Invitations délivrées</p>
+         <p className="text-[10px] text-muted mt-0.5">
+           {Math.round((guests.filter(g => g.preferences?.invitationSentAt).length / guests.length) * 100) || 0}% de la liste
+         </p>
+       </div>
+       
+       <div className="hidden sm:block text-border/60"><ArrowRight className="w-5 h-5" /></div>
+
+       {/* 3. RSVP */}
+       <div className="flex-1 flex flex-col items-center text-center relative z-10">
+         <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center font-bold text-lg mb-2 border border-emerald-200 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+           {guests.filter(g => g.rsvp !== 'PENDING').length}
+         </div>
+         <p className="text-xs font-semibold text-foreground">Réponses RSVP</p>
+         <p className="text-[10px] text-emerald-600/70 font-medium mt-0.5">
+           {guests.filter(g => g.preferences?.invitationSentAt).length > 0 
+             ? `${Math.round((guests.filter(g => g.rsvp !== 'PENDING').length / guests.filter(g => g.preferences?.invitationSentAt).length) * 100) || 0}% de conversion` 
+             : '0% de conversion'}
+         </p>
+       </div>
+       
+     </div>
+   </div>
+ )}
+
  <Card>
  <CardHeader
  title={
@@ -2837,6 +2877,7 @@ Merci de confirmer votre présence :
  )}
  <TablePlanner
  key={`${selectedEvent.id}_${selectedEvent.tablePlan?.importedAt ?? 'empty'}`}
+ eventId={selectedEvent.id}
  guests={guests}
  initialTablePlan={selectedEvent.tablePlan}
  onSave={handleSaveTablePlan}

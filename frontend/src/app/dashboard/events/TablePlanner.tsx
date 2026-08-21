@@ -3,8 +3,9 @@
 import React, { useState, useRef } from 'react';
 import { 
  Plus, Trash2, Users, Check, Move, X, RefreshCw, 
- HelpCircle, Edit2, LayoutGrid, Maximize2, Minimize2, Copy, Lock, Unlock, Palette, RotateCw, Sparkles, ChevronDown
+ HelpCircle, Edit2, LayoutGrid, Maximize2, Minimize2, Copy, Lock, Unlock, Palette, RotateCw, Sparkles, ChevronDown, Download, PlusCircle, Save
 } from 'lucide-react';
+import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
  getOccupiedSeatCount,
@@ -43,6 +44,7 @@ interface Table {
 }
 
 interface TablePlannerProps {
+ eventId?: string;
  guests: GuestItem[];
  initialTablePlan: { tables?: Table[]; fixtures?: Array<{ id: string; kind: string; x: number; y: number; w: number; h: number; label?: string }> } | null | undefined;
  onSave: (newTablePlan: { tables: Table[]; fixtures?: unknown[] }) => Promise<void>;
@@ -105,6 +107,80 @@ export default function TablePlanner({
 
  // Unassigned accepted guests
  const unassignedGuests = acceptedGuests.filter(g => !assignedGuestIds.has(g.id));
+
+ // Auto-seat "Placement Magique"
+ const handleAutoSeat = () => {
+   if (unassignedGuests.length === 0) {
+     alert("Tous les invités ayant accepté sont déjà placés !");
+     return;
+   }
+   if (tables.length === 0) {
+     alert("Veuillez d'abord ajouter des tables sur le plan.");
+     return;
+   }
+
+   const updatedTables = [...tables.map(t => ({...t, seats: {...t.seats}}))];
+   let unplaced = [...unassignedGuests];
+
+   // Simple grouping by category
+   // First, group unplaced guests by category
+   const guestsByCat: Record<string, typeof unplaced> = {};
+   unplaced.forEach(g => {
+     const cat = g.category || 'Général';
+     if (!guestsByCat[cat]) guestsByCat[cat] = [];
+     guestsByCat[cat].push(g);
+   });
+
+   // Try to fill tables primarily with same category
+   for (const table of updatedTables) {
+     const totalSeats = table.capacity;
+     
+     // Find empty seats indices
+     const emptySeatIndices: number[] = [];
+     for (let i = 0; i < totalSeats; i++) {
+       if (!table.seats[i]) emptySeatIndices.push(i);
+     }
+     
+     if (emptySeatIndices.length === 0) continue;
+
+     // Is this table already partially filled? Determine its main category
+     const existingCats: string[] = [];
+     for (let i = 0; i < totalSeats; i++) {
+       const gid = table.seats[i];
+       if (gid) {
+         const g = acceptedGuests.find(guest => guest.id === gid);
+         if (g && g.category) existingCats.push(g.category);
+       }
+     }
+     // Mode category for the table
+     let dominantCat: string | null = null;
+     if (existingCats.length > 0) {
+       dominantCat = existingCats.sort((a,b) =>
+         existingCats.filter(v => v===a).length
+         - existingCats.filter(v => v===b).length
+       ).pop() || 'Général';
+     }
+
+     // Try to pick from dominantCat first, then largest available group
+     for (const seatIndex of emptySeatIndices) {
+       let catToPick = dominantCat;
+       if (!catToPick || !guestsByCat[catToPick] || guestsByCat[catToPick].length === 0) {
+         // Find largest category group remaining
+         const availableCats = Object.keys(guestsByCat).filter(k => guestsByCat[k].length > 0);
+         if (availableCats.length === 0) break; // no guests left
+         catToPick = availableCats.sort((a,b) => guestsByCat[b].length - guestsByCat[a].length)[0];
+       }
+       if (catToPick && guestsByCat[catToPick]?.length > 0) {
+         const guest = guestsByCat[catToPick].shift();
+         if (guest) {
+           table.seats[seatIndex] = guest.id;
+         }
+       }
+     }
+   }
+
+   setTables(updatedTables);
+ };
 
  // Add a new table
  const handleAddTable = () => {
@@ -240,18 +316,77 @@ export default function TablePlanner({
 
  const handleAutoAssign = () => {
  if (!caps.canAutoAssign) {
- alert('Le placement automatique n’est pas inclus dans votre forfait.');
+ alert('Le placement magique automatique n’est pas inclus dans votre forfait.');
  return;
  }
- const queue = [...unassignedGuests];
- if (queue.length === 0) return;
- setTables(tables.map((table) => {
- const seats = { ...table.seats };
- for (let i = 0; i < table.capacity && queue.length > 0; i++) {
- if (!seats[i]) seats[i] = queue.shift()!.id;
+ if (unassignedGuests.length === 0) {
+   alert("Tous les invités ayant accepté sont déjà placés !");
+   return;
  }
- return { ...table, seats };
- }));
+ if (tables.length === 0) {
+   alert("Veuillez d'abord ajouter des tables sur le plan.");
+   return;
+ }
+
+ const updatedTables = [...tables.map(t => ({...t, seats: {...t.seats}}))];
+ let unplaced = [...unassignedGuests];
+
+ // Group unplaced guests by category
+ const guestsByCat: Record<string, typeof unplaced> = {};
+ unplaced.forEach(g => {
+   const cat = g.category || 'Général';
+   if (!guestsByCat[cat]) guestsByCat[cat] = [];
+   guestsByCat[cat].push(g);
+ });
+
+ // Try to fill tables primarily with same category
+ for (const table of updatedTables) {
+   const totalSeats = table.capacity;
+   
+   // Find empty seats indices
+   const emptySeatIndices: number[] = [];
+   for (let i = 0; i < totalSeats; i++) {
+     if (!table.seats[i]) emptySeatIndices.push(i);
+   }
+   
+   if (emptySeatIndices.length === 0) continue;
+
+   // Mode category for the table based on already placed guests
+   const existingCats: string[] = [];
+   for (let i = 0; i < totalSeats; i++) {
+     const gid = table.seats[i];
+     if (gid) {
+       const g = acceptedGuests.find(guest => guest.id === gid);
+       if (g && g.category) existingCats.push(g.category);
+     }
+   }
+   let dominantCat: string | null = null;
+   if (existingCats.length > 0) {
+     dominantCat = existingCats.sort((a,b) =>
+       existingCats.filter(v => v===a).length
+       - existingCats.filter(v => v===b).length
+     ).pop() || 'Général';
+   }
+
+   // Pick guests
+   for (const seatIndex of emptySeatIndices) {
+     let catToPick = dominantCat;
+     if (!catToPick || !guestsByCat[catToPick] || guestsByCat[catToPick].length === 0) {
+       // Find largest category group remaining
+       const availableCats = Object.keys(guestsByCat).filter(k => guestsByCat[k].length > 0);
+       if (availableCats.length === 0) break; // no guests left
+       catToPick = availableCats.sort((a,b) => guestsByCat[b].length - guestsByCat[a].length)[0];
+     }
+     if (catToPick && guestsByCat[catToPick]?.length > 0) {
+       const guest = guestsByCat[catToPick].shift();
+       if (guest) {
+         table.seats[seatIndex] = guest.id;
+       }
+     }
+   }
+ }
+
+ setTables(updatedTables);
  };
 
  const handleClearAssignments = () => {
@@ -394,6 +529,71 @@ export default function TablePlanner({
  };
 
  const renderCanvas = (heightClass: string) => (
+ <div className="space-y-4 flex-1 flex flex-col min-h-0">
+ <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-surface border border-border rounded-2xl shadow-sm shrink-0">
+   <div className="flex items-center gap-2">
+     <Button
+       size="sm"
+       variant="ghost"
+       onClick={() => setShowAddModal(true)}
+       className="font-medium"
+       disabled={tables.length >= caps.maxTables}
+     >
+       <PlusCircle className="w-4 h-4 mr-1.5" />
+       Nouvelle table
+     </Button>
+     
+     {canImportRoomLayout && (
+       <Button
+         size="sm"
+         variant="ghost"
+         onClick={() => {
+           if (tables.length > 0 && !confirm('Attention : l’importation remplacera votre plan actuel. Continuer ?')) return;
+           onImportRoomLayout?.(true);
+         }}
+         loading={importingLayout}
+         disabled={importingLayout}
+         className="text-primary hover:bg-primary/10 transition font-medium"
+       >
+         <Download className="w-4 h-4 mr-1.5" />
+         Importer depuis salle
+       </Button>
+     )}
+   </div>
+   <div className="flex items-center gap-2">
+     <Button
+       size="sm"
+       variant="ghost"
+       onClick={handleAutoAssign}
+       disabled={unassignedGuests.length === 0}
+       className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 border border-amber-200 shadow-sm transition font-medium"
+     >
+       <Sparkles className="w-4 h-4 mr-1.5 text-amber-500" />
+       Placement Magique
+     </Button>
+     
+     <Button
+       size="sm"
+       onClick={handleSavePlan}
+       loading={saving}
+       disabled={saving}
+       className="bg-primary hover:bg-primary-hover text-white transition shadow-sm font-semibold"
+     >
+       <Save className="w-4 h-4 mr-1.5" />
+       Enregistrer
+     </Button>
+     
+     <button
+       type="button"
+       onClick={() => setIsExpanded(!isExpanded)}
+       className="p-2 text-muted hover:text-foreground bg-surface hover:bg-surface-muted rounded-xl border border-border transition shadow-sm"
+       title={isExpanded ? 'Réduire' : 'Plein écran'}
+     >
+       {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+     </button>
+   </div>
+ </div>
+
  <div
  ref={canvasRef}
  onMouseMove={handleMouseMove}
@@ -402,7 +602,7 @@ export default function TablePlanner({
  className={cn(
  'em-floor-canvas em-floor-canvas--photo',
  heightClass,
- 'w-full',
+ 'w-full flex-1 min-h-[400px]',
  draggingTableId && 'em-floor-canvas--dragging',
  )}
  style={resolveFloorStyle('parquet', undefined)}
@@ -605,6 +805,7 @@ export default function TablePlanner({
  );
  })
  )}
+   </div>
  </div>
  );
 
@@ -702,17 +903,6 @@ export default function TablePlanner({
  <Move className="w-3.5 h-3.5 text-muted shrink-0" />
  <span className="flex-1 min-w-[10rem] hidden sm:inline">Glissez les tables · déverrouillez pour déplacer un import · cliquez un siège pour placer un invité</span>
  <span className="flex-1 sm:hidden">Glissez · touchez un siège</span>
- {caps.canAutoAssign ? (
- <button
- type="button"
- onClick={handleAutoAssign}
- disabled={unassignedGuests.length === 0 || tables.length === 0}
- className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-[10px] font-semibold text-foreground hover:bg-primary/10 transition disabled:opacity-50"
- >
- <Users className="w-3.5 h-3.5" />
- Placer auto
- </button>
- ) : null}
  {tables.some((t) => Object.values(t.seats).some(Boolean)) ? (
  <button
  type="button"
