@@ -253,6 +253,16 @@ export interface RoomLayoutBlueprint {
     renderQuality?: import('@/lib/roomRenderQuality').RenderQuality;
     /** Ambiance lumineuse scénique. */
     lightingPreset?: import('@/lib/roomRenderQuality').LightingPreset;
+    /** Lustres / suspensions. */
+    showChandeliers?: boolean;
+    /** Uplights le long des murs. */
+    showUplights?: boolean;
+    /** Rideaux décoratifs. */
+    showCurtains?: boolean;
+    /** Plantes d’angle. */
+    showDecorPlants?: boolean;
+    /** Mode présentation (orbit auto, labels masqués). */
+    presentationMode?: boolean;
   };
 }
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Aperture, Sun,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Aperture, Sun, Presentation,
 } from 'lucide-react';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
 import ImageCropModal from '@/components/ImageCropModal';
@@ -636,6 +636,7 @@ export default function RoomLayoutEditor({
       lockOrbit={lockOrbit}
       renderQuality={renderQuality}
       lightingPreset={lightingPreset}
+      presentationMode={blueprint.metadata.presentationMode === true}
       className={className}
     />
   );
@@ -941,6 +942,28 @@ export default function RoomLayoutEditor({
                       </label>
                     </div>
                   )}
+                  <div className="space-y-1.5 pt-2 border-t border-border/50">
+                    <p className="text-[10px] font-bold uppercase text-muted">Ambiance 3D</p>
+                    {([
+                      ['showChandeliers', 'Lustres'],
+                      ['showUplights', 'Uplights muraux'],
+                      ['showCurtains', 'Rideaux'],
+                      ['showDecorPlants', 'Plantes d’angle'],
+                    ] as const).map(([key, label]) => (
+                      <label key={key} className="flex items-center gap-2 text-[11px] text-foreground cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={blueprint.metadata[key] === true}
+                          onChange={(e) => updateBlueprint({
+                            ...blueprint,
+                            metadata: { ...blueprint.metadata, [key]: e.target.checked },
+                          }, { message: e.target.checked ? `${label} activés` : `${label} masqués`, kind: 'settings' })}
+                          className="rounded border-border"
+                        />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
                 </div>
                 {caps.canCustomImages ? (
                   <label className="block text-xs space-y-1">
@@ -2082,6 +2105,35 @@ export default function RoomLayoutEditor({
           ))}
         </select>
       </label>
+      <button
+        type="button"
+        onClick={() => {
+          const next = !blueprint.metadata.presentationMode;
+          updateBlueprint({
+            ...blueprint,
+            metadata: {
+              ...blueprint.metadata,
+              presentationMode: next,
+              ...(next ? {
+                showChandeliers: true,
+                showUplights: true,
+                renderQuality: 'showcase' as RenderQuality,
+              } : {}),
+            },
+          }, { message: next ? 'Mode présentation activé' : 'Mode présentation désactivé', kind: 'settings' });
+          if (next) setLockOrbit(false);
+        }}
+        title="Orbit automatique, ambiance, sans labels"
+        className={cn(
+          'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
+          blueprint.metadata.presentationMode
+            ? 'bg-violet-50 border-violet-300 text-violet-900'
+            : 'bg-white border-border text-muted',
+        )}
+      >
+        <Presentation className="w-3.5 h-3.5" />
+        {blueprint.metadata.presentationMode ? 'Présentation ON' : 'Présentation'}
+      </button>
       <button
         type="button"
         onClick={exportShowcasePng}

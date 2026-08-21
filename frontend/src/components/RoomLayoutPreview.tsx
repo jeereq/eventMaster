@@ -347,6 +347,21 @@ export default function RoomLayoutPreview({
   const theme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
   const useWebGL = !force2d && quality !== 'thumb' && mounted;
 
+  const webglBlueprint = quality === 'showcase'
+    ? {
+        ...blueprint,
+        metadata: {
+          ...blueprint.metadata,
+          showChandeliers: blueprint.metadata.showChandeliers ?? true,
+          showUplights: blueprint.metadata.showUplights ?? true,
+          showCurtains: blueprint.metadata.showCurtains ?? false,
+          showDecorPlants: blueprint.metadata.showDecorPlants ?? true,
+          showRoof: blueprint.metadata.showRoof ?? true,
+          renderQuality: 'showcase' as const,
+        },
+      }
+    : blueprint;
+
   return (
     <div className={cn('space-y-2', className)}>
       {showHeader && (
@@ -363,7 +378,7 @@ export default function RoomLayoutPreview({
         <ThumbPreview blueprint={blueprint} className={className} />
       ) : useWebGL ? (
         <RoomWebGLViewer
-          blueprint={blueprint}
+          blueprint={webglBlueprint}
           selected={[]}
           onSelect={() => {}}
           readOnly
@@ -378,8 +393,8 @@ export default function RoomLayoutPreview({
 
       {quality === 'showcase' && useWebGL && (
         <p className="text-[10px] text-muted leading-relaxed">
-          Visualisation <span className="font-semibold text-foreground">3D réaliste</span> : textures de sol, murs, mobilier et surfaces.
-          Orbitez pour inspecter la salle comme dans l’éditeur.
+          Visualisation <span className="font-semibold text-foreground">3D réaliste</span> : textures, ambiance, mobilier et architecture.
+          Orbitez pour inspecter la salle.
         </p>
       )}
     </div>

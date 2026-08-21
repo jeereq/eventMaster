@@ -43,6 +43,7 @@ import {
   EventStage,
   EventZoneSurface,
 } from '@/components/CatalogueEventArchitecture';
+import { RoomAmbiance } from '@/components/CatalogueAmbiance';
 import {
   resolveLightingPreset,
   resolveRenderQuality,
@@ -79,6 +80,8 @@ interface RoomWebGLViewerProps {
   renderQuality?: RenderQuality;
   /** Override éclairage (sinon metadata / auto). */
   lightingPreset?: LightingPreset;
+  /** Mode présentation (orbit auto, sans labels). */
+  presentationMode?: boolean;
 }
 
 function pctToWorld(xPct: number, yPct: number, widthM: number, heightM: number): [number, number] {
@@ -684,6 +687,7 @@ function TableMesh({
   onSelect,
   onDragStart,
   readOnly,
+  hideLabels = false,
 }: {
   xPct: number;
   yPct: number;
@@ -706,6 +710,7 @@ function TableMesh({
   onSelect: (mods?: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean }) => void;
   onDragStart?: () => void;
   readOnly?: boolean;
+  hideLabels?: boolean;
 }) {
   const [wx, wz] = pctToWorld(xPct, yPct, widthM, heightM);
   const { gl } = useThree();
@@ -790,7 +795,7 @@ function TableMesh({
           />
         );
       })}
-      {selected && (
+      {selected && !hideLabels && (
         <Html center distanceFactor={8} style={{ pointerEvents: 'none' }} position={[0, topY + 0.35, 0]}>
           <div className="px-2 py-0.5 rounded-md bg-primary text-white text-[10px] font-bold whitespace-nowrap shadow">
             {name} · {capacity} pl.
@@ -818,6 +823,7 @@ function ZoneMesh({
   onDragStart,
   readOnly,
   pickable = true,
+  hideLabels = false,
 }: {
   xPct: number;
   yPct: number;
@@ -835,6 +841,7 @@ function ZoneMesh({
   onDragStart?: () => void;
   readOnly?: boolean;
   pickable?: boolean;
+  hideLabels?: boolean;
 }) {
   const w = (wPct / 100) * widthM;
   const h = (hPct / 100) * heightM;
@@ -875,9 +882,11 @@ function ZoneMesh({
         <coneGeometry args={[Math.min(w, h) * 0.06, Math.min(w, h) * 0.14, 3]} />
         <meshStandardMaterial color="#fef3c7" emissive="#f59e0b" emissiveIntensity={0.45} />
       </mesh>
-      <Html center distanceFactor={12} style={{ pointerEvents: 'none' }} position={[0, thickness + 0.22, 0]}>
-        <span className="text-[10px] font-bold text-white bg-black/55 px-1.5 py-0.5 rounded shadow-sm">{label}</span>
-      </Html>
+      {!hideLabels && (
+        <Html center distanceFactor={12} style={{ pointerEvents: 'none' }} position={[0, thickness + 0.22, 0]}>
+          <span className="text-[10px] font-bold text-white bg-black/55 px-1.5 py-0.5 rounded shadow-sm">{label}</span>
+        </Html>
+      )}
     </group>
   );
 }
@@ -898,6 +907,7 @@ function FreeChairMesh({
   onDragStart,
   readOnly,
   label,
+  hideLabels = false,
 }: {
   xPct: number;
   yPct: number;
@@ -914,6 +924,7 @@ function FreeChairMesh({
   onDragStart?: () => void;
   readOnly?: boolean;
   label?: string;
+  hideLabels?: boolean;
 }) {
   const [wx, wz] = pctToWorld(xPct, yPct, widthM, heightM);
   const { gl } = useThree();
@@ -941,7 +952,7 @@ function FreeChairMesh({
         rotationY={((rotation ?? 0) * Math.PI) / 180}
         selected={selected}
       />
-      {selected && (
+      {selected && !hideLabels && (
         <Html center distanceFactor={9} style={{ pointerEvents: 'none' }} position={[0, 1.05, 0]}>
           <span className="text-[9px] font-bold bg-primary text-white px-1.5 py-0.5 rounded">{label || 'Chaise'}</span>
         </Html>
@@ -1012,6 +1023,7 @@ function FixtureMesh({
   onDrag,
   readOnly,
   pickable = true,
+  hideLabels = false,
 }: {
   xPct: number;
   yPct: number;
@@ -1034,6 +1046,7 @@ function FixtureMesh({
   onDrag?: (xPct: number, yPct: number) => void;
   readOnly?: boolean;
   pickable?: boolean;
+  hideLabels?: boolean;
 }) {
   const w = (wPct / 100) * widthM;
   const d = (hPct / 100) * roomDepthM;
@@ -1242,7 +1255,7 @@ function FixtureMesh({
           />
         </mesh>
       )}
-      {(selected || label) && (
+      {(selected || label) && !hideLabels && (
         <Html center distanceFactor={10} style={{ pointerEvents: 'none' }} position={[0, height + 0.35, 0]}>
           <span className="text-[9px] font-bold bg-black/65 text-white px-1.5 py-0.5 rounded">
             {label || kind}
@@ -1265,10 +1278,14 @@ function SceneContent({
   qualitySettings,
   lighting,
   captureApiRef,
-}: Omit<RoomWebGLViewerProps, 'className' | 'previewMode' | 'renderQuality' | 'lightingPreset'> & {
+  presentationMode = false,
+  hideLabels = false,
+}: Omit<RoomWebGLViewerProps, 'className' | 'previewMode' | 'renderQuality' | 'lightingPreset' | 'presentationMode'> & {
   qualitySettings: ReturnType<typeof resolveRenderQuality>;
   lighting: ReturnType<typeof resolveLightingPreset>;
   captureApiRef?: React.MutableRefObject<RoomWebGLCaptureApi | null>;
+  presentationMode?: boolean;
+  hideLabels?: boolean;
 }) {
   const widthM = blueprint.canvas.widthM;
   const heightM = blueprint.canvas.heightM;
@@ -1343,10 +1360,24 @@ function SceneContent({
         />
       )}
 
-      <gridHelper
-        args={[Math.max(widthM, heightM), 24, '#64748b', '#334155']}
-        position={[0, 0.015, 0]}
+      <RoomAmbiance
+        widthM={widthM}
+        heightM={heightM}
+        wallHeightM={walls[0]?.heightM ?? 3}
+        flags={{
+          chandeliers: blueprint.metadata.showChandeliers === true,
+          uplights: blueprint.metadata.showUplights === true,
+          curtains: blueprint.metadata.showCurtains === true,
+          plants: blueprint.metadata.showDecorPlants === true,
+        }}
       />
+
+      {!presentationMode && !hideLabels ? (
+        <gridHelper
+          args={[Math.max(widthM, heightM), 24, '#64748b', '#334155']}
+          position={[0, 0.015, 0]}
+        />
+      ) : null}
 
       {walls.map((wall) => (
         <WallMesh
@@ -1384,6 +1415,7 @@ function SceneContent({
           onDrag={wallEditMode || !surfacePickable ? undefined : (x, y) => moveAny('fixture', f.id, x, y)}
           readOnly={readOnly || wallEditMode}
           pickable={surfacePickable || selected.some((s) => s.kind === 'fixture' && s.id === f.id)}
+          hideLabels={hideLabels}
         />
       ))}
 
@@ -1408,6 +1440,7 @@ function SceneContent({
               onDragStart={wallEditMode || readOnly || !surfacePickable ? undefined : () => setDragTarget({ kind: 'zone', id: item.id })}
               readOnly={readOnly || wallEditMode}
               pickable={surfacePickable || selected.some((s) => s.kind === 'zone' && s.id === item.id)}
+              hideLabels={hideLabels}
             />
           );
         }
@@ -1431,6 +1464,7 @@ function SceneContent({
               onSelect={(e) => onSelect({ kind: 'chair', id: item.id }, { additive: Boolean(e?.shiftKey || e?.metaKey || e?.ctrlKey) })}
               onDragStart={wallEditMode || readOnly || item.locked ? undefined : () => setDragTarget({ kind: 'chair', id: item.id })}
               readOnly={readOnly || wallEditMode || item.locked}
+              hideLabels={hideLabels}
             />
           );
         }
@@ -1493,9 +1527,11 @@ function SceneContent({
                   />
                 );
               })}
-              <Html center distanceFactor={10} style={{ pointerEvents: 'none' }} position={[0, elevation + 1.1, 0]}>
-                <span className="text-[9px] font-bold bg-white/90 px-1.5 py-0.5 rounded shadow-sm">{item.label}</span>
-              </Html>
+              {!hideLabels && (
+                <Html center distanceFactor={10} style={{ pointerEvents: 'none' }} position={[0, elevation + 1.1, 0]}>
+                  <span className="text-[9px] font-bold bg-white/90 px-1.5 py-0.5 rounded shadow-sm">{item.label}</span>
+                </Html>
+              )}
             </group>
           );
         }
@@ -1526,6 +1562,7 @@ function SceneContent({
             onSelect={(e) => onSelect({ kind: 'table', id: item.id }, { additive: Boolean(e?.shiftKey || e?.metaKey || e?.ctrlKey) })}
             onDragStart={wallEditMode || readOnly || item.locked ? undefined : () => setDragTarget({ kind: 'table', id: item.id })}
             readOnly={readOnly || wallEditMode || item.locked}
+            hideLabels={hideLabels}
           />
         );
       })}
@@ -1545,9 +1582,11 @@ function SceneContent({
       />
 
       <OrbitControls
-        enablePan={!wallEditMode && !lockOrbit && !dragTarget}
-        enableRotate={!wallEditMode && !lockOrbit && !dragTarget}
+        enablePan={!wallEditMode && !lockOrbit && !dragTarget && !presentationMode}
+        enableRotate={(!wallEditMode && !lockOrbit && !dragTarget) || presentationMode}
         enableZoom
+        autoRotate={presentationMode}
+        autoRotateSpeed={0.55}
         maxPolarAngle={Math.PI / 2.05}
         minDistance={3}
         maxDistance={Math.max(widthM, heightM) * 3}
@@ -1570,8 +1609,11 @@ export default forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(function Ro
   previewMode = false,
   renderQuality: renderQualityProp,
   lightingPreset: lightingPresetProp,
+  presentationMode: presentationModeProp,
 }, ref) {
-  const orbitLocked = previewMode ? false : lockOrbit;
+  const presentationMode = presentationModeProp ?? blueprint.metadata.presentationMode === true;
+  const orbitLocked = previewMode || presentationMode ? false : lockOrbit;
+  const hideLabels = presentationMode || previewMode;
   const qualitySettings = useMemo(
     () => resolveRenderQuality(
       renderQualityProp ?? blueprint.metadata.renderQuality,
@@ -1633,10 +1675,18 @@ export default forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(function Ro
             qualitySettings={qualitySettings}
             lighting={lighting}
             captureApiRef={captureApiRef}
+            presentationMode={presentationMode}
+            hideLabels={hideLabels || !qualitySettings.showHints}
           />
         </Suspense>
       </Canvas>
-      {qualitySettings.showHints ? (
+      {presentationMode ? (
+        <div className="pointer-events-none absolute bottom-2 left-2">
+          <div className="rounded-md bg-black/40 px-2 py-1 text-[9px] font-bold text-amber-100/90 backdrop-blur-sm">
+            Présentation · orbit automatique
+          </div>
+        </div>
+      ) : qualitySettings.showHints ? (
         <div className="pointer-events-none absolute bottom-2 left-2 right-2 flex items-end justify-between gap-2">
           <div className="rounded-md bg-black/55 px-2 py-1 text-[9px] font-medium text-white/85 backdrop-blur-sm">
             {previewMode
