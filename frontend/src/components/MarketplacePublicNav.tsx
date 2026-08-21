@@ -24,7 +24,7 @@ export default function MarketplacePublicNav({
   return (
     <div
       className={cn(
-        'inline-flex gap-0.5 p-0.5 rounded-full border border-border bg-surface-muted',
+        'inline-flex gap-0.5 p-0.5 rounded-[var(--radius-button)] border border-border bg-surface-muted',
         dense
           ? 'w-full max-w-full flex-nowrap overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
           : 'flex-wrap',
@@ -38,7 +38,7 @@ export default function MarketplacePublicNav({
             key={item.id}
             href={item.href}
             className={cn(
-              'inline-flex items-center rounded-full text-xs font-semibold transition shrink-0',
+              'inline-flex items-center rounded-[var(--radius-button)] text-xs font-semibold transition shrink-0',
               dense ? 'gap-1 px-2.5 py-1' : 'gap-1.5 px-3.5 py-1.5',
               active === item.id
                 ? 'bg-surface text-foreground shadow-sm'

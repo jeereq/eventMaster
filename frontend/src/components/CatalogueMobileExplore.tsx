@@ -14,7 +14,7 @@ import { catalogueItemDisplayKind, catalogueKindAccent, catalogueKindLabel, form
 
 type SheetSnap = 'peek' | 'mid' | 'full';
 
-const PEEK = 176;
+const PEEK = 228;
 
 function snapHeights(vh: number) {
   return {
@@ -58,50 +58,49 @@ function StoryCard({
     >
       <span className={cn('absolute inset-x-0 top-0 h-1 z-10', accent.bar)} aria-hidden />
       <button type="button" onClick={onSelect} className="block w-full text-left">
-        <div className="relative h-[4.75rem] bg-surface-muted">
+        <div className="relative h-16 bg-surface-muted">
           {item.coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={item.coverUrl} alt="" className="w-full h-full object-cover" />
           ) : (
             <div className={cn('w-full h-full flex items-center justify-center', accent.cover)}>
-              <Icon className="w-8 h-8" strokeWidth={2.2} />
+              <Icon className="w-7 h-7" strokeWidth={2.2} />
             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-          <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1.5">
-            <span className={cn('inline-flex h-7 w-7 items-center justify-center rounded-lg shadow-sm', accent.iconBox)}>
-              <Icon className="w-3.5 h-3.5" strokeWidth={2.4} />
+          <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-1">
+            <span className={cn('inline-flex h-6 w-6 items-center justify-center rounded-[var(--radius-button)] shadow-sm', accent.iconBox)}>
+              <Icon className="w-3 h-3" strokeWidth={2.4} />
             </span>
-            <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider shadow-sm', accent.badge)}>
+            <span className={cn('rounded-[var(--radius-button)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider shadow-sm', accent.badge)}>
               {catalogueKindLabel(displayKind)}
             </span>
           </span>
           {distance ? (
-            <span className="absolute top-2.5 right-2.5 rounded-full bg-black/55 text-white text-[10px] font-semibold px-2 py-0.5">
+            <span className="absolute top-1.5 right-1.5 rounded-[var(--radius-button)] bg-black/55 text-white text-[10px] font-semibold px-1.5 py-0.5">
               {distance}
             </span>
           ) : null}
-          <div className="absolute left-3 right-3 bottom-2.5 text-white">
-            <p className="font-semibold text-sm leading-snug line-clamp-2">{item.title}</p>
-            <p className="text-[11px] text-white/80 truncate mt-0.5">
-              {item.priceFromFc != null ? `Dès ${formatFc(item.priceFromFc)}` : 'Sur devis'}
-              {item.location ? ` · ${item.location}` : ''}
-            </p>
-          </div>
+        </div>
+        <div className="px-2.5 pt-2 min-w-0">
+          <p className="font-semibold text-sm leading-snug text-foreground truncate">{item.title}</p>
+          <p className="text-[11px] text-muted truncate mt-0.5">
+            {item.priceFromFc != null ? `Dès ${formatFc(item.priceFromFc)}` : 'Sur devis'}
+            {item.location ? ` · ${item.location}` : ''}
+          </p>
         </div>
       </button>
       <div className="flex items-center gap-2 px-2.5 py-2">
         <button
           type="button"
           onClick={onDirections}
-          className="flex-1 h-8 rounded-full bg-primary text-white text-[11px] font-semibold inline-flex items-center justify-center gap-1.5"
+          className="flex-1 h-8 rounded-[var(--radius-button)] bg-primary text-white text-[11px] font-semibold inline-flex items-center justify-center gap-1.5"
         >
           <Navigation className="w-3.5 h-3.5" />
           Y aller
         </button>
         <Link
           href={item.href}
-          className="flex-1 h-8 rounded-full border border-border bg-surface-muted text-foreground text-[11px] font-semibold inline-flex items-center justify-center"
+          className="flex-1 h-8 rounded-[var(--radius-button)] border border-border bg-surface-muted text-foreground text-[11px] font-semibold inline-flex items-center justify-center"
         >
           Voir
         </Link>
@@ -318,7 +317,7 @@ export default function CatalogueMobileExplore({
             <button
               type="button"
               onClick={onExit}
-              className="h-9 px-2.5 rounded-full bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center gap-1 text-xs font-semibold text-foreground shrink-0"
+              className="h-9 px-2.5 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center gap-1 text-xs font-semibold text-foreground shrink-0"
             >
               <X className="w-3.5 h-3.5" />
               Quitter
@@ -343,7 +342,7 @@ export default function CatalogueMobileExplore({
 
       <section
         ref={sheetRef}
-        className="absolute z-20 left-0 right-0 bottom-0 rounded-t-[1.75rem] border border-border bg-surface/95 backdrop-blur-xl shadow-[0_-12px_40px_rgba(15,23,42,0.18)] flex flex-col overflow-hidden"
+        className="absolute z-20 left-0 right-0 bottom-0 rounded-t-[var(--radius-card)] border border-border bg-surface/95 backdrop-blur-xl shadow-[0_-12px_40px_rgba(15,23,42,0.18)] flex flex-col overflow-hidden"
         style={{
           height: sheetH,
           paddingBottom: 'env(safe-area-inset-bottom)',
@@ -372,7 +371,7 @@ export default function CatalogueMobileExplore({
                 <button
                   type="button"
                   onClick={onExit}
-                  className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] font-semibold text-foreground"
+                  className="inline-flex items-center gap-1 rounded-[var(--radius-button)] border border-border px-2.5 py-1 text-[11px] font-semibold text-foreground"
                 >
                   <LayoutGrid className="w-3.5 h-3.5" />
                   Grille
@@ -381,7 +380,7 @@ export default function CatalogueMobileExplore({
               <button
                 type="button"
                 onClick={() => setSnap(snap === 'full' ? 'peek' : 'full')}
-                className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-1 text-[11px] font-semibold text-foreground"
+                className="inline-flex items-center gap-1 rounded-[var(--radius-button)] border border-border px-2.5 py-1 text-[11px] font-semibold text-foreground"
               >
                 <ChevronUp className={cn('w-3.5 h-3.5 transition', snap === 'full' && 'rotate-180')} />
                 {snap === 'full' ? 'Réduire' : 'Plus'}
@@ -428,7 +427,7 @@ export default function CatalogueMobileExplore({
           >
             {loading && items.length === 0 ? (
               Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="em-snap-card h-[8.25rem] rounded-[var(--radius-card)] bg-surface-muted animate-pulse" />
+                <div key={i} className="em-snap-card h-[9.5rem] rounded-[var(--radius-card)] bg-surface-muted animate-pulse" />
               ))
             ) : items.length === 0 ? (
               <div className="px-2 py-6 text-center w-full">

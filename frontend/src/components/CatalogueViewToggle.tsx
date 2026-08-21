@@ -164,7 +164,7 @@ export default function CatalogueViewToggle({
   return (
     <div
       className={cn(
-        'flex items-center rounded-full border border-border bg-surface-muted p-0.5',
+        'flex items-center rounded-[var(--radius-button)] border border-border bg-surface-muted p-0.5',
         className,
       )}
       role="group"
@@ -178,7 +178,7 @@ export default function CatalogueViewToggle({
           aria-pressed={value === id}
           title={`Vue ${label.toLowerCase()}`}
           className={cn(
-            'inline-flex flex-1 sm:flex-none items-center justify-center rounded-full px-2.5 py-1.5 transition-colors',
+            'inline-flex flex-1 sm:flex-none items-center justify-center rounded-[var(--radius-button)] px-2.5 py-1.5 transition-colors',
             id === 'focus' && 'hidden lg:inline-flex',
             value === id
               ? 'bg-surface text-primary shadow-sm ring-1 ring-border'

@@ -195,7 +195,7 @@ export default function CatalogueSearchLayout({
               <button
                 type="button"
                 onClick={exitMap}
-                className="h-9 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-full bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-xs font-semibold text-foreground hover:bg-surface transition hover:scale-[1.02] active:scale-[0.98]"
+                className="h-9 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-xs font-semibold text-foreground hover:bg-surface transition hover:scale-[1.02] active:scale-[0.98]"
               >
                 <Minimize2 className="w-3.5 h-3.5" />
                 Quitter

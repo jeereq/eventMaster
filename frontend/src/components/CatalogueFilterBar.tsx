@@ -310,7 +310,7 @@ export default function CatalogueFilterBar({
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder={searchPlaceholder}
-              className="w-full h-9 pl-9 pr-3 rounded-full bg-surface/90 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/25"
+              className="w-full h-9 pl-9 pr-3 rounded-[var(--radius-button)] bg-surface/90 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/25"
             />
           </div>
           {hasFilters && (
@@ -318,7 +318,7 @@ export default function CatalogueFilterBar({
               type="button"
               onClick={openModal}
               className={cn(
-                'relative h-9 w-9 shrink-0 rounded-full border shadow-lg backdrop-blur-xl inline-flex items-center justify-center transition',
+                'relative h-9 w-9 shrink-0 rounded-[var(--radius-button)] border shadow-lg backdrop-blur-xl inline-flex items-center justify-center transition',
                 count
                   ? 'bg-primary text-white border-primary'
                   : 'bg-surface/90 text-foreground border-white/25 dark:border-white/10',
@@ -340,7 +340,7 @@ export default function CatalogueFilterBar({
             text="Salles, prestataires, locations et événements filtrés sur EventMaster."
             label="Partager la recherche"
             url={shareUrl}
-            className="!h-9 !w-9 !rounded-full"
+            className="!h-9 !w-9 !rounded-[var(--radius-button)]"
           />
           ) : null}
         </div>
