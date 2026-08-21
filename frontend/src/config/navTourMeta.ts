@@ -122,9 +122,9 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
     route: '/dashboard/team',
   },
   'nav-marketplace': {
-    title: 'Marketplace',
+    title: 'Mes offres',
     description:
-      'Publiez salles, métiers ou locations (habits, véhicules, matériel), suivez les devis, puis confirmez les réservations : accepter → acompte hors plateforme → bloquer la date.',
+      'Espace vendeur : publiez salles, métiers ou locations, traitez les devis reçus et confirmez les réservations (accepter → acompte hors plateforme → bloquer la date).',
     route: '/dashboard/marketplace',
   },
   'nav-protocol': {
@@ -182,9 +182,9 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
     route: '/dashboard/profile',
   },
   'nav-catalogue': {
-    title: 'Marketplace',
+    title: 'Explorer',
     description:
-      'Explorer salles, prestataires, locations (habits, véhicules, matériel) et événements : filtres, carte Focus, grille ou liste, partage de l’URL. Onglets Favoris, Préparer un événement (brief budget) et Mes packs.',
+      'Catalogue acheteur (comme le client) : salles, prestataires, locations et événements — filtres, carte Focus, grille ou liste, favoris et packs budget.',
     route: '/dashboard/catalogue',
   },
   'nav-agenda': {
@@ -196,8 +196,20 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-bookings': {
     title: 'Devis & réservations',
     description:
-      'Vos demandes de devis envoyées, les réservations de dates, vos packs budget et vos favoris. L’acompte ({depositPercent} %) se verse hors plateforme.',
+      'Hub acheteur : demandes de devis, réservations, packs et favoris. L’acompte ({depositPercent} %) se verse hors plateforme.',
     route: '/dashboard/bookings',
+  },
+  'nav-quotes': {
+    title: 'Demandes de devis',
+    description:
+      'Vos demandes de devis envoyées aux salles et prestataires. Suivi des réponses et conversion en réservation.',
+    route: '/dashboard/bookings?tab=quotes',
+  },
+  'nav-reservations': {
+    title: 'Réservations',
+    description:
+      'Réservations de dates (acceptées, acompte, confirmées). L’acompte ({depositPercent} %) se verse hors plateforme.',
+    route: '/dashboard/bookings?tab=bookings',
   },
   'nav-tickets': {
     title: 'Mes billets',

@@ -11,6 +11,7 @@ import {
  LogOut, Menu, X, Loader2, ShieldCheck, PartyPopper, User, Sun, Moon, BarChart3,
  Building2, FileText, Key, MessageSquare, ScanLine, Briefcase, Clock, BookOpen,
  PanelLeftClose, PanelLeft, Store, CalendarCheck, ScrollText, Ticket, Wallet, Bell,
+ Inbox,
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import UserLegalGate from '@/components/UserLegalGate';
@@ -58,7 +59,16 @@ function navItemIsActive(pathname: string, search: string, item: NavItem, curren
   for (const [key, value] of want.entries()) {
    if (have.get(key) !== value) return false;
   }
+  // Devis vs Réservations (même path /dashboard/bookings)
+  if (path === '/dashboard/bookings' && want.has('tab')) {
+   const haveTab = have.get('tab') || 'quotes';
+   if (haveTab !== want.get('tab')) return false;
+  }
   return pathname === path;
+ }
+ if (path === '/dashboard/bookings' && pathname === '/dashboard/bookings') {
+  // Lien générique « Devis & réservations » (sans tab) : actif pour toute la page
+  return true;
  }
  if (path === '/dashboard/catalogue' && pathname === '/dashboard/catalogue') {
   return new URLSearchParams(search).get('kind') !== 'event';
@@ -199,6 +209,11 @@ function buildDashboardNav(opts: {
     { name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar },
     { name: 'Protocole', href: '/dashboard/events?mode=protocol', tourId: 'nav-protocol', icon: ScanLine },
    ]),
+   navSection('Marketplace', [
+    { name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires et locations — comme le catalogue client' },
+    { name: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes', tourId: 'nav-quotes', icon: Inbox },
+    { name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck },
+   ]),
    navSection('Suivi', [
     { name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3 },
    ]),
@@ -214,7 +229,8 @@ function buildDashboardNav(opts: {
    ]),
    navSection('Mes activités', [
     { name: 'Mes billets', href: '/dashboard/tickets', tourId: 'nav-tickets', icon: Ticket, description: 'Inscriptions, filtres, vue grille/liste et badges QR' },
-    { name: 'Devis & réservations', href: '/dashboard/bookings', tourId: 'nav-bookings', icon: CalendarCheck },
+    { name: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes', tourId: 'nav-quotes', icon: Inbox },
+    { name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck },
    ]),
    navSection('Compte', compteNavItems()),
   );
@@ -236,11 +252,17 @@ function buildDashboardNav(opts: {
  ];
 
  const marketItems: NavItem[] = [
-  ...(workspace.showEvents
-   ? [{ name: 'Devis & réservations', href: '/dashboard/bookings', tourId: 'nav-bookings', icon: CalendarCheck }]
+  ...(workspace.showBrowseCatalogue
+   ? [{ name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Catalogue acheteur : salles, métiers, locations (comme le client)' }]
+   : []),
+  ...(workspace.showEvents || workspace.showBrowseCatalogue
+   ? [
+      { name: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes', tourId: 'nav-quotes', icon: Inbox },
+      { name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck },
+     ]
    : []),
   ...(workspace.showMarketplace
-   ? [{ name: 'Marketplace', href: '/dashboard/marketplace', tourId: 'nav-marketplace', icon: Store }]
+   ? [{ name: 'Mes offres', href: '/dashboard/marketplace', tourId: 'nav-marketplace', icon: Briefcase, description: 'Publier et gérer vos fiches vendeur (salle / métier / location)' }]
    : []),
   ...(workspace.showRooms
    ? [{ name: 'Salles', href: '/dashboard/rooms', tourId: 'nav-rooms', icon: Building2 }]

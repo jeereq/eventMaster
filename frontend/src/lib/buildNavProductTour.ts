@@ -68,7 +68,11 @@ export function buildOrgNavTourIds(
 ): Array<{ tourId: string; route?: string }> {
   const tabs: Array<{ tourId: string; route?: string }> = [{ tourId: 'nav-dashboard' }];
   if (!workspace || workspace.showEvents) tabs.push({ tourId: 'nav-events' });
-  if (!workspace || workspace.showEvents) tabs.push({ tourId: 'nav-bookings' });
+  if (workspace?.showBrowseCatalogue) tabs.push({ tourId: 'nav-catalogue' });
+  if (!workspace || workspace.showEvents || workspace?.showBrowseCatalogue) {
+    tabs.push({ tourId: 'nav-quotes' });
+    tabs.push({ tourId: 'nav-reservations' });
+  }
   if (workspace?.showRooms) tabs.push({ tourId: 'nav-rooms' });
   if (workspace?.showTeam) tabs.push({ tourId: 'nav-team' });
   if (workspace?.showMarketplace) tabs.push({ tourId: 'nav-marketplace' });
@@ -165,7 +169,8 @@ export function buildFirstLoginTour(
   switch (guideId) {
     case 'client':
       push('nav-catalogue');
-      push('nav-bookings');
+      push('nav-quotes');
+      push('nav-reservations');
       push('nav-tickets');
       steps.push(
         firstLoginFinish(home, 'Ensuite : ouvrez une fiche, enregistrez un favori ou demandez un devis.'),
@@ -175,6 +180,8 @@ export function buildFirstLoginTour(
     case 'org_protocol':
       push('nav-protocol');
       push('nav-events');
+      push('nav-catalogue');
+      push('nav-quotes');
       steps.push(firstLoginFinish(home, 'Ensuite : ouvrez un événement le jour J et testez le scan QR.'));
       return steps;
 
@@ -200,7 +207,9 @@ export function buildFirstLoginTour(
       push('nav-dashboard', home);
       if (!workspace || workspace.showEvents) {
         push('nav-events');
-        push('nav-bookings');
+        if (workspace?.showBrowseCatalogue) push('nav-catalogue');
+        push('nav-quotes');
+        push('nav-reservations');
       } else {
         if (workspace.showRooms) push('nav-rooms');
         if (workspace.showMarketplace) push('nav-marketplace');
@@ -267,6 +276,9 @@ export function buildNavProductTour(
       return buildSteps([
         { tourId: 'nav-events' },
         { tourId: 'nav-protocol' },
+        { tourId: 'nav-catalogue' },
+        { tourId: 'nav-quotes' },
+        { tourId: 'nav-reservations' },
         { tourId: 'nav-guide' },
         { tourId: 'nav-profile' },
       ]);
@@ -281,7 +293,8 @@ export function buildNavProductTour(
         { tourId: 'nav-catalogue' },
         { tourId: 'nav-agenda' },
         { tourId: 'nav-tickets' },
-        { tourId: 'nav-bookings' },
+        { tourId: 'nav-quotes' },
+        { tourId: 'nav-reservations' },
         { tourId: 'nav-guide' },
         { tourId: 'nav-profile' },
       ]);

@@ -234,6 +234,8 @@ export interface WorkspaceModules {
   showEvents: boolean;
   showRooms: boolean;
   showMarketplace: boolean;
+  /** Catalogue acheteur (comme le compte client) : explorer salles / prestas. */
+  showBrowseCatalogue: boolean;
   showTemplates: boolean;
   showAnalytics: boolean;
   showProtocol: boolean;
@@ -258,6 +260,7 @@ export function getWorkspaceModules(opts: {
       showEvents: false,
       showRooms: canRooms,
       showMarketplace: !protocolOnly,
+      showBrowseCatalogue: !protocolOnly,
       showTemplates: false,
       showAnalytics: false,
       showProtocol: false,
@@ -273,11 +276,14 @@ export function getWorkspaceModules(opts: {
   const showEvents = maxEvents > 0;
   const showRooms = canRooms && maxRooms > 0;
   const showMarketplace = maxServices > 0 && !protocolOnly;
+  /** Protocole et orga avec événements peuvent explorer le catalogue acheteur. */
+  const showBrowseCatalogue = showEvents || protocolOnly;
 
   return {
     showEvents,
     showRooms,
     showMarketplace,
+    showBrowseCatalogue,
     showTemplates: showEvents && maxTemplates > 0 && !protocolOnly,
     showAnalytics: showEvents,
     showProtocol:

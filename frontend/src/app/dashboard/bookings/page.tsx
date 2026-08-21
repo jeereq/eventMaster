@@ -111,6 +111,15 @@ function OrganizerDemandesPage() {
     router.replace(qs ? `/dashboard/bookings?${qs}` : '/dashboard/bookings');
   };
 
+  const setHubTab = (id: HubTab) => {
+    setTab(id);
+    const params = new URLSearchParams(searchParams.toString());
+    if (id === 'quotes') params.delete('tab');
+    else params.set('tab', id);
+    const qs = params.toString();
+    router.replace(qs ? `/dashboard/bookings?${qs}` : '/dashboard/bookings', { scroll: false });
+  };
+
   const pendingQuotes = visibleInquiries.filter((item) => item.status === 'NEW' && !item.hasBooking).length;
   const openBookings = visibleBookings.filter((item) => item.status === 'REQUESTED' || item.status === 'ACCEPTED').length;
 
@@ -127,8 +136,14 @@ function OrganizerDemandesPage() {
   return (
     <div className="space-y-6 w-full">
       <PageHeader
-        title="Devis & réservations"
-        description={`Suivez vos demandes de devis, les réservations envoyées, vos packs et favoris. L’acompte (${depositPercent(site)} %) se verse hors plateforme.`}
+        title={tab === 'bookings' ? 'Réservations' : tab === 'quotes' ? 'Demandes de devis' : 'Devis & réservations'}
+        description={
+          tab === 'bookings'
+            ? `Suivez les réservations de dates. L’acompte (${depositPercent(site)} %) se verse hors plateforme.`
+            : tab === 'quotes'
+              ? 'Suivez vos demandes de devis envoyées aux salles et prestataires.'
+              : `Suivez devis, réservations, packs et favoris. L’acompte (${depositPercent(site)} %) se verse hors plateforme.`
+        }
         breadcrumbs={
           <Breadcrumbs
             items={[
@@ -140,7 +155,7 @@ function OrganizerDemandesPage() {
         action={
           <Link href="/dashboard/catalogue" className="inline-flex">
             <Button size="sm" leftIcon={<Store className="w-4 h-4" />}>
-              Marketplace
+              Explorer
             </Button>
           </Link>
         }
@@ -169,7 +184,7 @@ function OrganizerDemandesPage() {
       <CatalogueChoicePills
         options={tabs}
         value={tab}
-        onChange={(id) => setTab((id as HubTab) || 'quotes')}
+        onChange={(id) => setHubTab((id as HubTab) || 'quotes')}
       />
 
       {loading ? (
