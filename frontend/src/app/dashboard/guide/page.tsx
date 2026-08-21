@@ -73,7 +73,7 @@ function DashboardGuidePageContent() {
     <div className="space-y-6 w-full">
       <PageHeader
         title="Guide utilisateur"
-        description="Documentation et visite guidée de votre espace de travail, selon votre rôle."
+        description="Documentation à jour selon votre rôle : Explorer, devis / réservations, tâches protocole, éditeur de salles."
         breadcrumbs={
           <Breadcrumbs
             items={[

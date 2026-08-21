@@ -194,16 +194,16 @@ export const USER_GUIDES: UserGuide[] = [
     title: 'Guide Propriétaire d\'organisation',
     badge: 'Organisation',
     summary:
-      'En tant que propriétaire (créateur de l\'organisation), vous disposez de tous les droits : équipe, salles, événements, modèles, marketplace, facturation et factures.',
+      'En tant que propriétaire, vous pilotez l’organisation : équipe, salles 2D/3D (étages, escaliers selon forfait), événements, modèles, catalogue acheteur (Explorer), devis / réservations, offres vendeur (Mes offres), facturation et factures.',
     canDo: [
       'Gérer l\'équipe (managers, protocoles, commerciaux org.)',
-      'Créer et configurer les salles 2D',
-      'Créer des événements privés (liste d\'invités) ou publics avec inscription / billets en ligne',
-      'Renseigner dress code, avantages et notes pratiques pour les invités',
-      'Publier sur le fil d’actualité, répondre aux commentaires et consulter le livre d’or',
+      'Créer des salles multi-étages (Duplex, Villa…) et peaufiner le plan 3D selon le niveau d’éditeur du forfait',
+      'Créer des événements privés ou publics (billets), tâches d’équipe et mode Protocole',
+      'Explorer le catalogue acheteur (comme un client) : salles, métiers, locations',
+      'Suivre séparément les demandes de devis et les réservations',
+      'Publier vos offres vendeur (Mes offres) : métiers / locations ; salles via Salles',
       'Accéder à la facturation, au forfait, aux factures et aux versements des commerciaux org.',
-      'Personnaliser les modèles d\'invitation et messages invités',
-      'Publier des salles (plan 2D) et des prestations : métiers ou locations (habits, véhicules, matériel)',
+      'Personnaliser modèles d’invitation et messages invités',
     ],
     cannotDo: [
       'Voir les données d\'autres organisations',
@@ -212,27 +212,41 @@ export const USER_GUIDES: UserGuide[] = [
     navLinks: [
       { label: 'Tableau de bord', href: '/dashboard' },
       { label: 'Événements', href: '/dashboard/events' },
+      { label: 'Protocole', href: '/dashboard/events?mode=protocol' },
       { label: 'Statistiques', href: '/dashboard/analytics' },
       { label: 'Modèles', href: '/dashboard/templates' },
       { label: 'Facturation & plan', href: '/dashboard/billing' },
       { label: 'Versements commerciaux', href: '/dashboard/billing/payouts' },
       { label: 'Factures', href: '/dashboard/invoices' },
       { label: 'Salles', href: '/dashboard/rooms' },
-      { label: 'Explorer (catalogue)', href: '/dashboard/catalogue' },
+      { label: 'Explorer', href: '/dashboard/catalogue' },
       { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
       { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
       { label: 'Mes offres', href: '/dashboard/marketplace' },
       { label: 'Équipe', href: '/dashboard/team' },
+      { label: 'Guide', href: '/dashboard/guide' },
       { label: 'Mon compte', href: '/dashboard/profile' },
     ],
     workflows: [
       {
+        id: 'whats-new',
+        title: 'Nouveautés à connaître',
+        content:
+          '1. Marketplace séparé : Explorer = catalogue acheteur (comme le client) ; Mes offres = publication vendeur.\n2. Devis et Réservations sont deux entrées de menu distinctes (même page, onglets synchronisés avec l’URL).\n3. Événements : sous-onglets Liste | Tâches ; en mode Protocole, Accueil | Tâches sur un événement.\n4. Salles : modèles d’étages (Duplex…), escaliers / balcons dès Premium — détail dans « Éditeur de salles selon le forfait » et la FAQ.',
+        links: [
+          { label: 'Explorer', href: '/dashboard/catalogue' },
+          { label: 'FAQ éditeur', href: '/faq' },
+          { label: 'Facturation', href: '/dashboard/billing' },
+        ],
+      },
+      {
         id: 'event-lifecycle',
         title: 'Parcours complet d\'un événement',
         content:
-          '1. Créez l\'événement (titre, date, lieu, salle).\n2. Onglet Préparation : retenez une salle marketplace et des prestataires, puis envoyez un devis — l’étape est optionnelle mais fait partie du parcours.\n3. Onglet Infos invités : dress code, avantages (parking, cadeaux, extras), horaires et notes — visibles sur le RSVP.\n4. Ajoutez ou importez vos invités.\n5. Rédigez l’invitation (e-mail / WhatsApp). Un modèle visuel de la bibliothèque est un plus, pas une obligation.\n6. Diffusez l’invitation : les invités reçoivent le lien RSVP.\n7. Les invités confirment ou déclinent via leur lien personnel — dès acceptation, PDF / plan / GPS partent si une place est assignée.\n8. Organisez le plan de table 2D et assignez les places — les invités déjà confirmés reçoivent alors le placement complet.\n9. Onglet Feed : publiez photos et annonces ; les invités like et commentent ; le livre d’or collecte leurs messages.\n10. Le jour J, utilisez le mode Protocole (scan QR) pour confirmer la présence à l\'entrée.\n11. Consultez les statistiques RSVP et participation.',
+          '1. Créez l\'événement (titre, date, lieu, salle).\n2. Onglet Préparation : retenez une salle / prestataires via Explorer, puis envoyez un devis.\n3. Infos invités : dress code, avantages, notes (visibles au RSVP).\n4. Invités → invitation RSVP → plan de table.\n5. Onglet Tâches : checklist d’équipe (assignez le protocole).\n6. Feed : annonces ; livre d’or.\n7. Jour J : Protocole (scan QR) + onglet Tâches pour la checklist accueil.\n8. Statistiques RSVP / check-in.',
         links: [
           { label: 'Événements', href: '/dashboard/events' },
+          { label: 'Explorer', href: '/dashboard/catalogue' },
           { label: 'Statistiques', href: '/dashboard/analytics' },
         ],
       },
@@ -240,28 +254,39 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'create-event',
         title: 'Créer un événement complet',
         content:
-          '1. Allez dans Événements → Créer.\n2. Choisissez Privé (liste d’invités) ou Public (fiche sur le marketplace : grille, liste et carte).\n3. Ajoutez une galerie (photos / vidéos) : elle sert de couverture marketplace et de fiche publique.\n4. Pour un public payant, activez les billets en ligne et le prix en FC.\n5. Renseignez titre, date, lieu et GPS ; associez une salle (importe le plan 2D) et un modèle de formulaire RSVP si besoin.\n6. Dans Infos invités : dress code, avantages (parking, cadeaux, extras) et notes — visibles sur le RSVP.\n7. Sur le fil d’actualité, publiez une annonce ; les invités like et commentent. Sur un événement public, cochez « publier aussi sur la fiche marketplace ».\n8. Suivez le parcours : invités (ou acheteurs de billets) → invitation RSVP → plan de table → protocole.',
+          '1. Événements → Créer.\n2. Privé (liste d’invités) ou Public (fiche marketplace + billets éventuels).\n3. Galerie, GPS, salle (importe le plan), formulaire RSVP.\n4. Infos invités puis invitations.\n5. Suivez : invités → plan de table → tâches → protocole.',
         links: [{ label: 'Événements', href: '/dashboard/events' }],
+      },
+      {
+        id: 'browse-and-quote',
+        title: 'Explorer le catalogue et suivre devis / réservations',
+        content:
+          '1. Menu Explorer : même expérience que le client (filtres, carte, favoris, packs budget).\n2. Depuis une fiche, envoyez un devis ou une demande de date (lié à un événement si besoin).\n3. Menu Demandes de devis : réponses et conversion.\n4. Menu Réservations : acceptation, acompte hors plateforme, confirmation de date.',
+        links: [
+          { label: 'Explorer', href: '/dashboard/catalogue' },
+          { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+          { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
+        ],
       },
       {
         id: 'manage-team',
         title: 'Inviter un membre d\'équipe',
         content:
-          '1. Ouvrez Équipe dans le menu.\n2. Choisissez le rôle : Manager, Protocole ou Commercial org.\n3. Renseignez e-mail et mot de passe temporaire.\n4. Le membre reçoit ses accès selon son rôle.',
+          '1. Ouvrez Équipe.\n2. Rôle : Manager, Protocole ou Commercial org.\n3. E-mail + mot de passe temporaire.\n4. Le protocole voit Événements, Protocole, Explorer, devis et réservations.',
         links: [{ label: 'Équipe', href: '/dashboard/team' }],
       },
       {
         id: 'upgrade-plan',
         title: 'Changer de forfait',
         content:
-          '1. Ouvrez Facturation & plan.\n2. Comparez les quotas. Choisissez la période de base (mois, ou trimestre 90 j pour un forfait Particulier) ou l’annuel (12 mois ou 4 trimestres d’un coup, −10 %).\n3. Soumettez une demande de changement avec preuve de paiement si requis.\n4. Suivez le statut dans Factures après validation.',
+          '1. Facturation & plan.\n2. Comparez quotas et niveau d’éditeur de salles (Essentiel → Complet).\n3. Période de base ou annuel (−10 %).\n4. Demande + preuve si requis ; suivi dans Factures.',
         links: [{ label: 'Facturation & plan', href: '/dashboard/billing' }],
       },
       {
         id: 'org-payouts',
         title: 'Verser les commissions de vos commerciaux',
         content:
-          '1. Effectuez le virement hors plateforme (Mobile Money / banque) vers le commercial org.\n2. Ouvrez Versements commerciaux (Facturation) ou le lien depuis Équipe.\n3. Filtrez la période, ouvrez le dossier dû.\n4. Joignez une preuve (URL ou photo) et un motif (≥ 8 caractères).\n5. Marquez versée — le commercial est notifié. EventMaster ne paie pas ces commissions.',
+          '1. Virement hors plateforme vers le commercial.\n2. Versements commerciaux → dossier dû.\n3. Preuve + motif (≥ 8 caractères) → Marquer versée.',
         links: [
           { label: 'Versements commerciaux', href: '/dashboard/billing/payouts' },
           { label: 'Équipe', href: '/dashboard/team' },
@@ -269,16 +294,16 @@ export const USER_GUIDES: UserGuide[] = [
       },
       {
         id: 'marketplace-desk',
-        title: 'Publier une prestation et traiter les demandes',
+        title: 'Publier une offre (Mes offres)',
         content:
-          '1. Ouvrez Mes offres (espace vendeur).\n2. Onglet Prestations : créez une fiche métier (traiteur, photo, DJ…) ou location (habits homme / femme / enfant, voiture, moto, matériel) avec photos, tarif, ville, rayon ; passez en grille ou liste, puis publiez. Pour une salle : Salles → plan 2D → publier la fiche.\n3. Onglet Demandes : marquez un devis comme contacté, ou convertissez-le en réservation s’il a une date.\n4. Onglet Réservations : acceptez, marquez l’acompte reçu (versé hors plateforme), puis confirmez pour bloquer la date.\n5. Sur une fiche publique, le bouton Partager envoie le lien marketplace (pas l’URL interne du desk).',
+          '1. Menu Mes offres (vendeur) — distinct d’Explorer.\n2. Prestations : métier ou location ; photos, tarif, ville ; publiez. Salle : Salles → plan → publier.\n3. Demandes reçues → contacter / convertir en réservation.\n4. Réservations vendeur : accepter → acompte hors plateforme → confirmer.',
         links: [{ label: 'Mes offres', href: '/dashboard/marketplace' }],
       },
       {
         id: 'room-editor-plans',
         title: 'Éditeur de salles selon le forfait',
         content:
-          'L’éditeur 2D/3D est borné par roomEditorLevel (affiché dans Facturation) :\n1. Essentiel — tables simples uniquement (pas de thèmes ni fixtures).\n2. Business — rangées, grille ; entrées, allées, couloirs.\n3. Premium — thèmes, scène, buffet, zones ; escaliers entre étages et balcons.\n4. Complet — tout le Premium + périmètre, tapis, thèmes et images personnalisés (Enterprise, forfaits Salle).\n5. Duplex / Empiler : structure multi-étages ; créer un escalier ou balcon exige Premium ou Complet.\n6. Pour monter de niveau : Facturation → changer de forfait. Détail aussi dans la FAQ publique.',
+          'Niveau d’éditeur (Facturation) :\n1. Essentiel — tables simples.\n2. Business — rangées, entrées, allées, couloirs.\n3. Premium — thèmes, scène, buffet, zones, escaliers, balcons.\n4. Complet — + périmètre, tapis, thèmes / images perso.\n5. Duplex / Empiler : structure ; escalier / balcon = Premium+.\n6. FAQ publique : question dédiée à l’éditeur.',
         links: [
           { label: 'Facturation', href: '/dashboard/billing' },
           { label: 'Salles', href: '/dashboard/rooms' },
@@ -287,26 +312,23 @@ export const USER_GUIDES: UserGuide[] = [
       },
       {
         id: 'room-stairs',
-        title: 'Escaliers entre étages (guide dédié)',
+        title: 'Escaliers entre étages',
         content:
-          'Abonnement requis : niveau d’éditeur Premium ou Complet (Business Premium, Enterprise, forfaits Salle…). Sur Essentiel ou Business, les boutons Escalier / Balcon sont masqués.\n\n1. Prérequis : au moins 2 étages (modèle Duplex / Villa, ou + Étage).\n2. Sélectionnez l’étage de départ dans la barre Étage.\n3. Cliquez « Escalier vers… » et choisissez l’étage d’arrivée — hauteur et marches sont calculées.\n4. Sélectionnez l’escalier : définissez arrivée, style (Droit / Ouvert / Compact) et orientation.\n5. Recalibrer si besoin, puis Empiler pour vérifier en 3D.\n6. Dans l’éditeur, ouvrez le panneau « Guide — Escaliers entre étages » pour le détail pas à pas.',
+          'Premium ou Complet requis.\n1. Au moins 2 étages (Duplex / Villa ou + Étage).\n2. Étage de départ → Escalier vers… → arrivée.\n3. Panneau Définition : style (Droit / Ouvert / Compact), orientation, recalibrer.\n4. Empiler pour vérifier en 3D. Guide in-app dans l’éditeur.',
         links: [
           { label: 'Salles', href: '/dashboard/rooms' },
           { label: 'Facturation', href: '/dashboard/billing' },
-          { label: 'FAQ éditeur', href: '/faq' },
         ],
       },
     ],
     tips: [
-      'Les quotas (événements, invités, modèles) sont visibles sur le tableau de bord.',
-      'Les couleurs de l’organisation (Profil) s’appliquent à toute l’équipe ; l’accent personnel du header ne concerne que cet appareil.',
-      'Assignez des protocoles org. pour le scan QR web (navigateur) sur tous les événements.',
-      'Configurez les salles avant de créer des événements avec plan de table.',
-      'Éditeur de salles : Essentiel → tables ; Business → allées ; Premium → escaliers / balcons / thèmes ; Complet → tout + perso. Détail dans le workflow « Éditeur de salles selon le forfait ».',
-      'Pour un bâtiment multi-niveaux : modèle Duplex puis guide Escaliers (Premium+) dans Salles.',
-      'La commission marketplace ({commissionPercent} %) est due par le vendeur, distincte de l’abonnement SaaS.',
-      'Le paiement annuel facture 12 mois (ou 4 trimestres Particulier) d’un coup, avec −10 % sur ce total. Le cycle est mémorisé : le rappel J-7 et la facture de renouvellement auto reprennent l’annuel.',
-      'Les commissions de vos commerciaux org. se versent hors plateforme (Facturation → Versements), avec preuve.',
+      'Explorer ≠ Mes offres : l’un cherche, l’autre publie.',
+      'Devis et Réservations sont séparés dans le menu pour un suivi plus clair.',
+      'Assignez le protocole et des tâches avant le jour J (Événements → Tâches).',
+      'Éditeur : Essentiel → tables ; Business → allées ; Premium → escaliers / balcons ; Complet → perso.',
+      'Commission marketplace ({commissionPercent} %) = vendeur, hors abonnement SaaS.',
+      'Annuel = 12 mois (ou 4 trimestres Particulier) avec −10 %.',
+      'Versements commerciaux org. : hors plateforme, avec preuve.',
     ],
   },
   {
@@ -314,15 +336,14 @@ export const USER_GUIDES: UserGuide[] = [
     title: 'Guide Manager organisation',
     badge: 'Organisation',
     summary:
-      'Vous pilotez l\'organisation au quotidien : équipe, salles, événements, modèles et marketplace. La facturation reste réservée au propriétaire.',
+      'Vous pilotez le quotidien : équipe, salles 2D/3D, événements, Explorer (catalogue acheteur), devis / réservations, Mes offres. La facturation reste au propriétaire.',
     canDo: [
-      'Gérer l\'équipe et les rôles organisationnels',
-      'Créer salles et événements (privés ou publics, billets en ligne)',
-      'Renseigner dress code, avantages et notes pratiques pour les invités',
-      'Publier sur le fil d’actualité et suivre le livre d’or',
-      'Gérer invités, invitations et modèles',
-      'Consulter les factures (sans modifier le forfait)',
-      'Publier des salles et des prestations (métiers ou locations) et traiter devis / réservations',
+      'Gérer l\'équipe et les rôles',
+      'Créer salles (étages, plan 3D selon forfait) et événements (privés / publics)',
+      'Explorer le catalogue et suivre devis / réservations séparément',
+      'Publier des offres vendeur (Mes offres) et traiter les demandes reçues',
+      'Assigner des tâches et préparer le mode Protocole',
+      'Consulter les factures (sans changer de forfait)',
     ],
     cannotDo: [
       'Accéder à la facturation ni changer de forfait',
@@ -332,78 +353,95 @@ export const USER_GUIDES: UserGuide[] = [
     navLinks: [
       { label: 'Tableau de bord', href: '/dashboard' },
       { label: 'Événements', href: '/dashboard/events' },
+      { label: 'Protocole', href: '/dashboard/events?mode=protocol' },
       { label: 'Statistiques', href: '/dashboard/analytics' },
       { label: 'Modèles', href: '/dashboard/templates' },
       { label: 'Factures', href: '/dashboard/invoices' },
       { label: 'Salles', href: '/dashboard/rooms' },
-      { label: 'Explorer (catalogue)', href: '/dashboard/catalogue' },
+      { label: 'Explorer', href: '/dashboard/catalogue' },
       { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
       { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
       { label: 'Mes offres', href: '/dashboard/marketplace' },
       { label: 'Équipe', href: '/dashboard/team' },
+      { label: 'Guide', href: '/dashboard/guide' },
       { label: 'Mon compte', href: '/dashboard/profile' },
     ],
     workflows: [
       {
+        id: 'whats-new',
+        title: 'Nouveautés à connaître',
+        content:
+          '1. Explorer = catalogue acheteur ; Mes offres = publication vendeur.\n2. Menus Demandes de devis et Réservations séparés.\n3. Événements → Liste | Tâches ; Protocole → Accueil | Tâches.\n4. Salles multi-étages / escaliers selon le forfait (voir Facturation chez le propriétaire).',
+        links: [
+          { label: 'Explorer', href: '/dashboard/catalogue' },
+          { label: 'Événements', href: '/dashboard/events' },
+        ],
+      },
+      {
         id: 'event-lifecycle',
         title: 'Parcours complet d\'un événement',
         content:
-          '1. Créez l\'événement (titre, date, lieu suffisent).\n2. Onglet Préparation : salle et prestataires, devis liés à l’événement (optionnel).\n3. Ajoutez les invités — e-mail ou WhatsApp, un contact suffit.\n4. Rédigez et envoyez l\'invitation (lien RSVP).\n5. Suivez les réponses. Vous pouvez placer dès maintenant ; le PDF part au « oui » si une place est assignée.\n6. Jour J : mode Protocole pour l\'accueil (scan QR).',
+          '1. Créez l\'événement.\n2. Préparation : retenez des fiches via Explorer, devis liés.\n3. Invités → invitation RSVP → plan de table.\n4. Tâches d’équipe (assignez le protocole).\n5. Jour J : Protocole + checklist Tâches.',
         links: [
           { label: 'Événements', href: '/dashboard/events' },
-          { label: 'Statistiques', href: '/dashboard/analytics' },
+          { label: 'Explorer', href: '/dashboard/catalogue' },
         ],
       },
       {
         id: 'setup-room',
-        title: 'Configurer une salle 2D',
+        title: 'Configurer une salle 2D / 3D',
         content:
-          '1. Ouvrez Salles → Créer.\n2. Identité puis type (banquet, conférence…).\n3. Structure & plan : choisissez un modèle d’étages (Plein pied, Duplex, Villa…).\n4. Placez tables et chaises ; peaufinez le plan 3D.\n5. Associez la salle à un événement pour le placement invités.\n6. Les fonctions avancées (thèmes, escaliers, balcons) dépendent du niveau d’éditeur — voir « Éditeur de salles selon le forfait ».',
+          '1. Salles → Créer.\n2. Structure & plan : Plein pied, Duplex, Villa…\n3. Tables / chaises ; Premium+ pour escaliers et balcons.\n4. Associez à un événement pour le placement.',
         links: [{ label: 'Salles', href: '/dashboard/rooms' }],
       },
       {
         id: 'room-editor-plans',
         title: 'Éditeur de salles selon le forfait',
         content:
-          'L’éditeur 2D/3D est borné par le niveau d’éditeur du forfait (Facturation) :\n1. Essentiel — tables simples uniquement (pas de thèmes ni fixtures).\n2. Business — rangées, grille ; entrées, allées, couloirs.\n3. Premium — thèmes, scène, buffet, zones ; escaliers entre étages et balcons.\n4. Complet — tout le Premium + périmètre, tapis, thèmes et images personnalisés (Enterprise, forfaits Salle).\n5. Duplex / Empiler : structure multi-étages ; créer un escalier ou balcon exige Premium ou Complet.\n6. Pour monter de niveau : Facturation → changer de forfait. Même détail dans la FAQ publique.',
+          '1. Essentiel — tables.\n2. Business — allées / entrées.\n3. Premium — thèmes, escaliers, balcons.\n4. Complet — + perso.\n5. Le propriétaire monte de niveau dans Facturation.',
         links: [
-          { label: 'Facturation', href: '/dashboard/billing' },
           { label: 'Salles', href: '/dashboard/rooms' },
           { label: 'FAQ', href: '/faq' },
         ],
       },
       {
         id: 'room-stairs',
-        title: 'Escaliers entre étages (guide dédié)',
+        title: 'Escaliers entre étages',
         content:
-          'Abonnement requis : niveau d’éditeur Premium ou Complet (Business Premium, Enterprise, forfaits Salle…). Sur Essentiel ou Business, les boutons Escalier / Balcon sont masqués.\n\n1. Prérequis : au moins 2 étages (modèle Duplex / Villa, ou + Étage).\n2. Sélectionnez l’étage de départ dans la barre Étage.\n3. Cliquez « Escalier vers… » et choisissez l’étage d’arrivée — hauteur et marches sont calculées.\n4. Sélectionnez l’escalier : définissez arrivée, style (Droit / Ouvert / Compact) et orientation.\n5. Recalibrer si besoin, puis Empiler pour vérifier en 3D.\n6. Dans l’éditeur, ouvrez le panneau « Guide — Escaliers entre étages » pour le détail pas à pas.',
+          'Premium+.\n1. 2 étages minimum.\n2. Escalier vers… → arrivée.\n3. Style / orientation / recalibrer.\n4. Empiler en 3D.',
+        links: [{ label: 'Salles', href: '/dashboard/rooms' }],
+      },
+      {
+        id: 'browse-and-quote',
+        title: 'Explorer et suivre devis / réservations',
+        content:
+          '1. Explorer : cherchez salles et prestataires.\n2. Envoyez un devis depuis une fiche.\n3. Demandes de devis → suivi.\n4. Réservations → acompte hors plateforme → confirmation.',
         links: [
-          { label: 'Salles', href: '/dashboard/rooms' },
-          { label: 'Facturation', href: '/dashboard/billing' },
-          { label: 'FAQ éditeur', href: '/faq' },
+          { label: 'Explorer', href: '/dashboard/catalogue' },
+          { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+          { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
         ],
       },
       {
         id: 'invite-guests',
         title: 'Inviter et placer des invités',
         content:
-          '1. Onglet Invités : ajoutez ou importez la liste (e-mail ou WhatsApp).\n2. Onglet Invitations : rédigez le message, vérifiez l’aperçu, envoyez le lien RSVP.\n3. Plan de table : vous pouvez placer dès maintenant ; le PDF part quand la personne dit oui.\n4. Jour J : Protocole pour le scan QR.',
+          '1. Invités : ajouter / importer.\n2. Invitations : message + envoi RSVP.\n3. Plan de table ; PDF au « oui ».\n4. Protocole le jour J.',
         links: [{ label: 'Événements', href: '/dashboard/events' }],
       },
       {
         id: 'marketplace-desk',
-        title: 'Gérer prestations, devis et réservations',
+        title: 'Gérer Mes offres (vendeur)',
         content:
-          '1. Ouvrez Marketplace.\n2. Onglet Prestations pour les métiers, onglet Locations pour habits, voitures, motos ou matériel. Publiez ou mettez à jour vos fiches (vue grille ou liste).\n3. Traitez les demandes de devis (contacter, convertir en réservation).\n4. Dans Réservations, suivez l’étape suivante affichée sur chaque carte : accepter, acompte, confirmer.\n5. Partagez le lien public d’une fiche depuis la fiche marketplace, pas depuis l’URL interne.',
-        links: [{ label: 'Marketplace', href: '/dashboard/marketplace' }],
+          '1. Mes offres — pas Explorer.\n2. Publiez métier / location ; salles via Salles.\n3. Traitez devis reçus et réservations (accepter → acompte → confirmer).',
+        links: [{ label: 'Mes offres', href: '/dashboard/marketplace' }],
       },
     ],
     tips: [
-      'Respectez le quota de managers org. selon votre forfait.',
-      'Déléguez le protocole aux membres Protocole pour le jour J.',
-      'Utilisez les modèles globaux comme base dans le concepteur visuel.',
-      'Escaliers multi-étages : Premium+ ; voir « Éditeur de salles selon le forfait » et le guide dans l’éditeur.',
-      'La commission marketplace ({commissionPercent} %) est due par le vendeur, distincte de l’abonnement SaaS.',
+      'Explorer pour acheter / retenir ; Mes offres pour vendre.',
+      'Déléguez le protocole et des tâches avant le jour J.',
+      'Escaliers / balcons = Premium+ (forfait de l’organisation).',
+      'Commission vendeur ({commissionPercent} %) distincte de l’abonnement.',
     ],
   },
   {
@@ -411,61 +449,82 @@ export const USER_GUIDES: UserGuide[] = [
     title: 'Guide Protocole organisation',
     badge: 'Organisation',
     summary:
-      'Vous gérez l\'accueil et le contrôle des invités sur tous les événements de l\'organisation : scan QR dans le navigateur et confirmation de présence à l\'entrée.',
+      'Accueil jour J (scan QR), tâches protocole dans Événements, plus accès Explorer / devis / réservations pour le contexte marketplace — sans créer d’événements ni gérer la facturation.',
     canDo: [
-      'Accéder au mode Protocole sur tous les événements',
-      'Scanner les QR codes invités avec la caméra du navigateur (téléphone ou tablette)',
-      'Consulter et mettre à jour le statut RSVP des invités',
-      'Confirmer la présence le jour J et valider le siège',
-      'Consulter les statistiques d’accueil (check-in, tâches du jour)',
-      'Cocher les tâches qui vous sont assignées',
+      'Mode Protocole : scan QR navigateur, check-in, validation de siège',
+      'Sous-onglet Tâches (liste Événements) et Accueil | Tâches sur un événement',
+      'Explorer le catalogue (comme le client)',
+      'Consulter Demandes de devis et Réservations',
+      'Statistiques d’accueil (check-in, tâches)',
     ],
     cannotDo: [
       'Créer des événements ou des salles',
       'Gérer l\'équipe ou la facturation',
       'Modifier les modèles d\'invitation globaux',
+      'Publier des offres vendeur (Mes offres)',
     ],
     navLinks: [
       { label: 'Événements', href: '/dashboard/events' },
-      { label: 'Mode Protocole', href: '/dashboard/events?mode=protocol' },
-      { label: 'Tâches (dans Événements)', href: '/dashboard/events?view=tasks' },
-      { label: 'Explorer (catalogue)', href: '/dashboard/catalogue' },
+      { label: 'Protocole', href: '/dashboard/events?mode=protocol' },
+      { label: 'Tâches', href: '/dashboard/events?view=tasks' },
+      { label: 'Explorer', href: '/dashboard/catalogue' },
       { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
       { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
       { label: 'Statistiques', href: '/dashboard/analytics' },
+      { label: 'Guide', href: '/dashboard/guide' },
     ],
     workflows: [
+      {
+        id: 'whats-new',
+        title: 'Nouveautés pour le protocole',
+        content:
+          '1. Tâches = sous-onglet d’Événements / Protocole (pas un menu à part).\n2. Explorer + Devis + Réservations : même catalogue que le client, pour le contexte jour J.\n3. Sur un événement en mode Protocole : Accueil (scan) | Tâches (checklist).',
+        links: [
+          { label: 'Tâches', href: '/dashboard/events?view=tasks' },
+          { label: 'Explorer', href: '/dashboard/catalogue' },
+        ],
+      },
       {
         id: 'protocol-scan',
         title: 'Accueillir un invité (scan QR)',
         content:
-          '1. Ouvrez Mode Protocole ou sélectionnez un événement.\n2. Dans le navigateur, autorisez la caméra pour scanner le QR de l\'invité (ou recherchez par nom). L’app native n’est pas encore déployée.\n3. Vérifiez que le RSVP est « Confirmé » — sinon orientez l\'invité vers son lien.\n4. Confirmez la présence pour valider l\'entrée, puis le siège si prévu.',
+          '1. Protocole ou événement → Accueil.\n2. Autorisez la caméra (ou recherche par nom).\n3. RSVP confirmé requis.\n4. Confirmez présence puis siège si prévu.',
         links: [{ label: 'Mode Protocole', href: '/dashboard/events?mode=protocol' }],
       },
       {
         id: 'protocol-tasks',
-        title: 'Suivre les tâches protocole du jour',
+        title: 'Checklist tâches du jour',
         content:
-          '1. Ouvrez Événements (ou Protocole) → sous-onglet Tâches : vos tâches assignées.\n2. Sur un événement → onglet Tâches : checklist Jour J.\n3. Démarrez ou cochez « Faite ».\n4. Revenez à Accueil pour scanner.',
+          '1. Événements → Tâches : vos tâches assignées.\n2. Ou événement → Tâches : filtre Jour J / À moi.\n3. Démarrer ou Faite.\n4. Retour Accueil pour scanner.',
         links: [
-          { label: 'Événements → Tâches', href: '/dashboard/events?view=tasks' },
-          { label: 'Mode Protocole', href: '/dashboard/events?mode=protocol' },
+          { label: 'Tâches', href: '/dashboard/events?view=tasks' },
+          { label: 'Protocole', href: '/dashboard/events?mode=protocol' },
+        ],
+      },
+      {
+        id: 'protocol-marketplace',
+        title: 'Consulter devis et réservations',
+        content:
+          '1. Explorer : fiches salles / prestas liées à l’événement.\n2. Demandes de devis : statut des demandes.\n3. Réservations : dates bloquées / acomptes (info pour l’accueil).',
+        links: [
+          { label: 'Explorer', href: '/dashboard/catalogue' },
+          { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+          { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
         ],
       },
       {
         id: 'check-guest-list',
         title: 'Vérifier la liste des invités',
         content:
-          '1. Depuis Événements, ouvrez l\'événement du jour.\n2. Filtrez par statut RSVP (accepté, en attente, décliné).\n3. Recherchez par nom ou catégorie VIP.',
+          '1. Ouvrez l’événement.\n2. Filtrez RSVP.\n3. Recherche nom / VIP.',
         links: [{ label: 'Événements', href: '/dashboard/events' }],
       },
     ],
     tips: [
-      'Testez le scan dans le navigateur en conditions réelles avant l\'événement (lumière, connexion).',
-      'Assurez une connexion stable pour la synchronisation en direct.',
-      'Les invités sans QR peuvent être recherchés manuellement dans la liste.',
-      'Les tâches sont un sous-onglet d’Événements / Protocole, pas un menu séparé.',
-      'L’application iOS/Android n’est pas encore disponible : le scan se fait sur le web.',
+      'Testez le scan web avant le jour J.',
+      'Les tâches sont dans Événements, pas dans un menu séparé.',
+      'Explorer vous aide à connaître les prestataires sur place.',
+      'Pas d’app native pour l’instant : tout se fait dans le navigateur.',
     ],
   },
   {
@@ -506,44 +565,47 @@ export const USER_GUIDES: UserGuide[] = [
     title: 'Guide Manager / Protocole salle ou événement',
     badge: 'Périmètre restreint',
     summary:
-      'Vous êtes assigné à une ou plusieurs salles ou événements précis. Vos droits dépendent de votre affectation : Manager (gestion) ou Protocole (accueil).',
+      'Vous êtes assigné à des salles ou événements précis. Manager = gestion locale ; Protocole = accueil + tâches. Les menus Explorer / devis / réservations peuvent être visibles selon l’organisation.',
     canDo: [
-      'Manager événement : gérer invités, infos pratiques (dress code) et fil d’actualité sur vos événements/salles assignés',
-      'Protocole événement : scan QR dans le navigateur et suivi invités sur vos événements assignés',
-      'Consulter le plan de salle des événements de votre périmètre',
-      'Consulter les statistiques de vos événements (RSVP, check-in, tâches)',
+      'Manager : invités, infos pratiques, feed sur votre périmètre',
+      'Protocole : scan QR, check-in, tâches dans Événements',
+      'Consulter plan de salle et statistiques de vos événements',
     ],
     cannotDo: [
-      'Créer de nouveaux événements ou salles (sauf si promoteur manager org.)',
-      'Gérer l\'équipe ou accéder à la facturation',
-      'Voir les événements hors de votre affectation',
+      'Créer de nouveaux événements ou salles (sauf manager org.)',
+      'Gérer l\'équipe ou la facturation',
+      'Voir les événements hors affectation',
     ],
     navLinks: [
       { label: 'Événements', href: '/dashboard/events' },
       { label: 'Protocole', href: '/dashboard/events?mode=protocol' },
+      { label: 'Tâches', href: '/dashboard/events?view=tasks' },
       { label: 'Statistiques', href: '/dashboard/analytics' },
+      { label: 'Guide', href: '/dashboard/guide' },
     ],
     workflows: [
       {
         id: 'find-assignment',
         title: 'Identifier votre périmètre',
         content:
-          '1. Ouvrez Événements — seuls ceux qui vous sont assignés apparaissent.\n2. Si vous êtes protocole, utilisez le lien Protocole pour le scan.\n3. Contactez votre manager org. pour élargir vos affectations.',
+          '1. Événements : seuls vos assignés.\n2. Protocole pour le scan.\n3. Tâches pour la checklist.\n4. Demandez une affectation au manager org. si la liste est vide.',
         links: [{ label: 'Événements', href: '/dashboard/events' }],
       },
       {
         id: 'staff-day-of',
-        title: 'Jour J — protocole sur un événement assigné',
+        title: 'Jour J — protocole',
         content:
-          '1. Sélectionnez l\'événement dans votre liste.\n2. Passez en mode Protocole.\n3. Scannez les QR dans le navigateur (caméra web) ou recherchez les invités.\n4. Signalez les no-shows au manager de l\'événement.',
-        links: [{ label: 'Mode Protocole', href: '/dashboard/events?mode=protocol' }],
+          '1. Ouvrez l’événement.\n2. Accueil : scan QR web.\n3. Tâches : cochez la checklist.\n4. Signalez les no-shows.',
+        links: [
+          { label: 'Protocole', href: '/dashboard/events?mode=protocol' },
+          { label: 'Tâches', href: '/dashboard/events?view=tasks' },
+        ],
       },
     ],
     tips: [
-      'Votre rôle exact (manager vs protocole) est défini par l\'affectation salle/événement.',
-      'Sans événement visible, demandez une assignation à votre responsable.',
-      'Le scan QR se fait dans le navigateur ; l’app native n’est pas encore déployée.',
-      'Le tableau de bord global peut être limité — concentrez-vous sur Événements.',
+      'Rôle = affectation salle/événement.',
+      'Tâches = sous-onglet Événements / Protocole.',
+      'Scan dans le navigateur uniquement pour l’instant.',
     ],
   },
   {
@@ -551,17 +613,14 @@ export const USER_GUIDES: UserGuide[] = [
     title: 'Guide Client marketplace',
     badge: 'Client',
     summary:
-      'Vous cherchez une salle, un prestataire (métier ou location) ou un événement public, sans créer d’événements. Marketplace (Explorer, Favoris, Préparer, Mes packs), Agenda, billets et réservations sont dans le tableau de bord. Pour organiser une fête ou publier vos offres, changez le type de compte dans Mon compte.',
+      'Vous cherchez une salle, un prestataire ou un événement public. Menu : Marketplace (Explorer), Agenda, billets, Demandes de devis et Réservations (séparés). Pour organiser ou publier, changez le type de compte dans Mon compte.',
     canDo: [
-      'Explorer salles, prestataires (métiers et locations : habits, voitures, motos, matériel) et événements (filtres ville, type, prix, carte Focus, grille ou liste)',
-      'Ouvrir l’Agenda : événements publics du marketplace, pour s’inscrire ou acheter un billet',
-      'Mettre des fiches salles / prestataires / locations en favoris',
-      'Préparer un événement avec un brief budget simple (enveloppe, marge en FC, métiers) et obtenir 3 packs',
-      'Sauvegarder un brief ou un pack, ou composer un pack depuis les favoris',
-      'Partager une recherche (URL avec filtres) ou le lien public d’une fiche',
-      'Demander un devis ou une date, puis suivre les réservations',
-      'Retrouver vos billets, les filtrer, passer en grille ou liste, et ouvrir le badge QR',
-      'Passer organisateur ou prestataire depuis Mon compte',
+      'Explorer salles, métiers, locations et événements (filtres, carte, grille / liste)',
+      'Agenda : s’inscrire ou acheter un billet',
+      'Favoris, packs budget, partage d’URL',
+      'Suivre Demandes de devis et Réservations dans deux menus distincts',
+      'Mes billets + badge QR',
+      'Passer organisateur / prestataire depuis Mon compte',
     ],
     cannotDo: [
       'Créer des événements, invitations ou plans de table',
@@ -578,6 +637,16 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Mon compte', href: '/dashboard/profile' },
     ],
     workflows: [
+      {
+        id: 'whats-new-client',
+        title: 'Nouveautés menu',
+        content:
+          '1. Demandes de devis et Réservations sont deux entrées séparées (plus un seul « Devis & réservations »).\n2. Marketplace = Explorer / Favoris / Préparer / Packs.\n3. Agenda = événements publics uniquement.',
+        links: [
+          { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+          { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
+        ],
+      },
       {
         id: 'explore-favorites',
         title: 'Explorer et enregistrer des favoris',
@@ -613,10 +682,11 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'book-venue',
         title: 'Réserver une salle ou un prestataire',
         content:
-          '1. Ouvrez une fiche depuis Explorer, Favoris, l’Agenda ou un pack.\n2. Envoyez un devis ou une demande de date.\n3. Versez l’acompte ({depositPercent} %) directement au professionnel, hors EventMaster, après acceptation.\n4. Suivez le statut dans Mes réservations (filtres par statut, type et dates).',
+          '1. Ouvrez une fiche (Explorer, Favoris, Agenda ou pack).\n2. Envoyez un devis ou une demande de date.\n3. Suivez dans Demandes de devis.\n4. Après acceptation, versez l’acompte ({depositPercent} %) hors EventMaster.\n5. Suivez dans Réservations.',
         links: [
           { label: 'Marketplace', href: '/dashboard/catalogue' },
-          { label: 'Mes réservations', href: '/dashboard/bookings' },
+          { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+          { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
         ],
       },
       {
@@ -638,13 +708,12 @@ export const USER_GUIDES: UserGuide[] = [
       },
     ],
     tips: [
-      'Le compte client n’exige pas de licence SaaS.',
-      'La marge du brief est un montant : 5 % de 1 500 000 FC = 75 000 FC mis de côté.',
-      'Les trois packs d’une recherche évitent de proposer la même salle si le catalogue le permet.',
-      'Enregistrez un brief pour relancer la même recherche ; figez une salle puis relancez pour recalculer uniquement les prestataires.',
-      'L’Agenda du menu ouvre le marketplace client (événements), pas /marketplace/evenements.',
-      'Partagez une recherche pour envoyer exactement les mêmes filtres ; sur une fiche, le lien public suffit.',
-      'La commission vendeur ({commissionPercent} %) est distincte de l’abonnement EventMaster ; vous ne la payez pas en tant que client.',
+      'Devis et Réservations = deux menus pour y voir plus clair.',
+      'Compte client : pas de licence SaaS.',
+      'Marge du brief = montant (ex. 5 % de 1 500 000 FC).',
+      'Les 3 packs évitent de recycler la même salle si le catalogue le permet.',
+      'Agenda du menu = marketplace client événements.',
+      'Commission vendeur ({commissionPercent} %) : vous ne la payez pas en client.',
     ],
   },
   {
