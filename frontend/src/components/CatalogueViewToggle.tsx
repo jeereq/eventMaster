@@ -92,7 +92,7 @@ export function CatalogueGridColsToggle({
   value,
   onChange,
   className,
-  options = [2, 3, 4, 5],
+  options = [2, 3, 4],
 }: {
   value: CatalogueGridCols;
   onChange: (cols: CatalogueGridCols) => void;
