@@ -492,8 +492,8 @@ export function resolveChairVisual(
 export const ZONE_MATERIAL_COLORS: Record<ZoneMaterial, string> = {
   wood: '#8b6914',
   carpet: '#1e3a5f',
-  vinyl: '#312e81',
-  led: '#0ea5e9',
+  vinyl: '#e7e5e4',
+  led: '#fbbf24',
   marble: '#e7e5e4',
   concrete: '#9ca3af',
   parquet: '#c4a06a',
@@ -534,33 +534,56 @@ export function resolveZoneMaterialMap(material: ZoneMaterial | undefined): {
     };
   }
   if (mat === 'vinyl') {
-    const dance = makeCanvasTexture('zone:dance-vinyl', (ctx, size) => {
-      ctx.fillStyle = '#1e1b4b';
-      ctx.fillRect(0, 0, size, size);
-      const cell = size / 8;
-      for (let row = 0; row < 8; row += 1) {
-        for (let col = 0; col < 8; col += 1) {
-          if ((row + col) % 2 === 0) {
-            ctx.fillStyle = '#312e81';
-            ctx.fillRect(col * cell, row * cell, cell, cell);
-          }
+    const dance = makeCanvasTexture('zone:dance-vinyl-v2', (ctx, size) => {
+      // Damier disco classique (noir / ivoire) — pas de cyan « piscine »
+      const cell = size / 10;
+      for (let row = 0; row < 10; row += 1) {
+        for (let col = 0; col < 10; col += 1) {
+          const light = (row + col) % 2 === 0;
+          ctx.fillStyle = light ? '#e7e5e4' : '#171717';
+          ctx.fillRect(col * cell, row * cell, cell + 0.5, cell + 0.5);
         }
       }
-      // reflets
-      const g = ctx.createLinearGradient(0, 0, size, size);
-      g.addColorStop(0, 'rgba(255,255,255,0.18)');
-      g.addColorStop(0.4, 'rgba(255,255,255,0)');
-      g.addColorStop(1, 'rgba(125,211,252,0.12)');
+      // Joints fins
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 10; i += 1) {
+        ctx.beginPath();
+        ctx.moveTo(i * cell, 0);
+        ctx.lineTo(i * cell, size);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, i * cell);
+        ctx.lineTo(size, i * cell);
+        ctx.stroke();
+      }
+      // Reflet soft chaud (scène / club), pas d’eau
+      const g = ctx.createRadialGradient(size * 0.5, size * 0.35, size * 0.05, size * 0.5, size * 0.5, size * 0.7);
+      g.addColorStop(0, 'rgba(255,251,235,0.22)');
+      g.addColorStop(0.45, 'rgba(251,191,36,0.06)');
+      g.addColorStop(1, 'rgba(0,0,0,0.18)');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, size, size);
+      // Cercle central discret
+      ctx.beginPath();
+      ctx.arc(size / 2, size / 2, size * 0.18, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(212,175,55,0.55)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(size / 2, size / 2, size * 0.08, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(24,24,27,0.55)';
+      ctx.fill();
     }, 512);
-    dance.repeat.set(2, 2);
+    dance.repeat.set(1.5, 1.5);
     return {
       map: dance,
-      color: '#4c1d95',
-      roughness: 0.28,
-      metalness: 0.18,
-      thicknessM: 0.025,
+      color: '#ffffff',
+      roughness: 0.38,
+      metalness: 0.08,
+      thicknessM: 0.04,
+      emissive: '#000000',
+      emissiveIntensity: 0,
     };
   }
   if (mat === 'parquet' || mat === 'wood') {
@@ -599,15 +622,15 @@ export function resolveZoneMaterialMap(material: ZoneMaterial | undefined): {
       thicknessM: 0.018,
     };
   }
-  // led
+  // led — bandeau piste (ambre / club), pas cyan piscine
   return {
-    map: loadTiledTexture('/floors/epoxy.svg', 1.2, 1.2),
-    color: '#0ea5e9',
-    roughness: 0.2,
-    metalness: 0.45,
-    emissive: '#0284c7',
-    emissiveIntensity: 0.55,
-    thicknessM: 0.03,
+    map: null,
+    color: '#18181b',
+    roughness: 0.35,
+    metalness: 0.25,
+    emissive: '#b45309',
+    emissiveIntensity: 0.35,
+    thicknessM: 0.035,
   };
 }
 

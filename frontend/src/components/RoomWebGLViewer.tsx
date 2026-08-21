@@ -2,7 +2,7 @@
 
 import React, { Suspense, useMemo, useRef, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Canvas, ThreeEvent, useThree } from '@react-three/fiber';
-import { OrbitControls, Html, ContactShadows } from '@react-three/drei';
+import { OrbitControls, Html, ContactShadows, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 import {
   RoomLayoutBlueprint,
@@ -45,6 +45,7 @@ import {
 } from '@/components/CatalogueEventArchitecture';
 import { RoomAmbiance } from '@/components/CatalogueAmbiance';
 import { RowSeatsLOD } from '@/components/RowSeatsLOD';
+import RoomWalkthroughCamera from '@/components/RoomWalkthroughCamera';
 import {
   resolveLightingPreset,
   resolveRenderQuality,
@@ -83,6 +84,10 @@ interface RoomWebGLViewerProps {
   lightingPreset?: LightingPreset;
   /** Mode présentation (orbit auto, sans labels). */
   presentationMode?: boolean;
+  /** Visite guidée : entrée par la porte puis tour de la salle. */
+  walkthroughActive?: boolean;
+  onWalkthroughProgress?: (label: string, progress01: number) => void;
+  onWalkthroughComplete?: () => void;
 }
 
 function pctToWorld(xPct: number, yPct: number, widthM: number, heightM: number): [number, number] {
@@ -1378,6 +1383,9 @@ function SceneContent({
   captureApiRef,
   presentationMode = false,
   hideLabels = false,
+  walkthroughActive = false,
+  onWalkthroughProgress,
+  onWalkthroughComplete,
 }: Omit<RoomWebGLViewerProps, 'className' | 'previewMode' | 'renderQuality' | 'lightingPreset' | 'presentationMode'> & {
   qualitySettings: ReturnType<typeof resolveRenderQuality>;
   lighting: ReturnType<typeof resolveLightingPreset>;
@@ -1394,6 +1402,7 @@ function SceneContent({
 
   const { camera } = useThree();
   useEffect(() => {
+    if (walkthroughActive) return;
     const tilt = (depthAmount / 100) * 55;
     const dist = Math.max(widthM, heightM) * (1.1 + (100 - depthAmount) * 0.008);
     const elev = Math.cos((tilt * Math.PI) / 180) * dist;
@@ -1404,7 +1413,7 @@ function SceneContent({
       (camera as THREE.PerspectiveCamera).fov = qualitySettings.fov;
     }
     camera.updateProjectionMatrix();
-  }, [camera, depthAmount, widthM, heightM, qualitySettings.fov]);
+  }, [camera, depthAmount, widthM, heightM, qualitySettings.fov, walkthroughActive]);
 
   const [dragTarget, setDragTarget] = React.useState<{ kind: WebGLSelectableKind; id: string } | null>(null);
   /** En mode caméra bloquée (placement mobilier), les surfaces ne capturent pas les clics. */
@@ -1424,6 +1433,33 @@ function SceneContent({
         lighting={lighting}
         shadowMapSize={qualitySettings.shadowMapSize}
       />
+
+      {qualitySettings.fog ? (
+        <fog
+          attach="fog"
+          args={[
+            lighting.background,
+            Math.max(12, Math.max(widthM, heightM) * 0.9),
+            Math.max(35, Math.max(widthM, heightM) * 2.8),
+          ]}
+        />
+      ) : null}
+
+      {qualitySettings.environment ? (
+        <Environment
+          preset="apartment"
+          environmentIntensity={qualitySettings.environmentIntensity}
+        />
+      ) : null}
+
+      {walkthroughActive ? (
+        <RoomWalkthroughCamera
+          blueprint={blueprint}
+          active={walkthroughActive}
+          onProgress={onWalkthroughProgress}
+          onComplete={onWalkthroughComplete}
+        />
+      ) : null}
 
       {qualitySettings.contactShadows ? (
         <ContactShadows
@@ -1702,10 +1738,10 @@ function SceneContent({
       />
 
       <OrbitControls
-        enablePan={!wallEditMode && !lockOrbit && !dragTarget && !presentationMode}
-        enableRotate={(!wallEditMode && !lockOrbit && !dragTarget) || presentationMode}
-        enableZoom
-        autoRotate={presentationMode}
+        enablePan={!wallEditMode && !lockOrbit && !dragTarget && !presentationMode && !walkthroughActive}
+        enableRotate={(!wallEditMode && !lockOrbit && !dragTarget && !walkthroughActive) || (presentationMode && !walkthroughActive)}
+        enableZoom={!walkthroughActive}
+        autoRotate={presentationMode && !walkthroughActive}
         autoRotateSpeed={0.55}
         maxPolarAngle={Math.PI / 2.05}
         minDistance={3}
@@ -1730,10 +1766,13 @@ export default forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(function Ro
   renderQuality: renderQualityProp,
   lightingPreset: lightingPresetProp,
   presentationMode: presentationModeProp,
+  walkthroughActive = false,
+  onWalkthroughProgress,
+  onWalkthroughComplete,
 }, ref) {
   const presentationMode = presentationModeProp ?? blueprint.metadata.presentationMode === true;
-  const orbitLocked = previewMode || presentationMode ? false : lockOrbit;
-  const hideLabels = presentationMode || previewMode;
+  const orbitLocked = previewMode || presentationMode || walkthroughActive ? false : lockOrbit;
+  const hideLabels = presentationMode || previewMode || walkthroughActive;
   const qualitySettings = useMemo(
     () => resolveRenderQuality(
       renderQualityProp ?? blueprint.metadata.renderQuality,
@@ -1797,10 +1836,19 @@ export default forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(function Ro
             captureApiRef={captureApiRef}
             presentationMode={presentationMode}
             hideLabels={hideLabels || !qualitySettings.showHints}
+            walkthroughActive={walkthroughActive}
+            onWalkthroughProgress={onWalkthroughProgress}
+            onWalkthroughComplete={onWalkthroughComplete}
           />
         </Suspense>
       </Canvas>
-      {presentationMode ? (
+      {walkthroughActive ? (
+        <div className="pointer-events-none absolute bottom-2 left-2 right-2 flex items-end justify-between gap-2">
+          <div className="rounded-md bg-black/60 px-2.5 py-1.5 text-[10px] font-bold text-amber-50 backdrop-blur-sm">
+            Visite guidée · entrée par la porte
+          </div>
+        </div>
+      ) : presentationMode ? (
         <div className="pointer-events-none absolute bottom-2 left-2">
           <div className="rounded-md bg-black/40 px-2 py-1 text-[9px] font-bold text-amber-100/90 backdrop-blur-sm">
             Présentation · orbit automatique

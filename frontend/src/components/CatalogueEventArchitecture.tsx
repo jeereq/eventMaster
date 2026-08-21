@@ -202,8 +202,8 @@ export function EventZoneSurface({
   const ledRef = useRef<THREE.MeshStandardMaterial>(null);
 
   useFrame(({ clock }) => {
-    if (!ledRef.current || !isDance) return;
-    const pulse = 0.35 + Math.sin(clock.elapsedTime * 2.2) * 0.25;
+    if (!ledRef.current || material !== 'led') return;
+    const pulse = 0.28 + Math.sin(clock.elapsedTime * 1.8) * 0.18;
     ledRef.current.emissiveIntensity = pulse;
   });
 
@@ -216,58 +216,78 @@ export function EventZoneSurface({
       >
         <boxGeometry args={[w, thickness, h]} />
         <meshStandardMaterial
-          ref={isDance ? ledRef : undefined}
-          color={selected ? '#c7d2fe' : (color ?? mat.color)}
+          ref={material === 'led' ? ledRef : undefined}
+          color={
+            selected
+              ? '#c7d2fe'
+              : isDance && material !== 'led'
+                ? '#ffffff'
+                : (color ?? mat.color)
+          }
           map={mat.map ?? undefined}
           roughness={mat.roughness}
           metalness={mat.metalness}
-          emissive={mat.emissive ?? (isDance ? '#0284c7' : '#000000')}
-          emissiveIntensity={mat.emissiveIntensity ?? (isDance ? 0.4 : 0)}
+          emissive={mat.emissive ?? '#000000'}
+          emissiveIntensity={mat.emissiveIntensity ?? 0}
         />
       </mesh>
 
       {/* Sous-couche / frange */}
       <mesh position={[0, -thickness * 0.15, 0]} receiveShadow>
-        <boxGeometry args={[w + (isCarpet ? 0.12 : 0.05), thickness * 0.4, h + (isCarpet ? 0.12 : 0.05)]} />
+        <boxGeometry args={[w + (isCarpet ? 0.12 : 0.08), thickness * 0.45, h + (isCarpet ? 0.12 : 0.08)]} />
         <meshStandardMaterial
-          color={isCarpet ? '#0f172a' : isDance ? '#0369a1' : '#44403c'}
-          roughness={isDance ? 0.25 : 0.92}
-          metalness={isDance ? 0.45 : 0.05}
-          emissive={isDance ? '#0ea5e9' : '#000000'}
-          emissiveIntensity={isDance ? 0.25 : 0}
+          color={isCarpet ? '#0f172a' : isDance ? '#1c1917' : '#44403c'}
+          roughness={isDance ? 0.55 : 0.92}
+          metalness={isDance ? 0.12 : 0.05}
         />
       </mesh>
 
       {isDance && (
         <>
-          {/* Périmètre LED */}
+          {/* Bordure chrome / laiton */}
           {([
-            [0, h / 2 + 0.02, w, 0.04],
-            [0, -h / 2 - 0.02, w, 0.04],
-            [w / 2 + 0.02, 0, 0.04, h],
-            [-w / 2 - 0.02, 0, 0.04, h],
+            [0, h / 2 + 0.015, w + 0.04, 0.05],
+            [0, -h / 2 - 0.015, w + 0.04, 0.05],
+            [w / 2 + 0.015, 0, 0.05, h + 0.04],
+            [-w / 2 - 0.015, 0, 0.05, h + 0.04],
           ] as const).map(([x, z, bw, bd], i) => (
-            <mesh key={i} position={[x, thickness / 2 + 0.01, z]}>
-              <boxGeometry args={[bw, 0.025, bd]} />
+            <mesh key={`trim-${i}`} position={[x, thickness / 2 + 0.008, z]}>
+              <boxGeometry args={[bw, 0.02, bd]} />
               <meshStandardMaterial
-                color="#67e8f9"
-                emissive="#22d3ee"
-                emissiveIntensity={0.7}
-                roughness={0.15}
-                metalness={0.5}
+                color="#a8a29e"
+                emissive="#000000"
+                emissiveIntensity={0}
+                roughness={0.35}
+                metalness={0.75}
               />
             </mesh>
           ))}
-          <mesh position={[0, thickness / 2 + 0.003, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[w * 0.65, h * 0.65]} />
-            <meshStandardMaterial
-              color="#e0f2fe"
-              transparent
-              opacity={0.14}
-              roughness={0.05}
-              metalness={0.65}
-            />
-          </mesh>
+          {/* LED ambre discrètes aux coins (ambiance club, pas piscine) */}
+          {([
+            [w / 2 - 0.08, h / 2 - 0.08],
+            [-w / 2 + 0.08, h / 2 - 0.08],
+            [w / 2 - 0.08, -h / 2 + 0.08],
+            [-w / 2 + 0.08, -h / 2 + 0.08],
+          ] as const).map(([x, z], i) => (
+            <mesh key={`corner-${i}`} position={[x, thickness / 2 + 0.02, z]}>
+              <boxGeometry args={[0.12, 0.03, 0.12]} />
+              <meshStandardMaterial
+                color="#fbbf24"
+                emissive="#d97706"
+                emissiveIntensity={0.55}
+                roughness={0.3}
+                metalness={0.4}
+              />
+            </mesh>
+          ))}
+          {/* Spot chaud au-dessus du centre (léger) */}
+          <pointLight
+            position={[0, 2.4, 0]}
+            intensity={0.35}
+            distance={Math.max(w, h) * 1.4}
+            color="#fde68a"
+            castShadow={false}
+          />
         </>
       )}
 

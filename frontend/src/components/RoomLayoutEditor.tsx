@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Aperture, Sun, Presentation,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, Move, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, BookmarkPlus, BrickWall, Undo2, Redo2, VideoOff, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Aperture, Sun, Presentation, DoorOpen,
 } from 'lucide-react';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
 import ImageCropModal from '@/components/ImageCropModal';
@@ -128,6 +128,8 @@ export default function RoomLayoutEditor({
   const [accordion, setAccordion] = useState<string>('murs-sols');
   const [wallEditMode, setWallEditMode] = useState(false);
   const [lockOrbit, setLockOrbit] = useState(true);
+  const [walkthroughActive, setWalkthroughActive] = useState(false);
+  const [walkthroughLabel, setWalkthroughLabel] = useState('');
   const webglRef = useRef<RoomWebGLCaptureApi>(null);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
@@ -651,6 +653,13 @@ export default function RoomLayoutEditor({
       renderQuality={renderQuality}
       lightingPreset={lightingPreset}
       presentationMode={blueprint.metadata.presentationMode === true}
+      walkthroughActive={walkthroughActive}
+      onWalkthroughProgress={(label) => setWalkthroughLabel(label)}
+      onWalkthroughComplete={() => {
+        setWalkthroughActive(false);
+        setWalkthroughLabel('');
+        log('Visite guidée terminée', 'info');
+      }}
       className={className}
     />
   );
@@ -2197,7 +2206,10 @@ export default function RoomLayoutEditor({
               } : {}),
             },
           }, { message: next ? 'Mode présentation activé' : 'Mode présentation désactivé', kind: 'settings' });
-          if (next) setLockOrbit(false);
+          if (next) {
+            setLockOrbit(false);
+            setWalkthroughActive(false);
+          }
         }}
         title="Orbit automatique, ambiance, sans labels"
         className={cn(
@@ -2211,6 +2223,36 @@ export default function RoomLayoutEditor({
         {blueprint.metadata.presentationMode ? 'Présentation ON' : 'Présentation'}
       </button>
       ) : null}
+      <button
+        type="button"
+        onClick={() => {
+          if (walkthroughActive) {
+            setWalkthroughActive(false);
+            setWalkthroughLabel('');
+            return;
+          }
+          setLockOrbit(false);
+          if (blueprint.metadata.presentationMode) {
+            updateBlueprint({
+              ...blueprint,
+              metadata: { ...blueprint.metadata, presentationMode: false },
+            }, { message: 'Présentation désactivée pour la visite', kind: 'settings' });
+          }
+          setWalkthroughActive(true);
+          setWalkthroughLabel('Approche de l’entrée');
+          log('Visite guidée démarrée', 'info');
+        }}
+        title="Entre par la porte et visite la salle en 3D"
+        className={cn(
+          'inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[var(--radius-button)] text-xs font-bold border',
+          walkthroughActive
+            ? 'bg-amber-50 border-amber-300 text-amber-950'
+            : 'bg-white border-border text-muted',
+        )}
+      >
+        <DoorOpen className="w-3.5 h-3.5" />
+        {walkthroughActive ? (walkthroughLabel || 'Visite…') : 'Faire le tour'}
+      </button>
       <button
         type="button"
         onClick={exportShowcasePng}
