@@ -153,6 +153,8 @@ export interface RoomLayoutBlueprint {
     buffetStyle?: 'straight' | 'corner' | 'island';
     /** Escalier : orientation (0 = haut du plan). */
     stairDirection?: 0 | 90 | 180 | 270;
+    /** Escalier : étage de destination (liaison verticale). */
+    connectsToStoryId?: string;
     /** Groupe de sélection / alignement. */
     groupId?: string;
     /** Étage du bâtiment (maison multi-niveaux). */
@@ -283,6 +285,10 @@ export interface RoomLayoutBlueprint {
     activeStoryId?: string;
     /** Fondation sous le RDC. */
     foundation?: import('@/lib/roomBuildingUtils').RoomFoundation;
+    /** Afficher tous les étages empilés (vue coupe). */
+    stackView?: boolean;
+    /** Liaisons verticales explicites (escalier / ascenseur). */
+    verticalLinks?: import('@/lib/roomBuildingUtils').VerticalLink[];
   };
 }
 

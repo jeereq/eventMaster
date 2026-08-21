@@ -20,7 +20,7 @@ import {
   type ZoneKind,
 } from '@/lib/roomLayoutUtils';
 import { resolveDepthAmount } from '@/lib/roomFloorUtils';
-import { belongsToActiveStory, resolveFoundation } from '@/lib/roomBuildingUtils';
+import { isStoryVisible, resolveActiveStoryId, resolveFoundation, resolveStories, worldElevationForStory } from '@/lib/roomBuildingUtils';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
 import { getTableSeatPlacement3D } from '@/lib/tablePlanUtils';
 import {
@@ -1740,6 +1740,28 @@ function SceneContent({
         );
       })()}
 
+      {blueprint.metadata.stackView
+        ? resolveStories(blueprint).map((story) => (
+            <mesh
+              key={`deck-${story.id}`}
+              position={[0, story.elevationM - 0.02, 0]}
+              rotation={[-Math.PI / 2, 0, 0]}
+              receiveShadow
+            >
+              <planeGeometry args={[widthM * 0.98, heightM * 0.98]} />
+              <meshStandardMaterial
+                color={story.id === resolveActiveStoryId(blueprint) ? '#e7e5e4' : '#d6d3d1'}
+                roughness={0.9}
+                transparent
+                opacity={0.55}
+                polygonOffset
+                polygonOffsetFactor={1}
+                polygonOffsetUnits={1}
+              />
+            </mesh>
+          ))
+        : null}
+
       {blueprint.metadata.showRoof === true && (
         <RoofMesh
           widthM={widthM}
@@ -1773,19 +1795,20 @@ function SceneContent({
         />
       ) : null}
 
-      {walls.filter((wall) => belongsToActiveStory(blueprint, wall.storyId)).map((wall) => (
-        <WallMesh
-          key={wall.id}
-          wall={wall}
-          widthM={widthM}
-          heightM={heightM}
-          paintColor={blueprint.metadata.wallPaintColor}
-          selected={selected.some((s) => s.kind === 'wall' && s.id === wall.id)}
-          onSelect={(e) => onSelect({ kind: 'wall', id: wall.id }, { additive: Boolean(e?.shiftKey || e?.metaKey || e?.ctrlKey) })}
-        />
+      {walls.filter((wall) => isStoryVisible(blueprint, wall.storyId)).map((wall) => (
+        <group key={wall.id} position={[0, worldElevationForStory(blueprint, wall.storyId), 0]}>
+          <WallMesh
+            wall={wall}
+            widthM={widthM}
+            heightM={heightM}
+            paintColor={blueprint.metadata.wallPaintColor}
+            selected={selected.some((s) => s.kind === 'wall' && s.id === wall.id)}
+            onSelect={(e) => onSelect({ kind: 'wall', id: wall.id }, { additive: Boolean(e?.shiftKey || e?.metaKey || e?.ctrlKey) })}
+          />
+        </group>
       ))}
 
-      {blueprint.fixtures.filter((f) => belongsToActiveStory(blueprint, f.storyId)).map((f) => {
+      {blueprint.fixtures.filter((f) => isStoryVisible(blueprint, f.storyId)).map((f) => {
         /** Surfaces plates : ne capturent pas les clics en mode caméra bloquée. */
         const isSurfaceFixture = f.kind === 'carpet' || f.kind === 'aisle' || f.kind === 'corridor' || f.kind === 'perimeter';
         const fixturePickable = isSurfaceFixture
@@ -1793,8 +1816,8 @@ function SceneContent({
           : true;
         const canDragFixture = !readOnly && !wallEditMode && (!isSurfaceFixture || surfacePickable);
         return (
+          <group key={f.id} position={[0, worldElevationForStory(blueprint, f.storyId), 0]}>
           <FixtureMesh
-            key={f.id}
             xPct={f.x}
             yPct={f.y}
             wPct={f.w}
@@ -1818,14 +1841,16 @@ function SceneContent({
             pickable={fixturePickable}
             hideLabels={hideLabels}
           />
+          </group>
         );
       })}
 
-      {blueprint.furniture.filter((item) => belongsToActiveStory(blueprint, item.storyId)).map((item) => {
+      {blueprint.furniture.filter((item) => isStoryVisible(blueprint, item.storyId)).map((item) => {
+        const storyElev = worldElevationForStory(blueprint, item.storyId);
         if (item.kind === 'zone') {
           return (
+            <group key={item.id} position={[0, storyElev, 0]}>
             <ZoneMesh
-              key={item.id}
               xPct={item.x}
               yPct={item.y}
               wPct={item.w}
@@ -1844,13 +1869,14 @@ function SceneContent({
               pickable={surfacePickable || selected.some((s) => s.kind === 'zone' && s.id === item.id)}
               hideLabels={hideLabels}
             />
+            </group>
           );
         }
         if (item.kind === 'chair') {
           const surface = resolveFurnitureSurfaceAt(blueprint, item.x, item.y);
           return (
+            <group key={item.id} position={[0, storyElev, 0]}>
             <FreeChairMesh
-              key={item.id}
               xPct={item.x}
               yPct={item.y}
               chairType={item.chairType}
@@ -1868,6 +1894,7 @@ function SceneContent({
               readOnly={readOnly || wallEditMode || item.locked}
               hideLabels={hideLabels}
             />
+            </group>
           );
         }
         if (item.kind === 'row') {
@@ -1886,7 +1913,7 @@ function SceneContent({
           return (
             <group
               key={item.id}
-              position={[wx, 0, wz]}
+              position={[wx, storyElev, wz]}
               rotation={[0, rowRot, 0]}
               onClick={(e) => {
                 e.stopPropagation();
@@ -1945,8 +1972,8 @@ function SceneContent({
         const tableColor = resolveTableColor(item.tableColor, blueprint.metadata.defaultTableColor) ?? '#f8fafc';
         const surface = resolveFurnitureSurfaceAt(blueprint, item.x, item.y);
         return (
+          <group key={item.id} position={[0, storyElev, 0]}>
           <TableMesh
-            key={item.id}
             xPct={item.x}
             yPct={item.y}
             shape={item.shape}
@@ -1970,6 +1997,7 @@ function SceneContent({
             readOnly={readOnly || wallEditMode || item.locked}
             hideLabels={hideLabels}
           />
+          </group>
         );
       })}
 

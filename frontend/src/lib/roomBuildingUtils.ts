@@ -1,5 +1,5 @@
 import type { RoomLayoutBlueprint, ZoneMaterial } from '@/lib/roomLayoutUtils';
-import { makeLayoutId, refreshBlueprintMetadata } from '@/lib/roomLayoutUtils';
+import { createWallOpening, makeLayoutId, refreshBlueprintMetadata } from '@/lib/roomLayoutUtils';
 import type { LayoutSelectionItem } from '@/lib/roomSelectionUtils';
 
 /** Étage d’un bâtiment / maison (plan multi-niveaux). */
@@ -188,4 +188,158 @@ export function withActiveStoryId<T extends { storyId?: string }>(
 ): T {
   if (item.storyId) return item;
   return { ...item, storyId: resolveActiveStoryId(blueprint) };
+}
+
+export type VerticalLink = {
+  id: string;
+  kind: 'stairs' | 'elevator' | 'ramp';
+  fromStoryId: string;
+  toStoryId: string;
+  fixtureId: string;
+};
+
+export function resolveVerticalLinks(blueprint: RoomLayoutBlueprint): VerticalLink[] {
+  return blueprint.metadata.verticalLinks ?? [];
+}
+
+/** Relie un escalier de l’étage courant vers un autre étage (hauteur auto). */
+export function linkStairsToStory(
+  blueprint: RoomLayoutBlueprint,
+  stairsId: string,
+  toStoryId: string,
+): RoomLayoutBlueprint {
+  const stories = resolveStories(blueprint);
+  const stairs = blueprint.fixtures.find((f) => f.id === stairsId && f.kind === 'stairs');
+  if (!stairs || !stories.some((s) => s.id === toStoryId)) return blueprint;
+
+  const fromStoryId = stairs.storyId ?? resolveActiveStoryId(blueprint);
+  if (fromStoryId === toStoryId) return blueprint;
+
+  const fromElev = storyElevationM(blueprint, fromStoryId);
+  const toElev = storyElevationM(blueprint, toStoryId);
+  const heightM = Math.max(0.8, Math.abs(toElev - fromElev));
+  const steps = Math.max(4, Math.min(20, Math.round(heightM / 0.18)));
+
+  const link: VerticalLink = {
+    id: makeLayoutId('vlink'),
+    kind: 'stairs',
+    fromStoryId,
+    toStoryId,
+    fixtureId: stairsId,
+  };
+  const links = resolveVerticalLinks(blueprint).filter((l) => l.fixtureId !== stairsId);
+  links.push(link);
+
+  return {
+    ...blueprint,
+    fixtures: blueprint.fixtures.map((f) =>
+      f.id === stairsId
+        ? { ...f, connectsToStoryId: toStoryId, heightM, steps, storyId: fromStoryId }
+        : f,
+    ),
+    metadata: {
+      ...blueprint.metadata,
+      stories,
+      verticalLinks: links,
+    },
+  };
+}
+
+export function setStackView(
+  blueprint: RoomLayoutBlueprint,
+  enabled: boolean,
+): RoomLayoutBlueprint {
+  return {
+    ...blueprint,
+    metadata: {
+      ...blueprint.metadata,
+      stories: resolveStories(blueprint),
+      stackView: enabled,
+    },
+  };
+}
+
+/** Visible en mode normal (étage actif) ou en vue empilée (tous). */
+export function isStoryVisible(
+  blueprint: RoomLayoutBlueprint,
+  storyId: string | undefined,
+): boolean {
+  if (blueprint.metadata.stackView) return true;
+  return belongsToActiveStory(blueprint, storyId);
+}
+
+/** Élévation Y monde pour un élément (vue empilée ou 0). */
+export function worldElevationForStory(
+  blueprint: RoomLayoutBlueprint,
+  storyId: string | undefined,
+): number {
+  if (!blueprint.metadata.stackView) return 0;
+  return storyElevationM(blueprint, storyId);
+}
+
+function pointOnSegment(
+  ax: number, ay: number, bx: number, by: number, t: number,
+): { x: number; y: number } {
+  return { x: ax + (bx - ax) * t, y: ay + (by - ay) * t };
+}
+
+function distPointToSeg(
+  px: number, py: number,
+  ax: number, ay: number, bx: number, by: number,
+): { dist: number; t: number } {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const len2 = dx * dx + dy * dy || 1;
+  let t = ((px - ax) * dx + (py - ay) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  const q = pointOnSegment(ax, ay, bx, by, t);
+  const dist = Math.hypot(px - q.x, py - q.y);
+  return { dist, t };
+}
+
+/**
+ * Perce des portes dans les murs croisés par les couloirs de l’étage actif.
+ */
+export function punchCorridorOpenings(
+  blueprint: RoomLayoutBlueprint,
+): { blueprint: RoomLayoutBlueprint; added: number } {
+  const corridors = blueprint.fixtures.filter(
+    (f) => f.kind === 'corridor' && belongsToActiveStory(blueprint, f.storyId),
+  );
+  if (corridors.length === 0 || !blueprint.walls?.length) {
+    return { blueprint, added: 0 };
+  }
+
+  let added = 0;
+  const walls = blueprint.walls.map((wall) => {
+    if (!belongsToActiveStory(blueprint, wall.storyId)) return wall;
+    const openings = [...(wall.openings ?? [])];
+    const ax = wall.start.x;
+    const ay = wall.start.y;
+    const bx = wall.end.x;
+    const by = wall.end.y;
+
+    for (const c of corridors) {
+      const cx = c.x + c.w / 2;
+      const cy = c.y + c.h / 2;
+      const { dist, t } = distPointToSeg(cx, cy, ax, ay, bx, by);
+      const threshold = Math.max(c.w, c.h) * 0.55;
+      if (dist > threshold) continue;
+      if (openings.some((o) => o.kind === 'door' && Math.abs(o.t - t) < 0.12)) continue;
+      openings.push(
+        createWallOpening('door', {
+          t,
+          style: 'single',
+          widthM: Math.min(1.2, Math.max(0.8, (Math.min(c.w, c.h) / 100) * ((blueprint.canvas.widthM + blueprint.canvas.heightM) / 2))),
+        }),
+      );
+      added += 1;
+    }
+    return { ...wall, openings };
+  });
+
+  return {
+    blueprint: { ...blueprint, walls },
+    added,
+  };
 }
