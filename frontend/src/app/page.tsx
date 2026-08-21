@@ -241,7 +241,7 @@ export default function Home() {
         defaultAudience={profile.pricingAudience}
         lead={
           profileId === 'seeker'
-            ? 'Le compte client est gratuit : favoris, packs et devis. Les forfaits ci-dessous concernent l’organisation d’une fête, si vous en avez aussi besoin.'
+            ? 'Le compte client (recherche) est 100% gratuit : listes de favoris, création de packs et demandes de devis. Les forfaits ci-dessous sont dédiés à ceux qui veulent la sérénité absolue pour gérer l\'organisation complète d’une fête (invitations, placement, scan le jour J).'
             : undefined
         }
       />

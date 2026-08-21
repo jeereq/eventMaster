@@ -6,23 +6,23 @@ import { useLandingReveal } from '@/components/landing/useLandingReveal';
 const PILLARS = [
   {
     icon: Mail,
-    title: 'Inviter',
-    text: 'Un lien par personne. Ils répondent. Le PDF et le plan partent après le « oui ».',
+    title: 'Des invitations qui font de l\'effet',
+    text: 'Fini le PDF perdu. Envoyez un lien unique, suivez les confirmations en temps réel et partagez le plan au bon moment.',
   },
   {
     icon: LayoutGrid,
-    title: 'Placer',
-    text: 'Glissez les invités sur les sièges. Chacun sait où s’asseoir avant d’arriver.',
+    title: 'Le placement, sans le casse-tête',
+    text: 'Un plan interactif et visuel. Placez chaque invité facilement pour que tout le monde sache où s’asseoir avant même d\'arriver.',
   },
   {
     icon: ScanLine,
-    title: 'Accueillir',
-    text: 'Badge QR à l’entrée, scanné depuis le téléphone. Pas d’app à installer.',
+    title: 'Un accueil fluide et moderne',
+    text: 'Scannez le QR Code de vos invités depuis votre smartphone à l\'entrée. Fini la file d\'attente et les listes papier barrées.',
   },
   {
     icon: Store,
-    title: 'Trouver ou publier',
-    text: 'Salles, métiers, locations. Devis et acompte versés au pro, hors plateforme.',
+    title: 'L\'excellence à portée de clic',
+    text: 'Salles, prestataires, locations de matériel. Découvrez et réservez la crème de l\'événementiel sans intermédiaire financier.',
   },
 ];
 
@@ -37,13 +37,13 @@ export default function LandingProductOverview() {
     >
       <div className="page-container space-y-8">
         <div className="max-w-2xl space-y-2">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted">La solution</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-muted">La promesse EventMaster</p>
           <h2 className="text-2xl font-semibold text-foreground tracking-tight">
-            Tout l’événement, dans le même espace
+            Votre centre de commande centralisé
           </h2>
           <p className="text-sm text-muted leading-relaxed">
-            EventMaster relie ce qui se fait d’habitude en morceaux : l’invitation, les réponses, le plan de table,
-            l’accueil le jour J, et un catalogue si vous cherchez (ou publiez) une salle ou un presta.
+            Dites adieu aux tableurs et aux dizaines d'échanges. EventMaster unifie tout ce qui crée l'angoisse d'un organisateur : 
+            les invitations, les réponses, le placement et l'accueil le jour J.
           </p>
         </div>
 

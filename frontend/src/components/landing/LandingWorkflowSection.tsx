@@ -83,10 +83,10 @@ export default function LandingWorkflowSection({
       <div className="page-container space-y-8">
         <div className="max-w-2xl space-y-2">
           <p className="text-xs font-medium uppercase tracking-wider text-muted">
-            En un clic
+            Un chemin tout tracé
           </p>
           <h2 className="text-2xl font-semibold text-foreground tracking-tight">
-            Voici exactement quoi faire
+            Votre parcours, étape par étape
           </h2>
           <p className="text-sm text-muted leading-relaxed">{journey.intro}</p>
         </div>

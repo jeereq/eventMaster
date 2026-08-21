@@ -162,9 +162,9 @@ export default function LandingPricingSection({
  audience === 'B2C'
   ? [
       {
-        label: 'Particuliers (B2C)',
+        label: 'Particuliers',
         ids: [...B2C_PLAN_IDS],
-        description: 'Organisation complète, trimestre 90 jours ou annuel −10 %, sans publication marketplace',
+        description: 'La tranquillité absolue pour votre événement, facturation sur 90 jours ou annuel (−10 %).',
       },
     ]
   : audience === 'VENDOR'
@@ -182,19 +182,19 @@ export default function LandingPricingSection({
     ]
   : [
       {
-        label: 'Essentials & Business (B2B)',
+        label: 'Agences & Pros',
         ids: ['FREE', 'STANDARD'],
-        description: 'Démarrer et professionnaliser vos premiers événements d’organisation',
+        description: 'Pour maîtriser vos premiers événements clients avec professionnalisme',
       },
       {
-        label: 'Business Premium (B2B)',
+        label: 'Business Premium',
         ids: ['PREMIUM_1', 'PREMIUM_2'],
-        description: 'Éditeur visuel, import maquette, RSVP analytique et salles 2D avancées',
+        description: 'Éditeur visuel, import de maquette 2D, statistiques pointues sur les invités',
       },
       {
-        label: 'Business Enterprise (B2B)',
+        label: 'Business Enterprise',
         ids: ['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3'],
-        description: 'Volume, rapports, réseau commercial et accompagnement dédié',
+        description: 'Contrôle total pour les agences à fort volume, avec réseau commercial et suivi dédié',
       },
     ];
 
@@ -211,26 +211,26 @@ export default function LandingPricingSection({
  className="py-16 sm:py-20 bg-background border-t border-border"
  >
  <div className="page-container">
- <div className="max-w-2xl mb-10 space-y-2">
- <p className="text-xs font-medium text-muted uppercase tracking-wider">
- Forfaits
- </p>
- <h2 className="text-2xl font-semibold text-foreground tracking-tight">
- {audience === 'B2C'
-  ? 'Forfaits particuliers'
-  : audience === 'VENDOR'
-    ? 'Forfaits salles et prestataires'
-    : 'Forfaits organisations'}
- </h2>
- <p className="text-sm text-muted leading-relaxed">
- {lead ||
-  (audience === 'B2C'
-   ? `Palier d’invités (50, 100, 200 ou +200), trimestre 90 jours, plan de table — pas de publication marketplace. Le paiement annuel facture 4 trimestres d’un coup, avec −${ANNUAL_DISCOUNT_PERCENT} %.`
-   : audience === 'VENDOR'
-     ? `Publication de fiches salle, métier ou location — pas un abonnement d’agence. Sur les forfaits payants, le paiement annuel facture 12 mois d’un coup, avec −${ANNUAL_DISCOUNT_PERCENT} %.`
-     : `Facturation au mois (Business, Premium, Enterprise). Sur tous les forfaits payants, le paiement annuel facture 12 mois d’un coup, avec −${ANNUAL_DISCOUNT_PERCENT} %.`)}
- </p>
- </div>
+        <div className="max-w-2xl mb-10 space-y-2">
+          <p className="text-xs font-medium text-muted uppercase tracking-wider">
+            Un investissement pour votre sérénité
+          </p>
+          <h2 className="text-2xl font-semibold text-foreground tracking-tight">
+            {audience === 'B2C'
+              ? 'Choisissez la tranquillité'
+              : audience === 'VENDOR'
+                ? 'Donnez de la visibilité à votre activité'
+                : 'Passez à la vitesse supérieure'}
+          </h2>
+          <p className="text-sm text-muted leading-relaxed">
+            {lead ||
+              (audience === 'B2C'
+                ? `Des forfaits simples basés sur le nombre d'invités (50, 100, 200 ou +200) pour tout gérer sans stress. Le paiement annuel offre −${ANNUAL_DISCOUNT_PERCENT} %.`
+                : audience === 'VENDOR'
+                  ? `Publiez vos fiches (salle, métier, location) et recevez des demandes. Sur les forfaits payants, le paiement annuel offre −${ANNUAL_DISCOUNT_PERCENT} %.`
+                  : `La solution clé en main pour les professionnels de l'événementiel (Business, Premium, Enterprise). Paiement annuel : −${ANNUAL_DISCOUNT_PERCENT} %.`)}
+          </p>
+        </div>
 
  {activePromos.length > 0 && (
  <div className="mb-8 max-w-2xl rounded-[var(--radius-card)] border border-border bg-surface-muted p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">

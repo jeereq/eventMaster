@@ -305,12 +305,12 @@ export default function LandingVitrineSection({
       <div className="page-container space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
           <div className="max-w-xl space-y-2">
-            <p className="text-xs font-medium uppercase tracking-wider text-muted">Déjà en ligne</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-muted">Le catalogue EventMaster</p>
             <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-              Déjà des salles et des prestas en ligne
+              Trouvez la perle rare parmi nos partenaires
             </h2>
             <p className="text-sm text-muted leading-relaxed">
-              Parcourez sans compte. Un clic ouvre la fiche.
+              Ne perdez plus des heures à chercher. Parcourez notre sélection et découvrez leurs offres.
             </p>
           </div>
           <Link href="/marketplace">
