@@ -381,24 +381,39 @@ export default function RoomLayoutPreview({
 
       {quality === 'thumb' ? (
         <ThumbPreview blueprint={blueprint} className={className} />
-      ) : useWebGL ? (
-        <RoomWebGLViewer
-          blueprint={webglBlueprint}
-          selected={[]}
-          onSelect={() => {}}
-          readOnly
-          previewMode
-          renderQuality={quality === 'showcase' ? 'showcase' : 'standard'}
-          lightingPreset={lightingPreset}
-          className={cn(canvasClass, 'shadow-[var(--shadow-soft)]')}
-        />
       ) : (
-        <FlatShowcasePreview blueprint={blueprint} className={className} />
+        <div className={cn('relative overflow-hidden rounded-2xl', canvasClass, className)}>
+          {!useWebGL && (
+            <FlatShowcasePreview
+              blueprint={blueprint}
+              className="absolute inset-0 h-full w-full rounded-2xl"
+            />
+          )}
+          {useWebGL && (
+            <RoomWebGLViewer
+              blueprint={webglBlueprint}
+              selected={[]}
+              onSelect={() => {}}
+              readOnly
+              previewMode
+              renderQuality={quality === 'showcase' ? 'showcase' : 'standard'}
+              lightingPreset={lightingPreset}
+              className="absolute inset-0 h-full w-full shadow-[var(--shadow-soft)]"
+            />
+          )}
+          {!mounted && (
+            <div className="pointer-events-none absolute inset-0 z-10 flex items-end justify-center pb-3">
+              <span className="rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-semibold text-white/90 backdrop-blur-sm">
+                Chargement 3D…
+              </span>
+            </div>
+          )}
+        </div>
       )}
 
       {quality === 'showcase' && useWebGL && (
         <p className="text-[10px] text-muted leading-relaxed">
-          Visualisation <span className="font-semibold text-foreground">3D réaliste</span> : textures, ambiance, mobilier et architecture.
+          Visualisation <span className="font-semibold text-foreground">3D showcase</span> : textures, bloom, vignette et architecture.
           Orbitez pour inspecter la salle.
         </p>
       )}

@@ -49,6 +49,7 @@ import {
 import { RoomAmbiance } from '@/components/CatalogueAmbiance';
 import { RowSeatsLOD } from '@/components/RowSeatsLOD';
 import RoomWalkthroughCamera from '@/components/RoomWalkthroughCamera';
+import RoomShowcasePostProcessing from '@/components/RoomShowcasePostProcessing';
 import {
   resolveLightingPreset,
   resolveRenderQuality,
@@ -2127,6 +2128,10 @@ function SceneContent({
         maxDistance={Math.max(widthM, heightM, stackView ? topStoryElev + wallHeightM : 0) * (stackView ? 4.5 : 3)}
         target={[0, focusY, 0]}
       />
+
+      {qualitySettings.quality === 'showcase' ? (
+        <RoomShowcasePostProcessing lighting={lighting} />
+      ) : null}
     </>
   );
 }
