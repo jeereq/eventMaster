@@ -20,6 +20,7 @@ import ChairRenderer from '@/components/ChairRenderer';
 import FixtureRenderer from '@/components/FixtureRenderer';
 import RoomWebGLViewer from '@/components/RoomWebGLViewer';
 import { cn } from '@/lib/cn';
+import type { LightingPreset } from '@/lib/roomRenderQuality';
 
 export type RoomPreviewQuality = 'thumb' | 'standard' | 'showcase';
 
@@ -32,6 +33,8 @@ interface RoomLayoutPreviewProps {
   showDepthControls?: boolean;
   /** Forcer le rendu 2D même en showcase (listes légères). */
   force2d?: boolean;
+  /** Remplace metadata.lightingPreset (ex. créneau programme événement). */
+  lightingPreset?: LightingPreset;
 }
 
 /** Miniatures / listes : rendu 2D léger, teintes alignées sur le style WebGL. */
@@ -321,6 +324,7 @@ export default function RoomLayoutPreview({
   quality = 'standard',
   showMeta,
   force2d = false,
+  lightingPreset: lightingPresetOverride,
 }: RoomLayoutPreviewProps) {
   const showHeader = showMeta ?? quality !== 'thumb';
   const blueprint = rawBlueprint ? ensureBlueprintDefaults(rawBlueprint) : null;
@@ -345,6 +349,7 @@ export default function RoomLayoutPreview({
   }
 
   const theme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
+  const lightingPreset = lightingPresetOverride ?? blueprint.metadata.lightingPreset ?? 'auto';
   const useWebGL = !force2d && quality !== 'thumb' && mounted;
 
   const webglBlueprint = quality === 'showcase'
@@ -384,7 +389,7 @@ export default function RoomLayoutPreview({
           readOnly
           previewMode
           renderQuality={quality === 'showcase' ? 'showcase' : 'standard'}
-          lightingPreset={blueprint.metadata.lightingPreset ?? 'auto'}
+          lightingPreset={lightingPreset}
           className={cn(canvasClass, 'shadow-[var(--shadow-soft)]')}
         />
       ) : (

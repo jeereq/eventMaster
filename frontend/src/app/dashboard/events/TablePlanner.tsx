@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import { 
  Plus, Trash2, Users, Check, Move, X, RefreshCw, Search,
  HelpCircle, Edit2, LayoutGrid, Maximize2, Minimize2, Copy, Lock, Unlock, Palette, RotateCw, Sparkles, ChevronDown, Download, PlusCircle, Save
@@ -16,6 +16,7 @@ import {
 } from '@/lib/tablePlanUtils';
 import { chairTypeLabels, getFixtureClass, type ChairType } from '@/lib/roomLayoutUtils';
 import { resolveFloorStyle } from '@/lib/roomFloorUtils';
+import type { FloorType } from '@/lib/roomThemeUtils';
 import { roomEditorCapabilities, snapLayoutPct } from '@/lib/roomEditorAccess';
 import Link from 'next/link';
 
@@ -46,7 +47,12 @@ interface Table {
 interface TablePlannerProps {
  eventId?: string;
  guests: GuestItem[];
- initialTablePlan: { tables?: Table[]; fixtures?: Array<{ id: string; kind: string; x: number; y: number; w: number; h: number; label?: string }> } | null | undefined;
+ initialTablePlan: {
+   tables?: Table[];
+   fixtures?: Array<{ id: string; kind: string; x: number; y: number; w: number; h: number; label?: string }>;
+   floorType?: string | null;
+   floorImageUrl?: string | null;
+ } | null | undefined;
  onSave: (newTablePlan: { tables: Table[]; fixtures?: unknown[] }) => Promise<void>;
  roomName?: string | null;
  canImportRoomLayout?: boolean;
@@ -73,6 +79,13 @@ export default function TablePlanner({
  return [];
  });
  const [fixtures] = useState(() => initialTablePlan?.fixtures ?? []);
+ const floorStyle = useMemo(
+   () => resolveFloorStyle(
+     (initialTablePlan?.floorType as FloorType | undefined) ?? 'parquet',
+     initialTablePlan?.floorImageUrl ?? undefined,
+   ),
+   [initialTablePlan?.floorType, initialTablePlan?.floorImageUrl],
+ );
  const [saving, setSaving] = useState(false);
  const [activeTableId, setActiveTableId] = useState<string | null>(null);
  const [selectedSeat, setSelectedGuestSeat] = useState<{ tableId: string; seatIndex: number } | null>(null);
@@ -565,7 +578,7 @@ export default function TablePlanner({
  'w-full flex-1 min-h-[400px]',
  draggingTableId && 'em-floor-canvas--dragging',
  )}
- style={resolveFloorStyle('parquet', undefined)}
+ style={floorStyle}
  >
  {fixtures.map((fixture) => (
  <div

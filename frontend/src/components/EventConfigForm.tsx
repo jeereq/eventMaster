@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   Building2,
@@ -33,6 +33,8 @@ import {
   type EventProgram,
 } from '@/lib/eventProgram';
 import { lightingPresetLabels, type LightingPreset } from '@/lib/roomRenderQuality';
+import { ensureBlueprintDefaults, type RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
+import RoomLayoutPreview, { type RoomPreviewQuality } from '@/components/RoomLayoutPreview';
 import {
   EVENT_CONFIG_TABS,
   EVENT_KIND_LABELS,
@@ -73,6 +75,7 @@ type RoomOption = {
   location: string | null;
   floor: string | null;
   capacity: number | null;
+  layoutBlueprint?: unknown;
 };
 
 type TemplateOption = {
@@ -134,6 +137,7 @@ export default function EventConfigForm({
   const [eventProgram, setEventProgram] = useState<EventProgram>(() => createEmptyProgram());
   const [photos, setPhotos] = useState<string[]>([]);
   const [roomId, setRoomId] = useState('');
+  const [roomPreviewQuality, setRoomPreviewQuality] = useState<Exclude<RoomPreviewQuality, 'thumb'>>('standard');
   const [formTemplateId, setFormTemplateId] = useState('');
   const [openTablePlanAfterSave, setOpenTablePlanAfterSave] = useState(false);
   const [guestGuidelines, setGuestGuidelines] = useState<GuestGuidelines>(guidelinesFromEvent(null));
@@ -179,6 +183,7 @@ export default function EventConfigForm({
       setEventProgram(createEmptyProgram());
       setPhotos([]);
       setRoomId('');
+      setRoomPreviewQuality('standard');
       setFormTemplateId('');
       setOpenTablePlanAfterSave(false);
       setGuestGuidelines(guidelinesFromEvent(null));
@@ -361,12 +366,31 @@ export default function EventConfigForm({
 
   const applyRoom = (nextRoomId: string) => {
     setRoomId(nextRoomId);
+    setRoomPreviewQuality('standard');
     if (!nextRoomId) return;
     const room = rooms.find((item) => item.id === nextRoomId);
     if (!room) return;
     const parts = [room.name, room.floor, room.location].filter(Boolean);
     if (parts.length > 0) setLocation(parts.join(' — '));
   };
+
+  const selectedRoom = useMemo(
+    () => (roomId ? rooms.find((item) => item.id === roomId) : undefined),
+    [rooms, roomId],
+  );
+
+  const selectedRoomBlueprint = useMemo((): RoomLayoutBlueprint | null => {
+    if (!selectedRoom?.layoutBlueprint || typeof selectedRoom.layoutBlueprint !== 'object') {
+      return null;
+    }
+    return ensureBlueprintDefaults(selectedRoom.layoutBlueprint as RoomLayoutBlueprint);
+  }, [selectedRoom]);
+
+  const roomPreviewLighting = useMemo((): Exclude<LightingPreset, 'auto'> => {
+    const slot = eventProgram.slots[0];
+    if (slot?.lighting) return slot.lighting;
+    return 'dusk';
+  }, [eventProgram.slots]);
 
   const applyDressPreset = (presetId: DressCodePresetId | '') => {
     if (!presetId) {
@@ -818,7 +842,7 @@ export default function EventConfigForm({
                     , ou parcourez le marketplace.
                   </>
                 ) : (
-                  'Préremplit le lieu et lie le staff. À la création, le plan 2D est importé si un modèle existe.'
+                  'Préremplit le lieu et lie le staff. À la création, le plan de table est importé si un modèle existe.'
                 )}{' '}
                 <Link href="/marketplace/salles" className="font-semibold text-primary hover:underline">
                   Trouver une salle
@@ -829,6 +853,83 @@ export default function EventConfigForm({
                 </Link>
               </p>
             </label>
+
+            {selectedRoom && (
+              <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/30 p-3 sm:p-4 space-y-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="space-y-0.5 min-w-0">
+                    <h4 className="text-xs font-semibold text-foreground">Aperçu de la salle</h4>
+                    {selectedRoomBlueprint ? (
+                      <p className="text-[11px] text-muted leading-relaxed">
+                        Ambiance{' '}
+                        <span className="font-semibold text-foreground">
+                          {lightingPresetLabels[roomPreviewLighting]}
+                        </span>
+                        {eventProgram.slots[0]
+                          ? ` · créneau « ${eventProgram.slots[0].label} »`
+                          : ' · définissez un créneau dans Accès pour ajuster l’éclairage'}
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-muted leading-relaxed">
+                        Cette salle n’a pas encore de modèle. Créez-en un dans{' '}
+                        <Link href="/dashboard/rooms" className="font-semibold text-primary hover:underline">
+                          Salles
+                        </Link>
+                        .
+                      </p>
+                    )}
+                  </div>
+                  {selectedRoomBlueprint && (
+                    <div className="flex shrink-0 gap-1 rounded-full border border-border bg-surface p-0.5">
+                      {([
+                        { id: 'standard' as const, label: 'Rapide' },
+                        { id: 'showcase' as const, label: '3D showcase' },
+                      ]).map((opt) => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setRoomPreviewQuality(opt.id)}
+                          className={cn(
+                            'px-2.5 py-1 rounded-full text-[10px] font-semibold transition',
+                            roomPreviewQuality === opt.id
+                              ? 'bg-foreground text-background'
+                              : 'text-muted hover:text-foreground',
+                          )}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {selectedRoomBlueprint ? (
+                  <>
+                    <RoomLayoutPreview
+                      blueprint={selectedRoomBlueprint}
+                      quality={roomPreviewQuality}
+                      lightingPreset={roomPreviewLighting}
+                      showMeta
+                      className="[&_.em-floor-canvas]:rounded-xl"
+                    />
+                    <p className="text-[11px] text-muted leading-relaxed">
+                      Orbitez pour inspecter la salle. Le plan de table sera importé automatiquement à la création.
+                      {' '}
+                      <Link href="/dashboard/rooms" className="font-semibold text-primary hover:underline">
+                        Modifier le modèle
+                      </Link>
+                    </p>
+                  </>
+                ) : (
+                  <div className="aspect-[4/3] rounded-xl border border-dashed border-border bg-surface flex flex-col items-center justify-center gap-2 text-center px-4">
+                    <LayoutGrid className="w-8 h-8 text-muted" />
+                    <p className="text-xs text-muted">
+                      Aucun plan disponible pour « {selectedRoom.name} ».
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="space-y-3 pt-1 border-t border-border">
               <div className="flex items-center justify-between gap-2">
@@ -955,7 +1056,9 @@ export default function EventConfigForm({
                 </label>
                 <div className="space-y-2 pt-2 border-t border-border">
                   <p className="text-xs font-semibold text-foreground">Programme & ambiance</p>
-                  <p className="text-[11px] text-muted">Créneaux Soleil / Crépuscule / Nuit pour la vue extérieure.</p>
+                  <p className="text-[11px] text-muted">
+                    Créneaux Soleil / Crépuscule / Nuit — reflétés dans l’aperçu salle et la vue extérieure.
+                  </p>
                   {eventProgram.slots.map((slot) => (
                     <div key={slot.id} className="grid grid-cols-2 sm:grid-cols-4 gap-2 items-end p-2 rounded border border-border bg-surface-muted/40">
                       <Input
