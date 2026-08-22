@@ -3,7 +3,7 @@
 import React, { useMemo, useState, useRef } from 'react';
 import { 
  Plus, Trash2, Users, Check, Move, X, RefreshCw, Search,
- HelpCircle, Edit2, LayoutGrid, Maximize2, Minimize2, Copy, Lock, Unlock, Palette, RotateCw, Sparkles, ChevronDown, Download, PlusCircle, Save
+ HelpCircle, Edit2, LayoutGrid, Maximize2, Minimize2, Copy, Lock, Unlock, Palette, RotateCw, Sparkles, ChevronDown, Download, PlusCircle, Save, Box
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -14,11 +14,16 @@ import {
  getTableVisualStyle,
  TableShape,
 } from '@/lib/tablePlanUtils';
-import { chairTypeLabels, getFixtureClass, type ChairType } from '@/lib/roomLayoutUtils';
+import { chairTypeLabels, getFixtureClass, type ChairType, type RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
 import { resolveFloorStyle } from '@/lib/roomFloorUtils';
 import type { FloorType } from '@/lib/roomThemeUtils';
 import { roomEditorCapabilities, snapLayoutPct } from '@/lib/roomEditorAccess';
+import { buildTablePlanPreviewBlueprint } from '@/lib/tablePlanPreviewBlueprint';
+import type { LightingPreset } from '@/lib/roomRenderQuality';
+import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import Link from 'next/link';
+
+type PlannerView = '2d' | '3d';
 
 interface GuestItem {
  id: string;
@@ -52,9 +57,20 @@ interface TablePlannerProps {
    fixtures?: Array<{ id: string; kind: string; x: number; y: number; w: number; h: number; label?: string }>;
    floorType?: string | null;
    floorImageUrl?: string | null;
+   floorColor?: string | null;
+   roomOutline?: RoomLayoutBlueprint['roomOutline'];
+   roomThemeId?: string | null;
+   depthAmount?: number | null;
+   depthView?: boolean | null;
+   defaultTableColor?: string | null;
+   sourceRoomType?: string | null;
+   lightingPreset?: LightingPreset | null;
+   renderQuality?: 'draft' | 'standard' | 'showcase' | null;
  } | null | undefined;
  onSave: (newTablePlan: { tables: Table[]; fixtures?: unknown[] }) => Promise<void>;
  roomName?: string | null;
+ roomLayoutBlueprint?: RoomLayoutBlueprint | null;
+ previewLightingPreset?: Exclude<LightingPreset, 'auto'>;
  canImportRoomLayout?: boolean;
  onImportRoomLayout?: (replaceExisting: boolean) => Promise<void>;
  importingLayout?: boolean;
@@ -66,6 +82,8 @@ export default function TablePlanner({
  initialTablePlan,
  onSave,
  roomName,
+ roomLayoutBlueprint = null,
+ previewLightingPreset,
  canImportRoomLayout,
  onImportRoomLayout,
  importingLayout,
@@ -101,6 +119,7 @@ export default function TablePlanner({
  const [isExpanded, setIsExpanded] = useState(false);
  const [guestsOpen, setGuestsOpen] = useState(false);
  const [hoveredTableId, setHoveredTableId] = useState<string | null>(null);
+ const [plannerView, setPlannerView] = useState<PlannerView>('2d');
 
  // Dragging states
  const canvasRef = useRef<HTMLDivElement>(null);
@@ -123,10 +142,22 @@ export default function TablePlanner({
 
   // Unassigned eligible guests
   const unassignedGuests = placeableGuests.filter(g => !assignedGuestIds.has(g.id));
-  const filteredUnassignedGuests = unassignedGuests.filter(g => 
-    (g.firstName + ' ' + g.lastName).toLowerCase().includes(guestSearch.toLowerCase()) || 
-    (g.category || '').toLowerCase().includes(guestSearch.toLowerCase())
-  );
+ const filteredUnassignedGuests = unassignedGuests.filter(g => 
+   (g.firstName + ' ' + g.lastName).toLowerCase().includes(guestSearch.toLowerCase()) || 
+   (g.category || '').toLowerCase().includes(guestSearch.toLowerCase())
+ );
+
+ const previewBlueprint = useMemo(
+   () => buildTablePlanPreviewBlueprint(initialTablePlan, tables, roomLayoutBlueprint),
+   [initialTablePlan, tables, roomLayoutBlueprint],
+ );
+
+ const previewQuality = caps.canShowcaseRender ? 'showcase' as const : 'standard' as const;
+
+ const previewLighting = previewLightingPreset
+   ?? (initialTablePlan?.lightingPreset && initialTablePlan.lightingPreset !== 'auto'
+     ? initialTablePlan.lightingPreset
+     : 'dusk');
 
   // Add a new table
  const handleAddTable = () => {
@@ -473,6 +504,51 @@ export default function TablePlanner({
  })
  .filter(Boolean) as Array<{ seatIndex: number; name: string }>;
  };
+
+  const render3DPreview = (heightClass: string) => (
+    <div className={cn('flex flex-col min-h-0 space-y-2', heightClass)}>
+      {!previewBlueprint ? (
+        <div className="flex-1 min-h-[320px] rounded-[var(--radius-card)] border border-dashed border-border bg-surface-muted flex flex-col items-center justify-center gap-2 p-6 text-center">
+          <Box className="w-10 h-10 text-muted" />
+          <p className="text-sm font-semibold text-foreground">Vue 3D indisponible</p>
+          <p className="text-xs text-muted max-w-sm">
+            Ajoutez des tables ou importez le plan depuis la salle liée pour activer l’aperçu 3D.
+          </p>
+          {canImportRoomLayout && onImportRoomLayout ? (
+            <button
+              type="button"
+              onClick={() => onImportRoomLayout(tables.length > 0)}
+              disabled={importingLayout}
+              className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-primary hover:underline"
+            >
+              {importingLayout ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+              Importer depuis la salle
+            </button>
+          ) : null}
+        </div>
+      ) : (
+        <>
+          <RoomLayoutPreview
+            blueprint={previewBlueprint}
+            quality={previewQuality}
+            lightingPreset={previewLighting}
+            showMeta
+            className="flex-1 min-h-[320px] [&_.em-floor-canvas]:min-h-[320px]"
+          />
+          <p className="text-[11px] text-muted leading-relaxed">
+            Lecture seule — placement des invités en{' '}
+            <button type="button" onClick={() => setPlannerView('2d')} className="font-semibold text-primary hover:underline">
+              vue Plan 2D
+            </button>
+            .
+            {roomLayoutBlueprint
+              ? ' Architecture et décor depuis le modèle de salle.'
+              : ' Rendu simplifié à partir du plan importé.'}
+          </p>
+        </>
+      )}
+    </div>
+  );
 
   const renderCanvas = (heightClass: string) => (
     <div className="space-y-4 flex-1 flex flex-col min-h-0">
@@ -831,13 +907,36 @@ export default function TablePlanner({
  Plan de Table Interactif
  </h2>
  <p className="text-muted text-sm mt-0.5">
- {tables.length}/{caps.maxTables} tables · {caps.label}
- {caps.canSnapGrid ? ' · grille' : ''}
- {caps.canRotate ? ' · rotation' : ''}.
- Placez les invités confirmés sur les sièges.
+ {plannerView === '3d'
+   ? `Vue 3D ${previewQuality === 'showcase' ? 'showcase' : 'standard'} · orbitez pour inspecter la salle`
+   : `${tables.length}/${caps.maxTables} tables · ${caps.label}${caps.canSnapGrid ? ' · grille' : ''}${caps.canRotate ? ' · rotation' : ''}. Placez les invités confirmés sur les sièges.`}
  </p>
  </div>
  <div className="flex flex-wrap gap-2">
+ <div className="flex gap-1 rounded-full border border-border bg-surface p-0.5">
+ <button
+ type="button"
+ onClick={() => setPlannerView('2d')}
+ className={cn(
+ 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold transition',
+ plannerView === '2d' ? 'bg-foreground text-background' : 'text-muted hover:text-foreground',
+ )}
+ >
+ <LayoutGrid className="w-3 h-3" />
+ Plan 2D
+ </button>
+ <button
+ type="button"
+ onClick={() => setPlannerView('3d')}
+ className={cn(
+ 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold transition',
+ plannerView === '3d' ? 'bg-foreground text-background' : 'text-muted hover:text-foreground',
+ )}
+ >
+ <Box className="w-3 h-3" />
+ Vue 3D
+ </button>
+ </div>
  <button
  onClick={() => {
  if (tables.length >= caps.maxTables) {
@@ -874,6 +973,7 @@ export default function TablePlanner({
  {/* Grid Layout for Planner — canvas first on mobile */}
  <div className="flex flex-col xl:grid xl:grid-cols-4 gap-3 xl:gap-6">
  <div className="order-1 xl:order-2 xl:col-span-3 flex flex-col space-y-3">
+ {plannerView === '2d' ? (
  <div className="bg-surface border border-border rounded-[var(--radius-card)] px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs text-muted font-medium flex flex-wrap items-center gap-1.5 sm:gap-2 overflow-x-auto">
  <Move className="w-3.5 h-3.5 text-muted shrink-0" />
  <span className="flex-1 min-w-[10rem] hidden sm:inline">Glissez les tables · déverrouillez pour déplacer un import · cliquez un siège pour placer un invité</span>
@@ -927,8 +1027,22 @@ export default function TablePlanner({
  Plein écran
  </button>
  </div>
+ ) : (
+ <div className="bg-surface border border-border rounded-[var(--radius-card)] px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs text-muted font-medium flex flex-wrap items-center gap-2">
+ <Box className="w-3.5 h-3.5 text-primary shrink-0" />
+ <span>Vue 3D en lecture seule · molette = zoom · glisser = orbit</span>
+ <button
+ type="button"
+ onClick={() => setIsExpanded(true)}
+ className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-[10px] font-semibold text-primary hover:bg-primary/10 transition"
+ >
+ <Maximize2 className="w-3.5 h-3.5" />
+ Plein écran
+ </button>
+ </div>
+ )}
 
- {!isExpanded && renderCanvas('em-plan-stage')}
+ {!isExpanded && (plannerView === '3d' ? render3DPreview('em-plan-stage') : renderCanvas('em-plan-stage'))}
  </div>
 
  <div className="order-2 xl:order-1 xl:col-span-1 bg-surface border border-border rounded-[var(--radius-card)] p-3 sm:p-4 flex flex-col xl:h-[600px] shadow-sm">
@@ -1020,7 +1134,7 @@ export default function TablePlanner({
  </button>
  </div>
  <div className="flex-1 min-h-0">
- {renderCanvas('h-full min-h-0')}
+ {plannerView === '3d' ? render3DPreview('h-full min-h-0') : renderCanvas('h-full min-h-0')}
  </div>
  </div>
  )}

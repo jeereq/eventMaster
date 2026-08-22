@@ -28,6 +28,8 @@ import {
  computeEventWorkflowState,
  type EventWorkflowTab,
 } from '@/lib/eventWorkflow';
+import { normalizeEventProgram } from '@/lib/eventProgram';
+import type { RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
 import {
  type GuestGuidelines,
  defaultGuestGuidelines,
@@ -113,6 +115,7 @@ interface EventItem {
  floor?: string | null;
  } | null;
  tablePlan?: any;
+ eventProgram?: unknown;
  guestGuidelines?: GuestGuidelines | null;
  rsvpForm?: { fields?: unknown } | unknown[] | null;
  eventPrep?: unknown;
@@ -2945,6 +2948,12 @@ Merci de confirmer votre présence :
  initialTablePlan={selectedEvent.tablePlan}
  onSave={handleSaveTablePlan}
  roomName={selectedEvent.room?.name}
+ roomLayoutBlueprint={
+   (selectedEvent.room?.layoutBlueprint as RoomLayoutBlueprint | undefined)
+   ?? (orgRooms.find((r) => r.id === selectedEvent.roomId)?.layoutBlueprint as RoomLayoutBlueprint | undefined)
+   ?? null
+ }
+ previewLightingPreset={normalizeEventProgram(selectedEvent.eventProgram).slots[0]?.lighting}
  canImportRoomLayout={selectedRoomHasLayout || Boolean(selectedEvent.roomId && orgRooms.find((r) => r.id === selectedEvent.roomId)?.layoutBlueprint)}
  editorLevel={planFeatures?.roomEditorLevel}
  onImportRoomLayout={handleImportRoomLayout}
