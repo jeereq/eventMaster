@@ -179,7 +179,6 @@ export function buildFirstLoginTour(
 
     case 'org_protocol':
       push('nav-protocol');
-      push('nav-events');
       push('nav-catalogue');
       push('nav-quotes');
       steps.push(firstLoginFinish(home, 'Ensuite : ouvrez un événement le jour J et testez le scan QR.'));
@@ -274,7 +273,6 @@ export function buildNavProductTour(
 
     case 'org_protocol':
       return buildSteps([
-        { tourId: 'nav-events' },
         { tourId: 'nav-protocol' },
         { tourId: 'nav-catalogue' },
         { tourId: 'nav-quotes' },

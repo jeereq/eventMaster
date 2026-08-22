@@ -617,6 +617,21 @@ export default function EventsPage() {
  setProtocolDesk(isProtocolOnly || searchParams.get('mode') === 'protocol');
  }, [isProtocolOnly, searchParams]);
 
+ // Compte protocole : toujours en desk (URL canonique avec mode=protocol)
+ useEffect(() => {
+ if (!isProtocolOnly) return;
+ if (searchParams.get('mode') === 'protocol') return;
+ if (eventIdFromRoute) {
+  router.replace(eventDashboardHref(eventIdFromRoute, {
+    tab: isEventWorkspaceTab(searchParams.get('tab')) ? (searchParams.get('tab') as EventWorkspaceTab) : 'protocol',
+    protocol: true,
+  }), { scroll: false });
+  return;
+ }
+ const view = searchParams.get('view') === 'tasks' ? 'tasks' : 'events';
+ router.replace(eventsListHref(true, view), { scroll: false });
+ }, [isProtocolOnly, searchParams, eventIdFromRoute, router]);
+
  const listView: 'events' | 'tasks' = searchParams.get('view') === 'tasks' ? 'tasks' : 'events';
 
  const setListView = useCallback(
@@ -1792,6 +1807,16 @@ Merci de confirmer votre présence :
  }
  action={
  <div className="flex flex-wrap items-center gap-2">
+ {protocolDesk && !isProtocolOnly ? (
+ <Button
+ type="button"
+ size="sm"
+ variant="secondary"
+ onClick={() => router.push('/dashboard/events')}
+ >
+ Quitter le desk
+ </Button>
+ ) : null}
  {listView === 'events' && events.length > 0 && (
  <ViewModeToggle
  storageKey="em-view-events"
@@ -1936,7 +1961,7 @@ Merci de confirmer votre présence :
  <Breadcrumbs
  items={[
  { label: 'Accueil', href: '/dashboard' },
- { label: 'Événements', href: eventsListHref(protocolDesk) },
+ { label: protocolDesk ? 'Protocole' : 'Événements', href: eventsListHref(protocolDesk) },
  { label: selectedEvent.title },
  ]}
  />
@@ -1946,7 +1971,7 @@ Merci de confirmer votre présence :
  className="inline-flex items-center gap-1 text-xs font-medium text-muted hover:text-foreground transition"
  >
  <ArrowLeft className="w-3.5 h-3.5" />
- Tous les événements
+ {protocolDesk ? 'Tous les accueils' : 'Tous les événements'}
  </button>
  <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight truncate">
  {selectedEvent.title}
@@ -1998,6 +2023,16 @@ Merci de confirmer votre présence :
  </div>
  </div>
  <div className="flex flex-wrap gap-2 shrink-0">
+ {protocolDesk && !isProtocolOnly ? (
+ <Button
+ type="button"
+ size="sm"
+ variant="secondary"
+ onClick={() => router.push(eventDashboardHref(selectedEvent.id, { tab: 'prep' }))}
+ >
+ Vue complète
+ </Button>
+ ) : null}
  <Button
  type="button"
  size="sm"

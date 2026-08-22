@@ -6,11 +6,12 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
   QrCode, ScanLine, CheckCircle2, XCircle, MessageSquare, Loader2, UserCheck, Armchair,
-  Search, Users,
+  Search, Users, ClipboardList,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import QrCameraScanner, { QrCameraToggle } from '@/components/QrCameraScanner';
+import { eventDashboardHref } from '@/lib/eventRoutes';
 
 interface ProtocolGuest {
   id: string;
@@ -215,11 +216,21 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
             <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">Parcours jour J</p>
             <h3 className="font-semibold text-foreground text-base">1. Scanner · 2. Confirmer · 3. Invité suivant</h3>
           </div>
-          {!isKioskMode && (
-            <Button variant="secondary" onClick={() => setIsKioskMode(true)} className="shrink-0" size="sm" title="Mode Plein Écran">
-              <ScanLine className="w-4 h-4" />
-            </Button>
-          )}
+          <div className="flex items-center gap-2 shrink-0">
+            <Link
+              href={eventDashboardHref(eventId, { tab: 'tasks', protocol: true })}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-border bg-surface text-[11px] font-semibold text-muted hover:text-foreground transition"
+              title="Checklist protocole"
+            >
+              <ClipboardList className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Tâches</span>
+            </Link>
+            {!isKioskMode && (
+              <Button variant="secondary" onClick={() => setIsKioskMode(true)} className="shrink-0" size="sm" title="Mode Plein Écran">
+                <ScanLine className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
         </div>
         <p className="text-xs text-muted leading-relaxed">
           Présentez le badge QR. Après confirmation, le scanner se relance automatiquement.

@@ -97,7 +97,7 @@ export default function ProtocolTasksPanel({
     <div className="space-y-5 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="space-y-1.5">
-          <h2 className="text-xl font-semibold text-foreground tracking-tight inline-flex items-center gap-2">
+          <h2 className="text-xl font-display font-semibold text-foreground tracking-tight inline-flex items-center gap-2">
             <ClipboardList className="w-5 h-5 text-primary" />
             Tâches protocole
           </h2>

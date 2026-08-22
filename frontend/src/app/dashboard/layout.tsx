@@ -49,25 +49,37 @@ function navItemIsActive(pathname: string, search: string, item: NavItem, curren
  const qIndex = item.href.indexOf('?');
  const path = qIndex >= 0 ? item.href.slice(0, qIndex) : item.href;
  const query = qIndex >= 0 ? item.href.slice(qIndex + 1) : '';
- const pathMatch = pathname === path || (path !== '/dashboard' && pathname.startsWith(path));
- if (!pathMatch) return false;
+ const pathMatch = pathname === path || (path !== '/dashboard' && pathname.startsWith(`${path}/`)) || pathname.startsWith(`${path}?`);
+ // /dashboard/events et /dashboard/events/:id
+ const eventsPathMatch =
+  path === '/dashboard/events' &&
+  (pathname === '/dashboard/events' || pathname.startsWith('/dashboard/events/'));
+ const effectivePathMatch = path === '/dashboard/events' ? eventsPathMatch : pathMatch;
+ if (!effectivePathMatch) return false;
  if (item.href === '/dashboard/billing' && pathname.startsWith('/dashboard/billing/')) return false;
- // Protocole vs Protocole+tasks handled inside events page tabs
  if (query) {
   const want = new URLSearchParams(query);
   const have = new URLSearchParams(search);
   for (const [key, value] of want.entries()) {
-   if (have.get(key) !== value) return false;
+    if (have.get(key) !== value) return false;
   }
   // Devis vs Réservations (même path /dashboard/bookings)
   if (path === '/dashboard/bookings' && want.has('tab')) {
    const haveTab = have.get('tab') || 'quotes';
    if (haveTab !== want.get('tab')) return false;
   }
-  return pathname === path;
+  // Desk protocole : reste actif sur la fiche événement (?mode=protocol)
+  if (path === '/dashboard/events' && want.get('mode') === 'protocol') {
+    return have.get('mode') === 'protocol';
+  }
+  return pathname === path || (path === '/dashboard/events' && eventsPathMatch);
+ }
+ // « Événements » (sans mode) : pas actif quand on est en desk protocole
+ if (path === '/dashboard/events' && !query) {
+  const have = new URLSearchParams(search);
+  if (have.get('mode') === 'protocol') return false;
  }
  if (path === '/dashboard/bookings' && pathname === '/dashboard/bookings') {
-  // Lien générique « Devis & réservations » (sans tab) : actif pour toute la page
   return true;
  }
  if (path === '/dashboard/catalogue' && pathname === '/dashboard/catalogue') {
@@ -206,8 +218,7 @@ function buildDashboardNav(opts: {
  if (access?.isProtocolOnly) {
   return buildNavSections(
    navSection('Jour J', [
-    { name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar },
-    { name: 'Protocole', href: '/dashboard/events?mode=protocol', tourId: 'nav-protocol', icon: ScanLine },
+    { name: 'Protocole', href: '/dashboard/events?mode=protocol', tourId: 'nav-protocol', icon: ScanLine, description: 'Accueil QR, événements et tâches du jour' },
    ]),
    navSection('Marketplace', [
     { name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires et locations — comme le catalogue client' },

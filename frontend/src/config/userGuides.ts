@@ -272,7 +272,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'manage-team',
         title: 'Inviter un membre d\'équipe',
         content:
-          '1. Ouvrez Équipe.\n2. Rôle : Manager, Protocole ou Commercial org.\n3. E-mail + mot de passe temporaire.\n4. Le protocole voit Événements, Protocole, Explorer, devis et réservations.',
+          '1. Ouvrez Équipe.\n2. Rôle : Manager, Protocole ou Commercial org.\n3. E-mail + mot de passe temporaire.\n4. Le protocole voit Protocole (événements + tâches), Explorer, devis et réservations.',
         links: [{ label: 'Équipe', href: '/dashboard/team' }],
       },
       {
@@ -478,7 +478,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'whats-new',
         title: 'Nouveautés pour le protocole',
         content:
-          '1. Tâches = sous-onglet d’Événements / Protocole (pas un menu à part).\n2. Explorer + Devis + Réservations : même catalogue que le client, pour le contexte jour J.\n3. Sur un événement en mode Protocole : Accueil (scan) | Tâches (checklist).',
+          '1. Menu Protocole : sous-onglets Événements | Tâches.\n2. Sur un événement : Accueil (scan) | Tâches (checklist).\n3. Explorer + Devis + Réservations : même catalogue que le client, pour le contexte jour J.',
         links: [
           { label: 'Tâches', href: '/dashboard/events?view=tasks' },
           { label: 'Explorer', href: '/dashboard/catalogue' },
@@ -588,7 +588,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'find-assignment',
         title: 'Identifier votre périmètre',
         content:
-          '1. Événements : seuls vos assignés.\n2. Protocole pour le scan.\n3. Tâches pour la checklist.\n4. Demandez une affectation au manager org. si la liste est vide.',
+          '1. Protocole : vos événements assignés (liste + tâches).\n2. Accueil pour le scan QR.\n3. Tâches pour la checklist.\n4. Demandez une affectation au manager org. si la liste est vide.',
         links: [{ label: 'Événements', href: '/dashboard/events' }],
       },
       {

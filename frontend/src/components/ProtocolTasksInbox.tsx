@@ -63,12 +63,12 @@ export default function ProtocolTasksInbox({ protocol = true }: { protocol?: boo
   const overdue = open.filter((t) => taskDueState(t.dueAt, t.status) === 'overdue').length;
 
   return (
-    <div className="rounded-[var(--radius-card)] border border-border bg-surface overflow-hidden">
-      <div className="px-4 py-3 border-b border-border flex flex-wrap items-center justify-between gap-2">
+    <div className="rounded-2xl border border-border bg-surface overflow-hidden shadow-[0_10px_40px_rgba(15,23,42,0.04)]">
+      <div className="px-4 py-3.5 border-b border-border flex flex-wrap items-center justify-between gap-2 bg-gradient-to-r from-primary/5 to-transparent">
         <p className="text-sm font-semibold inline-flex items-center gap-2">
           <ClipboardList className="w-4 h-4 text-primary" />
           Mes tâches
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">{open.length}</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted tabular-nums">{open.length}</span>
           {overdue > 0 ? <StatusPill tone="rose">{overdue} en retard</StatusPill> : null}
         </p>
         <p className="text-[11px] text-muted">
