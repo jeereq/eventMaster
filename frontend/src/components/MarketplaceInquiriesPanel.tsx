@@ -28,6 +28,7 @@ import {
   type MarketplaceInquiryItem,
 } from '@/lib/marketplace';
 import { eventDashboardHref } from '@/lib/eventRoutes';
+import { cn } from '@/lib/cn';
 import { Building2, CalendarCheck, CheckCircle2, Inbox, KeyRound, Mail, Phone, Sparkles } from 'lucide-react';
 
 const KIND_OPTIONS = [
@@ -167,6 +168,57 @@ export default function MarketplaceInquiriesPanel({
   return (
     <div className="space-y-4">
       {error && <Alert variant="error">{error}</Alert>}
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setStatus('')}
+          className={cn(
+            'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition',
+            !status || status === 'all'
+              ? 'bg-primary text-white border-primary'
+              : 'border-border text-muted hover:text-foreground',
+          )}
+        >
+          Tous ({inquiries.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setStatus('NEW')}
+          className={cn(
+            'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition',
+            status === 'NEW'
+              ? 'bg-amber-500 text-white border-amber-500'
+              : 'border-border text-muted hover:text-foreground',
+          )}
+        >
+          {organizerView ? 'En attente' : 'Nouveaux'} ({newCount})
+        </button>
+        <button
+          type="button"
+          onClick={() => setStatus('CONTACTED')}
+          className={cn(
+            'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition',
+            status === 'CONTACTED'
+              ? 'bg-sky-600 text-white border-sky-600'
+              : 'border-border text-muted hover:text-foreground',
+          )}
+        >
+          {organizerView ? 'Pris en charge' : 'Contactés'} ({contactedCount})
+        </button>
+        <button
+          type="button"
+          onClick={() => setStatus('BOOKED')}
+          className={cn(
+            'px-2.5 py-1.5 rounded-full text-[11px] font-semibold border transition',
+            status === 'BOOKED'
+              ? 'bg-emerald-600 text-white border-emerald-600'
+              : 'border-border text-muted hover:text-foreground',
+          )}
+        >
+          Réservés ({inquiries.filter((i) => i.hasBooking).length})
+        </button>
+      </div>
 
       <CatalogueFilterBar
         search={query}

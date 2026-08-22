@@ -41,7 +41,7 @@ import {
 } from '@/lib/marketplace';
 import { eventDashboardHref } from '@/lib/eventRoutes';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
-import { Building2, CalendarCheck, CheckCircle2, KeyRound, Sparkles, XCircle } from 'lucide-react';
+import { Building2, CalendarCheck, CheckCircle2, ChevronDown, KeyRound, Sparkles, XCircle } from 'lucide-react';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { commissionPercent, depositPercent } from '@/lib/platformRates';
 
@@ -122,6 +122,7 @@ export default function MarketplaceBookingsPanel({
   const [query, setQuery] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [calendarOpen, setCalendarOpen] = useState(!organizerView);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState('');
   const [acceptAmount, setAcceptAmount] = useState<Record<string, string>>({});
@@ -146,7 +147,8 @@ export default function MarketplaceBookingsPanel({
       if (!hay.includes(q)) return false;
     }
     const day = (b.eventDate || '').slice(0, 10);
-    if (fromDate && day && day < fromDate) return false;
+    const end = (b.eventEndDate || b.eventDate || '').slice(0, 10);
+    if (fromDate && end && end < fromDate) return false;
     if (toDate && day && day > toDate) return false;
     return true;
   }), [bookings, filter, status, kind, query, fromDate, toDate]);
@@ -207,7 +209,43 @@ export default function MarketplaceBookingsPanel({
       )}
 
       {calendarDates.length > 0 && (
-        <AvailabilityCalendar title="Calendrier des réservations" bookedDates={calendarDates} />
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={() => setCalendarOpen((open) => !open)}
+            className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-2xl border border-border bg-surface text-left"
+          >
+            <span className="text-xs font-semibold text-foreground">
+              Calendrier des réservations
+              {fromDate || toDate ? (
+                <span className="ml-2 text-primary font-medium">
+                  · filtre actif
+                </span>
+              ) : null}
+            </span>
+            <ChevronDown className={cn('w-4 h-4 text-muted transition', calendarOpen && 'rotate-180')} />
+          </button>
+          {calendarOpen ? (
+            <AvailabilityCalendar
+              compact={organizerView}
+              title="Cliquez un jour pour filtrer"
+              bookedDates={calendarDates}
+              selectedDate={fromDate && toDate && fromDate === toDate ? fromDate : fromDate || undefined}
+              selectedEndDate={fromDate && toDate ? toDate : undefined}
+              onSelectRange={(from, to) => {
+                if (!from) {
+                  setFromDate('');
+                  setToDate('');
+                  return;
+                }
+                setFromDate(from);
+                setToDate(to || from);
+              }}
+              minDate="1970-01-01"
+              allowBookedSelection
+            />
+          ) : null}
+        </div>
       )}
 
       {error && <Alert variant="error">{error}</Alert>}

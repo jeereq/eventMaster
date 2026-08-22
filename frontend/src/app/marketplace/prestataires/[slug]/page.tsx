@@ -116,18 +116,21 @@ export default function MarketplaceServiceDetailPage() {
               <p className="text-sm text-muted leading-relaxed whitespace-pre-line">{service.description}</p>
             )}
             <ListingPublicDetails details={service.details} kind="service" />
-            <AvailabilityCalendar
-              title="Calendrier des disponibilités"
-              bookedDates={service.bookedDates}
-              blockedDates={service.blockedDates}
-              selectedDate={pickedDate}
-              selectedEndDate={pickedEndDate}
-              onSelectRange={(from, to) => {
-                setPickedDate(from);
-                setPickedEndDate(to);
-              }}
-            />
           </div>
+        ) : null}
+        availability={service ? (
+          <AvailabilityCalendar
+            compact
+            title="Choisir vos dates"
+            bookedDates={service.bookedDates}
+            blockedDates={service.blockedDates}
+            selectedDate={pickedDate}
+            selectedEndDate={pickedEndDate}
+            onSelectRange={(from, to) => {
+              setPickedDate(from);
+              setPickedEndDate(to);
+            }}
+          />
         ) : null}
         map={service && item ? (
           service.latitude != null && service.longitude != null ? (
@@ -171,10 +174,9 @@ export default function MarketplaceServiceDetailPage() {
             endpoint={`/public/services/${encodeURIComponent(service.slug)}/inquire`}
             successCopy="Demande transmise au prestataire."
             eventDate={pickedDate}
-            onEventDateChange={(value) => {
-              setPickedDate(value);
-              setPickedEndDate(value);
-            }}
+            onEventDateChange={setPickedDate}
+            eventEndDate={pickedEndDate}
+            onEventEndDateChange={setPickedEndDate}
           />
         ) : null}
         booking={service ? (

@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import PublicPageShell from '@/components/PublicPageShell';
 import ListingDetailLayout from '@/components/ListingDetailLayout';
+import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import MarketplaceLocationsMap, { type MarketplaceMapHandle } from '@/components/MarketplaceLocationsMap';
 import EventTicketCheckoutForm from '@/components/EventTicketCheckoutForm';
 import { Button, SkeletonListingDetail } from '@/components/ui';
@@ -19,6 +20,10 @@ import { eventPublicListHref } from '@/lib/safeAppPath';
 import type { MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import { Calendar, MapPin, Navigation, Rss, Ticket } from 'lucide-react';
 import { cn } from '@/lib/cn';
+
+function eventDateKey(iso: string) {
+  return String(iso || '').slice(0, 10);
+}
 
 function PublicFeedPost({ post }: { post: PublicEventPost }) {
   return (
@@ -158,6 +163,14 @@ function MarketplaceEventDetailInner() {
               </div>
             )}
           </div>
+        ) : null}
+        availability={event ? (
+          <AvailabilityCalendar
+            compact
+            title="Date de l’événement"
+            selectedDate={eventDateKey(event.date)}
+            minDate="1970-01-01"
+          />
         ) : null}
         map={event && item ? (
           event.latitude != null && event.longitude != null ? (

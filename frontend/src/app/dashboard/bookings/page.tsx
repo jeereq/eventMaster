@@ -17,7 +17,7 @@ import { formatFc } from '@/config/landingPricing';
 import MarketplaceBookingsPanel from '@/components/MarketplaceBookingsPanel';
 import MarketplaceInquiriesPanel from '@/components/MarketplaceInquiriesPanel';
 import { useRememberListReturn } from '@/lib/catalogueQuery';
-import { Bookmark, Heart, Inbox, Loader2, Store } from 'lucide-react';
+import { Bookmark, CalendarCheck, FileText, Heart, Inbox, Loader2, Store, Trash2 } from 'lucide-react';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { depositPercent } from '@/lib/platformRates';
@@ -28,6 +28,37 @@ import { eventTypeLabel } from '@/lib/listingDetails';
 import { cn } from '@/lib/cn';
 
 type HubTab = 'quotes' | 'bookings' | 'packs' | 'favorites';
+
+function HubStat({
+  label,
+  value,
+  hint,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  hint?: string;
+  active?: boolean;
+  onClick?: () => void;
+}) {
+  const Comp = onClick ? 'button' : 'div';
+  return (
+    <Comp
+      type={onClick ? 'button' : undefined}
+      onClick={onClick}
+      className={cn(
+        'text-left rounded-2xl border px-3.5 py-3 bg-surface transition',
+        active ? 'border-primary/40 ring-1 ring-primary/25' : 'border-border',
+        onClick && 'hover:border-primary/30 cursor-pointer',
+      )}
+    >
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">{label}</p>
+      <p className="text-xl font-semibold tracking-tight mt-0.5">{value}</p>
+      {hint ? <p className="text-[11px] text-muted mt-0.5 leading-snug">{hint}</p> : null}
+    </Comp>
+  );
+}
 
 function OrganizerDemandesPage() {
   useRememberListReturn();
@@ -50,6 +81,7 @@ function OrganizerDemandesPage() {
   const [error, setError] = useState('');
   const favorites = useListingFavorites();
   const isClient = access?.level === 'client';
+  const isProtocol = Boolean(access?.isProtocolOnly);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -122,70 +154,159 @@ function OrganizerDemandesPage() {
 
   const pendingQuotes = visibleInquiries.filter((item) => item.status === 'NEW' && !item.hasBooking).length;
   const openBookings = visibleBookings.filter((item) => item.status === 'REQUESTED' || item.status === 'ACCEPTED').length;
+  const confirmedBookings = visibleBookings.filter((item) => item.status === 'CONFIRMED' || item.status === 'COMPLETED').length;
 
   const tabs = useMemo(
     () => [
-      { id: 'quotes', label: pendingQuotes ? `Devis (${pendingQuotes})` : `Devis (${visibleInquiries.length})` },
-      { id: 'bookings', label: openBookings ? `Réservations (${openBookings})` : `Réservations (${visibleBookings.length})` },
-      { id: 'packs', label: `Packs (${packs.length})` },
-      { id: 'favorites', label: `Favoris (${favorites.items.length})` },
+      {
+        id: 'quotes',
+        label: pendingQuotes > 0
+          ? `Devis · ${pendingQuotes} en attente`
+          : `Devis · ${visibleInquiries.length}`,
+      },
+      {
+        id: 'bookings',
+        label: openBookings > 0
+          ? `Réservations · ${openBookings} ouvertes`
+          : `Réservations · ${visibleBookings.length}`,
+      },
+      ...(isProtocol ? [] : [
+        { id: 'packs', label: `Packs · ${packs.length}` },
+        { id: 'favorites', label: `Favoris · ${favorites.items.length}` },
+      ]),
     ],
-    [pendingQuotes, visibleInquiries.length, openBookings, visibleBookings.length, packs.length, favorites.items.length],
+    [
+      pendingQuotes,
+      visibleInquiries.length,
+      openBookings,
+      visibleBookings.length,
+      packs.length,
+      favorites.items.length,
+      isProtocol,
+    ],
   );
 
+  useEffect(() => {
+    if (!isProtocol) return;
+    if (tab !== 'packs' && tab !== 'favorites') return;
+    setTab('quotes');
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('tab');
+    const qs = params.toString();
+    router.replace(qs ? `/dashboard/bookings?${qs}` : '/dashboard/bookings', { scroll: false });
+  }, [isProtocol, tab, searchParams, router]);
+
+  const showEventFilter = (tab === 'quotes' || tab === 'bookings') && eventOptions.length > 0;
+
+  const pageTitle =
+    tab === 'bookings' ? 'Réservations'
+      : tab === 'quotes' ? 'Demandes de devis'
+        : tab === 'packs' ? 'Packs enregistrés'
+          : tab === 'favorites' ? 'Favoris'
+            : 'Devis & réservations';
+
+  const pageDescription = isProtocol
+    ? tab === 'bookings'
+      ? 'Suivez les réservations liées aux événements que vous accompagnez.'
+      : 'Suivez les devis envoyés aux salles et prestataires pour le protocole.'
+    : tab === 'bookings'
+      ? `Suivez les réservations de dates. L’acompte (${depositPercent(site)} %) se verse hors plateforme.`
+      : tab === 'quotes'
+        ? 'Suivez vos demandes de devis envoyées aux salles et prestataires.'
+        : tab === 'packs'
+          ? 'Retrouvez les compositions catalogue enregistrées pour votre projet.'
+          : tab === 'favorites'
+            ? 'Salles, métiers et locations que vous avez mises de côté.'
+            : `Suivez devis, réservations, packs et favoris. L’acompte (${depositPercent(site)} %) se verse hors plateforme.`;
+
   return (
-    <div className="space-y-6 w-full">
+    <div className="space-y-5 w-full">
       <PageHeader
-        title={tab === 'bookings' ? 'Réservations' : tab === 'quotes' ? 'Demandes de devis' : 'Devis & réservations'}
-        description={
-          tab === 'bookings'
-            ? `Suivez les réservations de dates. L’acompte (${depositPercent(site)} %) se verse hors plateforme.`
-            : tab === 'quotes'
-              ? 'Suivez vos demandes de devis envoyées aux salles et prestataires.'
-              : `Suivez devis, réservations, packs et favoris. L’acompte (${depositPercent(site)} %) se verse hors plateforme.`
-        }
+        title={pageTitle}
+        description={pageDescription}
         breadcrumbs={
           <Breadcrumbs
             items={[
-              { label: isClient ? 'Marketplace' : 'Accueil', href: isClient ? '/dashboard/catalogue' : '/dashboard' },
+              {
+                label: isProtocol ? 'Protocole' : isClient ? 'Marketplace' : 'Accueil',
+                href: isProtocol ? '/dashboard/events?mode=protocol' : isClient ? '/dashboard/catalogue' : '/dashboard',
+              },
               { label: 'Devis & réservations' },
             ]}
           />
         }
         action={
-          <Link href="/dashboard/catalogue" className="inline-flex">
-            <Button size="sm" leftIcon={<Store className="w-4 h-4" />}>
-              Explorer
-            </Button>
-          </Link>
+          !isProtocol ? (
+            <Link href="/dashboard/catalogue" className="inline-flex">
+              <Button size="sm" leftIcon={<Store className="w-4 h-4" />}>
+                Explorer
+              </Button>
+            </Link>
+          ) : null
         }
       />
 
-      {isClient ? <GettingStartedChecklist variant="client" hasEvents={false} /> : null}
+      {isClient && !isProtocol ? <GettingStartedChecklist variant="client" hasEvents={false} /> : null}
 
       {error && <Alert variant="error">{error}</Alert>}
 
-      {eventOptions.length > 0 ? (
-        <label className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted shrink-0">Événement</span>
-          <select
-            value={eventFilter}
-            onChange={(e) => setEventFilter(e.target.value)}
-            className="w-full sm:max-w-sm px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface text-sm"
-          >
-            <option value="all">Tous les événements</option>
-            {eventOptions.map((event) => (
-              <option key={event.id} value={event.id}>{event.title}</option>
-            ))}
-          </select>
-        </label>
+      {!loading ? (
+        <div className={cn('grid gap-2', isProtocol ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-4')}>
+          <HubStat
+            label="Devis en attente"
+            value={pendingQuotes}
+            hint={`${visibleInquiries.length} au total`}
+            active={tab === 'quotes'}
+            onClick={() => setHubTab('quotes')}
+          />
+          <HubStat
+            label="Résas ouvertes"
+            value={openBookings}
+            hint={`${confirmedBookings} confirmée${confirmedBookings > 1 ? 's' : ''}`}
+            active={tab === 'bookings'}
+            onClick={() => setHubTab('bookings')}
+          />
+          {!isProtocol ? (
+            <>
+              <HubStat
+                label="Packs"
+                value={packs.length}
+                active={tab === 'packs'}
+                onClick={() => setHubTab('packs')}
+              />
+              <HubStat
+                label="Favoris"
+                value={favorites.items.length}
+                active={tab === 'favorites'}
+                onClick={() => setHubTab('favorites')}
+              />
+            </>
+          ) : null}
+        </div>
       ) : null}
 
-      <CatalogueChoicePills
-        options={tabs}
-        value={tab}
-        onChange={(id) => setHubTab((id as HubTab) || 'quotes')}
-      />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <CatalogueChoicePills
+          options={tabs}
+          value={tab}
+          onChange={(id) => setHubTab((id as HubTab) || 'quotes')}
+        />
+        {showEventFilter ? (
+          <label className="flex flex-col gap-1.5 text-sm sm:min-w-[14rem]">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">Filtrer par événement</span>
+            <select
+              value={eventFilter}
+              onChange={(e) => setEventFilter(e.target.value)}
+              className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface text-sm"
+            >
+              <option value="all">Tous les événements</option>
+              {eventOptions.map((event) => (
+                <option key={event.id} value={event.id}>{event.title}</option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+      </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-16 text-muted">
@@ -227,9 +348,11 @@ function OrganizerDemandesPage() {
                     {pack.venue ? ` · ${pack.venue.title}` : ''}
                     {pack.services.length ? ` · ${pack.services.length} fiche${pack.services.length > 1 ? 's' : ''}` : ''}
                   </p>
-                  <Link href="/dashboard/catalogue?hub=plan" className="text-xs font-semibold text-primary hover:underline">
-                    Ouvrir le catalogue
-                  </Link>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <Link href="/dashboard/catalogue?hub=plan" className="text-xs font-semibold text-primary hover:underline">
+                      Ouvrir dans le catalogue
+                    </Link>
+                  </div>
                 </Card>
               </li>
             ))}
@@ -248,50 +371,64 @@ function OrganizerDemandesPage() {
         />
       ) : (
         <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {favorites.items.map((item) => (
-            <li key={`${item.kind}:${item.slug}`}>
-              <Link
-                href={
-                  item.href
-                  || (item.kind === 'venue'
-                    ? dashboardVenueHref(item.slug)
-                    : dashboardServiceHref(item.slug, item.category))
-                }
-                className="block"
-              >
-                <Card interactive className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-[var(--radius-card)] overflow-hidden bg-surface-muted shrink-0">
-                    {item.coverUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={item.coverUrl} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-muted">
-                        {item.kind === 'venue' ? <Store className="w-4 h-4" /> : <Inbox className="w-4 h-4" />}
-                      </div>
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className={cn(
-                      'text-[10px] font-semibold uppercase tracking-wider',
-                      item.kind === 'venue'
-                        ? 'text-primary'
-                        : isServiceRentalCategory(item.category)
-                          ? 'text-cyan-700 dark:text-cyan-400'
-                          : 'text-[color:var(--festive-accent)]',
-                    )}>
-                      {item.kind === 'venue' ? 'Salle' : item.categoryLabel || (isServiceRentalCategory(item.category) ? 'Location' : 'Métier')}
-                    </p>
-                    <p className="text-sm font-semibold truncate">{item.title}</p>
-                    <p className="text-[11px] text-muted truncate">
-                      {[item.orgName, item.location, item.priceFromFc != null ? formatFc(item.priceFromFc) : 'Sur devis'].filter(Boolean).join(' · ')}
-                    </p>
-                  </div>
+          {favorites.items.map((item) => {
+            const href =
+              item.href
+              || (item.kind === 'venue'
+                ? dashboardVenueHref(item.slug)
+                : dashboardServiceHref(item.slug, item.category));
+            return (
+              <li key={`${item.kind}:${item.slug}`}>
+                <Card className="flex items-center gap-3">
+                  <Link href={href} className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-12 h-12 rounded-[var(--radius-card)] overflow-hidden bg-surface-muted shrink-0">
+                      {item.coverUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={item.coverUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted">
+                          {item.kind === 'venue' ? <Store className="w-4 h-4" /> : <Inbox className="w-4 h-4" />}
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className={cn(
+                        'text-[10px] font-semibold uppercase tracking-wider',
+                        item.kind === 'venue'
+                          ? 'text-primary'
+                          : isServiceRentalCategory(item.category)
+                            ? 'text-cyan-700 dark:text-cyan-400'
+                            : 'text-[color:var(--festive-accent)]',
+                      )}>
+                        {item.kind === 'venue' ? 'Salle' : item.categoryLabel || (isServiceRentalCategory(item.category) ? 'Location' : 'Métier')}
+                      </p>
+                      <p className="text-sm font-semibold truncate">{item.title}</p>
+                      <p className="text-[11px] text-muted truncate">
+                        {[item.orgName, item.location, item.priceFromFc != null ? formatFc(item.priceFromFc) : 'Sur devis'].filter(Boolean).join(' · ')}
+                      </p>
+                    </div>
+                  </Link>
+                  <button
+                    type="button"
+                    aria-label="Retirer des favoris"
+                    className="shrink-0 min-h-10 min-w-10 inline-flex items-center justify-center rounded-xl border border-border text-muted hover:text-rose-600 hover:border-rose-300"
+                    onClick={() => void favorites.toggleFavorite(item.kind, item.slug)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </Card>
-              </Link>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
+
+      {!loading && (tab === 'quotes' || tab === 'bookings') && !isProtocol ? (
+        <p className="text-[11px] text-muted flex items-center gap-1.5">
+          {tab === 'quotes' ? <FileText className="w-3.5 h-3.5" /> : <CalendarCheck className="w-3.5 h-3.5" />}
+          Astuce : sélectionnez une période sur la fiche salle ou prestataire, puis envoyez le devis ou la réservation.
+        </p>
+      ) : null}
     </div>
   );
 }

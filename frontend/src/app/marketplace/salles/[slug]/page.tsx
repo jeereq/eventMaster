@@ -131,19 +131,21 @@ export default function MarketplaceVenueDetailPage() {
                 />
               </div>
             ) : null}
-
-            <AvailabilityCalendar
-              title="Calendrier des disponibilités"
-              bookedDates={venue.bookedDates}
-              blockedDates={venue.blockedDates}
-              selectedDate={pickedDate}
-              selectedEndDate={pickedEndDate}
-              onSelectRange={(from, to) => {
-                setPickedDate(from);
-                setPickedEndDate(to);
-              }}
-            />
           </div>
+        ) : null}
+        availability={venue ? (
+          <AvailabilityCalendar
+            compact
+            title="Choisir vos dates"
+            bookedDates={venue.bookedDates}
+            blockedDates={venue.blockedDates}
+            selectedDate={pickedDate}
+            selectedEndDate={pickedEndDate}
+            onSelectRange={(from, to) => {
+              setPickedDate(from);
+              setPickedEndDate(to);
+            }}
+          />
         ) : null}
         map={venue && item ? (
           venue.latitude != null && venue.longitude != null ? (
@@ -187,10 +189,9 @@ export default function MarketplaceVenueDetailPage() {
             endpoint={`/public/venues/${encodeURIComponent(venue.slug)}/inquire`}
             successCopy="Demande transmise au propriétaire."
             eventDate={pickedDate}
-            onEventDateChange={(value) => {
-              setPickedDate(value);
-              setPickedEndDate(value);
-            }}
+            onEventDateChange={setPickedDate}
+            eventEndDate={pickedEndDate}
+            onEventEndDateChange={setPickedEndDate}
           />
         ) : null}
         booking={venue ? (

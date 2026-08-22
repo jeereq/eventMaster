@@ -15,6 +15,8 @@ export default function MarketplaceInquiryForm({
   successCopy = 'Demande envoyée.',
   eventDate,
   onEventDateChange,
+  eventEndDate: eventEndDateProp,
+  onEventEndDateChange,
   defaultGuestCount,
   defaultMessage,
   eventId,
@@ -24,6 +26,8 @@ export default function MarketplaceInquiryForm({
   successCopy?: string;
   eventDate?: string;
   onEventDateChange?: (value: string) => void;
+  eventEndDate?: string;
+  onEventEndDateChange?: (value: string) => void;
   defaultGuestCount?: number | string;
   defaultMessage?: string;
   eventId?: string;
@@ -36,7 +40,7 @@ export default function MarketplaceInquiryForm({
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [internalDate, setInternalDate] = useState(eventDate || '');
-  const [eventEndDate, setEventEndDate] = useState('');
+  const [internalEndDate, setInternalEndDate] = useState(eventEndDateProp || '');
   const [eventTime, setEventTime] = useState('');
   const [eventType, setEventType] = useState('');
   const [budget, setBudget] = useState('');
@@ -49,6 +53,8 @@ export default function MarketplaceInquiryForm({
   const [formError, setFormError] = useState('');
   const selectedDate = onEventDateChange ? (eventDate ?? internalDate) : internalDate;
   const setSelectedDate = onEventDateChange ?? setInternalDate;
+  const eventEndDate = onEventEndDateChange ? (eventEndDateProp ?? internalEndDate) : internalEndDate;
+  const setEventEndDate = onEventEndDateChange ?? setInternalEndDate;
   const showAuthChoice = !authLoading && !token;
 
   useEffect(() => {
@@ -57,6 +63,16 @@ export default function MarketplaceInquiryForm({
     setEmail((prev) => prev || user.email || '');
     setPhone((prev) => prev || user.phone || '');
   }, [user]);
+
+  useEffect(() => {
+    if (eventDate == null) return;
+    if (!onEventDateChange) setInternalDate(eventDate);
+  }, [eventDate, onEventDateChange]);
+
+  useEffect(() => {
+    if (eventEndDateProp == null) return;
+    if (!onEventEndDateChange) setInternalEndDate(eventEndDateProp);
+  }, [eventEndDateProp, onEventEndDateChange]);
 
   const composedMessage = () => {
     const extras = [
@@ -139,7 +155,11 @@ export default function MarketplaceInquiryForm({
               type="date"
               leftIcon={<Calendar className="w-4 h-4" />}
               value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
+              onChange={(e) => {
+                const next = e.target.value;
+                setSelectedDate(next);
+                if (eventEndDate && next && eventEndDate < next) setEventEndDate(next);
+              }}
             />
             <Input
               label="Date de fin"

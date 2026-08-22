@@ -98,6 +98,7 @@ export default function ListingDetailLayout({
   quotaLabel,
   inquiry,
   booking,
+  availability,
   preview,
   embedded,
   heroAction,
@@ -132,6 +133,8 @@ export default function ListingDetailLayout({
   quotaLabel?: string | null;
   inquiry?: React.ReactNode;
   booking?: React.ReactNode;
+  /** Calendrier collé aux CTA devis / réservation (colonne contact). */
+  availability?: React.ReactNode;
   preview?: boolean;
   /** Dans le dashboard : pas de second `main.page-container`. */
   embedded?: boolean;
@@ -275,6 +278,12 @@ export default function ListingDetailLayout({
               className="lg:col-span-2 space-y-3 sm:space-y-4 lg:sticky lg:top-24 scroll-mt-24"
             >
               <div className="hidden lg:block">{priceBlock}</div>
+
+              {availability ? (
+                <div id="listing-availability" className="scroll-mt-24">
+                  {availability}
+                </div>
+              ) : null}
 
               {showCommerce ? (
                 <>

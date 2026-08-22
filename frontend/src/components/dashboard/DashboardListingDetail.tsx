@@ -220,20 +220,28 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
               />
             </div>
           ) : null}
-
-          <AvailabilityCalendar
-            title="Calendrier des disponibilités"
-            bookedDates={venue?.bookedDates || service?.bookedDates}
-            blockedDates={venue?.blockedDates || service?.blockedDates}
-            selectedDate={pickedDate}
-            selectedEndDate={pickedEndDate}
-            onSelectRange={(from, to) => {
-              setPickedDate(from);
-              setPickedEndDate(to);
-            }}
-          />
         </div>
       ) : null}
+      availability={
+        venue || service ? (
+          <AvailabilityCalendar
+            compact
+            title={canTransact ? 'Choisir vos dates' : 'Disponibilités'}
+            bookedDates={venue?.bookedDates || service?.bookedDates}
+            blockedDates={venue?.blockedDates || service?.blockedDates}
+            selectedDate={canTransact ? pickedDate : undefined}
+            selectedEndDate={canTransact ? pickedEndDate : undefined}
+            onSelectRange={
+              canTransact
+                ? (from, to) => {
+                    setPickedDate(from);
+                    setPickedEndDate(to);
+                  }
+                : undefined
+            }
+          />
+        ) : null
+      }
       map={item ? (
         lat != null && lng != null ? (
           <div className="rounded-[var(--radius-card)] border border-border overflow-hidden bg-surface shadow-[var(--shadow-soft)]">
@@ -274,10 +282,9 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
           endpoint={`/public/venues/${encodeURIComponent(venue.slug)}/inquire`}
           successCopy="Demande transmise au propriétaire."
           eventDate={pickedDate}
-          onEventDateChange={(value) => {
-            setPickedDate(value);
-            setPickedEndDate(value);
-          }}
+          onEventDateChange={setPickedDate}
+          eventEndDate={pickedEndDate}
+          onEventEndDateChange={setPickedEndDate}
           eventId={linkedEventId}
         />
       ) : canTransact && service ? (
@@ -285,10 +292,9 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
           endpoint={`/public/services/${encodeURIComponent(service.slug)}/inquire`}
           successCopy="Demande transmise au prestataire."
           eventDate={pickedDate}
-          onEventDateChange={(value) => {
-            setPickedDate(value);
-            setPickedEndDate(value);
-          }}
+          onEventDateChange={setPickedDate}
+          eventEndDate={pickedEndDate}
+          onEventEndDateChange={setPickedEndDate}
           eventId={linkedEventId}
         />
       ) : null}
