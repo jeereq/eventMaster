@@ -1170,8 +1170,14 @@ export function dashboardServiceHref(slug: string, category?: string | null) {
     : `/dashboard/catalogue/prestataires/${slug}`;
 }
 
+export function dashboardEventHref(slug: string) {
+  return `/dashboard/catalogue/evenements/${slug}`;
+}
+
 export function withDashboardListingHref(item: CatalogueItem): CatalogueItem {
-  if (item.kind === 'event') return item;
+  if (item.kind === 'event') {
+    return { ...item, href: dashboardEventHref(item.slug) };
+  }
   return {
     ...item,
     href: item.kind === 'venue' ? dashboardVenueHref(item.slug) : dashboardServiceHref(item.slug, item.category),

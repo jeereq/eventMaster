@@ -8,6 +8,7 @@ import { listStackClass } from '@/components/ui';
 import { Skeleton } from '@/components/ui/Skeleton';
 import FavoriteHeart from '@/components/FavoriteHeart';
 import { catalogueItemDisplayKind, catalogueKindAccent, catalogueKindFilterLabel, catalogueKindLabel, cataloguePriceCaption, formatDistanceKm, formatQuotaLabel, groupCatalogueItemsByDisplayKind, serviceMobilityLabel, type CatalogueDisplayKind, type CatalogueItem, type CatalogueViewMode } from '@/lib/marketplace';
+import { rememberCurrentCatalogueList } from '@/lib/catalogueQuery';
 
 export const CATALOGUE_GRID_COLS = [2, 3, 4, 5] as const;
 export type CatalogueGridCols = (typeof CATALOGUE_GRID_COLS)[number];
@@ -83,11 +84,13 @@ function GridCard({
   compact,
   favorited,
   onToggleFavorite,
+  onNavigate,
 }: {
   item: CatalogueItem;
   compact?: boolean;
   favorited?: boolean;
   onToggleFavorite?: (item: CatalogueItem) => void;
+  onNavigate?: (e: React.MouseEvent) => void;
 }) {
   const displayKind = catalogueItemDisplayKind(item);
   const accent = catalogueKindAccent(displayKind);
@@ -95,6 +98,7 @@ function GridCard({
   return (
     <Link
       href={item.href}
+      onClick={onNavigate}
       className={cn(
         'group relative flex flex-col bg-surface border rounded-[var(--radius-card)] overflow-hidden shadow-[var(--shadow-soft)] hover:shadow-[0_22px_44px_-24px_rgba(15,23,42,0.5)] hover:-translate-y-0.5 transition duration-200',
         accent.border,
@@ -168,10 +172,12 @@ function ListRow({
   item,
   favorited,
   onToggleFavorite,
+  onNavigate,
 }: {
   item: CatalogueItem;
   favorited?: boolean;
   onToggleFavorite?: (item: CatalogueItem) => void;
+  onNavigate?: (e: React.MouseEvent) => void;
 }) {
   const displayKind = catalogueItemDisplayKind(item);
   const accent = catalogueKindAccent(displayKind);
@@ -179,6 +185,7 @@ function ListRow({
   return (
     <Link
       href={item.href}
+      onClick={onNavigate}
       className={cn(
         'group flex items-center gap-3 sm:gap-4 bg-surface border rounded-[var(--radius-card)] p-2.5 sm:p-3 hover:shadow-[var(--shadow-soft)] transition',
         accent.border,
@@ -244,6 +251,11 @@ export default function CatalogueResults({
   isFavorite?: (item: CatalogueItem) => boolean;
   onToggleFavorite?: (item: CatalogueItem) => void;
 }) {
+  const rememberListOnNavigate = (e: React.MouseEvent) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    rememberCurrentCatalogueList();
+  };
+
   if (items.length === 0) {
     return (
       <div className="text-center py-16 px-6 border border-dashed border-border rounded-[var(--radius-card)] bg-surface">
@@ -271,6 +283,7 @@ export default function CatalogueResults({
                   item={item}
                   favorited={isFavorite?.(item)}
                   onToggleFavorite={onToggleFavorite}
+                  onNavigate={rememberListOnNavigate}
                 />
               ))}
             </div>
@@ -293,6 +306,7 @@ export default function CatalogueResults({
                 compact={cols >= 5}
                 favorited={isFavorite?.(item)}
                 onToggleFavorite={onToggleFavorite}
+                onNavigate={rememberListOnNavigate}
               />
             ))}
           </div>

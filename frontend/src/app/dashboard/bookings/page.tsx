@@ -16,7 +16,7 @@ import {
 import { formatFc } from '@/config/landingPricing';
 import MarketplaceBookingsPanel from '@/components/MarketplaceBookingsPanel';
 import MarketplaceInquiriesPanel from '@/components/MarketplaceInquiriesPanel';
-import { useRememberListReturn } from '@/lib/catalogueQuery';
+import { rememberCurrentCatalogueList, useRememberListReturn } from '@/lib/catalogueQuery';
 import { Bookmark, CalendarCheck, FileText, Heart, Inbox, Loader2, Store, Trash2 } from 'lucide-react';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -380,7 +380,14 @@ function OrganizerDemandesPage() {
             return (
               <li key={`${item.kind}:${item.slug}`}>
                 <Card className="flex items-center gap-3">
-                  <Link href={href} className="flex items-center gap-3 min-w-0 flex-1">
+                  <Link
+                    href={href}
+                    className="flex items-center gap-3 min-w-0 flex-1"
+                    onClick={(e) => {
+                      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+                      rememberCurrentCatalogueList();
+                    }}
+                  >
                     <div className="w-12 h-12 rounded-[var(--radius-card)] overflow-hidden bg-surface-muted shrink-0">
                       {item.coverUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element

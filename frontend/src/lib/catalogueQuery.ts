@@ -36,8 +36,40 @@ function returnKeyFor(href: string): string | null {
 export function isCatalogueDetailPath(pathname: string): boolean {
   return (
     /^\/marketplace\/(salles|prestataires|locations|evenements)\/[^/]+$/.test(pathname)
-    || /^\/dashboard\/catalogue\/(salles|prestataires|locations)\/[^/]+$/.test(pathname)
+    || /^\/dashboard\/catalogue\/(salles|prestataires|locations|evenements)\/[^/]+$/.test(pathname)
   );
+}
+
+/** Mémorise l’URL courante si on est sur une liste catalogue (ex. au clic sur une carte). */
+export function rememberCurrentCatalogueList() {
+  if (typeof window === 'undefined') return;
+  const { pathname, search } = window.location;
+  rememberCatalogueReturn(search ? `${pathname}${search}` : pathname);
+}
+
+export function catalogueReturnBackLabel(href: string): string {
+  const path = pathOnly(href);
+  const query = href.includes('?') ? href.slice(href.indexOf('?') + 1) : '';
+  const params = new URLSearchParams(query);
+
+  if (path === '/dashboard/bookings') return 'Réservations';
+  if (path === '/dashboard/rooms') return 'Salles';
+  if (path === '/dashboard/marketplace') return 'Prestations';
+  if (path === '/dashboard/admin/catalogue') return 'Catalogue';
+  if (path === '/dashboard/catalogue') {
+    const hub = params.get('hub');
+    if (hub === 'favorites') return 'Favoris';
+    if (hub === 'plan') return 'Préparer un événement';
+    if (hub === 'packs') return 'Mes packs';
+    if (params.get('kind') === 'event') return 'Agenda';
+    return 'Explorer';
+  }
+  if (path === '/marketplace') return 'Marketplace';
+  if (path === '/marketplace/salles') return 'Salles';
+  if (path === '/marketplace/prestataires') return 'Prestataires';
+  if (path === '/marketplace/locations') return 'Locations';
+  if (path === '/marketplace/evenements') return 'Événements';
+  return 'Retour';
 }
 
 export function rememberCatalogueReturn(href: string) {

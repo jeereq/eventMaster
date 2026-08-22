@@ -158,6 +158,16 @@ export default function ListingDetailLayout({
   const goBack = (e: React.MouseEvent) => {
     e.preventDefault();
     const stored = getCatalogueReturn(backHref, returnScope);
+    const storedPath = stored.split('?')[0] || stored;
+    const fallbackPath = backHref.split('?')[0] || backHref;
+    const storedIsList = isCatalogueListPath(storedPath) && stored.startsWith(returnScope);
+    const storedHasState = stored.includes('?') || storedPath !== fallbackPath;
+
+    if (storedIsList && (storedHasState || stored !== backHref)) {
+      router.push(stored);
+      return;
+    }
+
     if (typeof window !== 'undefined' && window.history.length > 1) {
       try {
         const ref = document.referrer ? new URL(document.referrer) : null;
@@ -172,10 +182,6 @@ export default function ListingDetailLayout({
         }
       } catch {
         /* ignore */
-      }
-      if (stored !== backHref && stored.startsWith(returnScope)) {
-        router.push(stored);
-        return;
       }
     }
     router.push(stored);

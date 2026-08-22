@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { getCatalogueReturn } from '@/lib/catalogueQuery';
+import { catalogueReturnBackLabel, getCatalogueReturn } from '@/lib/catalogueQuery';
 import RoomLayoutPreview from '@/components/RoomLayoutPreview';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import MarketplaceLocationsMap, { type MarketplaceMapHandle } from '@/components/MarketplaceLocationsMap';
@@ -94,17 +94,7 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
     setBackHref(getCatalogueReturn(defaultBackHref, '/dashboard'));
   }, [defaultBackHref]);
   const isRental = isServiceRentalCategory(service?.category);
-  const backLabel = backHref.startsWith('/dashboard/admin/catalogue')
-    ? 'Catalogue'
-    : backHref.startsWith('/dashboard/catalogue')
-      ? 'Marketplace'
-      : backHref.startsWith('/dashboard/rooms')
-        ? 'Salles'
-        : backHref.startsWith('/dashboard/bookings')
-          ? 'Réservations'
-          : backHref.startsWith('/dashboard/marketplace')
-            ? (isRental ? 'Locations' : 'Prestations')
-            : 'Retour';
+  const backLabel = catalogueReturnBackLabel(backHref);
 
   const item = venue
     ? withDashboardListingHref(venueToCatalogueItem(venue))

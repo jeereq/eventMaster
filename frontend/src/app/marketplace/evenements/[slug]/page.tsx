@@ -17,6 +17,9 @@ import {
   type PublicEventPost,
 } from '@/lib/marketplace';
 import { eventPublicListHref } from '@/lib/safeAppPath';
+import { catalogueReturnBackLabel, getCatalogueReturn } from '@/lib/catalogueQuery';
+import { CLIENT_AGENDA_HREF } from '@/lib/marketplace';
+import { useAuth } from '@/context/AuthContext';
 import type { MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import { Calendar, MapPin, Navigation, Rss, Ticket } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -51,6 +54,11 @@ function PublicFeedPost({ post }: { post: PublicEventPost }) {
 function MarketplaceEventDetailInner() {
   const params = useParams();
   const slug = params.slug as string;
+  const { tenant, access } = useAuth();
+  const isClient = tenant?.accountKind === 'CLIENT' || access?.level === 'client';
+  const defaultBackHref = isClient ? CLIENT_AGENDA_HREF : eventPublicListHref();
+  const returnScope = isClient ? '/dashboard' : '/marketplace';
+  const [backHref, setBackHref] = useState(defaultBackHref);
   const mapRef = useRef<MarketplaceMapHandle>(null);
   const [event, setEvent] = useState<PublicEventCard | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,6 +66,10 @@ function MarketplaceEventDetailInner() {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [tab, setTab] = useState<MarketplaceFormTab>('details');
   const [wantRoute, setWantRoute] = useState(false);
+
+  useEffect(() => {
+    setBackHref(getCatalogueReturn(defaultBackHref, returnScope));
+  }, [defaultBackHref, returnScope]);
 
   useEffect(() => {
     let cancelled = false;
@@ -90,8 +102,8 @@ function MarketplaceEventDetailInner() {
   return (
     <PublicPageShell faqHref="/faq" mobileFooterPad>
       <ListingDetailLayout
-        backHref={eventPublicListHref()}
-        backLabel="Tous les événements"
+        backHref={backHref}
+        backLabel={catalogueReturnBackLabel(backHref)}
         loading={loading}
         error={error || (!loading && !event ? 'Événement introuvable ou privé.' : '')}
         errorIcon={<Ticket className="w-10 h-10 text-muted mx-auto mb-3" />}
