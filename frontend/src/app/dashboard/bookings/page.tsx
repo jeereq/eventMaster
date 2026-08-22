@@ -229,7 +229,7 @@ function OrganizerDemandesPage() {
             items={[
               {
                 label: isProtocol ? 'Protocole' : isClient ? 'Marketplace' : 'Accueil',
-                href: isProtocol ? '/dashboard/events?mode=protocol' : isClient ? '/dashboard/catalogue' : '/dashboard',
+                href: isProtocol ? '/dashboard' : isClient ? '/dashboard/catalogue' : '/dashboard',
               },
               { label: 'Devis & réservations' },
             ]}

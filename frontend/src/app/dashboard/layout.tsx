@@ -217,6 +217,9 @@ function buildDashboardNav(opts: {
 
  if (access?.isProtocolOnly) {
   return buildNavSections(
+   navSection('Accueil', [
+    { name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard, description: 'Accueils du jour, check-in et tâches' },
+   ]),
    navSection('Jour J', [
     { name: 'Protocole', href: '/dashboard/events?mode=protocol', tourId: 'nav-protocol', icon: ScanLine, description: 'Accueil QR, événements et tâches du jour' },
    ]),

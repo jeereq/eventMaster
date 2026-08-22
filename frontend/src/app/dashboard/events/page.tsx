@@ -439,7 +439,7 @@ export default function EventsPage() {
  const [eventsPageSize, setEventsPageSize] = usePageSize('org-events', 8);
  const [guestsPageSize, setGuestsPageSize] = usePageSize('org-guests', 8);
  const isProtocolOnly = access?.isProtocolOnly ?? false;
- const [protocolDesk, setProtocolDesk] = useState(isProtocolOnly);
+ const protocolDesk = isProtocolOnly || searchParams.get('mode') === 'protocol';
  const canManageEvents = access?.canManageAllEvents ?? false;
  const eventsAtLimit = isAtQuota(planQuota?.usage.events, planQuota?.limits.maxEvents);
  const guestsAtLimit = isAtQuota(planQuota?.usage.guests, planQuota?.limits.maxGuests);
@@ -613,17 +613,13 @@ export default function EventsPage() {
  setEventsListPage(1);
  }, [events.length]);
 
- useEffect(() => {
- setProtocolDesk(isProtocolOnly || searchParams.get('mode') === 'protocol');
- }, [isProtocolOnly, searchParams]);
-
  // Compte protocole : toujours en desk (URL canonique avec mode=protocol)
  useEffect(() => {
  if (!isProtocolOnly) return;
  if (searchParams.get('mode') === 'protocol') return;
  if (eventIdFromRoute) {
   router.replace(eventDashboardHref(eventIdFromRoute, {
-    tab: isEventWorkspaceTab(searchParams.get('tab')) ? (searchParams.get('tab') as EventWorkspaceTab) : 'protocol',
+    tab: searchParams.get('tab') === 'tasks' ? 'tasks' : 'protocol',
     protocol: true,
   }), { scroll: false });
   return;
@@ -642,10 +638,9 @@ export default function EventsPage() {
  );
 
  useEffect(() => {
- if (protocolDesk && selectedEvent) {
+ if (!protocolDesk || !selectedEvent) return;
  const tab = searchParams.get('tab');
  setActiveTab(tab === 'tasks' ? 'tasks' : 'protocol');
- }
  }, [protocolDesk, selectedEvent?.id, searchParams]);
 
  const filteredEventsList = events.filter((event) => {
@@ -689,6 +684,14 @@ export default function EventsPage() {
  [guests, invitations, selectedEvent?.tablePlan, selectedEvent?.date, selectedEvent?.guestGuidelines, selectedEvent?.feedPostCount, selectedEvent?.eventPrep, guestGuidelines, isProtocolOnly, protocolDesk],
  );
 
+ /** En desk protocole, seuls Accueil / Tâches sont valides (évite panneau vide ou prep). */
+ const deskTab: EventWorkspaceTab =
+   protocolDesk && selectedEvent
+     ? activeTab === 'tasks'
+       ? 'tasks'
+       : 'protocol'
+     : activeTab;
+
  const broadcastConfirmInvite = invitations.find((invite) => invite.id === broadcastConfirmInviteId) || null;
  const broadcastAudience = useMemo(
  () => (broadcastConfirmInvite ? summarizeSendAudience(guests, broadcastConfirmInvite.channel) : null),
@@ -704,6 +707,7 @@ export default function EventsPage() {
 
  const handleWorkflowNavigate = useCallback((tab: EventWorkflowTab) => {
  if (!isEventWorkspaceTab(tab)) return;
+ if (protocolDesk && tab !== 'protocol' && tab !== 'tasks') return;
  setActiveTab(tab);
  if (eventIdFromRoute) {
  router.replace(eventDashboardHref(eventIdFromRoute, { tab, protocol: protocolDesk }), { scroll: false });
@@ -962,7 +966,7 @@ Merci de confirmer votre présence :
  resetEventForm();
  setShowEventModal(false);
  loadEvents();
- router.push(eventDashboardHref(savedEvent.id, { tab: protocolDesk ? undefined : 'prep', protocol: protocolDesk }));
+ router.push(eventDashboardHref(savedEvent.id, { tab: protocolDesk ? 'protocol' : 'prep', protocol: protocolDesk }));
  return;
  }
 
@@ -1103,9 +1107,12 @@ Merci de confirmer votre présence :
 
  useEffect(() => {
  const tab = searchParams.get('tab');
- if (isEventWorkspaceTab(tab) && !(protocolDesk && tab !== 'protocol' && tab !== 'tasks')) {
- setActiveTab(tab);
+ if (!isEventWorkspaceTab(tab)) return;
+ if (protocolDesk && tab !== 'protocol' && tab !== 'tasks') {
+  setActiveTab('protocol');
+  return;
  }
+ setActiveTab(tab);
  }, [searchParams, protocolDesk]);
 
  useEffect(() => {
@@ -2155,7 +2162,7 @@ Merci de confirmer votre présence :
  {eventsViewMode === 'list' && (
  <button
  type="button"
- onClick={() => router.push(eventDashboardHref(event.id, { tab: protocolDesk ? undefined : 'prep', protocol: protocolDesk }))}
+ onClick={() => router.push(eventDashboardHref(event.id, { tab: protocolDesk ? 'protocol' : 'prep', protocol: protocolDesk }))}
  className="inline-flex items-center"
  title={protocolDesk ? 'Ouvrir le protocole' : 'Voir détails'}
  >
@@ -2208,7 +2215,7 @@ Merci de confirmer votre présence :
  ? event.description
  : undefined
  }
- onClick={() => router.push(eventDashboardHref(event.id, { tab: protocolDesk ? undefined : 'prep', protocol: protocolDesk }))}
+ onClick={() => router.push(eventDashboardHref(event.id, { tab: protocolDesk ? 'protocol' : 'prep', protocol: protocolDesk }))}
  actions={actions}
  />
  );
@@ -2233,14 +2240,14 @@ Merci de confirmer votre présence :
  <div className="space-y-5">
  <EventWorkflowPanel
  workflow={eventWorkflow}
- activeTab={activeTab}
+ activeTab={deskTab}
  onNavigateTab={handleWorkflowNavigate}
  onAction={handleWorkflowAction}
  compact={false}
  protocolDesk={protocolDesk}
  />
 
- {activeTab === 'protocol' && selectedEvent && (
+ {deskTab === 'protocol' && (
  <>
  {protocolLocked ? (
  <PlanLimitCallout feature="protocolQr" planName={tenant?.plan} />
@@ -2250,7 +2257,7 @@ Merci de confirmer votre présence :
  </>
  )}
 
- {activeTab === 'prep' && selectedEvent && !isProtocolOnly && (
+ {deskTab === 'prep' && !protocolDesk && (
  <EventPrepPanel
  key={selectedEvent.id}
  eventId={selectedEvent.id}
@@ -2269,7 +2276,7 @@ Merci de confirmer votre présence :
  )}
 
  {/* Tab Content: Guests */}
- {activeTab === 'guests' && !isProtocolOnly && (
+ {deskTab === 'guests' && !protocolDesk && (
  <div className="space-y-5">
  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
  <div className="space-y-1">
@@ -2768,7 +2775,7 @@ Merci de confirmer votre présence :
 
 
  {/* Tab Content: Invitations */}
- {activeTab === 'invitations' && (
+ {deskTab === 'invitations' && !protocolDesk && (
  <div className="space-y-4 animate-fade-in">
  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
  <div className="space-y-1">
@@ -2941,7 +2948,7 @@ Merci de confirmer votre présence :
  )}
 
  {/* Tab Content: Table Plan */}
- {activeTab === 'guestInfo' && selectedEvent && !isProtocolOnly && (
+ {deskTab === 'guestInfo' && selectedEvent && !protocolDesk && (
  <div className="space-y-4 animate-fade-in">
  <div className="space-y-1">
  <h2 className="text-lg font-semibold text-foreground tracking-tight">Infos invités</h2>
@@ -2956,7 +2963,7 @@ Merci de confirmer votre présence :
  </div>
  )}
 
- {activeTab === 'tablePlan' && (
+ {deskTab === 'tablePlan' && !protocolDesk && (
  <div className="space-y-4">
  <div className="space-y-1">
  <h2 className="text-lg font-semibold text-foreground tracking-tight">Plan de table</h2>
@@ -2998,11 +3005,11 @@ Merci de confirmer votre présence :
  )}
 
  {/* Tab Content: Feed & Shares */}
- {activeTab === 'staff' && selectedEvent && (
+ {deskTab === 'staff' && selectedEvent && !protocolDesk && (
  <EventStaffPanel eventId={selectedEvent.id} />
  )}
 
- {activeTab === 'tasks' && selectedEvent && (
+ {deskTab === 'tasks' && selectedEvent && (
  protocolDesk ? (
  <ProtocolTasksPanel eventId={selectedEvent.id} eventTitle={selectedEvent.title} />
  ) : (
@@ -3010,7 +3017,7 @@ Merci de confirmer votre présence :
  )
  )}
 
- {activeTab === 'feed' && (
+ {deskTab === 'feed' && !protocolDesk && (
  <EventFeedManager
  key={`feed_${selectedEvent.id}`}
  eventId={selectedEvent.id}

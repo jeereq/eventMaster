@@ -136,7 +136,7 @@ export function buildNavTourOptions(input: {
 
 function firstLoginHome(guideId: UserGuideId, access?: OrgAccess | null): string {
   if (guideId === 'client') return '/dashboard/catalogue';
-  if (guideId === 'org_protocol' || access?.isProtocolOnly) return '/dashboard/events?mode=protocol';
+  if (guideId === 'org_protocol' || access?.isProtocolOnly) return '/dashboard';
   if (guideId === 'org_commercial') return '/dashboard/org-commercial';
   if (guideId === 'commercial_platform') return '/dashboard?tab=tenants';
   if (guideId === 'super_admin') return '/dashboard?tab=overview';
@@ -178,6 +178,7 @@ export function buildFirstLoginTour(
       return steps;
 
     case 'org_protocol':
+      push('nav-dashboard');
       push('nav-protocol');
       push('nav-catalogue');
       push('nav-quotes');
@@ -273,6 +274,7 @@ export function buildNavProductTour(
 
     case 'org_protocol':
       return buildSteps([
+        { tourId: 'nav-dashboard' },
         { tourId: 'nav-protocol' },
         { tourId: 'nav-catalogue' },
         { tourId: 'nav-quotes' },

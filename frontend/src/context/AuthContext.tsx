@@ -184,7 +184,7 @@ function postAuthPath(userRole?: string, access?: OrgAccess | null) {
   if (userRole === 'SUPER_ADMIN') return '/dashboard?tab=overview';
   if (userRole === 'COMMERCIAL') return '/dashboard?tab=tenants';
   if (access?.level === 'commercial') return '/dashboard/org-commercial';
-  if (access?.isProtocolOnly) return '/dashboard/events?mode=protocol';
+  if (access?.isProtocolOnly) return '/dashboard';
   if (access?.level === 'client') return '/dashboard/bookings';
   return '/dashboard';
 }

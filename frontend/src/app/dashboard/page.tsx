@@ -24,6 +24,7 @@ import { PageHeader, Alert, Button, ProjectCard, ListRowAction, StatusPill, Skel
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { parseStoredPhone } from '@/components/ui/PhoneInput';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
+import ProtocolDashboardHome from '@/components/ProtocolDashboardHome';
 import { useViewPreferencesOptional } from '@/context/ViewPreferencesContext';
 import { PLAN_IDS, planAudienceLabel, isB2cPlanId, durationDaysForPlan, durationPresetsForPlan, ANNUAL_DISCOUNT_PERCENT, formatFc, type PlanId } from '@/config/landingPricing';
 import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
@@ -402,18 +403,20 @@ function DashboardPageContent() {
  const router = useRouter();
 
  useEffect(() => {
- if (access?.isProtocolOnly) {
- router.replace('/dashboard/events?mode=protocol');
- } else if (access?.level === 'client') {
+ if (access?.level === 'client') {
  router.replace('/dashboard/bookings');
  }
- }, [access?.isProtocolOnly, access?.level, router]);
+ }, [access?.level, router]);
  const tabParam = searchParams.get('tab');
  const sectionParam = searchParams.get('section');
  const activeAnalyticsSection: AnalyticsSection =
  sectionParam && ANALYTICS_SECTIONS.some((s) => s.id === sectionParam)
  ? (sectionParam as AnalyticsSection)
  : 'overview';
+
+ if (access?.isProtocolOnly) {
+  return <ProtocolDashboardHome />;
+ }
 
  const setAnalyticsSection = (section: AnalyticsSection) => {
  router.replace(`/dashboard?tab=analytics&section=${section}`, { scroll: false });
